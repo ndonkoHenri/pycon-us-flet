@@ -47,7 +47,7 @@
 
 | Fact | Value | Source |
 |---|---|---|
-| Flet | **1.1** from `flet-dev/flet`'s `flet-1.1.0` branch at a pinned commit, until 1.1.0 is on PyPI; PyPI's latest is 1.0.4 (D-81, D-104). S5 found the `.flet-ref` of 2026-10-11 (`3710aff`) on `main`, which is 1.0.4 plus fixes; #120 moves it, and P0-05 rewrites this section from `docs/spikes/05-build-and-ship.md` | decisions F20; CHANGELOG "1.1.0" is unreleased |
+| Flet | **1.1** from `flet-dev/flet`'s `flet-1.1.0` branch at a pinned commit, until 1.1.0 is on PyPI; PyPI's latest is 1.0.4 (D-81, D-104). Pinned at `15854a0ac` since #120 (the first pin, `3710aff` on `main`, was 1.0.4 plus fixes and could not build iOS on Xcode 27; S5). `flet --version` still prints `1.0.4`, the nearest tag (§2.2 quirks). P0-05 rewrites this section from `docs/spikes/05-build-and-ship.md` | decisions F20, D-104; CHANGELOG "1.1.0" is unreleased |
 | Why 1.1 | iOS builds need it: 1.0.4 targets iOS 13.0 and fails on the owner's Xcode 27. 1.1 targets iOS 15. | F20; `TPL/ios/Runner.xcodeproj/project.pbxproj:348` (`IPHONEOS_DEPLOYMENT_TARGET = 15.0`) |
 | Flutter | 3.47.7. It is read from the checkout's `.fvmrc` when flet-cli runs from source. | `.fvmrc`; `flet/version.py` `get_flutter_version` |
 | Python in the app | CPython **3.14.7**, chosen from `requires-python = ">=3.14,<3.15"` | `CLI/utils/python_versions.py` `resolve_python_version`, python-build release `20260921` pinned at `:31` (run on our file: `PythonRelease(short='3.14', standalone='3.14.7', …)`) |
@@ -97,8 +97,12 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
 1. Check out the new SHA in `.flet-src`, and write it to `.flet-ref`.
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
-3. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102).
-4. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
+3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
+   Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
+   3.47.7). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
+   and the configuration, not on the pin's SHA; the reported version stays `1.0.4` across bumps (§2.2 quirks).
+4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102).
+5. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
 **When 1.1.0 is on PyPI** (one PR):
 - Set `flet==1.1.0`, the dev tools `==1.1.0` and the extensions `==1.1.0`.
