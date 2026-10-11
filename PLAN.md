@@ -320,9 +320,9 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual for humans and agents, which is maintained separately. The work itself is broken down in [`docs/roadmap.md`](docs/roadmap.md); GitHub issues are the live task list. In brief (D-88..D-96):
 
 - **Issues first.** One private GitHub repo (public in P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
-- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. CI must be green; the owner reviews and squash-merges.
+- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. CI must be green. Agents squash-merge their own PRs under the merge conditions of D-100; the owner watches and can step in, but is never a blocker.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
-- **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Docs change in the same PR as the behaviour.
+- **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the owner (D-101). Docs change in the same PR as the behaviour.
 - **Second opinions** (Claude Fable, Codex) are summarised as PR comments. **Upstream work** lives in flet-dev, tracked here by `upstream` issues.
 
 ## 11. Risks
@@ -343,7 +343,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until the owner settles them. **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
 
 ---
 
