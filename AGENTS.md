@@ -141,7 +141,8 @@ that date motivates us but never justifies cutting corners.
   it: `gh pr edit <n> --add-reviewer @copilot`. It arrives in about 5 to 15 minutes as a review by
   `copilot-pull-request-reviewer[bot]`, with inline comments by `Copilot`. Handle its comments before merging, like
   any reviewer's: fix, or reply on the thread with the reason and evidence. If nothing has arrived after about 20
-  minutes, say so in the PR and go on. It never replaces the second opinion above.
+  minutes, or the review only says the Copilot quota is used up, say so in the PR and go on. It never replaces the
+  second opinion above.
 - Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.

@@ -775,7 +775,7 @@ After a week with the P1 build, confirm Now · Schedule · My schedule · Map ·
 
 test, area:notifications
 
-A release build schedules a reminder 2 minutes ahead; test it with the app killed, the phone locked, a cold-start tap and over 64 candidates on the iPhone, and with the app killed, a reboot, exact alarms denied and a cold-start tap on an Android emulator (D-102).
+A release build schedules a reminder 2 minutes ahead; test it with the app killed, the phone locked, a cold-start tap and over 64 candidates on the iPhone, and with the app killed, the screen locked, a reboot, exact alarms denied and a cold-start tap on an Android emulator (D-102).
 
 - Verdict in `docs/spikes/06-reminders.md`; the E3 scope (API, platform config, limits) is written down.
 - The "at most 60 pending" policy (D-59) is confirmed or revised.
@@ -815,7 +815,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook in f
 6. **Unaided use.** Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
 **Early spikes.**
-- S7 (real floor plans with about 60 hotspots in `InteractiveViewer` on a low-RAM phone) opens P2-E1.
+- S7 (real floor plans with about 60 hotspots in `InteractiveViewer` on a low-RAM phone: a small-RAM Android AVD and the iPhone until a real one is borrowed, D-102) opens P2-E1.
 - S8 (a minimal `mobile_scanner` extension in release builds) opens UP-E1 on the upstream track, so that E1 can land before P3.
 - S9 (`flet test linux` in CI) may run from P2 on; a green result is proposed as a separate workflow through `needs-decision` (D-78).
 

@@ -508,8 +508,8 @@ Measured by hand at each phase exit, always on **release** builds (`flet build a
 
 | Metric | Target | Method |
 |---|---|---|
-| Cold start to the cached schedule | ≤ 2.5 s | Force-stop; screen-record with "Show taps" on; median of 5 frame counts from the tap to the first frame with session rows. Also log `adb shell am start -W` ×10 (`TotalTime`, first frame) on the emulator as a cheap cross-phase proxy |
-| First launch (no cache: bundled snapshot) | recorded | Same, after `adb shell pm clear <package>` |
+| Cold start to the cached schedule | ≤ 2.5 s | Median of 5 frame counts on a screen recording, from the icon tap to the first frame with session rows. iPhone: swipe the app away in the app switcher before each launch, and record with the Control Center screen recorder (the tap shows as the icon's highlight). Android emulator: force-stop, record with "Show taps" on, and also log `adb shell am start -W` ×10 (`TotalTime`, first frame) as a cheap cross-phase proxy |
+| First launch (no cache: bundled snapshot) | recorded | Same, after clearing the app's data. iPhone: delete the app and reinstall the same build (this removes the data directory and SharedPreferences; Keychain items, SecureStorage from P3, survive). Android emulator: `adb shell pm clear <package>` |
 | Feed processing | ≤ 400 ms | The app logs `feed processed in N ms` on every parse; median of 5 refreshes from the shared log (D-72) |
 | Scrolling the busiest day | no visible jank | iPhone: Instruments' Animation Hitches. Android emulator (relative): Perfetto with the `android.surfaceflinger.frametimeline` data source during scripted flings (`adb shell input swipe`), janky frames recorded. Plus the eye test at 200 % text |
 | Star tap and search keystroke latency | recorded (S2 sets any budget) | Frame counting on a screen recording |
@@ -519,7 +519,7 @@ Results go into the phase status issue (date, device or emulator image and host,
 
 ## 9. Device checklist (D-79)
 
-At each phase exit, with packaged builds on an Android emulator and an iOS simulator, and on the iPhone for the items that need hardware: VoiceOver (item 5), reminder delivery (item 12), the camera (S8, E1) and a TestFlight install of the phase build (D-102). Android items that would want hardware (a reboot, exact alarms, TalkBack) run on the emulator, and the results say so. Items marked with a phase start then. Results go into the phase status issue with device or emulator image, OS, build number and Flet pin.
+At each phase exit, with packaged builds on an Android emulator and an iOS simulator, and on the iPhone for the items that need hardware or a release build: items 1 and 2 with a TestFlight install of the phase build, the phase's exit journeys that name the iPhone (PLAN §7), VoiceOver (item 5), reminder delivery (item 12) and the camera (S8, E1) (D-102). Android items that would want hardware (a reboot, exact alarms, TalkBack) run on the emulator, and the results say so. Items marked with a phase start then. Results go into the phase status issue with device or emulator image, OS, build number and Flet pin.
 
 1. Install over the previous build: favourites, settings and cache survive.
 2. Cold start online; cold start in airplane mode (bundled or cached data, honest status strip from P1); kill and relaunch.
