@@ -20,7 +20,7 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
 
 ## Method
 
-- **Host:** MacBook with Apple M4 (10 cores, 24 GB), macOS 27.0 (26A428), Xcode 27.0 (27A266a), CocoaPods 1.17.0 (it warns unless `LANG=en_US.UTF-8`), uv 0.12.15.
+- **Host:** a Mac with an Apple M4 (10 cores, 24 GB), macOS 27.0 (26A428), Xcode 27.0 (27A266a), CocoaPods 1.17.0 (it warns unless `LANG=en_US.UTF-8`), uv 0.12.15.
 - **Devices (D-107):**
   - AVD `pycon_pixel6a_api36`: Pixel 6a profile, 4 GB RAM, Android 16 (API 36), Google APIs arm64, emulator 36.2.12.0, as `emulator-5554`.
   - Simulator iPhone 17 on iOS 26.5 (23F77). On this Mac the iPhone 16 family exists only on the iOS 18.6 runtime.
@@ -50,12 +50,12 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
 
 | Check | Pin `3710aff` | Candidate `15854a0ac` |
 |---|---|---|
-| `flet build apk --build-number 8`, first run | **540 s**: Flutter download about 305 s, Gradle `assembleRelease` 167.6 s. `~/.gradle` was already warm from other work, so a fresh machine adds Gradle downloads. | 143 s (Flutter present; Gradle 105 s) |
+| `flet build apk --build-number 8`, first run | **540 s**: Flutter 3.44.8 download and setup about 305 s, Gradle `assembleRelease` 167.6 s. `~/.gradle` was already warm from other work, so a fresh machine adds Gradle downloads. | 143 s (Flutter present; Gradle 105 s) |
 | Same, warm | **63 s** (Gradle 15.8 s) | 70 s (after a pubspec change) |
 | APK size (3 ABIs) | **140,418,054 bytes (140.4 MB)** | 142,499,081 bytes (142.5 MB) |
-| APK with `--arch arm64-v8a` | **54,950,467 bytes (55.0 MB)**, 71 s | — |
+| APK with `--arch arm64-v8a` | **54,950,467 bytes (55.0 MB)**, 71 s | **55,605,958 bytes (55.6 MB)**, 128 s; `native-code: 'arm64-v8a'` |
 | `aapt2 dump badging` (build-tools 36.0.0) | `minSdkVersion:'24'`, `targetSdkVersion:'36'`, `compileSdkVersion='36'`, `versionCode='8'`, `versionName='0.0.1'`, label `Conf Companion`, ABIs `arm64-v8a armeabi-v7a x86_64`, permissions `INTERNET`, `ACCESS_NETWORK_STATE` | `minSdkVersion:'24'`, `targetSdkVersion:'36'` |
-| `adb install -r` + `am start -W` | Success; first launch `TotalTime: 8346` ms (Python unpacks on first launch) | Success (an update over the other build, same debug key); `TotalTime: 3226` ms |
+| `adb install -r` + `am start -W` | Success; first launch after install `TotalTime: 8346` ms (S1 measures launches properly) | Success (an update over the other build, same debug key); `TotalTime: 3226` ms |
 | Screen | "PyCon US companion 0.0.1" on a lavender (tonal 1.0) background | "PyCon US companion 0.0.1" on white (1.1 neutral surfaces) |
 | `flet build aab --build-number 8` | 58 s; **101,007,325 bytes (101.0 MB)** | 44 s; 102,463,862 bytes |
 | bundletool `get-size total` on the emulator's device spec (arm64-v8a, 420 dpi, SDK 36) | **26,358,368 bytes (26.4 MB) download** | 26,600,984 bytes |
@@ -88,7 +88,7 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
 - 17 manifests come from dependencies:
   - `Flutter.framework`;
   - OpenSSL's `_ssl.framework` and `_hashlib.framework` (FileTimestamp `C617.1`);
-  - 14 plugin bundles (`shared_preferences_foundation`, `url_launcher_ios`, `device_info_plus`, …).
+  - 14 resource bundles of plugins and their pods (`shared_preferences_foundation`, `url_launcher_ios`, `device_info_plus`, `SDWebImage`, …).
 - `Python.framework` has none, although `nm -u` shows it imports these required-reason APIs:
   - `stat`, `fstat`, `fstatat`, `lstat` and `futimens` (FileTimestamp);
   - `statfs` and `fstatfs` (DiskSpace);
@@ -181,11 +181,11 @@ Companion-client caveats:
 - `flet run -w` opens a browser tab; `BROWSER=true` suppresses it.
 - Any HTTP `GET /` fails with "Web root path not found: …/flet_web/web", because a source checkout has no built web client. The native client only uses the WebSocket, so this is harmless.
 - Stopping `flet run` can leave the app's Python child process listening on port 8550. Check with `lsof -iTCP:8550` and kill it.
-- `flutter run` in `client/` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock` and two `Package.resolved` files. Restore them with `git -C .flet-src checkout -- client`.
+- `flutter run` in `client/` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Check `git -C .flet-src status`, then restore only those three files with `git -C .flet-src checkout -- <path>`. In the owner's worktree, never restore all of `client/`, which would discard his own edits.
 
 ### Other quirks
 
-- `flet debug` hides `flutter run`'s output behind a spinner ("Running debug version of the app on iOS device..."), and logs nothing useful when stdout is not a terminal.
+- Without `-v`, `flet debug` hides `flutter run`'s output behind a spinner ("Running debug version of the app on iOS device..."). `-v` streams it, and `-vv` adds Flutter's `--verbose` (`CLI/commands/build_base.py` `_run_flutter_command`: `capture_output=self.verbose < 1`).
 - Artifact names differ: `build/apk/pycon-us.apk`, `build/aab/pycon-us.aab` and `build/ipa/pycon-us.xcarchive`, but `build/ipa/pycon_us.ipa` (underscore).
 - Each iOS build prints:
   - Flutter's "All plugins found for ios are Swift Packages, but your project still has CocoaPods integration" notice;
@@ -199,7 +199,7 @@ Companion-client caveats:
 
 - **D-104** (amends D-81): until 1.1.0 is released, the pin is a commit on flet-dev/flet's `flet-1.1.0` branch. #120 bumps it.
 - **D-105** (amends D-26 and section M's font location): Roboto ships as the local font-only Flutter package `flutter_packages/roboto_fonts/`. `Theme.font_family` is `packages/roboto_fonts/Roboto`.
-- **D-106** (records values for D-12, sets the APK ABI): `minSdk` 24 and `targetSdk` 36. Sideload and CI APKs are built for `arm64-v8a` only; AABs keep all three ABIs.
+- **D-106** (records values for D-12, sets the APK ABI): `minSdk` 24 and `targetSdk` 36. APKs for our emulators and CI quick looks are built for `arm64-v8a` only. A tester whose device is not arm64 gets a universal APK or the Play AAB, and AABs keep all three ABIs.
 - **D-107** (amends D-102's device names): the build reference devices are the AVD `pycon_pixel6a_api36` and an iPhone 17 simulator on iOS 26.5.
 
 ## What the next issues must apply
@@ -223,29 +223,30 @@ Companion-client caveats:
   - minSdk 24 and targetSdk 36;
   - CPython 3.14.7.
 - §3.4: replace the Roboto row with D-105's package route.
-- §5.2: the exact companion-client commands, `BROWSER=true`, the "Web root path not found" message, the leftover port-8550 process, and the `git -C .flet-src checkout -- client` clean-up.
+- §5.2: the exact companion-client commands, `BROWSER=true`, the "Web root path not found" message, the leftover port-8550 process, and restoring the three rewritten client files.
 - §5.3:
-  - `flet debug` shows no `flutter run` output;
+  - `flet debug` shows `flutter run`'s output only with `-v`;
   - the debug build's `versionCode` is 1;
   - on-device iOS debugging needs a valid Apple Development certificate (none on the Mac today).
 - §8.2: the `.xcarchive` and `.ipa` outcomes, flet-cli's profile pre-check, and the `pycon_us.ipa` name.
-- §10: close the S5 rows with these numbers.
+- §10: close the S5 rows this verdict answers, with these numbers. The ITMS-91053 row stays open and points at #121.
 - D-107's device names, and fix "iPhone 16 family" in §5.5.
 
 **P0-06, #54 (`build-android.yml`):**
-- `extra-args: --arch arm64-v8a` (D-106): 55 MB instead of 140 MB per artifact.
+- `extra-args: --arch arm64-v8a` (D-106): 55.6 MB instead of 142.5 MB per artifact at the candidate pin.
 - Check that `-Xmx4G` holds on `ubuntu-latest`.
-- Expect about 9 minutes when the Flutter SDK is not cached. `cache: true` keys on the constant `0.1.0`, so after a pin bump run once with `cache: false`.
+- An uncached first build took 9 minutes on the Mac (about 5 of them for the Flutter SDK); time the runner's first run. `cache: true` keys on the constant `0.1.0`, so after a pin bump run once with `cache: false`.
 
 ## Fallback
 
-- If the `flet-1.1.0` branch is rewritten or deleted before 1.1.0 is released, the pin SHA may become unfetchable. In that case:
-  - pin the commit it merged into on `main`;
-  - or, if 1.1.0 is out, pin `flet==1.1.0` (development.md §2.2).
+- If the `flet-1.1.0` branch is rewritten or deleted:
+  - if it merged into `main`, pin the merge's commit on `main`;
+  - if 1.1.0 is out, pin `flet==1.1.0` (development.md §2.2);
+  - if it was deleted before merging, the tested commit stays in the owner's Flet clone (his `.flet-src` worktree). Keep it reachable there under a local branch or tag, and push it to a ref contributors and CI can fetch (for example a tag in the owner's fork of flet-dev/flet) before moving `.flet-ref`.
 - If App Store Connect rejects the upload for ITMS-91053:
   - file U13 upstream: a `Runner/PrivacyInfo.xcprivacy` in the template, or a manifest inside serious_python's `Python.framework`;
   - meanwhile, testers get Android builds, and the iPhone runs `flet debug ios`.
-- If the font package route stops working, fall back to the system font (accepted for `flet run`), and raise U20.
+- If the font package route stops working in a later pin, raise U20 (a multi-weight `page.fonts`) or a flet-cli fix upstream. Shipping packaged builds in the system font would need a D-26 amendment, because D-26 allows that fallback only for `flet run`.
 
 ---
 _Written by Claude Code (AI agent)._

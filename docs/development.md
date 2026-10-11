@@ -381,7 +381,7 @@ Notes:
 
 ### 5.5 Devices, emulators and logs
 
-**The device set (D-102).** Work happens on Android emulators and iOS simulators first: on the owner's Mac, the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled, as `adb shell pm list packages` shows), and the iPhone 16 family and an iPad Pro in the Simulator. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
+**The device set (D-102).** Work happens on Android emulators and iOS simulators first: on the owner's Mac, the AVDs `pycon_pixel6a_api36` (Pixel 6a profile, 4 GB, Google APIs, API 36; the build reference, D-107), `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled, as `adb shell pm list packages` shows), and the iPhone 17 family on iOS 26.5 (D-107) and an iPad Pro in the Simulator. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
 
 | Task | Command |
 |---|---|
@@ -607,7 +607,7 @@ Action inputs we leave at their defaults (`ACTION/action.yml`), so that `pyproje
 | `runner-python-version`, `bundled-python-version` | Empty, so uv and flet-cli resolve 3.14 from `requires-python` |
 | `build-version` | Empty, so `[project].version` is used (`CLI/commands/build.py:203-209`) |
 | `working-directory`, `output-directory` | The repo root; `build/apk` |
-| `extra-args` | None. `--arch arm64-v8a` would shrink a sideload APK; S5 records the size before we decide. |
+| `extra-args` | `--arch arm64-v8a` (D-106): 55.6 MB instead of 142.5 MB. P0-06 (#54) adds it. |
 | `cache` | `true`. If a pin bump behaves oddly, run once with `false`: the Flet download cache is keyed on the reported Flet version, which is a constant `0.1.0` under the source pin (§2.2). |
 
 **This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which can change between runs.
