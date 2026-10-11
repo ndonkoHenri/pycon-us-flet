@@ -43,10 +43,14 @@ that date motivates us but never justifies cutting corners.
 - `docs/decisions.md` is binding. To change it, open an issue labelled `needs-decision` with the options and your
   recommendation, then record the outcome as a new D-number in a PR **before or together with** the code that
   depends on it (D-101):
-  - **Reversible choices** don't wait for the owner: adopt your recommendation, say so in the issue and in the
-    phase status issue, and move on. The owner can override later.
-  - **Hard-to-reverse or outward-facing choices** wait for the owner: app identity and bundle id, publishing or
-    making the repo public, accounts or anything that costs money, and contacting anyone.
+  - **Reversible choices** don't wait for the owner. Post the decision as a comment on the issue, merge the PR
+    that records it, mention it in the phase status issue, then remove the `needs-decision` label. The owner can
+    override later.
+  - **Owner-only choices** wait for the owner: app identity and bundle id; making anything public (the repo, a
+    store listing, builds for people outside the team); accounts or anything that costs money; contacting people
+    outside this work (the PSF, social media, blogs); and anything that would lose data or need someone else's
+    help to undo. Routine work is already authorised: issues, PRs and comments in this repo, and the flet-dev
+    issues and PRs the upstream track needs.
 - Docs live next to the code they describe and change in the **same PR** as the behaviour.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
@@ -78,7 +82,8 @@ that date motivates us but never justifies cutting corners.
   - Type: `feature`, `bug`, `design`, `docs`, `test`, `chore`, `ci`, `refactor`, `epic`, `upstream`.
   - Area: `area:shell`, `area:theme`, `area:data`, `area:schedule`, `area:speakers`, `area:rooms-maps`,
     `area:sponsors`, `area:info`, `area:notifications`, `area:account`, `area:staff`, `area:build`, `area:quality`.
-  - Status: `blocked` (say on what), `needs-decision` (the owner decides), `good first issue`.
+  - Status: `blocked` (say on what), `needs-decision` (a decision is pending; see D-101 for who decides),
+    `good first issue`.
 - Unsure about something that changes behaviour or a decision? Don't guess silently: comment on the issue with the
   options and your recommendation, add `needs-decision`, and follow the decision rules above (D-101).
 
@@ -105,12 +110,20 @@ that date motivates us but never justifies cutting corners.
 
 - **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
   don't wait for approval. Merge only when all of these hold:
-  1. CI is green. Never merge over a red or pending check.
-  2. The definition of done is met, and you have re-read the whole diff yourself.
-  3. For big or risky PRs (about 400+ changed lines, or touching `docs/decisions.md`, the data core, signing, the
-     outbox or the build setup), a **second opinion** from another model (Claude Fable or Codex, run read-only)
-     has reviewed it, and every finding is fixed or answered in a PR comment.
-  4. Every comment from the owner is answered, and no `needs-decision` question in scope is still open.
+  1. **Checks pass on the PR's latest commit.** Once CI exists, every check must be green: missing, pending,
+     skipped or cancelled checks don't count. Until then (P0-02), run the checks that apply locally and list them
+     in the PR.
+  2. **The definition of done is met**, and you have re-read the whole final diff yourself.
+  3. **A second opinion, when required.** It is required when the PR changes more than 400 lines (not counting
+     lockfiles, fixtures, generated files or data snapshots), changes the architecture (module structure, state,
+     routing, the data core, signing, the outbox, build or CI), or edits `docs/decisions.md`. The reviewer is a
+     **different model** from the author (Claude Fable, or Codex run read-only) and reviews the final diff; re-run
+     it after substantive changes. Each finding is fixed, or rejected in a PR comment with the reason and
+     evidence. If you still disagree on something that matters (correctness, data loss, security), ask the other
+     reviewer model; if it's a product question, use `needs-decision`.
+  4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
+     acknowledged; every owner comment has a reply.
+  5. **No open `needs-decision` question** affects the PR.
 - Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
@@ -153,7 +166,9 @@ that date motivates us but never justifies cutting corners.
 - [ ] Runs on Android and iOS (for UI or native changes), with screenshots in the PR.
 - [ ] Accessible: labels, contrast, text scaling, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated when behaviour or decisions changed.
-- [ ] The merge conditions (D-100) hold, the PR is squash-merged, and follow-ups have issues.
+- [ ] Follow-ups have their own issues.
+
+After the merge: the PR is squash-merged under D-100, and the issue is closed (by `Closes #N`).
 
 ## Development setup
 

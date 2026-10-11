@@ -343,7 +343,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until the owner settles them. **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
 
 ---
 
