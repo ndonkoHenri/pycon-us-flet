@@ -1,0 +1,624 @@
+# UX/UI specification (v2)
+
+**Status:** plan of record, 2026-10-11. Consolidates the three v2 UX studies (foundations, attendee schedule, conference companion) under [`decisions.md`](decisions.md) sections C and D. Where this file and a decision disagree, the decision wins until a `needs-decision` issue changes it.
+**Scope:** Android and iOS phones, with a tablet layout (§8). Material 3 only, identical on both platforms (D-10). Web, PWA, desktop and Cupertino or adaptive variants are out of scope (D-08).
+**Related:** [`PLAN.md`](../PLAN.md), [`feature-matrix.md`](feature-matrix.md), [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md), [`architecture.md`](architecture.md).
+
+**Reading this file**
+- `P0`..`P4` say when a piece lands. A screen's phase covers everything in it unless a line says otherwise. *(could)* marks optional polish.
+- Feature ids (`SCHED-05`, `NEW-01`) are matrix rows; `D-nn` and `O-n` are in the decisions record; `UQ-n` are open UX questions (§10). Gap specs and status: [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md); an interim is replaced only by a PR that bumps the pinned Flet (D-64).
+- Every Flet control, field, enum and service named here was introspected in the local monorepo (flet-dev/flet `9fbe52a61`, 1.1.0-dev). Missing pieces are marked **GAP** with their interim. This is API evidence; spikes S1..S9 (PLAN §8) confirm behaviour on phones.
+
+---
+
+## 1. Design principles
+
+1. **Answer the attendee's question first:** what is on now, what is next for me, where is it. Time and place come before descriptions.
+2. **One obvious way:** one search, one place for saved sessions, one filter surface, one favourite control, one scaffold, one feedback rule.
+3. **Offline from the first launch.** Render the best local copy, refresh in the background, show freshness honestly, never an error while data exists (D-32, D-38).
+4. **Never move the user unasked.** Back pops exactly one step (#279); screens keep their day, filters, scroll and zoom (#313) (D-17, D-18).
+5. **Quiet chrome.** Surface app bars with visible titles; brand colour only at identity moments (D-28).
+6. **Identical visuals, native gestures** (D-10, D-11).
+7. **Accessible by construction:** components carry semantics, 48 dp targets, checked contrast, 200 % text (D-33).
+8. **No dead controls.** Anything that depends on a missing capability is hidden or says why (D-60, D-63).
+9. **Content is data.** Year facts come from `data/<year>/*.toml`, never from widget code or name matching (D-45).
+
+---
+
+## 2. Information architecture and navigation
+
+### 2.1 Bottom bar (D-13, prov. O-1)
+
+| # | Label | Icon (off / on) | Root | Answers |
+|---|---|---|---|---|
+| 1 | Now | `SENSORS_OUTLINED` / `SENSORS` | `/now` | What is happening, what is next for me (start screen, D-14) |
+| 2 | Schedule | `CALENDAR_MONTH_OUTLINED` / `CALENDAR_MONTH` | `/schedule` | The programme by day and time |
+| 3 | My schedule | `STAR_BORDER` / `STAR` | `/my-schedule` | What I saved, and my conflicts |
+| 4 | Map | `MAP_OUTLINED` / `MAP` | `/map` | Rooms, floor plans, expo, job fair |
+| 5 | More | `MORE_HORIZ` | `/more` | Everything else, one flat list |
+
+```python
+ft.NavigationBar(
+    destinations=[
+        ft.NavigationBarDestination(
+            icon=ft.Icons.SENSORS_OUTLINED, selected_icon=ft.Icons.SENSORS, label="Now"
+        ),
+        # ... the other four, in the order above
+    ],
+    selected_index=root_index(location),  # every route maps to exactly one root
+    label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
+    on_change=go_to_root,
+)
+```
+
+- Identical for every user; never changes with sign-in or role (SHELL-05). Never `adaptive=True`. The M3 indicator pill replaces Ionic's magenta label (4.18:1).
+- The bar shows on every View of a tab's stack, root and pushed, so tapping the active tab can return to its root (D-17, architecture §19 #6); pushed Views add a back arrow. S4 checks the bar during transitions (UQ-1).
+- The My schedule star is the favourite star, so tab and action read as one idea. Speakers live in More and search.
+
+### 2.2 More (D-15)
+
+One `ListView` of `ListTile`s under `SectionHeader`s; no drawer, no accordions. Trailing `CHEVRON_RIGHT` for in-app pages, `OPEN_IN_NEW` for web pages (§4.7). Every child is pushed, so Back works (Ionic's drawer replaced the root).
+
+| Section | Items (routes under `/more/`) | Phase |
+|---|---|---|
+| Profile row | "Sign in" (`sign-in`) or avatar, nickname, email (`account`); only when a mock API URL is set (D-51) | P3 |
+| Staff tools | Lead scanner, Door check, Swag pickup, CoC incident (`staff/<lead\|door\|swag\|coc>`), from `staff_entries(flags)`, "3 pending" badges | P3 |
+| Programme | Speakers, Tracks & session types, Keynotes, Open spaces, Lightning talks, Sprints | P1 |
+| Expo & sponsors | Sponsors, Expo hall (pushes the expo viewer), Job listings | P2 |
+| At the venue | Venue & hours, Wi-Fi, Help & safety | P2 |
+| About | About PyCon US, About the PSF, Social media | P2 |
+| You | Settings (P2), About this app (P1) | P1 |
+
+The Staff section and the profile row appear and disappear live with the account (SHELL-11, SHELL-15).
+
+### 2.3 Navigation map
+
+```
+/now          Now dashboard                       P1 (stub in P0)
+/schedule     Day tabs, slots, filter sheet       P1
+/my-schedule  Saved sessions by day               P1
+/map          Rooms (P1) · Floor plans · Expo · Job fair (P2)
+/more         Flat sectioned list                 P1+
+  speakers  tracks[/<slug>]  keynotes  open-spaces  lightning-talks  sprints   P1
+  sponsors  jobs  venue  wifi  help  about  psf  social  settings             P2
+  app (About this app, P1)  developer (hidden, P1)
+  sign-in  account  staff/<tool>                                             P3
+/search?scope=   global search                    P1
+/welcome         first run                        P2
+Drill under every root, More page and search (one pushed View per hop):
+  session/<id>  speaker/<id>  room/<slug>  sponsor/<slug>
+  plan/<plan>   (P2; floor plans, expo, job fair; §2.5)
+  e.g. /schedule/session/42/speaker/17/session/99
+```
+
+### 2.4 Back, tabs and position (D-17, D-18, D-11)
+
+1. **Detail chains are a real stack.** Every cross-link pushes one View via the drill route, so session → speaker → session → room pops one hop at a time (SESS-12). The View below stays mounted and keeps its scroll.
+2. **Tab switch** shows that tab's root. Root state lives outside screen state (D-18): filters in `Prefs`; the Schedule day and offset, the My schedule offset, and the Map sub-tab and zoom in `ViewMemory` (architecture §6.3). Offsets come back with `ListView.scroll_to(offset=...)`.
+3. **Re-tapping the active destination** on a pushed View returns to that tab's root (D-17); on the root it scrolls to the top. If S4 shows the bar looks wrong on pushed Views during transitions, the bar moves to roots only and re-tap becomes "scroll to top"; that changes D-17, so it goes through a `needs-decision` issue (UQ-1).
+4. **Android Back** on a root other than Now goes to Now; on Now it exits (`View.can_pop=False` + `on_confirm_pop`, checked in S4) (SHELL-16).
+5. **Transitions:** `ft.PageTransitionsTheme(android=ft.PageTransitionTheme.PREDICTIVE, ios=ft.PageTransitionTheme.CUPERTINO)` keeps iOS edge-swipe and Android predictive Back (prov. O-2). Tab switches do not animate: root Views may share one `View.route` key, a case the Router's pop handler explicitly supports (`components/router.py`); S4 confirms.
+6. **Insets (#311, D-12).** System bars are never hidden. Bodies sit in `ft.SafeArea`; lists pad their end by `page.media.padding.bottom` plus FAB clearance; sheets use `use_safe_area=True`. Checked with 3-button and gesture navigation and on an iPhone with a home indicator.
+
+### 2.5 Route shapes and Back targets (decisions §M, D-19; S4 confirms)
+
+- **Search returns to its results on Back** (D-19). Search is the global modal `/search?scope=` (decisions §M). The stock Router would pop every view of a modal chain to the modal's base (`components/router.py`: the `on_view_pop` handler, lines 672-711, modal branch 685-687; modal detection and the pop target, lines 744-797), but a `page.on_view_pop` installed before `page.render_views(App)` takes precedence (lines 676-679). So Back from a result returns to the results through the app's own `page.on_view_pop` and `parent_of()` (D-19), which S4 verifies; the handler goes once U18 lands.
+- **Schedule changes** is `/schedule/changes` (decisions §M), opened from Now, a SnackBar or Settings. Returning to the opener on Back rather than to the Schedule root would need `parent_of()` to remember the opener, as it does for search (D-19); that is a proposal pending a `needs-decision` issue.
+- **Floor plans push from anywhere** (rooms, sessions, Help, Venue, More, and sponsor "Find booth", SPON-04) through the fifth drill kind `plan/<plan>` (decisions §M, architecture §5.2): plan ids from `map.toml`, including `expo` and `job-fair`, with `?pin=<room key>` or `?booth=<n>`.
+
+Query parameters carry only view options (`?scope=`, `?pin=`, `?highlight=`, `?booth=`), read with `use_query()` until U9.
+
+### 2.6 Deep links (P2, NEW-07, D-21) and launch (SHELL-01, SHELL-03)
+
+- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. Unknown ids land on the root with "That session isn't in the current schedule". Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
+- **Launch:** native splash `#680579` with the app icon (O-4), never the PyCon logo (D-36); Flet's boot screen, shown while Python starts, in the same purple (`[tool.flet.boot_screen.flet]`); a boot View (same purple) until `Prefs.loaded` and the cached or bundled feed are read, so theme and filters never flash; a `ProgressRing` only after 1 s. First run goes to `/welcome` (P2), otherwise Now; in P3 lead-retrieval accounts may open on the Lead scanner (D-16). Never a permission prompt at launch (D-61).
+
+---
+
+## 3. Design system
+
+### 3.1 Brand palette
+
+Indigo `#3B3EA9` is the seed, light `primary`, the Now status header and the About band. Purple `#680579` is light `secondary`, the splash, boot View and Welcome (white text 11.1:1). Magenta `#A1009A` is light `tertiary` (7.0:1) and the favourite star; Ionic's `#DD04D2` (4.18:1) is used for nothing. Gold `#FFD779` is for icons on indigo only (6.2:1). Navy, cyan, Ionic blue `#3880ff` and the iOS `#000` dark surface are dropped (THEME-02, THEME-03, THEME-10).
+
+### 3.2 Colour schemes (D-22, D-23)
+
+Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9), so we set only brand roles; outline, error, inverse and container ramps come from the seed. WCAG ratios computed for this file.
+
+| Role | Light | Dark | HC light (P2) | HC dark (P2) |
+|---|---|---|---|---|
+| `primary` / `on_primary` | `#3B3EA9` / `#FFFFFF` 8.6 | `#BFC1FF` / `#1F2189` 7.5 | `#4A0072` / `#FFFFFF` 13.7 | `#FFD60A` / `#0B0F17` 13.6 |
+| `primary_container` / on | `#E1E0FF` / `#13126B` 12.3 | `#3B3EA9` / `#E1E0FF` 6.7 | = primary | = primary |
+| `secondary` / on | `#680579` / `#FFFFFF` 11.1 | `#F4AEFF` / `#52005E` 8.1 | `#4A0072` / `#FFFFFF` | `#F5F5F0` / `#0B0F17` |
+| `secondary_container` / on | `#FCD6FF` / `#36003F` 13.2 | `#680579` / `#FCD6FF` 8.6 | `#E9E7E1` / `#1A1D24` | `#21252F` / `#F5F5F0` |
+| `tertiary` / on | `#A1009A` / `#FFFFFF` 7.0 | `#FFACEB` / `#5E0058` 7.6 | `#4A0072` / `#FFFFFF` | `#FFD60A` / `#0B0F17` |
+| `tertiary_container` / on | `#FFD7F3` / `#3B0037` 13.1 | `#85007F` / `#FFD7F3` 7.1 | = secondary_container | = secondary_container |
+| `surface` / `on_surface` | `#FFFFFF` / `#1B1B1B` 17.2 | `#121212` / `#E7E7E7` 15.2 | `#FBFAF6` / `#1A1D24` 16.2 | `#0B0F17` / `#F5F5F0` 17.5 |
+| `on_surface_variant` | `#5E5E5E` 6.5 | `#ABABAB` 8.2 | `#1A1D24` | `#F5F5F0` |
+| `outline`, `error` | seed | seed | `#1A1D24`, `#8C0009` 9.5 | `#F5F5F0`, `#FFB4AB` 11.3 |
+
+- **High contrast** (P2) sets every role by hand: `surface_container*` equal `surface` so borders separate cards; all text 7:1. If HC stops fitting `ColorScheme` roles cleanly it moves to `later` (THEME-04). Settings › High contrast puts the HC themes in both slots.
+- A unit test checks every text/background pair in all four schemes, the tokens and the badges (D-25).
+- Each scheme sets `Theme.system_overlay_style` (`ft.SystemOverlayStyle`, D-12): status- and navigation-bar icon brightness follow the scheme, and navigation-bar contrast is enforced, so Android's 3-button icons never vanish into the background (#311).
+
+### 3.3 Tokens (D-24)
+
+A frozen `Tokens` dataclass behind `use_tokens()` holds what M3 has no role for.
+
+| Token | Light | Dark | HC light | HC dark | Used by |
+|---|---|---|---|---|---|
+| `live` | `#1B6E35` 6.3 | `#8BD89A` 11.1 | `#0F5A26` 8.0 | `#30D158` 9.5 | Happening now, Open now |
+| `warning` | `#7A5900` 6.5 | `#F2C14E` 11.2 | `#7A4A00` 7.2 | `#FFD60A` 13.6 | Stale data, overlaps, pending scans |
+| `success` | = live | = live | = live | = live | Scan accepted |
+| `favorite` | `tertiary` | `tertiary` | `on_surface` | `on_surface` | Filled star |
+
+Scan outcome colours (P3) are in §7.2; each passes 6.5:1 or better.
+
+### 3.4 Track badges (D-25, THEME-08, SCHED-20)
+
+Tonal pills: fill plus text colour, every pair at least 5.7:1 in both themes (D-25 requires 4.5:1; the lowest is AI dark, 5.77:1). Badges always carry text. In HC they are outlined: 1.5 dp `on_surface` border and text on `surface`.
+
+| Badge | Light fill / text | Dark fill / text |
+|---|---|---|
+| Talk | `#DCD6F5` / `#24165A` | `#291966` / `#D6CEF3` |
+| Tutorial | `#F5D6F3` / `#5A1655` | `#661961` / `#F3CEF0` |
+| Keynote, Plenary | `#F0D6F5` / `#50165A` | `#5B1966` / `#EDCEF3` |
+| Lightning talks | `#F0DBEA` / `#502042` | `#5B254B` / `#EDD3E6` |
+| Security | `#F5E9D6` / `#5A4116` | `#664A19` / `#F3E5CE` |
+| AI | `#D6F5EB` / `#165A44` | `#19664D` / `#CEF3E7` |
+| Charla | `#DBE3F0` / `#21334F` | `#253A5A` / `#D4DEED` |
+| Poster | `#F5DED6` / `#5A2717` | `#662D1A` / `#F3D7CE` |
+| Sponsor presentation | `#F5ECD6` / `#5A4616` | `#665019` / `#F3E8CE` |
+| Open space | `#D9F2E3` / `#1C5433` | `#20603A` / `#D1F0DE` |
+| Summit | `#E1E7EA` / `#2E3C42` | `#34444B` / `#DBE2E6` |
+| Event | `#D6F2F5` / `#16545A` | `#196066` / `#CEF0F3` |
+| Break, Informational | `#E6E6E6` / `#383838` | `#404040` / `#E0E0E0` |
+| En Español | `#FFD7F3` / `#5E0058` (10.1) | `#5E0058` / `#FFD7F3` |
+
+Role-based badges: Registration required = `error_container`/`on_error_container`; New track = `secondary_container`; Changed (24 h, P2) = `tertiary_container`. Palette keys are the feed's track keys, spaces included (`"open space"`); display names come from one `track_name()` (DATA-28).
+
+### 3.5 Theme construction
+
+`build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme` in `theme.py` is sketched once, in [architecture §15](architecture.md#15-theming-d-22d-28-d-33-d-34): the seed, neutral surfaces, each scheme's roles with their `on_*` partners, `system_overlay_style` (D-12), Roboto, left-aligned titles and the page transitions. The full override list per scheme is §3.2. `page.theme` and `page.dark_theme` get the light and dark results; `page.theme_mode` follows Appearance.
+
+### 3.6 Typography, shape, spacing (D-26, THEME-11)
+
+- **Font:** Roboto 400/500/700, declared as a `flutter.fonts` family (three assets with `weight: 400/500/700`) through `[tool.flet.flutter.pubspec]` (D-26, F18) and selected with `Theme.font_family="Roboto"`, so iOS does not fall back to SF Pro. `page.fonts` holds one file per family, so it cannot carry the three weights (a multi-weight `page.fonts` is U20). `flet run` falls back to the system font; S5 verifies the packaged build. Its digits are tabular, so times align (`TextStyle` has no `font_features`, F8). No weight-300 headings.
+- **Scale:** only `ft.Text(theme_style=ft.TextThemeStyle.X)`. `HEADLINE_SMALL` detail titles and Welcome; `TITLE_LARGE` app bars; `TITLE_MEDIUM` row and card titles; `TITLE_SMALL` section headers and gutter times; `BODY_LARGE` descriptions; `BODY_MEDIUM` row meta; `BODY_SMALL` status strip; `LABEL_LARGE` buttons and chips; `LABEL_SMALL` badges.
+- **Text scaling:** Flutter applies the OS scale and iOS Bold Text; Flet cannot read the factor (**GAP** U16), so layouts reflow by construction: no fixed heights around text, `Row(wrap=True)` for badges, row titles wrap to 3 lines (full on detail). Tested at 200 %. No in-app font-size setting.
+- **Selectable:** descriptions and bios `Markdown(selectable=True)`; copyable values (rooms, Wi-Fi password, address) `Text(selectable=True)`.
+- **Spacing** on a 4 dp grid: 16 dp gutters and card padding, 24 dp between sections, 8 dp within a group; `ListTile(min_height=56)`, 72 for two lines.
+- **Shape:** 8 dp badges and chips, 12 dp cards, 16 dp the Now header and meta cards, 28 dp sheet and dialog tops, full radius for the search field and extended FAB.
+- **Elevation** is tonal: rows sit on `surface` with no card per row; groups use `CardVariant.FILLED` or `OUTLINED`; app bars are flat with `elevation_on_scroll`; HC has no shadows and uses `OUTLINED` cards.
+- **iOS pins (D-10):** Roboto; `AppBarTheme(center_title=False)`; pushed Views get `leading=ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back")` instead of the iOS chevron; never `adaptive=True`. Accepted residual adaptations (D-10): overscroll physics (bounce on iOS, stretch on Android) and the text-selection toolbar and handles in selectable text (Markdown and text fields, see Selectable above). Intended difference: the Cupertino transition (D-11). Pinning the residual adaptations is **GAP** U19 (`Theme.platform` or a scroll-behaviour option).
+
+### 3.7 Icons (D-27, THEME-12)
+
+Material Icons only: `_OUTLINED` when unselected or decorative, filled when selected. Every icon named in this file exists in `ft.Icons`; the screen sections name the icon for each action. Brand logos (Python, PyPI, Mastodon, Bluesky, X, LinkedIn, YouTube, Discord) are bundled SVGs in `ft.Image`. Every icon-only button has a `tooltip`, which is also its accessible name. Fixed meanings: `CHEVRON_RIGHT` in-app, `OPEN_IN_NEW` external, `TUNE` filter, `SCHEDULE` time, `PLACE_OUTLINED` room, `WARNING_AMBER` overlap, `CHANGE_CIRCLE_OUTLINED` / `EVENT_BUSY_OUTLINED` / `NEW_RELEASES_OUTLINED` changed / removed / added, `CLOUD_OFF_OUTLINED` offline. Track icons (hub, §5.10): `MIC_NONE_OUTLINED` talks, `SCHOOL_OUTLINED` tutorials, `CO_PRESENT_OUTLINED` keynotes, `BOLT_OUTLINED` lightning talks, `FORUM_OUTLINED` open spaces, `ROCKET_LAUNCH_OUTLINED` sprints, `MEMORY_OUTLINED` AI, `TRANSLATE` charlas, `ARTICLE_OUTLINED` posters, `GROUPS_OUTLINED` events and summits. More rows: `PEOPLE_OUTLINE` speakers, `SELL_OUTLINED` session types, `STOREFRONT_OUTLINED` sponsors, `WORK_OUTLINE` jobs, `BUSINESS_OUTLINED` venue, `WIFI`, `SUPPORT_OUTLINED` help, `INFO_OUTLINE` about, `LANGUAGE` social, `SETTINGS_OUTLINED`, `ACCOUNT_CIRCLE_OUTLINED`, `QR_CODE_SCANNER` staff.
+
+### 3.8 Motion (D-34, THEME-09)
+
+- 150 ms toggles, 250 ms fades and `AnimatedSwitcher` swaps, 400 ms scroll-to-slot; `AnimationCurve.EASE_IN_OUT_CUBIC_EMPHASIZED` entering, `EASE_OUT` small changes.
+- No ambient motion: pins and highlights pulse at most twice; nothing rotates or auto-advances; FAB labels never collapse on a timer.
+- **Reduced motion:** `await ft.SemanticsService().get_accessibility_features()` at start and on resume (no change event, **GAP** U17). With `disable_animations` or `reduce_motion`, durations are 0, `Shimmer` becomes static placeholders, scrolls jump, pins are still. Every custom animation checks the flag (kept in `Prefs`, not persisted).
+
+### 3.9 Shared components (decisions §M names, grouped in `ui/`: `scaffold.py`, `rows.py`, `badges.py`, `states.py`)
+
+| Component | Flet building blocks | Spec | Accessibility |
+|---|---|---|---|
+| `AppScaffold` | `View(appbar, navigation_bar` or rail`, floating_action_button, controls=[SafeArea(...)])` | `AppBar(title, actions, elevation_on_scroll)`, title always visible; bar or rail on roots; back arrow on pushed Views | Title is the page name |
+| `SessionRow` | sketch below | Badges; title ≤ 3 lines; meta "9:25–10:10 AM · Room 104A"; speakers; optional elapsed `ProgressBar(bar_height=3)` | One phrase: "Talk. Title. 9:25 to 10:10 AM, Room 104A. Ana Lima."; star is its own stop |
+| `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add | Tooltip is the name; state announced |
+| `NoticeRow` | `Container(bgcolor=surface_container, Row[Icon(INFO_OUTLINE), Text, time])` | Notices, breaks, meals; no star; tappable only with content (SCHED-04) | "Notice. Registration opens, 7:00 AM" |
+| `TrackBadge` | `Container(bgcolor, border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))` | §3.4; not a `Chip` (Chips are interactive) | Text carries the meaning |
+| `TimeGutter` | 64 dp `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True)`, "9:25 AM" |
+| `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
+| `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
+| `StatusStrip` | `Row[Icon(16), Text(BODY_SMALL), TextButton("Refresh")]` + `ProgressBar(bar_height=2, value=None)` | Hidden when fresh (§4.2) | `live_region=True` |
+| `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM), FilledTonalButton?]` | One sentence, one way out | Live region on first show |
+| `SkeletonList` | `Shimmer` over 5 placeholder rows | Only with no data at all | "Loading schedule" |
+| `LocationCard` (P2) | `Card(OUTLINED, Row[Stack[Image(width=112), pin], Column[label, sublabel, floor]])` | Pin pulses twice; pushes the floor viewer | One button: "Show Room 104A on the Concourse level floor plan" |
+| `LinkTile` | `ListTile(leading, title, subtitle, trailing=OPEN_IN_NEW, on_click)` | Link rule §4.7 | `Semantics(link=True)`, "opens in browser" |
+
+```python
+import flet as ft
+
+
+@ft.component
+def FavoriteButton(selected: bool, on_toggle) -> ft.Control:
+    """The one favourite control (D-30): a 48 dp labelled star."""
+    tokens = use_tokens()
+    return ft.IconButton(
+        icon=ft.Icons.STAR_BORDER,
+        selected_icon=ft.Icons.STAR,
+        selected=selected,
+        selected_icon_color=tokens.favorite,
+        tooltip="Remove from My schedule" if selected else "Add to My schedule",
+        on_click=on_toggle,
+    )
+
+
+@ft.component
+def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
+    """A session in any list: one spoken phrase, plus a separate star."""
+    body = ft.Container(
+        ink=True,
+        on_click=on_open,
+        padding=ft.Padding.only(left=16, top=12, right=4, bottom=12),
+        content=ft.Column(
+            spacing=4,
+            controls=[
+                ft.Row(wrap=True, spacing=4, controls=[TrackBadge(b) for b in row.badges]),
+                ft.Text(row.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM, max_lines=3),
+                ft.Text(row.meta, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                ft.Text(row.speakers, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+            ],
+        ),
+    )
+    return ft.Row(
+        controls=[
+            ft.MergeSemantics(expand=True, content=body),
+            FavoriteButton(row.is_favorite, on_toggle),
+        ],
+    )
+```
+
+`SessionView` is a frozen view model from a pure query in `core/queries.py`; rows never format times themselves. Memoising rows on `(id, is_favorite)` is decided by spike S2.
+
+---
+
+## 4. Global patterns
+
+### 4.1 Screen states (D-32)
+
+| State | When | UI |
+|---|---|---|
+| Ready | Data present, fresh | Content, no strip |
+| Refreshing | Refresh running | Content stays interactive; `StatusStrip` with an indeterminate 2 dp bar |
+| Stale | Older than 6 h on conference days, 24 h otherwise | "Updated 9 h ago · Refresh" |
+| Offline | The last refresh failed with a network error (`Conference.problem == "offline"`; no `ft.Connectivity` before P3) | "Offline · schedule from Tue 10:42 AM"; Refresh still tries |
+| First load | No snapshot or cache, fetch running (rare, NEW-03) | `SkeletonList` |
+| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again" |
+| Empty | Nothing matches | `EmptyState` with a specific way out (§4.6) |
+| Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list |
+| Removed (P2) | Session left the latest feed while open | Content kept, inline note "Removed from the latest schedule" |
+
+No blocking loaders (SCHED-28 dropped); never a full-screen error while data exists (SCHED-14).
+
+### 4.2 Freshness and refresh (D-32, D-39, D-40)
+
+- Sources: bundled snapshot, then durable cache, then network; the best local copy renders at once.
+- Refresh on start; on resume when older than 15 min; every 15 min while Now or Schedule is visible; on Refresh. Time-dependent views recompute every 60 s while visible.
+- **GAP** U1 (`RefreshIndicator`): no pull-to-refresh. Interim: the strip's Refresh plus automatic refresh. When U1 is in the pinned Flet, one PR wraps the main lists (D-64).
+- A refresh never deletes the cache; a failure keeps the last good data (fixes EVT-07, SPON-08).
+- *(P2)* A refresh that changed the schedule shows "Schedule updated · 3 changes" with **Review**; unchanged refreshes are silent.
+
+### 4.3 Search (D-19, D-46, NEW-02)
+
+- One screen, opened from `SEARCH` on Now, Schedule, Map and More with a preset scope.
+- `AppBar(title=ft.TextField(autofocus=True, hint_text="Search sessions, speakers, rooms", border=ft.NoInputBorder(), keyboard_type=ft.KeyboardType.WEB_SEARCH, on_change=...), actions=[IconButton(CLOSE, tooltip="Clear search")])`; scope `Chip`s All · Sessions · Speakers · Rooms (P1) · Sponsors · Places (P2); results in sections with counts ("Sessions (12)"), sessions grouped by day.
+- 250 ms debounce; NFKD plus casefold; **all words must match**; over titles, description text (never HTML), speaker names, rooms, and in P2 sponsors, booths and venue places; all days.
+- Result taps push details; Back returns to the results with the query intact (§2.5). Search ignores Schedule filters and its no-results text says so.
+- A plain View rather than `ft.SearchBar`: simpler to test, normal Back.
+- The field is labelled "Search"; the summary ("12 sessions, 3 speakers") is a `Semantics(live_region=True)` text. *(could)* Recent queries before typing.
+
+### 4.4 Filters (D-20) and favourites (D-30, D-48)
+
+- **Filters:** only the Schedule has them, as a sheet of chips (§5.3). Whenever a track is hidden, including by default, a summary under the day tabs says so; `TUNE` shows a `Badge` dot only when filters differ from the default (D-20). They persist (the excluded list). My schedule, Now and Search ignore them.
+- **Favourites:** one control, the `FavoriteButton` star, on every session row and in the session app bar; swipe-to-favourite is dropped (SCHED-11). Add fills the star with `HapticFeedback().selection_click()` and no SnackBar. Remove shows "Removed from My schedule · Undo", because the row may vanish. Copy is "My schedule", never "favorite" or "successfully". Local, per conference year, no account; sign-out never clears it (D-55). *(P2)* The first favourite may trigger the reminders primer (§4.8).
+
+### 4.5 Feedback (D-29) and haptics
+
+- **Transient result, maybe undoable:** `SnackBar(behavior=SnackBarBehavior.FLOATING, duration=4000, action=SnackBarAction(...))`, one action: "Removed from My schedule · Undo", "Password copied".
+- **Persistent condition needing action:** `Banner(leading, content, actions)`: "Notifications are off · Open settings", "3 scans haven't synced · Sync now".
+- **Data status:** `StatusStrip`. **A result the user waits for** (sign-in errors, scan outcomes): in place.
+- **Choice in context:** `BottomSheet(show_drag_handle=True, use_safe_area=True)`: filters, permission primer, lead note.
+- **Before something destructive:** `AlertDialog(modal=True)` naming the consequence: "Sign out? 3 scans haven't synced."
+- **Unexpected error** (D-71): `@report_errors` shows "Something went wrong" (exception text in developer mode).
+
+Overlays go through `ft.use_dialog(dialog)` or `page.show_dialog(...)`; never close "whatever is on top" with a timed `pop_dialog()`. SnackBars sit above the bar (M3); no top toasts (Flet has no top SnackBar, F11).
+
+Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, chip toggled, tab re-tap; P3 scans: `light_impact()` accepted or queued, `medium_impact()` twice 120 ms apart for duplicates, `heavy_impact()` then `vibrate()` for denied.
+
+### 4.6 Errors and empty copy
+
+| Case | Title / body | Action |
+|---|---|---|
+| My schedule empty | "Nothing saved yet" / "Tap the star on any session to add it to My schedule. It works offline." | "Browse the schedule" |
+| Filters hide a day | "No sessions on Thursday match your filters" | "Clear filters" |
+| Search miss | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
+| No data, no network | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
+| Session / speaker not found | "This session isn't in the current schedule" | "Open schedule" / "All speakers" |
+| Next year not published | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
+| Sponsor not found (P2) | "We couldn't find this sponsor" | "All sponsors" |
+
+### 4.7 Links (INFO-14)
+
+In-app screen: push, `CHEVRON_RIGHT`. Web page: `UrlLauncher().launch_url(url, mode=LaunchMode.IN_APP_BROWSER_VIEW)`, `OPEN_IN_NEW`. Social profiles and maps: `LaunchMode.EXTERNAL_APPLICATION`. `tel:` and `mailto:`: external, with a Copy button beside them (no `can_launch_url` probe until U6). `Markdown` links go through `on_tap_link` with the same rule. External rows carry `Semantics(link=True)`.
+
+### 4.8 Permissions (D-61)
+
+Never at launch or on Welcome. Notifications (P2): on the first favourite or the first reminder switch, when the reminders capability is present. Camera (P3): on the first staff scan. Check with `await PermissionHandler().get_status(...)` (`flet-permission-handler`) and map its `PermissionStatus` (there is no "undetermined" member): `GRANTED`, `LIMITED`, `PROVISIONAL` → proceed; `DENIED` (never asked, or the OS may ask again) → a one-sentence primer `BottomSheet` ("Get a heads-up 10 minutes before your saved sessions start?", "Allow" / "Not now"), then the request: notifications through the E3 extension's `request_permission()` on both platforms (D-61, F17), the camera through `await PermissionHandler().request(...)`; `PERMANENTLY_DENIED` or `RESTRICTED` → no prompt, a `Banner` with "Open settings" (`await PermissionHandler().open_app_settings()`); `None` → treat the capability as unavailable. §6.9 and §7.2 use the same mapping. A denial never blocks a task.
+
+### 4.9 Time, dates and copy (D-35, DATA-12)
+
+- Times are always conference time (the year's IANA zone). When the device zone differs, Session detail, Now and Settings say "Pacific Time" and the Schedule shows a one-line note.
+- 12/24 h follows `page.media.always_use_24_hour_format`; otherwise "9:25 AM". Dates "Fri, May 14"; day headers "Friday, May 14"; ranges "9:25–10:10 AM" (no dash when start equals end); relative "in 25 min", "Started 10 min ago", "Ended".
+- US English, sentence case, verbs on buttons, no "successfully", no exclamation marks except the Welcome headline. Years, dates, names and URLs come from data. Spellings: "My schedule", "Open spaces", "Lightning talks", "Help & safety", "Wi-Fi".
+
+---
+
+## 5. Screens: attendee core (P0, P1)
+
+### 5.1 Now · `/now` (P1; SCHED-25, SCHED-26)
+
+**Purpose:** "what should I do next?" in every season. **Entry:** start destination (D-14), tab 1, reminder taps and deep links (P2).
+
+**Layout**
+1. `AppBar` "Now" with `SEARCH` (All).
+2. **Status header**, a brand moment (D-28): an indigo `Container` (16 dp radius; HC uses `primary`/`on_primary`) with "PyCon US {year}" and "Day 2 of 5 · Friday" / "Starts in 23 days" / "See you next year".
+3. `StatusStrip`, when needed.
+4. *(P3)* Staff card: `Card(FILLED)` with `ListTile(QR_CODE_SCANNER, "Scan badges", "Lead scanner · 3 pending")`.
+5. **Your next session**, when a saved session is ongoing or starts within 3 h: `Card(FILLED, bgcolor=primary_container)` with title, "in 12 min · Room 103ABC", `TextButton("Show room")` and the star.
+6. *(P2)* Schedule changes card: "2 saved sessions changed · Review".
+7. **Happening now** (a `SectionHeader` with a `live` dot): rows with start ≤ now < end, saved ones first, each with an elapsed bar.
+8. **Up next · 2:30 PM:** rows of the next start time, "Starts in 18 min".
+9. `TextButton("See the rest of today in Schedule")`: switches tab and scrolls to the next slot (user-initiated, allowed by D-18).
+10. *(P2)* Sponsor spotlight: one `mobile_banner` sponsor per app open, logo on a white tile, "Thanks to {name}, a {level} sponsor" (D-37).
+11. *(P2)* Quick info `FilledTonalButton`s: Wi-Fi, Help & safety, Venue & hours.
+
+**Seasons:** before the conference, items 5–9 become a countdown, key dates from `conference.toml` and "Build your schedule"; before a day's first slot, "First up today at 9:00 AM"; between slots, "Nothing in session right now"; after the last, "That's a wrap for today" + "See tomorrow"; after the conference, thanks, Sprints and recordings if the data links them.
+
+**Interactions:** rows push the session and Back returns to Now (Ionic returned to the Schedule root). Recompute every 60 s while visible (`use_effect` timer with `cleanup`) and at once on `AppLifecycleState.RESUME`. Schedule filters do not apply.
+
+**Accessibility:** the header is the first heading; the live dot is decorative; bars have `semantics_label="Elapsed"`, `semantics_value="60 percent"`; the next-session card is one phrase with a "Show room" action.
+
+**Improves on Ionic:** end times respected (Ionic kept the last slot "now" until midnight), a personal next session, seasons, Back to Now (SCHED-25, -26, SESS-12).
+
+### 5.2 Schedule · `/schedule` (P1; SCHED-01..04, -10, -13..17)
+
+**Purpose:** browse the programme and build My schedule. **Entry:** tab 2, Now's link, deep links.
+
+**Layout**
+1. `AppBar` "Schedule" with `SEARCH` (Sessions), `TUNE` ("Filter sessions", `Badge(small_size=8)` dot only when filters differ from the default) and an overflow (P2 "Schedule changes"; P4 "View source", NEW-09).
+2. `ft.Tabs(length=n_days, selected_index=day, on_change=...)` whose `content` is a `Column` of:
+   - `TabBar(tabs=[ft.Tab(label=DayLabel("Fri", "May 15"))])` as the first body row (**GAP** U10, no `AppBar.bottom`); today has a `badge` dot; scrollable past 5 days. A day without sessions (sprints) shows an empty state linking to Sprints.
+   - Filter summary whenever any track is hidden, the default included (D-20): "Hiding: Open spaces · Show all".
+   - `StatusStrip`; a one-line note "Times are Pacific Time (PDT)" when the device zone differs.
+   - `TabBarView(expand=True)`, one `ListView` per day.
+3. **Day list:** one item per slot (D-31): `Row[TimeGutter, Column[SessionRow...]]` under a 1 dp `Divider`, rows ordered by room; notices, breaks and meals are `NoticeRow`s. Each slot item has `key=ft.ScrollKey(f"slot-{iso}")` (a plain str or int key is never registered for `scroll_to`), and the list uses `build_controls_on_demand=False`, so `scroll_to(scroll_key=...)` reaches every slot, built or not on screen (F7; the busiest 2026 day has about 26 slots and 110 rows; S2 measures).
+4. Today only: a now line between the last started slot and the next, a 2 dp `primary` divider "Now · 10:42", updated every 60 s while visible.
+5. Extended `FloatingActionButton(icon=SCHEDULE, content="Now", tooltip="Jump to the current time")` on conference days; on another day's tab it reads "Today", switches tab, then scrolls.
+
+**Interactions:** swipe or tap to change day; rows push the session; the star toggles (§4.4). The day defaults to today during the conference, else the first day. On the first display of today's tab per app session, `await list_view.scroll_to(scroll_key=slot_key, duration=400)` goes to the current slot (else the next; 0 ms under reduced motion). It never re-jumps on Back, tab return, refresh or filter change (#313). *(could)* Long-press sheet: Add to My schedule, Share, Open room.
+
+**States:** §4.1; a day emptied by filters and the unpublished year as in §4.6.
+
+**Accessibility:** tabs read "Friday, May 15, today, tab 3 of 5"; gutter times are headings, so screen readers jump slot by slot; the now line reads "Current time 10:42 AM".
+
+**Improves on Ionic:** dated day tabs (SCHED-01); gutter for missing sticky headers (SCHED-02); labelled star, no swipe (SCHED-03, -11); global search (SCHED-05, -06); favourites move to My schedule (SCHED-07, -08); visible filters (SCHED-10); no blocking loaders (SCHED-13, -14, -28); scroll once, never on Back (SCHED-15, -16); per-view queries, so filters no longer leak (SCHED-17).
+
+### 5.3 Filter sheet (P1; SCHED-09, SCHED-10, EVT-04)
+
+`BottomSheet(show_drag_handle=True, draggable=True, scrollable=True, use_safe_area=True)` via `use_dialog`; not a route.
+1. "Filter sessions" with `TextButton("Reset")` (tooltip "Reset to default (hides open spaces)").
+2. Filter `Chip`s (`selected`, `show_checkmark=True`, `on_select`) under group headings: **Talks and keynotes** (Talk, Keynote, AI, Security, Charla, Lightning talks, Sponsor presentation); **Hands-on** (Tutorial, Summit); **Community** (Open space, Poster, Event); **Logistics** (Breaks and meals, Announcements). *(could)* "En Español only".
+3. `TextButton("What do these mean?")` pushes Tracks & session types.
+4. `FilledButton("Show 87 sessions")` with a live count; closes the sheet.
+
+Chips apply immediately to `Prefs`, so a swipe-dismiss keeps them (Ionic discarded changes). With all chips off: "Show 0 sessions", disabled, plus "Select at least one type". A chip reads "Talk, filter, selected".
+
+### 5.4 Search · `/search` (P1; NEW-02, SCHED-05, SPKR-02, EXPO-04)
+
+A global pattern: §4.3. Route shape per §2.5.
+
+### 5.5 Session detail · `…/session/<id>` (P1; SESS-01..12, NEW-06)
+
+**Purpose:** everything about one session, time and place first. **Entry:** every session row, Now, My schedule, search, speaker and room pages, reminder taps and deep links (P2).
+
+**Layout**
+1. `AppBar`: back arrow; actions `FavoriteButton`, `IconButton(SHARE_OUTLINED, tooltip="Share session")`, `PopupMenuButton` ("Open on us.pycon.org"; P2 "Add to calendar"; P4 "View source"). The title stays empty: the heading below names the page.
+2. **Header:** badges in `Row(wrap=True)`; the title in `HEADLINE_SMALL`, `selectable=True`, inside `Semantics(header=True)`; *(P2)* a Changed chip with the old value ("Moved from Room 102A").
+3. **When and where**, `Card(OUTLINED)` of `ListTile`s: `SCHEDULE` "Friday, May 15 · 9:25–10:00 AM" with "Starts in 25 min" / "Happening now" / "Ended"; `PLACE_OUTLINED` with the display location, pushing room detail with `?highlight=<id>`; multi-room plenaries add an `ExpansionTile` "+3 more rooms" (SESS-02); a "Pacific Time" note when zones differ.
+4. **Registration required** (tutorials, summits): `Card(FILLED)` with `INFO_OUTLINE`, "Registration required. Check your registration on us.pycon.org." and a link.
+5. **Speakers:** `SectionHeader` + `SpeakerRow`s; pseudo-speakers ("Hosted by …") are plain text (DATA-15).
+6. **About:** `Markdown(selectable=True, extension_set=MarkdownExtensionSet.GITHUB_WEB, on_tap_link=...)` over HTML converted once per feed version (D-44). Keynotes and panels add an eyebrow, abstract and speaker cards from `content.toml` (SESS-08).
+7. When relevant: the posters list "Posters (25)" (SESS-09); *(P2)* the job fair `LocationCard` (SESS-10); the open-space image and link (SESS-11). *(could)* "Also at this time".
+
+**Interactions:** Share (NEW-06) uses `await ft.Share().share_text("<title>\n<day> <time> · <room>\n<url>", share_position_origin=origin)` (the origin anchors the sheet on tablets, D-09); the URL pattern comes from `conference.toml` and applies to numeric ids only. *(P2)* Add to calendar shares an `.ics` (UTC, stable UID, `VALARM` 10 min) with `await ft.Share().share_files([ft.ShareFile.from_bytes(data, mime_type="text/calendar", name=f"{slug}.ics")], share_position_origin=origin)` (D-62, SESS-05); the native prompt waits for E4 (SESS-04).
+
+**States:** renders from cache instantly; not found per §4.6 (Ionic rendered a blank page); *(P2)* removed while open keeps the content with an inline note.
+
+**Accessibility:** title is heading level 1, sections level 2; each "When and where" tile is one phrase ("Room: 103ABC, button"). Check on devices that Markdown links are announced as links; if not, list them as `LinkTile`s.
+
+**Improves on Ionic:** time and place first (SESS-01); one room tile (SESS-02); labelled synced star (SESS-03); keynote data, not hard-coded copies (SESS-08); a real back stack, not `prevUrl` (SESS-12); working Share (NEW-06).
+
+### 5.6 My schedule · `/my-schedule` (P1; NEW-01, SCHED-07, -08, -12)
+
+**Purpose:** the personal agenda, in time order, with conflicts. **Entry:** tab 3, Now's next-session card.
+
+**Layout:** `AppBar` "My schedule" with an overflow (P2 "Export to calendar (.ics)" for all saved sessions and "Reminder settings"); `StatusStrip`; a `ListView` where past days collapse into one `ExpansionTile` "Earlier days (6 sessions)", then a `SectionHeader` per day and gutter slots holding only saved sessions. Today's ended sessions collapse into "Show 4 earlier sessions". Overlapping rows both show `WARNING_AMBER` (`warning`) and "Overlaps with "Typing deep dive"": a hint, not a blocker. *(P2)* Changed chips. *(could)* "Free 11:00 AM–1:30 PM · See what's on".
+
+**Interactions:** unstarring removes the row with Undo. On conference days the list opens at today's header once per app session: the header carries `key=ft.ScrollKey(f"day-{iso}")` and the list uses `build_controls_on_demand=False` (it is short), else the open scrolls to a computed `offset=`. Schedule filters never apply: a saved open space always shows.
+
+**States:** empty per §4.6; all past: "All your saved sessions are over" with "See what's on today"; *(P3)* after the first mock sync a one-time "Synced with your account" (D-55).
+
+**Accessibility:** the overlap is part of the row phrase; day headers are headings.
+
+**Improves on Ionic:** a place instead of a toggle with a hidden all-days mode (SCHED-07, -08); conflicts; local-first (SCHED-12).
+
+### 5.7 Speakers · `/more/speakers` and `…/speaker/<id>` (P1; SPKR-01..03)
+
+- **List:** `AppBar` "Speakers"; an inline filter as the first row, `TextField(prefix_icon=SEARCH, hint_text="Filter speakers", filled=True, border=ft.NoInputBorder())`, accent-insensitive, all words (SPKR-02); a lazy `ListView` with letter `SectionHeader`s and `SpeakerRow`s sorted by displayed name, folded (D-46). No paging, no pseudo-speakers. No match: "No speakers match "zz"" + "Clear". *(could)* An A–Z index (**GAP**: no fast-scroll control).
+- **Detail:** `AppBar` (Share only when a public speaker URL exists in the year data); centred `CircleAvatar(radius=48, foreground_image_src=..., content=initials)`, name (`HEADLINE_SMALL`, heading), track badges; **Sessions** with stars before the bio, because "when do they speak" comes next; **About** as `Markdown` with intercepted links. Ionic's banner and gold ring are dropped (they ignore dark and HC).
+
+### 5.8 Map · `/map` (Rooms P1, other panes P2; ROOM-01, MAP-01..03, MAP-07, MAP-08)
+
+- **P1:** `AppBar` "Map" with `SEARCH` (Rooms); the body is the Rooms list: natural sort (grouped by floor from `map.toml` in P2, "Other locations" last), `ListTile(leading=Icon(PLACE_OUTLINED), title="Room 103ABC", subtitle="Now: Building X · 26 sessions", trailing=CHEVRON_RIGHT)`. "Now:" only while something is on; *(P2)* seeded sprint-only rooms read "Sprints" (MAP-08). Skeleton, then "No rooms yet" (Ionic showed "Loading rooms…" forever).
+- **P2:** the body becomes `Tabs` with **Rooms · Floor plans · Expo · Job fair** as the first row and a `TabBarView`. The selected pane and each pane's zoom live in `ViewMemory` (D-18; Ionic destroyed panes). Map panes never scroll the page, so pans are not stolen. Overflow "3D venue tour" opens Concept3D in the in-app browser (no iframe). Search scope becomes Places (rooms, booths, venue spots).
+- **Floor plans:** `Card(OUTLINED)` per plan with a 16:10 thumbnail, title, subtitle and `OPEN_IN_FULL`, in Ionic's order; a tap pushes the floor viewer (§6.1).
+
+### 5.9 Room detail · `…/room/<slug>` (P1; ROOM-02..04)
+
+`AppBar` with the room name; *(P2)* `LocationCard`; "Now in this room" when something is on; a day `TabBar` (days with sessions, today first) and `SessionRow`s with display names (Ionic showed "Ai"). **Highlight:** with `?highlight=<id>` (`use_query()` until U9) that row gets `primary_container` for 2 s (static under reduced motion) and is scrolled to once: the row carries `key=ft.ScrollKey(f"session-{id}")` and the day list uses `build_controls_on_demand=False` (a room has few sessions a day), else the scroll uses a computed `offset=`. Ids compare as strings (Ionic's number-vs-string compare never matched). Returning never re-scrolls.
+
+### 5.10 Tracks & session types · `/more/tracks[/<slug>]` (P1; SCHED-21, -22, -24, EVT-04)
+
+- **Hub:** answers "what is a charla?" and "show me the charlas" in one place. `ListTile`s in three groups (Presentations; Hands-on; Community), each with a 40 dp tonal circle holding the track icon, the plural name, the legend line ("30–45 minute talks on a wide range of Python topics"), a count and a "New" badge from data. Keynotes, Lightning talks, Open spaces and Sprints link to their own pages.
+- **Track page:** `AppBar` with the plural name and overflow "Add all to My schedule"; an intro line; a lazy list with day headers, no paging. The posters track lists the 25 posters, not the collapsed row (SCHED-22). "Add all" covers every session of the track and goes straight to a SnackBar "Added 16 sessions · Undo" (no dialog: it is reversible, D-29; SCHED-24); not on open spaces. Clean slugs (`charlas`), not Ionic's `ais`/`lightning-talkss` (DATA-29); unknown slug → not found.
+
+### 5.11 Keynotes, open spaces, lightning talks, sprints (P1; SPKR-04, EVT-01..08)
+
+- **Keynotes** (`/more/keynotes`): one `Card(ELEVATED)` per keynote or panel from `content.toml` (shared with SESS-08; the loader fails loudly on unknown session ids): photo `Image(width=96, height=96, border_radius=48, fit=BoxFit.COVER, error_content=initials)`, name, role, a 4-line bio with "Read more", and a time-and-room `ListTile` with a star. Panels show a wrapping row of 64 dp avatars.
+- **Open spaces** (`/more/open-spaces`): `IconButton(ADD, tooltip="Propose an open space")` opens the sign-up URL from data; an intro line; a day `TabBar` derived from the data (Ionic called every other day "Sunday"); gutter slots of saveable rows with an optional 56 dp thumbnail. None yet: "No open spaces yet" + "Propose one".
+- **Lightning talks** (`/more/lightning-talks`): one page replacing Ionic's static page and track list: a `Card(FILLED)` with the year's copy and `FilledButton("Sign up for a lightning talk")`, a collapsed `ExpansionTile` "Think you can't do one?", the sessions with stars, and a "More info" `LinkTile`.
+- **Sprints** (`/more/sprints`): overflow "Sprint info on us.pycon.org" and "Submit a sprint project"; intro with dates from data; an inline filter (all words over name, submitter and description text, EVT-06); `Card(OUTLINED)` per project with logo (`fit=BoxFit.CONTAIN`, initials fallback), name, "by <submitter>", a 4-line description with "More", and "Project page". None yet: "No sprint projects yet" + "Submit a project". Refresh never wipes the cache (EVT-07).
+
+### 5.12 About this app · `/more/app` (P1 minimal, P2 full; INFO-03, INFO-04)
+
+Version and build from `pycon_us.__version__` and the build number (**GAP** U4); Python and Flet versions; "Conference data updated 2 h ago" and its source; "Built with Python and Flet" with links to the repository and flet.dev; licences; "Not an official PSF app" (D-36); "Report a problem with the app" (our repository). *(P2)* "Share log": `console.log` via `ShareFile.from_path` plus plain diagnostics, never secrets, emails or badge codes (D-72). Seven taps on the version row unlock Developer ("Developer options unlocked").
+
+### 5.13 Developer · `/more/developer` (P1, grows by phase; DEV-01, DEV-04..06, D-73)
+
+Always available when not embedded; in packaged builds after the unlock; a `warning`-tone `Chip("Developer")` in the app bar. Feed URL, time zone, **fake clock** (Now, Schedule and reminders follow it), read-only capability flags; cache age, "Refresh now", "Clear cached feed" (falls back to the snapshot); *(P2)* "Test reminder in 5 s" with the outcome inline (scheduled, muted, denied, not available in this build) and "Show welcome again"; *(P3)* the mock API base URL and "Clear staff data" (confirmed); "Share log"; "Reset app" (an `AlertDialog` naming what is lost, then `/welcome`).
+
+---
+
+## 6. Screens: conference companion (P2)
+
+### 6.1 Floor viewer · `…/plan/<plan>` (ROOM-05, MAP-05, INFO-13)
+
+A pushed full-screen View with an `AppBar` (back arrow, plan title, overflow "Reset view") over a `Stack`:
+1. `InteractiveViewer(min_scale=1, max_scale=natural_width / displayed_width, boundary_margin=...)` around `Stack[Image(fit=BoxFit.CONTAIN, semantics_label="Concourse level floor plan, Room 104C marked"), pin]`. The pin is placed from percentages once `on_size_change` reports the size. Flet's defaults (max 2.5, min 0.8) are overridden.
+2. A label `Card` outside the zoom layer, bottom-left in `SafeArea`: "Room 104C · Concourse level · Talk track", readable at any zoom.
+3. Zoom buttons bottom-right (`ZOOM_IN`, `ZOOM_OUT`, `CENTER_FOCUS_STRONG`), async handlers calling `await viewer.zoom(1.5)`, `zoom(1 / 1.5)`, `reset(animation_duration=250)`: the single-pointer alternative to pinch (WCAG 2.5.1).
+
+Pinch, pan, and double-tap (`GestureDetector(on_double_tap=...)`) for 2× or reset. The pin pulses twice, then stays still. Plans are re-encoded to ≤ 2048 px (S7 checks memory and tap accuracy).
+
+### 6.2 Expo hall · Map › Expo and `plan/expo?booth=<n>` (EXPO-01..05, SPON-04)
+
+- **Map | List** `SegmentedButton`; List first when the OS reports `accessible_navigation`.
+- **Map:** the viewer's zoom layer over the hall, with one hit area per booth: a `Container` placed from ratio geometry in `map.toml`, faintly outlined at all zooms, in `Semantics(button=True, label="Booth 613, Bloomberg")`. Background `surface` (Ionic letterboxed in near-black).
+- **Tap a booth:** it is selected (amber `#F2C14E` with a dark 2 dp outline, passing 3:1; Ionic's highlight was 1.7:1) and a **BoothCard** appears, a `Card` positioned at the bottom of the outer `Stack` in `SafeArea` (a modal sheet would block the map): logo, name, "Booth 613 · Visionary", `FilledTonalButton("Sponsor details")`, `TextButton("3 open roles")` when hiring, a 48 dp close.
+- **List:** booths by number with a `Chip("Sort by name")`; a row selects the booth on the map.
+- **`?booth=<n>`:** that booth selected with its card, no camera move; animated zoom waits for **GAP** U3 (EXPO-05 `later`). An unknown booth opens the List with "Booth 139 isn't on the map yet". Sponsor "Find booth" pushes this view, so Back returns to the sponsor.
+
+### 6.3 Job fair · Map › Job fair (MAP-04, SPON-10)
+
+The viewer (no pins) above sponsors with a table number, sorted by table: "T2 · Sentry · 5 roles"; a row pushes the sponsor.
+
+### 6.4 Schedule changes · `/schedule/changes` (NEW-04, D-47)
+
+**Entry:** "Schedule updated · Review", the Now card, Schedule's overflow, Settings › Data. `AppBar` with overflow "Mark all as seen"; "Affects My schedule" first (when it does), then "All changes"; groups by detection time ("Today, 10:42 AM"). Items: `ListTile(leading=Icon(CHANGE_CIRCLE_OUTLINED | EVENT_BUSY_OUTLINED | NEW_RELEASES_OUTLINED), title=..., subtitle=Text(spans=[TextSpan(old, style=TextStyle(decoration=TextDecoration.LINE_THROUGH)), TextSpan(" → "), TextSpan(new, style=TextStyle(weight=FontWeight.W_600))]), trailing=FavoriteButton)`. Unseen items have a 6 dp `primary` dot, seen 2 s after opening. A tap pushes the session; a removed one shows its last data with "Removed from the latest schedule" (never "cancelled": the feed's flag is always false). Empty: `HISTORY`, "No changes yet". Items read as sentences ("Building X: room changed from 102A to 103ABC. In My schedule."); strikethrough is never the only cue.
+
+### 6.5 Sponsors · `/more/sponsors` and `…/sponsor/<slug>` (SPON-01..05, SPON-09)
+
+- **List:** intro "PyCon US is possible thanks to these organizations."; a `SectionHeader` per level in `level_order`; the top level as full-width `Card`s (logo on a white plate, name, booth), the next two as `GridView(max_extent=200)` logo cards, the rest as `ListTile`s with a 48 dp white plate and "Booth 613". White plates keep dark logos legible in dark mode; `Image(error_content=initials)` offline. One node each: "Bloomberg, Visionary sponsor, booth 613". *(could)* "Has a booth", "Hiring" chips.
+- **Detail:** logo on a white plate (max 240 × 96) and a level `Chip`; a wrapping row of labelled actions, `FilledTonalButton(icon=STOREFRONT_OUTLINED, ...)` "Find booth 613", `OutlinedButton(icon=GROUPS_OUTLINED, ...)` "Job fair table T2", `OutlinedButton(icon=OPEN_IN_NEW, ...)` "Website"; **About** as selectable plain text keeping newlines; **Open roles** as `LinkTile`s parsed from real `<a href>` anchors (Ionic collapsed them into one unlinked paragraph). Slugs reproduce Ionic's exactly (SPON-02). Not found per §4.6.
+
+### 6.6 Job listings · `/more/jobs` (SPON-06..08)
+
+A job-fair `LocationCard` (pushes `plan/job-fair`); an inline search (250 ms, all words over company, role titles and plain text, never raw HTML); one `Card` per sponsor with a header row (logo, name, level chip, chevron to the sponsor) and role `LinkTile`s, "Show all 15 roles" past 5. No match: "No roles match "rust"" + "Clear search". Empty feed: "No job listings yet."
+
+### 6.7 Info pages (INFO-01..14, MAP-09..11)
+
+`AppScaffold`, title always visible, max 720 dp, content from `content.toml` (else converted feed HTML), rendered instantly with no modal loader (INFO-05).
+- **About PyCon US** (`/more/about`): a compact indigo band (name, dates, city; the third brand moment, D-28), the about text as `Markdown`, links to Help & safety, Venue & hours and the website.
+- **About the PSF** (`/more/psf`): the mission once (Ionic showed it twice); "Get involved", "Python resources", "Follow the PSF" `LinkTile`s with brand SVGs; `FilledButton("Donate to the PSF")`.
+- **Help & safety** (`/more/help`; merges CoC and Help, INFO-07, INFO-11): first in reading order, a **Report a concern** `Card(OUTLINED)` with an `error` outline and two large rows, "Call the CoC hotline" (`tel:`) and "Email the CoC team" (`mailto:`), each with Copy and an explicit label ("Call the Code of Conduct hotline, 562 662 4082"); then Information desk, Lost & found and Quiet room `LocationCard`s, the CoC summary and full text link, "Report a problem with the app". Contacts only from a verified public source, re-checked yearly (D-45).
+- **Wi-Fi** (`/more/wifi`): network and password as selectable `TITLE_LARGE` text with Copy; `FilledButton("Copy password")` → `ft.Clipboard().set(...)` → "Password copied"; "Wi-Fi by <sponsor>" from an explicit slug (Ionic matched "temporal").
+- **Venue & hours** (`/more/venue`): address `Card` with "Directions" (by `page.platform`: Apple Maps on iOS, `geo:` on Android, `EXTERNAL_APPLICATION`) and "Copy address"; a `Card` per service (Registration, Information desk, Swag pickup, Quiet room, Lost & found, Luggage) with hours (today in bold), a status chip ("Open now" in `live`, "Opens 7:30 AM", "Closed today"), a `LocationCard` and "Sponsored by" from data.
+- **Social media** (`/more/social`): hashtag `Chip`s that copy on tap (Ionic's did nothing); `LinkTile`s with brand SVGs, opened externally; the X logo follows the text colour.
+
+### 6.8 Welcome · `/welcome` (SHELL-02, STORE-07)
+
+No bar; full-bleed `#680579` in both themes, in `SafeArea`: the app icon (O-4; decorative, since the headline names the event), never the PyCon logo unless O-4 decides otherwise (D-36); "Welcome to PyCon US {year}" (`HEADLINE_SMALL`, white); "Long Beach, CA · May 12–18" (data); three icon rows ("Plan your schedule and save sessions", "Find rooms, booths and hours, even offline", "Get reminders before the talks you saved", the last only when reminders exist); a full-width `FilledButton("Get started")` that sets `pycon.onboarded` and replaces the route with Now; *(P3)* "Sponsor or staff? Sign in" when a mock URL is set; footnote "Built with Python and Flet by the community · Not an official PSF app". No permission prompt. After the conference: "Thanks for coming. See you next year."
+
+### 6.9 Settings · `/more/settings` and reminders (THEME-01, NOTIF-01..10, NEW-05)
+
+1. **Appearance:** a `RadioGroup` of `Radio` rows System (default) / Light / Dark; a `Switch` "High contrast" defaulting to the OS flag where reported (iOS, Android 34+), re-read on resume (D-23). Applied at once.
+2. **Reminders** (D-58..D-60): a permission card only when needed, mapped as in §4.8 (`DENIED` → "Allow notifications"; `PERMANENTLY_DENIED` or `RESTRICTED` → "Notifications are off in system settings." + `OutlinedButton("Open settings")`). Timing is inexact (D-59); an exact-timing option is considered only if S6 shows inexact reminders are too late; "Remind me before sessions in My schedule" `Switch` with a 5 · 10 · 15 min `SegmentedButton`; "Conference moments" (keynotes and panels, lightning-talk and open-space sign-ups, times from `content.toml`); *(could)* the next 5 reminders. Push-only categories, the master toggle and the FCM card are not shown (NOTIF-02, -04, -08, -11 dropped).
+3. *(P3)* **Start screen** for lead-retrieval staff: "Open the app on: Now / Lead scanner" (D-16).
+4. **Data:** "Updated 9:12 AM · Refresh now", "Times are in Pacific Time", "Schedule changes". Then **About this app**.
+
+Toggle rows are `ListTile(toggle_inputs=True)`: the whole row is the target and reads as one control. Toggles re-plan reminders silently, without a SnackBar each.
+
+**Interim until E3 is in the pinned Flet** (D-60, always in the `flet run` companion app, D-63): the Reminders section says "Reminders aren't available in this build. Your next session appears on Now, and calendar exports include an alarm." and shows no switches. While the app is open, 10 min before a saved session, a `Banner` "Typing deep dive starts in 10 min · Room 103ABC" offers "Open" and "Dismiss".
+
+---
+
+## 7. Screens: accounts and staff tools (P3, mock only)
+
+These exist only when a mock API base URL is set (D-51); the app never calls private PSF endpoints.
+
+### 7.1 Sign in and Account (AUTH-01..12, SHELL-13)
+
+- **Sign in** (`/more/sign-in`): "Only needed for sponsor and staff tools, and to sync My schedule." and "Connected to the local mock server". `AutofillGroup` with `TextField(label="Email", keyboard_type=KeyboardType.EMAIL, autofill_hints=[AutofillHint.EMAIL])` and `TextField(label="Password", password=True, can_reveal_password=True, autofill_hints=[AutofillHint.PASSWORD], on_submit=...)`. `FilledButton("Sign in")` is disabled with a `ProgressRing` while in flight. Distinct inline errors: "Email or password is incorrect.", "You're offline. Connect and try again.", "The server didn't answer. Try again." Afterwards, back to the origin; lead-retrieval accounts land on the Lead scanner (#310).
+- **Account** (`/more/account`): initials avatar, nickname, email; read-only access chips; "My schedule sync: up to date / 2 changes waiting"; "Speaker Discord" for speakers; `OutlinedButton("Sign out")` → "Sign out? Your saved sessions stay on this device.", or "3 scans haven't synced. Sign out anyway?" with "Sync now".
+- **Entry to tools** (SHELL-06, -07, -11): the More section and the Now card only; each tool is a pushed View; visibility from `staff_entries(flags)` with Ionic's gating.
+
+### 7.2 Shared scan screen (LEAD-01, -02, -09, -12, -13, D-65)
+
+1. `AppBar`: tool name and context ("Door check · Decorators, Wed 9:00 AM"); a **sync chip** ("All synced" / "3 pending" / "Offline · 3 queued") opening the queue sheet; a torch `IconButton(FLASHLIGHT_OFF, selected_icon=FLASHLIGHT_ON)` with E1; a `KEYBOARD` button focusing manual entry.
+2. **Camera area** (`expand`): the E1 preview when `capabilities.SCANNER` is true, with a scan window, "Point the camera at the badge QR code" and a "Tap to resume" pause overlay. Without E1 (companion app, or before E1 is pinned): "Camera scanning isn't available in this build." and manual entry is primary.
+3. **Result panel:** `AnimatedSwitcher` in `Semantics(live_region=True)`: icon, outcome word, name or code, details, "12 s ago"; stays until the next scan, dims after 5 s.
+4. **Manual entry:** `TextField(label="Badge code", on_submit=...)` taking the full `code:validator` payload, which USB and Bluetooth HID scanners also type before Enter; focus returns to it, so hardware scanning is continuous.
+5. Tool actions ("Add note", "Change session") in `SafeArea`.
+
+| Outcome | Visual | Haptics | Spoken |
+|---|---|---|---|
+| Accepted | `CHECK_CIRCLE`, white on `#146C2E`, "Checked in · Ada Lovelace" | light | polite |
+| Duplicate | `HISTORY`, `#1A1A1A` on `#F2C14E`, "Already checked in" | medium ×2 | assertive |
+| Denied | `BLOCK`, white on `#B3261E`, "Not registered for this session" + reason | heavy + vibrate | assertive |
+| Queued offline | `CLOUD_UPLOAD_OUTLINED`, neutral, "Saved. Will sync when online." | light | polite |
+
+`announce_message` only when `supports_announcements`; the live region covers the rest. One accepted result per code every 4 s; scanning pauses under dialogs and sheets. `Wakelock().enable()` while mounted, `disable()` on unmount. Camera permission per §4.8 (`DENIED` → primer, then request; `PERMANENTLY_DENIED` or `RESTRICTED` → "Camera access is off", "Open settings", "Enter codes instead"). The **queue sheet** (`BottomSheet(scrollable=True)`) lists pending and failed rows with time, name or code and last error, "Sync now" and "Retry failed"; states are words and icons: Queued, Confirmed, Failed.
+
+### 7.3 The four tools (O-7 order: lead → door → swag → CoC)
+
+- **Lead scanner** (`staff/lead`; LEAD-04..08, -10, -11): `Tabs` Scan · Leads (42). A consent screen on first use per account (not an alert): `Checkbox("I'll only scan with consent")` enables Continue; asked again after sign-out. Staff scanning for a sponsor see `Chip("For: Bloomberg")` and pick from a full-screen searchable list with Cancel. Results: captured → name + "Add note"; queued → "Saved. Will sync."; duplicate → "Already in your leads" + "Open lead" (Ionic was silent). Note sheet: Interest `SegmentedButton(allow_empty_selection=True)` Hot · Warm · Cold with icons, not emoji; follow-up `Chip`s; `TextField(multiline=True, max_length=4000)`. Leads: filter, lazy list with status icon and word, no 50-row cap.
+- **Door check** (`staff/door`; DOOR-01..07): category chips and a searchable, day-grouped session list → "Start check-in" → "Loading attendee list… 2 of 5" then "Ready, works offline" (or "Badges will be checked online" + Retry); scanning starts only then. "42 checked in" (`DISPLAY_SMALL`) stays visible above the result panel. Results show the name (O-7), dietary chips and a prominent allergy chip with `WARNING_AMBER`.
+- **Swag pickup** (`staff/swag`; SHIRT-01..04): categories → scan → a hand-out `BottomSheet(scrollable=True)` with a `Checkbox` per item (picked-up items disabled with the reason; available items pre-checked, O-7) and `FilledButton("Hand out 2 items")`. Online only: offline, scanning is disabled up front with "Swag pickup needs a connection".
+- **CoC incident** (`staff/coc`; MASK-01..05): "Scan a badge" or search the in-memory directory. Neither records directly: both open a review `AlertDialog(modal=True, scrollable=True)` with name, badge name, count in words and `TextField(label="What happened?", hint_text="What happened? Where? Witnesses?", multiline=True, max_length=2000, capitalization=ft.TextCapitalization.SENTENCES)` (the first positional parameter is `value`, so the prompt must not be passed positionally), then "Record incident". Neutral result ("Incident recorded. 3 on record."), cleared after 15 s and on backgrounding; email hidden until revealed (O-7); errors shown. Online only.
+
+---
+
+## 8. Tablets and landscape (D-09, SHELL-14, NATIVE-02)
+
+- **≥ 600 dp** (`page.width`, re-checked in `page.on_resize`): root Views swap the bar for `ft.NavigationRail(destinations=..., selected_index=..., label_type=ft.NavigationRailLabelType.ALL, group_alignment=-1)` with the same destinations (P2).
+- Reading screens max 720 dp and lists max 840 dp, centred on `surface`; floor plans use the full width.
+- Phone landscape is allowed and reflows; side insets come from `page.media.padding`.
+- *(could, later)* list-detail two-pane at ≥ 840 dp for Schedule and Speakers: it doubles the state paths, so it waits for need.
+
+---
+
+## 9. Accessibility checklist (every UI PR; D-33, D-93)
+
+- [ ] Every control has a name, role and state; icon-only buttons have a `tooltip`; toggles announce state (`selected`, `Semantics(toggled=...)`).
+- [ ] Rows read as one phrase (`MergeSemantics`); the star is its own stop.
+- [ ] Titles, section, day and gutter headers are `Semantics(header=True)`; reading order follows visual order.
+- [ ] Targets ≥ 48 × 48 dp; `visual_density` never reduced on rows.
+- [ ] Contrast test green (AA light and dark, 7:1 text in HC); no hard-coded greys (Ionic's `#808080` was 3.9:1).
+- [ ] At 200 % OS text and with iOS Bold Text, nothing clips or overlaps; no fixed heights around text.
+- [ ] Colour is never the only signal (badges have text, outcomes have icon and word).
+- [ ] Reduced motion honoured: no animation, static `Shimmer`, instant scrolls, still pins.
+- [ ] Every gesture has a button alternative (zoom buttons, expo List, manual scan entry).
+- [ ] Dynamic results use `Semantics(live_region=True)`; `announce_message` only where that cannot work and `supports_announcements` is true.
+- [ ] Images have `semantics_label`, or `exclude_from_semantics=True` when decorative.
+- [ ] Key controls have `Semantics(identifier="<screen>.<element>[.<key>]")` for `flet test`.
+- [ ] TalkBack and VoiceOver checked on the changed flow; the PR names the devices.
+
+---
+
+## 10. Open UX questions
+
+Each default applies until the owner decides. Decision-level questions (O-1 tabs, O-2 transitions, O-3 font, O-7 staff details) are in the decisions record.
+
+| # | Question | Default |
+|---|---|---|
+| UQ-1 | Bottom bar on pushed detail Views too? With one View per level each pushed View carries its own bar, which slides with the page | On every View, as D-17 and architecture §19 #6 require; S4 checks it in transitions. Roots only (re-tap scrolls to top) would amend D-17 through a `needs-decision` issue |
+| UQ-2 | The route shapes in §2.5 | Search: S4 confirms D-19 (global modal plus our `page.on_view_pop`). The `plan/<plan>` drill kind is in §M. Schedule changes returning to its opener: a `needs-decision` issue to amend §M |
+| UQ-3 | Breaks and meals on the Schedule: compact notices or hidden by default? | Shown as `NoticeRow`s |
+| UQ-8 | 2027 booth geometry: hand-tag with a Developer overlay that prints tapped ratios, or derive from a PDF? | Developer overlay |
+
+**Decided** (revisit only through a `needs-decision` issue): Open spaces hidden on the Schedule by default, shown as a filter state with the summary line (D-20); a one-sentence primer before asking for notifications on the first favourite or reminder switch (D-61); Speakers sorted by displayed name (D-46); no sponsor strip or carousel, a spotlight card instead (D-37); safety contacts, including any emergency number or first aid, only from a verified public source (D-45); "My schedule" with a star (D-13, D-30).

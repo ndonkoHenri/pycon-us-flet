@@ -1,900 +1,749 @@
-# Flet gaps and the extension roadmap
+# Flet gaps and upstream work
 
-**Status:** companion to [`PLAN.md`](../PLAN.md) §6, 2026-10-11. **Owner:** U. **Binding inputs:** PLAN.md, the decisions record ([`decisions.md`](decisions.md), D-01..D-136; this doc implements D-23..D-29, D-67, D-74..D-79, D-89, the §O spec and the amendments D-109, D-111..D-114, D-131..D-133), [`feature-matrix.md`](feature-matrix.md) (ids).
+**Status:** v2, 2026-10-11. It replaces the v1 spec (PSF-oriented, kept in git history).
+**Owner:** U. **Binding inputs:** [`PLAN.md`](../PLAN.md) §6 and §8, the decisions record ([`decisions.md`](decisions.md): D-58..D-65 for capabilities and notifications, D-81 for the Flet pin, D-97..D-99 for upstream work), and [`feature-matrix.md`](feature-matrix.md) for feature ids.
 
-This doc is the implementation spec for every Flet gap the 27.0 app works around: six extensions (**E1-E6**) and fifteen core/CLI items (**U1-U15**). For each one it gives the feature ids it serves, the interim that always ships, the target API, the wrapped Dart package and its exact version, platform setup, effort, owner, deadline and gate, tests, the `Caps` key and probe, and the steps to upgrade the app.
+This doc is the register and the spec for every piece of Flet the app needs but Flet lacks. Each item gives the feature ids it serves, the interim that ships now, the upstream work (with the wrapped pub.dev package and version), a Python API sketch modelled on the existing `flet-*` extensions, platform setup, effort, the gate (a capability constant for extensions, a Flet pin bump for core items) and the upgrade steps.
 
-**Conventions.**
-- **exists** = verified in the local monorepo (`flet-dev/flet` @ `7688de3`, 1.1.0 in development; the uv env reports `flet_version 1.0.4`) by introspection on 2026-10-11.
-- **proposed (Ux/Ex)** = does not exist yet. The name is the one this doc fixes (D-25: "final names belong in the flet-gaps doc"), and `platform/caps.py` probes exactly that name.
-- Dates without a year are 2026-10..12 or 2027-01..09, as in PLAN. **UNCONFIRMED** marks external dates nobody has confirmed.
-- Paths: `FLET` = `sdk/python/packages/flet/src/flet`, `CLI` = `sdk/python/packages/flet-cli/src/flet_cli/commands`, `TPL` = `sdk/python/templates/build/{{cookiecutter.out_dir}}`, `DART` = `packages/flet/lib/src` (all in the monorepo).
+Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, PWA, desktop, Cupertino and PSF-only items are cut (§1.3).
 
----
-
-## 1. Register at a glance
-
-| Id | Gap | Feature ids | Interim (always shipped, always tested) | Target | Caps key | Effort | Owner | Deadline / gate | Tier |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | QR badge scanning | LEAD-01, DOOR-04, SHIRT-02, MASK-04 | `ManualEntryScanner` (typed, pasted or HID-wedge `code:validator`) | `flet-barcode-scanner` on `mobile_scanner` 7.4.2 | `scanner` | M, 35 h | U | v0.1 on device 01-10; PyPI 0.2 by 02-19; G2 01-31; G-Staff 02-26 | T1 |
-| **E2** | FCM push (+ optional analytics) | NOTIF-01, 04, 06, 07, 08, 09, 11; NATIVE-04, 05, 06 | `BannerPoller` (app-config `banners[]`), PSF email/Discord | `flet-firebase` on `firebase_core` 4.15.0 + `firebase_messaging` 16.7.0 (+ `firebase_analytics` 12.6.0 only if OD-3, in the separate `flet-firebase-analytics` wheel, D-111) | `push`, `analytics` | L, 50 h | U | spike S8 by 11-30; **G3 02-12**; release by 03-05, else 27.1 | T3 |
-| **E3** | OS-scheduled reminders | NOTIF-05, NOTIF-07, DEV-06, NATIVE-06 | in-app reminder banners + `.ics` with `VALARM` | `zoned_schedule`/`cancel` added to the official flet-dev/flet#6948 package (`flutter_local_notifications` 22.3.1 + `timezone` 0.11.1) | `local_notifications` | M, 40 h (+U7 6 h) | FT (v1), U (scheduling) | #6948 v1 merged and released by 01-15 (UNCONFIRMED, FT); **G3 02-12**; scheduling in the Flet 1.1.x point release by 02-26; else 27.1 | T3 |
-| **E4** | Native add-to-calendar | SESS-04 | `.ics` via `ft.Share.share_files` (SESS-05) | `flet-add-to-calendar` on `add_2_calendar` 3.1.1 | `calendar` | S, 20 h (+U6 6 h) | CC/U | **G3 02-12**; 03-05 or 27.1 | T3 |
-| **E5** | HTML rendering | INFO-05, DATA-23, DATA-25, SESS-06, MAP-09 | `core/html_md.py` → `ft.Markdown(on_tap_link)` | `flet-html` on `flutter_widget_from_html_core` (0.17.4 today) | `html` | M | CC | 27.1 sprint (05-17/18, UNCONFIRMED) | post |
-| **E6** | Revealed swipe buttons | SCHED-11 | `ft.Dismissible` + `await confirm_dismiss(False)` + long press + star | `flet-slidable` on `flutter_slidable` (4.0.3 today) | `slidable` | S | CC | 27.1 sprint | post |
-| **U1** | Pull-to-refresh | SCHED-13, SCHED-26, EVT-07, SPON-08, LEAD-13 | AppBar refresh `IconButton` + `ProgressBar` (D-67) | `ft.RefreshIndicator` | `refresh_indicator` | S, 8 h | U | merged 01-15 | T0 upgrade |
-| **U2** | Sticky slot headers | SCHED-02 | non-sticky dividers (D-71) | `ft.GroupedListView` + `ft.ListGroup` | `sticky_headers` | M | FT/CC | 27.1 | post |
-| **U3** | Animated booth zoom | EXPO-05 | `reset()` → `zoom(6)` → `pan(dx,dy)` on an `InteractiveViewer(max_scale=8)` (default 2.5 clamps) | `InteractiveViewer.set_transform()` / `zoom_to_rect()` | `iv_set_transform` | S, 10 h | U | 02-12 | T2 |
-| **U4** | App version at runtime | INFO-03 | CI-written `build_info.py` | `page.get_app_info()` → `ft.AppInfo` | `app_info` | S, 4 h | U | merged 01-15 | T0 upgrade |
-| **U5** | iOS entitlements | NOTIF-04, NATIVE-04, NATIVE-07 | push off; autofill by OS heuristics | `[tool.flet.ios.entitlement]` + `--ios-entitlements` | config | S, 8 h | U | merged 01-31; released by 02-26 | gates E2 |
-| **U6** | Android `<queries>` | SESS-04, INFO-14 | never call `can_launch_url`; `.ics` | `[tool.flet.android.queries]` | config | S, 6 h | U | 01-31, only if E4 pursued | gates E4 |
-| **U7** | Core library desugaring | NOTIF-05 | E3 interim | `[tool.flet.android] core_library_desugaring = true` | config | S, 6 h | U | 01-31, only if E3 pursued | gates E3 |
-| **U8** | Resource meta-data | NATIVE-07 | autofill heuristics | inline-table `[tool.flet.android.meta_data]` + `[tool.flet.android.string_resources]` (part 2 added by D-112) | config | S, 5 h (D-112) | U | 01-31, only for the autofill upgrade | T3 |
-| **U9** | Query-string hook | ROOM-03, SPON-04 | `use_query()` parses `page.route` (D-37) | `ft.use_route_search()` | helper probe | XS | U | 02-12 | T2 |
-| **U10** | `AppBar.bottom` | SCHED-01 | day selector as first row of `View.controls` | `AppBar.bottom` + `bottom_height` | - | S | CC (PyCon sprint candidate, U reviews) | post-conference | post |
-| **U11** | Offline PWA | NATIVE-09 | online-only PWA (D-93) | Flet-generated service worker | - | M | FT | post-conference | post |
-| **U12** | iOS deployment target | NATIVE-02 | iOS 15 floor (template) | `[tool.flet.ios] deployment_target` | build | S | U | 12-15, **only if** spike S10 finds a pod needing > iOS 15 | conditional |
-| **U13** | App privacy manifest | (store; R9) | none needed unless ITMS-91053 | template `ios/Runner/PrivacyInfo.xcprivacy` | build | S | U | 12-15, **only if** spike S5 reports ITMS-91053 | conditional |
-| **U14** | Verified App Links | (deep links, D-38) | custom scheme `pyconus://app` | `[tool.flet.android.deep_linking] auto_verify`, multiple hosts | - | S | U (reuses U5's entitlement plumbing) | post-conference | post |
-| **U15** | Non-fatal handler errors | (cross-cutting; PLAN §5.8, D-85) | `@safe` on every handler and effect | `ft.set_error_handler()` + `fatal_errors` option | helper probe | S | U | 02-12 | T2 |
-
-**Release vehicles.**
-- E1, E2 and E4 (and E5/E6) are standalone PyPI wheels (§2.6). E3 ships inside the flet-dev/flet monorepo with a Flet release, at Flet's version (PLAN §6.1, D-20): the scheduling PR rides the 1.1.x point release by 02-26, or a 1.2 released before the 03-05 pin.
-- U5-U8 ship in a **1.1.x point release by 02-26** (D-22, OD-19).
-- U1, U3, U4, U9 and U15 target the same point release. If FT policy puts new core API in 1.2 instead, they light up only if 1.2 is released before the **03-05** pin (D-21); otherwise their interim ships. No 27.0 feature needs them.
-- U2, U10, U11 and U14 are 27.1 or later.
-
-**Probe vs config vs build.**
-- Probe items light up through `Caps`.
-- Config items (U5-U8) need no app code: they are `pyproject` tables added in the release that ships the dependent feature (D-89).
-- Build items (U12, U13) change the template and are invisible to the app.
+**Conventions**
+- **exists**: verified in the local monorepo (`flet-dev/flet` at `9fbe52a61`, unreleased 1.1.0) by introspection or by reading the source on 2026-10-11.
+- **proposed**: does not exist yet. The names here are our proposal. The Flet team has the final say, and if they choose a different name, only the one app module that imports it changes.
+- **Paths** in the monorepo:
+  - `FLET` = `sdk/python/packages/flet/src/flet`
+  - `CLI` = `sdk/python/packages/flet-cli/src/flet_cli/commands`
+  - `TPL` = `sdk/python/templates/build/{{cookiecutter.out_dir}}`
+  - `DART` = `packages/flet/lib/src`
+- **Effort**: XS ≤ ½ day, S 1–2 days, M about a week, L more; each includes tests, docs and a changelog entry.
+- **Phases** are the PLAN §7 milestones. No item here has a date (D-02).
 
 ---
 
-## 2. Rules common to every extension (E1-E6)
+## 1. Register
 
-### 2.1 Compatibility policy (D-20, D-23)
+### 1.1 Priority order (D-98)
+
+| # | Id | Gap | Feature ids | Interim (ships now) | Upstream piece | App needs it | Effort | Status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7 and the Android receivers | P2 (spike S6 during P1) | M | #6948 is an open issue (v1 scope, no scheduling); no PR yet |
+| 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
+| 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
+| 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
+| 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` plus the build number constant (D-83) | `page.get_app_info()` | P2 | XS | proposed |
+| 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
+| 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P2 | XS | proposed (one PR with U16) |
+| 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
+| 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
+| 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
+| 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
+| 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed |
+| later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
+| later | **E5** | HTML rendering | DATA-23, DATA-25, SESS-06, INFO-05, MAP-09 | `core/html_md.py` → `ft.Markdown` (D-44) | Extension over `flutter_widget_from_html_core` 0.17.4 | later | M | proposed |
+| low | **E2** | FCM push | none: the app has no push (D-58) | n/a | `firebase_messaging` 16.7.0 (+ U5) | never, in this app | L | a Flet contribution only |
+
+**Conditional CLI and template items.** We do these only when a feature or a spike needs them (D-98).
+
+| Id | What | Needed by | Status |
+|---|---|---|---|
+| **U7** | Core library desugaring in the Android `:app` module | E3: `flutter_local_notifications` requires it **even without scheduling**, so #6948 v1 must solve it | needed (§4.1) |
+| **U6** | Extra Android `<queries>` entries | E4; `can_launch_url` (INFO-14, which avoids it) | only with E4 |
+| **U12** | Configurable iOS deployment target | A pod needing more than iOS 15 | **not needed**: pod minimums are 11.0–13.0 (§6) |
+| **U13** | App-level `PrivacyInfo.xcprivacy` | ITMS-91053 in the S5 TestFlight upload | only if S5 reports it |
+
+### 1.2 Deep links: no gap
+
+Deep links (NEW-07, D-21) use what exists: the per-platform tables `flet build` reads for Android and iOS (`CLI/build_base.py:1422-1437`) and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-55`) and Info.plist entry. The owner's open PR [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953) (fixes #6951) makes the common `[tool.flet.deep_linking]` table a per-key fallback on Android and iOS. We configure **both per-platform tables**, so links work with or without #6953 in the pinned Flet (F16); collapsing them later is optional.
+
+```toml
+# pyproject.toml (P2). The scheme follows the app identity (O-4); "pyconus" is a placeholder.
+[tool.flet.android.deep_linking]
+scheme = "pyconus"
+host = "app"
+
+[tool.flet.ios.deep_linking]
+scheme = "pyconus"
+host = "app"
+```
+
+Reminder taps (E3) reuse the same paths, so a notification and a link both land on "root with the target pushed" (D-21).
+
+### 1.3 Cut or noted
+
+**Cut** (D-98), each with the reason:
+
+| Id | Item | Why cut |
+|---|---|---|
+| E6 | `flet-slidable` | Swipe-to-favourite is dropped (SCHED-11); a visible star replaces it (D-30) |
+| U5 | `[tool.flet.ios.entitlement]` | It served push (`aps-environment`) and PSF credential sharing. Local notifications need no entitlement |
+| U8 | Android meta-data / string resources | It served `asset_statements` for us.pycon.org credential sharing (NATIVE-07, dropped) |
+| U11 | Offline service worker for `flet build web` | No web target (D-08) |
+| U14 | Verified App Links / universal links | They need the PSF domain (D-21) |
+
+**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists two as later candidates (U19, U20); the rest get an id only when a feature needs them, and the last three are small fixes the owner can file directly.
+
+| Gap | Interim | Possible upstream piece |
+|---|---|---|
+| `Theme.platform` (U19, D-98) | Pin the iOS-adaptive defaults by hand: bundled font, `center_title=False`, Material back arrow (D-10) | `Theme.platform` |
+| Contrast level / scheme variant | Hand-authored high-contrast overrides (D-23) | `Theme.contrast_level`, `color_scheme_variant` |
+| `TextStyle.font_features` | Roboto, whose digits are tabular (D-26) | `font_features` |
+| Bottom-sheet detents, non-modal sheet | Fixed-height `BottomSheet`; a positioned `Card` for the booth card | Detents / persistent sheet |
+| Secure screen (`FLAG_SECURE`, iOS snapshot blur) for staff PII | Clear result panels when the app goes to the background (P3) | A `page` flag |
+| Multi-weight families in `page.fonts` (one static file per family, no weights) (U20, D-98) | Declare the Roboto 400/500/700 family through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26) | `page.fonts` accepting a family with weighted files; schedule it only if S5 shows the pubspec route fails |
+| An `async def` `use_effect` cleanup is cancelled before it starts on a dependency change (F2) | Sync cleanups only (D-70 rule 3) | In the setup branch, cancel only the previous setup task, so async cleanups run |
+| `flet debug android\|ios --show-devices` exits with "Device ID must be specified": `check_device_id()` runs before the `--show-devices` branch (flet-cli `commands/debug.py:108-110`) | `flet devices` | Run the device check after that branch |
+| `flet_app` docstring (`flet/pytest_plugin.py:132`) says the bound page is the tester session, but in device mode `flet_app.page` raises `RuntimeError` | Flows use `flet_app.tester` only ([`testing-and-quality.md`](testing-and-quality.md) §5.1) | Fix the docstring |
+
+---
+
+## 2. How the app lives with a gap
+
+### 2.1 Capability constants (D-63)
+
+An **extension** is used only when the app runs as a packaged build **and** the extension is bundled. `flet run --android/--ios` runs Python on the laptop with the companion app. The companion bundles only the first-party extensions registered in the monorepo's `client/lib/main.dart` (camera, permission_handler, secure_storage and others), so those work under `flet run`. It has none of the extensions this doc proposes, so it must never receive an E1/E3/E4/E5 control. The packaged build template sets `FLET_PLATFORM`, and `flet.utils.is_embedded()` checks that variable (`FLET/utils/platform_utils.py:70`, exists; F14). The companion app is therefore never "embedded", which gives exactly that. If the Flet team later adds the #6948 extension to the companion, the gate stays conservative but still correct.
+
+```python
+"""Optional extensions this build can use (D-63).
+
+A capability is on only in a packaged build that bundles the extension.
+The `flet run` companion app is never embedded, so it always gets the interim.
+"""
+
+import importlib.util
+
+from flet.utils import is_embedded
+
+
+def available(module: str) -> bool:
+    """Return True when running packaged and `module` is importable."""
+    return is_embedded() and importlib.util.find_spec(module) is not None
+
+
+REMINDERS = available("flet_local_notifications")  # E3; module name from #6948
+SCANNER = available("flet_barcode_scanner")  # E1; proposed name
+```
+
+Rules:
+- One `services/` module per capability imports the extension and owns its fallback: `services/reminders.py` (E3) and `services/scanner.py` (E1). Screens never import an extension.
+- The extension is listed in `[project].dependencies` with an exact pin, in a dependency PR of its own (D-92) merged just before the PR that adopts it. `uv sync` installs it in the development venv too, which is harmless: under `flet run`, `is_embedded()` is False, so the capability stays off.
+- The Developer screen (D-73) shows the constants read-only; nothing changes them at runtime. Interims are exercised in the companion app (never embedded) and by the unit tests.
+- Each capability module has one unit test: when not embedded, it chooses the interim.
+
+**Core gaps (U-items) get no runtime detection** (D-64). The app pins one Flet version (D-81). After the PR that pins a release with the piece, one PR swaps the interim for the real thing and deletes the interim (D-92).
+
+### 2.2 Interims and tracking
+
+- Every interim is usable, tested and honest, with no controls that do nothing. A missing capability is said in plain words, e.g. "Reminders aren't available in this build" (D-60). An interim is removed only by a tested dependency or pin change here, never because an upstream issue closed (D-64).
+- Each item is an `upstream` issue here, linking the flet-dev issue or PR. It goes in the milestone of the phase that needs it (D-89); items whose app need is "later" or "never" have no milestone until a phase adopts them. App issues that wait on it are `blocked`, and the interim ships meanwhile (D-97). Spikes S6 and S8 are `Spike:` issues labelled `test`, with verdicts in `docs/spikes/` (D-91).
+
+### 2.3 Developing against an unreleased piece (D-81, F18)
+
+Until 1.1.0 is on PyPI, the app builds against the monorepo at a pinned commit: the git-ignored `.flet-src` checkout at the SHA in `.flet-ref` ([`development.md`](development.md) §2.2). A first-party extension from the monorepo is taken from that same checkout, never from a live working copy, so development and `flet build` use the matching Python and Dart code. List it in `[project].dependencies`, then add one line to each of the two **existing** tables in `pyproject.toml`:
+
+```toml
+[tool.uv.sources]   # existing table: the development venv
+flet-local-notifications = { path = ".flet-src/sdk/python/packages/flet-local-notifications", editable = true }
+
+[tool.flet.dev_packages]   # existing table: what flet build bundles
+"flet-local-notifications" = ".flet-src/sdk/python/packages/flet-local-notifications"
+```
+
+- `dev_packages` only rewrites names already listed in the dependencies (`CLI/build_base.py:2616-2641`), and relative paths resolve against the project root. A missing path is passed through as `name @ path`, which pip rejects.
+- Without the `[tool.uv.sources]` line, uv would resolve the unrelated PyPI `flet-local-notifications` (§6), which pins `flet==0.28.3`.
+- Never add a second `dev_packages` key under `[tool.flet]`: the table already exists, and TOML forbids defining it twice.
+
+flet-cli run from a source checkout already uses the local build template and overrides the Dart `flet` package with the monorepo path (F18). Moving the pin is its own PR (D-92).
+
+### 2.4 Generic upgrade steps (every item)
+
+1. The piece is merged in flet-dev and in the Flet commit or release we pin. A separate PR bumps the pin (D-81, D-92) and says why. The swap follows in its own PR.
+2. **Extensions:** a dependency PR adds the exact pin to `[project].dependencies` (§2.1); the adoption PR then adds the item's platform setup (its section below) and runs the item's device checks. The capability constant turns on by itself in packaged builds.
+3. **Core items:** replace the interim at its call sites, delete the interim code and its tests, add tests for the new path.
+4. Update this register (status), `PLAN.md` §6 if the priority table changes, and the matrix rows the item serves.
+5. Close the `upstream` issue and unblock the app issues.
+
+---
+
+## 3. Rules for the new extensions (E1, E3 scheduling, E4, E5)
 
 | Rule | Value |
 |---|---|
-| Home | Standalone Apache-2.0 repos in the `flet-dev` org: `flet-dev/flet-barcode-scanner`, `flet-dev/flet-firebase`, `flet-dev/flet-add-to-calendar` (E5/E6 likewise, at the sprint). E3 lives where #6948 lives (§4). Moving into the monorepo is a post-conference option (OD-14), using the integration checklist in `.agents/skills/implement-flet-extension/SKILL.md`. |
-| Python | `requires-python = ">=3.10"`, `dependencies = ["flet>=1.1.0,<2"]`; independent `0.x` versions; pure `py3-none-any` wheel carrying the Dart package as package data |
-| Dart | `flet: ^1.1.0`, `flutter: ">=3.47.0"`, `sdk: '>=3.3.0 <4.0.0'` (from the `flet create --template extension` scaffold). The wrapped package is pinned **exactly** (`mobile_scanner: 7.4.2`, not `^7.4.2`) |
-| UI imports | `package:flutter/widgets.dart`, plus `package:material_ui/material_ui.dart` / `package:cupertino_ui/cupertino_ui.dart` where needed, with `material_ui: ^1.6.0` (same constraint as `packages/flet/pubspec.yaml`). **Never** `package:flutter/material.dart` or `cupertino.dart` |
-| CI | Every PR: build and test against the newest released Flet 1.1.x. Nightly: build against `flet@main`, with `[tool.flet.flutter.pubspec.dependency_overrides] flet = { git = ... }` in the example app ("Prerelease compatibility" in `website/docs/publish/index.md`) |
-| App side | Exact pin in `[tool.flet.android].dependencies` / `[tool.flet.ios].dependencies` only (D-89). Never `[project].dependencies`, because the web build and `flet run` must not see them. No editable `[tool.uv.sources]` in release builds |
-| Spike | **S7** (M0, by 11-13): a standalone wheel builds and registers through `[tool.flet.<platform>].dependencies`, and `mobile_scanner` renders under the material_ui gate |
+| Home | The Flet team decides; likely next to the existing `flet-*` packages in the monorepo (D-99). First-party extensions are released with Flet and share its version (`flet-secure-storage`, `flet-permission-handler` and `flet-camera` are 1.0.4 on PyPI, like `flet`). |
+| Clean room | Written from the wrapped package's pub.dev docs and Flet's own extensions. The GPL-3.0 `AyberkA0/flet-barcode-scanner` is never opened, and PRs say so (D-99). |
+| Licences | All wrapped packages are BSD or MIT; re-check at every bump. |
+| Dart pin | Exact (`mobile_scanner: 7.4.2`, not `^7.4.2`), as `flet-secure-storage` does with `flutter_secure_storage: 10.3.1`. |
+| UI imports | `package:flutter/widgets.dart`, plus `package:material_ui/material_ui.dart` when Material is needed, with the same constraint as `packages/flet/pubspec.yaml` (`material_ui: ^1.6.0`). Never `package:flutter/material.dart` (monorepo skill `implement-flet-extension`, "Third-party Dependency Gate"). |
+| Packaging | `[tool.setuptools.package-data] "flutter.<dart_pkg>" = ["pubspec.yaml", "lib/**"]`, as in `flet-secure-storage`. Add `"android/**"` only if the package must carry an Android module (§4.1). |
+| Registration | `flet build` copies each bundled `flutter/<pkg>` and adds it as a path dependency (`CLI/build_base.py:2032-2078`). The app needs no pubspec edits. |
 
-How the build picks an extension up: `flet build` installs the platform dependencies into site-packages and finds every `flutter/<dart_pkg>/pubspec.yaml`. It adds each one as a path dependency (`CLI/build_base.py` "Registering Flutter user extensions") and generates the `Extension()` registration. No `pubspec` editing is needed in the app.
+**Python patterns (exists).** Services (E3, E4) are `@ft.control("Name") class Name(ft.Service)`; visual controls (E1, E5) subclass `ft.LayoutControl`, like `flet_camera.Camera`. Events are `on_x: Optional[ft.EventHandler[XEvent]]` with `@dataclass class XEvent(ft.Event["Name"])`; payload fields must not reuse `ft.Event`'s `name`, `data` or `control`. Methods are `async def` wrappers over `self._invoke_method(...)`, so callers are `async def` (F1). Enum values are the Dart enum's `.name`. On the Dart side every `control.getX("prop", default)` repeats the Python default, which is never sent over the wire.
 
-### 2.2 Python patterns (from `flet-geolocator`, `flet-permission-handler`, `flet-secure-storage`, `flet-camera`)
+**The material_ui gate** applies to visual extensions (E1, E5):
+1. Static: `lib/` imports no `package:flutter/material.dart`, and a reviewed list names the upstream widgets we instantiate.
+2. Runtime: render the control in a plain Flet page on the emulator and the simulator, in every state reachable without hardware. The log must contain no "No Material widget found" and no `FlutterError`.
+3. Upgrade guard: the resolved upstream version equals the pin (`pubspec.lock`).
 
-| Element | Pattern (exists) |
-|---|---|
-| Non-visual | `@ft.control("Name") class Name(ft.Service)`. Construction registers the service with the current page (`Service._auto_register = True`). Set client props and handlers in `init()`; `self.page` is not attached yet inside `init()` |
-| Visual | `@ft.control("Name") class Name(ft.LayoutControl)`; Dart wraps the widget in `LayoutControl(control:, child:)` |
-| Props | dataclass fields with defaults. Value types use `@ft.value`. Enums are `Enum` with the **Dart enum `.name` as value** (`QR_CODE = "qrCode"`) so Dart can `parseEnum(...)` |
-| Events | `on_<name>: Optional[ft.EventHandler[XEvent]] = None`, where `@dataclass class XEvent(ft.Event["Name"])` adds payload fields. Dart calls `control.triggerEvent("<name>", {...})`, and `BaseControl._trigger_event` builds `XEvent` from the dict (`from_dict(XEvent, {control, name, **payload})`). **Never name a payload field `data`, `name` or `control`**: they are base `ft.Event` fields, and redeclaring `data` (a kw-only default on the base) raises `TypeError` at class definition |
-| Methods | `async def m(self, ...) -> T: return await self._invoke_method("m", {...}, timeout=...)`. Always coroutines: callers must be `async def` (decisions §N.1) |
-| Platform guard | `if self.page.web: raise ft.FletUnsupportedPlatformException(...)` (the geolocator pattern), or a `before_update()` check (the permission_handler pattern) |
-| Packaging | Standalone extensions (E1, E2, E4-E6; the `flet create --template extension` form): `[tool.setuptools.package-data] "flutter.<dart_pkg>" = ["**/*"]`. Monorepo first-party extensions (E3's #6948 package) use `["pubspec.yaml", "lib/**"]` (`flet-geolocator`, `flet-camera`), so an `android/` dir does not reach their wheel unless `"android/**"` is added (§E3) |
-
-### 2.3 Dart patterns
-
-```dart
-// lib/<pkg>.dart
-library flet_barcode_scanner;
-export "src/extension.dart" show Extension;
-
-// lib/src/extension.dart
-class Extension extends FletExtension {
-  @override
-  Widget? createWidget(Key? key, Control control) =>            // visual (E1, E5, E6)
-      control.type == "BarcodeScanner" ? BarcodeScannerControl(key: key, control: control) : null;
-  @override
-  FletService? createService(Control control) =>                 // services (E2-E4)
-      control.type == "AddToCalendar" ? AddToCalendarService(control: control) : null;
-}
-```
-
-- Services extend `FletService`. They register `control.addInvokeMethodListener(_invoke)` in `init()`, (re)subscribe streams in `update()` only when `control.hasEventHandler("x")`, and cancel everything in `dispose()` (the `GeolocatorService` pattern).
-- Widgets are `StatefulWidget`s. They own the controller in `initState`, react in `didUpdateWidget`, and remove the listener in `dispose` (the `CameraControl` pattern).
-- **Default value matching (critical).** Every `control.getX("prop", default)` repeats the Python default, because defaults are not sent over the wire.
-- Throw a small exception class from `_invoke` to surface errors to Python (the `_GeolocatorException` pattern).
-
-### 2.4 The material_ui gate test (SKILL.md §"Third-party Dependency Gate")
-
-This test is required for every **visual** extension (E1, E5, E6). Services (E2-E4) build no widgets, so for them it is moot.
-1. **Static.** A CI step fails if `lib/` contains `package:flutter/material.dart` or `cupertino.dart`. A reviewed allowlist names the upstream widgets we instantiate.
-2. **Runtime.** An integration test renders the control inside a plain Flet page on the iOS simulator and the Android emulator, in every state reachable without hardware: placeholder, error ("no camera" on the simulator), `paused=True`. It asserts there is no `No Material widget found` / `FlutterError` in the log, and takes a golden of the error state.
-3. **Upgrade guard.** A test asserts the resolved upstream version equals the pin (`pubspec.lock`), so a transitive bump cannot slip in.
-
-### 2.5 Integration-test plan (shared shape)
-
-| Layer | Where | How |
-|---|---|---|
-| Python unit | `tests/` in the extension repo | Construct the control or service; check default serialisation; mock `_invoke_method`; check enum round-trips |
-| Integration (emulator/simulator) | `examples/<pkg>_example/` + `tests/` | `flet test android --device-id <emu>` / `flet test ios --device-id <sim>` (**exists**: `CLI/test.py` provisions a test host with the extension registered and drives `flet.testing.FletTestApp`). Covers the gate test (§2.4), method calls, event delivery and permission-denied paths |
-| Device (manual, scripted) | checklist in the repo | Real camera, push, alarms and calendar UI on the PLAN §8.1 device lab before each extension release |
-| App side | `pycon-us` `tests/fallback` | The fallback-parity suite runs each capability faked on and off (D-97). The extension itself is never imported in app tests |
-
-### 2.6 Release process (standalone E items: E1, E2, E4, E5, E6)
-
-E3 is excluded: the #6948 package lives in the monorepo, is released with Flet and versioned with it (official extensions are at 1.0.4, the same version as `flet`), and the app pins it to the same version as `flet` (D-20).
-
-1. The version lives in `pyproject.toml` and `pubspec.yaml` (kept equal); a `CHANGELOG.md` entry per release.
-2. Tag `vX.Y.Z` → GitHub Actions: lint, unit, `flet test` on the Android emulator, then build the wheel and sdist and publish with **PyPI trusted publishing** (OIDC; no token in the repo).
-3. Version line: `0.1.0` (first device build) → `0.2.0` (first PyPI release the app pins) → `0.x` fixes → `1.0.0` after the conference (M7, "extensions to 1.0").
-4. The app bumps the exact pin only on or before **03-05** (D-18). After that, only a P0 fix moves a pin, through the hotfix lane.
-5. Docs: `README.md` plus the template's `docs/` (mkdocs) in the repo. Flet website pages come with the monorepo move.
-
-### 2.7 Clean-room statement (D-27, D-102)
-
-- All extensions are written from the wrapped packages' public pub.dev documentation and API, and from Flet's own first-party extensions.
-- The GPL-3.0 `AyberkA0/flet-barcode-scanner` is **never opened** by anyone writing E1. PR descriptions say so, and reviewers check it.
-- Permissive third-party wrappers (e.g. MIT `flet-android-notifications`, `Nwokike/flet-notifications`) may be read for API ideas. No code is copied.
-- Licence: Apache-2.0, with DCO sign-off. All wrapped packages are permissive: `mobile_scanner` BSD-3, FlutterFire BSD-3, `flutter_local_notifications` BSD-3, `timezone` BSD-2, `add_2_calendar` MIT, `flutter_widget_from_html_core` MIT, `flutter_slidable` MIT. Re-check each at bump time.
-
----
-
-## 3. `Caps`: keys, probes and the upgrade path (D-74, D-75, PLAN [§5.7](../PLAN.md#57-platform-and-capability-abstraction))
-
-A capability is **on** only when both (a) `build_info.CAPS` lists it, and (b) the runtime probe succeeds. `tools/caps_manifest.py` writes (a) in CI from the dependencies actually bundled for the target platform, plus the core probes evaluated in the build venv (pinned Flet). `flet run` and the companion app get an empty manifest. Remote `features.*` in app-config can only veto.
-
-| Key | Manifest source | Runtime probe (exact name) | Provider when on / off |
-|---|---|---|---|
-| `scanner` | `flet-barcode-scanner` | `flet_barcode_scanner.BarcodeScanner.toggle_torch` | `MobileScanner` / `ManualEntryScanner` (`SimulatedScanner` in DEMO) |
-| `push` | `flet-firebase` | `flet_firebase.FirebaseMessaging.subscribe_to_topic` | `FirebasePush` / `BannerPoller` |
-| `analytics` | `flet-firebase-analytics` (only if OD-3; D-111) | `flet_firebase_analytics.FirebaseAnalytics.log_event` | `FirebaseAnalytics` / `NullAnalytics` |
-| `local_notifications` | `flet-notifications` (OD-15) | `flet_notifications.LocalNotifications.zoned_schedule` | `ScheduledReminders` / `InAppReminders` + `IcsReminderPack` |
-| `calendar` | `flet-add-to-calendar` | `flet_add_to_calendar.AddToCalendar.add_event` | `NativeCalendar` / `IcsShare` |
-| `html` | `flet-html` | `flet_html.Html` | `Html` / `ft.Markdown` over `html_md` |
-| `slidable` | `flet-slidable` | `flet_slidable.Slidable` | `Slidable` row / `Dismissible` row |
-| `refresh_indicator` | core probe at build | `ft.RefreshIndicator` | `Refreshable` returns it / button + `ProgressBar` |
-| `app_info` | core probe at build | `ft.Page.get_app_info` | `PageAppInfo` / `BuildInfoAppInfo` |
-| `iv_set_transform` | core probe at build | `ft.InteractiveViewer.set_transform` | animated zoom / reset→zoom→pan |
-| `sticky_headers` | core probe at build | `ft.GroupedListView` | sticky groups / dividers |
-
-U9 and U15 have no `Caps` key (D-74 does not list them). Their helpers probe once at import: `use_query()` uses `ft.use_route_search` when `hasattr(ft, "use_route_search")`, and `services/safe.py` registers `ft.set_error_handler` when present. Both are pure-Python, so the manifest adds nothing.
-
-Probes import extensions lazily inside `platform/caps.py` (`importlib.util.find_spec` and then `getattr`). **Screens never import an extension** (D-74).
-
-```python
-# src/pycon_us/platform/caps.py (sketch; the `Caps` holder itself is an @ft.observable class per D-74, not shown)
-import importlib
-import importlib.util
-
-PROBES = {
-    "scanner": ("flet_barcode_scanner", "BarcodeScanner.toggle_torch"),
-    "refresh_indicator": ("flet", "RefreshIndicator"),
-    # ... one row per key in the table above
-}
-def probe(module: str, attr: str) -> bool:
-    if importlib.util.find_spec(module) is None:
-        return False
-    obj = importlib.import_module(module)
-    for part in attr.split("."):
-        obj = getattr(obj, part, None)
-        if obj is None:
-            return False
-    return True
-```
-
-**Upgrade procedure (identical for every E/U probe item; PLAN §6.2).**
-1. The upstream release ships (a PyPI wheel, or a Flet point release).
-2. Bump the exact pin in `pyproject.toml` (by **03-05**).
-3. For E items, add the dist to `[tool.flet.android].dependencies` and `[tool.flet.ios].dependencies`, plus the item's platform setup (each section's "App upgrade" row).
-4. CI writes the manifest; `Caps` lights the key. The "all on" fallback-parity suite already covers the path, so no screen code changes.
-5. The release notes print `python -m pycon_us.platform.caps`.
+**Tests, in the extension:** Python unit tests (defaults, serialisation, enums, `_invoke_method` mocked); integration with `flet test android|ios --device-id …` and `flet.testing.FletTestApp` (exists, F21); a short scripted device check for camera, alarms and reboot.
 
 ---
 
 ## 4. Extensions
 
-### E1 `flet-barcode-scanner` (T1; the largest interim)
+### 4.1 E3: scheduled local notifications (priority 1)
 
 | Field | Value |
 |---|---|
-| Serves | LEAD-01 (shared scanner surface), DOOR-04, SHIRT-02, MASK-04; PLAN §4.2 "Badge scanning" |
-| Interim | `ManualEntryScanner`: one `TextField` (autofocus, `on_submit`) that accepts the **full `code:validator` payload**, typed, pasted, or typed by a USB/BT HID wedge scanner, and passes it to `core.badges.parse_badge` (D-80, D-81). DEMO uses `SimulatedScanner` (D-84). Fallback hardware: 4 HID scanners (~$30 each) if E1 fails at G2 |
-| Dart package | **`mobile_scanner` 7.4.2** (exact; BSD-3; published 2026-09-14; Dart `^3.7.0`, Flutter `>=3.29.0`; checked 2026-10-11). Android: CameraX + ML Kit; iOS: Apple Vision/AVFoundation |
-| Kind | `LayoutControl` (camera preview) with async methods |
-| Effort / owner | M, 35 h / U |
-| Deadlines | Spike S7 (M0) → v0.1 on device **01-10** → reads real 2026 badges at **G2 01-31** → PyPI **0.2 by 02-19** → Badge Day 1 **02-24** (>= 95 % first-try decode, G-Staff 02-26) → Badge Day 2 04-09 (criterion S4: >= 98 %). Released on PyPI before 03-05 (criterion S10) |
-| Caps | `scanner`; kill switch `features.lead_retrieval/door_check/swag/coc` vetoes per tool (D-83) |
+| Serves | NOTIF-05 (fixed conference moments), NEW-05 (reminders before saved sessions), NOTIF-01 and STORE-10 (reminder settings), NOTIF-06 (permission in context), NOTIF-10 (the permission card), DEV-06 (test reminder), NATIVE-06 (declarations). Taps open NEW-07 paths. |
+| Interim (D-60) | • Settings › Reminders shows "Reminders aren't available in this build", with no live switches.<br>• Now's "Your next session" covers the app being open, and so does an in-app `Banner` with "Open" and "Dismiss" 10 min before a saved session.<br>• `.ics` with a `VALARM`: "Remind me" on session detail and "Add all to calendar" in My schedule (`core/ics.py`, D-62). |
+| Upstream | Two parts:<br>(a) The official local-notifications extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948), opened by Feodor Fitsner on 2026-10-10. Its v1 scope is `initialize`, `request_permission`, `get_permission_status`, `show`, `cancel`, `cancel_all`, `get_launch_details` and `on_notification_tap`. **Scheduled and periodic notifications are explicitly out of v1.**<br>(b) Our follow-up PR "scheduling", built on v1. |
+| Dart packages | `flutter_local_notifications` **22.3.1** (BSD-3; 2026-09-13; minSdk 24; iOS pod 13.0) with `timezone` **0.11.1**. Flet 1.1 (Flutter 3.47.7, AGP 8.13.2, default minSdk 24) meets every minimum. |
+| Python package | Per #6948: dist `flet-local-notifications`, module `flet_local_notifications`, class `LocalNotifications`. **Both `flet-local-notifications` and `flet-notifications` are taken on PyPI** by unrelated projects (§6). The dist name is the Flet team's call; our code changes in `capabilities.py` and `services/reminders.py` only. |
+| Ownership | The Flet team owns v1; U adds scheduling on top, with no fork or competing package (D-97, D-99). The old `ndonkoHenri/notifications` branch (`awesome_notifications`) is not a base. |
+| Effort | M for scheduling (Dart service, Python API, Android module or CLI hook, tests), plus S6. U7 belongs to v1. |
+| Gate | `capabilities.REMINDERS`. The dependency is added only once the pinned Flet contains the scheduling PR, in the dependency PR just before adoption, so a v1-only package never turns the capability on. |
 
-**Python API** (proposed, E1; D-25 names):
+**Python API added by the scheduling PR** (proposed; v1 members omitted):
 
 ```python
-class BarcodeFormat(Enum):          # values = mobile_scanner BarcodeFormat.name
-    QR_CODE = "qrCode"; ALL = "all"  # (+ others later; QR only in 0.x)
-class CameraFacing(Enum):
-    BACK = "back"; FRONT = "front"
+from datetime import datetime
+from enum import Enum
+
+import flet as ft
+from flet.utils import from_dict
+
+
+class AndroidScheduleMode(Enum):
+    """How Android fires a scheduled notification (Dart `AndroidScheduleMode.name`)."""
+
+    INEXACT_ALLOW_WHILE_IDLE = "inexactAllowWhileIdle"
+    EXACT_ALLOW_WHILE_IDLE = "exactAllowWhileIdle"
+
+
+@ft.value
+class PendingNotification:
+    """A notification the OS will show later."""
+
+    id: int
+    title: str | None = None
+    body: str | None = None
+    payload: str | None = None
+
+
+@ft.control("LocalNotifications")
+class LocalNotifications(ft.Service):
+    """The v1 service from #6948; scheduling adds the methods below."""
+
+    async def zoned_schedule(
+        self,
+        id: int,
+        title: str,
+        body: str,
+        at: datetime,
+        *,
+        payload: str | None = None,
+        android_schedule_mode: AndroidScheduleMode = AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE,
+    ) -> None:
+        """Show a notification at the aware instant `at`, even if the app is not running."""
+        if at.tzinfo is None:
+            raise ValueError("at must be timezone-aware")
+        args = {"id": id, "title": title, "body": body, "at": at.isoformat(),
+                "payload": payload, "android_schedule_mode": android_schedule_mode}
+        await self._invoke_method("zoned_schedule", args)
+
+    async def get_pending(self) -> list[PendingNotification]:
+        """Return the notifications scheduled but not yet shown."""
+        pending = await self._invoke_method("get_pending")  # a list of dicts on the wire
+        return [from_dict(PendingNotification, p) for p in pending or []]
+```
+
+**Semantics.**
+- **Time.** A one-shot reminder needs only an instant: Dart parses the ISO string and schedules `tz.TZDateTime.from(instant, tz.UTC)`, with no device time-zone lookup. DST is resolved in Python, where `at` is built in the conference zone (D-43). Repeating schedules, which would need an IANA zone, are out of scope.
+- **Ids** are deterministic 32-bit ints. A session reminder uses the numeric session id (schedule 1–1147, open spaces 9025–9177), or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids (`reminder_id()`, architecture §14.1). Event reminders use 8000–8099. The test reminder (DEV-06) uses 8999, as Ionic did. A unit test checks a year's plan for collisions. Because `apply()` cancels everything, a re-plan can remove a pending test reminder; that is acceptable for a developer tool.
+- **Taps.** `on_notification_tap` (v1) and `get_launch_details()` (v1, for cold start) deliver `payload`. The app puts the deep-link path there (`/my-schedule/session/<id>`) and navigates as for a link (D-21).
+- **Inexact by default** (D-59). Android 14+ does not grant exact alarms to new installs, and inexact delivery is usually within minutes. Exact timing is opt-in, only if S6 shows inexact delivery is too late. In that case, declare `SCHEDULE_EXACT_ALARM` and check it with `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` (exists), rather than adding a new API.
+- **Limit.** iOS keeps 64 pending requests, so the app schedules at most the next 60 (D-59).
+
+**App side** (`services/reminders.py`; `plan()` is pure and tested without Flet):
+
+```python
+"""Local reminders: schedule the plan with E3, or keep the interim (D-58..D-60)."""
+
+from dataclasses import dataclass
+from datetime import datetime
+
+from pycon_us import capabilities
+
+MAX_PENDING = 60  # iOS keeps 64 pending requests (D-59)
+
+_service = None  # the E3 service once start() built it; None means the interim (D-60)
+
+
+@dataclass(frozen=True)
+class Reminder:
+    """One planned notification."""
+
+    id: int
+    at: datetime  # aware, in the conference zone
+    title: str
+    body: str
+    route: str  # deep-link path opened on tap
+
+
+def start() -> bool:
+    """Build the E3 service when this build has it.
+
+    App calls this once, inside its page context. Only this module imports the
+    extension (§2.1). Returns False when the interim is all there is.
+    """
+    global _service
+    if not capabilities.REMINDERS:
+        _service = None
+        return False
+    import flet_local_notifications as fln  # module name from #6948
+
+    _service = fln.LocalNotifications()
+    return True
+
+
+async def apply(plan: list[Reminder]) -> None:
+    """Cancel every pending reminder, then schedule the plan ("cancel all, reschedule")."""
+    if _service is None:
+        return
+    await _service.cancel_all()
+    for r in plan[:MAX_PENDING]:
+        await _service.zoned_schedule(r.id, r.title, r.body, r.at, payload=r.route)
+```
+
+`apply(plan)` (D-59) re-runs whenever favourites, reminder settings or the feed change, so a moved session moves its reminder. App calls `reminders.start()` and `reminders.apply()` and never imports the extension.
+
+**Platform setup.**
+
+| Platform | Entry | How | Status |
+|---|---|---|---|
+| Android | Core library desugaring | `flutter_local_notifications` requires `isCoreLibraryDesugaringEnabled` and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` in the **app** module, even when nothing is scheduled. The template sets Java 17 and no desugaring (`TPL/android/app/build.gradle.kts:65-68`), and no CLI option adds it. **U7** (§5.10) is therefore a prerequisite of #6948 v1, not only of scheduling. | missing (U7) |
+| Android | Receivers and the boot permission (scheduling only) | `ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver` (boot actions `BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `QUICKBOOT_POWERON`) and `RECEIVE_BOOT_COMPLETED`. The plugin's manifest has only `VIBRATE` and `POST_NOTIFICATIONS` (22.3.1 archive), and the template has no `<receiver>` hook. **Preferred:** the extension ships an Android library module declaring them, merged by Gradle. Flet extensions are plain Dart packages, so this needs a `flutter: plugin: platforms: android:` pubspec entry (with a no-op `pluginClass` if flutter_tools insists) and `"android/**"` in package-data. **Fallback:** a `[tool.flet.android.receiver]` table rendered like `provider` (`TPL/.../AndroidManifest.xml:67-71`). S6 decides. | missing |
+| Android | `POST_NOTIFICATIONS` (API 33+) | The plugin's manifest merges it. We also declare it explicitly so the app's manifest is self-describing: `[tool.flet.android.permission] "android.permission.POST_NOTIFICATIONS" = true` (exists, `CLI/build_base.py:1259`). | exists |
+| Android | Exact alarms | Not declared by default (inexact). Declare `SCHEDULE_EXACT_ALARM` only after S6; never `USE_EXACT_ALARM`, which is for alarm and calendar apps. | n/a |
+| Android | R8 in release builds | The plugin serialises scheduled notifications with GSON. The template's default rules include `-keepnames class * { *; }`, and `[tool.flet.android] proguard_rules = [...]` (a list appended to the defaults; exists, `CLI/build_base.py:1267-1270`) can append GSON keep rules. `proguard_default_rules = false` drops the defaults. S6 tests a **release** build: schedule, reboot, fire. | verify in S6 |
+| Android | Small icon | `@mipmap/ic_launcher` (in the template). A monochrome icon needs a drawable resource hook; later. | exists |
+| iOS | Permission | Request through the extension's `request_permission()` (v1). The template's permission_handler macros have no notifications entry (F17), so not through `flet-permission-handler`. | v1 |
+| iOS | Notification delegate | The plugin README requires `UNUserNotificationCenter.current().delegate = self` in `AppDelegate`, for taps and foreground presentation. The template's `AppDelegate.swift` is stock and does not set it, and the plugin does not set it either (checked in 22.3.1). **#6948 v1 must solve this** for `on_notification_tap` to work on iOS: either a template line or a delegate set from the extension's iOS side. | missing (v1) |
+
+**Spike S6** (during P1, upstream track; PLAN §8). The question: can a release build deliver reminders reliably when the app isn't running? On both phones: schedule 2 min ahead and kill the app; lock the phone; reboot (Android); deny notifications and exact alarms (Android 14+); tap from a cold start; plan more than 64 candidates (iOS); move a saved session in a fixture feed and check that its reminder moves. The verdict decides the Android receiver approach, whether exact alarms are worth it, and the GSON rules.
+
+**Tests.**
+- **Extension:** `zoned_schedule` at now + 70 s appears in `get_pending`, and `cancel` removes it; a naive `at` raises `ValueError`; the instant is exact across the 2027-03-14 US DST change; scheduling works on an API 34 emulator with exact alarms denied.
+- **App:** unit tests for the pure `plan()` (past instants skipped, the cap of 60, deterministic ids, lead times); `apply()` against a fake service set as `_service`; `start()` picks the interim when not embedded.
+
+**Upgrade** (§2.4, plus):
+1. After the pin PR for the Flet release, or commit, that contains #6948 v1 and the scheduling PR, a separate dependency PR adds the extension's exact pin. The adoption PR then adds `POST_NOTIFICATIONS` and anything else S6 required.
+2. Settings › Reminders switches become live, and the permission card appears (NOTIF-01, NOTIF-06, NOTIF-10).
+3. The in-app `Banner` stays for the foreground, and the `.ics` actions stay.
+4. Run the P2 exit check: a reminder fires with the app killed and after an Android reboot, and a tap opens the session.
+
+### 4.2 E1: barcode scanner (priority 4; the staff showcase)
+
+| Field | Value |
+|---|---|
+| Serves | LEAD-01 (the shared scan screen), LEAD-02 (camera permission), DOOR-04, SHIRT-02, MASK-04, NATIVE-06 |
+| Interim (D-65) | Manual entry on the shared scan screen: a `TextField(on_submit=...)` taking the full `code:validator` payload, typed, pasted or sent by a USB/Bluetooth HID scanner, with focus kept. It **always** ships; the camera is added on top when E1 is bundled, and the companion app says "Camera scanning isn't available in this build". |
+| Upstream | A new extension. Proposed dist `flet-barcode-scanner` (free on PyPI), module `flet_barcode_scanner`, control `BarcodeScanner`. |
+| Dart package | `mobile_scanner` **7.4.2** (BSD-3; 2026-09-14; Dart `^3.7.0`, Flutter `>=3.29.0`; Android `minSdk 23`, CameraX and ML Kit; iOS pod 12.0, Apple Vision). |
+| Gate finding | `mobile_scanner` imports `package:flutter/material.dart` in `mobile_scanner.dart` and `mobile_scanner_preview.dart`. The default error and placeholder widgets use `Colors.black`, `Icons.error`, `Icon` and `Text`. The extension must pass its own `errorBuilder` and `placeholderBuilder` (built from `widgets.dart`), so no SDK-Material widget is ever built. The §3 gate test proves it. |
+| Effort | M, plus S8 |
+| Gate | `capabilities.SCANNER` |
+
+**Python API** (proposed). It is declarative: torch and pause are properties, not imperative toggles, which fits components mode.
+
+```python
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional
+
+import flet as ft
+
+
+class BarcodeFormat(Enum):
+    """Dart `BarcodeFormat.name` values; QR is all the app needs."""
+
+    QR_CODE = "qrCode"
+    ALL = "all"
+
 
 @dataclass
 class BarcodeDetectEvent(ft.Event["BarcodeScanner"]):
-    format: BarcodeFormat
-    raw_value: Optional[str] = None  # first barcode in the capture; default so a payload omitting a null key still deserialises
-    barcodes: list[dict] = field(default_factory=list)   # every barcode: raw_value, format, corners
+    raw_value: Optional[str] = None
+    format: Optional[BarcodeFormat] = None
+
 
 @ft.control("BarcodeScanner")
 class BarcodeScanner(ft.LayoutControl):
-    formats: list[BarcodeFormat] = field(default_factory=lambda: [BarcodeFormat.QR_CODE])
-    facing: CameraFacing = CameraFacing.BACK
-    paused: bool = False             # True stops analysis and releases the camera
-    detection_timeout: ft.DurationValue = field(default_factory=lambda: ft.Duration(milliseconds=250))
-    fit: ft.BoxFit = ft.BoxFit.COVER
-    on_detect: Optional[ft.EventHandler[BarcodeDetectEvent]] = None
-    on_error: Optional[ft.ControlEventHandler["BarcodeScanner"]] = None   # e.data = message
+    """A live camera preview that reports detected barcodes."""
 
-    async def start(self) -> None: ...
-    async def stop(self) -> None: ...
-    async def toggle_torch(self) -> None: ...
-    async def analyze_image(self, path: str) -> list[dict]: ...   # CI decode tests; verify 7.4.2 signature
+    formats: list[BarcodeFormat] = field(default_factory=lambda: [BarcodeFormat.QR_CODE])
+    paused: bool = False  # True stops analysis and releases the camera
+    torch: bool = False
+    on_detect: Optional[ft.EventHandler[BarcodeDetectEvent]] = None
+    on_error: Optional[ft.ControlEventHandler["BarcodeScanner"]] = None  # e.data is the message
+
+    async def analyze_image(self, path: str) -> list[str]:
+        """Decode the barcodes in an image file (lets device tests check decoding without pointing a camera at a badge)."""
+        return await self._invoke_method("analyze_image", {"path": path})
 ```
 
 **Dart side.**
-- `BarcodeScannerControl` creates `MobileScannerController(formats:, facing:, detectionSpeed: DetectionSpeed.normal, detectionTimeoutMs:, autoStart: !paused)` in `initState`. `didUpdateWidget` maps `paused` to `stop()`/`start()`.
-- `onDetect: (capture) => control.triggerEvent("detect", {...})`. Methods go through `addInvokeMethodListener`.
-- Pass our own `errorBuilder` and `placeholderBuilder`, built from `widgets.dart`, so no SDK-Material text styling leaks in (gate §2.4).
-- `useAppLifecycleState` stays on: the camera is released on background.
+- `MobileScannerController(formats:, detectionSpeed: DetectionSpeed.normal, autoStart: !paused)` is created in `initState`.
+- `didUpdateWidget` maps `paused` to `stop()`/`start()`, and calls `toggleTorch()` when `torch` differs from the controller's torch state.
+- `onDetect` calls `triggerEvent("detect", {"raw_value": ..., "format": ...})` for the first barcode in the capture.
+- `useAppLifecycleState` stays on, so the camera is released in the background.
+
+**App side** (`services/scanner.py`). The app owns cooldowns and feedback, not the extension:
+
+```python
+"""Camera scanning when E1 is bundled; manual and HID entry always (D-65)."""
+
+from collections.abc import Callable
+from typing import Optional
+
+import flet as ft
+
+from pycon_us.capabilities import SCANNER
+
+
+def camera_view(on_code: Callable[[str], None], paused: bool) -> Optional[ft.Control]:
+    """Return the camera preview, or None when this build has no scanner."""
+    if not SCANNER:
+        return None
+    import flet_barcode_scanner as fbs  # only this module imports the extension
+
+    def detected(e: fbs.BarcodeDetectEvent) -> None:
+        if e.raw_value:
+            on_code(e.raw_value)
+
+    return fbs.BarcodeScanner(paused=paused, on_detect=detected, expand=True)
+```
+
+The scan screen applies the 4 s per-code cooldown and pauses while a dialog or sheet is open (MASK-04, SHIRT-02). It shows outcomes as colour, icon, word, haptics and a live region, and keeps `ft.Wakelock` enabled while it is mounted (D-65).
 
 **Platform setup.**
 
 | Platform | Entry | How (exists today) |
 |---|---|---|
-| both | camera permission + usage string | `[tool.flet] permissions = ["camera"]` emits `NSCameraUsageDescription` + `android.permission.CAMERA`. Override the iOS string in `[tool.flet.ios.info]` with staff-scanning wording (review 5.1.1, D-89) |
-| both | runtime prompt | `status = await ph.request(fph.Permission.CAMERA)` (with `ph = fph.PermissionHandler()`); if `status == fph.PermissionStatus.PERMANENTLY_DENIED`: `await ph.open_app_settings()` (coroutines; the caller must be `async def`) (NOTIF-10 hint component, shared with LEAD-02) |
-| both | keep awake while scanning | `ft.Wakelock().enable()` / `disable()` (coroutines) |
-| Android | ML Kit model | **Keep the bundled model** (the default). It works offline on first launch, which matters on conference Wi-Fi. Cost: +3-10 MB, inside the 40 MB budget (criterion S6); spike S7 measures it (AAB size with and without `flet-barcode-scanner`). The unbundled variant is now settable without a fork via `[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"` (exists; research said otherwise), but it downloads the model through Play Services on first use, so we don't use it |
-| iOS | min version | spike S10 confirms the pod minimum is <= 15 (else U12) |
+| both | Camera permission and usage string | `[tool.flet] permissions = ["camera"]` emits `NSCameraUsageDescription` and `android.permission.CAMERA` (`CLI/build_base.py:254`). Override the iOS string with staff-scanning wording in `[tool.flet.ios.info]`. |
+| both | Runtime prompt in context (D-61) | `ph = fph.PermissionHandler()`, then `await ph.request(fph.Permission.CAMERA)`. If the result is `PermissionStatus.PERMANENTLY_DENIED`, show "Camera access is off" with "Open settings" (`await ph.open_app_settings()`) and "Enter codes instead". |
+| both | Keep awake while scanning | `ft.Wakelock().enable()` / `disable()` (coroutines) |
+| Android | ML Kit model | Keep the bundled model (+3–10 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
+| iOS | Minimum OS | Pod 12.0, below the template's 15.0, so U12 is not needed. |
+
+**Spike S8** (before P3, upstream track). Build the smallest extension (one control, `on_detect`, torch) as release builds on both OSes. Test a printed QR in daylight and dim light, repeated detections, permission denied, background and resume, and the companion app's fallback to manual entry. The verdict decides whether E1 goes ahead and settles its API.
 
 **Tests.**
-- The gate test (§2.4).
-- `analyze_image` on bundled PNGs of the 2026 sample badges (P3), on the emulator and simulator. Asserts the exact `raw_value` and that `parse_badge` round-trips.
-- Pause/resume 50× without a camera leak (Android logcat `CameraX` errors = fail).
-- Torch toggles twice.
-- Permission denied → `on_error` fires and nothing crashes.
-- A manual device script on the PLAN §8.1 lab: low light, glossy badges, 3 s per-code CoC cooldown (D-82, the app's responsibility).
+- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload; pause and resume 50 times with no camera leak (no CameraX errors in logcat); the torch toggles; a denied permission fires `on_error` and nothing crashes.
+- **App:** the P3 exit criterion, a printed sheet of mock badges scanned on both phones, including two devices checking in the same attendee (PLAN §7).
 
-**App upgrade.**
-1. Add `flet-barcode-scanner==0.2.x` to both platform dependency lists (PLAN §9.1: "E1 is always there" from the first build that has it; D-89 for the dependency-list rule).
-2. `MobileScanner` implements `BadgeScanner` and owns `paused` per tool cadence: lead re-arms after 500 ms, door after 250 ms, swag pauses until its modal closes, CoC has a 3 s per-code cooldown (D-82).
-3. The header and footer stay tappable over the preview (LEAD-01 gotcha). Manual entry remains reachable from every scanner screen.
+**Upgrade** (§2.4, plus):
+1. Add the exact pin and `permissions = ["camera"]`.
+2. The camera area appears on the scan screen. Manual entry stays reachable on every tool.
 
-**Risks.**
-- An upstream minor could add a Material widget. Mitigations: the exact pin plus gate test.
-- Focus and low light. Mitigations: tap-to-focus is upstream default; the HID fallback stays.
-- Size (spike S7; criterion S6 at G5).
-
----
-
-### E2 `flet-firebase` (+ `flet-firebase-analytics`) (T3, gated at G3)
-
-| Field | Value |
-|---|---|
-| Serves | NOTIF-04 (topics), NOTIF-06 (prompt + token), NOTIF-07 (shared `PermissionGate`), NOTIF-08 (foreground `on_message` → `TopToast`), NOTIF-11 (token card), NOTIF-01 (toggles drive topics), NOTIF-09 + NATIVE-05 (analytics, only if OD-3), NATIVE-04 (wiring), NATIVE-06 (permissions) |
-| Interim | `BannerPoller`: app-config `banners[]` fetched on start, on resume and every 5 min, filtered by category toggles; emergency banners always shown in-app (OD-18). Plus PSF email/Discord for emergencies (PLAN §4.2) |
-| Dart packages | **`firebase_core` 4.15.0**, **`firebase_messaging` 16.7.0** (needs `firebase_core ^4.14.0`; Dart `^3.6.0`, Flutter `>=3.27.0`). **`firebase_analytics` 12.6.0** only if OD-3 (D-111: a separate wheel **`flet-firebase-analytics`**, superseding the analytics part of D-24). All published 2026-09-14, BSD-3, checked 2026-10-11 |
-| Kind | Services only (no widgets; gate moot) |
-| Effort / owner | L, 50 h / U |
-| Deadlines | **Spike S8** (Dart-only `Firebase.initializeApp(options)` on Android and iOS, topic round-trip) verdict by **11-30**; P5 (Firebase app configs, APNs key, `test-*` topic) by **01-31**; **U5 merged by 01-31**; **G3 02-12**: topic round-trip on both OSes with the PSF config and U5 merged; released by **03-05**, else 27.1 (06-30) |
-| Caps | `push`, `analytics` |
-
-**Why analytics is a separate wheel.** One wheel has one fixed `pubspec.yaml`, so `firebase_analytics` cannot be optional inside `flet-firebase`. Bundling it unconditionally would link the Analytics SDK into 27.0. That contradicts D-79 ("No analytics SDK in 27.0") and NATIVE-05, and changes the Data Safety form. So `FirebaseAnalytics` ships (D-111) as `flet_firebase_analytics.FirebaseAnalytics` in the same repo, and the app bundles it only after an OD-3 "yes". The §3 probe row uses these names. (D-24/D-25 listed `firebase_analytics`/`FirebaseAnalytics` under E2 `flet-firebase`; D-111 supersedes that analytics part. Only the dist and module change; class and method names stay as D-25.)
-
-**Python API** (proposed, E2):
-
-```python
-@ft.value
-class FirebaseOptions:            # values from the PSF Firebase console (P5); not secrets
-    api_key: str; app_id: str; messaging_sender_id: str; project_id: str
-    ios_bundle_id: Optional[str] = None; storage_bucket: Optional[str] = None
-
-@ft.control("FirebaseApp")
-class FirebaseApp(ft.Service):
-    options: Optional[FirebaseOptions] = None        # per-platform options picked by the app
-    async def initialize(self) -> None: ...          # Dart: Firebase.initializeApp(options: ...)
-
-@dataclass
-class RemoteMessageEvent(ft.Event["FirebaseMessaging"]):
-    message_id: Optional[str] = None; title: Optional[str] = None; body: Optional[str] = None
-    payload: dict[str, str] = field(default_factory=dict); from_topic: Optional[str] = None
-    # Dart sends {"payload": message.data, ...}; never `data` (§2.2). Defaults are required: `_trigger_event` builds the
-    # event with from_dict(), so an Optional field without a default is still required and a data-only message
-    # (no title/body key) would raise TypeError in dispatch
-
-class AuthorizationStatus(Enum):
-    AUTHORIZED = "authorized"; DENIED = "denied"; NOT_DETERMINED = "notDetermined"; PROVISIONAL = "provisional"
-
-@ft.control("FirebaseMessaging")
-class FirebaseMessaging(ft.Service):
-    on_message: Optional[ft.EventHandler[RemoteMessageEvent]] = None              # foreground only
-    on_message_opened_app: Optional[ft.EventHandler[RemoteMessageEvent]] = None
-    on_token_refresh: Optional[ft.ControlEventHandler["FirebaseMessaging"]] = None   # e.data = token
-    async def request_permission(self, alert=True, badge=True, sound=True, provisional=False) -> AuthorizationStatus: ...
-    async def get_token(self) -> Optional[str]: ...
-    async def subscribe_to_topic(self, topic: str) -> None: ...
-    async def unsubscribe_from_topic(self, topic: str) -> None: ...
-    async def get_initial_message(self) -> Optional[dict]: ...   # tap that cold-started the app
-
-# lives in flet_firebase_analytics (separate wheel, D-111), not in flet_firebase
-@ft.control("FirebaseAnalytics")
-class FirebaseAnalytics(ft.Service):
-    async def log_event(self, name: str, parameters: Optional[dict] = None) -> None: ...
-    async def set_user_property(self, name: str, value: Optional[str]) -> None: ...
-    async def set_analytics_collection_enabled(self, enabled: bool) -> None: ...
-```
-
-**Design constraints.**
-- **Initialisation is Dart-only, with no `google-services.json` or `GoogleService-Info.plist`** (D-24; there is no flet build hook for them).
-- `FirebaseApp.initialize()` must complete before any messaging call. The Dart services queue calls until `Firebase.apps` is non-empty.
-- **Background messages run no Python.** The four topics carry *notification* payloads that the OS displays. Taps surface through `get_initial_message()` (cold start) and `on_message_opened_app` (warm) once Python is up.
-- `getToken`/`onTokenRefresh` are kept for D-25 parity. If 16.7.0 marks them deprecated, the Dart side maps them to the replacement API without changing Python names.
-- Topic names are exact: `announcements`, `schedule-changes`, `emergency`, `daily-digest`, in project `pycon-us-2023-mobile` (D-76). They are re-asserted on start and on every toggle change.
-- Prompt timing (D-78): end of Welcome or first visit to Notifications. Never at boot, never on web. Permission goes through `request_permission()`, never `flet_permission_handler` (it has no iOS notification macro; decisions §N.11).
-
-**Platform setup** (only in the release that ships E2; D-89):
-
-| Platform | Entry | How |
-|---|---|---|
-| iOS | `aps-environment` entitlement | **U5** `[tool.flet.ios.entitlement] "aps-environment" = "production"`. Also needs the Push capability on App ID `org.pycon.us.2023.onsite` and a profile that includes it (PSF, P4/P5) |
-| iOS | background mode | `[tool.flet.ios.info] UIBackgroundModes = ["remote-notification"]` (exists) |
-| iOS | APNs key | uploaded to Firebase by the PSF (P5) |
-| Android | `POST_NOTIFICATIONS` (API 33+) | `[tool.flet.android.permission] "android.permission.POST_NOTIFICATIONS" = true` (exists) |
-| Android | default channel | none (Ionic parity, NATIVE-04: no default channel). FCM uses its own fallback channel; a `default_notification_channel_id` meta-data would have no effect because no E2/E3 v1 API creates the channel |
-| Android | small icon | none: FCM falls back to the launcher icon. A monochrome `@drawable` needs an app resource the template cannot add, so it waits for 27.1 (U8 covers strings, not drawables) |
-| Analytics (if OD-3) | ad-id off | `[tool.flet.android.meta_data] "google_analytics_adid_collection_enabled" = "false"`; `AD_ID` stays removed (`[tool.flet.android.permission] "com.google.android.gms.permission.AD_ID" = false`) |
-
-**Tests.**
-- Integration: `initialize` with the staging options; `subscribe_to_topic("test-<run>")`; a CI job sends to that topic via the FCM HTTP v1 API (service account held as a PSF secret in the nightly environment only) and asserts `on_message` in the foreground.
-- Manual device script: background display, tap → `on_message_opened_app`, cold-start tap → `get_initial_message`, permission denied path (NOTIF-07: never re-prompt), token rotation.
-- Fallback parity: `push` off, so banners still deliver every category.
-
-**App upgrade.**
-1. Add `flet-firebase==0.x` to the platform lists, plus the setup rows above.
-2. `FirebasePush` replaces `BannerPoller` as the `PushService`. `BannerPoller` keeps running for in-app emergency banners (OD-18).
-3. The Developer Info FCM token card appears (NOTIF-11, `caps.push`).
-
----
-
-### E3 Scheduled reminders in the official #6948 package (T3, gated at G3)
-
-| Field | Value |
-|---|---|
-| Serves | NOTIF-05 (fixed reminders, ids 8000+ from app-content), NOTIF-07 (shared `PermissionGate`), DEV-06 (test notification, id 8999), NATIVE-06 |
-| Interim | `InAppReminders`: time-windowed in-app banners from `app-content.reminders[]`. Plus `IcsReminderPack`: "Add reminders to calendar" as an `.ics` with `VALARM`, best effort (D-77) |
-| Dart packages | **`flutter_local_notifications` 22.3.1** (published 2026-09-13; needs `timezone ^0.11.0`, Dart `^3.10.0`, Flutter `>=3.38.1`, AGP >= 8.11.1, compileSdk >= 35) + **`timezone` 0.11.1** (2026-06-29). **No `flutter_timezone`**: the IANA zone comes from `settings.CONF_TZ` (D-24) |
-| Package | PyPI **`flet-notifications`** (OD-15; PyPI 404 = free, re-checked 2026-10-11), import `flet_notifications` |
-| Effort / owner | M, 40 h for scheduling (U) + U7 6 h; #6948 v1 is FT-owned |
-| Deadlines | #6948 v1 merged and released by **01-15** (UNCONFIRMED, FT); scheduling PR + U7 merged by **G3 02-12**; released with the Flet 1.1.x point release by **02-26** (or a 1.2 released before **03-05**), else 27.1 |
-| Caps | `local_notifications` |
-
-**Coordination with flet-dev/flet#6948.**
-- **Status.** The issue "New extension: flet-local-notifications (flutter_local_notifications)" was opened by Feodor Fitsner on 2026-10-10. v1 scope: Android, iOS, macOS, Windows, Linux and web; `show`, `cancel`, permission, `on_notification_tap`. **Scheduled and periodic notifications are explicitly out of v1.**
-- **Ownership split.** FT owns v1. U contributes one follow-up PR, "scheduling", on top of v1. U does not fork it and does not ship a competing package. If v1 is not merged by 01-15, E3 goes to 27.1 (D-29); U does not take over v1 under deadline pressure.
-- **PyPI name clash (OD-15).** `flet-local-notifications` on PyPI belongs to an unrelated project (1.2.2, 2026-07-11, pins `flet==0.28.3`). Proposal to the #6948 owner: publish as **`flet-notifications`**, still free on PyPI. A GitHub repo `Nwokike/flet-notifications` (MIT) uses the same name but is not on PyPI; mention it in the README to avoid confusion. A PEP 541 claim on the taken name is optional and not on the critical path.
-- **Class name.** D-25 fixes `LocalNotifications`. If v1 names it differently, amend D-25 (decisions-record rule) and change one probe row in `platform/caps.py`.
-- **Prior art.** U's own `ndonkoHenri/notifications` branch (March 2025) is a pre-1.0 `awesome_notifications` prototype in `flet/core`. It is not a base for this work.
-
-**Python API added by the scheduling PR** (proposed, E3; D-25):
-
-```python
-class ScheduleMode(Enum):          # Dart AndroidScheduleMode.name
-    EXACT_ALLOW_WHILE_IDLE = "exactAllowWhileIdle"
-    INEXACT_ALLOW_WHILE_IDLE = "inexactAllowWhileIdle"
-
-# added to the v1 service class
-class LocalNotifications(ft.Service):
-    async def zoned_schedule(self, id: int, title: str, body: str, at: datetime, tz: str,
-                             mode: ScheduleMode = ScheduleMode.EXACT_ALLOW_WHILE_IDLE,
-                             payload: Optional[str] = None) -> None: ...
-    async def cancel(self, ids: int | list[int]) -> None: ...     # extends v1 cancel(id)
-    async def can_schedule_exact(self) -> bool: ...               # Android 12+; True elsewhere
-    async def request_permission(self) -> bool: ...               # v1; listed for completeness
-    async def get_pending_ids(self) -> list[int]: ...             # tests + Developer Info
-```
-
-**Semantics.**
-- `at` must be timezone-aware. Python sends `at.astimezone(ZoneInfo(tz)).isoformat()` plus `tz`. Dart calls `tz.initializeTimeZones()` once, then `TZDateTime.from(DateTime.parse(iso), tz.getLocation(tz))`, so the instant is exact and DST-correct.
-- Ids are 32-bit ints: the app uses 8000-80xx for reminders and 8999 for DEV-06.
-- App algorithm (D-77): cancel 8000-80xx, then schedule every enabled future reminder; past instants are skipped. If `can_schedule_exact()` is False (Android 14+ denies `SCHEDULE_EXACT_ALARM` by default), use `INEXACT_ALLOW_WHILE_IDLE`.
-
-**Platform setup.**
-
-| Platform | Entry | How |
-|---|---|---|
-| Android | desugaring | **U7** `[tool.flet.android] core_library_desugaring = true` (`isCoreLibraryDesugaringEnabled` + `desugar_jdk_libs:2.1.4` in `:app`). The template has Java 17 already |
-| Android | **receivers** | `ScheduledNotificationReceiver` and `ScheduledNotificationBootReceiver` (`exported="false"`; the boot receiver with `BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `QUICKBOOT_POWERON`) plus `RECEIVE_BOOT_COMPLETED`. The plugin's own manifest declares only `VIBRATE` and `POST_NOTIFICATIONS` (verified 2026-10-11), and the template has no `<receiver>` hook. **Resolution:** the #6948 Dart package ships an `android/` module whose library `AndroidManifest.xml` declares both receivers and the permission, and Gradle's manifest merger adds them to the app with no CLI change. Two requirements: (1) the package's `pubspec.yaml` must declare `flutter: plugin: platforms: android: package: <java.package>` (`pluginClass` may be omitted), because flutter_tools registers only packages with a `flutter: plugin:` key (`flutter_plugins.dart`), and Flet extensions, including the `flet create` extension scaffold, are plain Dart packages without one, so a bare `android/` folder would be ignored; (2) its pyproject package-data must add `"android/**"`, a departure from the monorepo convention `["pubspec.yaml", "lib/**"]` (§2.2). Verify both in the S7-style spike: the wheel contains `android/src/main/AndroidManifest.xml`, and `manifest-merger-release-report.txt` shows the receivers. Fallback: extend U7 with `[tool.flet.android.receiver]`. **This is not in PLAN §6.2**; see "Discrepancies" at the end |
-| Android | permissions | `[tool.flet.android.permission] "android.permission.POST_NOTIFICATIONS" = true`, `"android.permission.SCHEDULE_EXACT_ALARM" = true` (not `USE_EXACT_ALARM`, which Play reviews as calendar/alarm-app only) |
-| Android | small icon | `@mipmap/ic_launcher` (exists in the template). A monochrome drawable waits for 27.1 |
-| iOS | prompt | `request_permission()` at the D-78 moment, shared with E2 through `PermissionGate` |
-| iOS | foreground presentation | The template `AppDelegate.swift` is stock and sets no `UNUserNotificationCenter` delegate. Foreground presentation is not needed: in the foreground the app shows in-app banners. Background delivery is unaffected. No template change |
-
-**Tests.**
-- Integration on the emulator: `zoned_schedule` at now + 70 s → `get_pending_ids` contains the id → `cancel` → gone.
-- DST: schedule across the 2027-03-14 US transition; the asserted UTC instant must be exact.
-- Reboot test (manual, on device): pending reminders survive.
-- Exact-alarm denied → inexact path.
-- iOS simulator: pending request count.
-
-**App upgrade.**
-1. Add `flet-notifications==<the pinned Flet version>` (same version as `flet`, D-20) plus the setup rows.
-2. `ScheduledReminders` becomes the `Reminders` provider. In-app banners stay for foreground use.
-3. DEV-06 fires an OS notification with id 8999.
-
----
-
-### E4 `flet-add-to-calendar` (T3, gated at G3)
+### 4.3 E4: native add-to-calendar (later)
 
 | Field | Value |
 |---|---|
 | Serves | SESS-04 |
-| Interim | `IcsShare`: `await ft.Share().share_files([ft.ShareFile.from_bytes(ics, mime_type="text/calendar", name=f"{slug}.ics")])`. This is Ionic's own fallback (SESS-05) |
-| Dart package | **`add_2_calendar` 3.1.1** (MIT; published 2026-06-15; Dart `^3.11.0`, Flutter `>=3.41.0`; checked 2026-10-11). Opens the OS calendar editor pre-filled; no silent writes. `device_calendar` is rejected (stale, full calendar access) |
-| Effort / owner | S, 20 h (+U6 6 h) / CC with U review |
-| Deadlines | **U6 merged by 01-31**; G3 **02-12**: U6 merged and the prompt works on both OSes; released by 03-05, else 27.1 |
-| Caps | `calendar` |
-
-**Python API** (proposed, E4; D-25):
+| Interim | `.ics` through `await ft.Share().share_files([ft.ShareFile.from_bytes(ics, mime_type="text/calendar", name=f"{slug}.ics")])`, for one session or all of My schedule (SESS-05, D-62). It stays as "Share as file" after the upgrade. |
+| Dart package | `add_2_calendar` **3.1.1** (MIT; 2026-06-15; Dart `^3.11.0`, Flutter `>=3.41.0`; iOS pod 11.0). It opens the OS calendar editor pre-filled, with no silent writes. |
+| Setup | • Android 11+: a `<queries>` intent for `INSERT` on `vnd.android.cursor.item/event`, which needs **U6**.<br>• iOS: `NSCalendarsUsageDescription`, `NSCalendarsWriteOnlyAccessUsageDescription` (iOS 17+) and `NSContactsUsageDescription` (the package README warns of a crash without it), set in `[tool.flet.ios.info]`. |
+| Effort / gate | S plus U6 / `capabilities.CALENDAR` |
 
 ```python
+# Proposed (E4): a Service, like flet-secure-storage.
 @ft.control("AddToCalendar")
 class AddToCalendar(ft.Service):
     async def add_event(self, title: str, start: datetime, end: datetime,
-                        location: Optional[str] = None, description: Optional[str] = None,
-                        url: Optional[str] = None,
-                        ios_reminder: Optional[ft.DurationValue] = None) -> bool: ...
-        # False = user cancelled or no calendar app; raises FletUnsupportedPlatformException on web/desktop
+                        location: str | None = None, description: str | None = None,
+                        url: str | None = None) -> bool:
+        """Open the OS calendar editor; False if the user cancelled or no calendar app exists."""
 ```
 
-`start` and `end` are aware datetimes, sent as ISO strings. `url` maps to `IOSParams.url` on iOS and is appended to the description on Android. The app passes exactly the title, location (empty string when absent), description and URL of SESS-04. Synthetic ids link to the schedule page; a bad time yields "Couldn't read this session's time".
+**Upgrade** (§2.4, plus): the pinned Flet must contain U6; add the `<queries>` intent (§5.9) and the iOS usage strings to `[tool.flet.ios.info]`. Session detail's "Add to calendar" calls `add_event`, and the `.ics` action stays as "Share as file".
 
-**Platform setup** (only in the release that ships E4):
+**Tests:** the editor opens pre-filled on both phones; a cancelled editor returns False; with no calendar app it returns False and the app offers "Share as file".
 
-| Platform | Entry | How |
-|---|---|---|
-| Android 11+ | `<queries>` `INSERT` on `vnd.android.cursor.item/event` | **U6** `[tool.flet.android.queries]` (§5 U6) |
-| Android | permissions | none (prompt path) |
-| iOS | `NSCalendarsUsageDescription` (iOS 15/16 and the README), `NSCalendarsWriteOnlyAccessUsageDescription` (iOS 17+; D-89 spelling) and `NSContactsUsageDescription` (the README warns of a crash without it, from location autocomplete in Apple's editor) | `[tool.flet.ios.info]` (exists). The Ionic plist had both calendar keys. D-89 lists only the write-only key today; the other two need a D-89 amendment before the E4 release (§9 #4) |
-
-**Tests.**
-- Integration: on the Android emulator, `add_event` launches the INSERT intent. The test asserts the result returns, then backs out.
-- iOS simulator: the editor presents and cancelling returns False.
-- Unit: datetime serialisation round-trip.
-- Manual: the event lands with the correct local time on both OSes.
-
-**App upgrade.**
-1. Add `flet-add-to-calendar==0.x` plus U6 queries plus the plist keys.
-2. `NativeCalendar` replaces `IcsShare` for SESS-04. The `.ics` share stays available as "Share as file".
-
----
-
-### E5 `flet-html` (27.1 sprint)
+### 4.4 E5: HTML rendering (later)
 
 | Field | Value |
 |---|---|
-| Serves | INFO-05, DATA-23, DATA-25, SESS-06, MAP-09 |
-| Interim | `core/html_md.py` (stdlib `html.parser`; links absolutised; D-53) → `ft.Markdown(value, on_tap_link=...)` (exists). Tables degrade to text |
-| Dart package | `flutter_widget_from_html_core` **0.17.4** today (MIT; 2026-09-08; deps `csslib`, `html`, `logging` only; checked 2026-10-11). Re-verify and pin exactly at the sprint |
-| Gate | **Required before any code** (D-24): find out whether the widgets `HtmlWidget` builds (text selection, links) use SDK Material. If they do, wrap only the `widgets.dart` paths, or drop E5 and keep Markdown |
-| Effort / owner / date | M / CC / 27.1 sprint 2027-05-17/18 (UNCONFIRMED) |
-| Caps | `html` |
+| Serves | DATA-23, DATA-25, SESS-06, INFO-05, MAP-09 |
+| Interim | `core/html_md.py` (stdlib `html.parser`, absolute links, text fallback for unknown tags) → `ft.Markdown(selectable=True, on_tap_link=...)` (D-44). Spike S3 measures coverage over every HTML field in the 2025 and 2026 feeds. If coverage is good, E5 may never be needed. |
+| Dart package | `flutter_widget_from_html_core` **0.17.4** (MIT; 2026-09-08; depends only on `csslib`, `html` and `logging`). Run the gate (§3) **before any code**: if the widgets it builds for selection or links use SDK Material, drop E5. |
+| Setup | None: the package is pure Dart and needs no permissions or usage strings. |
+| Effort / gate | M / `capabilities.HTML`: the companion app lacks its Dart code, so `html_md` → `Markdown` stays the fallback (one helper chooses). |
 
 ```python
 @ft.control("Html")
-class Html(ft.LayoutControl):          # proposed (E5)
+class Html(ft.LayoutControl):
     value: str = ""
-    base_url: Optional[str] = None      # resolves /2027/... links (DATA-25)
-    text_style: Optional[ft.TextStyle] = None
+    base_url: Optional[str] = None  # resolves /2027/... links
     selectable: bool = False
-    on_tap_link: Optional[ft.ControlEventHandler["Html"]] = None   # e.data = absolute URL
+    on_tap_link: Optional[ft.ControlEventHandler["Html"]] = None  # e.data is the absolute URL
 ```
 
-**Platform setup:** none (no permissions, plist keys or manifest entries). Images load over HTTPS like any `ft.Image`.
+**Upgrade** (§2.4, plus): one helper picks `Html` when `capabilities.HTML`, else `html_md` → `Markdown`; search keeps matching the converted text.
 
-**Tests.**
-- The gate test (§2.4): static grep of `lib/`; runtime render of `Html` with links, a table, an image and `selectable=True` text on the Android emulator and the iOS simulator, with no `No Material widget found` / `FlutterError` in the log.
-- `on_tap_link` delivers an absolute URL for a `/2027/...` href when `base_url` is set, and the href unchanged when it is already absolute.
-- Goldens of INFO-05 and MAP-09 content rendered by `Html` stay within threshold of the Markdown (`html_md`) path.
-- The upgrade guard: the resolved `flutter_widget_from_html_core` version equals the pin in `pubspec.lock`.
+**Tests:** the §3 gate; link taps yield absolute URLs; every HTML field in the 2025 and 2026 feeds renders with no `FlutterError`.
 
-**App upgrade.** Wherever the app renders feed HTML (INFO-05, DATA-23, DATA-25, SESS-06, MAP-09), it uses `Html` when `caps.html` is set; otherwise `Markdown(html_md(...))`. The goldens for INFO and MAP-09 must stay within threshold.
+### 4.5 E2: FCM push (low; not used by the app)
 
-### E6 `flet-slidable` (27.1 sprint)
-
-| Field | Value |
-|---|---|
-| Serves | SCHED-11 |
-| Interim | `ft.Dismissible` one-shot swipe + `await confirm_dismiss(False)` snap-back + SnackBar with Ionic copy; long-press menu and star as non-gesture paths (D-72) |
-| Dart package | `flutter_slidable` **4.0.3** today (MIT; 2025-09-27; Flutter `>=3.27.0`; checked 2026-10-11) |
-| Gate | Upstream `SlidableAction` is likely built from SDK Material buttons. Expose actions only through `CustomSlidableAction` with a Flet-built child, so only `Slidable`/`ActionPane` (widgets layer) are used. The gate test proves it |
-| Effort / owner / date | S / CC / 27.1 sprint |
-| Caps | `slidable` |
-
-```python
-@ft.control("Slidable")
-class Slidable(ft.LayoutControl):      # proposed (E6)
-    content: ft.Control
-    start_actions: list[ft.Control] = field(default_factory=list)   # rendered as CustomSlidableAction children
-    end_actions: list[ft.Control] = field(default_factory=list)
-    extent_ratio: ft.Number = 0.25
-    close_on_action: bool = True
-    async def close(self) -> None: ...
-```
-
-**Platform setup:** none (no permissions, plist keys or manifest entries).
-
-**Tests.**
-- The gate test (§2.4) with only `CustomSlidableAction` children (no upstream `SlidableAction`): static grep plus a runtime render on the emulator and the simulator with no `No Material widget found` in the log.
-- A swipe on `content` reveals the start/end actions (golden of the open state).
-- `close()` returns the row to closed; with `close_on_action=True` an action tap closes it, with `False` it stays open.
-- Tapping an action fires that action control's own handler exactly once.
-- The upgrade guard: the resolved `flutter_slidable` version equals the pin in `pubspec.lock`.
-
-**App upgrade.** `SessionRow` wraps itself in `Slidable` with "Favorite" (`#69bb7b`) / "Remove" (danger) actions when `caps.slidable` is set. Informational rows stay non-swipeable.
+The app has no push (D-58): there is no sender, and the PSF's Firebase project is not ours; NOTIF-04 and NATIVE-04 are `drop`. A `flet-firebase` extension stays a possible Flet contribution with no app integration: `firebase_core` **4.15.0** and `firebase_messaging` **16.7.0** (BSD-3; 2026-09-14), Dart-only `Firebase.initializeApp(options)` (no hook exists for `google-services.json`/`GoogleService-Info.plist`), and the iOS `aps-environment` entitlement, which needs the cut U5.
 
 ---
 
-## 5. Core and CLI items (U1-U15)
+## 5. Core and CLI items
 
-Each item is a PR to `flet-dev/flet`, with a CHANGELOG entry, docs and integration tests per the monorepo skills (`write-changelog-entry`, `create-flet-control-integration-tests`, `docs-conventions`). CLI items also update `website/docs/publish/{index,android,ios}.md` and the `flet_build_test` example.
+Each is a PR to flet-dev/flet with a CHANGELOG entry, docs and integration tests, following the monorepo skills (`write-changelog-entry`, `create-flet-control-integration-tests`, `docs-conventions`).
 
-### U1 `ft.RefreshIndicator` (S, 8 h; U; merged 01-15)
+### 5.1 U1: `ft.RefreshIndicator` (priority 2; S)
 
 | Field | Value |
 |---|---|
-| Ids | SCHED-13, SCHED-26, EVT-07, SPON-08, LEAD-13 |
-| Interim | `Refreshable` renders an AppBar refresh `IconButton` + `ProgressBar` that calls `FeedStore.refresh(force=True)`, which keeps the cache on failure (D-67). LEAD-13: "Sync now" button |
-| Dart | `RefreshIndicator` / `RefreshIndicator.adaptive` from `material_ui` (no new dependency; `cupertino_ui` sliver variant not needed) |
-| Probe | `refresh_indicator` = `hasattr(ft, "RefreshIndicator")` |
+| Serves | DATA-03, SCHED-13, EVT-07, SPON-08 |
+| Interim | The `StatusStrip` (D-32) shows Refresh while data is stale, offline or refreshing. Settings › Data and the Developer screen have "Refresh now". All call `Conference.start_refresh(svc)` (architecture §6.2), which keeps the cache on failure (D-39). Automatic refresh runs on start, on resume when the data is older than 15 min, and every 15 min while Now or Schedule is visible (D-40). |
+| Today | Absent (F8). |
+| Dart | Flutter's `RefreshIndicator` from `material_ui`; no new dependency. |
 
 ```python
 @ft.control("RefreshIndicator")
-class RefreshIndicator(ft.LayoutControl):      # proposed (U1)
-    content: ft.Control                        # must be scrollable (ListView/Column(scroll=...))
-    on_refresh: Optional[ft.ControlEventHandler["RefreshIndicator"]] = None   # sync or async
+class RefreshIndicator(ft.LayoutControl):
+    """Pull-to-refresh around a scrollable control (proposed, U1)."""
+
+    content: ft.Control  # a ListView, or a Column/Row with scroll set
+    on_refresh: Optional[ft.ControlEventHandler["RefreshIndicator"]] = None
     color: Optional[ft.ColorValue] = None
     bgcolor: Optional[ft.ColorValue] = None
-    displacement: ft.Number = 40.0             # Flutter default
+    displacement: ft.Number = 40.0
     edge_offset: ft.Number = 0.0
-    stroke_width: ft.Number = 2.5              # RefreshProgressIndicator.defaultStrokeWidth
-    adaptive: bool = False
+    stroke_width: ft.Number = 2.5
 ```
 
-**Completion contract.** Flutter's `onRefresh` needs a `Future`. Mirror `Dismissible` (`DART/controls/dismissible.dart`): `onRefresh` creates a `Completer` and triggers `refresh`. The Python class overrides `_trigger_event` for `refresh`: it awaits the user handler, then always calls `await self._invoke_method("end_refresh")` in a `finally`, which completes the `Completer`. A Dart-side 60 s timeout completes it if Python never answers, so the spinner can never hang (the SPON-08 Ionic bug).
+**Completion contract.** Flutter's `onRefresh` must return a `Future`. Follow `Dismissible` (exists, `DART/controls/dismissible.dart:82-91`):
+1. Dart stores a `Completer` and triggers `refresh`.
+2. Python awaits the user's handler, sync or async, then **always** calls `_invoke_method("end_refresh")` in a `finally`, which completes the `Completer`.
+3. A Dart-side timeout completes it if Python never answers, so the spinner can never hang (Ionic's SPON-08 bug).
 
-**Tests.** Drag gesture → handler runs → spinner disappears after the handler returns. A handler that raises still ends the spinner. Adaptive on iOS shows the Cupertino style (golden).
+**Tests.** Drag, then the handler runs, then the spinner disappears. A handler that raises still ends the spinner. Updating `content` keeps the scroll offset.
 
-**App upgrade.** `Refreshable` branches on `caps.refresh_indicator` by value, never with a conditional hook (D-67).
+**Upgrade.** The app's list scaffold wraps its list in `RefreshIndicator(on_refresh=...)`. The StatusStrip keeps its Refresh button, because pull-to-refresh is not discoverable by screen-reader users (D-33), and Settings › Data keeps "Refresh now".
 
-### U2 Sticky group headers (M; FT/CC; 27.1)
+### 5.2 U15: non-fatal handler and effect errors (priority 3; S)
 
 | Field | Value |
 |---|---|
-| Ids | SCHED-02 |
-| Interim | `ListView` of non-sticky slot dividers ("Sat - 9:25 am") + rows (D-71) |
-| Design | A `CustomScrollView` with one `SliverMainAxisGroup` per group, whose first sliver is a `PinnedHeaderSliver`. These are framework widgets, so no new dependency and no Material |
-| Probe | `sticky_headers` = `hasattr(ft, "GroupedListView")` |
+| Serves | Cross-cutting (D-71) |
+| Interim | `@report_errors` on handlers and effects: it logs the traceback, shows "Something went wrong" (with the exception text in developer mode), and re-raises `CancelledError`. Expected failures are still handled at their own boundaries. |
+| Today | • An event-handler exception is logged, then `session.error()` sends `SESSION_CRASHED` (`FLET/messaging/session.py:459-464`, `:592-600`).<br>• A sync effect setup does the same (`:746-748`).<br>• Async effect tasks fail silently into asyncio (F4).<br>• `page.on_error` exists, but it carries Flutter-side errors. |
+| Change | One opt-in page event. When set, it receives every unhandled exception from event handlers and effects, sync or async, and the session stays alive. When it is unset, behaviour is unchanged. |
 
 ```python
-@ft.control("ListGroup")
-class ListGroup(ft.Control):                   # proposed (U2), sub-control
-    header: ft.Control
-    controls: list[ft.Control] = field(default_factory=list)
+@dataclass
+class UnhandledErrorEvent(ft.Event["Page"]):
+    """An exception no handler caught (proposed, U15)."""
 
-@ft.control("GroupedListView")
-class GroupedListView(ft.LayoutControl):       # proposed (U2)
-    groups: list[ListGroup] = field(default_factory=list)
-    sticky_headers: bool = True
-    async def scroll_to(self, offset: Optional[float] = None, delta: Optional[float] = None,
-                        scroll_key=None, duration: ft.DurationValue = 0,
-                        curve: ft.AnimationCurve = ft.AnimationCurve.EASE) -> None: ...
-        # same signature and scroll_key semantics as ListView.scroll_to (decisions §N.5)
+    error: Optional[BaseException] = None
+    source: str = ""  # e.g. "on_click handler of Button(12)" or "effect in Schedule"
+
+
+# Proposed new field on ft.Page:
+#     on_unhandled_error: Optional[ft.EventHandler[UnhandledErrorEvent]] = None
 ```
 
-SCHED-16's scroll-to-slot uses the same key contract as `ListView.scroll_to` (decisions §N.5). Ships in 27.1 (D-26; feature-matrix SCHED-02).
+The Flet team decides the final shape. A page event keeps it per session, discoverable and opt-in.
 
-**Tests.**
-- Integration (`create-flet-control-integration-tests`): three groups, scrolled past the first header. The header stays pinned at the top and the next header pushes it out (golden at two scroll offsets). With `sticky_headers=False`, headers scroll with their rows.
-- `scroll_to(scroll_key=...)` on a row in a later group lands it directly below the pinned header; `offset`/`delta` behave as in `ListView`.
-- Adding a group in an update re-renders without resetting the scroll offset.
-- The log has no `No Material widget found` (framework widgets only; checked like §2.4 step 2).
+**Tests.** With the hook set, a raising click handler, sync effect or async effect task sends no `SESSION_CRASHED`, the page stays interactive, and the hook receives the exception and its source. Without the hook, behaviour is unchanged.
 
-**App upgrade.** The schedule list branches on `caps.sticky_headers`: a `GroupedListView` with one `ListGroup` per slot (header = the existing divider text), or the D-71 divider `ListView`. SCHED-16 calls the same `scroll_to(scroll_key=...)` on either.
+**Upgrade.** `main.py` sets `page.on_unhandled_error` to log and show the SnackBar. The PR deletes `@report_errors` and its uses (D-71).
 
-### U3 `InteractiveViewer.set_transform()` / `zoom_to_rect()` (S, 10 h; U; 02-12; T2)
+### 5.3 U4: `page.get_app_info()` (priority 5; XS)
 
 | Field | Value |
 |---|---|
-| Ids | EXPO-05 (T2; third on the cut order) |
-| Interim | `await iv.reset()` → `await iv.zoom(6)` → `await iv.pan(dx, dy)`, on an `ft.InteractiveViewer(max_scale=8, boundary_margin=ft.Margin.all(...), ...)`: `zoom(factor)` clamps the total scale to `max_scale`, which defaults to 2.5, so any `max_scale >= 6` is required or `zoom(6)` silently stops at 2.5×; popup after 250 ms. The existing `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped. `reset(animation_duration)` goes back to identity and is the only one that animates (a `Matrix4Tween`, `DART/controls/interactive_viewer.dart`). `save_state`/`restore_state` store and restore one matrix |
-| Dart | Set `TransformationController.value` directly. Animate with a `Matrix4Tween` when a duration is given, reusing the existing `reset` code path |
-| Probe | `iv_set_transform` = `hasattr(ft.InteractiveViewer, "set_transform")` |
-
-```python
-# added to ft.InteractiveViewer (proposed, U3)
-async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue,
-                        animation_duration: Optional[ft.DurationValue] = None) -> None: ...
-async def zoom_to_rect(self, rect: ft.Rect, padding: ft.Number = 0,
-                       animation_duration: Optional[ft.DurationValue] = None) -> None: ...
-```
-
-`zoom_to_rect` computes the scale that fits `rect` (in content coordinates; booths are 9931×7021 ratios in app-content) inside the viewport, clamps it to `[min_scale, max_scale]` and centres it. That is exactly "zoom to booth N". The same id twice re-centres. `reduce_motion` passes `animation_duration=None`.
-
-**Tests.**
-- Integration: `set_transform(scale=2, offset=...)` on a gridded test image lands the expected `TransformationController` matrix (golden of the viewport; `save_state` → `restore_state` round-trips it).
-- `zoom_to_rect` on a rect so small that fitting it would exceed `max_scale` clamps to `max_scale`; a rect too large to fit at `min_scale` clamps to `min_scale`; calling it twice with the same rect gives the same golden.
-- With `animation_duration`, a frame pumped halfway differs from both the start and the end; without it, the first frame is final.
-
-**App upgrade.** `FloorPlan` branches on `caps.iv_set_transform`: `zoom_to_rect(booth_rect, animation_duration=...)` (`None` under `reduce_motion`) replaces reset → zoom → pan. The popup still opens 250 ms after the call returns.
-
-### U4 `page.get_app_info()` (S, 4 h; U; merged 01-15)
-
-| Field | Value |
-|---|---|
-| Ids | INFO-03 |
-| Interim | `build_info.py` written by CI (VERSION, BUILD_NUMBER, GIT_SHA, TARGET, CAPS, PYCON_ENV; D-90). `importlib.metadata` does not work in packaged apps (decisions §N.10) |
-| Dart | `package_info_plus ^9.0.0` is already a dependency of `packages/flet/pubspec.yaml`, but nothing uses it. Add a `get_app_info` case next to `get_device_info` in `DART/controls/page.dart` |
-| Probe | `app_info` = `hasattr(ft.Page, "get_app_info")`. The manifest gate matters: in the companion app this would report the companion's own version, so `PageAppInfo` is used only from a built app |
+| Serves | INFO-03 (About this app) |
+| Interim | `pycon_us.__version__`, kept equal to `[project].version` by a unit test, plus the build number (D-83). `importlib.metadata` cannot see the app in packaged builds (F15). |
+| Today | Absent. `package_info_plus: ^9.0.0` is already in `packages/flet/pubspec.yaml`, unused (latest 10.2.2); add the case next to `get_device_info` (`DART/controls/page.dart:338`). In the companion app it would report the companion's version, so the app uses it only when `is_embedded()`. |
 
 ```python
 @ft.value
-class AppInfo:                                  # proposed (U4)
-    app_name: str; package_name: str; version: str; build_number: str
+class AppInfo:
+    """What the OS knows about the running app (proposed, U4)."""
+
+    app_name: str
+    package_name: str
+    version: str
+    build_number: str
     installer_store: Optional[str] = None
 
-# ft.Page (proposed, U4)
-async def get_app_info(self) -> AppInfo: ...
+
+# Proposed on ft.Page, next to get_device_info():
+#     async def get_app_info(self) -> AppInfo: ...
 ```
 
-**App upgrade.** `PageAppInfo` supplies version and build. `GIT_SHA`, `TARGET` and `CAPS` still come from `build_info.py`.
+**Upgrade.** About this app reads `version` and `build_number` from `await page.get_app_info()` when embedded, and the PR deletes the build-number constant. **Test:** on the flet test host, the result equals `--build-version`/`--build-number` and the bundle id.
 
-**Tests.**
-- Integration on the flet test host (`flet test android` / `flet test ios`): `get_app_info()` returns the `version` and `build_number` the host was built with (`--build-version` / `--build-number`), and `package_name` equals its bundle id.
-- Unit: `AppInfo` deserialisation, including `installer_store=None`.
-- App side: the fallback-parity suite runs `app_info` on and off; INFO-03 shows the same version string either way.
-
-### U5 `[tool.flet.ios.entitlement]` (S, 8 h; U; merged 01-31, released by 02-26)
+### 5.4 U16 + U17: text scale and accessibility changes (priority 6; XS, one PR)
 
 | Field | Value |
 |---|---|
-| Ids | NOTIF-04, NATIVE-04 (push), NATIVE-07 (`webcredentials:us.pycon.org` autofill) |
-| Interim | push off; autofill through `ft.AutofillGroup` + `TextField(autofill_hints=[...])` OS heuristics |
-| Today | Only `[tool.flet.macos.entitlement]` / `--macos-entitlements` exist (`CLI/build_base.py`, rendered by `render_dict` into `TPL/macos/Runner/*.entitlements`). `TPL/ios/Runner` has no `.entitlements` file and the pbxproj has no `CODE_SIGN_ENTITLEMENTS` |
-| Change | (1) A CLI option `--ios-entitlements key=value` plus the pyproject table, merged like the macOS one (`merge_dict` + `parse_cli_plist_value`). (2) Template: add `ios/Runner/Runner.entitlements` rendered with `render_dict(cookiecutter.options.ios_entitlements)`, emitted only when non-empty, and `CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements` in the three Runner build configurations, conditionally. (3) Docs in `publish/ios.md` |
+| Serves | THEME-11 (text at 200 %), THEME-09 (reduced motion), the high-contrast switch default (D-23) |
+| Interim | Fluid layouts with no fixed heights around text (D-26). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). |
+| Today | `PageMediaData` has `padding`, `view_padding`, `view_insets`, `device_pixel_ratio`, `orientation` and `always_use_24_hour_format`. Its Dart builder (`DART/widgets/page_media.dart:56-64`) already sends a `media_change` event whenever these change, and `page.on_media_change` receives the new `PageMediaData` (exists). |
+| Change | Add five fields, read in the same Dart builder:<br>• `text_scale_factor` from `MediaQuery.textScalerOf(context)`;<br>• `disable_animations`, `high_contrast`, `bold_text` and `accessible_navigation` from `MediaQuery`.<br>Reading them makes the builder depend on them, so the **existing** `on_media_change` becomes the change event. That covers U17 with no new event type. |
 
-```toml
-# app pyproject, only in the release that ships E2 / the autofill upgrade (D-89)
-[tool.flet.ios.entitlement]
-"aps-environment" = "production"
-"com.apple.developer.associated-domains" = ["webcredentials:us.pycon.org"]
+```python
+# Proposed additions to ft.PageMediaData (all read-only):
+#     text_scale_factor: float = 1.0
+#     disable_animations: bool = False
+#     high_contrast: bool = False
+#     bold_text: bool = False
+#     accessible_navigation: bool = False
 ```
 
-**Tests.**
-- Unit: rendering with an empty table produces no file and no build setting, so existing builds are byte-identical.
-- `flet build ipa` on CI: `codesign -d --entitlements - Runner.app` shows the keys.
-- PSF prerequisites: the App ID capabilities, and an AASA file on us.pycon.org with team `BMM5U3QVKW` (NATIVE-07 gotcha).
+**Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live.
 
-### U6 `[tool.flet.android.queries]` (S, 6 h; U; 01-31, only if E4)
+**Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values.
 
-| Field | Value |
-|---|---|
-| Ids | SESS-04 (calendar INSERT), INFO-14 (would allow `can_launch_url`; the app still avoids it) |
-| Today | `TPL/android/app/src/main/AndroidManifest.xml` has one fixed `<queries>` (`PROCESS_TEXT`) and no hook |
-| Change | Render extra `<intent>` and `<package>` entries inside the existing `<queries>` |
+### 5.5 U10: `AppBar.bottom` (later; S)
+
+- **Serves:** SCHED-01 (day tabs), SCHED-27.
+- **Interim:** the `TabBar` is the first row of the view's body.
+- **Today:** `ft.AppBar` has no `bottom` field.
+- **Change:** `bottom: Optional[ft.Control] = None`, wrapped in a `PreferredSize` whose height the Dart side measures, or a `bottom_height: ft.Number = 48.0` if measuring proves awkward. A good PyCon sprint candidate.
+- **Upgrade:** Schedule moves its `TabBar` into `AppBar(bottom=...)`. No other screen changes.
+
+### 5.6 U2: grouped list with pinned headers (later; M)
+
+- **Serves:** SCHED-02, SCHED-27.
+- **Interim:** each time slot is one `ListView` item with its time in a left gutter (D-31), which also gives `scroll_to` slot-sized keys (F7).
+- **Design:** a `CustomScrollView` with one `SliverMainAxisGroup` per group, whose first sliver is a `PinnedHeaderSliver`. These are framework widgets, so no Material and no new dependency.
+
+```python
+# Proposed (U2): scroll_to(...) mirrors ListView.scroll_to, including scroll_key.
+@ft.control("ListGroup")
+class ListGroup(ft.Control):
+    header: ft.Control
+    controls: list[ft.Control] = field(default_factory=list)
+
+
+@ft.control("GroupedListView")
+class GroupedListView(ft.LayoutControl):
+    groups: list[ListGroup] = field(default_factory=list)
+    sticky_headers: bool = True
+```
+
+**Upgrade.** The schedule may keep the gutter layout. Adopt U2 only if pinned slot headers test better on devices than the gutter.
+
+### 5.7 U3: absolute `InteractiveViewer` transform (later; S)
+
+- **Serves:** EXPO-05 (zoom to booth).
+- **Interim:** the booth is selected and highlighted and its card shown, without moving the camera.
+- **Today:** `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped (`FLET/controls/core/interactive_viewer.py:230`, `:246`). Only `reset(animation_duration)` animates (`:195`). `save_state`/`restore_state` store one matrix.
+- **Change:** set the `TransformationController` value directly, animating with a `Matrix4Tween` when a duration is given, as `reset` does.
+
+```python
+# Proposed on ft.InteractiveViewer:
+#     async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue,
+#                             animation_duration: Optional[ft.DurationValue] = None) -> None: ...
+#     async def zoom_to_rect(self, rect: ft.Rect, padding: ft.Number = 0,
+#                            animation_duration: Optional[ft.DurationValue] = None) -> None: ...
+```
+
+`zoom_to_rect` fits a content-space rectangle in the viewport, clamped to `[min_scale, max_scale]`. **Upgrade:** the floor plan calls `zoom_to_rect(booth_rect, animation_duration=...)`, with `None` under reduced motion.
+
+### 5.8 U9: `ft.use_route_search()` (later; XS)
+
+- **Serves:** ROOM-03 (`?highlight=`), SPON-04 and EXPO-05 (`?booth=`).
+- **Interim:** `use_query()` in `routes.py` calls `ft.use_route_location()`, which subscribes and returns the pathname, then parses the query from `page.route`.
+- **Today:** `LocationInfo.search` is populated without the leading `?` (`FLET/components/router.py:112-123`, `:725`) but not exposed by a hook.
+- **Change:** `def use_route_search() -> str`, next to `use_route_location()` (`router.py:357`), exported as `ft.use_route_search`.
+- **Upgrade:** `use_query()` becomes `dict(parse_qsl(ft.use_route_search()))`. Its callers do not change.
+
+### 5.9 U6: Android `<queries>` (only with E4; S)
+
+- **Today:** the template has one fixed `<queries>` entry (`PROCESS_TEXT`, `TPL/android/app/src/main/AndroidManifest.xml:83-88`) and no hook.
+- **Change:** render extra intents from pyproject:
 
 ```toml
 [[tool.flet.android.queries.intent]]
 action = "android.intent.action.INSERT"
-data = { mimeType = "vnd.android.cursor.item/event" }   # attributes rendered as android:<k>
-[[tool.flet.android.queries.intent]]
-action = "android.support.customtabs.action.CustomTabsService"
+data = { mimeType = "vnd.android.cursor.item/event" }
 ```
 
-**Test.** The manifest-merger report contains the intents. On an API 34 emulator, E4's `add_event` resolves the activity.
+- **Test:** the manifest-merger report contains the intent. Without the table, the manifest is byte-identical to today.
 
-### U7 `core_library_desugaring` (S, 6 h; U; 01-31, only if E3)
+### 5.10 U7: core library desugaring (with E3; S)
 
-| Field | Value |
-|---|---|
-| Ids | NOTIF-05 |
-| Today | `TPL/android/app/build.gradle.kts` has `compileOptions { sourceCompatibility/targetCompatibility = JavaVersion.VERSION_17 }` and no desugaring. The CLI has no arbitrary Gradle snippet hook. The `:app` Gradle knobs are `legacy_packaging`, `excluded_abis`, `min_sdk_version`/`target_sdk_version`, `target_arch`/split-per-ABI and signing, plus `gradle_properties` and ProGuard rules. None of them enables desugaring |
-| Change | `[tool.flet.android] core_library_desugaring = true` (+ `--android-core-library-desugaring`) renders `isCoreLibraryDesugaringEnabled = true` and `dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") }` |
-| Scope note | If the #6948 package cannot carry the receivers in its own library manifest (§E3), U7 grows a `[tool.flet.android.receiver]` table rendered like `provider` (name + attributes + `intent_filter` actions) |
+- **Today:** `compileOptions` sets Java 17 with no desugaring (`TPL/android/app/build.gradle.kts:65-68`). None of the existing `:app` options (`min_sdk_version`, `gradle_properties`, `proguard_rules`, signing, splits) enables it.
+- **Change:** `[tool.flet.android] core_library_desugaring = true` (plus a CLI flag) renders `isCoreLibraryDesugaringEnabled = true` and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`.
+- **Alternative for the Flet team:** enable it unconditionally in the template. It is harmless for apps that don't need it, and it removes a knob.
+- **Scope:** if S6 picks the fallback for E3's receivers, this PR also adds a `[tool.flet.android.receiver]` table, rendered like `provider`.
+- **Test:** `flet build apk` of an app using `flutter_local_notifications` 22.3.1 fails without the setting and succeeds with it.
 
-**Test.** `flet build apk` of an app using `flutter_local_notifications` 22.3.1 succeeds with the flag and fails without it (a regression guard that the flag is wired).
+### 5.11 U12 and U13 (conditional)
 
-### U8 Resource meta-data and string resources (S, 5 h per D-112; U; 01-31, only for the autofill upgrade)
+- **U12, iOS deployment target: not needed.** The template's 15.0 floor (D-12) is above every pod we wrap: `mobile_scanner` 12.0, `flutter_local_notifications` 13.0, `add_2_calendar` 11.0 (§6). Reopen it only if a new dependency needs more.
+- **U13, app privacy manifest:** only if the S5 TestFlight upload reports ITMS-91053. The change would ship `Runner/PrivacyInfo.xcprivacy` in the template, declaring the required-reason APIs that embedded CPython and `shared_preferences` use, with the reasons reviewed by the Flet team.
 
-| Field | Value |
-|---|---|
-| Ids | NATIVE-07 (Android credential sharing with us.pycon.org) |
-| Today | `[tool.flet.android.meta_data]` renders only `android:value`. `provider.meta_data` already accepts inline tables of attributes (`CLI/build_base.py`). The template has **no app string resource** to point at |
-| Change | (1) Accept inline tables in `[tool.flet.android.meta_data]`, rendered as attributes, reusing the provider code path. (2) Add `[tool.flet.android.string_resources]`, rendered into `res/values/flet_strings.xml` as `<string name="..." translatable="false">` with Android string-resource escaping: XML-escape `&` and `<`; backslash-escape `"`, `'` and `\`, a leading `@` or `?`, and newlines (`\n`). XML escaping alone is not enough: aapt strips unescaped double quotes as quoting delimiters (and `&quot;` is a raw `"` after parsing), so the `asset_statements` JSON would reach the app without its quotes. Ionic's working `strings.xml` uses `\"` for this reason. **Without (2), (1) cannot express `asset_statements`**, because `@string/asset_statements` must exist |
+### 5.12 U18: Back inside a modal sub-chain (later; XS)
 
-```toml
-[tool.flet.android.string_resources]
-asset_statements = '[{"include": "https://us.pycon.org/.well-known/assetlinks.json"}]'
-[tool.flet.android.meta_data]
-asset_statements = { resource = "@string/asset_statements" }
-```
-
-PSF prerequisite: `assetlinks.json` with the upload and app-signing certificate fingerprints.
-
-**Scope note.** Part (2) widens D-26 U8 ("inline-table resource `meta_data`") and the estimate moves from 3 h to 5 h. Both are recorded in D-112 (§9 #2).
-
-**Tests.**
-- Unit: with both tables empty the rendered manifest is byte-identical to today and no `flet_strings.xml` is written. A value containing `&`, `<`, `"`, `'`, `\`, a leading `@` and a newline is rendered with the escaping above and `translatable="false"`. An inline table renders as attributes (`android:resource="@string/asset_statements"`).
-- `flet build apk` on CI: the manifest-merger report contains the `asset_statements` meta-data, and the **compiled** `asset_statements` resource (read back with `aapt2 dump resources` on the APK, or `getString` on the emulator) equals the exact JSON input, quotes included.
-- Device (manual): once the PSF's `assetlinks.json` is live, the Android password manager offers us.pycon.org credentials in the login form.
-
-**App upgrade.** Only in the release that ships the autofill upgrade (D-89): add the two tables above (with U5's `webcredentials:` entitlement on iOS). No app code changes; `ft.AutofillGroup` is already in place.
-
-### U9 `ft.use_route_search()` (XS; U; 02-12; T2)
-
-| Field | Value |
-|---|---|
-| Ids | ROOM-03 (`?session=` highlight), SPON-04 (`expo-hall?booth=N`) |
-| Interim | `use_query()` calls `ft.use_route_location()`, which subscribes and returns the pathname only, then parses `page.route` (D-37; spike S9 verifies `page.route` carries the query) |
-| Today | `LocationInfo.search` is already populated in `FLET/components/router.py` (`search = parsed.query or ""`, line ~725), without the leading `?`. It is just not exposed by a hook |
-| Change | `def use_route_search() -> str`, next to `use_route_location()` in `router.py`, returning the location's `search` (no `?`) and subscribing the same way. Export as `ft.use_route_search` |
-| Probe | the helper: `use_query()` returns `dict(parse_qsl(ft.use_route_search()))` when available. One branch at import, never a conditional hook |
-
-**Tests.**
-- Component test under `ft.Router`: `use_route_search()` returns `"session=42"` (no `?`) for `/rooms/a?session=42`, `""` without a query, and never includes a `#` fragment.
-- After `page.navigate("/expo-hall", booth=7)` (kwargs become query parameters), the subscribed component re-renders and returns `"booth=7"`.
-
-**App upgrade.** None beyond the Flet pin: `use_query()` switches branch at import. The ROOM-03 and SPON-04 tests run against both branches (fallback parity).
-
-### U10 `AppBar.bottom` (S; post-conference)
-
-- **Ids:** SCHED-01.
-- **Interim:** the day selector (`SegmentedButton` / `CupertinoSlidingSegmentedButton` / scrollable `TabBar`) is the first row of `View.controls`.
-- **Today:** `ft.AppBar` has no `bottom` field (decisions §N.8).
-- **Change:** add `bottom: Optional[ft.Control]` and `bottom_height: ft.Number = 48.0`, wrapped in `PreferredSize`.
-- **Owner:** CC (PyCon sprint candidate), reviewed by U.
-- **Tests:** integration: `AppBar(bottom=..., bottom_height=48)` renders the control below the toolbar (golden), the bar's preferred height is toolbar + `bottom_height`, and updating `bottom` re-renders it. `bottom=None` leaves the layout unchanged (regression golden).
-- **App upgrade (27.1):** a helper-level probe (`"bottom" in [f.name for f in dataclasses.fields(ft.AppBar)]`, like U9/U15; no `Caps` key). The schedule view moves the day selector from the first row of `View.controls` into `AppBar.bottom`. No other screen changes.
-
-### U11 Offline service worker for `flet build web` (M; post-conference)
-
-- **Ids:** NATIVE-09.
-- **Interim:** an online-only PWA on PSF Firebase Hosting (D-93).
-- **Today:** Flutter 3.47's `flutter_service_worker.js` unregisters itself, and Pyodide and CanvasKit load from CDNs.
-- **Change:** a Flet-generated SW precaching `app.zip`, Pyodide and CanvasKit (`--no-cdn`), with versioned cache names.
-- **Owner:** FT.
-- **Tests:** CI `flet build web --no-cdn`, then headless Chromium: load once online, switch the network off, reload, and the app boots from cache. A new build changes the cache names and the old caches are deleted on `activate`.
-- **App upgrade (27.1):** rebuild the PWA on the new Flet pin with `--no-cdn`, and serve the service-worker file with `no-cache` on Firebase Hosting (D-93 otherwise unchanged). The shell then boots offline; feed data still needs the network (the web build has no sqlite cache, D-93).
-
-### U12 `[tool.flet.ios] deployment_target` (S; U; conditional, 12-15)
-
-- **Ids:** NATIVE-02.
-- **Today:** the target is fixed at 15.0 in three places in `TPL/ios/Runner.xcodeproj/project.pbxproj` and in `Podfile` (`platform :ios, '15.0'`). Xcode 27 rejects anything lower.
-- **Change:** render all four from one option, rejecting values below 15.
-- **Do it only if spike S10** finds a wrapped pod (E1-E4) whose minimum is above 15. Otherwise close it as not needed.
-- **Tests:** unit: no option keeps `15.0` in all four places (byte-identical template); `deployment_target = "16.0"` rewrites the three pbxproj entries and the Podfile; `"14.0"` is rejected with a clear error. CI `flet build ipa` with `16.0`: `xcodebuild -showBuildSettings` reports `IPHONEOS_DEPLOYMENT_TARGET = 16.0` and `pod install` succeeds.
-- **App upgrade:** set `[tool.flet.ios] deployment_target` to the pod's minimum, only in the release that ships the extension needing it.
-
-### U13 Template `PrivacyInfo.xcprivacy` (S; U; conditional, 12-15)
-
-- **Context:** store submission risk R9.
-- **Today:** there is no app-level privacy manifest in `TPL/ios/Runner`.
-- **Do it only if spike S5** (a throwaway TestFlight upload) reports ITMS-91053.
-- **Change:** ship `Runner/PrivacyInfo.xcprivacy` in the Runner target's resources. It declares the required-reason APIs that the embedded CPython uses (file timestamp, disk space, system boot time; `UserDefaults` for `shared_preferences`), with reasons chosen from Apple's list and reviewed by FT.
-- **Tests:** CI `flet build ipa`: the `.app` contains `PrivacyInfo.xcprivacy` and `plutil -lint` passes. A TestFlight upload of that IPA (the S5 check, rerun) reports no ITMS-91053.
-- **App upgrade:** none; the template change arrives with the Flet pin.
-
-### U14 Verified App Links and multiple hosts (S; post-conference)
-
-- **Context:** deep links (D-38).
-- **Interim:** the custom scheme `pyconus://app/...` (exists: `[tool.flet.android.deep_linking]` / `[tool.flet.ios.deep_linking]` `scheme`/`host`, one pair each; the global `[tool.flet.deep_linking]` is ignored for Android and iOS builds, D-109).
-- **Change:** `[tool.flet.android.deep_linking] auto_verify = true`, `hosts = [...]` and `path_prefix`. iOS Universal Links reuse U5 (`applinks:`).
-- **Note:** sheet detents (SHELL-07: `BottomSheet` has no detents, decisions §N.12) are a separate post-conference control gap with no U-id yet (PLAN §6.2). In 27.0 it is a fixed-height sheet.
-- **Tests:** unit: `auto_verify = true` renders `android:autoVerify="true"` on the intent filter, with one `<data>` per host plus `path_prefix`; without the table the manifest is byte-identical. Device: `adb shell pm get-app-links org.pycon.us` reports `verified` for us.pycon.org once `assetlinks.json` is live, and an `https://us.pycon.org/...` link opens the app. iOS: the `applinks:` entitlement (through U5) and the AASA file open the app from Safari.
-- **App upgrade (27.1):** add the table with `hosts = ["us.pycon.org"]`, and `applinks:us.pycon.org` to the U5 entitlement table. The PSF publishes `assetlinks.json` (`delegate_permission/common.handle_all_urls`) and the AASA `applinks` section. The router maps the https paths to the same canonical routes as the custom-scheme aliases (D-38); the custom scheme stays.
-
-### U15 Non-fatal handler/effect errors (S; U; 02-12; T2)
-
-| Field | Value |
-|---|---|
-| Context | PLAN [§5.8](../PLAN.md#58-error-handling), D-85, D-86 |
-| Interim | `@safe` on every handler and effect, plus a lint rule |
-| Today | Handler exceptions call `session.error(...)` (`FLET/messaging/session.py`, event dispatch), and so do sync-effect exceptions ("Exception in effect"). Both send `SESSION_CRASHED`. `page.on_error` exists but is the Flutter-side event |
-| Change | (1) `ft.set_error_handler(handler)`: called with `(exc, where)` before `session.error`; returning `True` marks the error handled, so there is no crash screen. (2) An app option `fatal_errors: bool = True` (default unchanged) to keep sessions alive. Both are opt-in, so existing apps behave identically |
-| Probe | `services/safe.py` registers the hook when `hasattr(ft, "set_error_handler")`. `@safe` stays as defence in depth |
-
-**Tests.**
-- Integration (Python side, `FletTestApp`): a click handler that raises, with `set_error_handler` returning `True`, sends no `SESSION_CRASHED` and the page stays interactive. The hook receives the exception and a `where` naming the handler.
-- The same for a sync effect that raises.
-- A hook returning `False`/`None` keeps today's crash behaviour; `fatal_errors=False` keeps the session alive without a hook; with neither, behaviour is unchanged (regression).
-
-**App upgrade.** None beyond the Flet pin: `services/safe.py` registers the hook at import when present; `@safe` stays.
+- **Serves:** NEW-02 (search, D-19): Back from a result pushed over the global modal `/search` must return to the results.
+- **Today:** while a modal route is anywhere in the matched chain, the stock pop handler navigates to the modal's base location, even for a pop from a view pushed over the modal (`FLET/components/router.py`, modal branch of the `on_view_pop` handler; F6). An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead.
+- **Interim:** `main()` sets `page.on_view_pop` to navigate to `parent_of(e.route, memory.search_base)` (architecture §5.3).
+- **Change:** pop to the previous view entry's resolved pathname unless the popped view is the modal itself; only then go to the modal's base.
+- **Test:** `/search` → `/search/session/42` → Back lands on `/search`; Back again lands on the base.
+- **Upgrade:** after the pin bump, delete the app's `on_view_pop` handler. `parent_of()` stays for the back arrow (D-10).
 
 ---
 
-## 6. Timeline and gates (extract of PLAN [§7](../PLAN.md#72-milestones) for this doc)
+## 6. Verification log (2026-10-11)
 
-| When | What | Item |
-|---|---|---|
-| by 11-13 (M0, G1) | Spike **S7**: a standalone wheel via `[tool.flet.<platform>].dependencies` + `mobile_scanner` under the gate. Spike **S10**: pod minimums. Spike **S5**: TestFlight upload (decides U13) | E1, U12, U13 |
-| by 11-30 | Spike **S8**: Dart-only Firebase init + topic round-trip | E2 |
-| 12-15 | U12/U13 done only if their spike tripped; contributors recruited (E4-E6 owners) | U12, U13 |
-| 01-10 | E1 v0.1 on device | E1 |
-| 01-15 | U1 and U4 merged; #6948 v1 merged and released (UNCONFIRMED, FT) | U1, U4, E3 |
-| 01-31 (G2) | U5 merged (U6-U8 if pursued); E1 reads real badges; P5 Firebase config | U5-U8, E1, E2 |
-| **02-12 (G3)** | Per item, go or 27.1: E2, E3 (+U7), E4 (+U6), the autofill entitlement (U5/U8). U3, U9, U15 merged (T2) | T3, T2 |
-| 02-19 | E1 0.2 on PyPI | E1 |
-| 02-24 / 02-26 | Badge Day 1 / G-Staff (E1 >= 95 % first try). Flet 1.1.x point release with U5-U8 (+U1/U3/U4/U9/U15) and, if E3 is "go" at G3, the #6948 scheduling PR (else a 1.2 released before 03-05) | E1, E3, U* |
-| **03-05** | Last pin change: every "go" item released and pinned | all |
-| 05-17/18 (UNCONFIRMED) | Sprint: E5, E6, U2, U11, the T3 items that missed | post |
-| 06-30 (M7) | 27.1: missed upgrades; extensions to 1.0 | all |
+**pub.dev** (`https://pub.dev/api/packages/<name>`, latest versions; minimums from the published archives):
 
-If any item misses its date, its interim ships. That is the whole contingency (D-10, PLAN principle 8).
-
----
-
-## 7. Documented-only workarounds (**not used in 27.0**; D-28)
-
-These are recorded so nobody rediscovers them under pressure. None is a late switch. The rule is: upstream first, never a fork.
-
-| Workaround | What it would do | Why not |
-|---|---|---|
-| Helper plugin `native/pycon_native_config` (a Flutter-only Android plugin added through `[tool.flet.flutter.pubspec.dependencies]`) | Its library manifest adds `<queries>`, `asset_statements` (with its own `strings.xml`), a drawable for the FCM icon, and could even merge an `autoVerify` intent-filter into `MainActivity` | Status **PLAUSIBLE**: built only on paper. It is native code living in the app repo, which U6/U8/U14 replace upstream. The `autoVerify` merge is brittle |
-| Gradle init script `~/.gradle/init.d/pycon-desugaring.gradle.kts` | Enables desugaring in `:app` without a template change | Status **PLAUSIBLE**. It lives outside the repo's build definition (CI-only magic); U7 replaces it |
-| Custom build template (`[tool.flet.template] url/ref`) | Entitlements, AppDelegate, Gradle edits | **Never** (D-28, PLAN §2 non-goals): it needs a rebase on every Flet release, right before a conference |
-| Unbundled ML Kit (`[tool.flet.android.gradle_properties]`) | A smaller APK for E1 | Exists and is supported, but rejected: the model downloads on first use (§E1) |
-
----
-
-## 8. Verification log (2026-10-11)
-
-**pub.dev** (`https://pub.dev/api/packages/<name>`, fetched 2026-10-11).
-
-| Package | Latest | Published | Constraints noted |
+| Package | Latest | Published | Constraints and facts used here |
 |---|---|---|---|
-| mobile_scanner | 7.4.2 | 2026-09-14 | Dart ^3.7.0, Flutter >=3.29.0 |
-| firebase_core | 4.15.0 | 2026-09-14 | - |
-| firebase_messaging | 16.7.0 | 2026-09-14 | firebase_core ^4.14.0; Dart ^3.6.0; Flutter >=3.27.0 |
-| firebase_analytics | 12.6.0 | 2026-09-14 | - |
-| flutter_local_notifications | 22.3.1 | 2026-09-13 | timezone ^0.11.0; Dart ^3.10.0; Flutter >=3.38.1; Android: receivers + desugaring (`desugar_jdk_libs` 2.1.4) + AGP >= 8.11.1 |
-| timezone | 0.11.1 | 2026-06-29 | - |
-| add_2_calendar | 3.1.1 | 2026-06-15 | Dart ^3.11.0; Flutter >=3.41.0; iOS calendar + contacts keys; Android `<queries>` |
-| flutter_widget_from_html_core | 0.17.4 | 2026-09-08 | no Material package dependency (gate still required) |
-| flutter_slidable | 4.0.3 | 2025-09-27 | Flutter >=3.27.0 |
+| `flutter_local_notifications` | 22.3.1 | 2026-09-13 | Dart `^3.10.0`, Flutter `>=3.38.1`; minSdk 24; iOS pod 13.0; desugaring, receivers and the iOS delegate line are the app's job (§4.1) |
+| `timezone` | 0.11.1 | 2026-06-29 | Dart `^3.10.0` |
+| `mobile_scanner` | 7.4.2 | 2026-09-14 | Dart `^3.7.0`, Flutter `>=3.29.0`; minSdk 23; iOS pod 12.0; SDK `material.dart` in default builders (§4.2) |
+| `add_2_calendar` | 3.1.1 | 2026-06-15 | Dart `^3.11.0`, Flutter `>=3.41.0`; iOS pod 11.0 |
+| `flutter_widget_from_html_core` | 0.17.4 | 2026-09-08 | Flutter `>=3.32.0`; deps `csslib`, `html`, `logging` |
+| `firebase_core` / `firebase_messaging` | 4.15.0 / 16.7.0 | 2026-09-14 | Flutter `>=3.27.0` |
+| `package_info_plus` | 10.2.2 | 2026-10-01 | Flet's pubspec has `^9.0.0` |
 
-All Flutter minimums are at or below the extension template's `flutter: ">=3.47.0"` (Flet 1.1 uses Flutter 3.47).
+**Flet toolchain:** Flutter 3.47.7 (`.fvmrc`), whose default Android `minSdkVersion` is 24 and `compileSdkVersion` 36; AGP 8.13.2 and Gradle 9.3.1 in the template. Every package above fits.
 
-**PyPI names** (HTTP status of `pypi.org/pypi/<name>/json`).
-- 404 (free): `flet-barcode-scanner`, `flet-firebase`, `flet-firebase-analytics`, `flet-add-to-calendar`, `flet-notifications`, `flet-html`, `flet-slidable`.
-- 200 (taken): `flet-local-notifications`.
+**PyPI names** (`pypi.org/pypi/<name>/json`):
+- **Taken:**
+  - `flet-local-notifications` (1.2.2, 2026-07-11, unrelated, pins `flet==0.28.3`);
+  - `flet-notifications` (0.1.0, published 2026-10-11, `Nwokike/flet-notifications`).
+- **Free:** `flet-barcode-scanner`, `flet-mobile-scanner`, `flet-add-to-calendar`, `flet-html`, `flet-firebase`.
+- `flet` and the first-party extensions (`flet-secure-storage`, `flet-permission-handler`, `flet-camera`) are 1.0.4.
 
-**Local SDK** (exists; introspected 2026-10-11).
-- Base classes and helpers: `ft.Service` (`_auto_register`, `_invoke_method(method_name, arguments, timeout)`), `ft.LayoutControl`, `ft.control`, `ft.value`, `ft.Event`, `ft.EventHandler`, `ft.ControlEventHandler`, `ft.FletUnsupportedPlatformException`.
-- `ft.InteractiveViewer.zoom/pan/reset/save_state/restore_state` (coroutines), `ft.Dismissible.confirm_dismiss` (coroutine), `ft.ListView.scroll_to(offset, delta, scroll_key, duration, curve)`.
-- `ft.Markdown.on_tap_link`, `ft.Share.share_files/share_text/share_uri`, `ft.ShareFile`, `ft.UrlLauncher` + `ft.LaunchMode.IN_APP_BROWSER_VIEW`, `ft.Wakelock.enable/disable/is_enabled`.
-- `ft.SemanticsService.announce_message/get_accessibility_features`, `ft.Page.get_device_info`, `ft.Page.on_error`, `ft.Router(routes, not_found, manage_views)`, `ft.Route(path, index, component, children, loader, outlet, modal, recursive)`, `ft.use_route_location`, `ft.LocationInfo`.
-- `ft.Matrix4`, `ft.Rect(left, top, right, bottom)`, `ft.AutofillGroup`, `ft.Banner` (a `DialogControl`).
-- Extensions: `flet_permission_handler.PermissionHandler` + `Permission.CAMERA/NOTIFICATION/CALENDAR_WRITE_ONLY/SCHEDULE_EXACT_ALARM`; `flet_secure_storage.SecureStorage`.
-- CLI: `flet test <platform> --device-id` (`CLI/test.py`).
+**GitHub:**
+- [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948): an open **issue**; no implementation PR found.
+- [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953): an open PR (branch `fix/deep-linking-fallback`, closes #6951) touching `build_base.py`, its tests and the changelog.
 
-**Confirmed absent** (the items above): `ft.RefreshIndicator`, `ft.use_route_search`, `ft.Page.get_app_info`, `ft.AppInfo`, `ft.AppBar.bottom`, `InteractiveViewer.set_transform`, any sliver or sticky control, an iOS entitlements option, an Android `<queries>` hook, desugaring, `<receiver>` and string-resource hooks.
+**Local SDK: exists** (beyond what PLAN's F-facts cover): `flet.utils.is_embedded`; `ft.Service`, `ft.LayoutControl`, `ft.control`, `ft.value`, `ft.Event` (fields `name`, `data`, `control`); `ft.PageMediaData` (six fields) and `page.on_media_change`; `ft.LocationInfo(pathname, search, hash)`; `flet_permission_handler.Permission.CAMERA`/`NOTIFICATION`/`SCHEDULE_EXACT_ALARM`; and the CLI keys `[tool.flet] permissions`, `dev_packages`, and `[tool.flet.android]` `permission`, `gradle_properties`, `proguard_rules`, `provider`.
 
-**Corrections to `docs/research/flet/*`.**
-1. Android `gradle.properties` **is** configurable: `[tool.flet.android.gradle_properties]` (exists), so `mobile_scanner`'s unbundled flag needs no fork.
-2. `flutter_local_notifications` does **not** merge its receivers from the plugin manifest. Its manifest declares only `VIBRATE` and `POST_NOTIFICATIONS`, so scheduling needs the receivers declared elsewhere (§E3).
-3. The first-party service extensions (`flet-geolocator`, `flet-secure-storage`, `flet-permission-handler`) list no `material_ui` in their pubspecs. Only packages that build Material widgets need it, so E2-E4 do not.
+**Local SDK: absent.**
+- Core: `ft.RefreshIndicator`, `ft.use_route_search`, `ft.AppInfo`, `Page.get_app_info`, `AppBar.bottom`, any sliver or grouped list control, `ft.CarouselView`, an `Html` control, an error hook.
+- `PageMediaData.text_scale_factor` and any accessibility-change event.
+- Packages: any local-notifications or barcode package in `sdk/python/packages/`.
+- Template and CLI: iOS entitlements, an Android `<queries>`/`<receiver>` hook, desugaring.
 
 ---
 
-## 9. Discrepancies with PLAN.md and the decisions record (all resolved 2026-10-11)
+## 7. Open points
 
-Each row below is now recorded in the decisions record and followed by PLAN.md: #1 by D-113, #2 by D-112, #3 by D-111, #4 by D-114, #5 by D-132.
+Tracked by `upstream` issues; none needs a decision here:
+1. **E3 package name:** both `flet-local-notifications` (#6948's proposal) and `flet-notifications` are taken on PyPI; the Flet team picks.
+2. **iOS notification delegate** is missing from the stock `AppDelegate.swift`; for #6948 v1, verified in S6.
+3. **U16 and U17 as one PR** through `PageMediaData` and the existing `on_media_change`, instead of a separate `SemanticsService` event.
 
-| # | Where | Issue | This doc |
-|---|---|---|---|
-| 1 | PLAN §6.2 E3; D-26 U7 | Scheduled notifications need two `<receiver>` entries + `RECEIVE_BOOT_COMPLETED` in the app manifest; U7 (desugaring) alone is not enough, and the template has no receiver hook | Receivers ship in the #6948 package's Android library manifest. This needs a `flutter: plugin: platforms: android: package:` entry in its pubspec (manifest-only plugin, no `pluginClass`) and `"android/**"` in its package-data (§E3); fallback: U7 gains `[tool.flet.android.receiver]` |
-| 2 | PLAN §6.2 U8; D-26 U8 | Inline-table `meta_data` cannot express `asset_statements` without a `@string` resource, which the template cannot add | U8 = inline-table meta-data **+** `[tool.flet.android.string_resources]`, re-estimated S, 5 h (was 3 h); recorded as D-112 (amends D-26 U8 and the D-17 hours; PLAN §6.2 U6-U8 17 h, §7.1 T3 127 h) |
-| 3 | D-24/D-25 E2 | `firebase_analytics` cannot be optional inside one `flet-firebase` wheel; bundling it contradicts D-79 / NATIVE-05 | Separate wheel `flet-firebase-analytics` (`flet_firebase_analytics.FirebaseAnalytics`); recorded as D-111 (supersedes the analytics part of D-24/D-25); the feature-matrix `E2` legend, the §3 probe row and the register use the new names |
-| 4 | D-89; PLAN §9.1 | E4 (`add_2_calendar`) also needs `NSCalendarsUsageDescription` (iOS 15/16) and `NSContactsUsageDescription` (README: crash otherwise) | All three keys in the E4 release; recorded as D-114 (amends D-89) |
-| 5 | D-74 vs PLAN §6.2 | U9/U15 trigger is "probe", but D-74 defines no `Caps` key for them | Helper-level import probes (§3) |
+Resolved on 2026-10-11 and applied to PLAN, the decisions record and the matrix: U7 is needed by #6948 v1 itself (PLAN §6); D-64 now reads "replaced only after a PR bumps the pinned Flet; the swap is its own tested PR"; the Developer screen shows capability flags read-only (D-73), so there are no force-interim switches; notification permission goes through E3's `request_permission()` (D-61, NOTIF-06, NATIVE-06); NATIVE-02 no longer depends on U12; NOTIF-10 depends on E3.
