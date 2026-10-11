@@ -28,3 +28,10 @@ App issues that wait on it get `blocked` and a link here. See docs/flet-gaps-and
 
 - [ ] The flet-dev issue or PR is merged, or its status is recorded here.
 - [ ] An app issue exists for replacing the interim after the Flet pin bump (D-64).
+
+## How to verify
+
+<!--
+Link the merged flet-dev PR (or the extension release) and the Flet commit or version that contains it, and
+link the app issue that replaces the interim after the pin bump.
+-->

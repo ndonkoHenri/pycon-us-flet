@@ -96,7 +96,7 @@ chore, area:build · after P0-01
 Issue templates (feature, bug, spike, upstream), a PR template with the D-92 sections, the "PyCon US Flet" Project, and `main` protection.
 
 - Templates exist in `.github/`; the spike template has a verdict section.
-- The Project has Status Todo / In progress / In review / Done and auto-adds issues and PRs.
+- The Project has Status Todo / In progress / In review / Done; agents add every issue and PR to it. Auto-add can only be turned on in the web UI, an owner step (#118).
 - AGENTS.md says how `main` is protected (ruleset, or convention on a private Free plan).
 
 #### P0-04 · Apply the mobile build configuration from the S5 verdict

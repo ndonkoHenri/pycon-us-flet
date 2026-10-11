@@ -155,7 +155,8 @@ that date motivates us but never justifies cutting corners.
   of truth; the board is a view of it.
 - **Add every new issue and PR yourself** with `--project "PyCon US Flet"` (above). GitHub's built-in
   "Auto-add to project" workflow can only be turned on in the web UI (the GraphQL API can delete Project
-  workflows but not create or enable them), so don't rely on it. Adding twice is harmless.
+  workflows but not create or enable them), so don't rely on it; turning it on is an owner step (#118). Adding
+  twice is harmless.
 - **Move the Status yourself**, on the issue and on its PR: Todo when filed, In progress when you start,
   In review when the PR is ready for review, Done when it merges. `gh` needs the `project` scope
   (`gh auth refresh -s project`). The ids below are stable; if the Project is ever rebuilt, look them up again
