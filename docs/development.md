@@ -97,8 +97,10 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
 1. Check out the new SHA in `.flet-src`, and write it to `.flet-ref`.
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
-3. Delete `build/` (`rm -rf build`). It caches Dart build-hook binaries compiled by the previous Flutter, and a newer
-   Flutter refuses them ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to 3.47.7).
+3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
+   Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
+   3.47.7). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
+   and the configuration, not on the pin's SHA; the reported version stays `1.0.4` across bumps (§2.2 quirks).
 4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102).
 5. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
