@@ -451,7 +451,7 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 |---|---|
 | Included Actions minutes are limited, and macOS minutes count about 10× Linux | Everything runs on Linux. There is no iOS job (§7.5), and Android builds run only on demand or on tags. |
 | Artifact storage is small (hundreds of MB) | APK artifacts are kept for 14 days. |
-| Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, CI green, agents merge under D-100. |
+| Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, CI green, agents merge under D-100. Creating a ruleset returns HTTP 403 (checked 2026-10-11); AGENTS.md › Branches and commits has the ruleset to add once the repo is public. |
 | Environments (and their secrets and required reviewers) are unavailable for private repos | We need none: CI holds no secrets (D-86). |
 
 Conventions in every workflow:
