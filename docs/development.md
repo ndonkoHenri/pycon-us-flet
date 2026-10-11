@@ -457,63 +457,35 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 Conventions in every workflow:
 - `permissions: contents: read`.
 - `persist-credentials: false` on checkouts.
-- Third-party actions pinned to a full commit SHA, with the version as a comment. The SHAs below are those used by `ACTION/.github/workflows/`.
+- Third-party actions pinned to a full commit SHA, with the version as a comment. The pins were checked against their release tags on 2026-10-11 (annotated tags followed to the commit): `actions/checkout` v6.0.3 is `df4cb1c069e1874edd31b4311f1884172cec0e10`, `astral-sh/setup-uv` v8.3.2 is `11f9893b081a58869d3b5fccaea48c9e9e46f990`.
 - `pull_request`, never `pull_request_target`.
 - `UV_LOCKED=1`, so every `uv` command fails if `uv.lock` is stale.
 
 ### 7.2 `.github/workflows/ci.yml`: every PR and push to `main`
 
-```yaml
-name: CI
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) is the source of truth; this section says what it does and why.
 
-on:
-  pull_request:
-  push:
-    branches: [main]
+**Required checks (D-100).** A PR may be merged only when every check below has passed on its latest commit. A missing, pending, skipped or cancelled required check is not green. Rename a job only together with this list.
 
-permissions:
-  contents: read
+| Workflow | Job id | Check name (as GitHub shows it) |
+|---|---|---|
+| `CI` (`ci.yml`) | `check` | `Lint, types and tests` |
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+`gh pr checks <n>` lists them. GitHub does not enforce this list on a private Free repo (§7.1); agents check it before merging.
 
-env:
-  UV_LOCKED: "1"            # fail if uv.lock does not match pyproject.toml
+**One Linux job**, `Lint, types and tests`. Its steps, in order (the first failure fails the job):
 
-jobs:
-  check:
-    name: Lint, types and tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
+| Step | Command | Why |
+|---|---|---|
+| Check out the app | `actions/checkout` | |
+| Read the Flet pin, check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref`, sparse `sdk/python`, into `.flet-src` | `uv.lock` points at the path sources there (§2.2). Delete both steps with the 1.1.0 pin. |
+| Set up uv | `astral-sh/setup-uv` with `enable-cache: true` | Caches uv's package cache, keyed on `uv.lock` and the `pyproject.toml` files. `uv sync` then installs CPython 3.14 from `requires-python`. |
+| Install | `uv sync --locked` | Fails if `uv.lock` is stale (D-75). |
+| Lint, Check formatting | `uv run ruff check`, `uv run ruff format --check` | D-74 |
+| Type-check | `uv run pyright` | D-74 |
+| Test | `uv run pytest` | D-76. `--hypothesis-profile=ci` joins once `tests/conftest.py` registers it (#114). |
 
-      # Until Flet 1.1.0 is on PyPI (D-81, docs/development.md §2.2).
-      - name: Read the Flet pin
-        id: flet
-        run: echo "ref=$(cat .flet-ref)" >> "$GITHUB_OUTPUT"
-      - name: Check out Flet at the pin
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          repository: flet-dev/flet
-          ref: ${{ steps.flet.outputs.ref }}
-          path: .flet-src
-          sparse-checkout: sdk/python       # uv needs only the Python packages here
-          sparse-checkout-cone-mode: true
-          persist-credentials: false
-
-      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-        with:
-          enable-cache: true
-      - run: uv sync
-      - run: uv run ruff check
-      - run: uv run ruff format --check
-      - run: uv run pyright
-      - run: uv run pytest
-```
+**Triggers and concurrency.** It runs on every `pull_request` and on every push to `main`. A new push to a PR cancels that PR's run in progress; runs on `main` are never cancelled, so every commit on `main` keeps its own result.
 
 The target is under 2 minutes (D-84). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job: spike S9 tries `flet test linux`, and a green result becomes a separate workflow through a `needs-decision` issue (D-78).
 
