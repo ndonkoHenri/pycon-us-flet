@@ -16,7 +16,7 @@ communities what a polished Python mobile app looks like. It is not an official 
 - **Phases, not deadlines.** P0 Foundations, P1 Attendee core, P2 Conference companion, P3 Accounts & staff tools,
   P4 Showcase. Presenting the app at PyCon US 2027 (Long Beach, May 12–18) is the objective, not a deadline.
 
-**Status:** planning is done; P0 Foundations starts now. There is no code yet.
+**Status:** P0 Foundations is under way: the project scaffold, CI and the GitHub workflow are in place; the data core and app shell come next.
 
 ## How to read the docs
 
