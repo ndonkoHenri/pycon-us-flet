@@ -153,14 +153,14 @@ that date motivates us but never justifies cutting corners.
 - A GitHub Project ("PyCon US Flet") gives the overview with one Status field (Todo, In progress, In review,
   Done); group or filter it by milestone (the phase) and by `area:*` label (D-90, D-94). The issue is the source
   of truth; the board is a view of it.
-- **Add every new issue and PR yourself** with `--project "PyCon US Flet"` (above). GitHub's built-in
-  "Auto-add to project" workflow can only be turned on in the web UI (the GraphQL API can delete Project
-  workflows but not create or enable them), so don't rely on it; turning it on is an owner step (#118). Adding
-  twice is harmless.
-- **Move the Status yourself**, on the issue and on its PR: Todo when filed, In progress when you start,
-  In review when the PR is ready for review, Done when it merges. `gh` needs the `project` scope
-  (`gh auth refresh -s project`). The ids below are stable; if the Project is ever rebuilt, look them up again
-  with the first two commands.
+- **The Project's built-in workflows do most of the bookkeeping.** The owner turned them on in the web UI
+  (the API can't; #118): open issues and PRs are auto-added, "Item added" sets Todo, "Pull request linked to
+  issue" sets In progress, "Item closed" and "Pull request merged" set Done, "Auto-close issue" closes an issue
+  set to Done, and "Item reopened" sets Todo. Still pass `--project "PyCon US Flet"` when you create an issue
+  or PR, so it's on the board at once; adding twice is harmless.
+- **Set two statuses yourself**, on the issue and on its PR: In progress when you start, and In review when the
+  PR is ready (no workflow sets In review). `gh` needs the `project` scope (`gh auth refresh -s project`). The
+  ids below are stable; if the Project is ever rebuilt, look them up again with the first two commands.
 
   ```sh
   gh project view 2 --owner ndonkoHenri --format json --jq .id   # project id
