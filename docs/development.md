@@ -184,7 +184,8 @@ flet = ".flet-src/sdk/python/packages/flet"
 
 # ------------------------------------------------------------------ tools
 [tool.ruff]
-target-version = "py314"
+target-version = "py314"              # ruff also skips git-ignored paths (excluded/, .flet-src)
+extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
 
 [tool.ruff.lint]
 extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DTZ: no naive datetimes (D-43)
@@ -321,7 +322,7 @@ def test_version_matches_pyproject():
 - For iOS, a Mac with Xcode 27, CocoaPods and an Apple ID, plus a paid team for device builds (§8.2).
 
 ```bash
-git clone git@github.com:<owner>/pycon-us.git && cd pycon-us
+git clone https://github.com/ndonkoHenri/pycon-us-flet.git && cd pycon-us-flet
 git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src   # §2.2
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
 uv sync                                    # Python 3.14 and the dev tools

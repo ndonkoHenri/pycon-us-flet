@@ -1,0 +1,86 @@
+[project]
+name = "pycon-us"
+version = "0.0.1"                     # == pycon_us.__version__ (unit test, D-83)
+description = "A conference companion for PyCon US on Android and iOS, built with Python and Flet. Not an official PSF app."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.14,<3.15"      # flet build bundles CPython 3.14 (D-82, F19)
+dependencies = [                      # bundled into the app by flet build: pin exactly
+    "flet",                           # pinned by .flet-ref until 1.1.0 is on PyPI (D-81)
+    "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
+]
+
+[build-system]                        # uv sync installs pycon_us (src/pycon_us) editable on the host
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [                               # host only, never bundled; versions in uv.lock (D-75)
+    "flet-cli",                       # flet run / build / debug / devices / test
+    "flet-web",                       # flet run --android/--ios serves through it
+    "flet-desktop",                   # optional desktop window (D-09, development.md §5.4)
+    "flet-platform-assets",           # flet-cli dependency, listed so uv takes it from .flet-src
+    "flet[test]",                     # flet test flows (D-78) and pytest-asyncio
+    "pytest",
+    "hypothesis",
+    "ruff",
+    "pyright",
+]
+
+# ------------------------------------------------------------------ flet build
+[tool.flet]
+product = "Conf Companion"            # display name: neutral placeholder until O-4 (D-36)
+bundle_id = "io.github.ndonkohenri.pyconus"   # placeholder until O-4, both platforms
+
+[tool.flet.app]
+path = "src"                          # entry point src/main.py
+
+[tool.flet.splash]                    # SHELL-01: the same purple as BootView, so no flash
+color = "#680579"
+dark_color = "#680579"
+
+[tool.flet.boot_screen.flet]          # shown while Python starts, between splash and BootView
+bgcolor_light = "#680579"
+bgcolor_dark = "#680579"
+
+[tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false # HTTPS only: no export-compliance prompt on upload
+
+# ------------------------------------------------------------------ Flet from source (development.md §2.2)
+# Delete both tables in the PR that pins flet==1.1.0.
+[tool.uv.sources]
+flet = { path = ".flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = ".flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = ".flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = ".flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = ".flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+
+[tool.flet.dev_packages]              # what flet build bundles instead of PyPI's flet
+flet = ".flet-src/sdk/python/packages/flet"
+
+# ------------------------------------------------------------------ tools
+[tool.ruff]
+target-version = "py314"              # ruff also skips git-ignored paths (excluded/, .flet-src)
+extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
+
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DTZ: no naive datetimes (D-43)
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.pyright]
+include = ["src", "tests", "tools"]
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"                 # async client tests (testing-and-quality.md §2)
+testpaths = ["tests"]
+pythonpath = ["."]                    # tools.mock_api; pycon_us is installed by uv sync
+addopts = ["--ignore=tests/ui"]       # device flows run through flet test (D-78)
