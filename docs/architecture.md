@@ -733,7 +733,7 @@ def write_atomic(path: Path, data: bytes) -> None:
 ```
 
 - `Storage.write_feed(raw)` runs `write_atomic` in `asyncio.to_thread`; `read_feed()` returns bytes and mtime. The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, S1).
-- **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 checks `sqlite3` in the embedded Python on both phones.
+- **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 checks `sqlite3` in the embedded Python on Android and iOS.
 
 ---
 

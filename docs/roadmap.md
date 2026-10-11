@@ -16,7 +16,7 @@ Phases are milestones (D-89). Soft markers are orientation, never deadlines (D-0
 
 | Phase | Goal | Soft marker | Items |
 |---|---|---|---|
-| **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on both phones | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
+| **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on an Android emulator and the iPhone | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
 | **P1 Attendee core** | Good enough to demo, and to use for a whole simulated conference day | demo slice end of Nov; exit mid-Dec 2026 | 7 epics, 36 issues, spike S6, 2 upstream issues |
 | **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 1 upstream issue |
 | **P3 Accounts & staff tools** | The private-API features against the local mock, with the scanner as the showcase | Mar 2027 | 8 epics |
@@ -42,14 +42,14 @@ Upstream Flet work runs in parallel with the phases (section 8).
 
 ## 3. P0 Foundations
 
-**Goal.** A proven toolchain, a tested data core, and an app shell running as a packaged build on both phones.
+**Goal.** A proven toolchain, a tested data core, and an app shell running as a packaged build on an Android emulator and the iPhone.
 
 **Exit criteria** (PLAN §7):
-1. **Packaged builds.** Builds from the pinned Flet run on the owner's Android phone and iPhone without a laptop.
+1. **Packaged builds.** Builds from the pinned Flet run on an Android emulator and on the owner's iPhone, with no connection to a dev server (D-102).
    - Offline, the first launch shows the bundled schedule on the Schedule stub (days, session counts, source); online, a refresh replaces it.
    - State survives kill and relaunch, and an update install.
 2. **CI.** CI is green on `main`, and the feed tests (rules, invariants, snapshot) pass on the 2025 and 2026 feeds.
-3. **Shell.** The shell passes the S4 journey on both phones with stub details, and the shell smoke flow (`test_shell_starts`, `flet test`) passes on an emulator and a simulator.
+3. **Shell.** The shell passes the S4 journey on an Android emulator and the iPhone with stub details, and the shell smoke flow (`test_shell_starts`, `flet test`) passes on an emulator and a simulator.
 4. **Spikes.** S1–S5 have verdicts in `docs/spikes/`, and their outcomes are in `decisions.md`.
 
 **Early spikes.** S1–S5 (epic P0-E2) run before the screens they affect are built (PLAN §8). S1 and S5 come first, because every packaged check depends on them.
@@ -140,21 +140,21 @@ ci, area:data · after P0-13 · DEV-08
 
 Time-boxed spikes (half a day to a day) that retire the riskiest assumptions; each closes with a verdict in `docs/spikes/` and, where it decides something, a decisions.md update.
 
-#### S1 · Spike: does the packaged app run well on both phones with our stack?
+#### S1 · Spike: does the packaged app run well on Android and iOS with our stack?
 
 test, area:build
 
-A release-build stub with `httpx`, `zoneinfo` + `tzdata`, `sqlite3`, SharedPreferences and SecureStorage fetches, parses and persists the 2026 feed on both phones.
+A release-build stub with `httpx`, `zoneinfo` + `tzdata`, `sqlite3`, SharedPreferences and SecureStorage fetches, parses and persists the 2026 feed on an Android emulator and the iPhone (D-102).
 
 - Verdict in `docs/spikes/01-packaged-runtime.md`: cold start and first launch, `.pyc` on and off.
 - `FLET_APP_STORAGE_DATA` survives kill, relaunch and an update install.
-- Decides lazy imports and parsing off the UI loop; D-80 confirmed or revised.
+- Decides lazy imports and parsing off the UI loop; D-80 confirmed or revised from the iPhone's numbers, with the emulator's recorded as the Android regression baseline.
 
 #### S2 · Spike: can the busiest day render and update fast in components mode?
 
 test, area:schedule
 
-Render the 2026 Friday (about 26 slots, 110 rows) with realistic rows; measure star-tap and search-as-you-type latency on a mid-range Android and an iPhone.
+Render the 2026 Friday (about 26 slots, 110 rows) with realistic rows; measure star-tap and search-as-you-type latency on release builds on the iPhone, and compare the variants on an Android emulator (relative numbers only, D-102).
 
 - Verdict in `docs/spikes/02-day-list.md` with numbers per variant and device.
 - Row architecture and `build_controls_on_demand` recorded in decisions.md.
@@ -181,7 +181,7 @@ Walk Now → session → speaker → session → room through a recursive drill 
 
 test, area:build
 
-Prove the D-81 setup: `flet build apk`, `aab` and `ipa` from a pinned flet-dev/flet commit, and one TestFlight internal upload with a throwaway bundle id.
+Prove the D-81 setup: `flet build apk`, `aab` and `ipa` from a pinned flet-dev/flet commit, and one TestFlight internal upload with a throwaway bundle id, installed on the iPhone; `flet build ios-simulator` for the simulator.
 
 - Verdict in `docs/spikes/05-build-and-ship.md` with exact commands and versions.
 - TestFlight processed the build, or the blocker is filed upstream.
@@ -386,7 +386,7 @@ Pinned status issue, updated weekly: done, next, blocked, decisions, numbers.
 
 test, area:quality · after P0-02, P0-03, P0-04, P0-05, P0-06, P0-07, P0-14, P0-15, P0-21, P0-23, P0-25, P0-27, S1, S2, S3, S4
 
-Run the P0 exit criteria on both phones with packaged builds; record results in the P0 status issue.
+Run the P0 exit criteria with packaged builds on an Android emulator, an iOS simulator and the iPhone (D-102); record results in the P0 status issue.
 
 - Every P0 exit criterion is ticked with evidence.
 - The P1 status issue is opened and pinned.
@@ -396,7 +396,7 @@ Run the P0 exit criteria on both phones with packaged builds; record results in 
 **Goal.** The attendee core is good enough to demo, and to use for a whole simulated conference day.
 
 **Exit criteria** (PLAN §7):
-1. **Core journeys in airplane mode.** On both phones, with packaged builds:
+1. **Core journeys in airplane mode.** On an Android emulator and the iPhone, with packaged builds:
    - open on Now, then session → speaker → session → Back;
    - star and unstar with Undo;
    - My schedule shows overlaps;
@@ -724,7 +724,7 @@ test, area:quality · after P1-08, P1-15, P1-18, P1-20, P1-28, P1-29
 
 test, area:quality · after P1-08, P1-11, P1-15, P1-16, P1-18
 
-TalkBack and VoiceOver complete search → favourite → session detail; check names, states, 200 % text and 48 dp targets.
+TalkBack (on an Android emulator) and VoiceOver (on the iPhone) complete search → favourite → session detail; check names, states, 200 % text and 48 dp targets.
 
 - Results are recorded in the P1 status issue; every finding is fixed or filed.
 
@@ -732,7 +732,7 @@ TalkBack and VoiceOver complete search → favourite → session detail; check n
 
 test, area:quality · after P1-08, S2
 
-Measure cold start, feed processing and scrolling the busiest day on our Android phone and iPhone.
+Measure cold start, feed processing and scrolling the busiest day on release builds on the iPhone against D-80, and on an Android emulator as a relative regression signal (D-102).
 
 - Numbers recorded with device, OS, build and Flet pin; each miss has an issue.
 
@@ -775,7 +775,7 @@ After a week with the P1 build, confirm Now · Schedule · My schedule · Map ·
 
 test, area:notifications
 
-A release build schedules a reminder 2 minutes ahead; test it with the app killed, the phone locked, an Android reboot, exact alarms denied, a cold-start tap and over 64 candidates on iOS.
+A release build schedules a reminder 2 minutes ahead; test it with the app killed, the phone locked, a cold-start tap and over 64 candidates on the iPhone, and with the app killed, a reboot, exact alarms denied and a cold-start tap on an Android emulator (D-102).
 
 - Verdict in `docs/spikes/06-reminders.md`; the E3 scope (API, platform config, limits) is written down.
 - The "at most 60 pending" policy (D-59) is confirmed or revised.
@@ -807,7 +807,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook in f
    - the expo map and list;
    - Wi-Fi, Help & safety and venue hours.
 3. **Reminders.**
-   - With E3 pinned: a reminder fires with the app killed and after an Android reboot, the tap opens the session, and the reminder moves with the session.
+   - With E3 pinned: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, the tap opens the session, and the reminder moves with the session.
    - Without E3, the interim says so.
    - A denied permission never blocks a task.
 4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
@@ -894,7 +894,7 @@ epic, upstream, area:quality
 
 epic, upstream, area:staff
 
-Spike S8 first (a minimal `mobile_scanner` control in release builds on both OSes), then a clean-room extension in flet-dev using `material_ui`. The staff tools never depend on it.
+Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev using `material_ui`. The staff tools never depend on it.
 
 ### Other issues in this milestone
 
@@ -911,7 +911,7 @@ Add `page.get_app_info()` (version, build number, package name) to Flet; the app
 **Goal.** The private-API features, built faithfully against the local mock, with the scanner as the showcase. The app never calls private PSF endpoints (D-06, D-51).
 
 **Exit criteria** (PLAN §7):
-1. **Tools against the mock.** Every tool kept under O-7 completes scripted scenarios on both phones, with manual and HID entry, and with the camera when E1 is bundled.
+1. **Tools against the mock.** Every tool kept under O-7 completes scripted scenarios on an Android emulator and the iPhone, with manual and HID entry, and with the camera when E1 is bundled (the iPhone's camera, or the emulator's virtual scene camera).
 2. **Offline queue.**
    - Airplane-mode scans survive kill and restart.
    - Under idempotent mock semantics each record syncs exactly once; under non-idempotent ones nothing is lost, and a duplicate occurs only after a lost response, where it is detected and shown (D-57).
@@ -919,7 +919,7 @@ Add `page.get_app_info()` (version, build number, package name) to Flet; the app
    - Signing out with unsynced rows asks first.
 3. **Faults and roles.** Fault injection and the Ionic-derived signing vectors pass. A wrong role cannot reach a tool.
 4. **PSF hosts.** A test proves the client refuses PSF hosts.
-5. **Printed badges.** With E1 bundled, a printed sheet of mock badges scans on both phones, including two devices checking in the same attendee; without it, the same scenario passes with manual or HID entry.
+5. **Printed badges.** With E1 bundled, a printed sheet of mock badges scans on the iPhone (on Android, the badge images through an emulator's virtual scene camera), including two devices (the iPhone and an emulator) checking in the same attendee; without it, the same scenario passes with manual or HID entry.
 
 **Early spikes.**
 - S8 (a minimal `mobile_scanner` extension in release builds) runs in P2, before P3, on the upstream track (UP-E1, in the P2 milestone).
