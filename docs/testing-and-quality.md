@@ -569,7 +569,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 
 ## 12. CI wiring (D-84)
 
-- **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`. Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
+- **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (plain `pytest` until `tests/conftest.py` registers the profile, #114). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
 - **`feed-check.yml`** (weekly): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed (and next year's once it answers 200); unknown keys are printed, not failed.
 - **`build-android.yml`** (manual and `v*` tags): a debug-signed APK artifact. iOS builds and all device work stay local.
 - **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; `Spike: flet test linux in CI`, label `test`, P2 at the earliest) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).
