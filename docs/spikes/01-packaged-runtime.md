@@ -10,8 +10,8 @@ Does a packaged release build with our runtime stack (`httpx`, `zoneinfo` + `tzd
 ## Answer: yes on the emulator and the simulator; the iPhone's release numbers are pending
 
 - **Storage:** `FLET_APP_STORAGE_DATA` is durable. The cached feed, a sqlite3 table, SharedPreferences and SecureStorage all survived force-stop and relaunch, an `adb install -r` with a higher build number (twice), and on the simulator two update installs (D-108).
-- **Speed (emulator, release APK):** a cold start reaches the cached content in a median of **760 ms** after the launch intent. Python takes 220 ms of that, from the top of `main.py` to the first rendered frame. That is the regression baseline (D-112). Absolute numbers, on the iPhone against D-80, wait for #121.
-- **Parsing:** `json.loads` of the 822 KB feed plus a processing stand-in takes **3-4 ms**. That is far under the 150 ms threshold, so parsing stays on the event loop (D-109). `asyncio.to_thread` would not help anyway: the loop stalled just as long either way, because the parse holds the GIL.
+- **Speed (emulator, release APK):** a cold start reaches the cached content in a median of **760 ms** after the launch intent. This comes from the app's log line, which screen recordings show is late by 0.2-0.3 s, never early. Python takes 220 ms of that, from the top of `main.py` to the first rendered frame. That is the regression baseline (D-112). Absolute numbers, on the iPhone against D-80, wait for #121.
+- **Parsing:** `json.loads` of the 822 KB feed plus a processing stand-in takes **3-4 ms** (52 ms at worst, the first launch after an update). That is far under the 150 ms threshold, so parsing stays on the event loop (D-109). For this workload, `asyncio.to_thread` stalled the loop just as long, because the C JSON decoder holds the GIL. Pure-Python processing would behave differently, so the real processor gets its own measurement if it ever nears the threshold.
 - **Imports:** all of them take about **56 ms** (`httpx` 24 ms), so lazy imports are not needed (D-110).
 - **`.pyc`:** keep the default. Without it, Python recompiles on every start, because serious_python sets `PYTHONDONTWRITEBYTECODE=1` (F25). The first frame then comes 280 ms later, and the APK is only 0.8 MB smaller (D-111).
 - **`is_embedded()`:** `True` in the packaged app on both platforms; `False` under `flet run`.
@@ -29,7 +29,7 @@ Does a packaged release build with our runtime stack (`httpx`, `zoneinfo` + `tzd
   - On start it reads `feed-2026.json` from `FLET_APP_STORAGE_DATA`, parses and shows it, and only then fetches `https://us.pycon.org/2026/schedule/conference.json` with `httpx.AsyncClient(timeout=10)`. After a good parse it writes the feed back through a temp file, `fsync` and `os.replace` (D-39).
   - It also counts launches in SharedPreferences and in a sqlite3 table, round-trips a SecureStorage value, and formats a 2026 session time in `America/Los_Angeles`.
   - Every step prints a line `S1 <event> wall=<epoch> py_ms=<since main.py>`. Android routes it to logcat (tag `flet.python`), iOS to the unified log (sender `dart_bridge`).
-- **Timing:** "first frame" and "cached content" are logged when a SharedPreferences call made after the render returns; the Dart side answers it only after it has applied the patch. Times "from start" subtract logcat's `ActivityTaskManager: START u0` timestamp from the event's wall clock (both device clock).
+- **Timing:** "first frame" and "cached content" are logged when a SharedPreferences call made after the render returns. The Dart side handles messages in order, so the patch has been applied by then, but the reply does not wait for a frame. The line is therefore a proxy, which the screen recordings below show to be **late, not early**. Times "from start" subtract logcat's `ActivityTaskManager: START u0` timestamp from the event's wall clock (both device clock).
   - A scratch script ran `adb shell am force-stop`, waited 2 s, cleared logcat, ran `adb shell am start -W -n <pkg>/.MainActivity` and waited for the network refresh, ten times per build.
   - First launches: `adb uninstall`, `adb install`, then the same, three times per build.
   - The first rounds ran right after two Gradle builds and were noisy, so both cold starts were measured again on a quiet host ("round b").
@@ -51,10 +51,16 @@ Medians, with min-max in brackets. "Start" is the launch intent; `TotalTime` is 
 | `.pyc` off | cold, round a | 10 | 576 (411-761) | 696 (499-857) | 1284 (1000-1505) | 1324 (1020-1556) | 576 (501-669) |
 | `.pyc` off | first after fresh install | 3 | 578 (557-606) | 730 (725-796) | 1281 (1270-1335) | no cache: 1454 | 541 (539-557) |
 | `.pyc` off over `.pyc` on | first after `adb install -r` (build 2 over 1) | 1 | 748 | — | — | — | 534 |
-| `.pyc` on over `.pyc` on | first after `adb install -r` (build 3 over 1) | 1 | 2875 | — | — | — | storage step at 1383 |
+| `.pyc` on over `.pyc` on | first after `adb install -r` (build 3 over 1, then 4 over 3) | 2 | 2875, 2467 | — | — | — | storage step at 1383, 1225 |
 
 Reading it:
+- The first launch after an update of the `.pyc` build was the slowest case seen (about 2.5-2.9 s to Flutter's first frame, n=2). The `.pyc`-off update was not, so the cause is not settled; the iPhone's update check in #121 records the same step.
 - `am start -W` stops at Flutter's first frame, which is Flet's boot screen, not our content. Python starts about 90 ms after it, and our cached content appears about 330 ms later. A content-to-content comparison needs the app's own log line (D-112).
+- **The log line against the screen** (`adb shell screenrecord`, three cold starts, frames decoded with PyAV):
+  - Recording loads the emulator, so these starts were slower: `Displayed` at +2.3-2.8 s.
+  - Taking the frame where the splash fades into Flet's boot screen as `Displayed`, the first content frame came 2.05 s (run 1) and 1.67 s (run 2) after it.
+  - The "first frame" line came 2.28 s and 1.98 s after `Displayed`, so it lagged the pixels by 0.2-0.3 s. Run 3's frames could not be told apart.
+  - So the proxy overstates the time to content and never understates it. It is consistent build to build, which is what a regression baseline needs.
 - Round a against round b shows how much a busy host moves the numbers: about 25 %, more than D-80's 20 % regression line. Measure on a quiet host and repeat before calling a regression.
 
 **Import times** (ms, medians, `.pyc` on, round b; `.pyc` off in brackets):
@@ -145,10 +151,10 @@ The contrast ratios use WCAG luminance on the screenshot pixels: the darkest or 
 ## Decisions changed
 
 - **D-108** (confirms D-39 and F14): the feed cache, `changes-<year>.json` and `outbox.db` live in `FLET_APP_STORAGE_DATA`. It is read from the environment on every start and never stored as an absolute path, because iOS moves the container on an update.
-- **D-109** (settles architecture §6.2's "if S1 measures over 150 ms"): `feed.process` runs on the event loop. If the logged processing time on the iPhone ever exceeds 150 ms, revisit it; `to_thread` would not help for GIL-bound work.
+- **D-109** (settles architecture §6.2's "if S1 measures over 150 ms"): `feed.process` runs on the event loop as the initial choice. If the logged processing time on the iPhone ever exceeds 150 ms, benchmark the real processor on and off the loop before choosing; the `to_thread` result here holds only for the C JSON decoder.
 - **D-110:** no lazy imports. Modules import at the top. Revisit if Python start → first frame on the emulator grows by more than 100 ms over this baseline.
 - **D-111:** keep `[tool.flet.compile]` at its defaults, `.pyc` for the app and packages; never turn it off for a tester build.
-- **D-112** (records for D-80 and D-102): the emulator regression baseline, and the method that measures to the content rather than to `am start -W`'s boot-screen frame.
+- **D-112** (records for D-80 and D-102): the emulator regression baseline, and a log-based method that measures to the content rather than to `am start -W`'s boot-screen frame. The log line is a late proxy; screen recordings stay the method for numbers held against D-80.
 - **D-113** (amends D-12): each colour scheme's `system_overlay_style` has transparent bars, icon brightness opposite to the scheme, and `enforce_system_navigation_bar_contrast=False`.
 
 D-80's targets are unchanged: the emulator numbers are a regression signal (D-102), and the iPhone's release numbers in #121 confirm or revise them.
@@ -162,10 +168,18 @@ D-80's targets are unchanged: the emulator numbers are a regression signal (D-10
 
 ## Fallback
 
-- If the iPhone's processing time on the real feed exceeds 150 ms: profile `feed.process` first. Then try `concurrent.futures.InterpreterPoolExecutor` (Python 3.14 subinterpreters, no shared GIL) behind the same pure function, and only then `to_thread` for any I/O-heavy part. The cache read stays first, so the screen never waits on processing a fresh download.
+- If the iPhone's processing time on the real feed exceeds 150 ms:
+  - profile `feed.process` first;
+  - then benchmark the real function on the loop, in `asyncio.to_thread` (pure-Python code releases the GIL every few milliseconds, unlike `json.loads`) and in `concurrent.futures.InterpreterPoolExecutor` (Python 3.14 subinterpreters, no shared GIL), and pick by the measured loop stall.
+  - The cache read stays first, so the screen never waits on processing a fresh download.
 - If imports grow (P1 adds screens): move the `httpx` import into the refresh path (24 ms on the emulator) before reaching for anything more general.
 - If a future template or Flutter change breaks D-113's style: drop the `AppBar`'s influence by wrapping each root in a Flet-provided annotated region (upstream), and meanwhile keep `enforce_system_navigation_bar_contrast=False` with an explicit `system_navigation_bar_color` equal to the `NavigationBar`'s surface.
-- If `FLET_APP_STORAGE_DATA` ever changed meaning: the cache is rebuilt from the bundled snapshot on the next start (D-39), so only preferences in files would be lost. Preferences live in SharedPreferences, not files.
+- If `FLET_APP_STORAGE_DATA` ever changed meaning (a template change, say), not everything in it is equal:
+  - the feed cache is rebuilt from the bundled snapshot on the next start (D-39);
+  - `changes-<year>.json` loses only the change history;
+  - `outbox.db` (P3) can hold unsynced staff actions (D-56).
+  
+  So a pin bump that moves the directory needs a migration that finds the old location and moves the outbox before anything writes the new one. The bump's smoke test (development.md §2.2) installs over the previous build and checks that the launch counter, the cache and the outbox survive.
 
 ---
 _Written by Claude Code (AI agent)._

@@ -305,7 +305,7 @@ def App(services: Services) -> list[ft.View]:
         set_overlay(value)
         await services.prefs.set(PREF_OVERLAY, value)
 
-    def apply_theme() -> None:
+    async def apply_theme() -> None:  # effect setups are coroutines (D-70)
         page.theme = build_theme(dark=False, overlay=overlay)
         page.dark_theme = build_theme(dark=True, overlay=overlay)
         page.update()
