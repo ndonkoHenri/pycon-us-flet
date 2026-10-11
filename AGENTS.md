@@ -78,6 +78,11 @@ that date motivates us but never justifies cutting corners.
   whose tasks are its **sub-issues** (`gh issue create --parent <epic>`).
 - A good issue says: context (links to docs, feature ids, D-ids), scope (in and out), acceptance criteria as a
   checklist, and how to verify. Keep it PR-sized; split it if it isn't.
+- Start from a template in `.github/ISSUE_TEMPLATE/`: `feature.md`, `bug.md`, `spike.md` (titled
+  `Spike: <question>`, labelled `test`, closing with a verdict in `docs/spikes/NN-<slug>.md`, D-91) or
+  `upstream.md`. A blank issue is fine for a chore. With `gh`, which doesn't fill templates in for you, copy the
+  template's sections into `--body`, and add every new issue to the Project (see Project board):
+  `gh issue create --label <type> --label <area> --milestone "<phase>" --project "PyCon US Flet"`.
 - Labels:
   - Type: `feature`, `bug`, `design`, `docs`, `test`, `chore`, `ci`, `refactor`, `epic`, `upstream`.
   - Area: `area:shell`, `area:theme`, `area:data`, `area:schedule`, `area:speakers`, `area:rooms-maps`,
@@ -94,6 +99,12 @@ that date motivates us but never justifies cutting corners.
 - Commit messages: imperative subject of 72 characters or fewer ("Add schedule day tabs"), a body that explains
   why when it isn't obvious, and the issue reference (`Refs #14`).
 - Keep commits focused. Rebase on `main` when needed, but never force-push a branch someone else is working on.
+- **`main` is protected by convention** (D-88): every change reaches it through a squash-merged PR, and nobody
+  pushes, force-pushes to or deletes `main`. GitHub can't enforce this yet: creating a ruleset on this private
+  repo on GitHub Free fails with `Upgrade to GitHub Pro or make this repository public to enable this feature.
+  (HTTP 403)` (tried 2026-10-11). When the repo goes public (P4), add a ruleset on the default branch that
+  requires a PR, blocks force pushes and deletion, and requires **no** approvals, so agents can still merge
+  their own PRs (D-100).
 
 ### Pull requests
 
@@ -101,9 +112,11 @@ that date motivates us but never justifies cutting corners.
   or generated files; split bigger work.
 - Open a **draft PR** early for anything that takes more than a session, so progress is visible; mark it ready
   when it meets the definition of done.
-- The PR template asks for: what and why, how it was tested (commands, devices), screenshots or recordings for UI
-  changes (Android emulator **and** iOS simulator, light and dark when relevant), docs and decision updates, and
-  follow-ups.
+- The PR template (`.github/pull_request_template.md`) asks for: `Closes #N`, what and why, how it was tested
+  (commands, devices, Flet pin), screenshots or recordings for UI changes (Android emulator **and** iOS simulator,
+  light and dark when relevant), reviews (second opinion and Copilot), a pre-merge checklist (definition of done,
+  docs and decision updates) and follow-ups. `gh pr create --body` doesn't fill it in: use its sections.
+- Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
 - CI must be green.
 
 ### Reviews and merging
@@ -138,8 +151,34 @@ that date motivates us but never justifies cutting corners.
 ### Project board
 
 - A GitHub Project ("PyCon US Flet") gives the overview with one Status field (Todo, In progress, In review,
-  Done); group or filter it by milestone (the phase) and by `area:*` label (D-90, D-94). Issues and PRs from this
-  repo are added automatically. The issue is the source of truth; the board is a view of it.
+  Done); group or filter it by milestone (the phase) and by `area:*` label (D-90, D-94). The issue is the source
+  of truth; the board is a view of it.
+- **The Project's built-in workflows do most of the bookkeeping.** The owner turned them on in the web UI
+  (the API can't; #118): open issues and PRs are auto-added, "Item added" sets Todo, "Pull request linked to
+  issue" sets In progress, "Item closed" and "Pull request merged" set Done, "Auto-close issue" closes an issue
+  set to Done, and "Item reopened" sets Todo. Still pass `--project "PyCon US Flet"` when you create an issue
+  or PR, so it's on the board at once; adding twice is harmless.
+- **Set two statuses yourself**, on the issue and on its PR: In progress when you start, and In review when the
+  PR is ready (no workflow sets In review). `gh` needs the `project` scope (`gh auth refresh -s project`). The
+  ids below are stable; if the Project is ever rebuilt, look them up again with the first two commands.
+
+  ```sh
+  gh project view 2 --owner ndonkoHenri --format json --jq .id   # project id
+  gh project field-list 2 --owner ndonkoHenri --format json \
+    --jq '.fields[] | select(.name == "Status") | {id, options}'   # Status field id and option ids
+  # The item id of an issue or PR (adds it to the Project if it isn't there yet):
+  item=$(gh project item-add 2 --owner ndonkoHenri --format json --jq .id \
+    --url https://github.com/ndonkoHenri/pycon-us-flet/issues/<n>)   # or .../pull/<n>
+  gh project item-edit --project-id PVT_kwHOBeZJHs4BmmHp --id "$item" \
+    --field-id PVTSSF_lAHOBeZJHs4BmmHpzhlOeUE --single-select-option-id <option id>
+  ```
+
+  | Status | Option id |
+  |---|---|
+  | Todo | `876879f0` |
+  | In progress | `921d2845` |
+  | In review | `0361c618` |
+  | Done | `40195126` |
 - Each phase has a pinned status issue (`P0 status`, ...). Post a short weekly update there: done, next, blocked,
   decisions needed.
 
