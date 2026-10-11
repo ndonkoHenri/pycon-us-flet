@@ -43,9 +43,9 @@ that date motivates us but never justifies cutting corners.
 - `docs/decisions.md` is binding. To change it, open an issue labelled `needs-decision` with the options and your
   recommendation, then record the outcome as a new D-number in a PR **before or together with** the code that
   depends on it (D-101):
-  - **Reversible choices** don't wait for the owner. Post the decision as a comment on the issue, merge the PR
-    that records it, mention it in the phase status issue, then remove the `needs-decision` label. The owner can
-    override later.
+  - **Reversible choices** don't wait for the owner. The question is **settled** once you post the decision as a
+    comment on the issue; then record it as a D-number in a PR, mention it in the phase status issue, and remove
+    the `needs-decision` label. The owner can override later.
   - **Owner-only choices** wait for the owner: app identity and bundle id; making anything public (the repo, a
     store listing, builds for people outside the team); accounts or anything that costs money; contacting people
     outside this work (the PSF, social media, blogs); and anything that would lose data or need someone else's
@@ -111,8 +111,8 @@ that date motivates us but never justifies cutting corners.
 - **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
   don't wait for approval. Merge only when all of these hold:
   1. **Checks pass on the PR's latest commit.** Once CI exists, every check must be green: missing, pending,
-     skipped or cancelled checks don't count. Until then (P0-02), run the checks that apply locally and list them
-     in the PR.
+     skipped or cancelled checks don't count (the required checks are the `ci.yml` jobs listed in
+     `docs/development.md`). Until CI exists (P0-02), run the checks that apply locally and list them in the PR.
   2. **The definition of done is met**, and you have re-read the whole final diff yourself.
   3. **A second opinion, when required.** It is required when the PR changes more than 400 lines (not counting
      lockfiles, fixtures, generated files or data snapshots), changes the architecture (module structure, state,
@@ -123,7 +123,7 @@ that date motivates us but never justifies cutting corners.
      reviewer model; if it's a product question, use `needs-decision`.
   4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
      acknowledged; every owner comment has a reply.
-  5. **No open `needs-decision` question** affects the PR.
+  5. **No unsettled `needs-decision` question** affects the PR.
 - Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
