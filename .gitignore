@@ -6,8 +6,10 @@ __pycache__/
 *.py[cod]
 .venv/
 
-# Flet build output
+# Build and tool output
 build/
+/dist/
+.hypothesis/
 
 # IDE
 .idea/
@@ -27,4 +29,6 @@ build/
 *.p12
 *.p8
 *.mobileprovision
-.env*
+.env
+.env.*
+!.env.example
