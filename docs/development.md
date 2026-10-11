@@ -106,6 +106,8 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
 - After that, flet-cli downloads the release template and the Dart package is the published one.
 
 **Known quirks of a source pin:**
+- `.flet-src/sdk/python` is a uv workspace, so `uv.lock` also records Flet's own dev group (every extension package under `sdk/python/packages`) as editable paths. Nothing extra is installed, but `uv sync --locked` needs all those directories: a checkout must include the whole `sdk/python` tree (CI's sparse checkout of `sdk/python` does).
+- With `[tool.flet.dev_packages]` set, `flet build` never reuses installed site-packages and passes `--no-cache-dir`, so every build reinstalls the bundled packages (`CLI/commands/build_base.py:2808`). Slower, but expected while the pin lasts.
 - `flet --version` prints the nearest git tag, for example `1.0.4`. In CI's shallow clone it prints `0.1.0`.
 - Packaged apps report `flet.version.flet_version == "0.1.0"`, because a mobile build skips the git lookup (`flet/version.py:86-103`). About this app (INFO-03) shows this value as "source build".
 - None of this affects the build. S5 confirms it.
@@ -184,7 +186,8 @@ flet = ".flet-src/sdk/python/packages/flet"
 
 # ------------------------------------------------------------------ tools
 [tool.ruff]
-target-version = "py314"
+target-version = "py314"              # ruff also skips git-ignored paths (excluded/, .flet-src)
+extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
 
 [tool.ruff.lint]
 extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DTZ: no naive datetimes (D-43)
@@ -321,7 +324,7 @@ def test_version_matches_pyproject():
 - For iOS, a Mac with Xcode 27, CocoaPods and an Apple ID, plus a paid team for device builds (§8.2).
 
 ```bash
-git clone git@github.com:<owner>/pycon-us.git && cd pycon-us
+git clone https://github.com/ndonkoHenri/pycon-us-flet.git && cd pycon-us-flet
 git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src   # §2.2
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
 uv sync                                    # Python 3.14 and the dev tools

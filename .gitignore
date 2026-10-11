@@ -6,8 +6,10 @@ __pycache__/
 *.py[cod]
 .venv/
 
-# Flet build output
+# Build and tool output
 build/
+/dist/
+.hypothesis/
 
 # IDE
 .idea/
@@ -16,3 +18,17 @@ build/
 
 # Claude Code runtime state
 .claude/scheduled_tasks.lock
+
+# Flet from source (docs/development.md §2.2) and flet run storage
+.flet-src
+.flet/
+
+# Signing material and local secrets: never committed (D-86)
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+.env
+.env.*
+!.env.example
