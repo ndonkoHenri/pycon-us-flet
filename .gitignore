@@ -16,8 +16,9 @@ build/
 .vscode/
 .DS_Store
 
-# Claude Code runtime state
+# Claude Code runtime state (agent worktrees live under .claude/worktrees)
 .claude/scheduled_tasks.lock
+.claude/worktrees/
 
 # Flet from source (docs/development.md §2.2) and flet run storage
 .flet-src
