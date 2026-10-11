@@ -479,7 +479,7 @@ Conventions in every workflow:
 |---|---|---|
 | Check out the app | `actions/checkout` | |
 | Read the Flet pin, check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref`, sparse `sdk/python`, into `.flet-src` | `uv.lock` points at the path sources there (§2.2). Delete both steps with the 1.1.0 pin. |
-| Set up uv | `astral-sh/setup-uv` with `enable-cache: true` | Caches uv's package cache, keyed on `uv.lock` and the `pyproject.toml` files. `uv sync` then installs CPython 3.14 from `requires-python`. |
+| Set up uv | `astral-sh/setup-uv`, `version: "0.12.x"`, `enable-cache: true` | uv stays on the `uv_build>=0.12,<0.13` line of `pyproject.toml`; unpinned, the action installs the latest uv, which warns that `uv_build` does not match it. Bump both together. The cache holds uv's packages, keyed on `uv.lock` and the `pyproject.toml` files. `uv sync` then installs CPython 3.14 from `requires-python`. |
 | Install | `uv sync --locked` | Fails if `uv.lock` is stale (D-75). |
 | Lint, Check formatting | `uv run ruff check`, `uv run ruff format --check` | D-74 |
 | Type-check | `uv run pyright` | D-74 |
