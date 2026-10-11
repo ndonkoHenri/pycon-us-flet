@@ -40,8 +40,13 @@ that date motivates us but never justifies cutting corners.
 
 ## Decisions and documentation
 
-- `docs/decisions.md` is binding. To change a decision, open an issue labelled `needs-decision`, agree on it, then
-  change `decisions.md` in a PR **before or together with** the code that depends on it.
+- `docs/decisions.md` is binding. To change it, open an issue labelled `needs-decision` with the options and your
+  recommendation, then record the outcome as a new D-number in a PR **before or together with** the code that
+  depends on it (D-101):
+  - **Reversible choices** don't wait for the owner: adopt your recommendation, say so in the issue and in the
+    phase status issue, and move on. The owner can override later.
+  - **Hard-to-reverse or outward-facing choices** wait for the owner: app identity and bundle id, publishing or
+    making the repo public, accounts or anything that costs money, and contacting anyone.
 - Docs live next to the code they describe and change in the **same PR** as the behaviour.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
@@ -74,8 +79,8 @@ that date motivates us but never justifies cutting corners.
   - Area: `area:shell`, `area:theme`, `area:data`, `area:schedule`, `area:speakers`, `area:rooms-maps`,
     `area:sponsors`, `area:info`, `area:notifications`, `area:account`, `area:staff`, `area:build`, `area:quality`.
   - Status: `blocked` (say on what), `needs-decision` (the owner decides), `good first issue`.
-- Unsure about something that changes behaviour or a decision? Comment on the issue, add `needs-decision`, and
-  wait. Don't guess on product decisions.
+- Unsure about something that changes behaviour or a decision? Don't guess silently: comment on the issue with the
+  options and your recommendation, add `needs-decision`, and follow the decision rules above (D-101).
 
 ### Branches and commits
 
@@ -98,10 +103,17 @@ that date motivates us but never justifies cutting corners.
 
 ### Reviews and merging
 
-- The **owner reviews and merges**. Agents never merge their own PRs unless the owner explicitly says so.
-- **Squash merge** (the PR title becomes the commit on `main`), then delete the branch.
-- For architecture changes or big PRs, get a **second opinion** from another model (Claude Fable or Codex, run
-  read-only). Post a short summary as a PR comment: what it flagged and what was changed.
+- **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
+  don't wait for approval. Merge only when all of these hold:
+  1. CI is green. Never merge over a red or pending check.
+  2. The definition of done is met, and you have re-read the whole diff yourself.
+  3. For big or risky PRs (about 400+ changed lines, or touching `docs/decisions.md`, the data core, signing, the
+     outbox or the build setup), a **second opinion** from another model (Claude Fable or Codex, run read-only)
+     has reviewed it, and every finding is fixed or answered in a PR comment.
+  4. Every comment from the owner is answered, and no `needs-decision` question in scope is still open.
+- Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
+- The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
+  issue, or a revert PR when something is broken.
 
 ### Upstream Flet work
 
@@ -128,9 +140,10 @@ that date motivates us but never justifies cutting corners.
    widening the PR.
 4. Verify for real: run the tests and linters, and for UI work run the app (emulator, simulator or device). Say
    exactly what you ran and what you saw; never claim a check you didn't do.
-5. Ask instead of guessing on product or architecture questions (`needs-decision`).
+5. Don't guess silently on product or architecture questions: use `needs-decision` and the decision rules
+   (D-101). Decide the reversible ones yourself and record them; wait only for the owner-only kinds.
 6. Sign your work: agents act through the owner's GitHub account, so end every PR description and issue comment
-   you write with `_Written by <agent name> (AI agent)._`. The owner's review and merge show on GitHub.
+   you write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work.
 7. Never call private PSF endpoints, commit secrets or edit `excluded/`.
 
 ## Definition of done
@@ -140,7 +153,7 @@ that date motivates us but never justifies cutting corners.
 - [ ] Runs on Android and iOS (for UI or native changes), with screenshots in the PR.
 - [ ] Accessible: labels, contrast, text scaling, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated when behaviour or decisions changed.
-- [ ] The PR is reviewed and squash-merged; follow-ups have issues.
+- [ ] The merge conditions (D-100) hold, the PR is squash-merged, and follow-ups have issues.
 
 ## Development setup
 
