@@ -148,7 +148,7 @@ A release-build stub with `httpx`, `zoneinfo` + `tzdata`, `sqlite3`, SharedPrefe
 
 - Verdict in `docs/spikes/01-packaged-runtime.md`: cold start and first launch, `.pyc` on and off.
 - `FLET_APP_STORAGE_DATA` survives kill, relaunch and an update install.
-- Decides lazy imports and parsing off the UI loop; D-80 confirmed or revised from the iPhone's numbers, with the emulator's recorded as the Android regression baseline.
+- Decides lazy imports and parsing off the UI loop; D-80 confirmed or revised from the iPhone's numbers (moved to #121 by S1), with the emulator's recorded as the Android regression baseline (D-112).
 
 #### S2 · Spike: can the busiest day render and update fast in components mode?
 

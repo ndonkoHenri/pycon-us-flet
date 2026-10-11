@@ -4,7 +4,7 @@
 **For:** whoever implements a module, screen or service. **Companion to** [`PLAN.md`](../PLAN.md) §5 and [`decisions.md`](decisions.md), which is binding; §19 lists where this file departs from it.
 
 **Conventions**
-- `D-nn` are decisions, `F1`..`F24` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
+- `D-nn` are decisions, `F1`..`F26` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
 - Every Flet API named here was introspected in the local monorepo (flet-dev/flet `9fbe52a61`, unreleased 1.1.0). An API that does **not exist yet** is marked *(not in Flet yet: Ux/Ex)* and has an interim; §18 is the ledger.
 - Code blocks are sketches: they parse and use only verified APIs, but leave out obvious imports, copy and styling.
 - Each module says when it arrives (P0..P4). Build only what the current phase needs (D-66).
@@ -337,7 +337,7 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
 - The bar shows on every View of a tab's stack, so tapping the active tab returns to its root (D-17); S4 checks it during transitions (§19 #6).
 - **Back arrow (D-10):** Flutter's implied back button shows `arrow_back_ios_new_rounded` on iOS (Flet's theme has no `platform`, F8), so pushed views always show the Material back arrow, which navigates to `parent_of()` (D-19); Search passes `back_to=` its remembered `search_base`. S4 only checks the visual result.
 - **Tablets (P2, D-09):** at 600 dp and wider, `AppScaffold` puts an `ft.NavigationRail` in a `Row` beside the content (`View.navigation_bar` takes a `NavigationBar`, or a `CupertinoNavigationBar`, which D-10 rules out, but not a `NavigationRail`) and centres content at 720/840 dp.
-- **Insets and system bars (#311, D-12):** `SafeArea` bodies, `use_safe_area=True` sheets, and `Theme.system_overlay_style` per colour scheme (§15); S1 checks 3-button and gesture navigation, in light and dark.
+- **Insets and system bars (#311, D-12):** `SafeArea` bodies, `use_safe_area=True` sheets, and `Theme.system_overlay_style` per colour scheme (§15, D-113); S1 checked 3-button and gesture navigation, in light and dark. The `SafeArea` also keeps landscape content clear of the side navigation bar.
 
 ### 5.6 Deep links (D-21, NEW-07, P2)
 
@@ -426,7 +426,7 @@ class Conference:
 ```
 
 - `age()` is seconds since `fetched_at`; `set_foreground()` sets `_foreground`, checked by the 60 s tick (D-40). One `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08).
-- `feed.process` is pure: if S1 measures over about 150 ms, call it through `asyncio.to_thread` (rule 7). No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
+- `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)
 
@@ -732,8 +732,8 @@ def write_atomic(path: Path, data: bytes) -> None:
     os.replace(tmp, path)
 ```
 
-- `Storage.write_feed(raw)` runs `write_atomic` in `asyncio.to_thread`; `read_feed()` returns bytes and mtime. The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, S1).
-- **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 checks `sqlite3` in the embedded Python on Android and iOS.
+- `Storage.write_feed(raw)` runs `write_atomic` in `asyncio.to_thread`; `read_feed()` returns bytes and mtime. The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, D-108). Read it from `FLET_APP_STORAGE_DATA` on every start; never persist its absolute path, because iOS moves the container on an update.
+- **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 ran `sqlite3` in the embedded Python on Android and iOS, and the database survived update installs (D-108).
 
 ---
 
@@ -1101,7 +1101,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     )
 ```
 
-- `overlay_style()` returns the `Theme.system_overlay_style` for each `(dark, high_contrast)` scheme (D-12): light status- and navigation-bar icons on dark schemes, dark icons on light ones, and enforced navigation-bar contrast, so Android's navigation-bar icons never vanish into the background (#311). S1 checks it with 3-button and gesture navigation, in light and dark.
+- `overlay_style()` returns the `Theme.system_overlay_style` for each `(dark, high_contrast)` scheme (D-12): light status- and navigation-bar icons on dark schemes, dark icons on light ones, transparent bars and navigation-bar contrast **not** enforced (D-113), so Android's 3-button icons sit on the `NavigationBar`'s colour and never on a dark scrim (#311). S1 checked it with 3-button and gesture navigation, in light and dark.
 - `apply_theme(page, prefs)` sets `page.theme` and `page.dark_theme` from `build_theme()`, `page.theme_mode` from `THEME_MODES[prefs.theme]`, then `page.update()`.
 - Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9): light and dark set brand roles only; HC overrides every role, with `surface_container*` = `surface`. `Prefs.high_contrast_on` is `"on"`, or `"system"` with the OS flag (iOS, Android 34+; re-read on resume, F13); `Prefs.dark` resolves `"system"` with `os_dark`.
 - **Values** come from `docs/ux.md` and are mirrored in `theme.py`: full HC schemes; `Tokens` (D-24: `live`, `warning`, `success`, `favorite`; picked by `(dark, high_contrast)` in `use_tokens()`); track badges (D-25: a tonal pair per track key and brightness, at least 4.5:1, outlined in HC; "En Español" the tonal pair `#FFD7F3` / `#5E0058` in light, inverted in dark). `tests/test_theme.py` checks every text/background pair in all four schemes.
@@ -1188,10 +1188,10 @@ A last-resort net, not error handling (§16.1). Details show when not embedded o
 
 | Spike | Confirms |
 |---|---|
-| S1 | data dir survives updates; `tzdata`, `httpx`, `sqlite3`, SecureStorage on device; `to_thread` for parsing; insets; page handlers fire |
+| S1 | **Done** (`docs/spikes/01-packaged-runtime.md`): data dir survives updates (D-108); `tzdata`, `httpx`, `sqlite3`, SecureStorage on device; parsing stays on the loop (D-109); overlay style and insets (D-113). Page handlers firing without `page.update()` moved to S4 |
 | S2 | row architecture; `build_controls_on_demand=False` per day list so `scroll_to(scroll_key=...)` reaches unbuilt slots (F7) |
 | S3 | `html_md` coverage of every HTML field |
-| S4 | `Drill` returning a component; per-level params; root `can_pop=False` + `on_confirm_pop` → Now; global-modal search with pushed results through our `on_view_pop` (`parent_of()`); the bar on detail Views during transitions; the Material back arrow on iOS |
+| S4 | `Drill` returning a component; per-level params; root `can_pop=False` + `on_confirm_pop` → Now; global-modal search with pushed results through our `on_view_pop` (`parent_of()`); the bar on detail Views during transitions; the Material back arrow on iOS; from S1: page handlers fire without `page.update()`, and the boot gate survives a new session after an Android activity recreation (F26) |
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
 | S6, S7, S8 | E3 reminders; floor plans in `InteractiveViewer`; E1 scanning |
 
