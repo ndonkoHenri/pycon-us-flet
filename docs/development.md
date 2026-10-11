@@ -242,7 +242,7 @@ Not set, because the default is what we want:
 
 | Key | Why it is absent |
 |---|---|
-| `[tool.flet.compile]`, `[tool.flet.cleanup]` | The defaults (`.pyc` for app and packages; package cleanup on) suit us. S1 measures `.pyc` on and off before we change anything (`CLI/commands/build_base.py:2777-2790`). |
+| `[tool.flet.compile]`, `[tool.flet.cleanup]` | The defaults (`.pyc` for app and packages; package cleanup on) suit us (`CLI/commands/build_base.py:2777-2790`). S1 measured `.pyc` off: Python recompiles on every start, because serious_python sets `PYTHONDONTWRITEBYTECODE=1` (F25), and cold starts reached the content 284 ms later on the emulator, so `.pyc` stays on (D-111). |
 | `company`, `copyright` | Used only by the desktop templates (`TPL/macos/…/AppInfo.xcconfig`, `TPL/windows/…/Runner.rc`). |
 | `min_sdk_version`, `target_sdk_version` | Flutter's defaults (D-12); S5 records them. |
 | `[tool.flet.android.signing]`, `build_number` | Signing comes from `FLET_ANDROID_SIGNING_*` environment variables (§8.1), and the build number from `--build-number` (§4). |

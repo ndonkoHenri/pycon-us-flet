@@ -139,7 +139,7 @@ Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overr
 
 - **High contrast** (P2) sets every role by hand: `surface_container*` equal `surface` so borders separate cards; all text 7:1. If HC stops fitting `ColorScheme` roles cleanly it moves to `later` (THEME-04). Settings › High contrast puts the HC themes in both slots.
 - A unit test checks every text/background pair in all four schemes, the tokens and the badges (D-25).
-- Each scheme sets `Theme.system_overlay_style` (`ft.SystemOverlayStyle`, D-12): status- and navigation-bar icon brightness follow the scheme, and navigation-bar contrast is enforced, so Android's 3-button icons never vanish into the background (#311).
+- Each scheme sets `Theme.system_overlay_style` (`ft.SystemOverlayStyle`, D-12, D-113): status- and navigation-bar icon brightness follow the scheme, both bars are transparent, and navigation-bar contrast is **not** enforced. Android's 3-button icons then sit on the `NavigationBar`'s colour; with the scrim, or with no style under an `AppBar`, they were grey on dark grey (2.3:1, #311; S1).
 
 ### 3.3 Tokens (D-24)
 

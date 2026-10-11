@@ -508,14 +508,14 @@ Measured by hand at each phase exit, always on **release** builds (`flet build a
 
 | Metric | Target | Method |
 |---|---|---|
-| Cold start to the cached schedule | ≤ 2.5 s | Median of 5 frame counts on a screen recording, from the icon tap to the first frame with session rows. iPhone: swipe the app away in the app switcher before each launch, and record with the Control Center screen recorder (the tap shows as the icon's highlight). Android emulator: force-stop, record with "Show taps" on, and also log `adb shell am start -W` ×10 (`TotalTime`, first frame) as a cheap cross-phase proxy |
+| Cold start to the cached schedule | ≤ 2.5 s | Median of 5 frame counts on a screen recording, from the icon tap to the first frame with session rows. iPhone: swipe the app away in the app switcher before each launch, and record with the Control Center screen recorder (the tap shows as the icon's highlight). Android emulator: the log-based method of D-112. After `am force-stop`, run `adb shell am start -W` ×10 on a quiet host; cold start = the app's "cached content rendered" log line minus logcat's `ActivityTaskManager: START u0` line (`adb logcat -v epoch`). Record `TotalTime` too, but it ends at Flet's boot screen, about 330 ms before the content (S1). The log line is a late proxy (0.2-0.3 s after the pixels in S1's recordings), good for build-to-build comparison. Baseline: 760 ms (D-112) |
 | First launch (no cache: bundled snapshot) | recorded | Same, after clearing the app's data. iPhone: delete the app and reinstall the same build (this removes the data directory and SharedPreferences; Keychain items, SecureStorage from P3, survive). Android emulator: `adb shell pm clear <package>` |
 | Feed processing | ≤ 400 ms | The app logs `feed processed in N ms` on every parse; median of 5 refreshes from the shared log (D-72) |
 | Scrolling the busiest day | no visible jank | iPhone: Instruments' Animation Hitches. Android emulator (relative): Perfetto with the `android.surfaceflinger.frametimeline` data source during scripted flings (`adb shell input swipe`), janky frames recorded. Plus the eye test at 200 % text |
 | Star tap and search keystroke latency | recorded (S2 sets any budget) | Frame counting on a screen recording |
 | App size | recorded, not gated | APK and AAB size; download size with `bundletool get-size total`; IPA size from TestFlight |
 
-Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup, gets a `bug` + `area:quality` issue.
+Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). S1's reproducer (`docs/spikes/01-packaged-runtime/`) shows the logging, and its verdict the emulator baseline. A busy host moved S1's medians by about 25 %, so repeat a suspect run before filing. A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup, gets a `bug` + `area:quality` issue.
 
 ## 9. Device checklist (D-79)
 
