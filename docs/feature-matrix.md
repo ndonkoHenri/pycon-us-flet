@@ -38,7 +38,7 @@ It lists all **263** features catalogued from the Ionic app ([`research/feature-
 
 | code | meaning | status |
 |---|---|---|
-| S1–S9 | Spikes ([PLAN §8](../PLAN.md#8-early-spikes)): S1 packaged stack on both phones, S2 busiest-day list rendering, S3 HTML→Markdown coverage, S4 Router and back gestures, S5 build and ship from the Flet 1.1 pin, S6 reliable local reminders, S7 floor plans in `InteractiveViewer`, S8 `mobile_scanner` extension, S9 `flet test linux` in CI | spikes, not code |
+| S1–S9 | Spikes ([PLAN §8](../PLAN.md#8-early-spikes)): S1 packaged stack on Android and iOS, S2 busiest-day list rendering, S3 HTML→Markdown coverage, S4 Router and back gestures, S5 build and ship from the Flet 1.1 pin, S6 reliable local reminders, S7 floor plans in `InteractiveViewer`, S8 `mobile_scanner` extension, S9 `flet test linux` in CI | spikes, not code |
 | E1 | Barcode-scanner extension (over `mobile_scanner`) | upstream, not yet in Flet |
 | E2 | FCM push extension (`flet-firebase`); referenced only by dropped rows | upstream, low priority |
 | E3 | Scheduled local notifications in the official flet-dev/flet#6948 extension | upstream, not yet in Flet |

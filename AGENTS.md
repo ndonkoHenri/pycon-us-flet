@@ -137,6 +137,12 @@ that date motivates us but never justifies cutting corners.
   4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
      acknowledged; every owner comment has a reply.
   5. **No unsettled `needs-decision` question** affects the PR.
+- **A Copilot review** (D-103). On every PR that changes code or configuration, request one right after opening
+  it: `gh pr edit <n> --add-reviewer @copilot`. It arrives in about 5 to 15 minutes as a review by
+  `copilot-pull-request-reviewer[bot]`, with inline comments by `Copilot`. Handle its comments before merging, like
+  any reviewer's: fix, or reply on the thread with the reason and evidence. If nothing has arrived after about 20
+  minutes, or the review only says the Copilot quota is used up, say so in the PR and go on. It never replaces the
+  second opinion above.
 - Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
@@ -202,7 +208,8 @@ that date motivates us but never justifies cutting corners.
 
 - [ ] Acceptance criteria of the issue met.
 - [ ] Tests added or updated, all passing; linters clean.
-- [ ] Runs on Android and iOS (for UI or native changes), with screenshots in the PR.
+- [ ] Runs on an Android emulator and an iOS simulator (for UI or native changes), with screenshots in the PR; the
+  owner's iPhone only for checks that need hardware or a release build (D-102).
 - [ ] Accessible: labels, contrast, text scaling, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated when behaviour or decisions changed.
 - [ ] Follow-ups have their own issues.

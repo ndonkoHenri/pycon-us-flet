@@ -26,7 +26,7 @@
 | UI smoke flows (§5) | `flet test`, `flet_app`, `RemoteTester` | UI-heavy PRs; phase exits | no |
 | Goldens (§6) | `take_screenshot`, `assert_screenshot` | P4 only | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
-| Device checklist and performance (§8, §9) | release builds on our phones | phase exits | no |
+| Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
 | Public feed check (§12) | `tools/check_feed.py` | weekly | yes (cron) |
 
 ## 2. Layout, configuration and commands
@@ -312,7 +312,7 @@ The machine records each row's attribution at enqueue time and compares it in an
 | Tester | `flet_app.tester` is a `RemoteTester` (`flet.testing.remote_tester`): `find_by_semantics_identifier`, `find_by_text`, `find_by_text_containing`, `find_by_tooltip`, `find_by_key`, `find_by_icon`, `tap`, `long_press`, `enter_text`, `mouse_hover`, `pump(duration)`, `pump_and_settle(duration)`, `take_screenshot(name)`. A `Finder` has `count`, `first`, `last`, `at(i)`. |
 | Absent on device | `drag`, `drag_from`, `tap_at`, `mouse_click`, `right_mouse_click`, `mouse_double_click` and the `*_at` variants exist only on the host `Tester` (F21). `RemoteTester.pump_and_settle` has no `timeout` argument; each call fails after a fixed 60 s. |
 | Assertions | A Flutter-side error (for example "RenderFlex overflowed") makes `flutter test` exit non-zero, and `FletTestApp.teardown()` then raises, so the test fails even if every Python assertion passed. |
-| Targets | `FletTestApp` points the app at `10.0.2.2` on Android and `127.0.0.1` on iOS (`flet_test_app.py:295`). Those reach the laptop only from an **emulator or simulator**, so flows run there; physical phones are covered by the device checklist (§9). |
+| Targets | `FletTestApp` points the app at `10.0.2.2` on Android and `127.0.0.1` on iOS (`flet_test_app.py:295`). Those reach the laptop only from an **emulator or simulator**, so flows run there; the iPhone is covered by the device checklist (§9). |
 
 ### 5.2 Driving state without test hooks
 
@@ -487,7 +487,7 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
 
 ### 7.3 Manual, at every phase exit
 
-- **Screen readers.** TalkBack on the Android phone and VoiceOver on the iPhone complete the phase's flows. Every control is reached in visual order and announced with name, role and state; each row reads as one phrase, with the star as its own stop; SnackBars and scan outcomes are announced.
+- **Screen readers.** TalkBack on an Android emulator (Google APIs images include it) and VoiceOver on the iPhone (the simulator has none) complete the phase's flows (D-102). Every control is reached in visual order and announced with name, role and state; each row reads as one phrase, with the star as its own stop; SnackBars and scan outcomes are announced.
 
   | Phase | Flows |
   |---|---|
@@ -499,24 +499,27 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
 - **Tools.** Accessibility Scanner on Android (48 dp targets, contrast of seeded roles as rendered); Xcode's Accessibility Inspector on the simulator; a proposed "Show semantics" Developer switch setting `page.show_semantics_debugger` (exists in `BasePage`).
 - **System settings.** Bold Text (iOS), high contrast where the OS reports it (iOS, Android 34+; re-read on resume, D-23), "Remove animations".
 
-## 8. Performance on real devices (D-80)
+## 8. Performance (D-80, D-102)
 
-Measured by hand at each phase exit on the mid-range Android phone (where the targets apply) and recorded for the iPhone, always on **release** builds (`flet build apk` / `ipa`), never on `flet run` or `flet test` builds. S1 and S2 may revise the targets in the decisions record.
+Measured by hand at each phase exit, always on **release** builds (`flet build apk` / `ipa`), never on `flet run`, `flet test` or debug builds. S1 and S2 may revise the targets in the decisions record. The targets are written for a mid-range Android phone, which we don't have (D-102):
+- **The iPhone** gives the numbers held against the targets (`ipa`, installed through TestFlight or Xcode).
+- **An Android emulator** gives a relative regression signal only: the same emulator image (e.g. `Pixel_9_Pro_XL_API_35`, cold boot) on the same host, compared build to build and never against the targets. The host's load skews it, so close other heavy work while measuring, and report the host with the numbers.
+- **A borrowed mid-range Android phone**, if we get one before P4, gives the absolute Android numbers (PLAN §11).
 
 | Metric | Target | Method |
 |---|---|---|
-| Cold start to the cached schedule | ≤ 2.5 s | Force-stop; screen-record with "Show taps" on; median of 5 frame counts from the tap to the first frame with session rows. Also log `adb shell am start -W` ×10 (`TotalTime`, first frame) as a cheap cross-phase proxy |
-| First launch (no cache: bundled snapshot) | recorded | Same, after `adb shell pm clear <package>` |
+| Cold start to the cached schedule | ≤ 2.5 s | Median of 5 frame counts on a screen recording, from the icon tap to the first frame with session rows. iPhone: swipe the app away in the app switcher before each launch, and record with the Control Center screen recorder (the tap shows as the icon's highlight). Android emulator: force-stop, record with "Show taps" on, and also log `adb shell am start -W` ×10 (`TotalTime`, first frame) as a cheap cross-phase proxy |
+| First launch (no cache: bundled snapshot) | recorded | Same, after clearing the app's data. iPhone: delete the app and reinstall the same build (this removes the data directory and SharedPreferences; Keychain items, SecureStorage from P3, survive). Android emulator: `adb shell pm clear <package>` |
 | Feed processing | ≤ 400 ms | The app logs `feed processed in N ms` on every parse; median of 5 refreshes from the shared log (D-72) |
-| Scrolling the busiest day | no visible jank | Android 12+: Perfetto with the `android.surfaceflinger.frametimeline` data source during scripted flings (`adb shell input swipe`), janky frames recorded; iPhone: Instruments' Animation Hitches. Plus the eye test at 200 % text |
+| Scrolling the busiest day | no visible jank | iPhone: Instruments' Animation Hitches. Android emulator (relative): Perfetto with the `android.surfaceflinger.frametimeline` data source during scripted flings (`adb shell input swipe`), janky frames recorded. Plus the eye test at 200 % text |
 | Star tap and search keystroke latency | recorded (S2 sets any budget) | Frame counting on a screen recording |
 | App size | recorded, not gated | APK and AAB size; download size with `bundletool get-size total`; IPA size from TestFlight |
 
-Results go into the phase status issue (date, device, OS, build, Flet pin). A regression over 20 % from the previous phase gets a `bug` + `area:quality` issue.
+Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup, gets a `bug` + `area:quality` issue.
 
 ## 9. Device checklist (D-79)
 
-At each phase exit, on both phones with release builds (plus a quick emulator and simulator pass). Items marked with a phase start then. Results go into the phase status issue with device, OS, build number and Flet pin.
+At each phase exit, with packaged builds on an Android emulator and an iOS simulator, and on the iPhone for the items that need hardware or a release build: items 1 and 2 with a TestFlight install of the phase build, the phase's exit journeys that name the iPhone (PLAN §7), VoiceOver (item 5), reminder delivery (item 12) and the camera (S8, E1) (D-102). Android items that would want hardware (a reboot, exact alarms, TalkBack) run on the emulator, and the results say so. Items marked with a phase start then. Results go into the phase status issue with device or emulator image, OS, build number and Flet pin.
 
 1. Install over the previous build: favourites, settings and cache survive.
 2. Cold start online; cold start in airplane mode (bundled or cached data, honest status strip from P1); kill and relaunch.
@@ -529,7 +532,7 @@ At each phase exit, on both phones with release builds (plus a quick emulator an
 9. Background for more than 15 minutes, then resume: refresh happens, accessibility flags are re-read.
 10. Landscape, and a tablet emulator (rail from P2).
 11. The companion app (`flet run --android` / `--ios`) shows the interim for every capability (P0 exit 3).
-12. Reminders (P2): with E3 pinned, they fire with the app killed and after an Android reboot, and the tap opens the session with a back stack; without E3, the settings say "Reminders aren't available in this build" and Now, the Banner and `.ics` work (D-60). A denied permission never blocks a task.
+12. Reminders (P2): with E3 pinned, they fire with the app killed (on the iPhone and the emulator) and after a reboot of the emulator, and the tap opens the session with a back stack; without E3, the settings say "Reminders aren't available in this build" and Now, the Banner and `.ics` work (D-60). A denied permission never blocks a task.
 13. Scans (P3): queue in airplane mode, survive kill and relaunch, sync once; sign-out with unsynced rows asks first.
 14. The shared log contains no secret, email or badge code (D-72).
 15. Deep links (P2): `adb shell am start -a android.intent.action.VIEW -d '<scheme>://app/schedule/session/<id>'` and `xcrun simctl openurl <udid> '<scheme>://app/...'`, cold and warm: the link lands on the session with its root below, so Back returns to the root; an unknown id lands on the root with a SnackBar (D-21).
@@ -553,7 +556,7 @@ By kind of change:
 | Colours or theme | The contrast test covers every new pair |
 | Private API or mock | Contract README updated with Ionic file:line; the PSF guard test unchanged and green |
 | List rows, startup, feed parsing | Before and after numbers from a release build |
-| Flet pin or dependency bump | Its own PR; all flows on the Android emulator and the iOS simulator; a packaged build smoke-tested on one phone |
+| Flet pin or dependency bump | Its own PR; all flows on the Android emulator and the iOS simulator; a packaged build smoke-tested on the emulator and the simulator (`flet build apk`, `flet build ios-simulator`) |
 
 ## 11. Quality gates per phase
 
@@ -561,10 +564,10 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 
 | Phase | Automated (CI green) | UI flows | Device, accessibility, performance |
 |---|---|---|---|
-| **P0** | Feed rules, invariants, snapshot (2025, 2026); Ionic reference captured; two-zone fixture; capabilities, storage keys, version, `core` purity; light/dark contrast | The shell flow (`test_shell_starts`) passes with `flet test` on an emulator and a simulator (PLAN P0 exit 3) | Checklist 1, 2, 6, 7, 11 on both phones; S1–S5 verdicts in `docs/spikes/`; D-80 targets confirmed or revised |
+| **P0** | Feed rules, invariants, snapshot (2025, 2026); Ionic reference captured; two-zone fixture; capabilities, storage keys, version, `core` purity; light/dark contrast | The shell flow (`test_shell_starts`) passes with `flet test` on an emulator and a simulator (PLAN P0 exit 3) | Checklist 1, 2, 6, 7, 11 on an Android emulator and an iOS simulator, 1 and 2 also on the iPhone; S1–S5 verdicts in `docs/spikes/`; D-80 targets confirmed or revised (D-102) |
 | **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F6 on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
 | **P2** | + diff (#312), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + F7 | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
-| **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + F8 | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on both phones, including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
+| **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + F8 | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
 | **P4** | All green; goldens added | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
 
 ## 12. CI wiring (D-84)
@@ -581,7 +584,7 @@ Not in Flet today. Each has an interim; the upstream fixes are candidates withou
 | Gap | Interim | Candidate upstream fix |
 |---|---|---|
 | `RemoteTester` has no drag, fling or scroll | Reach targets via search, day tabs, Jump to now; `adb shell input swipe` on Android | Drag and `scroll_until_visible` in the device protocol |
-| Flows can't reach physical phones (`10.0.2.2` / `127.0.0.1` fixed, `flet_test_app.py:295`) | Emulator and simulator; phones via the checklist | A host override (`adb reverse` on Android) |
+| Flows can't reach physical phones (`10.0.2.2` / `127.0.0.1` fixed, `flet_test_app.py:295`) | Emulator and simulator; the iPhone via the checklist | A host override (`adb reverse` on Android) |
 | A `Finder` only counts matches | Assert presence of text, tooltips, identifiers | Finder text, bounds and semantics flags |
 | `RemoteTester.pump_and_settle` has a fixed 60 s timeout | `wait_for_id` polling | A `timeout` argument, as on `Tester` |
 | No accessibility guideline checks | Accessibility Scanner, Accessibility Inspector | Flutter's `meetsGuideline` on the tester |

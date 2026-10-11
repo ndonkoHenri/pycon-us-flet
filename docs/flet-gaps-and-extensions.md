@@ -329,7 +329,7 @@ async def apply(plan: list[Reminder]) -> None:
 | iOS | Permission | Request through the extension's `request_permission()` (v1). The template's permission_handler macros have no notifications entry (F17), so not through `flet-permission-handler`. | v1 |
 | iOS | Notification delegate | The plugin README requires `UNUserNotificationCenter.current().delegate = self` in `AppDelegate`, for taps and foreground presentation. The template's `AppDelegate.swift` is stock and does not set it, and the plugin does not set it either (checked in 22.3.1). **#6948 v1 must solve this** for `on_notification_tap` to work on iOS: either a template line or a delegate set from the extension's iOS side. | missing (v1) |
 
-**Spike S6** (during P1, upstream track; PLAN §8). The question: can a release build deliver reminders reliably when the app isn't running? On both phones: schedule 2 min ahead and kill the app; lock the phone; reboot (Android); deny notifications and exact alarms (Android 14+); tap from a cold start; plan more than 64 candidates (iOS); move a saved session in a fixture feed and check that its reminder moves. The verdict decides the Android receiver approach, whether exact alarms are worth it, and the GSON rules.
+**Spike S6** (during P1, upstream track; PLAN §8). The question: can a release build deliver reminders reliably when the app isn't running? On the iPhone and an Android emulator (D-102): schedule 2 min ahead and kill the app; lock the screen; reboot (the emulator); deny notifications, and exact alarms (the emulator, Android 14+); tap from a cold start; plan more than 64 candidates (iPhone); move a saved session in a fixture feed and check that its reminder moves. The verdict decides the Android receiver approach, whether exact alarms are worth it, and the GSON rules.
 
 **Tests.**
 - **Extension:** `zoned_schedule` at now + 70 s appears in `get_pending`, and `cancel` removes it; a naive `at` raises `ValueError`; the instant is exact across the 2027-03-14 US DST change; scheduling works on an API 34 emulator with exact alarms denied.
@@ -339,7 +339,7 @@ async def apply(plan: list[Reminder]) -> None:
 1. After the pin PR for the Flet release, or commit, that contains #6948 v1 and the scheduling PR, a separate dependency PR adds the extension's exact pin. The adoption PR then adds `POST_NOTIFICATIONS` and anything else S6 required.
 2. Settings › Reminders switches become live, and the permission card appears (NOTIF-01, NOTIF-06, NOTIF-10).
 3. The in-app `Banner` stays for the foreground, and the `.ics` actions stay.
-4. Run the P2 exit check: a reminder fires with the app killed and after an Android reboot, and a tap opens the session.
+4. Run the P2 exit check: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, and a tap opens the session.
 
 ### 4.2 E1: barcode scanner (priority 4; the staff showcase)
 
@@ -435,11 +435,11 @@ The scan screen applies the 4 s per-code cooldown and pauses while a dialog or s
 | Android | ML Kit model | Keep the bundled model (+3–10 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
 | iOS | Minimum OS | Pod 12.0, below the template's 15.0, so U12 is not needed. |
 
-**Spike S8** (before P3, upstream track). Build the smallest extension (one control, `on_detect`, torch) as release builds on both OSes. Test a printed QR in daylight and dim light, repeated detections, permission denied, background and resume, and the companion app's fallback to manual entry. The verdict decides whether E1 goes ahead and settles its API.
+**Spike S8** (before P3, upstream track). Build the smallest extension (one control, `on_detect`, torch) as release builds for Android and iOS. On the iPhone, test a printed QR in daylight and dim light, repeated detections, permission denied, background and resume. On an Android emulator, test a QR image in the virtual scene camera, repeated detections, permission denied, background and resume (no torch or lighting conditions; D-102). Test the companion app's fallback to manual entry too. The verdict decides whether E1 goes ahead and settles its API.
 
 **Tests.**
-- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload; pause and resume 50 times with no camera leak (no CameraX errors in logcat); the torch toggles; a denied permission fires `on_error` and nothing crashes.
-- **App:** the P3 exit criterion, a printed sheet of mock badges scanned on both phones, including two devices checking in the same attendee (PLAN §7).
+- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload; pause and resume 50 times with no camera leak (no CameraX errors in logcat, on the emulator); the torch toggles (on the iPhone; Android's torch waits for a borrowed phone, D-102); a denied permission fires `on_error` and nothing crashes.
+- **App:** the P3 exit criterion, a printed sheet of mock badges scanned on the iPhone (on Android, the badge images through an emulator's virtual scene camera), including two devices checking in the same attendee (PLAN §7).
 
 **Upgrade** (§2.4, plus):
 1. Add the exact pin and `permissions = ["camera"]`.
@@ -467,7 +467,7 @@ class AddToCalendar(ft.Service):
 
 **Upgrade** (§2.4, plus): the pinned Flet must contain U6; add the `<queries>` intent (§5.9) and the iOS usage strings to `[tool.flet.ios.info]`. Session detail's "Add to calendar" calls `add_event`, and the `.ics` action stays as "Share as file".
 
-**Tests:** the editor opens pre-filled on both phones; a cancelled editor returns False; with no calendar app it returns False and the app offers "Share as file".
+**Tests:** the editor opens pre-filled on an Android emulator and an iOS simulator; a cancelled editor returns False; with no calendar app it returns False and the app offers "Share as file".
 
 ### 4.4 E5: HTML rendering (later)
 

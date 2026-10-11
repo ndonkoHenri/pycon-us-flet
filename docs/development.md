@@ -97,7 +97,7 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
 1. Check out the new SHA in `.flet-src`, and write it to `.flet-ref`.
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
-3. Run the full checks, then build and smoke-test on both phones. The template and Dart package change with the pin.
+3. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102).
 4. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
 **When 1.1.0 is on PyPI** (one PR):
@@ -381,6 +381,8 @@ Notes:
 
 ### 5.5 Devices, emulators and logs
 
+**The device set (D-102).** Work happens on Android emulators and iOS simulators first: on the owner's Mac, the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled, as `adb shell pm list packages` shows), and the iPhone 16 family and an iPad Pro in the Simulator. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
+
 | Task | Command |
 |---|---|
 | List connected devices | `uv run flet devices [android\|ios]` (USB and wireless; `--device-connection attached\|wireless`) |
@@ -392,7 +394,7 @@ Notes:
 | A tester's log | Developer screen › Share log, which sends `console.log` (D-72) |
 
 Physical devices:
-- **Android:** enable developer options and USB or wireless debugging (`adb pair` for wireless).
+- **Android** (a borrowed phone): enable developer options and USB or wireless debugging (`adb pair` for wireless).
 - **iPhone:** enable Developer Mode (Settings › Privacy & Security), trust the Mac, and register the device in the team (§8.2).
 
 ### 5.6 Fake clock and feed
@@ -642,7 +644,7 @@ The owner's own accounts are the only route, and testing is internal only. There
 | Route | Build | Signed with | Notes |
 |---|---|---|---|
 | Quick look | CI artifact (§7.4) or local `flet build apk` | The debug key | Uninstall before switching builds |
-| Owner's phones, kept updated | Local `flet build apk` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
+| Owner's emulator (and a borrowed phone), kept updated | Local `flet build apk` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
 | Testers | Local `flet build aab` → Play Console › **Internal testing** | The upload key; Play re-signs with its app signing key | Up to 100 testers by email list; no review. Testers install through an opt-in link. |
 
 A device can update in place only from one signing identity: our upload key (sideload) or Play's app signing key (Play), not both. Pick one route per device. Switching means uninstalling first.
@@ -731,8 +733,8 @@ There is no release train. The procedure:
    - check the pin (§2.2) and run `uv sync`;
    - signed AAB → Play internal testing;
    - IPA (`--ios-export-method app-store-connect`, §8.2) → TestFlight.
-6. **Smoke-test** on both phones: install over the previous build, airplane-mode start and the core journeys. At a phase exit, run the full device checklist (D-79).
-7. **Record** in the phase status issue: the version, build number, Flet pin, devices, cold-start time and app sizes (D-80).
+6. **Smoke-test** on an Android emulator (the signed APK or AAB build, installed over the previous one) and on the iPhone (the TestFlight build, installed over the previous one): airplane-mode start and the core journeys. At a phase exit, run the full device checklist (D-79, D-102).
+7. **Record** in the phase status issue: the version, build number, Flet pin, devices and emulator images, cold-start times (the iPhone's against D-80; the emulator's as a relative signal, D-102) and app sizes.
 
 ---
 
