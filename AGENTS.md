@@ -209,7 +209,7 @@ that date motivates us but never justifies cutting corners.
 - [ ] Acceptance criteria of the issue met.
 - [ ] Tests added or updated, all passing; linters clean.
 - [ ] Runs on an Android emulator and an iOS simulator (for UI or native changes), with screenshots in the PR; the
-  owner's iPhone only for checks that need hardware (D-102).
+  owner's iPhone only for checks that need hardware or a release build (D-102).
 - [ ] Accessible: labels, contrast, text scaling, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated when behaviour or decisions changed.
 - [ ] Follow-ups have their own issues.
