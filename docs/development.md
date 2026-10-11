@@ -485,7 +485,7 @@ Conventions in every workflow:
 | Type-check | `uv run pyright` | D-74 |
 | Test | `uv run pytest` | D-76. `--hypothesis-profile=ci` joins once `tests/conftest.py` registers it (#114). |
 
-**Triggers and concurrency.** It runs on every `pull_request` and on every push to `main`. A new push to a PR cancels that PR's run in progress; runs on `main` are never cancelled, so every commit on `main` keeps its own result.
+**Triggers and concurrency.** It runs on every `pull_request` and on every push to `main`. The concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
 
 The target is under 2 minutes (D-84). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job: spike S9 tries `flet test linux`, and a green result becomes a separate workflow through a `needs-decision` issue (D-78).
 
