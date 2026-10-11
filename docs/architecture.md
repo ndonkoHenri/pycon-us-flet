@@ -1092,7 +1092,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         surfaces=ft.ThemeSurfaces.NEUTRAL,
         color_scheme=scheme,
         system_overlay_style=overlay_style(dark=dark, scheme=scheme),   # D-12, #311
-        font_family="Roboto",
+        font_family="packages/roboto_fonts/Roboto",         # D-26, D-105: the bundled font package
         appbar_theme=ft.AppBarTheme(center_title=False),
         page_transitions=ft.PageTransitionsTheme(
             android=ft.PageTransitionTheme.PREDICTIVE,        # D-11, prov. O-2

@@ -184,7 +184,7 @@ test, area:build
 Prove the D-81 setup: `flet build apk`, `aab` and `ipa` from a pinned flet-dev/flet commit, and one TestFlight internal upload with a throwaway bundle id, installed on the iPhone; `flet build ios-simulator` for the simulator.
 
 - Verdict in `docs/spikes/05-build-and-ship.md` with exact commands and versions.
-- TestFlight processed the build, or the blocker is filed upstream.
+- TestFlight processed the build, or the blocker is filed upstream. *(Moved to the iPhone session, #121: it needs owner-only portal steps, D-101.)*
 - AAB size, default minSdk, and the three Roboto weights rendering on iOS (D-26) recorded.
 
 ### P0-E3 · Data core and offline data

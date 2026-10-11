@@ -47,7 +47,7 @@
 
 | Fact | Value | Source |
 |---|---|---|
-| Flet | **1.1** from `flet-dev/flet` `main` at a pinned commit, until 1.1.0 is on PyPI; PyPI's latest is 1.0.4 (D-81) | decisions F20; CHANGELOG "1.1.0" is unreleased |
+| Flet | **1.1** from `flet-dev/flet`'s `flet-1.1.0` branch at a pinned commit, until 1.1.0 is on PyPI; PyPI's latest is 1.0.4 (D-81, D-104). S5 found the `.flet-ref` of 2026-10-11 (`3710aff`) on `main`, which is 1.0.4 plus fixes; #120 moves it, and P0-05 rewrites this section from `docs/spikes/05-build-and-ship.md` | decisions F20; CHANGELOG "1.1.0" is unreleased |
 | Why 1.1 | iOS builds need it: 1.0.4 targets iOS 13.0 and fails on the owner's Xcode 27. 1.1 targets iOS 15. | F20; `TPL/ios/Runner.xcodeproj/project.pbxproj:348` (`IPHONEOS_DEPLOYMENT_TARGET = 15.0`) |
 | Flutter | 3.47.7. It is read from the checkout's `.fvmrc` when flet-cli runs from source. | `.fvmrc`; `flet/version.py` `get_flutter_version` |
 | Python in the app | CPython **3.14.7**, chosen from `requires-python = ">=3.14,<3.15"` | `CLI/utils/python_versions.py` `resolve_python_version`, python-build release `20260921` pinned at `:31` (run on our file: `PythonRelease(short='3.14', standalone='3.14.7', …)`) |
@@ -274,7 +274,7 @@ Each row lands in the PR that ships the feature, never earlier. A Flet extension
 | P3 | Mock credentials (D-49) | `"flet-secure-storage"` | Yes (monorepo package) |
 | P3 | Camera scanning (E1, D-65) | `[tool.flet] permissions = ["camera"]` and `[tool.flet.ios.info] NSCameraUsageDescription = "Scans attendee badges for the staff tools."`. Without our own text, Flet's default "capture photos and videos" string is used (`CLI/commands/build_base.py:254-269`). Then add the scanner extension once it is pinned. | The keys: yes. The extension: no (E1). |
 | P3 | Mock server on an iPhone (§6) | `[tool.flet.ios.info] NSLocalNetworkUsageDescription = "Connects to a developer's test server on your local network."`, but only if S1 or P3 shows that iOS local-network privacy prompts for the embedded Python's sockets. **UNVERIFIED.** | Yes (`ios.info`) |
-| P0 (S5) | Roboto 400/500/700 (D-26, THEME-11) | `[tool.flet.flutter.pubspec.flutter]` with `fonts = [{ family = "Roboto", fonts = [{ asset = "<path>/Roboto-Regular.ttf", weight = 400 }, { asset = "<path>/Roboto-Medium.ttf", weight = 500 }, { asset = "<path>/Roboto-Bold.ttf", weight = 700 }] }]`, merged into the generated `pubspec.yaml` (`CLI/commands/build_base.py:2002-2020`). The asset path the generated Flutter project resolves, and that the three weights render on iOS, are S5's questions; `flet run` falls back to the system font (accepted). `page.fonts` takes one file per family (U20). | The merge: yes. The asset path: S5. |
+| P0 (S5) | Roboto 400/500/700 (D-26, THEME-11) | `[tool.flet.flutter.pubspec.flutter]` with `fonts = [{ family = "Roboto", fonts = [{ asset = "<path>/Roboto-Regular.ttf", weight = 400 }, { asset = "<path>/Roboto-Medium.ttf", weight = 500 }, { asset = "<path>/Roboto-Bold.ttf", weight = 700 }] }]`, merged into the generated `pubspec.yaml` (`CLI/commands/build_base.py:2002-2020`). **S5 replaced this route (D-105):** with assets outside `build/flutter/`, iOS renders SF Pro; a local font-only Flutter package added through `[tool.flet.flutter.pubspec.dependencies]` works on both platforms (`docs/spikes/05-build-and-ship.md`). `flet run` falls back to the system font (accepted). `page.fonts` takes one file per family (U20). | The merge: yes. The package route: yes (S5). |
 | P0 (S5) | iOS signing (§8.2) | `[tool.flet.ios] team_id`, plus `[tool.flet.ios.export_methods.debugging]` and `[tool.flet.ios.export_methods.app-store-connect]`. No `export_method` key, so it defaults to `debugging` and `flet debug ios` signs for development. | Yes |
 
 ---
@@ -381,7 +381,7 @@ Notes:
 
 ### 5.5 Devices, emulators and logs
 
-**The device set (D-102).** Work happens on Android emulators and iOS simulators first: on the owner's Mac, the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled, as `adb shell pm list packages` shows), and the iPhone 16 family and an iPad Pro in the Simulator. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
+**The device set (D-102).** Work happens on Android emulators and iOS simulators first: on the owner's Mac, the AVDs `pycon_pixel6a_api36` (Pixel 6a profile, 4 GB, Google APIs, API 36; the build reference, D-107), `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled, as `adb shell pm list packages` shows), and the iPhone 17 family on iOS 26.5 (D-107) and an iPad Pro in the Simulator. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
 
 | Task | Command |
 |---|---|
@@ -607,7 +607,7 @@ Action inputs we leave at their defaults (`ACTION/action.yml`), so that `pyproje
 | `runner-python-version`, `bundled-python-version` | Empty, so uv and flet-cli resolve 3.14 from `requires-python` |
 | `build-version` | Empty, so `[project].version` is used (`CLI/commands/build.py:203-209`) |
 | `working-directory`, `output-directory` | The repo root; `build/apk` |
-| `extra-args` | None. `--arch arm64-v8a` would shrink a sideload APK; S5 records the size before we decide. |
+| `extra-args` | `--arch arm64-v8a` (D-106): 55.6 MB instead of 142.5 MB. P0-06 (#54) adds it. |
 | `cache` | `true`. If a pin bump behaves oddly, run once with `false`: the Flet download cache is keyed on the reported Flet version, which is a constant `0.1.0` under the source pin (§2.2). |
 
 **This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which can change between runs.
