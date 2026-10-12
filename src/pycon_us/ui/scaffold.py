@@ -2,11 +2,11 @@
 
 ``AppScaffold`` builds each screen's View (architecture §5.5): a surface ``AppBar`` with
 the screen's title, left-aligned and always visible (D-10, D-28), the Material back arrow
-on pushed Views, the Back rules of the tab roots (D-17, D-142), and the body in a
-``SafeArea`` (D-12, D-113). The status- and navigation-bar style comes from the theme
-(``theme.overlay_style()``, D-151): Flet's ``AppBar`` applies it, so a screen never sets
-one. The bottom bar (#75) joins on tab roots only (D-144), and the tablet rail with the
-720/840 dp content widths in P2 (#30).
+on pushed Views, the bottom bar (``ui.navigation``) and the Back rules on tab roots
+(D-13, D-17, D-142, D-144), and the body in a ``SafeArea`` (D-12, D-113). The status- and
+navigation-bar style comes from the theme (``theme.overlay_style()``, D-151): Flet's
+``AppBar`` applies it, so a screen never sets one. The tablet rail with the 720/840 dp
+content widths joins in P2 (#30).
 
 ``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
 (U1) arrives (D-32, D-146); ``SectionHeader`` is the heading of a group of rows.
@@ -26,19 +26,28 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Source, Status, ViewMemory, use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.navigation import Retap, navigation_bar
 
 logger = logging.getLogger(__name__)
 
 
 def AppScaffold(
-    *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
+    *,
+    title: str,
+    body: ft.Control,
+    actions: list[ft.Control] | None = None,
+    on_retap: Retap | None = None,
 ) -> ft.View:
-    """Return a screen's View: the app bar, the Back rules and the body (D-10, D-17).
+    """Return a screen's View: the app bar, the bottom bar, the Back rules and the body.
 
     A plain builder that calls hooks, so a screen calls it exactly once per render, in
     every branch (hooks are unconditional, D-70). It records the top View's route for
     the start route (D-143), and places the body in ``Shown``, which logs D-112's
     content line (D-165).
+
+    On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
+    instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
+    to the system, which leaves the app (D-17, D-142).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -48,6 +57,9 @@ def AppScaffold(
             home indicator and the navigation bar in either orientation.
         actions: The app bar's actions, e.g. ``search_button()``; each icon-only one
             has a tooltip, its accessible name (D-27).
+        on_retap: A tab root's action when its active tab is tapped again, usually the
+            action ``ui.navigation.use_scroll_to_top()`` returns; ignored on pushed Views, which
+            have no bar.
 
     Returns:
         The View for this route level.
@@ -70,6 +82,15 @@ def AppScaffold(
         page.navigate("/now")
         await e.control.confirm_pop(False)  # this View stays; Now replaces the root
 
+    @report_errors
+    async def switch_tab(e: ft.Event[ft.NavigationBar]) -> None:
+        # Flutter reports the active destination too, so a re-tap lands here (S4).
+        root = TAB_ROOTS[e.control.selected_index]
+        if root != view_path:
+            page.navigate(root)  # roots share one View key: a swap, not a push (D-142)
+        elif on_retap is not None:
+            await on_retap()
+
     back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
     return ft.View(
         route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
@@ -82,7 +103,8 @@ def AppScaffold(
             leading=None if is_root else back_arrow,
             actions=actions or [],
         ),
-        # The NavigationBar goes here, on tab roots only (#75, D-144).
+        # On roots only: on pushed Views the bar moved with the page (D-144).
+        navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,
         can_pop=not back_to_now,
         on_confirm_pop=leave_for_now if back_to_now else None,
         controls=[ft.SafeArea(expand=True, content=Shown(body))],
