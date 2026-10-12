@@ -6,5 +6,10 @@ This product is a rebuild of the PyCon US mobile app
 Apache License, Version 2.0. The original app is our functional reference;
 its data semantics, texts and research notes informed this project.
 
+The app bundles the Roboto font (Regular, Medium and Bold, version 2.138,
+https://github.com/googlefonts/roboto), Copyright 2011 Google Inc., licensed
+under the Apache License, Version 2.0. Its files and license are in
+flutter_packages/roboto_fonts/.
+
 This is not an official Python Software Foundation app. "PyCon" and "Python"
 are trademarks of the Python Software Foundation.

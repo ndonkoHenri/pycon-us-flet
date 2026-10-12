@@ -43,8 +43,24 @@ dark_color = "#680579"
 bgcolor_light = "#680579"
 bgcolor_dark = "#680579"
 
+[tool.flet.flutter.pubspec.dependencies] # Roboto 400/500/700 (D-26, D-105); path from build/flutter/
+roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }
+
 [tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
 "org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios]                       # signing (development.md §8.2); not secret (D-86)
+team_id = "VF87YBAN84"
+# No export_method: the default "debugging" serves flet debug ios; TestFlight builds pass
+# --ios-export-method app-store-connect. No provisioning_profile yet (#121): flet build ipa
+# then passes --no-codesign and produces an .xcarchive.
+
+[tool.flet.ios.export_methods.debugging]
+signing_certificate = "Apple Development"
+
+[tool.flet.ios.export_methods."app-store-connect"]
+signing_certificate = "Apple Distribution"
+export_options = { manageAppVersionAndBuildNumber = false }   # Xcode must not renumber
 
 [tool.flet.ios.info]
 ITSAppUsesNonExemptEncryption = false # HTTPS only: no export-compliance prompt on upload
