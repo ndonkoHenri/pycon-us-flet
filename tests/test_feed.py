@@ -149,23 +149,53 @@ def test_speakers_are_registered_once_by_id_from_slots_and_posters() -> None:
         assert poster.speaker_ids and set(poster.speaker_ids) <= set(data.speakers)
 
 
+def test_first_record_of_a_speaker_wins() -> None:
+    document = json.loads(recorded(2026))
+    first = next(slot for slot in document["schedule"] if slot.get("speakers"))
+    speaker = first["speakers"][0]
+
+    def rename_later_copy(doc: dict[str, Any]) -> None:
+        doc["posters"][0]["speakers"].append(dict(speaker, name="Someone Else", bio=""))
+
+    data = process(changed(2026, rename_later_copy), settings(2026))
+    registered = data.speakers[str(speaker["id"])]
+    assert (registered.name, registered.bio) == (speaker["name"], speaker["bio"])
+
+
 def test_posters_sprints_and_job_listings_pass_through() -> None:
+    document = json.loads(recorded(2026))
     data = decoded(2026)
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
         25,
         24,
         13,
     )
+
+    poster, record = data.posters[0], document["posters"][0]
+    assert (poster.id, poster.title, poster.description) == (
+        str(record["conf_key"]),
+        record["title"],
+        record["description_html"],
+    )
+    assert poster.speaker_ids == tuple(str(s["id"]) for s in record["speakers"])
+
+    for sprint, record in zip(data.sprints, document["sprints"], strict=True):
+        assert (sprint.id, sprint.name, sprint.url, sprint.submitter) == (
+            str(record["id"]),
+            record["name"],
+            record["url"],
+            record["submitter"],
+        )
+        assert sprint.logo_url == record["logo_url"]  # None for two projects
     assert sum(sprint.logo_url is None for sprint in data.sprints) == 2
-    ids = [r.id for r in (*data.posters, *data.sprints, *data.job_listings)]
-    assert all(type(i) is str for i in ids)
-    assert {listing.sponsor_level for listing in data.job_listings} <= {
-        "Visionary",
-        "Maintaining",
-        "Partner",
-        "Supporting",
-        "Contributing",
-    }
+
+    listing, record = data.job_listings[0], document["job-listings"][0]
+    assert (listing.id, listing.sponsor_name, listing.sponsor_level) == (
+        str(record["id"]),
+        record["sponsor_name"],
+        record["sponsor_level"],
+    )
+    assert listing.description == record["description_html"]
 
 
 def test_feed_without_optional_sections_decodes_them_empty() -> None:
@@ -251,14 +281,34 @@ def test_bad_slot_is_skipped_and_logged(
     ]
 
 
-def test_duplicate_session_id_keeps_the_first() -> None:
+@pytest.mark.parametrize(
+    ("section", "key", "count"),
+    [
+        ("schedule", "conf_key", 728),
+        ("posters", "conf_key", 25),
+        ("sprints", "id", 24),
+        ("job-listings", "id", 13),
+    ],
+)
+def test_duplicate_id_keeps_the_first(section: str, key: str, count: int) -> None:
     def duplicate(doc: dict[str, Any]) -> None:
-        doc["schedule"].append(dict(doc["schedule"][0], name="Impostor"))
+        first = doc[section][0]
+        doc[section].append(dict(first, **{key: str(first[key])}))  # "6" repeats 6
 
     data = process(changed(2026, duplicate), settings(2026))
-    first = json.loads(recorded(2026))["schedule"][0]
-    assert data.sessions[str(first["conf_key"])].name == first["name"]
-    assert data.skipped == (f"schedule[728]: duplicate id '{first['conf_key']}'",)
+    first = json.loads(recorded(2026))[section][0]
+    assert data.skipped == (f"{section}[{count}]: duplicate id '{first[key]}'",)
+
+
+def test_time_out_of_range_is_skipped() -> None:
+    raw = changed(
+        2026, lambda doc: doc["schedule"][5].update(start="0001-01-01T00:00:00+00:00")
+    )
+    data = process(raw, settings(2026))
+    assert data.skipped == (
+        "schedule[5]: 'start' is out of range: '0001-01-01T00:00:00+00:00'",
+    )
+    assert len(data.sessions) == 727
 
 
 def test_bad_records_in_other_sections_are_skipped() -> None:

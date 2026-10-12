@@ -75,35 +75,35 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         logger.warning("Skipped a feed record: %s", reason)
         skipped.append(reason)
 
-    speakers: dict[str, Speaker] = {}
-    sessions: dict[str, Session] = {}
-    for where, (session, its_speakers) in _decode(
-        sections["schedule"], "schedule", lambda item: _slot(item, zone), skip
-    ):
-        if session.id in sessions:
-            skip(where, f"duplicate id {session.id!r}")
-            continue
-        sessions[session.id] = session
-        _register(speakers, its_speakers)
-    if not sessions:
+    slots = _decode(
+        sections["schedule"],
+        "schedule",
+        lambda item: _slot(item, zone),
+        _first_id,
+        skip,
+    )
+    if not slots:
         raise FeedError("no readable schedule slot")
-
-    posters: list[Poster] = []
-    for _, (poster, its_speakers) in _decode(
-        sections["posters"], "posters", _poster, skip
-    ):
-        posters.append(poster)
-        _register(speakers, its_speakers)
-    sprints = _decode(sections["sprints"], "sprints", _sprint, skip)
-    job_listings = _decode(sections["job-listings"], "job-listings", _job_listing, skip)
+    posters = _decode(sections["posters"], "posters", _poster, _first_id, skip)
+    speakers: dict[str, Speaker] = {}
+    for _, its_speakers in (*slots, *posters):
+        for speaker in its_speakers:
+            speakers.setdefault(
+                speaker.id, speaker
+            )  # the first record wins, as in Ionic
+    sessions = {session.id: session for session, _ in slots}
 
     return ConferenceData(
         sessions=sessions,
         speakers=speakers,
         days=_days(sessions.values()),
-        posters=tuple(posters),
-        sprints=tuple(sprint for _, sprint in sprints),
-        job_listings=tuple(listing for _, listing in job_listings),
+        posters=tuple(poster for poster, _ in posters),
+        sprints=tuple(_decode(sections["sprints"], "sprints", _sprint, _id_of, skip)),
+        job_listings=tuple(
+            _decode(
+                sections["job-listings"], "job-listings", _job_listing, _id_of, skip
+            )
+        ),
         skipped=tuple(skipped),
     )
 
@@ -130,23 +130,31 @@ def _decode[T](
     items: list[object],
     section: str,
     decode: Callable[[object], T],
+    id_of: Callable[[T], str],
     skip: Callable[[str, object], None],
-) -> list[tuple[str, T]]:
-    """Return ``(where, record)`` for each item ``decode`` can read; ``skip`` the others."""
-    records: list[tuple[str, T]] = []
+) -> list[T]:
+    """Return the records ``decode`` can read, the first of each id; ``skip`` the others."""
+    records: dict[str, T] = {}
     for index, item in enumerate(items):
         where = f"{section}[{index}]"
         try:
-            records.append((where, decode(item)))
+            record = decode(item)
         except (TypeError, ValueError) as error:
             skip(where, error)
-    return records
+            continue
+        if (record_id := id_of(record)) in records:
+            skip(where, f"duplicate id {record_id!r}")
+            continue
+        records[record_id] = record
+    return list(records.values())
 
 
-def _register(speakers: dict[str, Speaker], new: Iterable[Speaker]) -> None:
-    """Add speakers not seen yet; the first record of an id wins, as in Ionic."""
-    for speaker in new:
-        speakers.setdefault(speaker.id, speaker)
+def _id_of(record: Sprint | JobListing) -> str:
+    return record.id
+
+
+def _first_id(pair: tuple[Session | Poster, list[Speaker]]) -> str:
+    return pair[0].id
 
 
 def _days(sessions: Iterable[Session]) -> tuple[Day, ...]:
@@ -287,4 +295,7 @@ def _moment(record: Mapping[str, object], key: str, zone: ZoneInfo) -> datetime:
         raise ValueError(f"{key!r} is not an ISO 8601 time: {text!r}") from None
     if moment.utcoffset() is None:
         raise ValueError(f"{key!r} has no UTC offset: {text!r}")
-    return moment.astimezone(zone)
+    try:
+        return moment.astimezone(zone)
+    except OverflowError:  # e.g. 0001-01-01T00:00:00+00:00 has no Pacific equivalent
+        raise ValueError(f"{key!r} is out of range: {text!r}") from None
