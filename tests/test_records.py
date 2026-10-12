@@ -18,6 +18,22 @@ from pycon_us.core import records
 
 ZONE = ZoneInfo("America/Los_Angeles")
 SURROGATE = re.compile(r"[\ud800-\udfff]")
+PAIR = re.compile(r"([\ud800-\udbff])([\udc00-\udfff])")
+
+
+def expected(text: str) -> str:
+    """Return ``text`` as UTF-16 reads it: a high-low pair joined, other surrogates U+FFFD.
+
+    Written with regexes, independently of the helper under test.
+    """
+    joined = PAIR.sub(
+        lambda pair: chr(
+            0x10000 + (ord(pair[1]) - 0xD800) * 0x400 + ord(pair[2]) - 0xDC00
+        ),
+        text,
+    )
+    return SURROGATE.sub("\ufffd", joined)
+
 
 # st.text() and st.characters() leave surrogates out, so the text is joined from
 # characters drawn from the surrogate block as well.
@@ -89,5 +105,5 @@ def test_no_decoded_string_holds_a_surrogate(text: str, key: int | str) -> None:
         records.job_listing(listing),
     ]
     strings = list(strings_in(decoded))
-    assert SURROGATE.sub("\ufffd", text) in strings  # the rest of the text is kept
+    assert expected(text) in strings  # pairs are joined, the rest of the text kept
     assert not any(SURROGATE.search(string) for string in strings)

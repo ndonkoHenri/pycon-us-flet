@@ -248,6 +248,34 @@ def test_emoji_and_other_non_ascii_text_are_unchanged() -> None:
     assert process(raw, settings(2026)).sessions[TALK_ID].name == name
 
 
+def test_an_emoji_sent_as_cesu_8_bytes_is_kept() -> None:
+    """json.loads decodes bytes with surrogatepass, so a CESU-8 pair is two code points."""
+
+    def rename(doc: dict[str, Any]) -> None:
+        first_talk(doc)["name"] = "Snakes CESU"
+
+    raw = changed(2026, rename).replace(b"CESU", b"\xed\xa0\xbd\xed\xb0\x8d")
+    assert process(raw, settings(2026)).sessions[TALK_ID].name == "Snakes \U0001f40d"
+
+
+def test_a_lone_surrogate_in_a_content_block_becomes_a_replacement_character() -> None:
+    """#152: the ``conference.content`` blocks bypass the record decoders."""
+
+    def add_surrogates(doc: dict[str, Any]) -> None:
+        content = doc["conference"]["content"]
+        content["venues-hours"] = "Lone \ud800 here"
+        content["lone-\ud800"] = "Snakes \U0001f40d"
+
+    raw = changed(2026, add_surrogates)
+    assert b'"Lone \\ud800 here"' in raw
+    data = process(raw, settings(2026))
+    assert data.skipped == ()
+    assert data.content["venues-hours"] == "Lone \ufffd here"
+    assert "Lone \ufffd here" in data.content_md["venues-hours"]
+    assert data.content["lone-\ufffd"] == "Snakes \U0001f40d"
+    assert "Snakes \U0001f40d" in data.content_md["lone-\ufffd"]
+
+
 def break_start(doc: dict[str, Any]) -> None:
     del doc["schedule"][KEPT]["start"]
 
