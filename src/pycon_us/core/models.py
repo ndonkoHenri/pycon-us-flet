@@ -7,12 +7,14 @@ in ``ConferenceData`` and return fresh view models instead of mutating these.
 
 Feed processing fills the fields in stages. Decoding (P0-10) gives what the feed states;
 Ionic's rules (``core/rules.py``) decide what becomes a session (P0-11) and add cleaned
-names, flags and rooms (P0-12).
+names, flags and rooms (P0-12). Last, ``feed.process()`` converts the feed's markup once
+(D-130, D-140): the ``*_md`` fields and ``Session.search_text`` stay at their empty
+defaults until then, beside the raw HTML they come from.
 """
 
 import datetime as dt
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, eq=False)
@@ -24,12 +26,14 @@ class Speaker:
         name: The display name.
         photo_url: The photo's URL as the feed gives it; empty when there is none.
         bio: The feed's HTML biography; empty when there is none.
+        bio_md: ``bio`` as Markdown (D-130).
     """
 
     id: str
     name: str
     photo_url: str
     bio: str
+    bio_md: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -66,6 +70,10 @@ class Session:
         image_url: An open space's image, absolute; empty when there is none.
         in_timeline: Whether the schedule's days list it; poster details are reached from
             the Posters row, tracks, rooms, speakers and search instead (DATA-07).
+        description_md: ``description`` as Markdown (D-130); an open space's as the feed
+            gives it, since it is Markdown already (DATA-25).
+        search_text: What search matches (D-46): the name, the description's text and
+            ``speaker_names``, folded (``queries.fold``).
     """
 
     id: str
@@ -87,6 +95,8 @@ class Session:
     url: str
     image_url: str
     in_timeline: bool
+    description_md: str = ""
+    search_text: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -139,12 +149,14 @@ class Poster:
         title: The title.
         description: The feed's HTML description.
         speaker_ids: Its authors.
+        description_md: ``description`` as Markdown (D-130).
     """
 
     id: str
     title: str
     description: str
     speaker_ids: tuple[str, ...]
+    description_md: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -158,6 +170,7 @@ class Sprint:
         description: HTML or plain text, as the feed gives it.
         logo_url: The logo's URL, or None when the feed has none.
         submitter: Who signed the project up.
+        description_md: ``description`` as Markdown (D-130).
     """
 
     id: str
@@ -166,6 +179,7 @@ class Sprint:
     description: str
     logo_url: str | None
     submitter: str
+    description_md: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -177,7 +191,8 @@ class JobListing:
         sponsor_name: The sponsor.
         sponsor_logo_url: The sponsor's logo.
         sponsor_level: The sponsorship level, e.g. ``Visionary``.
-        description: The feed's HTML list of roles.
+        description: The feed's HTML list of roles; SPON-09 reads its links.
+        description_md: ``description`` as Markdown (D-130).
     """
 
     id: str
@@ -185,6 +200,7 @@ class JobListing:
     sponsor_logo_url: str
     sponsor_level: str
     description: str
+    description_md: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -205,6 +221,9 @@ class ConferenceData:
             rule that removed them (DATA-04..06): e.g. ``placeholder``, or ``collapsed`` for
             the slots folded into a collapsed row. An open space's id is its session id.
         skipped: One line per feed record that could not be read, naming it and why.
+        content: The feed's ``conference.content`` HTML blocks by key, e.g. ``about`` or
+            ``venues-hours`` (MAP-09 reads its sections).
+        content_md: ``content`` as Markdown, by the same keys (D-130).
     """
 
     sessions: Mapping[str, Session]
@@ -216,3 +235,5 @@ class ConferenceData:
     job_listings: tuple[JobListing, ...]
     dropped: Mapping[str, tuple[str, ...]]
     skipped: tuple[str, ...]
+    content: Mapping[str, str]
+    content_md: Mapping[str, str] = field(default_factory=dict[str, str])
