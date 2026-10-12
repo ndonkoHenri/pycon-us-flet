@@ -13,6 +13,7 @@ ignored, so the feed can grow without breaking the app.
 
 import json
 import logging
+import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from datetime import date, datetime
@@ -56,6 +57,7 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         FeedError: The feed is not a JSON object with a ``schedule`` list, an optional
             section is not a list, or no schedule slot could be read.
     """
+    started = time.perf_counter()
     sections = _sections(raw)
     zone = settings.time_zone
     skipped: list[str] = []
@@ -134,7 +136,7 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
             ", ".join(f"{len(ids)} {rule}" for rule, ids in dropped.items()),
         )
 
-    return ConferenceData(
+    data = ConferenceData(
         sessions=sessions,
         speakers=speakers,
         days=_days(s for s in sessions.values() if s.in_timeline),
@@ -155,6 +157,14 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         dropped={rule: tuple(ids) for rule, ids in dropped.items()},
         skipped=tuple(skipped),
     )
+    # D-109 compares this with 150 ms on the iPhone's release build.
+    logger.info(
+        "Feed processed in %d ms: %d sessions, %d skipped",
+        round((time.perf_counter() - started) * 1000),
+        len(data.sessions),
+        len(data.skipped),
+    )
+    return data
 
 
 def _index(

@@ -340,7 +340,7 @@ def test_a_session_id_already_taken_is_skipped() -> None:
 def test_dropped_slots_are_counted_in_the_log(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO, logger="pycon_us.core.feed"):
         processed(2026)
-    (message,) = caplog.messages
+    message, _ = caplog.messages  # then "Feed processed in N ms: ..."
     assert message == (
         "Dropped 484 available-open-space, 7 open-space-duplicate, 49 collapsed,"
         " 4 placeholder, 1 posters-plenary"

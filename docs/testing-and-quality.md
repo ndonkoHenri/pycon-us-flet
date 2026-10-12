@@ -84,7 +84,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 |---|---|
 | Lint, format, types | `uv run ruff check && uv run ruff format --check && uv run pyright` |
 | Unit and mock tests (under 2 min, D-84) | `uv run pytest` |
-| Accept a reviewed snapshot change | `uv run pytest tests/test_feed.py --snapshot-update` |
+| Accept a reviewed snapshot change | `uv run pytest tests/test_feed_invariants.py --snapshot-update` |
 | UI flows on the Android emulator | `uv run flet test android -d emulator-5554 --tests-dir tests/ui` |
 | UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui` |
 | One flow, verbose | add `-k favourite -v`; pytest options after `--` (e.g. `-- -x`) |
@@ -138,23 +138,25 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 | Speakers link by name; pseudo-speakers ("Hosted by …") are text, not directory entries | `test_hosted_by_is_not_a_speaker` | DATA-15 |
 | Rooms fan out from multi-room strings | `test_multi_room_session_appears_in_each_room` | DATA-16 |
 | Sprint-only rooms from `map.toml` are seeded (from P2, with the pin registry) | `test_sprint_only_rooms_are_seeded` | MAP-08, DATA-32 |
-| Ids are strings in four stable forms | `test_ids_are_strings_in_known_forms` | DATA-26, D-42 |
+| Ids are strings in four stable forms | `test_ids_are_unique_stable_strings_in_ionics_forms` (an invariant) | DATA-26, D-42 |
 | A malformed slot is skipped and logged; the rest of the day survives | `test_bad_slot_is_skipped_and_logged` (uses `caplog`) | D-41 |
 
-**Invariants.** One parametrised test per invariant, run on every fixture year (and by `tools/check_feed.py` on the live feed):
+**Invariants** (`tests/test_feed_invariants.py`, built in P0-13). One test per invariant, each run on every fixture year under both machine zones (and later by `tools/check_feed.py` on the live feed):
 
-1. No session lost: every raw slot maps to a session id, a documented collapsed row, or one of the named drop rules (each drop counted and logged).
-2. Ids are unique strings, and processing the same bytes twice gives the same ids.
-3. Processing is pure: the decoded input is unchanged afterwards.
-4. Every session lies in exactly one conference-local day, and the days are the conference dates.
-5. All datetimes are aware, in the year's zone; `start <= end`.
-6. Every time group has a start; groups are sorted; within a slot, rows are ordered by room (D-31).
-7. No dropped category survives; posters and breaks remain.
-8. Exactly one Lunch row per conference day that has lunch.
-9. Every speaker referenced by a session exists in the registry, and every registry speaker has a session.
-10. Every session room has a slug, and slugs are unique per room name.
+1. No session lost: every raw slot is its own session or listed in `ConferenceData.dropped` under exactly one named rule (D-123); every collapsed slot lies within a row of its kind on its day; every open space is a session or unscheduled; every poster has its detail session.
+2. Ids are unique strings in Ionic's four forms, and processing the same bytes twice gives the same outline.
+3. Every session lies in exactly one conference-local day within the conference dates, and timeline sessions are in exactly one time group.
+4. All datetimes are aware, in the year's zone; `start <= end`.
+5. Every time group has a start; groups are sorted; within a group, rows are ordered by location, then name (D-31).
+6. No dropped category survives (free or duplicate open spaces, placeholders, the Posters plenary, blanks); posters and breaks remain, as collapsed rows and poster details only.
+7. Exactly one Lunch row per conference day that has lunch.
+8. Only sessions a display-time override matches show another start, shifted by its minutes; they stay in their start's group (the Job Fair, DATA-11).
+9. Every speaker a session links is in the directory and named in it, and every directory speaker has a session; no pseudo-speaker is in the directory.
+10. One room per slug, naturally sorted, listing exactly the sessions that name it.
 
-**Snapshot of our model.** A compact, reviewable outline of the processed model (days → groups → `(id, title, room, track, speaker ids, start, end)`) is compared with `tests/fixtures/snapshots/outline-<year>.json`. The outline function lives in the test module so the snapshot stays readable; a full `dataclasses.asdict` dump would be too large to review. When a parser change alters the outline, the PR runs `--snapshot-update` and explains the diff in its body.
+Processing is pure by construction: `process()` takes bytes and returns new frozen values.
+
+**Snapshot of our model.** A compact, reviewable outline of the processed model is compared with `tests/fixtures/snapshots/outline-<year>.json`: days → groups (by conference-local `HH:MM`) → one line per session, `id | name | track | shown location | start-end`, then `shown HH:MM`, `pre-registration`, `español`, `speakers <ids>` and `text <names not in the directory>` when they apply; then the sessions outside the timeline (poster details), the rooms with their counts, the speaker directory, the drop counts and the skipped records. The outline function lives in the test module so the snapshot stays readable; a full `dataclasses.asdict` dump would be too large to review. It runs under both machine zones, so it also proves the model does not depend on the machine's zone. When a parser change alters the outline, the PR runs `uv run pytest tests/test_feed_invariants.py --snapshot-update` and explains the diff in its body.
 
 ```python
 # tests/conftest.py (excerpt)
