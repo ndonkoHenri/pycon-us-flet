@@ -111,9 +111,10 @@ class Conference:
     ) -> asyncio.Task[None]:
         """Start a background refresh, unless one is running already (single flight).
 
-        Call it from the event loop's thread (D-70 rule 7). Without awaiting the task, an
-        unexpected error reaches only asyncio's exception handler (F4); expected
-        failures never raise, they set ``problem``.
+        Call it from the event loop's thread (D-70 rule 7). Expected failures never raise,
+        they set ``problem``. An unexpected error is logged as soon as the refresh ends,
+        whether or not anyone awaits the task (D-71); ``refresh()`` callers also get it
+        raised.
 
         Args:
             storage: Where the feed cache lives.
@@ -125,6 +126,7 @@ class Conference:
         """
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._refresh(storage, year, transport))
+            self._task.add_done_callback(_log_unexpected)
         return self._task
 
     async def refresh(
@@ -210,6 +212,16 @@ class Conference:
         self.fetched_at = fetched_at
         self.problem = None
         self.version += 1
+
+
+def _log_unexpected(task: asyncio.Task[None]) -> None:
+    """Log a refresh that failed with an unexpected error, as soon as it ends (D-71).
+
+    Without it, the error of a refresh nobody awaits would surface only when the finished
+    task is garbage collected, which ``Conference._task`` delays until the next refresh.
+    """
+    if not task.cancelled() and (error := task.exception()) is not None:
+        logger.error("Feed refresh failed unexpectedly", exc_info=error)
 
 
 ConferenceCtx: ft.ContextProvider[Conference | None] = ft.create_context(None)

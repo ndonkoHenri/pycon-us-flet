@@ -437,7 +437,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 ```
 
 - `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing`, `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). P1 (#82) adds `set_foreground()` and `_foreground`, checked by the 60 s tick (D-40). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
-- Unexpected exceptions in a refresh that nobody awaits reach asyncio's exception handler (F4), which P0-21's `setup_logging()` logs; expected failures never raise.
+- A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; P0-21's asyncio exception handler (F4) is the backstop. Expected failures never raise.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)

@@ -2,7 +2,7 @@
 
 The feed is served by an ``httpx.MockTransport``, never the network. The feed cache lives
 in a temporary directory, with SharedPreferences replaced by the in-memory fake from
-``tests/test_storage.py``; time comes from ``clock.set_test_now()``.
+``tests/fakes.py``; time comes from ``clock.set_test_now()``.
 """
 
 import asyncio
@@ -21,10 +21,11 @@ from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
+from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status
+from tests.fakes import MemoryPrefs
 from tests.feeds import changed
-from tests.test_storage import MemoryPrefs
 
 NOW = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 TALK = "142"  # a 2026 talk; the variants below rename it
@@ -133,7 +134,9 @@ async def test_the_feed_cache_wins_over_the_snapshot(
     storage: Storage, year: YearData
 ) -> None:
     assert await storage.write_feed(CACHED_FEED)
-    saved_at = datetime(2026, 10, 12, 8, 0, tzinfo=UTC)
+    saved_at = datetime(
+        2026, 10, 1, 8, 0, tzinfo=UTC
+    )  # older than the bundled snapshot
     os.utime(storage.feed_path, (saved_at.timestamp(), saved_at.timestamp()))
 
     conference = await loaded(storage, year)
@@ -141,8 +144,10 @@ async def test_the_feed_cache_wins_over_the_snapshot(
     assert conference.source == "cache"
     assert title(conference.data) == "Renamed in the cache"
     assert conference.fetched_at == saved_at
-    assert conference.fetched_at is not None
+    assert conference.fetched_at is not None  # narrows the type for pyright
     assert conference.fetched_at.tzinfo is UTC
+    # D-145: the cache wins even when an update installs a newer snapshot.
+    assert saved_at < year.read_snapshot().captured_at
 
 
 async def test_a_corrupt_cache_is_deleted_and_the_snapshot_published(
@@ -367,6 +372,47 @@ async def test_a_publish_notifies_subscribers_and_the_task_does_not(
     assert changes[0] == "refreshing"
     assert "_task" not in changes
     assert changes[-1] == "refreshing"  # cleared last, after the publish
+
+
+async def test_an_unexpected_refresh_error_is_logged_at_once(
+    storage: Storage,
+    year: YearData,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def broken(
+        url: str, *, transport: httpx.AsyncBaseTransport | None = None
+    ) -> bytes:
+        raise RuntimeError("a bug")
+
+    monkeypatch.setattr(api, "fetch_feed", broken)
+    conference = await loaded(storage, year)
+
+    with caplog.at_level(logging.ERROR):
+        task = conference.start_refresh(storage, year)
+        # asyncio.wait never retrieves the error: this is the refresh nobody awaits.
+        await asyncio.wait([task])
+
+    # D-71: logged when the refresh ends, not when the finished task is collected.
+    assert "Feed refresh failed unexpectedly" in caplog.text
+    assert "RuntimeError: a bug" in caplog.text
+    assert not conference.refreshing
+    assert conference.version == 1
+
+
+async def test_an_unexpected_refresh_error_reaches_refresh_callers(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def broken(
+        url: str, *, transport: httpx.AsyncBaseTransport | None = None
+    ) -> bytes:
+        raise RuntimeError("a bug")
+
+    monkeypatch.setattr(api, "fetch_feed", broken)
+    conference = await loaded(storage, year)
+
+    with pytest.raises(RuntimeError, match="a bug"):
+        await conference.refresh(storage, year)
 
 
 # ------------------------------------------------------------------ status and age
