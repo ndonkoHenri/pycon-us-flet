@@ -206,4 +206,4 @@ def test_ago_label_says_just_now_for_a_time_after_now() -> None:
 
 def test_ago_label_refuses_naive_datetimes() -> None:
     with pytest.raises(ValueError, match="aware"):
-        timefmt.ago_label(datetime(2026, 5, 15, 9, 0), pacific(15, 10, 0))
+        timefmt.ago_label(NAIVE, pacific(15, 10, 0))
