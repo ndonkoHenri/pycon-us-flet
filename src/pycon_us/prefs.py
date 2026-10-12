@@ -69,8 +69,9 @@ class Prefs:
         os_dark: The OS is in dark mode; not persisted, kept current by ``App``.
         os_high_contrast: The OS asks for high contrast (iOS, Android 34+); not
             persisted, read at start and on resume (F13).
-        reduce_motion: The OS asks for less motion (D-34); not persisted, read at start
-            and on resume.
+        reduce_motion: The OS asks for less motion (D-34): iOS Reduce Motion or
+            Android's Remove animations. Not persisted, read at start and on resume;
+            ask through ``motion_ms()``.
         loaded: The stored values have been read; it opens the boot gate.
     """
 
@@ -96,6 +97,18 @@ class Prefs:
         if self.high_contrast == "system":
             return self.os_high_contrast
         return self.high_contrast == "on"
+
+    def motion_ms(self, ms: int) -> int:
+        """Return how long an animation of ``ms`` milliseconds runs: 0 under reduced motion.
+
+        The one way the app asks about motion (D-34, D-173): pass the result as a
+        ``scroll_to(duration=...)``, an ``animate_*`` or any other duration, so the
+        motion becomes a jump when the OS asks for less of it.
+
+        Args:
+            ms: The M3 duration the animation has otherwise (ux.md §3.8).
+        """
+        return 0 if self.reduce_motion else ms
 
     async def load(self, storage: Storage) -> None:
         """Read every persisted setting; an unreadable or unknown value reads as its default.

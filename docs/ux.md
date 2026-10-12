@@ -203,7 +203,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 
 - 150 ms toggles, 250 ms fades and `AnimatedSwitcher` swaps, 400 ms scroll-to-slot; `AnimationCurve.EASE_IN_OUT_CUBIC_EMPHASIZED` entering, `EASE_OUT` small changes.
 - No ambient motion: pins and highlights pulse at most twice; nothing rotates or auto-advances; FAB labels never collapse on a timer.
-- **Reduced motion:** `await ft.SemanticsService().get_accessibility_features()` at start and on resume (no change event, **GAP** U17). With `disable_animations` or `reduce_motion`, durations are 0, `Shimmer` becomes static placeholders, scrolls jump, pins are still. Every custom animation checks the flag (kept in `Prefs`, not persisted).
+- **Reduced motion (D-173):** `await ft.SemanticsService().get_accessibility_features()` at start and in `app.on_resume()` (no change event, **GAP** U17), so a change in the OS settings applies on the next resume, without a restart. With `disable_animations` (Android's Remove animations) or `reduce_motion` (iOS Reduce Motion), durations are 0, `Shimmer` becomes static placeholders, scrolls jump, pins are still, and a scheme change (Appearance, dark mode) lands at once instead of crossfading. Every custom animation asks `prefs.motion_ms(ms)`, which returns `ms` or 0 (the flag is `Prefs.reduce_motion`, not persisted). Page transitions stay the platform's: Android's setting already makes them instant in Flutter, and on iOS the slide keeps the edge swipe. Progress indicators keep moving while work runs.
 
 ### 3.9 Shared components (decisions §M names, grouped in `ui/`: `scaffold.py`, `rows.py`, `badges.py`, `states.py`)
 
@@ -606,7 +606,7 @@ These exist only when a mock API base URL is set (D-51); the app never calls pri
 - [ ] Contrast test green (AA light and dark, 7:1 text in HC); no hard-coded greys (Ionic's `#808080` was 3.9:1).
 - [ ] At 200 % OS text and with iOS Bold Text, nothing clips or overlaps; no fixed heights around text.
 - [ ] Colour is never the only signal (badges have text, outcomes have icon and word).
-- [ ] Reduced motion honoured: no animation, static `Shimmer`, instant scrolls, still pins.
+- [ ] Reduced motion honoured: every duration through `prefs.motion_ms()`, static `Shimmer`, instant scrolls, still pins (D-173).
 - [ ] Every gesture has a button alternative (zoom buttons, expo List, manual scan entry).
 - [ ] Dynamic results use `Semantics(live_region=True)`; `announce_message` only where that cannot work and `supports_announcements` is true.
 - [ ] Images have `semantics_label`, or `exclude_from_semantics=True` when decorative.

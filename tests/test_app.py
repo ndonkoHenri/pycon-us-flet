@@ -19,6 +19,7 @@ from pycon_us.app import (
     NO_THEME_ANIMATION,
     apply_theme,
     bootstrap,
+    on_resume,
     read_accessibility,
 )
 from pycon_us.config import YearData, load_year
@@ -170,6 +171,15 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
 
 
+async def test_under_reduced_motion_theme_changes_never_crossfade(
+    fake_page: FakePage, svc: Services, semantics: MemorySemantics, network: Network
+) -> None:
+    semantics.features["disable_animations"] = True  # Android's Remove animations
+    await started(fake_page, svc)
+    # The gate opens with the crossfade still off: a scheme change lands at once (D-34).
+    assert fake_page.theme_animation_style == NO_THEME_ANIMATION
+
+
 async def test_the_cache_is_shown_before_the_snapshot(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
@@ -280,11 +290,38 @@ async def test_a_resume_reads_the_accessibility_flags_again(
             name="app_lifecycle_state_change", control=page, state=state
         )
 
-    semantics.features["high_contrast"] = True
+    # Changed in the OS settings while the app was in the background.
+    semantics.features.update(high_contrast=True, reduce_motion=True)
     await fake_page.on_app_lifecycle_state_change(event(ft.AppLifecycleState.HIDE))
     assert semantics.reads == 1 and not prefs.os_high_contrast
     await fake_page.on_app_lifecycle_state_change(event(ft.AppLifecycleState.RESUME))
-    assert semantics.reads == 2 and prefs.os_high_contrast  # a snapshot (F13)
+    assert semantics.reads == 2  # a snapshot (F13)
+    assert prefs.os_high_contrast and prefs.reduce_motion
+
+
+async def test_a_resume_turns_the_theme_crossfade_off_and_on_with_the_os(
+    fake_page: FakePage, svc: Services, semantics: MemorySemantics, network: Network
+) -> None:
+    _, prefs = await started(fake_page, svc)
+    page = cast(ft.Page, fake_page)
+    assert fake_page.theme_animation_style is None  # Flutter's crossfade
+    semantics.features["reduce_motion"] = True  # iOS Reduce Motion, turned on
+    await on_resume(page, svc, prefs)
+    assert fake_page.theme_animation_style == NO_THEME_ANIMATION  # without a restart
+    semantics.features["reduce_motion"] = False  # and off again
+    await on_resume(page, svc, prefs)
+    assert fake_page.theme_animation_style is None
+
+
+async def test_a_change_of_reduced_motion_is_logged_once(
+    semantics: MemorySemantics, caplog: pytest.LogCaptureFixture
+) -> None:
+    prefs = Prefs()
+    semantics.features["disable_animations"] = True
+    with caplog.at_level(logging.INFO, logger="pycon_us.app"):
+        await read_accessibility(semantics, prefs)
+        await read_accessibility(semantics, prefs)  # unchanged: resumes are many
+    assert [r.getMessage() for r in caplog.records] == ["Reduced motion is on"]
 
 
 async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising(

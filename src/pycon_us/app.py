@@ -128,9 +128,10 @@ async def bootstrap(
     2. The year's favourites (D-48), so no star fills in after the first screen.
     3. The feed cache, else the bundled snapshot (D-38, D-145).
     4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
-       changes crossfade again from here on.
+       changes crossfade again from here on, unless the OS asks for reduced motion.
     5. A refresh in the background, not awaited (single flight, D-145).
-    6. The page handlers, which only write stores (D-147).
+    6. The page handlers, which only write stores (D-147); a resume runs
+       ``on_resume()``.
 
     An unexpected error in steps 1-3 is logged and the gate opens anyway, with whatever
     loaded: a start never hangs on the boot view. A session replaced during steps 1-3
@@ -159,7 +160,7 @@ async def bootstrap(
         logger.info("Session closed during the start; it stops here (D-147)")
         return
     prefs.loaded = True
-    page.theme_animation_style = None  # later changes crossfade, as Flutter's default
+    page.theme_animation_style = theme_animation(prefs)
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
 
     @report_errors
@@ -172,10 +173,29 @@ async def bootstrap(
     @report_errors
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent) -> None:
         if e.state == ft.AppLifecycleState.RESUME:
-            await read_accessibility(svc.semantics, prefs)  # a snapshot (F13, U17)
+            await on_resume(page, svc, prefs)
 
     page.on_platform_brightness_change = on_brightness
     page.on_app_lifecycle_state_change = on_lifecycle
+
+
+async def on_resume(page: ft.Page, svc: Services, prefs: Prefs) -> None:
+    """Do what the app does each time it returns to the foreground: the one place for it.
+
+    The OS reports its accessibility settings as a snapshot, with no change event (F13,
+    U17), so they are read again here, and a setting changed while the app was away
+    applies without a restart (D-23, D-173). On Android such a change can reach Flutter
+    only after this read, and then applies at the next resume (#178). Components
+    follow ``Prefs`` by themselves; the theme animation is a page field, so it is set
+    here. The refresh of a stale feed joins here (D-40, #82).
+
+    Args:
+        page: The session's page.
+        svc: The session's services.
+        prefs: The session's ``Prefs`` store.
+    """
+    await read_accessibility(svc.semantics, prefs)
+    page.theme_animation_style = theme_animation(prefs)
 
 
 async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
@@ -193,8 +213,24 @@ async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> No
     except SERVICE_ERRORS:
         logger.warning("Could not read the accessibility features", exc_info=True)
         return
+    reduce_motion = features.reduce_motion or features.disable_animations
+    if reduce_motion != prefs.reduce_motion:  # logged on change only: resumes are many
+        logger.info("Reduced motion is %s", "on" if reduce_motion else "off")
     prefs.os_high_contrast = features.high_contrast
-    prefs.reduce_motion = features.reduce_motion or features.disable_animations
+    prefs.reduce_motion = reduce_motion
+
+
+def theme_animation(prefs: Prefs) -> ft.AnimationStyle | None:
+    """Return ``page.theme_animation_style`` once the boot gate is open (D-161, D-173).
+
+    Args:
+        prefs: The settings and device facts; only ``reduce_motion`` counts.
+
+    Returns:
+        ``None``, Flutter's 200 ms crossfade between schemes, or ``NO_THEME_ANIMATION``
+        when the OS asks for reduced motion, so a scheme change lands at once.
+    """
+    return NO_THEME_ANIMATION if prefs.reduce_motion else None
 
 
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:
