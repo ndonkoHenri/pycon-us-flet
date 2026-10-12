@@ -3,7 +3,8 @@
 ``process()`` is the pipeline's one entry point. It decodes the JSON into frozen records
 (``core/records.py``), every id a string and every time an aware datetime in the conference
 zone; applies Ionic's processing rules (``core/rules.py``) to decide what becomes a
-session; and buckets the timeline's sessions into conference-local days and time groups.
+session; buckets the timeline's sessions into conference-local days and time groups; and
+last converts the feed's HTML to Markdown and search text, once (D-130, D-140).
 
 Failures are split in two. A feed whose structure is wrong raises ``FeedError``, so the
 caller keeps the data it has. A single bad record is skipped, recorded in
@@ -13,12 +14,15 @@ ignored, so the feed can grow without breaking the app.
 
 import json
 import logging
+import re
 import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
+from dataclasses import replace
 from datetime import date, datetime
+from functools import cache
 
-from pycon_us.core import records, rules
+from pycon_us.core import html_md, records, rules
 from pycon_us.core.models import (
     ConferenceData,
     Day,
@@ -29,6 +33,7 @@ from pycon_us.core.models import (
     Sprint,
     TimeGroup,
 )
+from pycon_us.core.queries import fold
 from pycon_us.core.records import OpenSpace, Slot
 from pycon_us.core.rules import FeedSettings
 
@@ -37,13 +42,17 @@ logger = logging.getLogger(__name__)
 # The 2025 feed has no posters, sprints or job listings.
 _OPTIONAL_SECTIONS = ("open-spaces", "posters", "sprints", "job-listings")
 
+# An inline Markdown link in an open space's description: its text shows, its
+# destination does not, so search leaves the destination out (D-46, D-140).
+_MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
 
 class FeedError(ValueError):
     """The feed as a whole is unusable: not JSON, wrong structure, or no readable slot."""
 
 
 def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
-    """Decode the raw feed and apply Ionic's rules to it.
+    """Decode the raw feed, apply Ionic's rules to it, then convert its markup.
 
     Args:
         raw: The feed's bytes, as fetched or cached.
@@ -55,10 +64,12 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
 
     Raises:
         FeedError: The feed is not a JSON object with a ``schedule`` list, an optional
-            section is not a list, or no schedule slot could be read.
+            section is not a list, ``conference`` or its ``content`` is not an object, or
+            no schedule slot could be read.
     """
     started = time.perf_counter()
-    sections = _sections(raw)
+    document = _document(raw)
+    sections = _sections(document)
     zone = settings.time_zone
     skipped: list[str] = []
 
@@ -66,6 +77,8 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         reason = f"{where}: {problem}"
         logger.warning("Skipped a feed record: %s", reason)
         skipped.append(reason)
+
+    content = _content(document, skip)
 
     slots = _decode(
         sections["schedule"],
@@ -156,7 +169,10 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         ),
         dropped={rule: tuple(ids) for rule, ids in dropped.items()},
         skipped=tuple(skipped),
+        content=content,
     )
+    # After the rules: the placeholder rule reads the raw description, as Ionic did.
+    data = _converted(data, settings.site_url)
     # D-109 compares this with 150 ms on the iPhone's release build.
     logger.info(
         "Feed processed in %d ms: %d sessions, %d skipped",
@@ -180,22 +196,108 @@ def _index(
     return index
 
 
-def _sections(raw: bytes) -> dict[str, list[object]]:
-    """Parse the JSON and return the lists we read: ``schedule`` and the optional sections."""
+def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
+    """Return the model with every markup field converted (D-130, D-140; DATA-23..25).
+
+    Each distinct value converts once: a poster's description is also its poster
+    detail's, and many fields are empty. Open spaces are Markdown already, so their
+    descriptions pass through (D-115) and their search text comes from the Markdown.
+    """
+
+    @cache
+    def markdown(value: str) -> str:
+        return html_md.to_markdown(value, site_url)
+
+    def marked_up(session: Session) -> Session:
+        if session.kind == "open-space":
+            description_md = session.description
+            text = _markdown_text(session.description)
+        else:
+            description_md = markdown(session.description)
+            text = html_md.to_text(session.description)
+        return replace(
+            session,
+            description_md=description_md,
+            search_text=fold(" ".join([session.name, text, *session.speaker_names])),
+        )
+
+    return replace(
+        data,
+        sessions={key: marked_up(value) for key, value in data.sessions.items()},
+        speakers={
+            key: replace(value, bio_md=markdown(value.bio))
+            for key, value in data.speakers.items()
+        },
+        posters=tuple(
+            replace(p, description_md=markdown(p.description)) for p in data.posters
+        ),
+        sprints=tuple(
+            replace(s, description_md=markdown(s.description)) for s in data.sprints
+        ),
+        job_listings=tuple(
+            replace(j, description_md=markdown(j.description))
+            for j in data.job_listings
+        ),
+        content_md={key: markdown(value) for key, value in data.content.items()},
+    )
+
+
+def _markdown_text(value: str) -> str:
+    """Return the visible text of an open space's Markdown, for search (D-46, D-140).
+
+    A link keeps its text and loses its destination, and the ``*`` and backtick markers
+    go. ``_`` stays: in these descriptions it joins identifiers (``ic_ocr_cataloger``),
+    never emphasis. Then ``to_text`` collapses whitespace as for HTML.
+    """
+    shown = _MARKDOWN_LINK.sub(r"\1", value)
+    return html_md.to_text(shown.replace("*", "").replace("`", ""))
+
+
+def _document(raw: bytes) -> dict[str, object]:
+    """Parse the JSON, which must be an object."""
     try:
         document = json.loads(raw)
     except ValueError as error:  # JSONDecodeError and UnicodeDecodeError
         raise FeedError(f"not JSON: {error}") from None
     if not isinstance(document, dict):
         raise FeedError("not a JSON object")
-    if not isinstance(document.get("schedule"), list):
+    return document
+
+
+def _sections(document: dict[str, object]) -> dict[str, list[object]]:
+    """Return the lists we read: ``schedule`` and the optional sections."""
+    schedule = document.get("schedule")
+    if not isinstance(schedule, list):
         raise FeedError("no 'schedule' list")
-    sections = {"schedule": document["schedule"]}
+    sections: dict[str, list[object]] = {"schedule": schedule}
     for key in _OPTIONAL_SECTIONS:
-        sections[key] = document.get(key, [])
-        if not isinstance(sections[key], list):
+        section = document.get(key, [])
+        if not isinstance(section, list):
             raise FeedError(f"{key!r} is not a list")
+        sections[key] = section
     return sections
+
+
+def _content(
+    document: dict[str, object], skip: Callable[[str, object], None]
+) -> dict[str, str]:
+    """Return the ``conference.content`` HTML blocks by key; both levels are optional.
+
+    A block that is not a string is skipped, like any other unreadable record.
+    """
+    conference = document.get("conference", {})
+    if not isinstance(conference, dict):
+        raise FeedError("'conference' is not an object")
+    content = conference.get("content", {})
+    if not isinstance(content, dict):
+        raise FeedError("'conference.content' is not an object")
+    blocks: dict[str, str] = {}
+    for key, value in content.items():
+        if isinstance(value, str):
+            blocks[key] = value
+        else:
+            skip(f"conference.content[{key!r}]", f"should be a string, got {value!r}")
+    return blocks
 
 
 def _decode[T](

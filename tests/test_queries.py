@@ -7,7 +7,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.feed import process
-from pycon_us.core.queries import days
+from pycon_us.core.queries import days, fold
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -40,3 +40,17 @@ def test_a_session_outside_the_conference_dates_widens_the_days() -> None:
     conference = load_year(2026).conference
     result = days(data, conference.first_day, conference.last_day)
     assert result[:3] == (date(2026, 5, 11), date(2026, 5, 12), date(2026, 5, 13))
+
+
+@pytest.mark.parametrize(
+    ("text", "folded"),
+    [
+        ("Cristián", "cristian"),
+        ("ÜBER Python", "uber python"),
+        ("Straße", "strasse"),  # case folding, not just lower-casing
+        ("ﬁle", "file"),  # NFKD splits the ligature
+    ],
+)
+def test_fold_ignores_case_and_accents(text: str, folded: str) -> None:
+    """D-46: search and the Speakers sort compare folded text."""
+    assert fold(text) == folded

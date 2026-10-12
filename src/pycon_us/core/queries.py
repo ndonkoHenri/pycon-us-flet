@@ -3,6 +3,7 @@
 Queries never change the model (SCHED-17): they return new values computed from it.
 """
 
+import unicodedata
 from datetime import date, timedelta
 
 from pycon_us.core.models import ConferenceData
@@ -27,3 +28,19 @@ def days(data: ConferenceData, first_day: date, last_day: date) -> tuple[date, .
     dates = [day.date for day in data.days]
     start, end = min([first_day, *dates]), max([last_day, *dates])
     return tuple(start + timedelta(days=n) for n in range((end - start).days + 1))
+
+
+def fold(text: str) -> str:
+    """Return text as search compares it: accents stripped and case folded (D-46).
+
+    So ``Cristián`` and ``CRISTIAN`` both fold to ``cristian``. Feed processing folds
+    ``Session.search_text`` once; a query is folded the same way.
+
+    Args:
+        text: Any text.
+
+    Returns:
+        The NFKD decomposition without its combining marks, case folded.
+    """
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()

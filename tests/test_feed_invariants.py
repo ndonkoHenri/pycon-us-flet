@@ -255,7 +255,8 @@ def outline(data: ConferenceData, year: int) -> dict[str, object]:
 
     A line reads ``id | name | track | shown location | start-end`` in conference time,
     then, when they apply: ``shown HH:MM``, ``pre-registration``, ``español``,
-    ``speakers <ids>`` and ``text <names not in the directory>``.
+    ``speakers <ids>`` and ``text <names not in the directory>``. ``markdown`` shows
+    the converted fields (D-130): see ``markdown_samples``.
     """
     zone = load_year(year).conference.zone
 
@@ -300,7 +301,35 @@ def outline(data: ConferenceData, year: int) -> dict[str, object]:
         "speakers": [f"{s.id}: {s.name}" for s in data.speakers.values()],
         "dropped": {rule: len(ids) for rule, ids in data.dropped.items()},
         "skipped": list(data.skipped),
+        "markdown": markdown_samples(data),
     }
+
+
+def markdown_samples(data: ConferenceData) -> dict[str, list[str]]:
+    """Every content block's Markdown, and one of each other converted field, by line.
+
+    The other fields show their first value that conversion changed: enough to review a
+    change of conversion without copying every description into the snapshot. Open
+    spaces pass through unchanged (DATA-25), so none is shown.
+    """
+    samples = {
+        f"content {key}": value.splitlines() for key, value in data.content_md.items()
+    }
+    fields = {
+        "session": [
+            (s.id, s.description, s.description_md) for s in data.sessions.values()
+        ],
+        "speaker": [(s.id, s.bio, s.bio_md) for s in data.speakers.values()],
+        "poster": [(p.id, p.description, p.description_md) for p in data.posters],
+        "sprint": [(s.id, s.description, s.description_md) for s in data.sprints],
+        "job listing": [
+            (j.id, j.description, j.description_md) for j in data.job_listings
+        ],
+    }
+    for field, values in fields.items():
+        if sample := next((v for v in values if v[1] != v[2]), None):
+            samples[f"{field} {sample[0]}"] = sample[2].splitlines()
+    return samples
 
 
 def clock(moment: datetime, zone: ZoneInfo) -> str:
