@@ -5,6 +5,7 @@
 year = 2026
 name = "PyCon US 2026"
 time_zone = "America/Los_Angeles"   # IANA zone; every time is shown in it (D-43)
+time_zone_name = "Pacific Time"      # shown when the device zone differs (D-35)
 first_day = 2026-05-13              # tutorials
 last_talk_day = 2026-05-17          # the last day of the main conference
 last_day = 2026-05-19               # the last sprint day

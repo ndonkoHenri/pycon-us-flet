@@ -31,6 +31,7 @@ def test_the_active_year_is_2026_in_pacific_time() -> None:
     conference = load_year().conference
     assert config.YEAR == 2026
     assert conference.zone == ZoneInfo("America/Los_Angeles")
+    assert conference.time_zone_name == "Pacific Time"
     assert (conference.first_day, conference.last_talk_day, conference.last_day) == (
         date(2026, 5, 13),
         date(2026, 5, 17),
@@ -39,7 +40,9 @@ def test_the_active_year_is_2026_in_pacific_time() -> None:
 
 
 def test_2025_is_in_eastern_time() -> None:
-    assert load_year(2025).conference.zone == ZoneInfo("America/New_York")
+    conference = load_year(2025).conference
+    assert conference.zone == ZoneInfo("America/New_York")
+    assert conference.time_zone_name == "Eastern Time"
 
 
 def test_job_fair_override_matches_only_the_whole_name() -> None:
