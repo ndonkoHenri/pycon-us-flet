@@ -255,6 +255,9 @@ def strip_line(
     return f"Couldn't update · {since}"  # an answer we could not use
 
 
+PROGRESS_HEIGHT = 2
+"""The height of the strip's refresh bar, in dp (ux.md §3.9)."""
+
 TICK_SECONDS = 60
 """How often a shown strip reads the clock again: its age, and fresh turning stale (D-40)."""
 
@@ -318,11 +321,14 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     )
     button = ft.TextButton("Refresh", on_click=refresh, disabled=refreshing)
     progress = ft.ProgressBar(
-        bar_height=2,
+        bar_height=PROGRESS_HEIGHT,
         value=None,  # indeterminate
         visible=refreshing,
         # No label: the line says it, and the strip's node would say it twice.
     )
+    # The bar's slot keeps its height when the bar hides, so the strip and the list
+    # under it do not move by 2 dp when a refresh starts or ends.
+    progress_slot = ft.Container(progress, height=PROGRESS_HEIGHT)
     row = ft.Row([icon, text, button], spacing=12)
     return ft.Semantics(
         identifier="app.status",
@@ -334,7 +340,7 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
             content=ft.Column(
                 [
                     ft.Container(row, padding=ft.Padding.only(left=16, right=8)),
-                    progress,
+                    progress_slot,
                 ],
                 spacing=0,
             ),

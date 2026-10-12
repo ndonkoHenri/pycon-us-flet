@@ -501,7 +501,10 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
     assert isinstance(box, ft.Container)
     column = box.content
     assert isinstance(column, ft.Column)
-    padded, progress = column.controls
+    padded, slot = column.controls
+    assert isinstance(slot, ft.Container)
+    assert slot.height == 2  # kept while the bar hides: nothing moves (ux.md §3.9)
+    progress = slot.content
     assert isinstance(padded, ft.Container)
     assert isinstance(padded.content, ft.Row)
     _, text, button = padded.content.controls
