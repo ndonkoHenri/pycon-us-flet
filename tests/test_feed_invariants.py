@@ -4,7 +4,7 @@ Each invariant runs on every recorded feed (2025 and 2026) under both machine zo
 snapshot is a readable outline of *our* processed model, one line per session, compared
 with ``tests/fixtures/snapshots/outline-<year>.json``. After a deliberate change, run
 ``uv run pytest tests/test_feed_invariants.py --snapshot-update`` and explain the diff in
-the PR. Ionic's own processing output is a separate, one-off reference (#66).
+the PR. Ionic's own processing output is compared in ``test_ionic_reference.py`` (#66).
 """
 
 import re
