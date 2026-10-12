@@ -441,7 +441,7 @@ def suite_jump(variant: str) -> None:
             box = next(b for label, _, b in nodes() if label == button)
             adb("logcat", "-c")
             tap(box)
-            done = wait_for("jump-done") or wait_for("jump2-done")
+            done = wait_for("jump-done" if button == "Jump to slot" else "jump2-done")
             time.sleep(1.5)
             key = (done or {}).get("key", "")
             target = datetime.fromisoformat(key.removeprefix("slot-"))
@@ -456,7 +456,7 @@ def suite_jump(variant: str) -> None:
             print(
                 f"jump {variant} scale={SCALE} {button!r} #{attempt + 1}: target {label} "
                 f"{'ON SCREEN' if visible else 'not reached'}; scroll ends "
-                f"{[e['pixels'] for e in scrolled]}",
+                f"{[e['pixels'] for e in scrolled]} of max {[e.get('max') for e in scrolled]}",
                 flush=True,
             )
             shot = subprocess.run(

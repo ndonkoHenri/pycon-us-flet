@@ -390,7 +390,7 @@ Never at launch or on Welcome. Notifications (P2): on the first favourite or the
 4. Today only: a now line between the last started slot and the next, a 2 dp `primary` divider "Now · 10:42", updated every 60 s while visible.
 5. Extended `FloatingActionButton(icon=SCHEDULE, content="Now", tooltip="Jump to the current time")` on conference days; on another day's tab it reads "Today", switches tab, then scrolls.
 
-**Interactions:** swipe or tap to change day; rows push the session; the star toggles (§4.4). The day defaults to today during the conference, else the first day. On the first display of today's tab per app session, `await today_list.scroll_to(scroll_key=ft.ScrollKey(slot_key), duration=400)` goes to the current slot (D-155; never a computed offset) (else the next; 0 ms under reduced motion). It never re-jumps on Back, tab return, refresh or filter change (#313). *(could)* Long-press sheet: Add to My schedule, Share, Open room.
+**Interactions:** swipe or tap to change day; rows push the session; the star toggles (§4.4). The day defaults to today during the conference, else the first day. On the first display of today's tab per app session, `await today_list.scroll_to(scroll_key=ft.ScrollKey(slot_key), duration=400)` goes to the current slot once the render that shows today's list has been applied (D-155; never a computed offset; #86 verifies the sequencing) (else the next; 0 ms under reduced motion). It never re-jumps on Back, tab return, refresh or filter change (#313). *(could)* Long-press sheet: Add to My schedule, Share, Open room.
 
 **States:** §4.1; a day emptied by filters and the unpublished year as in §4.6.
 
