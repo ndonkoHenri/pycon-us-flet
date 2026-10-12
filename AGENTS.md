@@ -121,16 +121,18 @@ that date motivates us but never justifies cutting corners.
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
   stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
+  Upload through the GitHub contents API (D-168), which needs no checkout and works from any worktree:
   ```sh
-  set -e; W=<your-scratch>/pr-assets-<pr>           # a path of your own, unique per PR
-  git fetch origin pr-assets && git worktree add --detach "$W" origin/pr-assets
-  mkdir -p "$W/<pr>" && cp <shots>.png "$W/<pr>/" && sips -Z 1000 "$W/<pr>"/*.png   # downscale
-  git -C "$W" add <pr> && git -C "$W" commit -m "Add screenshots for #<pr>"
-  git -C "$W" push origin HEAD:pr-assets || { git -C "$W" pull --rebase origin pr-assets && git -C "$W" push origin HEAD:pr-assets; }
-  git worktree remove "$W"                         # only reached after a successful push
+  for f in <shots>.png; do
+    cp "$f" "<your-scratch>/$(basename "$f")" && sips -Z 1000 "<your-scratch>/$(basename "$f")" > /dev/null
+    base64 -i "<your-scratch>/$(basename "$f")" | tr -d '\n' > "<your-scratch>/upload.b64"
+    gh api -X PUT "repos/ndonkoHenri/pycon-us-flet/contents/<pr>/$(basename "$f")" -f branch=pr-assets \
+      -f message="Add $(basename "$f") for #<pr>" -F content=@"<your-scratch>/upload.b64" --jq .content.path
+  done
   ```
-  Work detached (as above), so parallel agents never fight over a checked-out branch; never force-push `pr-assets`.
-  If both pushes fail, keep the worktree and its commit, and say so in the PR. Then write
+  Each upload is its own commit on `pr-assets`; never force-push it, and re-run a failed upload as it is (a file that
+  already exists needs its `sha`: `-f sha=$(gh api "repos/ndonkoHenri/pycon-us-flet/contents/<pr>/<file>?ref=pr-assets"
+  --jq .sha)`). Then write
   `![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)` in the PR
   body or a comment: it shows in the browser for signed-in users who can see the repo.
 
