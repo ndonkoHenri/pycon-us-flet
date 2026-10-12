@@ -388,8 +388,8 @@ class Conference:
                 return
             except feed.FeedError as error:
                 await svc.storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
-        snapshot = svc.year.snapshot
-        self._publish(feed.process(snapshot.raw, svc.year.feed_settings), "bundled", snapshot.captured_at)
+        snapshot = svc.year.read_snapshot()                  # bundled with the app (D-135)
+        self._publish(feed.process(snapshot.raw, svc.year.feed_settings), "bundled", snapshot.captured_at.timestamp())
 
     def start_refresh(self, svc: Services, max_age: float = 0.0) -> None:
         """Start one background refresh, unless one runs or network data is fresher than max_age seconds."""
@@ -463,7 +463,7 @@ A screen reads its stores through hooks, memoises its view model with `ft.use_me
 |---|---|---|
 | Network | `fetch_feed(conference.feed_url)`: `httpx.AsyncClient`, 10 s timeout | background refresh |
 | Persistent cache | `<data dir>/feed-<year>.json`, raw bytes; `saved_at` = file mtime | every start when present |
-| Bundled snapshot | `data/<year>/conference.json`, refreshed by `tools/update_snapshot.py` (which also writes `snapshot_captured_at`) | first launch, or a corrupt cache |
+| Bundled snapshot | `data/<year>/conference.json`, read by `YearData.read_snapshot()` and refreshed by `tools/update_snapshot.py`, which refuses a feed that does not parse cleanly and also writes `conference.toml`'s `snapshot_captured_at` (D-135) | first launch, or a corrupt cache |
 
 The strip is hidden when fresh; shows "Updating…" with an indeterminate `ProgressBar` while refreshing, "Updated N h ago · Refresh" when stale (6 h on conference days, else 24 h), and "Offline · schedule from Tue 10:42 · Refresh" when `problem == "offline"`. Skeletons only when `data is None` (impossible after bootstrap). A failed refresh leaves data and cache untouched.
 
@@ -618,7 +618,7 @@ city = "Long Beach, CA"             # later: address (P2)
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
 presentation_url = "https://us.pycon.org/2026/schedule/presentation/{id}/"   # P1 (NEW-06)
-snapshot_captured_at = 2026-10-11T09:00:00-07:00     # P0-17: written by tools/update_snapshot.py
+snapshot_captured_at = 2026-10-11T09:00:00-07:00     # written by tools/update_snapshot.py; only the active year (D-135)
 
 [[tracks]]
 key = "Ai"                  # as produced by feed processing: the kind, first letter upper-cased

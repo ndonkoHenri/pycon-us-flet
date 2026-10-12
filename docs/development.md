@@ -759,7 +759,7 @@ The Transporter app is the no-terminal alternative (`DOCS/publish/ios.md` "Uploa
 
 There is no release train. The procedure:
 1. `main` is green, and the phase status issue lists what this build is for.
-2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` (D-38, NEW-03). Review the diff, then merge.
+2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
 4. **Tag** `vX.Y.Z` on `main`. `build-android.yml` builds the quick-look APK.
 5. **Locally, at the same commit:**

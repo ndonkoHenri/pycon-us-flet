@@ -14,6 +14,10 @@ Notes for readers of the tests:
 - The 2025 feed has no `posters`, `sprints` or `job-listings` sections; its posters sit in the
   `sessions` list of one `poster` slot (`conf_key` 154), and processing reads them as posters (D-121).
 - Edge cases are built in the tests from deep copies of these files, never as hand-written JSON.
+- The app's bundled snapshot, `src/pycon_us/data/2026/conference.json`, is a separate file (D-135):
+  `tools/update_snapshot.py` refreshes it before builds, while these stay as recorded, so the exact
+  counts the tests assert never move with a snapshot refresh. When the bytes are equal, as on
+  2026-10-12, the repository stores them once (same blob).
 
 To record the 2027 feed when it appears: `curl -sSfo tests/fixtures/feeds/conference-2027.json
 https://us.pycon.org/2027/schedule/conference.json`, then add its row with `shasum -a 256`.
