@@ -19,14 +19,7 @@ from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.prefs import Prefs
 from pycon_us.screens import more
-from pycon_us.screens.more import (
-    ABOUT_APP,
-    DEVELOPER,
-    MORE_PAGES,
-    PROGRAMME,
-    More,
-    MoreEntry,
-)
+from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
@@ -72,6 +65,8 @@ def render(
     monkeypatch.setattr(more, "use_services", lambda: svc)
     monkeypatch.setattr(more, "use_prefs", lambda: prefs)
     monkeypatch.setattr(more, "AppScaffold", lambda **kwargs: kwargs)
+    # The companion app's list, wherever pytest runs (FLET_PLATFORM may be set, F14)
+    monkeypatch.setattr(more, "SHOW_DEVELOPER", True)
 
     def render() -> dict[str, Any]:
         return cast(dict[str, Any], inspect.unwrap(More)())
@@ -145,11 +140,14 @@ def test_developer_is_hidden_in_packaged_builds_until_unlocked(
     assert "Developer" not in titles  # D-73: #88 adds the unlock
 
 
-def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead() -> None:
-    assert {entry.location for entry in MORE_PAGES} <= PAGES
-    assert {entry.location for entry in (*PROGRAMME, ABOUT_APP, DEVELOPER)} == {
-        entry.location for entry in MORE_PAGES
-    }
+def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(
+    render: Callable[[], dict[str, Any]], page: FakePage
+) -> None:
+    for row in rows_of(render()):
+        if (tile := tile_of(row)) is not None:
+            cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == [entry.location for entry in MORE_PAGES]
+    assert set(page.navigated) <= PAGES
 
 
 @pytest.mark.parametrize("entry", MORE_PAGES, ids=lambda entry: entry.location)
@@ -202,7 +200,8 @@ def test_more_keeps_the_search_and_the_re_tap_scroll_to_top(
     assert search.tooltip == "Search"
 
 
-def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
+def appearance_column(scaffold: dict[str, Any]) -> ft.Column:
+    """The Appearance group's column: its label, then its ``RadioGroup``."""
     [group] = [
         row
         for row in rows_of(scaffold)
@@ -210,7 +209,11 @@ def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
     ]
     column = group.content
     assert isinstance(column, ft.Column)
-    choice = column.controls[-1]
+    return column
+
+
+def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
+    choice = appearance_column(scaffold).controls[-1]
     assert isinstance(choice, ft.RadioGroup)
     return choice
 
@@ -253,6 +256,16 @@ def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
         ("more.appearance.dark", "dark", "Dark"),
     ]
     assert all(tile.toggle_inputs for _, _, tile in options)
+
+
+def test_the_appearance_label_is_a_heading_for_screen_readers(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    label = appearance_column(render()).controls[0]
+    assert isinstance(label, ft.Semantics) and label.header  # D-33
+    assert isinstance(label.content, ft.ListTile)
+    assert label.content.title == "Appearance"
+    assert label.content.on_click is None  # a label, not a link
 
 
 async def test_choosing_an_appearance_saves_it(

@@ -132,9 +132,13 @@ def appearance(
         selected: ``Prefs.theme``; the group is controlled (D-157).
         on_change: Saves the choice.
     """
-    label = ft.ListTile(
-        leading=ft.Icon(ft.Icons.PALETTE_OUTLINED),
-        title="Appearance",
+    # A heading, as a SectionHeader is, so screen readers can jump to the group (D-33)
+    label = ft.Semantics(
+        header=True,
+        content=ft.ListTile(
+            leading=ft.Icon(ft.Icons.PALETTE_OUTLINED),
+            title="Appearance",
+        ),
     )
     options: list[ft.Control] = [
         ft.MergeSemantics(
