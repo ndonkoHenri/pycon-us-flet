@@ -217,6 +217,23 @@ def test_link_destination_is_percent_encoded() -> None:
     assert md(value) == "[x](https://x.org/a%20b%28c%29%5D)"
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ('<p><a href="https://x.org/\ud800">x</a></p>', "[x](https://x.org/%ED%A0%80)"),
+        (
+            "<p>https://x.org/\udfff",
+            "[https&#58;//x.org/\udfff](https://x.org/%ED%BF%BF)",
+        ),
+    ],
+)
+def test_lone_surrogate_in_a_link_target_is_percent_encoded(
+    value: str, expected: str
+) -> None:
+    """D-130: JSON can carry a lone surrogate; strict UTF-8 would raise on it."""
+    assert md(value) == expected
+
+
 def test_link_edge_whitespace_stays_outside_the_brackets() -> None:
     """D-114: "[x](…)y" would read "xy"."""
     assert md('<p><a href="https://x.org"> Lynn </a>Root</p>') == (
