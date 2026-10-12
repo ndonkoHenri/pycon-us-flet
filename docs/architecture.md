@@ -14,11 +14,11 @@
 ## 1. Shape of the app
 
 ```
- src/main.py   page.on_view_pop (parent_of), then page.render_views(App)
+ src/main.py   page.on_view_pop (parent_of), then page.render_views(App, MEMORY)
  app.py        App: Services + stores (once) → boot gate → providers → ft.Router(ROUTES)
  routes.py     tab roots · More pages · search · recursive drill (session/speaker/room/sponsor/plan)
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
- state.py      Conference · Prefs · Favorites (+ Account, Staff in P3) · ViewMemory (plain)
+ state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      (P1 favorites.py, P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
  core/         pure Python, no Flet: feed rules, models, queries, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
@@ -58,7 +58,8 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
-| `state.py` | stores, contexts and `use_*()` hooks; `ViewMemory` (§6) | P0 |
+| `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
+| `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
@@ -77,77 +78,73 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 # src/pycon_us/app.py (excerpt)
 @ft.component
 def App(memory: ViewMemory):
-    """Build services and stores once, wait for preferences, then mount the Router."""
+    """Build services and stores once, wait for the settings and the feed, then route."""
+    page = ft.context.page
     svc = ft.use_memo(lambda: Services.create(memory), [])   # in the page context: Flet registers each service
     conference = ft.use_memo(Conference, [])      # App does not subscribe to it
-    favorites = ft.use_memo(Favorites, [])
     prefs, _ = ft.use_state(Prefs)                # use_state subscribes App to Prefs only
 
-    @report_errors
     async def start():
-        await bootstrap(svc, conference, prefs, favorites)
+        await bootstrap(page, svc, conference, prefs)
 
     def follow_theme():
-        apply_theme(ft.context.page, prefs)
+        apply_theme(page, prefs)
 
     ft.use_effect(start, [])
-    ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast, prefs.os_high_contrast])
+    ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
 
     if not prefs.loaded:                          # boot gate: no theme or filter flash
         return [BootView()]
 
-    def router():
-        return ft.Router(ROUTES, not_found=NotFound, manage_views=True)
-
     tokens = build_tokens(dark=prefs.dark, high_contrast=prefs.high_contrast_on)   # D-150
 
+    def router():
+        return ft.Router(ROUTES, manage_views=True)
+
     return ServicesCtx(svc, lambda: ConferenceCtx(conference, lambda: PrefsCtx(
-        prefs, lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)))))
+        prefs, lambda: TokensCtx(tokens, router))))
 ```
 
-`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()`, `use_favorites()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). `BootView` is purple `#680579` with the app icon, like the native splash and Flet's boot screen shown while Python starts; both are set in `pyproject.toml` (`[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). P3 adds `AccountCtx` and `StaffCtx`.
+`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). P1 adds `Favorites` (`ft.use_memo(Favorites, [])`, `FavoritesCtx`, loaded in `bootstrap()` after `Prefs`), P3 `AccountCtx` and `StaffCtx`. #74 brings `ROUTES` and `not_found`; until then `ROUTES` is one stub screen (`screens/stub.py`) with the data source, status and the first day's session count (D-161).
+
+`BootView` is a full-bleed `View` in the splash's purple `#680579`, like the native splash and Flet's boot screen shown while Python starts (both set in `pyproject.toml`: `[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). It shows a white `ProgressRing` only after 1 s (`loop.call_later` from a sync effect whose cleanup cancels it), and the app icon once O-4 has one (D-161).
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create()` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, which `main()` uses for its `on_view_pop` and passes to `App`, §5.3, §6.3), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147), and the Flet services `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()`, `ft.SemanticsService()` and `ft.StoragePaths()`. A Flet `Service` registers with the page when constructed, so screens never construct one. P2 adds `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`). P3 adds `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags) and `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147). A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()` and `ft.StoragePaths()`; P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
 
 ### 4.3 Bootstrap (DATA-35)
 
 ```python
 # src/pycon_us/app.py (excerpt)
-async def bootstrap(svc: Services, conference: Conference, prefs: Prefs, favorites: Favorites) -> None:
+async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs: Prefs) -> None:
     """Start in the order that avoids flashes and never waits on the network."""
-    page = ft.context.page
-    await prefs.load(svc)                     # 1. preferences, accessibility, theme
-    await read_accessibility(svc, prefs)
-    prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
-    clock.start_fake_clock(prefs.dev.fake_now)
-    apply_theme(page, prefs)
-    await favorites.load(svc)                 # 2. user state
-    await conference.load_local(svc.storage, svc.year)   # 3. cache or bundled snapshot, before the first frame
-    prefs.loaded = True                       # 4. opens the boot gate
-    conference.start_refresh(svc.storage, svc.year)      # 5. background, single flight, not awaited
-
-    @report_errors
-    async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
-        conference.set_foreground(e.state == ft.AppLifecycleState.RESUME)
-        if e.state == ft.AppLifecycleState.RESUME:
-            await read_accessibility(svc, prefs)              # OS flags are a snapshot (F13)
-            age = conference.age()
-            if age is None or age > timedelta(minutes=15):        # D-40; #82 owns the triggers
-                conference.start_refresh(svc.storage, svc.year)
+    try:
+        await prefs.load(svc.storage)             # 1. settings, OS flags, theme: under the boot view
+        await read_accessibility(svc.semantics, prefs)
+        prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
+        apply_theme(page, prefs)
+        await conference.load_local(svc.storage, svc.year)   # 2. cache or bundled snapshot
+    except Exception:
+        logger.exception("Start failed; opening the app with what has loaded")
+    prefs.loaded = True                           # 3. opens the boot gate
+    conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 4. background, not awaited
 
     def on_brightness(e: ft.PlatformBrightnessChangeEvent):
-        prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
+        prefs.os_dark = e.brightness == ft.Brightness.DARK
 
+    async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
+        if e.state == ft.AppLifecycleState.RESUME:
+            await read_accessibility(svc.semantics, prefs)   # OS flags are a snapshot (F13)
+
+    page.on_platform_brightness_change = on_brightness   # 5. handlers write stores only (D-147)
     page.on_app_lifecycle_state_change = on_lifecycle
-    page.on_platform_brightness_change = on_brightness
-    page.on_close = svc.close                 # a new session replaced this one: stop our loops (D-147)
+    page.on_close = svc.close                 # a new session replaced this one: stop our work (D-147)
 ```
 
-- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`. Each step has its own error boundary (§16), and `prefs.loaded` is always set.
-- P3 inserts after step 2: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
-- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
+- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, so the first screen has its stored theme; `App`'s theme effect follows later changes.
+- P1 inserts `await favorites.load(svc.storage)` after step 1 and the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
+- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
 **Refresh triggers (D-40):** start (always); resume (if older than 15 min); a 60 s ticking effect in Now and Schedule while the app is in the foreground (refresh when older than 15 min, recompute time-dependent views); "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*.
 
@@ -370,12 +367,12 @@ Both `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]` are c
 
 ### 6.1 Stores (D-69)
 
-All are `@ft.observable @dataclass` in `state.py`. Fields starting with `_` never notify. A method that persists awaits the write before assigning the field.
+All are `@ft.observable @dataclass(eq=False)`, each in its own module with its context and hook: `Conference` in `state.py` (with `ViewMemory`), `Prefs` in `prefs.py`, then `favorites.py` (P1), `account.py` and `staff.py` (P3) (D-160). Fields starting with `_` never notify. A method that persists awaits the write before assigning the field, and assigns it even when the write fails, returning `False` so the caller can say the change was not saved (D-120).
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
 | `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_foreground` (P1, #82) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `set_foreground` (P1, #82) | P0 |
-| `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks`, `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`; `loaded` | `load`, `save(svc, **changes)`; properties `high_contrast_on`, `dark` | P0 |
+| `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`; `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark` | P0 |
 | `Favorites` | `ids: list[str]` (a list, because it is persisted as `list[str]`, F12) | `load`, `toggle`, `add_many`, `remove_many` (each returns what Undo needs) | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
 | `Staff` | `sponsor`; `pending`, `failed`, `synced`; `syncing`; `last_sync_at`; `last_error`; `revision`; memory-only PII: `inventory`, `coc_directory` | `select_sponsor`, `update_counts`, `clear` | P3 |
@@ -413,15 +410,18 @@ class Conference:
         snapshot = year.read_snapshot()                      # bundled with the app (D-135)
         self._publish(feed.process(snapshot.raw, year.feed_settings), "bundled", snapshot.captured_at)
 
-    def start_refresh(self, storage: Storage, year: YearData, *, transport=None) -> asyncio.Task[None]:
-        """Start a background refresh unless one is in flight; return the one that runs (D-145)."""
+    def start_refresh(self, storage: Storage, year: YearData, *, transport=None, closed=None) -> asyncio.Task[None]:
+        """Start a background refresh unless one is in flight; return the one that runs (D-145).
+
+        `closed` is `Services.closed`: a refresh that ends after it is set writes nothing (D-147).
+        """
         if self._task is None or self._task.done():
-            self._task = asyncio.create_task(self._refresh(storage, year, transport))
+            self._task = asyncio.create_task(self._refresh(storage, year, transport, closed))
         return self._task
 
-    async def refresh(self, storage: Storage, year: YearData, *, transport=None) -> None:
+    async def refresh(self, storage: Storage, year: YearData, *, transport=None, closed=None) -> None:
         """Refresh and wait; concurrent callers share one request, and one caller's cancellation spares it."""
-        await asyncio.shield(self.start_refresh(storage, year, transport=transport))
+        await asyncio.shield(self.start_refresh(storage, year, transport=transport, closed=closed))
 
     async def _refresh(self, storage: Storage, year: YearData, transport) -> None:
         self.refreshing = True
@@ -456,6 +456,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 ```
 
 - `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing`, `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). P1 (#82) adds `set_foreground()` and `_foreground`, checked by the 60 s tick (D-40). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
+- With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; P0-21's asyncio exception handler (F4) is the backstop. Expected failures never raise.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 

@@ -60,7 +60,7 @@ class Prefs:
     Attributes:
         theme: The Appearance setting (``pycon.theme``).
         high_contrast: The High contrast setting (``pycon.high_contrast``); until P2
-            both values give the standard schemes (``theme.build_theme``).
+            the standard schemes show whatever it says (``theme.build_theme``).
         onboarded: Whether Welcome was seen (``pycon.onboarded``, P2).
         excluded_tracks: Track keys hidden from the Schedule (``pycon.excluded_tracks``;
             by default Open Space, D-20).
