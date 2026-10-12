@@ -5,11 +5,14 @@ Run it before a build for testers (``docs/development.md`` §8.3)::
     uv run python tools/update_snapshot.py
 
 It fetches the public feed of ``config.YEAR`` from the year's ``feed_url`` and checks it with
-``feed.process``, the app's own parser. A feed that does not parse, or that has a record the
-parser skips, is refused and nothing changes. Otherwise it writes the bytes unchanged to
-``data/<year>/conference.json``, records the time in ``conference.toml``'s
-``snapshot_captured_at``, and prints how the counts changed. Both files are replaced
-atomically.
+``feed.process``, the app's own parser. A feed that does not parse, that has a record the
+parser skips, or whose days fall outside the conference dates is refused, and nothing
+changes: the same bar as the test of the committed snapshot (D-135). Otherwise it writes the
+bytes unchanged to ``data/<year>/conference.json``, records the time in ``conference.toml``'s
+``snapshot_captured_at``, and prints how the counts changed.
+
+Each file is replaced atomically, one after the other. If the second write fails, the error
+is raised and the pair is out of step until the next run; restore it from version control.
 """
 
 import re
@@ -24,6 +27,7 @@ from pycon_us.config import (
     DATA_DIR,
     SNAPSHOT_FILE,
     YEAR,
+    ConferenceInfo,
     Snapshot,
     YearData,
     YearDataError,
@@ -63,8 +67,9 @@ def update_snapshot(
         A report for the terminal: the source, the bytes and the count changes.
 
     Raises:
-        SnapshotError: The feed could not be fetched, does not parse, or has records the
-            parser skips; nothing was written.
+        SnapshotError: The feed could not be fetched, does not parse, has records the
+            parser skips, or has days outside the conference dates; or ``conference.toml``
+            could not be updated. Nothing was written.
         YearDataError: The year's data files are invalid.
         OSError: Writing a file failed; that file is unchanged (``write_atomic``).
     """
@@ -75,11 +80,7 @@ def update_snapshot(
         new = process(raw, year_data.feed_settings)
     except FeedError as error:
         raise SnapshotError(f"the feed does not parse: {error}") from None
-    if new.skipped:
-        lines = "\n".join(f"  {reason}" for reason in new.skipped)
-        raise SnapshotError(
-            f"the parser skips {len(new.skipped)} feed record(s):\n{lines}"
-        )
+    _check(new, conference)
 
     previous = _previous(year_data)
     captured_at = (now or datetime.now(UTC)).astimezone(conference.zone)
@@ -106,6 +107,21 @@ def main() -> int:
     return 0
 
 
+def _check(data: ConferenceData, conference: ConferenceInfo) -> None:
+    """Refuse a feed the committed-snapshot test would reject (D-135)."""
+    if data.skipped:
+        lines = "\n".join(f"  {reason}" for reason in data.skipped)
+        raise SnapshotError(
+            f"the parser skips {len(data.skipped)} feed record(s):\n{lines}"
+        )
+    first, last = data.days[0].date, data.days[-1].date  # process() never returns none
+    if first < conference.first_day or last > conference.last_day:
+        raise SnapshotError(
+            f"the feed's days, {first} to {last}, fall outside the conference's, "
+            f"{conference.first_day} to {conference.last_day}"
+        )
+
+
 def _fetch(url: str, transport: httpx.BaseTransport | None) -> bytes:
     try:
         with httpx.Client(
@@ -130,7 +146,9 @@ def _with_captured_at(text: str, captured_at: datetime) -> str:
     """Return ``conference.toml``'s text with ``snapshot_captured_at`` set.
 
     Only that line changes, so the hand-written comments stay. A year folder without the
-    line (a new year) gets it right after ``feed_url``.
+    line (a new year) gets it right after ``feed_url``. Both keys are expected bare and at
+    the start of a line, as our files write them; any other form fails the check below
+    before anything is written.
     """
     line = f"snapshot_captured_at = {captured_at.isoformat()}"
     if _CAPTURED_LINE.search(text):
@@ -141,8 +159,14 @@ def _with_captured_at(text: str, captured_at: datetime) -> str:
         raise SnapshotError(
             "conference.toml has no feed_url line to add the time after"
         )
-    if tomllib.loads(updated).get("snapshot_captured_at") != captured_at:
-        raise SnapshotError("could not set snapshot_captured_at in conference.toml")
+    try:
+        written = tomllib.loads(updated).get("snapshot_captured_at")
+    except tomllib.TOMLDecodeError as error:
+        written = error
+    if written != captured_at:
+        raise SnapshotError(
+            f"could not set snapshot_captured_at in conference.toml: got {written!r}"
+        )
     return updated
 
 

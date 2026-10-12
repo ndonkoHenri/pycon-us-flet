@@ -118,9 +118,23 @@ def test_report_shows_each_count_before_and_after(data_dir: Path) -> None:
     lines = report.splitlines()
     assert lines[0] == f"Updated 2026/conference.json from {FEED_URL}"
     assert lines[1].startswith("captured at 2026-10-12T10:04:31-07:00; ")
-    assert "  sessions        728 -> 727     -1" in lines
-    assert "  sprints          24 -> 23      -1" in lines
-    assert "  posters          25 -> 25" in lines
+    assert lines[2:] == [
+        "  sessions        728 -> 727     -1",
+        "  speakers        170 -> 170",
+        "  days              5 -> 5",
+        "  posters          25 -> 25",
+        "  sprints          24 -> 23      -1",
+        "  job listings     13 -> 13",
+    ]
+
+
+def test_report_says_when_the_previous_snapshot_no_longer_parses(
+    data_dir: Path,
+) -> None:
+    (data_dir / "2026" / "conference.json").write_bytes(b"[]")
+    report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
+    assert "; the previous snapshot no longer parses" in report.splitlines()[1]
+    assert "  sessions          - -> 728" in report.splitlines()
 
 
 def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
@@ -143,8 +157,21 @@ def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
             200,
             "the parser skips 1 feed record(s):\n  schedule[0]: ",
         ),
+        (
+            changed(
+                lambda doc: [
+                    slot.update(
+                        start=slot["start"].replace("2026-", "2027-"),
+                        end=slot["end"].replace("2026-", "2027-"),
+                    )
+                    for slot in doc["schedule"]
+                ]
+            ),
+            200,
+            "the feed's days, 2027-05-13 to 2027-05-17, fall outside the conference's, 2026-05-13 to 2026-05-19",
+        ),
     ],
-    ids=["html", "wrong-structure", "server-error", "skipped-record"],
+    ids=["html", "wrong-structure", "server-error", "skipped-record", "wrong-year"],
 )
 def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
     data_dir: Path, body: bytes, status: int, problem: str
@@ -153,6 +180,22 @@ def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
     with pytest.raises(SnapshotError) as error:
         update_snapshot(2026, data_dir, transport=serving(body, status), now=NOW)
     assert str(error.value).startswith(problem)
+    assert files(data_dir) == before
+
+
+def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
+    data_dir: Path,
+) -> None:
+    # Valid TOML, but not the bare key the tool rewrites: it must not write a duplicate.
+    toml = data_dir / "2026" / "conference.toml"
+    text = toml.read_text(encoding="utf-8")
+    toml.write_text(
+        text.replace("\nsnapshot_captured_at =", '\n"snapshot_captured_at" ='),
+        encoding="utf-8",
+    )
+    before = files(data_dir)
+    with pytest.raises(SnapshotError, match="^could not set snapshot_captured_at"):
+        update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert files(data_dir) == before
 
 
