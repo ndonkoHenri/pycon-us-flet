@@ -5,3 +5,6 @@ are laid out in ``docs/decisions.md`` section M.
 """
 
 __version__ = "0.0.1"
+
+APP_NAME = "Conf Companion"
+"""The display name: a neutral placeholder until O-4 (D-36), equal to ``[tool.flet] product``."""
