@@ -123,7 +123,7 @@ Indigo `#3B3EA9` is the seed, light `primary`, the Now status header and the Abo
 
 ### 3.2 Colour schemes (D-22, D-23)
 
-Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9), so we set only brand roles; outline, error, inverse and container ramps come from the seed. WCAG ratios computed for this file.
+Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9), so we set the brand roles and their containers, each with its `on_*` partner, plus `surface`, `on_surface` and `on_surface_variant` (equal to Flet's neutral ramp, so the contrast test sees them); outline, error, inverse and the neutral `surface_container*` ramp come from the seed and Flet. WCAG ratios computed for this file.
 
 | Role | Light | Dark | HC light (P2) | HC dark (P2) |
 |---|---|---|---|---|

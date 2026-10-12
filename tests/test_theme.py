@@ -2,6 +2,7 @@
 
 import ast
 import dataclasses
+import re
 from pathlib import Path
 
 import flet as ft
@@ -26,31 +27,44 @@ PAIRS = [
     ("inverse_surface", "on_inverse_surface"),
 ]
 
-# Every surface of Flet's neutral ramp: surface, surface_bright, surface_dim and the five
-# surface_container* roles (neutralizeSurfaces in packages/flet/lib/src/utils/theme.dart
-# at the .flet-ref pin). Cards, sheets, app bars and Markdown code spans sit on these.
-NEUTRAL_SURFACES = {
-    False: [
-        "#FFFFFF",
-        "#FFFFFF",
-        "#DDDDDD",
-        "#FFFFFF",
-        "#F7F7F7",
-        "#F2F2F2",
-        "#EDEDED",
-        "#E7E7E7",
-    ],
-    True: [
-        "#121212",
-        "#3B3B3B",
-        "#121212",
-        "#0D0D0D",
-        "#1B1B1B",
-        "#202020",
-        "#292929",
-        "#313131",
-    ],
+# Flet's neutral ramp (neutralizeSurfaces in packages/flet/lib/src/utils/theme.dart at
+# the .flet-ref pin): every surface, including surface_bright, surface_dim and the five
+# surface_container* roles that cards, sheets, bars and Markdown code spans sit on, and
+# the text roles the ramp sets. A test checks this mirror against the Dart source.
+NEUTRAL_RAMP = {
+    False: {
+        "surface": "#FFFFFF",
+        "surfaceBright": "#FFFFFF",
+        "surfaceDim": "#DDDDDD",
+        "surfaceContainerLowest": "#FFFFFF",
+        "surfaceContainerLow": "#F7F7F7",
+        "surfaceContainer": "#F2F2F2",
+        "surfaceContainerHigh": "#EDEDED",
+        "surfaceContainerHighest": "#E7E7E7",
+        "onSurface": "#1B1B1B",
+        "onSurfaceVariant": "#5E5E5E",
+    },
+    True: {
+        "surface": "#121212",
+        "surfaceBright": "#3B3B3B",
+        "surfaceDim": "#121212",
+        "surfaceContainerLowest": "#0D0D0D",
+        "surfaceContainerLow": "#1B1B1B",
+        "surfaceContainer": "#202020",
+        "surfaceContainerHigh": "#292929",
+        "surfaceContainerHighest": "#313131",
+        "onSurface": "#E7E7E7",
+        "onSurfaceVariant": "#ABABAB",
+    },
 }
+NEUTRAL_SURFACES = {
+    dark: [value for role, value in ramp.items() if role.startswith("surface")]
+    for dark, ramp in NEUTRAL_RAMP.items()
+}
+FLET_THEME_DART = (
+    Path(__file__).resolve().parents[1]
+    / ".flet-src/packages/flet/lib/src/utils/theme.dart"
+)
 
 AA_TEXT = 4.5
 
@@ -126,8 +140,28 @@ def test_brand_roles_are_all_declared(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_surface_roles_match_flets_neutral_ramp(dark: bool) -> None:
-    # The scheme repeats the ramp's surface so the pairs above check what Flutter shows.
-    assert hex_role(scheme(dark), "surface") == NEUTRAL_SURFACES[dark][0]
+    # The scheme repeats the ramp's text roles so the pairs above check what Flutter shows.
+    color_scheme, ramp = scheme(dark), NEUTRAL_RAMP[dark]
+    assert hex_role(color_scheme, "surface") == ramp["surface"]
+    assert hex_role(color_scheme, "on_surface") == ramp["onSurface"]
+    assert hex_role(color_scheme, "on_surface_variant") == ramp["onSurfaceVariant"]
+
+
+@pytest.mark.skipif(
+    not FLET_THEME_DART.exists(), reason="CI checks out only .flet-src/sdk/python"
+)
+def test_neutral_ramp_mirrors_the_pinned_flet_source() -> None:
+    # Runs wherever the full pin is checked out, so a Flet bump that changes the ramp
+    # fails here instead of leaving the contrast tests green on stale colours.
+    source = FLET_THEME_DART.read_text(encoding="utf-8")
+    body = source[source.index("ColorScheme neutralizeSurfaces(") :]
+    dark_branch, light_branch = body.split("return scheme.copyWith(")[1:3]
+    pattern = r"(\w+): const Color\(0xFF([0-9A-F]{6})\)"
+    for dark, branch in ((True, dark_branch), (False, light_branch)):
+        found = {role: f"#{value}" for role, value in re.findall(pattern, branch)}
+        assert {role: found.get(role) for role in NEUTRAL_RAMP[dark]} == NEUTRAL_RAMP[
+            dark
+        ]
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

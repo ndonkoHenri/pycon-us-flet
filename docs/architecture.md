@@ -1161,7 +1161,7 @@ THEME_MODES = {"system": ft.ThemeMode.SYSTEM, "light": ft.ThemeMode.LIGHT, "dark
 
 def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     """The one Material 3 theme, identical on Android and iOS (D-10, D-22)."""
-    if high_contrast:
+    if high_contrast:                                   # P2; until then the standard scheme
         scheme = HC_DARK if dark else HC_LIGHT
     else:
         scheme = DARK_SCHEME if dark else LIGHT_SCHEME
