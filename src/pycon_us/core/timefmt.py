@@ -7,7 +7,7 @@ names come from fixed English tuples and labels are built by hand, so nothing de
 device locale or on ``strftime`` flags. Naive datetimes are refused: they have no instant.
 """
 
-from datetime import date, datetime, timedelta, tzinfo
+from datetime import UTC, date, datetime, timedelta, tzinfo
 
 _WEEKDAYS = (
     "Monday",
@@ -61,9 +61,10 @@ def time_range_label(
     a single time when the range is empty (a notice such as "Registration opens").
     In 24-hour form: "09:25–10:10".
     """
-    if start == end:
-        return time_label(start, zone, use_24h=use_24h)
     first, last = _local(start, zone), _local(end, zone)
+    # Compare in UTC: datetimes sharing a tzinfo compare wall times and ignore DST folds.
+    if first.astimezone(UTC) == last.astimezone(UTC):
+        return time_label(first, zone, use_24h=use_24h)
     if use_24h:
         return f"{time_label(first, zone, use_24h=True)}–{time_label(last, zone, use_24h=True)}"
     if first.date() == last.date() and _meridiem(first) == _meridiem(last):

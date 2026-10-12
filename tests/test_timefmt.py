@@ -3,6 +3,7 @@
 Every test runs under two machine time zones (``machine_tz``); the results must not change.
 """
 
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -133,6 +134,39 @@ def test_zone_note_follows_the_machine_zone(machine_tz: str) -> None:
     assert (note is None) == (machine_tz == "America/Los_Angeles")
 
 
-def test_naive_datetimes_are_refused() -> None:
+def test_an_hour_apart_in_the_fall_back_fold_is_a_range() -> None:
+    first = datetime(2026, 11, 1, 1, 30, tzinfo=PACIFIC)  # 1:30 AM PDT
+    second = first.replace(fold=1)  # 1:30 AM PST, an hour later
+    assert first == second  # same tzinfo: Python compares wall times
+    assert timefmt.time_range_label(first, second, PACIFIC, use_24h=False) == (
+        "1:30–1:30 AM"
+    )
+
+
+def test_the_same_instant_in_two_zones_is_one_time() -> None:
+    folded = datetime(2026, 11, 1, 1, 30, fold=1, tzinfo=PACIFIC)  # 1:30 AM PST
+    label = timefmt.time_range_label(
+        folded, folded.astimezone(UTC), PACIFIC, use_24h=False
+    )
+    assert label == "1:30 AM"
+
+
+NAIVE = datetime(2026, 5, 15, 9, 0)  # noqa: DTZ001
+AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: timefmt.local_date(NAIVE, PACIFIC),
+        lambda: timefmt.today(NAIVE, PACIFIC),
+        lambda: timefmt.time_label(NAIVE, PACIFIC, use_24h=False),
+        lambda: timefmt.time_range_label(NAIVE, AWARE, PACIFIC, use_24h=False),
+        lambda: timefmt.time_range_label(AWARE, NAIVE, PACIFIC, use_24h=True),
+        lambda: timefmt.time_range_label(NAIVE, NAIVE, PACIFIC, use_24h=False),
+        lambda: timefmt.zone_note(NAIVE, PACIFIC, "Pacific Time", timedelta(0)),
+    ],
+)
+def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
     with pytest.raises(ValueError, match="aware"):
-        timefmt.time_label(datetime(2026, 5, 15, 9, 0), PACIFIC, use_24h=False)  # noqa: DTZ001
+        call()

@@ -24,13 +24,27 @@ def test_real_time_is_aware_utc() -> None:
     assert before <= now <= datetime.now(UTC)
 
 
-def test_fake_clock_runs_forward_from_its_start() -> None:
+class SteppedTime(datetime):
+    """Stands in for real time in ``clock``: it only moves when a test steps it."""
+
+    current = datetime(2026, 10, 12, 8, 0, tzinfo=UTC)
+
+    @classmethod
+    def now(cls, tz=None) -> datetime:  # same signature as datetime.now
+        return cls.current
+
+
+def test_fake_clock_runs_forward_with_real_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(clock, "datetime", SteppedTime)
+    monkeypatch.setattr(SteppedTime, "current", SteppedTime.current)
     start = datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
     clock.start_fake_clock(start)
-    first = clock.now()
-    second = clock.now()
-    assert timedelta(0) <= first - start < timedelta(seconds=5)
-    assert second >= first
+    assert clock.now() == start
+    assert clock.now().tzinfo is UTC
+    SteppedTime.current += timedelta(minutes=90)
+    assert clock.now() == start + timedelta(minutes=90)
 
 
 def test_test_override_wins_over_the_fake_clock() -> None:
@@ -39,6 +53,9 @@ def test_test_override_wins_over_the_fake_clock() -> None:
     clock.set_test_now(frozen)
     assert clock.now() == frozen
     assert clock.now().tzinfo is UTC
+    clock.start_fake_clock(None)
+    assert clock.now() == frozen  # still frozen while the override is set
+    clock.start_fake_clock(datetime(2026, 5, 15, 16, 0, tzinfo=UTC))
     clock.set_test_now(None)
     assert clock.now().date() == date(2026, 5, 15)  # the fake clock again
 
