@@ -76,12 +76,15 @@ class MemorySemantics(ft.SemanticsService):
 
 
 class FakePage:
-    """The few ``ft.Page`` fields the start sequence and ``report_errors`` use.
+    """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
 
     Tests pass it as ``cast(ft.Page, FakePage())``: a real page needs a session.
     """
 
     def __init__(self, brightness: ft.Brightness = ft.Brightness.LIGHT) -> None:
+        self.route = "/"
+        self.navigated: list[str] = []
+        self.media: ft.PageMediaData | None = None
         self.platform_brightness = brightness
         self.theme: ft.Theme | None = None
         self.dark_theme: ft.Theme | None = None
@@ -94,6 +97,11 @@ class FakePage:
 
     def show_dialog(self, dialog: ft.DialogControl) -> None:
         self.dialogs.append(dialog)
+
+    def navigate(self, location: str) -> None:
+        """Go to a location, as ``page.navigate`` does: the route changes at once."""
+        self.navigated.append(location)
+        self.route = location
 
 
 @contextmanager

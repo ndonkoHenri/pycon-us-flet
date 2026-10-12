@@ -9,8 +9,9 @@ import flet as ft
 
 from pycon_us.core.slugs import slugify_room
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_view
+from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.state import use_conference
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 
 
 @ft.component
@@ -25,23 +26,31 @@ def SessionDetail(session_id: str) -> ft.View:
     data = conference.data
     session = data.sessions.get(session_id) if data else None
     if data is None or session is None:
-        return stub_view(
+        return AppScaffold(
             title="Not found",
-            controls=[note(f"No session {session_id!r} in this year's schedule.")],
+            body=stub_body(
+                [note(f"No session {session_id!r} in this year's schedule.")]
+            ),
         )
     slugs = [slugify_room(name) for name in session.rooms]
-    return stub_view(
+    rooms = [slug for slug in slugs if slug in data.rooms]
+    return AppScaffold(
         title=session.name,
-        controls=[
-            note(f"{session.track} · {session.display_location}"),
-            *(
-                nav_tile(data.speakers[sid].name, drill_href(view_path, "speaker", sid))
-                for sid in session.speaker_ids
-            ),
-            *(
-                nav_tile(data.rooms[slug].name, drill_href(view_path, "room", slug))
-                for slug in slugs
-                if slug in data.rooms
-            ),
-        ],
+        body=stub_body(
+            [
+                note(f"{session.track} · {session.display_location}"),
+                *([SectionHeader("Speakers")] if session.speaker_ids else []),
+                *(
+                    nav_tile(
+                        data.speakers[sid].name, drill_href(view_path, "speaker", sid)
+                    )
+                    for sid in session.speaker_ids
+                ),
+                *([SectionHeader("Rooms")] if rooms else []),
+                *(
+                    nav_tile(data.rooms[slug].name, drill_href(view_path, "room", slug))
+                    for slug in rooms
+                ),
+            ]
+        ),
     )

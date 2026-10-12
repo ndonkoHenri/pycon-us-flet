@@ -33,6 +33,9 @@ class Services:
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
+        shown_versions: The feed versions this session has logged D-112's content line
+            for; ``AppScaffold`` logs each version once, from the first screen that
+            shows it (D-165).
     """
 
     year: YearData
@@ -40,6 +43,7 @@ class Services:
     memory: ViewMemory
     semantics: ft.SemanticsService
     closed: asyncio.Event = field(default_factory=asyncio.Event)
+    shown_versions: set[int] = field(default_factory=set)
 
     @classmethod
     def create(cls, memory: ViewMemory) -> Services:

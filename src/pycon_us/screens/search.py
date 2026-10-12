@@ -11,9 +11,10 @@ import flet as ft
 
 from pycon_us.core.models import Session
 from pycon_us.locations import drill_href, use_query
-from pycon_us.screens.stub import nav_tile, note, stub_view
+from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
+from pycon_us.ui.scaffold import AppScaffold
 
 SAMPLES = 3
 """How many results of each kind the stub shows."""
@@ -49,10 +50,9 @@ def Search() -> ft.View:
                 nav_tile(r.name, drill_href(view_path, "room", r.slug))
                 for r in islice(data.rooms.values(), SAMPLES)
             ]
-    return stub_view(
+    return AppScaffold(
         title="Search",
-        controls=[
-            note(f"Scope: {scope}. Opened from {svc.memory.search_base}."),
-            *results,
-        ],
+        body=stub_body(
+            [note(f"Scope: {scope}. Opened from {svc.memory.search_base}."), *results]
+        ),
     )

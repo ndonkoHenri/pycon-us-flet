@@ -1,7 +1,7 @@
 """Schedule (``/schedule``): a stub that shows what the start sequence published.
 
-Until P1's day tabs (SCHED-01..04), it shows where the feed came from and when, the data
-status with a Refresh button, every conference day with its session count, and a few
+Until P1's day tabs (SCHED-01..04), it shows the status strip, where the feed came from
+and when, a Refresh button, every conference day with its session count, and a few
 sessions to open, so "bundled first, a refresh replaces it" is visible on a phone
 (DATA-35, D-38).
 """
@@ -16,10 +16,11 @@ from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_label, local_date, time_label
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, search_button, stub_view
+from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference, use_conference
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
 SOURCE_LABELS = {
     "none": "No schedule yet",
@@ -28,21 +29,13 @@ SOURCE_LABELS = {
     "network": "Schedule downloaded",
 }
 
-STATUS_LABELS = {
-    "fresh": "Up to date",
-    "stale": "May be out of date",
-    "refreshing": "Refreshing…",
-    "offline": "Offline: showing the saved schedule",
-    "problem": "Couldn't refresh: showing the saved schedule",
-}
-
 SAMPLE_SIZE = 5
 """How many sessions with speakers the stub links to, for the drill."""
 
 
 @ft.component
 def Schedule() -> ft.View:
-    """The Schedule root: the data's source, age and status, its days and a few sessions."""
+    """The Schedule root: the data's status, source and age, its days and a few sessions."""
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
@@ -56,41 +49,46 @@ def Schedule() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     counts = _session_counts(data)
-    return stub_view(
+    return AppScaffold(
         title="Schedule",
         actions=[search_button(svc.memory, "sessions")],
-        controls=[
-            ft.Semantics(  # the shell smoke flow finds it (testing §5.4)
-                identifier="schedule.source",
-                content=note(SOURCE_LABELS[conference.source]),
-            ),
-            note(_fetched(conference, info.zone, use_24h)),
-            note(STATUS_LABELS[conference.status(info)]),
-            ft.Container(
-                ft.FilledTonalButton(
-                    "Refresh",
-                    icon=ft.Icons.REFRESH,
-                    on_click=refresh,
-                    disabled=conference.refreshing,
+        body=stub_body(
+            [
+                ft.Semantics(  # the shell smoke flow finds it (testing §5.4)
+                    identifier="schedule.source",
+                    content=note(SOURCE_LABELS[conference.source]),
                 ),
-                padding=ft.Padding.symmetric(horizontal=16, vertical=8),
-            ),
-            *(
-                ft.ListTile(
-                    title=day_label(day), subtitle=f"{counts.get(day, 0)} sessions"
-                )
-                for day in (days(data, info.first_day, info.last_day) if data else ())
-            ),
-            note("Sessions with speakers:"),
-            *(
-                nav_tile(
-                    session.name,
-                    drill_href(view_path, "session", session.id),
-                    subtitle=", ".join(session.speaker_names),
-                )
-                for session in islice(_with_speakers(data), SAMPLE_SIZE)
-            ),
-        ],
+                note(_fetched(conference, info.zone, use_24h)),
+                ft.Container(
+                    ft.FilledTonalButton(
+                        "Refresh",
+                        icon=ft.Icons.REFRESH,
+                        on_click=refresh,
+                        disabled=conference.refreshing,
+                    ),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                ),
+                SectionHeader("Days"),
+                *(
+                    ft.ListTile(
+                        title=day_label(day), subtitle=f"{counts.get(day, 0)} sessions"
+                    )
+                    for day in (
+                        days(data, info.first_day, info.last_day) if data else ()
+                    )
+                ),
+                SectionHeader("Sessions with speakers"),
+                *(
+                    nav_tile(
+                        session.name,
+                        drill_href(view_path, "session", session.id),
+                        subtitle=", ".join(session.speaker_names),
+                    )
+                    for session in islice(_with_speakers(data), SAMPLE_SIZE)
+                ),
+            ],
+            status=True,
+        ),
     )
 
 

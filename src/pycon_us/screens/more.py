@@ -9,9 +9,10 @@ from typing import cast
 import flet as ft
 
 from pycon_us.prefs import Appearance, use_prefs
-from pycon_us.screens.stub import nav_tile, note, search_button, stub_view
+from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
 MORE_PAGES = (
     ("Speakers", "/more/speakers"),
@@ -50,23 +51,25 @@ def More() -> ft.View:
                 )
             )
 
-    return stub_view(
+    return AppScaffold(
         title="More",
         actions=[search_button(svc.memory, "all")],
-        controls=[
-            *(nav_tile(label, location) for label, location in MORE_PAGES),
-            note("Appearance"),
-            ft.Container(
-                ft.SegmentedButton(
-                    selected=[prefs.theme],  # controlled (D-157)
-                    segments=[
-                        ft.Segment(value=value, label=ft.Text(label))
-                        for value, label in APPEARANCE_LABELS.items()
-                    ],
-                    on_change=choose_appearance,
+        body=stub_body(
+            [
+                *(nav_tile(label, location) for label, location in MORE_PAGES),
+                SectionHeader("Appearance"),
+                ft.Container(
+                    ft.SegmentedButton(
+                        selected=[prefs.theme],  # controlled (D-157)
+                        segments=[
+                            ft.Segment(value=value, label=ft.Text(label))
+                            for value, label in APPEARANCE_LABELS.items()
+                        ],
+                        on_change=choose_appearance,
+                    ),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
                 ),
-                padding=ft.Padding.symmetric(horizontal=16, vertical=8),
-            ),
-            note("Not an official PSF app."),
-        ],
+                note("Not an official PSF app."),
+            ]
+        ),
     )

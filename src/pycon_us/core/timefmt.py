@@ -82,6 +82,24 @@ def day_heading(day: date) -> str:
     return f"{_WEEKDAYS[day.weekday()]}, {_MONTHS[day.month - 1]} {day.day}"
 
 
+def ago_label(then: datetime, now: datetime) -> str:
+    """Return how long before ``now`` ``then`` was, in words (DATA-31).
+
+    "just now" under a minute (and for a ``then`` after ``now``, as a fake clock can
+    make it), then whole minutes, hours or days, rounded down: "1 minute ago",
+    "9 hours ago", "3 days ago". Words, not "9 h", so screen readers say them.
+    """
+    seconds = (_local(now, UTC) - _local(then, UTC)).total_seconds()
+    minutes = int(max(seconds, 0) // 60)
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return _ago(minutes, "minute")
+    if minutes < 24 * 60:
+        return _ago(minutes // 60, "hour")
+    return _ago(minutes // (24 * 60), "day")
+
+
 def zone_note(
     now: datetime, zone: tzinfo, zone_name: str, device_offset: timedelta | None
 ) -> str | None:
@@ -115,3 +133,7 @@ def _clock12(local: datetime) -> str:
 
 def _meridiem(local: datetime) -> str:
     return "AM" if local.hour < 12 else "PM"
+
+
+def _ago(amount: int, unit: str) -> str:
+    return f"{amount} {unit} ago" if amount == 1 else f"{amount} {unit}s ago"
