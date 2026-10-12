@@ -3,7 +3,7 @@
 A location is a route path, with an optional query of view options (decisions §M):
 ``/schedule/session/42/speaker/17?highlight=99``. The helpers here are pure, so they are
 unit-tested on every route shape, apart from the ``use_query()`` hook. Screens import
-them without importing the route table, which imports the screens (D-163):
+them without importing the route table, which imports the screens (D-164):
 ``routes.py`` holds the table itself, and a test keeps its pages and ``PAGES`` the same.
 """
 
@@ -116,7 +116,7 @@ def query_of(location: str) -> dict[str, str]:
 
 
 def is_top_view(location: str, view_path: str) -> bool:
-    """Return whether a location addresses this View, so it is the top one (D-163).
+    """Return whether a location addresses this View, so it is the top one (D-164).
 
     Compare with ``page.route``, never ``ft.use_route_location()``: under a global
     modal the Router renders the Views below it at the remembered opener's location,

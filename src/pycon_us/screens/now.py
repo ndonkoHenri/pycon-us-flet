@@ -10,6 +10,7 @@ import flet as ft
 
 from pycon_us.screens.stub import nav_tile, note, search_button, stub_view
 from pycon_us.services import use_services
+from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 
@@ -30,6 +31,7 @@ def Now() -> ft.View:
     svc = use_services()
     conference = use_conference()
 
+    @report_errors
     async def log_shown() -> None:
         # D-112's content line: a SharedPreferences round trip after the render, so the
         # patch has reached Flutter when it is logged.

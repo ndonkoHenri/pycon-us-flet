@@ -17,7 +17,7 @@
  src/main.py   page.on_view_pop (parent_of), then page.render_views(App, MEMORY)
  app.py        App: Services + stores (once) → boot gate → providers → ft.Router(ROUTES)
  routes.py     tab roots · More pages · search · recursive drill (session/speaker/room/sponsor/plan)
- locations.py  drill_href · parent_of · use_query: what screens import to link and go back (D-163)
+ locations.py  drill_href · parent_of · use_query: what screens import to link and go back (D-164)
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
  state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      (P1 favorites.py, P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
@@ -59,7 +59,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound` (§5) | P0 |
-| `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-163) | P0 |
+| `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
@@ -191,7 +191,7 @@ Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99
 
 ### 5.3 `routes.py` and `locations.py`
 
-`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-163): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `DRILL_KINDS` and `PAGES`. `PAGES` lists every page path without a parameter; a test keeps it equal to the table's.
+`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-164): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `DRILL_KINDS` and `PAGES`. `PAGES` lists every page path without a parameter; a test keeps it equal to the table's.
 
 ```python
 # src/pycon_us/routes.py (excerpt)
@@ -269,6 +269,7 @@ MEMORY = ViewMemory()                         # one per process: a new session r
 
 
 def main(page: ft.Page):
+    @report_errors                            # a page handler too (§16.3, D-163)
     def on_view_pop(e: ft.ViewPopEvent):
         page.navigate(parent_of(e.route, MEMORY.search_base))
 
@@ -278,7 +279,7 @@ def main(page: ft.Page):
 
 `Start` (the index route `/`) navigates to `start_target(memory.last_location, memory.search_base)`: the last location when it is set, else `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`. For the same reason a direct `/search` entry mounts `Start` below the modal, so `Start` navigates only when it is the top View (`is_top_view()`).
 
-`use_query()` (U9 interim) parses `ft.context.page.route`'s query once, when its View mounts, and only for the top View (`is_top_view(page.route, view_path)`, never `use_route_location()`, which under a global modal is the opener's location for the Views below): a deep entry builds the Views below too, and the query is not theirs (D-163). Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown location matches no route and shows `NotFound` (the Router's `not_found`, wrapped in a View) with "Go to Now"; in P0 an unknown id shows a not-found state on its own level under the back arrow, and #90 settles what P1 does (D-21, ux.md §4.1).
+`use_query()` (U9 interim) parses `ft.context.page.route`'s query once, when its View mounts, and only for the top View (`is_top_view(page.route, view_path)`, never `use_route_location()`, which under a global modal is the opener's location for the Views below): a deep entry builds the Views below too, and the query is not theirs (D-164). Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown location matches no route and shows `NotFound` (the Router's `not_found`, wrapped in a View) with "Go to Now"; in P0 an unknown id shows a not-found state on its own level under the back arrow, and #90 settles what P1 does (D-21, ux.md §4.1).
 
 ### 5.4 Search (D-19)
 
@@ -312,7 +313,7 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
     tab = next((i for i, t in enumerate(TABS) if view_path.startswith(t[0])), None)   # None under /search
     is_root = tab is not None and view_path == TABS[tab][0]
     intercept_back = is_root and view_path != "/now"
-    if is_top_view(page.route, view_path):                         # the top View, not one under a modal (D-163)
+    if is_top_view(page.route, view_path):                         # the top View, not one under a modal (D-164)
         memory.last_location = page.route                          # where a new session returns (D-143)
 
     def on_tab(e: ft.Event[ft.NavigationBar]):

@@ -18,6 +18,7 @@ from pycon_us.core.timefmt import day_label, local_date, time_label
 from pycon_us.locations import drill_href
 from pycon_us.screens.stub import nav_tile, note, search_button, stub_view
 from pycon_us.services import use_services
+from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference, use_conference
 
 SOURCE_LABELS = {
@@ -47,6 +48,7 @@ def Schedule() -> ft.View:
     svc = use_services()
     conference = use_conference()
 
+    @report_errors
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 

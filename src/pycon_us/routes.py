@@ -28,6 +28,7 @@ from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.services import use_services
+from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
 
 
@@ -70,6 +71,7 @@ def Start() -> ft.View:
     page = ft.context.page
     memory = use_services().memory
 
+    @report_errors
     def go() -> None:
         if is_top_view(page.route, "/"):
             page.navigate(start_target(memory.last_location, memory.search_base))
@@ -86,6 +88,7 @@ def NotFound() -> ft.Control:
     """
     page = ft.context.page
 
+    @report_errors
     def go_to_now() -> None:
         page.navigate("/now")
 

@@ -11,6 +11,7 @@ import flet as ft
 from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.screens.stub import nav_tile, note, search_button, stub_view
 from pycon_us.services import use_services
+from pycon_us.services.errors import report_errors
 
 MORE_PAGES = (
     ("Speakers", "/more/speakers"),
@@ -38,6 +39,7 @@ def More() -> ft.View:
     svc = use_services()
     prefs = use_prefs()
 
+    @report_errors
     async def choose_appearance(e: ft.Event[ft.SegmentedButton]) -> None:
         theme = cast(Appearance, e.control.selected[0])
         if not await prefs.save(svc.storage, theme=theme):
