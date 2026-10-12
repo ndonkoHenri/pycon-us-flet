@@ -532,7 +532,7 @@ Conventions in every workflow:
 | Install | `uv sync --locked` | Fails if `uv.lock` is stale (D-75). |
 | Lint, Check formatting | `uv run ruff check`, `uv run ruff format --check` | D-74 |
 | Type-check | `uv run pyright` | D-74 |
-| Test | `uv run pytest --hypothesis-profile=ci` | D-76. The `ci` profile, registered in `tests/conftest.py`, runs 200 derandomised examples per property with no deadline; local runs keep hypothesis's default (testing-and-quality.md §3.1). |
+| Test | `uv run pytest --hypothesis-profile=ci` | D-76. Hypothesis's built-in `ci` profile (derandomised, no deadline, `too_slow` suppressed), extended in `tests/conftest.py` to 200 examples per property; named explicitly rather than left to the `CI` variable (testing-and-quality.md §3.1). |
 
 **Triggers and concurrency.** It runs on every `pull_request` and on every push to `main`. The concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
 

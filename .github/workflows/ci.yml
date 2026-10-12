@@ -58,4 +58,4 @@ jobs:
       - name: Type-check
         run: uv run pyright
       - name: Test
-        run: uv run pytest --hypothesis-profile=ci   # tests/conftest.py registers it
+        run: uv run pytest --hypothesis-profile=ci   # hypothesis's built-in profile, 200 examples via tests/conftest.py
