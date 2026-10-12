@@ -151,7 +151,7 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 3. Every session lies in exactly one conference-local day within the conference dates, and timeline sessions are in exactly one time group.
 4. All datetimes are aware, in the year's zone; `start <= end`.
 5. Every time group has a start; groups are sorted; within a group, rows are ordered by location, then name (D-31).
-6. No raw slot of a dropped category (free or duplicate open spaces, placeholders, the Posters plenary, blanks) or of a collapsed kind is a session of its own; each day with poster slots has exactly one Posters row.
+6. No raw slot of a dropped category (free or duplicate open spaces, placeholders, the Posters plenary, blanks) or of a collapsed kind is a session of its own; each day with poster slots has exactly one Posters row; a feed with break slots has at least one break row.
 7. Exactly one Lunch row per conference day that has lunch.
 8. Every session shows its start shifted by the first display-time override its title matches, or unshifted; grouping keeps the start (the Job Fair, DATA-11).
 9. Every speaker a session links is in the directory and named in it, and every directory speaker has a session; no pseudo-speaker is in the directory.
