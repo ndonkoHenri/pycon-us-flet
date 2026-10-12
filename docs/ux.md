@@ -123,7 +123,7 @@ Indigo `#3B3EA9` is the seed, light `primary`, the Now status header and the Abo
 
 ### 3.2 Colour schemes (D-22, D-23)
 
-Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9), so we set only brand roles; outline, error, inverse and container ramps come from the seed. WCAG ratios computed for this file.
+Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9), so we set the brand roles and their containers, each with its `on_*` partner, plus `surface`, `on_surface` and `on_surface_variant` (equal to Flet's neutral ramp, so the contrast test sees them); outline, error, inverse and the neutral `surface_container*` ramp come from the seed and Flet. WCAG ratios computed for this file.
 
 | Role | Light | Dark | HC light (P2) | HC dark (P2) |
 |---|---|---|---|---|
@@ -139,11 +139,11 @@ Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overr
 
 - **High contrast** (P2) sets every role by hand: `surface_container*` equal `surface` so borders separate cards; all text 7:1. If HC stops fitting `ColorScheme` roles cleanly it moves to `later` (THEME-04). Settings › High contrast puts the HC themes in both slots.
 - A unit test checks every text/background pair in all four schemes, the tokens and the badges (D-25).
-- Each scheme sets `Theme.system_overlay_style` (`ft.SystemOverlayStyle`, D-12, D-113): status- and navigation-bar icon brightness follow the scheme, both bars are transparent, and navigation-bar contrast is **not** enforced. Android's 3-button icons then sit on the `NavigationBar`'s colour; with the scrim, or with no style under an `AppBar`, they were grey on dark grey (2.3:1, #311; S1).
+- Each scheme sets `Theme.system_overlay_style` (`ft.SystemOverlayStyle`, D-12, D-113): status- and navigation-bar icon brightness follow the scheme, the status bar is transparent, the navigation bar has the `NavigationBar`'s colour (`surface_container`, D-151: below Android 15 the app is not drawn under it), and navigation-bar contrast is **not** enforced. Android's 3-button icons then sit on the `NavigationBar`'s colour; with the scrim, or with no style under an `AppBar`, they were grey on dark grey (2.3:1, #311; S1).
 
 ### 3.3 Tokens (D-24)
 
-A frozen `Tokens` dataclass behind `use_tokens()` holds what M3 has no role for.
+A frozen `Tokens` dataclass behind `use_tokens()` holds what M3 has no role for; `App` provides the current scheme's tokens (D-150). Each token reads at 4.5:1 or better on every surface of its scheme, containers included (the ratios below are on `surface`).
 
 | Token | Light | Dark | HC light | HC dark | Used by |
 |---|---|---|---|---|---|

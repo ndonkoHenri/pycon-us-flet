@@ -99,11 +99,13 @@ def App(memory: ViewMemory):
     def router():
         return ft.Router(ROUTES, not_found=NotFound, manage_views=True)
 
+    tokens = build_tokens(dark=prefs.dark, high_contrast=prefs.high_contrast_on)   # D-150
+
     return ServicesCtx(svc, lambda: ConferenceCtx(conference, lambda: PrefsCtx(
-        prefs, lambda: FavoritesCtx(favorites, router))))
+        prefs, lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)))))
 ```
 
-`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()`, `use_favorites()` and `use_services()` (one-line `ft.use_context(...)` hooks). `BootView` is purple `#680579` with the app icon, like the native splash and Flet's boot screen shown while Python starts; both are set in `pyproject.toml` (`[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). P3 adds `AccountCtx` and `StaffCtx`.
+`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()`, `use_favorites()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). `BootView` is purple `#680579` with the app icon, like the native splash and Flet's boot screen shown while Python starts; both are set in `pyproject.toml` (`[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). P3 adds `AccountCtx` and `StaffCtx`.
 
 ### 4.2 `Services`
 
@@ -1146,41 +1148,43 @@ Permissions are asked in context after a one-sentence primer: notifications on t
 ## 15. Theming (D-22..D-28, D-33, D-34)
 
 ```python
-# src/pycon_us/theme.py (excerpt)
+# src/pycon_us/theme.py (excerpt; P0 has LIGHT_SCHEME and DARK_SCHEME, P2 adds the HC ones)
 SEED = "#3B3EA9"
-LIGHT = ft.ColorScheme(primary="#3B3EA9", on_primary="#FFFFFF", secondary="#680579", on_secondary="#FFFFFF",
-                       tertiary="#A1009A", on_tertiary="#FFFFFF")
-DARK = ft.ColorScheme(primary="#BFC1FF", on_primary="#1F2189", secondary="#F4AEFF", on_secondary="#52005E",
-                      tertiary="#FFACEB", on_tertiary="#5E0058")
-HC_LIGHT = ft.ColorScheme(primary="#4A0072", on_primary="#FFFFFF", surface="#FBFAF6", on_surface="#1A1D24")  # + all roles
-HC_DARK = ft.ColorScheme(primary="#FFD60A", on_primary="#0B0F17", surface="#0B0F17", on_surface="#F5F5F0")   # + all roles
+LIGHT_SCHEME = ft.ColorScheme(primary="#3B3EA9", on_primary="#FFFFFF", secondary="#680579", on_secondary="#FFFFFF",
+                              tertiary="#A1009A", on_tertiary="#FFFFFF", ...)   # + containers and surface text roles
+DARK_SCHEME = ft.ColorScheme(primary="#BFC1FF", on_primary="#1F2189", secondary="#F4AEFF", on_secondary="#52005E",
+                             tertiary="#FFACEB", on_tertiary="#5E0058", ...)
+HC_LIGHT = ft.ColorScheme(primary="#4A0072", on_primary="#FFFFFF", surface="#FBFAF6", on_surface="#1A1D24")  # P2, + all roles
+HC_DARK = ft.ColorScheme(primary="#FFD60A", on_primary="#0B0F17", surface="#0B0F17", on_surface="#F5F5F0")   # P2, + all roles
 THEME_MODES = {"system": ft.ThemeMode.SYSTEM, "light": ft.ThemeMode.LIGHT, "dark": ft.ThemeMode.DARK}
 
 
 def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     """The one Material 3 theme, identical on Android and iOS (D-10, D-22)."""
-    if high_contrast:
+    if high_contrast:                                   # P2; until then the standard scheme
         scheme = HC_DARK if dark else HC_LIGHT
     else:
-        scheme = DARK if dark else LIGHT
+        scheme = DARK_SCHEME if dark else LIGHT_SCHEME
     return ft.Theme(
         color_scheme_seed=SEED,
         surfaces=ft.ThemeSurfaces.NEUTRAL,
         color_scheme=scheme,
-        system_overlay_style=overlay_style(dark=dark, scheme=scheme),   # D-12, #311
         font_family="packages/roboto_fonts/Roboto",         # D-26, D-105: the bundled font package
         appbar_theme=ft.AppBarTheme(center_title=False),
         page_transitions=ft.PageTransitionsTheme(
             android=ft.PageTransitionTheme.PREDICTIVE,        # D-11, D-148
             ios=ft.PageTransitionTheme.CUPERTINO,             # keeps the iOS edge swipe
         ),
+        system_overlay_style=overlay_style(dark=dark),        # D-12, D-113, #311
     )
 ```
 
-- `overlay_style()` returns the `Theme.system_overlay_style` for each `(dark, high_contrast)` scheme (D-12): light status- and navigation-bar icons on dark schemes, dark icons on light ones, transparent bars and navigation-bar contrast **not** enforced (D-113), so Android's 3-button icons sit on the `NavigationBar`'s colour and never on a dark scrim (#311). S1 checked it with 3-button and gesture navigation, in light and dark.
+- Until P2 (THEME-04, THEME-05), `high_contrast=True` returns the standard scheme, so callers already pass the flag.
+- `overlay_style(*, dark)` returns the `Theme.system_overlay_style` (D-12): light status- and navigation-bar icons on dark schemes, dark icons on light ones, a transparent status bar, a navigation bar in the `NavigationBar`'s colour (`SURFACE_CONTAINER`, D-151) and navigation-bar contrast **not** enforced (D-113), so Android's 3-button icons sit on the `NavigationBar`'s colour and never on a dark scrim (#311), also below Android 15, where the app is not drawn under the bar. S1 checked it with 3-button and gesture navigation, in light and dark; #71 again on Android 14 and 16, including a dark-mode switch while the app runs.
 - `apply_theme(page, prefs)` sets `page.theme` and `page.dark_theme` from `build_theme()`, `page.theme_mode` from `THEME_MODES[prefs.theme]`, then `page.update()`.
-- Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9): light and dark set brand roles only; HC overrides every role, with `surface_container*` = `surface`. `Prefs.high_contrast_on` is `"on"`, or `"system"` with the OS flag (iOS, Android 34+; re-read on resume, F13); `Prefs.dark` resolves `"system"` with `os_dark`.
-- **Values** come from `docs/ux.md` and are mirrored in `theme.py`: full HC schemes; `Tokens` (D-24: `live`, `warning`, `success`, `favorite`; picked by `(dark, high_contrast)` in `use_tokens()`); track badges (D-25: a tonal pair per track key and brightness, at least 4.5:1, outlined in HC; "En Español" the tonal pair `#FFD7F3` / `#5E0058` in light, inverted in dark). `tests/test_theme.py` checks every text/background pair in all four schemes.
+- Flet builds `ColorScheme.fromSeed`, neutralises surfaces, then applies our overrides (F9): light and dark set the brand roles and their containers, each with its `on_*` partner, plus `surface`, `on_surface` and `on_surface_variant`, which repeat Flet's neutral ramp so the contrast test sees them; HC overrides every role, with `surface_container*` = `surface`. `Prefs.high_contrast_on` is `"on"`, or `"system"` with the OS flag (iOS, Android 34+; re-read on resume, F13); `Prefs.dark` resolves `"system"` with `os_dark`.
+- **Values** come from `docs/ux.md` and are mirrored in `theme.py`: full HC schemes (P2); `Tokens` (D-24: `live`, `warning`, `success`, `favorite`; `build_tokens(*, dark, high_contrast)` picks them, `App` provides them through `TokensCtx` and screens read them with `use_tokens()`, D-150); track badges (P1-02; D-25: a tonal pair per track key and brightness, at least 4.5:1, outlined in HC; "En Español" the tonal pair `#FFD7F3` / `#5E0058` in light, inverted in dark). `tests/test_theme.py` checks every text/background pair in light and dark (HC from P2), and the text roles and tokens on every surface of Flet's neutral ramp.
+- **Markdown:** `MARKDOWN_STYLE` is the one `ft.MarkdownStyleSheet` of D-116, passed to every `ft.Markdown(md_style_sheet=...)`. Its colours are scheme roles (`PRIMARY`, `ON_SURFACE`, `SURFACE_CONTAINER_HIGHEST`, `OUTLINE`), resolved against the theme on screen, so one constant serves every scheme; every text style in it names its colour (F28), its font family and, for links and strike-through, its decoration colour (D-152).
 - **Type** (D-26, D-33): only the M3 scale (`ft.Text(theme_style=ft.TextThemeStyle.TITLE_MEDIUM)`), no fixed heights around text, reflow at 200 %. **Roboto:** `page.fonts` takes one static file per family, so 500/700 would be synthetic; declare the family's 400/500/700 files through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26).
 - **Icons** (D-27): Material Icons only, outlined unless selected; icon-only buttons have a tooltip (their accessible name). **Motion** (D-34): M3 durations; with `prefs.reduce_motion`, durations drop to 0 and pulses are static. **iOS pins** (D-10): bundled font, `center_title=False`, Material back arrow, never `adaptive=True`; the Cupertino transition and bounce scrolling stay native.
 

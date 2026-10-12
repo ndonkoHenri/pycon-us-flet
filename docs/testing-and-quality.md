@@ -436,7 +436,7 @@ Goldens churn while the UI evolves, so a handful arrive only in P4 (D-78):
 
 A unit test checks every declared text/background pair in each scheme: light and dark from P0, high contrast from P2. Text needs 4.5:1, or 7:1 in high contrast. Track badges and `Tokens` (`live`, `warning`, `success`, `favorite`) are checked the same way.
 
-Roles left to the seed are computed by Flutter's `ColorScheme.fromSeed` on the Dart side (F9), so Python cannot check them. Hence one rule, also enforced by the test: **an overridden role is always declared with its "on" partner**. Seeded pairs are spot-checked on screen with Accessibility Scanner (§7.3).
+Roles left to the seed are computed by Flutter's `ColorScheme.fromSeed` on the Dart side (F9), so Python cannot check them. Hence one rule, also enforced by the test: **an overridden role is always declared with its "on" partner**. Seeded pairs are spot-checked on screen with Accessibility Scanner (§7.3). Light and dark also declare `surface`, `on_surface` and `on_surface_variant` (the values of Flet's neutral ramp), and the test checks those text roles, `primary` (links) and the tokens on every surface of that ramp (`surface`, `surface_bright`, `surface_dim` and the five `surface_container*`), mirrored from `neutralizeSurfaces` in Flet's `utils/theme.dart`, since cards, sheets, bars and Markdown code spans sit on them.
 
 ```python
 # tests/test_theme.py (excerpt)
