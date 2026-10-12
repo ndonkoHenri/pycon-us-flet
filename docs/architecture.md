@@ -326,7 +326,8 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         route="/" if is_root else view_path,                       # roots share a key: no transition (D-142)
         padding=0,
         appbar=ft.AppBar(
-            title=ft.Text(title), center_title=False, automatically_imply_leading=False,
+            title=ft.Text(title),                                      # on a root, in Semantics(identifier="<tab>.title") (D-169)
+            center_title=False, automatically_imply_leading=False,
             leading=None if is_root else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
             actions=actions or [],
         ),

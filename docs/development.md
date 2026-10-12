@@ -39,6 +39,7 @@
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
 | Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
+| Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
 | Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---
@@ -452,6 +453,29 @@ Off-season and in demos, the Developer screen (DEV-01, D-73) sets:
 - the feed URL.
 
 Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now, Jump to now and reminders, until the 2027 feed exists (PLAN §7). Environment variables do not reach packaged apps, so there are no build flavours.
+
+### 5.7 UI flows: `flet test` (D-78, D-170)
+
+The flows in `tests/ui/` run on an emulator or a simulator, never in CI (`addopts` keeps them out of `uv run pytest`, D-84). The strategy, the helpers and the list of flows are in [`testing-and-quality.md`](testing-and-quality.md) §5.
+
+```bash
+# Android: an emulator of your own (D-102), its animations off (testing-and-quality.md §5.2)
+~/Library/Android/sdk/emulator/emulator -avd flet_probe_api34 -read-only -no-audio -no-boot-anim -port 5580 &
+for s in window_animation_scale transition_animation_scale animator_duration_scale; do
+  adb -s emulator-5580 shell settings put global $s 0
+done
+uv run flet test android -d emulator-5580 --tests-dir tests/ui -v
+
+# iOS: a booted iPhone 17 simulator on iOS 26.5 (D-107)
+xcrun simctl boot <udid>
+LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
+```
+
+- `-d` is required for both platforms, and `--tests-dir tests/ui` points `flet test` at the flows (its default is `tests`, which would collect the unit tests too). `-v` streams the Flutter test process's output; without it a failure prints only the output's tail. `-k <expression>` runs some flows only.
+- `flet test` first provisions a Flutter test host in `build/flutter` through the `flet build` pipeline (1 to 2½ minutes; the app's Python is packaged again on every run), then pytest runs each flow: `flutter test` builds a debug binary, installs it, launches it and connects the tester, and the app is uninstalled when the flow ends. So every flow starts from a fresh install, with no stored settings or cache. On #78's Mac (M4), with warm Gradle and Xcode caches, the shell flow took about 3½ minutes on Android (provisioning 1 min, Gradle 45 s, install 15 s, the flow about 1 min) and about 5 minutes on iOS (provisioning 2½ min, Xcode build 67 s); a first run on a host busy with other emulators took 15 minutes on Android.
+- The bundle id is the app's own (`io.github.ndonkohenri.pyconus`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
+- Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out.png`: look there first when a flow fails.
+- The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 
 ---
 

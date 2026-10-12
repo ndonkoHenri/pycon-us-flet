@@ -52,7 +52,7 @@ ft.NavigationBar(
 ```
 
 - Identical for every user; never changes with sign-in or role (SHELL-05). Never `adaptive=True`. The M3 indicator pill replaces Ionic's magenta label (4.18:1).
-- Each destination's label is its accessible name; its node also carries the identifier `app.nav.<tab>` (`app.nav.now` … `app.nav.my_schedule`, decisions §M) for UI tests (D-166).
+- Each destination's label is its accessible name; its node also carries the identifier `app.nav.<tab>` (`app.nav.now` … `app.nav.my_schedule`, decisions §M) for UI tests (D-166), and each root's app-bar title carries `<tab>.title` (`now.title` … `more.title`, D-169).
 - The bar shows on tab roots only (D-144, #149); pushed Views show the back arrow and no bar. S4 found that a bar on pushed Views slid across with the page on iOS and doubled during Android transitions and predictive Back.
 - The My schedule star is the favourite star, so tab and action read as one idea. Speakers live in More and search.
 

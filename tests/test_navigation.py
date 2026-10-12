@@ -47,6 +47,16 @@ def test_each_tab_has_an_app_nav_identifier_for_ui_tests() -> None:
     ]
 
 
+def test_each_tab_root_s_title_has_a_screen_identifier_for_ui_tests() -> None:
+    assert [tab.title_identifier for tab in TABS] == [
+        "now.title",
+        "schedule.title",
+        "my_schedule.title",
+        "map.title",
+        "more.title",
+    ]
+
+
 @pytest.mark.parametrize("root", TAB_ROOTS)
 def test_the_bar_is_material_with_labels_always_shown_and_its_root_selected(
     root: str,

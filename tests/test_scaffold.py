@@ -32,7 +32,7 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import scaffold
-from pycon_us.ui.navigation import TABS
+from pycon_us.ui.navigation import TABS, Tab
 from pycon_us.ui.scaffold import (
     AppScaffold,
     SectionHeader,
@@ -352,6 +352,18 @@ def test_every_tab_root_shows_the_bar_with_its_own_tab_selected(
 ) -> None:
     bar = bar_of(view_at(hooks, page, root))
     assert TABS[bar.selected_index].root == root
+
+
+@pytest.mark.parametrize("tab", TABS)
+def test_a_root_s_title_carries_its_screen_identifier_for_ui_tests(
+    hooks: Hooks, page: FakePage, tab: Tab
+) -> None:
+    title = app_bar(view_at(hooks, page, tab.root)).title
+    assert isinstance(title, ft.Semantics)
+    assert title.identifier == tab.title_identifier
+    assert title.label is None  # the text names the node, once (D-166)
+    assert isinstance(title.content, ft.Text)
+    assert title.content.value == "Title"
 
 
 @pytest.mark.parametrize(
