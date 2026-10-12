@@ -7,7 +7,8 @@ A plan id comes from ``map.toml`` (a floor, ``expo`` or ``job-fair``); ``?pin=``
 import flet as ft
 
 from pycon_us.locations import use_query
-from pycon_us.screens.stub import note, stub_view
+from pycon_us.screens.stub import note, stub_body
+from pycon_us.ui.scaffold import AppScaffold
 
 
 @ft.component
@@ -19,7 +20,9 @@ def PlanViewer(plan_id: str) -> ft.View:
     """
     options = use_query()
     shown = ", ".join(f"{key}={value}" for key, value in options.items()) or "none"
-    return stub_view(
+    return AppScaffold(
         title="Floor plan",
-        controls=[note(f"Plan {plan_id!r} arrives in P2. View options: {shown}.")],
+        body=stub_body(
+            [note(f"Plan {plan_id!r} arrives in P2. View options: {shown}.")]
+        ),
     )

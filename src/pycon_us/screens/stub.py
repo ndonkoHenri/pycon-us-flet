@@ -1,79 +1,37 @@
-"""The minimal chrome every stub screen shares, until ``AppScaffold`` and the bar land.
+"""The content every stub screen shares, until each screen gets its real one.
 
-``stub_view()`` gives each screen a View with a plain ``AppBar`` and the Back rules the
-route table needs: the Material back arrow on pushed Views (D-10), one View key for the
-tab roots (D-142), Back on a non-Now root going to Now (D-17), and the top View's
-location recorded for the start route (D-143). #76 replaces it with ``AppScaffold``
-and #75 adds the bottom bar; until then Now links to the other roots.
+``stub_body()`` lists a stub's rows under a line naming the View's path and params, so a
+screenshot shows which level of a stack it is; ``note()`` and ``nav_tile()`` are its
+rows. The chrome around them is ``ui.scaffold.AppScaffold`` (#76). Each P1 screen
+replaces its stub content with its own, so this module shrinks to nothing.
 """
 
 import flet as ft
 
-from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
-from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import ViewMemory
+from pycon_us.ui.scaffold import StatusStrip
 
 
-def stub_view(
-    *, title: str, controls: list[ft.Control], actions: list[ft.Control] | None = None
-) -> ft.View:
-    """Return a screen's View: its title, its route and params, then its controls.
+def stub_body(controls: list[ft.Control], *, status: bool = False) -> ft.ListView:
+    """Return a stub screen's body: its View path and params, then its rows.
 
     A plain function that calls hooks, so a screen calls it exactly once per render,
     in every branch (hooks are unconditional, D-70).
 
     Args:
-        title: The app bar's title.
-        controls: The body, in a ``ListView`` inside a ``SafeArea``.
-        actions: The app bar's actions, e.g. ``search_button()``.
+        controls: The rows.
+        status: Start with the ``StatusStrip``, as the screens that show the feed's
+            state do (Now, Schedule, My schedule; ux.md §5).
 
     Returns:
-        The View for this route level.
+        A ``ListView`` that fills the View.
     """
-    page = ft.context.page
     view_path = ft.use_view_path()
     params = ft.use_route_params()
-    memory = use_services().memory
-    is_root = view_path in TAB_ROOTS
-    back_to_now = is_root and view_path != "/now"
-    if is_top_view(page.route, view_path):  # where a new session returns (D-143)
-        memory.last_location = page.route
-
-    @report_errors
-    def go_back() -> None:
-        page.navigate(parent_of(view_path, memory.search_base))
-
-    @report_errors
-    async def leave_for_now(e: ft.Event[ft.View]) -> None:
-        page.navigate("/now")
-        await e.control.confirm_pop(False)  # this View stays; Now replaces the root
-
     shown = ", ".join(f"{key}={value}" for key, value in params.items())
-    return ft.View(
-        route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
-        padding=0,
-        appbar=ft.AppBar(
-            title=ft.Text(title),
-            center_title=False,
-            automatically_imply_leading=False,
-            leading=None
-            if is_root
-            else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
-            actions=actions or [],
-        ),
-        can_pop=not back_to_now,
-        on_confirm_pop=leave_for_now if back_to_now else None,
-        controls=[
-            ft.SafeArea(
-                expand=True,
-                content=ft.ListView(
-                    [note(f"{view_path}  {shown}".rstrip(), small=True), *controls],
-                    expand=True,
-                ),
-            )
-        ],
-    )
+    route_line = note(f"{view_path}  {shown}".rstrip(), small=True)
+    strip: list[ft.Control] = [StatusStrip()] if status else []
+    return ft.ListView([*strip, route_line, *controls], expand=True)
 
 
 def note(text: str, *, small: bool = False) -> ft.Control:
@@ -110,23 +68,3 @@ def nav_tile(title: str, location: str, *, subtitle: str | None = None) -> ft.Li
         trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
         on_click=go,
     )
-
-
-def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
-    """Return the app bar action that opens the global search with a preset scope (D-19).
-
-    It records the opener's location, query included, so Back from search returns
-    there.
-
-    Args:
-        memory: The process's ``ViewMemory``.
-        scope: ``all``, ``sessions``, ``speakers`` or ``rooms``.
-    """
-    page = ft.context.page
-
-    @report_errors
-    def open_search() -> None:
-        memory.search_base = page.route
-        page.navigate(f"/search?scope={scope}")
-
-    return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)

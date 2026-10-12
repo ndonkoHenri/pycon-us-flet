@@ -3,9 +3,10 @@
 import flet as ft
 
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, search_button, stub_view
+from pycon_us.screens.stub import nav_tile, stub_body
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
+from pycon_us.ui.scaffold import AppScaffold, search_button
 
 
 @ft.component
@@ -15,15 +16,17 @@ def Map() -> ft.View:
     svc = use_services()
     conference = use_conference()
     rooms = conference.data.rooms.values() if conference.data else ()
-    return stub_view(
+    return AppScaffold(
         title="Map",
         actions=[search_button(svc.memory, "rooms")],
-        controls=[
-            nav_tile(
-                room.name,
-                drill_href(view_path, "room", room.slug),
-                subtitle=f"{len(room.session_ids)} sessions",
-            )
-            for room in rooms
-        ],
+        body=stub_body(
+            [
+                nav_tile(
+                    room.name,
+                    drill_href(view_path, "room", room.slug),
+                    subtitle=f"{len(room.session_ids)} sessions",
+                )
+                for room in rooms
+            ]
+        ),
     )

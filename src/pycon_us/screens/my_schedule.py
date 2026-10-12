@@ -2,12 +2,14 @@
 
 import flet as ft
 
-from pycon_us.screens.stub import note, stub_view
+from pycon_us.screens.stub import note, stub_body
+from pycon_us.ui.scaffold import AppScaffold
 
 
 @ft.component
 def MySchedule() -> ft.View:
-    """The My schedule root: its title only."""
-    return stub_view(
-        title="My schedule", controls=[note("Saved sessions arrive in P1.")]
+    """The My schedule root: the data's status and a placeholder."""
+    return AppScaffold(
+        title="My schedule",
+        body=stub_body([note("Saved sessions arrive in P1.")], status=True),
     )

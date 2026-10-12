@@ -170,3 +170,40 @@ AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
 def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
     with pytest.raises(ValueError, match="aware"):
         call()
+
+
+@pytest.mark.parametrize(
+    ("elapsed", "label"),
+    [
+        (timedelta(seconds=59), "just now"),
+        (timedelta(minutes=1), "1 minute ago"),
+        (timedelta(minutes=59, seconds=59), "59 minutes ago"),
+        (timedelta(hours=1), "1 hour ago"),
+        (timedelta(hours=9, minutes=59), "9 hours ago"),
+        (timedelta(hours=23, minutes=59), "23 hours ago"),
+        (timedelta(days=1), "1 day ago"),
+        (timedelta(days=3, hours=23), "3 days ago"),
+    ],
+)
+def test_ago_label_says_whole_units_rounded_down_in_words(
+    elapsed: timedelta, label: str
+) -> None:
+    now = pacific(15, 10, 0)
+    assert timefmt.ago_label(now - elapsed, now) == label
+
+
+def test_ago_label_compares_instants_not_wall_times() -> None:
+    now = pacific(15, 10, 0)
+    then = (now - timedelta(hours=2)).astimezone(KIRITIMATI)  # a day ahead on the wall
+    assert timefmt.ago_label(then, now) == "2 hours ago"
+
+
+def test_ago_label_says_just_now_for_a_time_after_now() -> None:
+    # A Developer fake clock set before the data's fetch time (D-145: age never < 0).
+    now = pacific(15, 10, 0)
+    assert timefmt.ago_label(now + timedelta(hours=3), now) == "just now"
+
+
+def test_ago_label_refuses_naive_datetimes() -> None:
+    with pytest.raises(ValueError, match="aware"):
+        timefmt.ago_label(NAIVE, pacific(15, 10, 0))

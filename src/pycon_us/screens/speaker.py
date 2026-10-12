@@ -7,8 +7,9 @@ not-found state under the back arrow (#90 settles P1's).
 import flet as ft
 
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_view
+from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.state import use_conference
+from pycon_us.ui.scaffold import AppScaffold
 
 
 @ft.component
@@ -23,17 +24,19 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     data = conference.data
     speaker = data.speakers.get(speaker_id) if data else None
     if data is None or speaker is None:
-        return stub_view(
+        return AppScaffold(
             title="Not found",
-            controls=[note(f"No speaker {speaker_id!r} in this year's schedule.")],
+            body=stub_body(
+                [note(f"No speaker {speaker_id!r} in this year's schedule.")]
+            ),
         )
     sessions = sorted(
         (s for s in data.sessions.values() if speaker_id in s.speaker_ids),
         key=lambda s: s.start,
     )
-    return stub_view(
+    return AppScaffold(
         title=speaker.name,
-        controls=[
-            nav_tile(s.name, drill_href(view_path, "session", s.id)) for s in sessions
-        ],
+        body=stub_body(
+            [nav_tile(s.name, drill_href(view_path, "session", s.id)) for s in sessions]
+        ),
     )

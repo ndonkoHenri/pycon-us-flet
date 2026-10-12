@@ -7,8 +7,9 @@ import flet as ft
 
 from pycon_us.core.queries import fold
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, stub_view
+from pycon_us.screens.stub import nav_tile, stub_body
 from pycon_us.state import use_conference
+from pycon_us.ui.scaffold import AppScaffold
 
 
 @ft.component
@@ -17,10 +18,12 @@ def Speakers() -> ft.View:
     view_path = ft.use_view_path()
     conference = use_conference()
     speakers = conference.data.speakers.values() if conference.data else ()
-    return stub_view(
+    return AppScaffold(
         title="Speakers",
-        controls=[
-            nav_tile(speaker.name, drill_href(view_path, "speaker", speaker.id))
-            for speaker in sorted(speakers, key=lambda speaker: fold(speaker.name))
-        ],
+        body=stub_body(
+            [
+                nav_tile(speaker.name, drill_href(view_path, "speaker", speaker.id))
+                for speaker in sorted(speakers, key=lambda speaker: fold(speaker.name))
+            ]
+        ),
     )

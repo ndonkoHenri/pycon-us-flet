@@ -214,7 +214,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `TimeGutter` | `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` over an invisible "10:00" / "AM" in a `Stack`, padding 16 left and 8 right: no fixed width, so it grows with the text and is the same for every slot (D-158) | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True, label="9:25 AM", exclude_semantics=True)` |
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
-| `StatusStrip` | `Row[Icon(16), Text(BODY_SMALL), TextButton("Refresh")]` + `ProgressBar(bar_height=2, value=None)` | Hidden when fresh (§4.2) | `live_region=True` |
+| `StatusStrip` | `Row[Icon(16), Text(BODY_SMALL), TextButton("Refresh")]` + `ProgressBar(bar_height=2, value=None)` on `surface_container_high` | Hidden when fresh (§4.2); Refresh disabled while refreshing (D-165) | `live_region=True`, identifier `app.status` |
 | `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM), FilledTonalButton?]` | One sentence, one way out | Live region on first show |
 | `SkeletonList` | `Shimmer` over 5 placeholder rows | Only with no data at all | "Loading schedule" |
 | `LocationCard` (P2) | `Card(OUTLINED, Row[Stack[Image(width=112), pin], Column[label, sublabel, floor]])` | Pin pulses twice; pushes the floor viewer | One button: "Show Room 104A on the Concourse level floor plan" |
@@ -275,10 +275,11 @@ def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
 |---|---|---|
 | Ready | Data present, fresh | Content, no strip |
 | Refreshing | Refresh running | Content stays interactive; `StatusStrip` with an indeterminate 2 dp bar |
-| Stale | Older than 6 h on conference days, 24 h otherwise | "Updated 9 h ago · Refresh" |
-| Offline | The last refresh failed with a network error (`Conference.problem == "offline"`; no `ft.Connectivity` before P3) | "Offline · schedule from Tue 10:42 AM"; Refresh still tries |
+| Stale | Older than 6 h on conference days, 24 h otherwise | "Updated 9 hours ago · Refresh" |
+| Offline | The last refresh failed with a network error (`Conference.problem == "offline"`; no `ft.Connectivity` before P3) | "Offline · schedule from Tue, May 12, 10:42 AM"; Refresh still tries |
+| Not updated | The last refresh got an answer it could not use (`problem == "server"`, D-146) | "Couldn't update · schedule from Tue, May 12, 10:42 AM"; Refresh |
 | First load | No snapshot or cache, fetch running (rare, NEW-03) | `SkeletonList` |
-| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again" |
+| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again"; the strip says "Offline · no schedule yet" or "Couldn't update · no schedule yet" |
 | Empty | Nothing matches | `EmptyState` with a specific way out (§4.6) |
 | Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list |
 | Removed (P2) | Session left the latest feed while open | Content kept, inline note "Removed from the latest schedule" |

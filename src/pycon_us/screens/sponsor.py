@@ -2,7 +2,8 @@
 
 import flet as ft
 
-from pycon_us.screens.stub import note, stub_view
+from pycon_us.screens.stub import note, stub_body
+from pycon_us.ui.scaffold import AppScaffold
 
 
 @ft.component
@@ -12,6 +13,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     Args:
         sponsor_slug: The sponsor's slug, unquoted.
     """
-    return stub_view(
-        title="Sponsor", controls=[note(f"Sponsor {sponsor_slug!r} arrives in P2.")]
+    return AppScaffold(
+        title="Sponsor",
+        body=stub_body([note(f"Sponsor {sponsor_slug!r} arrives in P2.")]),
     )
