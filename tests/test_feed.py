@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from pycon_us.config import load_year
 from pycon_us.core.feed import FeedError, process
 from tests.feeds import YEARS, changed, document, processed, settings
 
