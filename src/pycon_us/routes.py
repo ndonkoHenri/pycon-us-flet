@@ -13,7 +13,7 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.locations import DRILL_KINDS, start_target
+from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
 from pycon_us.screens.more_pages import MorePage, Track
@@ -49,8 +49,10 @@ def Drill() -> ft.View:
             return RoomDetail(room_slug=ident)
         case "sponsor":
             return SponsorDetail(sponsor_slug=ident)
-        case _:
+        case "plan":
             return PlanViewer(plan_id=ident)
+        case kind:  # DRILL only matches DRILL_KINDS: a new kind needs its case here
+            raise ValueError(f"no screen for the drill kind {kind!r}")
 
 
 @ft.component
@@ -58,15 +60,19 @@ def Start() -> ft.View:
     """``/``: send the session to Now, or back to where the user was (D-143).
 
     A new session in the same process (F26, F29) finds ``ViewMemory.last_location``
-    and rebuilds that stack; a deep link or ``--route`` start never comes here. It
-    shows the boot purple for the moment it is on screen, and shares the tab roots'
-    View key, so Now replaces it without a transition (D-142).
+    and rebuilds that stack; a deep link or ``--route`` start never comes here, except
+    one straight to ``/search``: with no opener to remember, the Router builds the
+    modal over ``/``, so ``Start`` mounts below it and must stay put, not replace the
+    entry (``is_top_view()``); Back from search then goes to ``search_base``. It shows
+    the boot purple for the moment it is on screen, and shares the tab roots' View
+    key, so Now replaces it without a transition (D-142).
     """
     page = ft.context.page
     memory = use_services().memory
 
     def go() -> None:
-        page.navigate(start_target(memory.last_location, memory.search_base))
+        if is_top_view(page.route, "/"):
+            page.navigate(start_target(memory.last_location, memory.search_base))
 
     ft.use_effect(go, [])
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
@@ -88,7 +94,12 @@ def NotFound() -> ft.Control:
         content=ft.Column(
             spacing=16,
             controls=[
-                ft.Text("Page not found", theme_style=ft.TextThemeStyle.HEADLINE_SMALL),
+                ft.Semantics(
+                    header=True,
+                    content=ft.Text(
+                        "Page not found", theme_style=ft.TextThemeStyle.HEADLINE_SMALL
+                    ),
+                ),
                 ft.Text(f"Nothing in the app is at {page.route}.", selectable=True),
                 ft.FilledButton("Go to Now", on_click=go_to_now),
             ],

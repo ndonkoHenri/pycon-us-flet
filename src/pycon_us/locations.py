@@ -115,21 +115,38 @@ def query_of(location: str) -> dict[str, str]:
     return dict(parse_qsl(urlparse(location).query, keep_blank_values=True))
 
 
+def is_top_view(location: str, view_path: str) -> bool:
+    """Return whether a location addresses this View, so it is the top one (D-163).
+
+    Compare with ``page.route``, never ``ft.use_route_location()``: under a global
+    modal the Router renders the Views below it at the remembered opener's location,
+    so the opener's View would pass that test too (``/map`` under
+    ``/search?scope=rooms``), and so would ``Start`` under a modal entered directly.
+
+    Args:
+        location: The addressed location, ``page.route``, query included.
+        view_path: The View's own path, ``ft.use_view_path()``.
+
+    Returns:
+        True only for the View the location's path ends at.
+    """
+    return (urlparse(location).path.rstrip("/") or "/") == view_path
+
+
 def use_query() -> dict[str, str]:
     """Return the view options of the location that opened this View (U9 interim).
 
-    Read once, when the View mounts, and only by the View the location addresses (the
-    top one): a deep entry builds the Views below it too, and the query is not theirs.
-    Options that must survive Back live in ``ViewMemory`` (D-18); the query only seeds
-    them.
+    Read once, when the View mounts, and only by the View the location addresses
+    (``is_top_view()``): a deep entry builds the Views below it too, and a global
+    modal keeps its opener's Views mounted below it; the query is not theirs. Options
+    that must survive Back live in ``ViewMemory`` (D-18); the query only seeds them.
 
     Returns:
         The options, as ``query_of()`` reads them; empty for a View below the top.
     """
     page = ft.context.page
-    location = ft.use_route_location()
     view_path = ft.use_view_path()
     query, _ = ft.use_state(
-        lambda: query_of(page.route) if view_path == location else {}
+        lambda: query_of(page.route) if is_top_view(page.route, view_path) else {}
     )
     return query

@@ -6,18 +6,22 @@ Locations are matched with the Router's own matcher (``_match_routes`` and
 screens themselves are checked on devices (the PR).
 """
 
+import inspect
 from urllib.parse import unquote
 
+import flet as ft
 import pytest
 from flet.components.router import _match_routes, _split_chain_into_view_levels
 from hypothesis import given
 from hypothesis import strategies as st
 
+from pycon_us import routes
 from pycon_us.locations import (
     DRILL_KINDS,
     PAGES,
     TAB_ROOTS,
     drill_href,
+    is_top_view,
     parent_of,
     query_of,
     start_target,
@@ -154,6 +158,43 @@ def test_the_drill_takes_every_kind_and_nothing_else() -> None:
     ]
 
 
+DRILL_SCREENS = {
+    "session": ("SessionDetail", "session_id"),
+    "speaker": ("SpeakerDetail", "speaker_id"),
+    "room": ("RoomDetail", "room_slug"),
+    "sponsor": ("SponsorDetail", "sponsor_slug"),
+    "plan": ("PlanViewer", "plan_id"),
+}
+
+
+def drill_screen(monkeypatch: pytest.MonkeyPatch, kind: str) -> object:
+    """What ``Drill``'s body returns for a level of kind with the quoted id ``a%2Fb``.
+
+    The body runs without a renderer: the params hook and the screens are stand-ins,
+    each screen returning its own name and keyword arguments.
+    """
+    params = {"kind": kind, "ident": "a%2Fb"}
+    monkeypatch.setattr(ft, "use_route_params", lambda: params)
+    for name, _ in DRILL_SCREENS.values():
+        monkeypatch.setattr(routes, name, lambda _name=name, **kw: (_name, kw))
+    return inspect.unwrap(routes.Drill)()  # the body, without @ft.component
+
+
+@pytest.mark.parametrize("kind", DRILL_KINDS)
+def test_each_drill_kind_opens_its_own_screen_with_the_unquoted_id(
+    monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    name, argument = DRILL_SCREENS[kind]
+    assert drill_screen(monkeypatch, kind) == (name, {argument: "a/b"})
+
+
+def test_a_drill_kind_without_a_screen_is_an_error_not_another_screen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(ValueError, match="'poster'"):
+        drill_screen(monkeypatch, "poster")
+
+
 def page_paths(routes: list, prefix: str = "") -> set[str]:
     paths: set[str] = set()
     for route in routes:
@@ -251,6 +292,37 @@ def test_any_id_round_trips_through_its_link_and_back(
 )
 def test_query_of_reads_the_view_options(location: str, options: dict) -> None:
     assert query_of(location) == options
+
+
+# ------------------------------------------------------------------ top View
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "/schedule/session/42/speaker/17",
+        "/map/room/hall-a?highlight=42",
+        "/now/session/poster%20detail%2B1",
+        "/more/tracks/python/",
+        "/search/speaker/17",
+        "/",
+    ],
+)
+def test_only_the_last_view_a_location_builds_is_the_top_one(location: str) -> None:
+    path = location.split("?")[0].rstrip("/") or "/"
+    paths = [view_path for _, view_path, _ in view_levels(path)]
+    assert [is_top_view(location, view_path) for view_path in paths] == [
+        *[False] * (len(paths) - 1),
+        True,
+    ]
+
+
+@pytest.mark.parametrize("below", ["/map", "/schedule/session/42", "/"])
+def test_under_the_global_search_only_search_is_the_top_view(below: str) -> None:
+    # The Router renders the Views below a global modal at the opener's location, or
+    # at "/" (Start) when /search is entered directly; neither is the top View.
+    assert not is_top_view("/search?scope=rooms", below)
+    assert is_top_view("/search?scope=rooms", "/search")
 
 
 # ------------------------------------------------------------------ start

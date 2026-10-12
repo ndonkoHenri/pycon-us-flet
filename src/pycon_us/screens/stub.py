@@ -9,7 +9,7 @@ and #75 adds the bottom bar; until then Now links to the other roots.
 
 import flet as ft
 
-from pycon_us.locations import TAB_ROOTS, parent_of
+from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import ViewMemory
@@ -33,12 +33,11 @@ def stub_view(
     """
     page = ft.context.page
     view_path = ft.use_view_path()
-    location = ft.use_route_location()
     params = ft.use_route_params()
     memory = use_services().memory
     is_root = view_path in TAB_ROOTS
     back_to_now = is_root and view_path != "/now"
-    if view_path == location:  # the top View: where a new session returns (D-143)
+    if is_top_view(page.route, view_path):  # where a new session returns (D-143)
         memory.last_location = page.route
 
     @report_errors
