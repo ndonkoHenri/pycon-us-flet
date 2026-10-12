@@ -16,6 +16,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.feed import FeedError, process
+from pycon_us.core.models import ConferenceData
 from tests.feeds import YEARS, changed, document, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -196,6 +197,83 @@ def test_unknown_fields_are_ignored() -> None:
     data = process(changed(2026, add_fields), settings(2026))
     assert data.skipped == ()
     assert len(data.sessions) == len(processed(2026).sessions)
+
+
+def first_talk(doc: dict[str, Any]) -> dict[str, Any]:
+    return next(slot for slot in doc["schedule"] if slot["kind"] == "talk")
+
+
+TALK_ID = str(first_talk(document(2026))["conf_key"])
+
+
+@pytest.mark.parametrize(
+    ("field", "read"),
+    [
+        ("description", lambda data: data.sessions[TALK_ID].description),
+        ("name", lambda data: data.sessions[TALK_ID].name),
+        ("authors", lambda data: data.sessions[TALK_ID].speaker_names[0]),
+        ("id", lambda data: data.sprints[0].id),
+    ],
+)
+def test_a_lone_surrogate_becomes_a_replacement_character(
+    field: str, read: Callable[[ConferenceData], str]
+) -> None:
+    """#150: JSON can escape a lone surrogate, which Flet's strict UTF-8 cannot send."""
+
+    def add_surrogate(doc: dict[str, Any]) -> None:
+        value = "Lone \ud800 here"
+        if field == "authors":
+            first_talk(doc)["authors"][0] = value
+        elif field == "id":
+            doc["sprints"][0]["id"] = value
+        else:
+            first_talk(doc)[field] = value
+
+    raw = changed(2026, add_surrogate)
+    assert b'"Lone \\ud800 here"' in raw  # the escape json.loads keeps as a code point
+    data = process(raw, settings(2026))
+    assert data.skipped == ()
+    assert read(data) == "Lone \ufffd here"
+
+
+def test_emoji_and_other_non_ascii_text_are_unchanged() -> None:
+    """#150: an emoji is a pair of surrogate escapes in JSON, decoded as one character."""
+    name = "Snakes \U0001f40d, caf\u00e9 and \U00020000"
+
+    def rename(doc: dict[str, Any]) -> None:
+        first_talk(doc)["name"] = name
+
+    raw = changed(2026, rename)
+    assert b"\\ud83d\\udc0d" in raw
+    assert process(raw, settings(2026)).sessions[TALK_ID].name == name
+
+
+def test_an_emoji_sent_as_cesu_8_bytes_is_kept() -> None:
+    """json.loads decodes bytes with surrogatepass, so a CESU-8 pair is two code points."""
+
+    def rename(doc: dict[str, Any]) -> None:
+        first_talk(doc)["name"] = "Snakes CESU"
+
+    raw = changed(2026, rename).replace(b"CESU", b"\xed\xa0\xbd\xed\xb0\x8d")
+    assert process(raw, settings(2026)).sessions[TALK_ID].name == "Snakes \U0001f40d"
+
+
+def test_a_lone_surrogate_in_a_content_block_becomes_a_replacement_character() -> None:
+    """#152: the ``conference.content`` blocks bypass the record decoders."""
+
+    def add_surrogates(doc: dict[str, Any]) -> None:
+        content = doc["conference"]["content"]
+        content["venues-hours"] = "Lone \ud800 here"
+        content["lone-\ud800"] = "Snakes \U0001f40d"
+
+    raw = changed(2026, add_surrogates)
+    assert b'"Lone \\ud800 here"' in raw
+    data = process(raw, settings(2026))
+    assert data.skipped == ()
+    assert data.content["venues-hours"] == "Lone \ufffd here"
+    assert "Lone \ufffd here" in data.content_md["venues-hours"]
+    assert data.content["lone-\ufffd"] == "Snakes \U0001f40d"
+    assert "Snakes \U0001f40d" in data.content_md["lone-\ufffd"]
 
 
 def break_start(doc: dict[str, Any]) -> None:

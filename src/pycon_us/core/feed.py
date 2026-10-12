@@ -283,7 +283,8 @@ def _content(
 ) -> dict[str, str]:
     """Return the ``conference.content`` HTML blocks by key; both levels are optional.
 
-    A block that is not a string is skipped, like any other unreadable record.
+    A block that is not a string is skipped, like any other unreadable record. Keys and
+    blocks bypass the record decoders, so their lone surrogates are replaced here (#152).
     """
     conference = document.get("conference", {})
     if not isinstance(conference, dict):
@@ -294,7 +295,7 @@ def _content(
     blocks: dict[str, str] = {}
     for key, value in content.items():
         if isinstance(value, str):
-            blocks[key] = value
+            blocks[records.without_surrogates(key)] = records.without_surrogates(value)
         else:
             skip(f"conference.content[{key!r}]", f"should be a string, got {value!r}")
     return blocks

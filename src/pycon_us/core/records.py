@@ -2,9 +2,9 @@
 
 Each decoder takes one JSON value and returns its record, or raises ``TypeError`` or
 ``ValueError`` naming the field and the problem; ``feed.process()`` then skips that record.
-Ids become strings and times aware datetimes in the conference zone. Unknown fields are
-ignored. ``Slot`` and ``OpenSpace`` are the feed as it is, before Ionic's rules
-(``core/rules.py``) make sessions of them.
+Ids become strings and times aware datetimes in the conference zone, and a lone surrogate
+in a string becomes U+FFFD (#150). Unknown fields are ignored. ``Slot`` and ``OpenSpace``
+are the feed as it is, before Ionic's rules (``core/rules.py``) make sessions of them.
 """
 
 import logging
@@ -206,6 +206,26 @@ def job_listing(item: object) -> JobListing:
     )
 
 
+def without_surrogates(value: str) -> str:
+    r"""Return ``value`` with each lone surrogate replaced by U+FFFD; the rest is kept.
+
+    JSON can escape a lone surrogate (``"\ud800"``) and ``json.loads`` keeps it as a code
+    point, but strict UTF-8 cannot encode one, and Flet sends every string to Flutter as
+    strict UTF-8 (msgpack), so one would fail there (#150). An escaped pair is already one
+    supplementary character (an emoji) after ``json.loads``, but a pair that arrives as
+    CESU-8 bytes stays two code points, because ``json.loads`` decodes bytes with
+    ``surrogatepass``. The UTF-16 round trip joins such a pair into its character and
+    replaces each lone surrogate with one U+FFFD. UTF-8's ``errors="replace"`` is not
+    used: it would turn them into ``?``.
+
+    The record decoders apply it to every string they return, and ``feed.process()`` to
+    the ``conference.content`` blocks.
+    """
+    if value.isascii():  # most feed strings: no surrogate, and ten times faster
+        return value
+    return value.encode("utf-16-le", "surrogatepass").decode("utf-16-le", "replace")
+
+
 def _object(item: object) -> Mapping[str, object]:
     if not isinstance(item, dict):
         raise TypeError(f"expected an object, got {item!r}")
@@ -219,7 +239,7 @@ def _text(record: Mapping[str, object], key: str, *, optional: bool = False) -> 
         return ""
     if not isinstance(value, str):
         raise TypeError(f"{key!r} should be a string, got {value!r}")
-    return value
+    return without_surrogates(value)
 
 
 def _id(record: Mapping[str, object], key: str) -> str:
@@ -227,7 +247,7 @@ def _id(record: Mapping[str, object], key: str) -> str:
     value = record.get(key)
     if isinstance(value, bool) or not isinstance(value, int | str) or value == "":
         raise ValueError(f"{key!r} should be an id, got {value!r}")
-    return str(value)
+    return str(value) if isinstance(value, int) else without_surrogates(value)
 
 
 def _list(record: Mapping[str, object], key: str) -> list[object]:
@@ -245,7 +265,7 @@ def _strings(record: Mapping[str, object], key: str) -> tuple[str, ...]:
     values = _list(record, key)
     if not all(isinstance(value, str) for value in values):
         raise TypeError(f"{key!r} should be a list of strings, got {values!r}")
-    return tuple(str(value) for value in values)
+    return tuple(without_surrogates(str(value)) for value in values)
 
 
 def _schedule_time(
