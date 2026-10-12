@@ -45,13 +45,14 @@ ft.NavigationBar(
         ),
         # ... the other four, in the order above
     ],
-    selected_index=root_index(location),  # every route maps to exactly one root
+    selected_index=TAB_ROOTS.index(root),  # the bar is on roots only (D-144)
     label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
-    on_change=go_to_root,
+    on_change=switch_tab,  # another tab: its root; the active one: the root's re-tap
 )
 ```
 
 - Identical for every user; never changes with sign-in or role (SHELL-05). Never `adaptive=True`. The M3 indicator pill replaces Ionic's magenta label (4.18:1).
+- Each destination's label is its accessible name; its node also carries the identifier `app.nav.<tab>` (`app.nav.now` … `app.nav.my_schedule`, decisions §M) for UI tests (D-166).
 - The bar shows on tab roots only (D-144, #149); pushed Views show the back arrow and no bar. S4 found that a bar on pushed Views slid across with the page on iOS and doubled during Android transitions and predictive Back.
 - The My schedule star is the favourite star, so tab and action read as one idea. Speakers live in More and search.
 
@@ -95,7 +96,7 @@ Drill under every root, More page and search (one pushed View per hop):
 
 1. **Detail chains are a real stack.** Every cross-link pushes one View via the drill route, so session → speaker → session → room pops one hop at a time (SESS-12). The View below stays mounted and keeps its scroll.
 2. **Tab switch** shows that tab's root. Root state lives outside screen state (D-18): filters in `Prefs`; the Schedule day and offset, the My schedule offset, and the Map sub-tab and zoom in `ViewMemory` (architecture §6.3). Offsets come back with `ListView.scroll_to(offset=...)`.
-3. **Re-tapping the active destination** scrolls its root to the top. The bar is on roots only (D-144, settled in #149 after S4), so from a pushed View, Back leads to the root.
+3. **Re-tapping the active destination** scrolls its root to the top: 300 ms, a jump under reduced motion (D-34, D-166). The bar is on roots only (D-144, settled in #149 after S4), so from a pushed View, Back leads to the root.
 4. **Android Back** on a root other than Now goes to Now; on Now it exits (`View.can_pop=False` + `on_confirm_pop`, D-142) (SHELL-16).
 5. **Transitions:** `ft.PageTransitionsTheme(android=ft.PageTransitionTheme.PREDICTIVE, ios=ft.PageTransitionTheme.CUPERTINO)` keeps iOS edge-swipe and Android predictive Back (D-148, settling O-2). Tab switches do not animate: root Views share one `View.route` key, `"/"`, a case the Router's pop handler explicitly supports (`components/router.py`) (D-142; with a key per root, S4 saw a tab switch slide in like a detail).
 6. **Insets (#311, D-12).** System bars are never hidden. Bodies sit in `ft.SafeArea`; lists pad their end by `page.media.padding.bottom` plus FAB clearance; sheets use `use_safe_area=True`. Checked with 3-button and gesture navigation and on an iPhone with a home indicator.

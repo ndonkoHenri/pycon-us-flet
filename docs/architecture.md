@@ -65,7 +65,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
-| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `rows.py` (`SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
+| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
@@ -291,8 +291,9 @@ One `Search` component on the global modal route `/search`, opened from Now, Sch
 
 ```python
 # src/pycon_us/ui/scaffold.py (excerpt; D-165)
-def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | None = None) -> ft.View:
-    """A screen's View: the app bar, the Back rules and the body (D-10, D-17).
+def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | None = None,
+                on_retap: Retap | None = None) -> ft.View:
+    """A screen's View: the app bar, the bottom bar on roots, the Back rules and the body (D-10, D-17, D-144).
 
     A plain builder that each screen calls unconditionally, so its hooks are safe (rule 4).
     """
@@ -313,6 +314,14 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         page.navigate("/now")
         await e.control.confirm_pop(False)
 
+    @report_errors
+    async def switch_tab(e: ft.Event[ft.NavigationBar]):                # a re-tap fires it too (S4)
+        root = TAB_ROOTS[e.control.selected_index]
+        if root != view_path:
+            page.navigate(root)                                        # one shared root key: a swap, not a push
+        elif on_retap is not None:
+            await on_retap()                                           # e.g. use_scroll_to_top()'s action
+
     return ft.View(
         route="/" if is_root else view_path,                       # roots share a key: no transition (D-142)
         padding=0,
@@ -321,7 +330,7 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
             leading=None if is_root else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
             actions=actions or [],
         ),
-        # navigation_bar: #75, tab roots only (D-144), with TABS and on_retap (S4)
+        navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,  # roots only (D-144)
         can_pop=not back_to_now,
         on_confirm_pop=leave_for_now if back_to_now else None,
         controls=[ft.SafeArea(expand=True, content=Shown(body))],
@@ -360,16 +369,16 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
 - A **tab switch** leaves that root alone on the stack (D-17); roots restore day, filters and scroll from `ViewMemory`/`Prefs` and never scroll by themselves (D-18, #313). **Back** on a root other than Now goes to Now; on Now it exits (Android).
 - **The bar is on tab roots only** (D-144, #149): on pushed Views it travelled with the page (iOS) or doubled (Android) in every transition. Re-tapping the active tab scrolls its root to the top; from a pushed View, Back leads to the root. U23 (a shell bar outside the `Navigator`) would let it return to every View.
 - **Back arrow (D-10):** Flutter's implied back button shows `arrow_back_ios_new_rounded` on iOS (Flet's theme has no `platform`, F8), so pushed views always show the Material back arrow, which navigates to `parent_of(view_path, memory.search_base)` (D-19), so Search's arrow returns to its opener with no parameter (D-165). S4 showed the Material arrow and a left-aligned title on the iOS simulator.
-- **The bottom bar (#75):** a `NavigationBar(selected_index=tab, label_behavior=ALWAYS_SHOW, destinations=..., on_change=on_tab)` on tab roots only (D-144). A re-tap of the active tab fires `on_change` too (S4), and the scaffold hands it to the screen's `on_retap` (e.g. `await list.scroll_to(offset=0)`); any other tab navigates to its root. The destinations:
+- **The bottom bar (#75, D-166):** `ui/navigation.py`'s `navigation_bar(root, on_change)` is a `NavigationBar(selected_index=TAB_ROOTS.index(root), label_behavior=ALWAYS_SHOW, destinations=..., on_change=...)`, never adaptive, on tab roots only (D-144). A re-tap of the active tab fires `on_change` too (S4), and the scaffold hands it to the screen's `on_retap`; any other tab navigates to its root. A root gets its action from `use_scroll_to_top()`: a ref for its list and an action that awaits `scroll_to(offset=0, duration=300)` (0 under reduced motion, D-34). A `NavigationBarDestination` has no `Semantics` of its own, so each icon is wrapped in an unlabelled `Semantics(identifier="app.nav.<tab>")`, which Flutter merges into the destination's node (D-166). The destinations, in `TAB_ROOTS`' order:
 
   ```python
   TABS = (
-      ("/now", "Now", ft.Icons.SENSORS_OUTLINED, ft.Icons.SENSORS),
-      ("/schedule", "Schedule", ft.Icons.CALENDAR_MONTH_OUTLINED, ft.Icons.CALENDAR_MONTH),
-      ("/my-schedule", "My schedule", ft.Icons.STAR_BORDER, ft.Icons.STAR),
-      ("/map", "Map", ft.Icons.MAP_OUTLINED, ft.Icons.MAP),
-      ("/more", "More", ft.Icons.MORE_HORIZ, ft.Icons.MORE_HORIZ),
-  )
+      Tab("/now", "Now", ft.Icons.SENSORS_OUTLINED, ft.Icons.SENSORS),
+      Tab("/schedule", "Schedule", ft.Icons.CALENDAR_MONTH_OUTLINED, ft.Icons.CALENDAR_MONTH),
+      Tab("/my-schedule", "My schedule", ft.Icons.STAR_BORDER, ft.Icons.STAR),
+      Tab("/map", "Map", ft.Icons.MAP_OUTLINED, ft.Icons.MAP),
+      Tab("/more", "More", ft.Icons.MORE_HORIZ, ft.Icons.MORE_HORIZ),
+  )  # Tab.identifier: "app.nav." + the root, "-" as "_" (app.nav.my_schedule)
   ```
 - **Status strip (D-32, D-165):** `StatusStrip()` is a component the screens that show the feed's state put first in their body (Now, Schedule, My schedule); hidden when fresh, otherwise an icon, `strip_line()`'s text and Refresh, one live region (`app.status`). `SectionHeader(text)` heads a group of rows.
 - **Tablets (P2, D-09):** at 600 dp and wider, `AppScaffold` puts an `ft.NavigationRail` in a `Row` beside the content (`View.navigation_bar` takes a `NavigationBar`, or a `CupertinoNavigationBar`, which D-10 rules out, but not a `NavigationRail`) and centres content at 720/840 dp.
