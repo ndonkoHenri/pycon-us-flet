@@ -23,7 +23,7 @@ from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import FakePage, MemoryHaptics, MemoryPrefs, MemorySemantics, bound
 
 
 @pytest.fixture
@@ -41,6 +41,7 @@ def svc(tmp_path: Path) -> Services:
         storage=storage,
         memory=ViewMemory(),
         semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
     )
 
 

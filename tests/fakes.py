@@ -75,6 +75,24 @@ class MemorySemantics(ft.SemanticsService):
         return dict(self.features)
 
 
+class MemoryHaptics(ft.HapticFeedback):
+    """HapticFeedback that records the effects asked for instead of reaching a device."""
+
+    def init(self) -> None:
+        self.effects: list[str] = []
+        self.error: Exception | None = None
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        if self.error is not None:
+            raise self.error
+        self.effects.append(method_name)
+
+
 class FakePage:
     """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
 

@@ -43,7 +43,7 @@ from pycon_us.ui.scaffold import (
     search_button,
     strip_line,
 )
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import FakePage, MemoryHaptics, MemoryPrefs, MemorySemantics, bound
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
@@ -57,7 +57,11 @@ def year() -> YearData:
 def svc(year: YearData, tmp_path: Path) -> Services:
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
-        year=year, storage=storage, memory=ViewMemory(), semantics=MemorySemantics()
+        year=year,
+        storage=storage,
+        memory=ViewMemory(),
+        semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
     )
 
 

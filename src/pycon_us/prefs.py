@@ -72,6 +72,9 @@ class Prefs:
         reduce_motion: The OS asks for less motion (D-34): iOS Reduce Motion or
             Android's Remove animations. Not persisted, read at start and on resume;
             ask through ``motion_ms()``.
+        screen_reader: A screen reader is on (TalkBack, VoiceOver; Flutter's
+            ``accessible_navigation``). Not persisted, read at start and on resume;
+            an Undo SnackBar then stays until it is used or replaced (D-176).
         loaded: The stored values have been read; it opens the boot gate.
     """
 
@@ -84,6 +87,7 @@ class Prefs:
     os_dark: bool = False
     os_high_contrast: bool = False
     reduce_motion: bool = False
+    screen_reader: bool = False
     loaded: bool = False
 
     @property

@@ -2,8 +2,8 @@
 
 Until P1's day tabs (SCHED-01..04), it shows the status strip, where the feed came from
 and when, a Refresh button, every conference day with its session count, and a few
-sessions to open, so "bundled first, a refresh replaces it" is visible on a phone
-(DATA-35, D-38).
+sessions as ``SessionRow``s with their stars, so "bundled first, a refresh replaces it"
+is visible on a phone (DATA-35, D-38) and the star works from a tab root.
 """
 
 from collections.abc import Iterator
@@ -15,12 +15,15 @@ import flet as ft
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_label, local_date, time_label
-from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_body
+from pycon_us.favorites import use_favorites
+from pycon_us.screens.stub import note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference, use_conference
+from pycon_us.theme import use_tokens
+from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import use_scroll_to_top
+from pycon_us.ui.rows import SessionRow, use_session_views
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
 SOURCE_LABELS = {
@@ -31,7 +34,10 @@ SOURCE_LABELS = {
 }
 
 SAMPLE_SIZE = 5
-"""How many sessions with speakers the stub links to, for the drill."""
+"""How many sessions with speakers the stub shows, for the drill and the star."""
+
+SCREEN = "schedule"
+"""The screen's name in its rows' semantics identifiers (decisions §M)."""
 
 
 @ft.component
@@ -39,9 +45,11 @@ def Schedule() -> ft.View:
     """The Schedule root: the data's status, source and age, its days and a few sessions."""
     list_ref, scroll_to_top = use_scroll_to_top()
     page = ft.context.page
-    view_path = ft.use_view_path()
     svc = use_services()
     conference = use_conference()
+    favorites = use_favorites()
+    on_toggle = use_favorite_toggle(favorites)
+    tokens = use_tokens()
 
     @report_errors
     async def refresh() -> None:
@@ -51,6 +59,8 @@ def Schedule() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     counts = _session_counts(data)
+    samples = [s.id for s in islice(_with_speakers(data), SAMPLE_SIZE)]
+    views = use_session_views(conference, samples, use_24h=use_24h)
     return AppScaffold(
         title="Schedule",
         actions=[search_button(svc.memory, "sessions")],
@@ -81,12 +91,14 @@ def Schedule() -> ft.View:
                 ),
                 SectionHeader("Sessions with speakers"),
                 *(
-                    nav_tile(
-                        session.name,
-                        drill_href(view_path, "session", session.id),
-                        subtitle=", ".join(session.speaker_names),
+                    SessionRow(
+                        view,
+                        view.session.id in favorites.ids,
+                        on_toggle,
+                        tokens,
+                        screen=SCREEN,
                     )
-                    for session in islice(_with_speakers(data), SAMPLE_SIZE)
+                    for view in views
                 ),
             ],
             status=True,
