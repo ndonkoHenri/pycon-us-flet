@@ -88,9 +88,8 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
     speakers: dict[str, Speaker] = {}
     for _, its_speakers in (*slots, *posters):
         for speaker in its_speakers:
-            speakers.setdefault(
-                speaker.id, speaker
-            )  # the first record wins, as in Ionic
+            # The first record of an id wins, as in Ionic.
+            speakers.setdefault(speaker.id, speaker)
     sessions = {session.id: session for session, _ in slots}
 
     return ConferenceData(
