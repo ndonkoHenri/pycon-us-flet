@@ -217,36 +217,59 @@ def test_an_error_with_no_page_to_show_it_on_is_still_logged(
 # ------------------------------------------------------------------ setup_logging
 
 
+def ours(root: logging.Logger) -> list[logging.Handler]:
+    return [h for h in root.handlers if h.get_name() == HANDLER_NAME]
+
+
 @pytest.fixture
 def clean_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[logging.Logger]:
-    """Undo what setup_logging() does to the process-wide loggers after the test."""
+    """Start from loggers setup_logging() has not touched, and restore them afterwards.
+
+    The loggers are process-wide, so a test that ran setup_logging() earlier, or an
+    import of ``main``, would otherwise decide what these tests see.
+    """
     monkeypatch.delenv("FLET_LOG_LEVEL", raising=False)
     root = logging.getLogger()
-    level, handlers = root.level, list(root.handlers)
+    level, earlier = root.level, ours(root)
     quiet = {name: logging.getLogger(name).level for name in QUIET_LOGGERS}
+    for handler in earlier:
+        root.removeHandler(handler)
+    for name in QUIET_LOGGERS:
+        logging.getLogger(name).setLevel(logging.NOTSET)
     yield root
-    for handler in root.handlers:
-        if handler not in handlers:
-            root.removeHandler(handler)
+    # Only our handler: pytest adds and removes its own capture handlers per phase.
+    for handler in ours(root):
+        root.removeHandler(handler)
+    for handler in earlier:
+        root.addHandler(handler)
     root.setLevel(level)
     for name, old in quiet.items():
         logging.getLogger(name).setLevel(old)
-
-
-def ours(root: logging.Logger) -> list[logging.Handler]:
-    return [h for h in root.handlers if h.get_name() == HANDLER_NAME]
 
 
 def test_setup_logging_adds_one_stderr_handler_at_info(
     clean_logging: logging.Logger,
 ) -> None:
     setup_logging()
-    setup_logging()  # a second call changes nothing
+    setup_logging()  # a second call adds no handler
 
     (handler,) = ours(clean_logging)
     assert isinstance(handler, logging.StreamHandler)
     assert handler.stream is sys.stderr
     assert clean_logging.level == logging.INFO
+
+
+def test_a_second_setup_logging_call_keeps_the_levels_set_since(
+    clean_logging: logging.Logger,
+) -> None:
+    setup_logging()
+    clean_logging.setLevel(logging.DEBUG)
+    logging.getLogger("httpx").setLevel(logging.INFO)
+
+    setup_logging()
+
+    assert clean_logging.level == logging.DEBUG
+    assert logging.getLogger("httpx").level == logging.INFO
 
 
 def test_log_lines_carry_the_time_level_logger_and_message(

@@ -54,7 +54,9 @@ def report_errors(fn: Callable[..., Any]) -> Callable[..., Any]:
     The wrapper logs the exception with its traceback and the wrapped function's name,
     shows a floating "Something went wrong" SnackBar (with the exception when not
     embedded, D-73) and returns None; the session goes on. ``CancelledError`` and other
-    ``BaseException``s propagate, so cancelling an effect still cancels it.
+    ``BaseException``s propagate, so cancelling an effect still cancels it. The log
+    holds the exception's message verbatim, so code that can raise must keep URLs,
+    tokens and badge codes out of its messages (D-72).
 
     A coroutine function gets an ``async def`` wrapper and anything else a plain one,
     both made with ``functools.wraps``: Flet checks ``inspect.iscoroutinefunction``
@@ -119,15 +121,17 @@ def setup_logging() -> None:
     (``flet run -vv`` sets ``debug``; Flet's own handling of it does nothing once a
     handler exists). ``QUIET_LOGGERS`` stay at WARNING. A packaged app replaces
     ``sys.stderr`` with a tee to the platform log and ``console.log`` before the app is
-    imported (F14), so the handler writes to both. Calling it again changes nothing.
+    imported (F14), so the handler writes to both. Once the handler is there, a second
+    call returns at once: it neither adds a handler nor resets a level set since.
     """
     root = logging.getLogger()
+    if any(handler.get_name() == HANDLER_NAME for handler in root.handlers):
+        return
+    handler = logging.StreamHandler()  # sys.stderr as it is now: the tee
+    handler.set_name(HANDLER_NAME)
+    handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
+    root.addHandler(handler)
     level = logging.getLevelName(os.getenv("FLET_LOG_LEVEL", "info").strip().upper())
     root.setLevel(level if isinstance(level, int) else logging.INFO)
-    if not any(handler.get_name() == HANDLER_NAME for handler in root.handlers):
-        handler = logging.StreamHandler()  # sys.stderr as it is now: the tee
-        handler.set_name(HANDLER_NAME)
-        handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
-        root.addHandler(handler)
     for name in QUIET_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)

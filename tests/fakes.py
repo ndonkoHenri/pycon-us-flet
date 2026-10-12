@@ -5,6 +5,9 @@ from contextlib import contextmanager
 from typing import Any, cast
 
 import flet as ft
+
+# Private: Flet has no public way to bind a page (its own pytest plugin sets this too).
+# Checked against the .flet-ref pin 15854a0ac; switch when #160's binding lands.
 from flet.controls.context import _context_page
 
 
