@@ -143,16 +143,16 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 
 **Invariants** (`tests/test_feed_invariants.py`, built in P0-13). One test per invariant, each run on every fixture year under both machine zones (and later by `tools/check_feed.py` on the live feed):
 
-1. No session lost: every raw slot is its own session or listed in `ConferenceData.dropped` under exactly one named rule (D-123); every collapsed slot lies within a row of its kind on its day; every open space is a session or unscheduled; every poster has its detail session.
+1. No session lost: every raw slot is its own session or listed in `ConferenceData.dropped` under exactly one named rule (D-123); every collapsed slot lies within a row of its kind on its day; every open space is a session or unscheduled, judged from its raw times and room; every raw poster, top-level or nested (D-121), has its detail session.
 2. Ids are unique strings in Ionic's four forms, and processing the same bytes twice gives the same outline.
 3. Every session lies in exactly one conference-local day within the conference dates, and timeline sessions are in exactly one time group.
 4. All datetimes are aware, in the year's zone; `start <= end`.
 5. Every time group has a start; groups are sorted; within a group, rows are ordered by location, then name (D-31).
-6. No dropped category survives (free or duplicate open spaces, placeholders, the Posters plenary, blanks); posters and breaks remain, as collapsed rows and poster details only.
+6. No raw slot of a dropped category (free or duplicate open spaces, placeholders, the Posters plenary, blanks) or of a collapsed kind is a session of its own; each day with poster slots has exactly one Posters row.
 7. Exactly one Lunch row per conference day that has lunch.
-8. Only sessions a display-time override matches show another start, shifted by its minutes; they stay in their start's group (the Job Fair, DATA-11).
+8. Every session shows its start shifted by the first display-time override its title matches, or unshifted; grouping keeps the start (the Job Fair, DATA-11).
 9. Every speaker a session links is in the directory and named in it, and every directory speaker has a session; no pseudo-speaker is in the directory.
-10. One room per slug, naturally sorted, listing exactly the sessions that name it.
+10. One room per slug, naturally sorted, listing exactly the sessions that name it, by start, then name.
 
 Processing is pure by construction: `process()` takes bytes and returns new frozen values.
 
