@@ -329,7 +329,16 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     # The bar's slot keeps its height when the bar hides, so the strip and the list
     # under it do not move by 2 dp when a refresh starts or ends.
     progress_slot = ft.Container(progress, height=PROGRESS_HEIGHT)
-    row = ft.Row([icon, text, button], spacing=12)
+    # The icon tops its line, so when the line wraps (large text) the icon stays beside
+    # the first line rather than the middle of the block; the pair stays centred
+    # against the 48 dp button, so a single line still sits mid-strip.
+    line_row = ft.Row(
+        [icon, text],
+        spacing=12,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+        expand=True,
+    )
+    row = ft.Row([line_row, button], spacing=12)
     return ft.Semantics(
         identifier="app.status",
         container=True,

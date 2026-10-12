@@ -509,7 +509,13 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
     assert isinstance(padded.content, ft.Row)
     # Room around a line that wraps at 200 % text (ux.md §3.9).
     assert padded.padding == ft.Padding.only(left=16, top=4, right=8, bottom=4)
-    _, text, button = padded.content.controls
+    line_row, button = padded.content.controls
+    assert isinstance(line_row, ft.Row)
+    # The icon tops the line, so a line that wraps keeps it beside its first line.
+    assert line_row.vertical_alignment == ft.CrossAxisAlignment.START
+    assert padded.content.vertical_alignment == ft.CrossAxisAlignment.CENTER
+    icon, text = line_row.controls
+    assert isinstance(icon, ft.Icon)
     assert isinstance(text, ft.Text)
     assert isinstance(button, ft.TextButton)
     assert isinstance(progress, ft.ProgressBar)
