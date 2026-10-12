@@ -509,7 +509,7 @@ Each is a PR to flet-dev/flet with a CHANGELOG entry, docs and integration tests
 | Field | Value |
 |---|---|
 | Serves | DATA-03, SCHED-13, EVT-07, SPON-08 |
-| Interim | The `StatusStrip` (D-32) shows Refresh while data is stale, offline or refreshing. Settings › Data and the Developer screen have "Refresh now". All call `Conference.start_refresh(svc)` (architecture §6.2), which keeps the cache on failure (D-39). Automatic refresh runs on start, on resume when the data is older than 15 min, and every 15 min while Now or Schedule is visible (D-40). |
+| Interim | The `StatusStrip` (D-32) shows Refresh while data is stale, offline or refreshing. Settings › Data and the Developer screen have "Refresh now". All call `Conference.start_refresh(svc.storage, svc.year)` (architecture §6.2, D-145), which keeps the cache on failure (D-39). Automatic refresh runs on start, on resume when the data is older than 15 min, and every 15 min while Now or Schedule is visible (D-40). |
 | Today | Absent (F8). |
 | Dart | Flutter's `RefreshIndicator` from `material_ui`; no new dependency. |
 

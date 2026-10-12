@@ -25,7 +25,7 @@
  data/<year>/  conference.toml · content.toml · map.toml · conference.json (snapshot)
 ```
 
-**Dependencies point down only.** `core/` imports the standard library and nothing else (a unit test scans its imports, D-68). `services/` may use `core/` and Flet services. Store methods take `svc: Services` explicitly. Screens never import an extension; only the one capability module per gap does (§13).
+**Dependencies point down only.** `core/` imports the standard library and nothing else (a unit test scans its imports, D-68). `services/` may use `core/` and Flet services. Store methods take the services they use explicitly (`Conference`: `storage` and `year`, D-145). Screens never import an extension; only the one capability module per gap does (§13).
 
 **Data flow.** The app renders the cached feed (else the bundled snapshot) before the first frame; a single-flight background refresh replaces the cache only after a good parse. Screens are pure queries over frozen models, memoised on `Conference.version`. User state lives in small observable stores. Private-API features (P3) talk only to the local mock.
 
@@ -122,16 +122,18 @@ async def bootstrap(svc: Services, conference: Conference, prefs: Prefs, favorit
     clock.start_fake_clock(prefs.dev.fake_now)
     apply_theme(page, prefs)
     await favorites.load(svc)                 # 2. user state
-    await conference.load_local(svc)          # 3. cache or bundled snapshot, before the first frame
+    await conference.load_local(svc.storage, svc.year)   # 3. cache or bundled snapshot, before the first frame
     prefs.loaded = True                       # 4. opens the boot gate
-    conference.start_refresh(svc)             # 5. background, single flight, not awaited
+    conference.start_refresh(svc.storage, svc.year)      # 5. background, single flight, not awaited
 
     @report_errors
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
         conference.set_foreground(e.state == ft.AppLifecycleState.RESUME)
         if e.state == ft.AppLifecycleState.RESUME:
             await read_accessibility(svc, prefs)              # OS flags are a snapshot (F13)
-            conference.start_refresh(svc, max_age=15 * 60)
+            age = conference.age()
+            if age is None or age > timedelta(minutes=15):        # D-40; #82 owns the triggers
+                conference.start_refresh(svc.storage, svc.year)
 
     def on_brightness(e: ft.PlatformBrightnessChangeEvent):
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
@@ -353,7 +355,7 @@ All are `@ft.observable @dataclass` in `state.py`. Fields starting with `_` neve
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
-| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at`; `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_foreground` | `load_local`, `start_refresh`, `age`, `set_foreground` | P0 |
+| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_foreground` (P1, #82) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `set_foreground` (P1, #82) | P0 |
 | `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks`, `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`; `loaded` | `load`, `save(svc, **changes)`; properties `high_contrast_on`, `dark` | P0 |
 | `Favorites` | `ids: list[str]` (a list, because it is persisted as `list[str]`, F12) | `load`, `toggle`, `add_many`, `remove_many` (each returns what Undo needs) | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
@@ -366,65 +368,76 @@ Year data is a frozen value in `Services.year`, and capabilities are constants: 
 ```python
 # src/pycon_us/state.py (excerpt)
 @ft.observable
-@dataclass
+@dataclass(eq=False)                      # a store compares by identity
 class Conference:
-    """This year's processed feed, where it came from and how fresh it is (D-38..D-40)."""
+    """This year's processed feed, where it came from and how fresh it is (D-38, D-39)."""
 
     data: ConferenceData | None = None
     source: Literal["none", "bundled", "cache", "network"] = "none"
-    fetched_at: float | None = None
+    fetched_at: datetime | None = None    # aware (D-145)
     refreshing: bool = False
     problem: Literal["offline", "server"] | None = None
     version: int = 0
-    _task: asyncio.Task | None = field(default=None, repr=False)
-    _foreground: bool = True
+    _task: asyncio.Task[None] | None = field(default=None, repr=False)
 
-    async def load_local(self, svc: Services) -> None:
+    async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the persistent cache, or the bundled snapshot when there is no usable cache."""
-        cached = await svc.storage.read_feed()
+        cached = await storage.read_feed()
         if cached is not None:
             try:
-                self._publish(feed.process(cached.raw, svc.year.feed_settings), "cache", cached.saved_at)
-                return
+                data = feed.process(cached.raw, year.feed_settings)
             except feed.FeedError as error:
-                await svc.storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
-        snapshot = svc.year.read_snapshot()                  # bundled with the app (D-135)
-        self._publish(feed.process(snapshot.raw, svc.year.feed_settings), "bundled", snapshot.captured_at.timestamp())
+                await storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
+            else:
+                self._publish(data, "cache", datetime.fromtimestamp(cached.saved_at, UTC))
+                return
+        snapshot = year.read_snapshot()                      # bundled with the app (D-135)
+        self._publish(feed.process(snapshot.raw, year.feed_settings), "bundled", snapshot.captured_at)
 
-    def start_refresh(self, svc: Services, max_age: float = 0.0) -> None:
-        """Start one background refresh, unless one runs or network data is fresher than max_age seconds."""
-        if self._task is not None and not self._task.done():
-            return
-        if self.source == "network" and self.age() < max_age:
-            return
-        self._task = asyncio.create_task(self._refresh(svc))
+    def start_refresh(self, storage: Storage, year: YearData, *, transport=None) -> asyncio.Task[None]:
+        """Start a background refresh unless one is in flight; return the one that runs (D-145)."""
+        if self._task is None or self._task.done():
+            self._task = asyncio.create_task(self._refresh(storage, year, transport))
+        return self._task
 
-    @report_errors
-    async def _refresh(self, svc: Services) -> None:
+    async def refresh(self, storage: Storage, year: YearData, *, transport=None) -> None:
+        """Refresh and wait; concurrent callers share one request, and one caller's cancellation spares it."""
+        await asyncio.shield(self.start_refresh(storage, year, transport=transport))
+
+    async def _refresh(self, storage: Storage, year: YearData, transport) -> None:
         self.refreshing = True
         try:
-            raw = await fetch_feed(svc.year.conference.feed_url)
-            data = feed.process(raw, svc.year.feed_settings)     # FeedError: nothing is written
-            await svc.storage.write_feed(raw)                     # atomic, after a good parse (D-39)
-            previous, previous_source = self.data, self.source
-            self._publish(data, "network", time.time())
-            if previous is not None and previous_source != "bundled":
-                await self._record_changes(svc, diff(previous, data))      # P2, D-47
-        except NetworkError:
-            self.problem = "offline"
-        except (ApiError, feed.FeedError):
+            raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
+            data = feed.process(raw, year.feed_settings)          # FeedError: nothing is written
+        except api.NetworkError:
+            self.problem = "offline"                              # D-146
+        except (api.ApiError, feed.FeedError):
             logger.warning("Feed refresh failed; keeping the current data", exc_info=True)
             self.problem = "server"
+        else:
+            await storage.write_feed(raw)                          # atomic, after a good parse (D-39)
+            previous, previous_source = self.data, self.source
+            self._publish(data, "network", clock.now())
+            if previous is not None and previous_source != "bundled":
+                await self._record_changes(storage, diff(previous, data))   # P2, D-47
         finally:
             self.refreshing = False
 
-    def _publish(self, data: ConferenceData, source: str, fetched_at: float) -> None:
+    def _publish(self, data: ConferenceData, source: Source, fetched_at: datetime) -> None:
         self.data = data                  # eq=False: always notifies (F5)
         self.source, self.fetched_at, self.problem = source, fetched_at, None
         self.version += 1                 # writes in one block give one re-render
+
+
+ConferenceCtx: ft.ContextProvider[Conference | None] = ft.create_context(None)
+
+
+def use_conference() -> Conference:       # raises RuntimeError without a provider
+    ...
 ```
 
-- `age()` is seconds since `fetched_at`; `set_foreground()` sets `_foreground`, checked by the 60 s tick (D-40). One `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08).
+- `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing`, `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). P1 (#82) adds `set_foreground()` and `_foreground`, checked by the 60 s tick (D-40). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
+- Unexpected exceptions in a refresh that nobody awaits reach asyncio's exception handler (F4), which P0-21's `setup_logging()` logs; expected failures never raise.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)
