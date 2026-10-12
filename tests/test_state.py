@@ -588,7 +588,7 @@ async def test_a_refresh_on_demand_restarts_the_interval(
     assert not conference.refresh_due()
 
 
-async def test_an_automatic_refresh_shares_the_one_in_flight(
+async def test_no_automatic_refresh_is_due_while_one_is_in_flight(
     storage: Storage, year: YearData
 ) -> None:
     conference = await loaded(storage, year)
@@ -596,8 +596,8 @@ async def test_an_automatic_refresh_shares_the_one_in_flight(
     started = conference.start_refresh(storage, year, transport=feed.transport)
     clock.set_test_now(NOW + timedelta(minutes=20))  # a refresh hung for 20 min
 
-    assert conference.refresh_due()
-    assert conference.start_refresh_if_due(storage, year) is started
+    assert not conference.refresh_due()
+    assert conference.start_refresh_if_due(storage, year) is None
     feed.release()
     await started
     assert feed.requests == 1

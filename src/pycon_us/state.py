@@ -151,7 +151,10 @@ class Conference:
         the interval counts from the last attempt, not from the data's age, so a phone
         without a network retries every 15 min rather than on every check. A clock set
         back before the last start (the Developer fake clock) makes it due as well.
+        Never while one is running: that one is the attempt.
         """
+        if self._task is not None and not self._task.done():
+            return False
         if self._started_at is None:
             return True
         since = clock.now() - self._started_at
