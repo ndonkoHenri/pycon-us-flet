@@ -40,7 +40,8 @@ def main(page: ft.Page) -> None:
     ``page.on_view_pop`` is set before ``render_views``, so the Router hands it every pop
     (F6): the Android Back key, a committed predictive or iOS edge swipe. It goes one step
     to ``parent_of()``, also from a View pushed over the global modal ``/search``, which
-    the Router alone would pop to the modal's base (D-141). It goes once U18 lands.
+    the Router alone would pop to the modal's base (D-141). The handler goes once U18
+    lands.
     """
     page.title = APP_NAME
 
