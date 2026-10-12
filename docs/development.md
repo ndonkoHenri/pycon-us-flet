@@ -107,7 +107,7 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
    3.47.7). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
    and the configuration, not on the pin's SHA; the reported version stays `1.0.4` across bumps (§2.2 quirks).
-4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-169): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
+4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
 5. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
 **When 1.1.0 is on PyPI** (one PR):
@@ -454,7 +454,7 @@ Off-season and in demos, the Developer screen (DEV-01, D-73) sets:
 
 Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now, Jump to now and reminders, until the 2027 feed exists (PLAN §7). Environment variables do not reach packaged apps, so there are no build flavours.
 
-### 5.7 UI flows: `flet test` (D-78, D-170)
+### 5.7 UI flows: `flet test` (D-78, D-171)
 
 The flows in `tests/ui/` run on an emulator or a simulator, never in CI (`addopts` keeps them out of `uv run pytest`, D-84). The strategy, the helpers and the list of flows are in [`testing-and-quality.md`](testing-and-quality.md) §5.
 

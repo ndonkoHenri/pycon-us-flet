@@ -52,7 +52,7 @@ def AppScaffold(
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
             page's heading (Flutter marks an app bar title as a header). On a tab
-            root it carries the identifier ``<tab>.title`` for UI flows (D-169).
+            root it carries the identifier ``<tab>.title`` for UI flows (D-170).
         body: What the View shows under the app bar, usually an ``expand=True``
             ``ListView``; it is placed in a ``SafeArea``, clear of the notch, the
             home indicator and the navigation bar in either orientation.
@@ -95,7 +95,7 @@ def AppScaffold(
     back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
     title_control: ft.Control = ft.Text(title)
     if is_root:
-        # The identifier tells UI flows which root shows (D-169). An unlabelled
+        # The identifier tells UI flows which root shows (D-170). An unlabelled
         # Semantics merges it into the title's own node, as the bar's do (D-166).
         tab = TABS[TAB_ROOTS.index(view_path)]
         title_control = ft.Semantics(
