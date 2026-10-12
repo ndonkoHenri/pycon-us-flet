@@ -71,8 +71,8 @@ def More() -> ft.View:
     prefs = use_prefs()
 
     @report_errors
-    async def choose_appearance(e: ft.Event[ft.SegmentedButton]) -> None:
-        theme = cast(Appearance, e.control.selected[0])
+    async def choose_appearance(e: ft.Event[ft.RadioGroup]) -> None:
+        theme = cast(Appearance, e.control.value)
         if not await prefs.save(svc.storage, theme=theme):
             page.show_dialog(
                 ft.SnackBar(
@@ -120,36 +120,47 @@ def link(entry: MoreEntry) -> ft.Control:
 
 
 def appearance(
-    selected: Appearance, on_change: ft.ControlEventHandler[ft.SegmentedButton]
+    selected: Appearance, on_change: ft.ControlEventHandler[ft.RadioGroup]
 ) -> ft.Control:
     """Return the Appearance setting: System, Light or Dark (D-23; Settings in P2).
 
-    Its label lines up with the rows' titles, its icon with theirs.
+    Radio rows, as Settings will have them (ux.md §6.9): the whole row is the target
+    and reads as one control, and the rows reflow at any text size, where three
+    segments in one row clipped "System" at 200 % on a 360 dp wide phone.
 
     Args:
-        selected: ``Prefs.theme``; the control is controlled (D-157).
+        selected: ``Prefs.theme``; the group is controlled (D-157).
         on_change: Saves the choice.
     """
-    label = ft.Row(
-        [
-            ft.Icon(ft.Icons.PALETTE_OUTLINED, color=ft.Colors.ON_SURFACE_VARIANT),
-            ft.Text("Appearance", theme_style=ft.TextThemeStyle.BODY_LARGE),
-        ],
-        spacing=16,
+    label = ft.ListTile(
+        leading=ft.Icon(ft.Icons.PALETTE_OUTLINED),
+        title="Appearance",
     )
-    choice = ft.SegmentedButton(
-        selected=[selected],
-        segments=[
-            ft.Segment(value=value, label=ft.Text(text))
-            for value, text in APPEARANCE_LABELS.items()
-        ],
-        on_change=on_change,
-    )
+    options: list[ft.Control] = [
+        ft.MergeSemantics(
+            content=ft.Semantics(
+                identifier=f"more.appearance.{value}",
+                content=ft.ListTile(
+                    leading=ft.Radio(value=value),
+                    title=text,
+                    toggle_inputs=True,  # a tap anywhere on the row selects it
+                ),
+            )
+        )
+        for value, text in APPEARANCE_LABELS.items()
+    ]
     return ft.Semantics(
         identifier="more.appearance",
         container=True,
-        content=ft.Container(
-            ft.Column([label, choice], spacing=8),
-            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+        content=ft.Column(
+            [
+                label,
+                ft.RadioGroup(
+                    value=selected,
+                    on_change=on_change,
+                    content=ft.Column(options, spacing=0),
+                ),
+            ],
+            spacing=0,
         ),
     )

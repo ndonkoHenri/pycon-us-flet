@@ -202,23 +202,36 @@ def test_more_keeps_the_search_and_the_re_tap_scroll_to_top(
     assert search.tooltip == "Search"
 
 
-def appearance_of(scaffold: dict[str, Any]) -> ft.SegmentedButton:
+def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
     [group] = [
         row
         for row in rows_of(scaffold)
         if isinstance(row, ft.Semantics) and row.identifier == "more.appearance"
     ]
-    assert isinstance(group.content, ft.Container)
-    column = group.content.content
+    column = group.content
     assert isinstance(column, ft.Column)
     choice = column.controls[-1]
-    assert isinstance(choice, ft.SegmentedButton)
+    assert isinstance(choice, ft.RadioGroup)
     return choice
 
 
-async def choose(choice: ft.SegmentedButton, value: str) -> None:
-    """Pick a segment as Flutter reports it: selected first, then ``on_change``."""
-    choice.selected = [value]
+def options_of(choice: ft.RadioGroup) -> list[tuple[str | None, str, ft.ListTile]]:
+    """Each option row as (identifier, its radio's value, its tile)."""
+    column = choice.content
+    assert isinstance(column, ft.Column)
+    options = []
+    for row in column.controls:
+        assert isinstance(row, ft.MergeSemantics)  # one node per option
+        assert isinstance(row.content, ft.Semantics)
+        tile = row.content.content
+        assert isinstance(tile, ft.ListTile) and isinstance(tile.leading, ft.Radio)
+        options.append((row.content.identifier, str(tile.leading.value), tile))
+    return options
+
+
+async def choose(choice: ft.RadioGroup, value: str) -> None:
+    """Pick an option as Flutter reports it: the value first, then ``on_change``."""
+    choice.value = value
     await cast(Any, choice.on_change)(SimpleNamespace(control=choice))
 
 
@@ -227,8 +240,19 @@ def test_appearance_shows_the_stored_choice(
 ) -> None:
     prefs.theme = "dark"
     choice = appearance_of(render())
-    assert choice.selected == ["dark"]  # controlled (D-157)
-    assert [s.value for s in choice.segments] == ["system", "light", "dark"]
+    assert choice.value == "dark"  # controlled (D-157)
+
+
+def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    options = options_of(appearance_of(render()))
+    assert [(ident, value, tile.title) for ident, value, tile in options] == [
+        ("more.appearance.system", "system", "System"),
+        ("more.appearance.light", "light", "Light"),
+        ("more.appearance.dark", "dark", "Dark"),
+    ]
+    assert all(tile.toggle_inputs for _, _, tile in options)
 
 
 async def test_choosing_an_appearance_saves_it(
