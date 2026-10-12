@@ -507,6 +507,8 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
     progress = slot.content
     assert isinstance(padded, ft.Container)
     assert isinstance(padded.content, ft.Row)
+    # Room around a line that wraps at 200 % text (ux.md §3.9).
+    assert padded.padding == ft.Padding.only(left=16, top=4, right=8, bottom=4)
     _, text, button = padded.content.controls
     assert isinstance(text, ft.Text)
     assert isinstance(button, ft.TextButton)

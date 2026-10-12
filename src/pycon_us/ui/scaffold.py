@@ -339,7 +339,12 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             content=ft.Column(
                 [
-                    ft.Container(row, padding=ft.Padding.only(left=16, right=8)),
+                    # 4 dp above and below: at 200 % text the line wraps, and it
+                    # would touch the strip's edges; at 100 % the strip is 56 dp,
+                    # an M3 one-line list item.
+                    ft.Container(
+                        row, padding=ft.Padding.only(left=16, top=4, right=8, bottom=4)
+                    ),
                     progress_slot,
                 ],
                 spacing=0,
