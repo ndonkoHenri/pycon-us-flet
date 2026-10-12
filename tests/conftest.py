@@ -1,4 +1,4 @@
-"""Shared test fixtures (docs/testing-and-quality.md §2)."""
+"""Shared test fixtures and the hypothesis profiles (docs/testing-and-quality.md §2)."""
 
 import json
 import time
@@ -6,8 +6,14 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from hypothesis import settings
 
 SNAPSHOTS = Path(__file__).parent / "fixtures" / "snapshots"
+
+# CI runs `pytest --hypothesis-profile=ci` (docs/testing-and-quality.md §12): more examples,
+# and the same ones on every run, so a red build reproduces and is not a lucky draw. No
+# deadline, because shared runners are slow by fits. Local runs keep hypothesis's default.
+settings.register_profile("ci", max_examples=200, deadline=None, derandomize=True)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
