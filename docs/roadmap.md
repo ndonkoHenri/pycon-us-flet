@@ -319,7 +319,7 @@ feature, area:shell · after P0-18, P0-19 · SHELL-01, DATA-35
 
 feature, area:quality · after P0-20
 
-`services/errors.py` (logging, an asyncio exception handler, `@report_errors`) and `capabilities.py` (import-time constants gated on `flet.utils.is_embedded()`).
+`services/errors.py` (logging and `@report_errors`; asyncio's default exception handler is kept, D-163) and `capabilities.py` (import-time constants gated on `flet.utils.is_embedded()`).
 
 - A raising handler logs and shows "Something went wrong" without ending the session; `CancelledError` is re-raised.
 - When not embedded, every capability is `False` (unit test).

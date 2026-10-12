@@ -54,7 +54,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 
 | Module | Responsibility | Phase |
 |---|---|---|
-| `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the default View in the boot purple and no theme animation until the gate opens, F35, D-161): one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
+| `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the default View in the boot purple and no theme animation until the gate opens, F35, D-161): `setup_logging()` at import and one `ViewMemory` per process (D-163, D-143); `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
@@ -270,12 +270,11 @@ def parent_of(route: str, search_base: str = "/now") -> str:
 
 ```python
 # src/main.py (excerpt)
+setup_logging()                               # once per process, at import (D-163)
 MEMORY = ViewMemory()                         # one per process: a new session reuses it (D-143, F29)
 
 
 def main(page: ft.Page):
-    setup_logging()
-
     def on_view_pop(e: ft.ViewPopEvent):
         page.navigate(parent_of(e.route, MEMORY.search_base))
 
@@ -461,7 +460,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 
 - `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing`, `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). P1 (#82) adds `set_foreground()` and `_foreground`, checked by the 60 s tick (D-40). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
-- A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; P0-21's asyncio exception handler (F4) is the backstop. Expected failures never raise.
+- A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)
@@ -489,7 +488,7 @@ Filters are preferences (persisted in `Prefs`); positions are process memory (he
 
 ### 6.4 Screen pattern
 
-A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, tuple(favorites.ids), ...])` (lists passed as tuples), builds handlers as named functions (async ones wrapped in `report_errors`), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.toggle, svc, sid)`. Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
+A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, tuple(favorites.ids), ...])` (lists passed as tuples), builds handlers and effects as named functions, each wrapped in `report_errors` (sync or async, D-163), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.toggle, svc, sid)`. Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
 
 ---
 
@@ -1081,14 +1080,14 @@ from importlib.util import find_spec
 from flet.utils import is_embedded
 
 
-def _bundled(module: str) -> bool:
+def available(module: str) -> bool:
     return is_embedded() and find_spec(module) is not None
 
 
-SECURE_STORAGE = _bundled("flet_secure_storage")
-PERMISSIONS = _bundled("flet_permission_handler")
-REMINDERS = _bundled("flet_local_notifications")    # E3 (flet-dev/flet#6948): module name is a placeholder
-SCANNER = _bundled("flet_barcode_scanner")          # E1, not published yet: module name is a placeholder
+SECURE_STORAGE = available("flet_secure_storage")
+PERMISSIONS = available("flet_permission_handler")
+REMINDERS = available("flet_local_notifications")    # E3 (flet-dev/flet#6948): module name is a placeholder
+SCANNER = available("flet_barcode_scanner")          # E1, not published yet: module name is a placeholder
 ```
 
 | Constant | Owner module | Interim |
@@ -1098,7 +1097,7 @@ SCANNER = _bundled("flet_barcode_scanner")          # E1, not published yet: mod
 | `SECURE_STORAGE` | `services/storage.py` | credentials kept in memory for the session |
 | `PERMISSIONS` | reminders, scanner | the extension's own permission request |
 
-`is_embedded()` is `FLET_PLATFORM is not None`, set by the build template, not by `flet run` (F14). The Developer screen shows these constants read-only (D-73); interims are exercised through `flet run` and the companion app, which is never embedded. A unit test per owner module checks the interim when not embedded.
+`is_embedded()` is `FLET_PLATFORM is not None`, set by the build template, not by `flet run` (F14). The Developer screen shows these constants read-only (D-73); interims are exercised through `flet run` and the companion app, which is never embedded. `tests/test_capabilities.py` reloads the module with `FLET_PLATFORM` unset and every extension findable, and gets all four `False`; a unit test per owner module checks its interim when not embedded.
 
 ---
 
@@ -1216,51 +1215,42 @@ An exception in an event handler (or a sync effect) ends the session; one in an 
 
 ```python
 # src/pycon_us/services/errors.py (excerpt)
-logger = logging.getLogger("pycon_us")
-_show_details = False
-
-
 def report_errors(fn):
-    """Log an unexpected exception from a handler or effect and tell the user, instead of ending the session.
-
-    Keeps the signature (Flet counts handler parameters through __wrapped__) and the async-ness (F2).
-    CancelledError always propagates. Delete once U15 is in the pinned Flet.
-    """
+    """Log an unexpected exception from a handler or effect and tell the user, instead of ending the session."""
+    if inspect.isgeneratorfunction(fn) or inspect.isasyncgenfunction(fn):
+        raise TypeError(...)                  # Flet would never iterate it through a wrapper
     where = f"{fn.__module__}.{fn.__qualname__}"
     if inspect.iscoroutinefunction(fn):
 
-        @functools.wraps(fn)
+        @functools.wraps(fn)                  # Flet reads iscoroutinefunction and the parameter count
         async def run_async(*args, **kwargs):
             try:
                 return await fn(*args, **kwargs)
-            except asyncio.CancelledError:
-                raise
-            except Exception as error:
-                _report(where, error)
+            except Exception as error:        # CancelledError is a BaseException: it propagates
+                logger.exception("Unexpected error in %s", where)
+                _tell_user(error)
+                return None
 
         return run_async
 
     @functools.wraps(fn)
     def run(*args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-        except Exception as error:
-            _report(where, error)
-
-    return run
+        ...                                   # the same, without await
 
 
-def _report(where: str, error: Exception) -> None:
-    logger.error("Unexpected error in %s", where, exc_info=error)
-    text = f"Something went wrong: {error}" if _show_details else "Something went wrong."
-    ft.context.page.show_dialog(ft.SnackBar(content=ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING))
+def _tell_user(error: Exception) -> None:
+    text = MESSAGE if is_embedded() else f"{MESSAGE}: {type(error).__name__}: {error}"
+    try:
+        ft.context.page.show_dialog(ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING))
+    except Exception:                         # no page, or a replaced session (F30): log only
+        logger.warning("Could not show the error message", exc_info=True)
 ```
 
-A last-resort net, not error handling (§16.1). Details show when not embedded or with Developer unlocked; review checks wrapping (no lint, D-71).
+A last-resort net, not error handling (§16.1). Every handler and effect setup is wrapped, sync or async; `bootstrap()`'s loading steps keep their own `try` so the gate opens anyway (D-161, D-163). Details show when not embedded, and with Developer unlocked once #88 adds it; review checks wrapping (no lint, D-71). An async effect needs the wrapper most: its exception otherwise reaches asyncio only when its task is released, which for a mounted effect with `[]` dependencies is never (F37).
 
 ### 16.3 Logging
 
-`setup_logging()` sends stdlib `logging` to stderr at INFO plus an asyncio exception handler; packaged apps capture it in `console.log` (F14). Feed processing logs its duration (D-80). **Never log** secrets, keys, signatures, emails or badge codes. "Share log" shares `ft.ShareFile.from_path(await svc.paths.get_console_log_filename())`. No Sentry, no analytics.
+`setup_logging()`, called once when `main.py` is imported, puts one stderr handler on the root logger (`HH:MM:SS.mmm LEVEL logger: message`) at INFO, or at `FLET_LOG_LEVEL` (`flet run -vv`), with `httpx` and `httpcore` at WARNING because their INFO line is the request URL; packaged apps tee stderr to logcat or the unified log and to `console.log` (F14). There is no asyncio exception handler of our own: the default one already logs through `logging` (D-163). Feed processing logs its duration (D-80). **Never log** secrets, keys, signatures, emails or badge codes. "Share log" shares `ft.ShareFile.from_path(await svc.paths.get_console_log_filename())`. No Sentry, no analytics.
 
 ---
 

@@ -545,7 +545,7 @@ class RefreshIndicator(ft.LayoutControl):
 |---|---|
 | Serves | Cross-cutting (D-71) |
 | Interim | `@report_errors` on handlers and effects: it logs the traceback, shows "Something went wrong" (with the exception text in developer mode), and re-raises `CancelledError`. Expected failures are still handled at their own boundaries. |
-| Today | • An event-handler exception is logged, then `session.error()` sends `SESSION_CRASHED` (`FLET/messaging/session.py:459-464`, `:592-600`).<br>• A sync effect setup does the same (`:746-748`).<br>• Async effect tasks fail silently into asyncio (F4).<br>• `page.on_error` exists, but it carries Flutter-side errors. |
+| Today | • An event-handler exception is logged, then `session.error()` sends `SESSION_CRASHED` (`FLET/messaging/session.py:459-464`, `:592-600`).<br>• A sync effect setup does the same (`:746-748`).<br>• Async effect tasks fail silently into asyncio (F4), which reports the exception only when the task is released, so a mounted effect's never (F37).<br>• `page.on_error` exists, but it carries Flutter-side errors. |
 | Change | One opt-in page event. When set, it receives every unhandled exception from event handlers and effects, sync or async, and the session stays alive. When it is unset, behaviour is unchanged. |
 
 ```python
