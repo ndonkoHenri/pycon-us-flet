@@ -591,22 +591,26 @@ name = "PyCon US 2026"
 time_zone = "America/Los_Angeles"
 first_day = 2026-05-13
 last_talk_day = 2026-05-17
-last_day = 2026-05-21
-city = "Long Beach, CA"             # also: venue, address
+last_day = 2026-05-19
+venue = "Long Beach Convention Center"
+city = "Long Beach, CA"             # later: address (P2)
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
-presentation_url = "https://us.pycon.org/2026/schedule/presentation/{id}/"
-snapshot_captured_at = 2026-10-11T09:00:00-07:00     # written by tools/update_snapshot.py
+presentation_url = "https://us.pycon.org/2026/schedule/presentation/{id}/"   # P1 (NEW-06)
+snapshot_captured_at = 2026-10-11T09:00:00-07:00     # P0-17: written by tools/update_snapshot.py
 
 [[tracks]]
-key = "Ai"                  # as produced by feed processing
+key = "Ai"                  # as produced by feed processing: the kind, first letter upper-cased
 short = "AI"
 plural = "AI talks"
 long = "The Future of AI with Python"
-slug = "ai"
+icon = "MEMORY_OUTLINED"    # an outlined ft.Icons name (D-27); colours stay in the theme tokens (D-24, D-25)
 group = "talks"             # filter-sheet group: talks | hands-on | community | logistics
-new = true                  # "New track" badge
+slug = "ai"                 # P1 (DATA-29)
+new = true                  # P1: "New track" badge
 ```
+
+Every field without a phase note exists today (P0-08); the others arrive with their features. An unknown track key falls back to its humanised form (`Hallway-track` → "Hallway track"), so a new kind in next year's feed still reads well.
 
 ```toml
 # data/2026/content.toml
@@ -638,7 +642,7 @@ title = "Lightning talk sign-ups are open"
 body = "Sign up at the board near registration."
 
 [[display_time_overrides]]          # also: [[venue_hours]] (service, pin, hours), [sponsor_credits]
-match = '(?i)^\s*job\s*fair\s*&\s*community\s*showcase\s*$'   # regex on the cleaned name, anchored at both ends
+match = '\s*job\s*fair\s*&\s*community\s*showcase\s*'   # regex, case-insensitive, fullmatch on the cleaned name
 minutes = -30
 ```
 
@@ -692,7 +696,7 @@ def checked(raw: dict, cls: type, where: str) -> dict:
     return raw
 ```
 
-Entries are built as `Pin(**checked(raw, Pin, f"map.toml pins[{i}]"))`, then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations".
+As built (P0-08), one recursive `_build(cls, raw, file)` applies this check to every table and turns arrays of tables into tuples of their dataclass; errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations".
 
 ---
 
