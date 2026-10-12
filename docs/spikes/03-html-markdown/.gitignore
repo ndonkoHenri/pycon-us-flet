@@ -1,0 +1,2 @@
+# The lock depends on the local Flet checkout; `uv sync` recreates it.
+uv.lock

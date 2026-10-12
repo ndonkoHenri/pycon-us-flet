@@ -1,0 +1,51 @@
+# S3 reproducer (docs/spikes/03-html-markdown.md): a stub app that renders the
+# converted feed samples with ft.Markdown. It uses the repo's .flet-src checkout
+# through relative paths. From the repo root, regenerate the samples:
+#
+#   python3 -I docs/spikes/03-html-markdown/census.py
+#
+# then build from this folder:
+#
+#   uv sync
+#   uv run flet build apk --arch arm64-v8a --build-number 1
+#
+# Nothing here is part of the app; src/ of the repo is untouched.
+
+[project]
+name = "s3-html-markdown"
+version = "0.0.1"
+description = "S3 spike: converted feed HTML rendered with ft.Markdown."
+requires-python = ">=3.14,<3.15"
+dependencies = ["flet"]
+
+[dependency-groups]
+dev = [
+    "flet-cli",
+    "flet-web",
+    "flet-desktop",
+    "flet-platform-assets",
+]
+
+[tool.flet]
+product = "S3 Markdown"
+bundle_id = "io.github.ndonkohenri.pyconus.s3"   # throwaway id, never uploaded
+
+[tool.flet.app]
+path = "src"
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false
+
+# The same pin as the app (D-81): a source checkout in the repo root's .flet-src.
+[tool.uv.sources]
+flet = { path = "../../../.flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = "../../../.flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = "../../../.flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = "../../../.flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = "../../../.flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+
+[tool.flet.dev_packages]
+flet = "../../../.flet-src/sdk/python/packages/flet"
