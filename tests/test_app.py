@@ -14,6 +14,7 @@ from typing import cast
 import flet as ft
 import pytest
 
+from pycon_us import app
 from pycon_us.app import (
     NO_THEME_ANIMATION,
     apply_theme,
@@ -58,7 +59,10 @@ def svc(
 
 @pytest.fixture
 def fake_page() -> FakePage:
-    return FakePage()
+    page = FakePage()
+    # As main.prepare_first_page leaves it, before main() runs.
+    page.theme_animation_style = NO_THEME_ANIMATION
+    return page
 
 
 class Network:
@@ -127,8 +131,8 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
-    # No theme flash and no empty first screen (SHELL-01): the stored theme is set with
-    # no crossfade, before the gate opens, and later changes crossfade again.
+    # No theme flash and no empty first screen (SHELL-01): the stored theme is set before
+    # the gate opens, still with no crossfade, and later changes crossfade again.
     assert seen_at_open == [NO_THEME_ANIMATION, ft.ThemeMode.DARK, "bundled"]
     assert fake_page.theme_animation_style is None
     assert fake_page.theme is not None and fake_page.dark_theme is not None
@@ -252,6 +256,38 @@ async def test_closing_the_page_stops_the_session_s_refresh(
     assert svc.closed.is_set()
     await finish_refresh(conference, network)
     assert conference.source == "bundled"  # nothing written to a closed session (F30)
+
+
+async def test_a_session_closed_during_the_start_stops_there_without_an_error(
+    fake_page: FakePage,
+    svc: Services,
+    network: Network,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    reading, release = asyncio.Event(), asyncio.Event()
+
+    async def held_read(*_: object) -> None:
+        reading.set()
+        await release.wait()
+        # What a store write from a replaced session raises (F30).
+        raise RuntimeError("An attempt to fetch destroyed session.")
+
+    monkeypatch.setattr(app, "read_accessibility", held_read)
+    conference, prefs = Conference(), Prefs()
+    start = asyncio.create_task(
+        bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
+    )
+    await reading.wait()
+    fake_page.on_close()  # replaced while the start awaits (F26, F29; D-147)
+    release.set()
+    with caplog.at_level(logging.INFO):
+        await start
+    assert not prefs.loaded
+    assert conference._task is None  # no refresh into a destroyed session
+    assert fake_page.on_app_lifecycle_state_change is None
+    assert "Start failed" not in caplog.text
+    assert "closed during the start" in caplog.text
 
 
 # ------------------------------------------------------------------ theme and services

@@ -54,7 +54,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 
 | Module | Responsibility | Phase |
 |---|---|---|
-| `src/main.py` | `ft.run(main, before_main=paint_first_view)` (the default View in the boot purple, F35, D-161): one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
+| `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the default View in the boot purple and no theme animation until the gate opens, F35, D-161): one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
@@ -119,15 +119,18 @@ def App(memory: ViewMemory):
 # src/pycon_us/app.py (excerpt)
 async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs: Prefs) -> None:
     """Start in the order that avoids flashes and never waits on the network."""
-    page.theme_animation_style = NO_THEME_ANIMATION   # the stored theme lands at once (D-161)
+    page.on_close = svc.close                 # 0. before any await: a replaced session stops (D-147)
     try:
         await prefs.load(svc.storage)             # 1. settings, OS flags, theme: under the boot view
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
-        apply_theme(page, prefs)
+        apply_theme(page, prefs)                  # no animation yet: main.prepare_first_page (D-161)
         await conference.load_local(svc.storage, svc.year)   # 2. cache or bundled snapshot
     except Exception:
-        logger.exception("Start failed; opening the app with what has loaded")
+        if not svc.closed.is_set():               # a closed session's store write fails (F30)
+            logger.exception("Start failed; opening the app with what has loaded")
+    if svc.closed.is_set():                       # replaced during steps 1-2: stop here
+        return
     prefs.loaded = True                           # 3. opens the boot gate
     page.theme_animation_style = None             # later theme changes crossfade again
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 4. background, not awaited
@@ -141,12 +144,11 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
 
     page.on_platform_brightness_change = on_brightness   # 5. handlers write stores only (D-147)
     page.on_app_lifecycle_state_change = on_lifecycle
-    page.on_close = svc.close                 # a new session replaced this one: stop our work (D-147)
 ```
 
-- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=paint_first_view`, which gives the page's default View the boot purple: Flet shows that View for a frame before `main()`'s first patch (F35).
+- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=prepare_first_page`, which gives the page's default View the boot purple (Flet shows that View for a frame before `main()`'s first patch, F35) and sets `page.theme_animation_style` to zero duration in that first page, so every theme change before the gate lands at once, including the default settings that `App`'s theme effect applies on mount, before `bootstrap()` has read the stored ones.
 - P1 inserts `await favorites.load(svc.storage)` after step 1 and the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
-- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
+- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `bootstrap()` sets `page.on_close` before its first await, so a session replaced during the boot view is closed too, and it then stops before it opens the gate or starts a refresh. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
 **Refresh triggers (D-40):** start (always); resume (if older than 15 min); a 60 s ticking effect in Now and Schedule while the app is in the foreground (refresh when older than 15 min, recompute time-dependent views); "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*.
 

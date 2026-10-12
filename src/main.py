@@ -10,7 +10,7 @@ import logging
 import flet as ft
 
 from pycon_us import APP_NAME
-from pycon_us.app import BOOT_COLOR, App
+from pycon_us.app import BOOT_COLOR, NO_THEME_ANIMATION, App
 from pycon_us.state import ViewMemory
 
 # INFO to stderr, which packaged apps capture in console.log (F14); #73 replaces this
@@ -21,14 +21,18 @@ MEMORY = ViewMemory()
 """One per process: a new session finds it as the last one left it (D-143)."""
 
 
-def paint_first_view(page: ft.Page) -> None:
-    """Give the page's default View the boot purple, before Flutter's first frame of it.
+def prepare_first_page(page: ft.Page) -> None:
+    """Set up the page Flet sends before ``main()`` runs, which Flutter shows at once (F35).
 
-    Flet sends the page, with its default empty View, before ``main()`` runs, and Flutter
-    removes its boot screen as soon as that arrives: one frame of the default View
-    (white in light mode) showed between the purple boot screen and ``BootView`` (#72).
+    * The default View gets the boot purple: Flutter removes its boot screen as soon as
+      the page arrives, and one frame of that View (white in light mode) showed between
+      the purple boot screen and ``BootView`` (#72).
+    * Theme changes land without animation until ``bootstrap()`` opens the boot gate,
+      from the first frame on: ``App``'s theme effect applies the default settings on
+      mount, before ``bootstrap()`` has read the stored ones (D-161).
     """
     page.views[0].bgcolor = BOOT_COLOR
+    page.theme_animation_style = NO_THEME_ANIMATION
 
 
 def main(page: ft.Page) -> None:
@@ -38,4 +42,4 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(main, before_main=paint_first_view)
+    ft.run(main, before_main=prepare_first_page)

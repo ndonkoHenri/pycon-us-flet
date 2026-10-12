@@ -37,8 +37,9 @@ DATA_DIR_VARIABLE = "FLET_APP_STORAGE_DATA"
 FALLBACK_DATA_DIR = Path(".flet", "storage", "data")
 """Used under the working directory when the variable is unset, as ``flet run`` would set it."""
 
-PREFS_ERRORS = (TimeoutError, RuntimeError)
-"""What a SharedPreferences call raises when the Flutter side times out or fails."""
+SERVICE_ERRORS = (TimeoutError, RuntimeError)
+"""What a Flet service call (SharedPreferences, SemanticsService) raises when the Flutter
+side times out or fails; the app's one name for it."""
 
 _write_lock = threading.Lock()
 """Serialises ``write_atomic``: a cancelled ``to_thread`` write keeps running (D-120)."""
@@ -219,7 +220,7 @@ class Storage:
         """
         try:
             stored = await self.prefs.get(pref.key)
-        except PREFS_ERRORS:
+        except SERVICE_ERRORS:
             logger.warning("Could not read preference %s", pref.key, exc_info=True)
             return copy.deepcopy(pref.default)
         if stored is None:
@@ -245,7 +246,7 @@ class Storage:
         stored: Any = json.dumps(value) if isinstance(pref.default, dict) else value
         try:
             saved = await self.prefs.set(pref.key, stored)
-        except PREFS_ERRORS:
+        except SERVICE_ERRORS:
             logger.warning("Could not save preference %s", pref.key, exc_info=True)
             return False
         if not saved:

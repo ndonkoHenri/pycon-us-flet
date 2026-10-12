@@ -14,6 +14,7 @@ import flet as ft
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens.stub import Stub
 from pycon_us.services import Services, ServicesCtx
+from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import THEME_MODES, TokensCtx, build_theme, build_tokens
 
@@ -25,11 +26,10 @@ BOOT_COLOR = "#680579"
 RING_DELAY = 1.0
 """Seconds before the boot view shows a progress ring; most starts end sooner (ux.md §2.6)."""
 
-SERVICE_ERRORS = (TimeoutError, RuntimeError)
-"""What a Flet service call raises when the Flutter side times out or fails."""
-
 NO_THEME_ANIMATION = ft.AnimationStyle(duration=0)
-"""``page.theme_animation_style`` while the boot view shows: the stored theme at once."""
+"""``page.theme_animation_style`` until the boot gate opens: every theme change before it
+lands at once. Flutter crossfades theme changes over 200 ms, and a gate that opens sooner
+showed the first screen mid-fade (iOS simulator, #72)."""
 
 ROUTES = [ft.Route(index=True, component=Stub)]
 """One stub screen until the route table lands (#74)."""
@@ -108,15 +108,19 @@ async def bootstrap(
 ) -> None:
     """Start in the order that avoids flashes and never waits on the network (DATA-35).
 
+    0. ``page.on_close``, before anything is awaited (D-147).
     1. Settings, the OS's accessibility flags and brightness, then the theme they ask
-       for, all while the boot view shows, with no theme animation.
+       for, all while the boot view shows. ``main.prepare_first_page()`` has turned
+       the theme animation off, so the theme lands at once.
     2. The feed cache, else the bundled snapshot (D-38, D-145).
-    3. ``prefs.loaded`` opens the boot gate: the first screen shows that data.
+    3. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
+       changes crossfade again from here on.
     4. A refresh in the background, not awaited (single flight, D-145).
-    5. The page handlers, which only write stores (D-147), and ``page.on_close``.
+    5. The page handlers, which only write stores (D-147).
 
     An unexpected error in steps 1-2 is logged and the gate opens anyway, with whatever
-    loaded: a start never hangs on the boot view.
+    loaded: a start never hangs on the boot view. A session replaced during steps 1-2
+    (F26, F29) stops there: its stores belong to a destroyed session (F30).
 
     Args:
         page: The session's page.
@@ -124,9 +128,8 @@ async def bootstrap(
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
     """
-    # Flutter crossfades theme changes over 200 ms; the stored theme must land at once,
-    # or a gate that opens sooner shows the first screen mid-fade (iOS simulator, #72).
-    page.theme_animation_style = NO_THEME_ANIMATION
+    # First, so a session replaced while the start awaits gets `closed` too (D-147).
+    page.on_close = svc.close
     try:
         await prefs.load(svc.storage)
         await read_accessibility(svc.semantics, prefs)
@@ -134,7 +137,11 @@ async def bootstrap(
         apply_theme(page, prefs)
         await conference.load_local(svc.storage, svc.year)
     except Exception:  # #73's report_errors takes over reporting
-        logger.exception("Start failed; opening the app with what has loaded")
+        if not svc.closed.is_set():  # a closed session's store write fails (F30)
+            logger.exception("Start failed; opening the app with what has loaded")
+    if svc.closed.is_set():
+        logger.info("Session closed during the start; it stops here (D-147)")
+        return
     prefs.loaded = True
     page.theme_animation_style = None  # later changes crossfade, as Flutter's default
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
@@ -151,7 +158,6 @@ async def bootstrap(
 
     page.on_platform_brightness_change = on_brightness
     page.on_app_lifecycle_state_change = on_lifecycle
-    page.on_close = svc.close  # a new session replaced this one (D-147)
 
 
 async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
