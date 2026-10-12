@@ -1,10 +1,9 @@
 """Turn the public feed into the conference model (D-41, D-42; DATA-01, DATA-13, DATA-24, DATA-26).
 
-``process()`` is the pipeline's one entry point. Today it decodes: the JSON becomes frozen
-records, every id a string, every time an aware datetime in the conference zone, and the
-sessions are bucketed into conference-local days and time groups. Ionic's processing rules
-(filters, open spaces, collapsed rows, names, flags, speakers by name, rooms) arrive with
-P0-11 and P0-12, between decoding and grouping; until then every schedule slot is a session.
+``process()`` is the pipeline's one entry point. It decodes the JSON into frozen records
+(``core/records.py``), every id a string and every time an aware datetime in the conference
+zone; applies Ionic's processing rules (``core/rules.py``) to decide what becomes a
+session; and buckets the timeline's sessions into conference-local days and time groups.
 
 Failures are split in two. A feed whose structure is wrong raises ``FeedError``, so the
 caller keeps the data it has. A single bad record is skipped, recorded in
@@ -15,11 +14,12 @@ ignored, so the feed can grow without breaking the app.
 import json
 import logging
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from pycon_us.core import records, rules
 from pycon_us.core.models import (
     ConferenceData,
     Day,
@@ -30,11 +30,12 @@ from pycon_us.core.models import (
     Sprint,
     TimeGroup,
 )
-from pycon_us.core.timefmt import local_date
+from pycon_us.core.records import OpenSpace, Slot
 
 logger = logging.getLogger(__name__)
 
-_OPTIONAL_SECTIONS = ("posters", "sprints", "job-listings")  # the 2025 feed has none
+# The 2025 feed has no posters, sprints or job listings.
+_OPTIONAL_SECTIONS = ("open-spaces", "posters", "sprints", "job-listings")
 
 
 class FeedError(ValueError):
@@ -47,20 +48,27 @@ class FeedSettings:
 
     Attributes:
         time_zone: The conference zone: times are converted to it and days bucketed in it.
+        site_url: The year's site, ending in ``/``; site-relative links resolve against it.
+        hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere, e.g.
+            ``Expo `` in 2026, where ``Lunch (Hall AB)`` is served in ``Expo Hall AB``
+            (D-122).
     """
 
     time_zone: ZoneInfo
+    site_url: str
+    hall_prefix: str
 
 
 def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
-    """Decode the raw feed into the conference model.
+    """Decode the raw feed and apply Ionic's rules to it.
 
     Args:
         raw: The feed's bytes, as fetched or cached.
         settings: The year's processing settings.
 
     Returns:
-        The model. Records that could not be read are listed in ``skipped``.
+        The model. Records that could not be read are listed in ``skipped``; records that
+        did not become sessions of their own, in ``dropped``.
 
     Raises:
         FeedError: The feed is not a JSON object with a ``schedule`` list, an optional
@@ -78,33 +86,99 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
     slots = _decode(
         sections["schedule"],
         "schedule",
-        lambda item: _slot(item, zone),
-        _first_id,
+        lambda item: records.slot(item, zone),
+        _id_of,
         skip,
     )
     if not slots:
         raise FeedError("no readable schedule slot")
-    posters = _decode(sections["posters"], "posters", _poster, _first_id, skip)
+    posters = _decode(sections["posters"], "posters", records.poster, _first_id, skip)
+    posters += _decode(
+        records.nested_posters(sections["schedule"]),
+        "schedule posters",
+        records.nested_poster,
+        _first_id,
+        skip,
+    )
+    spaces = _decode(
+        sections["open-spaces"],
+        "open-spaces",
+        lambda item: records.open_space(item, zone),
+        _session_id_of,
+        skip,
+    )
+
+    dropped: defaultdict[str, list[str]] = defaultdict(list)
+    kept: list[Slot] = []
+    folded: list[Slot] = []
+    for slot in slots:
+        if rule := rules.drop_rule(slot):
+            dropped[rule].append(slot.id)
+        elif slot.kind in rules.COLLAPSED_KINDS:
+            dropped["collapsed"].append(slot.id)
+            folded.append(slot)
+        else:
+            kept.append(slot)
+    rows = rules.collapse(folded, zone, settings.hall_prefix)
+    candidates = [rules.slot_session(slot, zone) for slot in kept] + rows
+    for space in spaces:
+        session = rules.open_space_session(space, zone, settings.site_url)
+        if session is None:
+            dropped["unscheduled-open-space"].append(space.session_id)
+        else:
+            candidates.append(session)
+    details = rules.poster_details((poster for poster, _ in posters), rows)
+    if posters and not details:
+        logger.warning("No Posters row: the %d posters get no session", len(posters))
+    sessions = _index(candidates + details, skip)
+    if dropped:
+        logger.info(
+            "Dropped %s",
+            ", ".join(f"{len(ids)} {rule}" for rule, ids in dropped.items()),
+        )
+
     speakers: dict[str, Speaker] = {}
-    for _, its_speakers in (*slots, *posters):
+    for its_speakers in (
+        *(slot.speakers for slot in kept),
+        *(speakers for _, speakers in posters),
+    ):
         for speaker in its_speakers:
             # The first record of an id wins, as in Ionic.
             speakers.setdefault(speaker.id, speaker)
-    sessions = {session.id: session for session, _ in slots}
 
     return ConferenceData(
         sessions=sessions,
         speakers=speakers,
-        days=_days(sessions.values()),
+        days=_days(s for s in sessions.values() if s.in_timeline),
         posters=tuple(poster for poster, _ in posters),
-        sprints=tuple(_decode(sections["sprints"], "sprints", _sprint, _id_of, skip)),
+        sprints=tuple(
+            _decode(sections["sprints"], "sprints", records.sprint, _id_of, skip)
+        ),
         job_listings=tuple(
             _decode(
-                sections["job-listings"], "job-listings", _job_listing, _id_of, skip
+                sections["job-listings"],
+                "job-listings",
+                records.job_listing,
+                _id_of,
+                skip,
             )
         ),
+        dropped={rule: tuple(ids) for rule, ids in dropped.items()},
         skipped=tuple(skipped),
     )
+
+
+def _index(
+    sessions: Iterable[Session], skip: Callable[[str, object], None]
+) -> dict[str, Session]:
+    """Return the sessions by id; a later session with an id already taken is skipped."""
+    index: dict[str, Session] = {}
+    for session in sessions:
+        if session.id in index:
+            skip(f"session {session.name!r}", f"duplicate id {session.id!r}")
+            continue
+        index[session.id] = session
+    return index
 
 
 def _sections(raw: bytes) -> dict[str, list[object]]:
@@ -148,11 +222,15 @@ def _decode[T](
     return list(records.values())
 
 
-def _id_of(record: Sprint | JobListing) -> str:
+def _id_of(record: Slot | Sprint | JobListing) -> str:
     return record.id
 
 
-def _first_id(pair: tuple[Session | Poster, list[Speaker]]) -> str:
+def _session_id_of(space: OpenSpace) -> str:
+    return space.session_id
+
+
+def _first_id(pair: tuple[Poster, list[Speaker]]) -> str:
     return pair[0].id
 
 
@@ -182,119 +260,3 @@ def _days(sessions: Iterable[Session]) -> tuple[Day, ...]:
         )
         for day, groups in sorted(calendar.items())
     )
-
-
-def _slot(item: object, zone: ZoneInfo) -> tuple[Session, list[Speaker]]:
-    slot = _object(item)
-    start, end = _moment(slot, "start", zone), _moment(slot, "end", zone)
-    if end < start:
-        raise ValueError(f"ends at {end.isoformat()}, before it starts")
-    speakers = [_speaker(speaker) for speaker in _list(slot, "speakers")]
-    session = Session(
-        id=_id(slot, "conf_key"),
-        name=_text(slot, "name"),
-        kind=_text(slot, "kind"),
-        location=_text(slot, "room"),
-        description=_text(slot, "description", optional=True),
-        start=start,
-        end=end,
-        day=local_date(start, zone),
-        speaker_ids=tuple(speaker.id for speaker in speakers),
-        url=_text(slot, "conf_url", optional=True),
-    )
-    return session, speakers
-
-
-def _speaker(item: object) -> Speaker:
-    record = _object(item)
-    return Speaker(
-        id=_id(record, "id"),
-        name=_text(record, "name"),
-        photo_url=_text(record, "photo", optional=True),
-        bio=_text(record, "bio", optional=True),
-    )
-
-
-def _poster(item: object) -> tuple[Poster, list[Speaker]]:
-    record = _object(item)
-    speakers = [_speaker(speaker) for speaker in _list(record, "speakers")]
-    poster = Poster(
-        id=_id(record, "conf_key"),
-        title=_text(record, "title"),
-        description=_text(record, "description_html", optional=True),
-        speaker_ids=tuple(speaker.id for speaker in speakers),
-    )
-    return poster, speakers
-
-
-def _sprint(item: object) -> Sprint:
-    record = _object(item)
-    logo_url = record.get("logo_url")
-    return Sprint(
-        id=_id(record, "id"),
-        name=_text(record, "name"),
-        url=_text(record, "url"),
-        description=_text(record, "description_html", optional=True),
-        logo_url=None if logo_url is None else _text(record, "logo_url"),
-        submitter=_text(record, "submitter", optional=True),
-    )
-
-
-def _job_listing(item: object) -> JobListing:
-    record = _object(item)
-    return JobListing(
-        id=_id(record, "id"),
-        sponsor_name=_text(record, "sponsor_name"),
-        sponsor_logo_url=_text(record, "sponsor_logo_url", optional=True),
-        sponsor_level=_text(record, "sponsor_level", optional=True),
-        description=_text(record, "description_html", optional=True),
-    )
-
-
-def _object(item: object) -> Mapping[str, object]:
-    if not isinstance(item, dict):
-        raise TypeError(f"expected an object, got {item!r}")
-    return item
-
-
-def _text(record: Mapping[str, object], key: str, *, optional: bool = False) -> str:
-    """Return a string field; an optional one may be missing or null, which reads as ""."""
-    value = record.get(key)
-    if value is None and optional:
-        return ""
-    if not isinstance(value, str):
-        raise TypeError(f"{key!r} should be a string, got {value!r}")
-    return value
-
-
-def _id(record: Mapping[str, object], key: str) -> str:
-    """Return an id as a string (D-42, DATA-26); the feed's ids are integers."""
-    value = record.get(key)
-    if isinstance(value, bool) or not isinstance(value, int | str) or value == "":
-        raise ValueError(f"{key!r} should be an id, got {value!r}")
-    return str(value)
-
-
-def _list(record: Mapping[str, object], key: str) -> list[object]:
-    """Return an optional list field; missing or null reads as empty."""
-    value = record.get(key)
-    if value is None:
-        return []
-    if not isinstance(value, list):
-        raise TypeError(f"{key!r} should be a list, got {value!r}")
-    return value
-
-
-def _moment(record: Mapping[str, object], key: str, zone: ZoneInfo) -> datetime:
-    """Return an ISO 8601 time with a UTC offset as an aware datetime in ``zone``."""
-    text = _text(record, key)
-    try:
-        moment = datetime.fromisoformat(text)
-    except ValueError:
-        raise ValueError(f"{key!r} is not an ISO 8601 time: {text!r}") from None
-    if moment.utcoffset() is None:
-        raise ValueError(f"{key!r} has no UTC offset: {text!r}")
-    try:
-        return moment.astimezone(zone)
-    except OverflowError:  # e.g. 0001-01-01T00:00:00+00:00 has no Pacific equivalent
-        raise ValueError(f"{key!r} is out of range: {text!r}") from None

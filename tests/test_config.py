@@ -189,6 +189,12 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
+            'site_url = "https://us.pycon.org/2026/"',
+            'site_url = "https://us.pycon.org/2026"',
+            "2026/conference.toml: site_url: expected a final '/'",
+        ),
+        (
+            "conference.toml",
             'feed_url = "https://us.pycon.org/2026/schedule/conference.json"',
             'feed_url = "https:///2026/schedule/conference.json"',
             "2026/conference.toml: feed_url: expected an https:// URL with a host",

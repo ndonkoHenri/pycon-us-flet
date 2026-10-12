@@ -3,3 +3,6 @@
 # feed processing needs. No display-time override is known for 2025.
 
 display_time_overrides = []
+
+# The 2025 feed calls its halls "Hall A", "Hall B" and "Hall C" everywhere (D-122).
+hall_prefix = ""
