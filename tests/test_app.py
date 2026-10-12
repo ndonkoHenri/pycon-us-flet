@@ -26,7 +26,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics
+from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
 from tests.feeds import recorded
 
 type Fetch = Callable[..., Awaitable[bytes]]
@@ -245,6 +245,31 @@ async def test_a_resume_reads_the_accessibility_flags_again(
     assert semantics.reads == 1 and not prefs.os_high_contrast
     await fake_page.on_app_lifecycle_state_change(event(ft.AppLifecycleState.RESUME))
     assert semantics.reads == 2 and prefs.os_high_contrast  # a snapshot (F13)
+
+
+async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising(
+    fake_page: FakePage,
+    svc: Services,
+    semantics: MemorySemantics,
+    network: Network,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    await started(fake_page, svc)
+    page = cast(ft.Page, fake_page)
+    semantics.error = ValueError("not a service error")  # a bug, not SERVICE_ERRORS
+    with bound(fake_page):  # Flet binds the page while a handler runs
+        await fake_page.on_app_lifecycle_state_change(
+            ft.AppLifecycleStateChangeEvent(
+                name="app_lifecycle_state_change",
+                control=page,
+                state=ft.AppLifecycleState.RESUME,
+            )
+        )
+    # report_errors (D-71): a raise here would end the session (F4).
+    assert "Unexpected error in pycon_us.app.bootstrap.<locals>.on_lifecycle" in (
+        caplog.text
+    )
+    assert [type(dialog) for dialog in fake_page.dialogs] == [ft.SnackBar]
 
 
 async def test_closing_the_page_stops_the_session_s_refresh(

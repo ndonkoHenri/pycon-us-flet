@@ -16,6 +16,7 @@ from pycon_us import APP_NAME
 from pycon_us.core.timefmt import day_label, local_date, time_label
 from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.services import use_services
+from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
 from pycon_us.state import Conference, use_conference
 
@@ -51,6 +52,7 @@ def Stub() -> ft.View:
     conference = use_conference()
     prefs = use_prefs()
 
+    @report_errors
     async def log_shown() -> None:
         # D-112's content line: a SharedPreferences round trip after the render, so the
         # patch has reached Flutter when it is logged.
@@ -61,9 +63,11 @@ def Stub() -> ft.View:
 
     ft.use_effect(log_shown, [conference.version])
 
+    @report_errors
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
+    @report_errors
     async def choose_appearance(e: ft.Event[ft.SegmentedButton]) -> None:
         theme = cast(Appearance, e.control.selected[0])
         if not await prefs.save(svc.storage, theme=theme):
