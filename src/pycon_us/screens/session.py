@@ -34,11 +34,15 @@ def SessionDetail(session_id: str) -> ft.View:
         )
     slugs = [slugify_room(name) for name in session.rooms]
     rooms = [slug for slug in slugs if slug in data.rooms]
+    # A generic break has no place to show (DATA-16): join only the parts it has, so
+    # it reads "Break", not "Break ·" (#170).
+    parts = (session.track, session.display_location)
+    meta = " · ".join(part for part in parts if part)
     return AppScaffold(
         title=session.name,
         body=stub_body(
             [
-                note(f"{session.track} · {session.display_location}"),
+                *([note(meta)] if meta else []),
                 *([SectionHeader("Speakers")] if session.speaker_ids else []),
                 *(
                     nav_tile(
