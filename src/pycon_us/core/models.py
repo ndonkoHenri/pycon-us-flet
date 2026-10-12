@@ -236,4 +236,4 @@ class ConferenceData:
     dropped: Mapping[str, tuple[str, ...]]
     skipped: tuple[str, ...]
     content: Mapping[str, str]
-    content_md: Mapping[str, str] = field(default_factory=dict[str, str])
+    content_md: Mapping[str, str] = field(default_factory=dict)

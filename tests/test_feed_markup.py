@@ -100,9 +100,36 @@ def test_search_text_is_the_folded_name_description_text_and_speakers(
     year: int,
 ) -> None:
     """D-46: search matches text, never markup, ignoring case and accents."""
-    for session in processed(year).sessions.values():
+    sessions = processed(year).sessions.values()
+    for session in (s for s in sessions if s.kind != "open-space"):
         parts = [session.name, to_text(session.description), *session.speaker_names]
         assert session.search_text == fold(" ".join(parts))
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_open_space_search_text_has_no_markdown_markup(year: int) -> None:
+    """D-46, D-140: an open space's Markdown links and markers are not searched."""
+    spaces = [s for s in processed(year).sessions.values() if s.kind == "open-space"]
+    assert any("](" in s.description for s in spaces)
+    for space in spaces:
+        assert space.search_text.startswith(fold(space.name))
+        for markup in ("](", "*", "`"):
+            assert markup not in space.search_text
+
+
+def test_open_space_search_text_keeps_link_text_without_destinations() -> None:
+    """2026's pytest open space links ``[pytest](pytest.org)`` and bolds a phrase."""
+    session = processed(2026).sessions["9086"]
+    assert "[pytest](pytest.org) is great" in session.description
+    assert "pytest is great" in session.search_text
+    assert "large system test suite" in session.search_text
+    assert "pytest.org" not in session.search_text
+    assert "github.com" not in session.search_text
+
+
+def test_open_space_search_text_keeps_underscores_in_identifiers() -> None:
+    session = processed(2025).sessions["9099"]
+    assert "ic_ocr_cataloger" in session.search_text
 
 
 def test_search_text_ignores_accents_and_case() -> None:

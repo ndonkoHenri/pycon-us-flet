@@ -14,6 +14,7 @@ ignored, so the feed can grow without breaking the app.
 
 import json
 import logging
+import re
 import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
@@ -40,6 +41,10 @@ logger = logging.getLogger(__name__)
 
 # The 2025 feed has no posters, sprints or job listings.
 _OPTIONAL_SECTIONS = ("open-spaces", "posters", "sprints", "job-listings")
+
+# An inline Markdown link in an open space's description: its text shows, its
+# destination does not, so search leaves the destination out (D-46, D-140).
+_MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
 class FeedError(ValueError):
@@ -196,7 +201,7 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
 
     Each distinct value converts once: a poster's description is also its poster
     detail's, and many fields are empty. Open spaces are Markdown already, so their
-    descriptions pass through (D-115).
+    descriptions pass through (D-115) and their search text comes from the Markdown.
     """
 
     @cache
@@ -204,14 +209,16 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
         return html_md.to_markdown(value, site_url)
 
     def marked_up(session: Session) -> Session:
-        open_space = session.kind == "open-space"
-        words = [session.name, html_md.to_text(session.description)]
+        if session.kind == "open-space":
+            description_md = session.description
+            text = _markdown_text(session.description)
+        else:
+            description_md = markdown(session.description)
+            text = html_md.to_text(session.description)
         return replace(
             session,
-            description_md=(
-                session.description if open_space else markdown(session.description)
-            ),
-            search_text=fold(" ".join([*words, *session.speaker_names])),
+            description_md=description_md,
+            search_text=fold(" ".join([session.name, text, *session.speaker_names])),
         )
 
     return replace(
@@ -233,6 +240,17 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
         ),
         content_md={key: markdown(value) for key, value in data.content.items()},
     )
+
+
+def _markdown_text(value: str) -> str:
+    """Return the visible text of an open space's Markdown, for search (D-46, D-140).
+
+    A link keeps its text and loses its destination, and the ``*`` and backtick markers
+    go. ``_`` stays: in these descriptions it joins identifiers (``ic_ocr_cataloger``),
+    never emphasis. Then ``to_text`` collapses whitespace as for HTML.
+    """
+    shown = _MARKDOWN_LINK.sub(r"\1", value)
+    return html_md.to_text(shown.replace("*", "").replace("`", ""))
 
 
 def _document(raw: bytes) -> dict[str, object]:
