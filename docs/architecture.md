@@ -299,20 +299,10 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
-    conference = use_conference()                                  # for the content line below
     is_root = view_path in TAB_ROOTS
     back_to_now = is_root and view_path != "/now"
     if is_top_view(page.route, view_path):                         # the top View, not one under a modal (D-164)
         svc.memory.last_location = page.route                      # where a new session returns (D-143)
-    version, source = conference.version, conference.source
-
-    @report_errors
-    async def log_shown():                                         # D-112's mark, once per version per session
-        if version in svc.shown_versions:
-            return
-        svc.shown_versions.add(version)
-        await svc.storage.get(THEME)                               # the patch has reached Flutter
-        logger.info("Content shown: %s feed, version %d", source, version)
 
     @report_errors
     def go_back():
@@ -323,7 +313,6 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         page.navigate("/now")
         await e.control.confirm_pop(False)
 
-    ft.use_effect(log_shown, [version])
     return ft.View(
         route="/" if is_root else view_path,                       # roots share a key: no transition (D-142)
         padding=0,
@@ -335,8 +324,31 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         # navigation_bar: #75, tab roots only (D-144), with TABS and on_retap (S4)
         can_pop=not back_to_now,
         on_confirm_pop=leave_for_now if back_to_now else None,
-        controls=[ft.SafeArea(expand=True, content=body)],
+        controls=[ft.SafeArea(expand=True, content=Shown(body))],
     )
+
+
+@ft.component
+def Shown(body: ft.Control) -> ft.Control:
+    """Return body unchanged; log D-112's mark once per feed version per session.
+
+    Its own component, so only this leaf reads Conference: a refresh re-renders it, and
+    it hands back the same body (Flet keeps a retained child as is), not the screen.
+    """
+    svc = use_services()
+    conference = use_conference()
+    version, source = conference.version, conference.source
+
+    @report_errors
+    async def log_shown():
+        if version in svc.shown_versions:                          # another screen showed it first
+            return
+        svc.shown_versions.add(version)
+        await svc.storage.get(THEME)                               # the patch has reached Flutter
+        logger.info("Content shown: %s feed, version %d", source, version)
+
+    ft.use_effect(log_shown, [version])
+    return body
 ```
 
 - A **tab switch** leaves that root alone on the stack (D-17); roots restore day, filters and scroll from `ViewMemory`/`Prefs` and never scroll by themselves (D-18, #313). **Back** on a root other than Now goes to Now; on Now it exits (Android).
@@ -499,7 +511,7 @@ A screen reads its stores through hooks, memoises its view model with `ft.use_me
 | Persistent cache | `<data dir>/feed-<year>.json`, raw bytes; `saved_at` = file mtime | every start when present |
 | Bundled snapshot | `data/<year>/conference.json`, read by `YearData.read_snapshot()` and refreshed by `tools/update_snapshot.py`, which refuses a feed that does not parse cleanly and also writes `conference.toml`'s `snapshot_captured_at` (D-135) | first launch, or a corrupt cache |
 
-The strip (`StatusStrip`, D-165) is hidden when fresh; shows "Updating the schedule…" with an indeterminate `ProgressBar` while refreshing, "Updated 9 hours ago · Refresh" when stale (6 h on conference days, else 24 h), "Offline · schedule from Tue, May 12, 10:42 AM · Refresh" when `problem == "offline"`, and "Couldn't update · schedule from … · Refresh" when `problem == "server"`. Skeletons only when `data is None` (impossible after bootstrap). A failed refresh leaves data and cache untouched.
+The strip (`StatusStrip`, D-165) is hidden when fresh; shows "Updating the schedule…" with an indeterminate `ProgressBar` while refreshing, "Updated 9 hours ago · Refresh" when stale (6 h on conference days, else 24 h), "Offline · schedule from Tue, May 12, 10:42 AM · Refresh" when `problem == "offline"`, and "Couldn't update · schedule from … · Refresh" when `problem == "server"`; without data the last two say "Offline · no schedule yet" and "Couldn't update · no schedule yet", and a stale status "No schedule yet". Skeletons only when `data is None` (impossible after bootstrap). A failed refresh leaves data and cache untouched.
 
 ### 7.2 Feed shape (2026; `docs/research/ionic/data-layer.md` §9)
 

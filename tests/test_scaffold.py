@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
+from flet.components.component import Renderer
 
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
@@ -29,6 +30,7 @@ from pycon_us.ui import scaffold
 from pycon_us.ui.scaffold import (
     AppScaffold,
     SectionHeader,
+    Shown,
     StatusStrip,
     search_button,
     strip_line,
@@ -86,6 +88,8 @@ def hooks(
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
     monkeypatch.setattr(scaffold, "use_tokens", lambda: DARK_TOKENS)
+    # ``Shown``'s body runs inline, as ``StatusStrip``'s does below: no renderer here.
+    monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
     return hooks
 
 
@@ -228,6 +232,33 @@ async def test_the_content_line_is_logged_once_per_feed_version(
     ]
 
 
+def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
+    hooks: Hooks, page: FakePage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(scaffold, "Shown", Shown)  # the real component
+    reads: list[str] = []
+    monkeypatch.setattr(scaffold, "use_conference", lambda: reads.append("read"))
+    body = ft.Text("body")
+    hooks.view_path = page.route = "/more"
+
+    with Renderer().with_context():  # what calling a component needs, as in a render
+        view = AppScaffold(title="More", body=body)
+
+    (safe,) = view.controls
+    assert isinstance(safe, ft.SafeArea)
+    shown = safe.content
+    assert isinstance(shown, ft.Component)
+    assert shown.fn is inspect.unwrap(Shown)
+    assert shown.args == (body,)
+    assert reads == []  # the screen's own render never subscribed to Conference
+
+
+def test_shown_hands_back_the_same_body(hooks: Hooks, conference: Conference) -> None:
+    body = ft.Text("body")
+    assert inspect.unwrap(Shown)(body) is body
+    assert [deps for _, deps in hooks.effects] == [[conference.version]]
+
+
 def test_search_records_its_opener_with_the_query_then_opens(
     page: FakePage,
 ) -> None:
@@ -254,6 +285,8 @@ FETCHED = datetime(2026, 5, 12, 10, 42, tzinfo=PACIFIC)  # a Tuesday
         ("stale", None, "No schedule yet"),
         ("offline", FETCHED, "Offline · schedule from Tue, May 12, 10:42 AM"),
         ("problem", FETCHED, "Couldn't update · schedule from Tue, May 12, 10:42 AM"),
+        ("offline", None, "Offline · no schedule yet"),
+        ("problem", None, "Couldn't update · no schedule yet"),
     ],
 )
 def test_the_strip_says_why_the_data_is_not_fresh(

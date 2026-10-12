@@ -279,7 +279,7 @@ def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
 | Offline | The last refresh failed with a network error (`Conference.problem == "offline"`; no `ft.Connectivity` before P3) | "Offline · schedule from Tue, May 12, 10:42 AM"; Refresh still tries |
 | Not updated | The last refresh got an answer it could not use (`problem == "server"`, D-146) | "Couldn't update · schedule from Tue, May 12, 10:42 AM"; Refresh |
 | First load | No snapshot or cache, fetch running (rare, NEW-03) | `SkeletonList` |
-| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again" |
+| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again"; the strip says "Offline · no schedule yet" or "Couldn't update · no schedule yet" |
 | Empty | Nothing matches | `EmptyState` with a specific way out (§4.6) |
 | Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list |
 | Removed (P2) | Session left the latest feed while open | Content kept, inline note "Removed from the latest schedule" |

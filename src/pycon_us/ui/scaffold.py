@@ -35,12 +35,9 @@ def AppScaffold(
     """Return a screen's View: the app bar, the Back rules and the body (D-10, D-17).
 
     A plain builder that calls hooks, so a screen calls it exactly once per render, in
-    every branch (hooks are unconditional, D-70). It reads ``Conference``, so the
-    screen re-renders when the feed or its status changes, as screens that show the
-    feed do anyway.
-
-    It also records the top View's route for the start route (D-143) and logs D-112's
-    content line once per feed version, from the first screen that shows it (D-165).
+    every branch (hooks are unconditional, D-70). It records the top View's route for
+    the start route (D-143), and places the body in ``Shown``, which logs D-112's
+    content line (D-165).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -57,22 +54,10 @@ def AppScaffold(
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
-    conference = use_conference()
     is_root = view_path in TAB_ROOTS
     back_to_now = is_root and view_path != "/now"
     if is_top_view(page.route, view_path):  # where a new session returns (D-143)
         svc.memory.last_location = page.route
-    version, source = conference.version, conference.source  # what this render shows
-
-    @report_errors
-    async def log_shown() -> None:
-        if version in svc.shown_versions:  # another screen showed it first
-            return
-        svc.shown_versions.add(version)
-        # D-112's content line: a SharedPreferences round trip after the render, so the
-        # patch has reached Flutter when it is logged.
-        await svc.storage.get(THEME)
-        logger.info("Content shown: %s feed, version %d", source, version)
 
     @report_errors
     def go_back() -> None:
@@ -84,7 +69,6 @@ def AppScaffold(
         page.navigate("/now")
         await e.control.confirm_pop(False)  # this View stays; Now replaces the root
 
-    ft.use_effect(log_shown, [version])
     back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
     return ft.View(
         route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
@@ -100,8 +84,39 @@ def AppScaffold(
         # The NavigationBar goes here, on tab roots only (#75, D-144).
         can_pop=not back_to_now,
         on_confirm_pop=leave_for_now if back_to_now else None,
-        controls=[ft.SafeArea(expand=True, content=body)],
+        controls=[ft.SafeArea(expand=True, content=Shown(body))],
     )
+
+
+@ft.component
+def Shown(body: ft.Control) -> ft.Control:
+    """Return ``body`` unchanged, and log D-112's content line once per feed version.
+
+    The line is ``Content shown: <source> feed, version <n>``, logged from the first
+    screen that renders a version (``Services.shown_versions``, D-165), after a
+    SharedPreferences round trip so the patch has reached Flutter. It is a component of
+    its own so that only it reads ``Conference``: a refresh re-renders this leaf, which
+    hands back the same ``body``, and not the screen around it.
+
+    Args:
+        body: The screen's body.
+    """
+    svc = use_services()
+    conference = use_conference()
+    version, source = conference.version, conference.source  # what this render shows
+
+    @report_errors
+    async def log_shown() -> None:
+        if version in svc.shown_versions:  # another screen showed it first
+            return
+        svc.shown_versions.add(version)
+        # Flet cancels this setup only when it re-runs, for a newer version (no cleanup,
+        # so an unmount leaves it running); that version is then what is shown.
+        await svc.storage.get(THEME)
+        logger.info("Content shown: %s feed, version %d", source, version)
+
+    ft.use_effect(log_shown, [version])
+    return body
 
 
 def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
@@ -171,21 +186,25 @@ def strip_line(
 
     Returns:
         The line, e.g. "Updated 9 hours ago" or "Offline · schedule from Tue, May 12,
-        10:42 AM"; None when the data is fresh.
+        10:42 AM" ("Offline · no schedule yet" without data); None when the data is
+        fresh.
     """
     if status == "fresh":
         return None
     if status == "refreshing":
         return "Updating the schedule…"
-    if fetched_at is None:  # stale: nothing loaded at all (rare, NEW-03)
-        return "No schedule yet"
     if status == "stale":
+        if fetched_at is None:  # nothing loaded at all (rare, NEW-03)
+            return "No schedule yet"
         return f"Updated {ago_label(fetched_at, now)}"
-    day = day_label(local_date(fetched_at, zone))
-    since = f"{day}, {time_label(fetched_at, zone, use_24h=use_24h)}"
+    if fetched_at is None:  # a failed refresh with nothing loaded: no "from" to give
+        since = "no schedule yet"
+    else:
+        day = day_label(local_date(fetched_at, zone))
+        since = f"schedule from {day}, {time_label(fetched_at, zone, use_24h=use_24h)}"
     if status == "offline":  # no answer: a better network may help
-        return f"Offline · schedule from {since}"
-    return f"Couldn't update · schedule from {since}"  # an answer we could not use
+        return f"Offline · {since}"
+    return f"Couldn't update · {since}"  # an answer we could not use
 
 
 @ft.component
