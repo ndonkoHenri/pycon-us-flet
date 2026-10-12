@@ -12,6 +12,7 @@ marks the title as a header, is checked on devices (the PR).
 import asyncio
 import inspect
 import logging
+import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
@@ -27,7 +28,8 @@ from flet.components.component import Renderer
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.services import Services
+from pycon_us.screens import my_schedule, now, schedule
+from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
 from pycon_us.theme import DARK_TOKENS
@@ -67,9 +69,31 @@ class Hooks:
     effects: list[tuple[Callable[[], Any], list[Any] | None]] = field(
         default_factory=list
     )
+    cleanups: list[Callable[[], Any] | None] = field(default_factory=list)
+    state: Any = None
+    renders: int = 0
+    """How many re-renders a state setter asked for: only for a changed value."""
 
-    def use_effect(self, setup: Callable[[], Any], dependencies: Any = None) -> None:
+    def use_effect(
+        self,
+        setup: Callable[[], Any],
+        dependencies: Any = None,
+        cleanup: Callable[[], Any] | None = None,
+    ) -> None:
         self.effects.append((setup, dependencies))
+        self.cleanups.append(cleanup)
+
+    def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
+        """One state per test, set as Flet's setter sets it: unchanged, no render."""
+        if self.state is None:
+            self.state = initial() if callable(initial) else initial
+
+        def set_state(value: Any) -> None:
+            if value != self.state:
+                self.state = value
+                self.renders += 1
+
+        return self.state, set_state
 
 
 @pytest.fixture
@@ -91,6 +115,7 @@ def hooks(
     hooks = Hooks()
     monkeypatch.setattr(ft, "use_view_path", lambda: hooks.view_path)
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
+    monkeypatch.setattr(ft, "use_state", hooks.use_state)
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
     monkeypatch.setattr(scaffold, "use_tokens", lambda: DARK_TOKENS)
@@ -464,8 +489,9 @@ def test_the_strip_writes_times_in_conference_time_and_the_device_format() -> No
     assert line == "Offline · schedule from Tue, May 12, 10:42"
 
 
-def render_strip() -> ft.Semantics:
-    strip = inspect.unwrap(StatusStrip)()  # the body, without @ft.component
+def render_strip(*, auto_refresh: bool = False) -> ft.Semantics:
+    # The body, without @ft.component.
+    strip = inspect.unwrap(StatusStrip)(auto_refresh=auto_refresh)
     assert isinstance(strip, ft.Semantics)
     return strip
 
@@ -526,6 +552,198 @@ def test_while_refreshing_the_strip_shows_progress_and_disables_refresh(
     assert button.disabled is True
     assert progress.visible is True
     assert progress.value is None  # indeterminate
+
+
+# ------------------------------------------------------------------ the strip's ticks
+
+
+@dataclass
+class Clock:
+    """``clock.now()`` for a test, moved by hand."""
+
+    now: datetime
+
+    def move(self, delta: timedelta) -> None:
+        self.now += delta
+
+
+@pytest.fixture
+def moving_clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
+    fake = Clock(datetime(2026, 5, 11, 12, 0, 30, tzinfo=PACIFIC))
+    monkeypatch.setattr(clock, "now", lambda: fake.now)
+    return fake
+
+
+@dataclass
+class Loops:
+    """Stands in for ``Services.run_every``: records each loop instead of running it."""
+
+    started: list[tuple[float, Callable[[], object]]] = field(default_factory=list)
+
+    # A bound method set on the class is not bound again: no `self` of Services.
+    async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
+        self.started.append((seconds, action))
+
+
+@pytest.fixture
+def loops(monkeypatch: pytest.MonkeyPatch) -> Loops:
+    fake = Loops()
+    monkeypatch.setattr(Services, "run_every", fake.run_every)
+    return fake
+
+
+async def mounted_strip(
+    hooks: Hooks, loops: Loops, **kwargs: Any
+) -> Callable[[], object]:
+    """Render the strip and run its effect as a mount does; return the tick."""
+    render_strip(**kwargs)
+    setup, _ = hooks.effects[-1]
+    await setup()
+    ((seconds, tick),) = loops.started
+    assert seconds == scaffold.TICK_SECONDS == 60
+    return tick
+
+
+def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) -> None:
+    render_strip(auto_refresh=True)
+    (_, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
+    assert dependencies == [True]
+    # Flet cancels an effect's task on unmount only when it has a cleanup (F2), and a
+    # cleanup returned by a sync setup is lost at the next render (F39).
+    assert cleanup is scaffold.stop_ticks
+
+
+async def test_a_tick_re_renders_the_strip_only_when_the_minute_changed(
+    hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
+) -> None:
+    tick = await mounted_strip(hooks, loops)
+    tick()  # at mount: the same minute as the render
+    assert hooks.renders == 0
+    moving_clock.move(timedelta(seconds=60))
+    tick()
+    assert hooks.renders == 1
+
+
+async def test_a_tick_shows_the_strip_once_the_data_turns_stale(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    loops: Loops,
+    moving_clock: Clock,
+) -> None:
+    conference.fetched_at = moving_clock.now - timedelta(
+        hours=23, minutes=59, seconds=30
+    )
+    tick = await mounted_strip(hooks, loops)
+    assert render_strip().visible is False
+    moving_clock.move(timedelta(seconds=60))
+    tick()
+    assert hooks.renders == 1
+    strip = render_strip()  # the re-render the tick asked for
+    text, _, _ = strip_parts(strip)
+    assert strip.visible is True
+    assert text.value == "Updated 1 day ago"
+
+
+class Network:
+    """Stands in for ``api.fetch_feed``: counts requests, each held until released.
+
+    Released, it answers with an empty body, which ``feed.process`` rejects: a failed
+    refresh, which is enough to end it.
+    """
+
+    def __init__(self) -> None:
+        self.requests = 0
+        self.released = asyncio.Event()
+
+    async def fetch_feed(self, url: str, **_: object) -> bytes:
+        self.requests += 1
+        await self.released.wait()
+        return b""
+
+
+@pytest.fixture
+def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
+    fake = Network()
+    monkeypatch.setattr(api, "fetch_feed", fake.fetch_feed)
+    yield fake
+    fake.released.set()  # a held refresh ends with the test
+
+
+async def test_on_now_and_schedule_a_tick_starts_a_refresh_when_one_is_due(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    loops: Loops,
+    moving_clock: Clock,
+    network: Network,
+) -> None:
+    tick = await mounted_strip(hooks, loops, auto_refresh=True)
+    tick()  # nothing has started in this session yet
+    first = conference._task
+    assert first is not None
+    network.released.set()
+    await first
+    assert network.requests == 1
+
+    moving_clock.move(timedelta(minutes=14, seconds=59))
+    tick()
+    assert conference._task is first  # not yet due
+
+    moving_clock.move(timedelta(seconds=1))  # 15 min after it began (D-40)
+    tick()
+    second = conference._task
+    assert second is not None and second is not first
+    await second
+    assert network.requests == 2
+
+
+async def test_elsewhere_a_tick_never_refreshes(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    loops: Loops,
+    moving_clock: Clock,
+) -> None:
+    tick = await mounted_strip(hooks, loops)  # My schedule's strip
+    tick()
+    moving_clock.move(timedelta(hours=2))
+    tick()
+    assert conference._task is None
+
+
+@pytest.mark.parametrize(
+    ("screen", "auto_refresh"),
+    [(now.Now, True), (schedule.Schedule, True), (my_schedule.MySchedule, False)],
+)
+def test_only_now_and_schedule_refresh_every_15_minutes(
+    hooks: Hooks,
+    page: FakePage,
+    svc: Services,
+    conference: Conference,
+    monkeypatch: pytest.MonkeyPatch,
+    screen: Callable[[], Any],
+    auto_refresh: bool,
+) -> None:
+    module = sys.modules[screen.__module__]
+    bodies: list[dict[str, Any]] = []
+
+    def stub_body(controls: list[ft.Control], **kwargs: Any) -> dict[str, Any]:
+        bodies.append(kwargs)
+        return kwargs
+
+    monkeypatch.setattr(module, "stub_body", stub_body)
+    monkeypatch.setattr(module, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(module, "use_scroll_to_top", lambda: (ft.Ref(), None))
+    for name, fake in (("use_services", svc), ("use_conference", conference)):
+        if hasattr(module, name):
+            monkeypatch.setattr(module, name, lambda fake=fake: fake)
+
+    inspect.unwrap(screen)()
+
+    ((kwargs),) = bodies
+    assert kwargs["status"] is True
+    assert kwargs.get("auto_refresh", False) is auto_refresh
 
 
 # ------------------------------------------------------------------ SectionHeader

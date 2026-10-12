@@ -8,13 +8,14 @@ nothing reaches the network. The components themselves are checked on devices (t
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
 import flet as ft
 import pytest
 
-from pycon_us import app
+from pycon_us import app, clock
 from pycon_us.app import (
     NO_THEME_ANIMATION,
     apply_theme,
@@ -314,10 +315,10 @@ async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     semantics.features.update(high_contrast=True, reduce_motion=True)
-    _, prefs = await started(fake_page, svc)
+    conference, prefs = await started(fake_page, svc)
     semantics.error = TimeoutError()  # the Flutter side does not answer
     with caplog.at_level(logging.WARNING, logger="pycon_us.app"):
-        await on_resume(svc, prefs)
+        await on_resume(svc, conference, prefs)
     assert semantics.reads == 2
     # The last good snapshot stands; nothing falls back to the defaults (F13).
     assert prefs.os_high_contrast and prefs.reduce_motion
@@ -334,6 +335,77 @@ async def test_a_change_of_reduced_motion_is_logged_once(
         await read_accessibility(semantics, prefs)
         await read_accessibility(semantics, prefs)  # unchanged: resumes are many
     assert [r.getMessage() for r in caplog.records] == ["Reduced motion is on"]
+
+
+def lifecycle(
+    fake_page: FakePage, state: ft.AppLifecycleState
+) -> ft.AppLifecycleStateChangeEvent:
+    return ft.AppLifecycleStateChangeEvent(
+        name="app_lifecycle_state_change", control=cast(ft.Page, fake_page), state=state
+    )
+
+
+@pytest.fixture
+def frozen_clock() -> Iterator[datetime]:
+    clock.set_test_now(STARTED_AT)
+    yield STARTED_AT
+    clock.set_test_now(None)
+
+
+STARTED_AT = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
+
+
+async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    await started(fake_page, svc)
+    handler = fake_page.on_app_lifecycle_state_change
+    for state in ("inactive", "hide", "pause"):  # going to the background (D-147)
+        await handler(lifecycle(fake_page, ft.AppLifecycleState(state)))
+    assert not svc.foreground.is_set()  # Services.run_every waits (D-40)
+    for state in ("restart", "show"):
+        await handler(lifecycle(fake_page, ft.AppLifecycleState(state)))
+    assert not svc.foreground.is_set()
+    await handler(lifecycle(fake_page, ft.AppLifecycleState.RESUME))
+    assert svc.foreground.is_set()
+
+
+async def test_a_resume_refreshes_once_the_last_refresh_began_15_minutes_ago(
+    fake_page: FakePage, svc: Services, network: Network, frozen_clock: datetime
+) -> None:
+    conference, _ = await started(fake_page, svc)
+    at_start = conference._task
+    await finish_refresh(conference, network)
+    resume = lifecycle(fake_page, ft.AppLifecycleState.RESUME)
+
+    clock.set_test_now(frozen_clock + timedelta(minutes=14))
+    await fake_page.on_app_lifecycle_state_change(resume)
+    assert conference._task is at_start  # not due yet: no request
+
+    clock.set_test_now(frozen_clock + timedelta(minutes=15))
+    await fake_page.on_app_lifecycle_state_change(resume)
+    assert conference._task is not at_start  # a new request
+    await finish_refresh(conference, network)
+    assert conference.source == "network"
+
+
+async def test_an_offline_resume_keeps_the_data_and_says_offline(
+    fake_page: FakePage, svc: Services, network: Network, frozen_clock: datetime
+) -> None:
+    conference, _ = await started(fake_page, svc)
+    await finish_refresh(conference, network)
+    shown = conference.data
+    network.answer = api.NetworkError("airplane mode")
+
+    clock.set_test_now(frozen_clock + timedelta(hours=2))
+    await fake_page.on_app_lifecycle_state_change(
+        lifecycle(fake_page, ft.AppLifecycleState.RESUME)
+    )
+    await finish_refresh(conference, network)
+
+    assert conference.data is shown and conference.source == "network"
+    assert conference.problem == "offline"
+    assert conference.status(svc.year.conference) == "offline"
 
 
 async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising(

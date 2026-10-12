@@ -22,6 +22,7 @@ def Now() -> ft.View:
         body=stub_body(
             [note("What's on now and your next session arrive in P1.")],
             status=True,
+            auto_refresh=True,
             ref=list_ref,
         ),
         on_retap=scroll_to_top,

@@ -6,6 +6,8 @@ phases add reminders, the API client, the sync worker and the scanner.
 """
 
 import asyncio
+import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -16,6 +18,13 @@ from pycon_us.services.storage import Storage, data_dir
 
 if TYPE_CHECKING:  # state.py imports this package
     from pycon_us.state import ViewMemory
+
+
+def _set_event() -> asyncio.Event:
+    """Return an ``asyncio.Event`` that is already set: a session starts in the foreground."""
+    event = asyncio.Event()
+    event.set()
+    return event
 
 
 @dataclass(frozen=True, eq=False)
@@ -33,6 +42,9 @@ class Services:
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
+        foreground: Set while the app is in the foreground: the lifecycle handler
+            clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
+            loops wait for it, so nothing ticks in the background (D-40).
         shown_versions: The feed versions this session has logged D-112's content line
             for; ``AppScaffold``'s ``Shown`` logs each version once, from the first
             screen that shows it (D-165).
@@ -43,6 +55,7 @@ class Services:
     memory: ViewMemory
     semantics: ft.SemanticsService
     closed: asyncio.Event = field(default_factory=asyncio.Event)
+    foreground: asyncio.Event = field(default_factory=_set_event)
     shown_versions: set[int] = field(default_factory=set)
 
     @classmethod
@@ -79,6 +92,30 @@ class Services:
         loop, and a feed refresh before it writes, checks ``closed``. Until U24 (D-149).
         """
         self.closed.set()
+        # Wakes the run_every() loops that wait for a resume, so they see `closed` and
+        # return: a session replaced in the background never resumes.
+        self.foreground.set()
+
+    async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
+        """Call ``action`` now, then every ``seconds`` while the app is in the foreground.
+
+        In the background it waits without doing anything, and calls ``action`` as soon
+        as the app resumes when a call fell due meanwhile, so a screen catches up at
+        once (D-40). It returns when the session closes (D-147); an effect's cleanup
+        stops it sooner by cancelling its task.
+
+        Args:
+            seconds: The time between two calls.
+            action: What to do; it runs on the event loop, so it may write stores.
+        """
+        while True:
+            await self.foreground.wait()
+            if self.closed.is_set():
+                return
+            action()
+            # Sleeps `seconds`, or less when the session closes meanwhile.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self.closed.wait(), seconds)
 
 
 ServicesCtx: ft.ContextProvider[Services | None] = ft.create_context(None)

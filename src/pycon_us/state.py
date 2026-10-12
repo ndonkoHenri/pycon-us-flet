@@ -42,6 +42,10 @@ STALE_ON_CONFERENCE_DAYS = timedelta(hours=6)
 STALE_OTHERWISE = timedelta(hours=24)
 """Data older than this is stale on any other day (D-32)."""
 
+REFRESH_EVERY = timedelta(minutes=15)
+"""How long after a refresh began the next automatic one is due: on resume, and on Now
+and Schedule while they show (D-40)."""
+
 
 # eq=False: a store is one object, compared by identity. A generated __eq__ would compare
 # every field, the whole processed feed included, whenever Flet compares it (F5).
@@ -73,6 +77,7 @@ class Conference:
     problem: Problem | None = None
     version: int = 0
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
+    _started_at: datetime | None = field(default=None, repr=False)
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the feed cache, or the bundled snapshot when there is no usable cache.
@@ -131,11 +136,55 @@ class Conference:
             The running refresh: the new one, or the one already in flight.
         """
         if self._task is None or self._task.done():
+            self._started_at = clock.now()
             self._task = asyncio.create_task(
                 self._refresh(storage, year, transport, closed)
             )
             self._task.add_done_callback(_log_unexpected)
         return self._task
+
+    def refresh_due(self) -> bool:
+        """Return whether an automatic refresh is due (D-40).
+
+        It is due when no refresh has started in this session, or when the last one
+        started ``REFRESH_EVERY`` or more ago by ``clock.now()``, whatever its outcome:
+        the interval counts from the last attempt, not from the data's age, so a phone
+        without a network retries every 15 min rather than on every check. A clock set
+        back before the last start (the Developer fake clock) makes it due as well.
+        """
+        if self._started_at is None:
+            return True
+        since = clock.now() - self._started_at
+        return not timedelta(0) <= since < REFRESH_EVERY
+
+    def start_refresh_if_due(
+        self,
+        storage: Storage,
+        year: YearData,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        closed: asyncio.Event | None = None,
+    ) -> asyncio.Task[None] | None:
+        """Start a background refresh when ``refresh_due()``; the automatic triggers' call.
+
+        The app calls it on resume, and the status strip of Now and Schedule every
+        minute while it shows (D-40). Like ``start_refresh``, it never raises for an
+        expected failure and never clears what is published.
+
+        Args:
+            storage: Where the feed cache lives.
+            year: The year's data: the feed URL and feed settings.
+            transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+            closed: Set when the store's session has been replaced; see
+                ``start_refresh``.
+
+        Returns:
+            The refresh it started, or None when none was due.
+        """
+        if not self.refresh_due():
+            return None
+        logger.info("An automatic feed refresh is due; starting it")
+        return self.start_refresh(storage, year, transport=transport, closed=closed)
 
     async def refresh(
         self,

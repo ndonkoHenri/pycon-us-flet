@@ -90,6 +90,7 @@ def Schedule() -> ft.View:
                 ),
             ],
             status=True,
+            auto_refresh=True,
             ref=list_ref,
         ),
         on_retap=scroll_to_top,
