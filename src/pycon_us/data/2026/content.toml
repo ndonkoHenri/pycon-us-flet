@@ -1,0 +1,12 @@
+# PyCon US 2026: content the app shows (D-45). Loaded by pycon_us.config.load_year().
+# For now it holds only the display-time overrides; links, Wi-Fi, safety contacts,
+# keynotes and the rest arrive with their screens.
+
+# Shift the displayed start of a session without moving it in the timeline (DATA-11).
+# `match` is a regular expression matched case-insensitively against the whole cleaned
+# session name; `minutes` moves the displayed start (negative is earlier).
+# The Job Fair opens at 9:30 but is grouped with the 10:00 sessions, as in Ionic's app;
+# the longer "Job Fair & Community Showcase & Poster Sessions" row does not match.
+[[display_time_overrides]]
+match = '\s*job\s*fair\s*&\s*community\s*showcase\s*'
+minutes = -30

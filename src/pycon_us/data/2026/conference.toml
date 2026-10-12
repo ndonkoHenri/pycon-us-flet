@@ -1,0 +1,142 @@
+# PyCon US 2026: the facts the app needs about this year (D-45).
+# Loaded by pycon_us.config.load_year(); the dataclasses there are the schema.
+# Source: https://us.pycon.org/2026/ (checked 2026-10-12).
+
+year = 2026
+name = "PyCon US 2026"
+time_zone = "America/Los_Angeles"   # IANA zone; every time is shown in it (D-43)
+first_day = 2026-05-13              # tutorials
+last_talk_day = 2026-05-17          # the last day of the main conference
+last_day = 2026-05-19               # the last sprint day
+venue = "Long Beach Convention Center"
+city = "Long Beach, CA"
+site_url = "https://us.pycon.org/2026/"
+feed_url = "https://us.pycon.org/2026/schedule/conference.json"
+
+# The track registry (DATA-14, DATA-28). `key` is the track as feed processing names it:
+# the feed's kind with its first letter upper-cased (`sponsor-workshop` becomes
+# `Sponsor Presentation`). `short` names a badge or a row, `plural` a list of the
+# track's sessions, `long` the track on session detail. `icon` is an outlined Material
+# icon (an ft.Icons name, D-27); `group` places it in the filter sheet: talks,
+# hands-on, community or logistics. Colours live in the theme tokens (D-24, D-25).
+# An unknown key falls back to its humanised form (config.ConferenceInfo.track).
+
+[[tracks]]
+key = "Talk"
+short = "Talk"
+plural = "Talks"
+long = "Talk"
+icon = "MIC_NONE_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Keynote"
+short = "Keynote"
+plural = "Keynotes"
+long = "Keynote"
+icon = "CO_PRESENT_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Plenary"
+short = "Plenary"
+plural = "Plenaries"
+long = "Plenary"
+icon = "CAMPAIGN_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Lightning-talks"
+short = "Lightning talks"
+plural = "Lightning talks"
+long = "Lightning talks"
+icon = "BOLT_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Ai"
+short = "AI"
+plural = "Future of AI with Python"
+long = "The Future of AI with Python"
+icon = "MEMORY_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Security"
+short = "Security"
+plural = "Trailblazing Python Security"
+long = "Trailblazing Python Security"
+icon = "SHIELD_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Charla"
+short = "Charla"
+plural = "Charlas"
+long = "Charla"
+icon = "TRANSLATE"
+group = "talks"
+
+[[tracks]]
+key = "Poster"
+short = "Poster"
+plural = "Posters"
+long = "Poster"
+icon = "ARTICLE_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Tutorial"
+short = "Tutorial"
+plural = "Tutorials"
+long = "Tutorial"
+icon = "SCHOOL_OUTLINED"
+group = "hands-on"
+
+[[tracks]]
+key = "Sponsor Presentation"
+short = "Sponsor presentation"
+plural = "Sponsor presentations"
+long = "Sponsor presentation"
+icon = "BUSINESS_CENTER_OUTLINED"
+group = "hands-on"
+
+[[tracks]]
+key = "Open Space"
+short = "Open space"
+plural = "Open spaces"
+long = "Open space"
+icon = "FORUM_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Summit"
+short = "Summit"
+plural = "Summits"
+long = "Summit"
+icon = "GROUPS_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Event"
+short = "Event"
+plural = "Events"
+long = "Event"
+icon = "GROUPS_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Informational"
+short = "Notice"
+plural = "Notices"
+long = "Notice"
+icon = "INFO_OUTLINE"
+group = "logistics"
+
+[[tracks]]
+key = "Break"
+short = "Break"
+plural = "Breaks"
+long = "Break"
+icon = "COFFEE_OUTLINED"
+group = "logistics"

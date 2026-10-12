@@ -1,0 +1,111 @@
+# PyCon US 2025: the facts the app needs about this year (D-45).
+# Kept for the recorded 2025 feed (tests/fixtures/feeds/): its Eastern time zone keeps the
+# code honest about zones. The fields are explained in data/2026/conference.toml.
+# Source: https://us.pycon.org/2025/ (checked 2026-10-12).
+
+year = 2025
+name = "PyCon US 2025"
+time_zone = "America/New_York"
+first_day = 2025-05-14
+last_talk_day = 2025-05-18
+last_day = 2025-05-22
+venue = "David L. Lawrence Convention Center"
+city = "Pittsburgh, PA"
+site_url = "https://us.pycon.org/2025/"
+feed_url = "https://us.pycon.org/2025/schedule/conference.json"
+
+[[tracks]]
+key = "Talk"
+short = "Talk"
+plural = "Talks"
+long = "Talk"
+icon = "MIC_NONE_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Plenary"
+short = "Plenary"
+plural = "Plenaries"
+long = "Plenary"
+icon = "CAMPAIGN_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Lightning-talks"
+short = "Lightning talks"
+plural = "Lightning talks"
+long = "Lightning talks"
+icon = "BOLT_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Charla"
+short = "Charla"
+plural = "Charlas"
+long = "Charla"
+icon = "TRANSLATE"
+group = "talks"
+
+[[tracks]]
+key = "Poster"
+short = "Poster"
+plural = "Posters"
+long = "Poster"
+icon = "ARTICLE_OUTLINED"
+group = "talks"
+
+[[tracks]]
+key = "Tutorial"
+short = "Tutorial"
+plural = "Tutorials"
+long = "Tutorial"
+icon = "SCHOOL_OUTLINED"
+group = "hands-on"
+
+[[tracks]]
+key = "Sponsor Presentation"
+short = "Sponsor presentation"
+plural = "Sponsor presentations"
+long = "Sponsor presentation"
+icon = "BUSINESS_CENTER_OUTLINED"
+group = "hands-on"
+
+[[tracks]]
+key = "Open Space"
+short = "Open space"
+plural = "Open spaces"
+long = "Open space"
+icon = "FORUM_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Summit"
+short = "Summit"
+plural = "Summits"
+long = "Summit"
+icon = "GROUPS_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Event"
+short = "Event"
+plural = "Events"
+long = "Event"
+icon = "GROUPS_OUTLINED"
+group = "community"
+
+[[tracks]]
+key = "Informational"
+short = "Notice"
+plural = "Notices"
+long = "Notice"
+icon = "INFO_OUTLINE"
+group = "logistics"
+
+[[tracks]]
+key = "Break"
+short = "Break"
+plural = "Breaks"
+long = "Break"
+icon = "COFFEE_OUTLINED"
+group = "logistics"
