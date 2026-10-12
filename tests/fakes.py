@@ -1,8 +1,14 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
 
-from typing import Any
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Any, cast
 
 import flet as ft
+
+# Private: Flet has no public way to bind a page (its own pytest plugin sets this too).
+# Checked against the .flet-ref pin 15854a0ac; switch when #160's binding lands.
+from flet.controls.context import _context_page
 
 
 class MemoryPrefs(ft.SharedPreferences):
@@ -70,7 +76,7 @@ class MemorySemantics(ft.SemanticsService):
 
 
 class FakePage:
-    """The few ``ft.Page`` fields the start sequence reads and writes.
+    """The few ``ft.Page`` fields the start sequence and ``report_errors`` use.
 
     Tests pass it as ``cast(ft.Page, FakePage())``: a real page needs a session.
     """
@@ -84,3 +90,17 @@ class FakePage:
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
+        self.dialogs: list[ft.DialogControl] = []
+
+    def show_dialog(self, dialog: ft.DialogControl) -> None:
+        self.dialogs.append(dialog)
+
+
+@contextmanager
+def bound(page: FakePage) -> Iterator[ft.Page]:
+    """Bind ``page`` to ``ft.context.page``, as Flet does while a handler or effect runs."""
+    token = _context_page.set(cast(ft.Page, page))  # pyright: ignore[reportArgumentType]
+    try:
+        yield cast(ft.Page, page)
+    finally:
+        _context_page.reset(token)

@@ -5,17 +5,14 @@ per session; on Android a new session can start in the same Python process (F26,
 so what must outlive a session lives at module level here.
 """
 
-import logging
-
 import flet as ft
 
 from pycon_us import APP_NAME
 from pycon_us.app import BOOT_COLOR, NO_THEME_ANIMATION, App
+from pycon_us.services.errors import setup_logging
 from pycon_us.state import ViewMemory
 
-# INFO to stderr, which packaged apps capture in console.log (F14); #73 replaces this
-# with setup_logging() and an asyncio exception handler.
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+setup_logging()  # once per process, before the first session logs anything (D-72)
 
 MEMORY = ViewMemory()
 """One per process: a new session finds it as the last one left it (D-143)."""

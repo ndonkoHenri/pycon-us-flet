@@ -14,6 +14,7 @@ import flet as ft
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens.stub import Stub
 from pycon_us.services import Services, ServicesCtx
+from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import THEME_MODES, TokensCtx, build_theme, build_tokens
@@ -51,9 +52,11 @@ def App(memory: ViewMemory):
     conference = ft.use_memo(Conference, [])
     prefs, _ = ft.use_state(Prefs)
 
+    @report_errors
     async def start() -> None:
         await bootstrap(page, svc, conference, prefs)
 
+    @report_errors
     def follow_theme() -> None:
         apply_theme(page, prefs)
 
@@ -82,6 +85,7 @@ def BootView() -> ft.View:
     """The boot gate's view: the splash's purple, and a ring only after ``RING_DELAY``."""
     ring, set_ring = ft.use_state(False)
 
+    @report_errors
     def show_ring_later():
         # A sync setup whose return value is its cleanup (F2): an unmount within the
         # delay cancels the timer.
@@ -136,7 +140,7 @@ async def bootstrap(
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
         await conference.load_local(svc.storage, svc.year)
-    except Exception:  # #73's report_errors takes over reporting
+    except Exception:  # its own net, not report_errors: the gate opens anyway (D-161)
         if not svc.closed.is_set():  # a closed session's store write fails (F30)
             logger.exception("Start failed; opening the app with what has loaded")
     if svc.closed.is_set():
@@ -146,12 +150,14 @@ async def bootstrap(
     page.theme_animation_style = None  # later changes crossfade, as Flutter's default
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
 
+    @report_errors
     def on_brightness(e: ft.Event[ft.Page]) -> None:
         # Not e.brightness: at the pin the event arrives as a plain ControlEvent whose
         # data is the name (flet_backend.dart sends a string), while the page field is
         # already updated (S4).
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
 
+    @report_errors
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent) -> None:
         if e.state == ft.AppLifecycleState.RESUME:
             await read_accessibility(svc.semantics, prefs)  # a snapshot (F13, U17)
