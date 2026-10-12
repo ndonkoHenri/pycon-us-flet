@@ -222,8 +222,13 @@ NETTED = [
     SRC / "main.py",
     SRC / "pycon_us" / "routes.py",
     *sorted((SRC / "pycon_us" / "screens").glob("*.py")),
+    *sorted((SRC / "pycon_us" / "ui").glob("*.py")),
 ]
-"""Modules whose nested functions are all handlers or effect setups (D-163)."""
+"""Modules whose nested functions are all handlers or effect setups (D-163).
+
+``app.py`` is left out on purpose: its nested ``router()`` is a provider's child
+builder, not a handler, so review checks that module's wrapping instead.
+"""
 
 
 @pytest.mark.parametrize("path", NETTED, ids=lambda p: p.name)

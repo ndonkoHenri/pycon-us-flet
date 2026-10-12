@@ -231,8 +231,10 @@ def Drill():
             return RoomDetail(room_slug=ident)
         case "sponsor":
             return SponsorDetail(sponsor_slug=ident)
-        case _:
+        case "plan":
             return PlanViewer(plan_id=ident)
+        case kind:  # DRILL only matches DRILL_KINDS
+            raise ValueError(f"no screen for the drill kind {kind!r}")
 ```
 
 ```python
@@ -1241,7 +1243,7 @@ def _tell_user(error: Exception) -> None:
         logger.warning("Could not show the error message", exc_info=True)
 ```
 
-A last-resort net, not error handling (§16.1). Every handler and effect setup is wrapped, sync or async; `bootstrap()`'s loading steps keep their own `try` so the gate opens anyway (D-161, D-163). Details show when not embedded, and with Developer unlocked once #88 adds it; review checks wrapping (no lint, D-71). An async effect needs the wrapper most: its exception otherwise reaches asyncio only when its task is released, which for a mounted effect with `[]` dependencies is never (F37).
+A last-resort net, not error handling (§16.1). Every handler and effect setup is wrapped, sync or async; `bootstrap()`'s loading steps keep their own `try` so the gate opens anyway (D-161, D-163). Details show when not embedded, and with Developer unlocked once #88 adds it; an AST test (`tests/test_errors.py`) checks that every function nested in `main.py`, `routes.py`, `screens/` and `ui/` is wrapped; review checks the rest (`app.py`; D-71). An async effect needs the wrapper most: its exception otherwise reaches asyncio only when its task is released, which for a mounted effect with `[]` dependencies is never (F37).
 
 ### 16.3 Logging
 
