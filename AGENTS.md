@@ -218,6 +218,6 @@ After the merge: the PR is squash-merged under D-100, and the issue is closed (b
 
 ## Development setup
 
-See [`docs/development.md`](docs/development.md): the Flet pin, uv, running on devices, the mock server, builds and
-CI. The test strategy is [`docs/testing-and-quality.md`](docs/testing-and-quality.md). P0-05 completes the guide from
-spike S5's verdict.
+Follow [`docs/development.md`](docs/development.md) §5.1 to go from a fresh clone to the app on an emulator or
+simulator. The guide also covers the Flet pin and its bumps, hot reload with the companion client, builds, signing,
+the mock server and CI. The test strategy is [`docs/testing-and-quality.md`](docs/testing-and-quality.md).
