@@ -255,8 +255,8 @@
 - **Shared components** (`ui/`, grouped by role; split a module at about 400 lines, D-66):
   - `scaffold.py`: `AppScaffold`, `SectionHeader`, `StatusStrip`, with `strip_line()` and `search_button()` (D-165).
   - `navigation.py`: `TABS`, `navigation_bar()`, `use_scroll_to_top()` (D-166); P2's tablet rail joins it.
-  - `rows.py`: `SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`.
-  - `badges.py`: `FavoriteButton`, `TrackBadge`, with `session_badges()` and `badge_row()` (D-174).
+  - `rows.py`: `SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`, with `use_session_views()`, `spoken_phrase()`, `notice_phrase()` and `is_notice()` (D-177).
+  - `badges.py`: `FavoriteButton`, `TrackBadge`, with `session_badges()` and `badge_row()` (D-174); `badge_specs()` and the hook `use_favorite_toggle()` (D-177).
   - `states.py`: `EmptyState`, `SkeletonList`.
 - **Stores and hooks:** `Conference` / `use_conference()`, `Prefs` / `use_prefs()`, `Favorites` / `use_favorites()`, `Account` / `use_account()` (P3), `Staff` / `use_staff()` (P3), plus `use_services()` (`services/__init__.py`, with `Services` and `ServicesCtx`) and `use_tokens()`.
 - **Routes.** S4 confirmed the shape (D-141), and `docs/architecture.md` §5 holds the full table; keep it and this list in sync.
