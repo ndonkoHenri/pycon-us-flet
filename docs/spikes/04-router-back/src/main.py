@@ -99,7 +99,7 @@ _PROCESS_MEMORY = ViewMemory()
 
 # ------------------------------------------------------------------ shell
 def nav_bar(tab: int, on_change) -> ft.NavigationBar:
-    """The five fixed destinations (D-13), shown on every View of a tab's stack."""
+    """The five fixed destinations (D-13): on tab roots, on pushed Views if the knob says so."""
     icons = (
         (ft.Icons.SENSORS_OUTLINED, ft.Icons.SENSORS, "Now"),
         (ft.Icons.CALENDAR_MONTH_OUTLINED, ft.Icons.CALENDAR_MONTH, "Schedule"),
@@ -138,6 +138,7 @@ def scaffold(
     controls: list[ft.Control],
     actions: list[ft.Control] | None = None,
     back_to: str | None = None,
+    on_retap=None,
 ) -> ft.View:
     """A View with the app bar, its tab's bar and the Back rules (D-10, D-17).
 
@@ -155,8 +156,12 @@ def scaffold(
 
     def on_tab(e: ft.Event[ft.NavigationBar]) -> None:
         target = TABS[e.control.selected_index or 0]
-        log("tab", view=view_path, to=target, retap=tab == e.control.selected_index)
-        page.navigate(target)  # the active tab too: back to its root (D-17)
+        retap = tab == e.control.selected_index
+        log("tab", view=view_path, to=target, retap=retap)
+        if retap and is_root and on_retap is not None:
+            page.run_task(on_retap)  # a root's re-tap: its screen scrolls to the top
+        else:
+            page.navigate(target)  # from a pushed View: back to its root (D-17)
 
     def go_back() -> None:
         target = back_to or parent_of(view_path, memory.search_base)
@@ -231,6 +236,8 @@ def Start() -> ft.View:
 
     async def go() -> None:
         target = memory.last_location if KNOBS["memory_per_process"] else ""
+        if urlparse(target).path.split("/")[1:2] == ["search"]:
+            target = memory.search_base  # a modal can't be rebuilt over `/`: its opener
         log("start", route=page.route, to=target or "/now")
         page.navigate(target or "/now")
 
@@ -272,6 +279,11 @@ def Schedule() -> ft.View:
 
     ft.use_effect(restore, [day])
 
+    async def scroll_to_top() -> None:
+        if list_ref.current.current is not None:
+            await list_ref.current.current.scroll_to(offset=0, duration=300)
+        log("retap-scroll", day=day)
+
     def remember_offset(e: ft.OnScrollEvent) -> None:
         memory.schedule_offsets[day] = e.pixels  # no re-render (D-18)
 
@@ -302,6 +314,7 @@ def Schedule() -> ft.View:
         title="Schedule",
         actions=[search_action(view_path, "sessions")],
         controls=[days, listing],
+        on_retap=scroll_to_top,
     )
 
 
@@ -697,8 +710,12 @@ async def run_journeys(page: ft.Page, memory: ViewMemory, reason: str) -> None:
     await step("deep", deep, deep)
     for _ in range(3):
         await step("back-arrow", back(), back())
-    # J7: an unknown id lands on its parent with a SnackBar.
+    # J7: an unknown id renders once, then lands on its parent with a SnackBar.
+    LEVELS.pop("/schedule/session/nope", None)
     await step("unknown", "/schedule/session/nope", "/schedule")
+    rendered = LEVELS.get("/schedule/session/nope") == ("session", "nope")
+    results["pass" if rendered else "fail"] += 1
+    log("unknown-rendered", ok=rendered)
     await checkpoint("j7-unknown")
     await step("tab", "/now", "/now")
     log("journey-done", **results)

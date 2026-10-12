@@ -145,7 +145,7 @@ async def bootstrap(svc: Services, conference: Conference, prefs: Prefs, favorit
 
 - `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`. Each step has its own error boundary (§16), and `prefs.loaded` is always set.
 - P3 inserts after step 2: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
-- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh check it before they write a store. U24 would make this unnecessary.
+- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
 **Refresh triggers (D-40):** start (always); resume (if older than 15 min); a 60 s ticking effect in Now and Schedule while the app is in the foreground (refresh when older than 15 min, recompute time-dependent views); "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*.
 
@@ -280,7 +280,7 @@ def main(page: ft.Page):
     page.render_views(App, MEMORY)            # App passes memory on to Services.create()
 ```
 
-`Start` (the index route `/`) navigates to `memory.last_location` when it is set, else to `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there.
+`Start` (the index route `/`) navigates to `memory.last_location` when it is set, else to `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`.
 
 `use_query()` (U9 interim) calls `ft.use_route_location()` for its hook slot and parses `urlparse(ft.context.page.route).query`, read once at mount. Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown id navigates to the parent path with a SnackBar.
 
@@ -303,11 +303,13 @@ TABS = (
 
 def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
                 actions: list[ft.Control] | None = None, fab: ft.Control | None = None,
-                back_to: str | None = None) -> ft.View:
+                back_to: str | None = None,
+                on_retap: Callable[[], Awaitable[None]] | None = None) -> ft.View:
     """A View with the app bar, the bottom bar on tab roots and the Back rules (D-17, D-144).
 
     A plain builder that each screen calls unconditionally, so its two hooks are safe (rule 4).
-    `back_to` overrides where the back arrow goes (Search passes its `search_base`).
+    `back_to` overrides where the back arrow goes (Search passes its `search_base`);
+    `on_retap` is a root's scroll-to-top, run when its active tab is tapped again.
     """
     page = ft.context.page
     memory = use_services().memory
@@ -318,7 +320,11 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
         memory.last_location = page.route                          # where a new session returns (D-143)
 
     def on_tab(e: ft.Event[ft.NavigationBar]):
-        page.navigate(TABS[e.control.selected_index][0])          # a re-tap fires too: the root scrolls to top
+        index = e.control.selected_index
+        if index == tab and on_retap is not None:                  # a re-tap fires on_change too (S4)
+            page.run_task(on_retap)                                 # e.g. await list.scroll_to(offset=0)
+        else:
+            page.navigate(TABS[index][0])
 
     def go_back(e: ft.Event[ft.IconButton]):
         page.navigate(back_to or parent_of(view_path))

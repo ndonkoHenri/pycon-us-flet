@@ -31,7 +31,7 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
   - `src/main.py`: the shell in components mode. `main()` sets `page.on_view_pop` (navigates to `parent_of(e.route, memory.search_base)`) before `page.render_views(App, memory)`. `App` has a boot gate on an observable `Device` store (opened after a SharedPreferences read), sets the page handlers in its start effect, and provides `ViewMemory` and `Device` through contexts around `ft.Router(ROUTES, manage_views=True)`. `scaffold()` builds every View: the `AppBar` with the Material back arrow on pushed Views (D-10), the bar, and D-17's `can_pop=False` + `on_confirm_pop` on non-Now roots. Stub screens: Now, Schedule (three days of 40 rows, day and offsets in `ViewMemory`), My schedule, Map, More (plus `/more/speakers`), Search, and `Drill` → `Detail` for sessions, speakers and rooms. A 15 s ticking effect shows whether an old session's work outlives it. More has switches for the knobs this verdict compares (shared root key, bar on pushed Views, `ViewMemory` per process, stop effects on close).
   - `src/routes.py`: the pure helpers `drill_href()`, `tab_of()`, `parent_of()` and `stack_depth()`.
   - `check_routes.py`: host checks of per-level params with the Router's own matcher, Back targets and stack depths.
-  - `drive_android.py`: nine adb journeys. Each step is one tap (found in `uiautomator dump`), the Back key, an edge swipe (`input motionevent`, with a screenshot mid-gesture) or an adb setting, and waits for the app's `S4 top ... route=<path>` log line.
+  - `drive_android.py`: ten adb journeys. Each step is one tap (found in `uiautomator dump`), the Back key, an edge swipe (`input motionevent`, with a screenshot mid-gesture) or an adb setting, and waits for the app's `S4 top ... route=<path>` log line.
   - `drive_ios.py`: simctl cannot tap, so the app walks its own journeys (`S4_JOURNEY=1` via `SIMCTL_CHILD_`) and checks each step's top route and View count against `stack_depth()`; the script screenshots each checkpoint, records the screen, then checks background and resume, dark mode and deep entry.
 - **Frames:** screen recordings (`adb shell screenrecord`, `simctl io recordVideo`) decoded with PyAV, keeping the frames that changed.
 
@@ -42,18 +42,18 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
 | Run | Device | Result |
 |---|---|---|
 | `uv run python check_routes.py` | host | all checks pass: per-level params of 5 locations, 8 Back targets, 5 stack depths, 2 non-matches |
-| `drive_android.py` (all nine journeys) | Android 14 | **117 / 117**: drill 17, roots 19, retap 10, search 15, predictive 8, memory 8, lifecycle 12, deep 10, recreate 18 |
-| in-app journeys ("Run journeys" in More) | Android 14 | 37 / 37 steps |
-| `drive_android.py predictive drill roots` | Android 16 | 44 / 44 |
-| `drive_ios.py`, bar on every View | iOS 26.5 | **50 / 50** (41 in-app checks, 9 from the host) |
-| `drive_ios.py`, `S4_BAR_ON_PUSHED=0` | iOS 26.5 | 50 / 50 |
+| `drive_android.py` (all ten journeys) | Android 14 | **130 / 130**: drill 17, roots 19, retap 10, retap-top 5, search 15, predictive 8, memory 8, lifecycle 12, deep 10, recreate 26 |
+| in-app journeys ("Run journeys" in More) | Android 14 | 38 / 38 steps |
+| `drive_android.py predictive drill roots` | Android 16 | 44 / 44 (the build before the review fixes, which changed no route code) |
+| `drive_ios.py`, bar on every View | iOS 26.5 | **51 / 51** (42 in-app checks, 9 from the host) |
+| `drive_ios.py`, `S4_BAR_ON_PUSHED=0` | iOS 26.5 | 50 / 50 (the build before the review fixes) |
 
 ### Route shape and per-level params (D-141)
 
 - `/now/session/42/speaker/17/session/99/room/room-102a` gives five Views; the levels log `session '42'`, `speaker '17'`, `session '99'`, `room 'room-102a'`, each from its own `use_route_params()`.
 - Quoted ids survive Flutter's route information on both platforms: `/now/session/poster%20detail%2B1/speaker/%C3%A7~31/session/7` reaches each level as `poster detail+1`, `ç~31` and `7` after `unquote`, by tap, by the Android `route` extra and by the iOS `--route` argument. The Router's matcher escapes the consumed prefix before matching the next level (`repath`), so `.`, `+` and `%` in an id never act as regex syntax.
 - Deep entry builds the stack at once (`/map/room/hall-a/session/42/speaker/23` → four Views, Back × 4 → `/map` → Now).
-- An unknown id (`/schedule/session/nope`) renders a "Not found" level for one frame, then its effect navigates to `parent_of()` with a SnackBar; the SnackBar shows on the parent on both platforms.
+- An unknown id (`/schedule/session/nope`): the reproducer renders the level once, then its effect navigates to `parent_of()` and shows a SnackBar, which appears on the parent on both platforms (the in-app check also confirms the unknown level rendered first). That is the mechanism only: what the app does for an unknown id is not settled here, because the docs disagree (D-21: land on the root; architecture §5.3: the parent; ux.md's states table and P1-11: an empty state). #90 decides it.
 
 ### Back (D-141, D-142)
 
@@ -74,7 +74,7 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
   - iOS: the pushed page slides in **with its own bar**, so two bars sit side by side mid-push and the bar travels across the screen.
   - Android: a push or pop cross-fades whole pages, so both bars ghost for a few frames; during a predictive gesture the shrinking page's bar sits over the bar of the page below for the whole gesture.
 - With the bar on roots only: on iOS the barless detail slides over the root and covers its bar (as `hidesBottomBarWhenPushed` does); on Android the root's bar fades out under the incoming page, and a predictive gesture shows one bar. Both runs passed the same journeys.
-- Re-tap: Flutter's `NavigationBar` calls `onDestinationSelected` for the selected destination too, so `on_change` fires on a re-tap (`retap=True` logged) on a root and on a pushed View.
+- Re-tap: Flutter's `NavigationBar` calls `onDestinationSelected` for the selected destination too, so `on_change` fires on a re-tap (`retap=True` logged) on a root and on a pushed View. With the bar on roots, the scaffold hands a root's re-tap to the screen's `on_retap`: on a scrolled Schedule it ran `await ListView.scroll_to(offset=0, duration=300)` and the first row came back on screen.
 
 ### Tab switches and the root View key (D-142)
 
@@ -87,7 +87,7 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
 - **Under a pushed View:** Schedule › Day 2 › scrolled › a row › Back: the same rows on screen (the View stayed mounted and kept its scroll).
 - **After a tab switch** (Schedule unmounts): the remount read `schedule_day=2` and `offset=515` from `ViewMemory`, and `await ListView.scroll_to(offset=..., duration=0)` in its mount effect put the same rows on screen. Writing the offset from `on_scroll` re-rendered nothing (`renders=1`).
 - **Search:** the query and the opener location came back from `ViewMemory` (above).
-- **Across a new session:** see the next section.
+- **Across a new session:** see the next section. A location under `/search` cannot be restored as is: a fresh Router puts a global modal over its last non-modal location, which is `/` (the start route), so `Start` restores the search's opener (`search_base`) instead.
 
 ### A new session in the same process (F26, F29, F30; D-143, D-147)
 
@@ -97,8 +97,8 @@ Recreation by switching gesture and 3-button navigation (S1's trigger), on `/now
 |---|---|---|
 | New session | `S4 main s=2`, same pid, `route=/` | the same |
 | Boot gate | ran again: BootView, then the Router at `/` | the same |
-| Where it lands | `/` → Start → **`/now`** (the drill is lost) | Start → `memory.last_location` → **`/now/session/42/speaker/17`**, three Views; Back → `/now/session/42` |
-| The old session | `page.on_close` fired; its 15 s ticking effect kept running and died at its next store write with `RuntimeError('An attempt to fetch destroyed session.')`, seen only by asyncio | `on_close` set the effect's stop event; the loop ended cleanly (`error=none`) |
+| Where it lands | `/` → Start → **`/now`** (the drill is lost) | Start → `memory.last_location` → **`/now/session/42/speaker/17`**, three Views; Back → `/now/session/42`. From a search result (`/search/speaker/17`, opened on `/now/session/42`) it lands on the opener, `/now/session/42` |
+| The old session | `page.on_close` fired; its 15 s ticking effect kept running and died at its next store write with `RuntimeError('An attempt to fetch destroyed session.')`, seen only by asyncio | `on_close` set the effect's stop event; the loop ended cleanly (`error=none`), and nothing from the old session ran afterwards |
 
 - Without a store write in the loop (an earlier build), the old effect kept ticking next to the new session's (two cycles seen) and would have run indefinitely.
 - After `detach`, a re-render triggered by the lifecycle handler fails to send (`dart_bridge.send_bytes failed ... Dart_PostCObject_DL failed`, logged once per patch): harmless, since that client is gone.
@@ -119,7 +119,7 @@ Recreation by switching gesture and 3-button navigation (S1's trigger), on `/now
 
 ## Decisions changed
 
-- **D-141:** the drill route shape of §M and architecture §5.3 stands (no `s~id` fallback), and `page.on_view_pop` with `parent_of()` (D-19) handles every pop; Search's return and the unknown-id rule confirmed.
+- **D-141:** the drill route shape of §M and architecture §5.3 stands (no `s~id` fallback), and `page.on_view_pop` with `parent_of()` (D-19) handles every pop, Search's return to its results included.
 - **D-142:** D-17's Back rule on roots confirmed (Back on Now finishes the Android activity, F29); root Views share one `View.route` key, `"/"`.
 - **D-143** (amends D-18 and D-19): `ViewMemory` lives per process, and the start route returns a new session to the last location.
 - **D-144** (amends D-17, settles UQ-1 through #149): the bar on tab roots only.

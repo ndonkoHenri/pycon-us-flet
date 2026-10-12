@@ -117,11 +117,11 @@ def main() -> None:
             seen = len(lines())
             time.sleep(0.3)
         for line in lines():
-            if re.search(r"S4 (step|per-level|search-kept) ", line):
+            if re.search(r"S4 (step|per-level|search-kept|unknown-rendered) ", line):
                 ok = " ok=True" in line
                 check("in-app " + line.split(" t=")[1].split(" ", 1)[1][:150], ok)
         done = wait(r"S4 journey-done", 0, 1)
-        check("in-app journeys finished", done is not None, done or "")
+        check("in-app journeys finished clean", " fail=0" in (done or ""), done or "")
     finally:
         video.send_signal(2)  # SIGINT finishes the file
         video.wait()
@@ -168,6 +168,7 @@ def main() -> None:
         shot(name)
     stream.terminate()
     print(f"== {RESULTS['PASS']} passed, {RESULTS['FAIL']} failed", flush=True)
+    sys.exit(1 if RESULTS["FAIL"] else 0)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ Run from this folder with the APK installed (``flet build apk``, then
 
     uv run python drive_android.py <journey> [<journey> ...]
 
-Journeys: ``drill``, ``roots``, ``retap``, ``search``, ``predictive``, ``memory``,
+Journeys: ``drill``, ``roots``, ``retap``, ``retap_top``, ``search``, ``predictive``, ``memory``,
 ``lifecycle``, ``deep``, ``recreate``. Each step does one thing (a tap found in
 the accessibility tree, the Back key, an edge swipe, an adb setting) and waits
 for the app's ``S4 top ... route=<path>`` log line. Results print as ``PASS`` or
@@ -249,8 +249,12 @@ def journey_drill() -> None:
         "drill: relaunch after Back on Now starts a new session (F26)",
         wait(r"S4 main s=2", since, 5) is not None,
     )
-    old_tick = wait(r"S4 tick .*own=1 ", since + 1, 20)
-    check("drill: the old session's effect stopped", old_tick is None, old_tick or "")
+    end = wait(r"S4 tick-end .*own=1 ", since, 20)
+    check(  # no stop on close (default): the old effect dies at its next store write
+        "drill: the old session's effect ran on, then died at a store write (F30)",
+        end is not None and "destroyed session" in end,
+        end or "",
+    )
 
 
 def journey_roots() -> None:
@@ -298,6 +302,23 @@ def journey_retap() -> None:
     go("retap: switch from a pushed View", "Hall A", "/map/room/hall-a")
     go("retap: other tab", "Schedule", "/schedule")
     go("retap: back to Map shows its root", "Map", "/map")
+
+
+def journey_retap_top() -> None:
+    """Re-tapping the active tab on a scrolled root scrolls it to the top."""
+    expect_route("retap-top: start", cold_start(), "/now", 30)
+    go("retap-top: tab Schedule", "Schedule", "/schedule")
+    adb("shell", "input", "swipe", "540", "1800", "540", "600", "500")
+    time.sleep(1.5)
+    check("retap-top: scrolled away from the top", "Day 1 talk 01" not in screen_text())
+    since = tap("Schedule")
+    check(
+        "retap-top: the screen's on_retap ran",
+        wait(r"S4 retap-scroll", since) is not None,
+    )
+    time.sleep(1)
+    check("retap-top: back at the top", "Day 1 talk 01" in screen_text())
+    shot("retap-top")
 
 
 def journey_search() -> None:
@@ -498,10 +519,11 @@ def switch_nav_mode() -> str:
     return mode
 
 
-def recreate_once(label: str, own: int, lands: str) -> None:
-    """Recreate the activity on a drill View; check the new session and the old one."""
-    go(f"{label}: session", "Keynote", "/now/session/42")
-    go(f"{label}: speaker", "Ada Lovelace", "/now/session/42/speaker/17")
+def recreate_once(label: str, own: int, lands: str, ended: str) -> None:
+    """Recreate the activity; check the new session, where it lands, and the old one.
+
+    `ended` is what the old session's ticking effect must log when it ends.
+    """
     since = mark()
     mode = switch_nav_mode()
     main = wait(r"S4 main", since, 15)
@@ -517,7 +539,11 @@ def recreate_once(label: str, own: int, lands: str) -> None:
     time.sleep(1)
     shot(f"recreate-{label}-{mode}")
     end = wait(rf"S4 tick-end .*own={own} ", since, 20)
-    check(f"{label}: how the old session's effect ended", end is not None, end or "")
+    check(f"{label}: the old effect ends with {ended}", ended in (end or ""), end or "")
+    later = wait(rf"S4 tick .*own={own} ", since + 16, 1)  # nothing after the end
+    check(
+        f"{label}: no work from the old session afterwards", later is None, later or ""
+    )
     switch_nav_mode()
     time.sleep(4)
 
@@ -525,7 +551,9 @@ def recreate_once(label: str, own: int, lands: str) -> None:
 def journey_recreate() -> None:
     """F26: an activity recreation starts a new session in the same process."""
     expect_route("recreate: start", cold_start(), "/now", 30)
-    recreate_once("default", 1, "/now")
+    go("default: session", "Keynote", "/now/session/42")
+    go("default: speaker", "Ada Lovelace", "/now/session/42/speaker/17")
+    recreate_once("default", 1, "/now", "destroyed session")
     # The interim: ViewMemory per process (Start restores the last location) and
     # page.on_close stopping long-running effects. Knobs are read by main(), so
     # leave from Now and relaunch to start a session that uses them.
@@ -541,8 +569,14 @@ def journey_recreate() -> None:
     time.sleep(2)
     since = launch()
     check("recreate: relaunch is session 2", wait(r"S4 main s=2", since) is not None)
-    recreate_once("interim", 2, "/now/session/42/speaker/17")
+    go("interim: session", "Keynote", "/now/session/42")
+    go("interim: speaker", "Ada Lovelace", "/now/session/42/speaker/17")
+    recreate_once("interim", 2, "/now/session/42/speaker/17", "error=none")
     expect_route("recreate: Back after the restore", key("BACK"), "/now/session/42")
+    # From a search result, a new session lands on the search's opener.
+    go("search: open", "Search", "/search")
+    go("search: a result", "Ada Lovelace", "/search/speaker/17")
+    recreate_once("search", 4, "/now/session/42", "error=none")
 
 
 JOURNEYS = {
@@ -566,3 +600,4 @@ if __name__ == "__main__":
         except (LookupError, ValueError, subprocess.CalledProcessError) as error:
             check(f"{name}: aborted", False, repr(error))
     print(f"== {RESULTS['PASS']} passed, {RESULTS['FAIL']} failed", flush=True)
+    sys.exit(1 if RESULTS["FAIL"] else 0)
