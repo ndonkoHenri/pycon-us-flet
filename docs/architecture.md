@@ -496,7 +496,7 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 | 13 | Poster details | `poster-detail-<conf_key>` sessions inherit the first Posters row's time and place; none without a Posters row (D-123); `in_timeline=False`. 2025's posters are nested in its poster slot and decode as posters (D-121) | DATA-07 |
 | 14 | Rooms | split `location` on `,`, one name per `slugify_room` slug (`core/slugs.py`); multi-room fan-out into `ConferenceData.rooms` (by slug, natural order of name, each room's sessions by start then name, D-125); `display_location` = override, first room, else location; a generic `Break` shows no location | DATA-16, ROOM-06 |
 | 15 | Sprint rooms | seeded from `map.toml` pins with `sprint = true`; rooms natural-sorted | MAP-08 |
-| 16 | Markup | HTML → Markdown once per feed version (§7.7); open-space Markdown kept with absolute links; sponsor text kept plain | DATA-23..25 |
+| 16 | Markup | HTML → Markdown once per feed version, after the rules above (§7.7, D-130; wired by #134); open-space Markdown kept with absolute links; sponsor text kept plain | DATA-23..25 |
 | 17 | `slot.sessions` | a poster slot's are posters (D-121); any other kind's are logged and ignored | DATA-27 (drop) |
 
 **Invariants** (D-77, on the 2025 and 2026 fixtures; `tests/test_feed_invariants.py`, testing-and-quality.md §3.3): no session lost beyond the documented drops and collapses; ids stable across runs; no placeholder survives; Job Fair grouped at 10:00, labelled 9:30; one Posters row and per-day Lunch rows; every speaker with sessions linked; every group has a start; `start <= end`; all datetimes aware; rooms and slugs consistent. `process()` logs `Feed processed in N ms` at INFO (D-109). A reviewed snapshot of the processed model and the one-off Ionic outputs (`tests/fixtures/ionic/<year>/`, no Node in CI) settle ambiguous rules; intended differences are listed by feature id.
@@ -572,12 +572,13 @@ Weekday and month names come from fixed tuples, never locale `strftime`, and nai
 
 ### 7.7 HTML → Markdown (`core/html_md.py`; D-44)
 
-Stdlib `html.parser`, once per feed version, into a small tree that is then rendered; S3 settled the details (D-114, D-115; `docs/spikes/03-html-markdown.md`, whose `html_md_proto.py` is the reference):
+Stdlib `html.parser`, once per feed version inside `feed.process()` (D-130), into a small tree that is then rendered; S3 settled the details (D-114, D-115; `docs/spikes/03-html-markdown.md`, whose `html_md_proto.py` was the reference) and #67 the boundaries (D-131). Two public functions: `to_markdown(value, site_url) -> str` and `to_text(value) -> str`.
 - **Tags** (the 2025 and 2026 census): `p` → paragraph; `br` → `"  \n"`; `hr` → `---`; `h1`–`h6` → `#`–`######`; `ul`/`ol`/`li` → `- `/`N. `, continuation lines indented by the marker's width (three spaces under `1. `); `blockquote` → `> `; `strong`/`b`, `em`/`i`, `s`/`del`/`strike` → `**x**`, `*x*`, `~~x~~` with edge whitespace kept outside; `code` → a code span fenced with one backtick more than the longest run inside; `a` → `[text](url)`, the `href` joined to `site_url`, only `http`, `https` and `mailto` linked, the destination percent-encoded; bare `http(s)` URLs in text become explicit links; edge whitespace stays outside links and emphasis; emphasis that could not flank loses its markers.
 - **Anything else is unwrapped** (its text stays in place); `script` and `style` are dropped. Whitespace collapses as in a browser; only `br` breaks a line.
 - **A value with no tag is plain text:** entities decoded, blank lines make paragraphs, single newlines hard breaks (sprint descriptions).
 - **Escaping** (D-115): in text, `` \ ` * _ [ ] ( < > | ~ $ & : `` and a block marker at the start of a line become numeric character references (`&#36;`), because `ft.Markdown` always enables LaTeX (F27) and GFM emoji; code spans stay raw.
-- **A text-only form** (no markup) feeds search (D-46).
+- **A text-only form** (`to_text`, no markup) feeds search (D-46): the visible text, with blocks, list items and breaks as spaces so words never join; link targets, `script` and `style` left out; not yet folded.
+- **Emphasis** is rendered as tokens and checked against CommonMark's flanking rules before it is joined into a paragraph; a pair that could not open or close loses its markers (D-114, D-131).
 
 Rendered with `ft.Markdown(value, selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB, on_tap_link=..., md_style_sheet=...)`, with the one style sheet from `theme.py` whose text styles all name their colour (D-116, F28); links open with `launch_url(url, mode=ft.LaunchMode.IN_APP_BROWSER_VIEW)` (SESS-06). Job roles from `<a href>` anchors (SPON-09) and Venue & hours sections (MAP-09) arrive with their screens in P2.
 
