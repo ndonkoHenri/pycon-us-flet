@@ -26,6 +26,14 @@ def test_code_spans_in_a_name_lose_their_backticks() -> None:
     assert plain_text("A lone ` backtick") == "A lone ` backtick"
 
 
+def test_a_code_span_loses_one_space_of_padding_each_side() -> None:
+    """marked 4 (Ionic's markdownToTxt) strips one space each end when both ends have one."""
+    assert plain_text("a ` b ` c") == "a b c"
+    assert plain_text("Quote `` `a` `` here") == "Quote `a` here"
+    assert plain_text("Pad ` b` only one end") == "Pad  b only one end"
+    assert plain_text("All spaces `  ` stay") == "All spaces    stay"
+
+
 def test_tags_in_a_name_are_stripped_keeping_their_text() -> None:
     """D-114: 2025's cancelled workshop."""
     title = clean_title("CANCELLED: <s>Introduction to Sprints Workshop</s>", "event")

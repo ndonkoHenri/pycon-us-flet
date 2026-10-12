@@ -51,8 +51,20 @@ def plain_text(name: str) -> str:
     Ionic's own output, #66) and one ``<s>…</s>`` in 2025 (D-125: names strip tags and keep
     their text).
     """
-    text = _CODE_SPAN.sub(r"\2", _MARKDOWN_LINK.sub(r"\1", name))
+    text = _CODE_SPAN.sub(_code_span_text, _MARKDOWN_LINK.sub(r"\1", name))
     return html.unescape(_TAG.sub("", text)).strip()
+
+
+def _code_span_text(match: re.Match[str]) -> str:
+    """A code span's text, less one space at each end when both ends have one.
+
+    marked 4 (CommonMark) does so, which lets a span start or end with a backtick:
+    two backticks around " `a` " read as `a`.
+    """
+    text = match[2]
+    if text.strip(" ") and text[0] == text[-1] == " ":
+        return text[1:-1]
+    return text
 
 
 def trailing_room(name: str) -> tuple[str, str]:
