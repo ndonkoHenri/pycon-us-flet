@@ -10,7 +10,7 @@ the PR. Ionic's own processing output is a separate, one-off reference (#66).
 import re
 from collections import Counter
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -78,14 +78,23 @@ def test_no_session_is_lost(year: int) -> None:
                 and end <= row.end
                 for row in rows
             ), slot["conf_key"]
-    # An open space is a session or unscheduled; a poster has its detail session.
+    # A scheduled open space (its raw times and room) is a session; another is dropped.
+    unscheduled = data.dropped.get("unscheduled-open-space", ())
     for space in doc.get("open-spaces", []):
         space_id = str(space["conf_key"] + 9000)
-        assert (space_id in data.sessions) != (
-            space_id in data.dropped.get("unscheduled-open-space", ())
-        )
-    for poster in data.posters:
-        assert f"poster-detail-{poster.id}" in data.sessions
+        room = (space.get("room_display") or "").strip() or (space.get("room") or "")
+        if space.get("start") and space.get("end") and room.strip():
+            assert space_id in data.sessions and space_id not in unscheduled
+        else:
+            assert space_id in unscheduled and space_id not in data.sessions
+    # Every raw poster, top-level or nested in a slot (D-121), has its detail session.
+    raw_posters = [str(p["conf_key"]) for p in doc.get("posters", [])]
+    raw_posters += [
+        str(p["conf_key"]) for s in doc["schedule"] for p in s.get("sessions") or []
+    ]
+    assert [poster.id for poster in data.posters] == raw_posters
+    for poster_id in raw_posters:
+        assert not data.sessions[f"poster-detail-{poster_id}"].in_timeline
 
 
 def test_ids_are_unique_stable_strings_in_ionics_forms(year: int) -> None:
@@ -140,21 +149,41 @@ def test_every_group_has_a_start_and_ordered_rows(year: int) -> None:
 
 
 def test_no_dropped_category_survives(year: int) -> None:
-    """DATA-04, DATA-06: no free or duplicate open space, placeholder or blank; posters
-    and breaks remain, as collapsed rows and poster details only."""
+    """DATA-04, DATA-06: no free or duplicate open space, placeholder, Posters plenary or
+    blank is a session; posters and breaks remain, as one Posters row a poster day and
+    break rows."""
+    doc = document(year)
     data = processed(year)
-    for session in data.sessions.values():
-        assert not session.kind.startswith("available-open-space")
-        assert session.kind != "blank" and session.name != "Slot"
-        if session.kind not in COLLAPSED_KINDS:  # a placeholder's shape (DATA-04)
-            name = session.name.strip().lower()
-            assert name != session.kind.lower() or session.description, session.id
-        if session.kind in COLLAPSED_KINDS:
-            assert session.id.startswith((f"{session.kind}-", "poster-detail-"))
-        if session.kind == "plenary":
-            assert plain_text(session.name).lower() not in ("poster", "posters")
-    kinds = {row.kind for row in collapsed_rows(data)}
-    assert kinds == {"poster", "break"}
+    zone = load_year(year).conference.zone
+    for slot in doc["schedule"]:
+        kind, name = slot["kind"], slot["name"]
+        placeholder = (
+            kind not in COLLAPSED_KINDS
+            and name.strip().lower() == kind.lower()
+            and not (slot.get("description") or "").strip()
+            and not slot.get("contact")
+            and not slot.get("authors")
+        )
+        posters_plenary = kind == "plenary" and re.fullmatch(
+            r"posters?(\s*\([^)]*\))?", plain_text(name), re.IGNORECASE
+        )
+        if (
+            kind.startswith("available-open-space")
+            or kind in ("open-space", "blank", *COLLAPSED_KINDS)
+            or name == "Slot"
+            or placeholder
+            or posters_plenary
+        ):
+            assert str(slot["conf_key"]) not in data.sessions, slot["conf_key"]
+    poster_days = {
+        local_date(datetime.fromisoformat(slot["start"]), zone)
+        for slot in doc["schedule"]
+        if slot["kind"] == "poster"
+    }
+    rows = collapsed_rows(data)
+    posters_rows = Counter(row.day for row in rows if row.name == "Posters")
+    assert set(posters_rows) == poster_days and set(posters_rows.values()) == {1}
+    assert any(row.kind == "break" for row in rows)
 
 
 def test_one_lunch_row_per_day_with_lunch(year: int) -> None:
@@ -176,11 +205,11 @@ def test_only_overridden_sessions_show_another_start(year: int) -> None:
     """DATA-11: the Job Fair is shown at its display time and grouped at its start."""
     overrides = load_year(year).content.display_time_overrides
     for session in processed(year).sessions.values():
-        matched = [o for o in overrides if o.pattern.fullmatch(session.name)]
-        if session.display_start != session.start:
-            assert matched and session.kind not in ("open-space", "break", "poster")
-            minutes = (session.display_start - session.start).total_seconds() / 60
-            assert minutes == matched[0].minutes
+        shift = 0
+        if session.kind not in ("open-space", "break", "poster"):  # slots' titles only
+            matched = [o for o in overrides if o.pattern.fullmatch(session.name)]
+            shift = matched[0].minutes if matched else 0
+        assert session.display_start == session.start + timedelta(minutes=shift)
 
 
 def test_speakers_and_sessions_link_both_ways(year: int) -> None:
@@ -202,6 +231,10 @@ def test_rooms_and_sessions_agree(year: int) -> None:
     for slug, room in data.rooms.items():
         assert slug == slugify_room(room.name) and room.session_ids
         assert len(room.session_ids) == len(set(room.session_ids))
+        order = [
+            (data.sessions[i].start, data.sessions[i].name) for i in room.session_ids
+        ]
+        assert order == sorted(order), slug  # by start, then name (D-125)
         for session_id in room.session_ids:
             rooms = data.sessions[session_id].rooms
             assert slug in {slugify_room(r) for r in rooms}
