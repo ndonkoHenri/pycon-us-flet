@@ -1,0 +1,99 @@
+# Build a debug-signed arm64 APK on demand and for v* tags (D-84, D-86, D-106; docs/development.md §7.4).
+# It runs the documented `flet build apk` command directly, not flet-dev/flet-build-action (§7.4 says why).
+name: Build Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# A new run for the same branch or tag cancels the older one: a build takes minutes of the monthly allowance.
+concurrency:
+  group: build-android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_LOCKED: "1"            # every uv command fails if uv.lock does not match pyproject.toml
+
+jobs:
+  apk:
+    name: Debug-signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0            # the build number is the commit count (D-83)
+          persist-credentials: false
+
+      - name: Check that the tag matches the version
+        if: github.ref_type == 'tag'
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match [project].version $version (development.md §4)."
+            exit 1
+          fi
+
+      - name: Read the Flet pin and the build number
+        id: meta
+        run: |
+          echo "flet-ref=$(cat .flet-ref)" >> "$GITHUB_OUTPUT"
+          echo "build-number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Until Flet 1.1.0 is on PyPI (D-81, docs/development.md §2.2). Not sparse, unlike ci.yml: flet build
+      # needs the template, .fvmrc and the Dart package packages/flet, which it adds as a path dependency.
+      - name: Check out Flet at the pin
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: flet-dev/flet
+          ref: ${{ steps.meta.outputs.flet-ref }}
+          path: .flet-src
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: false       # a tag build starts from clean inputs; uv sync takes seconds
+      - name: Install
+        run: uv sync --locked
+
+      # The build fills about 11 GB (Flutter, the NDK, Gradle caches) and the runner starts with about 13 GB
+      # free. Remove preinstalled toolchains we never use, so a growing build doesn't run out of disk.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
+      # flet-cli downloads Flutter (from .flet-src/.fvmrc) and uses the runner's JDK 17 and Android SDK.
+      # The Gradle heap is -Xmx4G from [tool.flet.android.gradle_properties]: on the 7.9 GB runner at least
+      # 1 GB stayed available (development.md §7.4).
+      - name: Build the APK
+        env:
+          BUILD_NUMBER: ${{ steps.meta.outputs.build-number }}
+          FLET_CLI_NO_RICH_OUTPUT: "1"
+        run: uv run flet build apk --arch arm64-v8a --build-number "$BUILD_NUMBER" --yes -v
+
+      # Name the file after the build number and commit, so downloads from different runs don't collide.
+      - name: Name the APK
+        id: apk
+        env:
+          BUILD_NUMBER: ${{ steps.meta.outputs.build-number }}
+        run: |
+          name="pycon-us-$BUILD_NUMBER-${GITHUB_SHA::7}-arm64-v8a"
+          mv build/apk/pycon-us.apk "build/apk/$name.apk"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      # Zipped (the default), because `gh run download` cannot fetch an unzipped artifact (cli/cli#13012).
+      - name: Upload the APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: build/apk/${{ steps.apk.outputs.name }}.apk
+          compression-level: 0      # an APK is already compressed
+          overwrite: true           # a re-run of the same run uploads the same name again
+          retention-days: 14        # artifact storage is small on a private Free repo (development.md §7.1)
+          if-no-files-found: error
