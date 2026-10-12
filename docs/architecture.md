@@ -60,7 +60,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
 | `state.py` | stores, contexts and `use_*()` hooks; `ViewMemory` (§6) | P0 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (P0); `queries` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `rows.py` (`SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |
@@ -499,7 +499,7 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 | 16 | Markup | HTML → Markdown once per feed version (§7.7); open-space Markdown kept with absolute links; sponsor text kept plain | DATA-23..25 |
 | 17 | `slot.sessions` | a poster slot's are posters (D-121); any other kind's are logged and ignored | DATA-27 (drop) |
 
-**Invariants** (D-77, on the 2025 and 2026 fixtures): no session lost beyond the documented drops and collapses; ids stable across runs; no placeholder survives; Job Fair grouped at 10:00, labelled 9:30; one Posters row and per-day Lunch rows; every speaker with sessions linked; every group has a start; `start < end`; all datetimes aware. A reviewed snapshot of the processed model and the one-off Ionic outputs (`tests/fixtures/ionic/<year>/`, no Node in CI) settle ambiguous rules; intended differences are listed by feature id.
+**Invariants** (D-77, on the 2025 and 2026 fixtures; `tests/test_feed_invariants.py`, testing-and-quality.md §3.3): no session lost beyond the documented drops and collapses; ids stable across runs; no placeholder survives; Job Fair grouped at 10:00, labelled 9:30; one Posters row and per-day Lunch rows; every speaker with sessions linked; every group has a start; `start <= end`; all datetimes aware; rooms and slugs consistent. `process()` logs `Feed processed in N ms` at INFO (D-109). A reviewed snapshot of the processed model and the one-off Ionic outputs (`tests/fixtures/ionic/<year>/`, no Node in CI) settle ambiguous rules; intended differences are listed by feature id.
 
 ### 7.4 Models (`core/models.py`)
 
@@ -511,7 +511,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 | Query | Rule | Features |
 |---|---|---|
-| `days(data)` | days of the feed; ignores filters | DATA-17 |
+| `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
 | `timeline(data, day, excluded)` | one item per time slot, rows ordered by start then room (D-31); a track passes unless excluded | DATA-18, SCHED-02 |
 | `search(data, query, scope)` | folded, **all** words must match `search_text` (D-46); grouped by type, sessions by day; ignores filters | NEW-02, SPKR-02 |
 | `now_next(sessions, now)` | Now = `start <= now < end`; Next = the earliest later start; ignores filters | SCHED-25 |

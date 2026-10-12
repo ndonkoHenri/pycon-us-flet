@@ -1,0 +1,770 @@
+{
+ "days": {
+  "2025-05-14": {
+   "07:00": [
+    "1745 | Registration / Information Desks Open | Informational | Concourse A | 07:00-07:00"
+   ],
+   "09:00": [
+    "1 | AI crash course for Python developers | Tutorial | Room 310/311 | 09:00-12:30 | pre-registration | speakers 89",
+    "2 | Back to foundations: Automated testing with Python | Tutorial | Room 317 | 09:00-12:30 | pre-registration | speakers 149",
+    "3 | Building machine learning pipelines that scale: a case study using Ibis and IbisML | Tutorial | Room 318 | 09:00-12:30 | pre-registration | speakers 137 138",
+    "4 | Python project packaging: from zero to hero | Tutorial | Room 319 | 09:00-12:30 | pre-registration | speakers 29 30",
+    "5 | Comprehending comprehensions | Tutorial | Room 320 | 09:00-12:30 | pre-registration | speakers 81",
+    "6 | Speed Up Your Code by 50x: A Guide to Moving from NumPy to JAX | Tutorial | Room 321 | 09:00-12:30 | pre-registration | speakers 62 63",
+    "1746 | Python Language Summit | Summit | Room 403/404 | 09:00-17:15 | pre-registration"
+   ],
+   "12:30": [
+    "break-Ballroom A-2025-05-14T12:30:00-04:00 | Lunch | Break | Ballroom A | 12:30-13:30"
+   ],
+   "13:30": [
+    "8 | Building software on top of Large Language Models | Tutorial | Room 310/311 | 13:30-17:00 | pre-registration | speakers 26",
+    "9 | Snakes in a Grid: Working with spreadsheets in Python + Python in Excel | Tutorial | Room 317 | 13:30-17:00 | pre-registration | speakers 39",
+    "10 | Decorators Demystified | Tutorial | Room 318 | 13:30-17:00 | pre-registration | speakers 140",
+    "11 | Codyssey: A playful control system workshop | Tutorial | Room 319 | 13:30-17:00 | pre-registration | speakers 40",
+    "12 | Practical PyScript | Tutorial | Room 320 | 13:30-17:00 | pre-registration | speakers 9",
+    "13 | NanoDash: Writing an Interactive Web Framework from Scratch | Tutorial | Room 321 | 13:30-17:00 | pre-registration | speakers 101 102"
+   ],
+   "17:00": [
+    "1747 | Information Desk Closes | Informational | Concourse A | 17:00-17:00"
+   ],
+   "18:00": [
+    "1748 | Registration Desk Closes | Informational | Concourse A | 18:00-18:00"
+   ]
+  },
+  "2025-05-15": {
+   "07:00": [
+    "1749 | Registration / Information Desks Open | Informational | Concourse A | 07:00-07:00"
+   ],
+   "09:00": [
+    "14 | What is the magic of magic methods in the Python language? | Tutorial | Room 310/311 | 09:00-12:30 | pre-registration | speakers 7",
+    "15 | Reproducible Dependency Management with Pixi | Tutorial | Room 317 | 09:00-12:30 | pre-registration | speakers 148",
+    "16 | Polars: Faster, Simpler, Smarter Python Analytics | Tutorial | Room 318 | 09:00-12:30 | pre-registration | speakers 121",
+    "17 | Event Sourcing From The Ground Up | Tutorial | Room 319 | 09:00-12:30 | pre-registration | speakers 70",
+    "18 | Discover 3D graphics with WebGL and PyScript | Tutorial | Room 320 | 09:00-12:30 | pre-registration | speakers 27",
+    "19 | The A-B-Cs of Regressions | Tutorial | Room 321 | 09:00-12:30 | pre-registration | speakers 108",
+    "1751 | WebAssembly Summit | Summit | Room 402 | 09:00-17:00 | pre-registration",
+    "1750 | Education Summit | Summit | Room 403/404 | 09:00-16:30 | pre-registration"
+   ],
+   "09:30": [
+    "29 | Evolving Django: What We Learned by Integrating MongoDB (Sponsor: MongoDB) | Sponsor Presentation | Room 309 | 09:30-10:30 | speakers 160",
+    "30 | Accelerated Python: The Community and Ecosystem (Sponsor: NVIDIA) | Sponsor Presentation | Room 315 | 09:30-10:30 | speakers 170",
+    "31 | 🐍 Python meets the crab 🦀 - Friendship at first sight? (Sponsor: Bloomberg) | Sponsor Presentation | Room 316 | 09:30-10:30 | speakers 172"
+   ],
+   "11:30": [
+    "33 | Enterprise-Ready Python for High-Performance Data Teams (Sponsor: Snowflake) | Sponsor Presentation | Room 309 | 11:30-12:30 | speakers 167 168",
+    "35 | Building AI Applications the Pydantic Way (Sponsor: Pydantic) | Sponsor Presentation | Room 316 | 11:30-12:30 | speakers 161"
+   ],
+   "12:30": [
+    "break-Ballroom A-2025-05-15T12:30:00-04:00 | Lunch | Break | Ballroom A | 12:30-13:30"
+   ],
+   "13:30": [
+    "38 | Real-World Problems Blockchain Actually Solves (and How to Code Them in Python) (Sponsor: Algorand) | Sponsor Presentation | Room 309 | 13:30-14:30 | speakers 171",
+    "21 | Reimplementing the module `itertools` for fun and profit | Tutorial | Room 310/311 | 13:30-17:00 | pre-registration | speakers 106",
+    "39 | High-Performance Python: Faster Type Checking and Free Threaded Execution (Sponsor: Meta) | Sponsor Presentation | Room 315 | 13:30-14:30 | speakers 133 134",
+    "40 | DataComPy - Dataframe Comparisons made Explicit (Sponsor: Capital One) | Sponsor Presentation | Room 316 | 13:30-14:30 | speakers 83 84",
+    "22 | (Pre-)Commit to Better Code | Tutorial | Room 317 | 13:30-17:00 | pre-registration | speakers 71",
+    "23 | Analyzing Survey Data with Pandas and StatsModels | Tutorial | Room 318 | 13:30-17:00 | pre-registration | speakers 61",
+    "24 | Handcrafting Your Own Language Processor: The Art of Writing Recursive Descent Parsers | Tutorial | Room 319 | 13:30-17:00 | pre-registration | speakers 76",
+    "25 | Build a Synthesizer with Python | Tutorial | Room 320 | 13:30-17:00 | pre-registration | speakers 21",
+    "26 | Building a cross-platform app with BeeWare | Tutorial | Room 321 | 13:30-17:00 | pre-registration | speakers 90"
+   ],
+   "15:30": [
+    "42 | Reviewing another year of security partnership between the PSF and Alpha-Omega | Sponsor Presentation | Room 309 | 15:30-16:30 | speakers 16 173 174",
+    "43 | Building Scalable AI Tool Servers with Model Context Protocol (MCP) and Heroku (Sponsor: Heroku) | Sponsor Presentation | Room 315 | 15:30-16:30 | speakers 166 3",
+    "44 | Build modern Python apps on Azure (Sponsor: Microsoft) | Sponsor Presentation | Room 316 | 15:30-16:30 | speakers 32 158"
+   ],
+   "16:30": [
+    "1752 | Newcomer Orientation | Event | Hall B | 16:30-17:00"
+   ],
+   "17:00": [
+    "1754 | Information Desk Closes | Informational | Concourse A | 17:00-17:00",
+    "1753 | Opening Reception | Event | Hall A | 17:00-19:00",
+    "27 | Opening Reception | Plenary | Hall A | 17:00-19:00"
+   ],
+   "18:00": [
+    "1755 | Registration Desk Closes | Informational | Concourse A | 18:00-18:00"
+   ]
+  },
+  "2025-05-16": {
+   "07:00": [
+    "1756 | Registration / Information Desks Open | Informational | Concourse A | 07:00-07:00"
+   ],
+   "07:30": [
+    "break-Outside of Hall B-2025-05-16T07:30:00-04:00 | Breakfast | Break | Outside of Hall B | 07:30-09:00"
+   ],
+   "08:00": [
+    "1759 | Open Spaces Rooms Open | Informational | Open Spaces Rooms | 08:00-08:00"
+   ],
+   "09:00": [
+    "1758 | Expo Hall Opens | Informational | Hall A | 09:00-09:00",
+    "1757 | Swag Pickup Opens | Informational | Hall A | 09:00-09:00",
+    "47 | Welcome | Plenary | Hall B | 09:00-09:25"
+   ],
+   "09:25": [
+    "48 | PSF Welcome | Plenary | Hall B | 09:25-09:45"
+   ],
+   "09:45": [
+    "49 | Keynote - Cory Doctorow | Plenary | Hall B | 09:45-10:30"
+   ],
+   "10:30": [
+    "break-Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00 | Break | Break | - | 10:30-11:00"
+   ],
+   "11:00": [
+    "52 | Bridging Python and Apache Iceberg™: The Power of PyIceberg | Talk | Ballroom A | 11:00-11:30 | speakers 141",
+    "53 | World's First Undoable Notebook | Talk | Ballroom BC | 11:00-11:30 | speakers 105",
+    "51 | Building a NoGIL Load Balancer in 30 minutes | Talk | Hall C | 11:00-11:30 | speakers 128",
+    "54 | Diving into the Deep End: A Python Journey in Water Management | Talk | Room 301-305 | 11:00-11:30 | speakers 119",
+    "9073 | Fantasy Sports Analytics Meetup | Open Space | Room 308 | 11:00-12:00",
+    "9094 | Making Python Better for New Programmers | Open Space | Room 309 | 11:00-12:00",
+    "55 | \"GeoMonitoreo con Python: Soluciones Innovadoras para los Desafíos de Latinoamérica\" | Charla | Room 310/311 | 11:00-11:30 | español | speakers 78 79",
+    "9070 | Outer Space Open Space | Open Space | Room 316 | 11:00-12:00"
+   ],
+   "11:45": [
+    "57 | The PyArrow revolution in Pandas | Talk | Ballroom A | 11:45-12:15 | speakers 81",
+    "58 | Going From Notebooks to Scalable Systems | Talk | Ballroom BC | 11:45-12:15 | speakers 59",
+    "56 | Using Rust in Free-Threaded vs Regular Python 3.13 | Talk | Hall C | 11:45-12:15 | speakers 124",
+    "59 | How to learn Japanese with Python | Talk | Room 301-305 | 11:45-12:15 | speakers 139",
+    "60 | Automatizando el Rendimiento de Código Python | Charla | Room 310/311 | 11:45-12:15 | español | speakers 77"
+   ],
+   "12:00": [
+    "9089 | Chat about CouchDB | Open Space | PSF Couch | 12:00-13:00",
+    "9072 | On Premise Python | Open Space | Room 308 | 12:00-13:00",
+    "9080 | Python for Advocacy, Activism, and Civics | Open Space | Room 309 | 12:00-13:00",
+    "9062 | Education and Outreach Working Group Open Space | Open Space | Room 315 | 12:00-13:00"
+   ],
+   "12:30": [
+    "62 | Processing Large Geospatial Datasets with Dask & Xarray | Talk | Ballroom A | 12:30-13:00 | speakers 98",
+    "63 | Marimo: A Notebook that \"Compiles\" Python for Reproducibility and Reusability | Talk | Ballroom BC | 12:30-13:15 | speakers 20",
+    "61 | Unraveling Community Support For Free-Threaded Python | Talk | Hall C | 12:30-13:15 | speakers 44 45",
+    "64 | Make Python Talk, Make Python Listen | Talk | Room 301-305 | 12:30-13:00 | speakers 129",
+    "65 | Cambiando el guión: No estamos solas - DataSoul Podcast | Charla | Room 310/311 | 12:30-13:00 | español | speakers 23 24"
+   ],
+   "13:00": [
+    "break-Hall A-2025-05-16T13:00:00-04:00 | Lunch | Break | Hall A | 13:00-14:00",
+    "9076 | Mysterious Sticker | Open Space | Room 308 | 13:00-14:00",
+    "9090 | Educators: Share Your Secrets | Open Space | Room 316 | 13:00-14:00"
+   ],
+   "13:45": [
+    "72 | Intuition vs. Reality: Surprising Truths in Python Performance | Talk | Ballroom A | 13:45-14:30 | speakers 64 65",
+    "74 | This Talk Has Been Disabled | Talk | Room 301-305 | 13:45-14:30 | speakers 147"
+   ],
+   "14:00": [
+    "73 | A11y Need Is Love (But Accessible Docs Help Too) | Talk | Ballroom BC | 14:00-14:30 | speakers 152",
+    "71 | Safeguard your precious API endpoints built on FastAPI using OAuth 2.0 | Talk | Hall C | 14:00-14:30 | speakers 100",
+    "9102 | AI for data science | Open Space | Room 308 | 14:00-15:00",
+    "9068 | CTF tips & tricks | Open Space | Room 309 | 14:00-15:00",
+    "75 | Cómo llevar tus presentaciones técnicas al siguiente nivel con Python + Quarto | Charla | Room 310/311 | 14:00-14:30 | español | speakers 72",
+    "9064 | Free-threaded Python | Open Space | Room 315 | 14:00-15:00",
+    "9069 | WheelNext - Let's re-invent the Wheel | Open Space | Room 316 | 14:00-15:00",
+    "1760 | Hatchery - FlaskCon | Event | Room 317 | 14:00-18:00",
+    "9081 | All things tabular (Pandas, Polars, duckdb...) | Open Space | Room 318 | 14:00-15:00",
+    "1761 | Typing Summit | Summit | Room 319 | 14:00-18:00",
+    "1762 | Maintainers Summit | Summit | Room 402 | 14:00-17:45 | pre-registration"
+   ],
+   "14:45": [
+    "77 | Design Pressure: The Invisible Hand That Shapes Your Code | Talk | Ballroom A | 14:45-15:15 | speakers 93",
+    "78 | Inclusive Data for 1.3 Billion: Designing Accessible Visualizations | Talk | Ballroom BC | 14:45-15:15 | speakers 46 47",
+    "76 | Tips and Tricks for JSON Web Tokens (JWTs) | Talk | Hall C | 14:45-15:15 | speakers 104",
+    "79 | Programming for Yourself | Talk | Room 301-305 | 14:45-15:15 | speakers 91",
+    "80 | Construyendo un Buscador Multimodal: Combinando Texto e Imágenes para una Búsqueda Inteligente. | Charla | Room 310/311 | 14:45-15:15 | español | speakers 37 169"
+   ],
+   "15:00": [
+    "9066 | Data Engineering Meetup: PyCon 2025 | Open Space | Room 308 | 15:00-16:00",
+    "9104 | Python for Science & Research | Open Space | Room 309 | 15:00-16:00",
+    "9117 | Gnu Radio/ Ham Radio | Open Space | Room 316 | 15:00-16:00",
+    "9082 | Tabular ML (sklearn, xgboost, catboost, & friends) | Open Space | Room 318 | 15:00-16:00",
+    "9112 | Pythonic Music 🎼 MIDI, Synthesis and more | Open Space | Room 320 | 15:00-16:00"
+   ],
+   "15:30": [
+    "82 | Python: The Architect's Secret Weapon | Talk | Ballroom A | 15:30-16:00 | speakers 99",
+    "83 | Beautiful and Balanced: Using Color Theory in Data Visualization | Talk | Ballroom BC | 15:30-16:00 | speakers 54",
+    "81 | From Desktop to Browser: Crafting Browser-Native Game Engine with Webassembly | Talk | Hall C | 15:30-16:00 | speakers 11",
+    "84 | 503 days working full-time on FOSS: lessons learned | Talk | Room 301-305 | 15:30-16:00 | speakers 106",
+    "85 | Descifrando emociones desde arte a memes: un sistema multimodal de imágenes y textos | Charla | Room 310/311 | 15:30-16:00 | español | speakers 43"
+   ],
+   "16:00": [
+    "break-Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00 | Break | Break | - | 16:00-16:30",
+    "9055 | Tea with Cheuk | Open Space | Room 308 | 16:00-17:00",
+    "9079 | Live Recording: AI in Education and CS classrooms | Open Space | Room 309 | 16:00-17:00",
+    "9067 | Neurodivergent Pythonista Social Space | Open Space | Room 316 | 16:00-17:00",
+    "9096 | nanobind, pybind11 and other C++ binding libraries | Open Space | Room 318 | 16:00-17:00",
+    "9100 | Scaling Python: What's the secret sauce? | Open Space | Room 320 | 16:00-17:00",
+    "9108 | Hike a bit of Three Rivers Heritage Trail | Open Space | Room 321 | 16:00-17:00"
+   ],
+   "16:30": [
+    "88 | Detecting Honeybee Swarms Using the Integration of OpenCV, Pandas, AI, and PyTorch | Talk | Ballroom A | 16:30-17:00 | speakers 22",
+    "89 | Who Tests the Testers? Making and Testing Pipelines | Talk | Ballroom BC | 16:30-17:00 | speakers 31",
+    "87 | Building Resilient Data Pipelines: The Power of Idempotency | Talk | Hall C | 16:30-17:00 | speakers 80",
+    "90 | Unlocking Python's Power: A Practical Guide to Metaprogramming with Decorators, Metaclasses, and Dynamic Code Generation | Talk | Room 301-305 | 16:30-17:00 | speakers 118",
+    "91 | Diseñando y Construyendo Teclados ⌨️ Personalizados con Python | Charla | Room 310/311 | 16:30-17:00 | español | speakers 12"
+   ],
+   "17:00": [
+    "1764 | Registration / Information Desks Close | Informational | Concourse A | 17:00-17:00",
+    "1763 | Swag Pickup Closes | Informational | Hall A | 17:00-17:00",
+    "9071 | Enterprise Python Data Practitioners Roundtable | Open Space | Room 315 | 17:00-18:00"
+   ],
+   "17:15": [
+    "93 | Working with Audio in Python (feat. Pedalboard) | Talk | Ballroom A | 17:15-17:45 | speakers 130",
+    "94 | The Most Bizarre Software Bugs in History | Talk | Ballroom BC | 17:15-17:45 | speakers 19",
+    "92 | Schemas: The Key To Data Happiness | Talk | Hall C | 17:15-17:45 | speakers 50",
+    "95 | Or Else! An Exploration of Obscure Control Flow | Talk | Room 301-305 | 17:15-17:45 | speakers 97",
+    "96 | Usando Python y Gemini para visualizar alertas sanitarias en una web accesible | Charla | Room 310/311 | 17:15-17:45 | español | speakers 28"
+   ],
+   "18:00": [
+    "1765 | Expo Hall Closes | Informational | Hall A | 18:00-18:00",
+    "97 | Lightning Talks | Lightning-talks | Hall B | 18:00-19:00 | text Hosted by Abigail, Chris, Cristián, and Lorena",
+    "9105 | Ensemble (mob) programming | Open Space | Room 309 | 18:00-19:00"
+   ],
+   "20:00": [
+    "1766 | Open Spaces Rooms Close | Informational | Open Spaces Rooms | 20:00-20:00"
+   ]
+  },
+  "2025-05-17": {
+   "06:20": [
+    "9133 | Fun Run 5K | Open Space | Conference Center East Lobby | 06:20-07:15"
+   ],
+   "07:00": [
+    "9083 | Easy Run/Walk down to Point State Park | Open Space | Meet at entrance to conference center (outside doors) | 07:00-08:00"
+   ],
+   "07:30": [
+    "9185 | Orange Espresso chat | Open Space | La Prima cafe | 07:30-08:40",
+    "break-Outside of Hall B-2025-05-17T07:30:00-04:00 | Breakfast | Break | Outside of Hall B | 07:30-09:00"
+   ],
+   "08:00": [
+    "1767 | Registration / Information Desks Open | Informational | Concourse A | 08:00-08:00",
+    "99 | Lightning Talks | Lightning-talks | Hall B | 08:00-09:00 | text Hosted by Abigail, Chris, Cristián, and Lorena",
+    "1769 | Open Spaces Rooms Open | Informational | Open Spaces Rooms | 08:00-08:00"
+   ],
+   "09:00": [
+    "1770 | Expo Hall Opens | Informational | Hall A | 09:00-09:00",
+    "1768 | Swag Pickup Opens | Informational | Hall A | 09:00-09:00",
+    "100 | Diversity & Inclusion Panel: The Work Still Matters: Inclusion, Access, and Community in 2025 | Plenary | Hall B | 09:00-09:25",
+    "9085 | Functional Programming Open Space | Open Space | Room 308 | 09:00-10:00",
+    "9128 | Research Software Engineers meetup | Open Space | Room 309 | 09:00-10:00"
+   ],
+   "09:25": [
+    "101 | Keynote - Lynn Root | Plenary | Hall B | 09:25-10:05"
+   ],
+   "10:00": [
+    "9125 | Junior Engineer Advice Session | Open Space | Room 308 | 10:00-11:00",
+    "9086 | Astral’s type checker, ty | Open Space | Room 316 | 10:00-11:00"
+   ],
+   "10:05": [
+    "break-Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00 | Break | Break | - | 10:05-10:30"
+   ],
+   "10:30": [
+    "104 | Finding 2.0 | Talk | Ballroom A | 10:30-11:00 | speakers 178",
+    "105 | Scale Smarter, Not Harder, with cuPyNumeric. | Talk | Ballroom BC | 10:30-11:00 | speakers 73 74",
+    "103 | PyXL: A Chip That Runs Python at Turbo Speeds | Talk | Hall C | 10:30-11:00 | speakers 42",
+    "106 | Writing Extension Modules To Be Interruptible | Talk | Room 301-305 | 10:30-11:00 | speakers 41",
+    "107 | Honrando las Narrativas de Braceros: Un Enfoque Pythonico para Minería de Textos de Historias de Trabajo Arduo, Migración y Resiliencia | Charla | Room 310/311 | 10:30-11:00 | español | speakers 17",
+    "1771 | Hatchery - Community Organizer Summit | Summit | Room 317 | 10:30-13:00 | pre-registration",
+    "9063 | Supply-Chain Security | Open Space | Room 321 | 10:30-12:30"
+   ],
+   "11:00": [
+    "9092 | Rust in Python Open Space | Open Space | Room 308 | 11:00-12:00",
+    "9095 | Physical World Python | Open Space | Room 309 | 11:00-12:00",
+    "9129 | Startups & Solopreneurs | Open Space | Room 315 | 11:00-12:00",
+    "9087 | Astral's package manager, uv | Open Space | Room 316 | 11:00-12:00",
+    "9075 | Actually Usable Estimation with Quantified Tasks | Open Space | Room 318 | 11:00-12:00",
+    "9078 | t-strings: Let's build powerful templating together | Open Space | Room 320 | 11:00-11:45",
+    "9131 | Keeping Up With CPython: Alternative implementations and language tools | Open Space | Room 321 | 11:00-12:00"
+   ],
+   "11:15": [
+    "109 | Missing the Apex: Predicting F1 Races with Python | Talk | Ballroom A | 11:15-11:45 | speakers 135",
+    "110 | When GPUs Make Python Slower: Patterns and Pitfalls | Talk | Ballroom BC | 11:15-11:45 | speakers 155",
+    "108 | What's New in the Linux Kernel... from Python | Talk | Hall C | 11:15-11:45 | speakers 14",
+    "111 | Scaling the Mountain: A Framework for Tackling Large-Scale Tech Debt | Talk | Room 301-305 | 11:15-11:45 | speakers 2",
+    "112 | Más allá de Try-Except: La frontera de Python en el manejo de errores con Monadas y Railway Magic | Charla | Room 310/311 | 11:15-11:45 | español | speakers 103"
+   ],
+   "12:00": [
+    "114 | How to build a cross-platform graphical user interface with Python | Talk | Ballroom A | 12:00-12:30 | speakers 90",
+    "115 | GPU Programming in Pure Python | Talk | Ballroom BC | 12:00-12:45 | speakers 126",
+    "113 | Program Your Own Computer in Python | Talk | Hall C | 12:00-12:45 | speakers 153",
+    "116 | Reduce the environmental footprint of your Python programs | Talk | Room 301-305 | 12:00-12:30 | speakers 92",
+    "9132 | Mysterious Sticker | Open Space | Room 308 | 12:00-13:00",
+    "9135 | py-bugger: An intentional way to practice debugging. | Open Space | Room 309 | 12:00-13:00",
+    "117 | NLP para la preservación del lenguaje indígena Quechua | Charla | Room 310/311 | 12:00-12:30 | español | speakers 69",
+    "9138 | Reproducible notebooks with marimo! | Open Space | Room 315 | 12:00-13:00",
+    "9157 | Discussing LLM guardrails | Open Space | Room 318 | 12:00-13:00"
+   ],
+   "12:30": [
+    "break-Hall A-2025-05-17T12:30:00-04:00 | Lunch | Break | Hall A | 12:30-13:45",
+    "1773 | PSF Members Lunch | Event | Room 403/404 | 12:30-14:00 | pre-registration"
+   ],
+   "13:00": [
+    "9057 | Current & Displaced Federal Data Professionals Open Space | Open Space | Room 308 | 13:00-14:00",
+    "9098 | Challenges to deploying data science apps and docs | Open Space | Room 309 | 13:00-14:00",
+    "9053 | \"Nebraska\" Maintainers Round-table | Open Space | Room 315 | 13:00-14:00",
+    "9127 | GPU Programming in Python | Open Space | Room 316 | 13:00-14:00",
+    "9113 | LGBTQ Hangout | Open Space | Room 318 | 13:00-14:00",
+    "9115 | Testing and Fuzzing with Hypothesis! | Open Space | Room 320 | 13:00-14:00",
+    "9130 | Which Data Package? pandas, polars, ibis, duckdb ? | Open Space | Room 321 | 13:00-14:00"
+   ],
+   "13:30": [
+    "124 | Looking At Audio | Talk | Ballroom A | 13:30-14:15 | speakers 27",
+    "1774 | Swag Pickup Closes | Informational | Hall A | 13:30-13:30",
+    "126 | The Zen of Polymorphism: Choosing between isinstance(), methods, and @singledispatch | Talk | Room 301-305 | 13:30-14:15 | speakers 113"
+   ],
+   "13:45": [
+    "125 | Cython in Practice: A Deep Dive into Legacy C Integration and Debugging | Talk | Ballroom BC | 13:45-14:15 | speakers 66",
+    "123 | Type Hints in Real-World Projects: Practical Steps for Continuous Maintenance and Improvement | Talk | Hall C | 13:45-14:15 | speakers 15",
+    "127 | Pruebas E2E automatizadas con Playwright y Python | Charla | Room 310/311 | 13:45-14:15 | español | speakers 107",
+    "1775 | Hatchery – Hometown Heros | Summit | Room 317 | 13:45-17:45 | pre-registration",
+    "1776 | Packaging Summit | Summit | Room 319 | 13:45-17:45 | pre-registration",
+    "1772 | Mentored Sprints | Event | Room 402 | 13:45-17:30 | pre-registration"
+   ],
+   "14:00": [
+    "9091 | Let's talk about the Qt Framework | Open Space | Room 309 | 14:00-15:00",
+    "9109 | Coding with LLMs | Open Space | Room 315 | 14:00-15:00",
+    "9106 | All things MCP! | Open Space | Room 316 | 14:00-15:00",
+    "9119 | NixOS + Python = ♥️ | Open Space | Room 318 | 14:00-15:00",
+    "9124 | Python on GPUs | Open Space | Room 320 | 14:00-15:00",
+    "9118 | Diversity and Inclusion Working Group | Open Space | Room 321 | 14:00-15:00"
+   ],
+   "14:15": [
+    "9056 | Python Book Author Meet-and-Greet | Open Space | Room 308 | 14:15-15:45"
+   ],
+   "14:30": [
+    "129 | You can and Should Build XKCD's \"Sky Alarm\" for Cool Space Things | Talk | Ballroom A | 14:30-15:00 | speakers 18",
+    "130 | Zoom, Enhance: Asyncio's New Introspection Powers | Talk | Ballroom BC | 14:30-15:00 | speakers 151 131",
+    "128 | Supercharge your Python library using AST parsing | Talk | Hall C | 14:30-15:00 | speakers 146",
+    "131 | Elastic Generics: Flexible Static Typing with TypeVarTuple and Unpack | Talk | Room 301-305 | 14:30-15:00 | speakers 95",
+    "132 | Rust + Python = Poder Ilimitado: Introducción a PyO3 | Charla | Room 310/311 | 14:30-15:00 | español | speakers 123"
+   ],
+   "15:00": [
+    "9149 | 3d Printing | Open Space | Room 308 | 15:00-16:00",
+    "9084 | RobotPy: Python for the FIRST Robotics Competition | Open Space | Room 309 | 15:00-16:00",
+    "9088 | Python Typing: Improving Types in the ecosystem, 2025 typing survey and typing stubs | Open Space | Room 315 | 15:00-16:00",
+    "9093 | DuckDB <3 Python | Open Space | Room 316 | 15:00-16:00",
+    "9110 | Web Dev Tools with Django & Wagtail | Open Space | Room 318 | 15:00-16:00",
+    "9121 | Songs for Europe | Open Space | Room 321 | 15:00-16:00"
+   ],
+   "15:15": [
+    "134 | Attestations: a new generation of signatures on PyPI | Talk | Ballroom A | 15:15-15:45 | speakers 88",
+    "135 | Why `len('😶‍🌫️') == 4` and other weird things you should know about strings in Python | Talk | Ballroom BC | 15:15-15:45 | speakers 29 30",
+    "133 | A new safe external debugger interface for CPython | Talk | Hall C | 15:15-15:45 | speakers 151 163",
+    "136 | Notes, Groups and Stars: exceptional new features of Python 3.11! | Talk | Room 301-305 | 15:15-15:45 | speakers 109",
+    "137 | Transformando Gafas en Asistentes Inteligentes: Open Source Vision Language Models | Charla | Room 310/311 | 15:15-15:45 | español | speakers 13"
+   ],
+   "15:45": [
+    "break-Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00 | Break | Break | - | 15:45-16:15",
+    "9054 | Juggling! | Open Space | West Atrium | 15:45-17:00"
+   ],
+   "16:00": [
+    "9122 | Songs for Europe | Open Space | Room 308 | 16:00-17:00",
+    "9061 | CKAN Community | Open Space | Room 309 | 16:00-18:00",
+    "9099 | Python, Electronics, datasheets, and component OCR | Open Space | Room 309 | 16:00-17:00",
+    "9077 | Data engineering in Python the right way | Open Space | Room 315 | 16:00-17:00",
+    "9097 | ORM OMG! | Open Space | Room 316 | 16:00-17:00",
+    "9120 | Architecting in AWS Python+CDK. ☁️➕🐍 | Open Space | Room 318 | 16:00-17:00",
+    "9107 | Board Games!!! | Open Space | Room 318 | 16:00-17:00",
+    "9114 | 3D and Computer Vision Meet | Open Space | Room 320 | 16:00-17:00",
+    "9101 | Help using Python types and getting Pyrefly type checking working in your IDE | Open Space | Room 321 | 16:00-17:00"
+   ],
+   "16:15": [
+    "140 | A PEP Talk: Adventures in Account Recovery, PEP 541, And More As the Inaugural PyPI Support Specialist | Talk | Ballroom A | 16:15-16:45 | speakers 181",
+    "141 | Selenium with Python using Robot Framework | Talk | Ballroom BC | 16:15-16:45 | speakers 177",
+    "139 | The chaotic locals() and how we fixed it | Talk | Hall C | 16:15-16:45 | speakers 67",
+    "142 | What they don't tell you about building a JIT compiler for CPython | Talk | Room 301-305 | 16:15-16:45 | speakers 6",
+    "143 | Iterando de forma eficiente en Python con Itertools | Charla | Room 310/311 | 16:15-16:45 | español | speakers 185"
+   ],
+   "16:30": [
+    "1777 | Expo Hall Closes | Informational | Hall A | 16:30-16:30"
+   ],
+   "17:00": [
+    "145 | AI with a Conscience: Building Fair and Transparent Systems in Python | Talk | Ballroom BC | 17:00-17:30 | speakers 85",
+    "1778 | Registration / Information Desks Close | Informational | Concourse A | 17:00-17:00",
+    "144 | Metaclasses Demystified | Talk | Hall C | 17:00-17:30 | speakers 154",
+    "9168 | Climbing The Stack | Open Space | Meet *outside* room 315 | 17:00-19:30",
+    "146 | Painting with Python | Talk | Room 301-305 | 17:00-17:30 | speakers 36",
+    "9103 | IT mullet: Business in the front, fursuit tail in the back | Open Space | Room 308 | 17:00-18:00",
+    "9134 | The Red Cross and Other Humanitarian Organizations | Open Space | Room 309 | 17:00-18:00",
+    "147 | Django Asíncrono: Desbloqueando el Poder de la Programación Async | Charla | Room 310/311 | 17:00-17:30 | español | speakers 38",
+    "9169 | Song For Europe | Open Space | Room 315 | 17:00-18:00",
+    "9136 | Programmers Dilemma! A Game Theory Experiment | Open Space | Room 316 | 17:00-18:00",
+    "9146 | Vim | Open Space | Room 318 | 17:00-18:00",
+    "9150 | Digital Nomads Open Space | Open Space | Room 320 | 17:00-18:00",
+    "9155 | Finding 2.0 Support Group | Open Space | Room 321 | 17:00-18:00"
+   ],
+   "17:45": [
+    "148 | Lightning Talks | Lightning-talks | Hall B | 17:45-18:45 | text Hosted by Abigail, Chris, Cristián, and Lorena"
+   ],
+   "18:00": [
+    "9166 | Plotly Data Visualization Meet & Greet | Open Space | Room 308 | 18:00-19:00",
+    "9159 | Test Equipment Automation | Open Space | Room 315 | 18:00-19:00"
+   ],
+   "18:45": [
+    "1779 | PyLadies Auction | Event | Ballroom A | 18:45-22:30 | pre-registration"
+   ],
+   "20:00": [
+    "1780 | Open Spaces Rooms Close | Informational | Open Spaces Rooms | 20:00-20:00"
+   ]
+  },
+  "2025-05-18": {
+   "08:00": [
+    "1782 | Registration / Information Desks Open | Informational | Concourse A | 08:00-08:00",
+    "150 | Lightning Talks | Lightning-talks | Hall B | 08:00-09:00 | text Hosted by Abigail, Chris, Cristián, and Lorena",
+    "1781 | Open Spaces Rooms Open | Informational | Open Spaces Rooms | 08:00-08:00",
+    "break-Outside of Hall B-2025-05-18T08:00:00-04:00 | Breakfast | Break | Outside of Hall B | 08:00-09:00"
+   ],
+   "09:00": [
+    "151 | Keynote - The Marshall Project | Plenary | Hall B | 09:00-09:45"
+   ],
+   "09:45": [
+    "152 | PSF - Update from our Security Engineers | Plenary | Hall B | 09:45-10:00"
+   ],
+   "10:00": [
+    "153 | Job Fair and Community Showcase | Plenary | Hall A | 10:00-13:00",
+    "1783 | Job Fair and Poster Sessions | Event | Hall A | 10:00-13:00",
+    "poster-Hall A-2025-05-18T10:00:00-04:00 | Posters | Poster | Hall A | 10:00-13:00",
+    "1784 | Swag Pickup Opens | Informational | Hall A | 10:00-10:00",
+    "9140 | Engineering Productivity | Open Space | Room 308 | 10:00-11:00",
+    "9156 | Mysterious Sticker | Open Space | Room 309 | 10:00-11:00",
+    "9139 | Computer Assisted Reporting and Investigative journalism | Open Space | Room 310/311 | 10:00-11:00",
+    "9137 | Reproducible notebooks with marimo! | Open Space | Room 315 | 10:00-11:00",
+    "9158 | Python in Aviation | Open Space | Room 316 | 10:00-11:00",
+    "1785 | Hatchery - Humble Data | Event | Room 317 | 10:00-15:15 | pre-registration",
+    "9179 | Twisted Community | Open Space | Room 318 | 10:00-11:00",
+    "9174 | SeleniumBase Deep Dive | Open Space | Room 319 | 10:00-11:00",
+    "9177 | Python on HPC Supercomputers | Open Space | Room 321 | 10:00-11:00"
+   ],
+   "11:00": [
+    "1787 | Swag Pickup Closes | Informational | Hall A | 11:00-11:00",
+    "1786 | Swag pickup Opens for T-shirt Sales | Informational | Hall A | 11:00-11:00",
+    "9059 | Still on Python 2? | Open Space | Room 308 | 11:00-12:00",
+    "9141 | Testing! | Open Space | Room 309 | 11:00-12:00",
+    "9163 | Game Devs | Open Space | Room 310/311 | 11:00-12:00",
+    "9052 | Simplifying initial Django deployments | Open Space | Room 315 | 11:00-12:00",
+    "9151 | Let's talk LLMOps | Open Space | Room 316 | 11:00-12:00",
+    "9181 | Python and the Energy Transition | Open Space | Room 318 | 11:00-12:00",
+    "9172 | Come play with Pydantic AI agents! | Open Space | Room 319 | 11:00-12:00",
+    "9152 | Accessibility Solutions | Open Space | Room 320 | 11:00-12:00",
+    "9176 | GPU Accelerated Data Science with RAPIDS | Open Space | Room 321 | 11:00-12:00"
+   ],
+   "12:00": [
+    "break-Hall A-2025-05-18T12:00:00-04:00 | Lunch | Break | Hall A | 12:00-13:00",
+    "9178 | Entertainment Robots and the Pragmatics of Contextual Analysis. | Open Space | Outside the staff room | 12:00-12:30",
+    "9173 | High Performance Django | Open Space | Room 308 | 12:00-13:00",
+    "9167 | Ensemble (mob) programming | Open Space | Room 309 | 12:00-13:00",
+    "9188 | PyBatch | Open Space | Room 315 | 12:00-13:00",
+    "9195 | Python for Hardware Folks | Open Space | Room 316 | 12:00-13:00",
+    "1788 | PyLadies Lunch | Event | Room 403/404 | 12:00-13:00 | pre-registration"
+   ],
+   "12:30": [
+    "9183 | Python Skill-Building | Open Space | 4th floor tables (under the tents) | 12:30-13:00",
+    "9154 | python-build-standalone | Open Space | Room 309 | 12:30-13:00"
+   ],
+   "13:00": [
+    "9184 | Ask a Friendly Meat-Loving Vegan | Open Space | 4th floor tables (under the tents) | 13:00-13:37",
+    "157 | Processing large JSON files without running out of memory | Talk | Ballroom A | 13:00-13:30 | speakers 142",
+    "158 | Reinventing the Wheel:  A Community-Driven Roadmap for Python Packaging | Talk | Ballroom BC | 13:00-13:30 | speakers 114 115",
+    "1789 | Registration / Information Desks Close | Informational | Concourse A | 13:00-13:00",
+    "1790 | Swag pickup T-shirt Sales Close | Informational | Hall A | 13:00-13:00",
+    "156 | Bridging IoT and Machine Learning with Python for Sustainable Agriculture | Talk | Hall C | 13:00-13:30 | speakers 53 164",
+    "159 | Going faster in all directions at once: How two teams are working together to make Python better for all | Talk | Room 301-305 | 13:00-13:30 | speakers 86 87",
+    "9142 | Young Professionals Meetup! | Open Space | Room 308 | 13:00-14:00",
+    "9144 | All Presenters/Speakers | Open Space | Room 309 | 13:00-14:00",
+    "9060 | PSF & Meetups Discussion | Open Space | Room 310/311 | 13:00-14:00",
+    "9175 | Creative Coding with Python | Open Space | Room 315 | 13:00-14:00",
+    "9180 | Hosting with Teahouse | Open Space | Room 316 | 13:00-14:00",
+    "9153 | OpenAPI and Arazzo specifications | Open Space | Room 318 | 13:00-14:00",
+    "9160 | Geeking Out about AI Evals | Open Space | Room 319 | 13:00-14:00",
+    "9186 | Consciousness | Open Space | Room 320 | 13:00-14:00",
+    "9189 | Plotly Data Viz - Meet & Greet | Open Space | Room 321 | 13:00-14:00"
+   ],
+   "13:45": [
+    "161 | Taming file zoos: Data science with DuckDB database files | Talk | Ballroom A | 13:45-14:15 | speakers 127",
+    "162 | Phantom Dependencies: is your requirements.txt haunted? | Talk | Ballroom BC | 13:45-14:15 | speakers 16",
+    "160 | Dependency Injection in Python with Pydantic and Hydra | Talk | Hall C | 13:45-14:15 | speakers 145",
+    "163 | Cheese Must Stand: Defending the Python Library Ecosystem in 2025 | Talk | Room 301-305 | 13:45-14:15 | speakers 111 112"
+   ],
+   "14:00": [
+    "9199 | Headache or Harmony: Engineering meets Data Science | Open Space | Lounge area on third floor between 309 and 308 | 14:00-15:00",
+    "9148 | PAO, PyhtonAsia community and make connections | Open Space | Room 308 | 14:00-15:00",
+    "9145 | Dotfile Nerds | Open Space | Room 309 | 14:00-15:00",
+    "9190 | Types: What is Preventing Adoption? | Open Space | Room 310/311 | 14:00-15:00",
+    "9058 | Beautiful Soup: Ask Me Anything | Open Space | Room 315 | 14:00-15:00",
+    "9162 | 🌸  pyOpenSci 🌸 Python, packaging and making sharing code easier for everyone, everywhere. | Open Space | Room 316 | 14:00-15:00",
+    "9143 | Black Python Devs | Open Space | Room 318 | 14:00-15:00",
+    "9161 | Go | Open Space | Room 319 | 14:00-15:00",
+    "9187 | Artist Meetup | Open Space | Room 320 | 14:00-15:00",
+    "9165 | Software Engineering Managers Meetup | Open Space | Room 321 | 14:00-15:00",
+    "9164 | Intro to Lightsaber Combat | Open Space | garden outside 315 | 14:00-15:00"
+   ],
+   "14:30": [
+    "165 | The past, present, and future of virtual environments | Talk | Ballroom A | 14:30-15:00 | speakers 34",
+    "166 | Unlearning SQL | Talk | Ballroom BC | 14:30-15:00 | speakers 183",
+    "164 | Keeping up with Python: what makes upgrades hard, and what can we do about it | Talk | Hall C | 14:30-15:00 | speakers 33",
+    "167 | One Year In: Insights and Inspiration from my PSF Journey | Talk | Room 301-305 | 14:30-15:00 | speakers 143"
+   ],
+   "15:00": [
+    "9170 | Unlearning SQL | Open Space | Room 315 | 15:00-16:00",
+    "9198 | Python for Climate Tech | Open Space | Room 318 | 15:00-16:00",
+    "9194 | 🚀 Vim & CLI Power Users – Let's Share Tools! | Open Space | Room 320 | 15:00-16:00",
+    "9182 | Caliban Book Shop | Open Space | Room 321 | 15:00-16:00"
+   ],
+   "15:15": [
+    "168 | Keynote - Dr. Kari L. Jordan | Plenary | Hall B | 15:15-16:00"
+   ],
+   "16:00": [
+    "169 | Steering Council Panel | Plenary | Hall B | 16:00-16:35",
+    "9204 | Phipps Conservatory and Botanical Gardens Trip | Open Space | Phipps Conservatory | 16:00-17:00",
+    "9202 | Ask a teenager anything! BRING MEMES!! | Open Space | Room 308 | 16:00-16:40",
+    "9191 | The Writer's Nook | Open Space | Room 316 | 16:00-17:00",
+    "9201 | Python for Real Estate & Construction | Open Space | Room 318 | 16:00-17:00",
+    "9193 | GDSFactory: Build the future of quantum and integrated circuit design — with Python. | Open Space | Room 320 | 16:00-17:00"
+   ],
+   "16:35": [
+    "170 | Python Software Foundation Update & Awards | Plenary | Hall B | 16:35-17:05"
+   ],
+   "17:00": [
+    "9200 | Food & Drinks | Open Space | Outside Hall B | 17:00-17:20",
+    "9203 | [Outing, see description] Ice Cream sprint | Open Space | Room 308 | 17:00-18:00",
+    "9205 | Event sourcing | Open Space | Room 315 | 17:00-18:00"
+   ],
+   "17:05": [
+    "171 | Closing | Plenary | Hall B | 17:05-17:20"
+   ],
+   "17:30": [
+    "9147 | Pickleball | Open Space | Room 309 | 17:30-19:00",
+    "1791 | CANCELLED: Introduction to Sprints Workshop | Event | Room 402 | 17:30-19:30"
+   ],
+   "18:00": [
+    "9197 | More boardgames! | Open Space | Room 308 | 18:00-19:00",
+    "9192 | a worse ad-hoc intro to sprints | Open Space | Room 310/311 | 18:00-19:00"
+   ],
+   "20:00": [
+    "1792 | Open Spaces Rooms Close | Informational | Open Spaces Rooms | 20:00-20:00"
+   ]
+  }
+ },
+ "dropped": {
+  "collapsed": 13,
+  "placeholder": 1
+ },
+ "outside the timeline": [
+  "poster-detail-1544 | Putting a Face to the Pattern: Applying Time-Series Classification & Clustering to Transmission Load Patterns | Poster | Hall A | 10:00-13:00 | speakers 4 5",
+  "poster-detail-154139 | How to refactor with confidence | Poster | Hall A | 10:00-13:00 | speakers 156",
+  "poster-detail-1547 | Conformal Prediction: Quantifying Confidence in ML Model Predictions | Poster | Hall A | 10:00-13:00 | speakers 8",
+  "poster-detail-15423 | Datasette: an ecosystem of tools for finding stories in data | Poster | Hall A | 10:00-13:00 | speakers 26",
+  "poster-detail-154101 | From Monolithic to Mosaic: Collaborative SLMs Ecosystems for Cost-Efficient, Scalable, and Edge-Ready solutions | Poster | Hall A | 10:00-13:00 | speakers 116 117",
+  "poster-detail-15444 | AmpliconFinder: A Python Based Bioinformatics Pipeline for Early Stage Cancer Diagnosis | Poster | Hall A | 10:00-13:00 | speakers 48 49",
+  "poster-detail-1549 | ClimateML: Machine Learning for Climate Model Downscaling | Poster | Hall A | 10:00-13:00 | speakers 11",
+  "poster-detail-154144 | Infomaid -- An Offline AI Text-Generative Tool To Support Ethical Learning With Textual Assistance | Poster | Hall A | 10:00-13:00 | speakers 162",
+  "poster-detail-15449 | Data About Your Data: Open Source Python Tools for Scientific Metadata Management | Poster | Hall A | 10:00-13:00 | speakers 55 56",
+  "poster-detail-15446 | ExecExam: Streamlining Python Assessments with Automation and Personalized Feedback | Poster | Hall A | 10:00-13:00 | speakers 180 51 52",
+  "poster-detail-15430 | A visual exploration of vectors | Poster | Hall A | 10:00-13:00 | speakers 32",
+  "poster-detail-15448 | Beautiful and Balanced: Using Color Theory in Data Visualization | Poster | Hall A | 10:00-13:00 | speakers 54",
+  "poster-detail-154127 | Visual Prototyping for Woven Bands | Poster | Hall A | 10:00-13:00 | speakers 144",
+  "poster-detail-15450 | Weather Data along the International Space Station Orbits | Poster | Hall A | 10:00-13:00 | speakers 57 58",
+  "poster-detail-15422 | Atom to Innovation: Machine Learning for Materials Science | Poster | Hall A | 10:00-13:00 | speakers 25",
+  "poster-detail-154166 | Flet: cross-platform apps in Python with Flutter UI | Poster | Hall A | 10:00-13:00 | speakers 182",
+  "poster-detail-15482 | Building low-carbon websites with Wagtail & Django | Poster | Hall A | 10:00-13:00 | speakers 94",
+  "poster-detail-15434 | Painting with Python (poster) | Poster | Hall A | 10:00-13:00 | speakers 36",
+  "poster-detail-154108 | Improving in Chess using Python | Poster | Hall A | 10:00-13:00 | speakers 122"
+ ],
+ "rooms": [
+  "4th-floor-tables-under-the-tents: 4th floor tables (under the tents) (2)",
+  "ballroom-a: Ballroom A (25)",
+  "ballroom-bc: Ballroom BC (23)",
+  "concourse-a: Concourse A (12)",
+  "conference-center-east-lobby: Conference Center East Lobby (1)",
+  "garden-outside-315: garden outside 315 (1)",
+  "hall-a: Hall A (39)",
+  "hall-b: Hall B (16)",
+  "hall-c: Hall C (23)",
+  "la-prima-cafe: La Prima cafe (1)",
+  "lounge-area-on-third-floor-between-309-and-308: Lounge area on third floor between 309 and 308 (1)",
+  "meet-outside-room-315: Meet *outside* room 315 (1)",
+  "meet-at-entrance-to-conference-center-outside-doors: Meet at entrance to conference center (outside doors) (1)",
+  "open-spaces-rooms: Open Spaces Rooms (6)",
+  "or-join-the-whatsapp-group: or join the whatsapp group (1)",
+  "outside-hall-b: Outside Hall B (1)",
+  "outside-of-hall-b: Outside of Hall B (3)",
+  "outside-the-staff-room: Outside the staff room (1)",
+  "phipps-conservatory: Phipps Conservatory (1)",
+  "psf-couch: PSF Couch (1)",
+  "room-301-305: Room 301-305 (23)",
+  "room-308: Room 308 (24)",
+  "room-309: Room 309 (26)",
+  "room-310-311: Room 310/311 (29)",
+  "room-315: Room 315 (21)",
+  "room-316: Room 316 (22)",
+  "room-317: Room 317 (8)",
+  "room-318: Room 318 (21)",
+  "room-319: Room 319 (10)",
+  "room-320: Room 320 (16)",
+  "room-321: Room 321 (17)",
+  "room-402: Room 402 (4)",
+  "room-403-404: Room 403/404 (4)",
+  "west-atrium: West Atrium (1)"
+ ],
+ "skipped": [],
+ "speakers": [
+  "4: Laura Walter",
+  "5: Alexander Wang",
+  "156: Phillip Schanely",
+  "8: Alexander Olden",
+  "26: Simon Willison",
+  "116: Rudraksh Karpe",
+  "117: SUMIT PANDEY",
+  "48: Haque Ishfaq",
+  "49: Atia Binte Amin",
+  "11: Neeraj Pandey",
+  "162: Oliver Bonham-Carter",
+  "55: Donald Campbell",
+  "56: Oleksandr Khoroshevskyi",
+  "180: Gregory M. Kapfhammer",
+  "51: Hemani Alaparthi",
+  "52: Pallas-Athena Cain",
+  "32: Pamela Fox",
+  "54: Laura Fisher",
+  "144: Kathryn Born",
+  "57: Jules Kouatchou",
+  "58: Khalil Alexander",
+  "25: Manoj Pandey",
+  "182: Feodor Fitsner",
+  "94: Vince Salvino",
+  "36: Caleb Madrigal",
+  "122: Adarsh Divakaran",
+  "89: Anthony Shaw",
+  "148: Mike Müller",
+  "27: Łukasz Langa",
+  "108: Neha",
+  "121: Matt Harrison",
+  "81: Reuven M. Lerner",
+  "29: Marie Roald",
+  "30: Yngve Mardal Moe",
+  "70: Sebastiaan Zeeff",
+  "7: Paweł Żal",
+  "137: Anjali Datta",
+  "138: Deepyaman Datta",
+  "62: Ian Quah",
+  "63: Bryan Quah",
+  "149: Francesco Bruni",
+  "172: Bernát Gábor",
+  "170: Jeremy Tanner",
+  "160: Anaiya Raisinghani",
+  "178: Marc Gibbons",
+  "17: Rodrigo Silva Ferreira",
+  "42: Ron Livne",
+  "73: Irina Demeshko",
+  "74: Quynh L. Nguyen",
+  "41: Zack Weinberg",
+  "78: Natalia V. Revollo",
+  "79: Carlos E. Berger",
+  "128: Alvaro Duran",
+  "105: Zhaoheng Li",
+  "119: Jack Linke",
+  "141: Rushan Jiang",
+  "103: Sebastian Arias",
+  "155: Kaashif Hymabaccus",
+  "135: Josh Weissbock",
+  "14: Geoffrey Thomas",
+  "2: Jimmy Lai",
+  "167: Savannah Ostrowski",
+  "168: Doris Lee",
+  "161: Samuel Colvin",
+  "139: Takanori Suzuki",
+  "59: Catherine Nelson",
+  "124: David Hewitt",
+  "77: Kevin Rodriguez",
+  "153: Glyph",
+  "92: Apoorv Garg",
+  "126: Bryce Adelstein Lelbach",
+  "90: Russell Keith-Magee",
+  "69: Carla Marcela Florida Román",
+  "23: Laura López",
+  "24: Valentina Ariza",
+  "44: Lysandros Nikolaou",
+  "45: Nathan Goldbaum",
+  "129: Al Sweigart",
+  "98: Patrick Hoefler",
+  "20: Akshay Agrawal",
+  "142: Itamar Turner-Trauring",
+  "53: Iyinoluwa Moyosola Oyelade",
+  "164: Alowolodu Olufunso Dayo",
+  "86: Michael Droettboom",
+  "87: Dino Viehland",
+  "114: Jonathan Dekhtiar",
+  "115: Barry Warsaw",
+  "83: Akshay Gupta",
+  "84: Raymond Haffar",
+  "40: Daniel Anderson",
+  "39: Sarah Kaiser",
+  "61: Allen  Downey",
+  "133: Sam Gross",
+  "134: Neil Mitchell",
+  "71: Stefanie Molin",
+  "76: Ariel Ortiz",
+  "106: Rodrigo Girão Serrão",
+  "140: Trey Hunner",
+  "21: Sangarshanan",
+  "113: Brett Slatkin",
+  "9: Nicholas H.Tollervey",
+  "101: Martha Cryan",
+  "102: Emily Kellison-Linn",
+  "171: Gabriel Kuettel",
+  "66: Maryanne Wachter",
+  "64: Arthur Pastel",
+  "65: Adrien Cacciaguerra",
+  "107: Joan Alejandro Esquivel Montero",
+  "111: Patrick Smyth",
+  "112: Srishti Hegde",
+  "127: Alex Monahan",
+  "16: Seth Michael Larson",
+  "145: Pascal Tomecek",
+  "147: Dawn Cooper",
+  "15: Koudai Aono",
+  "72: Riva Quiroga",
+  "152: Smera Goel",
+  "100: Semona Igama",
+  "151: Pablo Galindo Salgado",
+  "131: Yury Selivanov",
+  "33: Jason Fried",
+  "95: Christopher Ariza",
+  "123: Daniel Hernández Méndez",
+  "183: Steven Lott",
+  "143: Jacob Coffee",
+  "18: Keith Murray",
+  "146: Adam Glustein",
+  "34: Zanie Blue",
+  "46: Pavithra Eswaramoorthy",
+  "47: Frank Elavsky",
+  "93: Hynek Schlawack",
+  "104: Emin Martinian",
+  "91: Paul Ganssle",
+  "37: Elizabeth Fuentes",
+  "169: Camila Hinojosa Añez",
+  "13: Alejandro Núñez Arroyo",
+  "109: Zac Hatfield-Dodds",
+  "163: Ivona Stojanovic",
+  "88: William Woodruff",
+  "99: Tadeh Hakopian",
+  "173: Michael Winser",
+  "174: Mike Fiedler",
+  "166: Hillary Sanders",
+  "3: Ken Alger",
+  "43: Maria Jose Molina Contreras",
+  "158: Rohit Ganguly",
+  "6: Brandt Bucher",
+  "181: Maria Ashna",
+  "177: Monica Oyugi",
+  "67: Tian Gao",
+  "185: Andres Pineda",
+  "118: Aditya Mehra",
+  "80: Mihir Kavatkar",
+  "22: Michael Dahlberg",
+  "31: Evan Kohilas",
+  "12: Carlos A Aranibar",
+  "85: Sanjana Kandi",
+  "38: Luis Martinez",
+  "154: Jason C. McDonald",
+  "19: Mia Bajić",
+  "28: Lía Da Silva - Rojas",
+  "130: Peter Sobot",
+  "97: Amethyst Reese 🌸",
+  "50: Sev Leonard"
+ ]
+}

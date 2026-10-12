@@ -2,11 +2,11 @@
 
 They run on the recorded 2025 and 2026 feeds, under two machine time zones (``machine_tz``).
 Edge cases are deep copies of the recorded feeds with one record changed. Ionic's rules
-have their own tests in ``test_rules.py``.
+have their own tests in ``test_rules.py``, and the invariants and snapshot of the
+processed model are in ``test_feed_invariants.py``.
 """
 
 import logging
-import re
 from collections.abc import Callable
 from datetime import date, datetime
 from typing import Any
@@ -14,81 +14,17 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from pycon_us.config import load_year
 from pycon_us.core.feed import FeedError, process
 from tests.feeds import YEARS, changed, document, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
 KEPT = 5  # the index of a 2026 slot that becomes a session ("Registration Desk Opens")
-ID_FORMS = re.compile(
-    r"\d+|poster-detail-\d+|(break|poster)-.*-\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d"
-)
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_recorded_feeds_have_no_unreadable_record(year: int) -> None:
     assert processed(year).skipped == ()
-
-
-@pytest.mark.parametrize("year", YEARS)
-def test_every_slot_is_a_session_or_dropped_by_one_rule(year: int) -> None:
-    slots = [str(slot["conf_key"]) for slot in document(year)["schedule"]]
-    data = processed(year)
-    own = [
-        s.id
-        for s in data.sessions.values()
-        if s.id.isdigit() and s.kind != "open-space"
-    ]
-    dropped = [
-        i
-        for rule, ids in data.dropped.items()
-        if rule != "unscheduled-open-space"
-        for i in ids
-    ]
-    assert sorted(own + dropped) == sorted(slots)
-
-
-@pytest.mark.parametrize("year", YEARS)
-def test_ids_are_strings_in_known_forms(year: int) -> None:
-    """DATA-26, D-42: Ionic's four id forms, as strings, keyed by themselves."""
-    data = processed(year)
-    for session_id, session in data.sessions.items():
-        assert type(session.id) is str and session_id == session.id
-        assert ID_FORMS.fullmatch(session.id), session.id
-
-
-@pytest.mark.parametrize("year", YEARS)
-def test_every_time_group_has_an_aware_start_in_the_conference_zone(year: int) -> None:
-    zone = load_year(year).conference.zone
-    data = processed(year)
-    for day in data.days:
-        starts = [group.start for group in day.groups]
-        assert starts == sorted(set(starts)), day.date
-        for group in day.groups:
-            assert group.start.tzinfo == zone
-            assert group.start.astimezone(zone).date() == day.date
-            for session_id in group.session_ids:
-                assert data.sessions[session_id].start == group.start
-
-
-@pytest.mark.parametrize("year", YEARS)
-def test_every_timeline_session_is_in_exactly_one_group(year: int) -> None:
-    data = processed(year)
-    grouped = [
-        i for day in data.days for group in day.groups for i in group.session_ids
-    ]
-    assert sorted(grouped) == sorted(
-        s.id for s in data.sessions.values() if s.in_timeline
-    )
-
-
-@pytest.mark.parametrize("year", YEARS)
-def test_days_are_conference_dates_in_order(year: int) -> None:
-    conference = load_year(year).conference
-    days = [day.date for day in processed(year).days]
-    assert days == sorted(days)
-    assert conference.first_day <= days[0] and days[-1] <= conference.last_day
 
 
 def test_2026_has_five_schedule_days() -> None:
@@ -98,9 +34,8 @@ def test_2026_has_five_schedule_days() -> None:
 
 
 def test_2025_times_stay_in_eastern_time() -> None:
-    session = processed(2025).sessions[
-        "1745"
-    ]  # "Registration / Information Desks Open"
+    # "Registration / Information Desks Open"
+    session = processed(2025).sessions["1745"]
     eastern = ZoneInfo("America/New_York")
     assert session.start == datetime(2025, 5, 14, 7, 0, tzinfo=eastern)
     assert session.start.tzinfo == eastern
@@ -244,14 +179,6 @@ def test_unknown_fields_are_ignored() -> None:
     data = process(changed(2026, add_fields), settings(2026))
     assert data.skipped == ()
     assert len(data.sessions) == len(processed(2026).sessions)
-
-
-def test_processing_the_same_bytes_twice_gives_the_same_model() -> None:
-    first, second = processed(2026), processed(2026)
-    assert list(first.sessions) == list(second.sessions)
-    assert [
-        (d.date, [(g.start, g.session_ids) for g in d.groups]) for d in first.days
-    ] == [(d.date, [(g.start, g.session_ids) for g in d.groups]) for d in second.days]
 
 
 def break_start(doc: dict[str, Any]) -> None:
