@@ -532,29 +532,37 @@ def matches(query: str, folded_haystack: str) -> bool:
 ### 7.6 Time (`clock.py`, `core/timefmt.py`; D-35, D-43)
 
 ```python
-# src/pycon_us/clock.py
-"""The one source of 'now' (D-43): a test override, then the Developer fake clock, then real time."""
-from datetime import datetime, timedelta, timezone
-
+# src/pycon_us/clock.py (excerpt)
+"""The one source of "now" (D-43, DATA-12)."""
 _test_now: datetime | None = None
 _fake_offset: timedelta | None = None
 
 
 def now() -> datetime:
-    """The current instant, timezone-aware (UTC)."""
+    """Return the current instant as an aware UTC datetime."""
     if _test_now is not None:
         return _test_now
-    real = datetime.now(timezone.utc)
+    real = datetime.now(UTC)
     return real if _fake_offset is None else real + _fake_offset
 
 
 def start_fake_clock(at: datetime | None) -> None:
     """Make now() run forward from `at` (Developer screen); None returns to real time."""
     global _fake_offset
-    _fake_offset = None if at is None else at - datetime.now(timezone.utc)
+    _fake_offset = None if at is None else _aware(at) - datetime.now(UTC)
 ```
 
-The conference zone comes from `conference.toml` (`ZoneInfo`, with the `tzdata` wheel; S1 checks it on devices). `core` functions take `now` as a parameter; only screens and stores call `clock.now()`. Labels read `9:25 AM`, or `09:25` when `page.media.always_use_24_hour_format` is set (F23); weekday and month names come from fixed tuples, never locale `strftime`. A "Pacific Time" note appears when the device's offset differs. Tests run under `TZ=America/Los_Angeles` and `Pacific/Kiritimati`.
+`set_test_now(at)` sets the override; both setters refuse naive datetimes. The conference zone and its display name come from `conference.toml` (`time_zone`, `time_zone_name`; `ZoneInfo` with the `tzdata` wheel, which S1 checked on devices). `core` functions take `now` and the zone as parameters; only screens and stores call `clock.now()`. `core/timefmt.py` holds:
+
+| Function | Result |
+|---|---|
+| `local_date(moment, zone)`, `today(now, zone)` | the conference-local date: the day bucket, and the one "today" |
+| `time_label(moment, zone, use_24h=...)` | `9:25 AM`, or `09:25` when `page.media.always_use_24_hour_format` is set (F23) |
+| `time_range_label(start, end, zone, use_24h=...)` | `9:25–10:10 AM`, `11:30 AM–12:15 PM`, one time when start equals end |
+| `day_label(day)`, `day_heading(day)` | `Fri, May 15`, `Friday, May 15` |
+| `zone_note(now, zone, zone_name, device_offset)` | `Times are Pacific Time (PDT)` when the device's offset at `now` differs, else None; the UI passes `now.astimezone().utcoffset()` |
+
+Weekday and month names come from fixed tuples, never locale `strftime`, and naive datetimes raise `ValueError`. Tests run under `TZ=America/Los_Angeles` and `Pacific/Kiritimati` (the `machine_tz` fixture), and cover both DST changes and midnight.
 
 ### 7.7 HTML → Markdown (`core/html_md.py`; D-44)
 

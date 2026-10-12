@@ -6,6 +6,7 @@
 year = 2025
 name = "PyCon US 2025"
 time_zone = "America/New_York"
+time_zone_name = "Eastern Time"
 first_day = 2025-05-14
 last_talk_day = 2025-05-18
 last_day = 2025-05-22
