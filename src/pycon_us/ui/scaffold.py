@@ -255,25 +255,53 @@ def strip_line(
     return f"Couldn't update · {since}"  # an answer we could not use
 
 
+PROGRESS_HEIGHT = 2
+"""The height of the strip's refresh bar, in dp (ux.md §3.9)."""
+
+TICK_SECONDS = 60
+"""How often a shown strip reads the clock again: its age, and fresh turning stale (D-40)."""
+
+
 @ft.component
-def StatusStrip() -> ft.Control:
+def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     """Say when the schedule on screen is not fresh, and offer Refresh (D-32).
 
     Shown while refreshing, when the data is stale, and after a failed refresh;
-    hidden when fresh. A live region, so a screen reader announces each change. The
-    age is written when the strip renders: #82 re-renders it every 60 s while it shows
-    (D-40), and adds the refresh triggers.
+    hidden when fresh. A live region, so a screen reader announces each change.
+
+    While it is mounted and the app is in the foreground, it ticks every
+    ``TICK_SECONDS`` (``Services.run_every``): it re-renders when the minute has
+    changed, so its age keeps up and it appears when the data turns stale, and with
+    ``auto_refresh`` it starts a refresh whenever one is due (D-40). Leaving the
+    screen stops the ticks, and so does the background.
+
+    Args:
+        auto_refresh: True on Now and Schedule, the screens that refresh the feed
+            every 15 min while they show (``Conference.refresh_due()``, D-40).
     """
     page = ft.context.page
     svc = use_services()
     conference = use_conference()
     tokens = use_tokens()
+    _, set_minute = ft.use_state(current_minute)
     info = svc.year.conference
     status = conference.status(info)
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     line = strip_line(
         status, conference.fetched_at, clock.now(), info.zone, use_24h=use_24h
     )
+
+    @report_errors
+    def tick() -> None:
+        set_minute(current_minute())  # the same minute renders nothing new
+        if auto_refresh:
+            conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
+
+    @report_errors
+    async def keep_up() -> None:
+        await svc.run_every(TICK_SECONDS, tick)
+
+    ft.use_effect(keep_up, [auto_refresh], cleanup=stop_ticks)
 
     @report_errors
     async def refresh() -> None:
@@ -293,12 +321,24 @@ def StatusStrip() -> ft.Control:
     )
     button = ft.TextButton("Refresh", on_click=refresh, disabled=refreshing)
     progress = ft.ProgressBar(
-        bar_height=2,
+        bar_height=PROGRESS_HEIGHT,
         value=None,  # indeterminate
         visible=refreshing,
         # No label: the line says it, and the strip's node would say it twice.
     )
-    row = ft.Row([icon, text, button], spacing=12)
+    # The bar's slot keeps its height when the bar hides, so the strip and the list
+    # under it do not move by 2 dp when a refresh starts or ends.
+    progress_slot = ft.Container(progress, height=PROGRESS_HEIGHT)
+    # The icon tops its line, so when the line wraps (large text) the icon stays beside
+    # the first line rather than the middle of the block; the pair stays centred
+    # against the 48 dp button, so a single line still sits mid-strip.
+    line_row = ft.Row(
+        [icon, text],
+        spacing=12,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+        expand=True,
+    )
+    row = ft.Row([line_row, button], spacing=12)
     return ft.Semantics(
         identifier="app.status",
         container=True,
@@ -308,10 +348,30 @@ def StatusStrip() -> ft.Control:
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             content=ft.Column(
                 [
-                    ft.Container(row, padding=ft.Padding.only(left=16, right=8)),
-                    progress,
+                    # 4 dp above and below: at 200 % text the line wraps, and it
+                    # would touch the strip's edges; at 100 % the strip is 56 dp,
+                    # an M3 one-line list item.
+                    ft.Container(
+                        row, padding=ft.Padding.only(left=16, top=4, right=8, bottom=4)
+                    ),
+                    progress_slot,
                 ],
                 spacing=0,
             ),
         ),
     )
+
+
+def current_minute() -> int:
+    """Return the minute ``clock.now()`` is in, counted from the epoch: the tick's state."""
+    return int(clock.now().timestamp()) // 60
+
+
+def stop_ticks() -> None:
+    """The strip's effect cleanup: it has nothing of its own to undo.
+
+    Flet cancels an effect's task on unmount only when the effect has a cleanup (F2),
+    and that cancel is what stops the ticks. A cleanup returned by a sync setup would
+    not do: the component's next render replaces it with ``use_effect``'s argument
+    (F39), and the strip re-renders every minute.
+    """

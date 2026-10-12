@@ -516,3 +516,114 @@ def test_a_running_refresh_outranks_the_last_problem(year: YearData) -> None:
     conference = Conference(fetched_at=NOW, refreshing=True, problem="offline")
 
     assert conference.status(year.conference) == "refreshing"
+
+
+# ------------------------------------------------------------------ automatic refreshes
+
+
+async def test_an_automatic_refresh_is_due_until_one_has_started(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    assert conference.refresh_due()
+
+    task = conference.start_refresh_if_due(
+        storage, year, transport=serving(NETWORK_FEED)
+    )
+
+    assert task is not None
+    assert not conference.refresh_due()  # running, and just started
+    await task
+    assert conference.source == "network"
+
+
+@pytest.mark.parametrize(
+    ("later", "due"),
+    [
+        (timedelta(minutes=14, seconds=59), False),
+        (timedelta(minutes=15), True),
+        (timedelta(hours=3), True),
+        (-timedelta(seconds=1), True),  # a clock set back (the fake clock, D-73)
+    ],
+)
+async def test_the_next_one_is_due_15_minutes_after_the_last_began(
+    storage: Storage, year: YearData, later: timedelta, due: bool
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+
+    clock.set_test_now(NOW + later)
+
+    assert conference.refresh_due() is due
+
+
+async def test_a_failed_refresh_also_waits_15_minutes_before_the_next_try(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    offline = failing(httpx.ConnectError("offline"))
+    await conference.refresh(storage, year, transport=offline)
+
+    # The data is weeks old, yet an offline phone does not retry on every check.
+    clock.set_test_now(NOW + timedelta(minutes=10))
+    assert conference.start_refresh_if_due(storage, year, transport=offline) is None
+    assert conference.problem == "offline"
+
+    clock.set_test_now(NOW + timedelta(minutes=15))
+    task = conference.start_refresh_if_due(storage, year, transport=offline)
+    assert task is not None
+    await task
+
+
+async def test_a_refresh_on_demand_restarts_the_interval(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    clock.set_test_now(NOW + timedelta(minutes=14))
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))  # Refresh
+
+    clock.set_test_now(NOW + timedelta(minutes=20))
+
+    assert not conference.refresh_due()
+
+
+async def test_no_automatic_refresh_is_due_while_one_is_in_flight(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    feed = HeldFeed()
+    started = conference.start_refresh(storage, year, transport=feed.transport)
+    clock.set_test_now(NOW + timedelta(minutes=20))  # a refresh hung for 20 min
+
+    assert not conference.refresh_due()
+    assert conference.start_refresh_if_due(storage, year) is None
+    feed.release()
+    await started
+    assert feed.requests == 1
+
+
+@pytest.mark.parametrize(
+    ("transport", "status"),
+    [(make, status) for _, make, status in FAILURES],
+    ids=[name for name, _, _ in FAILURES],
+)
+async def test_an_automatic_refresh_that_fails_keeps_the_data_and_the_cache(
+    storage: Storage,
+    year: YearData,
+    transport: Callable[[], httpx.MockTransport],
+    status: Status,
+) -> None:
+    assert await storage.write_feed(CACHED_FEED)
+    conference = await loaded(storage, year)
+    before = (conference.data, conference.source, conference.fetched_at)
+
+    task = conference.start_refresh_if_due(storage, year, transport=transport())
+    assert task is not None
+    await task
+
+    # Never cleared, and the strip says why (P1 exit criterion 3; D-39, D-146).
+    assert (conference.data, conference.source, conference.fetched_at) == before
+    assert title(conference.data) == "Renamed in the cache"
+    assert storage.feed_path.read_bytes() == CACHED_FEED
+    assert conference.status(year.conference) == status

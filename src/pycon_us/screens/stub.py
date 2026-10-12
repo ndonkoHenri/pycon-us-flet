@@ -16,6 +16,7 @@ def stub_body(
     controls: list[ft.Control],
     *,
     status: bool = False,
+    auto_refresh: bool = False,
     ref: ft.Ref[ft.ListView] | None = None,
 ) -> ft.ListView:
     """Return a stub screen's body: its View path and params, then its rows.
@@ -27,6 +28,8 @@ def stub_body(
         controls: The rows.
         status: Start with the ``StatusStrip``, as the screens that show the feed's
             state do (Now, Schedule, My schedule; ux.md §5).
+        auto_refresh: Let the strip refresh the feed every 15 min while the screen
+            shows, as Now and Schedule do (D-40).
         ref: A tab root's list ref from ``use_scroll_to_top()``, so a re-tap of its
             tab scrolls the list to the top (D-144).
 
@@ -37,7 +40,7 @@ def stub_body(
     params = ft.use_route_params()
     shown = ", ".join(f"{key}={value}" for key, value in params.items())
     route_line = note(f"{view_path}  {shown}".rstrip(), small=True)
-    strip: list[ft.Control] = [StatusStrip()] if status else []
+    strip: list[ft.Control] = [StatusStrip(auto_refresh=auto_refresh)] if status else []
     return ft.ListView([*strip, route_line, *controls], expand=True, ref=ref)
 
 
