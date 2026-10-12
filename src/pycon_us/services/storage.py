@@ -12,14 +12,17 @@ Two places, one job each:
 
 Storage failures are expected failures (D-71): they are logged and returned,
 never raised, because the data in memory stays correct for the session and the
-next write tries again (D-120).
+next write tries again (D-120). The one exception is a data directory that
+cannot be created, which means a broken install.
 """
 
 import asyncio
+import contextlib
 import copy
 import json
 import logging
 import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -33,6 +36,12 @@ DATA_DIR_VARIABLE = "FLET_APP_STORAGE_DATA"
 
 FALLBACK_DATA_DIR = Path(".flet", "storage", "data")
 """Used under the working directory when the variable is unset, as ``flet run`` would set it."""
+
+PREFS_ERRORS = (TimeoutError, RuntimeError)
+"""What a SharedPreferences call raises when the Flutter side times out or fails."""
+
+_write_lock = threading.Lock()
+"""Serialises ``write_atomic``: a cancelled ``to_thread`` write keeps running (D-120)."""
 
 
 @dataclass(frozen=True)
@@ -109,6 +118,10 @@ def data_dir() -> Path:
 
     Returns:
         An absolute path to an existing directory.
+
+    Raises:
+        OSError: The directory cannot be created, which means a broken install,
+            not an expected failure (D-120).
     """
     configured = os.environ.get(DATA_DIR_VARIABLE)
     path = Path(configured) if configured else Path.cwd() / FALLBACK_DATA_DIR
@@ -121,26 +134,30 @@ def write_atomic(path: Path, data: bytes) -> None:
 
     The bytes go to ``<name>.tmp`` next to ``path``, are flushed to disk, and
     the temp file then replaces ``path`` in one ``os.replace``. A force-stop
-    during the write leaves the previous file intact (S1). One writer at a
-    time: two writers would share the temp file.
+    during the write leaves the previous file intact (S1). Writers take turns
+    (a lock), because they share the temp file: a refresh whose task was
+    cancelled can still be writing in its thread when the next one starts.
 
     Args:
         path: The file to replace.
         data: Its new content.
 
     Raises:
-        OSError: The write failed; ``path`` is unchanged and the temp file removed.
+        OSError: The write failed; ``path`` is unchanged, and the temp file is
+            removed when the file system allows it.
     """
     tmp = path.with_name(path.name + ".tmp")
-    try:
-        with open(tmp, "wb") as file:
-            file.write(data)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(tmp, path)
-    except OSError:
-        tmp.unlink(missing_ok=True)
-        raise
+    with _write_lock:
+        try:
+            with open(tmp, "wb") as file:
+                file.write(data)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(tmp, path)
+        except OSError:
+            with contextlib.suppress(OSError):  # keep the original error
+                tmp.unlink(missing_ok=True)
+            raise
 
 
 @dataclass(frozen=True, eq=False)
@@ -196,10 +213,15 @@ class Storage:
             pref: A key from the table.
 
         Returns:
-            The stored value, or a copy of the default when the key is absent or
-            its value is not of the pref's type (logged).
+            The stored value, or a copy of the default when the key is absent,
+            its value is not of the pref's type, or SharedPreferences fails (the
+            last two are logged).
         """
-        stored = await self.prefs.get(pref.key)
+        try:
+            stored = await self.prefs.get(pref.key)
+        except PREFS_ERRORS:
+            logger.warning("Could not read preference %s", pref.key, exc_info=True)
+            return copy.deepcopy(pref.default)
         if stored is None:
             return copy.deepcopy(pref.default)
         value = _decode(pref, stored)
@@ -216,11 +238,16 @@ class Storage:
             value: The new value, of the pref's type.
 
         Returns:
-            Whether SharedPreferences saved it; a failure is logged.
+            Whether SharedPreferences saved it; a failure is logged. A store that
+            saves what the user chose shows the failure too (D-120).
         """
         # A T that is not a dict is one of the SharedPreferences types (F12).
         stored: Any = json.dumps(value) if isinstance(pref.default, dict) else value
-        saved = await self.prefs.set(pref.key, stored)
+        try:
+            saved = await self.prefs.set(pref.key, stored)
+        except PREFS_ERRORS:
+            logger.warning("Could not save preference %s", pref.key, exc_info=True)
+            return False
         if not saved:
             logger.warning("Could not save preference %s", pref.key)
         return saved

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ class MemoryPrefs(ft.SharedPreferences):
     def init(self) -> None:
         self.values: dict[str, Any] = {}
         self.fail_writes = False
+        self.error: Exception | None = None
 
     async def _invoke_method(
         self,
@@ -29,6 +31,8 @@ class MemoryPrefs(ft.SharedPreferences):
         timeout: float | None = None,
     ) -> Any:
         assert arguments is not None
+        if self.error is not None:
+            raise self.error
         if method_name == "get":
             return self.values.get(arguments["key"])
         if method_name == "set":
@@ -145,6 +149,22 @@ async def test_a_failed_preference_write_is_reported(
     prefs.fail_writes = True
     assert not await store.set(storage.ONBOARDED, True)
     assert "pycon.onboarded" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "error", [TimeoutError(), RuntimeError("client error")], ids=["timeout", "client"]
+)
+async def test_a_failing_shared_preferences_call_is_reported_not_raised(
+    error: Exception,
+    store: Storage,
+    prefs: MemoryPrefs,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """D-120: the app keeps going on defaults instead of ending the session."""
+    prefs.error = error
+    assert await store.get(storage.EXCLUDED_TRACKS) == ["Open Space"]
+    assert not await store.set(storage.EXCLUDED_TRACKS, [])
+    assert caplog.text.count("pycon.excluded_tracks") == 2
 
 
 # ------------------------------------------------------------------ the data directory
@@ -272,3 +292,80 @@ async def test_an_unreadable_cache_reads_as_none_and_is_reported(
     (tmp_path / "feed-2026.json").mkdir()  # IsADirectoryError, an OSError
     assert await store.read_feed() is None
     assert "Could not read the cached feed" in caplog.text
+
+
+@pytest.mark.parametrize("failing", ["fsync", "replace"])
+async def test_no_temp_file_is_left_after_a_failed_write(
+    failing: str, store: Storage, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(*args: object) -> None:
+        raise OSError(5, "Input/output error")
+
+    monkeypatch.setattr(storage.os, failing, fail)
+    assert not await store.write_feed(b"feed")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_failed_cleanup_keeps_the_original_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def disk_full(fd: int) -> None:
+        raise OSError(28, "No space left on device")
+
+    def read_only(self: Path, missing_ok: bool = False) -> None:
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(storage.os, "fsync", disk_full)
+    monkeypatch.setattr(Path, "unlink", read_only)
+    with pytest.raises(OSError, match="No space left"):
+        storage.write_atomic(tmp_path / "feed-2026.json", b"feed")
+
+
+def test_overlapping_writers_take_turns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cancelled refresh can still be writing in its thread when the next one starts."""
+    path = tmp_path / "feed-2026.json"
+    first_is_syncing, release_first = threading.Event(), threading.Event()
+    real_fsync = os.fsync
+    calls: list[int] = []
+    errors: list[OSError] = []
+
+    def slow_first_fsync(fd: int) -> None:
+        calls.append(fd)
+        if len(calls) == 1:
+            first_is_syncing.set()
+            release_first.wait(5)
+        real_fsync(fd)
+
+    def write(data: bytes) -> None:
+        try:
+            storage.write_atomic(path, data)
+        except OSError as error:
+            errors.append(error)
+
+    monkeypatch.setattr(storage.os, "fsync", slow_first_fsync)
+    first = threading.Thread(target=write, args=(b"A" * 100_000,))
+    first.start()
+    assert first_is_syncing.wait(5)
+    second = threading.Thread(target=write, args=(b"B" * 10,))
+    second.start()
+    second.join(
+        0.2
+    )  # without turns, the second writer replaces the first's temp file now
+    release_first.set()
+    first.join(5)
+    second.join(5)
+    assert errors == []
+    assert path.read_bytes() == b"B" * 10
+    assert [p.name for p in tmp_path.iterdir()] == ["feed-2026.json"]
+
+
+def test_data_dir_raises_when_it_cannot_be_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-120's one exception: a data directory that cannot exist is a broken install."""
+    (tmp_path / "taken").write_bytes(b"")
+    monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "taken"))
+    with pytest.raises(OSError):
+        storage.data_dir()

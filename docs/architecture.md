@@ -730,21 +730,24 @@ def data_dir() -> Path:
 def write_atomic(path: Path, data: bytes) -> None:
     """Write so that readers see the old file or the new one, never a partial file."""
     tmp = path.with_name(path.name + ".tmp")
-    try:
-        with open(tmp, "wb") as file:
-            file.write(data)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(tmp, path)
-    except OSError:
-        tmp.unlink(missing_ok=True)
-        raise
+    with _write_lock:                      # writers share the temp file (D-120)
+        try:
+            with open(tmp, "wb") as file:
+                file.write(data)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(tmp, path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                tmp.unlink(missing_ok=True)
+            raise
 ```
 
 - `Storage(prefs, directory, year)` is built once in `Services.create()` as `Storage(ft.SharedPreferences(), data_dir(), year)`.
 - Preferences: `await storage.get(THEME)` returns the stored value, or a copy of the default when the key is absent (an explicit `[]` is kept) or its value is not of the pref's type (logged). `await storage.set(pref, value)` JSON-encodes dicts.
 - Feed cache: `read_feed()` returns a `CachedFeed(raw, saved_at)` (bytes and mtime) or `None`; it does not judge the bytes. `write_feed(raw)` runs `write_atomic` in `asyncio.to_thread` and is called only after `raw` parsed (D-39). `delete_feed(reason)` removes a cache that no longer parses (or that the Developer screen clears) and logs why.
-- Failures are logged and returned, never raised (D-120): `set` and `write_feed` return `False`, `read_feed` returns `None`, and the previous file stays.
+- Failures are logged and returned, never raised (D-120): `set` (also on a SharedPreferences timeout or client error) and `write_feed` return `False`, `get` returns the default, `read_feed` returns `None`, and the previous file stays. A store that saves what the user chose shows a `False` to the user. Only `data_dir()` raises, when the directory cannot be created (a broken install).
+- `write_atomic` holds a module lock while it writes, because a cancelled refresh's `to_thread` write keeps running and the writers share the temp file.
 - The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, D-108). Read it from `FLET_APP_STORAGE_DATA` on every start; never persist its absolute path, because iOS moves the container on an update. Without the variable (not `flet run`, not a packaged build: pytest, or a plain `python`), it is `.flet/storage/data` under the working directory, the layout `flet run` uses.
 - **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 ran `sqlite3` in the embedded Python on Android and iOS, and the database survived update installs (D-108).
 
