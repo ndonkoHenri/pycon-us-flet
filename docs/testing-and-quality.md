@@ -98,7 +98,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 - **Descriptive names** (`test_lunch_row_spans_earliest_start_to_latest_end`). A feature id may appear in the docstring; nothing enforces it (D-04).
 - **`core` takes `now` as an argument** (D-43), so tests pass fixed aware datetimes. Only `clock.now()` itself is tested with its override.
 - **No network, no Flet runtime.** `core/` tests import no Flet (D-68). Stores are plain `@ft.observable` dataclasses and run without a page; `Observable.subscribe(fn)` checks that a change notifies. `subscribe` holds listeners weakly (a `weakref.WeakSet`): in tests bind the listener to a local name (`def on_change(sender, field): ...`) and keep it alive for the test; never pass a lambda, which is collected at once and never called.
-- **Hypothesis** runs derandomised in CI (`--hypothesis-profile=ci`: 200 examples, `deadline=None`), registered in `tests/conftest.py`.
+- **Hypothesis** runs derandomised in CI (`--hypothesis-profile=ci`): hypothesis's built-in `ci` profile (no deadline, no example database, `too_slow` health check off, `@reproduce_failure` blob printed), which `tests/conftest.py` extends to 200 examples per property; `tests/test_hypothesis_profile.py` pins those values. CI names the profile on the command line instead of leaving it to the `CI` variable, which hypothesis also reads. Local runs use the default profile (100 random examples, 200 ms deadline) unless a `CI` variable is set in the shell; add `--hypothesis-profile=ci` to reproduce a CI failure.
 - **Fast.** The whole suite stays under 2 minutes on CI (D-84). A slow test is a design smell, not a reason for a marker.
 
 ### 3.2 Two machine time zones
@@ -571,7 +571,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 
 ## 12. CI wiring (D-84)
 
-- **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (plain `pytest` until `tests/conftest.py` registers the profile, #114). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
+- **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
 - **`feed-check.yml`** (weekly): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed (and next year's once it answers 200); unknown keys are printed, not failed.
 - **`build-android.yml`** (manual and `v*` tags): a debug-signed APK artifact. iOS builds and all device work stay local.
 - **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; `Spike: flet test linux in CI`, label `test`, P2 at the earliest) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).

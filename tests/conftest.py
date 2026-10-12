@@ -1,4 +1,4 @@
-"""Shared test fixtures (docs/testing-and-quality.md §2)."""
+"""Shared test fixtures and the hypothesis ci profile (docs/testing-and-quality.md §2)."""
 
 import json
 import time
@@ -6,8 +6,16 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from hypothesis import settings
 
 SNAPSHOTS = Path(__file__).parent / "fixtures" / "snapshots"
+
+# CI runs `pytest --hypothesis-profile=ci` (docs/testing-and-quality.md §3.1, §12).
+# Hypothesis's built-in `ci` profile is what a shared runner needs: the same examples on
+# every run (so a red build reproduces), no deadline and no `too_slow` health check (runners
+# are slow by fits), and the `@reproduce_failure` blob printed. We extend it, inheriting all
+# of that, and only raise it to 200 examples per property.
+settings.register_profile("ci", settings.get_profile("ci"), max_examples=200)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
