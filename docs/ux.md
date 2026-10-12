@@ -220,10 +220,10 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
 | `StatusStrip` | `Row[Row[Icon(16), Text(BODY_SMALL)], TextButton("Refresh")]`, the inner row top-aligned so a wrapped line keeps the icon beside its first line, and centred against the 48 dp button + `ProgressBar(bar_height=2, value=None)` in a 2 dp slot that stays when the bar hides (nothing moves when a refresh starts or ends), on `surface_container_high`; padding 16 start, 8 end, 4 above and below (56 dp at 100 %, and room around the wrapped line at 200 %) | Hidden when fresh (§4.2); Refresh disabled while refreshing (D-165); re-reads the clock every 60 s, and on Now and Schedule starts the 15-min refresh (D-175) | `live_region=True`, identifier `app.status` |
-| `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM), FilledTonalButton?]` | One sentence, one way out | Live region on first show |
-| `SkeletonList` | `Shimmer` over 5 placeholder rows | Only with no data at all | "Loading schedule" |
+| `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM)?, FilledTonalButton?]`, centred, 32/48 dp padding, no fixed height (D-176) | One sentence, one way out: the button, or the sentence where no button can help (§4.6); a label and its handler come as a pair | The title is a heading; title and body are one live region with the identifier, announced on first show; the icon is decorative; the button is its own stop |
+| `SkeletonList` | `Shimmer(period=prefs.motion_ms(1500))` over 5 session-shaped placeholder rows in `surface_container_highest`, highlight `surface_container_low`; no `Shimmer` under reduced motion (D-173, D-176) | Only with no data at all: while the first fetch runs, before it has failed (§4.1) | One node, "Loading schedule"; the placeholders are excluded |
 | `LocationCard` (P2) | `Card(OUTLINED, Row[Stack[Image(width=112), pin], Column[label, sublabel, floor]])` | Pin pulses twice; pushes the floor viewer | One button: "Show Room 104A on the Concourse level floor plan" |
-| `LinkTile` | `MergeSemantics(ListTile(leading, title, subtitle, trailing, on_click))`, with an optional `Semantics(identifier=...)` | In-app (#77): trailing `CHEVRON_RIGHT`, pushes a location, M3 heights (56 dp, 72 with a subtitle). External (#83): trailing `OPEN_IN_NEW`, link rule §4.7 | One node read as its title and subtitle; external rows add `Semantics(link=True)`, "opens in browser" |
+| `LinkTile` | `MergeSemantics(ListTile(leading, title, subtitle, trailing, on_click))`, with an optional `Semantics(identifier=...)`; a phone or email row is `Row[that, IconButton(CONTENT_COPY_OUTLINED)]` | In-app (#77): trailing `CHEVRON_RIGHT`, pushes a location, M3 heights (56 dp, 72 with a subtitle). External (#83, D-176): the link rule §4.7; web pages and apps end in `OPEN_IN_NEW`, phone and email rows in Copy | One node read as its title and subtitle; external rows add `Semantics(link=True)`, and the `OPEN_IN_NEW` icon is read "Opens in browser" ("Opens in another app"); Copy is its own stop, `<identifier>.copy` |
 
 ```python
 import flet as ft
@@ -337,13 +337,26 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 | Filters hide a day | "No sessions on Thursday match your filters" | "Clear filters" |
 | Search miss | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
 | No data, no network | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
-| Session / speaker not found | "This session isn't in the current schedule" | "Open schedule" / "All speakers" |
+| Session / speaker / room not found | "This session isn't in the current schedule" (speaker, room) | "Open schedule" / "All speakers" / "All rooms" (the Map) |
 | Next year not published | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
 | Sponsor not found (P2) | "We couldn't find this sponsor" | "All sponsors" |
 
+Every empty state names a way out (D-176): its one button, or, where no button can help (the search miss: the query is right there; My schedule unavailable: only a relaunch helps), its sentence. The "No data, no network" row reads by the failure (`Conference.problem`): offline, "Connect to the internet and try again."; an answer the app could not use, "The schedule couldn't be read. Try again in a few minutes." Until the P1 screens, the Schedule stub shows it and the skeleton, and the session, speaker and room stubs and the Router's `NotFound` ("Page not found" · "Nothing in the app is at /x." · "Go to Now") show theirs.
+
 ### 4.7 Links (INFO-14)
 
-In-app screen: push, `CHEVRON_RIGHT`. Web page: `UrlLauncher().launch_url(url, mode=LaunchMode.IN_APP_BROWSER_VIEW)`, `OPEN_IN_NEW`. Social profiles and maps: `LaunchMode.EXTERNAL_APPLICATION`. `tel:` and `mailto:`: external, with a Copy button beside them (no `can_launch_url` probe until U6). `Markdown` links go through `on_tap_link` with the same rule. External rows carry `Semantics(link=True)`.
+One rule, in `ui/rows.py` (D-176): `link_kind(target, *, app=False)` says what a target is, `LAUNCH_MODES` how it opens, and `open_link(svc, target, app=...)` opens it, for `LinkTile` and for `Markdown`'s `on_tap_link` alike.
+
+| Target | Kind | Opens with | Row |
+|---|---|---|---|
+| An app location (`/more/speakers`, a drill href) | page | `page.navigate`, pushed | trailing `CHEVRON_RIGHT`; a button for screen readers |
+| `http(s)` | web page | `svc.launcher.launch_url(url, mode=LaunchMode.IN_APP_BROWSER_VIEW)`, so the attendee stays in context | trailing `OPEN_IN_NEW`, read "Opens in browser"; a link |
+| `http(s)` with `app=True` (a social profile, Apple Maps directions), or `geo:` | app | `LaunchMode.EXTERNAL_APPLICATION` | trailing `OPEN_IN_NEW`, read "Opens in another app"; a link |
+| `tel:`, `mailto:` | phone, email | `LaunchMode.EXTERNAL_APPLICATION` | no trailing icon (the title is the verb: "Call the Code of Conduct hotline", the subtitle the number); a Copy `IconButton` beside it ("Copy phone number", "Phone number copied") |
+
+- The caller marks a social profile or a map with `app=True`: a host cannot say it (Mastodon has many instances). Any other scheme (`javascript:`, `file:`, `sms:`) is refused with `ValueError`.
+- There is no `can_launch_url` probe until U6: a simulator, an iPad or a phone without a mail account may do nothing on a `tel:` or `mailto:` tap, which is why Copy is always beside them. When the platform reports a failure, a SnackBar says "Couldn't open the link" (architecture §16.1); a failed copy says "Couldn't copy". Logs name the kind, never the target (a `mailto:` holds an address, D-72).
+- External rows carry `Semantics(link=True)`. "Opens in browser" is the `OPEN_IN_NEW` icon's `semantics_label`, read after the title in the merged node, not `Semantics.hint_text`, which never reaches Flutter at the pin (#187).
 
 ### 4.8 Permissions (D-61)
 
