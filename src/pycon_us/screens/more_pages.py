@@ -12,7 +12,7 @@ from pycon_us.screens.more import MORE_PAGES
 from pycon_us.screens.stub import note, stub_body
 from pycon_us.ui.scaffold import AppScaffold
 
-TITLES = {location: label for label, location in MORE_PAGES}
+TITLES = {entry.location: entry.title for entry in MORE_PAGES}
 
 
 @ft.component

@@ -8,7 +8,7 @@ replaces its stub content with its own, so this module shrinks to nothing.
 
 import flet as ft
 
-from pycon_us.services.errors import report_errors
+from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import StatusStrip
 
 
@@ -55,23 +55,14 @@ def note(text: str, *, small: bool = False) -> ft.Control:
     )
 
 
-def nav_tile(title: str, location: str, *, subtitle: str | None = None) -> ft.ListTile:
+def nav_tile(title: str, location: str, *, subtitle: str | None = None) -> ft.Control:
     """Return a row that navigates to a location: a drill link, a page or a root.
+
+    A ``ui.rows.LinkTile`` without an icon, as stub lists of names use it.
 
     Args:
         title: The row's text.
         location: Where a tap goes; for a detail, ``drill_href(view_path, ...)``.
         subtitle: A second line, if any.
     """
-    page = ft.context.page
-
-    @report_errors
-    def go() -> None:
-        page.navigate(location)
-
-    return ft.ListTile(
-        title=title,
-        subtitle=subtitle,
-        trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
-        on_click=go,
-    )
+    return LinkTile(title, location, subtitle=subtitle)
