@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+    branches: [ci/54-build-android]   # TEMPORARY: proof run for #54; removed before merging
 
 permissions:
   contents: read
@@ -65,11 +66,24 @@ jobs:
 
       # flet-cli downloads Flutter (from .flet-src/.fvmrc) and uses the runner's JDK 17 and Android SDK.
       # The Gradle heap is -Xmx4G from [tool.flet.android.gradle_properties], which fits the runner.
+      - name: Start the memory sampler (TEMPORARY, #54)
+        run: |
+          nproc; free -m; df -h /
+          (while sleep 5; do free -m | awk '/Mem:/{print $7}' >> "$RUNNER_TEMP/avail.log"; done) &
+
       - name: Build the APK
         env:
           BUILD_NUMBER: ${{ steps.meta.outputs.build-number }}
           FLET_CLI_NO_RICH_OUTPUT: "1"
         run: uv run flet build apk --arch arm64-v8a --build-number "$BUILD_NUMBER" --yes -v
+
+      - name: Report memory (TEMPORARY, #54)
+        if: always()
+        run: |
+          echo "samples: $(wc -l < "$RUNNER_TEMP/avail.log"); min available MB: $(sort -n "$RUNNER_TEMP/avail.log" | head -1)"
+          free -m; df -h /
+          grep jvmargs build/flutter/android/gradle.properties || true
+          ls -l build/apk
 
       # Name the file after the build number and commit, so downloads from different runs don't collide.
       - name: Name the APK
