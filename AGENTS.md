@@ -121,18 +121,22 @@ that date motivates us but never justifies cutting corners.
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
   stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
-  Upload through the GitHub contents API (D-168), which needs no checkout and works from any worktree:
+  Upload through the GitHub contents API (D-168), which needs no checkout and works from any worktree. Use
+  URL-safe file names (letters, digits, `-`). The subshell stops at the first failure, so nothing stale is uploaded:
   ```sh
-  for f in <shots>.png; do
-    cp "$f" "<your-scratch>/$(basename "$f")" && sips -Z 1000 "<your-scratch>/$(basename "$f")" > /dev/null
-    base64 -i "<your-scratch>/$(basename "$f")" | tr -d '\n' > "<your-scratch>/upload.b64"
-    gh api -X PUT "repos/ndonkoHenri/pycon-us-flet/contents/<pr>/$(basename "$f")" -f branch=pr-assets \
-      -f message="Add $(basename "$f") for #<pr>" -F content=@"<your-scratch>/upload.b64" --jq .content.path
-  done
+  ( set -euo pipefail
+    repo=ndonkoHenri/pycon-us-flet; pr=<pr>; dir=$(mktemp -d <your-scratch>/shots.XXXXXX)
+    for f in <shots>.png; do
+      name=$(basename "$f"); cp "$f" "$dir/$name"; sips -Z 1000 "$dir/$name" > /dev/null
+      base64 -i "$dir/$name" | tr -d '\n' > "$dir/$name.b64"
+      # An existing file needs its current blob sha (re-uploading after a timeout, or replacing an image).
+      sha=$(gh api "repos/$repo/contents/$pr/$name?ref=pr-assets" --jq .sha 2>/dev/null || true)
+      gh api -X PUT "repos/$repo/contents/$pr/$name" -f branch=pr-assets -f message="Add $name for #$pr" \
+        -F content=@"$dir/$name.b64" ${sha:+-f sha="$sha"} --jq .content.path
+    done )
   ```
-  Each upload is its own commit on `pr-assets`; never force-push it, and re-run a failed upload as it is (a file that
-  already exists needs its `sha`: `-f sha=$(gh api "repos/ndonkoHenri/pycon-us-flet/contents/<pr>/<file>?ref=pr-assets"
-  --jq .sha)`). Then write
+  Each upload is its own commit on `pr-assets`; never force-push it. If a call fails, look before retrying: the file may
+  already be there. Then write
   `![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)` in the PR
   body or a comment: it shows in the browser for signed-in users who can see the repo.
 
