@@ -27,7 +27,7 @@
 | Goldens (§6) | `take_screenshot`, `assert_screenshot` | P4 only | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
-| Public feed check (§12) | `tools/check_feed.py` | weekly | yes (cron) |
+| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | weekly | yes (cron) |
 
 ## 2. Layout, configuration and commands
 
@@ -90,7 +90,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 | UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui` |
 | One flow, verbose | add `-k favourite -v`; pytest options after `--` (e.g. `-- -x`) |
 | Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
-| Public feed check | `uv run python tools/check_feed.py` |
+| Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
 
 ## 3. Unit tests
 
@@ -144,7 +144,7 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 
 **Bundled snapshot** (NEW-03, D-135). `test_the_bundled_snapshot_processes_cleanly` processes `src/pycon_us/data/<YEAR>/conference.json` and expects no skipped record, the bar `tools/update_snapshot.py` applies before it writes; the invariants below take the snapshot as an input too. The tool's own tests serve the recorded feed, or a broken copy, through `httpx.MockTransport`.
 
-**Invariants** (`tests/test_feed_invariants.py`, built in P0-13). One test per invariant, each run on every fixture year under both machine zones (and later by `tools/check_feed.py` on the live feed):
+**Invariants** (`tools/feed_invariants.py`, tested by `tests/test_feed_invariants.py`; built in P0-13, shared in P0-07). Each invariant returns its problems, one line each, instead of asserting. One test per invariant asserts the list is empty on every fixture year under both machine zones, and `tools/check_feed.py` prints the lists for the live feed every week (§12), so both run the same code. A test checks that every invariant the tool runs has its test here:
 
 1. No session lost: every raw slot is its own session or listed in `ConferenceData.dropped` under exactly one named rule (D-123); every collapsed slot lies within a row of its kind on its day; every open space is a session or unscheduled, judged from its raw times and room; every raw poster, top-level or nested (D-121), has its detail session.
 2. Ids are unique strings in Ionic's four forms, and processing the same bytes twice gives the same outline.
@@ -159,7 +159,7 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 
 Processing is pure by construction: `process()` takes bytes and returns new frozen values.
 
-**Snapshot of our model.** A compact, reviewable outline of the processed model is compared with `tests/fixtures/snapshots/outline-<year>.json`: days → groups (by conference-local `HH:MM`) → one line per session, `id | name | track | shown location | start-end`, then `shown HH:MM`, `pre-registration`, `español`, `speakers <ids>` and `text <names not in the directory>` when they apply; then the sessions outside the timeline (poster details), the rooms with their counts, the speaker directory, the drop counts and the skipped records; last, `markdown`: every content block's Markdown and the first value that conversion changed of each other converted field, one Markdown line per JSON string (D-140). The outline function lives in the test module so the snapshot stays readable; a full `dataclasses.asdict` dump would be too large to review. It runs under both machine zones, so it also proves the model does not depend on the machine's zone. When a parser change alters the outline, the PR runs `uv run pytest tests/test_feed_invariants.py --snapshot-update` and explains the diff in its body.
+**Snapshot of our model.** A compact, reviewable outline of the processed model is compared with `tests/fixtures/snapshots/outline-<year>.json`: days → groups (by conference-local `HH:MM`) → one line per session, `id | name | track | shown location | start-end`, then `shown HH:MM`, `pre-registration`, `español`, `speakers <ids>` and `text <names not in the directory>` when they apply; then the sessions outside the timeline (poster details), the rooms with their counts, the speaker directory, the drop counts and the skipped records; last, `markdown`: every content block's Markdown and the first value that conversion changed of each other converted field, one Markdown line per JSON string (D-140). The outline function, `outline()`, lives in `tools/feed_invariants.py` next to the stable-ids invariant that compares two outlines; a full `dataclasses.asdict` dump would be too large to review. It runs under both machine zones, so it also proves the model does not depend on the machine's zone. When a parser change alters the outline, the PR runs `uv run pytest tests/test_feed_invariants.py --snapshot-update` and explains the diff in its body.
 
 ```python
 # tests/conftest.py (excerpt)
@@ -575,7 +575,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 ## 12. CI wiring (D-84)
 
 - **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
-- **`feed-check.yml`** (weekly): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed (and next year's once it answers 200); unknown keys are printed, not failed.
+- **`feed-check.yml`** (weekly): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
 - **`build-android.yml`** (manual and `v*` tags): a debug-signed APK artifact. iOS builds and all device work stay local.
 - **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; `Spike: flet test linux in CI`, label `test`, P2 at the earliest) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).
 

@@ -39,6 +39,7 @@
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
 | Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
+| Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---
 
@@ -541,49 +542,16 @@ The target is under 2 minutes (D-84). The time-zone tests run under two machine 
 
 ### 7.3 `.github/workflows/feed-check.yml`: weekly
 
-```yaml
-name: Feed check
+[`.github/workflows/feed-check.yml`](../.github/workflows/feed-check.yml) is the source of truth; this section says what it does and why. It is not a required check (§7.2).
 
-on:
-  schedule:
-    - cron: "17 6 * * 1"    # Mondays 06:17 UTC
-  workflow_dispatch:
+**Run it:** it runs on Mondays at 06:17 UTC; by hand, Actions › Feed check › Run workflow, or `gh workflow run feed-check.yml --ref main`. Locally, `uv run python -m tools.check_feed` (add years, e.g. `2025 2026`, to check those instead). It runs as a module because it imports `tools.feed_invariants`.
 
-permissions:
-  contents: read
+**One Linux job**, `Parse the public feed`, with a 10-minute timeout and `contents: read` only. Its steps are `ci.yml`'s up to `uv sync --locked` (the same checkouts, Flet pin, uv line and cache, §7.2), then `uv run python -m tools.check_feed`. A run takes well under a minute after setup: fetching and processing the 2026 feed takes about a second.
 
-env:
-  UV_LOCKED: "1"
-
-jobs:
-  feed:
-    name: Parse the public feed
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-      - name: Read the Flet pin
-        id: flet
-        run: echo "ref=$(cat .flet-ref)" >> "$GITHUB_OUTPUT"
-      - name: Check out Flet at the pin
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          repository: flet-dev/flet
-          ref: ${{ steps.flet.outputs.ref }}
-          path: .flet-src
-          sparse-checkout: sdk/python       # uv needs only the Python packages here
-          sparse-checkout-cone-mode: true
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-        with:
-          enable-cache: true
-      - run: uv run python tools/check_feed.py
-```
-
-- **What it checks.** `tools/check_feed.py` fetches the feed for `config.YEAR` and runs our parser plus the invariants (D-77) over it. It also reports, without failing, whether next year's feed has appeared.
-- **Notification.** A failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot.
+- **What it checks.** `tools/check_feed.py` fetches the `feed_url` of `config.YEAR` and runs our parser (`feed.process`) and every invariant of `tools/feed_invariants.py` over it: the same functions `tests/test_feed_invariants.py` runs on the recorded feeds (D-77, testing-and-quality.md §3.3). It fails, exiting with 1, when the feed cannot be fetched (a 404 included), does not parse, has a record the parser skips, or breaks an invariant. The report lists the counts, each broken invariant with up to ten of its problems, and the keys the recorded feeds lack, which never fail: the parser ignores unknown keys.
+- **Next year.** It also says whether next year's feed answers, at this year's `feed_url` with the next year in its path (D-05's pattern): "not published yet (HTTP 404 …)", or "PUBLISHED … with N slots". That line never fails the run. When it appears, record the feed (`tests/fixtures/feeds/README.md`) and add `data/<year>/` (docs/roadmap.md, the 2027 rollover).
+- **Notification.** A failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot and no `issues: write`.
+- **Concurrency.** One run at a time (group `feed-check`, `cancel-in-progress: false`): every run checks the same live feed, so a pending run may be replaced, but a running one is never cancelled.
 - **Why the Flet steps.** They are there only because `uv sync` needs `.flet-src` to exist; they disappear with the 1.1.0 pin. `ci.yml` and this workflow check out only `sdk/python` (sparse), which holds the five path sources, so the monorepo's Dart client and website do not eat the 2-minute budget (D-84). `build-android.yml` keeps the full checkout, because `flet build` needs the template, the Dart package and `.fvmrc`.
 
 ### 7.4 `.github/workflows/build-android.yml`: on demand and on `v*` tags
