@@ -422,14 +422,14 @@ A global pattern: §4.3. Route shape per §2.5.
 3. **When and where**, `Card(OUTLINED)` of `ListTile`s: `SCHEDULE` "Friday, May 15 · 9:25–10:00 AM" with "Starts in 25 min" / "Happening now" / "Ended"; `PLACE_OUTLINED` with the display location, pushing room detail with `?highlight=<id>`; multi-room plenaries add an `ExpansionTile` "+3 more rooms" (SESS-02); a "Pacific Time" note when zones differ.
 4. **Registration required** (tutorials, summits): `Card(FILLED)` with `INFO_OUTLINE`, "Registration required. Check your registration on us.pycon.org." and a link.
 5. **Speakers:** `SectionHeader` + `SpeakerRow`s; pseudo-speakers ("Hosted by …") are plain text (DATA-15).
-6. **About:** `Markdown(selectable=True, extension_set=MarkdownExtensionSet.GITHUB_WEB, on_tap_link=...)` over HTML converted once per feed version (D-44). Keynotes and panels add an eyebrow, abstract and speaker cards from `content.toml` (SESS-08).
+6. **About:** `Markdown(selectable=True, extension_set=MarkdownExtensionSet.GITHUB_WEB, on_tap_link=..., md_style_sheet=...)` over HTML converted once per feed version (D-44, D-114), with the app's style sheet: underlined primary links, headings below the screen title (D-116). Keynotes and panels add an eyebrow, abstract and speaker cards from `content.toml` (SESS-08).
 7. When relevant: the posters list "Posters (25)" (SESS-09); *(P2)* the job fair `LocationCard` (SESS-10); the open-space image and link (SESS-11). *(could)* "Also at this time".
 
 **Interactions:** Share (NEW-06) uses `await ft.Share().share_text("<title>\n<day> <time> · <room>\n<url>", share_position_origin=origin)` (the origin anchors the sheet on tablets, D-09); the URL pattern comes from `conference.toml` and applies to numeric ids only. *(P2)* Add to calendar shares an `.ics` (UTC, stable UID, `VALARM` 10 min) with `await ft.Share().share_files([ft.ShareFile.from_bytes(data, mime_type="text/calendar", name=f"{slug}.ics")], share_position_origin=origin)` (D-62, SESS-05); the native prompt waits for E4 (SESS-04).
 
 **States:** renders from cache instantly; not found per §4.6 (Ionic rendered a blank page); *(P2)* removed while open keeps the content with an inline note.
 
-**Accessibility:** title is heading level 1, sections level 2; each "When and where" tile is one phrase ("Room: 103ABC, button"). Check on devices that Markdown links are announced as links; if not, list them as `LinkTile`s.
+**Accessibility:** title is heading level 1, sections level 2; each "When and where" tile is one phrase ("Room: 103ABC, button"). Markdown links stay inline: on Android each is its own focusable node named by its text (S3, D-116); the P1 accessibility pass checks what TalkBack and VoiceOver call them.
 
 **Improves on Ionic:** time and place first (SESS-01); one room tile (SESS-02); labelled synced star (SESS-03); keynote data, not hard-coded copies (SESS-08); a real back stack, not `prevUrl` (SESS-12); working Share (NEW-06).
 

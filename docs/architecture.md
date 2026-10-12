@@ -4,7 +4,7 @@
 **For:** whoever implements a module, screen or service. **Companion to** [`PLAN.md`](../PLAN.md) §5 and [`decisions.md`](decisions.md), which is binding; §19 lists where this file departs from it.
 
 **Conventions**
-- `D-nn` are decisions, `F1`..`F26` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
+- `D-nn` are decisions, `F1`..`F28` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
 - Every Flet API named here was introspected in the local monorepo (flet-dev/flet `9fbe52a61`, unreleased 1.1.0). An API that does **not exist yet** is marked *(not in Flet yet: Ux/Ex)* and has an interim; §18 is the ledger.
 - Code blocks are sketches: they parse and use only verified APIs, but leave out obvious imports, copy and styling.
 - Each module says when it arrives (P0..P4). Build only what the current phase needs (D-66).
@@ -570,7 +570,14 @@ Weekday and month names come from fixed tuples, never locale `strftime`, and nai
 
 ### 7.7 HTML → Markdown (`core/html_md.py`; D-44)
 
-Stdlib `html.parser`, once per feed version, links made absolute against `site_url`, covering the 2026 tag census (`p`, `li`, `a`, `strong`, `code`, `em`, `ul`, `h1`–`h4`, `br`, `ol`, `hr`, `blockquote`): `p` → paragraph; `br` → `"  \n"`; `strong`/`b`, `em`/`i`, `code` → `**x**`, `*x*`, `` `x` ``; `a` → `[text](absolute url)`; `ul`/`ol`/`li` → `- `/`1. `, two spaces per level; `h1`–`h4` → `#`–`####`; `blockquote` → `> `; `hr` → `---`; anything else → its text. Rendered with `ft.Markdown(value, selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB, on_tap_link=...)`; links open with `launch_url(url, mode=ft.LaunchMode.IN_APP_BROWSER_VIEW)` (SESS-06). S3 measures coverage. Job roles from `<a href>` anchors (SPON-09) and Venue & hours sections (MAP-09) arrive with their screens in P2.
+Stdlib `html.parser`, once per feed version, into a small tree that is then rendered; S3 settled the details (D-114, D-115; `docs/spikes/03-html-markdown.md`, whose `html_md_proto.py` is the reference):
+- **Tags** (the 2025 and 2026 census): `p` → paragraph; `br` → `"  \n"`; `hr` → `---`; `h1`–`h6` → `#`–`######`; `ul`/`ol`/`li` → `- `/`N. `, continuation lines indented by the marker's width (three spaces under `1. `); `blockquote` → `> `; `strong`/`b`, `em`/`i`, `s`/`del`/`strike` → `**x**`, `*x*`, `~~x~~` with edge whitespace kept outside; `code` → a code span fenced with one backtick more than the longest run inside; `a` → `[text](url)`, the `href` joined to `site_url`, only `http`, `https` and `mailto` linked, the destination percent-encoded.
+- **Anything else is unwrapped** (its text stays in place); `script` and `style` are dropped. Whitespace collapses as in a browser; only `br` breaks a line.
+- **A value with no tag is plain text:** blank lines make paragraphs, single newlines hard breaks (sprint descriptions).
+- **Escaping** (D-115): in text, `` \ ` * _ [ ] ( < > | ~ $ & : `` and a block marker at the start of a line become numeric character references (`&#36;`), because `ft.Markdown` always enables LaTeX (F27) and GFM emoji; code spans stay raw; bare URLs stay raw so GFM autolinks them.
+- **A text-only form** (no markup) feeds search (D-46).
+
+Rendered with `ft.Markdown(value, selectable=True, extension_set=ft.MarkdownExtensionSet.GITHUB_WEB, on_tap_link=..., md_style_sheet=...)`, with the one style sheet from `theme.py` whose text styles all name their colour (D-116, F28); links open with `launch_url(url, mode=ft.LaunchMode.IN_APP_BROWSER_VIEW)` (SESS-06). Job roles from `<a href>` anchors (SPON-09) and Venue & hours sections (MAP-09) arrive with their screens in P2.
 
 ### 7.8 Names and slugs (`core/slugs.py`)
 
@@ -1223,12 +1230,12 @@ A last-resort net, not error handling (§16.1). Details show when not embedded o
 |---|---|
 | S1 | **Done** (`docs/spikes/01-packaged-runtime.md`): data dir survives updates (D-108); `tzdata`, `httpx`, `sqlite3`, SecureStorage on device; parsing stays on the loop (D-109); overlay style and insets (D-113). Page handlers firing without `page.update()` moved to S4 |
 | S2 | row architecture; `build_controls_on_demand=False` per day list so `scroll_to(scroll_key=...)` reaches unbuilt slots (F7) |
-| S3 | `html_md` coverage of every HTML field |
+| S3 | **Done** (`docs/spikes/03-html-markdown.md`): the converter covers both feeds' 17 tags with no text change; escaping (D-115) and the style sheet (D-116); E5 cut (D-117) |
 | S4 | `Drill` returning a component; per-level params; root `can_pop=False` + `on_confirm_pop` → Now; global-modal search with pushed results through our `on_view_pop` (`parent_of()`); the bar on detail Views during transitions; the Material back arrow on iOS; from S1: page handlers fire without `page.update()`, and the boot gate survives a new session after an Android activity recreation (F26) |
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
 | S6, S7, S8 | E3 reminders; floor plans in `InteractiveViewer`; E1 scanning |
 
-**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (E5 → `html_md`); multi-weight families in `page.fonts` (→ pubspec fonts).
+**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
 
 ---
 

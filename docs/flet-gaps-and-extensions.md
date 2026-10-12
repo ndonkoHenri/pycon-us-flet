@@ -39,7 +39,6 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
 | 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed |
 | later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
-| later | **E5** | HTML rendering | DATA-23, DATA-25, SESS-06, INFO-05, MAP-09 | `core/html_md.py` → `ft.Markdown` (D-44) | Extension over `flutter_widget_from_html_core` 0.17.4 | later | M | proposed |
 | low | **E2** | FCM push | none: the app has no push (D-58) | n/a | `firebase_messaging` 16.7.0 (+ U5) | never, in this app | L | a Flet contribution only |
 
 **Conditional CLI and template items.** We do these only when a feature or a spike needs them (D-98).
@@ -74,13 +73,14 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 
 | Id | Item | Why cut |
 |---|---|---|
+| E5 | HTML rendering control | S3 showed `core/html_md.py` → `ft.Markdown` covers both feeds with no text change (D-114, D-117); §4.4 stays as a record |
 | E6 | `flet-slidable` | Swipe-to-favourite is dropped (SCHED-11); a visible star replaces it (D-30) |
 | U5 | `[tool.flet.ios.entitlement]` | It served push (`aps-environment`) and PSF credential sharing. Local notifications need no entitlement |
 | U8 | Android meta-data / string resources | It served `asset_statements` for us.pycon.org credential sharing (NATIVE-07, dropped) |
 | U11 | Offline service worker for `flet build web` | No web target (D-08) |
 | U14 | Verified App Links / universal links | They need the PSF domain (D-21) |
 
-**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists two as later candidates (U19, U20); the rest get an id only when a feature needs them, and the last three are small fixes the owner can file directly.
+**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists four as later candidates (U19..U22); the rest get an id only when a feature needs them, and the last three are small fixes the owner can file directly.
 
 | Gap | Interim | Possible upstream piece |
 |---|---|---|
@@ -89,6 +89,8 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | `TextStyle.font_features` | Roboto, whose digits are tabular (D-26) | `font_features` |
 | Bottom-sheet detents, non-modal sheet | Fixed-height `BottomSheet`; a positioned `Card` for the booth card | Detents / persistent sheet |
 | Secure screen (`FLAG_SECURE`, iOS snapshot blur) for staff PII | Clear result panels when the app goes to the background (P3) | A `page` flag |
+| `ft.Markdown` always adds LaTeX syntax, so `$…$`, `( … )` and `[ … ]` in text render as math (U21, D-117, F27) | Escape text with numeric character references (D-115); open-space Markdown passes through unescaped | A flag (or extension-set entry) that turns LaTeX on, off by default; `DART/controls/markdown.dart` |
+| A partial `MarkdownStyleSheet` replaces the theme's text styles instead of merging; links default to `Colors.blue` (U22, D-117, F28) | One app style sheet whose text styles all name their colour (D-116) | Merge given styles over the theme-derived ones; links and block quotes from the colour scheme; `DART/utils/markdown.dart` |
 | Multi-weight families in `page.fonts` (one static file per family, no weights) (U20, D-98) | Declare the Roboto 400/500/700 family through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26) | `page.fonts` accepting a family with weighted files; schedule it only if S5 shows the pubspec route fails |
 | An `async def` `use_effect` cleanup is cancelled before it starts on a dependency change (F2) | Sync cleanups only (D-70 rule 3) | In the setup branch, cancel only the previous setup task, so async cleanups run |
 | `flet debug android\|ios --show-devices` exits with "Device ID must be specified": `check_device_id()` runs before the `--show-devices` branch (flet-cli `commands/debug.py:108-110`) | `flet devices` | Run the device check after that branch |
@@ -469,7 +471,7 @@ class AddToCalendar(ft.Service):
 
 **Tests:** the editor opens pre-filled on an Android emulator and an iOS simulator; a cancelled editor returns False; with no calendar app it returns False and the app offers "Share as file".
 
-### 4.4 E5: HTML rendering (later)
+### 4.4 E5: HTML rendering (cut by D-117 after S3; kept as a record)
 
 | Field | Value |
 |---|---|
