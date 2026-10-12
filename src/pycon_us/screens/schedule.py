@@ -58,7 +58,10 @@ def Schedule() -> ft.View:
         title="Schedule",
         actions=[search_button(svc.memory, "sessions")],
         controls=[
-            note(SOURCE_LABELS[conference.source]),
+            ft.Semantics(  # the shell smoke flow finds it (testing §5.4)
+                identifier="schedule.source",
+                content=note(SOURCE_LABELS[conference.source]),
+            ),
             note(_fetched(conference, info.zone, use_24h)),
             note(STATUS_LABELS[conference.status(info)]),
             ft.Container(

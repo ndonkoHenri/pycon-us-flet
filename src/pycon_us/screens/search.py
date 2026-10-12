@@ -4,10 +4,12 @@ It shows its scope and where it was opened from, and a few sample results of tha
 that push details on top of it, so search → result → Back returns to the results.
 """
 
+from collections.abc import Iterable, Iterator
 from itertools import islice
 
 import flet as ft
 
+from pycon_us.core.models import Session
 from pycon_us.locations import drill_href, use_query
 from pycon_us.screens.stub import nav_tile, note, stub_view
 from pycon_us.services import use_services
@@ -15,6 +17,11 @@ from pycon_us.state import use_conference
 
 SAMPLES = 3
 """How many results of each kind the stub shows."""
+
+
+def _with_speakers(sessions: Iterable[Session]) -> Iterator[Session]:
+    """Sessions that link on to speakers, so a result can be drilled further."""
+    return (s for s in sessions if s.speaker_ids)
 
 
 @ft.component
@@ -30,7 +37,7 @@ def Search() -> ft.View:
         if scope in ("all", "sessions"):
             results += [
                 nav_tile(s.name, drill_href(view_path, "session", s.id))
-                for s in islice(data.sessions.values(), SAMPLES)
+                for s in islice(_with_speakers(data.sessions.values()), SAMPLES)
             ]
         if scope in ("all", "speakers"):
             results += [

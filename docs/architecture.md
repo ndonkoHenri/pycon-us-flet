@@ -17,6 +17,7 @@
  src/main.py   page.on_view_pop (parent_of), then page.render_views(App, MEMORY)
  app.py        App: Services + stores (once) → boot gate → providers → ft.Router(ROUTES)
  routes.py     tab roots · More pages · search · recursive drill (session/speaker/room/sponsor/plan)
+ locations.py  drill_href · parent_of · use_query: what screens import to link and go back (D-163)
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
  state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      (P1 favorites.py, P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
@@ -57,7 +58,8 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the default View in the boot purple and no theme animation until the gate opens, F35, D-161): `setup_logging()` at import and one `ViewMemory` per process (D-163, D-143); `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
-| `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
+| `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound` (§5) | P0 |
+| `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-163) | P0 |
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
@@ -105,7 +107,7 @@ def App(memory: ViewMemory):
         prefs, lambda: TokensCtx(tokens, router))))
 ```
 
-`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). P1 adds `Favorites` (`ft.use_memo(Favorites, [])`, `FavoritesCtx`, loaded in `bootstrap()` after `Prefs`), P3 `AccountCtx` and `StaffCtx`. #74 brings `ROUTES` and `not_found`; until then `ROUTES` is one stub screen (`screens/stub.py`) with the data source, status and the first day's session count (D-161).
+`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). P1 adds `Favorites` (`ft.use_memo(Favorites, [])`, `FavoritesCtx`, loaded in `bootstrap()` after `Prefs`), P3 `AccountCtx` and `StaffCtx`. `ROUTES` and `not_found=NotFound` come from `routes.py` (§5.3); in P0 every route renders a stub screen (`screens/stub.py`'s `stub_view()`, until `AppScaffold` lands), and the Schedule stub shows the data source, fetch time, status and each day's session count.
 
 `BootView` is a full-bleed `View` in the splash's purple `#680579`, like the native splash and Flet's boot screen shown while Python starts (both set in `pyproject.toml`: `[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). It shows a white `ProgressRing` only after 1 s (`loop.call_later` from a sync effect whose cleanup cancels it), and the app icon once O-4 has one (D-161).
 
@@ -187,11 +189,12 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 
 Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99` is five Views; Back pops one at a time and, the query being dropped, never re-applies the highlight. Query parameters carry view options only, read once at mount; anything that must survive Back lives in `ViewMemory` (§6.3).
 
-### 5.3 `routes.py`
+### 5.3 `routes.py` and `locations.py`
+
+`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-163): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `use_query()` and the constants `TAB_ROOTS`, `DRILL_KINDS` and `PAGES`. `PAGES` lists every page path without a parameter; a test keeps it equal to the table's.
 
 ```python
 # src/pycon_us/routes.py (excerpt)
-DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan")
 DRILL = ft.Route(path=f":kind({'|'.join(DRILL_KINDS)})/:ident", recursive=True, component=Drill)
 
 
@@ -208,7 +211,7 @@ ROUTES = [
     pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
-    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks), pushed("tracks/:slug", Track),
+    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks, pushed(":slug", Track)),
            pushed("keynotes", Keynotes), pushed("open-spaces", OpenSpaces), pushed("sprints", Sprints),
            pushed("lightning-talks", LightningTalks), pushed("app", AboutApp), pushed("developer", Developer)),
 ]
@@ -230,40 +233,31 @@ def Drill():
             return SponsorDetail(sponsor_slug=ident)
         case _:
             return PlanViewer(plan_id=ident)
+```
+
+```python
+# src/pycon_us/locations.py (excerpt)
+PAGES = frozenset({*TAB_ROOTS, "/search", "/more/speakers", "/more/tracks", ...})   # no parameter; a test keeps it = ROUTES'
 
 
 def drill_href(view_path: str, kind: str, ident: str) -> str:
-    """The URL that pushes one detail level on top of the current View."""
+    """The location that pushes one detail level on top of the View at `view_path`."""
     return f"{view_path.rstrip('/')}/{kind}/{quote(ident, safe='')}"
 
 
-def page_paths(routes: list[ft.Route], prefix: str = "") -> set[str]:
-    """Every page path in the table (`/more/tracks`, `/more/tracks/:slug`, ...), drill excluded."""
-    paths = set()
-    for route in routes:
-        if route is DRILL or route.path is None:
-            continue
-        path = f"{prefix}/{route.path}"
-        paths |= {path, *page_paths(route.children or [], path)}
-    return paths
-
-
-PAGE_PATHS = page_paths(ROUTES)
-
-
-def parent_of(route: str, search_base: str = "/now") -> str:
-    """Where Back goes from `route` (D-19): drop the last drill pair, else walk up to the nearest page.
+def parent_of(location: str, search_base: str = "/now") -> str:
+    """Where Back goes (D-19): drop the last drill pair, else walk up to the nearest page.
 
     `/more/staff/lead` returns `/more`, because `/more/staff` is not a page. `/search` itself returns
     to `search_base`, the location (query included) it was opened from.
     """
-    parts = urlparse(route).path.strip("/").split("/")
+    parts = urlparse(location).path.strip("/").split("/")
     if parts == ["search"]:
         return search_base
     if len(parts) >= 3 and parts[-2] in DRILL_KINDS:
         return "/" + "/".join(parts[:-2])
     parent = parts[:-1]
-    while parent and "/" + "/".join(parent) not in PAGE_PATHS:
+    while parent and "/" + "/".join(parent) not in PAGES:
         parent.pop()
     return "/" + "/".join(parent)
 ```
@@ -282,9 +276,9 @@ def main(page: ft.Page):
     page.render_views(App, MEMORY)            # App passes memory on to Services.create()
 ```
 
-`Start` (the index route `/`) navigates to `memory.last_location` when it is set, else to `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`.
+`Start` (the index route `/`) navigates to `start_target(memory.last_location, memory.search_base)`: the last location when it is set, else `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`.
 
-`use_query()` (U9 interim) calls `ft.use_route_location()` for its hook slot and parses `urlparse(ft.context.page.route).query`, read once at mount. Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown id navigates to the parent path with a SnackBar.
+`use_query()` (U9 interim) parses `ft.context.page.route`'s query once, when its View mounts, and only for the top View (`use_view_path() == use_route_location()`): a deep entry builds the Views below too, and the query is not theirs (D-163). Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown location matches no route and shows `NotFound` (the Router's `not_found`, wrapped in a View) with "Go to Now"; in P0 an unknown id shows a not-found state on its own level under the back arrow, and #90 settles what P1 does (D-21, ux.md §4.1).
 
 ### 5.4 Search (D-19)
 
