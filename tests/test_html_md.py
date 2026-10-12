@@ -256,6 +256,32 @@ def test_dropping_an_outer_emphasis_rechecks_the_inner_one() -> None:
     assert md("<p>a<strong><em>(x)</em></strong>b</p>") == "a&#40;x)b"
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("<p><em>a</em><em>b</em></p>", "*ab*"),
+        ("<p><strong>a</strong><b>b</b> c</p>", "**ab** c"),
+        ("<p><s>a</s><del>b</del></p>", "~~ab~~"),
+        ("<p><code>a</code><code>b</code></p>", "`ab`"),
+        ("<p><code>a</code><script>x</script><code>b</code></p>", "`ab`"),
+    ],
+    ids=["em", "strong-b", "s-del", "code", "code-across-script"],
+)
+def test_touching_elements_of_one_kind_render_as_one(value: str, expected: str) -> None:
+    """D-131: "*a**b*" and "`a``b`" would show their markers literally."""
+    assert md(value) == expected
+
+
+def test_consecutive_line_breaks_give_one_hard_break() -> None:
+    """D-131: a blank line would end the paragraph and split emphasis or links across it."""
+    assert md("<p><em>a<br><br>b</em></p>") == "*a  \nb*"
+
+
+def test_invalid_href_stays_text() -> None:
+    """D-131: a malformed href ("http://[" is an invalid IPv6 host) must not stop the feed."""
+    assert md('<p><a href="http://[">x</a></p>') == "x"
+
+
 def test_url_inside_link_text_stays_text() -> None:
     """D-114: links cannot nest, so the label's URL is not linked again."""
     value = '<p><a href="https://x.org">https://y.org</a></p>'
@@ -372,7 +398,7 @@ _HTML = st.lists(
             *("<em>", "</em>", "<strong>", "</strong>", "<s>", "</s>", "<code>"),
             *("</code>", "<a href='/x'>", "</a>"),  # script and style: named tests
             *(" ", "\n", "x", "(", ")", "$", "*", ":", "`", "1. ", "#", "&amp;"),
-            "https://a.org/b.",
+            *("https://a.org/b.", "<a href='http://['>"),
         ]
     ),
     min_size=1,
@@ -384,3 +410,11 @@ def test_html_keeps_every_visible_character(value: str) -> None:
     """D-114: whatever the nesting, the Markdown and search text show the HTML's text."""
     assert markdown_text(md(value)) == html_text(value)
     assert "".join(to_text(value).split()) == html_text(value)
+
+
+@given(st.text(alphabet=st.sampled_from("<>/=\"' ab&#;:[]") | st.characters()))
+def test_any_input_converts_without_raising(text: str) -> None:
+    """D-130: conversion runs inside feed processing, so no field value may raise."""
+    md(f"<p>{text}")
+    md(f'<a href="{text}">{text}</a>')
+    to_text(f"<p>{text}")

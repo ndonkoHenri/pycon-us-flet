@@ -32,7 +32,7 @@ _EMPHASIS = {
     **dict.fromkeys(("s", "del", "strike"), "~~"),
 }
 _DROPPED_TAGS = frozenset({"script", "style"})  # their text is not content
-_KNOWN_TAGS = _BLOCK_TAGS | _DROPPED_TAGS | {"a", "code", "br", *_EMPHASIS}
+_KNOWN_TAGS = _BLOCK_TAGS | {"a", "code", "br", *_EMPHASIS}
 _VOID_TAGS = frozenset({"br", "hr"})  # never have children or end tags
 _LINK_SCHEMES = frozenset({"http", "https", "mailto"})
 
@@ -63,31 +63,54 @@ class _TreeBuilder(HTMLParser):
     """Builds an ``_Element`` tree, tolerating unclosed and stray end tags.
 
     Unknown tags never enter the tree, so their children land in their parent: that is
-    what unwrapping means (D-114).
+    what unwrapping means (D-114). ``script`` and ``style`` are skipped with their text.
+    An emphasis or code element that directly follows one of the same kind continues it
+    (D-131): rendered apart, their markers would touch and show literally (``*a**b*``).
     """
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.root = _Element("root", {})
         self._open = [self.root]
+        self._dropping: str | None = None  # the script or style element being skipped
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _DROPPED_TAGS:
+            self._dropping = tag
         if tag not in _KNOWN_TAGS:
             return
+        parent = self._open[-1]
+        previous = parent.children[-1] if parent.children else None
+        continues = tag == "code" or tag in _EMPHASIS
+        if (
+            continues
+            and isinstance(previous, _Element)
+            and _kind(previous.tag) == _kind(tag)
+        ):
+            self._open.append(previous)
+            return
         element = _Element(tag, {name: value or "" for name, value in attrs})
-        self._open[-1].children.append(element)
+        parent.children.append(element)
         if tag not in _VOID_TAGS:
             self._open.append(element)
 
     def handle_endtag(self, tag: str) -> None:
-        # Close the innermost open element with this tag, and any left open inside it.
+        if tag == self._dropping:
+            self._dropping = None
+        # Close the innermost open element of this kind, and any left open inside it.
         for depth in range(len(self._open) - 1, 0, -1):
-            if self._open[depth].tag == tag:
+            if _kind(self._open[depth].tag) == _kind(tag):
                 del self._open[depth:]
                 return
 
     def handle_data(self, data: str) -> None:
-        self._open[-1].children.append(data)
+        if self._dropping is None:
+            self._open[-1].children.append(data)
+
+
+def _kind(tag: str) -> str:
+    """Tags that render the same are one kind: ``b`` and ``strong`` are both ``**``."""
+    return _EMPHASIS.get(tag, tag)
 
 
 def to_markdown(value: str, site_url: str) -> str:
@@ -136,7 +159,7 @@ def _text_of(element: _Element) -> str:
             parts.append(child)
         elif child.tag in _BLOCK_TAGS or child.tag == "br":
             parts.append(f" {_text_of(child)} ")
-        elif child.tag not in _DROPPED_TAGS:
+        else:
             parts.append(_text_of(child))
     return "".join(parts)
 
@@ -311,8 +334,6 @@ def _inline(
     if isinstance(node, str):
         return [_escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)]
     tag = node.tag
-    if tag in _DROPPED_TAGS:
-        return []
     if tag == "br":
         return ["\n"]
     if tag == "code":
@@ -337,8 +358,12 @@ def _link(inner: list[_Token], href: str, site_url: str) -> list[_Token]:
     """Wrap a link's text in ``[...](url)``, or leave it as text (D-114)."""
     if not href:
         return inner
-    url = urljoin(site_url, href)
-    if urlsplit(url).scheme not in _LINK_SCHEMES:
+    try:
+        url = urljoin(site_url, href)
+        scheme = urlsplit(url).scheme
+    except ValueError:  # e.g. "http://[", an invalid IPv6 host: keep the text
+        return inner
+    if scheme not in _LINK_SCHEMES:
         return inner
     return _around(inner, ["["], [f"]({_destination(url)})"])
 
