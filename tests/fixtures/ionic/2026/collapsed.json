@@ -1,0 +1,114 @@
+[
+ {
+  "id": "break-Expo Hall AB-2026-05-15T08:00:00-07:00",
+  "name": "Coffee",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-15T08:00:00-07:00",
+  "end": "2026-05-15T09:00:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-17T08:00:00-07:00",
+  "name": "Coffee",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T08:00:00-07:00",
+  "end": "2026-05-17T09:00:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-16T08:00:00-07:00",
+  "name": "Coffee",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T09:00:00-07:00"
+ },
+ {
+  "id": "poster-Expo Hall AB-2026-05-17T09:30:00-07:00",
+  "name": "Posters",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00"
+ },
+ {
+  "id": "break--2026-05-17T10:00:00-07:00",
+  "name": "Break",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00"
+ },
+ {
+  "id": "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+  "name": "Break",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-16T10:05:00-07:00",
+  "end": "2026-05-16T10:30:00-07:00"
+ },
+ {
+  "id": "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+  "name": "Break",
+  "location": "Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-15T10:30:00-07:00",
+  "end": "2026-05-15T11:00:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-17T12:00:00-07:00",
+  "name": "Lunch",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T12:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00"
+ },
+ {
+  "id": "break--2026-05-13T12:30:00-07:00",
+  "name": "Break",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-13T12:30:00-07:00",
+  "end": "2026-05-13T13:30:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-16T12:30:00-07:00",
+  "name": "Lunch",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-16T12:30:00-07:00",
+  "end": "2026-05-16T13:45:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-15T12:30:00-07:00",
+  "name": "Lunch",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T14:00:00-07:00"
+ },
+ {
+  "id": "break-Expo Hall C-2026-05-14T12:30:00-07:00",
+  "name": "Lunch",
+  "location": "Expo Hall C",
+  "displayLocation": "Expo Hall C",
+  "start": "2026-05-14T12:30:00-07:00",
+  "end": "2026-05-14T13:30:00-07:00"
+ },
+ {
+  "id": "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+  "name": "Break",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-16T15:45:00-07:00",
+  "end": "2026-05-16T16:15:00-07:00"
+ },
+ {
+  "id": "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+  "name": "Break",
+  "location": "Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T16:30:00-07:00"
+ }
+]

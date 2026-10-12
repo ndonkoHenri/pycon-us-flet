@@ -1,0 +1,568 @@
+[
+ {
+  "slug": "elsewhere",
+  "name": "Elsewhere",
+  "sessions": [
+   "9104",
+   "9109",
+   "9031",
+   "9157",
+   "9034",
+   "9162",
+   "9173",
+   "9056"
+  ]
+ },
+ {
+  "slug": "expo-hall-ab",
+  "name": "Expo Hall AB",
+  "sessions": [
+   "147",
+   "break-Expo Hall AB-2026-05-15T08:00:00-07:00",
+   "break-Expo Hall AB-2026-05-15T12:30:00-07:00",
+   "break-Expo Hall AB-2026-05-16T08:00:00-07:00",
+   "break-Expo Hall AB-2026-05-16T12:30:00-07:00",
+   "break-Expo Hall AB-2026-05-17T08:00:00-07:00",
+   "227",
+   "poster-Expo Hall AB-2026-05-17T09:30:00-07:00",
+   "poster-detail-60",
+   "poster-detail-52",
+   "poster-detail-35",
+   "poster-detail-84",
+   "poster-detail-71",
+   "poster-detail-89",
+   "poster-detail-91",
+   "poster-detail-11",
+   "poster-detail-86",
+   "poster-detail-118",
+   "poster-detail-131",
+   "poster-detail-95",
+   "poster-detail-85",
+   "poster-detail-113",
+   "poster-detail-12",
+   "poster-detail-53",
+   "poster-detail-114",
+   "poster-detail-122",
+   "poster-detail-37",
+   "poster-detail-8",
+   "poster-detail-62",
+   "poster-detail-134",
+   "poster-detail-135",
+   "poster-detail-129",
+   "poster-detail-14",
+   "178",
+   "break-Expo Hall AB-2026-05-17T12:00:00-07:00"
+  ]
+ },
+ {
+  "slug": "expo-hall-c",
+  "name": "Expo Hall C",
+  "sessions": [
+   "break-Expo Hall C-2026-05-14T12:30:00-07:00"
+  ]
+ },
+ {
+  "slug": "grand-ballroom-a",
+  "name": "Grand Ballroom A",
+  "sessions": [
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "105",
+   "66",
+   "23",
+   "138",
+   "126",
+   "110",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "81",
+   "101",
+   "163",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+   "142",
+   "10",
+   "80",
+   "99",
+   "61",
+   "31",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+   "72",
+   "120",
+   "173",
+   "175",
+   "125",
+   "108",
+   "96"
+  ]
+ },
+ {
+  "slug": "grand-ballroom-b",
+  "name": "Grand Ballroom B",
+  "sessions": [
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "4",
+   "36",
+   "87",
+   "123",
+   "25",
+   "63",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "54",
+   "45",
+   "163",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+   "51",
+   "6",
+   "40",
+   "64",
+   "124",
+   "67",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+   "73",
+   "141",
+   "173",
+   "175",
+   "55",
+   "42",
+   "98"
+  ]
+ },
+ {
+  "slug": "lobby",
+  "name": "Lobby",
+  "sessions": [
+   "9165"
+  ]
+ },
+ {
+  "slug": "out-front-of-hyatt-regency",
+  "name": "Out Front of Hyatt Regency",
+  "sessions": [
+   "9119"
+  ]
+ },
+ {
+  "slug": "pacific-ballroom-arena",
+  "name": "Pacific Ballroom - Arena",
+  "sessions": [
+   "146",
+   "151",
+   "152",
+   "153",
+   "161",
+   "164",
+   "165",
+   "176",
+   "177",
+   "182",
+   "183",
+   "184",
+   "185"
+  ]
+ },
+ {
+  "slug": "room-101a",
+  "name": "Room 101A",
+  "sessions": [
+   "2",
+   "188",
+   "106",
+   "92",
+   "219"
+  ]
+ },
+ {
+  "slug": "room-101ab",
+  "name": "Room 101AB",
+  "sessions": [
+   "231"
+  ]
+ },
+ {
+  "slug": "room-101b",
+  "name": "Room 101B",
+  "sessions": [
+   "19",
+   "16",
+   "107",
+   "44",
+   "219"
+  ]
+ },
+ {
+  "slug": "room-102a",
+  "name": "Room 102A",
+  "sessions": [
+   "24",
+   "57",
+   "112",
+   "13",
+   "9106",
+   "9113",
+   "9026",
+   "9097",
+   "9073",
+   "9087",
+   "9116",
+   "9100",
+   "9112",
+   "9079",
+   "9128",
+   "9038",
+   "9111",
+   "9152",
+   "9045",
+   "9122",
+   "9166",
+   "9137",
+   "9130"
+  ]
+ },
+ {
+  "slug": "room-102b",
+  "name": "Room 102B",
+  "sessions": [
+   "3",
+   "56",
+   "133",
+   "20",
+   "9040",
+   "9090",
+   "9091",
+   "9092",
+   "9094",
+   "9095",
+   "9037",
+   "9140",
+   "9144",
+   "9153",
+   "9161",
+   "9167",
+   "9169",
+   "9176"
+  ]
+ },
+ {
+  "slug": "room-102c",
+  "name": "Room 102C",
+  "sessions": [
+   "191",
+   "83",
+   "68",
+   "49",
+   "9078",
+   "9072",
+   "9088",
+   "9098",
+   "9103",
+   "9047",
+   "9105",
+   "9135",
+   "9147",
+   "9163",
+   "9126",
+   "9124",
+   "9131",
+   "9044",
+   "9028",
+   "9033",
+   "9174",
+   "9039"
+  ]
+ },
+ {
+  "slug": "room-103abc",
+  "name": "Room 103ABC",
+  "sessions": [
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "15",
+   "70",
+   "143",
+   "30",
+   "58",
+   "69",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "94",
+   "93",
+   "163",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+   "1142",
+   "74",
+   "140",
+   "1",
+   "116",
+   "104",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+   "117",
+   "79",
+   "173",
+   "175",
+   "127",
+   "132",
+   "82"
+  ]
+ },
+ {
+  "slug": "room-104ab",
+  "name": "Room 104AB",
+  "sessions": [
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "102",
+   "119",
+   "128",
+   "77",
+   "78",
+   "121",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "21",
+   "38",
+   "163",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+   "90",
+   "28",
+   "26",
+   "115",
+   "109",
+   "103",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+   "5",
+   "136",
+   "173",
+   "175",
+   "88",
+   "47"
+  ]
+ },
+ {
+  "slug": "room-104c",
+  "name": "Room 104C",
+  "sessions": [
+   "199",
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "41",
+   "139",
+   "59",
+   "39",
+   "97",
+   "75",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "9",
+   "43",
+   "163",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+   "76",
+   "7",
+   "18",
+   "137",
+   "46",
+   "17",
+   "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+   "50",
+   "29",
+   "173",
+   "9175"
+  ]
+ },
+ {
+  "slug": "room-201a",
+  "name": "Room 201A",
+  "sessions": [
+   "201",
+   "209",
+   "218",
+   "9164",
+   "9114",
+   "9171"
+  ]
+ },
+ {
+  "slug": "room-201b",
+  "name": "Room 201B",
+  "sessions": [
+   "22",
+   "802",
+   "194",
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "27",
+   "48",
+   "33",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "192",
+   "9141",
+   "9150",
+   "9046",
+   "9158"
+  ]
+ },
+ {
+  "slug": "room-202a",
+  "name": "Room 202A",
+  "sessions": [
+   "111",
+   "1095",
+   "187",
+   "65",
+   "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+   "9059",
+   "9074",
+   "9089",
+   "9118",
+   "9083",
+   "9082",
+   "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+   "9145",
+   "9081",
+   "9071",
+   "9143",
+   "9149",
+   "9134",
+   "9168",
+   "9177",
+   "9060"
+  ]
+ },
+ {
+  "slug": "room-202b",
+  "name": "Room 202B",
+  "sessions": [
+   "803",
+   "193",
+   "186",
+   "195",
+   "9121",
+   "9080",
+   "9099",
+   "9151",
+   "9057",
+   "9146",
+   "9159"
+  ]
+ },
+ {
+  "slug": "room-202c",
+  "name": "Room 202C",
+  "sessions": [
+   "1094",
+   "1135",
+   "9027",
+   "9043",
+   "9025",
+   "9127",
+   "9142",
+   "9155",
+   "9108",
+   "9076",
+   "9172"
+  ]
+ },
+ {
+  "slug": "s-1",
+  "name": "S-1",
+  "sessions": [
+   "9154",
+   "9133"
+  ]
+ },
+ {
+  "slug": "s-2",
+  "name": "S-2",
+  "sessions": []
+ },
+ {
+  "slug": "s-3",
+  "name": "S-3",
+  "sessions": [
+   "9042",
+   "9086",
+   "9062",
+   "9064",
+   "9063",
+   "9066",
+   "9075",
+   "9093",
+   "9068",
+   "9110",
+   "9053"
+  ]
+ },
+ {
+  "slug": "s-3a",
+  "name": "S-3A",
+  "sessions": []
+ },
+ {
+  "slug": "s-3b",
+  "name": "S-3B",
+  "sessions": []
+ },
+ {
+  "slug": "s-4",
+  "name": "S-4",
+  "sessions": [
+   "200",
+   "9096",
+   "9101",
+   "9117",
+   "9125",
+   "9148",
+   "9077",
+   "9156"
+  ]
+ },
+ {
+  "slug": "s-4a",
+  "name": "S-4A",
+  "sessions": []
+ },
+ {
+  "slug": "s-4b",
+  "name": "S-4B",
+  "sessions": []
+ },
+ {
+  "slug": "s-5",
+  "name": "S-5",
+  "sessions": [
+   "9030",
+   "9067",
+   "9160"
+  ]
+ },
+ {
+  "slug": "s-5a",
+  "name": "S-5A",
+  "sessions": []
+ },
+ {
+  "slug": "s-5b",
+  "name": "S-5B",
+  "sessions": []
+ },
+ {
+  "slug": "s-6",
+  "name": "S-6",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-ballroom",
+  "name": "Seaside Ballroom",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-ballroom-a",
+  "name": "Seaside Ballroom A",
+  "sessions": [
+   "223"
+  ]
+ },
+ {
+  "slug": "seaside-ballroom-b",
+  "name": "Seaside Ballroom B",
+  "sessions": [
+   "223"
+  ]
+ },
+ {
+  "slug": "seaside-lobby",
+  "name": "Seaside Lobby",
+  "sessions": []
+ }
+]

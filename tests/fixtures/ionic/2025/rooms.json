@@ -1,0 +1,665 @@
+[
+ {
+  "slug": "4th-floor-tables-under-the-tents",
+  "name": "4th floor tables (under the tents)",
+  "sessions": [
+   "9183",
+   "9184"
+  ]
+ },
+ {
+  "slug": "ballroom-a",
+  "name": "Ballroom A",
+  "sessions": [
+   "break-Ballroom A-2025-05-14T12:30:00-04:00",
+   "break-Ballroom A-2025-05-15T12:30:00-04:00",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00",
+   "52",
+   "57",
+   "62",
+   "72",
+   "77",
+   "82",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00",
+   "88",
+   "93",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00",
+   "104",
+   "109",
+   "114",
+   "124",
+   "129",
+   "134",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00",
+   "140",
+   "1779",
+   "157",
+   "161",
+   "165"
+  ]
+ },
+ {
+  "slug": "ballroom-bc",
+  "name": "Ballroom BC",
+  "sessions": [
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00",
+   "53",
+   "58",
+   "63",
+   "73",
+   "78",
+   "83",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00",
+   "89",
+   "94",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00",
+   "105",
+   "110",
+   "115",
+   "125",
+   "130",
+   "135",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00",
+   "141",
+   "145",
+   "158",
+   "162",
+   "166"
+  ]
+ },
+ {
+  "slug": "concourse-a",
+  "name": "Concourse A",
+  "sessions": [
+   "1745",
+   "1747",
+   "1748",
+   "1749",
+   "1754",
+   "1755",
+   "1756",
+   "1764",
+   "1767",
+   "1778",
+   "1782",
+   "1789"
+  ]
+ },
+ {
+  "slug": "conference-center-east-lobby",
+  "name": "Conference Center East Lobby",
+  "sessions": [
+   "9133"
+  ]
+ },
+ {
+  "slug": "expo-hall-a",
+  "name": "Expo Hall A",
+  "sessions": [
+   "1753",
+   "27",
+   "break-Expo Hall A-2025-05-16T13:00:00-04:00",
+   "break-Expo Hall A-2025-05-17T12:30:00-04:00",
+   "1783",
+   "153",
+   "poster-Expo Hall A-2025-05-18T10:00:00-04:00",
+   "break-Expo Hall A-2025-05-18T12:00:00-04:00"
+  ]
+ },
+ {
+  "slug": "expo-hall-b",
+  "name": "Expo Hall B",
+  "sessions": [
+   "1752",
+   "47",
+   "48",
+   "49",
+   "97",
+   "99",
+   "100",
+   "101",
+   "148",
+   "150",
+   "151",
+   "152",
+   "168",
+   "169",
+   "170",
+   "171"
+  ]
+ },
+ {
+  "slug": "expo-hall-c",
+  "name": "Expo Hall C",
+  "sessions": [
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00"
+  ]
+ },
+ {
+  "slug": "garden-outside-315",
+  "name": "garden outside 315",
+  "sessions": [
+   "9164"
+  ]
+ },
+ {
+  "slug": "hall-a",
+  "name": "Hall A",
+  "sessions": [
+   "1757",
+   "1758",
+   "1763",
+   "1765",
+   "1768",
+   "1770",
+   "1774",
+   "1777",
+   "1784",
+   "1786",
+   "1787",
+   "1790"
+  ]
+ },
+ {
+  "slug": "hall-c",
+  "name": "Hall C",
+  "sessions": [
+   "51",
+   "56",
+   "61",
+   "71",
+   "76",
+   "81",
+   "87",
+   "92",
+   "103",
+   "108",
+   "113",
+   "123",
+   "128",
+   "133",
+   "139",
+   "144",
+   "156",
+   "160",
+   "164"
+  ]
+ },
+ {
+  "slug": "la-prima-cafe",
+  "name": "La Prima cafe",
+  "sessions": [
+   "9185"
+  ]
+ },
+ {
+  "slug": "lounge-area-on-third-floor-between-309-and-308",
+  "name": "Lounge area on third floor between 309 and 308",
+  "sessions": [
+   "9199"
+  ]
+ },
+ {
+  "slug": "meet-outside-room-315",
+  "name": "Meet *outside* room 315",
+  "sessions": [
+   "9168"
+  ]
+ },
+ {
+  "slug": "meet-at-entrance-to-conference-center-outside-doors",
+  "name": "Meet at entrance to conference center (outside doors)",
+  "sessions": [
+   "9083"
+  ]
+ },
+ {
+  "slug": "open-spaces-rooms",
+  "name": "Open Spaces Rooms",
+  "sessions": [
+   "1759",
+   "1766",
+   "1769",
+   "1780",
+   "1781",
+   "1792"
+  ]
+ },
+ {
+  "slug": "or-join-the-whatsapp-group",
+  "name": "or join the whatsapp group",
+  "sessions": [
+   "9200"
+  ]
+ },
+ {
+  "slug": "outside-hall-b",
+  "name": "Outside Hall B",
+  "sessions": [
+   "9200"
+  ]
+ },
+ {
+  "slug": "outside-of-hall-b",
+  "name": "Outside of Hall B",
+  "sessions": [
+   "break-Outside of Hall B-2025-05-16T07:30:00-04:00",
+   "break-Outside of Hall B-2025-05-17T07:30:00-04:00",
+   "break-Outside of Hall B-2025-05-18T08:00:00-04:00"
+  ]
+ },
+ {
+  "slug": "outside-the-staff-room",
+  "name": "Outside the staff room",
+  "sessions": [
+   "9178"
+  ]
+ },
+ {
+  "slug": "phipps-conservatory",
+  "name": "Phipps Conservatory",
+  "sessions": [
+   "9204"
+  ]
+ },
+ {
+  "slug": "psf-couch",
+  "name": "PSF Couch",
+  "sessions": [
+   "9089"
+  ]
+ },
+ {
+  "slug": "room-301-305",
+  "name": "Room 301-305",
+  "sessions": [
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00",
+   "54",
+   "59",
+   "64",
+   "74",
+   "79",
+   "84",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00",
+   "90",
+   "95",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00",
+   "106",
+   "111",
+   "116",
+   "126",
+   "131",
+   "136",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00",
+   "142",
+   "146",
+   "159",
+   "163",
+   "167"
+  ]
+ },
+ {
+  "slug": "room-308",
+  "name": "Room 308",
+  "sessions": [
+   "9073",
+   "9072",
+   "9076",
+   "9102",
+   "9066",
+   "9055",
+   "9085",
+   "9125",
+   "9092",
+   "9132",
+   "9057",
+   "9056",
+   "9149",
+   "9122",
+   "9103",
+   "9166",
+   "9140",
+   "9059",
+   "9173",
+   "9142",
+   "9148",
+   "9202",
+   "9203",
+   "9197"
+  ]
+ },
+ {
+  "slug": "room-309",
+  "name": "Room 309",
+  "sessions": [
+   "29",
+   "33",
+   "38",
+   "42",
+   "9094",
+   "9080",
+   "9068",
+   "9104",
+   "9079",
+   "9105",
+   "9128",
+   "9095",
+   "9135",
+   "9098",
+   "9091",
+   "9084",
+   "9061",
+   "9099",
+   "9134",
+   "9156",
+   "9141",
+   "9167",
+   "9154",
+   "9144",
+   "9145",
+   "9147"
+  ]
+ },
+ {
+  "slug": "room-310-311",
+  "name": "Room 310/311",
+  "sessions": [
+   "1",
+   "8",
+   "14",
+   "21",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T10:30:00-04:00",
+   "55",
+   "60",
+   "65",
+   "75",
+   "80",
+   "85",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-16T16:00:00-04:00",
+   "91",
+   "96",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T10:05:00-04:00",
+   "107",
+   "112",
+   "117",
+   "127",
+   "132",
+   "137",
+   "break-Expo Hall C, Ballroom A, Ballroom BC, Room 301-305, Room 310/311-2025-05-17T15:45:00-04:00",
+   "143",
+   "147",
+   "9139",
+   "9163",
+   "9060",
+   "9190",
+   "9192"
+  ]
+ },
+ {
+  "slug": "room-315",
+  "name": "Room 315",
+  "sessions": [
+   "30",
+   "39",
+   "43",
+   "9062",
+   "9064",
+   "9071",
+   "9129",
+   "9138",
+   "9053",
+   "9109",
+   "9088",
+   "9077",
+   "9169",
+   "9159",
+   "9137",
+   "9052",
+   "9188",
+   "9175",
+   "9058",
+   "9170",
+   "9205"
+  ]
+ },
+ {
+  "slug": "room-316",
+  "name": "Room 316",
+  "sessions": [
+   "31",
+   "35",
+   "40",
+   "44",
+   "9070",
+   "9090",
+   "9069",
+   "9117",
+   "9067",
+   "9086",
+   "9087",
+   "9127",
+   "9106",
+   "9093",
+   "9097",
+   "9136",
+   "9158",
+   "9151",
+   "9195",
+   "9180",
+   "9162",
+   "9191"
+  ]
+ },
+ {
+  "slug": "room-317",
+  "name": "Room 317",
+  "sessions": [
+   "2",
+   "9",
+   "15",
+   "22",
+   "1760",
+   "1771",
+   "1775",
+   "1785"
+  ]
+ },
+ {
+  "slug": "room-318",
+  "name": "Room 318",
+  "sessions": [
+   "3",
+   "10",
+   "16",
+   "23",
+   "9081",
+   "9082",
+   "9096",
+   "9075",
+   "9157",
+   "9113",
+   "9119",
+   "9110",
+   "9107",
+   "9120",
+   "9146",
+   "9179",
+   "9181",
+   "9153",
+   "9143",
+   "9198",
+   "9201"
+  ]
+ },
+ {
+  "slug": "room-319",
+  "name": "Room 319",
+  "sessions": [
+   "4",
+   "11",
+   "17",
+   "24",
+   "1761",
+   "1776",
+   "9174",
+   "9172",
+   "9160",
+   "9161"
+  ]
+ },
+ {
+  "slug": "room-320",
+  "name": "Room 320",
+  "sessions": [
+   "5",
+   "12",
+   "18",
+   "25",
+   "9112",
+   "9100",
+   "9078",
+   "9115",
+   "9124",
+   "9114",
+   "9150",
+   "9152",
+   "9186",
+   "9187",
+   "9194",
+   "9193"
+  ]
+ },
+ {
+  "slug": "room-321",
+  "name": "Room 321",
+  "sessions": [
+   "6",
+   "13",
+   "19",
+   "26",
+   "9108",
+   "9063",
+   "9131",
+   "9130",
+   "9118",
+   "9121",
+   "9101",
+   "9155",
+   "9177",
+   "9176",
+   "9189",
+   "9165",
+   "9182"
+  ]
+ },
+ {
+  "slug": "room-402",
+  "name": "Room 402",
+  "sessions": [
+   "1751",
+   "1762",
+   "1772",
+   "1791"
+  ]
+ },
+ {
+  "slug": "room-403-404",
+  "name": "Room 403/404",
+  "sessions": [
+   "1746",
+   "1750",
+   "1773",
+   "1788"
+  ]
+ },
+ {
+  "slug": "s-1",
+  "name": "S-1",
+  "sessions": []
+ },
+ {
+  "slug": "s-2",
+  "name": "S-2",
+  "sessions": []
+ },
+ {
+  "slug": "s-3",
+  "name": "S-3",
+  "sessions": []
+ },
+ {
+  "slug": "s-3a",
+  "name": "S-3A",
+  "sessions": []
+ },
+ {
+  "slug": "s-3b",
+  "name": "S-3B",
+  "sessions": []
+ },
+ {
+  "slug": "s-4",
+  "name": "S-4",
+  "sessions": []
+ },
+ {
+  "slug": "s-4a",
+  "name": "S-4A",
+  "sessions": []
+ },
+ {
+  "slug": "s-4b",
+  "name": "S-4B",
+  "sessions": []
+ },
+ {
+  "slug": "s-5",
+  "name": "S-5",
+  "sessions": []
+ },
+ {
+  "slug": "s-5a",
+  "name": "S-5A",
+  "sessions": []
+ },
+ {
+  "slug": "s-5b",
+  "name": "S-5B",
+  "sessions": []
+ },
+ {
+  "slug": "s-6",
+  "name": "S-6",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-ballroom",
+  "name": "Seaside Ballroom",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-ballroom-a",
+  "name": "Seaside Ballroom A",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-ballroom-b",
+  "name": "Seaside Ballroom B",
+  "sessions": []
+ },
+ {
+  "slug": "seaside-lobby",
+  "name": "Seaside Lobby",
+  "sessions": []
+ },
+ {
+  "slug": "west-atrium",
+  "name": "West Atrium",
+  "sessions": [
+   "9054"
+  ]
+ }
+]

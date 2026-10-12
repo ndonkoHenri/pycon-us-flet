@@ -35,6 +35,7 @@
 tests/
   __init__.py          # tests are a package, so flows can import tests.ui.helpers
   conftest.py          # hypothesis profile, --snapshot-update, machine_tz, snapshot fixtures
+  feeds.py, ionic.py   # helpers: the recorded feeds; Ionic's capture and its normaliser (§3.3)
   test_<module>.py     # unit tests, one file per module under test (D-67, section M)
   fixtures/
     feeds/conference-2025.json, conference-2026.json   # recorded public feeds (+ README: date, URL)
@@ -197,14 +198,15 @@ def snapshot(request):
     return check
 ```
 
-**Ionic reference (captured once).** In P0, `tools/capture_ionic_reference/` runs Ionic's `processData` and key queries under Node on both feeds and writes `tests/fixtures/ionic/<year>/*.json` (README: Ionic commit, Node version, date). CI and contributors never need Node (D-77). `test_feed.py` compares a few facts that settle ambiguous rules, not whole outputs:
+**Ionic reference (captured once).** `tools/capture_ionic_reference/` copies Ionic's `conference-data.ts` (and what it imports for `processData`) unchanged, stubs Angular and RxJS, bundles it with esbuild and runs `processData` under Node on both feeds; it writes the facts to `tests/fixtures/ionic/<year>/` (`summary`, `timeline`, `sessions`, `collapsed`, `rooms`, `speakers`), and its README records the provenance (Ionic commit, Node, esbuild and package versions, date) and how to re-run it. CI and contributors never need Node (D-77). `tests/test_ionic_reference.py` compares our model with those facts through the normaliser in `tests/ionic.py`, on both feeds and under both machine zones:
 
-- the set of session ids (including Ionic's synthetic ids);
-- the collapsed-row ids and their time spans;
-- group start times per day, and the Job Fair label;
-- speaker-to-session links.
+- the session ids (including Ionic's synthetic ids) and each session's name, track, location, shown location, start, end, shown start (the Job Fair's label), linked speakers, author names and flags;
+- the days, their time groups in order and the rows in each (as sets: D-31);
+- the collapsed rows and their spans;
+- the rooms with their sessions, and the room order (`room_sort_key` against Ionic's `localeCompare`);
+- the speaker directory, in order, and each speaker's sessions.
 
-Deliberate differences live in one dict, `INTENDED_DIFFERENCES = {"DATA-13": "every group has a start time", ...}`, each with its own named test. Ionic is a reference, not an oracle.
+Deliberate differences live in one dict, `INTENDED_DIFFERENCES` (D-121 nested posters, D-122 the hall prefix, D-124 the lightning talks' place, D-125 the pseudo-speaker and room order, D-31 row order, DATA-13 group starts, MAP-08 sprint rooms), each with its own named test that shows it on the captured output. Every other difference is a bug to fix: the first capture found 2025's code spans in titles (Ionic's `markdownToTxt` drops the backticks), now stripped in `core/names.py`. Ionic is a reference, not an oracle.
 
 ### 3.4 Other `core/` modules
 

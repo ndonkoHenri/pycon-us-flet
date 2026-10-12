@@ -1,0 +1,5859 @@
+[
+ {
+  "id": "9119",
+  "name": "5K Fun Run",
+  "track": "Open Space",
+  "location": "Out Front of Hyatt Regency",
+  "displayLocation": "Out Front of Hyatt Regency",
+  "start": "2026-05-16T07:00:00-07:00",
+  "end": "2026-05-16T08:00:00-07:00",
+  "timeStart": "7:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9078",
+  "name": "GeoData Show & Tell / Meetup",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T08:00:00-07:00",
+  "end": "2026-05-15T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9167",
+  "name": "Scroll Lock Zine",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9076",
+  "name": "Financial Data with Python: APIs, Open Data, and Better Investment Workflows",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9112",
+  "name": "Python for Advocacy, Activism, and Civics",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T10:00:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9045",
+  "name": "conda x PyPI: Building Bridges That Actually Hold",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9042",
+  "name": "Web Scraping",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T10:00:00-07:00",
+  "end": "2026-05-15T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9028",
+  "name": "The Python Developers Survey: What Would YOU Ask?",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9106",
+  "name": "CTF for fun and profit",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T10:00:00-07:00",
+  "end": "2026-05-15T11:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9154",
+  "name": "Rubik's Cube Talk and Play",
+  "track": "Open Space",
+  "location": "S-1",
+  "displayLocation": "S-1",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:15:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9169",
+  "name": "Twisted In 2026",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9033",
+  "name": "Let's talk Rust!",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9072",
+  "name": "So you want to get into 3D Printing...",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9059",
+  "name": "Agentic Software Engineering on Brownfield and Serious Projects",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9164",
+  "name": "Junior Dev Hangout",
+  "track": "Open Space",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9122",
+  "name": "PyLadiesCon - Q&A and new perspectives",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9086",
+  "name": "pytest for system tests",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9173",
+  "name": "Hike - Rancho Palos Verdes",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9113",
+  "name": "CTF for fun and profit",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9079",
+  "name": "SPy Language Open Space",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9037",
+  "name": "Learn How To Run For Office! (Or support someone who is!)",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9141",
+  "name": "Dear technical leaders, how are you thinking about the future of your teams?",
+  "track": "Open Space",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9172",
+  "name": "Beyond GitHub",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9145",
+  "name": "Let's talk chess!",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9040",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9151",
+  "name": "The Zen of DevRel",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9134",
+  "name": "Let’s talk docs!",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9148",
+  "name": "Tech Hiring Fraud: How it Affects Job Seekers and Employers",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9157",
+  "name": "Scroll Lock Zine",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9135",
+  "name": "CTF for fun and profit",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9127",
+  "name": "Pyrefly",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-16T11:00:00-07:00",
+  "end": "2026-05-16T12:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9166",
+  "name": "Robot Python 🤖",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-17T12:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9090",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T12:00:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9088",
+  "name": "Scroll Lock Zine",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T12:00:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9026",
+  "name": "LGBTQ+ Social",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T12:00:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9074",
+  "name": "All things tabular data",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T12:00:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9128",
+  "name": "Python in Healthcare, Research & Scientific Computing",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T13:00:00-07:00",
+  "end": "2026-05-16T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9081",
+  "name": "nanobind, pybind11, Cython and other C++ binding libraries",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-16T13:00:00-07:00",
+  "end": "2026-05-16T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9091",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T13:00:00-07:00",
+  "end": "2026-05-15T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9176",
+  "name": "Ham Radio for the Curious Pythonista",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9062",
+  "name": "Civic Data & AI",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T13:00:00-07:00",
+  "end": "2026-05-15T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9137",
+  "name": "Black Python Devs",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9114",
+  "name": "uv: a package and project management tool",
+  "track": "Open Space",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9089",
+  "name": "Trial by Telecommunications",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T13:00:00-07:00",
+  "end": "2026-05-15T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9147",
+  "name": "GeoPython",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T13:00:00-07:00",
+  "end": "2026-05-16T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9174",
+  "name": "Engineering Productivity",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T14:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9098",
+  "name": "From Pipettes to Python: AI and Data Science in Biotech R&D",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9097",
+  "name": "PyBites",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9121",
+  "name": "Walk by the ocean! Long Beach (not so long) walk",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9118",
+  "name": "Make a GUI app with BeeWare",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9030",
+  "name": "Python Game Development",
+  "track": "Open Space",
+  "location": "S-5",
+  "displayLocation": "S-5",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9071",
+  "name": "Developing Qt applications with Python",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9039",
+  "name": "PSF Board Open Space",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9150",
+  "name": "BeeWare and Mobile Python",
+  "track": "Open Space",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9092",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9142",
+  "name": "GeoData Pt2",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9163",
+  "name": "Board Games Prt. 2",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9140",
+  "name": "When AI Agents Go Feral",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9104",
+  "name": "Indeedians Assemble!",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9038",
+  "name": "Community Organizers Unite!",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9130",
+  "name": "Accessibility at Python Events",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9068",
+  "name": "t-string-apalooza",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9175",
+  "name": "Board Games!!!!",
+  "track": "Open Space",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9064",
+  "name": "Open Source Contributions in the age of AI agent",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9096",
+  "name": "No Starch Press: Meet the Python Authors",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9165",
+  "name": "Improv Games",
+  "track": "Open Space",
+  "location": "Lobby",
+  "displayLocation": "Lobby",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9168",
+  "name": "Wrangling Devs & Deadlines",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9171",
+  "name": "python-build-standalone",
+  "track": "Open Space",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-17T14:00:00-07:00",
+  "end": "2026-05-17T14:30:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9027",
+  "name": "ty",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9057",
+  "name": "Agentic/Vibe Coding",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9126",
+  "name": "Federated/P2P Meet and Greet",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9133",
+  "name": "Your Agent Is Only as Good as Its Data Layer",
+  "track": "Open Space",
+  "location": "S-1",
+  "displayLocation": "S-1",
+  "start": "2026-05-16T14:00:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9046",
+  "name": "CivicTech",
+  "track": "Open Space",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9073",
+  "name": "XR Devs and Enthusiasts",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9094",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9103",
+  "name": "Building Data Pipelines With Python",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9083",
+  "name": "pyOpenSci: AI Tools & Open Source: Let's Figure This Out Together",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9080",
+  "name": "PyGov",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9043",
+  "name": "Security for Open Source project maintainers",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9063",
+  "name": "QA and Test Automation",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9101",
+  "name": "Technomad Gathering",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9109",
+  "name": "Teach us something about python we don't know",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9111",
+  "name": "Using AI for NON-coding tasks",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9124",
+  "name": "CFP talk development workshop",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9143",
+  "name": "Data Scientist Meetup",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9146",
+  "name": "Educators in Python: Chat about Lesson Planning and Teaching (industry & academia)",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9155",
+  "name": "PDX Pythonistas",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9110",
+  "name": "High Performance Django/FastAPI",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9077",
+  "name": "Python Dataclasses and Serialization",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9160",
+  "name": "Local agents & adding type annotations everywhere for ~free",
+  "track": "Open Space",
+  "location": "S-5",
+  "displayLocation": "S-5",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9144",
+  "name": "Space Open Space 🚀",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-16T15:00:00-07:00",
+  "end": "2026-05-16T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9177",
+  "name": "3D Print modeling with python",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-17T15:00:00-07:00",
+  "end": "2026-05-17T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9152",
+  "name": "marimo",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9034",
+  "name": "Juggling",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9156",
+  "name": "Accessibility at Python Events",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9108",
+  "name": "Computable Contracts for Healthcare - Contracts-as-Code",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9087",
+  "name": "Package-specific AI Skills installation",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9066",
+  "name": "Docs Discussion",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9159",
+  "name": "All Presenters/Speakers",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9047",
+  "name": "Orb Pondering",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9060",
+  "name": "Guild of Educators",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-17T16:00:00-07:00",
+  "end": "2026-05-17T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9099",
+  "name": "Local AI",
+  "track": "Open Space",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9149",
+  "name": "Practical AI",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9158",
+  "name": "Lazy Imports",
+  "track": "Open Space",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9067",
+  "name": "Python libraries for Bible data",
+  "track": "Open Space",
+  "location": "S-5",
+  "displayLocation": "S-5",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9082",
+  "name": "TTRPGs and Pythonistas!",
+  "track": "Open Space",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9117",
+  "name": "marimo",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9053",
+  "name": "Build cross-platform apps in Python with Flet",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9131",
+  "name": "Organizing IRL meetups",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9095",
+  "name": "Python With 💗ART",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9153",
+  "name": "The Web Platform and the Indie Web",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-16T16:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9075",
+  "name": "PyCon Running",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9105",
+  "name": "--dangerously-skip-permissions, Safely",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9125",
+  "name": "CV/Resume Workshop",
+  "track": "Open Space",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9116",
+  "name": "Nix/Nixpkgs/NixOS",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9056",
+  "name": "Ice Cream Selfie Flash Mob with Mariatta",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-17T17:00:00-07:00",
+  "end": "2026-05-17T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9161",
+  "name": "Board games",
+  "track": "Open Space",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T18:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9093",
+  "name": "MTG Casual Commander",
+  "track": "Open Space",
+  "location": "S-3",
+  "displayLocation": "S-3",
+  "start": "2026-05-15T18:00:00-07:00",
+  "end": "2026-05-15T19:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9044",
+  "name": "Hbomberguy Fan Meetup (Unofficial)",
+  "track": "Open Space",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-16T18:00:00-07:00",
+  "end": "2026-05-16T19:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9025",
+  "name": "NVIDIA AI Open Space",
+  "track": "Open Space",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-15T18:00:00-07:00",
+  "end": "2026-05-15T19:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9162",
+  "name": "Nix/Nixpkgs/NixOS Dinner @ Yard House",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-16T19:00:00-07:00",
+  "end": "2026-05-16T20:00:00-07:00",
+  "timeStart": "7:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9031",
+  "name": "DjangoSocial",
+  "track": "Open Space",
+  "location": "Elsewhere",
+  "displayLocation": "Elsewhere",
+  "start": "2026-05-15T19:00:00-07:00",
+  "end": "2026-05-15T20:00:00-07:00",
+  "timeStart": "7:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9100",
+  "name": "LLM-Free Development",
+  "track": "Open Space",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-15T19:00:00-07:00",
+  "end": "2026-05-15T20:00:00-07:00",
+  "timeStart": "7:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "196",
+  "name": "Registration Desk Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-13T07:30:00-07:00",
+  "end": "2026-05-13T07:30:00-07:00",
+  "timeStart": "7:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "198",
+  "name": "Registration Desk Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-14T07:30:00-07:00",
+  "end": "2026-05-14T07:30:00-07:00",
+  "timeStart": "7:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "205",
+  "name": "Registration Desk Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T07:30:00-07:00",
+  "end": "2026-05-15T07:30:00-07:00",
+  "timeStart": "7:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "225",
+  "name": "Registration Desk Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T08:00:00-07:00",
+  "end": "2026-05-17T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "206",
+  "name": "Open Spaces Rooms Open",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T08:00:00-07:00",
+  "end": "2026-05-15T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "216",
+  "name": "Expo Hall Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "175",
+  "name": "Lightning Talks",
+  "track": "Lightning-talks",
+  "location": "Room 103ABC, Room 104AB, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T08:00:00-07:00",
+  "end": "2026-05-17T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [
+   "178"
+  ],
+  "speakerNames": [
+   "Hosted by Abigail, Chris, Cristián, and Lorena"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "215",
+  "name": "Open Spaces Rooms Open",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "207",
+  "name": "Expo Hall Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T08:00:00-07:00",
+  "end": "2026-05-15T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "226",
+  "name": "Open Spaces Rooms Open",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T08:00:00-07:00",
+  "end": "2026-05-17T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "214",
+  "name": "Registration Desk Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T08:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "163",
+  "name": "Lightning Talks",
+  "track": "Lightning-talks",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [
+   "178"
+  ],
+  "speakerNames": [
+   "Hosted by Abigail, Chris, Cristián, and Lorena"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "164",
+  "name": "Diversity & Inclusion Panel",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-16T09:00:00-07:00",
+  "end": "2026-05-16T09:25:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "19",
+  "name": "All about decorators",
+  "track": "Tutorial",
+  "location": "Room 101B",
+  "displayLocation": "Room 101B",
+  "start": "2026-05-13T09:00:00-07:00",
+  "end": "2026-05-13T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "19"
+  ],
+  "speakerNames": [
+   "Reuven M. Lerner"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "151",
+  "name": "Welcome — PyCon US Chair Elaine Wong",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-15T09:00:00-07:00",
+  "end": "2026-05-15T09:25:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "68",
+  "name": "When KPIs Go Weird: Anomaly Detection with Python",
+  "track": "Tutorial",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "71"
+  ],
+  "speakerNames": [
+   "Juliana Ferreira Alves"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "199",
+  "name": "Python Education Summit",
+  "track": "Summit",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T16:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "107",
+  "name": "Writing Pythonic Code: Features That Make Python Powerful",
+  "track": "Tutorial",
+  "location": "Room 101B",
+  "displayLocation": "Room 101B",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "114"
+  ],
+  "speakerNames": [
+   "Mason Egger"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "24",
+  "name": "Python Performance Lab: Sharpening Your Instincts",
+  "track": "Tutorial",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-13T09:00:00-07:00",
+  "end": "2026-05-13T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "24",
+   "25"
+  ],
+  "speakerNames": [
+   "Arthur Pastel",
+   "Adrien Cacciaguerra"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "2",
+  "name": "Build your first MCP server in Python",
+  "track": "Tutorial",
+  "location": "Room 101A",
+  "displayLocation": "Room 101A",
+  "start": "2026-05-13T09:00:00-07:00",
+  "end": "2026-05-13T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "2"
+  ],
+  "speakerNames": [
+   "Pamela Fox"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "191",
+  "name": "Building Production Grade ETL Pipelines in Python with Apache Airflow",
+  "track": "Tutorial",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-13T09:00:00-07:00",
+  "end": "2026-05-13T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "154"
+  ],
+  "speakerNames": [
+   "Bhavani Ravi"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "106",
+  "name": "Going from Notebooks to Production Code",
+  "track": "Tutorial",
+  "location": "Room 101A",
+  "displayLocation": "Room 101A",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "112",
+   "113"
+  ],
+  "speakerNames": [
+   "Catherine Nelson",
+   "Robert Masson"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "176",
+  "name": "amanda casari",
+  "track": "Keynote",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T09:00:00-07:00",
+  "end": "2026-05-17T09:45:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "112",
+  "name": "Show off your data: Interactive dashboards in Python",
+  "track": "Tutorial",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "120"
+  ],
+  "speakerNames": [
+   "Daniel Chen"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "3",
+  "name": "Your First Machine Learning Models - How to Build Them in Scikit-learn",
+  "track": "Tutorial",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-13T09:00:00-07:00",
+  "end": "2026-05-13T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "3"
+  ],
+  "speakerNames": [
+   "Corey Wade"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "217",
+  "name": "Swag Pickup Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T09:00:00-07:00",
+  "end": "2026-05-16T09:00:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "208",
+  "name": "Swag Pickup Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T09:00:00-07:00",
+  "end": "2026-05-15T09:00:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "133",
+  "name": "The How and Why of Object-oriented Programming in Python",
+  "track": "Tutorial",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-14T09:00:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "9:00 am",
+  "speakers": [
+   "141"
+  ],
+  "speakerNames": [
+   "Mike Müller"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "165",
+  "name": "Pablo Galindo Salgado",
+  "track": "Keynote",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-16T09:25:00-07:00",
+  "end": "2026-05-16T10:05:00-07:00",
+  "timeStart": "9:25 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "152",
+  "name": "PSF Welcome",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-15T09:25:00-07:00",
+  "end": "2026-05-15T09:45:00-07:00",
+  "timeStart": "9:25 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "200",
+  "name": "WebAssembly Summit",
+  "track": "Summit",
+  "location": "S-4",
+  "displayLocation": "S-4",
+  "start": "2026-05-14T09:30:00-07:00",
+  "end": "2026-05-14T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "111",
+  "name": "From Cheese Shop to Fortress: Building Secure, Production-Ready Python Wheels (Sponsor: Chainguard)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-14T09:30:00-07:00",
+  "end": "2026-05-14T10:30:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "119"
+  ],
+  "speakerNames": [
+   "dann frazier"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "803",
+  "name": "Shipping Python instantly to 300+ Cities with Cloudflare Workers (Sponsor: Cloudflare)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-14T09:30:00-07:00",
+  "end": "2026-05-14T10:30:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "167",
+   "168"
+  ],
+  "speakerNames": [
+   "Craig Dennis",
+   "Hood Chatham"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "227",
+  "name": "Job Fair & Community Showcase & Poster Sessions",
+  "track": "Event",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "153",
+  "name": "Lin Qiao",
+  "track": "Keynote",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-15T09:45:00-07:00",
+  "end": "2026-05-15T10:30:00-07:00",
+  "timeStart": "9:45 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "177",
+  "name": "PSF - Update from our Security Engineers",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T09:45:00-07:00",
+  "end": "2026-05-17T10:00:00-07:00",
+  "timeStart": "9:45 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "178",
+  "name": "Job Fair & Community Showcase",
+  "track": "Plenary",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "228",
+  "name": "Swag Pickup Opens",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T10:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "142",
+  "name": "Python for Humans - Designing Python Code Like a User Interface",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [
+   "150"
+  ],
+  "speakerNames": [
+   "Justin Lee"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "51",
+  "name": "Conquer multithreaded Python with Blanket",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [
+   "54"
+  ],
+  "speakerNames": [
+   "Larry Hastings"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "218",
+  "name": "Maintainers Summit",
+  "track": "Summit",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "90",
+  "name": "Hash me if you can: let's talk about Python dictionaries!",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [
+   "94"
+  ],
+  "speakerNames": [
+   "Mia Bajić"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "76",
+  "name": "Python como herramienta de movilidad social en comunidades afro y subrepresentadas",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [
+   "79"
+  ],
+  "speakerNames": [
+   "Veronica Rodriguez Viveros"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "1142",
+  "name": "Understanding Python's logging: Combine components like Lego blocks!",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T10:30:00-07:00",
+  "end": "2026-05-16T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [
+   "49"
+  ],
+  "speakerNames": [
+   "nikkie"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "15",
+  "name": "Mind the gap! Why static typing requires more than just adding annotations",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T11:30:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [
+   "14",
+   "15"
+  ],
+  "speakerNames": [
+   "Jia Chen",
+   "Steven Troxler"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "4",
+  "name": "The Art of Extending Python with other languages",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T11:30:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [
+   "182"
+  ],
+  "speakerNames": [
+   "Cristián Maureira-Fredes"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "41",
+  "name": "Logs, llanto y feature flags: historias de código en modo supervivencia",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T11:30:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [
+   "43"
+  ],
+  "speakerNames": [
+   "Laura Meng"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "102",
+  "name": "GPU Communications for Python",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T11:30:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [
+   "107",
+   "160"
+  ],
+  "speakerNames": [
+   "Benjamin Glick",
+   "Michael Yh Wang"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "105",
+  "name": "AI-Assisted Contributions and Maintainer Load",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T11:00:00-07:00",
+  "end": "2026-05-15T11:30:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [
+   "111"
+  ],
+  "speakerNames": [
+   "Paolo Melchiorre"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "230",
+  "name": "Extra T-shirts Available",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "229",
+  "name": "Swag Pickup Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T11:00:00-07:00",
+  "end": "2026-05-17T11:00:00-07:00",
+  "timeStart": "11:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "6",
+  "name": "Switching from Sphinx to Markdown",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T11:15:00-07:00",
+  "end": "2026-05-16T11:45:00-07:00",
+  "timeStart": "11:15 am",
+  "speakers": [
+   "6"
+  ],
+  "speakerNames": [
+   "Kattni"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "28",
+  "name": "Beyond Optional in Real-World Projects: Missing, None, and Unset",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T11:15:00-07:00",
+  "end": "2026-05-16T11:45:00-07:00",
+  "timeStart": "11:15 am",
+  "speakers": [
+   "29"
+  ],
+  "speakerNames": [
+   "Koudai Aono"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "7",
+  "name": "Construyendo computadoras cuánticas con Python: aprendizajes al crear un ecosistema de diseño de hardware",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T11:15:00-07:00",
+  "end": "2026-05-16T11:45:00-07:00",
+  "timeStart": "11:15 am",
+  "speakers": [
+   "179"
+  ],
+  "speakerNames": [
+   "Joaquin Matres"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "10",
+  "name": "Don’t Write Polars Code with a Pandas Accent",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T11:15:00-07:00",
+  "end": "2026-05-16T11:45:00-07:00",
+  "timeStart": "11:15 am",
+  "speakers": [
+   "10"
+  ],
+  "speakerNames": [
+   "Joram Mutenge"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "74",
+  "name": "Anatomy of a Phishing Campaign",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T11:15:00-07:00",
+  "end": "2026-05-16T11:45:00-07:00",
+  "timeStart": "11:15 am",
+  "speakers": [
+   "77"
+  ],
+  "speakerNames": [
+   "Mike Fiedler"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "193",
+  "name": "Securing and Scaling Jupyter at Bloomberg: How we run Notebooks on Kubernetes (Sponsor: Bloomberg)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-14T11:30:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "11:30 am",
+  "speakers": [
+   "156",
+   "158"
+  ],
+  "speakerNames": [
+   "Rituraj Singh",
+   "Yifan Zhang"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "22",
+  "name": "Building AI Inference Pipelines in Python (Sponsor: NVIDIA)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-14T11:30:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "11:30 am",
+  "speakers": [
+   "22"
+  ],
+  "speakerNames": [
+   "Andy Terrel"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "1095",
+  "name": "Python Security: What we've done, now AI and Glasswing are changing everything, and how we're planning to survive (Sponsor: Alpha-Omega)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-14T11:30:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "11:30 am",
+  "speakers": [
+   "171",
+   "77"
+  ],
+  "speakerNames": [
+   "Seth Larson",
+   "Mike Fiedler"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "27",
+  "name": "Pydantic Monty: Wild LLMs, from tool calling to computer use (Sponsor: Pydantic)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-15T11:30:00-07:00",
+  "end": "2026-05-15T12:30:00-07:00",
+  "timeStart": "11:30 am",
+  "speakers": [
+   "28"
+  ],
+  "speakerNames": [
+   "Samuel Colvin"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "1094",
+  "name": "Inside an AI Agent SDK: Building One from Scratch in Python (Sponsor: SerpApi)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-14T11:30:00-07:00",
+  "end": "2026-05-14T12:30:00-07:00",
+  "timeStart": "11:30 am",
+  "speakers": [
+   "174"
+  ],
+  "speakerNames": [
+   "Adarsh Divakaran"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "139",
+  "name": "El texto no es texto: historia de las strings en Python",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T11:45:00-07:00",
+  "end": "2026-05-15T12:15:00-07:00",
+  "timeStart": "11:45 am",
+  "speakers": [
+   "147"
+  ],
+  "speakerNames": [
+   "Daniel Hervás"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "119",
+  "name": "How many spoons does your environment cost: Feat. demos breaking and the human element of your broken env",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T11:45:00-07:00",
+  "end": "2026-05-15T12:15:00-07:00",
+  "timeStart": "11:45 am",
+  "speakers": [
+   "128"
+  ],
+  "speakerNames": [
+   "Dawn Wages"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "36",
+  "name": "How to give your Python code to someone else",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T11:45:00-07:00",
+  "end": "2026-05-15T12:15:00-07:00",
+  "timeStart": "11:45 am",
+  "speakers": [
+   "38"
+  ],
+  "speakerNames": [
+   "Russell Keith-Magee"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "66",
+  "name": "Container-enabled Asyncio is All You Need (to Build Pythonic AI Workflows at Scale)",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T11:45:00-07:00",
+  "end": "2026-05-15T12:15:00-07:00",
+  "timeStart": "11:45 am",
+  "speakers": [
+   "177"
+  ],
+  "speakerNames": [
+   "Niels Bantilan"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "70",
+  "name": "PEP 750 - T-strings: safer and smarter string processing",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T11:45:00-07:00",
+  "end": "2026-05-15T12:15:00-07:00",
+  "timeStart": "11:45 am",
+  "speakers": [
+   "73"
+  ],
+  "speakerNames": [
+   "Vinícius Gubiani Ferreira"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "231",
+  "name": "PyLadies Lunch",
+  "track": "Event",
+  "location": "Room 101AB",
+  "displayLocation": "Room 101AB",
+  "start": "2026-05-17T12:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "140",
+  "name": "Zero Trust in 200ms: Implementing Identity-Per-Transaction with Python and Serverless",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T12:00:00-07:00",
+  "end": "2026-05-16T12:30:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [
+   "148"
+  ],
+  "speakerNames": [
+   "Tristan McKinnon"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "80",
+  "name": "No More Spreadsheets! Building PyLadiesCon Infrastructure with Python and Django",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T12:00:00-07:00",
+  "end": "2026-05-16T12:45:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [
+   "84"
+  ],
+  "speakerNames": [
+   "Mariatta"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "40",
+  "name": "The Exceptions We Don't Catch in Technical Conversations",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T12:00:00-07:00",
+  "end": "2026-05-16T12:30:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [
+   "42"
+  ],
+  "speakerNames": [
+   "Emin Martinian"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "18",
+  "name": "¿Cómo Python puede ayudar a detectar señales tempranas en la salud mental universitaria?",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T12:00:00-07:00",
+  "end": "2026-05-16T12:30:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [
+   "18"
+  ],
+  "speakerNames": [
+   "Valentina Lazaro"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "26",
+  "name": "Preflight Your Data: Catch Hidden Issues Before Handoff",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T12:00:00-07:00",
+  "end": "2026-05-16T12:30:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [
+   "180"
+  ],
+  "speakerNames": [
+   "Jennifer Slotnick"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "128",
+  "name": "Breaking the Speed Limit: Fast Statistical Models with Python 3.14, Numba, and JAX",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [
+   "55",
+   "56"
+  ],
+  "speakerNames": [
+   "Wenxin Jiang",
+   "Jian Yin"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "87",
+  "name": "How to Write a Great Command Line Application",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [
+   "175"
+  ],
+  "speakerNames": [
+   "Dan Craig"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "219",
+  "name": "PSF Members Lunch",
+  "track": "Event",
+  "location": "Room 101A, Room 101B",
+  "displayLocation": "Room 101A",
+  "start": "2026-05-16T12:30:00-07:00",
+  "end": "2026-05-16T14:00:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "59",
+  "name": "Cómo Python ayudó a descubrir criminales que se estaban postulando en las elecciones de Brasil",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T13:00:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [
+   "63"
+  ],
+  "speakerNames": [
+   "Judite Cypreste"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "143",
+  "name": "What's so hard about writing a type checker? A tour of ty",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T13:15:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [
+   "151"
+  ],
+  "speakerNames": [
+   "Carl Meyer"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "23",
+  "name": "Making African Languages Visible: A Python-Based Guide to Low-Resource Language ID",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T13:15:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [
+   "23"
+  ],
+  "speakerNames": [
+   "Gift  Ojeabulu"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "125",
+  "name": "A bridge over (not) troubled waters: Collecting marine data from your couch",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T13:30:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [
+   "135"
+  ],
+  "speakerNames": [
+   "Sarah Kaiser"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "232",
+  "name": "Registration Desk Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "55",
+  "name": "Brains and Explosions: A Simple VDB Writer for Python",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T13:30:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [
+   "59"
+  ],
+  "speakerNames": [
+   "Joachim Pfefferkorn"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "233",
+  "name": "Donations for T-shirt Close",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "201",
+  "name": "Typing Summit",
+  "track": "Summit",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-14T13:00:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "127",
+  "name": "Learning Computer Science with Python and Music(21)",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-17T13:00:00-07:00",
+  "end": "2026-05-17T13:30:00-07:00",
+  "timeStart": "1:00 pm",
+  "speakers": [
+   "137"
+  ],
+  "speakerNames": [
+   "Michael Scott Asato Cuthbert"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "64",
+  "name": "[Yes, You Can] Test SQL",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T13:30:00-07:00",
+  "end": "2026-05-16T14:15:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "16"
+  ],
+  "speakerNames": [
+   "Paul Zuradzki"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "57",
+  "name": "SQL, Mappers, and ORMs: Database Abstractions in Python",
+  "track": "Tutorial",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-13T13:30:00-07:00",
+  "end": "2026-05-13T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "61"
+  ],
+  "speakerNames": [
+   "Mario Munoz"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "220",
+  "name": "Swag Pickup Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T13:30:00-07:00",
+  "end": "2026-05-16T13:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "20",
+  "name": "Writing Professional Python with AI Coding Agents",
+  "track": "Tutorial",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "169"
+  ],
+  "speakerNames": [
+   "Matt Harrison"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "48",
+  "name": "Building a New Approach to Enterprise Python Libraries (Sponsor: Capital One)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-15T13:30:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "50",
+   "51"
+  ],
+  "speakerNames": [
+   "Dan Furman",
+   "David Hoover"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "187",
+  "name": "Make Attackers Cry -- Outsmart them with Deception (Sponsor: Fastly)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T14:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "153"
+  ],
+  "speakerNames": [
+   "Rick Horwitz"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "13",
+  "name": "Thinking of Topic Modeling as Search",
+  "track": "Tutorial",
+  "location": "Room 102A",
+  "displayLocation": "Room 102A",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "5"
+  ],
+  "speakerNames": [
+   "Kas Stohr"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "56",
+  "name": "Causal Inference with Python",
+  "track": "Tutorial",
+  "location": "Room 102B",
+  "displayLocation": "Room 102B",
+  "start": "2026-05-13T13:30:00-07:00",
+  "end": "2026-05-13T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "104"
+  ],
+  "speakerNames": [
+   "Neha"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "92",
+  "name": "Thinking in Arrays:  An Introduction to Array-Oriented Programming",
+  "track": "Tutorial",
+  "location": "Room 101A",
+  "displayLocation": "Room 101A",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "97"
+  ],
+  "speakerNames": [
+   "Iason Krommydas"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "1135",
+  "name": "Vibe Cloud to production with Gemini (Sponsor: Google)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202C",
+  "displayLocation": "Room 202C",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T14:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "139"
+  ],
+  "speakerNames": [
+   "Peter Danenberg"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "44",
+  "name": "One Pixel at a Time: DIY Image Manipulation with Pillow for Fun and Profit",
+  "track": "Tutorial",
+  "location": "Room 101B",
+  "displayLocation": "Room 101B",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "46"
+  ],
+  "speakerNames": [
+   "Ariel Ortiz"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "186",
+  "name": "Build, Deploy, Monetize: The Future of the Developer Economy (Sponsor: Apify)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T14:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "152",
+   "181"
+  ],
+  "speakerNames": [
+   "Saurav Jain",
+   "Jakub Wolf"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "83",
+  "name": "Lazy Looping in Practice: Building and Using Generators and Iterators",
+  "track": "Tutorial",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-13T13:30:00-07:00",
+  "end": "2026-05-13T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "26"
+  ],
+  "speakerNames": [
+   "Trey Hunner"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "188",
+  "name": "Implementing RAG in Python: Build a Retrieval-Augmented Generation System",
+  "track": "Tutorial",
+  "location": "Room 101A",
+  "displayLocation": "Room 101A",
+  "start": "2026-05-13T13:30:00-07:00",
+  "end": "2026-05-13T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "60"
+  ],
+  "speakerNames": [
+   "Isabel Michel"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "115",
+  "name": "The Surprising Effectiveness of Immutable Data Structures",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T13:30:00-07:00",
+  "end": "2026-05-16T14:15:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "123"
+  ],
+  "speakerNames": [
+   "Brett Slatkin"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "802",
+  "name": "Dungeons and Databases Build NPC agents to work with data in DocumentDB and Postgres (Sponsor: Microsoft)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T14:30:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "166",
+   "170"
+  ],
+  "speakerNames": [
+   "Gwyneth Peña-Siguenza",
+   "Marko Hotti"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "16",
+  "name": "Practical Software Testing with Python",
+  "track": "Tutorial",
+  "location": "Room 101B",
+  "displayLocation": "Room 101B",
+  "start": "2026-05-13T13:30:00-07:00",
+  "end": "2026-05-13T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "16"
+  ],
+  "speakerNames": [
+   "Paul Zuradzki"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "49",
+  "name": "Python for Absolute Beginners",
+  "track": "Tutorial",
+  "location": "Room 102C",
+  "displayLocation": "Room 102C",
+  "start": "2026-05-14T13:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "1:30 pm",
+  "speakers": [
+   "52"
+  ],
+  "speakerNames": [
+   "Al Sweigart"
+  ],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "42",
+  "name": "Memory management in CPython, fast or slow?",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-17T13:45:00-07:00",
+  "end": "2026-05-17T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "44"
+  ],
+  "speakerNames": [
+   "Mark Shannon"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "77",
+  "name": "Peeking under the hood of uv run",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T13:45:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "80"
+  ],
+  "speakerNames": [
+   "Zanie Blue"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "209",
+  "name": "Packaging Summit",
+  "track": "Summit",
+  "location": "Room 201A",
+  "displayLocation": "Room 201A",
+  "start": "2026-05-15T13:45:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "137",
+  "name": "Interoperabilidad de hardware con Python para sistemas conectados",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T13:45:00-07:00",
+  "end": "2026-05-16T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "145"
+  ],
+  "speakerNames": [
+   "Hugo Leyton"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "108",
+  "name": "Running Every Street in Paris with Python and PostGIS",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-17T13:45:00-07:00",
+  "end": "2026-05-17T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "115"
+  ],
+  "speakerNames": [
+   "Vinayak Mehta"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "132",
+  "name": "Leading Without Permission: Building Digital Diaspora as an Afro-Latina Woman in Tech",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-17T13:45:00-07:00",
+  "end": "2026-05-17T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "79"
+  ],
+  "speakerNames": [
+   "Veronica Rodriguez Viveros"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "88",
+  "name": "Why you, as a Python developer, should learn Rust",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-17T13:45:00-07:00",
+  "end": "2026-05-17T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "92"
+  ],
+  "speakerNames": [
+   "Daniel Szoke"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "99",
+  "name": "Create a Python Package: From Zero to Hero",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T13:45:00-07:00",
+  "end": "2026-05-16T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "61"
+  ],
+  "speakerNames": [
+   "Mario Munoz"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "1",
+  "name": "Rust for CPython: Making Python Safer and More Robust for Everyone",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T13:45:00-07:00",
+  "end": "2026-05-16T14:15:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "1"
+  ],
+  "speakerNames": [
+   "Emma Smith"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "123",
+  "name": "Panel: Fostering better collaboration between the scientific Python community and core Python development",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T13:45:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "1:45 pm",
+  "speakers": [
+   "132",
+   "128",
+   "133"
+  ],
+  "speakerNames": [
+   "Jonathan Dekhtiar",
+   "Dawn Wages",
+   "Michael Droettboom"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "30",
+  "name": "The Bakery: How PEP810 sped up my bread operations business",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [
+   "31"
+  ],
+  "speakerNames": [
+   "Jacob Coffee"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "138",
+  "name": "Running Large Language Models on Laptops: Practical Quantization Techniques in Python",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [
+   "146"
+  ],
+  "speakerNames": [
+   "Aayush Kumar JVS"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "39",
+  "name": "Zonas Horarias en Python: Todo lo que ojalá no necesitases",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T14:00:00-07:00",
+  "end": "2026-05-15T14:30:00-07:00",
+  "timeStart": "2:00 pm",
+  "speakers": [
+   "41"
+  ],
+  "speakerNames": [
+   "Paul Ganssle"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "98",
+  "name": "Taking Generators Too Far: Writing a PDF from Scratch in Python",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-17T14:30:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "103"
+  ],
+  "speakerNames": [
+   "Arie Bovenberg"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "46",
+  "name": "Cuando los datos no hablan: Python como intérprete de la supervivencia de las especies",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T14:30:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "48"
+  ],
+  "speakerNames": [
+   "Joyce Beatriz Ferreira da Costa Silva"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "96",
+  "name": "From Messy Clinical Data to Interoperable FHIR: A Python-First Mapping and Validation Pipeline",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-17T14:30:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "62"
+  ],
+  "speakerNames": [
+   "Lisa Smith"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "61",
+  "name": "Beyond Rate Limiting: Adaptive Security for Python Web Applications",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T14:30:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "65"
+  ],
+  "speakerNames": [
+   "Aayush Gauba"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "47",
+  "name": "Lazy imports and the art of interpreter procrastination",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-17T14:30:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "188"
+  ],
+  "speakerNames": [
+   "Brittany Reynoso"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "109",
+  "name": "Using Python Biopharm to Help Cure Cancer",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T14:30:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "116"
+  ],
+  "speakerNames": [
+   "Sushant Singh"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "116",
+  "name": "Asleep at the Wheel: Getting your SBOMs to pay attention to Python Builds",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T14:30:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "124",
+   "125"
+  ],
+  "speakerNames": [
+   "Sanchit Sahay",
+   "Abhishek Reddypalle"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "124",
+  "name": "Where the Sidewalk Ends: Data-Driven Urban Safety",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T14:30:00-07:00",
+  "end": "2026-05-16T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "134"
+  ],
+  "speakerNames": [
+   "Fay Shaw"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "82",
+  "name": "Fall In Love With CSS",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-17T14:30:00-07:00",
+  "end": "2026-05-17T15:00:00-07:00",
+  "timeStart": "2:30 pm",
+  "speakers": [
+   "86"
+  ],
+  "speakerNames": [
+   "Piper Thunstrom"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "78",
+  "name": "How to port a Python kernel to Pyodide for a blazingly fast in-browser coding experience",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T14:45:00-07:00",
+  "end": "2026-05-15T15:15:00-07:00",
+  "timeStart": "2:45 pm",
+  "speakers": [
+   "81"
+  ],
+  "speakerNames": [
+   "Myles Scolnick"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "97",
+  "name": "Uso de Python para apoyar la traduccion de una lengua indígena en zonas rurales de Bolivia",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T14:45:00-07:00",
+  "end": "2026-05-15T15:15:00-07:00",
+  "timeStart": "2:45 pm",
+  "speakers": [
+   "102"
+  ],
+  "speakerNames": [
+   "Iblin Rocio Mocho"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "126",
+  "name": "Distributing AI with Python in the Browser: Edge Inference and Flexibility Without Infrastructure",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T14:45:00-07:00",
+  "end": "2026-05-15T15:15:00-07:00",
+  "timeStart": "2:45 pm",
+  "speakers": [
+   "136"
+  ],
+  "speakerNames": [
+   "Fabio Pliger"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "25",
+  "name": "pathlib: why and how to use it",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T14:45:00-07:00",
+  "end": "2026-05-15T15:15:00-07:00",
+  "timeStart": "2:45 pm",
+  "speakers": [
+   "26"
+  ],
+  "speakerNames": [
+   "Trey Hunner"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "58",
+  "name": "A Shiny for Python Cultural Survival Tool: Training Your Slang Translator",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T14:45:00-07:00",
+  "end": "2026-05-15T15:15:00-07:00",
+  "timeStart": "2:45 pm",
+  "speakers": [
+   "101"
+  ],
+  "speakerNames": [
+   "Elizabeth Black"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "33",
+  "name": "Text2SQL: From Academic Benchmarks to Self-Service Analytics (Sponsor: JetBrains)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-15T15:00:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:00 pm",
+  "speakers": [
+   "35"
+  ],
+  "speakerNames": [
+   "Artem Trofimov"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "104",
+  "name": "Post-Incident Runtime SBOM Generation from Python Memory",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T15:15:00-07:00",
+  "end": "2026-05-16T15:45:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [
+   "109",
+   "110"
+  ],
+  "speakerNames": [
+   "Hala Ali",
+   "Andrew Case"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "182",
+  "name": "Rachell Calhoun & Tim Schilling",
+  "track": "Keynote",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T15:15:00-07:00",
+  "end": "2026-05-17T16:00:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "17",
+  "name": "Construye aplicaciones web interactivas con Python: Streamlit y Supabase en acción",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T15:15:00-07:00",
+  "end": "2026-05-16T15:45:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [
+   "17"
+  ],
+  "speakerNames": [
+   "Nicolas Emir Mejia Agreda"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "31",
+  "name": "Tachyon: Python 3.15's sampling profiler is faster than your code",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T15:15:00-07:00",
+  "end": "2026-05-16T15:45:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [
+   "32",
+   "33"
+  ],
+  "speakerNames": [
+   "Pablo Galindo Salgado",
+   "Laszlo Kiss Kollar"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "67",
+  "name": "The art of live process manipulation with Python 3.14's zero-overhead debugging interface",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T15:15:00-07:00",
+  "end": "2026-05-16T15:45:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [
+   "70"
+  ],
+  "speakerNames": [
+   "Savannah Ostrowski"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "103",
+  "name": "The Terminal is the New Browser: Building Rich TUIs with Textual",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T15:15:00-07:00",
+  "end": "2026-05-16T15:45:00-07:00",
+  "timeStart": "3:15 pm",
+  "speakers": [
+   "108"
+  ],
+  "speakerNames": [
+   "Andres Pineda"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "110",
+  "name": "Beyond the Hype: A Pragmatic Look at How Developers Actually Use AI Tools",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T15:30:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "183",
+   "112",
+   "184",
+   "185",
+   "186",
+   "187"
+  ],
+  "speakerNames": [
+   "Carol Willing",
+   "Catherine Nelson",
+   "Jelle Zijlstra",
+   "Jodie Burchell",
+   "Laís Carvalho",
+   "Maike Scherer"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "195",
+  "name": "Scaling Python to Saturate the Hypercube (Sponsor: Hudson River Trading)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202B",
+  "displayLocation": "Room 202B",
+  "start": "2026-05-14T15:30:00-07:00",
+  "end": "2026-05-14T16:30:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "159"
+  ],
+  "speakerNames": [
+   "Hashem"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "194",
+  "name": "Better Together: How Types Make Python Fly (Sponsor: Meta)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-14T15:30:00-07:00",
+  "end": "2026-05-14T16:30:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "157",
+   "161"
+  ],
+  "speakerNames": [
+   "Dino Viehland",
+   "Alex Malyshev"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "69",
+  "name": "Beyond the P-Value: A Data Scientist’s Guide to Tier-1 Feature Launches",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T15:30:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "72"
+  ],
+  "speakerNames": [
+   "Jyoti Yadav"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "75",
+  "name": "Cómo pasé de perdida a enseñar Python + IA a miles, en un año",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T15:30:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "166"
+  ],
+  "speakerNames": [
+   "Gwyneth Peña-Siguenza"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "63",
+  "name": "Free-threaded Python: past, present and future",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T15:30:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "67"
+  ],
+  "speakerNames": [
+   "Thomas Wouters"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "121",
+  "name": "From Graveyard to Glory: Production Python in the Browser",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T15:30:00-07:00",
+  "end": "2026-05-15T16:00:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "130"
+  ],
+  "speakerNames": [
+   "Mahmoud Hashemi"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "65",
+  "name": "The Ultimate Guide to Vibe Engineering with Streamlit (Sponsor: Snowflake)",
+  "track": "Sponsor Presentation",
+  "location": "Room 202A",
+  "displayLocation": "Room 202A",
+  "start": "2026-05-14T15:30:00-07:00",
+  "end": "2026-05-14T16:30:00-07:00",
+  "timeStart": "3:30 pm",
+  "speakers": [
+   "68"
+  ],
+  "speakerNames": [
+   "Chanin Nantasenamat"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "183",
+  "name": "Steering Council Panel",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T16:00:00-07:00",
+  "end": "2026-05-17T16:35:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "117",
+  "name": "GitHub Actions Security in Python Packages",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T16:15:00-07:00",
+  "end": "2026-05-16T16:45:00-07:00",
+  "timeStart": "4:15 pm",
+  "speakers": [
+   "126"
+  ],
+  "speakerNames": [
+   "Andrew Nesbitt"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "73",
+  "name": "Getting Started with Celery: Building Your First Background Task System in Python",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T16:15:00-07:00",
+  "end": "2026-05-16T16:45:00-07:00",
+  "timeStart": "4:15 pm",
+  "speakers": [
+   "76"
+  ],
+  "speakerNames": [
+   "Italo Carvalho Vianelli Ribeiro"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "72",
+  "name": "Making Python Faster with Free Threading and Mypyc",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T16:15:00-07:00",
+  "end": "2026-05-16T16:45:00-07:00",
+  "timeStart": "4:15 pm",
+  "speakers": [
+   "75"
+  ],
+  "speakerNames": [
+   "Jukka Lehtosalo"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "50",
+  "name": "El Agent que Convirtió el Caos de On-Call en un Solo Slack Thread",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T16:15:00-07:00",
+  "end": "2026-05-16T16:45:00-07:00",
+  "timeStart": "4:15 pm",
+  "speakers": [
+   "53"
+  ],
+  "speakerNames": [
+   "Angelik Laboy Torres"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "5",
+  "name": "Thinking of Topic Modeling as Search",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T16:15:00-07:00",
+  "end": "2026-05-16T16:45:00-07:00",
+  "timeStart": "4:15 pm",
+  "speakers": [
+   "5"
+  ],
+  "speakerNames": [
+   "Kas Stohr"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "81",
+  "name": "What Python Developers Need to Know About Hardware: A Practical Guide to GPU Memory, Kernel Scheduling, and Execution Models",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "85",
+   "176"
+  ],
+  "speakerNames": [
+   "Santosh Appachu Devanira Poovaiah",
+   "Vyas Ramasubramani"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "9",
+  "name": "Python en la nube: Introducción a AWS con Boto3",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "9"
+  ],
+  "speakerNames": [
+   "Alison Orellana-Rios"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "54",
+  "name": "Lock-Free Multi-Core Performance with Behavior-Oriented Concurrency",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "58"
+  ],
+  "speakerNames": [
+   "Matthew Johnson"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "221",
+  "name": "Expo Hall Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T16:30:00-07:00",
+  "end": "2026-05-16T16:30:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "94",
+  "name": "Why Software Engineering Best Practices Fail in Data Engineering",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "99"
+  ],
+  "speakerNames": [
+   "Constance Martineau"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "146",
+  "name": "Newcomer Orientation",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-14T16:30:00-07:00",
+  "end": "2026-05-14T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "192",
+  "name": "Every Obvious Approach Failed: Building an Async Database Client That Actually Scales (Sponsor: ClickHouse)",
+  "track": "Sponsor Presentation",
+  "location": "Room 201B",
+  "displayLocation": "Room 201B",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:30:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "155"
+  ],
+  "speakerNames": [
+   "Joe Spadola"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "21",
+  "name": "Demystifying Python’s Memory Management",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T16:30:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "4:30 pm",
+  "speakers": [
+   "21"
+  ],
+  "speakerNames": [
+   "Puneet Khushwani"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "184",
+  "name": "Python Software Foundation Update",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T16:35:00-07:00",
+  "end": "2026-05-17T17:05:00-07:00",
+  "timeStart": "4:35 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "211",
+  "name": "Registration Desk Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "222",
+  "name": "Registration Desk Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "141",
+  "name": "Upgrading Python CLIs: From Scripts to Interactive Tools",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [
+   "149"
+  ],
+  "speakerNames": [
+   "Avik Basu"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "136",
+  "name": "When KPIs Go Weird: Anomaly Detection with Python",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [
+   "71"
+  ],
+  "speakerNames": [
+   "Juliana Ferreira Alves"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "147",
+  "name": "Opening Reception",
+  "track": "Plenary",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-14T17:00:00-07:00",
+  "end": "2026-05-14T19:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "210",
+  "name": "Swag Pickup Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T17:00:00-07:00",
+  "end": "2026-05-15T17:00:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "120",
+  "name": "High-Performance LLM Inference in Pure Python with PyTorch Custom Ops",
+  "track": "Talk",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [
+   "129"
+  ],
+  "speakerNames": [
+   "Yineng Zhang"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "79",
+  "name": "Breaking Bad (Packages): Why Traditional Vulnerability Tracking Fails Supply Chain Attacks",
+  "track": "Security",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [
+   "82",
+   "83"
+  ],
+  "speakerNames": [
+   "Shelby Cunningham",
+   "Madison Ficorilli"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "29",
+  "name": "Python a la velocidad de la luz: Un recorrido completo por el ecosistema de CUDA",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-16T17:00:00-07:00",
+  "end": "2026-05-16T17:30:00-07:00",
+  "timeStart": "5:00 pm",
+  "speakers": [
+   "30"
+  ],
+  "speakerNames": [
+   "Daniel Rodriguez"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "185",
+  "name": "Closing",
+  "track": "Plenary",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-17T17:05:00-07:00",
+  "end": "2026-05-17T17:20:00-07:00",
+  "timeStart": "5:05 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "93",
+  "name": "Debugging Python in Production: Practical Techniques Beyond Print Statements",
+  "track": "Talk",
+  "location": "Room 103ABC",
+  "displayLocation": "Room 103ABC",
+  "start": "2026-05-15T17:15:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "5:15 pm",
+  "speakers": [
+   "98"
+  ],
+  "speakerNames": [
+   "Anshul Jannumahanti"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "101",
+  "name": "How to Build Your First Real-Time Voice Agent in Python (Without Losing Your Mind)",
+  "track": "Ai",
+  "location": "Grand Ballroom A",
+  "displayLocation": "Grand Ballroom A",
+  "start": "2026-05-15T17:15:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "5:15 pm",
+  "speakers": [
+   "105",
+   "106"
+  ],
+  "speakerNames": [
+   "Camila Hinojosa Añez",
+   "Elizabeth Fuentes"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "43",
+  "name": "“Cuando pip install no es suficiente: amenazas reales y defensas prácticas en Python y PyPI”",
+  "track": "Charla",
+  "location": "Room 104C",
+  "displayLocation": "Room 104C",
+  "start": "2026-05-15T17:15:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "5:15 pm",
+  "speakers": [
+   "45"
+  ],
+  "speakerNames": [
+   "Diego Caceres Solis"
+  ],
+  "preRegistered": false,
+  "spanish": true,
+  "inTimeline": true
+ },
+ {
+  "id": "38",
+  "name": "Python and the JVM - A Love Story",
+  "track": "Talk",
+  "location": "Room 104AB",
+  "displayLocation": "Room 104AB",
+  "start": "2026-05-15T17:15:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "5:15 pm",
+  "speakers": [
+   "40"
+  ],
+  "speakerNames": [
+   "Shir Havron"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "45",
+  "name": "Demystifying the GIL",
+  "track": "Talk",
+  "location": "Grand Ballroom B",
+  "displayLocation": "Grand Ballroom B",
+  "start": "2026-05-15T17:15:00-07:00",
+  "end": "2026-05-15T17:45:00-07:00",
+  "timeStart": "5:15 pm",
+  "speakers": [
+   "47"
+  ],
+  "speakerNames": [
+   "Bruce Eckel"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "173",
+  "name": "Lightning Talks",
+  "track": "Lightning-talks",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-16T17:45:00-07:00",
+  "end": "2026-05-16T18:45:00-07:00",
+  "timeStart": "5:45 pm",
+  "speakers": [
+   "178"
+  ],
+  "speakerNames": [
+   "Hosted by Abigail, Chris, Cristián, and Lorena"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "212",
+  "name": "Expo Hall Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T18:00:00-07:00",
+  "end": "2026-05-15T18:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "161",
+  "name": "Lightning Talks",
+  "track": "Lightning-talks",
+  "location": "Pacific Ballroom - Arena",
+  "displayLocation": "Pacific Ballroom - Arena",
+  "start": "2026-05-15T18:00:00-07:00",
+  "end": "2026-05-15T19:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "204",
+  "name": "Registration Desk Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-14T18:00:00-07:00",
+  "end": "2026-05-14T18:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "197",
+  "name": "Registration Desk Closes",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-13T18:00:00-07:00",
+  "end": "2026-05-13T18:00:00-07:00",
+  "timeStart": "6:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "223",
+  "name": "PyLadies Auction",
+  "track": "Event",
+  "location": "Seaside Ballroom A, Seaside Ballroom B",
+  "displayLocation": "Seaside Ballroom A",
+  "start": "2026-05-16T18:45:00-07:00",
+  "end": "2026-05-16T22:30:00-07:00",
+  "timeStart": "6:45 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": true,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "224",
+  "name": "Open Spaces Rooms Close",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-16T20:00:00-07:00",
+  "end": "2026-05-16T20:00:00-07:00",
+  "timeStart": "8:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "234",
+  "name": "Open Spaces Rooms Close",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T20:00:00-07:00",
+  "end": "2026-05-17T20:00:00-07:00",
+  "timeStart": "8:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "213",
+  "name": "Open Spaces Rooms Close",
+  "track": "Informational",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-15T20:00:00-07:00",
+  "end": "2026-05-15T20:00:00-07:00",
+  "timeStart": "8:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-15T08:00:00-07:00",
+  "name": "Coffee",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-15T08:00:00-07:00",
+  "end": "2026-05-15T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-17T08:00:00-07:00",
+  "name": "Coffee",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T08:00:00-07:00",
+  "end": "2026-05-17T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-16T08:00:00-07:00",
+  "name": "Coffee",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-16T08:00:00-07:00",
+  "end": "2026-05-16T09:00:00-07:00",
+  "timeStart": "8:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "poster-Expo Hall AB-2026-05-17T09:30:00-07:00",
+  "name": "Posters",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break--2026-05-17T10:00:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-17T10:00:00-07:00",
+  "end": "2026-05-17T12:00:00-07:00",
+  "timeStart": "10:00 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T10:05:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-16T10:05:00-07:00",
+  "end": "2026-05-16T10:30:00-07:00",
+  "timeStart": "10:05 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T10:30:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "Room 103ABC, Room 201B, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-15T10:30:00-07:00",
+  "end": "2026-05-15T11:00:00-07:00",
+  "timeStart": "10:30 am",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-17T12:00:00-07:00",
+  "name": "Lunch",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T12:00:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "12:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break--2026-05-13T12:30:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "",
+  "displayLocation": "",
+  "start": "2026-05-13T12:30:00-07:00",
+  "end": "2026-05-13T13:30:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-16T12:30:00-07:00",
+  "name": "Lunch",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-16T12:30:00-07:00",
+  "end": "2026-05-16T13:45:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall AB-2026-05-15T12:30:00-07:00",
+  "name": "Lunch",
+  "track": "Break",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-15T12:30:00-07:00",
+  "end": "2026-05-15T14:00:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Expo Hall C-2026-05-14T12:30:00-07:00",
+  "name": "Lunch",
+  "track": "Break",
+  "location": "Expo Hall C",
+  "displayLocation": "Expo Hall C",
+  "start": "2026-05-14T12:30:00-07:00",
+  "end": "2026-05-14T13:30:00-07:00",
+  "timeStart": "12:30 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-16T15:45:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-16T15:45:00-07:00",
+  "end": "2026-05-16T16:15:00-07:00",
+  "timeStart": "3:45 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "break-Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B-2026-05-15T16:00:00-07:00",
+  "name": "Break",
+  "track": "Break",
+  "location": "Room 201B, Room 103ABC, Room 202A, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B",
+  "displayLocation": "",
+  "start": "2026-05-15T16:00:00-07:00",
+  "end": "2026-05-15T16:30:00-07:00",
+  "timeStart": "4:00 pm",
+  "speakers": [],
+  "speakerNames": [],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": true
+ },
+ {
+  "id": "poster-detail-60",
+  "name": "Beyond “LGTM”: Building a Python Bot That Teaches Teams How to Actually Talk to Each Other",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "64"
+  ],
+  "speakerNames": [
+   "Daaimah Tibrey"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-52",
+  "name": "Breaking the Speed Limit: Fast Statistical Models with Python 3.14, Numba, and JAX",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "55",
+   "56"
+  ],
+  "speakerNames": [
+   "Wenxin Jiang",
+   "Jian Yin"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-35",
+  "name": "Build Complex-Valued Neural Networks with Python",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "37"
+  ],
+  "speakerNames": [
+   "Subhosri Basu"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-84",
+  "name": "Building Your Own Quantum Cloud with Python",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "87"
+  ],
+  "speakerNames": [
+   "Satoyuki Tsukano"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-71",
+  "name": "Building a Self-Correcting Protein Analysis Agent with LangGraph",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "74"
+  ],
+  "speakerNames": [
+   "Jose Felipe Duarte Coronado"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-89",
+  "name": "Building and testing GPU code in open-source projects: lessons from XGBoost",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "93"
+  ],
+  "speakerNames": [
+   "Hyunsu Cho"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-91",
+  "name": "Cost & Energy of Everyday LLM Workloads: A Visual Field Guide for Python Developers",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "95",
+   "96"
+  ],
+  "speakerNames": [
+   "Shivay Lamba",
+   "Suvrakamal Das"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-11",
+  "name": "Data Telling Stories: Understanding the Community Profile with PyLadies Fortaleza - BR",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "11"
+  ],
+  "speakerNames": [
+   "Ariana Cursino"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-86",
+  "name": "Evaluating engineering coherence of interpreted soil units in a complex geology using python",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "90"
+  ],
+  "speakerNames": [
+   "Abhigya Paudyal"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-118",
+  "name": "Everything I Googled During My First PyTorch Project",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "127"
+  ],
+  "speakerNames": [
+   "Jai Chandnani"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-131",
+  "name": "Exposing Greenwashing: Satellite ML for Carbon Credit Verification",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "140"
+  ],
+  "speakerNames": [
+   "Neeraj Pandey"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-95",
+  "name": "Flet: Python GUI for cross-platform apps",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "100"
+  ],
+  "speakerNames": [
+   "Feodor Fitsner"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-85",
+  "name": "From Chaos to Clarity: Automating history clean-up and mono-repo migration with git-filter-repo",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "88",
+   "89"
+  ],
+  "speakerNames": [
+   "Shiva Gaire",
+   "Everest K C"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-113",
+  "name": "From Models to Messages: A Visual Guide to (De)Serialization Patterns in SQLAlchemy ORM",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "121"
+  ],
+  "speakerNames": [
+   "Ritik Mathur"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-12",
+  "name": "From Workstations to Production: How to Implement and Secure Python Solutions Applications (On-Premises and On-Cloud)",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "12"
+  ],
+  "speakerNames": [
+   "Samuel Palacios"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-53",
+  "name": "How Python Powers Modern AI: Comparing PyTorch and JAX Execution Stacks",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "57"
+  ],
+  "speakerNames": [
+   "Yuchuan Gou"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-114",
+  "name": "Memor: Reproducible Structured Memory for LLMs",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "122"
+  ],
+  "speakerNames": [
+   "Sadra Sabouri"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-122",
+  "name": "Privacy-Preserving Natural Language Querying via Schema-Driven Agent Pipelines",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "131"
+  ],
+  "speakerNames": [
+   "Prazy Jindal"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-37",
+  "name": "Python in Rocket Science: Visualisation of Supersonic Combustion",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "39"
+  ],
+  "speakerNames": [
+   "Hassan Saad Ifti"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-8",
+  "name": "Simulating LLM Agents in pytest: Path to Reliable AI Agents and Systems",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "8"
+  ],
+  "speakerNames": [
+   "Vincent Koc"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-62",
+  "name": "Speak Python with Devices",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "66"
+  ],
+  "speakerNames": [
+   "petertc"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-134",
+  "name": "Vocals vs. Vapor: Can Python Catch the Fake?",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "142"
+  ],
+  "speakerNames": [
+   "Manoj Pandey"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-135",
+  "name": "What Broke When Our AI Agents Got Autonomy, and How We Secured Them with Dual LLMs",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "143",
+   "144"
+  ],
+  "speakerNames": [
+   "Satyam Soni",
+   "Rudraksh Karpe"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-129",
+  "name": "Where the Sidewalk Ends: Data-Driven Urban Safety",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "134"
+  ],
+  "speakerNames": [
+   "Fay Shaw"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ },
+ {
+  "id": "poster-detail-14",
+  "name": "epymorph: open-source software for the rapid exploration of spatial disease models and forecasting powered by Python",
+  "track": "Poster",
+  "location": "Expo Hall AB",
+  "displayLocation": "Expo Hall AB",
+  "start": "2026-05-17T09:30:00-07:00",
+  "end": "2026-05-17T13:00:00-07:00",
+  "timeStart": "9:30 am",
+  "speakers": [
+   "13"
+  ],
+  "speakerNames": [
+   "Tyler Coles"
+  ],
+  "preRegistered": false,
+  "spanish": false,
+  "inTimeline": false
+ }
+]

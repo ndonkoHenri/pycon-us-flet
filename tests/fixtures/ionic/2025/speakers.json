@@ -1,0 +1,1460 @@
+[
+ {
+  "id": "184",
+  "name": "Hosted by Abigail, Chris, Cristián, and Lorena",
+  "sessions": [
+   "99",
+   "150",
+   "148",
+   "97"
+  ],
+  "tracks": [
+   "Lightning-talks"
+  ]
+ },
+ {
+  "id": "89",
+  "name": "Anthony Shaw",
+  "sessions": [
+   "1"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "148",
+  "name": "Mike Müller",
+  "sessions": [
+   "15"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "27",
+  "name": "Łukasz Langa",
+  "sessions": [
+   "18",
+   "124"
+  ],
+  "tracks": [
+   "Tutorial",
+   "Talk"
+  ]
+ },
+ {
+  "id": "108",
+  "name": "Neha",
+  "sessions": [
+   "19"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "121",
+  "name": "Matt Harrison",
+  "sessions": [
+   "16"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "81",
+  "name": "Reuven M. Lerner",
+  "sessions": [
+   "5",
+   "57"
+  ],
+  "tracks": [
+   "Tutorial",
+   "Talk"
+  ]
+ },
+ {
+  "id": "29",
+  "name": "Marie Roald",
+  "sessions": [
+   "4",
+   "135"
+  ],
+  "tracks": [
+   "Tutorial",
+   "Talk"
+  ]
+ },
+ {
+  "id": "30",
+  "name": "Yngve Mardal Moe",
+  "sessions": [
+   "4",
+   "135"
+  ],
+  "tracks": [
+   "Tutorial",
+   "Talk"
+  ]
+ },
+ {
+  "id": "70",
+  "name": "Sebastiaan Zeeff",
+  "sessions": [
+   "17"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "7",
+  "name": "Paweł Żal",
+  "sessions": [
+   "14"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "137",
+  "name": "Anjali Datta",
+  "sessions": [
+   "3"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "138",
+  "name": "Deepyaman Datta",
+  "sessions": [
+   "3"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "62",
+  "name": "Ian Quah",
+  "sessions": [
+   "6"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "63",
+  "name": "Bryan Quah",
+  "sessions": [
+   "6"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "149",
+  "name": "Francesco Bruni",
+  "sessions": [
+   "2"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "172",
+  "name": "Bernát Gábor",
+  "sessions": [
+   "31"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "170",
+  "name": "Jeremy Tanner",
+  "sessions": [
+   "30"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "160",
+  "name": "Anaiya Raisinghani",
+  "sessions": [
+   "29"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "178",
+  "name": "Marc Gibbons",
+  "sessions": [
+   "104"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "17",
+  "name": "Rodrigo Silva Ferreira",
+  "sessions": [
+   "107"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "42",
+  "name": "Ron Livne",
+  "sessions": [
+   "103"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "73",
+  "name": "Irina Demeshko",
+  "sessions": [
+   "105"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "74",
+  "name": "Quynh L. Nguyen",
+  "sessions": [
+   "105"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "41",
+  "name": "Zack Weinberg",
+  "sessions": [
+   "106"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "78",
+  "name": "Natalia V. Revollo",
+  "sessions": [
+   "55"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "79",
+  "name": "Carlos E. Berger",
+  "sessions": [
+   "55"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "128",
+  "name": "Alvaro Duran",
+  "sessions": [
+   "51"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "105",
+  "name": "Zhaoheng Li",
+  "sessions": [
+   "53"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "119",
+  "name": "Jack Linke",
+  "sessions": [
+   "54"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "141",
+  "name": "Rushan Jiang",
+  "sessions": [
+   "52"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "103",
+  "name": "Sebastian Arias",
+  "sessions": [
+   "112"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "155",
+  "name": "Kaashif Hymabaccus",
+  "sessions": [
+   "110"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "135",
+  "name": "Josh Weissbock",
+  "sessions": [
+   "109"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "14",
+  "name": "Geoffrey Thomas",
+  "sessions": [
+   "108"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "2",
+  "name": "Jimmy Lai",
+  "sessions": [
+   "111"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "167",
+  "name": "Savannah Ostrowski",
+  "sessions": [
+   "33"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "168",
+  "name": "Doris Lee",
+  "sessions": [
+   "33"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "161",
+  "name": "Samuel Colvin",
+  "sessions": [
+   "35"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "139",
+  "name": "Takanori Suzuki",
+  "sessions": [
+   "59"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "59",
+  "name": "Catherine Nelson",
+  "sessions": [
+   "58"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "124",
+  "name": "David Hewitt",
+  "sessions": [
+   "56"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "77",
+  "name": "Kevin Rodriguez",
+  "sessions": [
+   "60"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "153",
+  "name": "Glyph",
+  "sessions": [
+   "113"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "92",
+  "name": "Apoorv Garg",
+  "sessions": [
+   "116"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "126",
+  "name": "Bryce Adelstein Lelbach",
+  "sessions": [
+   "115"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "90",
+  "name": "Russell Keith-Magee",
+  "sessions": [
+   "114",
+   "26"
+  ],
+  "tracks": [
+   "Talk",
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "69",
+  "name": "Carla Marcela Florida Román",
+  "sessions": [
+   "117"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "23",
+  "name": "Laura López",
+  "sessions": [
+   "65"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "24",
+  "name": "Valentina Ariza",
+  "sessions": [
+   "65"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "44",
+  "name": "Lysandros Nikolaou",
+  "sessions": [
+   "61"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "45",
+  "name": "Nathan Goldbaum",
+  "sessions": [
+   "61"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "129",
+  "name": "Al Sweigart",
+  "sessions": [
+   "64"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "98",
+  "name": "Patrick Hoefler",
+  "sessions": [
+   "62"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "20",
+  "name": "Akshay Agrawal",
+  "sessions": [
+   "63"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "142",
+  "name": "Itamar Turner-Trauring",
+  "sessions": [
+   "157"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "53",
+  "name": "Iyinoluwa Moyosola Oyelade",
+  "sessions": [
+   "156"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "164",
+  "name": "Alowolodu Olufunso Dayo",
+  "sessions": [
+   "156"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "86",
+  "name": "Michael Droettboom",
+  "sessions": [
+   "159"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "87",
+  "name": "Dino Viehland",
+  "sessions": [
+   "159"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "114",
+  "name": "Jonathan Dekhtiar",
+  "sessions": [
+   "158"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "115",
+  "name": "Barry Warsaw",
+  "sessions": [
+   "158"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "83",
+  "name": "Akshay Gupta",
+  "sessions": [
+   "40"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "84",
+  "name": "Raymond Haffar",
+  "sessions": [
+   "40"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "40",
+  "name": "Daniel Anderson",
+  "sessions": [
+   "11"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "39",
+  "name": "Sarah Kaiser",
+  "sessions": [
+   "9"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "61",
+  "name": "Allen  Downey",
+  "sessions": [
+   "23"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "133",
+  "name": "Sam Gross",
+  "sessions": [
+   "39"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "134",
+  "name": "Neil Mitchell",
+  "sessions": [
+   "39"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "71",
+  "name": "Stefanie Molin",
+  "sessions": [
+   "22"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "76",
+  "name": "Ariel Ortiz",
+  "sessions": [
+   "24"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "106",
+  "name": "Rodrigo Girão Serrão",
+  "sessions": [
+   "21",
+   "84"
+  ],
+  "tracks": [
+   "Tutorial",
+   "Talk"
+  ]
+ },
+ {
+  "id": "140",
+  "name": "Trey Hunner",
+  "sessions": [
+   "10"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "21",
+  "name": "Sangarshanan",
+  "sessions": [
+   "25"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "113",
+  "name": "Brett Slatkin",
+  "sessions": [
+   "126"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "9",
+  "name": "Nicholas H.Tollervey",
+  "sessions": [
+   "12"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "101",
+  "name": "Martha Cryan",
+  "sessions": [
+   "13"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "102",
+  "name": "Emily Kellison-Linn",
+  "sessions": [
+   "13"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "171",
+  "name": "Gabriel Kuettel",
+  "sessions": [
+   "38"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "26",
+  "name": "Simon Willison",
+  "sessions": [
+   "8"
+  ],
+  "tracks": [
+   "Tutorial"
+  ]
+ },
+ {
+  "id": "66",
+  "name": "Maryanne Wachter",
+  "sessions": [
+   "125"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "64",
+  "name": "Arthur Pastel",
+  "sessions": [
+   "72"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "65",
+  "name": "Adrien Cacciaguerra",
+  "sessions": [
+   "72"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "107",
+  "name": "Joan Alejandro Esquivel Montero",
+  "sessions": [
+   "127"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "111",
+  "name": "Patrick Smyth",
+  "sessions": [
+   "163"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "112",
+  "name": "Srishti Hegde",
+  "sessions": [
+   "163"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "127",
+  "name": "Alex Monahan",
+  "sessions": [
+   "161"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "16",
+  "name": "Seth Michael Larson",
+  "sessions": [
+   "162",
+   "42"
+  ],
+  "tracks": [
+   "Talk",
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "145",
+  "name": "Pascal Tomecek",
+  "sessions": [
+   "160"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "147",
+  "name": "Dawn Cooper",
+  "sessions": [
+   "74"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "15",
+  "name": "Koudai Aono",
+  "sessions": [
+   "123"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "72",
+  "name": "Riva Quiroga",
+  "sessions": [
+   "75"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "152",
+  "name": "Smera Goel",
+  "sessions": [
+   "73"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "100",
+  "name": "Semona Igama",
+  "sessions": [
+   "71"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "151",
+  "name": "Pablo Galindo Salgado",
+  "sessions": [
+   "130",
+   "133"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "131",
+  "name": "Yury Selivanov",
+  "sessions": [
+   "130"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "33",
+  "name": "Jason Fried",
+  "sessions": [
+   "164"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "95",
+  "name": "Christopher Ariza",
+  "sessions": [
+   "131"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "123",
+  "name": "Daniel Hernández Méndez",
+  "sessions": [
+   "132"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "183",
+  "name": "Steven Lott",
+  "sessions": [
+   "166"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "143",
+  "name": "Jacob Coffee",
+  "sessions": [
+   "167"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "18",
+  "name": "Keith Murray",
+  "sessions": [
+   "129"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "146",
+  "name": "Adam Glustein",
+  "sessions": [
+   "128"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "34",
+  "name": "Zanie Blue",
+  "sessions": [
+   "165"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "46",
+  "name": "Pavithra Eswaramoorthy",
+  "sessions": [
+   "78"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "47",
+  "name": "Frank Elavsky",
+  "sessions": [
+   "78"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "93",
+  "name": "Hynek Schlawack",
+  "sessions": [
+   "77"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "104",
+  "name": "Emin Martinian",
+  "sessions": [
+   "76"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "91",
+  "name": "Paul Ganssle",
+  "sessions": [
+   "79"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "37",
+  "name": "Elizabeth Fuentes",
+  "sessions": [
+   "80"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "169",
+  "name": "Camila Hinojosa Añez",
+  "sessions": [
+   "80"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "13",
+  "name": "Alejandro Núñez Arroyo",
+  "sessions": [
+   "137"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "109",
+  "name": "Zac Hatfield-Dodds",
+  "sessions": [
+   "136"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "163",
+  "name": "Ivona Stojanovic",
+  "sessions": [
+   "133"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "88",
+  "name": "William Woodruff",
+  "sessions": [
+   "134"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "99",
+  "name": "Tadeh Hakopian",
+  "sessions": [
+   "82"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "173",
+  "name": "Michael Winser",
+  "sessions": [
+   "42"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "174",
+  "name": "Mike Fiedler",
+  "sessions": [
+   "42"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "166",
+  "name": "Hillary Sanders",
+  "sessions": [
+   "43"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "3",
+  "name": "Ken Alger",
+  "sessions": [
+   "43"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "11",
+  "name": "Neeraj Pandey",
+  "sessions": [
+   "81"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "54",
+  "name": "Laura Fisher",
+  "sessions": [
+   "83"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "43",
+  "name": "Maria Jose Molina Contreras",
+  "sessions": [
+   "85"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "32",
+  "name": "Pamela Fox",
+  "sessions": [
+   "44"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "158",
+  "name": "Rohit Ganguly",
+  "sessions": [
+   "44"
+  ],
+  "tracks": [
+   "Sponsor Presentation"
+  ]
+ },
+ {
+  "id": "6",
+  "name": "Brandt Bucher",
+  "sessions": [
+   "142"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "181",
+  "name": "Maria Ashna",
+  "sessions": [
+   "140"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "177",
+  "name": "Monica Oyugi",
+  "sessions": [
+   "141"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "67",
+  "name": "Tian Gao",
+  "sessions": [
+   "139"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "185",
+  "name": "Andres Pineda",
+  "sessions": [
+   "143"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "118",
+  "name": "Aditya Mehra",
+  "sessions": [
+   "90"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "80",
+  "name": "Mihir Kavatkar",
+  "sessions": [
+   "87"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "22",
+  "name": "Michael Dahlberg",
+  "sessions": [
+   "88"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "31",
+  "name": "Evan Kohilas",
+  "sessions": [
+   "89"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "12",
+  "name": "Carlos A Aranibar",
+  "sessions": [
+   "91"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "36",
+  "name": "Caleb Madrigal",
+  "sessions": [
+   "146"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "85",
+  "name": "Sanjana Kandi",
+  "sessions": [
+   "145"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "38",
+  "name": "Luis Martinez",
+  "sessions": [
+   "147"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "154",
+  "name": "Jason C. McDonald",
+  "sessions": [
+   "144"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "19",
+  "name": "Mia Bajić",
+  "sessions": [
+   "94"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "28",
+  "name": "Lía Da Silva - Rojas",
+  "sessions": [
+   "96"
+  ],
+  "tracks": [
+   "Charla"
+  ]
+ },
+ {
+  "id": "130",
+  "name": "Peter Sobot",
+  "sessions": [
+   "93"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "97",
+  "name": "Amethyst Reese 🌸",
+  "sessions": [
+   "95"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ },
+ {
+  "id": "50",
+  "name": "Sev Leonard",
+  "sessions": [
+   "92"
+  ],
+  "tracks": [
+   "Talk"
+  ]
+ }
+]
