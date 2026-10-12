@@ -3,14 +3,17 @@
 One theme per colour scheme, identical on Android and iOS (D-10): seeded from the PyCon
 indigo with neutral surfaces, the brand overrides of ``docs/ux.md`` §3.2, the bundled Roboto
 (D-105), left-aligned app-bar titles, per-platform page transitions (D-11) and the system
-bar style of D-113. ``Tokens`` holds the colours Material 3 has no role for (D-24), and
+bar style of D-113. ``Tokens`` holds the colours Material 3 has no role for (D-24), the
+track badges' tonal pairs among them (D-25), and
 ``MARKDOWN_STYLE`` is the one style sheet every feed text uses (D-116).
 
 The high-contrast schemes arrive in P2 (THEME-04, THEME-05); until then the
 ``high_contrast`` flag selects the standard ones.
 """
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from types import MappingProxyType
 
 import flet as ft
 
@@ -30,7 +33,12 @@ FONT_FAMILY = "packages/roboto_fonts/Roboto"
 # Flet builds ColorScheme.fromSeed, neutralises the surfaces, then applies these overrides
 # (F9). Every overridden role comes with its "on" partner, so the contrast test can check
 # the pair (testing-and-quality.md §7.1). The surface roles repeat Flet's neutral ramp
-# (packages/flet/lib/src/utils/theme.dart, neutralizeSurfaces) so the test sees them too.
+# (packages/flet/lib/src/utils/theme.dart, neutralizeSurfaces), and the error roles the
+# seed's own (Material's error palette: tones 40 and 100 in light, 80 and 20 in dark), so
+# the test sees them too: the "Registration required" badge is drawn in error.
+_ERROR_LIGHT = "#BA1A1A"
+_ERROR_DARK = "#FFB4AB"
+
 LIGHT_SCHEME = ft.ColorScheme(
     primary=SEED,
     on_primary="#FFFFFF",
@@ -44,6 +52,8 @@ LIGHT_SCHEME = ft.ColorScheme(
     on_tertiary="#FFFFFF",
     tertiary_container="#FFD7F3",
     on_tertiary_container="#3B0037",
+    error=_ERROR_LIGHT,
+    on_error="#FFFFFF",
     surface="#FFFFFF",
     on_surface="#1B1B1B",
     on_surface_variant="#5E5E5E",
@@ -63,6 +73,8 @@ DARK_SCHEME = ft.ColorScheme(
     on_tertiary="#5E0058",
     tertiary_container="#85007F",
     on_tertiary_container="#FFD7F3",
+    error=_ERROR_DARK,
+    on_error="#690005",
     surface="#121212",
     on_surface="#E7E7E7",
     on_surface_variant="#ABABAB",
@@ -141,40 +153,125 @@ def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
 
 
 @dataclass(frozen=True)
+class BadgeColors:
+    """The colours of one badge (D-25), as ``#RRGGBB``.
+
+    Attributes:
+        text: The label's colour.
+        fill: The pill's colour; None for an outlined badge, whose label and 1 dp
+            border are both ``text``, on whatever surface the badge sits on.
+    """
+
+    text: str
+    fill: str | None = None
+
+
+# ux.md §3.4: light fill, light text, dark fill, dark text for each key of the track
+# registry (conference.toml), spaces and capitals included. Keynotes and plenaries share
+# a pair; breaks and notices share the neutral grey, which a key the palette lacks gets
+# too (a new kind in next year's feed). The fills sit on one CIELAB lightness (87 light,
+# 29 dark) and chroma (22, less where sRGB runs out), about 30 degrees of hue apart, with
+# Summit a quieter slate, so any two fills, the En Español pink and the grey included,
+# differ by a CIE76 distance of 10 or more and read as different colours; each label is
+# its fill's hue at lightness 27 (light) or 90 (dark). Tests check both properties.
+_NEUTRAL = ("#E6E6E6", "#383838", "#404040", "#E0E0E0")
+_TRACK_PAIRS = {
+    "Talk": ("#C7DBFE", "#014271", "#2C4666", "#D9E3F5"),
+    "Tutorial": ("#FFCDD8", "#6C293E", "#643743", "#F6DCE1"),
+    "Keynote": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
+    "Plenary": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
+    "Lightning-talks": ("#E9D9B0", "#4B3F0A", "#4E4422", "#EAE2CF"),
+    "Security": ("#FAD3B5", "#5D3712", "#5B3E26", "#F2DFD1"),
+    "Ai": ("#AAE6D8", "#01493E", "#0F4D43", "#CEE8E1"),
+    "Charla": ("#ABE2FD", "#03465A", "#034B60", "#CFE6F2"),
+    "Poster": ("#FFCFC6", "#6A2D25", "#643932", "#F7DDD8"),
+    "Sponsor Presentation": ("#D4DFB5", "#354511", "#3E4826", "#E0E5D2"),
+    "Open Space": ("#BDE4C3", "#134925", "#2A4C32", "#D6E7D8"),
+    "Summit": ("#BED5E1", "#1E4455", "#3C515B", "#CFE6F3"),
+    "Event": ("#A2E6EC", "#03474C", "#024C52", "#CBE8EB"),
+    "Break": _NEUTRAL,
+    "Informational": _NEUTRAL,
+}
+_SPANISH = ("#FFD7F3", "#5E0058", "#5E0058", "#FFD7F3")  # inverted in dark (D-25)
+
+
+def _badge(pair: tuple[str, str, str, str], *, dark: bool) -> BadgeColors:
+    """Return one palette entry's tonal badge in the light or dark scheme."""
+    light_fill, light_text, dark_fill, dark_text = pair
+    if dark:
+        return BadgeColors(text=dark_text, fill=dark_fill)
+    return BadgeColors(text=light_text, fill=light_fill)
+
+
+@dataclass(frozen=True)
 class Tokens:
     """Colours Material 3 has no role for (D-24), as ``#RRGGBB`` for one scheme.
 
-    Each reads at 4.5:1 or better on every surface of its scheme (tests/test_theme.py).
-    Screens get the current scheme's tokens from ``use_tokens()``.
+    Each text colour reads at 4.5:1 or better on every surface of its scheme, and each
+    badge's label on its fill (tests/test_theme.py). Compared and hashed by value, so
+    they can be a dictionary key. Screens get the current scheme's tokens from
+    ``use_tokens()``.
 
     Attributes:
         live: Happening now, open now.
         warning: Stale data, overlaps, pending scans.
         success: Scan accepted.
         favorite: The filled star.
+        tracks: Each track's badge, by track key (D-25); read it through
+            ``track_badge()``, which knows the fallback.
+        unknown_track: The badge of a track the palette lacks: the neutral grey.
+        spanish: The "En Español" badge (D-25).
+        registration: The "Registration required" badge, outlined in ``error``.
     """
 
     live: str
     warning: str
     success: str
     favorite: str
+    # A read-only mapping is unhashable, so it stays out of the generated __hash__; equal
+    # tokens have equal other fields, so the hash still agrees with ==.
+    tracks: Mapping[str, BadgeColors] = field(hash=False)
+    unknown_track: BadgeColors
+    spanish: BadgeColors
+    registration: BadgeColors
+
+    def track_badge(self, key: str) -> BadgeColors:
+        """Return the badge colours of track ``key``; the neutral grey if it has none."""
+        return self.tracks.get(key, self.unknown_track)
 
 
-LIGHT_TOKENS = Tokens(
+def _tokens(*, dark: bool, live: str, warning: str, favorite: str) -> Tokens:
+    """Build one scheme's tokens: the given colours and that scheme's badges."""
+    return Tokens(
+        live=live,
+        warning=warning,
+        success=live,  # ux.md §3.3: success is live
+        favorite=favorite,
+        # Read-only, as the tokens are frozen; a test checks every pair.
+        tracks=MappingProxyType(
+            {key: _badge(pair, dark=dark) for key, pair in _TRACK_PAIRS.items()}
+        ),
+        unknown_track=_badge(_NEUTRAL, dark=dark),
+        spanish=_badge(_SPANISH, dark=dark),
+        registration=BadgeColors(text=_ERROR_DARK if dark else _ERROR_LIGHT),
+    )
+
+
+LIGHT_TOKENS = _tokens(
+    dark=False,
     live="#1B6E35",
     warning="#7A5900",
-    success="#1B6E35",
     favorite="#A1009A",  # the light tertiary (tested)
 )
-"""Tokens for the light scheme (ux.md §3.3)."""
+"""Tokens for the light scheme (ux.md §3.3, §3.4)."""
 
-DARK_TOKENS = Tokens(
+DARK_TOKENS = _tokens(
+    dark=True,
     live="#8BD89A",
     warning="#F2C14E",
-    success="#8BD89A",
     favorite="#FFACEB",  # the dark tertiary (tested)
 )
-"""Tokens for the dark scheme (ux.md §3.3)."""
+"""Tokens for the dark scheme (ux.md §3.3, §3.4)."""
 
 
 def build_tokens(*, dark: bool, high_contrast: bool) -> Tokens:

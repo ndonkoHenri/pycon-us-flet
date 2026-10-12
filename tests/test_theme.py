@@ -1,14 +1,18 @@
-"""Tests for the themes, tokens and Markdown style sheet (D-22..D-26, D-33, D-113, D-116)."""
+"""Tests for the themes, tokens, badges and Markdown style sheet (D-22..D-26, D-33, D-113,
+D-116)."""
 
 import ast
 import dataclasses
+import itertools
+import math
 import re
 from pathlib import Path
+from types import MappingProxyType
 
 import flet as ft
 import pytest
 
-from pycon_us import theme
+from pycon_us import config, theme
 
 # Background roles and their text partners. A role the theme leaves to the seed is None in
 # both columns; Flutter computes it on the Dart side, so it is checked on screen instead
@@ -68,6 +72,9 @@ FLET_THEME_DART = (
 
 AA_TEXT = 4.5
 
+TEXT_TOKENS = ("live", "warning", "success", "favorite")
+"""The tokens that are a text colour on the surfaces; the others are badges."""
+
 SRC = Path(__file__).resolve().parents[1] / "src"
 
 
@@ -83,6 +90,27 @@ def luminance(hex_color: str) -> float:
 def contrast_ratio(a: str, b: str) -> float:
     lighter, darker = sorted((luminance(a), luminance(b)), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def cielab(hex_color: str) -> tuple[float, float, float]:
+    """CIELAB (D65) of #RRGGBB, from linear sRGB through XYZ."""
+    channels = [int(hex_color.lstrip("#")[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    r, g, b = (
+        c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels
+    )
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+    fx, fy, fz = (
+        t ** (1 / 3) if t > 216 / 24389 else (24389 / 27 * t + 16) / 116
+        for t in (x, y, z)
+    )
+    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+
+
+def color_distance(a: str, b: str) -> float:
+    """CIE76 colour difference: about 2.3 is just noticeable, 10 clearly different."""
+    return math.dist(cielab(a), cielab(b))
 
 
 def scheme(dark: bool) -> ft.ColorScheme:
@@ -113,6 +141,19 @@ def test_contrast_ratio_matches_known_values(
     background: str, foreground: str, ratio: float
 ) -> None:
     assert contrast_ratio(background, foreground) == pytest.approx(ratio, abs=0.01)
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "distance"),
+    [
+        ("#FFFFFF", "#000000", 100.0),
+        ("#FFFFFF", "#FFFFFF", 0.0),
+        ("#808080", "#FF0000", 104.6),  # red is L 53.24, a 80.09, b 67.20
+        ("#FFDAD6", "#FFD7F3", 16.4),  # error_container against the En Español pink
+    ],
+)
+def test_color_distance_matches_known_values(a: str, b: str, distance: float) -> None:
+    assert color_distance(a, b) == pytest.approx(distance, abs=0.1)
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
@@ -172,10 +213,7 @@ def test_text_colours_read_at_aa_on_every_neutral_surface(dark: bool) -> None:
         "on_surface": hex_role(color_scheme, "on_surface"),
         "on_surface_variant": hex_role(color_scheme, "on_surface_variant"),
         "primary (links)": hex_role(color_scheme, "primary"),
-        **{
-            f"tokens.{name}": value
-            for name, value in dataclasses.asdict(tokens).items()
-        },
+        **{f"tokens.{name}": getattr(tokens, name) for name in TEXT_TOKENS},
     }
     for name, text in texts.items():
         for surface in NEUTRAL_SURFACES[dark]:
@@ -256,9 +294,118 @@ def test_favorite_token_is_the_tertiary_role(dark: bool) -> None:
     assert tokens.success == tokens.live
 
 
+BADGE_TOKENS = ("tracks", "unknown_track", "spanish", "registration")
+
+YEARS = sorted(
+    int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
+)
+
+
+def badges(tokens: theme.Tokens) -> dict[str, theme.BadgeColors]:
+    """Every badge the tokens hold, by a name for the failure message."""
+    return {
+        **{f"track {key!r}": colors for key, colors in tokens.tracks.items()},
+        "unknown track": tokens.unknown_track,
+        "En Español": tokens.spanish,
+        "Registration required": tokens.registration,
+    }
+
+
+def test_every_token_is_a_checked_text_colour_or_badge() -> None:
+    # A new token must join one of the contrast tests, not slip past both.
+    names = {field.name for field in dataclasses.fields(theme.Tokens)}
+    assert names == {*TEXT_TOKENS, *BADGE_TOKENS}
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_badge_reads_at_aa(dark: bool) -> None:
+    # D-25: a tonal badge's label on its fill; an outlined badge's label sits on the
+    # surface itself, so on every surface of the neutral ramp. WCAG 2.x formula.
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    for name, colors in badges(tokens).items():
+        backgrounds = [colors.fill] if colors.fill else NEUTRAL_SURFACES[dark]
+        for background in backgrounds:
+            ratio = contrast_ratio(background, colors.text)
+            assert ratio >= AA_TEXT, (name, background, colors.text, round(ratio, 2))
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_badge_fill_differs_from_every_other(dark: bool) -> None:
+    # The label carries the meaning (D-33), but two tracks of near-equal colour would
+    # look like one, and En Español beside a track like part of it (#181's review). So
+    # any two fills, the grey of breaks included, differ by a CIE76 distance of 10.
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    fills = {
+        colors.fill: name for name, colors in badges(tokens).items() if colors.fill
+    }
+    for a, b in itertools.combinations(fills, 2):
+        distance = color_distance(a, b)
+        assert distance >= 10, (fills[a], fills[b], round(distance, 1))
+
+
+@pytest.mark.parametrize("year", YEARS)
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_track_of_every_year_has_its_own_badge(dark: bool, year: int) -> None:
+    # Palette keys must equal the registry's keys exactly, spaces and capitals included
+    # (THEME-08), or a track would fall back to the grey.
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    keys = {track.key for track in config.load_year(year).conference.tracks}
+    assert keys - tokens.tracks.keys() == set()
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_notices_summits_events_and_breaks_get_colours(dark: bool) -> None:
+    # Ionic left them grey with no entry (SCHED-20); breaks and notices share the grey.
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    grey = tokens.unknown_track
+    assert tokens.track_badge("Informational") == tokens.track_badge("Break") == grey
+    assert tokens.track_badge("Summit") != grey
+    assert tokens.track_badge("Event") != grey
+    assert tokens.track_badge("Summit") != tokens.track_badge("Event")
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_an_unknown_track_gets_the_neutral_badge(dark: bool) -> None:
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    assert tokens.track_badge("Workshop") == tokens.unknown_track
+    assert tokens.unknown_track.fill is not None
+
+
+def test_en_espanol_is_the_tonal_pair_inverted_in_dark() -> None:
+    # D-25: #FFD7F3 / #5E0058 (10.1:1), instead of Ionic's #DD04D2 (4.18:1).
+    light, dark = theme.LIGHT_TOKENS.spanish, theme.DARK_TOKENS.spanish
+    assert light == theme.BadgeColors(text="#5E0058", fill="#FFD7F3")
+    assert dark == theme.BadgeColors(text="#FFD7F3", fill="#5E0058")
+    ratio = contrast_ratio(light.text, light.fill or "")
+    assert ratio == pytest.approx(10.06, abs=0.01)
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
+    registration = theme.build_tokens(dark=dark, high_contrast=False).registration
+    assert registration == theme.BadgeColors(text=hex_role(scheme(dark), "error"))
+    assert registration.fill is None  # outlined
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_error_roles_are_the_seeds_own(dark: bool) -> None:
+    # Declared so the contrast test sees what Flutter's fromSeed draws (Material's error
+    # palette, hue 25); the rendered colour was checked on screen (#80).
+    expected = ("#FFB4AB", "#690005") if dark else ("#BA1A1A", "#FFFFFF")
+    color_scheme = scheme(dark)
+    assert (color_scheme.error, color_scheme.on_error) == expected
+
+
 def test_tokens_are_frozen() -> None:
     with pytest.raises(dataclasses.FrozenInstanceError):
         theme.LIGHT_TOKENS.live = "#000000"  # type: ignore[misc]
+    with pytest.raises(TypeError):  # the palette too
+        theme.LIGHT_TOKENS.tracks["Talk"] = theme.BadgeColors("#000000")  # type: ignore[index]
+    # Hashable by value although the palette is a mapping: tokens can be a dict key.
+    palette = MappingProxyType(dict(theme.LIGHT_TOKENS.tracks))
+    rebuilt = dataclasses.replace(theme.LIGHT_TOKENS, tracks=palette)
+    assert rebuilt == theme.LIGHT_TOKENS
+    assert hash(rebuilt) == hash(theme.LIGHT_TOKENS)
 
 
 def test_tokens_context_defaults_to_the_light_tokens() -> None:
