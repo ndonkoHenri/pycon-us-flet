@@ -32,7 +32,10 @@ def main(page: ft.Page) -> None:
                         f"Version {pycon_us.__version__}",
                         theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                     ),
-                    ft.Text("Not an official PSF app."),
+                    ft.Text(
+                        "Not an official PSF app.",
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                    ),
                 ]
             )
         )
