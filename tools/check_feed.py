@@ -14,7 +14,8 @@ a record the parser skips breaks "no session is lost". Keys the recorded feeds
 (testing-and-quality.md §12).
 
 Then it says whether next year's feed is published, at this year's URL with the next year
-in it (D-05's pattern). That line never fails the check: a 404 means "not yet".
+in it (D-05's pattern). That line never fails the check: a 404, or a redirect (to this
+year's feed, say), means "not yet".
 
 It exits with 0 when every checked year passes and 1 otherwise; a failed scheduled run
 emails the owner, which is the alert (docs/development.md §7.3).
@@ -127,6 +128,11 @@ def next_year_status(
         response = _get(url, transport)
     except httpx.HTTPError as error:
         return f"{following}: could not fetch {url}: {error}"
+    if response.history:  # an unpublished year may redirect to this year's feed
+        return (
+            f"{following}: {url} redirects to {response.url} "
+            f"(HTTP {response.history[0].status_code}); not published yet"
+        )
     if response.status_code == httpx.codes.NOT_FOUND:
         return f"{following}: not published yet (HTTP 404 at {url})"
     if response.status_code != httpx.codes.OK:

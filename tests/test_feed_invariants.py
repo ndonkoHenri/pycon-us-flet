@@ -73,7 +73,11 @@ def test_rooms_and_sessions_agree(year: int) -> None:
 
 def test_every_invariant_has_a_test_here(year: int) -> None:
     """The weekly check runs ``INVARIANTS``; each of them must also guard the fixtures."""
-    tests = {name.removeprefix("test_") for name in globals()}
+    tests = {
+        name.removeprefix("test_")
+        for name, value in globals().items()
+        if name.startswith("test_") and callable(value)
+    }
     assert {check.__name__ for check in feed_invariants.INVARIANTS} <= tests
 
 

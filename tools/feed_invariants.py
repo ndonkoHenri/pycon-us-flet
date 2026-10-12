@@ -15,7 +15,7 @@ import re
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -370,9 +370,15 @@ def _one_row_a_day(
     problems = [
         f"{day} has {count} {name} rows" for day, count in row_days.items() if count > 1
     ]
-    if set(row_days) != slot_days:
-        problems.append(f"{name} rows are not on exactly the days with {name} slots")
+    if missing := sorted(slot_days - set(row_days)):
+        problems.append(f"{name} rows missing on {_dates(missing)}")
+    if extra := sorted(set(row_days) - slot_days):
+        problems.append(f"{name} rows without a {name} slot on {_dates(extra)}")
     return problems
+
+
+def _dates(days: list[date]) -> str:
+    return ", ".join(day.isoformat() for day in days)
 
 
 def outline(data: ConferenceData, zone: ZoneInfo) -> dict[str, object]:
