@@ -20,6 +20,7 @@ from tests.ui.helpers import (
     remote,
     screenshot,
     tap_back_arrow,
+    tap_first_text,
     tap_id,
     tap_text,
     wait_for_id,
@@ -41,15 +42,17 @@ TABS = [  # (the bar's destination, its root's title), in the bar's order (D-13)
 
 
 @cache
-def first_speaker() -> str:
-    """The name the Speakers page lists first: the directory sorted as search folds.
+def first_speakers() -> list[str]:
+    """The names the Speakers page lists first: the directory sorted as search folds.
 
-    Taken from the bundled snapshot, which the app shows until a refresh replaces it
-    with the same year's feed.
+    Taken from the bundled snapshot. On a device with a network, a refresh replaces it
+    with the live feed, whose speakers change between snapshot refreshes, so the flow
+    taps whichever of the first few is on screen. P1-30's ``fresh_start()`` will serve
+    a recorded feed instead.
     """
     year = load_year()
     data = process(year.read_snapshot().raw, year.feed_settings)
-    return min((speaker.name for speaker in data.speakers.values()), key=fold)
+    return sorted((speaker.name for speaker in data.speakers.values()), key=fold)[:5]
 
 
 async def test_shell_starts(flet_app: ftt.FletTestApp) -> None:
@@ -84,7 +87,7 @@ async def test_shell_starts(flet_app: ftt.FletTestApp) -> None:
     await wait_for_tooltip(t, "Back")  # pushed Views: the back arrow, no bar (D-144)
     assert (await t.find_by_semantics_identifier("app.nav.more")).count == 0
     await screenshot("04-speakers")
-    await tap_text(t, first_speaker())
+    await tap_first_text(t, first_speakers())
     await wait_for_text(t, "Speakers", gone=True)
     await screenshot("05-speaker")
 

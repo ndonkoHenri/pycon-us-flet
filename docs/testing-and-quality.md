@@ -334,9 +334,10 @@ The machine records each row's attribution at enqueue time and compares it in an
 | Helper | What it does |
 |---|---|
 | `remote(flet_app)` | The `RemoteTester`; fails outside device mode |
-| `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out.png` and fails with what it saw |
+| `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out.png` if the device still answers, and fails with what it saw |
 | `wait_for_id`, `wait_for_text`, `wait_for_tooltip` | `wait_for` with an identifier, an exact text or a tooltip |
 | `tap(t, finder)`, `tap_id`, `tap_text` | Tap the first match once it is on screen, then pump once |
+| `tap_first_text(t, texts)` | Tap whichever of these texts shows first: for rows a feed refresh may change, such as the first speakers |
 | `tap_back_arrow(t)`, `press_system_back(t)` | Back, as above |
 | `screenshot(name)` | `build/ui/<platform>/<name>.png` through `adb exec-out screencap -p` or `xcrun simctl io <udid> screenshot`, not `take_screenshot` (§5.1) |
 
@@ -381,7 +382,7 @@ About eight journeys, added in the phase that builds them. Each runs on the Andr
 
 | # | Test | Phase | Journey and assertions | Ids / D |
 |---|---|---|---|---|
-| Shell | `test_shell_starts` | P0 | The test build starts on Now (`now.title`) with the five `app.nav.*` tabs; each tab shows its root; the Schedule stub shows its `schedule.source` label and the first conference day; More → Speakers (a pushed page, no bar) → the first speaker (a drill level); the back arrow pops one level at a time to the More root and its bar; on Android the Back key pops a push and takes the More root to Now; no Flutter error. No offline assertion: the feed-URL override comes with the Developer screen (P1-28) | SHELL-03, SHELL-05, NEW-03, D-17, D-141, D-144 |
+| Shell | `test_shell_starts` | P0 | The test build starts on Now (`now.title`) with the five `app.nav.*` tabs; each tab shows its root; the Schedule stub shows its `schedule.source` label and the first conference day; More → Speakers (a pushed page, no bar) → one of the snapshot's first five speakers (a drill level; a networked device lists the live feed's, P1-30's `fresh_start()` makes it a recorded one); the back arrow pops one level at a time to the More root and its bar; on Android the Back key pops a push and takes the More root to Now; no Flutter error. No offline assertion: the feed-URL override comes with the Developer screen (P1-28) | SHELL-03, SHELL-05, NEW-03, D-17, D-141, D-144 |
 | F1 | `test_start_offline_shows_schedule` | P1 (after P1-08, P1-28) | With an unreachable feed URL set in Developer, the bundled rows render and no error screen appears; the status strip says offline and Refresh keeps the rows | NEW-03, DATA-02, SCHED-14, D-32, D-39 |
 | F2 | `test_switch_days_keeps_selection` | P1 | Third day tab shows its rows; session → Back keeps the day | DATA-17, SCHED-01, D-18 |
 | F3 | `test_search_finds_session_speaker_room` | P1 | An accent-folded query finds a session, a speaker and a room on different days; result → Back keeps the query | NEW-02, D-19, D-46 |

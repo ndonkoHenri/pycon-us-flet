@@ -11,7 +11,7 @@ import asyncio
 import os
 import shutil
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 
 import flet as ft
@@ -69,10 +69,11 @@ async def wait_for(
     deadline = time.monotonic() + timeout
     while True:
         finder = await find()
-        if finder.count == expected if expected is not None else finder.count > 0:
+        matched = finder.count > 0 if expected is None else finder.count == expected
+        if matched:
             return finder
         if time.monotonic() > deadline:
-            await screenshot("timed-out")  # what the screen showed instead
+            await screenshot_on_failure()
             wanted = "at least 1" if expected is None else str(expected)
             raise AssertionError(
                 f"{what}: {finder.count} on screen, not {wanted}, after {timeout} s"
@@ -131,6 +132,21 @@ async def tap_text(t: RemoteTester, text: str) -> None:
     await tap(t, await wait_for_text(t, text))
 
 
+async def tap_first_text(t: RemoteTester, texts: Sequence[str]) -> None:
+    """Tap the first of these texts that is on screen, once one of them is.
+
+    For rows a feed refresh may change: the flow passes a few likely ones, so a new
+    or a withdrawn entry does not fail it.
+    """
+    assert texts, "at least one text"
+
+    async def find() -> Finder:
+        finders = [await t.find_by_text(text) for text in texts]
+        return next((finder for finder in finders if finder.count), finders[-1])
+
+    await tap(t, await wait_for(t, find, f"any of the texts {list(texts)!r}"))
+
+
 async def tap_back_arrow(t: RemoteTester) -> None:
     """Tap the app bar's back arrow, the Material one on both platforms (D-10).
 
@@ -168,6 +184,18 @@ async def screenshot(name: str) -> None:
         path.write_bytes(await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p"))
     else:
         await run("xcrun", "simctl", "io", DEVICE, "screenshot", str(path))
+
+
+async def screenshot_on_failure() -> None:
+    """Save ``timed-out.png``, what the screen showed instead, if the device lets us.
+
+    A step often times out because the app or the device went away, and then ``adb``
+    or ``simctl`` fails too: that failure must not hide the step's own message.
+    """
+    try:
+        await screenshot("timed-out")
+    except (AssertionError, OSError) as error:
+        print(f"No timed-out.png: {error}")
 
 
 async def run(*command: str) -> bytes:
