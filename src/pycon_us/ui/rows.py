@@ -271,7 +271,9 @@ def _ExternalLinkTile(
     return ft.Row(
         [
             ft.Container(row, expand=True),
-            ft.Container(copy_button, padding=ft.Padding.only(right=8)),
+            # 12 dp centres the 24 dp icon of the 48 dp button where a ListTile's
+            # trailing icon sits (24 dp from the edge), so the column of icons lines up.
+            ft.Container(copy_button, padding=ft.Padding.only(right=12)),
         ],
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
