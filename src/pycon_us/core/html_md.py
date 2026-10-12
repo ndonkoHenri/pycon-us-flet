@@ -211,7 +211,9 @@ def _escape_line_start(line: str) -> str:
 
 
 def _destination(url: str) -> str:
-    return quote(url, safe=_DESTINATION_SAFE)
+    # JSON can carry a lone surrogate (the escape \ud800), which strict UTF-8 cannot
+    # encode; conversion must never raise (D-130), so it is percent-encoded like any byte.
+    return quote(url, safe=_DESTINATION_SAFE, errors="surrogatepass")
 
 
 # Blocks
