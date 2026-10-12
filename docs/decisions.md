@@ -249,7 +249,7 @@
   - Secure keys: `pycon.api_key`, `pycon.api_secret`.
   - Files in the data directory: `feed-<year>.json`, `changes-<year>.json`, `outbox.db`.
 - **Year data:** `src/pycon_us/data/<year>/` holds `conference.toml`, `content.toml`, `map.toml` and `conference.json` (the snapshot). Assets live in `src/assets/` (~~`fonts/`,~~ `icons/`, `maps/<year>/`); the Roboto files live in the Flutter package `flutter_packages/roboto_fonts/` (D-105).
-- **Tools:** `tools/mock_api/` (`handlers.py`, `server.py`, `transport.py`, `badges.py`, `README.md`), `tools/update_snapshot.py`, `tools/check_feed.py`, `tools/capture_ionic_reference/`, `tools/check_matrix.py`.
+- **Tools:** `tools/mock_api/` (`handlers.py`, `server.py`, `transport.py`, `badges.py`, `README.md`), `tools/update_snapshot.py`, `tools/check_feed.py` with `tools/feed_invariants.py` (the invariants it shares with the tests), `tools/capture_ionic_reference/`, `tools/check_matrix.py`.
 - **Flet pin (D-81):** `.flet-ref` (committed; the pinned flet-dev/flet commit SHA) and `.flet-src` (git-ignored checkout at that SHA), used through `[tool.uv.sources]` and `[tool.flet.dev_packages]` until 1.1.0 is on PyPI.
 - **Tests.**
   - Unit tests: `tests/test_<module>.py`; UI flows: `tests/ui/`.

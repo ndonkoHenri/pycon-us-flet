@@ -10,6 +10,7 @@ from pycon_us.config import load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.rules import FeedSettings
+from tools.feed_invariants import ProcessedFeed, processed_feed
 
 FEEDS = Path(__file__).parent / "fixtures" / "feeds"
 YEARS = [2025, 2026]
@@ -33,6 +34,11 @@ def settings(year: int) -> FeedSettings:
 def processed(year: int) -> ConferenceData:
     """The recorded feed, processed. Not cached: each machine zone processes it again."""
     return process(recorded(year), settings(year))
+
+
+def recorded_feed(year: int) -> ProcessedFeed:
+    """The recorded feed with its JSON, model and year data, for the invariants."""
+    return processed_feed(recorded(year), load_year(year))
 
 
 def changed(year: int, change: Callable[[dict[str, Any]], object]) -> bytes:

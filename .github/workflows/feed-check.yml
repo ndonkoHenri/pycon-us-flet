@@ -1,0 +1,56 @@
+# Run our parser and the feed invariants on the live public feed every week (D-84, DEV-08;
+# docs/development.md §7.3). A failed scheduled run emails the owner: that is the alert.
+# It also reports, without failing, whether next year's feed is published.
+name: Feed check
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"    # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time. Every run checks the same live feed, so a run started while another
+# is pending may replace it; a running check is never cancelled, so its result still counts.
+concurrency:
+  group: feed-check
+  cancel-in-progress: false
+
+env:
+  UV_LOCKED: "1"            # every uv command fails if uv.lock does not match pyproject.toml
+
+jobs:
+  feed:
+    name: Parse the public feed
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      # Until Flet 1.1.0 is on PyPI (D-81, docs/development.md §2.2): uv sync needs .flet-src.
+      - name: Read the Flet pin
+        id: flet
+        run: echo "ref=$(cat .flet-ref)" >> "$GITHUB_OUTPUT"
+      - name: Check out Flet at the pin
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: flet-dev/flet
+          ref: ${{ steps.flet.outputs.ref }}
+          path: .flet-src
+          sparse-checkout: sdk/python   # uv.lock references every package of this uv workspace
+          sparse-checkout-cone-mode: true
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Check the public feed
+        run: uv run python -m tools.check_feed
