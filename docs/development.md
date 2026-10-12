@@ -63,9 +63,9 @@
 | What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`. | `CLI/commands/build_base.py:2598-2641` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
 | Deep links on mobile | Read only from `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]`. Each needs both `scheme` and `host`. | `CLI/commands/build_base.py:1422-1427, 2970-2982`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; F16 |
-| Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac; the runner is P0-06's check (#54). | `CLI/commands/build_base.py:1144-1153, 1263-1266` |
+| Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1144-1153, 1263-1266` |
 | Logs | Android: logcat tag `flet.python`. iOS: unified log, sender `dart_bridge`. Both also write `console.log`. | `DOCS/publish/android.md` and `DOCS/publish/ios.md`, "Reading your app's output" |
-| flet-build-action | Runs `uv run flet --version --json`, then `flet build <target> --yes --verbose --output …`, then archives. It never signs or uploads. | `ACTION/action.yml`; `ACTION/scripts/flet_action.py:112-232` |
+| flet-build-action | Runs `uv run flet --version --json`, then `flet build <target> --yes --verbose --output …`, then archives. It never signs or uploads. `build-android.yml` runs `flet build` directly instead (§7.4). | `ACTION/action.yml`; `ACTION/scripts/flet_action.py:112-232` |
 
 ### 2.2 Flet from source until 1.1.0 (D-81)
 
@@ -601,26 +601,37 @@ jobs:
 | Check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref` into `.flet-src`: the whole tree at depth 1, not sparse | `flet build` needs the template, `.fvmrc` and the Dart package `packages/flet`, which it adds to `pubspec.yaml` as a path dependency (§2.2). Delete the step with the 1.1.0 pin. |
 | Set up uv | `astral-sh/setup-uv`, `version: "0.12.x"`, `enable-cache: false` | The same uv line as `ci.yml` (§7.2). No cache: a tag build starts from clean inputs, and `uv sync` takes seconds. |
 | Install | `uv sync --locked` | D-75 |
+| Free disk space | `sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL` | The build fills about 11 GB (Flutter, the NDK, Gradle's caches) and the runner starts with about 13 GB free: the first run ended with 1.9 GB left. These preinstalled toolchains are never used here. |
 | Build the APK | `uv run flet build apk --arch arm64-v8a --build-number <count> --yes -v`, with `FLET_CLI_NO_RICH_OUTPUT=1` | The command of §8.1 with D-106's ABI. `--yes` lets flet-cli download Flutter (the version in `.flet-src/.fvmrc`) into `~/flutter`; it uses the runner's JDK 17 (`JAVA_HOME`) and Android SDK (`ANDROID_HOME`). `-v` and plain output keep the log useful when a build fails. |
 | Name the APK | `build/apk/pycon-us.apk` → `pycon-us-<count>-<short sha>-arm64-v8a.apk` | Downloads from different runs don't collide. |
-| Upload the APK | `actions/upload-artifact`, `archive: false`, `retention-days: 14` | The APK is already compressed, so it is uploaded as-is and the artifact takes the file's name. 14 days, because artifact storage is small (§7.1). |
+| Upload the APK | `actions/upload-artifact`, artifact named like the file, `compression-level: 0`, `retention-days: 14` | Zipped (the default), because `gh run download` cannot fetch an unzipped artifact: it unzips the APK itself and fails (cli/cli#13012, seen on the first run). No compression, because an APK is already compressed. 14 days, because artifact storage is small (§7.1). |
 
-**Measured** on the first run ({{RUN}}, uncached, Flet `15854a0ac`):
-{{MEASURED}}
+**Measured** in #54 (two runs, no caches, Flet `15854a0ac`, `ubuntu-latest`: 2 vCPUs, 7.9 GB RAM, 3 GB swap):
+
+| | First run | Last run, with Free disk space |
+|---|---|---|
+| Job | 12 min 34 s | 9 min 33 s |
+| Flutter 3.47.7 download and extract | 67 s | 50 s |
+| `flet build apk` in all | 12 min 5 s | 8 min 45 s, of which Gradle's `assembleRelease` 5 min 44 s (it also downloads NDK r28c and CMake 3.22.1) |
+| Memory with `-Xmx4G` | at least 1,067 MB available; 45 MB of swap used | at least 1,888 MB available; 397 MB of swap used |
+| Free disk | 13 GB before, 1.9 GB after | 24 GB before, 13 GB after (Free disk space took 23 s) |
+| Artifact | 56,208,360 bytes (`versionCode` 14) | 56,208,552 bytes (`versionCode` 16) |
+
+So the `-Xmx4G` heap fits the runner, with about 1 GB to spare. Both APKs installed and started on the `flet_probe_api34` emulator. The two runs signed with different debug keys, so the second installed only after `adb uninstall`.
 
 **Why not `flet-dev/flet-build-action`.** It was the plan, but running the documented command directly is simpler and correct under the source pin (`ACTION/action.yml` at `v1`):
 - Its own `setup-uv` step installs the latest uv, which would replace the `0.12.x` line we keep with `uv_build` (§7.2).
 - Its Flet download cache is keyed on the reported Flet version, a constant `0.1.0` under the source pin (§2.2). After a pin bump it would restore the previous pin's downloads unless someone remembers to run once with `cache: false` (the S5 caveat).
-- It zips the APK into `flet-apk.zip`, which saves nothing on an already-compressed file.
+- It wraps the APK in its own `flet-apk.zip` and names it the same in every run.
 - P0-06 asks for the same commands as this document, and one `flet build apk` line is exactly that.
 
-When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another look: its Flutter SDK cache would save {{FLUTTER}} per run.
+When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another look: its Flutter SDK cache would save about a minute per run.
 
-**No caches.** The Flutter SDK download is the slow part of the build, but the workflow runs rarely, and a cache would be one more key to keep right across pin bumps.
+**No caches.** On the runner the Flutter download takes about a minute and Gradle most of the rest; the workflow runs rarely, and each cache would be one more key to keep right across pin bumps. So the S5 caveat (a cache keyed on the constant `0.1.0` needs one uncached run after a pin bump) does not apply: every run is uncached.
 
-**This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which differs from your machine's and can change between runs.
-- Download it with `gh run download <run-id>` (or from the run page), then run `adb install pycon-us-<…>.apk`, or open the file on the phone.
-- Installing over a build signed with another key fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.pyconus` first, which loses the app's data.
+**This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which differs from your machine's and changes with every run.
+- Download it with `gh run download <run-id>`, which unzips it into a folder named after the APK, then run `adb install <that folder>/pycon-us-<…>.apk`. The run page gives you the zip; unzip it first.
+- So installing over an earlier CI build, or over a local build, fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.pyconus` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
 
 ### 7.5 Not in CI: iOS
@@ -785,7 +796,7 @@ S5 closed the rows it answered: builds from the `.flet-src` setup (§2.2, §8), 
 |---|---|---|
 | ITMS-91053 on the first TestFlight upload (§8.2) | #121 | Testers get Android builds; the iPhone runs `flet debug ios` once it has a development certificate |
 | An iPhone development certificate and profiles; the release numbers on the iPhone | #121 | Simulators only for iOS (§5.3) |
-| `build-android.yml` on a GitHub runner: the `-Xmx4G` heap, `--arch arm64-v8a`, the first run's time | P0-06 (#54) | Raise the heap, or move the override to a CI-only `~/.gradle/gradle.properties` |
+| `build-android.yml` on a GitHub runner: the `-Xmx4G` heap, `--arch arm64-v8a`, the first run's time | P0-06 (#54) | **Answered** by #54: the heap fits `ubuntu-latest` (7.9 GB; at least 1 GB available, swap under 400 MB), and a clean run takes about 9.5-12.5 minutes (§7.4) |
 | A Flet companion app in the stores that speaks 1.1 | Flet 1.1.0 release | The companion client from `.flet-src/client` (§5.2), or `flet debug` |
 | App identity: name, icon, bundle id, URL scheme | O-4 | Placeholders as in §3.1 |
 | Distribution routes | O-5 | Internal only (D-85) |
