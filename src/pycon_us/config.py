@@ -5,14 +5,18 @@
 missing key, a wrong type or a broken rule fails at load time with a ``YearDataError`` that
 names the file, the key and the problem. Years, dates, names and URLs live in the data
 files, never in code; rolling over is a new ``data/<year>/`` folder and a new ``YEAR``.
+
+The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
+``YearData.read_snapshot()`` (D-38, NEW-03).
 """
 
 import dataclasses
 import re
 import tomllib
+import types
 import typing
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
@@ -27,7 +31,14 @@ YEAR = 2026
 """The conference year the app shows (D-05)."""
 
 DATA_DIR = Path(__file__).parent / "data"
-"""Where the per-year folders live; ``flet build`` bundles it with the package."""
+"""Where the per-year folders live; ``flet build`` bundles it with the package.
+
+A path relative to this module, because ``flet build`` copies ``src/`` into the app rather
+than installing it (F15): the files sit next to the code on the phone too.
+"""
+
+SNAPSHOT_FILE = "conference.json"
+"""The feed snapshot's name in a year folder (D-38, NEW-03)."""
 
 TRACK_GROUPS = ("talks", "hands-on", "community", "logistics")
 """The filter-sheet groups a track can belong to, in display order (DATA-14)."""
@@ -39,6 +50,7 @@ _TYPE_NAMES = {
     int: "an integer",
     bool: "true or false",
     date: "a date",
+    datetime: "a date and time",
 }
 
 
@@ -84,6 +96,9 @@ class ConferenceInfo:
     site_url: str
     feed_url: str
     tracks: tuple[Track, ...]
+    snapshot_captured_at: datetime | None = None
+    """When ``tools/update_snapshot.py`` fetched the bundled snapshot; aware. None when the
+    year bundles no snapshot (only the active year needs one)."""
 
     @property
     def zone(self) -> ZoneInfo:
@@ -132,12 +147,34 @@ class Content:
     lightning_talks_location: str = ""
 
 
+@dataclass(frozen=True, eq=False)
+class Snapshot:
+    """The feed snapshot bundled for an offline first launch (D-38, NEW-03).
+
+    Attributes:
+        raw: The public feed's bytes exactly as fetched, so the current parser reads them
+            (D-47).
+        captured_at: When they were fetched: aware. The status strip shows the data's age
+            from it (P1).
+    """
+
+    raw: bytes
+    captured_at: datetime
+
+
 @dataclass(frozen=True)
 class YearData:
-    """Everything bundled for one conference year."""
+    """Everything bundled for one conference year.
+
+    Attributes:
+        conference: The facts from ``conference.toml``.
+        content: The texts and overrides from ``content.toml``.
+        folder: The year's folder, where ``read_snapshot()`` finds the snapshot.
+    """
 
     conference: ConferenceInfo
     content: Content
+    folder: Path
 
     @property
     def feed_settings(self) -> FeedSettings:
@@ -149,6 +186,33 @@ class YearData:
             lightning_talks_location=self.content.lightning_talks_location,
             display_time_overrides=self.content.display_time_overrides,
         )
+
+    def read_snapshot(self) -> Snapshot:
+        """Read the year's bundled feed snapshot (D-38, NEW-03).
+
+        It is read on demand, not by ``load_year()``: once a feed cache exists the app
+        never needs it. The bytes are not checked here; ``feed.process`` does that, and a
+        test processes the committed snapshot.
+
+        Returns:
+            The snapshot's bytes and capture time.
+
+        Raises:
+            YearDataError: The year bundles no snapshot (``snapshot_captured_at`` is not
+                set), or ``conference.json`` is missing: a broken build.
+        """
+        year = self.conference.year
+        captured_at = self.conference.snapshot_captured_at
+        if captured_at is None:
+            raise YearDataError(
+                f"{year}/conference.toml: snapshot_captured_at: missing key; "
+                "the year bundles no snapshot"
+            )
+        try:
+            raw = (self.folder / SNAPSHOT_FILE).read_bytes()
+        except FileNotFoundError:
+            raise YearDataError(f"{year}/{SNAPSHOT_FILE}: file not found") from None
+        return Snapshot(raw, captured_at)
 
 
 def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
@@ -177,7 +241,7 @@ def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
         Content, _read(folder / "content.toml", content_file), content_file
     )
     _check_content(content, content_file)
-    return YearData(conference, content)
+    return YearData(conference, content, folder)
 
 
 def _read(path: Path, file: str) -> dict[str, object]:
@@ -217,6 +281,11 @@ def _build[T: DataclassInstance](
 
 
 def _value(expected: object, value: object, file: str, key: str) -> object:
+    if isinstance(expected, types.UnionType):  # an optional key, `X | None`
+        # TOML has no null: a key that is present holds an X.
+        (expected,) = (
+            arg for arg in typing.get_args(expected) if arg is not type(None)
+        )
     if typing.get_origin(expected) is tuple:  # an array of tables
         item_cls = typing.get_args(expected)[0]
         if not isinstance(value, list):
@@ -254,6 +323,11 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         raise YearDataError(f"{file}: last_talk_day: is before first_day")
     if conference.last_day < conference.last_talk_day:
         raise YearDataError(f"{file}: last_day: is before last_talk_day")
+    captured_at = conference.snapshot_captured_at
+    if captured_at is not None and captured_at.utcoffset() is None:
+        raise YearDataError(
+            f"{file}: snapshot_captured_at: expected a time with a UTC offset"
+        )
     for key in ("site_url", "feed_url"):
         url = urlsplit(getattr(conference, key))
         if url.scheme != "https" or not url.hostname:

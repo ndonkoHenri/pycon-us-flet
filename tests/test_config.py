@@ -1,7 +1,7 @@
 """Tests for the year-data loader (D-45, DATA-34, DATA-14, DATA-28)."""
 
 import shutil
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -109,6 +109,34 @@ def test_unknown_track_falls_back_to_its_humanised_key(fmt: config.TrackFormat) 
 def test_track_icons_are_material_icon_names(year: int) -> None:
     for track in load_year(year).conference.tracks:
         assert hasattr(ft.Icons, track.icon), track.key
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_a_year_bundles_a_snapshot_exactly_when_it_records_its_capture_time(
+    year: int,
+) -> None:
+    data = load_year(year)
+    has_file = (data.folder / config.SNAPSHOT_FILE).is_file()
+    assert has_file == (data.conference.snapshot_captured_at is not None)
+
+
+def test_the_active_year_bundles_its_snapshot() -> None:
+    """NEW-03: the app has data on its first launch, offline."""
+    data = load_year()
+    snapshot = data.read_snapshot()
+    assert snapshot.raw == (config.DATA_DIR / "2026" / "conference.json").read_bytes()
+    assert snapshot.captured_at == data.conference.snapshot_captured_at
+    assert snapshot.captured_at.utcoffset() is not None
+    assert snapshot.captured_at < datetime.now(UTC)
+
+
+def test_a_year_without_a_snapshot_says_so() -> None:
+    with pytest.raises(
+        YearDataError,
+        match=r"^2025/conference\.toml: snapshot_captured_at: missing key; "
+        "the year bundles no snapshot$",
+    ):
+        load_year(2025).read_snapshot()
 
 
 @pytest.fixture
@@ -230,6 +258,24 @@ def edit(path: Path, old: str, new: str) -> None:
             "2026/conference.toml: invalid TOML",
         ),
         (
+            "conference.toml",
+            "snapshot_captured_at = ",
+            'snapshot_captured_at = "yesterday"\n# ',
+            "2026/conference.toml: snapshot_captured_at: expected a date and time, got 'yesterday'",
+        ),
+        (
+            "conference.toml",
+            "snapshot_captured_at = ",
+            "snapshot_captured_at = 2026-10-12\n# ",
+            "2026/conference.toml: snapshot_captured_at: expected a date and time, got datetime.date(2026, 10, 12)",
+        ),
+        (
+            "conference.toml",
+            "-07:00\n",
+            "\n",
+            "2026/conference.toml: snapshot_captured_at: expected a time with a UTC offset",
+        ),
+        (
             "content.toml",
             "minutes = -30",
             'minutes = "-30"',
@@ -284,6 +330,12 @@ def test_missing_file_is_named(data_dir: Path) -> None:
     (data_dir / "2026" / "content.toml").unlink()
     with pytest.raises(YearDataError, match=r"^2026/content\.toml: file not found$"):
         load_year(2026, data_dir)
+
+
+def test_missing_snapshot_file_is_named(data_dir: Path) -> None:
+    (data_dir / "2026" / "conference.json").unlink()
+    with pytest.raises(YearDataError, match=r"^2026/conference\.json: file not found$"):
+        load_year(2026, data_dir).read_snapshot()
 
 
 def test_missing_year_is_named(data_dir: Path) -> None:

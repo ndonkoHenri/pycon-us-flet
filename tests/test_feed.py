@@ -27,6 +27,22 @@ def test_recorded_feeds_have_no_unreadable_record(year: int) -> None:
     assert processed(year).skipped == ()
 
 
+def test_the_bundled_snapshot_processes_cleanly() -> None:
+    """NEW-03: the snapshot the app opens with offline reads without a skipped record.
+
+    ``tools/update_snapshot.py`` refuses a feed that fails this, so it holds for every
+    snapshot the tool writes. The P0-13 invariants should take the snapshot as an input
+    too when they land.
+    """
+    year_data = load_year()
+    data = process(year_data.read_snapshot().raw, year_data.feed_settings)
+    assert data.skipped == ()
+    assert data.sessions and data.days
+    conference = year_data.conference
+    days = [day.date for day in data.days]
+    assert conference.first_day <= days[0] and days[-1] <= conference.last_day
+
+
 def test_2026_has_five_schedule_days() -> None:
     assert [day.date for day in processed(2026).days] == [
         date(2026, 5, d) for d in range(13, 18)
