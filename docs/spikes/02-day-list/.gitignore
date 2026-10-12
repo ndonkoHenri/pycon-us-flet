@@ -1,0 +1,6 @@
+# The lock depends on the local Flet checkout; `uv sync` recreates it.
+uv.lock
+# Screen recordings, screenshots and logs of a measuring run.
+out/
+# The copy of the repo's src/pycon_us (see pyproject.toml).
+src/pycon_us/

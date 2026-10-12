@@ -156,7 +156,7 @@ test, area:schedule
 
 Render the 2026 Friday (about 26 slots, 110 rows) with realistic rows; measure star-tap and search-as-you-type latency on release builds on the iPhone, and compare the variants on an Android emulator (relative numbers only, D-102).
 
-- Verdict in `docs/spikes/02-day-list.md` with numbers per variant and device.
+- Verdict in `docs/spikes/02-day-list.md` with numbers per variant and device (done: D-153..D-159; the iPhone's release numbers in #121).
 - Row architecture and `build_controls_on_demand` recorded in decisions.md.
 
 #### S3 · Spike: is a stdlib HTML-to-Markdown converter good enough for the feed?
@@ -454,7 +454,7 @@ feature, area:theme · after P0-19, P0-08 · THEME-08, SCHED-20
 
 feature, area:schedule · after P1-01, P1-02, S2 · SCHED-03, SCHED-04
 
-The row family (`ui/rows.py`, `ui/badges.py`) in the architecture S2 chose: rows read as one phrase, and a 48 dp star is a separate stop with Undo on removal.
+The row family (`ui/rows.py`, `ui/badges.py`) in the architecture S2 chose (memoised rows inside memoised slots and day lists, D-153): rows read as one phrase, and a 48 dp star is a separate stop with Undo on removal.
 
 - No fixed heights; rows reflow at 200 % text.
 - Screen readers read one phrase per row plus the star's name and state.

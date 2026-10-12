@@ -211,7 +211,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add | Tooltip is the name; state announced |
 | `NoticeRow` | `Container(bgcolor=surface_container, Row[Icon(INFO_OUTLINE), Text, time])` | Notices, breaks, meals; no star; tappable only with content (SCHED-04) | "Notice. Registration opens, 7:00 AM" |
 | `TrackBadge` | `Container(bgcolor, border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))` | §3.4; not a `Chip` (Chips are interactive) | Text carries the meaning |
-| `TimeGutter` | 64 dp `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True)`, "9:25 AM" |
+| `TimeGutter` | `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` over an invisible "10:00" / "AM" in a `Stack`, padding 16 left and 8 right: no fixed width, so it grows with the text and is the same for every slot (D-158) | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True, label="9:25 AM", exclude_semantics=True)` |
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
 | `StatusStrip` | `Row[Icon(16), Text(BODY_SMALL), TextButton("Refresh")]` + `ProgressBar(bar_height=2, value=None)` | Hidden when fresh (§4.2) | `live_region=True` |
@@ -263,7 +263,7 @@ def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
     )
 ```
 
-`SessionView` is a frozen view model from a pure query in `core/queries.py`; rows never format times themselves. Memoising rows on `(id, is_favorite)` is decided by spike S2.
+`SessionView` is a frozen view model from a pure query in `core/queries.py`; rows never format times themselves. The Schedule memoises the whole path (D-153, S2): `ft.memo` day lists given only their day's favourites, `ft.memo` slot items given only their slot's favourites, and `ft.memo` rows keyed by session id on `(row view, is_favorite)`, with view models built once per feed version and `on_toggle` from `use_callback`. A star tap then re-renders one row; memoising the rows alone left the parents' rebuild (38 ms against 3 ms on the busiest day, F34).
 
 ---
 
@@ -385,12 +385,12 @@ Never at launch or on Welcome. Notifications (P2): on the first favourite or the
    - `TabBar(tabs=[ft.Tab(label=DayLabel("Fri", "May 15"))])` as the first body row (**GAP** U10, no `AppBar.bottom`); today has a `badge` dot; scrollable past 5 days. A day without sessions (sprints) shows an empty state linking to Sprints.
    - Filter summary whenever any track is hidden, the default included (D-20): "Hiding: Open spaces · Show all".
    - `StatusStrip`; a one-line note "Times are Pacific Time (PDT)" when the device zone differs.
-   - `TabBarView(expand=True)`, one `ListView` per day.
-3. **Day list:** one item per slot (D-31): `Row[TimeGutter, Column[SessionRow...]]` under a 1 dp `Divider`, rows ordered by room; notices, breaks and meals are `NoticeRow`s. Each slot item has `key=ft.ScrollKey(f"slot-{iso}")` (a plain str or int key is never registered for `scroll_to`), and the list uses `build_controls_on_demand=False`, so `scroll_to(scroll_key=...)` reaches every slot, built or not on screen (F7; the busiest 2026 day has about 26 slots and 110 rows; S2 measures).
+   - `TabBarView(expand=True)`, one day list per day. The first render fills only the shown day; the other days follow in a second render (D-156).
+3. **Day list:** one item per slot (D-31): `Row[TimeGutter, Column[SessionRow...]]` under a 1 dp `Divider`, rows ordered by room; notices, breaks and meals are `NoticeRow`s. Each slot item has `key=ft.ScrollKey(f"slot-{iso}")` (a plain str or int key is never registered for `scroll_to`). Each day list is a lazy `ListView`; today's also gets `cache_extent=FULL_LIST_EXTENT`, so Flutter builds all its slots and `scroll_to(scroll_key=...)` reaches any of them (D-154). A lazy list builds only near the viewport, with or without `build_controls_on_demand=False`, and the key then does nothing (F7, F32); building every day in full would cost each day switch about two frames. The busiest 2026 day has 26 slots and 111 rows; S2 measured it (`docs/spikes/02-day-list.md`).
 4. Today only: a now line between the last started slot and the next, a 2 dp `primary` divider "Now · 10:42", updated every 60 s while visible.
 5. Extended `FloatingActionButton(icon=SCHEDULE, content="Now", tooltip="Jump to the current time")` on conference days; on another day's tab it reads "Today", switches tab, then scrolls.
 
-**Interactions:** swipe or tap to change day; rows push the session; the star toggles (§4.4). The day defaults to today during the conference, else the first day. On the first display of today's tab per app session, `await list_view.scroll_to(scroll_key=slot_key, duration=400)` goes to the current slot (else the next; 0 ms under reduced motion). It never re-jumps on Back, tab return, refresh or filter change (#313). *(could)* Long-press sheet: Add to My schedule, Share, Open room.
+**Interactions:** swipe or tap to change day; rows push the session; the star toggles (§4.4). The day defaults to today during the conference, else the first day. On the first display of today's tab per app session, `await today_list.scroll_to(scroll_key=ft.ScrollKey(slot_key), duration=400)` goes to the current slot once the render that shows today's list has been applied (D-155; never a computed offset; #86 verifies the sequencing) (else the next; 0 ms under reduced motion). It never re-jumps on Back, tab return, refresh or filter change (#313). *(could)* Long-press sheet: Add to My schedule, Share, Open room.
 
 **States:** §4.1; a day emptied by filters and the unpublished year as in §4.6.
 
@@ -439,7 +439,7 @@ A global pattern: §4.3. Route shape per §2.5.
 
 **Layout:** `AppBar` "My schedule" with an overflow (P2 "Export to calendar (.ics)" for all saved sessions and "Reminder settings"); `StatusStrip`; a `ListView` where past days collapse into one `ExpansionTile` "Earlier days (6 sessions)", then a `SectionHeader` per day and gutter slots holding only saved sessions. Today's ended sessions collapse into "Show 4 earlier sessions". Overlapping rows both show `WARNING_AMBER` (`warning`) and "Overlaps with "Typing deep dive"": a hint, not a blocker. *(P2)* Changed chips. *(could)* "Free 11:00 AM–1:30 PM · See what's on".
 
-**Interactions:** unstarring removes the row with Undo. On conference days the list opens at today's header once per app session: the header carries `key=ft.ScrollKey(f"day-{iso}")` and the list uses `build_controls_on_demand=False` (it is short), else the open scrolls to a computed `offset=`. Schedule filters never apply: a saved open space always shows.
+**Interactions:** unstarring removes the row with Undo. On conference days the list opens at today's header once per app session: the header carries `key=ft.ScrollKey(f"day-{iso}")` and the list's `cache_extent=FULL_LIST_EXTENT` builds every row, so `scroll_to(scroll_key=...)` reaches it (D-154, F32). Schedule filters never apply: a saved open space always shows.
 
 **States:** empty per §4.6; all past: "All your saved sessions are over" with "See what's on today"; *(P3)* after the first mock sync a one-time "Synced with your account" (D-55).
 
