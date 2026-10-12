@@ -10,11 +10,13 @@ The design follows architecture §7.7 with what S3 found:
   always enables LaTeX (``$...$``, ``( ... )``, ``[ ... ]``) on top of the
   extension set, backslash escapes collide with ``\(`` and ``\[``, and GFM
   turns ``:name:`` into emoji;
-- a field with no tags is plain text: blank lines make paragraphs and single
-  newlines make line breaks.
+- bare ``http(s)`` URLs in text become explicit links, so nothing is left raw;
+- a field with no tags is plain text (entities decoded): blank lines make
+  paragraphs and single newlines make line breaks.
 """
 
 import re
+from html import unescape
 from html.parser import HTMLParser
 from urllib.parse import quote, urljoin
 
@@ -41,7 +43,10 @@ LINK_SCHEMES = ("http://", "https://", "mailto:")
 _INLINE_SPECIALS = re.compile(r"[\\`*_\[\](<>|~$&:]")
 # Block markers that only matter at the start of a line.
 _LINE_START = re.compile(r"^(#|>|[-+=]|\d+[.)])")
-_URL = re.compile(r"(?:https?://|www\.)\S+")
+_URL = re.compile(r"https?://[^\s<>\"]+")
+_URL_TRAILER = re.compile(
+    r"[.,;:!?\'\")\]]+$"
+)  # punctuation that ends a sentence, not the URL
 _HTML_SPACE = re.compile(r"[ \t\n\r\f]+")
 _HAS_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 
@@ -80,16 +85,23 @@ class _TreeBuilder(HTMLParser):
         self.stack[-1].children.append(data)
 
 
-def escape(text: str) -> str:
-    """Escape text for Markdown, leaving bare URLs for GFM's autolinks."""
+def escape(text: str, linkify: bool = True) -> str:
+    """Escape text for Markdown; with ``linkify``, bare URLs become links."""
+    if not linkify:
+        return _escape_chars(text)
     parts = []
     last = 0
     for match in _URL.finditer(text):
+        url = _URL_TRAILER.sub("", match.group(0))
         parts.append(_escape_chars(text[last : match.start()]))
-        parts.append(match.group(0))
-        last = match.end()
+        parts.append(f"[{_escape_chars(url)}]({_destination(url)})")
+        last = match.start() + len(url)
     parts.append(_escape_chars(text[last:]))
     return "".join(parts)
+
+
+def _destination(url: str) -> str:
+    return quote(url, safe=":/?#@!&'*+,;=%~-._")
 
 
 def _escape_chars(text: str) -> str:
@@ -104,17 +116,18 @@ def _escape_line_start(line: str) -> str:
     return line[: len(marker) - 1] + f"&#{ord(marker[-1])};" + line[len(marker) :]
 
 
-def _inline(node: Node | str, base_url: str) -> str:
+def _inline(node: Node | str, base_url: str, in_link: bool = False) -> str:
     r"""Render inline content; ``\n`` marks a hard line break."""
     if isinstance(node, str):
-        return escape(_HTML_SPACE.sub(" ", node))
+        return escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)
     if node.tag in DROPPED_TAGS:
         return ""
     if node.tag == "br":
         return "\n"
     if node.tag == "code":
         return _code_span(_HTML_SPACE.sub(" ", _text_of(node)))
-    inner = "".join(_inline(child, base_url) for child in node.children)
+    in_link = in_link or node.tag == "a"  # links cannot nest
+    inner = "".join(_inline(child, base_url, in_link) for child in node.children)
     if node.tag in ("strong", "b"):
         return _wrap(inner, "**")
     if node.tag in ("em", "i"):
@@ -128,20 +141,24 @@ def _inline(node: Node | str, base_url: str) -> str:
 
 def _wrap(inner: str, marker: str) -> str:
     """Wrap with an emphasis marker, keeping edge whitespace outside it."""
+    return _around(inner, marker, marker)
+
+
+def _link(inner: str, href: str, base_url: str) -> str:
+    url = urljoin(base_url, href.strip())
+    if not url.startswith(LINK_SCHEMES):
+        return inner
+    return _around(inner, "[", f"]({_destination(url)})")
+
+
+def _around(inner: str, before: str, after: str) -> str:
+    """Put markup around the text, leaving its edge whitespace outside."""
     core = inner.strip()
     if not core:
         return inner
     lead = inner[: len(inner) - len(inner.lstrip())]
     trail = inner[len(inner.rstrip()) :]
-    return f"{lead}{marker}{core}{marker}{trail}"
-
-
-def _link(inner: str, href: str, base_url: str) -> str:
-    url = urljoin(base_url, href.strip())
-    text = inner.strip()
-    if not text or not url.startswith(LINK_SCHEMES):
-        return inner
-    return f"[{text}]({quote(url, safe=":/?#@!&'*+,;=%~-._")})"
+    return f"{lead}{before}{core}{after}{trail}"
 
 
 def _code_span(text: str) -> str:
@@ -248,7 +265,7 @@ def _join_item_blocks(blocks: list[str]) -> str:
 
 
 def _plain(text: str) -> str:
-    paragraphs = re.split(r"\n[ \t]*\n+", text.strip())
+    paragraphs = re.split(r"\n[ \t]*\n+", unescape(text).strip())
     out = []
     for paragraph in paragraphs:
         lines = [

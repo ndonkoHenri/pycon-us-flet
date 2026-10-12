@@ -149,7 +149,7 @@ class _TextOf(HTMLParser):
 def html_text(value: str) -> str:
     """The HTML's visible characters, whitespace removed (plain text counts as text)."""
     if not TAG.search(value):
-        return "".join(value.split())
+        return "".join(html.unescape(value).split())
     parser = _TextOf()
     parser.feed(value)
     parser.close()

@@ -10,8 +10,8 @@ Can a small converter on stdlib `html.parser` turn every HTML field of the 2025 
 ## Answer: yes, with escaping and a style sheet
 
 - **The markup is small and regular.** Both feeds use 17 tags, 4 attributes that matter (`href` only; `target`, `rel`, `class` and one `style` are presentation) and 4 entities. The prototype handles 16 tags and unwraps the 17th (`span`, 4 uses, all `style="font-size: smaller"`).
-- **No text is lost or changed.** All 1,389 values of the 19 HTML fields convert; the visible text of every value matches the HTML's (whitespace aside), and no tag, raw `$` or LaTeX opener is left in the output.
-- **It renders on Android 16** (`pycon_pixel6a_api36`). 22 feed samples and 2 synthetic ones were shown with `ft.Markdown(selectable=True, extension_set=GITHUB_WEB, on_tap_link=...)` in light and dark and at 200 % text: headings, nested lists, ordered lists with nested bullets, code spans, strike-through, block quotes, rules, hard breaks, autolinked bare URLs and links all rendered as intended. A tapped relative link reported its absolute URL with `selectable=True`.
+- **No character is lost or added.** All 1,389 values of the 19 HTML fields convert. The visible characters of every value match the HTML's (whitespace aside), and no tag, raw `$` or LaTeX opener is left in the output. This is a static check: whether markup renders as intended was checked on the device for 24 samples, and P0-15's tests cover the boundaries (see the review notes below).
+- **It renders on Android 16** (`pycon_pixel6a_api36`). 22 feed samples and 2 synthetic ones were shown with `ft.Markdown(selectable=True, extension_set=GITHUB_WEB, on_tap_link=...)` in light and dark and at 200 % text: headings, nested lists, ordered lists with nested bullets, code spans, strike-through, block quotes, rules, hard breaks, bare URLs and links all rendered as intended. A tapped relative link reported its absolute URL with `selectable=True`.
 - **Escaping is not optional.** Flet's `Markdown` always adds LaTeX syntax on top of any extension set (F27): `5$ or 10$ `, `( the notes )` and `[ the FAQ ]` rendered as math on the emulator, and GFM turned `~y~` into strike-through and `:smile:` into an emoji. Writing those characters as numeric character references fixed all of them (D-115). No 2025 or 2026 field triggers LaTeX today, but the 2026 job listings already carry `$` amounts.
 - **Flet's defaults are not good enough for the app.** Links are `Colors.blue` without an underline (about 3.1:1 on white, and colour is the only cue), headings start at `headlineSmall`, and a custom `md_style_sheet` replaces the theme's text styles instead of merging with them, so text without an explicit colour turns black in dark mode (F28). The app passes one style sheet with explicit colours (D-116).
 - **So E5 is not needed** (D-117): HTML that the converter cannot express (tables, images) does not occur in two years of feeds.
@@ -86,7 +86,7 @@ Every string field of both feeds was scanned. Markup lives in these fields; slot
 | Check | Result |
 |---|---|
 | Values converted | 1,389 (19 fields; slot names excluded) |
-| Visible text changed | **0** |
+| Characters lost or added (whitespace aside) | **0** |
 | Tags left in the Markdown (outside code) | 0 |
 | Raw `$`, `\(` or `\[` left (outside code) | 0 |
 | Tags unwrapped | `span` (4) |
@@ -104,8 +104,10 @@ Every string field of both feeds was scanned. Markup lives in these fields; slot
 | `$`, `( … )`, `[ … ]` | job listings (`$188,000 – $275,000`), any prose | Rendered as LaTeX (synthetic sample 23) | Numeric character references (D-115, sample 24) |
 | `~`, `*`, `_`, `|`, `<`, `>`, `#`, `1.` at line start, `:name:` | prose, code-like text (`data_final_final_v3.csv`) | Strike-through, emphasis, tables, inline HTML, headings, lists, emoji | Numeric character references (D-115) |
 | Markdown syntax inside `<code>` | `len([x for x in arr if x % 2 == 0])`, `<head>` | — | Code spans are raw: Markdown does not interpret them, so nothing is escaped inside (sample 9, 11) |
-| Bare URLs in text | job listings, poster descriptions | — | Left raw, so GFM autolinks them and `on_tap_link` gets them (samples 2, 13, 20) |
+| Bare URLs in text | job listings, poster descriptions | Left raw, a URL's `_`, `$` or `]` could be read as markup, and GFM's autolink decides where it ends | An explicit link labelled with the escaped URL, trailing sentence punctuation left outside (D-114; samples 2, 13, 20; a tap on sample 20's URL reported `https://github.com/NAU-CCL/epymorph`) |
 | Relative links | 24 hrefs | Open nothing | Joined to the site URL; only `http`, `https` and `mailto` become links (D-114) |
+| Link or emphasis text with edge spaces (`<a> x </a>y`) | none in the feeds | `[x](…)y` reads "xy" | Edge whitespace kept outside the markup (D-114) |
+| Emphasis starting or ending with punctuation next to a letter (`a<em>(x)</em>b`) | none in the feeds | CommonMark cannot open or close it, so `*` shows literally | P0-15 drops the markers (D-114) |
 | Nested lists inside ordered lists | 2025 descriptions | Architecture §7.7's "two spaces per level" does not nest under `1. ` (CommonMark needs the marker's width, three spaces) | Continuation lines indented by the marker's width (sample 9) |
 
 ### Rendering on the emulator
@@ -115,7 +117,7 @@ Every string field of both feeds was scanned. Markup lives in these fields; slot
 | # | Field | Shows | Result |
 |---|---|---|---|
 | 1 | 2026 description | `ol`, `&amp;` | numbered list, `&` |
-| 2★ | 2026 description | newlines in `p`, `hr`, `h2`, `strong`, bare URL | collapsed lines, rule, heading, bold, URL autolinked |
+| 2★ | 2026 description | newlines in `p`, `hr`, `h2`, `strong`, bare URL | collapsed lines, rule, heading, bold, URL as a link |
 | 3 | 2026 description | `ol` of links | numbered links |
 | 4 | 2025 description | relative link, `br`, `span` | link + "Keynote" on the next line; tap → `https://us.pycon.org/2025/about/keynote-speakers#lynn-root` |
 | 5 | 2025 description | `h1`, `h2` | headings |
@@ -126,14 +128,14 @@ Every string field of both feeds was scanned. Markup lives in these fields; slot
 | 10 | 2025 description | `h4`, `ul > li > strong` | |
 | 11 | 2025 description | code with `&lt;head&gt;` | `<head>` in a code span |
 | 12★ | 2026 bio | `blockquote` | quote block |
-| 13 | 2026 job listing | `h2`, `strong`, `$` amounts, bare URL | `$188,000 – $275,000` as text; URL autolinked |
+| 13 | 2026 job listing | `h2`, `strong`, `$` amounts, bare URL | `$188,000 – $275,000` as text; URL as a link |
 | 14 | 2026 job listing | `$` range, lists | |
 | 15 | 2026 job listing | `ul > li > p > a` with `target`, `rel`, `class` | tight list of links |
 | 16★ | 2026 social-media | nested `ul`, code handles | two-level list |
 | 17 | 2026 venues-hours | `h2`, `h3`, `ul` | |
 | 18 | 2026 code-of-conduct | `mailto:` link | |
 | 19 | 2026 poster bio | `h1` + `ul` in a bio | |
-| 20 | 2026 poster | `&mdash;`, bare URL | |
+| 20 | 2026 poster | `&mdash;`, bare URL | tap → `https://github.com/NAU-CCL/epymorph` |
 | 21 | 2026 sprint | plain text with paragraphs | two paragraphs |
 | 22 | 2025 poster (`slot.sessions`) | `br`-separated pseudo-list | first item joins the sentence (as in a browser), the rest on their own lines |
 | 23 | synthetic, unescaped | `5$ or 10$`, `( the notes )`, `[ the FAQ ]`, `~y~`, `*z*`, `:smile:` | **math**, strike, italic, emoji |
@@ -147,10 +149,18 @@ Every string field of both feeds was scanned. Markup lives in these fields; slot
 
 Screenshots (1080 × 2400) are in the session scratchpad (`s3/light-01..24.png`, `dark-09, 12, 16, 24`, the styled variants and `light-09-font200.png`); they are summarised in the PR and not committed.
 
+### Review notes (Codex, read-only, on the PR's diff)
+
+- Emphasis next to punctuation and a letter cannot flank in CommonMark, escaped or not; no feed value has it (checked over both fixtures), and D-114 drops the markers in that case.
+- Bare URLs are now explicit links and link text keeps its edge spaces outside the brackets; samples 2, 13 and 20 were rendered again with that build.
+- Plain-text values now decode entities (`A &amp; B` → `A & B`).
+- Kept as they are: an item that holds only a nested list renders `- - a` with the next item indented by two spaces, which CommonMark reads as a nested list; a `br` inside a heading becomes a space (D-114); a code span with edge spaces loses one space at each edge in the renderer, which hardly shows.
+- The text check is static (characters, whitespace aside), so the verdict says what it proves; P0-15's tests add the boundaries (`testing-and-quality.md` §3.4).
+
 ## Decisions changed
 
 - **D-114** (amends D-44's converter details and architecture §7.7): the supported tag list, unwrapping, whitespace, plain-text values, list indentation and link rules; the samples become P0-15's fixtures.
-- **D-115:** escaping with numeric character references, including LaTeX and emoji triggers; raw code spans; bare URLs left for autolinks.
+- **D-115:** escaping with numeric character references, including LaTeX and emoji triggers; raw code spans; bare URLs as explicit links.
 - **D-116** (records for SESS-06, SPKR-03, DATA-23): one app style sheet with explicit colours; Markdown links stay (not `LinkTile`s).
 - **D-117** (amends D-98): E5 moves to Cut; U21 (LaTeX opt-in in `ft.Markdown`) and U22 (a style sheet that merges with the theme) join the later candidates.
 - **Facts F27, F28** (section N).
