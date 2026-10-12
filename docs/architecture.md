@@ -473,7 +473,9 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 
 ### 7.3 Processing rules (`core/feed.py`; D-41, each rule has a named test)
 
-`process(raw: bytes, settings: FeedSettings) -> ConferenceData`, where `FeedSettings` (frozen, from the year data) holds the time zone, site URL, track table, display-time overrides and sprint rooms. A structurally wrong feed raises `FeedError`; a single bad slot is skipped, recorded in `ConferenceData.skipped`, logged once, and never blanks the schedule.
+`process(raw: bytes, settings: FeedSettings) -> ConferenceData`, where `FeedSettings` (frozen, `YearData.feed_settings`) holds the time zone, and gains the site URL, track table, display-time overrides and sprint rooms as the rules below need them. A structurally wrong feed raises `FeedError`: not JSON, not an object, no `schedule` list, an optional section (`posters`, `sprints`, `job-listings`; the 2025 feed has none) that is not a list, or no readable slot at all. A single bad record (a missing or mistyped field, a time without a UTC offset, an end before its start, a duplicate id) is skipped, recorded in `ConferenceData.skipped` as `schedule[5]: <problem>`, logged once at WARNING, and never blanks the schedule. Unknown fields are ignored.
+
+**Decoding (P0-10, built).** Every id becomes a `str` (D-42); every time an aware datetime converted to the conference zone; each session's `day` is `timefmt.local_date(start)`. Days are sorted by date; each day's `TimeGroup`s are keyed by their aware start (so every group has one, DATA-13) and sorted by it; within a group, sessions are ordered by location, then name. Speakers are registered once by id, the first record winning, from slots and posters. Until the rules below land, every schedule slot is a session.
 
 | # | Rule | Behaviour | Features |
 |---|---|---|---|
@@ -498,6 +500,8 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 **Invariants** (D-77, on the 2025 and 2026 fixtures): no session lost beyond the documented drops and collapses; ids stable across runs; no placeholder survives; Job Fair grouped at 10:00, labelled 9:30; one Posters row and per-day Lunch rows; every speaker with sessions linked; every group has a start; `start < end`; all datetimes aware. A reviewed snapshot of the processed model and the one-off Ionic outputs (`tests/fixtures/ionic/<year>/`, no Node in CI) settle ambiguous rules; intended differences are listed by feature id.
 
 ### 7.4 Models (`core/models.py`)
+
+Built in P0-10: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (`id`, `name`, `kind`, `location`, `description`, aware `start`/`end`, `day`, `speaker_ids`, `url`), `TimeGroup` (`start`, `session_ids`), `Day` (`date`, `groups`), `Poster`, `Sprint`, `JobListing` and `ConferenceData` (`sessions` and `speakers` by id, `days`, `posters`, `sprints`, `job_listings`, `skipped`), all `@dataclass(frozen=True, eq=False)`. The rules add the rest of the target shape:
 
 `Session` (`id: str`, name, track, kind, flags, `location`, `display_location`, `rooms`, `description_md`, `search_text` = folded title + description text + speaker names, speaker ids and names, aware `start`/`end`/`display_start`, `day`, URLs, `in_timeline`), `Speaker`, `Room`, `TimeGroup`, and `ConferenceData` (frozen, `eq=False`: `sessions: dict[str, Session]`, speakers, rooms, days, sponsors by level, sprints, job listings, `content_md`, `skipped`). Objects refer to each other by id only; queries return fresh view models and never mutate the model (Ionic wrote `hide` flags onto shared objects, SCHED-17).
 
