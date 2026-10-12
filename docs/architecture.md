@@ -477,7 +477,7 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 
 **Decoding (P0-10, built).** Every id becomes a `str` (D-42); every time an aware datetime converted to the conference zone; each session's `day` is `timefmt.local_date(start)`. Slots and open spaces decode into plain records (`records.Slot`, `records.OpenSpace`) that the rules turn into sessions. Days are sorted by date; each day's `TimeGroup`s are keyed by their aware start (so every group has one, DATA-13) and sorted by it; within a group, sessions are ordered by location, then name. Only sessions with `in_timeline` are grouped.
 
-**Rules (`core/rules.py`; P0-11 built, P0-12 next).** `process()` applies them between decoding and grouping, in Ionic's order: `drop_rule` per slot, `collapse` for poster and break slots, `slot_session` for the rest, `open_space_session`, then `poster_details`. Every record that does not become a session of its own is listed by rule in `ConferenceData.dropped` and counted in one INFO log line (D-123). Speakers are registered once by id, the first record winning, from the sessions' slots and the posters.
+**Rules (`core/rules.py`; P0-11 built, P0-12 next).** `process()` applies them between decoding and grouping, in Ionic's order: `drop_rule` per slot, `collapse` for poster and break slots, `slot_session` for the rest, `open_space_session`, then `poster_details`. Every record that does not become a session of its own is listed by rule in `ConferenceData.dropped` and counted in one INFO log line (D-123). Speakers are registered once by id, the first record winning: the posters' authors first, then the sessions' slots, in Ionic's order.
 
 | # | Rule | Behaviour | Features |
 |---|---|---|---|

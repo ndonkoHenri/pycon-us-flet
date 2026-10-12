@@ -153,16 +153,41 @@ def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
         assert poster.speaker_ids and set(poster.speaker_ids) <= set(data.speakers)
 
 
-def test_first_record_of_a_speaker_wins() -> None:
+def test_first_record_of_a_speaker_wins_poster_authors_first() -> None:
+    """As in Ionic, poster authors are registered before the schedule's speakers."""
     first = next(slot for slot in document(2026)["schedule"] if slot.get("speakers"))
     speaker = first["speakers"][0]
+    poster_copy = dict(speaker, bio="<p>From the poster.</p>")
 
-    def rename_later_copy(doc: dict[str, Any]) -> None:
-        doc["posters"][0]["speakers"].append(dict(speaker, name="Someone Else", bio=""))
+    def add_poster_copy(doc: dict[str, Any]) -> None:
+        doc["posters"][0]["speakers"].append(poster_copy)
+        doc["posters"][1]["speakers"].append(dict(speaker, bio="<p>Later.</p>"))
 
-    data = process(changed(2026, rename_later_copy), settings(2026))
+    data = process(changed(2026, add_poster_copy), settings(2026))
     registered = data.speakers[str(speaker["id"])]
-    assert (registered.name, registered.bio) == (speaker["name"], speaker["bio"])
+    assert (registered.name, registered.bio) == (speaker["name"], poster_copy["bio"])
+
+
+def test_a_nested_poster_with_a_posters_id_is_skipped() -> None:
+    """D-121: top-level and nested posters share one id space."""
+
+    def nest_a_copy(doc: dict[str, Any]) -> None:
+        poster = doc["posters"][0]
+        doc["schedule"].append(
+            {
+                **doc["schedule"][KEPT],
+                "conf_key": 99999,
+                "kind": "poster",
+                "sessions": [{"conf_key": poster["conf_key"], "name": "Copy"}],
+            }
+        )
+
+    data = process(changed(2026, nest_a_copy), settings(2026))
+    poster_id = str(document(2026)["posters"][0]["conf_key"])
+    assert data.skipped == (f"schedule posters[0]: duplicate id '{poster_id}'",)
+    assert [p.title for p in data.posters if p.id == poster_id] == [
+        document(2026)["posters"][0]["title"]
+    ]
 
 
 def test_posters_sprints_and_job_listings_pass_through() -> None:
@@ -336,6 +361,8 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
         del doc["job-listings"][2]["sponsor_name"]
         doc["open-spaces"][3]["conf_key"] = "3"
         doc["open-spaces"][4]["start"] = "soon"
+        doc["open-spaces"][5]["start"] = 0  # falsy, but not "not scheduled"
+        doc["open-spaces"][6]["end"] = False
 
     data = process(changed(2026, spoil), settings(2026))
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
@@ -344,11 +371,13 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
         12,
     )
     open_spaces = [s for s in data.sessions.values() if s.kind == "open-space"]
-    assert len(open_spaces) == 121
+    assert len(open_spaces) == 119
     assert [reason.split(":")[0] for reason in data.skipped] == [
         "posters[0]",
         "open-spaces[3]",
         "open-spaces[4]",
+        "open-spaces[5]",
+        "open-spaces[6]",
         "sprints[1]",
         "job-listings[2]",
     ]

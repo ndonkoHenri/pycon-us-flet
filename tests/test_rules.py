@@ -160,6 +160,33 @@ def test_lunch_row_spans_earliest_start_to_latest_end() -> None:
     assert (lunch.start, lunch.end) == (pacific(15, 12, 30), pacific(15, 14))
 
 
+def test_a_rows_span_and_id_come_from_its_earliest_slot_wherever_it_is() -> None:
+    """DATA-06: an earlier slot found later still moves the row's start and id."""
+
+    def earliest_last(doc: dict[str, Any]) -> None:
+        lunches = [s for s in doc["schedule"] if s["conf_key"] in (149, 155, 156)]
+        for lunch in lunches:
+            doc["schedule"].remove(lunch)
+        doc["schedule"] += sorted(lunches, key=lambda s: s["start"], reverse=True)
+
+    data = process(changed(2026, earliest_last), settings(2026))
+    lunch = data.sessions["break-Expo Hall AB-2026-05-15T12:30:00-07:00"]
+    assert (lunch.start, lunch.end) == (pacific(15, 12, 30), pacific(15, 14))
+
+
+def test_collapsed_ids_do_not_depend_on_the_feeds_offset() -> None:
+    """D-123: the same instants written in UTC give the same ids."""
+
+    def in_utc(doc: dict[str, Any]) -> None:
+        for slot in doc["schedule"]:
+            for key in ("start", "end"):
+                moment = datetime.fromisoformat(slot[key]).astimezone(ZoneInfo("UTC"))
+                slot[key] = moment.isoformat()
+
+    utc = process(changed(2026, in_utc), settings(2026))
+    assert list(utc.sessions) == list(processed(2026).sessions)
+
+
 def test_one_lunch_row_per_day_that_has_lunch() -> None:
     """DATA-06: Thursday to Sunday in 2026; every day in 2025."""
     for year, expected in ((2026, 4), (2025, 5)):

@@ -123,9 +123,10 @@ def slot(item: object, zone: ZoneInfo) -> Slot:
 def open_space(item: object, zone: ZoneInfo) -> OpenSpace:
     """Decode one record of ``open-spaces``; it may not be scheduled yet."""
     record = _object(item)
-    # A missing, null or empty time means "not scheduled yet", not a broken record.
-    start = _moment(record, "start", zone) if record.get("start") else None
-    end = _moment(record, "end", zone) if record.get("end") else None
+    start, end = (
+        _schedule_time(record, "start", zone),
+        _schedule_time(record, "end", zone),
+    )
     if start and end and end < start:
         raise ValueError(f"ends at {end.isoformat()}, before it starts")
     conf_key = record.get("conf_key")
@@ -245,6 +246,15 @@ def _strings(record: Mapping[str, object], key: str) -> tuple[str, ...]:
     if not all(isinstance(value, str) for value in values):
         raise TypeError(f"{key!r} should be a list of strings, got {values!r}")
     return tuple(str(value) for value in values)
+
+
+def _schedule_time(
+    record: Mapping[str, object], key: str, zone: ZoneInfo
+) -> datetime | None:
+    """Return an open space's time; missing, null or "" means "not scheduled yet" (None)."""
+    if record.get(key) in (None, ""):
+        return None
+    return _moment(record, key, zone)
 
 
 def _moment(record: Mapping[str, object], key: str, zone: ZoneInfo) -> datetime:

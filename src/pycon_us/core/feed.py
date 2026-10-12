@@ -92,13 +92,17 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
     )
     if not slots:
         raise FeedError("no readable schedule slot")
-    posters = _decode(sections["posters"], "posters", records.poster, _first_id, skip)
+    poster_ids: set[str] = set()  # posters and 2025's nested posters share ids (D-121)
+    posters = _decode(
+        sections["posters"], "posters", records.poster, _first_id, skip, poster_ids
+    )
     posters += _decode(
         records.nested_posters(sections["schedule"]),
         "schedule posters",
         records.nested_poster,
         _first_id,
         skip,
+        poster_ids,
     )
     spaces = _decode(
         sections["open-spaces"],
@@ -139,11 +143,11 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
 
     speakers: dict[str, Speaker] = {}
     for its_speakers in (
-        *(slot.speakers for slot in kept),
         *(speakers for _, speakers in posters),
+        *(slot.speakers for slot in kept),
     ):
         for speaker in its_speakers:
-            # The first record of an id wins, as in Ionic.
+            # The first record of an id wins; Ionic registered poster authors first.
             speakers.setdefault(speaker.id, speaker)
 
     return ConferenceData(
@@ -205,9 +209,15 @@ def _decode[T](
     decode: Callable[[object], T],
     id_of: Callable[[T], str],
     skip: Callable[[str, object], None],
+    taken: set[str] | None = None,
 ) -> list[T]:
-    """Return the records ``decode`` can read, the first of each id; ``skip`` the others."""
-    records: dict[str, T] = {}
+    """Return the records ``decode`` can read, the first of each id; ``skip`` the others.
+
+    ``taken`` holds the ids already read, when two lists share one id space; the ids read
+    here are added to it.
+    """
+    taken = set() if taken is None else taken
+    records: list[T] = []
     for index, item in enumerate(items):
         where = f"{section}[{index}]"
         try:
@@ -215,11 +225,12 @@ def _decode[T](
         except (TypeError, ValueError) as error:
             skip(where, error)
             continue
-        if (record_id := id_of(record)) in records:
+        if (record_id := id_of(record)) in taken:
             skip(where, f"duplicate id {record_id!r}")
             continue
-        records[record_id] = record
-    return list(records.values())
+        taken.add(record_id)
+        records.append(record)
+    return records
 
 
 def _id_of(record: Slot | Sprint | JobListing) -> str:
