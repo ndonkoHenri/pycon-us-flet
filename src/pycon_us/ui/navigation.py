@@ -108,7 +108,9 @@ def use_scroll_to_top() -> tuple[ft.Ref[ft.ListView], Retap]:
         ``AppScaffold(on_retap=...)``.
     """
     prefs = use_prefs()
-    list_ref = ft.use_memo(ft.Ref[ft.ListView], [])  # one ref for the root's lifetime
+    # One ref for the root's lifetime. It stays live although Ref.current is weak:
+    # each render's list re-points it, and takes over the mounted one (F38).
+    list_ref = ft.use_memo(ft.Ref[ft.ListView], [])
 
     @report_errors
     async def scroll_to_top() -> None:
