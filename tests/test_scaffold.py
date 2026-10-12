@@ -6,10 +6,11 @@ bound as Flet binds a session's page. What the controls look like, and that Flut
 marks the title as a header, is checked on devices (the PR).
 """
 
+import asyncio
 import inspect
 import logging
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -230,6 +231,60 @@ async def test_the_content_line_is_logged_once_per_feed_version(
         "Content shown: bundled feed, version 1",
         "Content shown: network feed, version 2",
     ]
+
+
+class SlowPrefs(MemoryPrefs):
+    """SharedPreferences whose replies wait until the test releases them."""
+
+    def init(self) -> None:
+        super().init()
+        self.release = asyncio.Event()
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        await self.release.wait()
+        return await super()._invoke_method(method_name, arguments, timeout)
+
+
+@pytest.fixture
+def slow_prefs() -> SlowPrefs:
+    return SlowPrefs()  # before ``page``: a service registers with a bound page
+
+
+async def test_a_newer_version_does_not_cancel_the_line_of_the_one_shown_before(
+    slow_prefs: SlowPrefs,
+    hooks: Hooks,
+    page: FakePage,
+    svc: Services,
+    conference: Conference,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    caplog.set_level(logging.INFO, logger=scaffold.__name__)
+    storage = Storage(prefs=slow_prefs, directory=tmp_path, year=2026)
+    slow_svc = replace(svc, storage=storage)
+    monkeypatch.setattr(scaffold, "use_services", lambda: slow_svc)
+    conference.source, conference.version = "cache", 1
+    view_at(hooks, page, "/now")
+    ((setup, _),) = hooks.effects
+
+    # Flet cancels the run in progress when the network version re-runs the effect.
+    run = asyncio.create_task(setup())
+    await asyncio.sleep(0)  # the run reaches the round trip
+    run.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await run
+    slow_prefs.release.set()
+    for _ in range(5):  # the shielded round trip returns, then logs
+        await asyncio.sleep(0)
+
+    lines = [r.getMessage() for r in caplog.records if r.name == scaffold.__name__]
+    assert lines == ["Content shown: cache feed, version 1"]
 
 
 def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(

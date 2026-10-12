@@ -12,6 +12,7 @@ one. The bottom bar (#75) joins on tab roots only (D-144), and the tablet rail w
 (U1) arrives (D-32, D-146); ``SectionHeader`` is the heading of a group of rows.
 """
 
+import asyncio
 import logging
 from datetime import datetime, tzinfo
 
@@ -22,8 +23,8 @@ from pycon_us.core.timefmt import ago_label, day_label, local_date, time_label
 from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
-from pycon_us.state import Status, ViewMemory, use_conference
+from pycon_us.services.storage import THEME, Storage
+from pycon_us.state import Source, Status, ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 
 logger = logging.getLogger(__name__)
@@ -93,8 +94,8 @@ def Shown(body: ft.Control) -> ft.Control:
     """Return ``body`` unchanged, and log D-112's content line once per feed version.
 
     The line is ``Content shown: <source> feed, version <n>``, logged from the first
-    screen that renders a version (``Services.shown_versions``, D-165), after a
-    SharedPreferences round trip so the patch has reached Flutter. It is a component of
+    screen that renders a version (``Services.shown_versions``, D-165), through
+    ``log_when_shown()``. It is a component of
     its own so that only it reads ``Conference``: a refresh re-renders this leaf, which
     hands back the same ``body``, and not the screen around it.
 
@@ -110,13 +111,29 @@ def Shown(body: ft.Control) -> ft.Control:
         if version in svc.shown_versions:  # another screen showed it first
             return
         svc.shown_versions.add(version)
-        # Flet cancels this setup only when it re-runs, for a newer version (no cleanup,
-        # so an unmount leaves it running); that version is then what is shown.
-        await svc.storage.get(THEME)
-        logger.info("Content shown: %s feed, version %d", source, version)
+        # A newer version re-runs this effect, and Flet cancels the run in progress (an
+        # unmount does not: no cleanup). This version was rendered all the same, and the
+        # first line marks the cold start, so the shield lets the line finish.
+        await asyncio.shield(log_when_shown(svc.storage, source, version))
 
     ft.use_effect(log_shown, [version])
     return body
+
+
+@report_errors
+async def log_when_shown(storage: Storage, source: Source, version: int) -> None:
+    """Log D-112's content line once a SharedPreferences round trip has returned.
+
+    The round trip goes after the render's patch, so Flutter has the content when the
+    line is logged (a proxy: S1 saw it 0.2-0.3 s after the pixels).
+
+    Args:
+        storage: The session's ``Storage``.
+        source: Where the shown feed came from.
+        version: The shown feed version.
+    """
+    await storage.get(THEME)
+    logger.info("Content shown: %s feed, version %d", source, version)
 
 
 def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:

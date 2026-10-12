@@ -344,11 +344,17 @@ def Shown(body: ft.Control) -> ft.Control:
         if version in svc.shown_versions:                          # another screen showed it first
             return
         svc.shown_versions.add(version)
-        await svc.storage.get(THEME)                               # the patch has reached Flutter
-        logger.info("Content shown: %s feed, version %d", source, version)
+        # A newer version re-runs the effect and Flet cancels this run; this version was rendered.
+        await asyncio.shield(log_when_shown(svc.storage, source, version))
 
     ft.use_effect(log_shown, [version])
     return body
+
+
+@report_errors
+async def log_when_shown(storage: Storage, source: Source, version: int) -> None:
+    await storage.get(THEME)                                       # the patch has reached Flutter
+    logger.info("Content shown: %s feed, version %d", source, version)
 ```
 
 - A **tab switch** leaves that root alone on the stack (D-17); roots restore day, filters and scroll from `ViewMemory`/`Prefs` and never scroll by themselves (D-18, #313). **Back** on a root other than Now goes to Now; on Now it exits (Android).
