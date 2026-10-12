@@ -94,5 +94,6 @@ jobs:
           name: ${{ steps.apk.outputs.name }}
           path: build/apk/${{ steps.apk.outputs.name }}.apk
           compression-level: 0      # an APK is already compressed
+          overwrite: true           # a re-run of the same run uploads the same name again
           retention-days: 14        # artifact storage is small on a private Free repo (development.md §7.1)
           if-no-files-found: error
