@@ -171,13 +171,20 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
 
 
-async def test_under_reduced_motion_theme_changes_never_crossfade(
-    fake_page: FakePage, svc: Services, semantics: MemorySemantics, network: Network
+@pytest.mark.parametrize("flag", ["reduce_motion", "disable_animations"])
+async def test_under_reduced_motion_theme_changes_still_crossfade(
+    fake_page: FakePage,
+    svc: Services,
+    semantics: MemorySemantics,
+    network: Network,
+    flag: str,
 ) -> None:
-    semantics.features["disable_animations"] = True  # Android's Remove animations
-    await started(fake_page, svc)
-    # The gate opens with the crossfade still off: a scheme change lands at once (D-34).
-    assert fake_page.theme_animation_style == NO_THEME_ANIMATION
+    semantics.features[flag] = True  # iOS Reduce Motion, Android's Remove animations
+    _, prefs = await started(fake_page, svc)
+    assert prefs.reduce_motion
+    # A crossfade changes colour, not position; a hard swap left Material's text tween
+    # dark on dark for a few frames on iOS (D-173).
+    assert fake_page.theme_animation_style is None
 
 
 async def test_the_cache_is_shown_before_the_snapshot(
@@ -299,18 +306,23 @@ async def test_a_resume_reads_the_accessibility_flags_again(
     assert prefs.os_high_contrast and prefs.reduce_motion
 
 
-async def test_a_resume_turns_the_theme_crossfade_off_and_on_with_the_os(
-    fake_page: FakePage, svc: Services, semantics: MemorySemantics, network: Network
+async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
+    fake_page: FakePage,
+    svc: Services,
+    semantics: MemorySemantics,
+    network: Network,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
+    semantics.features.update(high_contrast=True, reduce_motion=True)
     _, prefs = await started(fake_page, svc)
-    page = cast(ft.Page, fake_page)
-    assert fake_page.theme_animation_style is None  # Flutter's crossfade
-    semantics.features["reduce_motion"] = True  # iOS Reduce Motion, turned on
-    await on_resume(page, svc, prefs)
-    assert fake_page.theme_animation_style == NO_THEME_ANIMATION  # without a restart
-    semantics.features["reduce_motion"] = False  # and off again
-    await on_resume(page, svc, prefs)
+    semantics.error = TimeoutError()  # the Flutter side does not answer
+    with caplog.at_level(logging.WARNING, logger="pycon_us.app"):
+        await on_resume(svc, prefs)
+    assert semantics.reads == 2
+    # The last good snapshot stands; nothing falls back to the defaults (F13).
+    assert prefs.os_high_contrast and prefs.reduce_motion
     assert fake_page.theme_animation_style is None
+    assert "Could not read the accessibility features" in caplog.text
 
 
 async def test_a_change_of_reduced_motion_is_logged_once(

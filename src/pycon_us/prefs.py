@@ -107,6 +107,9 @@ class Prefs:
 
         Args:
             ms: The M3 duration the animation has otherwise (ux.md §3.8).
+
+        Returns:
+            ``ms``, or 0 when the OS asks for reduced motion (``reduce_motion``).
         """
         return 0 if self.reduce_motion else ms
 

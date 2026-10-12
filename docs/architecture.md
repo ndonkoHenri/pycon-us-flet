@@ -137,7 +137,7 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
     if svc.closed.is_set():                       # replaced during steps 1-3: stop here
         return
     prefs.loaded = True                           # 4. opens the boot gate
-    page.theme_animation_style = theme_animation(prefs)   # crossfade again, unless reduced motion (D-173)
+    page.theme_animation_style = None             # crossfade again, under reduced motion too (D-173)
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 5. background, not awaited
 
     def on_brightness(e: ft.Event[ft.Page]):     # not e.brightness: a plain event at the pin (F36, U25)
@@ -145,19 +145,18 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
 
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
         if e.state == ft.AppLifecycleState.RESUME:
-            await on_resume(page, svc, prefs)
+            await on_resume(svc, prefs)
 
     page.on_platform_brightness_change = on_brightness   # 6. handlers write stores only (D-147)
     page.on_app_lifecycle_state_change = on_lifecycle
 
 
-async def on_resume(page: ft.Page, svc: Services, prefs: Prefs) -> None:
+async def on_resume(svc: Services, prefs: Prefs) -> None:
     """The one place for what a return to the foreground does (D-173)."""
     await read_accessibility(svc.semantics, prefs)        # OS flags are a snapshot (F13, U17)
-    page.theme_animation_style = theme_animation(prefs)   # a page field, not a component
 ```
 
-- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`, and logs "Reduced motion is on/off" when that flag changes; a failed read is logged and keeps the previous values. `theme_animation(prefs)` is `None` (Flutter's crossfade) or, under reduced motion, `NO_THEME_ANIMATION` (D-173). An unexpected error in steps 1-3 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=prepare_first_page`, which gives the page's default View the boot purple (Flet shows that View for a frame before `main()`'s first patch, F35) and sets `page.theme_animation_style` to zero duration in that first page, so every theme change before the gate lands at once, including the default settings that `App`'s theme effect applies on mount, before `bootstrap()` has read the stored ones.
+- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`, and logs "Reduced motion is on/off" when that flag changes; a failed read is logged and keeps the previous values. The theme crossfade stays under reduced motion: it changes colour, not position (D-173). An unexpected error in steps 1-3 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=prepare_first_page`, which gives the page's default View the boot purple (Flet shows that View for a frame before `main()`'s first patch, F35) and sets `page.theme_animation_style` to zero duration in that first page, so every theme change before the gate lands at once, including the default settings that `App`'s theme effect applies on mount, before `bootstrap()` has read the stored ones.
 - P1 inserted `await favorites.load(svc.storage)` as step 2 (D-172) and adds the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume to `on_resume()`, and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
 - **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `bootstrap()` sets `page.on_close` before its first await, so a session replaced during the boot view is closed too, and it then stops before it opens the gate or starts a refresh. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
@@ -1224,7 +1223,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
 - **Values** come from `docs/ux.md` and are mirrored in `theme.py`: full HC schemes (P2); `Tokens` (D-24: `live`, `warning`, `success`, `favorite`; `build_tokens(*, dark, high_contrast)` picks them, `App` provides them through `TokensCtx` and screens read them with `use_tokens()`, D-150); track badges (P1-02; D-25: a tonal pair per track key and brightness, at least 4.5:1, outlined in HC; "En Español" the tonal pair `#FFD7F3` / `#5E0058` in light, inverted in dark). `tests/test_theme.py` checks every text/background pair in light and dark (HC from P2), and the text roles and tokens on every surface of Flet's neutral ramp.
 - **Markdown:** `MARKDOWN_STYLE` is the one `ft.MarkdownStyleSheet` of D-116, passed to every `ft.Markdown(md_style_sheet=...)`. Its colours are scheme roles (`PRIMARY`, `ON_SURFACE`, `SURFACE_CONTAINER_HIGHEST`, `OUTLINE`), resolved against the theme on screen, so one constant serves every scheme; every text style in it names its colour (F28), its font family and, for links and strike-through, its decoration colour (D-152).
 - **Type** (D-26, D-33): only the M3 scale (`ft.Text(theme_style=ft.TextThemeStyle.TITLE_MEDIUM)`), no fixed heights around text, reflow at 200 %. **Roboto:** `page.fonts` takes one static file per family, so 500/700 would be synthetic; declare the family's 400/500/700 files through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26).
-- **Icons** (D-27): Material Icons only, outlined unless selected; icon-only buttons have a tooltip (their accessible name). **Motion** (D-34, D-173): M3 durations, each passed through `prefs.motion_ms(ms)`, which gives 0 under reduced motion; pulses are static then, and the theme crossfade is off. Route transitions stay the platform's (D-173). **iOS pins** (D-10): bundled font, `center_title=False`, Material back arrow, never `adaptive=True`; the Cupertino transition and bounce scrolling stay native.
+- **Icons** (D-27): Material Icons only, outlined unless selected; icon-only buttons have a tooltip (their accessible name). **Motion** (D-34, D-173): M3 durations, each passed through `prefs.motion_ms(ms)`, which gives 0 under reduced motion; pulses are static then. The theme crossfade stays: a colour fade, not motion (D-173). Route transitions stay the platform's (D-173). **iOS pins** (D-10): bundled font, `center_title=False`, Material back arrow, never `adaptive=True`; the Cupertino transition and bounce scrolling stay native.
 
 ---
 
