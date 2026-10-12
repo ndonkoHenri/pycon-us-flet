@@ -12,6 +12,7 @@ from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
 MORE_PAGES = (
@@ -36,6 +37,7 @@ APPEARANCE_LABELS: dict[Appearance, str] = {
 @ft.component
 def More() -> ft.View:
     """The More root: its pages, the Appearance setting and the PSF note (D-36)."""
+    list_ref, scroll_to_top = use_scroll_to_top()
     page = ft.context.page
     svc = use_services()
     prefs = use_prefs()
@@ -70,6 +72,8 @@ def More() -> ft.View:
                     padding=ft.Padding.symmetric(horizontal=16, vertical=8),
                 ),
                 note("Not an official PSF app."),
-            ]
+            ],
+            ref=list_ref,
         ),
+        on_retap=scroll_to_top,
     )

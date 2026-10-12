@@ -1,5 +1,8 @@
 """Tests for the shared chrome: ``AppScaffold``, ``StatusStrip`` and ``SectionHeader`` (#76).
 
+``AppScaffold``'s bottom bar and its tab switches are here too (#75); the bar's own
+parts are in ``test_navigation.py``.
+
 The builders run outside a renderer: the hooks they call (``ft.use_view_path``,
 ``ft.use_effect`` and the store hooks) are replaced by ``Hooks``, and a fake page is
 bound as Flet binds a session's page. What the controls look like, and that Flutter
@@ -23,11 +26,13 @@ from flet.components.component import Renderer
 
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
+from pycon_us.locations import TAB_ROOTS
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import scaffold
+from pycon_us.ui.navigation import TABS
 from pycon_us.ui.scaffold import (
     AppScaffold,
     SectionHeader,
@@ -324,6 +329,96 @@ def test_search_records_its_opener_with_the_query_then_opens(
     click(button)
     assert memory.search_base == "/map?highlight=7"
     assert page.navigated == ["/search?scope=rooms"]
+
+
+# ------------------------------------------------------------------ the bottom bar (#75)
+
+
+def bar_of(view: ft.View) -> ft.NavigationBar:
+    assert isinstance(view.navigation_bar, ft.NavigationBar)
+    return view.navigation_bar
+
+
+async def tap_tab(view: ft.View, root: str) -> None:
+    """Tap a destination as Flutter reports it: selected first, then ``on_change``."""
+    bar = bar_of(view)
+    bar.selected_index = TAB_ROOTS.index(root)
+    await cast(Any, bar.on_change)(SimpleNamespace(control=bar))
+
+
+@pytest.mark.parametrize("root", TAB_ROOTS)
+def test_every_tab_root_shows_the_bar_with_its_own_tab_selected(
+    hooks: Hooks, page: FakePage, root: str
+) -> None:
+    bar = bar_of(view_at(hooks, page, root))
+    assert TABS[bar.selected_index].root == root
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "/now/session/42",
+        "/schedule/session/42/speaker/17",
+        "/more/speakers",
+        "/more/tracks/python",
+        "/search",
+        "/search/session/42",
+    ],
+)
+def test_pushed_views_show_the_back_arrow_and_no_bar(
+    hooks: Hooks, page: FakePage, location: str
+) -> None:
+    view = view_at(hooks, page, location)
+    assert view.navigation_bar is None  # it moved with the page (D-144)
+    back_arrow(view)
+
+
+@pytest.mark.parametrize("target", ["/now", "/my-schedule", "/map", "/more"])
+async def test_tapping_another_tab_shows_its_root(
+    hooks: Hooks, page: FakePage, target: str
+) -> None:
+    retaps: list[str] = []
+
+    async def retap() -> None:
+        retaps.append("schedule")
+
+    await tap_tab(view_at(hooks, page, "/schedule", on_retap=retap), target)
+    assert page.navigated == [target]
+    assert retaps == []
+
+
+async def test_re_tapping_the_active_tab_runs_the_root_s_retap_and_stays(
+    hooks: Hooks, page: FakePage
+) -> None:
+    retaps: list[str] = []
+
+    async def retap() -> None:
+        retaps.append("map")
+
+    await tap_tab(view_at(hooks, page, "/map", on_retap=retap), "/map")
+    assert retaps == ["map"]
+    assert page.navigated == []
+
+
+async def test_re_tapping_a_root_without_a_retap_action_does_nothing(
+    hooks: Hooks, page: FakePage
+) -> None:
+    await tap_tab(view_at(hooks, page, "/now"), "/now")
+    assert page.navigated == []
+    assert page.dialogs == []
+
+
+async def test_a_retap_that_fails_is_reported_and_the_bar_keeps_working(
+    hooks: Hooks, page: FakePage
+) -> None:
+    async def retap() -> None:
+        raise RuntimeError("the list is gone")
+
+    view = view_at(hooks, page, "/more", on_retap=retap)
+    await tap_tab(view, "/more")
+    assert len(page.dialogs) == 1  # "Something went wrong" (D-163), not a crash
+    await tap_tab(view, "/now")
+    assert page.navigated == ["/now"]
 
 
 # ------------------------------------------------------------------ StatusStrip

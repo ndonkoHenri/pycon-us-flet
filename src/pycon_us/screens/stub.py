@@ -12,7 +12,12 @@ from pycon_us.services.errors import report_errors
 from pycon_us.ui.scaffold import StatusStrip
 
 
-def stub_body(controls: list[ft.Control], *, status: bool = False) -> ft.ListView:
+def stub_body(
+    controls: list[ft.Control],
+    *,
+    status: bool = False,
+    ref: ft.Ref[ft.ListView] | None = None,
+) -> ft.ListView:
     """Return a stub screen's body: its View path and params, then its rows.
 
     A plain function that calls hooks, so a screen calls it exactly once per render,
@@ -22,6 +27,8 @@ def stub_body(controls: list[ft.Control], *, status: bool = False) -> ft.ListVie
         controls: The rows.
         status: Start with the ``StatusStrip``, as the screens that show the feed's
             state do (Now, Schedule, My schedule; ux.md §5).
+        ref: A tab root's list ref from ``use_scroll_to_top()``, so a re-tap of its
+            tab scrolls the list to the top (D-144).
 
     Returns:
         A ``ListView`` that fills the View.
@@ -31,7 +38,7 @@ def stub_body(controls: list[ft.Control], *, status: bool = False) -> ft.ListVie
     shown = ", ".join(f"{key}={value}" for key, value in params.items())
     route_line = note(f"{view_path}  {shown}".rstrip(), small=True)
     strip: list[ft.Control] = [StatusStrip()] if status else []
-    return ft.ListView([*strip, route_line, *controls], expand=True)
+    return ft.ListView([*strip, route_line, *controls], expand=True, ref=ref)
 
 
 def note(text: str, *, small: bool = False) -> ft.Control:

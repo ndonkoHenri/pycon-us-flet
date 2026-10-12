@@ -80,7 +80,7 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | U11 | Offline service worker for `flet build web` | No web target (D-08) |
 | U14 | Verified App Links / universal links | They need the PSF domain (D-21) |
 
-**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists seven as later candidates (U19..U25); the rest get an id only when a feature needs them, and the last four are small fixes the owner can file directly.
+**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists seven as later candidates (U19..U25); the rest get an id only when a feature needs them, and the last five are small fixes the owner can file directly.
 
 | Gap | Interim | Possible upstream piece |
 |---|---|---|
@@ -99,6 +99,7 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | `flet debug android\|ios --show-devices` exits with "Device ID must be specified": `check_device_id()` runs before the `--show-devices` branch (flet-cli `commands/debug.py:108-110`) | `flet devices` | Run the device check after that branch |
 | No public way to bind `ft.context.page` outside a session: `_context_page` (`flet/controls/context.py:212`) is private, and Flet's own pytest plugin sets it directly (#160) | `tests/fakes.py`'s `bound()` sets the private ContextVar, checked against the pin | A context manager such as `ft.context.bind_page(page)` that the pytest plugin uses too |
 | `flet_app` docstring (`flet/pytest_plugin.py:132`) says the bound page is the tester session, but in device mode `flet_app.page` raises `RuntimeError` | Flows use `flet_app.tester` only ([`testing-and-quality.md`](testing-and-quality.md) §5.1) | Fix the docstring |
+| `NavigationBarDestination` has no identifier; and the `Semantics.identifier` docstring (`flet/controls/core/semantics.py:42-43`) says it forces its own node, which the Dart control does not do (#163) | Each destination's icon is an unlabelled `Semantics(identifier=...)` that Flutter merges into the destination's node (D-166); pin bumps re-check it ([`development.md`](development.md) §2.2) | An `identifier` on the destination (and the rail's); align the docstring with the Dart |
 
 ---
 

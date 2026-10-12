@@ -20,6 +20,7 @@ from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference, use_conference
+from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
 SOURCE_LABELS = {
@@ -36,6 +37,7 @@ SAMPLE_SIZE = 5
 @ft.component
 def Schedule() -> ft.View:
     """The Schedule root: the data's status, source and age, its days and a few sessions."""
+    list_ref, scroll_to_top = use_scroll_to_top()
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
@@ -88,7 +90,9 @@ def Schedule() -> ft.View:
                 ),
             ],
             status=True,
+            ref=list_ref,
         ),
+        on_retap=scroll_to_top,
     )
 
 
