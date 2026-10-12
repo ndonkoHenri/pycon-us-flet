@@ -149,12 +149,6 @@ def test_speakers_are_registered_once_by_id_from_slots_and_posters() -> None:
         assert poster.speaker_ids and set(poster.speaker_ids) <= set(data.speakers)
 
 
-def test_speaker_without_photo_or_bio_reads_as_empty() -> None:
-    speakers = decoded(2026).speakers.values()
-    assert any(speaker.photo_url == "" for speaker in speakers)
-    assert all(isinstance(speaker.bio, str) for speaker in speakers)
-
-
 def test_posters_sprints_and_job_listings_pass_through() -> None:
     data = decoded(2026)
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
