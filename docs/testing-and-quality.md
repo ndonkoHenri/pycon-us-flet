@@ -141,6 +141,8 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 | Ids are strings in four stable forms | `test_ids_are_unique_stable_strings_in_ionics_forms` (an invariant) | DATA-26, D-42 |
 | A malformed slot is skipped and logged; the rest of the day survives | `test_bad_slot_is_skipped_and_logged` (uses `caplog`) | D-41 |
 
+**Bundled snapshot** (NEW-03, D-135). `test_the_bundled_snapshot_processes_cleanly` processes `src/pycon_us/data/<YEAR>/conference.json` and expects no skipped record, the bar `tools/update_snapshot.py` applies before it writes; the invariants below take the snapshot as an input too. The tool's own tests serve the recorded feed, or a broken copy, through `httpx.MockTransport`.
+
 **Invariants** (`tests/test_feed_invariants.py`, built in P0-13). One test per invariant, each run on every fixture year under both machine zones (and later by `tools/check_feed.py` on the live feed):
 
 1. No session lost: every raw slot is its own session or listed in `ConferenceData.dropped` under exactly one named rule (D-123); every collapsed slot lies within a row of its kind on its day; every open space is a session or unscheduled, judged from its raw times and room; every raw poster, top-level or nested (D-121), has its detail session.
