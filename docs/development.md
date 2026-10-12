@@ -145,9 +145,9 @@ build-backend = "uv_build"
 dev = [                               # host only, never bundled; versions in uv.lock (D-75)
     "flet-cli",                       # flet run / build / debug / devices / test
     "flet-web",                       # flet run --android/--ios serves through it
-    "flet-desktop",                   # optional desktop window (D-09, §5.4)
+    "flet-desktop",                   # optional desktop window (D-09, development.md §5.4)
     "flet-platform-assets",           # flet-cli dependency, listed so uv takes it from .flet-src
-    "flet[test]",                     # flet test flows (D-78) and pytest-asyncio; in dev so uv sync installs it
+    "flet[test]",                     # flet test flows (D-78) and pytest-asyncio
     "pytest",
     "hypothesis",
     "ruff",
@@ -170,13 +170,29 @@ dark_color = "#680579"
 bgcolor_light = "#680579"
 bgcolor_dark = "#680579"
 
+[tool.flet.flutter.pubspec.dependencies] # Roboto 400/500/700 (D-26, D-105); path from build/flutter/
+roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }
+
 [tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
 "org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios]                       # signing (development.md §8.2); not secret (D-86)
+team_id = "VF87YBAN84"
+# No export_method: the default "debugging" serves flet debug ios; TestFlight builds pass
+# --ios-export-method app-store-connect. No provisioning_profile yet (#121): flet build ipa
+# then passes --no-codesign and produces an .xcarchive.
+
+[tool.flet.ios.export_methods.debugging]
+signing_certificate = "Apple Development"
+
+[tool.flet.ios.export_methods."app-store-connect"]
+signing_certificate = "Apple Distribution"
+export_options = { manageAppVersionAndBuildNumber = false }   # Xcode must not renumber
 
 [tool.flet.ios.info]
 ITSAppUsesNonExemptEncryption = false # HTTPS only: no export-compliance prompt on upload
 
-# ------------------------------------------------------------------ Flet from source (§2.2)
+# ------------------------------------------------------------------ Flet from source (development.md §2.2)
 # Delete both tables in the PR that pins flet==1.1.0.
 [tool.uv.sources]
 flet = { path = ".flet-src/sdk/python/packages/flet", editable = true }
@@ -219,7 +235,7 @@ addopts = ["--ignore=tests/ui"]       # device flows run through flet test (D-78
 - `uv lock` resolved `flet` as `editable = ".flet-src/…"`;
 - ruff, pyright and pytest ran under it.
 
-The `[build-system]`, splash, boot-screen, `asyncio_mode` and `DTZ` lines were added after that check, so S5 re-runs it on the whole file. A real `flet build` from this setup is spike **S5**'s job.
+The `[build-system]`, splash, boot-screen, `asyncio_mode` and `DTZ` lines were added after that check, so S5 re-runs it on the whole file. A real `flet build` from this setup is spike **S5**'s job. P0-04 (#52) added the Roboto pubspec entry (D-105) and the iOS signing tables (§8.2), and built `apk --arch arm64-v8a`, `ios-simulator` and `ipa` from a clean `build/` with the whole file at the `15854a0ac` pin.
 
 **How `pycon_us` is importable on the host.** `[build-system]` uses uv's own backend, whose default layout is `src/pycon_us`, so `uv sync` installs the package editable. Then the tests, `tools/check_feed.py`, `tools/update_snapshot.py` and the mock server (which shares `core/signing.py`, D-52) all `import pycon_us` with no `PYTHONPATH`. Checked with uv 0.12.15 in a scratch project: `uv sync` built and installed it, and `uv run python tools/<script>.py` imported it. Without a build system, uv would treat the project as virtual and the tools would fail with `ModuleNotFoundError: pycon_us`. `flet build` is unaffected: it copies `src/` and pip-installs only `[project].dependencies`. On the phone, package metadata is still invisible (F15), so code reads `pycon_us.__version__`, never `importlib.metadata`.
 
@@ -240,6 +256,8 @@ The `[build-system]`, splash, boot-screen, `asyncio_mode` and `DTZ` lines were a
 | `tool.flet.boot_screen.flet` | `CLI/commands/build_base.py:1799-1840` (`_resolve_boot_screen`) | Background of Flet's boot screen while Python starts (`DOCS/publish/index.md` "Built-in `flet` boot screen") |
 | `tool.flet.android.gradle_properties` | `CLI/commands/build_base.py:1262-1265` | Merged over the template defaults, so ours replaces `org.gradle.jvmargs` |
 | `tool.flet.ios.info` | `CLI/commands/build_base.py:1205-1212` | Merged into `Info.plist` |
+| `tool.flet.flutter.pubspec.dependencies` | `CLI/commands/build_base.py:1986-2004` (at `15854a0ac`) | Merged into `build/flutter/pubspec.yaml`, so relative paths resolve from `build/flutter/`; adds `roboto_fonts` (D-105) |
+| `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1467-1501` (at `15854a0ac`) | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
 | `tool.flet.dev_packages` | `CLI/commands/build_base.py:2616-2641` | Rewrites `flet` to `flet @ file:///…/.flet-src/…` for the bundle; relative paths resolve from the project root |
 
 Not set, because the default is what we want:
@@ -278,8 +296,8 @@ Each row lands in the PR that ships the feature, never earlier. A Flet extension
 | P3 | Mock credentials (D-49) | `"flet-secure-storage"` | Yes (monorepo package) |
 | P3 | Camera scanning (E1, D-65) | `[tool.flet] permissions = ["camera"]` and `[tool.flet.ios.info] NSCameraUsageDescription = "Scans attendee badges for the staff tools."`. Without our own text, Flet's default "capture photos and videos" string is used (`CLI/commands/build_base.py:254-269`). Then add the scanner extension once it is pinned. | The keys: yes. The extension: no (E1). |
 | P3 | Mock server on an iPhone (§6) | `[tool.flet.ios.info] NSLocalNetworkUsageDescription = "Connects to a developer's test server on your local network."`, but only if S1 or P3 shows that iOS local-network privacy prompts for the embedded Python's sockets. **UNVERIFIED.** | Yes (`ios.info`) |
-| P0 (S5) | Roboto 400/500/700 (D-26, THEME-11) | `[tool.flet.flutter.pubspec.flutter]` with `fonts = [{ family = "Roboto", fonts = [{ asset = "<path>/Roboto-Regular.ttf", weight = 400 }, { asset = "<path>/Roboto-Medium.ttf", weight = 500 }, { asset = "<path>/Roboto-Bold.ttf", weight = 700 }] }]`, merged into the generated `pubspec.yaml` (`CLI/commands/build_base.py:2002-2020`). **S5 replaced this route (D-105):** with assets outside `build/flutter/`, iOS renders SF Pro; a local font-only Flutter package added through `[tool.flet.flutter.pubspec.dependencies]` works on both platforms (`docs/spikes/05-build-and-ship.md`). `flet run` falls back to the system font (accepted). `page.fonts` takes one file per family (U20). | The merge: yes. The package route: yes (S5). |
-| P0 (S5) | iOS signing (§8.2) | `[tool.flet.ios] team_id`, plus `[tool.flet.ios.export_methods.debugging]` and `[tool.flet.ios.export_methods.app-store-connect]`. No `export_method` key, so it defaults to `debugging` and `flet debug ios` signs for development. | Yes |
+| P0 (S5) | Roboto 400/500/700 (D-26, D-105, THEME-11) | **Done in P0-04 (#52), now in §3.1.** The local font-only Flutter package `flutter_packages/roboto_fonts/` (`pubspec.yaml` declaring family `Roboto` with weights 400, 500 and 700, the three TTFs from googlefonts/roboto v2.138, its Apache-2.0 `LICENSE`, and a one-line `lib/roboto_fonts.dart`), added with `[tool.flet.flutter.pubspec.dependencies] roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }`; the app sets `Theme.font_family = "packages/roboto_fonts/Roboto"`. The files stay out of `src/`, so they are not bundled twice. A `flutter.fonts` entry with assets outside `build/flutter/` renders SF Pro on iOS, so it is not used (`docs/spikes/05-build-and-ship.md`). `flet run` falls back to the system font (accepted). `page.fonts` takes one file per family (U20). | Yes (S5, P0-04) |
+| P0 (S5) | iOS signing (§8.2) | **Done in P0-04 (#52), now in §3.1,** except the profile names: `[tool.flet.ios] team_id`, plus `[tool.flet.ios.export_methods.debugging]` and `[tool.flet.ios.export_methods."app-store-connect"]`. No `export_method` key, so it defaults to `debugging` and `flet debug ios` signs for development. Each table gets its `provisioning_profile` once #121 creates the profiles. | Yes |
 
 ---
 
@@ -689,28 +707,33 @@ uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk
 
 Internal TestFlight testers are members of the owner's App Store Connect team: up to 100 people, with no Beta App Review. A build expires after 90 days. **External** testing would need Beta App Review, and the store name would then be visible outside the team, so it is out of scope (D-85).
 
-**Setup in S5,** first with a throwaway bundle id, then with the O-4 identity:
+**Setup** (owner-only, moved from S5 to #121), first with a throwaway bundle id, then with the O-4 identity:
 1. Register an explicit App ID for the bundle id, and register the owner's devices.
 2. Create an Apple Development certificate and a **Development** provisioning profile for the App ID that includes those devices (`flet debug ios` needs it; see the Flet blog post "flet debug", 2025-12-02, "Testing on a real iPhone/iPad device"). Regenerate it whenever a device is added.
 3. Create an Apple Distribution certificate, and an App Store profile. Name both profiles exactly as in `pyproject.toml`.
 4. Create an App Store Connect record under the neutral working name (O-4) and a SKU.
-5. Commit the signing configuration. Team ids and profile names are not secrets; another contributor overrides them with `--ios-team-id` and `--ios-provisioning-profile` (`DOCS/publish/ios.md` "Resolution order").
+5. Commit the signing configuration. Team ids and profile names are not secrets; another contributor overrides them with `--ios-team-id` and `--ios-provisioning-profile` (`DOCS/publish/ios.md` "Resolution order"). P0-04 (#52) committed the team id and the certificate names; the two `provisioning_profile` lines follow once #121 has created the profiles.
+
+As applied in `pyproject.toml` (§3.1), with the lines #121 adds commented out:
 
 ```toml
-[tool.flet.ios]
-team_id = "<owner team id>"
+[tool.flet.ios]                       # signing (development.md §8.2); not secret (D-86)
+team_id = "VF87YBAN84"
 # No export_method: the default "debugging" serves flet debug ios; TestFlight builds pass
-# --ios-export-method app-store-connect.
+# --ios-export-method app-store-connect. No provisioning_profile yet (#121): flet build ipa
+# then passes --no-codesign and produces an .xcarchive.
 
 [tool.flet.ios.export_methods.debugging]
-provisioning_profile = "<development profile incl. the owner's devices>"
+# provisioning_profile = "<development profile incl. the owner's devices>"   (#121)
 signing_certificate = "Apple Development"
 
-[tool.flet.ios.export_methods.app-store-connect]
-provisioning_profile = "<exact profile name from the portal>"
+[tool.flet.ios.export_methods."app-store-connect"]
+# provisioning_profile = "<exact profile name from the portal>"              (#121)
 signing_certificate = "Apple Distribution"
 export_options = { manageAppVersionAndBuildNumber = false }   # Xcode must not renumber
 ```
+
+Without a profile, both `uv run flet build ipa` and `uv run flet build ipa --ios-export-method app-store-connect` print flet-cli's warning panel, build with `--no-codesign` and leave `build/ipa/pycon-us.xcarchive` (checked in #52). The chosen table still reaches the generated project: `CODE_SIGN_IDENTITY` and `DEVELOPMENT_TEAM` in the Runner's build settings, and `method`, `teamID`, `signingCertificate` and `manageAppVersionAndBuildNumber` in `build/flutter/ios/exportOptions.plist`. Simulator builds are signed ad hoc whatever the table says.
 
 **Build and upload:**
 
