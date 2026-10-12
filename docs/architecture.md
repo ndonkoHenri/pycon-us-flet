@@ -164,7 +164,7 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
 - P1 inserted `await favorites.load(svc.storage)` as step 2 (D-172) and adds the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #84 added `on_resume()` (D-173), and #82 its refresh when due and the pause handling (D-175). P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
 - **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `bootstrap()` sets `page.on_close` before its first await, so a session replaced during the boot view is closed too, and it then stops before it opens the gate or starts a refresh. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
-**Refresh triggers (D-40, D-175):** start (always); resume, when `Conference.refresh_due()`; the status strip's 60 s tick on Now and Schedule (`StatusStrip(auto_refresh=True)`), while it is mounted and the app is in the foreground, when `refresh_due()`; "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*. `refresh_due()` is true when no refresh has started in the session, or the last one *began* 15 min ago or more by `clock.now()` (a clock set back counts as due): the interval counts from the last attempt, not the data's age, so an offline phone retries every 15 min rather than every minute. Every strip, My schedule's too, re-renders on its tick when the minute has changed, so its age keeps up and it appears when the data turns stale.
+**Refresh triggers (D-40, D-175):** all but Refresh and pull-to-refresh are automatic, so quiet: they show only the strip's bar (D-177). Start (always); resume, when `Conference.refresh_due()`; the status strip's 60 s tick on Now and Schedule (`StatusStrip(auto_refresh=True)`), while it is mounted and the app is in the foreground, when `refresh_due()`; "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*. `refresh_due()` is true when no refresh has started in the session, or the last one *began* 15 min ago or more by `clock.now()` (a clock set back counts as due): the interval counts from the last attempt, not the data's age, so an offline phone retries every 15 min rather than every minute. Every strip, My schedule's too, re-renders on its tick when the minute has changed, so its age keeps up and it appears when the data turns stale.
 
 ---
 
@@ -393,7 +393,7 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
       Tab("/more", "More", ft.Icons.MORE_HORIZ, ft.Icons.MORE_HORIZ),
   )  # Tab.identifier: "app.nav." + the root, "-" as "_" (app.nav.my_schedule)
   ```
-- **Status strip (D-32, D-165, D-175):** `StatusStrip(auto_refresh=False)` is a component the screens that show the feed's state put first in their body (Now, Schedule, My schedule); hidden when fresh, otherwise an icon, `strip_line()`'s text and Refresh, one live region (`app.status`). It ticks every 60 s through `Services.run_every` (re-rendering when the minute has changed), and on Now and Schedule (`auto_refresh=True`) the tick also starts a due refresh (§4.3). `SectionHeader(text)` heads a group of rows.
+- **Status strip (D-32, D-165, D-175, D-177):** `StatusStrip(auto_refresh=False)` is a component the screens that show the feed's state put first in their body (Now, Schedule, My schedule); hidden when fresh, otherwise an icon, `strip_line()`'s text and Refresh, one live region (`app.status`); its bar shows any refresh (`Conference.refreshing`), its line only the user's (D-177). It ticks every 60 s through `Services.run_every` (re-rendering when the minute has changed), and on Now and Schedule (`auto_refresh=True`) the tick also starts a due refresh (§4.3). `SectionHeader(text)` heads a group of rows.
 - **Tablets (P2, D-09):** at 600 dp and wider, `AppScaffold` puts an `ft.NavigationRail` in a `Row` beside the content (`View.navigation_bar` takes a `NavigationBar`, or a `CupertinoNavigationBar`, which D-10 rules out, but not a `NavigationRail`) and centres content at 720/840 dp.
 - **Insets and system bars (#311, D-12):** `SafeArea` bodies, `use_safe_area=True` sheets, and `Theme.system_overlay_style` per colour scheme (§15, D-113); S1 checked 3-button and gesture navigation, in light and dark. The `SafeArea` also keeps landscape content clear of the side navigation bar.
 
@@ -411,7 +411,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
-| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_started_at` (D-175) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `refresh_due`, `start_refresh_if_due` (D-175) | P0 |
+| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_started_at` (D-175); `_asked` (D-177) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `refresh_due`, `start_refresh_if_due` (D-175) | P0 |
 | `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`; `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark`; `motion_ms(ms)`, 0 under reduced motion (D-173) | P0 |
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
@@ -435,6 +435,7 @@ class Conference:
     problem: Literal["offline", "server"] | None = None
     version: int = 0
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
+    _asked: bool = field(default=False, repr=False)   # the user's refresh; automatic ones are quiet (D-177)
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the persistent cache, or the bundled snapshot when there is no usable cache."""
@@ -460,8 +461,13 @@ class Conference:
         return self._task
 
     async def refresh(self, storage: Storage, year: YearData, *, transport=None, closed=None) -> None:
-        """Refresh and wait; concurrent callers share one request, and one caller's cancellation spares it."""
-        await asyncio.shield(self.start_refresh(storage, year, transport=transport, closed=closed))
+        """The user's refresh: shared with any running one, and shown as "refreshing" (D-177)."""
+        task = self.start_refresh(storage, year, transport=transport, closed=closed)
+        if not self._asked:
+            self._asked = True
+            if self.refreshing:               # joined a quiet refresh: the strip changes now
+                cast(ft.Observable, self).notify()
+        await asyncio.shield(task)
 
     async def _refresh(self, storage: Storage, year: YearData, transport) -> None:
         self.refreshing = True
@@ -480,6 +486,7 @@ class Conference:
             if previous is not None and previous_source != "bundled":
                 await self._record_changes(storage, diff(previous, data))   # P2, D-47
         finally:
+            self._asked = False               # the next refresh starts quiet (D-177)
             self.refreshing = False
 
     def _publish(self, data: ConferenceData, source: Source, fetched_at: datetime) -> None:
@@ -495,7 +502,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
     ...
 ```
 
-- `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing`, `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). `start_refresh()` records when it starts a refresh (`_started_at`), and `refresh_due()` / `start_refresh_if_due()` are the automatic triggers' rule (§4.3, D-175). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
+- `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing` (only while a refresh the user asked for runs: an automatic one is quiet, D-177), `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). `start_refresh()` records when it starts a refresh (`_started_at`), and `refresh_due()` / `start_refresh_if_due()` are the automatic triggers' rule (§4.3, D-175). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
@@ -539,7 +546,7 @@ A screen reads its stores through hooks, memoises its view model with `ft.use_me
 | Persistent cache | `<data dir>/feed-<year>.json`, raw bytes; `saved_at` = file mtime | every start when present |
 | Bundled snapshot | `data/<year>/conference.json`, read by `YearData.read_snapshot()` and refreshed by `tools/update_snapshot.py`, which refuses a feed that does not parse cleanly and also writes `conference.toml`'s `snapshot_captured_at` (D-135) | first launch, or a corrupt cache |
 
-The strip (`StatusStrip`, D-165) is hidden when fresh; shows "Updating the schedule…" with an indeterminate `ProgressBar` while refreshing, "Updated 9 hours ago · Refresh" when stale (6 h on conference days, else 24 h), "Offline · schedule from Tue, May 12, 10:42 AM · Refresh" when `problem == "offline"`, and "Couldn't update · schedule from … · Refresh" when `problem == "server"`; without data the last two say "Offline · no schedule yet" and "Couldn't update · no schedule yet", and a stale status "No schedule yet". Skeletons only when `data is None` (impossible after bootstrap). A failed refresh leaves data and cache untouched.
+The strip (`StatusStrip`, D-165) is hidden when fresh; shows "Updating the schedule…" with an indeterminate `ProgressBar` while a refresh the user asked for runs; during an automatic refresh it keeps its line, icon and button and shows only the bar (hidden over fresh data, D-177); "Updated 9 hours ago · Refresh" when stale (6 h on conference days, else 24 h), "Offline · schedule from Tue, May 12, 10:42 AM · Refresh" when `problem == "offline"`, and "Couldn't update · schedule from … · Refresh" when `problem == "server"`; without data the last two say "Offline · no schedule yet" and "Couldn't update · no schedule yet", and a stale status "No schedule yet". Skeletons only when `data is None` (impossible after bootstrap). A failed refresh leaves data and cache untouched.
 
 ### 7.2 Feed shape (2026; `docs/research/ionic/data-layer.md` §9)
 
