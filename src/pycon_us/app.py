@@ -140,7 +140,7 @@ async def bootstrap(
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
         await conference.load_local(svc.storage, svc.year)
-    except Exception:  # not report_errors': the gate must open anyway (D-161)
+    except Exception:  # its own net, not report_errors: the gate opens anyway (D-161)
         if not svc.closed.is_set():  # a closed session's store write fails (F30)
             logger.exception("Start failed; opening the app with what has loaded")
     if svc.closed.is_set():
