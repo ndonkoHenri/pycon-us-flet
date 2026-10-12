@@ -2,12 +2,13 @@
 
 Each decoder takes one JSON value and returns its record, or raises ``TypeError`` or
 ``ValueError`` naming the field and the problem; ``feed.process()`` then skips that record.
-Ids become strings and times aware datetimes in the conference zone. Unknown fields are
-ignored. ``Slot`` and ``OpenSpace`` are the feed as it is, before Ionic's rules
-(``core/rules.py``) make sessions of them.
+Ids become strings and times aware datetimes in the conference zone, and a lone surrogate
+in a string becomes U+FFFD (#150). Unknown fields are ignored. ``Slot`` and ``OpenSpace``
+are the feed as it is, before Ionic's rules (``core/rules.py``) make sessions of them.
 """
 
 import logging
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 OPEN_SPACE_ID_OFFSET = 9000
 """Added to an open space's ``conf_key``, which collides with the schedule's (DATA-05)."""
+
+_SURROGATE = re.compile(r"[\ud800-\udfff]")
+"""A surrogate code point; in a decoded string it can only be a lone one."""
 
 
 @dataclass(frozen=True)
@@ -219,7 +223,7 @@ def _text(record: Mapping[str, object], key: str, *, optional: bool = False) -> 
         return ""
     if not isinstance(value, str):
         raise TypeError(f"{key!r} should be a string, got {value!r}")
-    return value
+    return _without_surrogates(value)
 
 
 def _id(record: Mapping[str, object], key: str) -> str:
@@ -227,7 +231,7 @@ def _id(record: Mapping[str, object], key: str) -> str:
     value = record.get(key)
     if isinstance(value, bool) or not isinstance(value, int | str) or value == "":
         raise ValueError(f"{key!r} should be an id, got {value!r}")
-    return str(value)
+    return str(value) if isinstance(value, int) else _without_surrogates(value)
 
 
 def _list(record: Mapping[str, object], key: str) -> list[object]:
@@ -245,7 +249,19 @@ def _strings(record: Mapping[str, object], key: str) -> tuple[str, ...]:
     values = _list(record, key)
     if not all(isinstance(value, str) for value in values):
         raise TypeError(f"{key!r} should be a list of strings, got {values!r}")
-    return tuple(str(value) for value in values)
+    return tuple(_without_surrogates(str(value)) for value in values)
+
+
+def _without_surrogates(value: str) -> str:
+    r"""Return ``value`` with each surrogate code point (U+D800..U+DFFF) replaced by U+FFFD.
+
+    JSON can escape a lone surrogate (``"\ud800"``) and ``json.loads`` keeps it, but strict
+    UTF-8 cannot encode one, and Flet sends every string to Flutter as strict UTF-8
+    (msgpack), so one would fail there (#150). A pair of escapes is already one
+    supplementary character (an emoji), so only lone surrogates are left to replace.
+    UTF-8's ``errors="replace"`` is not used: it would turn them into ``?``.
+    """
+    return _SURROGATE.sub("\ufffd", value)
 
 
 def _schedule_time(
