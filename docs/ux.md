@@ -72,6 +72,8 @@ One `ListView` of `ListTile`s under `SectionHeader`s; no drawer, no accordions. 
 
 The Staff section and the profile row appear and disappear live with the account (SHELL-11, SHELL-15).
 
+**How the list grows (D-169).** A section and its rows appear in the PR that brings their pages, so no row is dead (SHELL-09). P0 (#77) shows Programme, whose pages are stubs until their P1 screens, and You. Until Settings exists (P2), You starts with the **Appearance** control, three radio rows (System, Light, Dark) as §6.9 specifies them under an "Appearance" label marked as a heading (D-33), then About this app, then **Developer** wherever it is available (always when not embedded; in packaged builds after the unlock, D-73). Rows are `LinkTile`s (§3.9) with the §3.7 icons: `PEOPLE_OUTLINE` Speakers, `SELL_OUTLINED` Tracks & session types, `CO_PRESENT_OUTLINED` Keynotes, `FORUM_OUTLINED` Open spaces, `BOLT_OUTLINED` Lightning talks, `ROCKET_LAUNCH_OUTLINED` Sprints, `PALETTE_OUTLINED` Appearance, `INFO_OUTLINE` About this app, `DEVELOPER_MODE_OUTLINED` Developer. Each row carries the identifier `more.<page>` (`more.speakers`, `more.open_spaces`, `more.app`), the Appearance group `more.appearance` and its options `more.appearance.<value>`. A footnote, "Not an official PSF app.", closes the list until About this app carries it (D-36). Re-tapping More scrolls the list to the top (D-166).
+
 ### 2.3 Navigation map
 
 ```
@@ -219,7 +221,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM), FilledTonalButton?]` | One sentence, one way out | Live region on first show |
 | `SkeletonList` | `Shimmer` over 5 placeholder rows | Only with no data at all | "Loading schedule" |
 | `LocationCard` (P2) | `Card(OUTLINED, Row[Stack[Image(width=112), pin], Column[label, sublabel, floor]])` | Pin pulses twice; pushes the floor viewer | One button: "Show Room 104A on the Concourse level floor plan" |
-| `LinkTile` | `ListTile(leading, title, subtitle, trailing=OPEN_IN_NEW, on_click)` | Link rule §4.7 | `Semantics(link=True)`, "opens in browser" |
+| `LinkTile` | `MergeSemantics(ListTile(leading, title, subtitle, trailing, on_click))`, with an optional `Semantics(identifier=...)` | In-app (#77): trailing `CHEVRON_RIGHT`, pushes a location, M3 heights (56 dp, 72 with a subtitle). External (#83): trailing `OPEN_IN_NEW`, link rule §4.7 | One node read as its title and subtitle; external rows add `Semantics(link=True)`, "opens in browser" |
 
 ```python
 import flet as ft

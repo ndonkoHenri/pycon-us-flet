@@ -1,31 +1,59 @@
-"""More (``/more``): a stub of the flat list until P1 (D-15, ux.md §2.2).
+"""More (``/more``): one flat, sectioned list instead of Ionic's drawer (D-15, ux.md §2.2).
 
-It links to every More page the route table has, and keeps the Appearance control that
-exercises ``Prefs.save()`` and the theme until Settings exists (P2, THEME-01).
+A section shows once its pages exist, so no row is dead. In P0 that is **Programme**,
+whose pages are stubs until P1, and **You**: the Appearance control, which stands in for
+Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
+then About this app and, when not embedded, Developer (D-73; #88 adds the unlock in
+packaged builds). Expo & sponsors, At the venue and About join with their P2 pages; the
+profile row and Staff tools, first in the list, with P3's mock account (D-16, D-51).
+Every row pushes its page, so Back returns here (D-17).
 """
 
-from typing import cast
+from typing import NamedTuple, cast
 
 import flet as ft
+from flet.utils import is_embedded
 
 from pycon_us.prefs import Appearance, use_prefs
-from pycon_us.screens.stub import nav_tile, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.navigation import use_scroll_to_top
+from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 
-MORE_PAGES = (
-    ("Speakers", "/more/speakers"),
-    ("Tracks & session types", "/more/tracks"),
-    ("Keynotes", "/more/keynotes"),
-    ("Open spaces", "/more/open-spaces"),
-    ("Lightning talks", "/more/lightning-talks"),
-    ("Sprints", "/more/sprints"),
-    ("About this app", "/more/app"),
-    ("Developer", "/more/developer"),
+
+class MoreEntry(NamedTuple):
+    """A row of the More list: a page under ``/more`` (ux.md §2.2)."""
+
+    title: str
+    location: str
+    icon: ft.IconData
+
+    @property
+    def identifier(self) -> str:
+        """The semantics identifier UI tests find it by: ``more.<page>`` (section M)."""
+        return "more." + self.location.removeprefix("/more/").replace("-", "_")
+
+
+PROGRAMME = (
+    MoreEntry("Speakers", "/more/speakers", ft.Icons.PEOPLE_OUTLINE),
+    MoreEntry("Tracks & session types", "/more/tracks", ft.Icons.SELL_OUTLINED),
+    MoreEntry("Keynotes", "/more/keynotes", ft.Icons.CO_PRESENT_OUTLINED),
+    MoreEntry("Open spaces", "/more/open-spaces", ft.Icons.FORUM_OUTLINED),
+    MoreEntry("Lightning talks", "/more/lightning-talks", ft.Icons.BOLT_OUTLINED),
+    MoreEntry("Sprints", "/more/sprints", ft.Icons.ROCKET_LAUNCH_OUTLINED),
 )
-"""The More pages of P1, in the list's order (ux.md §2.2); later phases add theirs."""
+"""The Programme section, in the list's order (ux.md §2.2; icons §3.7)."""
+
+ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
+DEVELOPER = MoreEntry("Developer", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED)
+
+MORE_PAGES = (*PROGRAMME, ABOUT_APP, DEVELOPER)
+"""Every page the list links to; later phases add theirs with their sections."""
+
+SHOW_DEVELOPER = not is_embedded()
+"""Whether the list shows Developer: always in the companion app and on a desktop host;
+in packaged builds only after the unlock in About this app, which #88 adds (D-73)."""
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
     "system": "System",
@@ -36,15 +64,15 @@ APPEARANCE_LABELS: dict[Appearance, str] = {
 
 @ft.component
 def More() -> ft.View:
-    """The More root: its pages, the Appearance setting and the PSF note (D-36)."""
+    """The More root: its sections, the search, and a re-tap that scrolls to the top."""
     list_ref, scroll_to_top = use_scroll_to_top()
     page = ft.context.page
     svc = use_services()
     prefs = use_prefs()
 
     @report_errors
-    async def choose_appearance(e: ft.Event[ft.SegmentedButton]) -> None:
-        theme = cast(Appearance, e.control.selected[0])
+    async def choose_appearance(e: ft.Event[ft.RadioGroup]) -> None:
+        theme = cast(Appearance, e.control.value)
         if not await prefs.save(svc.storage, theme=theme):
             page.show_dialog(
                 ft.SnackBar(
@@ -53,27 +81,90 @@ def More() -> ft.View:
                 )
             )
 
+    you = (ABOUT_APP, DEVELOPER) if SHOW_DEVELOPER else (ABOUT_APP,)
     return AppScaffold(
         title="More",
         actions=[search_button(svc.memory, "all")],
-        body=stub_body(
+        body=ft.ListView(
             [
-                *(nav_tile(label, location) for label, location in MORE_PAGES),
-                SectionHeader("Appearance"),
+                SectionHeader("Programme"),
+                *(link(entry) for entry in PROGRAMME),
+                SectionHeader("You"),
+                appearance(prefs.theme, choose_appearance),
+                *(link(entry) for entry in you),
                 ft.Container(
-                    ft.SegmentedButton(
-                        selected=[prefs.theme],  # controlled (D-157)
-                        segments=[
-                            ft.Segment(value=value, label=ft.Text(label))
-                            for value, label in APPEARANCE_LABELS.items()
-                        ],
-                        on_change=choose_appearance,
+                    ft.Text(
+                        "Not an official PSF app.",  # until About this app says it (D-36)
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
-                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                    padding=ft.Padding.all(16),
                 ),
-                note("Not an official PSF app."),
             ],
+            expand=True,
             ref=list_ref,
         ),
         on_retap=scroll_to_top,
+    )
+
+
+def link(entry: MoreEntry) -> ft.Control:
+    """Return the row of one More page.
+
+    Args:
+        entry: The page.
+    """
+    return LinkTile(
+        entry.title, entry.location, icon=entry.icon, identifier=entry.identifier
+    )
+
+
+def appearance(
+    selected: Appearance, on_change: ft.ControlEventHandler[ft.RadioGroup]
+) -> ft.Control:
+    """Return the Appearance setting: System, Light or Dark (D-23; Settings in P2).
+
+    Radio rows, as Settings will have them (ux.md §6.9): the whole row is the target
+    and reads as one control, and the rows reflow at any text size, where three
+    segments in one row clipped "System" at 200 % on a 360 dp wide phone.
+
+    Args:
+        selected: ``Prefs.theme``; the group is controlled (D-157).
+        on_change: Saves the choice.
+    """
+    # A heading, as a SectionHeader is, so screen readers can jump to the group (D-33)
+    label = ft.Semantics(
+        header=True,
+        content=ft.ListTile(
+            leading=ft.Icon(ft.Icons.PALETTE_OUTLINED),
+            title="Appearance",
+        ),
+    )
+    options: list[ft.Control] = [
+        ft.MergeSemantics(
+            content=ft.Semantics(
+                identifier=f"more.appearance.{value}",
+                content=ft.ListTile(
+                    leading=ft.Radio(value=value),
+                    title=text,
+                    toggle_inputs=True,  # a tap anywhere on the row selects it
+                ),
+            )
+        )
+        for value, text in APPEARANCE_LABELS.items()
+    ]
+    return ft.Semantics(
+        identifier="more.appearance",
+        container=True,
+        content=ft.Column(
+            [
+                label,
+                ft.RadioGroup(
+                    value=selected,
+                    on_change=on_change,
+                    content=ft.Column(options, spacing=0),
+                ),
+            ],
+            spacing=0,
+        ),
     )
