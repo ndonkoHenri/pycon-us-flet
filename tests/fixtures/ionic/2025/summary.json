@@ -1,0 +1,68 @@
+{
+ "captured": {
+  "ionic": "PyCon/pycon-us-mobile@2aa6df8a86890df2d243f9e165905957614ae47e",
+  "node": "v26.8.2",
+  "esbuild": "0.28.2",
+  "npm": {
+   "markdown-to-txt": "2.0.1",
+   "marked": "4.3.0",
+   "lodash": "4.17.21",
+   "lodash.escape": "4.0.1",
+   "lodash.unescape": "4.0.1"
+  },
+  "date": "2026-10-12",
+  "environment": {
+   "timezone": "America/New_York",
+   "utcOffset": -4
+  }
+ },
+ "sessions": 350,
+ "sessionsByTrack": {
+  "Break": 12,
+  "Charla": 16,
+  "Event": 10,
+  "Informational": 30,
+  "Lightning-talks": 4,
+  "Open Space": 146,
+  "Plenary": 13,
+  "Poster": 1,
+  "Sponsor Presentation": 11,
+  "Summit": 8,
+  "Talk": 75,
+  "Tutorial": 24
+ },
+ "duplicateSessionIds": [],
+ "speakers": 144,
+ "rooms": 52,
+ "days": [
+  {
+   "date": "2025-05-14",
+   "groups": 6,
+   "sessions": 17
+  },
+  {
+   "date": "2025-05-15",
+   "groups": 10,
+   "sessions": 32
+  },
+  {
+   "date": "2025-05-16",
+   "groups": 23,
+   "sessions": 86
+  },
+  {
+   "date": "2025-05-17",
+   "groups": 30,
+   "sessions": 120
+  },
+  {
+   "date": "2025-05-18",
+   "groups": 20,
+   "sessions": 95
+  }
+ ],
+ "groupsWithoutStart": [
+  "2025-05-14 7:00 am",
+  "2025-05-15 7:00 am"
+ ]
+}
