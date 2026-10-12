@@ -1,7 +1,7 @@
 # S4: Do the Router, the drill route and native back gestures behave?
 
 **Spike:** S4 ([#65](https://github.com/ndonkoHenri/pycon-us-flet/issues/65), PLAN §8). **Date:** 2026-10-12, about 1.5 hours of builds and runs on one Mac.
-**Decides:** D-140 (route shape), D-141 (Back through `on_view_pop`), D-142 (D-17's root rule), D-143 (one root View key), D-144 (the bar on roots only, amends D-17; #149), D-145 (`ViewMemory` per process, amends D-18 and D-19), D-146 (a replaced session stops its work, amends D-70), D-147 (page handlers), D-148 (per-platform transitions, settles O-2), D-149 (U23, U24; amends D-98). **Facts:** F29..F31. **Held for a human:** the iOS edge swipe and an iOS deep link's "Open" prompt ([#121](https://github.com/ndonkoHenri/pycon-us-flet/issues/121)).
+**Decides:** D-141 (route shape and Back through `on_view_pop`), D-142 (D-17's root rule and one root View key), D-143 (`ViewMemory` per process, amends D-18 and D-19), D-144 (the bar on roots only, amends D-17; #149), D-147 (page handlers, and a replaced session stops its work; amends D-70), D-148 (per-platform transitions, settles O-2), D-149 (U23, U24; amends D-98). D-140, D-145 and D-146 were taken on `main` meanwhile, so the S4 range has seven decisions. **Facts:** F29..F31. **Held for a human:** the iOS edge swipe and an iOS deep link's "Open" prompt ([#121](https://github.com/ndonkoHenri/pycon-us-flet/issues/121)).
 
 ## Question
 
@@ -9,12 +9,12 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
 
 ## Answer: yes, with four changes
 
-- **The route shape stands** (D-140): one recursive `:kind(...)/:ident` child under every root, More page and `/search`. Each level sees its own `kind` and `ident`, even for ids with `:`, `+`, a space, `~` and `ç`, on Android and iOS; deep entry builds the whole stack. No `s~id` fallback.
+- **The route shape stands** (D-141): one recursive `:kind(...)/:ident` child under every root, More page and `/search`. Each level sees its own `kind` and `ident`, even for ids with `:`, `+`, a space, `~` and `ç`, on Android and iOS; deep entry builds the whole stack. No `s~id` fallback.
 - **Back works everywhere** (D-141, D-142): our `page.on_view_pop` (D-19) receives the Android Back key and committed predictive gestures; search → result → detail → Back → Back returns to the results with the query kept; Back on a non-Now root goes to Now through `can_pop=False` and `on_confirm_pop`; Back on Now leaves the app.
-- **Tab switches must not animate as pushes** (D-143): root Views share one `View.route` key, otherwise a tab switch slides in like a detail.
+- **Tab switches must not animate as pushes** (D-142): root Views share one `View.route` key, otherwise a tab switch slides in like a detail.
 - **Change 1, the bar** (D-144, #149): on pushed Views the `NavigationBar` travels with the page (iOS) or doubles (Android) in every transition, so it moves to tab roots only.
-- **Change 2, `ViewMemory`** (D-145): on Android a new session starts in the same process not only after an activity recreation (F26) but also after Back on Now and a relaunch (F29). Keeping `ViewMemory` per process lets the start route return the user to where they were.
-- **Change 3, a replaced session** (D-146): Flet closes the old session but does not unmount it, so its effects keep running until they touch a store (F30). The app stops its own work from `page.on_close`.
+- **Change 2, `ViewMemory`** (D-143): on Android a new session starts in the same process not only after an activity recreation (F26) but also after Back on Now and a relaunch (F29). Keeping `ViewMemory` per process lets the start route return the user to where they were.
+- **Change 3, a replaced session** (D-147): Flet closes the old session but does not unmount it, so its effects keep running until they touch a store (F30). The app stops its own work from `page.on_close`.
 - **Change 4, page handlers** (D-147): `page.on_platform_brightness_change` and `page.on_app_lifecycle_state_change` fire and re-render through store writes with no `page.update()`, on both platforms; this is a confirmation, not a change in code, but it settles the lifecycle sequence the app relies on.
 - **Transitions** (D-148, O-2): `PREDICTIVE` gives the predictive page animation on Android 14 (developer flag) and 16 (default); `CUPERTINO` slides on iOS. The edge swipe itself needs a finger (#121).
 
@@ -48,7 +48,7 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
 | `drive_ios.py`, bar on every View | iOS 26.5 | **50 / 50** (41 in-app checks, 9 from the host) |
 | `drive_ios.py`, `S4_BAR_ON_PUSHED=0` | iOS 26.5 | 50 / 50 |
 
-### Route shape and per-level params (D-140)
+### Route shape and per-level params (D-141)
 
 - `/now/session/42/speaker/17/session/99/room/room-102a` gives five Views; the levels log `session '42'`, `speaker '17'`, `session '99'`, `room 'room-102a'`, each from its own `use_route_params()`.
 - Quoted ids survive Flutter's route information on both platforms: `/now/session/poster%20detail%2B1/speaker/%C3%A7~31/session/7` reaches each level as `poster detail+1`, `ç~31` and `7` after `unquote`, by tap, by the Android `route` extra and by the iOS `--route` argument. The Router's matcher escapes the consumed prefix before matching the next level (`repath`), so `.`, `+` and `%` in an id never act as regex syntax.
@@ -76,20 +76,20 @@ Can the shell the decisions prescribe (D-13..D-21, D-69, section M) work as desi
 - With the bar on roots only: on iOS the barless detail slides over the root and covers its bar (as `hidesBottomBarWhenPushed` does); on Android the root's bar fades out under the incoming page, and a predictive gesture shows one bar. Both runs passed the same journeys.
 - Re-tap: Flutter's `NavigationBar` calls `onDestinationSelected` for the selected destination too, so `on_change` fires on a re-tap (`retap=True` logged) on a root and on a pushed View.
 
-### Tab switches and the root View key (D-143)
+### Tab switches and the root View key (D-142)
 
 - With one shared key (`View.route="/"` on every root), a tab switch swaps the page with no transition: only the bar's indicator animates (frames over about 100 ms).
 - With a key per root, the same switch ran the page transition (about 400 ms of a slide and fade), as for a pushed detail.
 - The stock pop handler and ours work with shared keys: pushed Views keep their resolved path as key, and `e.route` of a pop is always a detail's path.
 
-### ViewMemory (D-18, D-145)
+### ViewMemory (D-18, D-143)
 
 - **Under a pushed View:** Schedule › Day 2 › scrolled › a row › Back: the same rows on screen (the View stayed mounted and kept its scroll).
 - **After a tab switch** (Schedule unmounts): the remount read `schedule_day=2` and `offset=515` from `ViewMemory`, and `await ListView.scroll_to(offset=..., duration=0)` in its mount effect put the same rows on screen. Writing the offset from `on_scroll` re-rendered nothing (`renders=1`).
 - **Search:** the query and the opener location came back from `ViewMemory` (above).
 - **Across a new session:** see the next section.
 
-### A new session in the same process (F26, F29, F30; D-145, D-146)
+### A new session in the same process (F26, F29, F30; D-143, D-147)
 
 Recreation by switching gesture and 3-button navigation (S1's trigger), on `/now/session/42/speaker/17`:
 
@@ -119,21 +119,18 @@ Recreation by switching gesture and 3-button navigation (S1's trigger), on `/now
 
 ## Decisions changed
 
-- **D-140:** the drill route shape of §M and architecture §5.3 stands; the `s~id` fallback is not needed.
-- **D-141:** `page.on_view_pop` with `parent_of()` (D-19) handles every pop; Search's return and the unknown-id rule confirmed.
-- **D-142:** D-17's Back rule on roots confirmed; Back on Now finishes the Android activity (F29).
-- **D-143:** root Views share one `View.route` key, `"/"`.
+- **D-141:** the drill route shape of §M and architecture §5.3 stands (no `s~id` fallback), and `page.on_view_pop` with `parent_of()` (D-19) handles every pop; Search's return and the unknown-id rule confirmed.
+- **D-142:** D-17's Back rule on roots confirmed (Back on Now finishes the Android activity, F29); root Views share one `View.route` key, `"/"`.
+- **D-143** (amends D-18 and D-19): `ViewMemory` lives per process, and the start route returns a new session to the last location.
 - **D-144** (amends D-17, settles UQ-1 through #149): the bar on tab roots only.
-- **D-145** (amends D-18 and D-19): `ViewMemory` lives per process, and the start route returns a new session to the last location.
-- **D-146** (amends D-70 rule 3): `App` stops long-running work from `page.on_close` until U24.
-- **D-147:** the page handlers and the lifecycle sequence the app relies on.
+- **D-147** (amends D-70 rule 3): the page handlers and the lifecycle sequence the app relies on; `bootstrap()` stops long-running work from `page.on_close` until U24.
 - **D-148** (settles O-2): `PageTransitionsTheme(android=PREDICTIVE, ios=CUPERTINO)`; the iOS edge swipe is checked on the iPhone (#121).
 - **D-149** (amends D-98): U23 (a shell bar outside the Navigator) and U24 (closing a session unmounts it) are later candidates.
 
 ## Follow-ups
 
 - **#121 (iPhone session), held items:** the iOS edge-swipe Back on a drill level (it should go through `view-pop` like Android's gesture) and on a root (nothing to pop); a deep link through `s4spike://` after tapping "Open". Both need a finger; the simulator could not be tapped in this session.
-- **The P0 shell issue** (`routes.py`, `app.py`, `ui/scaffold.py`): apply D-140..D-147 and port `check_routes.py`'s cases to `tests/test_routes.py`.
+- **The P0 shell issue** (`routes.py`, `app.py`, `ui/scaffold.py`): apply D-141..D-147 and port `check_routes.py`'s cases to `tests/test_routes.py`.
 - **P1 search:** the field regains focus when the results come back (Flutter restores a route's focus), so the first Android Back closes the keyboard. Decide there whether that is acceptable or the results take the focus.
 - **Upstream (owner's track):** U23 and U24 (D-149), filed in flet-dev/flet when the owner schedules them.
 

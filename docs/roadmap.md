@@ -174,7 +174,7 @@ test, area:shell
 
 Walk Now → session → speaker → session → room through a recursive drill route with Android back, predictive back, the iOS edge swipe, tab re-taps, resume and the modal `/search`.
 
-- Verdict in `docs/spikes/04-router-back.md` (done: D-140..D-149); per-level params confirmed or the `s~id` fallback chosen.
+- Verdict in `docs/spikes/04-router-back.md` (done: D-141..D-149); per-level params confirmed or the `s~id` fallback chosen.
 - `PageTransitionsTheme(android=PREDICTIVE, ios=CUPERTINO)` confirmed on devices (O-2).
 
 #### S5 · Spike: can we build and ship internally from the pinned Flet 1.1?

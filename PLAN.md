@@ -158,7 +158,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | Query-string hook | `use_query()` | **U9** `use_route_search()` | 6 (app: later) |
 | Back from a result pushed over the modal search | Our `page.on_view_pop` with `parent_of()` (D-19) | **U18** per-level pops inside a modal sub-chain | 6 (app: later) |
 | A bar on pushed Views moves with every page | The bar on tab roots only (D-144) | **U23** a shell bar outside the `Navigator` | later |
-| A replaced session's effects keep running | `page.on_close` stops our loops (D-146) | **U24** closing a session unmounts it | later |
+| A replaced session's effects keep running | `page.on_close` stops our loops (D-147) | **U24** closing a session unmounts it | later |
 | iOS adaptations Flet cannot pin; weights in `page.fonts` | Accepted residuals (D-10); Roboto through the pubspec (D-26) | **U19** `Theme.platform`; **U20** multi-weight `page.fonts` | later |
 | HTML, native calendar | HTML→Markdown; `.ics` share | **E5**, **E4** | later |
 
