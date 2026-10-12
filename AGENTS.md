@@ -118,6 +118,18 @@ that date motivates us but never justifies cutting corners.
   docs and decision updates) and follow-ups. `gh pr create --body` doesn't fill it in: use its sections.
 - Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
 - CI must be green.
+- **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
+  and the PR embeds them:
+  ```sh
+  git fetch origin pr-assets && git worktree add --detach <scratch>/pr-assets origin/pr-assets
+  cd <scratch>/pr-assets && mkdir -p <pr> && cp <shots>.png <pr>/ && sips -Z 1000 <pr>/*.png   # downscale
+  git add <pr> && git commit -m "Add screenshots for #<pr>"
+  git push origin HEAD:pr-assets || { git pull --rebase origin pr-assets && git push origin HEAD:pr-assets; }
+  cd - && git worktree remove <scratch>/pr-assets
+  ```
+  Work detached (as above), so parallel agents never fight over a checked-out branch. Then write
+  `![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)` in the PR
+  body or a comment.
 
 ### Reviews and merging
 

@@ -20,6 +20,8 @@ Commands you ran and what you saw: `uv run ruff check`, `uv run ruff format --ch
 
 <!--
 UI changes only; otherwise write "No UI change". Android emulator and iOS simulator, light and dark when relevant.
+Push the PNGs to the pr-assets branch (AGENTS.md, D-162) and embed them as
+![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)
 
 | | Android emulator | iOS simulator |
 |---|---|---|
