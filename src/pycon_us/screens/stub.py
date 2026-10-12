@@ -1,148 +1,132 @@
-"""The one screen behind the boot gate until the route table lands (#74).
+"""The minimal chrome every stub screen shares, until ``AppScaffold`` and the bar land.
 
-It shows what the start sequence published: where the feed came from, when, the data
-status and the first day's session count, so "bundled first, a refresh replaces it" is
-visible on a phone. Its Appearance buttons exercise ``Prefs.save()`` and the theme until
-Settings exists (P2). #74 replaces it with the tab roots.
+``stub_view()`` gives each screen a View with a plain ``AppBar`` and the Back rules the
+route table needs: the Material back arrow on pushed Views (D-10), one View key for the
+tab roots (D-142), Back on a non-Now root going to Now (D-17), and the top View's
+location recorded for the start route (D-143). #76 replaces it with ``AppScaffold``
+and #75 adds the bottom bar; until then Now links to the other roots.
 """
-
-import logging
-from datetime import tzinfo
-from typing import cast
 
 import flet as ft
 
-from pycon_us import APP_NAME
-from pycon_us.core.timefmt import day_label, local_date, time_label
-from pycon_us.prefs import Appearance, use_prefs
+from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
-from pycon_us.state import Conference, use_conference
-
-logger = logging.getLogger(__name__)
-
-SOURCE_LABELS = {
-    "none": "No schedule yet",
-    "bundled": "Schedule bundled with the app",
-    "cache": "Schedule saved on this device",
-    "network": "Schedule downloaded",
-}
-
-STATUS_LABELS = {
-    "fresh": "Up to date",
-    "stale": "May be out of date",
-    "refreshing": "Refreshing…",
-    "offline": "Offline: showing the saved schedule",
-    "problem": "Couldn't refresh: showing the saved schedule",
-}
-
-APPEARANCE_LABELS: dict[Appearance, str] = {
-    "system": "System",
-    "light": "Light",
-    "dark": "Dark",
-}
+from pycon_us.state import ViewMemory
 
 
-@ft.component
-def Stub() -> ft.View:
-    """The data the boot gate published, a Refresh button and the Appearance setting."""
+def stub_view(
+    *, title: str, controls: list[ft.Control], actions: list[ft.Control] | None = None
+) -> ft.View:
+    """Return a screen's View: its title, its route and params, then its controls.
+
+    A plain function that calls hooks, so a screen calls it exactly once per render,
+    in every branch (hooks are unconditional, D-70).
+
+    Args:
+        title: The app bar's title.
+        controls: The body, in a ``ListView`` inside a ``SafeArea``.
+        actions: The app bar's actions, e.g. ``search_button()``.
+
+    Returns:
+        The View for this route level.
+    """
     page = ft.context.page
-    svc = use_services()
-    conference = use_conference()
-    prefs = use_prefs()
+    view_path = ft.use_view_path()
+    params = ft.use_route_params()
+    memory = use_services().memory
+    is_root = view_path in TAB_ROOTS
+    back_to_now = is_root and view_path != "/now"
+    if is_top_view(page.route, view_path):  # where a new session returns (D-143)
+        memory.last_location = page.route
 
     @report_errors
-    async def log_shown() -> None:
-        # D-112's content line: a SharedPreferences round trip after the render, so the
-        # patch has reached Flutter when it is logged.
-        await svc.storage.get(THEME)
-        logger.info(
-            "Content shown: %s feed, version %d", conference.source, conference.version
-        )
-
-    ft.use_effect(log_shown, [conference.version])
+    def go_back() -> None:
+        page.navigate(parent_of(view_path, memory.search_base))
 
     @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
+    async def leave_for_now(e: ft.Event[ft.View]) -> None:
+        page.navigate("/now")
+        await e.control.confirm_pop(False)  # this View stays; Now replaces the root
 
-    @report_errors
-    async def choose_appearance(e: ft.Event[ft.SegmentedButton]) -> None:
-        theme = cast(Appearance, e.control.selected[0])
-        if not await prefs.save(svc.storage, theme=theme):
-            page.show_dialog(
-                ft.SnackBar(
-                    ft.Text("Couldn't save your change"),
-                    behavior=ft.SnackBarBehavior.FLOATING,
-                )
-            )
-
-    use_24h = bool(page.media and page.media.always_use_24_hour_format)
-    status = STATUS_LABELS[conference.status(svc.year.conference)]
+    shown = ", ".join(f"{key}={value}" for key, value in params.items())
     return ft.View(
-        route="/",
-        padding=16,
-        appbar=ft.AppBar(title=ft.Text(APP_NAME), center_title=False),
+        route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
+        padding=0,
+        appbar=ft.AppBar(
+            title=ft.Text(title),
+            center_title=False,
+            automatically_imply_leading=False,
+            leading=None
+            if is_root
+            else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
+            actions=actions or [],
+        ),
+        can_pop=not back_to_now,
+        on_confirm_pop=leave_for_now if back_to_now else None,
         controls=[
             ft.SafeArea(
                 expand=True,
-                content=ft.Column(
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=12,
+                content=ft.ListView(
+                    [note(f"{view_path}  {shown}".rstrip(), small=True), *controls],
                     expand=True,
-                    controls=[
-                        ft.Text(
-                            SOURCE_LABELS[conference.source],
-                            theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
-                        ),
-                        ft.Text(
-                            _fetched(conference, svc.year.conference.zone, use_24h),
-                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        ),
-                        ft.Text(status, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
-                        ft.Text(
-                            _first_day(conference),
-                            theme_style=ft.TextThemeStyle.BODY_LARGE,
-                        ),
-                        ft.FilledTonalButton(
-                            "Refresh",
-                            icon=ft.Icons.REFRESH,
-                            on_click=refresh,
-                            disabled=conference.refreshing,
-                        ),
-                        ft.Text(
-                            "Appearance", theme_style=ft.TextThemeStyle.TITLE_SMALL
-                        ),
-                        ft.SegmentedButton(
-                            selected=[prefs.theme],  # controlled (D-157)
-                            segments=[
-                                ft.Segment(value=value, label=ft.Text(label))
-                                for value, label in APPEARANCE_LABELS.items()
-                            ],
-                            on_change=choose_appearance,
-                        ),
-                        ft.Text(
-                            "Not an official PSF app.",
-                            theme_style=ft.TextThemeStyle.BODY_SMALL,
-                        ),
-                    ],
                 ),
             )
         ],
     )
 
 
-def _fetched(conference: Conference, zone: tzinfo, use_24h: bool) -> str:
-    if conference.fetched_at is None:
-        return ""
-    day = day_label(local_date(conference.fetched_at, zone))
-    return f"Fetched {day}, {time_label(conference.fetched_at, zone, use_24h=use_24h)}"
+def note(text: str, *, small: bool = False) -> ft.Control:
+    """Return a line of body text with the list's side padding.
+
+    Args:
+        text: The text; selectable, so a route can be copied.
+        small: Use the small body style, for route details.
+    """
+    style = ft.TextThemeStyle.BODY_SMALL if small else ft.TextThemeStyle.BODY_MEDIUM
+    return ft.Container(
+        ft.Text(text, theme_style=style, selectable=True),
+        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+    )
 
 
-def _first_day(conference: Conference) -> str:
-    if conference.data is None or not conference.data.days:
-        return "No sessions"
-    day = conference.data.days[0]
-    count = sum(len(group.session_ids) for group in day.groups)
-    return f"{day_label(day.date)}: {count} sessions"
+def nav_tile(title: str, location: str, *, subtitle: str | None = None) -> ft.ListTile:
+    """Return a row that navigates to a location: a drill link, a page or a root.
+
+    Args:
+        title: The row's text.
+        location: Where a tap goes; for a detail, ``drill_href(view_path, ...)``.
+        subtitle: A second line, if any.
+    """
+    page = ft.context.page
+
+    @report_errors
+    def go() -> None:
+        page.navigate(location)
+
+    return ft.ListTile(
+        title=title,
+        subtitle=subtitle,
+        trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
+        on_click=go,
+    )
+
+
+def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
+    """Return the app bar action that opens the global search with a preset scope (D-19).
+
+    It records the opener's location, query included, so Back from search returns
+    there.
+
+    Args:
+        memory: The process's ``ViewMemory``.
+        scope: ``all``, ``sessions``, ``speakers`` or ``rooms``.
+    """
+    page = ft.context.page
+
+    @report_errors
+    def open_search() -> None:
+        memory.search_base = page.route
+        page.navigate(f"/search?scope={scope}")
+
+    return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)

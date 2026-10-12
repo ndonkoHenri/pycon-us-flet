@@ -666,7 +666,7 @@ class GroupedListView(ft.LayoutControl):
 ### 5.8 U9: `ft.use_route_search()` (later; XS)
 
 - **Serves:** ROOM-03 (`?highlight=`), SPON-04 and EXPO-05 (`?booth=`).
-- **Interim:** `use_query()` in `routes.py` calls `ft.use_route_location()`, which subscribes and returns the pathname, then parses the query from `page.route`.
+- **Interim:** `use_query()` in `locations.py` (D-164) parses the query from `page.route` once, when its View mounts, and only for the top View (`is_top_view(page.route, ft.use_view_path())`; `use_route_location()` is the opener's location for the Views under a global modal).
 - **Today:** `LocationInfo.search` is populated without the leading `?` (`FLET/components/router.py:112-123`, `:725`) but not exposed by a hook.
 - **Change:** `def use_route_search() -> str`, next to `use_route_location()` (`router.py:357`), exported as `ft.use_route_search`.
 - **Upgrade:** `use_query()` becomes `dict(parse_qsl(ft.use_route_search()))`. Its callers do not change.

@@ -5,17 +5,20 @@ Flet binds a session's page to a handler's context; that Flet then keeps the ses
 alive is checked on devices (the PR).
 """
 
+import ast
 import asyncio
 import inspect
 import logging
 import sys
 from collections.abc import Iterator
+from pathlib import Path
 
 import flet as ft
 import httpx
 import pytest
 from flet.utils import get_param_count
 
+import pycon_us
 from pycon_us.services import errors
 from pycon_us.services.errors import (
     HANDLER_NAME,
@@ -212,6 +215,40 @@ def test_an_error_with_no_page_to_show_it_on_is_still_logged(
         f"Unexpected error in {__name__}.fail",
         "Could not show the error message",
     ]
+
+
+SRC = Path(pycon_us.__file__).parent.parent
+NETTED = [
+    SRC / "main.py",
+    SRC / "pycon_us" / "routes.py",
+    *sorted((SRC / "pycon_us" / "screens").glob("*.py")),
+    *sorted((SRC / "pycon_us" / "ui").glob("*.py")),
+]
+"""Modules whose nested functions are all handlers or effect setups (D-163).
+
+``app.py`` is left out on purpose: its nested ``router()`` is a provider's child
+builder, not a handler, so review checks that module's wrapping instead.
+"""
+
+
+@pytest.mark.parametrize("path", NETTED, ids=lambda p: p.name)
+def test_every_handler_and_effect_a_screen_defines_is_wrapped(path: Path) -> None:
+    # Screens, the route table and main() define functions only to hand them to Flet as
+    # handlers or effects, so one without the net would end the session when it raises.
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    unwrapped = [
+        f"{outer.name}.{inner.name}"
+        for outer in ast.walk(tree)
+        if isinstance(outer, ast.FunctionDef | ast.AsyncFunctionDef)
+        for inner in ast.walk(outer)
+        if inner is not outer
+        and isinstance(inner, ast.FunctionDef | ast.AsyncFunctionDef)
+        and not any(
+            isinstance(d, ast.Name) and d.id == "report_errors"
+            for d in inner.decorator_list
+        )
+    ]
+    assert unwrapped == []
 
 
 # ------------------------------------------------------------------ setup_logging

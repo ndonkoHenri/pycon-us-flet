@@ -17,6 +17,10 @@ import flet as ft
 SEED = "#3B3EA9"
 """PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
 
+BOOT_COLOR = "#680579"
+"""The splash's purple (``[tool.flet.splash]``, ux.md §2.6): the boot view and the start
+route show it in every scheme, so the launch never flashes."""
+
 FONT_FAMILY = "packages/roboto_fonts/Roboto"
 """Roboto 400/500/700 from the local Flutter package (D-26, D-105).
 
