@@ -602,7 +602,7 @@ snapshot_captured_at = 2026-10-11T09:00:00-07:00     # P0-17: written by tools/u
 [[tracks]]
 key = "Ai"                  # as produced by feed processing: the kind, first letter upper-cased
 short = "AI"
-plural = "AI talks"
+plural = "Future of AI with Python"
 long = "The Future of AI with Python"
 icon = "MEMORY_OUTLINED"    # an outlined ft.Icons name (D-27); colours stay in the theme tokens (D-24, D-25)
 group = "talks"             # filter-sheet group: talks | hands-on | community | logistics

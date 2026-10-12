@@ -54,10 +54,41 @@ def test_job_fair_override_matches_only_the_whole_name() -> None:
 
 @pytest.mark.parametrize(
     ("fmt", "expected"),
-    [("short", "AI"), ("plural", "AI talks"), ("long", "The Future of AI with Python")],
+    [
+        ("short", "AI"),
+        ("plural", "Future of AI with Python"),
+        ("long", "The Future of AI with Python"),
+    ],
 )
 def test_track_name_formats(fmt: config.TrackFormat, expected: str) -> None:
     assert load_year(2026).conference.track_name("Ai", fmt) == expected
+
+
+def test_security_keeps_its_track_title() -> None:
+    conference = load_year(2026).conference
+    assert conference.track_name("Security") == "Security"
+    assert conference.track_name("Security", "plural") == "Trailblazing Python Security"
+
+
+def test_2026_registry_names_every_processed_track() -> None:
+    keys = {track.key for track in load_year(2026).conference.tracks}
+    assert keys == {
+        "Talk",
+        "Keynote",
+        "Plenary",
+        "Lightning-talks",
+        "Ai",
+        "Security",
+        "Charla",
+        "Poster",
+        "Tutorial",
+        "Sponsor Presentation",
+        "Open Space",
+        "Summit",
+        "Event",
+        "Informational",
+        "Break",
+    }
 
 
 def test_track_name_defaults_to_short() -> None:
@@ -137,15 +168,27 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
+            "last_talk_day = 2026-05-17",
+            "last_talk_day = 2026-05-12",
+            "2026/conference.toml: last_talk_day: is before first_day",
+        ),
+        (
+            "conference.toml",
             "last_day = 2026-05-19",
             "last_day = 2026-05-16",
-            "2026/conference.toml: last_talk_day: dates must be",
+            "2026/conference.toml: last_day: is before last_talk_day",
         ),
         (
             "conference.toml",
             'site_url = "https://',
             'site_url = "http://',
-            "2026/conference.toml: site_url: must start with https://",
+            "2026/conference.toml: site_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
+            'feed_url = "https://us.pycon.org/2026/schedule/conference.json"',
+            'feed_url = "https:///2026/schedule/conference.json"',
+            "2026/conference.toml: feed_url: expected an https:// URL with a host",
         ),
         (
             "conference.toml",
@@ -185,6 +228,18 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "content.toml",
+            "minutes = -30",
+            'minutes = -30\ncolour = "red"',
+            "2026/content.toml: display_time_overrides[0].colour: unknown key",
+        ),
+        (
+            "content.toml",
+            "[[display_time_overrides]]",
+            "[display_time_overrides]",
+            "2026/content.toml: display_time_overrides: expected an array of tables",
+        ),
+        (
+            "content.toml",
             r"match = '\s*job",
             r"match = '(\s*job",
             "2026/content.toml: display_time_overrides[0].match: missing ),",
@@ -198,6 +253,22 @@ def test_malformed_file_names_file_key_and_problem(
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)
     assert str(error.value).startswith(message)
+
+
+def test_array_items_must_be_tables(data_dir: Path) -> None:
+    (data_dir / "2026" / "content.toml").write_text(
+        'display_time_overrides = ["Job Fair"]\n', encoding="utf-8"
+    )
+    with pytest.raises(YearDataError) as error:
+        load_year(2026, data_dir)
+    assert str(error.value) == (
+        "2026/content.toml: display_time_overrides[0]: expected a table, got 'Job Fair'"
+    )
+
+
+def test_content_without_overrides_has_none(data_dir: Path) -> None:
+    (data_dir / "2026" / "content.toml").write_text("# nothing yet\n", encoding="utf-8")
+    assert load_year(2026, data_dir).content.display_time_overrides == ()
 
 
 def test_missing_file_is_named(data_dir: Path) -> None:

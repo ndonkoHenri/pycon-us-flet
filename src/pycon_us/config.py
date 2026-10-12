@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 if TYPE_CHECKING:
@@ -51,7 +52,7 @@ class Track:
         key: The track as feed processing names it: the feed's kind with its first letter
             upper-cased (``Ai``, ``Lightning-talks``, ``Open Space``).
         short: The name on badges and rows (``AI``).
-        plural: The name of a list of its sessions (``AI talks``).
+        plural: The title of a list of its sessions (``Future of AI with Python``).
         long: The full name, for session detail (``The Future of AI with Python``).
         icon: The name of an outlined ``ft.Icons`` member (D-27).
         group: Its group in the filter sheet, one of ``TRACK_GROUPS``.
@@ -243,13 +244,14 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         raise YearDataError(
             f"{file}: first_day: {conference.first_day} is not in {year}"
         )
-    if not conference.first_day <= conference.last_talk_day <= conference.last_day:
-        raise YearDataError(
-            f"{file}: last_talk_day: dates must be first_day <= last_talk_day <= last_day"
-        )
+    if conference.last_talk_day < conference.first_day:
+        raise YearDataError(f"{file}: last_talk_day: is before first_day")
+    if conference.last_day < conference.last_talk_day:
+        raise YearDataError(f"{file}: last_day: is before last_talk_day")
     for key in ("site_url", "feed_url"):
-        if not getattr(conference, key).startswith("https://"):
-            raise YearDataError(f"{file}: {key}: must start with https://")
+        url = urlsplit(getattr(conference, key))
+        if url.scheme != "https" or not url.hostname:
+            raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")
     seen: set[str] = set()
     for index, track in enumerate(conference.tracks):
         if track.key in seen:
