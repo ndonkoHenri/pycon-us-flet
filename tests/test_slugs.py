@@ -43,3 +43,12 @@ def test_rooms_sort_naturally_ignoring_case_and_accents() -> None:
         "Seaside Ballroom",
         "Seaside Ballroom A",
     ]
+
+
+def test_letters_without_a_decomposition_keep_their_own_place() -> None:
+    """D-125: "ø" is not "o" with an accent, so it sorts after "z"."""
+    assert sorted(["Ørsted Hall", "Zebra Room", "Orchid Room"], key=room_sort_key) == [
+        "Orchid Room",
+        "Zebra Room",
+        "Ørsted Hall",
+    ]

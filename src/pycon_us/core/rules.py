@@ -282,7 +282,7 @@ def open_space_session(space: OpenSpace, settings: FeedSettings) -> Session | No
 
 
 def poster_details(
-    posters: Iterable[Poster],
+    posters: Iterable[tuple[Poster, Sequence[Speaker]]],
     rows: Iterable[Session],
     speakers: Mapping[str, Speaker],
     zone: ZoneInfo,
@@ -291,31 +291,35 @@ def poster_details(
 
     They take the time, day and place of the first Posters row and stay out of the
     timeline, where the Posters row stands for them. Their speakers are their authors in
-    the directory. Without a Posters row there is no time to give them, so there are none
-    (D-123; Ionic made them with no time at all).
+    the directory, linked by id as Ionic did; every author stays as text (D-125). Without
+    a Posters row there is no time to give them, so there are none (D-123; Ionic made
+    them with no time at all).
+
+    Args:
+        posters: Each poster with its authors' speaker records.
+        rows: The collapsed rows.
+        speakers: The speaker directory.
+        zone: The conference zone.
     """
     row = next((r for r in rows if r.kind == "poster" and r.name == "Posters"), None)
     if row is None:
         return []
-    details = []
-    for poster in posters:
-        authors = [speakers[i] for i in poster.speaker_ids if i in speakers]
-        details.append(
-            _session(
-                id=f"poster-detail-{poster.id}",
-                name=poster.title,
-                kind="poster",
-                location=row.location,
-                start=row.start,
-                end=row.end,
-                zone=zone,
-                description=poster.description,
-                speaker_ids=tuple(author.id for author in authors),
-                speaker_names=tuple(author.name for author in authors),
-                in_timeline=False,
-            )
+    return [
+        _session(
+            id=f"poster-detail-{poster.id}",
+            name=poster.title,
+            kind="poster",
+            location=row.location,
+            start=row.start,
+            end=row.end,
+            zone=zone,
+            description=poster.description,
+            speaker_ids=tuple(a.id for a in authors if a.id in speakers),
+            speaker_names=tuple(author.name for author in authors),
+            in_timeline=False,
         )
-    return details
+        for poster, authors in posters
+    ]
 
 
 def rooms(sessions: Iterable[Session]) -> dict[str, Room]:

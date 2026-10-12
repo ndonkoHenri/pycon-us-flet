@@ -124,7 +124,7 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
             dropped["unscheduled-open-space"].append(space.session_id)
         else:
             candidates.append(session)
-    details = rules.poster_details((p for p, _ in posters), rows, speakers, zone)
+    details = rules.poster_details(posters, rows, speakers, zone)
     if posters and not details:
         logger.warning("No Posters row: the %d posters get no session", len(posters))
     sessions = _index(candidates + details, skip)

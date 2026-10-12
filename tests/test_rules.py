@@ -521,3 +521,54 @@ def test_a_session_without_a_room_is_in_no_room() -> None:
     data = processed(2026)
     notice = data.sessions["196"]  # "Registration Desk Opens"
     assert (notice.location, notice.rooms, notice.display_location) == ("", (), "")
+
+
+def test_poster_details_keep_every_authors_name() -> None:
+    """D-125: an author left out of the directory still shows as text."""
+
+    def pseudo_author(doc: dict[str, Any]) -> None:
+        doc["posters"][0]["speakers"][0]["name"] = "Hosted by Example"
+
+    data = process(changed(2026, pseudo_author), settings(2026))
+    poster = document(2026)["posters"][0]
+    detail = data.sessions[f"poster-detail-{poster['conf_key']}"]
+    assert detail.speaker_names[0] == "Hosted by Example"
+    assert str(poster["speakers"][0]["id"]) not in detail.speaker_ids
+
+
+def test_a_name_links_the_first_speaker_of_that_name_once() -> None:
+    """D-125: two records with one name link the first; a repeated author links once."""
+    talks = [s for s in document(2026)["schedule"] if s["kind"] == "talk"]
+    first, other = talks[0], talks[1]
+    name = first["authors"][0]
+
+    def same_name(doc: dict[str, Any]) -> None:
+        for record in doc["schedule"]:
+            if record["conf_key"] == other["conf_key"]:
+                record["speakers"][0]["name"] = name
+                record["authors"] = [name, name]
+
+    data = process(changed(2026, same_name), settings(2026))
+    linked = data.sessions[str(other["conf_key"])]
+    assert linked.speaker_ids == (str(first["speakers"][0]["id"]),)
+    assert linked.speaker_names == (name, name)
+
+
+def test_a_rooms_sessions_with_one_start_are_in_name_order() -> None:
+    """D-125: the Posters row, the Job Fair and 25 poster details all start at 9:30."""
+    data = processed(2026)
+    sessions = [data.sessions[i] for i in data.rooms["expo-hall-ab"].session_ids]
+    at_nine_thirty = [s.name for s in sessions if s.start == pacific(17, 9, 30)]
+    assert len(at_nine_thirty) == 27
+    assert at_nine_thirty == sorted(at_nine_thirty)
+
+
+def test_room_spellings_sharing_a_slug_list_a_session_once() -> None:
+    """DATA-16: "Room 101A" and "room 101a" are one room, named as first written."""
+
+    def respell(doc: dict[str, Any]) -> None:
+        doc["schedule"][KEPT_TALK]["room"] = "Room 101A, room 101a"
+
+    data = process(changed(2026, respell), settings(2026))
+    assert data.sessions[TALK_ID].rooms == ("Room 101A",)
+    assert data.rooms["room-101a"].session_ids.count(TALK_ID) == 1
