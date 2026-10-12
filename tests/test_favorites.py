@@ -11,8 +11,7 @@ from pathlib import Path
 import flet as ft
 import pytest
 
-from pycon_us import favorites as favorites_module
-from pycon_us.favorites import Change, Favorites, use_favorites
+from pycon_us.favorites import Change, Favorites
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
 
@@ -50,7 +49,9 @@ class Notifications:
 
 
 async def test_a_first_launch_has_no_favourites(store: Storage) -> None:
-    assert (await loaded(store)).ids == frozenset()
+    favorites = await loaded(store)
+    assert favorites.ids == frozenset()
+    assert favorites.loaded  # an empty list, not an unread one: My schedule is empty
 
 
 async def test_favourites_survive_a_relaunch(
@@ -113,12 +114,25 @@ async def test_a_failed_read_never_writes_over_the_saved_favourites(
     with caplog.at_level(logging.WARNING):
         favorites = await loaded(store)
     assert favorites.ids == frozenset()
+    assert not favorites.loaded  # My schedule says it can't open, not "Nothing saved"
     assert "pycon.2026.favorites" in caplog.text
     shared.error = None  # SharedPreferences works again, but the read was lost
     change = await favorites.toggle(store, "99")
     assert change == Change(added=frozenset({"99"}), saved=False)  # "Couldn't save"
     assert favorites.ids == {"99"}  # shown for the session
     assert shared.values["pycon.2026.favorites"] == ["17", "42"]  # never overwritten
+
+
+async def test_a_store_that_was_never_read_never_writes(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    # What a start that broke before the favourites' read leaves (D-161).
+    shared.values["pycon.2026.favorites"] = ["17", "42"]
+    favorites = Favorites()
+    change = await favorites.toggle(store, "99")
+    assert change == Change(added=frozenset({"99"}), saved=False)
+    assert favorites.ids == {"99"}
+    assert shared.values["pycon.2026.favorites"] == ["17", "42"]
 
 
 # ------------------------------------------------------------------ toggle
@@ -276,12 +290,3 @@ async def test_undo_after_the_user_changed_the_same_session_does_nothing_twice(
     assert await favorites.undo(store, removal) == Change()
     assert favorites.ids == {"42"}
     assert notified.seen == []
-
-
-# ------------------------------------------------------------------ the hook
-
-
-def test_use_favorites_needs_a_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(favorites_module.ft, "use_context", lambda _context: None)
-    with pytest.raises(RuntimeError, match="FavoritesCtx provider"):
-        use_favorites()

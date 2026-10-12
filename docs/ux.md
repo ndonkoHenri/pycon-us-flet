@@ -309,7 +309,7 @@ No blocking loaders (SCHED-28 dropped); never a full-screen error while data exi
 ### 4.4 Filters (D-20) and favourites (D-30, D-48)
 
 - **Filters:** only the Schedule has them, as a sheet of chips (§5.3). Whenever a track is hidden, including by default, a summary under the day tabs says so; `TUNE` shows a `Badge` dot only when filters differ from the default (D-20). They persist (the excluded list). My schedule, Now and Search ignore them.
-- **Favourites:** one control, the `FavoriteButton` star, on every session row and in the session app bar; swipe-to-favourite is dropped (SCHED-11). Add fills the star with `HapticFeedback().selection_click()` and no SnackBar. Remove shows "Removed from My schedule · Undo", because the row may vanish. Copy is "My schedule", never "favorite" or "successfully". Local, per conference year, no account; sign-out never clears it (D-55). *(P2)* The first favourite may trigger the reminders primer (§4.8).
+- **Favourites:** one control, the `FavoriteButton` star, on every session row and in the session app bar; swipe-to-favourite is dropped (SCHED-11). Add fills the star with `HapticFeedback().selection_click()` and no SnackBar. Remove shows "Removed from My schedule · Undo", because the row may vanish. When an edit can't be saved (`Change.saved` is False, D-120), its one SnackBar says "Couldn't save your change" instead: it replaces the removal or count message, keeps Undo when there was one, and also shows for an add. Copy is "My schedule", never "favorite" or "successfully". Local, per conference year, no account; sign-out never clears it (D-55). *(P2)* The first favourite may trigger the reminders primer (§4.8).
 
 ### 4.5 Feedback (D-29) and haptics
 
@@ -329,6 +329,7 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 | Case | Title / body | Action |
 |---|---|---|
 | My schedule empty | "Nothing saved yet" / "Tap the star on any session to add it to My schedule. It works offline." | "Browse the schedule" |
+| My schedule unavailable (`Favorites.loaded` is False after the gate, D-172) | "Couldn't open My schedule" / "Your saved sessions are still on this device. Close and reopen the app to see them." | none |
 | Filters hide a day | "No sessions on Thursday match your filters" | "Clear filters" |
 | Search miss | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
 | No data, no network | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
@@ -469,7 +470,7 @@ A global pattern: §4.3. Route shape per §2.5.
 ### 5.10 Tracks & session types · `/more/tracks[/<slug>]` (P1; SCHED-21, -22, -24, EVT-04)
 
 - **Hub:** answers "what is a charla?" and "show me the charlas" in one place. `ListTile`s in three groups (Presentations; Hands-on; Community), each with a 40 dp tonal circle holding the track icon, the plural name, the legend line ("30–45 minute talks on a wide range of Python topics"), a count and a "New" badge from data. Keynotes, Lightning talks, Open spaces and Sprints link to their own pages.
-- **Track page:** `AppBar` with the plural name and overflow "Add all to My schedule"; an intro line; a lazy list with day headers, no paging. The posters track lists the 25 posters, not the collapsed row (SCHED-22). "Add all" covers every session of the track and goes straight to a SnackBar "Added 16 sessions · Undo" (no dialog: it is reversible, D-29; SCHED-24); not on open spaces. Clean slugs (`charlas`), not Ionic's `ais`/`lightning-talkss` (DATA-29); unknown slug → not found.
+- **Track page:** `AppBar` with the plural name and overflow "Add all to My schedule"; an intro line; a lazy list with day headers, no paging. The posters track lists the 25 posters, not the collapsed row (SCHED-22). "Add all" covers every session of the track and goes straight to a SnackBar "Added 16 sessions · Undo" (no dialog: it is reversible, D-29; SCHED-24), "Added 1 session · Undo" for one, and "All of them are already in My schedule" with no Undo when nothing was new; not on open spaces. Clean slugs (`charlas`), not Ionic's `ais`/`lightning-talkss` (DATA-29); unknown slug → not found.
 
 ### 5.11 Keynotes, open spaces, lightning talks, sprints (P1; SPKR-04, EVT-01..08)
 

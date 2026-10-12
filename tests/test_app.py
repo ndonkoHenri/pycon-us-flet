@@ -217,6 +217,27 @@ async def test_an_unexpected_start_error_is_logged_and_the_gate_still_opens(
     assert "RuntimeError: a bug" in caplog.text
 
 
+async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
+    fake_page: FakePage,
+    svc: Services,
+    shared: MemoryPrefs,
+    network: Network,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def broken(*_: object) -> None:
+        raise RuntimeError("a bug")
+
+    shared.values["pycon.2026.favorites"] = ["17", "42"]
+    monkeypatch.setattr(Prefs, "load", broken)
+    favorites, prefs = Favorites(), Prefs()
+    await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
+    assert prefs.loaded  # the gate opens (D-161)
+    assert not favorites.loaded  # so My schedule says it can't open
+    change = await favorites.toggle(svc.storage, "99")
+    assert not change.saved  # "Couldn't save your change"
+    assert shared.values["pycon.2026.favorites"] == ["17", "42"]
+
+
 async def test_unreadable_accessibility_flags_keep_their_defaults(
     fake_page: FakePage,
     svc: Services,
