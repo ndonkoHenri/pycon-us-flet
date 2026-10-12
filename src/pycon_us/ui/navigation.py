@@ -129,7 +129,7 @@ def use_scroll_to_top() -> tuple[ft.Ref[ft.ListView], Retap]:
     @report_errors
     async def scroll_to_top() -> None:
         if list_ref.current is not None:  # None until the list has been built
-            duration = 0 if prefs.reduce_motion else RETAP_SCROLL_MS
+            duration = prefs.motion_ms(RETAP_SCROLL_MS)
             await list_ref.current.scroll_to(offset=0, duration=duration)
 
     return list_ref, scroll_to_top

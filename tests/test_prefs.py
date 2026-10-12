@@ -246,3 +246,21 @@ def test_high_contrast_follows_the_os_flag_only_under_system(
 ) -> None:
     prefs = Prefs(high_contrast=setting, os_high_contrast=os_flag)  # type: ignore[arg-type]
     assert prefs.high_contrast_on is on
+
+
+@pytest.mark.parametrize(("reduce_motion", "ms"), [(False, 400), (True, 0)])
+def test_an_animation_lasts_its_duration_unless_the_os_asks_for_less_motion(
+    reduce_motion: bool, ms: int
+) -> None:
+    assert Prefs(reduce_motion=reduce_motion).motion_ms(400) == ms  # D-34
+
+
+async def test_reduced_motion_is_never_stored(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    prefs = await loaded(store)
+    prefs.reduce_motion = True  # what read_accessibility() writes
+    await prefs.save(store, theme="dark")
+    # A device fact, read at start and on resume (F13), not a setting (D-34).
+    assert not any("motion" in key for key in shared.values)
+    assert not (await loaded(store)).reduce_motion
