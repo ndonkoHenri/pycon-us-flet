@@ -15,8 +15,8 @@ file, the key and the problem, and `tests/test_config.py` loads every year.
 The snapshot is the public feed's bytes, unchanged. `conference.toml`'s `snapshot_captured_at` says when
 it was fetched; a year has that key exactly when it has the file. `YearData.read_snapshot()` reads both
 on demand. To refresh it before a build, run `uv run python tools/update_snapshot.py`: it fetches the
-feed of `config.YEAR`, refuses one that does not parse cleanly, rewrites both files atomically and
-prints the count changes. Review the diff like any other.
+feed of `config.YEAR`, refuses one that does not parse cleanly, replaces each file atomically (one
+after the other) and prints the count changes. Review the diff like any other.
 
 `config.YEAR` picks the year the app shows. `2025/` is kept for its recorded feed in
 `tests/fixtures/feeds/`; its Eastern time zone keeps the code honest about zones. Rolling over to

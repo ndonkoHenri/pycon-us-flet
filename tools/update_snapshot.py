@@ -147,8 +147,9 @@ def _with_captured_at(text: str, captured_at: datetime) -> str:
 
     Only that line changes, so the hand-written comments stay. A year folder without the
     line (a new year) gets it right after ``feed_url``. Both keys are expected bare and at
-    the start of a line, as our files write them; any other form fails the check below
-    before anything is written.
+    the start of a line, as our files write them. The parsed documents before and after
+    must differ in that key only, so any other form, or a match inside a multi-line string,
+    is refused before anything is written.
     """
     line = f"snapshot_captured_at = {captured_at.isoformat()}"
     if _CAPTURED_LINE.search(text):
@@ -159,13 +160,14 @@ def _with_captured_at(text: str, captured_at: datetime) -> str:
         raise SnapshotError(
             "conference.toml has no feed_url line to add the time after"
         )
+    expected = tomllib.loads(text) | {"snapshot_captured_at": captured_at}
     try:
-        written = tomllib.loads(updated).get("snapshot_captured_at")
+        problem = None if tomllib.loads(updated) == expected else "other keys changed"
     except tomllib.TOMLDecodeError as error:
-        written = error
-    if written != captured_at:
+        problem = str(error)
+    if problem:
         raise SnapshotError(
-            f"could not set snapshot_captured_at in conference.toml: got {written!r}"
+            f"could not set snapshot_captured_at in conference.toml: {problem}"
         )
     return updated
 

@@ -199,6 +199,24 @@ def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
     assert files(data_dir) == before
 
 
+def test_a_capture_line_inside_a_multiline_string_is_not_rewritten(
+    data_dir: Path,
+) -> None:
+    toml = data_dir / "2026" / "conference.toml"
+    text = toml.read_text(encoding="utf-8")
+    toml.write_text(
+        text.replace(
+            'venue = "Long Beach Convention Center"',
+            'venue = """Long Beach\nsnapshot_captured_at = 1\nConvention Center"""',
+        ),
+        encoding="utf-8",
+    )
+    before = files(data_dir)
+    with pytest.raises(SnapshotError, match="other keys changed$"):
+        update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
+    assert files(data_dir) == before
+
+
 def test_a_network_failure_is_refused_and_nothing_changes(data_dir: Path) -> None:
     def fail(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)
