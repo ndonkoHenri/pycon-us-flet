@@ -374,6 +374,58 @@ async def test_a_publish_notifies_subscribers_and_the_task_does_not(
     assert changes[-1] == "refreshing"  # cleared last, after the publish
 
 
+async def test_a_refresh_that_ends_after_its_session_closed_writes_nothing(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    closed = asyncio.Event()
+    feed = HeldFeed()
+    task = conference.start_refresh(
+        storage, year, transport=feed.transport, closed=closed
+    )
+    await feed.arrived.wait()
+    changes: list[str | None] = []
+
+    def listener(_sender: object, name: str | None) -> None:
+        changes.append(name)
+
+    assert isinstance(conference, ft.Observable)
+    conference.subscribe(listener)
+    closed.set()  # page.on_close: a new session replaced this one (D-147)
+    feed.release()
+    await task
+
+    # A store write would reach a destroyed session (F30): neither the store nor the
+    # cache changes.
+    assert changes == []
+    assert conference.source == "bundled"
+    assert not storage.feed_path.exists()
+
+
+async def test_a_refresh_that_fails_after_its_session_closed_writes_nothing(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    closed = asyncio.Event()
+    closed.set()
+    await conference.refresh(
+        storage, year, transport=failing(httpx.ConnectError("down")), closed=closed
+    )
+    assert conference.problem is None
+
+
+async def test_an_open_session_refreshes_as_before(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(
+        storage, year, transport=serving(NETWORK_FEED), closed=asyncio.Event()
+    )
+    assert conference.source == "network"
+    assert not conference.refreshing
+    assert storage.feed_path.read_bytes() == NETWORK_FEED
+
+
 async def test_an_unexpected_refresh_error_is_logged_at_once(
     storage: Storage,
     year: YearData,

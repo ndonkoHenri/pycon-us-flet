@@ -1,43 +1,30 @@
 """Entry point of the app: ``flet run`` and ``flet build`` start here.
 
-``[tool.flet.app] path = "src"`` points both commands at this file. Until the
-real entry point lands (P0-20: boot gate, stores and router), it shows a
-placeholder so the toolchain can be exercised end to end.
+``[tool.flet.app] path = "src"`` points both commands at this file. ``main()`` runs once
+per session; on Android a new session can start in the same Python process (F26, F29),
+so what must outlive a session lives at module level here.
 """
+
+import logging
 
 import flet as ft
 
-import pycon_us
-from pycon_us.theme import build_theme
+from pycon_us import APP_NAME
+from pycon_us.app import App
+from pycon_us.state import ViewMemory
 
-# The display name stays a neutral placeholder until O-4 (D-36); it matches
-# [tool.flet] product in pyproject.toml.
-APP_NAME = "Conf Companion"
+# INFO to stderr, which packaged apps capture in console.log (F14); #73 replaces this
+# with setup_logging() and an asyncio exception handler.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+MEMORY = ViewMemory()
+"""One per process: a new session finds it as the last one left it (D-143)."""
 
 
 def main(page: ft.Page) -> None:
-    """Show a placeholder screen with the app name and version in the app's theme."""
+    """Render the app's views for this session; ``App`` does the rest."""
     page.title = APP_NAME
-    # theme_mode stays SYSTEM: the OS appearance picks the scheme (Appearance is P2).
-    page.theme = build_theme(dark=False, high_contrast=False)
-    page.dark_theme = build_theme(dark=True, high_contrast=False)
-    page.add(
-        ft.SafeArea(
-            content=ft.Column(
-                [
-                    ft.Text(APP_NAME, theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-                    ft.Text(
-                        f"Version {pycon_us.__version__}",
-                        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
-                    ),
-                    ft.Text(
-                        "Not an official PSF app.",
-                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    ),
-                ]
-            )
-        )
-    )
+    page.render_views(App, MEMORY)
 
 
 if __name__ == "__main__":

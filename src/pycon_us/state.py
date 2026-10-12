@@ -1,10 +1,11 @@
-"""The app's observable stores, their contexts and ``use_*`` hooks (D-69; architecture §6).
+"""The ``Conference`` store, its context and hook, and ``ViewMemory`` (D-69; architecture §6).
 
 Each store is an ``@ft.observable`` dataclass with its own context (D-70 rule 5): a
 component that reads a store through its hook re-renders when one of the store's public
-fields is assigned (F3, F5). Fields starting with ``_`` never notify.
+fields is assigned (F3, F5). Fields starting with ``_`` never notify. The other stores
+have modules of their own (D-160): ``prefs.py`` now, ``favorites.py`` in P1.
 
-P0 has ``Conference``; ``Prefs`` joins with the boot gate (P0-20) and ``Favorites`` in P1.
+``ViewMemory`` is plain, not a store: it lives for the whole process (D-143).
 """
 
 import asyncio
@@ -108,6 +109,7 @@ class Conference:
         year: YearData,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        closed: asyncio.Event | None = None,
     ) -> asyncio.Task[None]:
         """Start a background refresh, unless one is running already (single flight).
 
@@ -120,12 +122,18 @@ class Conference:
             storage: Where the feed cache lives.
             year: The year's data: the feed URL and feed settings.
             transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+            closed: Set when the store's session has been replaced (``Services.closed``,
+                D-147). A refresh that ends after it is set writes nothing: neither the
+                cache nor the store, whose subscribers belong to a destroyed session
+                (F30).
 
         Returns:
             The running refresh: the new one, or the one already in flight.
         """
         if self._task is None or self._task.done():
-            self._task = asyncio.create_task(self._refresh(storage, year, transport))
+            self._task = asyncio.create_task(
+                self._refresh(storage, year, transport, closed)
+            )
             self._task.add_done_callback(_log_unexpected)
         return self._task
 
@@ -135,6 +143,7 @@ class Conference:
         year: YearData,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        closed: asyncio.Event | None = None,
     ) -> None:
         """Refresh from the network and wait for it; concurrent calls share one request.
 
@@ -145,8 +154,12 @@ class Conference:
             storage: Where the feed cache lives.
             year: The year's data: the feed URL and feed settings.
             transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+            closed: Set when the store's session has been replaced; see
+                ``start_refresh``.
         """
-        await asyncio.shield(self.start_refresh(storage, year, transport=transport))
+        await asyncio.shield(
+            self.start_refresh(storage, year, transport=transport, closed=closed)
+        )
 
     def age(self) -> timedelta | None:
         """Return how old the data is by ``clock.now()``, never negative; None without data."""
@@ -184,25 +197,34 @@ class Conference:
         storage: Storage,
         year: YearData,
         transport: httpx.AsyncBaseTransport | None,
+        closed: asyncio.Event | None,
     ) -> None:
         """Fetch, parse, cache and publish; on any expected failure keep what is published."""
+
+        def session_closed() -> bool:
+            if closed is None or not closed.is_set():
+                return False
+            logger.info("Feed refresh ended after its session closed; nothing written")
+            return True
+
         self.refreshing = True
         try:
-            raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
-            data = feed.process(raw, year.feed_settings)  # on the loop (D-109)
-        except api.NetworkError as error:
-            logger.info("Feed refresh: no answer (%s); keeping the current data", error)
-            self.problem = "offline"
-        except (api.ApiError, feed.FeedError) as error:
-            logger.warning("Feed refresh failed (%s); keeping the current data", error)
-            self.problem = "server"
-        else:
+            result = await _fetch(year, transport)
+            if session_closed():
+                return
+            if isinstance(result, str):
+                self.problem = result
+                return
+            raw, data = result
             # Only a feed that parsed is cached (D-39). A failed write is logged and the
             # parsed data is still published (D-120).
             await storage.write_feed(raw)
-            self._publish(data, "network", clock.now())
+            if not session_closed():
+                self._publish(data, "network", clock.now())
         finally:
-            self.refreshing = False
+            # A closed session's store must not be written at all (F30).
+            if closed is None or not closed.is_set():
+                self.refreshing = False
 
     def _publish(
         self, data: ConferenceData, source: Source, fetched_at: datetime
@@ -212,6 +234,21 @@ class Conference:
         self.fetched_at = fetched_at
         self.problem = None
         self.version += 1
+
+
+async def _fetch(
+    year: YearData, transport: httpx.AsyncBaseTransport | None
+) -> tuple[bytes, ConferenceData] | Problem:
+    """Fetch and process the feed; return its bytes and data, or why that failed (D-146)."""
+    try:
+        raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
+        return raw, feed.process(raw, year.feed_settings)  # on the loop (D-109)
+    except api.NetworkError as error:
+        logger.info("Feed refresh: no answer (%s); keeping the current data", error)
+        return "offline"
+    except (api.ApiError, feed.FeedError) as error:
+        logger.warning("Feed refresh failed (%s); keeping the current data", error)
+        return "server"
 
 
 def _log_unexpected(task: asyncio.Task[None]) -> None:
@@ -238,3 +275,21 @@ def use_conference() -> Conference:
     if conference is None:
         raise RuntimeError("use_conference() needs a ConferenceCtx provider above it")
     return conference
+
+
+@dataclass
+class ViewMemory:
+    """Where the user left the app, kept for the whole Python process (D-18, D-143).
+
+    Plain, not observable: writing it re-renders nothing. ``main.py`` creates one at
+    import and every session's ``App`` gets that one, so a new session in the same
+    process (an Android activity recreation, F26, or a relaunch after Back on Now, F29)
+    finds it as the user left it. Fields join with the screens that remember something
+    (the day, offsets and search from P1).
+
+    Attributes:
+        last_location: The top View's route, where the start route returns a new
+            session (D-143, #74); empty until a screen records it.
+    """
+
+    last_location: str = ""

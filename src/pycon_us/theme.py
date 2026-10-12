@@ -66,6 +66,18 @@ DARK_SCHEME = ft.ColorScheme(
 """The dark scheme's overrides: tuned light tones of the same brand (ux.md §3.2)."""
 
 
+THEME_MODES = {
+    "system": ft.ThemeMode.SYSTEM,
+    "light": ft.ThemeMode.LIGHT,
+    "dark": ft.ThemeMode.DARK,
+}
+"""``page.theme_mode`` for each Appearance setting (``Prefs.theme``, THEME-01).
+
+Under ``system`` Flutter itself switches between ``page.theme`` and ``page.dark_theme``
+when the OS changes mode.
+"""
+
+
 def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     """Build the theme for one colour scheme (architecture §15).
 
