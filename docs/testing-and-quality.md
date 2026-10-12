@@ -107,18 +107,13 @@ Code that is correct only in Pacific time is wrong. Time-sensitive modules (`tes
 
 ```python
 # tests/conftest.py (excerpt)
-import time
-
-import pytest
-
-
 @pytest.fixture(params=["America/Los_Angeles", "Pacific/Kiritimati"])
-def machine_tz(request, monkeypatch):
-    """Run the test with the process time zone set to each value in turn."""
-    monkeypatch.setenv("TZ", request.param)
-    time.tzset()
-    yield request.param
-    monkeypatch.undo()
+def machine_tz(request: pytest.FixtureRequest) -> Iterator[str]:
+    """Run the test with the process time zone set to each value in turn (D-43)."""
+    with pytest.MonkeyPatch.context() as patch:  # restores only TZ, never another fixture's patches
+        patch.setenv("TZ", request.param)
+        time.tzset()
+        yield request.param
     time.tzset()
 ```
 
