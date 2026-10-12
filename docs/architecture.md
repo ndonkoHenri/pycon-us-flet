@@ -19,7 +19,7 @@
  routes.py     tab roots · More pages · search · recursive drill (session/speaker/room/sponsor/plan)
  locations.py  drill_href · parent_of · use_query: what screens import to link and go back (D-164)
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
- state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      (P1 favorites.py, P3 account.py, staff.py)
+ state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      favorites.py  Favorites   (P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
  core/         pure Python, no Flet: feed rules, models, queries, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
@@ -84,10 +84,11 @@ def App(memory: ViewMemory):
     page = ft.context.page
     svc = ft.use_memo(lambda: Services.create(memory), [])   # in the page context: Flet registers each service
     conference = ft.use_memo(Conference, [])      # App does not subscribe to it
+    favorites = ft.use_memo(Favorites, [])        # nor to this one (D-172)
     prefs, _ = ft.use_state(Prefs)                # use_state subscribes App to Prefs only
 
     async def start():
-        await bootstrap(page, svc, conference, prefs)
+        await bootstrap(page, svc, conference, prefs, favorites)
 
     def follow_theme():
         apply_theme(page, prefs)
@@ -104,10 +105,10 @@ def App(memory: ViewMemory):
         return ft.Router(ROUTES, manage_views=True)
 
     return ServicesCtx(svc, lambda: ConferenceCtx(conference, lambda: PrefsCtx(
-        prefs, lambda: TokensCtx(tokens, router))))
+        prefs, lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)))))
 ```
 
-`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()` and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). P1 adds `Favorites` (`ft.use_memo(Favorites, [])`, `FavoritesCtx`, loaded in `bootstrap()` after `Prefs`), P3 `AccountCtx` and `StaffCtx`. `ROUTES` and `not_found=NotFound` come from `routes.py` (§5.3); in P0 every route renders a stub screen in `AppScaffold` (`screens/stub.py`'s `stub_body()` lists its rows, D-165), and the Schedule stub shows the status strip, the data source, fetch time and each day's session count.
+`App` re-renders only on `Prefs` changes; screens subscribe to what they read through `use_conference()`, `use_prefs()`, `use_favorites()` (only in the component that owns a list, D-172) and `use_services()` (one-line `ft.use_context(...)` hooks); `use_tokens()` reads the current scheme's `Tokens`, a plain value that `App` re-provides on every render (D-150). `Favorites` (P1, D-172) is built with `ft.use_memo(Favorites, [])` and loaded in `bootstrap()` after the theme; P3 adds `AccountCtx` and `StaffCtx`. `ROUTES` and `not_found=NotFound` come from `routes.py` (§5.3); in P0 every route renders a stub screen in `AppScaffold` (`screens/stub.py`'s `stub_body()` lists its rows, D-165), and the Schedule stub shows the status strip, the data source, fetch time and each day's session count.
 
 `BootView` is a full-bleed `View` in the splash's purple `#680579`, like the native splash and Flet's boot screen shown while Python starts (both set in `pyproject.toml`: `[tool.flet.splash]`, `[tool.flet.boot_screen.flet]`; development.md §3), so nothing flashes (SHELL-01). It shows a white `ProgressRing` only after 1 s (`loop.call_later` from a sync effect whose cleanup cancels it), and the app icon once O-4 has one (D-161).
 
@@ -119,7 +120,8 @@ def App(memory: ViewMemory):
 
 ```python
 # src/pycon_us/app.py (excerpt)
-async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs: Prefs) -> None:
+async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs: Prefs,
+                    favorites: Favorites) -> None:
     """Start in the order that avoids flashes and never waits on the network."""
     page.on_close = svc.close                 # 0. before any await: a replaced session stops (D-147)
     try:
@@ -127,15 +129,16 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)                  # no animation yet: main.prepare_first_page (D-161)
-        await conference.load_local(svc.storage, svc.year)   # 2. cache or bundled snapshot
+        await favorites.load(svc.storage)         # 2. this year's favourites (D-48, D-172)
+        await conference.load_local(svc.storage, svc.year)   # 3. cache or bundled snapshot
     except Exception:
         if not svc.closed.is_set():               # a closed session's store write fails (F30)
             logger.exception("Start failed; opening the app with what has loaded")
-    if svc.closed.is_set():                       # replaced during steps 1-2: stop here
+    if svc.closed.is_set():                       # replaced during steps 1-3: stop here
         return
-    prefs.loaded = True                           # 3. opens the boot gate
+    prefs.loaded = True                           # 4. opens the boot gate
     page.theme_animation_style = None             # later theme changes crossfade again
-    conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 4. background, not awaited
+    conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 5. background, not awaited
 
     def on_brightness(e: ft.Event[ft.Page]):     # not e.brightness: a plain event at the pin (F36, U25)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
@@ -144,12 +147,12 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
         if e.state == ft.AppLifecycleState.RESUME:
             await read_accessibility(svc.semantics, prefs)   # OS flags are a snapshot (F13)
 
-    page.on_platform_brightness_change = on_brightness   # 5. handlers write stores only (D-147)
+    page.on_platform_brightness_change = on_brightness   # 6. handlers write stores only (D-147)
     page.on_app_lifecycle_state_change = on_lifecycle
 ```
 
-- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=prepare_first_page`, which gives the page's default View the boot purple (Flet shows that View for a frame before `main()`'s first patch, F35) and sets `page.theme_animation_style` to zero duration in that first page, so every theme change before the gate lands at once, including the default settings that `App`'s theme effect applies on mount, before `bootstrap()` has read the stored ones.
-- P1 inserts `await favorites.load(svc.storage)` after step 1 and the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
+- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-3 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=prepare_first_page`, which gives the page's default View the boot purple (Flet shows that View for a frame before `main()`'s first patch, F35) and sets `page.theme_animation_style` to zero duration in that first page, so every theme change before the gate lands at once, including the default settings that `App`'s theme effect applies on mount, before `bootstrap()` has read the stored ones.
+- P1 inserted `await favorites.load(svc.storage)` as step 2 (D-172) and adds the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
 - **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `bootstrap()` sets `page.on_close` before its first await, so a session replaced during the boot view is closed too, and it then stops before it opens the gate or starts a refresh. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
 **Refresh triggers (D-40):** start (always); resume (if older than 15 min); a 60 s ticking effect in Now and Schedule while the app is in the foreground (refresh when older than 15 min, recompute time-dependent views); "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*.
@@ -395,13 +398,13 @@ Both `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]` are c
 
 ### 6.1 Stores (D-69)
 
-All are `@ft.observable @dataclass(eq=False)`, each in its own module with its context and hook: `Conference` in `state.py` (with `ViewMemory`), `Prefs` in `prefs.py`, then `favorites.py` (P1), `account.py` and `staff.py` (P3) (D-160). Fields starting with `_` never notify. A method that persists awaits the write before assigning the field, and assigns it even when the write fails, returning `False` so the caller can say the change was not saved (D-120).
+All are `@ft.observable @dataclass(eq=False)`, each in its own module with its context and hook: `Conference` in `state.py` (with `ViewMemory`), `Prefs` in `prefs.py`, then `favorites.py` (P1), `account.py` and `staff.py` (P3) (D-160). Fields starting with `_` never notify. A method that persists assigns the field even when the write fails, and says so (`False`, or `Change.saved`) so the caller can say the change was not saved (D-120). `Prefs.save` writes before it assigns; `Favorites` assigns first and writes after, so a star changes at once and two quick taps never lose one another (D-172).
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
 | `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_foreground` (P1, #82) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `set_foreground` (P1, #82) | P0 |
 | `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`; `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark` | P0 |
-| `Favorites` | `ids: list[str]` (a list, because it is persisted as `list[str]`, F12) | `load`, `toggle`, `add_many`, `remove_many` (each returns what Undo needs) | P1 |
+| `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
 | `Staff` | `sponsor`; `pending`, `failed`, `synced`; `syncing`; `last_sync_at`; `last_error`; `revision`; memory-only PII: `inventory`, `coc_directory` | `select_sponsor`, `update_counts`, `clear` | P3 |
 
@@ -513,7 +516,7 @@ Filters are preferences (persisted in `Prefs`); positions are process memory (he
 
 ### 6.4 Screen pattern
 
-A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, tuple(favorites.ids), ...])` (lists passed as tuples), builds handlers and effects as named functions, each wrapped in `report_errors` (sync or async, D-163), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.toggle, svc, sid)`. Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
+A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, favorites.ids, ...])` (lists passed as tuples; `favorites.ids` is a frozenset already, D-172), builds handlers and effects as named functions, each wrapped in `report_errors` (sync or async, D-163), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.undo, svc.storage, change)` with the `Change` the edit returned (D-172). Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
 
 ---
 
@@ -801,7 +804,7 @@ As built (P0-08), one recursive `_build(cls, raw, file)` applies this check to e
 | Staff outbox (P3) | sqlite in data dir | `outbox.db` | see §12.1 |
 | Inventories, CoC directory (P3) | memory only | `Staff` fields | yes |
 
-SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`: each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key).
+SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`: each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key). `Storage.get()` reads a key, giving its default when the key is absent, unreadable or SharedPreferences fails (D-120); `Storage.read()` raises that failure instead, for the favourites, which must not take a failed read for an empty list (D-172).
 
 ```python
 # src/pycon_us/services/storage.py (excerpt)

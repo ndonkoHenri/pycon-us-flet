@@ -22,6 +22,7 @@ from pycon_us.app import (
     read_accessibility,
 )
 from pycon_us.config import YearData, load_year
+from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
@@ -89,7 +90,7 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
 
 async def started(fake_page: FakePage, svc: Services) -> tuple[Conference, Prefs]:
     conference, prefs = Conference(), Prefs()
-    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
+    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
     return conference, prefs
 
 
@@ -130,7 +131,7 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
 
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
-    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
+    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
     # No theme flash and no empty first screen (SHELL-01): the stored theme is set before
     # the gate opens, still with no crossfade, and later changes crossfade again.
     assert seen_at_open == [NO_THEME_ANIMATION, ft.ThemeMode.DARK, "bundled"]
@@ -149,6 +150,24 @@ async def test_the_os_brightness_and_accessibility_flags_are_read_at_start(
         True,
     )
     assert prefs.dark  # Appearance System follows the OS
+
+
+async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
+    fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
+) -> None:
+    shared.values["pycon.2026.favorites"] = ["42", "poster-detail-7"]
+    favorites, prefs = Favorites(), Prefs()
+    ids_at_open: list[frozenset[str]] = []
+
+    def listener(_sender: object, name: str | None) -> None:
+        if name == "loaded":
+            ids_at_open.append(favorites.ids)
+
+    assert isinstance(prefs, ft.Observable)
+    prefs.subscribe(listener)
+    await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
+    # No star fills in after the first screen (D-48).
+    assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
 
 
 async def test_the_cache_is_shown_before_the_snapshot(
@@ -196,6 +215,27 @@ async def test_an_unexpected_start_error_is_logged_and_the_gate_still_opens(
     assert conference.data is None
     assert "Start failed" in caplog.text
     assert "RuntimeError: a bug" in caplog.text
+
+
+async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
+    fake_page: FakePage,
+    svc: Services,
+    shared: MemoryPrefs,
+    network: Network,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def broken(*_: object) -> None:
+        raise RuntimeError("a bug")
+
+    shared.values["pycon.2026.favorites"] = ["17", "42"]
+    monkeypatch.setattr(Prefs, "load", broken)
+    favorites, prefs = Favorites(), Prefs()
+    await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
+    assert prefs.loaded  # the gate opens (D-161)
+    assert not favorites.loaded  # so My schedule says it can't open
+    change = await favorites.toggle(svc.storage, "99")
+    assert not change.saved  # "Couldn't save your change"
+    assert shared.values["pycon.2026.favorites"] == ["17", "42"]
 
 
 async def test_unreadable_accessibility_flags_keep_their_defaults(
@@ -301,7 +341,7 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
     monkeypatch.setattr(app, "read_accessibility", held_read)
     conference, prefs = Conference(), Prefs()
     start = asyncio.create_task(
-        bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
+        bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
     )
     await reading.wait()
     fake_page.on_close()  # replaced while the start awaits (F26, F29; D-147)

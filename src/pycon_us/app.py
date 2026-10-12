@@ -11,6 +11,7 @@ import logging
 
 import flet as ft
 
+from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
@@ -50,11 +51,12 @@ def App(memory: ViewMemory):
     # An explicit empty list: without one, use_memo recomputes on every render (D-69).
     svc = ft.use_memo(lambda: Services.create(memory), [])
     conference = ft.use_memo(Conference, [])
+    favorites = ft.use_memo(Favorites, [])
     prefs, _ = ft.use_state(Prefs)
 
     @report_errors
     async def start() -> None:
-        await bootstrap(page, svc, conference, prefs)
+        await bootstrap(page, svc, conference, prefs, favorites)
 
     @report_errors
     def follow_theme() -> None:
@@ -75,7 +77,10 @@ def App(memory: ViewMemory):
         svc,
         lambda: ConferenceCtx(
             conference,
-            lambda: PrefsCtx(prefs, lambda: TokensCtx(tokens, router)),
+            lambda: PrefsCtx(
+                prefs,
+                lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)),
+            ),
         ),
     )
 
@@ -108,7 +113,11 @@ def BootView() -> ft.View:
 
 
 async def bootstrap(
-    page: ft.Page, svc: Services, conference: Conference, prefs: Prefs
+    page: ft.Page,
+    svc: Services,
+    conference: Conference,
+    prefs: Prefs,
+    favorites: Favorites,
 ) -> None:
     """Start in the order that avoids flashes and never waits on the network (DATA-35).
 
@@ -116,14 +125,15 @@ async def bootstrap(
     1. Settings, the OS's accessibility flags and brightness, then the theme they ask
        for, all while the boot view shows. ``main.prepare_first_page()`` has turned
        the theme animation off, so the theme lands at once.
-    2. The feed cache, else the bundled snapshot (D-38, D-145).
-    3. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
+    2. The year's favourites (D-48), so no star fills in after the first screen.
+    3. The feed cache, else the bundled snapshot (D-38, D-145).
+    4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
        changes crossfade again from here on.
-    4. A refresh in the background, not awaited (single flight, D-145).
-    5. The page handlers, which only write stores (D-147).
+    5. A refresh in the background, not awaited (single flight, D-145).
+    6. The page handlers, which only write stores (D-147).
 
-    An unexpected error in steps 1-2 is logged and the gate opens anyway, with whatever
-    loaded: a start never hangs on the boot view. A session replaced during steps 1-2
+    An unexpected error in steps 1-3 is logged and the gate opens anyway, with whatever
+    loaded: a start never hangs on the boot view. A session replaced during steps 1-3
     (F26, F29) stops there: its stores belong to a destroyed session (F30).
 
     Args:
@@ -131,6 +141,7 @@ async def bootstrap(
         svc: The session's services.
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
+        favorites: The session's ``Favorites`` store.
     """
     # First, so a session replaced while the start awaits gets `closed` too (D-147).
     page.on_close = svc.close
@@ -139,6 +150,7 @@ async def bootstrap(
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
+        await favorites.load(svc.storage)
         await conference.load_local(svc.storage, svc.year)
     except Exception:  # its own net, not report_errors: the gate opens anyway (D-161)
         if not svc.closed.is_set():  # a closed session's store write fails (F30)

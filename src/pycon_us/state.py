@@ -3,7 +3,7 @@
 Each store is an ``@ft.observable`` dataclass with its own context (D-70 rule 5): a
 component that reads a store through its hook re-renders when one of the store's public
 fields is assigned (F3, F5). Fields starting with ``_`` never notify. The other stores
-have modules of their own (D-160): ``prefs.py`` now, ``favorites.py`` in P1.
+have modules of their own (D-160): ``prefs.py`` and ``favorites.py`` (P1).
 
 ``ViewMemory`` is plain, not a store: it lives for the whole process (D-143).
 """

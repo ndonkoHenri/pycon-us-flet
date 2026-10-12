@@ -200,7 +200,7 @@ class Storage:
     Attributes:
         prefs: The page's SharedPreferences service.
         directory: The durable data directory, from ``data_dir()``.
-        year: The conference year whose feed is cached.
+        year: The conference year whose feed and favourites are kept.
     """
 
     prefs: ft.SharedPreferences
@@ -219,10 +219,30 @@ class Storage:
             last two are logged).
         """
         try:
-            stored = await self.prefs.get(pref.key)
+            return await self.read(pref)
         except SERVICE_ERRORS:
             logger.warning("Could not read preference %s", pref.key, exc_info=True)
             return copy.deepcopy(pref.default)
+
+    async def read[T](self, pref: Pref[T]) -> T:
+        """Read a preference, raising when SharedPreferences fails.
+
+        For a store that must not mistake a failed read for an empty value: the
+        favourites, which would otherwise write that empty value over the saved one
+        (D-172). Everything else uses ``get``.
+
+        Args:
+            pref: A key from the table.
+
+        Returns:
+            The stored value, or a copy of the default when the key is absent or its
+            value is not of the pref's type (logged).
+
+        Raises:
+            TimeoutError: SharedPreferences did not answer (``SERVICE_ERRORS``).
+            RuntimeError: SharedPreferences reported an error (``SERVICE_ERRORS``).
+        """
+        stored = await self.prefs.get(pref.key)
         if stored is None:
             return copy.deepcopy(pref.default)
         value = _decode(pref, stored)

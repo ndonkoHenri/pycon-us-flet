@@ -436,7 +436,7 @@ Shared state and components that every attendee screen uses.
 
 feature, area:schedule · after P0-16, P0-20 · STORE-02, SCHED-12
 
-`@ft.observable Favorites(ids: list[str])` in its own context, saved per year under `pycon.<year>.favorites`, with `toggle`, `add_many` and `remove_many`, each returning what Undo needs.
+`@ft.observable Favorites` in its own context, saved per year under `pycon.<year>.favorites`, with `toggle`, `add_many` and `remove_many`, each returning what Undo needs (built as D-172: `ids` is a `frozenset[str]`).
 
 - Favourites survive relaunch; a 2026 favourite never marks a 2027 session.
 - A toggle notifies once; unit tests cover Undo and `add_many`.
