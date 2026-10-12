@@ -49,7 +49,7 @@
 | Fact | Value | Source |
 |---|---|---|
 | Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `15854a0ac` (`.flet-ref`) until 1.1.0 is on PyPI, where the latest is 1.0.4. The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints `1.0.4`, the nearest tag (§2.2). | D-81, D-104; F20; S5 |
-| Flutter | **3.47.7**, read from the checkout's `.fvmrc`. flet-cli uses the `flutter` on `PATH` if its major.minor matches (any 3.47.x); otherwise it asks, then downloads 3.47.7 into `~/flutter/3.47.7` (about 5 minutes; `--yes` skips the question). | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:155-181, 198-227`; `CLI/utils/flutter.py:43-55` |
+| Flutter | **3.47.7**, read from the checkout's `.fvmrc`. flet-cli uses `~/flutter/3.47.7` if it exists, else the `flutter` on `PATH` if its major.minor matches (any 3.47.x); otherwise it asks, then downloads 3.47.7 into `~/flutter/3.47.7` (about 5 minutes; `--yes` skips the question). It adds that SDK to `PATH` only for its own subprocesses, not your shell. | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:155-181, 198-227, 282-292, 427-439`; `CLI/utils/flutter.py:43-55` |
 | JDK (Android builds) | **17**. flet-cli uses `JAVA_HOME`, then `/usr/libexec/java_home`, if either is a JDK 17; otherwise it downloads Temurin **17.0.13+11** into `~/java/17.0.13+11`. Either way it runs `flutter config --jdk-dir=<that JDK>`, a global Flutter setting. A newer system JDK is ignored. | `CLI/utils/jdk.py:15-18, 87-163`; `CLI/commands/flutter_base.py:328-351` |
 | Android SDK | `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's `~/Library/Android/sdk`, then `~/Android/sdk`; if none exists, flet-cli asks and installs one into `~/Android/sdk`. | `CLI/utils/android_sdk.py:42-103, 269` |
 | Python in the app | CPython **3.14.7**, chosen from `requires-python = ">=3.14,<3.15"`. The S5 screen showed "Python 3.14.7 on android" and "… on ios". | `CLI/utils/python_versions.py` `resolve_python_version`; python-build release `20260921` (`:31`) |
@@ -377,6 +377,7 @@ BROWSER=true uv run flet run -r -w -p 8550
 cd .flet-src/client && flutter run -d emulator-5554    # or -d <simulator udid>
 ```
 
+- Terminal 2 needs Flutter 3.47.x on `PATH`. If flet-cli downloaded it (§2.1), first run `export PATH="$HOME/flutter/3.47.7/bin:$PATH"`.
 - The client connects to `http://localhost:8550` at the root path, or `http://10.0.2.2:8550` on the Android emulator (`client/lib/main.dart:84-97`), and logs "Page URL: …". A phone cannot reach the laptop that way, so phones use `flet debug` (§5.3).
 - `-r` watches `src/` recursively; without it only `src/main.py` reloads (F22). A reload restarts Python, so in-memory state resets; preferences live on the device and survive.
 - `-w` also opens a browser tab; `BROWSER=true` stops that.
@@ -697,6 +698,7 @@ A device can update in place only from one signing identity: our upload key (sid
 **The upload key**, created once:
 
 ```bash
+mkdir -p ~/keys
 keytool -genkeypair -v -keystore ~/keys/pyconus-upload.jks \
     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
