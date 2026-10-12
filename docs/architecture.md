@@ -54,7 +54,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 
 | Module | Responsibility | Phase |
 |---|---|---|
-| `src/main.py` | `ft.run(main)`: one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
+| `src/main.py` | `ft.run(main, before_main=paint_first_view)` (the default View in the boot purple, F35, D-161): one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
@@ -119,6 +119,7 @@ def App(memory: ViewMemory):
 # src/pycon_us/app.py (excerpt)
 async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs: Prefs) -> None:
     """Start in the order that avoids flashes and never waits on the network."""
+    page.theme_animation_style = NO_THEME_ANIMATION   # the stored theme lands at once (D-161)
     try:
         await prefs.load(svc.storage)             # 1. settings, OS flags, theme: under the boot view
         await read_accessibility(svc.semantics, prefs)
@@ -128,10 +129,11 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
     except Exception:
         logger.exception("Start failed; opening the app with what has loaded")
     prefs.loaded = True                           # 3. opens the boot gate
+    page.theme_animation_style = None             # later theme changes crossfade again
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)   # 4. background, not awaited
 
-    def on_brightness(e: ft.PlatformBrightnessChangeEvent):
-        prefs.os_dark = e.brightness == ft.Brightness.DARK
+    def on_brightness(e: ft.Event[ft.Page]):     # not e.brightness: a plain event at the pin (F36, U25)
+        prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
 
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
         if e.state == ft.AppLifecycleState.RESUME:
@@ -142,7 +144,7 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
     page.on_close = svc.close                 # a new session replaced this one: stop our work (D-147)
 ```
 
-- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, so the first screen has its stored theme; `App`'s theme effect follows later changes.
+- `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`; a failed read is logged and keeps the previous values. An unexpected error in steps 1-2 is logged and the gate opens with whatever loaded, so a start never hangs on the boot view (D-161). `apply_theme(page, prefs)` runs before the gate opens, with Flutter's 200 ms theme crossfade off, so the first screen has its stored theme and is never shown mid-fade; `App`'s theme effect follows later changes, which crossfade. `main.py` passes `before_main=paint_first_view`, which gives the page's default View the boot purple: Flet shows that View for a frame before `main()`'s first patch (F35).
 - P1 inserts `await favorites.load(svc.storage)` after step 1 and the Developer fake clock (`clock.start_fake_clock`) with the Developer screen; #82 adds the refresh on a stale resume and `conference.set_foreground()` to `on_lifecycle`. P3 inserts after the favourites: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
 - **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh (`start_refresh(..., closed=svc.closed)`, which then stops before its next write) check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
@@ -1277,7 +1279,7 @@ A last-resort net, not error handling (§16.1). Details show when not embedded o
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
 | S6, S7, S8 | E3 reminders; floor plans in `InteractiveViewer`; E1 scanning |
 
-**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); a shell bar outside the `Navigator` (U23 → the bar on roots only, D-144); unmounting a replaced session (U24 → `page.on_close` stops our loops, D-147); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
+**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); a shell bar outside the `Navigator` (U23 → the bar on roots only, D-144); unmounting a replaced session (U24 → `page.on_close` stops our loops, D-147); a typed brightness event and the boot screen kept until `main()`'s first patch (U25 → read `page.platform_brightness`, and `before_main` paints the default View, F35, F36); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
 
 ---
 

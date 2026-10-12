@@ -28,6 +28,9 @@ RING_DELAY = 1.0
 SERVICE_ERRORS = (TimeoutError, RuntimeError)
 """What a Flet service call raises when the Flutter side times out or fails."""
 
+NO_THEME_ANIMATION = ft.AnimationStyle(duration=0)
+"""``page.theme_animation_style`` while the boot view shows: the stored theme at once."""
+
 ROUTES = [ft.Route(index=True, component=Stub)]
 """One stub screen until the route table lands (#74)."""
 
@@ -106,7 +109,7 @@ async def bootstrap(
     """Start in the order that avoids flashes and never waits on the network (DATA-35).
 
     1. Settings, the OS's accessibility flags and brightness, then the theme they ask
-       for, all while the boot view shows.
+       for, all while the boot view shows, with no theme animation.
     2. The feed cache, else the bundled snapshot (D-38, D-145).
     3. ``prefs.loaded`` opens the boot gate: the first screen shows that data.
     4. A refresh in the background, not awaited (single flight, D-145).
@@ -121,6 +124,9 @@ async def bootstrap(
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
     """
+    # Flutter crossfades theme changes over 200 ms; the stored theme must land at once,
+    # or a gate that opens sooner shows the first screen mid-fade (iOS simulator, #72).
+    page.theme_animation_style = NO_THEME_ANIMATION
     try:
         await prefs.load(svc.storage)
         await read_accessibility(svc.semantics, prefs)
@@ -130,10 +136,14 @@ async def bootstrap(
     except Exception:  # #73's report_errors takes over reporting
         logger.exception("Start failed; opening the app with what has loaded")
     prefs.loaded = True
+    page.theme_animation_style = None  # later changes crossfade, as Flutter's default
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
 
-    def on_brightness(e: ft.PlatformBrightnessChangeEvent) -> None:
-        prefs.os_dark = e.brightness == ft.Brightness.DARK
+    def on_brightness(e: ft.Event[ft.Page]) -> None:
+        # Not e.brightness: at the pin the event arrives as a plain ControlEvent whose
+        # data is the name (flet_backend.dart sends a string), while the page field is
+        # already updated (S4).
+        prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
 
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent) -> None:
         if e.state == ft.AppLifecycleState.RESUME:

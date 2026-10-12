@@ -14,7 +14,12 @@ from typing import cast
 import flet as ft
 import pytest
 
-from pycon_us.app import apply_theme, bootstrap, read_accessibility
+from pycon_us.app import (
+    NO_THEME_ANIMATION,
+    apply_theme,
+    bootstrap,
+    read_accessibility,
+)
 from pycon_us.config import YearData, load_year
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
@@ -113,6 +118,8 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     seen_at_open: list[object] = []
 
     def listener(_sender: object, name: str | None) -> None:
+        if name == "theme":
+            seen_at_open.append(fake_page.theme_animation_style)
         if name == "loaded":
             seen_at_open.append(fake_page.theme_mode)
             seen_at_open.append(conference.source)
@@ -120,8 +127,10 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs)
-    # No theme flash and no empty first screen (SHELL-01).
-    assert seen_at_open == [ft.ThemeMode.DARK, "bundled"]
+    # No theme flash and no empty first screen (SHELL-01): the stored theme is set with
+    # no crossfade, before the gate opens, and later changes crossfade again.
+    assert seen_at_open == [NO_THEME_ANIMATION, ft.ThemeMode.DARK, "bundled"]
+    assert fake_page.theme_animation_style is None
     assert fake_page.theme is not None and fake_page.dark_theme is not None
 
 
@@ -208,12 +217,10 @@ async def test_a_brightness_change_writes_the_store(
 ) -> None:
     _, prefs = await started(fake_page, svc)
     page = cast(ft.Page, fake_page)
+    fake_page.platform_brightness = ft.Brightness.DARK
+    # What the pinned Flet delivers: a plain event whose data is the name (iOS sim).
     fake_page.on_platform_brightness_change(
-        ft.PlatformBrightnessChangeEvent(
-            name="platform_brightness_change",
-            control=page,
-            brightness=ft.Brightness.DARK,
-        )
+        ft.ControlEvent(name="platform_brightness_change", control=page, data="dark")
     )
     assert prefs.os_dark
 

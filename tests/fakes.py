@@ -80,6 +80,7 @@ class FakePage:
         self.theme: ft.Theme | None = None
         self.dark_theme: ft.Theme | None = None
         self.theme_mode: ft.ThemeMode | None = None
+        self.theme_animation_style: ft.AnimationStyle | None = None
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None

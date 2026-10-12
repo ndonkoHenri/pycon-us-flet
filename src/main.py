@@ -10,7 +10,7 @@ import logging
 import flet as ft
 
 from pycon_us import APP_NAME
-from pycon_us.app import App
+from pycon_us.app import BOOT_COLOR, App
 from pycon_us.state import ViewMemory
 
 # INFO to stderr, which packaged apps capture in console.log (F14); #73 replaces this
@@ -21,6 +21,16 @@ MEMORY = ViewMemory()
 """One per process: a new session finds it as the last one left it (D-143)."""
 
 
+def paint_first_view(page: ft.Page) -> None:
+    """Give the page's default View the boot purple, before Flutter's first frame of it.
+
+    Flet sends the page, with its default empty View, before ``main()`` runs, and Flutter
+    removes its boot screen as soon as that arrives: one frame of the default View
+    (white in light mode) showed between the purple boot screen and ``BootView`` (#72).
+    """
+    page.views[0].bgcolor = BOOT_COLOR
+
+
 def main(page: ft.Page) -> None:
     """Render the app's views for this session; ``App`` does the rest."""
     page.title = APP_NAME
@@ -28,4 +38,4 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(main, before_main=paint_first_view)
