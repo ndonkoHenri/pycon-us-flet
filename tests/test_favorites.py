@@ -99,6 +99,28 @@ async def test_a_change_that_cannot_be_saved_is_kept_for_the_session(
     assert (await loaded(store)).ids == frozenset()  # lost on relaunch
 
 
+@pytest.mark.parametrize(
+    "error", [TimeoutError(), RuntimeError("client error")], ids=["timeout", "client"]
+)
+async def test_a_failed_read_never_writes_over_the_saved_favourites(
+    error: Exception,
+    store: Storage,
+    shared: MemoryPrefs,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    shared.values["pycon.2026.favorites"] = ["17", "42"]
+    shared.error = error
+    with caplog.at_level(logging.WARNING):
+        favorites = await loaded(store)
+    assert favorites.ids == frozenset()
+    assert "pycon.2026.favorites" in caplog.text
+    shared.error = None  # SharedPreferences works again, but the read was lost
+    change = await favorites.toggle(store, "99")
+    assert change == Change(added=frozenset({"99"}), saved=False)  # "Couldn't save"
+    assert favorites.ids == {"99"}  # shown for the session
+    assert shared.values["pycon.2026.favorites"] == ["17", "42"]  # never overwritten
+
+
 # ------------------------------------------------------------------ toggle
 
 

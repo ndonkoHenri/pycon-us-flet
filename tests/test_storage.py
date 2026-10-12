@@ -137,6 +137,28 @@ async def test_a_failing_shared_preferences_call_is_reported_not_raised(
     assert caplog.text.count("pycon.excluded_tracks") == 2
 
 
+@pytest.mark.parametrize(
+    "error", [TimeoutError(), RuntimeError("client error")], ids=["timeout", "client"]
+)
+async def test_read_raises_a_failing_call_that_get_turns_into_the_default(
+    error: Exception, store: Storage, prefs: MemoryPrefs
+) -> None:
+    """D-172: the favourites must tell a failed read from an empty list."""
+    prefs.values["pycon.2026.favorites"] = ["42"]
+    prefs.error = error
+    with pytest.raises(type(error)):
+        await store.read(storage.favorites(2026))
+    assert await store.get(storage.favorites(2026)) == []
+
+
+async def test_read_gives_the_default_for_an_absent_or_unreadable_value(
+    store: Storage, prefs: MemoryPrefs
+) -> None:
+    assert await store.read(storage.favorites(2026)) == []
+    prefs.values["pycon.2026.favorites"] = "42"
+    assert await store.read(storage.favorites(2026)) == []
+
+
 # ------------------------------------------------------------------ the data directory
 
 

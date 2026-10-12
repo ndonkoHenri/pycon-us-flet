@@ -13,12 +13,15 @@ whole session, so a callback that closes over them never goes stale. A row that 
 ``use_favorites()`` itself would re-render on every star tap, wherever it was.
 """
 
+import logging
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import flet as ft
 
-from pycon_us.services.storage import Storage, favorites
+from pycon_us.services.storage import SERVICE_ERRORS, Storage, favorites
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -60,14 +63,32 @@ class Favorites:
     """
 
     ids: frozenset[str] = frozenset()
+    _unread: bool = field(default=False, repr=False)
 
     async def load(self, storage: Storage) -> None:
-        """Read the year's favourites; unreadable ones read as none (logged, D-120).
+        """Read the year's favourites.
+
+        An absent or unreadable value reads as none (logged, D-120). A read that fails
+        leaves the store empty and unread: later edits show but are not saved this
+        session (``saved=False``), so an empty set is never written over favourites
+        that could not be read (D-172).
 
         Args:
             storage: Where they are kept; its ``year`` picks the key (D-48).
         """
-        self.ids = frozenset(await storage.get(favorites(storage.year)))
+        key = favorites(storage.year)
+        try:
+            stored = await storage.read(key)
+        except SERVICE_ERRORS:
+            logger.warning(
+                "Could not read %s; changes are not saved this session",
+                key.key,
+                exc_info=True,
+            )
+            self._unread = True
+            return
+        self._unread = False
+        self.ids = frozenset(stored)
 
     async def toggle(self, storage: Storage, session_id: str) -> Change:
         """Save a session, or remove it when it is saved already (D-30).
@@ -140,6 +161,8 @@ class Favorites:
         if not add and not remove:
             return Change()
         self.ids = (self.ids - remove) | add  # one assignment, one notification
+        if self._unread:  # never write over favourites that a failed read did not see
+            return Change(added=add, removed=remove, saved=False)
         # The set is read here, before the first await, and Flet sends a service call
         # before it awaits the answer (Session.invoke_method), so the writes reach
         # SharedPreferences in the order of the edits and the last one holds them all.

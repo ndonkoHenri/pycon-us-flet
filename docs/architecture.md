@@ -804,7 +804,7 @@ As built (P0-08), one recursive `_build(cls, raw, file)` applies this check to e
 | Staff outbox (P3) | sqlite in data dir | `outbox.db` | see §12.1 |
 | Inventories, CoC directory (P3) | memory only | `Staff` fields | yes |
 
-SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`: each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key).
+SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`: each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key). `Storage.get()` reads a key, giving its default when the key is absent, unreadable or SharedPreferences fails (D-120); `Storage.read()` raises that failure instead, for the favourites, which must not take a failed read for an empty list (D-172).
 
 ```python
 # src/pycon_us/services/storage.py (excerpt)
