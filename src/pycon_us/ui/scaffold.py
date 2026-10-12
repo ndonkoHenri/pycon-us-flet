@@ -57,9 +57,9 @@ def AppScaffold(
             home indicator and the navigation bar in either orientation.
         actions: The app bar's actions, e.g. ``search_button()``; each icon-only one
             has a tooltip, its accessible name (D-27).
-        on_retap: A tab root's action when its active tab is tapped again, usually the
-            action ``ui.navigation.use_scroll_to_top()`` returns; ignored on pushed Views, which
-            have no bar.
+        on_retap: A tab root's action when its active tab is tapped again, usually
+            the one ``ui.navigation.use_scroll_to_top()`` returns; ignored on pushed
+            Views, which have no bar.
 
     Returns:
         The View for this route level.
