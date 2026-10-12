@@ -107,7 +107,7 @@ def App(memory: ViewMemory):
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create()` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir())`, §9), `memory` (the `ViewMemory` that `main()` created for its `on_view_pop` and passed to `App`, §5.3, §6.3), and the Flet services `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()`, `ft.SemanticsService()` and `ft.StoragePaths()`. A Flet `Service` registers with the page when constructed, so screens never construct one. P2 adds `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`). P3 adds `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create()` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the `ViewMemory` that `main()` created for its `on_view_pop` and passed to `App`, §5.3, §6.3), and the Flet services `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()`, `ft.SemanticsService()` and `ft.StoragePaths()`. A Flet `Service` registers with the page when constructed, so screens never construct one. P2 adds `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`). P3 adds `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
 
 ### 4.3 Bootstrap (DATA-35)
 
@@ -386,9 +386,8 @@ class Conference:
             try:
                 self._publish(feed.process(cached.raw, svc.year.feed_settings), "cache", cached.saved_at)
                 return
-            except feed.FeedError:
-                logger.warning("Cached feed is unreadable; deleting it", exc_info=True)
-                await svc.storage.delete_feed()
+            except feed.FeedError as error:
+                await svc.storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
         snapshot = svc.year.snapshot
         self._publish(feed.process(snapshot.raw, svc.year.feed_settings), "bundled", snapshot.captured_at)
 
@@ -711,28 +710,42 @@ Entries are built as `Pin(**checked(raw, Pin, f"map.toml pins[{i}]"))`, then che
 | Staff outbox (P3) | sqlite in data dir | `outbox.db` | see §12.1 |
 | Inventories, CoC directory (P3) | memory only | `Staff` fields | yes |
 
-SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`.
+SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/storage.py`: each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key).
 
 ```python
 # src/pycon_us/services/storage.py (excerpt)
+THEME: Pref[str] = Pref("pycon.theme", "system")
+EXCLUDED_TRACKS: Pref[list[str]] = Pref("pycon.excluded_tracks", ["Open Space"])
+DEV: Pref[dict[str, Any]] = Pref("pycon.dev", {})           # a dict default: stored as JSON
+
+
 def data_dir() -> Path:
-    """The durable, app-private directory (F14): set by packaged builds and by `flet run`."""
-    path = Path(os.environ.get("FLET_APP_STORAGE_DATA", ".flet/storage/data"))
+    """The durable data directory, read from the environment on every start (D-108)."""
+    configured = os.environ.get("FLET_APP_STORAGE_DATA")
+    path = Path(configured) if configured else Path.cwd() / ".flet/storage/data"
     path.mkdir(parents=True, exist_ok=True)
-    return path
+    return path.absolute()
 
 
 def write_atomic(path: Path, data: bytes) -> None:
     """Write so that readers see the old file or the new one, never a partial file."""
     tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "wb") as f:
-        f.write(data)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "wb") as file:
+            file.write(data)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(tmp, path)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
 ```
 
-- `Storage.write_feed(raw)` runs `write_atomic` in `asyncio.to_thread`; `read_feed()` returns bytes and mtime. The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, D-108). Read it from `FLET_APP_STORAGE_DATA` on every start; never persist its absolute path, because iOS moves the container on an update.
+- `Storage(prefs, directory, year)` is built once in `Services.create()` as `Storage(ft.SharedPreferences(), data_dir(), year)`.
+- Preferences: `await storage.get(THEME)` returns the stored value, or a copy of the default when the key is absent (an explicit `[]` is kept) or its value is not of the pref's type (logged). `await storage.set(pref, value)` JSON-encodes dicts.
+- Feed cache: `read_feed()` returns a `CachedFeed(raw, saved_at)` (bytes and mtime) or `None`; it does not judge the bytes. `write_feed(raw)` runs `write_atomic` in `asyncio.to_thread` and is called only after `raw` parsed (D-39). `delete_feed(reason)` removes a cache that no longer parses (or that the Developer screen clears) and logs why.
+- Failures are logged and returned, never raised (D-120): `set` and `write_feed` return `False`, `read_feed` returns `None`, and the previous file stays.
+- The OS may purge `FLET_APP_STORAGE_CACHE`, so nothing durable goes there; the data directory survives updates (F14, D-108). Read it from `FLET_APP_STORAGE_DATA` on every start; never persist its absolute path, because iOS moves the container on an update. Without the variable (not `flet run`, not a packaged build: pytest, or a plain `python`), it is `.flet/storage/data` under the working directory, the layout `flet run` uses.
 - **sqlite (P3, outbox only):** one connection in the data directory, used **only from the asyncio loop thread** (statements take milliseconds), `PRAGMA journal_mode=WAL`, migrations by `PRAGMA user_version`. S1 ran `sqlite3` in the embedded Python on Android and iOS, and the database survived update installs (D-108).
 
 ---
@@ -1119,6 +1132,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
 | Feed: offline or timeout | `Conference._refresh` | `problem = "offline"`; data kept |
 | Feed: HTTP error, bad JSON, `FeedError` | `Conference._refresh` | `problem = "server"`; data kept; logged |
 | Corrupt cache | `Conference.load_local` | cache deleted, snapshot shown, logged |
+| Storage read or write fails | `services/storage.py` | logged; `False` or `None` returned; the previous file and the data in memory kept (D-120) |
 | Unreadable preference | `Prefs.load` | its default; logged (bad year data is a build bug: the loader test fails) |
 | Share, URL, clipboard failure | the handler | SnackBar "Couldn't open the link" / "Couldn't share" |
 | Permission denied | permission flows | `Banner` with "Open settings"; the task continues |
