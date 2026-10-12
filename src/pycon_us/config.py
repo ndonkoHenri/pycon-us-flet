@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pycon_us.core.feed import FeedSettings
+from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -115,25 +115,6 @@ class ConferenceInfo:
 
 
 @dataclass(frozen=True)
-class DisplayTimeOverride:
-    """Shift the displayed start of matching sessions; grouping keeps the real start (DATA-11).
-
-    Attributes:
-        match: A regular expression, matched case-insensitively against the whole cleaned
-            session name, so it never matches a longer name by accident.
-        minutes: How far to move the displayed start; negative is earlier.
-    """
-
-    match: str
-    minutes: int
-
-    @property
-    def pattern(self) -> re.Pattern[str]:
-        """The compiled, case-insensitive ``match``; apply it with ``fullmatch``."""
-        return re.compile(self.match, re.IGNORECASE)
-
-
-@dataclass(frozen=True)
 class Content:
     """The year's content from ``content.toml``; for now only what feed processing needs.
 
@@ -142,10 +123,13 @@ class Content:
         hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere: a
             ``Lunch (Hall AB)`` is served in ``Expo Hall AB`` in 2026 (D-122). Empty
             when the feed names its halls the same way everywhere.
+        lightning_talks_location: Where lightning talks are shown to happen, whatever
+            rooms they are streamed to (D-124); empty to show their first room.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
     hall_prefix: str = ""
+    lightning_talks_location: str = ""
 
 
 @dataclass(frozen=True)
@@ -162,6 +146,8 @@ class YearData:
             time_zone=self.conference.zone,
             site_url=self.conference.site_url,
             hall_prefix=self.content.hall_prefix,
+            lightning_talks_location=self.content.lightning_talks_location,
+            display_time_overrides=self.content.display_time_overrides,
         )
 
 

@@ -15,9 +15,7 @@ import json
 import logging
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 from datetime import date, datetime
-from zoneinfo import ZoneInfo
 
 from pycon_us.core import records, rules
 from pycon_us.core.models import (
@@ -31,6 +29,7 @@ from pycon_us.core.models import (
     TimeGroup,
 )
 from pycon_us.core.records import OpenSpace, Slot
+from pycon_us.core.rules import FeedSettings
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +39,6 @@ _OPTIONAL_SECTIONS = ("open-spaces", "posters", "sprints", "job-listings")
 
 class FeedError(ValueError):
     """The feed as a whole is unusable: not JSON, wrong structure, or no readable slot."""
-
-
-@dataclass(frozen=True)
-class FeedSettings:
-    """What processing needs from the year data (``config.YearData.feed_settings``).
-
-    Attributes:
-        time_zone: The conference zone: times are converted to it and days bucketed in it.
-        site_url: The year's site, ending in ``/``; site-relative links resolve against it.
-        hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere, e.g.
-            ``Expo `` in 2026, where ``Lunch (Hall AB)`` is served in ``Expo Hall AB``
-            (D-122).
-    """
-
-    time_zone: ZoneInfo
-    site_url: str
-    hall_prefix: str
 
 
 def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
@@ -123,15 +105,26 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
             folded.append(slot)
         else:
             kept.append(slot)
-    rows = rules.collapse(folded, zone, settings.hall_prefix)
-    candidates = [rules.slot_session(slot, zone) for slot in kept] + rows
+    # Ionic registered poster authors first, then the schedule's speakers.
+    speakers = rules.register_speakers(
+        [
+            *(speaker for _, authors in posters for speaker in authors),
+            *(speaker for slot in kept for speaker in slot.speakers),
+        ]
+    )
+    by_name: dict[str, str] = {}
+    for speaker in speakers.values():
+        by_name.setdefault(speaker.name, speaker.id)
+
+    rows = rules.collapse(folded, settings)
+    candidates = [rules.slot_session(slot, settings, by_name) for slot in kept] + rows
     for space in spaces:
-        session = rules.open_space_session(space, zone, settings.site_url)
+        session = rules.open_space_session(space, settings)
         if session is None:
             dropped["unscheduled-open-space"].append(space.session_id)
         else:
             candidates.append(session)
-    details = rules.poster_details((poster for poster, _ in posters), rows)
+    details = rules.poster_details(posters, rows, speakers, zone)
     if posters and not details:
         logger.warning("No Posters row: the %d posters get no session", len(posters))
     sessions = _index(candidates + details, skip)
@@ -141,19 +134,11 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
             ", ".join(f"{len(ids)} {rule}" for rule, ids in dropped.items()),
         )
 
-    speakers: dict[str, Speaker] = {}
-    for its_speakers in (
-        *(speakers for _, speakers in posters),
-        *(slot.speakers for slot in kept),
-    ):
-        for speaker in its_speakers:
-            # The first record of an id wins; Ionic registered poster authors first.
-            speakers.setdefault(speaker.id, speaker)
-
     return ConferenceData(
         sessions=sessions,
         speakers=speakers,
         days=_days(s for s in sessions.values() if s.in_timeline),
+        rooms=rules.rooms(sessions.values()),
         posters=tuple(poster for poster, _ in posters),
         sprints=tuple(
             _decode(sections["sprints"], "sprints", records.sprint, _id_of, skip)

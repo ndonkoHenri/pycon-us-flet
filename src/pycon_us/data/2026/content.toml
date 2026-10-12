@@ -7,6 +7,10 @@
 # this prefix and both land in one room (D-122; Ionic's rule, DATA-06, DATA-08).
 hall_prefix = "Expo "
 
+# Lightning talks are given in the Arena and streamed to the rooms their slots list, so
+# their rows show the Arena (D-124; Ionic's rule, DATA-16).
+lightning_talks_location = "Pacific Ballroom - Arena"
+
 # Shift the displayed start of a session without moving it in the timeline (DATA-11).
 # `match` is a regular expression matched case-insensitively against the whole cleaned
 # session name; `minutes` moves the displayed start (negative is earlier).

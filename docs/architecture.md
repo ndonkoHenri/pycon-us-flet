@@ -60,7 +60,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
 | `state.py` | stores, contexts and `use_*()` hooks; `ViewMemory` (§6) | P0 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `models`, `timefmt`, `slugs`, `html_md` (P0); `queries` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (P0); `queries` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `rows.py` (`SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |
@@ -471,13 +471,13 @@ The strip is hidden when fresh; shows "Updating…" with an indeterminate `Progr
 
 Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule` (728 slots), `open-spaces` (123), `posters` (25), `sprints` (24), `job-listings` (13). Gotchas: three `conf_key` spaces collide (hence `+9000` and `poster-detail-` ids); durations are minutes in `schedule` and seconds in `open-spaces` (always use `start`/`end`); markup is mixed per field (HTML descriptions and bios, Markdown open spaces, plain sponsor text, Markdown links in slot names); speakers are linked **by name**; `cancelled` is always false (cancellations arrive as placeholder slots).
 
-### 7.3 Processing rules (`core/feed.py`, `core/records.py`, `core/rules.py`; D-41, each rule has a named test)
+### 7.3 Processing rules (`core/feed.py`, `core/records.py`, `core/rules.py`, `core/names.py`, `core/slugs.py`; D-41, each rule has a named test)
 
-`process(raw: bytes, settings: FeedSettings) -> ConferenceData`, where `FeedSettings` (frozen, `YearData.feed_settings`) holds the time zone, the site URL and the hall prefix (D-122), and gains the display-time overrides and sprint rooms as the rules below need them. A structurally wrong feed raises `FeedError`: not JSON, not an object, no `schedule` list, an optional section (`open-spaces`, `posters`, `sprints`, `job-listings`; the 2025 feed has no posters, sprints or job listings) that is not a list, or no readable slot at all. A single bad record (a missing or mistyped field, a time without a UTC offset, an end before its start, a duplicate id) is skipped, recorded in `ConferenceData.skipped` as `schedule[5]: <problem>`, logged once at WARNING, and never blanks the schedule. Unknown fields are ignored.
+`process(raw: bytes, settings: FeedSettings) -> ConferenceData`, where `FeedSettings` (frozen, `YearData.feed_settings`) holds the time zone, the site URL, the hall prefix (D-122), the lightning talks' location (D-124) and the display-time overrides, and gains the sprint rooms with P2's `map.toml`. It lives in `core/rules.py` with `DisplayTimeOverride`. A structurally wrong feed raises `FeedError`: not JSON, not an object, no `schedule` list, an optional section (`open-spaces`, `posters`, `sprints`, `job-listings`; the 2025 feed has no posters, sprints or job listings) that is not a list, or no readable slot at all. A single bad record (a missing or mistyped field, a time without a UTC offset, an end before its start, a duplicate id) is skipped, recorded in `ConferenceData.skipped` as `schedule[5]: <problem>`, logged once at WARNING, and never blanks the schedule. Unknown fields are ignored.
 
 **Decoding (P0-10, built).** Every id becomes a `str` (D-42); every time an aware datetime converted to the conference zone; each session's `day` is `timefmt.local_date(start)`. Slots and open spaces decode into plain records (`records.Slot`, `records.OpenSpace`) that the rules turn into sessions. Days are sorted by date; each day's `TimeGroup`s are keyed by their aware start (so every group has one, DATA-13) and sorted by it; within a group, sessions are ordered by location, then name. Only sessions with `in_timeline` are grouped.
 
-**Rules (`core/rules.py`; P0-11 built, P0-12 next).** `process()` applies them between decoding and grouping, in Ionic's order: `drop_rule` per slot, `collapse` for poster and break slots, `slot_session` for the rest, `open_space_session`, then `poster_details`. Every record that does not become a session of its own is listed by rule in `ConferenceData.dropped` and counted in one INFO log line (D-123). Speakers are registered once by id, the first record winning: the posters' authors first, then the sessions' slots, in Ionic's order.
+**Rules (`core/rules.py`; P0-11 and P0-12 built).** `process()` applies them between decoding and grouping, in Ionic's order: `drop_rule` per slot, `register_speakers`, `collapse` for poster and break slots, `slot_session` for the rest (titles cleaned by `core/names.py`, one regex table), `open_space_session`, `poster_details`, then `rooms`. Every record that does not become a session of its own is listed by rule in `ConferenceData.dropped` and counted in one INFO log line (D-123). Speakers are registered once by id, the first record winning: the posters' authors first, then the sessions' slots, in Ionic's order; pseudo-speakers stay text (D-125).
 
 | # | Rule | Behaviour | Features |
 |---|---|---|---|
@@ -487,14 +487,14 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 | 4 | Collapse | key `kind-day-name` (+`-start` for non-lunch breaks); Fri–Sun breaks named exactly `Break` that start 12:00–13:59 (conference time) renamed `Lunch`; posters named `Posters`; `(Room)` suffix → room; `^Hall ` → the year's `hall_prefix` (`Expo ` in 2026, D-122); earliest start to latest end | DATA-06, SCHED-19 |
 | 5 | Collapsed ids | Ionic's `{kind}-{room}-{start}` (e.g. `break--2026-05-13T12:30:00-07:00`), not the collapse key; the start in ISO 8601 at the conference's offset (D-123) | DATA-06, 26 |
 | 6 | Kinds | `sponsor-workshop` → `Sponsor Presentation`; `track` = capitalised kind | DATA-08, 14 |
-| 7 | Names | Markdown link → text, `html.unescape`; plenary, keynote, lightning-talks and event only: `(X)` → location, strip `^<kind>\s*[—:\-–]\s*`; lightning display `Pacific Ballroom - Arena` | DATA-08 |
+| 7 | Names | Markdown link → text, tags stripped keeping their text (D-114, D-125), `html.unescape`; plenary, keynote, lightning-talks and event only: `(X)` → location, `^Hall ` → `hall_prefix`, strip `^<kind>\s*[—:\-–]\s*`; lightning talks display the year's `lightning_talks_location` (D-124) | DATA-08 |
 | 8 | Pre-registration | `, pre-registration` phrase (cut from the name), tutorials, summits except Typing | DATA-09 |
 | 9 | Spanish | `kind == "charla"` or `en espa[nñ]ol`, case-insensitive; suffix stripped | DATA-10 |
 | 10 | Job Fair | `display_start = start - 30 min` from `display_time_overrides` (each `match` anchored at both ends and case-insensitive, as in Ionic, so the events-track "Job Fair & Community Showcase & Poster Sessions" row does not shift); grouping uses the canonical start (10:00 group, labelled 9:30) | DATA-11 |
-| 11 | Speakers | linked by name; pseudo-speakers ("Hosted by …") are plain text, not directory entries | DATA-15 |
+| 11 | Speakers | linked by name, each person once; all authors kept as text in `speaker_names`; pseudo-speakers (`^hosted by\b`) are plain text, not directory entries (D-125); poster details link their authors by id | DATA-15 |
 | 12 | Time groups | every group has an aware `start`; sorted by `(start, label)`; day = conference-local date | DATA-12, 13 |
 | 13 | Poster details | `poster-detail-<conf_key>` sessions inherit the first Posters row's time and place; none without a Posters row (D-123); `in_timeline=False`. 2025's posters are nested in its poster slot and decode as posters (D-121) | DATA-07 |
-| 14 | Rooms | split `location` on `,`; `slugify_room`; `Hall AB` → `Expo Hall AB`; multi-room fan-out; `display_location` = override, first link, else location; a generic `Break` shows no location | DATA-16, ROOM-06 |
+| 14 | Rooms | split `location` on `,`, one name per `slugify_room` slug (`core/slugs.py`); multi-room fan-out into `ConferenceData.rooms` (by slug, natural order of name, each room's sessions by start then name, D-125); `display_location` = override, first room, else location; a generic `Break` shows no location | DATA-16, ROOM-06 |
 | 15 | Sprint rooms | seeded from `map.toml` pins with `sprint = true`; rooms natural-sorted | MAP-08 |
 | 16 | Markup | HTML → Markdown once per feed version (§7.7); open-space Markdown kept with absolute links; sponsor text kept plain | DATA-23..25 |
 | 17 | `slot.sessions` | a poster slot's are posters (D-121); any other kind's are logged and ignored | DATA-27 (drop) |
@@ -503,7 +503,7 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 
 ### 7.4 Models (`core/models.py`)
 
-Built in P0-10 and P0-11: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (`id`, `name`, `kind`, `track`, `location`, `description`, aware `start`/`end`, `day`, `speaker_ids`, `url`, `image_url`, `in_timeline`), `TimeGroup` (`start`, `session_ids`), `Day` (`date`, `groups`), `Poster`, `Sprint`, `JobListing` and `ConferenceData` (`sessions` and `speakers` by id, `days`, `posters`, `sprints`, `job_listings`, `dropped`, `skipped`), all `@dataclass(frozen=True, eq=False)`. The rules add the rest of the target shape:
+Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (`id`, `name`, `kind`, `track`, `location`, `display_location`, `rooms`, `description`, aware `start`/`display_start`/`end`, `day`, `speaker_ids`, `speaker_names`, `pre_registered`, `spanish`, `url`, `image_url`, `in_timeline`), `Room` (`slug`, `name`, `session_ids`), `TimeGroup` (`start`, `session_ids`), `Day` (`date`, `groups`), `Poster`, `Sprint`, `JobListing` and `ConferenceData` (`sessions` and `speakers` by id, `days`, `rooms` by slug, `posters`, `sprints`, `job_listings`, `dropped`, `skipped`), all `@dataclass(frozen=True, eq=False)`. The rules add the rest of the target shape:
 
 `Session` (`id: str`, name, track, kind, flags, `location`, `display_location`, `rooms`, `description_md`, `search_text` = folded title + description text + speaker names, speaker ids and names, aware `start`/`end`/`display_start`, `day`, URLs, `in_timeline`), `Speaker`, `Room`, `TimeGroup`, and `ConferenceData` (frozen, `eq=False`: `sessions: dict[str, Session]`, speakers, rooms, days, sponsors by level, sprints, job listings, `content_md`, `skipped`). Objects refer to each other by id only; queries return fresh view models and never mutate the model (Ionic wrote `hide` flags onto shared objects, SCHED-17).
 
@@ -660,6 +660,9 @@ category = "lightning"              # lightning | open_space | keynote
 at = 2026-05-15T09:00:00-07:00
 title = "Lightning talk sign-ups are open"
 body = "Sign up at the board near registration."
+
+hall_prefix = "Expo "                # "Hall AB" in a name is "Expo Hall AB" (D-122)
+lightning_talks_location = "Pacific Ballroom - Arena"   # D-124
 
 [[display_time_overrides]]          # also: [[venue_hours]] (service, pin, hours), [sponsor_credits]
 match = '\s*job\s*fair\s*&\s*community\s*showcase\s*'   # regex, case-insensitive, fullmatch on the cleaned name

@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from pycon_us.config import load_year
-from pycon_us.core.feed import FeedSettings, process
+from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
+from pycon_us.core.rules import FeedSettings
 
 FEEDS = Path(__file__).parent / "fixtures" / "feeds"
 YEARS = [2025, 2026]
@@ -39,8 +40,3 @@ def changed(year: int, change: Callable[[dict[str, Any]], object]) -> bytes:
     doc = document(year)
     change(doc)
     return json.dumps(doc).encode()
-
-
-def slot(year: int, conf_key: int) -> dict[str, Any]:
-    """The recorded schedule slot with ``conf_key``."""
-    return next(s for s in document(year)["schedule"] if s["conf_key"] == conf_key)
