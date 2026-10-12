@@ -159,26 +159,28 @@ Scan outcome colours (P3) are in §7.2; each passes 6.5:1 or better.
 
 ### 3.4 Track badges (D-25, THEME-08, SCHED-20)
 
-Tonal pills: fill plus text colour, every pair at least 5.7:1 in both themes (D-25 requires 4.5:1; the lowest is AI dark, 5.77:1). Badges always carry text. In HC they are outlined: 1.5 dp `on_surface` border and text on `surface`. The palette lives in `Tokens` (`theme.py`, D-172), keyed by the registry's track keys (below).
+Tonal pills: fill plus text colour, every pair at least 6.4:1 in both themes (D-25 requires 4.5:1; the lowest is Summit dark, 6.45:1). Badges always carry text. In HC they are outlined: 1.5 dp `on_surface` border and text on `surface`. The palette lives in `Tokens` (`theme.py`, D-172), keyed by the registry's track keys (below).
+
+The fills are distinct colours, not shades of one (D-172): each sits at one CIELAB lightness (87 light, 29 dark) and chroma (22, a little less where sRGB runs out), about 30° of hue from its neighbours, and Summit is a quieter slate. So any two fills, En Español's pink and the Break grey included, differ by a CIE76 distance of 10 or more in each scheme (the closest: Tutorial and En Español, 10.2, light; Lightning talks and Sponsor presentation, 10.1, dark). Each label is its fill's hue at lightness 27 (light) or 90 (dark). A test checks both the contrast and the distance.
 
 | Badge | Light fill / text | Dark fill / text |
 |---|---|---|
-| Talk | `#DCD6F5` / `#24165A` | `#291966` / `#D6CEF3` |
-| Tutorial | `#F5D6F3` / `#5A1655` | `#661961` / `#F3CEF0` |
-| Keynote, Plenary | `#F0D6F5` / `#50165A` | `#5B1966` / `#EDCEF3` |
-| Lightning talks | `#F0DBEA` / `#502042` | `#5B254B` / `#EDD3E6` |
-| Security | `#F5E9D6` / `#5A4116` | `#664A19` / `#F3E5CE` |
-| AI | `#D6F5EB` / `#165A44` | `#19664D` / `#CEF3E7` |
-| Charla | `#DBE3F0` / `#21334F` | `#253A5A` / `#D4DEED` |
-| Poster | `#F5DED6` / `#5A2717` | `#662D1A` / `#F3D7CE` |
-| Sponsor presentation | `#F5ECD6` / `#5A4616` | `#665019` / `#F3E8CE` |
-| Open space | `#D9F2E3` / `#1C5433` | `#20603A` / `#D1F0DE` |
-| Summit | `#E1E7EA` / `#2E3C42` | `#34444B` / `#DBE2E6` |
-| Event | `#D6F2F5` / `#16545A` | `#196066` / `#CEF0F3` |
+| Talk | `#C7DBFE` / `#014271` | `#2C4666` / `#D9E3F5` |
+| Tutorial | `#FFCDD8` / `#6C293E` | `#643743` / `#F6DCE1` |
+| Keynote, Plenary | `#E0D4FD` / `#443869` | `#483F61` / `#E6E0F2` |
+| Lightning talks | `#E9D9B0` / `#4B3F0A` | `#4E4422` / `#EAE2CF` |
+| Security | `#FAD3B5` / `#5D3712` | `#5B3E26` / `#F2DFD1` |
+| AI | `#AAE6D8` / `#01493E` | `#0F4D43` / `#CEE8E1` |
+| Charla | `#ABE2FD` / `#03465A` | `#034B60` / `#CFE6F2` |
+| Poster | `#FFCFC6` / `#6A2D25` | `#643932` / `#F7DDD8` |
+| Sponsor presentation | `#D4DFB5` / `#354511` | `#3E4826` / `#E0E5D2` |
+| Open space | `#BDE4C3` / `#134925` | `#2A4C32` / `#D6E7D8` |
+| Summit | `#BED5E1` / `#1E4455` | `#3C515B` / `#CFE6F3` |
+| Event | `#A2E6EC` / `#03474C` | `#024C52` / `#CBE8EB` |
 | Break, Informational | `#E6E6E6` / `#383838` | `#404040` / `#E0E0E0` |
 | En Español | `#FFD7F3` / `#5E0058` (10.1) | `#5E0058` / `#FFD7F3` |
 
-A track the palette lacks (a new kind in next year's feed) gets the Break grey. Role-based badges: **Registration required** is outlined, its label and a 1 dp border in `error` on the surface (6.5:1 light, 11.0:1 dark; D-172), not an `error_container` fill, which would be the same pink as En Español; New track = `secondary_container`; Changed (24 h, P2) = `tertiary_container`. A session's badges are its track, then En Español, then Registration required (Ionic's set; a charla shows both "Charla" and "En Español"). Palette keys are the track registry's keys (`conference.toml`), spaces and capitals included (`"Open Space"`, `"Ai"`, `"Sponsor Presentation"`); labels come from one `track_name()` (DATA-28), so the AI badge reads "AI".
+A track the palette lacks (a new kind in next year's feed) gets the Break grey. Role-based badges: **Registration required** is outlined, its label and a 1 dp border in `error` on the surface (6.5:1 on `surface` in light, 11.0:1 in dark; 4.76:1 at worst, on `surface_dim`; D-172), not an `error_container` fill: an outline marks a requirement as a different kind of badge from a category, as Ionic's danger outline did; New track = `secondary_container`; Changed (24 h, P2) = `tertiary_container`. A session's badges are its track, then En Español, then Registration required (Ionic's set; a charla shows both "Charla" and "En Español"). Palette keys are the track registry's keys (`conference.toml`), spaces and capitals included (`"Open Space"`, `"Ai"`, `"Sponsor Presentation"`); labels come from one `track_name()` (DATA-28), so the AI badge reads "AI".
 
 ### 3.5 Theme construction
 
@@ -213,7 +215,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `SessionRow` | sketch below | Badges; title ≤ 3 lines; meta "9:25–10:10 AM · Room 104A"; speakers; optional elapsed `ProgressBar(bar_height=3)` | One phrase: "Talk. Title. 9:25 to 10:10 AM, Room 104A. Ana Lima."; star is its own stop |
 | `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add | Tooltip is the name; state announced |
 | `NoticeRow` | `Container(bgcolor=surface_container, Row[Icon(INFO_OUTLINE), Text, time])` | Notices, breaks, meals; no star; tappable only with content (SCHED-04) | "Notice. Registration opens, 7:00 AM" |
-| `TrackBadge` | `Container(bgcolor, border=Border.all(1, fill or text), border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))`, a plain builder given its `BadgeColors` (D-172); `session_badges()` and `badge_row()` (`Row(wrap=True, spacing=6, run_spacing=6)`) beside it | §3.4; not a `Chip` (Chips are interactive); the label wraps inside the pill at large text, never clipped | Text carries the meaning |
+| `TrackBadge` | `Container(bgcolor, border=Border.all(1, fill or text), border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))`, a plain builder given its `BadgeColors` (D-172); `session_badges()` and `badge_row()` (`Row(wrap=True, spacing=8, run_spacing=4)`, §3.6's grid) beside it | §3.4; not a `Chip` (Chips are interactive); the label wraps inside the pill at large text, never clipped | Text carries the meaning |
 | `TimeGutter` | `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` over an invisible "10:00" / "AM" in a `Stack`, padding 16 left and 8 right: no fixed width, so it grows with the text and is the same for every slot (D-158) | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True, label="9:25 AM", exclude_semantics=True)` |
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
@@ -242,8 +244,9 @@ def FavoriteButton(selected: bool, on_toggle) -> ft.Control:
 
 
 @ft.component
-def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
+def SessionRow(row: SessionView, tokens: Tokens, on_open, on_toggle) -> ft.Control:
     """A session in any list: one spoken phrase, plus a separate star."""
+    info = use_services().year.conference  # a plain context: subscribes to nothing
     body = ft.Container(
         ink=True,
         on_click=on_open,
@@ -251,7 +254,7 @@ def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
         content=ft.Column(
             spacing=4,
             controls=[
-                # D-172; a memoised row gets the tokens as a prop (D-150)
+                # D-172; the memoised row gets the tokens as a prop (D-150)
                 badge_row(session_badges(row.session, info, tokens)),
                 ft.Text(row.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM, max_lines=3),
                 ft.Text(row.meta, theme_style=ft.TextThemeStyle.BODY_MEDIUM),

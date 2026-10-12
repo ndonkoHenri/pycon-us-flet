@@ -55,14 +55,14 @@ def labels(session: Session, info: ConferenceInfo, dark: bool = False) -> list[s
 
 
 def test_a_tonal_badge_is_its_label_on_its_fill() -> None:
-    colors = theme.BadgeColors(text="#24165A", fill="#DCD6F5")
+    colors = theme.BadgeColors(text="#014271", fill="#C7DBFE")
     badge = TrackBadge("Talk", colors)
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     assert badge.content.value == "Talk"
-    assert badge.content.color == "#24165A"
-    assert badge.bgcolor == "#DCD6F5"
+    assert badge.content.color == "#014271"
+    assert badge.bgcolor == "#C7DBFE"
     # A border in the fill's colour: invisible, and as large as an outlined badge's.
-    assert badge.border == ft.Border.all(1, "#DCD6F5")
+    assert badge.border == ft.Border.all(1, "#C7DBFE")
 
 
 def test_an_outlined_badge_has_no_fill_and_a_border_in_its_text_colour() -> None:
@@ -84,9 +84,11 @@ def test_a_badge_is_a_material_label_in_an_8_dp_pill() -> None:
     assert badge.content.max_lines is None  # wraps at 200 %, never clipped
 
 
-def test_badges_wrap_onto_more_lines() -> None:
+def test_badges_wrap_onto_more_lines_with_gaps_on_the_grid() -> None:
     row = badge_row([TrackBadge("Talk", theme.LIGHT_TOKENS.track_badge("Talk"))])
     assert row.wrap is True
+    # ux.md §3.6: 8 dp within a group; 4 dp between wrapped lines.
+    assert (row.spacing, row.run_spacing) == (8, 4)
 
 
 def test_a_talk_shows_its_track(data: ConferenceData, info: ConferenceInfo) -> None:

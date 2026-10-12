@@ -3,8 +3,11 @@ D-116)."""
 
 import ast
 import dataclasses
+import itertools
+import math
 import re
 from pathlib import Path
+from types import MappingProxyType
 
 import flet as ft
 import pytest
@@ -89,6 +92,27 @@ def contrast_ratio(a: str, b: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
+def cielab(hex_color: str) -> tuple[float, float, float]:
+    """CIELAB (D65) of #RRGGBB, from linear sRGB through XYZ."""
+    channels = [int(hex_color.lstrip("#")[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    r, g, b = (
+        c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels
+    )
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+    fx, fy, fz = (
+        t ** (1 / 3) if t > 216 / 24389 else (24389 / 27 * t + 16) / 116
+        for t in (x, y, z)
+    )
+    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+
+
+def color_distance(a: str, b: str) -> float:
+    """CIE76 colour difference: about 2.3 is just noticeable, 10 clearly different."""
+    return math.dist(cielab(a), cielab(b))
+
+
 def scheme(dark: bool) -> ft.ColorScheme:
     color_scheme = theme.build_theme(dark=dark, high_contrast=False).color_scheme
     assert color_scheme is not None
@@ -117,6 +141,19 @@ def test_contrast_ratio_matches_known_values(
     background: str, foreground: str, ratio: float
 ) -> None:
     assert contrast_ratio(background, foreground) == pytest.approx(ratio, abs=0.01)
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "distance"),
+    [
+        ("#FFFFFF", "#000000", 100.0),
+        ("#FFFFFF", "#FFFFFF", 0.0),
+        ("#808080", "#FF0000", 104.6),  # red is L 53.24, a 80.09, b 67.20
+        ("#FFDAD6", "#FFD7F3", 16.4),  # error_container against the En Español pink
+    ],
+)
+def test_color_distance_matches_known_values(a: str, b: str, distance: float) -> None:
+    assert color_distance(a, b) == pytest.approx(distance, abs=0.1)
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
@@ -292,6 +329,20 @@ def test_every_badge_reads_at_aa(dark: bool) -> None:
             assert ratio >= AA_TEXT, (name, background, colors.text, round(ratio, 2))
 
 
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_badge_fill_differs_from_every_other(dark: bool) -> None:
+    # The label carries the meaning (D-33), but two tracks of near-equal colour would
+    # look like one, and En Español beside a track like part of it (#181's review). So
+    # any two fills, the grey of breaks included, differ by a CIE76 distance of 10.
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    fills = {
+        colors.fill: name for name, colors in badges(tokens).items() if colors.fill
+    }
+    for a, b in itertools.combinations(fills, 2):
+        distance = color_distance(a, b)
+        assert distance >= 10, (fills[a], fills[b], round(distance, 1))
+
+
 @pytest.mark.parametrize("year", YEARS)
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_every_track_of_every_year_has_its_own_badge(dark: bool, year: int) -> None:
@@ -350,6 +401,11 @@ def test_tokens_are_frozen() -> None:
         theme.LIGHT_TOKENS.live = "#000000"  # type: ignore[misc]
     with pytest.raises(TypeError):  # the palette too
         theme.LIGHT_TOKENS.tracks["Talk"] = theme.BadgeColors("#000000")  # type: ignore[index]
+    # Hashable by value although the palette is a mapping: tokens can be a dict key.
+    palette = MappingProxyType(dict(theme.LIGHT_TOKENS.tracks))
+    rebuilt = dataclasses.replace(theme.LIGHT_TOKENS, tracks=palette)
+    assert rebuilt == theme.LIGHT_TOKENS
+    assert hash(rebuilt) == hash(theme.LIGHT_TOKENS)
 
 
 def test_tokens_context_defaults_to_the_light_tokens() -> None:

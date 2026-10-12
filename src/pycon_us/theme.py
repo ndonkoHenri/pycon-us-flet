@@ -12,7 +12,7 @@ The high-contrast schemes arrive in P2 (THEME-04, THEME-05); until then the
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 
 import flet as ft
@@ -169,22 +169,26 @@ class BadgeColors:
 # ux.md §3.4: light fill, light text, dark fill, dark text for each key of the track
 # registry (conference.toml), spaces and capitals included. Keynotes and plenaries share
 # a pair; breaks and notices share the neutral grey, which a key the palette lacks gets
-# too (a new kind in next year's feed). A test checks every pair at 4.5:1 or better.
+# too (a new kind in next year's feed). The fills sit on one CIELAB lightness (87 light,
+# 29 dark) and chroma (22, less where sRGB runs out), about 30 degrees of hue apart, with
+# Summit a quieter slate, so any two fills, the En Español pink and the grey included,
+# differ by a CIE76 distance of 10 or more and read as different colours; each label is
+# its fill's hue at lightness 27 (light) or 90 (dark). Tests check both properties.
 _NEUTRAL = ("#E6E6E6", "#383838", "#404040", "#E0E0E0")
 _TRACK_PAIRS = {
-    "Talk": ("#DCD6F5", "#24165A", "#291966", "#D6CEF3"),
-    "Tutorial": ("#F5D6F3", "#5A1655", "#661961", "#F3CEF0"),
-    "Keynote": ("#F0D6F5", "#50165A", "#5B1966", "#EDCEF3"),
-    "Plenary": ("#F0D6F5", "#50165A", "#5B1966", "#EDCEF3"),
-    "Lightning-talks": ("#F0DBEA", "#502042", "#5B254B", "#EDD3E6"),
-    "Security": ("#F5E9D6", "#5A4116", "#664A19", "#F3E5CE"),
-    "Ai": ("#D6F5EB", "#165A44", "#19664D", "#CEF3E7"),
-    "Charla": ("#DBE3F0", "#21334F", "#253A5A", "#D4DEED"),
-    "Poster": ("#F5DED6", "#5A2717", "#662D1A", "#F3D7CE"),
-    "Sponsor Presentation": ("#F5ECD6", "#5A4616", "#665019", "#F3E8CE"),
-    "Open Space": ("#D9F2E3", "#1C5433", "#20603A", "#D1F0DE"),
-    "Summit": ("#E1E7EA", "#2E3C42", "#34444B", "#DBE2E6"),
-    "Event": ("#D6F2F5", "#16545A", "#196066", "#CEF0F3"),
+    "Talk": ("#C7DBFE", "#014271", "#2C4666", "#D9E3F5"),
+    "Tutorial": ("#FFCDD8", "#6C293E", "#643743", "#F6DCE1"),
+    "Keynote": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
+    "Plenary": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
+    "Lightning-talks": ("#E9D9B0", "#4B3F0A", "#4E4422", "#EAE2CF"),
+    "Security": ("#FAD3B5", "#5D3712", "#5B3E26", "#F2DFD1"),
+    "Ai": ("#AAE6D8", "#01493E", "#0F4D43", "#CEE8E1"),
+    "Charla": ("#ABE2FD", "#03465A", "#034B60", "#CFE6F2"),
+    "Poster": ("#FFCFC6", "#6A2D25", "#643932", "#F7DDD8"),
+    "Sponsor Presentation": ("#D4DFB5", "#354511", "#3E4826", "#E0E5D2"),
+    "Open Space": ("#BDE4C3", "#134925", "#2A4C32", "#D6E7D8"),
+    "Summit": ("#BED5E1", "#1E4455", "#3C515B", "#CFE6F3"),
+    "Event": ("#A2E6EC", "#03474C", "#024C52", "#CBE8EB"),
     "Break": _NEUTRAL,
     "Informational": _NEUTRAL,
 }
@@ -204,8 +208,9 @@ class Tokens:
     """Colours Material 3 has no role for (D-24), as ``#RRGGBB`` for one scheme.
 
     Each text colour reads at 4.5:1 or better on every surface of its scheme, and each
-    badge's label on its fill (tests/test_theme.py). Screens get the current scheme's
-    tokens from ``use_tokens()``.
+    badge's label on its fill (tests/test_theme.py). Compared and hashed by value, so
+    they can be a dictionary key. Screens get the current scheme's tokens from
+    ``use_tokens()``.
 
     Attributes:
         live: Happening now, open now.
@@ -223,7 +228,9 @@ class Tokens:
     warning: str
     success: str
     favorite: str
-    tracks: Mapping[str, BadgeColors]
+    # A read-only mapping is unhashable, so it stays out of the generated __hash__; equal
+    # tokens have equal other fields, so the hash still agrees with ==.
+    tracks: Mapping[str, BadgeColors] = field(hash=False)
     unknown_track: BadgeColors
     spanish: BadgeColors
     registration: BadgeColors

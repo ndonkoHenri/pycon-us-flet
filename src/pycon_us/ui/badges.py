@@ -78,7 +78,10 @@ def session_badges(
 def badge_row(badges: list[ft.Control]) -> ft.Row:
     """Return badges side by side, wrapping onto more lines when they don't fit.
 
+    The gaps are on the 4 dp grid (ux.md §3.6): 8 dp between badges, as within a
+    group, and 4 dp between wrapped lines, so a wrapped row stays compact.
+
     Args:
         badges: The badges, e.g. from ``session_badges()``.
     """
-    return ft.Row(badges, wrap=True, spacing=6, run_spacing=6)
+    return ft.Row(badges, wrap=True, spacing=8, run_spacing=4)
