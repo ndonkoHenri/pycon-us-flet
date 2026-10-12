@@ -18,12 +18,14 @@ from tests.ionic import (
     HOSTED_BY,
     IONIC_HALL_PREFIX,
     IONIC_LIGHTNING_TALKS_LOCATION,
+    Facts,
     captured,
     clock_label,
     comparable_ours,
     hall_names,
     intended,
     ionic_facts,
+    lightning_talks_in_their_place,
     mismatches,
     nested_posters,
     our_facts,
@@ -231,3 +233,16 @@ def test_ionic_seeded_2026s_sprint_rooms_into_every_year(year: int) -> None:
     assert empty
     assert all(re.fullmatch(r"S-\d[AB]?|Seaside .+", name) for name in empty)
     assert all(room.session_ids for room in processed(year).rooms.values())
+
+
+def test_a_null_ionic_location_shows_as_a_mismatch_not_a_crash() -> None:
+    """driver.ts writes a missing location as null; the normaliser passes it through."""
+    row = {
+        "track": "Lightning-talks",
+        "location": None,
+        "displayLocation": IONIC_LIGHTNING_TALKS_LOCATION,
+    }
+    facts = Facts(sessions={"1": row}, timeline={}, rooms={}, speakers={})
+    halls = with_our_hall_names(facts, hall_names(2025))
+    adjusted = lightning_talks_in_their_place(halls, "")
+    assert adjusted.sessions["1"] == row | {"displayLocation": ""}

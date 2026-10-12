@@ -137,6 +137,7 @@ def our_facts(year: int) -> Facts:
 
 
 def linked(data: ConferenceData, speaker_id: str) -> list[str]:
+    """The ids of the sessions that link ``speaker_id`` (DATA-15)."""
     return [s.id for s in data.sessions.values() if speaker_id in s.speaker_ids]
 
 
@@ -176,7 +177,8 @@ def with_our_hall_names(facts: Facts, hall: Callable[[str], str]) -> Facts:
     places = ("location", "displayLocation")
     return Facts(
         sessions={
-            hall(i): s | {key: hall(s[key]) for key in places}
+            # A null place (driver.ts writes `?? null`) stays null, to show as a mismatch.
+            hall(i): s | {key: hall(s[key]) for key in places if s[key] is not None}
             for i, s in facts.sessions.items()
         },
         timeline={
@@ -201,13 +203,13 @@ def lightning_talks_in_their_place(facts: Facts, place: str) -> Facts:
         arena = s["displayLocation"] == IONIC_LIGHTNING_TALKS_LOCATION
         return arena and s["track"] == "Lightning-talks"
 
-    first_room = {
-        i: s["location"].split(",")[0].strip() for i, s in facts.sessions.items()
-    }
+    def first_room(s: dict[str, Any]) -> str:
+        return (s["location"] or "").split(",")[0].strip()
+
     return replace(
         facts,
         sessions={
-            i: s | {"displayLocation": place or first_room[i]} if moved(s) else s
+            i: s | {"displayLocation": place or first_room(s)} if moved(s) else s
             for i, s in facts.sessions.items()
         },
     )
@@ -257,23 +259,24 @@ def comparable_ours(year: int) -> Facts:
     """Our facts without what Ionic never made: 2025's nested posters (D-121).
 
     Their details leave the sessions, rooms and speakers, and so do the authors who have
-    no other session.
+    no other session and the rooms that held only those details.
     """
     facts, details = our_facts(year), nested_posters(year)[0]
 
     def kept(ids: list[str]) -> list[str]:
         return [i for i in ids if i not in details]
 
+    rooms = {
+        slug: room | {"sessions": kept(room["sessions"])}
+        for slug, room in facts.rooms.items()
+    }
     speakers = {
         i: sp | {"sessions": kept(sp["sessions"])} for i, sp in facts.speakers.items()
     }
     return Facts(
         sessions={i: s for i, s in facts.sessions.items() if i not in details},
         timeline=facts.timeline,
-        rooms={
-            slug: room | {"sessions": kept(room["sessions"])}
-            for slug, room in facts.rooms.items()
-        },
+        rooms={slug: room for slug, room in rooms.items() if room["sessions"]},
         speakers={i: sp for i, sp in speakers.items() if sp["sessions"]},
     )
 
