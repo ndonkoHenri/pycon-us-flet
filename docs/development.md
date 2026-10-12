@@ -37,7 +37,7 @@
 | Build an APK for the emulator | `uv run flet build apk --arch arm64-v8a --build-number $(git rev-list --count HEAD)` (D-106) | §8.1 |
 | Build an AAB for Play | `uv run flet build aab --build-number $(git rev-list --count HEAD)` | §8.1 |
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
-| Get an APK from CI | Actions › Build Android › Run workflow, or push a `v*` tag | §7.4 |
+| Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 
 ---
@@ -505,7 +505,8 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 Conventions in every workflow:
 - `permissions: contents: read`.
 - `persist-credentials: false` on checkouts.
-- Third-party actions pinned to a full commit SHA, with the version as a comment. The pins were checked against their release tags on 2026-10-11 (annotated tags followed to the commit): `actions/checkout` v6.0.3 is `df4cb1c069e1874edd31b4311f1884172cec0e10`, `astral-sh/setup-uv` v8.3.2 is `11f9893b081a58869d3b5fccaea48c9e9e46f990`.
+- Third-party actions pinned to a full commit SHA, with the version as a comment. The pins were checked against their release tags on 2026-10-11 (annotated tags followed to the commit): `actions/checkout` v6.0.3 is `df4cb1c069e1874edd31b4311f1884172cec0e10`, `astral-sh/setup-uv` v8.3.2 is `11f9893b081a58869d3b5fccaea48c9e9e46f990`; checked on 2026-10-12, `actions/upload-artifact` v7.0.1 is `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+- actionlint and zizmor (`uvx zizmor --persona=pedantic .github/workflows/`) are clean on every workflow change.
 - `pull_request`, never `pull_request_target`.
 - `UV_LOCKED=1`, so every `uv` command fails if `uv.lock` is stale.
 
@@ -586,80 +587,41 @@ jobs:
 
 ### 7.4 `.github/workflows/build-android.yml`: on demand and on `v*` tags
 
-```yaml
-name: Build Android
+[`.github/workflows/build-android.yml`](../.github/workflows/build-android.yml) is the source of truth; this section says what it does and why. It builds a debug-signed arm64 APK (D-84, D-86, D-106). It is not a required check (§7.2).
 
-on:
-  workflow_dispatch:
-  push:
-    tags: ["v*"]
+**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main`. Pushing a `vX.Y.Z` tag runs it too (§8.3). A new run for the same branch or tag cancels the older one.
 
-permissions:
-  contents: read
+**One Linux job**, `Debug-signed APK`, with a 45-minute timeout. Its steps, in order:
 
-env:
-  UV_LOCKED: "1"
+| Step | Command | Why |
+|---|---|---|
+| Check out the app | `actions/checkout`, `fetch-depth: 0` | The build number is the commit count (§4). The build also reads `flutter_packages/roboto_fonts` (§3.1). |
+| Check that the tag matches the version | Tags only: the tag must equal `v` + `[project].version`; otherwise the job fails with an error naming both | §4 |
+| Read the Flet pin and the build number | `cat .flet-ref`, `git rev-list --count HEAD` | |
+| Check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref` into `.flet-src`: the whole tree at depth 1, not sparse | `flet build` needs the template, `.fvmrc` and the Dart package `packages/flet`, which it adds to `pubspec.yaml` as a path dependency (§2.2). Delete the step with the 1.1.0 pin. |
+| Set up uv | `astral-sh/setup-uv`, `version: "0.12.x"`, `enable-cache: false` | The same uv line as `ci.yml` (§7.2). No cache: a tag build starts from clean inputs, and `uv sync` takes seconds. |
+| Install | `uv sync --locked` | D-75 |
+| Build the APK | `uv run flet build apk --arch arm64-v8a --build-number <count> --yes -v`, with `FLET_CLI_NO_RICH_OUTPUT=1` | The command of §8.1 with D-106's ABI. `--yes` lets flet-cli download Flutter (the version in `.flet-src/.fvmrc`) into `~/flutter`; it uses the runner's JDK 17 (`JAVA_HOME`) and Android SDK (`ANDROID_HOME`). `-v` and plain output keep the log useful when a build fails. |
+| Name the APK | `build/apk/pycon-us.apk` → `pycon-us-<count>-<short sha>-arm64-v8a.apk` | Downloads from different runs don't collide. |
+| Upload the APK | `actions/upload-artifact`, `archive: false`, `retention-days: 14` | The APK is already compressed, so it is uploaded as-is and the artifact takes the file's name. 14 days, because artifact storage is small (§7.1). |
 
-jobs:
-  apk:
-    name: Debug-signed APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0    # the build number is the commit count (D-83)
-          persist-credentials: false
+**Measured** on the first run ({{RUN}}, uncached, Flet `15854a0ac`):
+{{MEASURED}}
 
-      - name: Check that the tag matches the version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
-          test "$GITHUB_REF_NAME" = "v$version"
+**Why not `flet-dev/flet-build-action`.** It was the plan, but running the documented command directly is simpler and correct under the source pin (`ACTION/action.yml` at `v1`):
+- Its own `setup-uv` step installs the latest uv, which would replace the `0.12.x` line we keep with `uv_build` (§7.2).
+- Its Flet download cache is keyed on the reported Flet version, a constant `0.1.0` under the source pin (§2.2). After a pin bump it would restore the previous pin's downloads unless someone remembers to run once with `cache: false` (the S5 caveat).
+- It zips the APK into `flet-apk.zip`, which saves nothing on an already-compressed file.
+- P0-06 asks for the same commands as this document, and one `flet build apk` line is exactly that.
 
-      - name: Read the Flet pin and the build number
-        id: meta
-        run: |
-          echo "flet-ref=$(cat .flet-ref)" >> "$GITHUB_OUTPUT"
-          echo "build-number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Check out Flet at the pin
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          repository: flet-dev/flet
-          ref: ${{ steps.meta.outputs.flet-ref }}
-          path: .flet-src
-          persist-credentials: false
+When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another look: its Flutter SDK cache would save {{FLUTTER}} per run.
 
-      - name: Build
-        id: build
-        uses: flet-dev/flet-build-action@96093619265697f7c68cef5cf18981e4be296b11 # v1
-        with:
-          target: apk
-          build-number: ${{ steps.meta.outputs.build-number }}
+**No caches.** The Flutter SDK download is the slow part of the build, but the workflow runs rarely, and a cache would be one more key to keep right across pin bumps.
 
-      - name: Upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          path: ${{ steps.build.outputs.archive-path }}
-          archive: false        # the action already made flet-apk.zip (ACTION/README.md "Archives")
-          retention-days: 14
-          if-no-files-found: error
-```
-
-Action inputs we leave at their defaults (`ACTION/action.yml`), so that `pyproject.toml` stays the only configuration:
-
-| Input | Default and why it is right |
-|---|---|
-| `runner-python-version`, `bundled-python-version` | Empty, so uv and flet-cli resolve 3.14 from `requires-python` |
-| `build-version` | Empty, so `[project].version` is used (`CLI/commands/build.py:203-209`) |
-| `working-directory`, `output-directory` | The repo root; `build/apk` |
-| `extra-args` | `--arch arm64-v8a` (D-106): 55.6 MB instead of 142.5 MB. P0-06 (#54) adds it. |
-| `cache` | `true`. If a pin bump behaves oddly, run once with `false`: the Flet download cache is keyed on the reported Flet version, which is a constant `0.1.0` under the source pin (§2.2). |
-
-**This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which can change between runs.
-- Installing over an earlier build may fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall <bundle id>` first, which loses the app's data.
+**This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which differs from your machine's and can change between runs.
+- Download it with `gh run download <run-id>` (or from the run page), then run `adb install pycon-us-<…>.apk`, or open the file on the phone.
+- Installing over a build signed with another key fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.pyconus` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
-- Install with `adb install <apk>`, or open the file on the phone after downloading it from the run page.
 
 ### 7.5 Not in CI: iOS
 

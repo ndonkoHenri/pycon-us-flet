@@ -64,6 +64,11 @@ jobs:
       - name: Install
         run: uv sync --locked
 
+      # The build fills about 11 GB (Flutter, the NDK, Gradle caches) and the runner starts with about 13 GB
+      # free. Remove preinstalled toolchains we never use, so a growing build doesn't run out of disk.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
       # flet-cli downloads Flutter (from .flet-src/.fvmrc) and uses the runner's JDK 17 and Android SDK.
       # The Gradle heap is -Xmx4G from [tool.flet.android.gradle_properties], which fits the runner.
       - name: Start the memory sampler (TEMPORARY, #54)
