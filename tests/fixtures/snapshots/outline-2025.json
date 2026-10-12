@@ -59,7 +59,7 @@
    ],
    "13:30": [
     "38 | Real-World Problems Blockchain Actually Solves (and How to Code Them in Python) (Sponsor: Algorand) | Sponsor Presentation | Room 309 | 13:30-14:30 | speakers 171",
-    "21 | Reimplementing the module `itertools` for fun and profit | Tutorial | Room 310/311 | 13:30-17:00 | pre-registration | speakers 106",
+    "21 | Reimplementing the module itertools for fun and profit | Tutorial | Room 310/311 | 13:30-17:00 | pre-registration | speakers 106",
     "39 | High-Performance Python: Faster Type Checking and Free Threaded Execution (Sponsor: Meta) | Sponsor Presentation | Room 315 | 13:30-14:30 | speakers 133 134",
     "40 | DataComPy - Dataframe Comparisons made Explicit (Sponsor: Capital One) | Sponsor Presentation | Room 316 | 13:30-14:30 | speakers 83 84",
     "22 | (Pre-)Commit to Better Code | Tutorial | Room 317 | 13:30-17:00 | pre-registration | speakers 71",
@@ -342,7 +342,7 @@
    ],
    "15:15": [
     "134 | Attestations: a new generation of signatures on PyPI | Talk | Ballroom A | 15:15-15:45 | speakers 88",
-    "135 | Why `len('😶‍🌫️') == 4` and other weird things you should know about strings in Python | Talk | Ballroom BC | 15:15-15:45 | speakers 29 30",
+    "135 | Why len('😶‍🌫️') == 4 and other weird things you should know about strings in Python | Talk | Ballroom BC | 15:15-15:45 | speakers 29 30",
     "133 | A new safe external debugger interface for CPython | Talk | Hall C | 15:15-15:45 | speakers 151 163",
     "136 | Notes, Groups and Stars: exceptional new features of Python 3.11! | Talk | Room 301-305 | 15:15-15:45 | speakers 109",
     "137 | Transformando Gafas en Asistentes Inteligentes: Open Source Vision Language Models | Charla | Room 310/311 | 15:15-15:45 | español | speakers 13"

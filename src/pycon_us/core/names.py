@@ -1,6 +1,6 @@
 """Ionic's title cleaning: names, their room suffix and their flags (DATA-08..10).
 
-The feed's slot names carry more than a title: a Markdown link, a ``(Room)`` suffix, a
+The feed's slot names carry more than a title: Markdown, a ``(Room)`` suffix, a
 "Keynote — " prefix, ", pre-registration required" and ", En Español". ``clean_title``
 takes them apart with the one regex table below, in Ionic's order.
 """
@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 # The regex table, as Ionic wrote it (conference-data.ts, processData).
 _MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")  # [text](url) → text
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")  # `itertools` → itertools
 _TAG = re.compile(r"</?[A-Za-z][^<>]*>")  # <s>text</s> → text; "<3" stays (D-114)
 _TRAILING_ROOM = re.compile(r"\s*\(([^)]+)\)\s*$")  # "Closing (Arena)" → room "Arena"
 _TYPING = re.compile(r"typing", re.IGNORECASE)  # the one summit open to all
@@ -43,13 +44,15 @@ class Title:
 
 
 def plain_text(name: str) -> str:
-    """Return a slot name as text: a Markdown link becomes its text, tags go, entities decode.
+    """Return a slot name as text: links and code spans keep their text, tags go, entities decode.
 
-    Ionic ran ``markdownToTxt`` on names; the feeds only use links there, plus one
-    ``<s>…</s>`` in 2025 (D-114: names strip tags and keep their text).
+    Ionic ran ``markdownToTxt`` on names. The feeds use links there, two code spans in 2025
+    (``Reimplementing the module `itertools` for fun and profit``, found by comparing with
+    Ionic's own output, #66) and one ``<s>…</s>`` in 2025 (D-125: names strip tags and keep
+    their text).
     """
-    text = _TAG.sub("", _MARKDOWN_LINK.sub(r"\1", name))
-    return html.unescape(text).strip()
+    text = _CODE_SPAN.sub(r"\2", _MARKDOWN_LINK.sub(r"\1", name))
+    return html.unescape(_TAG.sub("", text)).strip()
 
 
 def trailing_room(name: str) -> tuple[str, str]:

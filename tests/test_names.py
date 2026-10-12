@@ -16,6 +16,16 @@ def test_names_become_plain_text() -> None:
     assert plain_text("&lt;s&gt;kept&lt;/s&gt;") == "<s>kept</s>"  # text, not markup
 
 
+def test_code_spans_in_a_name_lose_their_backticks() -> None:
+    """2025's titles, as Ionic's markdownToTxt showed them (#66)."""
+    assert (
+        plain_text("Reimplementing the module `itertools` for fun and profit")
+        == "Reimplementing the module itertools for fun and profit"
+    )
+    assert plain_text("Why `len('a') == 4` and ``a`b``") == "Why len('a') == 4 and a`b"
+    assert plain_text("A lone ` backtick") == "A lone ` backtick"
+
+
 def test_tags_in_a_name_are_stripped_keeping_their_text() -> None:
     """D-114: 2025's cancelled workshop."""
     title = clean_title("CANCELLED: <s>Introduction to Sprints Workshop</s>", "event")
