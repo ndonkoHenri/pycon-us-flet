@@ -75,6 +75,34 @@ class MemorySemantics(ft.SemanticsService):
         return dict(self.features)
 
 
+class MemoryLauncher(ft.UrlLauncher):
+    """UrlLauncher that records what it was asked to open instead of opening it."""
+
+    def init(self) -> None:
+        self.launched: list[tuple[str, ft.LaunchMode]] = []
+        self.error: Exception | None = None
+
+    async def launch_url(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, url: str, *, mode: ft.LaunchMode = ft.LaunchMode.PLATFORM_DEFAULT
+    ) -> None:
+        if self.error is not None:
+            raise self.error
+        self.launched.append((url, mode))
+
+
+class MemoryClipboard(ft.Clipboard):
+    """Clipboard that keeps what was copied instead of reaching the platform."""
+
+    def init(self) -> None:
+        self.value: str | None = None
+        self.error: Exception | None = None
+
+    async def set(self, value: str) -> None:
+        if self.error is not None:
+            raise self.error
+        self.value = value
+
+
 class FakePage:
     """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
 
