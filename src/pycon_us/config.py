@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from pycon_us.core.feed import FeedSettings
+
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
 
@@ -144,6 +146,11 @@ class YearData:
 
     conference: ConferenceInfo
     content: Content
+
+    @property
+    def feed_settings(self) -> FeedSettings:
+        """What feed processing needs from this year's data."""
+        return FeedSettings(time_zone=self.conference.zone)
 
 
 def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
