@@ -26,7 +26,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Source, Status, ViewMemory, use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.navigation import Retap, navigation_bar
+from pycon_us.ui.navigation import TABS, Retap, navigation_bar
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,8 @@ def AppScaffold(
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
-            page's heading (Flutter marks an app bar title as a header).
+            page's heading (Flutter marks an app bar title as a header). On a tab
+            root it carries the identifier ``<tab>.title`` for UI flows (D-170).
         body: What the View shows under the app bar, usually an ``expand=True``
             ``ListView``; it is placed in a ``SafeArea``, clear of the notch, the
             home indicator and the navigation bar in either orientation.
@@ -92,11 +93,19 @@ def AppScaffold(
             await on_retap()
 
     back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
+    title_control: ft.Control = ft.Text(title)
+    if is_root:
+        # The identifier tells UI flows which root shows (D-170). An unlabelled
+        # Semantics merges it into the title's own node, as the bar's do (D-166).
+        tab = TABS[TAB_ROOTS.index(view_path)]
+        title_control = ft.Semantics(
+            identifier=tab.title_identifier, content=title_control
+        )
     return ft.View(
         route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
         padding=0,
         appbar=ft.AppBar(
-            title=ft.Text(title),
+            title=title_control,
             center_title=False,  # as the theme says; iOS would centre it (D-10)
             # Flutter would imply the iOS chevron on iOS; the Material arrow instead.
             automatically_imply_leading=False,

@@ -27,9 +27,23 @@ class Tab(NamedTuple):
     selected_icon: ft.IconData
 
     @property
+    def key(self) -> str:
+        """The tab's name in semantics identifiers: ``now`` … ``my_schedule`` (section M)."""
+        return self.root.strip("/").replace("-", "_")
+
+    @property
     def identifier(self) -> str:
         """The semantics identifier UI tests find it by: ``app.nav.<tab>`` (section M)."""
-        return "app.nav." + self.root.strip("/").replace("-", "_")
+        return "app.nav." + self.key
+
+    @property
+    def title_identifier(self) -> str:
+        """The identifier of its root's app-bar title: ``<tab>.title`` (section M).
+
+        UI flows find it to know which root is on screen; a ``Finder`` only counts
+        matches, so the title's text alone would not tell the root from its tab label.
+        """
+        return self.key + ".title"
 
 
 TABS = (

@@ -86,9 +86,9 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 | Lint, format, types | `uv run ruff check && uv run ruff format --check && uv run pyright` |
 | Unit and mock tests (under 2 min, D-84) | `uv run pytest` |
 | Accept a reviewed snapshot change | `uv run pytest tests/test_feed_invariants.py --snapshot-update` |
-| UI flows on the Android emulator | `uv run flet test android -d emulator-5554 --tests-dir tests/ui` |
-| UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui` |
-| One flow, verbose | add `-k favourite -v`; pytest options after `--` (e.g. `-- -x`) |
+| UI flows on the Android emulator (development.md §5.7) | `uv run flet test android -d <emulator-id> --tests-dir tests/ui -v` |
+| UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui -v` |
+| One flow | add `-k shell` |
 | Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
 | Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
 
@@ -315,6 +315,8 @@ The machine records each row's attribution at enqueue time and compares it in an
 | Fixture | `flet_app` (function scope, `flet/pytest_plugin.py`): each test function is a fresh `flutter test` launch, so **one journey per test function**. `flet_app.page` is not available in device mode (it raises `RuntimeError: page is not initialized`). Flows reach the app only through `flet_app.tester` finders. |
 | Tester | `flet_app.tester` is a `RemoteTester` (`flet.testing.remote_tester`): `find_by_semantics_identifier`, `find_by_text`, `find_by_text_containing`, `find_by_tooltip`, `find_by_key`, `find_by_icon`, `tap`, `long_press`, `enter_text`, `mouse_hover`, `pump(duration)`, `pump_and_settle(duration)`, `take_screenshot(name)`. A `Finder` has `count`, `first`, `last`, `at(i)`. |
 | Absent on device | `drag`, `drag_from`, `tap_at`, `mouse_click`, `right_mouse_click`, `mouse_double_click` and the `*_at` variants exist only on the host `Tester` (F21). `RemoteTester.pump_and_settle` has no `timeout` argument; each call fails after a fixed 60 s. |
+| Broken on device (#78) | `take_screenshot` works once per run on Android: it converts the Flutter surface to an image on every call, and the second call fails ("Surface already converted to an image"). `find_by_icon` sends Flet's packed icon value (`int(ft.Icons.CHEVRON_RIGHT)` is `0x10551`, set and index) where the device builds `IconData(<value>, fontFamily: "MaterialIcons")` from it (`_parseIcon` in `flet_integration_test`'s `remote_widget_tester.dart`), so it cannot match a Material icon (read in the source, not tried on a device). Flows use `adb exec-out screencap` / `simctl io screenshot` and find rows by text or identifier (D-171). |
+| Lifecycle | Every run packages the app's Python again, then `flutter test` installs a debug build, launches it and uninstalls it when the flow ends: each flow starts from a fresh install, with the app's own bundle id (development.md §5.7). Finders skip offstage widgets (Flutter's `skipOffstage`): once a push has finished, the covered View's controls are no longer found, which is how a flow knows a push or a pop is over. |
 | Assertions | A Flutter-side error (for example "RenderFlex overflowed") makes `flutter test` exit non-zero, and `FletTestApp.teardown()` then raises, so the test fails even if every Python assertion passed. |
 | Targets | `FletTestApp` points the app at `10.0.2.2` on Android and `127.0.0.1` on iOS (`flet_test_app.py:295`). Those reach the laptop only from an **emulator or simulator**, so flows run there; the iPhone is covered by the device checklist (§9). |
 
@@ -323,52 +325,23 @@ The machine records each row's attribution at enqueue time and compares it in an
 - **Identifiers.** Key controls carry `Semantics(identifier="<screen>.<element>[.<key>]")` (D-33, §M), e.g. `schedule.favorite.42`, `now.next_session`. They become Android `resource-id` and iOS `accessibilityIdentifier`, so they never contain names, emails or badge codes. Plain string literals; a typo fails a flow.
 - **The Developer screen** (D-73) sets the scene; flows unlock it with 7 taps on the version row, as a person would. It needs `developer.reset` (+ confirm), `developer.fake_clock` (ISO 8601 text), `developer.feed_url`, `developer.mock_url` (P3) and `developer.apply`.
 - **Data.** The `feed_url` fixture (in `tests/ui/conftest.py`) serves `tests/fixtures/feeds/` from the laptop with `http.server.ThreadingHTTPServer` on `127.0.0.1` and returns the URL the app can reach: `http://10.0.2.2:<port>/conference-2026.json` on Android, `http://127.0.0.1:<port>/…` on iOS. The fake clock sits inside the 2026 dates. "Offline" is a feed URL on a closed port: real airplane mode would also cut the tester's socket.
-- **Back.** Android: `adb -s $FLET_TEST_DEVICE shell input keyevent KEYCODE_BACK` from the test. iOS: tap the app bar's back button, `find_by_tooltip("Back")`. The iOS edge swipe and Android predictive back stay manual (§9).
-- **Settling.** Indeterminate progress and shimmer never settle, so helpers poll with `pump(duration)` until a finder matches. Android emulators run with the three animation scales at 0 (`adb shell settings put global transition_animation_scale 0`, etc.); Flutter reports that as `disable_animations`, which the app honours (D-34).
+- **Which screen.** A `Finder` only counts matches, and a root's title also shows as its tab's label, so each tab root's app-bar title carries `<tab>.title` (`now.title` … `more.title`, D-170); a pushed View is known by its back arrow (`find_by_tooltip("Back")`) and by the bar's absence (D-144).
+- **Back.** Both platforms: tap the app bar's back arrow (`tap_back_arrow`). Android also: the Back key, `adb -s $FLET_TEST_DEVICE shell input keyevent KEYCODE_BACK` from the test (`press_system_back`). The iOS edge swipe and Android predictive back stay manual (§9).
+- **Settling.** Indeterminate progress and shimmer never settle, so helpers poll with `pump(duration)` until a finder matches, or stops matching. While a push or a pop runs, both Views are on screen, and a tap on the one leaving is lost: a flow waits for the leaving View's marker to be gone, and `tap_back_arrow` for exactly one back arrow (#78 lost a tap that way). Android emulators run with the three animation scales at 0 (`adb shell settings put global transition_animation_scale 0`, etc.); Flutter reports that as `disable_animations`, which the app honours (D-34).
 
-```python
-# tests/ui/helpers.py (excerpt)
-"""Helpers for UI flows. They drive the app only through its own UI."""
+`tests/ui/helpers.py` (D-171):
 
-import time
+| Helper | What it does |
+|---|---|
+| `remote(flet_app)` | The `RemoteTester`; fails outside device mode |
+| `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out.png` if the device still answers, and fails with what it saw |
+| `wait_for_id`, `wait_for_text`, `wait_for_tooltip` | `wait_for` with an identifier, an exact text or a tooltip |
+| `tap(t, finder)`, `tap_id`, `tap_text` | Tap the first match once it is on screen, then pump once |
+| `tap_first_text(t, texts)` | Tap whichever of these texts shows first: for rows a feed refresh may change, such as the first speakers |
+| `tap_back_arrow(t)`, `press_system_back(t)` | Back, as above |
+| `screenshot(name)` | `build/ui/<platform>/<name>.png` through `adb exec-out screencap -p` or `xcrun simctl io <udid> screenshot`, not `take_screenshot` (§5.1) |
 
-import flet as ft
-from flet.testing import Finder
-
-STEP = ft.Duration(milliseconds=100)
-
-
-async def wait_for_id(t, identifier: str, timeout: float = 15.0) -> Finder:
-    """Pump frames until a control with this semantics identifier is built."""
-    deadline = time.monotonic() + timeout
-    while True:
-        finder = await t.find_by_semantics_identifier(identifier)
-        if finder.count:
-            return finder
-        if time.monotonic() > deadline:
-            raise AssertionError(f"{identifier!r} not found within {timeout} s")
-        await t.pump(STEP)
-
-
-async def wait_for_text(t, text: str, timeout: float = 15.0) -> Finder:
-    """Pump frames until a control showing exactly this text is built."""
-    deadline = time.monotonic() + timeout
-    while True:
-        finder = await t.find_by_text(text)
-        if finder.count:
-            return finder
-        if time.monotonic() > deadline:
-            raise AssertionError(f"text {text!r} not found within {timeout} s")
-        await t.pump(STEP)
-
-
-async def tap_id(t, identifier: str) -> None:
-    """Tap the first control with this identifier and let the result render."""
-    await t.tap((await wait_for_id(t, identifier)).first)
-    await t.pump(STEP)
-```
-
-The harness (`conftest.py` with `feed_url`, and the helpers above) arrives in P0 with the shell flow (P0-27); `open_developer()` and `fresh_start()` arrive with the first P1 flows (P1-30), once the Developer screen exists. `open_developer(t)` taps More → About this app → the version row (`about_app.version`) 7 times → Developer. `fresh_start(t, now=..., feed_url=...)` opens Developer, resets (confirmed), unlocks again, enters the clock and feed URL, applies and returns to Now.
+`tests/ui/conftest.py` holds `feed_url`. The harness arrived in P0 with the shell flow (P0-27, #78); `open_developer()` and `fresh_start()` arrive with the first P1 flows (P1-30), once the Developer screen exists. `open_developer(t)` taps More → About this app → the version row (`about_app.version`) 7 times → Developer. `fresh_start(t, now=..., feed_url=...)` opens Developer, resets (confirmed), unlocks again, enters the clock and feed URL, applies and returns to Now.
 
 ### 5.3 An example flow
 
@@ -409,7 +382,7 @@ About eight journeys, added in the phase that builds them. Each runs on the Andr
 
 | # | Test | Phase | Journey and assertions | Ids / D |
 |---|---|---|---|---|
-| Shell | `test_shell_starts` | P0 | The test build starts; the five `app.nav.*` tabs are found; the Schedule stub shows the bundled days and its `schedule.source` label; no error screen. No offline assertion: the feed-URL override comes with the Developer screen (P1-28) | SHELL-03, SHELL-05, NEW-03 |
+| Shell | `test_shell_starts` | P0 | The test build starts on Now (`now.title`) with the five `app.nav.*` tabs; each tab shows its root; the Schedule stub shows its `schedule.source` label and the first conference day; More → Speakers (a pushed page, no bar) → one of the snapshot's first five speakers (a drill level; a networked device lists the live feed's, P1-30's `fresh_start()` makes it a recorded one); the back arrow pops one level at a time to the More root and its bar; on Android the Back key pops a push and takes the More root to Now; no Flutter error. No offline assertion: the feed-URL override comes with the Developer screen (P1-28) | SHELL-03, SHELL-05, NEW-03, D-17, D-141, D-144 |
 | F1 | `test_start_offline_shows_schedule` | P1 (after P1-08, P1-28) | With an unreachable feed URL set in Developer, the bundled rows render and no error screen appears; the status strip says offline and Refresh keeps the rows | NEW-03, DATA-02, SCHED-14, D-32, D-39 |
 | F2 | `test_switch_days_keeps_selection` | P1 | Third day tab shows its rows; session → Back keeps the day | DATA-17, SCHED-01, D-18 |
 | F3 | `test_search_finds_session_speaker_room` | P1 | An accent-folded query finds a session, a speaker and a room on different days; result → Back keeps the query | NEW-02, D-19, D-46 |
@@ -595,6 +568,8 @@ Not in Flet today. Each has an interim; the upstream fixes are candidates withou
 | `RemoteTester.pump_and_settle` has a fixed 60 s timeout | `wait_for_id` polling | A `timeout` argument, as on `Tester` |
 | No accessibility guideline checks | Accessibility Scanner, Accessibility Inspector | Flutter's `meetsGuideline` on the tester |
 | No text-scale emulation | `adb` / `simctl` settings (§7.2) | With U16 `PageMediaData.text_scale_factor` |
+| `RemoteTester.take_screenshot` fails from its second call on Android (#78) | `adb exec-out screencap -p`, `xcrun simctl io <udid> screenshot` | Convert the surface to an image only once per run (`flet_integration_test`'s `takeScreenshot`) |
+| `RemoteTester.find_by_icon` sends Flet's packed icon value, so it cannot find a Material icon (#78, from the source) | Find by text, tooltip or identifier | Decode the packed value on the device, as Flet's own icon parsing does |
 | No profile build or performance overlay | Perfetto, Instruments on release builds (§8) | A profile build mode in `flet build` |
 
 ## 14. Open points
