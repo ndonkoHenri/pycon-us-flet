@@ -119,8 +119,8 @@ def test_report_shows_each_count_before_and_after(data_dir: Path) -> None:
     assert lines[0] == f"Updated 2026/conference.json from {FEED_URL}"
     assert lines[1].startswith("captured at 2026-10-12T10:04:31-07:00; ")
     assert lines[2:] == [
-        "  sessions        728 -> 727     -1",
-        "  speakers        170 -> 170",
+        "  sessions        345 -> 344     -1",
+        "  speakers        169 -> 169",
         "  days              5 -> 5",
         "  posters          25 -> 25",
         "  sprints          24 -> 23      -1",
@@ -134,7 +134,7 @@ def test_report_says_when_the_previous_snapshot_no_longer_parses(
     (data_dir / "2026" / "conference.json").write_bytes(b"[]")
     report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert "; the previous snapshot no longer parses" in report.splitlines()[1]
-    assert "  sessions          - -> 728" in report.splitlines()
+    assert "  sessions          - -> 345" in report.splitlines()
 
 
 def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
@@ -168,7 +168,9 @@ def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
                 ]
             ),
             200,
-            "the feed's days, 2027-05-13 to 2027-05-17, fall outside the conference's, 2026-05-13 to 2026-05-19",
+            # The Job Fair keeps its 2026 display time from content.toml (D-41), so the
+            # range starts in 2026; what matters is that the 2027 days are refused.
+            "the feed's days, 2026-05-15 to 2027-05-17, fall outside the conference's, 2026-05-13 to 2026-05-19",
         ),
     ],
     ids=["html", "wrong-structure", "server-error", "skipped-record", "wrong-year"],
