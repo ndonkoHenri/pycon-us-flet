@@ -625,7 +625,7 @@ class AppInfo:
 ### 5.6 U2: grouped list with pinned headers (later; M)
 
 - **Serves:** SCHED-02, SCHED-27.
-- **Interim:** each time slot is one `ListView` item with its time in a left gutter (D-31), which also gives `scroll_to` slot-sized keys (F7).
+- **Interim:** each time slot is one item of the day's `Column(scroll=AUTO)` with its time in a left gutter (D-31), which also gives `scroll_to` slot-sized keys; the `Column` builds every slot, so the keys are always reachable (D-154, F7, F32).
 - **Design:** a `CustomScrollView` with one `SliverMainAxisGroup` per group, whose first sliver is a `PinnedHeaderSliver`. These are framework widgets, so no Material and no new dependency.
 
 ```python

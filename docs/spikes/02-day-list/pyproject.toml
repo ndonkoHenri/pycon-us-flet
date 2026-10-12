@@ -1,0 +1,74 @@
+# S2 reproducer (docs/spikes/02-day-list.md): the busiest day of the bundled 2026 schedule,
+# drawn as the Schedule screen will draw it, in several row and list variants. It imports the
+# repo's real `pycon_us` package (the model, feed processing, time labels and theme), copied
+# next to main.py as the app's src/ holds it (its data files must sit on disk, not in
+# sitepackages.zip), and the repo's .flet-src checkout through relative paths. Build it from
+# this folder:
+#
+#   uv sync
+#   rsync -a --delete --exclude __pycache__ ../../../src/pycon_us src/   # as the app has it
+#   uv run flet build apk --arch arm64-v8a --build-number 1
+#   uv run flet build ios-simulator --build-number 1
+#   uv run --group measure python drive_android.py all     # with the APK installed
+#
+# Nothing here is part of the app; src/ of the repo is untouched.
+
+[project]
+name = "s2-day-list"
+version = "0.0.1"
+description = "S2 spike: the busiest day's list in components mode, eager and lazy."
+requires-python = ">=3.14,<3.15"
+dependencies = [                      # bundled by flet build: pin exactly (development.md §2.1)
+    "flet",
+    "tzdata==2026.5",
+]
+
+[dependency-groups]
+dev = [
+    "flet-cli",
+    "flet-web",
+    "flet-desktop",
+    "flet-platform-assets",
+]
+measure = [                           # host only: decoding the screen recordings
+    "av==16.0.1",
+    "numpy==2.3.4",
+]
+
+[tool.flet]
+product = "S2 Day list"
+bundle_id = "io.github.ndonkohenri.pyconus.s2"   # throwaway id, never uploaded
+
+[tool.flet.app]
+path = "src"
+
+# The variant comes from the launch route (src/main.py):
+# adb shell am start -a android.intent.action.VIEW -d "s2spike://s2/memo/lazy/all"
+[tool.flet.android.deep_linking]
+scheme = "s2spike"
+host = "s2"
+
+[tool.flet.ios.deep_linking]
+scheme = "s2spike"
+host = "s2"
+
+# Roboto 400/500/700 as in the app (D-26, D-105); the path is relative to build/flutter/.
+[tool.flet.flutter.pubspec.dependencies]
+roboto_fonts = { path = "../../../../../flutter_packages/roboto_fonts" }
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false
+
+# The same pin as the app (D-81): a source checkout in the repo root's .flet-src.
+[tool.uv.sources]
+flet = { path = "../../../.flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = "../../../.flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = "../../../.flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = "../../../.flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = "../../../.flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+
+[tool.flet.dev_packages]
+flet = "../../../.flet-src/sdk/python/packages/flet"

@@ -484,7 +484,7 @@ Filters are preferences (persisted in `Prefs`); positions are process memory (he
 
 ### 6.4 Screen pattern
 
-A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, tuple(favorites.ids), ...])` (lists passed as tuples), builds handlers as named functions (async ones wrapped in `report_errors`), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.toggle, svc, sid)`. Rows are `@ft.component`s keyed by session id and memoised on `(id, is_favorite)`, unless S2 decides otherwise.
+A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, tuple(favorites.ids), ...])` (lists passed as tuples), builds handlers as named functions (async ones wrapped in `report_errors`), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.toggle, svc, sid)`. Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list that `scroll_to(scroll_key=...)` must reach is a `Column(scroll=AUTO)` (D-154).
 
 ---
 
@@ -1270,7 +1270,7 @@ A last-resort net, not error handling (§16.1). Details show when not embedded o
 | Spike | Confirms |
 |---|---|
 | S1 | **Done** (`docs/spikes/01-packaged-runtime.md`): data dir survives updates (D-108); `tzdata`, `httpx`, `sqlite3`, SecureStorage on device; parsing stays on the loop (D-109); overlay style and insets (D-113). Page handlers firing without `page.update()` moved to S4 |
-| S2 | row architecture; `build_controls_on_demand=False` per day list so `scroll_to(scroll_key=...)` reaches unbuilt slots (F7) |
+| S2 | **Done** (`docs/spikes/02-day-list.md`): memoise the whole path, day list → slot → row (D-153); day lists are `Column(scroll=AUTO)`, since a `ListView` with or without `build_controls_on_demand` builds only near the viewport (D-154, F32); Jump to now is one keyed `scroll_to` (D-155); the shown day renders first (D-156); controlled text fields (D-157); a gutter that grows with the text (D-158); the interaction-latency baseline (D-159). iPhone release numbers in #121 |
 | S3 | **Done** (`docs/spikes/03-html-markdown.md`): the converter covers both feeds' 17 tags with no text change; escaping (D-115) and the style sheet (D-116); E5 cut (D-117) |
 | S4 | **Done** (`docs/spikes/04-router-back.md`): the drill shape and per-level params (D-141); every pop through our `on_view_pop` (D-141); D-17's root rule (D-142); one root View key (D-142); the bar on roots only (D-144); `ViewMemory` per process with the start route restoring the location (D-143); a replaced session stops its work from `page.on_close` (D-147); page handlers without `page.update()` (D-147); transitions (D-148). The iOS edge swipe is held for #121 |
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
