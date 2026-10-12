@@ -12,17 +12,20 @@ import logging
 import flet as ft
 
 from pycon_us.prefs import Prefs, PrefsCtx
-from pycon_us.screens.stub import Stub
+from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.theme import THEME_MODES, TokensCtx, build_theme, build_tokens
+from pycon_us.theme import (
+    BOOT_COLOR,
+    THEME_MODES,
+    TokensCtx,
+    build_theme,
+    build_tokens,
+)
 
 logger = logging.getLogger(__name__)
-
-BOOT_COLOR = "#680579"
-"""The splash's purple (``[tool.flet.splash]``, ux.md §2.6), so the launch never flashes."""
 
 RING_DELAY = 1.0
 """Seconds before the boot view shows a progress ring; most starts end sooner (ux.md §2.6)."""
@@ -31,9 +34,6 @@ NO_THEME_ANIMATION = ft.AnimationStyle(duration=0)
 """``page.theme_animation_style`` until the boot gate opens: every theme change before it
 lands at once. Flutter crossfades theme changes over 200 ms, and a gate that opens sooner
 showed the first screen mid-fade (iOS simulator, #72)."""
-
-ROUTES = [ft.Route(index=True, component=Stub)]
-"""One stub screen until the route table lands (#74)."""
 
 
 @ft.component
@@ -69,7 +69,7 @@ def App(memory: ViewMemory):
     tokens = build_tokens(dark=prefs.dark, high_contrast=prefs.high_contrast_on)
 
     def router():
-        return ft.Router(ROUTES, manage_views=True)
+        return ft.Router(ROUTES, not_found=NotFound, manage_views=True)
 
     return ServicesCtx(
         svc,

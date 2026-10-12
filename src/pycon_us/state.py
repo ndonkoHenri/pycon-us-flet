@@ -285,11 +285,14 @@ class ViewMemory:
     import and every session's ``App`` gets that one, so a new session in the same
     process (an Android activity recreation, F26, or a relaunch after Back on Now, F29)
     finds it as the user left it. Fields join with the screens that remember something
-    (the day, offsets and search from P1).
+    (the day, offsets, the search query and scope from P1).
 
     Attributes:
         last_location: The top View's route, where the start route returns a new
             session (D-143, #74); empty until a screen records it.
+        search_base: The location, query included, that opened ``/search``; Back from
+            search returns there (D-19). The opener records it.
     """
 
     last_location: str = ""
+    search_base: str = "/now"
