@@ -18,7 +18,8 @@ The launch route picks the variant, ``/<rows>/<list>/<days>``:
   ``cache`` (a lazy ``ListView`` with a 100,000 px ``cache_extent``);
 - days: ``all`` (every day's list is rendered at start, as a ``TabBarView`` page),
   ``visited`` (a day's list is rendered the first time its tab is shown) or ``deferred``
-  (the shown day first; the other days in a second render right after the first frame).
+  (the shown day first; the other days in a second render once Flutter has applied the
+  first, which a SharedPreferences round trip shows; no frame boundary is guaranteed).
 
 Every measurement is a line ``S2 <event> wall=<epoch> py_ms=<since main.py> ...`` on stdout
 (logcat tag ``flet.python`` on Android, the unified log on iOS). An action (a star tap, a

@@ -113,7 +113,11 @@ def launch(variant: str) -> dict[str, float]:
         float(m[1])
         for m in re.finditer(r"(\d+\.\d+).*START u0.*" + re.escape(PKG), system)
     )
-    by_event = {e["event"]: e for e in events()}
+    by_event: dict[str, dict[str, str]] = {}
+    for (
+        e
+    ) in events():  # the first of each: a deferred render logs a second patched/acked
+        by_event.setdefault(e["event"], e)
 
     def at(event: str) -> float:
         return (float(by_event[event]["wall"]) - start) * 1000
@@ -475,6 +479,18 @@ def flutter_layer() -> str:
     )
 
 
+def motion_intervals(presents: list[float], window: float = 1500.0) -> list[float]:
+    """Intervals between the frames presented within ``window`` ms of the gesture's first.
+
+    The window covers a fling or a tab slide, so a stall inside it counts, however
+    long; the frames after it (a ripple fading, the list at rest) are left out.
+    """
+    if not presents:
+        return []
+    inside = [t for t in presents if t <= presents[0] + window]
+    return [b - a for a, b in itertools.pairwise(inside)]
+
+
 def suite_fling(variant: str) -> None:
     """Frame pacing while flinging through the day: down six times, then back up."""
     launch(variant)
@@ -492,8 +508,7 @@ def suite_fling(variant: str) -> None:
             for cols in (line.split() for line in out.splitlines()[1:])
             if len(cols) == 3 and int(cols[1]) > 0 and int(cols[1]) < 2**62
         ]
-        # Gaps over 200 ms are the list at rest, not a frame of the fling.
-        intervals += [b - a for a, b in itertools.pairwise(presents) if b - a < 200]
+        intervals += motion_intervals(presents)
     janky = [i for i in intervals if i > 1.5 * 1000 / 60]
     report(
         "fling",
@@ -522,7 +537,7 @@ def suite_tabframes(variant: str) -> None:
             for cols in (line.split() for line in out.splitlines()[1:])
             if len(cols) == 3 and 0 < int(cols[1]) < 2**62
         ]
-        tap_frames = [b - a for a, b in itertools.pairwise(presents) if b - a < 200]
+        tap_frames = motion_intervals(presents)
         intervals += tap_frames
         worst.append(max(tap_frames, default=0.0))
     janky = [i for i in intervals if i > 1.5 * 1000 / 60]
