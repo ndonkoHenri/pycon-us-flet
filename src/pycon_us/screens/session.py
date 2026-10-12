@@ -1,6 +1,7 @@
 """Session detail (``…/session/<id>``): a stub until P1 (SESS-01..12).
 
-It links to the session's speakers and rooms, one drill level each, so a chain such as
+It shows the session's badges and place under the title, as P1's detail will (ux.md
+§5.5), and links to its speakers and rooms, one drill level each, so a chain such as
 session → speaker → session → room is a real stack (D-17). An unknown id shows a
 not-found state under the back arrow; #90 settles what P1 does (D-21, ux.md §4.1).
 """
@@ -10,19 +11,24 @@ import flet as ft
 from pycon_us.core.slugs import slugify_room
 from pycon_us.locations import drill_href
 from pycon_us.screens.stub import nav_tile, note, stub_body
+from pycon_us.services import use_services
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
+from pycon_us.ui.badges import badge_row, session_badges
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 
 
 @ft.component
 def SessionDetail(session_id: str) -> ft.View:
-    """One session: its track and place, then links to its speakers and rooms.
+    """One session: its badges and place, then links to its speakers and rooms.
 
     Args:
         session_id: The session id, unquoted (D-42).
     """
     view_path = ft.use_view_path()
     conference = use_conference()
+    info = use_services().year.conference
+    tokens = use_tokens()
     data = conference.data
     session = data.sessions.get(session_id) if data else None
     if data is None or session is None:
@@ -34,15 +40,23 @@ def SessionDetail(session_id: str) -> ft.View:
         )
     slugs = [slugify_room(name) for name in session.rooms]
     rooms = [slug for slug in slugs if slug in data.rooms]
-    # A generic break has no place to show (DATA-16): join only the parts it has, so
-    # it reads "Break", not "Break ·" (#170).
-    parts = (session.track, session.display_location)
-    meta = " · ".join(part for part in parts if part)
+    badges = session_badges(session, info, tokens)
     return AppScaffold(
         title=session.name,
         body=stub_body(
             [
-                *([note(meta)] if meta else []),
+                *(
+                    [
+                        ft.Container(
+                            badge_row(badges),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                        )
+                    ]
+                    if badges
+                    else []
+                ),
+                # A generic break has no place to show (DATA-16, #170).
+                *([note(session.display_location)] if session.display_location else []),
                 *([SectionHeader("Speakers")] if session.speaker_ids else []),
                 *(
                     nav_tile(

@@ -159,7 +159,7 @@ Scan outcome colours (P3) are in §7.2; each passes 6.5:1 or better.
 
 ### 3.4 Track badges (D-25, THEME-08, SCHED-20)
 
-Tonal pills: fill plus text colour, every pair at least 5.7:1 in both themes (D-25 requires 4.5:1; the lowest is AI dark, 5.77:1). Badges always carry text. In HC they are outlined: 1.5 dp `on_surface` border and text on `surface`.
+Tonal pills: fill plus text colour, every pair at least 5.7:1 in both themes (D-25 requires 4.5:1; the lowest is AI dark, 5.77:1). Badges always carry text. In HC they are outlined: 1.5 dp `on_surface` border and text on `surface`. The palette lives in `Tokens` (`theme.py`, D-172), keyed by the registry's track keys (below).
 
 | Badge | Light fill / text | Dark fill / text |
 |---|---|---|
@@ -178,7 +178,7 @@ Tonal pills: fill plus text colour, every pair at least 5.7:1 in both themes (D-
 | Break, Informational | `#E6E6E6` / `#383838` | `#404040` / `#E0E0E0` |
 | En Español | `#FFD7F3` / `#5E0058` (10.1) | `#5E0058` / `#FFD7F3` |
 
-Role-based badges: Registration required = `error_container`/`on_error_container`; New track = `secondary_container`; Changed (24 h, P2) = `tertiary_container`. Palette keys are the feed's track keys, spaces included (`"open space"`); display names come from one `track_name()` (DATA-28).
+A track the palette lacks (a new kind in next year's feed) gets the Break grey. Role-based badges: **Registration required** is outlined, its label and a 1 dp border in `error` on the surface (6.5:1 light, 11.0:1 dark; D-172), not an `error_container` fill, which would be the same pink as En Español; New track = `secondary_container`; Changed (24 h, P2) = `tertiary_container`. A session's badges are its track, then En Español, then Registration required (Ionic's set; a charla shows both "Charla" and "En Español"). Palette keys are the track registry's keys (`conference.toml`), spaces and capitals included (`"Open Space"`, `"Ai"`, `"Sponsor Presentation"`); labels come from one `track_name()` (DATA-28), so the AI badge reads "AI".
 
 ### 3.5 Theme construction
 
@@ -213,7 +213,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `SessionRow` | sketch below | Badges; title ≤ 3 lines; meta "9:25–10:10 AM · Room 104A"; speakers; optional elapsed `ProgressBar(bar_height=3)` | One phrase: "Talk. Title. 9:25 to 10:10 AM, Room 104A. Ana Lima."; star is its own stop |
 | `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add | Tooltip is the name; state announced |
 | `NoticeRow` | `Container(bgcolor=surface_container, Row[Icon(INFO_OUTLINE), Text, time])` | Notices, breaks, meals; no star; tappable only with content (SCHED-04) | "Notice. Registration opens, 7:00 AM" |
-| `TrackBadge` | `Container(bgcolor, border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))` | §3.4; not a `Chip` (Chips are interactive) | Text carries the meaning |
+| `TrackBadge` | `Container(bgcolor, border=Border.all(1, fill or text), border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))`, a plain builder given its `BadgeColors` (D-172); `session_badges()` and `badge_row()` (`Row(wrap=True, spacing=6, run_spacing=6)`) beside it | §3.4; not a `Chip` (Chips are interactive); the label wraps inside the pill at large text, never clipped | Text carries the meaning |
 | `TimeGutter` | `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` over an invisible "10:00" / "AM" in a `Stack`, padding 16 left and 8 right: no fixed width, so it grows with the text and is the same for every slot (D-158) | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True, label="9:25 AM", exclude_semantics=True)` |
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
@@ -251,7 +251,8 @@ def SessionRow(row: SessionView, on_open, on_toggle) -> ft.Control:
         content=ft.Column(
             spacing=4,
             controls=[
-                ft.Row(wrap=True, spacing=4, controls=[TrackBadge(b) for b in row.badges]),
+                # D-172; a memoised row gets the tokens as a prop (D-150)
+                badge_row(session_badges(row.session, info, tokens)),
                 ft.Text(row.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM, max_lines=3),
                 ft.Text(row.meta, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
                 ft.Text(row.speakers, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
