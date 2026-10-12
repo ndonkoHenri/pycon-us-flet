@@ -1,4 +1,4 @@
-"""Shared test fixtures and the hypothesis profiles (docs/testing-and-quality.md §2)."""
+"""Shared test fixtures and the hypothesis ci profile (docs/testing-and-quality.md §2)."""
 
 import json
 import time
