@@ -138,7 +138,8 @@ def test_slot_fields_are_decoded() -> None:
 def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
     year: int,
 ) -> None:
-    # No dropped slot carries speakers, so every speaker record of the feed is registered.
+    # No dropped slot carries speakers, so every speaker record of the feed is registered,
+    # but for the pseudo-speaker "Hosted by …" (DATA-15).
     doc = document(year)
     slots = doc["schedule"]
     records = [s for slot in slots for s in slot.get("speakers") or []]
@@ -146,7 +147,8 @@ def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
     nested = [p for slot in slots for p in slot.get("sessions") or []]  # 2025 (D-121)
     records += [s for poster in nested for s in poster["speakers"]]
     data = processed(year)
-    assert set(data.speakers) == {str(record["id"]) for record in records}
+    people = [r for r in records if not r["name"].startswith("Hosted by ")]
+    assert set(data.speakers) == {str(record["id"]) for record in people}
     for session in data.sessions.values():
         assert set(session.speaker_ids) <= set(data.speakers)
     for poster in data.posters:
@@ -155,7 +157,7 @@ def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
 
 def test_first_record_of_a_speaker_wins_poster_authors_first() -> None:
     """As in Ionic, poster authors are registered before the schedule's speakers."""
-    first = next(slot for slot in document(2026)["schedule"] if slot.get("speakers"))
+    first = next(slot for slot in document(2026)["schedule"] if slot["kind"] == "talk")
     speaker = first["speakers"][0]
     poster_copy = dict(speaker, bio="<p>From the poster.</p>")
 

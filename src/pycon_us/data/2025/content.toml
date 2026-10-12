@@ -6,3 +6,6 @@ display_time_overrides = []
 
 # The 2025 feed calls its halls "Hall A", "Hall B" and "Hall C" everywhere (D-122).
 hall_prefix = ""
+
+# 2025's lightning talks list their one room, Hall B (D-124).
+lightning_talks_location = ""

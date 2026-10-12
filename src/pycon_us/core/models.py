@@ -47,12 +47,21 @@ class Session:
             ``Sponsor Presentation`` for ``sponsor-workshop`` and ``Open Space`` for open
             spaces. ``config.ConferenceInfo.track()`` gives its display names.
         location: The room text; several rooms are joined by ", ".
+        display_location: The one place a row shows (DATA-16): an override such as the
+            lightning talks' hall, else the first room; empty for a generic break.
+        rooms: The rooms in ``location``, one name per room slug, in order (ROOM-06).
         description: The feed's description, empty when there is none: HTML, except
             Markdown for an open space (DATA-25).
-        start: When it starts: aware, in the conference zone.
+        start: When it starts: aware, in the conference zone. Its time group's start.
+        display_start: The start to show; earlier than ``start`` for the Job Fair
+            (DATA-11), else equal.
         end: When it ends, never before ``start``; equal for a notice.
         day: The conference-local date of ``start``: the day it is listed under.
-        speaker_ids: Its speakers, in the feed's order.
+        speaker_ids: Its speakers in the directory, linked by name (DATA-15).
+        speaker_names: Its authors as text, in the feed's order, including names that
+            are not in the directory ("Hosted by …").
+        pre_registered: Whether attending needs registration (DATA-09).
+        spanish: Whether it is given in Spanish (DATA-10).
         url: Its page on the conference site; empty when there is none.
         image_url: An open space's image, absolute; empty when there is none.
         in_timeline: Whether the schedule's days list it; poster details are reached from
@@ -64,14 +73,35 @@ class Session:
     kind: str
     track: str
     location: str
+    display_location: str
+    rooms: tuple[str, ...]
     description: str
     start: dt.datetime
+    display_start: dt.datetime
     end: dt.datetime
     day: dt.date
     speaker_ids: tuple[str, ...]
+    speaker_names: tuple[str, ...]
+    pre_registered: bool
+    spanish: bool
     url: str
     image_url: str
     in_timeline: bool
+
+
+@dataclass(frozen=True, eq=False)
+class Room:
+    """A room and the sessions in it (DATA-16, ROOM-06).
+
+    Attributes:
+        slug: Its slug (``slugs.slugify_room``), the key of its route.
+        name: Its name, as the feed first writes it.
+        session_ids: Its sessions, by start, then name; a multi-room session is in each.
+    """
+
+    slug: str
+    name: str
+    session_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True, eq=False)
@@ -164,8 +194,10 @@ class ConferenceData:
     Attributes:
         sessions: Every session by id: the schedule's slots in feed order, then the
             collapsed rows, the open spaces and the poster details.
-        speakers: Every speaker of a session or poster by id, in order of first appearance.
+        speakers: The speaker directory by id, in order of first appearance: poster
+            authors, then the schedule's speakers (DATA-15).
         days: The schedule's days, sorted by date; they hold the sessions in the timeline.
+        rooms: Every room of a session, by slug, in natural order of name (DATA-16).
         posters: The posters, in feed order.
         sprints: The sprint projects, in feed order.
         job_listings: The job listings, in feed order.
@@ -178,6 +210,7 @@ class ConferenceData:
     sessions: Mapping[str, Session]
     speakers: Mapping[str, Speaker]
     days: tuple[Day, ...]
+    rooms: Mapping[str, Room]
     posters: tuple[Poster, ...]
     sprints: tuple[Sprint, ...]
     job_listings: tuple[JobListing, ...]
