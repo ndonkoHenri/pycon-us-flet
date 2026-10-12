@@ -187,6 +187,7 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
             record["submitter"],
         )
         assert sprint.logo_url == record["logo_url"]  # None for two projects
+        assert sprint.description == record["description_html"]
     assert sum(sprint.logo_url is None for sprint in data.sprints) == 2
 
     listing, record = data.job_listings[0], document["job-listings"][0]
@@ -196,6 +197,7 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
         record["sponsor_level"],
     )
     assert listing.description == record["description_html"]
+    assert listing.sponsor_logo_url == record["sponsor_logo_url"]
 
 
 def test_feed_without_optional_sections_decodes_them_empty() -> None:
@@ -282,22 +284,33 @@ def test_bad_slot_is_skipped_and_logged(
 
 
 @pytest.mark.parametrize(
-    ("section", "key", "count"),
+    ("section", "key", "field", "count"),
     [
-        ("schedule", "conf_key", 728),
-        ("posters", "conf_key", 25),
-        ("sprints", "id", 24),
-        ("job-listings", "id", 13),
+        ("schedule", "conf_key", "name", 728),
+        ("posters", "conf_key", "title", 25),
+        ("sprints", "id", "name", 24),
+        ("job-listings", "id", "sponsor_name", 13),
     ],
 )
-def test_duplicate_id_keeps_the_first(section: str, key: str, count: int) -> None:
+def test_duplicate_id_keeps_the_first(
+    section: str, key: str, field: str, count: int
+) -> None:
     def duplicate(doc: dict[str, Any]) -> None:
         first = doc[section][0]
-        doc[section].append(dict(first, **{key: str(first[key])}))  # "6" repeats 6
+        doc[section].append(dict(first, **{key: str(first[key]), field: "Impostor"}))
 
     data = process(changed(2026, duplicate), settings(2026))
     first = json.loads(recorded(2026))[section][0]
     assert data.skipped == (f"{section}[{count}]: duplicate id '{first[key]}'",)
+    records = {
+        "schedule": list(data.sessions.values()),
+        "posters": data.posters,
+        "sprints": data.sprints,
+        "job-listings": data.job_listings,
+    }[section]
+    kept = [record for record in records if record.id == str(first[key])]
+    assert len(records) == count
+    assert [getattr(record, field) for record in kept] == [first[field]]
 
 
 def test_time_out_of_range_is_skipped() -> None:
