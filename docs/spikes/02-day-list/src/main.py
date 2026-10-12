@@ -14,8 +14,10 @@ The launch route picks the variant, ``/<rows>/<list>/<days>``:
   ``tree`` (``memo`` rows inside memoised slot components, inside memoised day lists that
   receive only their own day's favourites, so a change re-renders one path of the tree);
 - list: ``lazy`` (``ListView``, ``build_controls_on_demand=True``, the default), ``eager``
-  (``ListView(build_controls_on_demand=False)``), ``column`` (``Column(scroll=AUTO)``) or
-  ``cache`` (a lazy ``ListView`` with a 100,000 px ``cache_extent``);
+  (``ListView(build_controls_on_demand=False)``), ``column`` (``Column(scroll=AUTO)``),
+  ``cache`` (a lazy ``ListView`` with a 100,000 px ``cache_extent``) or ``today`` (lazy
+  lists, and the 100,000 px ``cache_extent`` on the busiest day's only, as if it were today:
+  D-154);
 - days: ``all`` (every day's list is rendered at start, as a ``TabBarView`` page),
   ``visited`` (a day's list is rendered the first time its tab is shown) or ``deferred``
   (the shown day first; the other days in a second render once Flutter has applied the
@@ -217,7 +219,7 @@ class Variant:
         )
         lst = (
             parts[1]
-            if parts[1:2] and parts[1] in ("lazy", "eager", "column", "cache")
+            if parts[1:2] and parts[1] in ("lazy", "eager", "column", "cache", "today")
             else "lazy"
         )
         days = (
@@ -492,7 +494,11 @@ def DayList(
         controls=items,
         expand=True,
         build_controls_on_demand=variant.list != "eager",
-        cache_extent=100_000 if variant.list == "cache" else None,
+        cache_extent=(
+            100_000
+            if variant.list == "cache" or (variant.list == "today" and index == BUSIEST)
+            else None
+        ),
         on_scroll=on_scroll,
     )
 

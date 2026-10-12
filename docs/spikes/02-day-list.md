@@ -17,7 +17,7 @@ Can the busiest day of the 2026 schedule render, and react to a star tap, a keys
   - a filter keystroke's list change shows 0-82 ms after the key, against 0-16 ms lazy (Python's share is the same 3 ms);
   - a `Column` also stalls for about 220 ms when a fling hits either end of the day (Android's stretch overscroll on one huge child); the fully built `ListView` does not.
   
-  So day lists stay lazy `ListView`s, and only today's list, the one the jump targets, gets a `cache_extent` that builds the whole day (D-154).
+  So day lists stay lazy `ListView`s, and only today's list, the one the jump targets, gets a `cache_extent` that builds the whole day (D-154). Measured that way (`tree/today/deferred`, Friday standing in for today): the jump landed 3 of 3 at both sizes, only switches to today dropped frames (worst 33-50 ms; 18-20 ms to the other days), and flings stayed smooth (worst frame 29 ms).
 - **Cold start** (D-156): rendering all five days in the first render costs **150 ms** more than the shown day alone: the cached content appeared at 970 ms against 815 ms (log proxy, D-112), and Python's first render took 245 ms against 105 ms. Rendering the other days in a second pass after the first one has been applied keeps the short start (815 ms, 865 at 200 %) and leaves no empty page when swiping to another day.
 - **Scrolling** (D-80): flinging through the day showed no jank in any lazy or fully built `ListView`: 0-4 of about 890 frames over 25 ms, none over 36 ms.
 - **200 % text** changes no Python timing (star 3 ms, keystroke 3 ms). It broke the layout in two places: the 64 dp gutter split "7:30" over two lines (fixed here, D-158), and the two-line day tabs are clipped (#86).
@@ -33,7 +33,7 @@ Can the busiest day of the 2026 schedule render, and react to a star tap, a keys
   - `src/main.py` imports the real `pycon_us`: a copy of the repo's `src/pycon_us` next to `main.py`, made by `rsync` before each build, because the package's data files must sit on disk as they do in the app (as a wheel they ended up inside `sitepackages.zip`). It processes the bundled 2026 snapshot with `feed.process`, builds one frozen `RowView` per session (badge, title, "time · room", speakers, search text) and a `SlotView` per time group, and draws the Schedule root: `AppBar`, `NavigationBar` (roots have the bar, D-144), `Tabs` with five two-line day tabs, a search field that filters the shown day, and a `TabBarView` of day lists. A slot item is a `Container(key=ft.ScrollKey("slot-<iso>"))` holding a divider, the time gutter and the slot's rows; session rows have a track badge (ux.md §3.4 colours), the title (`TITLE_MEDIUM`, 3 lines), the meta line, speakers and a 48 dp `IconButton` star; notices and breaks are compact rows without a star. Themes come from `pycon_us.theme.build_theme`.
   - The launch route picks the variant, `s2spike://s2/<rows>/<list>/<days>`:
     - rows: `plain` (plain controls rebuilt by the day list), `component` (each row an `@ft.component` keyed by session id), `memo` (the same, wrapped in `ft.memo`, so it re-renders only when `(row, is_fav)` changes) or `tree` (memoised rows inside memoised slot components inside memoised day lists, each given only the favourites under it);
-    - list: `lazy` (`ListView`, the default `build_controls_on_demand=True`), `eager` (`build_controls_on_demand=False`), `column` (`Column(scroll=AUTO)`) or `cache` (`ListView(cache_extent=100_000)`, on every day);
+    - list: `lazy` (`ListView`, the default `build_controls_on_demand=True`), `eager` (`build_controls_on_demand=False`), `column` (`Column(scroll=AUTO)`), `cache` (`ListView(cache_extent=100_000)`, on every day) or `today` (lazy, with that `cache_extent` on Friday's list only, as if Friday were today: D-154);
     - days: `all` (every day's list in the first render), `visited` (a day renders when its tab is first shown) or `deferred` (the shown day first, the others in a second render once the first has been applied).
   - Two app-bar buttons jump to the 21st slot (4:30 PM): `scroll_to(scroll_key=...)`, and a two-step jump (an offset estimated from 120 dp per session row and 48 dp per notice, then the key).
   - `drive_android.py` drives it with adb: `cold`, `star`, `search`, `days`, `jump`, `fling` and `tabframes` suites (its docstring has the details), and writes `out/results.jsonl`.
@@ -44,8 +44,8 @@ Can the busiest day of the 2026 schedule render, and react to a star tap, a keys
   - **Star:** an instant tap draws no press feedback before the star changes (the ripple appears with the fill, even for a 145 ms answer), so there is no on-screen start mark. Each recording starts with one keystroke instead: its character's frame and its `key-in` line map the video clock onto the device clock, and each fill frame is then compared with its tap's `star-in` line. Both actions reach Python the same way, so the result is the time the star takes beyond a change Flutter draws itself, give or take the mapping's error of about 10 ms (one build reads -9 to +12 ms across recordings).
   - **Fling and day-switch frames:** `dumpsys SurfaceFlinger --latency` for the app's `SurfaceView` layer, cleared before each gesture: the intervals between presented frames; a frame over 25 ms (1.5 vsyncs) counts as janky. The first runs left out every interval over 200 ms as the list at rest, which could hide a long stall; the last runs (marked) keep every interval within 1.5 s of the gesture's first frame instead, a Codex review finding.
 - **Runs:** cold starts n=10; star taps and keystrokes n=12 per variant (the keystrokes are `python` typed and deleted); day switches n=12; jumps 3 per button; flings 12 per variant (six down, six up). 200 % text is `adb shell settings put system font_scale 2.0`, restored to 1.0 after every run.
-- **Changes between runs:** the first runs (05:45-06:30) had the fixed 64 dp gutter; the 200 % runs and later the growing gutter of D-158 (one more invisible text per slot). The `deferred` mode came at 06:55, `?auto=1` (for the simulator) after the Android runs.
-- **Two slowdowns, discarded.** Twice (about 07:02-07:45 and from about 08:02) everything inside the emulator became about 3-4.4× slower: feed processing 66 → 200-290 ms, cold start 1.0 → 3.4-4.4 s. The host was unaffected (the same processing took 42 ms on it throughout), and every qemu thread showed `PRI 4`, a background priority: macOS throttled the emulator, each time some 20-30 minutes after the host's user went idle, until a few minutes after they came back. An agent cannot lift it (`taskpolicy -B` had no effect; bringing the window forward needs Apple-events access). Runs in those windows are left out, except functional results (jumps); the numbers below are from 05:45-07:01 and 07:50-08:02. testing-and-quality.md §8 now checks for it before measuring.
+- **Changes between runs:** the first runs (05:45-06:30) had the fixed 64 dp gutter; the 200 % runs and later the growing gutter of D-158 (one more invisible text per slot). The `deferred` mode came at 06:55, `?auto=1` (for the simulator) after the main Android runs, and the `today` mode last (08:20), after the review.
+- **Two slowdowns, discarded.** Twice (about 07:02-07:45 and from about 08:02) everything inside the emulator became about 3-4.4× slower: feed processing 66 → 200-290 ms, cold start 1.0 → 3.4-4.4 s. The host was unaffected (the same processing took 42 ms on it throughout), and every qemu thread showed `PRI 4`, a background priority: macOS throttled the emulator, each time some 20-30 minutes after the host's user went idle, until a few minutes after they came back. An agent cannot lift it (`taskpolicy -B` had no effect; bringing the window forward needs Apple-events access). Runs in those windows are left out, except functional results (jumps); the numbers below are from 05:45-07:01, 07:50-08:02 and 08:22-08:35, and each later window began with cold starts at 65-69 ms of processing, with Python timings inside it matching the first window's. testing-and-quality.md §8 now checks for it before measuring.
 
 ## Evidence
 
@@ -66,6 +66,7 @@ Can the busiest day of the 2026 schedule render, and react to a star tap, a keys
 | tree / cache / all | 956 (947-1007) | 230 | 3 (2-4) | -6 (-10 to -3) | 1 | 3 (2-30) | 0 (0-83) | 2 (1-5) | 66 | **3/3** | 3/3 |
 | tree / lazy / visited | **810** (798-914) | **102** | 3 (2-4) | 12 (-2-14) | 1 | 3 (1-27) | 0 (0-34) | 2 (1-69) | 183 | 0/3 | 3/3 |
 | tree / column / deferred (07:50) | 815 (802-891) | 105 | 3 (2-4) | 1 (-6-7) | 1 | 3 (2-29) | 25 (0-66) | 2 (1-6) | 58 | 3/3 | 3/3 |
+| **tree / today / deferred** (08:23) | 886 (856-958) | 111 | | | | | | 2 (1-6) | 124 | **3/3** | 3/3 |
 
 Reading it:
 - **Where the time goes.** A plain row tree rebuilds all 320 rows of the five days for any change: 140-160 ms of Python, and the screen waits exactly that long (star screen ≈ star py). Memoised rows re-render one row, but the parent still rebuilds the 88 slot containers of the five days, runs 320 memo checks and diffs it all: 35-40 ms. Only memoising the day lists and the slots as well removes the parent's work (F34).
@@ -99,11 +100,12 @@ Twelve flings per variant (six down the day, six back up, `input swipe` over 1,1
 | tree / lazy / all, every interval (08:00) | 888 | 3 | 35.4 | **18-24** (no frame over 25) |
 | tree / cache / all, every interval (08:00) | 888 | 1 | 25.2 | 19-50, median 49 (12 frames over 25) |
 | tree / column / deferred, every interval (07:55) | 916 | 4 | **227** | 19-70, median 49 (13 frames over 25) |
+| **tree / today / deferred**, every interval (08:25) | 888 | 2 | 28.9 | to Friday (today) 33-50; to Thursday or Saturday 18-20 (8 frames over 25) |
 
 - Scrolling never janks in a lazy or fully built `ListView`: Python takes no part in a fling.
 - The `Column`'s two 220-227 ms frames came at the turnarounds, where the fling hits the end and the top of the day and Android's stretch overscroll transforms the whole day as one child. The earlier `column` run hid them (its intervals over 200 ms were left out).
 - A day switch to a fully built list drops about two frames as the page builds all its slots; a lazy list builds a screenful.
-- At 200 %, the valid day-switch runs are `cache/all` and `cache/visited` (06:56): worst frame per switch 18-66 ms, median 49. The lazy and `Column` runs at 200 % fell in a slowdown.
+- At 200 % (every interval, 08:30): `lazy/all` 18-23 ms per switch; `today/deferred` 18-20 ms to the other days and 27-66 ms to Friday. The earlier `cache` runs (06:56): 18-66 ms, median 49.
 
 ### 200 % text
 
@@ -114,6 +116,7 @@ Twelve flings per variant (six down the day, six back up, `input swipe` over 1,1
 | tree / cache / all | 1028 (970-1095) | 250 | 3 (2-6) | -1 (-8-8) | 3 (2-31) | 0 (0-65) | 131 | **3/3** | 0/3 | 2 of 912 |
 | tree / lazy / visited | 828 (806-861) | 107 | 3 (3-5) | 2 (-6-7) | 3 (1-28) | 7 (0-16) | 166 | 0/3 | 0/3 | 0 of 913 |
 | tree / column / deferred (08:00) | 865 (814-885) | 105 | 3 (2-5) | 5 (0-14) | 3 (2-33) | 48 (0-82) | 132 | **3/3** | **3/3** | |
+| tree / today / deferred (08:30) | | | | | | | | **3/3** | **3/3** | |
 
 - Python's timings do not move with the text size.
 - **The two-step jump fails at 200 %** with a lazy list: the estimate (120 dp per row) is half the real height, so the first jump lands near 1:30 PM, where the 4:30 PM slot is not built, and the key does nothing (screenshot `jump-steps-tree-lazy-all-2.0`). With the whole day built, the key alone lands on 4:30 PM at offset 21,234 px (10,068 at 100 %), and so does the two-step jump.
@@ -127,7 +130,7 @@ Twelve flings per variant (six down the day, six back up, `input swipe` over 1,1
 
 - The slot items carry `key=ft.ScrollKey("slot-<iso>")`. Flutter's `ScrollableControl.scroll_to` looks the key's `GlobalKey` up and calls `Scrollable.ensureVisible` on its context; Flet registers the `GlobalKey` only in `ControlWidget.build` (`control_widget.dart`), so an item Flutter has not built has no context and the call does nothing, silently.
 - `build_controls_on_demand=False` gives Flutter's `ListView(children: [...])` (`list_view.dart`): the widgets are created up front, but a sliver list still builds (mounts) only the children inside the viewport and its cache extent (250 px by default). So the eager flag does not make far items reachable, and it changed no measured number. ux.md §5.2 and §5.6 assumed it did.
-- Built in full (`Column(scroll=AUTO)`, or a `ListView` whose `cache_extent` covers the day), one `scroll_to(scroll_key=...)` landed on the slot every time: `column` and `cache` with all days at 100 %, `cache` at 200 %, and `cache/visited`, `cache/deferred`, `column/visited` and `column/deferred` at both sizes (3/3 each; some of these ran in a slowdown, which does not change whether the slot is reached).
+- Built in full (`Column(scroll=AUTO)`, or a `ListView` whose `cache_extent` covers the day), one `scroll_to(scroll_key=...)` landed on the slot every time: `column` and `cache` with all days at 100 %, `cache` at 200 %, and `cache/visited`, `cache/deferred`, `column/visited`, `column/deferred` and `today/deferred` at both sizes (3/3 each; some of these ran in a slowdown, which does not change whether the slot is reached).
 - `on_scroll` (`ScrollType.END`) reported the landing offset, so a test or a log can confirm a jump.
 
 ### Search field (D-157, F33)
