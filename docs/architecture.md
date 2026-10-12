@@ -4,7 +4,7 @@
 **For:** whoever implements a module, screen or service. **Companion to** [`PLAN.md`](../PLAN.md) §5 and [`decisions.md`](decisions.md), which is binding; §19 lists where this file departs from it.
 
 **Conventions**
-- `D-nn` are decisions, `F1`..`F28` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
+- `D-nn` are decisions, `F1`..`F31` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
 - Every Flet API named here was introspected in the local monorepo (flet-dev/flet `9fbe52a61`, unreleased 1.1.0). An API that does **not exist yet** is marked *(not in Flet yet: Ux/Ex)* and has an interim; §18 is the ledger.
 - Code blocks are sketches: they parse and use only verified APIs, but leave out obvious imports, copy and styling.
 - Each module says when it arrives (P0..P4). Build only what the current phase needs (D-66).
@@ -54,7 +54,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 
 | Module | Responsibility | Phase |
 |---|---|---|
-| `src/main.py` | `ft.run(main)`: logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App)` | P0 |
+| `src/main.py` | `ft.run(main)`: one `ViewMemory` per process (D-143); logging setup, `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `drill_href()`, `parent_of()`, `use_query()` (§5) | P0 |
@@ -107,7 +107,7 @@ def App(memory: ViewMemory):
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create()` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the `ViewMemory` that `main()` created for its `on_view_pop` and passed to `App`, §5.3, §6.3), and the Flet services `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()`, `ft.SemanticsService()` and `ft.StoragePaths()`. A Flet `Service` registers with the page when constructed, so screens never construct one. P2 adds `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`). P3 adds `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create()` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, which `main()` uses for its `on_view_pop` and passes to `App`, §5.3, §6.3), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147), and the Flet services `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()`, `ft.SemanticsService()` and `ft.StoragePaths()`. A Flet `Service` registers with the page when constructed, so screens never construct one. P2 adds `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`). P3 adds `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
 
 ### 4.3 Bootstrap (DATA-35)
 
@@ -140,10 +140,12 @@ async def bootstrap(svc: Services, conference: Conference, prefs: Prefs, favorit
 
     page.on_app_lifecycle_state_change = on_lifecycle
     page.on_platform_brightness_change = on_brightness
+    page.on_close = svc.close                 # a new session replaced this one: stop our loops (D-147)
 ```
 
 - `read_accessibility()` copies `high_contrast` and `reduce_motion or disable_animations` from `get_accessibility_features()` into `Prefs`. Each step has its own error boundary (§16), and `prefs.loaded` is always set.
-- P3 inserts after step 2: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S1/S4 confirm the page handlers fire without `page.update()`.
+- P3 inserts after step 2: restore the account, then (not awaited) one `check_features` and one favourites sync (D-54, D-55); start the sync worker when a mock URL is set. S4 confirmed that the page handlers fire and re-render through store writes without `page.update()`, and the lifecycle sequences the app relies on (D-147): background `inactive, hide, pause`; return `restart, show, resume`; Back on Now on Android adds `detach` and ends the session (F29).
+- **A replaced session (D-147, F30):** on Android a new session can start in the same process (F26, F29). Flet closes the old one (`page.on_close`) but does not unmount it, so its effect tasks keep running. `svc.close()` sets `svc.closed`; the 60 s ticks, the sync worker and a refresh check it, as well as their own effect's stop event, before they write a store. Only `page.on_close` sets `svc.closed`: a screen unmounts on every tab switch, and its cleanup stops only its own effect. U24 would make this unnecessary.
 
 **Refresh triggers (D-40):** start (always); resume (if older than 15 min); a 60 s ticking effect in Now and Schedule while the app is in the foreground (refresh when older than 15 min, recompute time-dependent views); "Refresh" in the status strip; pull-to-refresh once the pinned Flet has `RefreshIndicator` *(not in Flet yet: U1)*.
 
@@ -156,6 +158,7 @@ async def bootstrap(svc: Services, conference: Conference, prefs: Prefs, favorit
 - With `manage_views=True`, each matched route with a component is one `View`; children are tried before the parent's exact match.
 - A `recursive=True` route matches its own pattern once per level, trying its non-recursive children first, and **each level gets its own params** (checked: `/schedule/session/42/speaker/17/session/99` gives three drill levels, `session/42`, `speaker/17`, `session/99`). Params are raw, percent-encoded segments: always `unquote`.
 - Default pop navigates to the previous view entry's resolved path and drops the query (what #313 needs).
+- **Confirmed in S4** (`docs/spikes/04-router-back.md`): per-level params with quoted ids on both platforms (D-141); every Back key and committed predictive gesture reaches our `page.on_view_pop` (D-141); `can_pop=False` + `on_confirm_pop` on a one-View stack (D-142); roots sharing one `View.route` key switch without a transition (D-142). Back on Now finishes the Android activity, and a relaunch is a new session in the same process (F29).
 - **Modal caveat:** with the stock pop handler, when the matched chain contains a `modal=True` route, *every* pop navigates to the modal's base URL, including a pop from a view pushed on top of the modal. An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead (`router.py` delegates before its modal branch; `e.route` is the popped view's route). We use that for search (§5.4, D-19) until U18 lands.
 - `not_found()` output is wrapped in a View. `use_route_location()` is the pathname only (no `use_route_search`, *not in Flet yet: U9*).
 - `View.can_pop=False` with `on_confirm_pop` intercepts system Back even on a one-View stack (Dart `view.dart` wraps the View in `PopScope`); the handler must `await view.confirm_pop(...)`, or the pop waits for a timeout.
@@ -166,7 +169,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 
 | Path | Screen | Kind | Phase | Features |
 |---|---|---|---|---|
-| `/` | `Start`: boot View, then `/welcome`, `/now` or (P3) the staff start screen | index | P0 | SHELL-03 |
+| `/` | `Start`: boot View, then the last location of this process (D-143), `/welcome`, `/now` or (P3) the staff start screen | index | P0 | SHELL-03 |
 | `/welcome` | `Welcome` | root, no bar | P2 | SHELL-02 |
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
 | `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
@@ -264,22 +267,26 @@ def parent_of(route: str, search_base: str = "/now") -> str:
 
 ```python
 # src/main.py (excerpt)
+MEMORY = ViewMemory()                         # one per process: a new session reuses it (D-143, F29)
+
+
 def main(page: ft.Page):
     setup_logging()
-    memory = ViewMemory()
 
     def on_view_pop(e: ft.ViewPopEvent):
-        page.navigate(parent_of(e.route, memory.search_base))
+        page.navigate(parent_of(e.route, MEMORY.search_base))
 
     page.on_view_pop = on_view_pop            # before render_views: the Router hands it every pop (F6)
-    page.render_views(App, memory)            # App passes memory on to Services.create()
+    page.render_views(App, MEMORY)            # App passes memory on to Services.create()
 ```
 
-`use_query()` (U9 interim) calls `ft.use_route_location()` for its hook slot and parses `urlparse(ft.context.page.route).query`, read once at mount. Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirms). An unknown id navigates to the parent path with a SnackBar.
+`Start` (the index route `/`) navigates to `memory.last_location` when it is set, else to `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`.
+
+`use_query()` (U9 interim) calls `ft.use_route_location()` for its hook slot and parses `urlparse(ft.context.page.route).query`, read once at mount. Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown id navigates to the parent path with a SnackBar.
 
 ### 5.4 Search (D-19)
 
-One `Search` component on the global modal route `/search`, opened from Now, Schedule, Map and More with a preset scope (`/search?scope=sessions`, `/search?scope=rooms`); the opener first records its own location, query included, in `ViewMemory.search_base`. Results push details with `drill_href()` (`/search/session/42`), and our `page.on_view_pop` sends Back to `parent_of()`: from a result to the results, from search to `search_base` (§5.3). Query and scope live in `ViewMemory`. S4 verifies search → result → Back.
+One `Search` component on the global modal route `/search`, opened from Now, Schedule, Map and More with a preset scope (`/search?scope=sessions`, `/search?scope=rooms`); the opener first records its own location, query included, in `ViewMemory.search_base`. Results push details with `drill_href()` (`/search/session/42`), and our `page.on_view_pop` sends Back to `parent_of()`: from a result to the results, from search to `search_base` (§5.3). Query and scope live in `ViewMemory`. S4 confirmed search → result → detail → Back → Back to the results with the query kept (D-141). On return Flutter gives the search field its focus back, so the first Android Back only closes the keyboard; P1's search decides how to handle it.
 
 ### 5.5 Scaffold, tabs and Back (D-15..D-18)
 
@@ -296,18 +303,28 @@ TABS = (
 
 def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
                 actions: list[ft.Control] | None = None, fab: ft.Control | None = None,
-                back_to: str | None = None) -> ft.View:
-    """A View with the app bar, its tab's bottom bar and the Back rules (plain builder, no hooks).
+                back_to: str | None = None,
+                on_retap: Callable[[], Awaitable[None]] | None = None) -> ft.View:
+    """A View with the app bar, the bottom bar on tab roots and the Back rules (D-17, D-144).
 
-    `back_to` overrides where the back arrow goes (Search passes its `search_base`).
+    A plain builder that each screen calls unconditionally, so its two hooks are safe (rule 4).
+    `back_to` overrides where the back arrow goes (Search passes its `search_base`);
+    `on_retap` is a root's scroll-to-top, run when its active tab is tapped again.
     """
     page = ft.context.page
+    memory = use_services().memory
     tab = next((i for i, t in enumerate(TABS) if view_path.startswith(t[0])), None)   # None under /search
     is_root = tab is not None and view_path == TABS[tab][0]
     intercept_back = is_root and view_path != "/now"
+    if view_path == ft.use_route_location():                       # the top View of this render
+        memory.last_location = page.route                          # where a new session returns (D-143)
 
     def on_tab(e: ft.Event[ft.NavigationBar]):
-        page.navigate(TABS[e.control.selected_index][0])          # the active tab too: back to its root
+        index = e.control.selected_index
+        if index == tab and on_retap is not None:                  # a re-tap fires on_change too (S4)
+            page.run_task(on_retap)                                 # e.g. await list.scroll_to(offset=0)
+        else:
+            page.navigate(TABS[index][0])
 
     def go_back(e: ft.Event[ft.IconButton]):
         page.navigate(back_to or parent_of(view_path))
@@ -318,7 +335,7 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
 
     back_arrow = None if is_root else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
     return ft.View(
-        route=view_path,
+        route="/" if is_root else view_path,                       # roots share a key: no transition (D-142)
         padding=0,
         appbar=ft.AppBar(title=ft.Text(title), leading=back_arrow, actions=actions or [], center_title=False),
         navigation_bar=ft.NavigationBar(
@@ -327,7 +344,7 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
             destinations=[ft.NavigationBarDestination(icon=i, selected_icon=s, label=label)
                           for _, label, i, s in TABS],
             on_change=on_tab,
-        ) if tab is not None else None,                            # search is a modal: no bar
+        ) if is_root else None,                                    # roots only (D-144); search: none
         floating_action_button=fab,
         can_pop=not intercept_back,
         on_confirm_pop=back_to_now if intercept_back else None,
@@ -336,8 +353,8 @@ def AppScaffold(*, view_path: str, title: str, controls: list[ft.Control],
 ```
 
 - A **tab switch** leaves that root alone on the stack (D-17); roots restore day, filters and scroll from `ViewMemory`/`Prefs` and never scroll by themselves (D-18, #313). **Back** on a root other than Now goes to Now; on Now it exits (Android).
-- The bar shows on every View of a tab's stack, so tapping the active tab returns to its root (D-17); S4 checks it during transitions (§19 #6).
-- **Back arrow (D-10):** Flutter's implied back button shows `arrow_back_ios_new_rounded` on iOS (Flet's theme has no `platform`, F8), so pushed views always show the Material back arrow, which navigates to `parent_of()` (D-19); Search passes `back_to=` its remembered `search_base`. S4 only checks the visual result.
+- **The bar is on tab roots only** (D-144, #149): on pushed Views it travelled with the page (iOS) or doubled (Android) in every transition. Re-tapping the active tab scrolls its root to the top; from a pushed View, Back leads to the root. U23 (a shell bar outside the `Navigator`) would let it return to every View.
+- **Back arrow (D-10):** Flutter's implied back button shows `arrow_back_ios_new_rounded` on iOS (Flet's theme has no `platform`, F8), so pushed views always show the Material back arrow, which navigates to `parent_of()` (D-19); Search passes `back_to=` its remembered `search_base`. S4 showed the Material arrow and a left-aligned title on the iOS simulator.
 - **Tablets (P2, D-09):** at 600 dp and wider, `AppScaffold` puts an `ft.NavigationRail` in a `Row` beside the content (`View.navigation_bar` takes a `NavigationBar`, or a `CupertinoNavigationBar`, which D-10 rules out, but not a `NavigationRail`) and centres content at 720/840 dp.
 - **Insets and system bars (#311, D-12):** `SafeArea` bodies, `use_safe_area=True` sheets, and `Theme.system_overlay_style` per colour scheme (§15, D-113); S1 checked 3-button and gesture navigation, in light and dark. The `SafeArea` also keeps landscape content clear of the side navigation bar.
 
@@ -445,7 +462,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 ```python
 @dataclass
 class ViewMemory:
-    """Where the user left each screen, for this app session.
+    """Where the user left each screen, for this app process (D-143).
 
     Plain, not observable: a screen reads it once to seed its own state and writes it back from its
     handlers, so remembering a scroll offset never re-renders another screen.
@@ -458,9 +475,10 @@ class ViewMemory:
     search_scope: str = "all"
     search_base: str = "/now"            # where search was opened from; Back returns there (D-19)
     map_tab: str = "rooms"
+    last_location: str = ""              # the top View's route; Start returns a new session there (D-143)
 ```
 
-Filters are preferences (persisted in `Prefs`); positions are session memory (here).
+Filters are preferences (persisted in `Prefs`); positions are process memory (here). One `ViewMemory` lives as long as the Python process, so a new session after an activity recreation or a Back exit on Android (F26, F29) finds the positions and the last location as the user left them (D-143).
 
 ### 6.4 Screen pattern
 
@@ -1153,7 +1171,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         font_family="packages/roboto_fonts/Roboto",         # D-26, D-105: the bundled font package
         appbar_theme=ft.AppBarTheme(center_title=False),
         page_transitions=ft.PageTransitionsTheme(
-            android=ft.PageTransitionTheme.PREDICTIVE,        # D-11, prov. O-2
+            android=ft.PageTransitionTheme.PREDICTIVE,        # D-11, D-148
             ios=ft.PageTransitionTheme.CUPERTINO,             # keeps the iOS edge swipe
         ),
     )
@@ -1250,18 +1268,16 @@ A last-resort net, not error handling (§16.1). Details show when not embedded o
 | S1 | **Done** (`docs/spikes/01-packaged-runtime.md`): data dir survives updates (D-108); `tzdata`, `httpx`, `sqlite3`, SecureStorage on device; parsing stays on the loop (D-109); overlay style and insets (D-113). Page handlers firing without `page.update()` moved to S4 |
 | S2 | row architecture; `build_controls_on_demand=False` per day list so `scroll_to(scroll_key=...)` reaches unbuilt slots (F7) |
 | S3 | **Done** (`docs/spikes/03-html-markdown.md`): the converter covers both feeds' 17 tags with no text change; escaping (D-115) and the style sheet (D-116); E5 cut (D-117) |
-| S4 | `Drill` returning a component; per-level params; root `can_pop=False` + `on_confirm_pop` → Now; global-modal search with pushed results through our `on_view_pop` (`parent_of()`); the bar on detail Views during transitions; the Material back arrow on iOS; from S1: page handlers fire without `page.update()`, and the boot gate survives a new session after an Android activity recreation (F26) |
+| S4 | **Done** (`docs/spikes/04-router-back.md`): the drill shape and per-level params (D-141); every pop through our `on_view_pop` (D-141); D-17's root rule (D-142); one root View key (D-142); the bar on roots only (D-144); `ViewMemory` per process with the start route restoring the location (D-143); a replaced session stops its work from `page.on_close` (D-147); page handlers without `page.update()` (D-147); transitions (D-148). The iOS edge swipe is held for #121 |
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
 | S6, S7, S8 | E3 reminders; floor plans in `InteractiveViewer`; E1 scanning |
 
-**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
+**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); a shell bar outside the `Navigator` (U23 → the bar on roots only, D-144); unmounting a replaced session (U24 → `page.on_close` stops our loops, D-147); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
 
 ---
 
 ## 19. Discrepancies with PLAN.md and decisions.md
 
-This file follows the right-hand column; each open row needs a `needs-decision` issue or an amendment in the implementing PR. Row numbers are stable ids (other docs cite them) and are never reused. Resolved in the decisions record on 2026-10-11, so retired: #1 search (D-19), #2 the `plan/<plan>` drill kind (§M), #3 the change-log path (§M; matrix NEW-04), #4 Roboto (D-26), #5 positions in `ViewMemory` (D-18), #7 the P3 storage keys (§M), #8 no parser-version key (D-47), #9 `services/api.py` from P0 (PLAN §5), #10 the mock's `transport.py` and `badges.py` and the QR library (D-50, D-75, §M).
+This file follows the right-hand column; each open row needs a `needs-decision` issue or an amendment in the implementing PR. Row numbers are stable ids (other docs cite them) and are never reused. Resolved in the decisions record on 2026-10-11, so retired: #1 search (D-19), #2 the `plan/<plan>` drill kind (§M), #3 the change-log path (§M; matrix NEW-04), #4 Roboto (D-26), #5 positions in `ViewMemory` (D-18), #7 the P3 storage keys (§M), #8 no parser-version key (D-47), #9 `services/api.py` from P0 (PLAN §5), #10 the mock's `transport.py` and `badges.py` and the QR library (D-50, D-75, §M). Resolved by S4 on 2026-10-12: #6 the bar on detail Views (D-144, #149: roots only).
 
-| # | PLAN / decisions | This design, and why |
-|---|---|---|
-| 6 | D-17: tapping the active tab returns to its root | Needs the bar on detail Views, which this design does; if S4 finds that looks wrong in transitions, the bar moves to roots and re-tap becomes "scroll to top" (ux.md UQ-1). |
+No rows are open.

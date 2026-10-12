@@ -1,0 +1,61 @@
+# S4 reproducer (docs/spikes/04-router-back.md): the five tab roots, the recursive
+# drill route, the global modal search and the D-17 Back rule, built on their own.
+# It uses the repo's .flet-src checkout through relative paths, so build it from
+# this folder:
+#
+#   uv sync
+#   uv run python check_routes.py                       # host: matching and parent_of()
+#   uv run flet build apk --arch arm64-v8a --build-number 1
+#   uv run flet build ios-simulator --build-number 1
+#
+# Nothing here is part of the app; src/ of the repo is untouched.
+
+[project]
+name = "s4-router-back"
+version = "0.0.1"
+description = "S4 spike: the Router, the recursive drill route and native Back."
+requires-python = ">=3.14,<3.15"
+dependencies = ["flet"]
+
+[dependency-groups]
+dev = [
+    "flet-cli",
+    "flet-web",
+    "flet-desktop",
+    "flet-platform-assets",
+]
+
+[tool.flet]
+product = "S4 Router"
+bundle_id = "io.github.ndonkohenri.pyconus.s4"   # throwaway id, never uploaded
+
+[tool.flet.app]
+path = "src"
+
+# Deep entry on both platforms (D-21 configures the app's own scheme in P2):
+# adb shell am start -a android.intent.action.VIEW -d "s4spike://s4/now/session/42"
+# xcrun simctl openurl <udid> "s4spike://s4/now/session/42"
+[tool.flet.android.deep_linking]
+scheme = "s4spike"
+host = "s4"
+
+[tool.flet.ios.deep_linking]
+scheme = "s4spike"
+host = "s4"
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false
+
+# The same pin as the app (D-81): a source checkout in the repo root's .flet-src.
+[tool.uv.sources]
+flet = { path = "../../../.flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = "../../../.flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = "../../../.flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = "../../../.flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = "../../../.flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+
+[tool.flet.dev_packages]
+flet = "../../../.flet-src/sdk/python/packages/flet"

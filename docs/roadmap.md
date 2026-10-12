@@ -174,7 +174,7 @@ test, area:shell
 
 Walk Now → session → speaker → session → room through a recursive drill route with Android back, predictive back, the iOS edge swipe, tab re-taps, resume and the modal `/search`.
 
-- Verdict in `docs/spikes/04-routing.md`; per-level params confirmed or the `s~id` fallback chosen.
+- Verdict in `docs/spikes/04-router-back.md` (done: D-141..D-149); per-level params confirmed or the `s~id` fallback chosen.
 - `PageTransitionsTheme(android=PREDICTIVE, ios=CUPERTINO)` confirmed on devices (O-2).
 
 #### S5 · Spike: can we build and ship internally from the pinned Flet 1.1?
@@ -339,7 +339,7 @@ feature, area:shell · after S4, P0-20 · SHELL-03, SHELL-04
 
 feature, area:shell · after P0-22 · SHELL-05, SHELL-16
 
-`ft.NavigationBar` with Now, Schedule, My schedule, Map and More; re-tapping a tab returns to its root; Back on a non-Now root goes to Now, and Back on Now exits.
+`ft.NavigationBar` with Now, Schedule, My schedule, Map and More, on tab roots only (D-144); re-tapping the active tab scrolls its root to the top; Back on a non-Now root goes to Now, and Back on Now exits.
 
 - The bar is the same for every user and on both platforms.
 - Back pops exactly one view; iOS edge swipe and Android predictive back work.

@@ -52,7 +52,7 @@ ft.NavigationBar(
 ```
 
 - Identical for every user; never changes with sign-in or role (SHELL-05). Never `adaptive=True`. The M3 indicator pill replaces Ionic's magenta label (4.18:1).
-- The bar shows on every View of a tab's stack, root and pushed, so tapping the active tab can return to its root (D-17, architecture §19 #6); pushed Views add a back arrow. S4 checks the bar during transitions (UQ-1).
+- The bar shows on tab roots only (D-144, #149); pushed Views show the back arrow and no bar. S4 found that a bar on pushed Views slid across with the page on iOS and doubled during Android transitions and predictive Back.
 - The My schedule star is the favourite star, so tab and action read as one idea. Speakers live in More and search.
 
 ### 2.2 More (D-15)
@@ -95,14 +95,14 @@ Drill under every root, More page and search (one pushed View per hop):
 
 1. **Detail chains are a real stack.** Every cross-link pushes one View via the drill route, so session → speaker → session → room pops one hop at a time (SESS-12). The View below stays mounted and keeps its scroll.
 2. **Tab switch** shows that tab's root. Root state lives outside screen state (D-18): filters in `Prefs`; the Schedule day and offset, the My schedule offset, and the Map sub-tab and zoom in `ViewMemory` (architecture §6.3). Offsets come back with `ListView.scroll_to(offset=...)`.
-3. **Re-tapping the active destination** on a pushed View returns to that tab's root (D-17); on the root it scrolls to the top. If S4 shows the bar looks wrong on pushed Views during transitions, the bar moves to roots only and re-tap becomes "scroll to top"; that changes D-17, so it goes through a `needs-decision` issue (UQ-1).
-4. **Android Back** on a root other than Now goes to Now; on Now it exits (`View.can_pop=False` + `on_confirm_pop`, checked in S4) (SHELL-16).
-5. **Transitions:** `ft.PageTransitionsTheme(android=ft.PageTransitionTheme.PREDICTIVE, ios=ft.PageTransitionTheme.CUPERTINO)` keeps iOS edge-swipe and Android predictive Back (prov. O-2). Tab switches do not animate: root Views may share one `View.route` key, a case the Router's pop handler explicitly supports (`components/router.py`); S4 confirms.
+3. **Re-tapping the active destination** scrolls its root to the top. The bar is on roots only (D-144, settled in #149 after S4), so from a pushed View, Back leads to the root.
+4. **Android Back** on a root other than Now goes to Now; on Now it exits (`View.can_pop=False` + `on_confirm_pop`, D-142) (SHELL-16).
+5. **Transitions:** `ft.PageTransitionsTheme(android=ft.PageTransitionTheme.PREDICTIVE, ios=ft.PageTransitionTheme.CUPERTINO)` keeps iOS edge-swipe and Android predictive Back (D-148, settling O-2). Tab switches do not animate: root Views share one `View.route` key, `"/"`, a case the Router's pop handler explicitly supports (`components/router.py`) (D-142; with a key per root, S4 saw a tab switch slide in like a detail).
 6. **Insets (#311, D-12).** System bars are never hidden. Bodies sit in `ft.SafeArea`; lists pad their end by `page.media.padding.bottom` plus FAB clearance; sheets use `use_safe_area=True`. Checked with 3-button and gesture navigation and on an iPhone with a home indicator.
 
-### 2.5 Route shapes and Back targets (decisions §M, D-19; S4 confirms)
+### 2.5 Route shapes and Back targets (decisions §M, D-19; confirmed by S4, D-141, D-141)
 
-- **Search returns to its results on Back** (D-19). Search is the global modal `/search?scope=` (decisions §M). The stock Router would pop every view of a modal chain to the modal's base (`components/router.py`: the `on_view_pop` handler, lines 672-711, modal branch 685-687; modal detection and the pop target, lines 744-797), but a `page.on_view_pop` installed before `page.render_views(App)` takes precedence (lines 676-679). So Back from a result returns to the results through the app's own `page.on_view_pop` and `parent_of()` (D-19), which S4 verifies; the handler goes once U18 lands.
+- **Search returns to its results on Back** (D-19). Search is the global modal `/search?scope=` (decisions §M). The stock Router would pop every view of a modal chain to the modal's base (`components/router.py`: the `on_view_pop` handler, lines 672-711, modal branch 685-687; modal detection and the pop target, lines 744-797), but a `page.on_view_pop` installed before `page.render_views(App)` takes precedence (lines 676-679). So Back from a result returns to the results through the app's own `page.on_view_pop` and `parent_of()` (D-19, D-141); the handler goes once U18 lands.
 - **Schedule changes** is `/schedule/changes` (decisions §M), opened from Now, a SnackBar or Settings. Returning to the opener on Back rather than to the Schedule root would need `parent_of()` to remember the opener, as it does for search (D-19); that is a proposal pending a `needs-decision` issue.
 - **Floor plans push from anywhere** (rooms, sessions, Help, Venue, More, and sponsor "Find booth", SPON-04) through the fifth drill kind `plan/<plan>` (decisions §M, architecture §5.2): plan ids from `map.toml`, including `expo` and `job-fair`, with `?pin=<room key>` or `?booth=<n>`.
 
@@ -616,8 +616,8 @@ Each default applies until the owner decides. Decision-level questions (O-1 tabs
 
 | # | Question | Default |
 |---|---|---|
-| UQ-1 | Bottom bar on pushed detail Views too? With one View per level each pushed View carries its own bar, which slides with the page | On every View, as D-17 and architecture §19 #6 require; S4 checks it in transitions. Roots only (re-tap scrolls to top) would amend D-17 through a `needs-decision` issue |
-| UQ-2 | The route shapes in §2.5 | Search: S4 confirms D-19 (global modal plus our `page.on_view_pop`). The `plan/<plan>` drill kind is in §M. Schedule changes returning to its opener: a `needs-decision` issue to amend §M |
+| UQ-1 | Bottom bar on pushed detail Views too? With one View per level each pushed View carries its own bar, which slides with the page | **Settled (#149, D-144):** roots only. S4 saw the bar slide across on iOS and double on Android; re-tap scrolls to top. U23 could bring it back |
+| UQ-2 | The route shapes in §2.5 | Search: S4 confirmed D-19 (global modal plus our `page.on_view_pop`; D-141). The `plan/<plan>` drill kind is in §M. Schedule changes returning to its opener: a `needs-decision` issue to amend §M |
 | UQ-3 | Breaks and meals on the Schedule: compact notices or hidden by default? | Shown as `NoticeRow`s |
 | UQ-8 | 2027 booth geometry: hand-tag with a Developer overlay that prints tapped ratios, or derive from a PDF? | Developer overlay |
 

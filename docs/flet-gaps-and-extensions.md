@@ -80,7 +80,7 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | U11 | Offline service worker for `flet build web` | No web target (D-08) |
 | U14 | Verified App Links / universal links | They need the PSF domain (D-21) |
 
-**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists four as later candidates (U19..U22); the rest get an id only when a feature needs them, and the last three are small fixes the owner can file directly.
+**Noted, not scheduled.** These are small gaps the UX studies, the architecture and the tooling checks raised. Each has a working interim. D-98 lists six as later candidates (U19..U24); the rest get an id only when a feature needs them, and the last three are small fixes the owner can file directly.
 
 | Gap | Interim | Possible upstream piece |
 |---|---|---|
@@ -91,6 +91,8 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | Secure screen (`FLAG_SECURE`, iOS snapshot blur) for staff PII | Clear result panels when the app goes to the background (P3) | A `page` flag |
 | `ft.Markdown` always adds LaTeX syntax, so `$…$`, `( … )` and `[ … ]` in text render as math (U21, D-117, F27) | Escape text with numeric character references (D-115); open-space Markdown passes through unescaped | A flag (or extension-set entry) that turns LaTeX on, off by default; `DART/controls/markdown.dart` |
 | A partial `MarkdownStyleSheet` replaces the theme's text styles instead of merging; links default to `Colors.blue` (U22, D-117, F28) | One app style sheet whose text styles all name their colour (D-116) | Merge given styles over the theme-derived ones; links and block quotes from the colour scheme; `DART/utils/markdown.dart` |
+| A `NavigationBar` lives on its `View`, so with one View per drill level it moves with every pushed page (U23, D-149) | The bar on tab roots only (D-144) | A shell that keeps one bar outside the `Navigator` while `manage_views` Views push and pop, like go_router's `ShellRoute`; `FLET/components/router.py` and the Dart page |
+| A replaced session is closed but not unmounted: effect cleanups don't run and effect tasks keep running (U24, D-149, F30) | `page.on_close` sets `svc.closed`, which every long-running loop checks (D-147) | On close, unmount the component tree (run cleanups, cancel effect tasks) and stop rendering after `detach`; `FLET/messaging/session.py`, `flet_dart_bridge_server.py` |
 | Multi-weight families in `page.fonts` (one static file per family, no weights) (U20, D-98) | Declare the Roboto 400/500/700 family through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26) | `page.fonts` accepting a family with weighted files; schedule it only if S5 shows the pubspec route fails |
 | An `async def` `use_effect` cleanup is cancelled before it starts on a dependency change (F2) | Sync cleanups only (D-70 rule 3) | In the setup branch, cancel only the previous setup task, so async cleanups run |
 | `flet debug android\|ios --show-devices` exits with "Device ID must be specified": `check_device_id()` runs before the `--show-devices` branch (flet-cli `commands/debug.py:108-110`) | `flet devices` | Run the device check after that branch |
