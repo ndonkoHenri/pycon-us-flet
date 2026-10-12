@@ -157,6 +157,8 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | Zoom-to-booth | Select + highlight, no camera move | **U3** absolute `InteractiveViewer` transform | 6 (app: later) |
 | Query-string hook | `use_query()` | **U9** `use_route_search()` | 6 (app: later) |
 | Back from a result pushed over the modal search | Our `page.on_view_pop` with `parent_of()` (D-19) | **U18** per-level pops inside a modal sub-chain | 6 (app: later) |
+| A bar on pushed Views moves with every page | The bar on tab roots only (D-144) | **U23** a shell bar outside the `Navigator` | later |
+| A replaced session's effects keep running | `page.on_close` stops our loops (D-146) | **U24** closing a session unmounts it | later |
 | iOS adaptations Flet cannot pin; weights in `page.fonts` | Accepted residuals (D-10); Roboto through the pubspec (D-26) | **U19** `Theme.platform`; **U20** multi-weight `page.fonts` | later |
 | HTML, native calendar | HTML→Markdown; `.ics` share | **E5**, **E4** | later |
 
@@ -343,7 +345,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
 
 ---
 

@@ -26,7 +26,12 @@ T0 = time.perf_counter()
 # Module state survives a new session in the same process (F26); the spike counts
 # sessions with it and keeps the knobs More toggles.
 SESSIONS_STARTED = [0]
-KNOBS = {"shared_root_key": True, "memory_per_process": False, "stop_on_close": False}
+KNOBS = {
+    "shared_root_key": True,
+    "bar_on_pushed": True,
+    "memory_per_process": False,
+    "stop_on_close": False,
+}
 LEVELS: dict[str, tuple[str, str]] = {}  # view path -> (kind, ident) as rendered
 
 
@@ -176,7 +181,9 @@ def scaffold(
             else ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
             actions=actions or [],
         ),
-        navigation_bar=nav_bar(tab, on_tab) if tab is not None else None,
+        navigation_bar=nav_bar(tab, on_tab)
+        if tab is not None and (is_root or KNOBS["bar_on_pushed"])
+        else None,
         can_pop=not intercept_back,
         on_confirm_pop=back_to_now if intercept_back else None,
         controls=[
@@ -358,6 +365,11 @@ def More() -> ft.View:
             label="Stop effects on close",
             value=KNOBS["stop_on_close"],
             on_change=lambda: toggle("stop_on_close"),
+        ),
+        ft.Switch(
+            label="Bar on pushed Views",
+            value=KNOBS["bar_on_pushed"],
+            on_change=lambda: toggle("bar_on_pushed"),
         ),
         ft.Text(f"pid {os.getpid()} · memory {id(memory):x} · route {page.route}"),
     ]
@@ -556,6 +568,8 @@ def App(memory: ViewMemory):
 def main(page: ft.Page) -> None:
     """Set our view-pop handler, then render the views (D-19)."""
     SESSIONS_STARTED[0] += 1
+    if os.environ.get("S4_BAR_ON_PUSHED") == "0":  # simctl launch can't tap a knob
+        KNOBS["bar_on_pushed"] = False
     memory = _PROCESS_MEMORY if KNOBS["memory_per_process"] else ViewMemory()
     log(
         "main", pid=os.getpid(), route=page.route, memory=f"{id(memory):x}", knobs=KNOBS

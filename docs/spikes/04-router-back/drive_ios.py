@@ -104,7 +104,9 @@ def main() -> None:
     try:
         time.sleep(2)
         subprocess.run(["xcrun", "simctl", "terminate", UDID, APP_ID], check=False)
-        simctl("launch", UDID, APP_ID, env={"SIMCTL_CHILD_S4_JOURNEY": "1"})
+        bar = os.environ.get("S4_BAR_ON_PUSHED", "1")  # 0: the bar on roots only
+        env = {"SIMCTL_CHILD_S4_JOURNEY": "1", "SIMCTL_CHILD_S4_BAR_ON_PUSHED": bar}
+        simctl("launch", UDID, APP_ID, env=env)
         seen = 0
         end = time.time() + 120
         while time.time() < end and not wait(r"S4 journey-done", 0, 0.1):
