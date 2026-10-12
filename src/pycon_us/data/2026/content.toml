@@ -1,6 +1,11 @@
 # PyCon US 2026: content the app shows (D-45). Loaded by pycon_us.config.load_year().
-# For now it holds only the display-time overrides; links, Wi-Fi, safety contacts,
+# For now it holds only what feed processing needs; links, Wi-Fi, safety contacts,
 # keynotes and the rest arrive with their screens.
+
+# The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
+# names ("Lunch (Hall AB)") and "Expo Hall AB" elsewhere, so a room named "Hall ..." gets
+# this prefix and both land in one room (D-122; Ionic's rule, DATA-06, DATA-08).
+hall_prefix = "Expo "
 
 # Shift the displayed start of a session without moving it in the timeline (DATA-11).
 # `match` is a regular expression matched case-insensitively against the whole cleaned

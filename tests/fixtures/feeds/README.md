@@ -12,7 +12,7 @@ Notes for readers of the tests:
 
 - 2025 is in Eastern time (`-04:00`), 2026 in Pacific time (`-07:00`).
 - The 2025 feed has no `posters`, `sprints` or `job-listings` sections; its posters sit in the
-  `sessions` list of one `poster` slot (`conf_key` 154).
+  `sessions` list of one `poster` slot (`conf_key` 154), and processing reads them as posters (D-121).
 - Edge cases are built in the tests from deep copies of these files, never as hand-written JSON.
 
 To record the 2027 feed when it appears: `curl -sSfo tests/fixtures/feeds/conference-2027.json

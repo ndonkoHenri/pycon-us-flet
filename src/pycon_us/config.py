@@ -135,9 +135,17 @@ class DisplayTimeOverride:
 
 @dataclass(frozen=True)
 class Content:
-    """The year's content from ``content.toml``; for now only the display-time overrides."""
+    """The year's content from ``content.toml``; for now only what feed processing needs.
+
+    Attributes:
+        display_time_overrides: Displayed starts to shift (DATA-11).
+        hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere: a
+            ``Lunch (Hall AB)`` is served in ``Expo Hall AB`` in 2026 (D-122). Empty
+            when the feed names its halls the same way everywhere.
+    """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
+    hall_prefix: str = ""
 
 
 @dataclass(frozen=True)
@@ -150,7 +158,11 @@ class YearData:
     @property
     def feed_settings(self) -> FeedSettings:
         """What feed processing needs from this year's data."""
-        return FeedSettings(time_zone=self.conference.zone)
+        return FeedSettings(
+            time_zone=self.conference.zone,
+            site_url=self.conference.site_url,
+            hall_prefix=self.content.hall_prefix,
+        )
 
 
 def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
@@ -260,6 +272,8 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         url = urlsplit(getattr(conference, key))
         if url.scheme != "https" or not url.hostname:
             raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")
+    if not conference.site_url.endswith("/"):  # site-relative links resolve against it
+        raise YearDataError(f"{file}: site_url: expected a final '/'")
     seen: set[str] = set()
     for index, track in enumerate(conference.tracks):
         if track.key in seen:

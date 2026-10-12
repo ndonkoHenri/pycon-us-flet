@@ -6,7 +6,8 @@ Objects refer to each other by string id only, so there are no cycles: queries l
 in ``ConferenceData`` and return fresh view models instead of mutating these.
 
 Feed processing fills the fields in stages. Decoding (P0-10) gives what the feed states;
-Ionic's rules (P0-11, P0-12) add cleaned names, tracks, flags and rooms.
+Ionic's rules (``core/rules.py``) decide what becomes a session (P0-11) and add cleaned
+names, flags and rooms (P0-12).
 """
 
 import datetime as dt
@@ -36,21 +37,32 @@ class Session:
     """One item of the schedule: a talk, tutorial, break, notice and so on.
 
     Attributes:
-        id: A stable string id (D-42); for a schedule slot, its ``conf_key``.
-        name: The name as the feed gives it (cleaned by P0-12).
-        kind: The feed's kind, e.g. ``talk`` or ``sponsor-workshop``.
-        location: The feed's room text; several rooms are joined by ", ".
-        description: The feed's HTML description; empty when there is none.
+        id: A stable string id in one of Ionic's four forms (D-42, DATA-26): a slot's
+            ``conf_key``; an open space's ``conf_key + 9000``; ``poster-detail-<conf_key>``;
+            or ``<kind>-<room>-<start>`` for a collapsed row.
+        name: The name as the feed gives it (cleaned by P0-12); ``Posters``, ``Lunch`` and
+            so on for a collapsed row.
+        kind: The feed's kind, e.g. ``talk``, ``sponsor-workshop`` or ``open-space``.
+        track: The track key (DATA-14): the kind with its first letter upper-cased, or
+            ``Sponsor Presentation`` for ``sponsor-workshop`` and ``Open Space`` for open
+            spaces. ``config.ConferenceInfo.track()`` gives its display names.
+        location: The room text; several rooms are joined by ", ".
+        description: The feed's description, empty when there is none: HTML, except
+            Markdown for an open space (DATA-25).
         start: When it starts: aware, in the conference zone.
         end: When it ends, never before ``start``; equal for a notice.
         day: The conference-local date of ``start``: the day it is listed under.
         speaker_ids: Its speakers, in the feed's order.
         url: Its page on the conference site; empty when there is none.
+        image_url: An open space's image, absolute; empty when there is none.
+        in_timeline: Whether the schedule's days list it; poster details are reached from
+            the Posters row, tracks, rooms, speakers and search instead (DATA-07).
     """
 
     id: str
     name: str
     kind: str
+    track: str
     location: str
     description: str
     start: dt.datetime
@@ -58,6 +70,8 @@ class Session:
     day: dt.date
     speaker_ids: tuple[str, ...]
     url: str
+    image_url: str
+    in_timeline: bool
 
 
 @dataclass(frozen=True, eq=False)
@@ -148,12 +162,16 @@ class ConferenceData:
     """One processed feed: everything the screens show about the schedule.
 
     Attributes:
-        sessions: Every session by id, in feed order.
-        speakers: Every speaker by id, in order of first appearance.
-        days: The schedule's days, sorted by date.
+        sessions: Every session by id: the schedule's slots in feed order, then the
+            collapsed rows, the open spaces and the poster details.
+        speakers: Every speaker of a session or poster by id, in order of first appearance.
+        days: The schedule's days, sorted by date; they hold the sessions in the timeline.
         posters: The posters, in feed order.
         sprints: The sprint projects, in feed order.
         job_listings: The job listings, in feed order.
+        dropped: The ids of the records that did not become sessions of their own, by the
+            rule that removed them (DATA-04..06): e.g. ``placeholder``, or ``collapsed`` for
+            the slots folded into a collapsed row. An open space's id is its session id.
         skipped: One line per feed record that could not be read, naming it and why.
     """
 
@@ -163,4 +181,5 @@ class ConferenceData:
     posters: tuple[Poster, ...]
     sprints: tuple[Sprint, ...]
     job_listings: tuple[JobListing, ...]
+    dropped: Mapping[str, tuple[str, ...]]
     skipped: tuple[str, ...]

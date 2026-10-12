@@ -1,73 +1,67 @@
 """Tests for decoding the feed into the model (D-41, D-42; DATA-01, DATA-13, DATA-24, DATA-26).
 
 They run on the recorded 2025 and 2026 feeds, under two machine time zones (``machine_tz``).
-Edge cases are deep copies of the recorded feeds with one record changed.
+Edge cases are deep copies of the recorded feeds with one record changed. Ionic's rules
+have their own tests in ``test_rules.py``.
 """
 
-import json
 import logging
+import re
 from collections.abc import Callable
 from datetime import date, datetime
-from functools import cache
-from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
 from pycon_us.config import load_year
-from pycon_us.core.feed import FeedError, FeedSettings, process
-from pycon_us.core.models import ConferenceData
+from pycon_us.core.feed import FeedError, process
+from tests.feeds import YEARS, changed, document, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
-FEEDS = Path(__file__).parent / "fixtures" / "feeds"
-YEARS = [2025, 2026]
-
-
-@cache
-def recorded(year: int) -> bytes:
-    return (FEEDS / f"conference-{year}.json").read_bytes()
-
-
-def settings(year: int) -> FeedSettings:
-    return load_year(year).feed_settings
-
-
-def decoded(year: int) -> ConferenceData:
-    return process(recorded(year), settings(year))
-
-
-def changed(year: int, change: Callable[[dict[str, Any]], object]) -> bytes:
-    """The recorded feed with ``change`` applied to a fresh copy of its JSON."""
-    document = json.loads(recorded(year))
-    change(document)
-    return json.dumps(document).encode()
+KEPT = 5  # the index of a 2026 slot that becomes a session ("Registration Desk Opens")
+ID_FORMS = re.compile(
+    r"\d+|poster-detail-\d+|(break|poster)-.*-\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d"
+)
 
 
 @pytest.mark.parametrize("year", YEARS)
-def test_recorded_feed_decodes_every_slot(year: int) -> None:
-    slots = json.loads(recorded(year))["schedule"]
-    data = decoded(year)
-    assert data.skipped == ()
-    assert len(data.sessions) == len(slots)
+def test_recorded_feeds_have_no_unreadable_record(year: int) -> None:
+    assert processed(year).skipped == ()
 
 
 @pytest.mark.parametrize("year", YEARS)
-def test_session_ids_are_the_slots_conf_keys_as_strings(year: int) -> None:
-    slots = json.loads(recorded(year))["schedule"]
-    data = decoded(year)
-    assert list(data.sessions) == [str(slot["conf_key"]) for slot in slots]
-    assert all(type(session.id) is str for session in data.sessions.values())
-    assert all(
-        session_id == session.id for session_id, session in data.sessions.items()
-    )
+def test_every_slot_is_a_session_or_dropped_by_one_rule(year: int) -> None:
+    slots = [str(slot["conf_key"]) for slot in document(year)["schedule"]]
+    data = processed(year)
+    own = [
+        s.id
+        for s in data.sessions.values()
+        if s.id.isdigit() and s.kind != "open-space"
+    ]
+    dropped = [
+        i
+        for rule, ids in data.dropped.items()
+        if rule != "unscheduled-open-space"
+        for i in ids
+    ]
+    assert sorted(own + dropped) == sorted(slots)
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_ids_are_strings_in_known_forms(year: int) -> None:
+    """DATA-26, D-42: Ionic's four id forms, as strings, keyed by themselves."""
+    data = processed(year)
+    for session_id, session in data.sessions.items():
+        assert type(session.id) is str and session_id == session.id
+        assert ID_FORMS.fullmatch(session.id), session.id
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_time_group_has_an_aware_start_in_the_conference_zone(year: int) -> None:
     zone = load_year(year).conference.zone
-    data = decoded(year)
+    data = processed(year)
     for day in data.days:
         starts = [group.start for group in day.groups]
         assert starts == sorted(set(starts)), day.date
@@ -79,30 +73,34 @@ def test_every_time_group_has_an_aware_start_in_the_conference_zone(year: int) -
 
 
 @pytest.mark.parametrize("year", YEARS)
-def test_every_session_is_in_exactly_one_group(year: int) -> None:
-    data = decoded(year)
+def test_every_timeline_session_is_in_exactly_one_group(year: int) -> None:
+    data = processed(year)
     grouped = [
         i for day in data.days for group in day.groups for i in group.session_ids
     ]
-    assert sorted(grouped) == sorted(data.sessions)
+    assert sorted(grouped) == sorted(
+        s.id for s in data.sessions.values() if s.in_timeline
+    )
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_days_are_conference_dates_in_order(year: int) -> None:
     conference = load_year(year).conference
-    days = [day.date for day in decoded(year).days]
+    days = [day.date for day in processed(year).days]
     assert days == sorted(days)
     assert conference.first_day <= days[0] and days[-1] <= conference.last_day
 
 
 def test_2026_has_five_schedule_days() -> None:
-    assert [day.date for day in decoded(2026).days] == [
+    assert [day.date for day in processed(2026).days] == [
         date(2026, 5, d) for d in range(13, 18)
     ]
 
 
 def test_2025_times_stay_in_eastern_time() -> None:
-    session = decoded(2025).sessions["1745"]  # "Registration / Information Desks Open"
+    session = processed(2025).sessions[
+        "1745"
+    ]  # "Registration / Information Desks Open"
     eastern = ZoneInfo("America/New_York")
     assert session.start == datetime(2025, 5, 14, 7, 0, tzinfo=eastern)
     assert session.start.tzinfo == eastern
@@ -112,36 +110,42 @@ def test_2025_times_stay_in_eastern_time() -> None:
 def test_a_late_evening_session_stays_on_its_local_day() -> None:
     # 23:30 Pacific on Friday is already Saturday in UTC and in Kiritimati.
     def late(doc: dict[str, Any]) -> None:
-        doc["schedule"][0].update(
+        doc["schedule"][KEPT].update(
             start="2026-05-15T23:30:00-07:00", end="2026-05-15T23:45:00-07:00"
         )
 
     data = process(changed(2026, late), settings(2026))
-    session_id = str(json.loads(recorded(2026))["schedule"][0]["conf_key"])
+    session_id = str(document(2026)["schedule"][KEPT]["conf_key"])
     assert data.sessions[session_id].day == date(2026, 5, 15)
     (friday,) = [day for day in data.days if day.date == date(2026, 5, 15)]
     assert session_id in friday.groups[-1].session_ids
 
 
 def test_slot_fields_are_decoded() -> None:
-    session = decoded(2026).sessions["1136"]
-    slot = next(
-        s for s in json.loads(recorded(2026))["schedule"] if s["conf_key"] == 1136
-    )
-    assert (session.name, session.kind, session.location) == (
+    slot = next(s for s in document(2026)["schedule"] if s["kind"] == "talk")
+    session = processed(2026).sessions[str(slot["conf_key"])]
+    assert (session.name, session.kind, session.track, session.location) == (
         slot["name"],
         slot["kind"],
+        "Talk",
         slot["room"],
     )
     assert session.description == slot["description"]
     assert session.url == slot.get("conf_url", "")
 
 
-def test_speakers_are_registered_once_by_id_from_slots_and_posters() -> None:
-    document = json.loads(recorded(2026))
-    records = [s for slot in document["schedule"] for s in slot.get("speakers") or []]
-    records += [s for poster in document["posters"] for s in poster["speakers"]]
-    data = decoded(2026)
+@pytest.mark.parametrize("year", YEARS)
+def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
+    year: int,
+) -> None:
+    # No dropped slot carries speakers, so every speaker record of the feed is registered.
+    doc = document(year)
+    slots = doc["schedule"]
+    records = [s for slot in slots for s in slot.get("speakers") or []]
+    records += [s for poster in doc.get("posters", []) for s in poster["speakers"]]
+    nested = [p for slot in slots for p in slot.get("sessions") or []]  # 2025 (D-121)
+    records += [s for poster in nested for s in poster["speakers"]]
+    data = processed(year)
     assert set(data.speakers) == {str(record["id"]) for record in records}
     for session in data.sessions.values():
         assert set(session.speaker_ids) <= set(data.speakers)
@@ -149,29 +153,53 @@ def test_speakers_are_registered_once_by_id_from_slots_and_posters() -> None:
         assert poster.speaker_ids and set(poster.speaker_ids) <= set(data.speakers)
 
 
-def test_first_record_of_a_speaker_wins() -> None:
-    document = json.loads(recorded(2026))
-    first = next(slot for slot in document["schedule"] if slot.get("speakers"))
+def test_first_record_of_a_speaker_wins_poster_authors_first() -> None:
+    """As in Ionic, poster authors are registered before the schedule's speakers."""
+    first = next(slot for slot in document(2026)["schedule"] if slot.get("speakers"))
     speaker = first["speakers"][0]
+    poster_copy = dict(speaker, bio="<p>From the poster.</p>")
 
-    def rename_later_copy(doc: dict[str, Any]) -> None:
-        doc["posters"][0]["speakers"].append(dict(speaker, name="Someone Else", bio=""))
+    def add_poster_copy(doc: dict[str, Any]) -> None:
+        doc["posters"][0]["speakers"].append(poster_copy)
+        doc["posters"][1]["speakers"].append(dict(speaker, bio="<p>Later.</p>"))
 
-    data = process(changed(2026, rename_later_copy), settings(2026))
+    data = process(changed(2026, add_poster_copy), settings(2026))
     registered = data.speakers[str(speaker["id"])]
-    assert (registered.name, registered.bio) == (speaker["name"], speaker["bio"])
+    assert (registered.name, registered.bio) == (speaker["name"], poster_copy["bio"])
+
+
+def test_a_nested_poster_with_a_posters_id_is_skipped() -> None:
+    """D-121: top-level and nested posters share one id space."""
+
+    def nest_a_copy(doc: dict[str, Any]) -> None:
+        poster = doc["posters"][0]
+        doc["schedule"].append(
+            {
+                **doc["schedule"][KEPT],
+                "conf_key": 99999,
+                "kind": "poster",
+                "sessions": [{"conf_key": poster["conf_key"], "name": "Copy"}],
+            }
+        )
+
+    data = process(changed(2026, nest_a_copy), settings(2026))
+    poster_id = str(document(2026)["posters"][0]["conf_key"])
+    assert data.skipped == (f"schedule posters[0]: duplicate id '{poster_id}'",)
+    assert [p.title for p in data.posters if p.id == poster_id] == [
+        document(2026)["posters"][0]["title"]
+    ]
 
 
 def test_posters_sprints_and_job_listings_pass_through() -> None:
-    document = json.loads(recorded(2026))
-    data = decoded(2026)
+    doc = document(2026)
+    data = processed(2026)
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
         25,
         24,
         13,
     )
 
-    poster, record = data.posters[0], document["posters"][0]
+    poster, record = data.posters[0], doc["posters"][0]
     assert (poster.id, poster.title, poster.description) == (
         str(record["conf_key"]),
         record["title"],
@@ -179,7 +207,7 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
     )
     assert poster.speaker_ids == tuple(str(s["id"]) for s in record["speakers"])
 
-    for sprint, record in zip(data.sprints, document["sprints"], strict=True):
+    for sprint, record in zip(data.sprints, doc["sprints"], strict=True):
         assert (sprint.id, sprint.name, sprint.url, sprint.submitter) == (
             str(record["id"]),
             record["name"],
@@ -190,7 +218,7 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
         assert sprint.description == record["description_html"]
     assert sum(sprint.logo_url is None for sprint in data.sprints) == 2
 
-    listing, record = data.job_listings[0], document["job-listings"][0]
+    listing, record = data.job_listings[0], doc["job-listings"][0]
     assert (listing.id, listing.sponsor_name, listing.sponsor_level) == (
         str(record["id"]),
         record["sponsor_name"],
@@ -201,8 +229,8 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
 
 
 def test_feed_without_optional_sections_decodes_them_empty() -> None:
-    data = decoded(2025)
-    assert (data.posters, data.sprints, data.job_listings) == ((), (), ())
+    data = processed(2025)  # its posters are nested in a slot instead (test_rules.py)
+    assert (data.sprints, data.job_listings) == ((), ())
 
 
 def test_unknown_fields_are_ignored() -> None:
@@ -213,11 +241,11 @@ def test_unknown_fields_are_ignored() -> None:
 
     data = process(changed(2026, add_fields), settings(2026))
     assert data.skipped == ()
-    assert len(data.sessions) == len(decoded(2026).sessions)
+    assert len(data.sessions) == len(processed(2026).sessions)
 
 
 def test_processing_the_same_bytes_twice_gives_the_same_model() -> None:
-    first, second = decoded(2026), decoded(2026)
+    first, second = processed(2026), processed(2026)
     assert list(first.sessions) == list(second.sessions)
     assert [
         (d.date, [(g.start, g.session_ids) for g in d.groups]) for d in first.days
@@ -225,7 +253,7 @@ def test_processing_the_same_bytes_twice_gives_the_same_model() -> None:
 
 
 def break_start(doc: dict[str, Any]) -> None:
-    del doc["schedule"][5]["start"]
+    del doc["schedule"][KEPT]["start"]
 
 
 @pytest.mark.parametrize(
@@ -233,31 +261,31 @@ def break_start(doc: dict[str, Any]) -> None:
     [
         (break_start, "'start' should be a string, got None"),
         (
-            lambda doc: doc["schedule"][5].update(start="2026-05-15T09:00:00"),
+            lambda doc: doc["schedule"][KEPT].update(start="2026-05-15T09:00:00"),
             "'start' has no UTC offset",
         ),
         (
-            lambda doc: doc["schedule"][5].update(start="tomorrow"),
+            lambda doc: doc["schedule"][KEPT].update(start="tomorrow"),
             "'start' is not an ISO 8601 time: 'tomorrow'",
         ),
         (
-            lambda doc: doc["schedule"][5].update(end="2026-05-01T09:00:00-07:00"),
+            lambda doc: doc["schedule"][KEPT].update(end="2026-05-01T09:00:00-07:00"),
             "before it starts",
         ),
         (
-            lambda doc: doc["schedule"][5].update(conf_key=True),
+            lambda doc: doc["schedule"][KEPT].update(conf_key=True),
             "'conf_key' should be an id, got True",
         ),
         (
-            lambda doc: doc["schedule"][5].update(name=None),
+            lambda doc: doc["schedule"][KEPT].update(name=None),
             "'name' should be a string, got None",
         ),
         (
-            lambda doc: doc["schedule"][5].update(speakers={}),
+            lambda doc: doc["schedule"][KEPT].update(speakers={}),
             "'speakers' should be a list",
         ),
         (
-            lambda doc: doc["schedule"][5].update(speakers=[{"name": "Ana"}]),
+            lambda doc: doc["schedule"][KEPT].update(speakers=[{"name": "Ana"}]),
             "'id' should be an id, got None",
         ),
         (
@@ -271,37 +299,38 @@ def test_bad_slot_is_skipped_and_logged(
     problem: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    slots = json.loads(recorded(2026))["schedule"]
+    bad = str(document(2026)["schedule"][KEPT]["conf_key"])
     with caplog.at_level(logging.WARNING, logger="pycon_us.core.feed"):
         data = process(changed(2026, change), settings(2026))
-    assert str(slots[5]["conf_key"]) not in data.sessions
-    assert len(data.sessions) == len(slots) - 1
+    assert set(processed(2026).sessions) - set(data.sessions) == {bad}
+    assert len(data.sessions) == len(processed(2026).sessions) - 1
     (reason,) = data.skipped
-    assert reason.startswith("schedule[5]: ") and problem in reason
+    assert reason.startswith(f"schedule[{KEPT}]: ") and problem in reason
     assert [r.getMessage() for r in caplog.records] == [
         f"Skipped a feed record: {reason}"
     ]
 
 
 @pytest.mark.parametrize(
-    ("section", "key", "field", "count"),
+    ("section", "index", "key", "field", "count"),
     [
-        ("schedule", "conf_key", "name", 728),
-        ("posters", "conf_key", "title", 25),
-        ("sprints", "id", "name", 24),
-        ("job-listings", "id", "sponsor_name", 13),
+        ("schedule", KEPT, "conf_key", "name", 345),
+        ("posters", 0, "conf_key", "title", 25),
+        ("sprints", 0, "id", "name", 24),
+        ("job-listings", 0, "id", "sponsor_name", 13),
     ],
 )
 def test_duplicate_id_keeps_the_first(
-    section: str, key: str, field: str, count: int
+    section: str, index: int, key: str, field: str, count: int
 ) -> None:
     def duplicate(doc: dict[str, Any]) -> None:
-        first = doc[section][0]
+        first = doc[section][index]
         doc[section].append(dict(first, **{key: str(first[key]), field: "Impostor"}))
 
     data = process(changed(2026, duplicate), settings(2026))
-    first = json.loads(recorded(2026))[section][0]
-    assert data.skipped == (f"{section}[{count}]: duplicate id '{first[key]}'",)
+    first = document(2026)[section][index]
+    position = len(document(2026)[section])
+    assert data.skipped == (f"{section}[{position}]: duplicate id '{first[key]}'",)
     records = {
         "schedule": list(data.sessions.values()),
         "posters": data.posters,
@@ -315,13 +344,14 @@ def test_duplicate_id_keeps_the_first(
 
 def test_time_out_of_range_is_skipped() -> None:
     raw = changed(
-        2026, lambda doc: doc["schedule"][5].update(start="0001-01-01T00:00:00+00:00")
+        2026,
+        lambda doc: doc["schedule"][KEPT].update(start="0001-01-01T00:00:00+00:00"),
     )
     data = process(raw, settings(2026))
     assert data.skipped == (
-        "schedule[5]: 'start' is out of range: '0001-01-01T00:00:00+00:00'",
+        f"schedule[{KEPT}]: 'start' is out of range: '0001-01-01T00:00:00+00:00'",
     )
-    assert len(data.sessions) == 727
+    assert len(data.sessions) == len(processed(2026).sessions) - 1
 
 
 def test_bad_records_in_other_sections_are_skipped() -> None:
@@ -329,6 +359,10 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
         doc["posters"][0]["title"] = 7
         doc["sprints"][1] = None
         del doc["job-listings"][2]["sponsor_name"]
+        doc["open-spaces"][3]["conf_key"] = "3"
+        doc["open-spaces"][4]["start"] = "soon"
+        doc["open-spaces"][5]["start"] = 0  # falsy, but not "not scheduled"
+        doc["open-spaces"][6]["end"] = False
 
     data = process(changed(2026, spoil), settings(2026))
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
@@ -336,11 +370,18 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
         23,
         12,
     )
+    open_spaces = [s for s in data.sessions.values() if s.kind == "open-space"]
+    assert len(open_spaces) == 119
     assert [reason.split(":")[0] for reason in data.skipped] == [
         "posters[0]",
+        "open-spaces[3]",
+        "open-spaces[4]",
+        "open-spaces[5]",
+        "open-spaces[6]",
         "sprints[1]",
         "job-listings[2]",
     ]
+    assert "'conf_key' should be an integer, got '3'" in data.skipped[1]
 
 
 @pytest.mark.parametrize(
