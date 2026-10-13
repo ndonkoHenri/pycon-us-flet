@@ -16,8 +16,9 @@ import pytest
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.queries import fold, speaker_order
-from pycon_us.core.search import DaySessions, SearchResults, search, search_index
+from pycon_us.core.search import SearchResults, search, search_index
 from pycon_us.core.slugs import room_sort_key, slugify_room
+from pycon_us.core.timeline import DaySessions, timeline, track_sessions
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -333,6 +334,32 @@ def test_the_index_holds_everything_in_the_schedules_order(year: int) -> None:
         data.speakers.values(), key=speaker_order
     )
     assert [r for _, r in index.rooms] == list(data.rooms.values())
+
+
+def in_common_order[T](
+    first: Sequence[T], second: Sequence[T]
+) -> tuple[list[T], list[T]]:
+    """The items the two sequences share, in the order of each."""
+    return [x for x in first if x in second], [x for x in second if x in first]
+
+
+@pytest.mark.parametrize("year", YEARS)
+@pytest.mark.parametrize("query", ["e", "python"])
+def test_search_lists_a_day_as_the_schedule_queries_do(year: int, query: str) -> None:
+    """One session order (D-178): a day's matches come as its track pages list them,
+    and each slot's as the Schedule lists the slot."""
+    data = processed(year)
+    results = search(search_index(data), query)
+    found = {group.day: group.sessions for group in results.sessions}
+    assert results.session_count > 50
+    for track in {s.track for s in data.sessions.values()}:
+        for group in track_sessions(data, track):
+            matches, listed = in_common_order(found.get(group.day, ()), group.sessions)
+            assert matches == listed, (track, group.day)
+    for day in data.days:
+        for slot in timeline(data, day.date, ()):
+            matches, listed = in_common_order(found.get(day.date, ()), slot.sessions)
+            assert matches == listed, slot.key
 
 
 @pytest.mark.parametrize(
