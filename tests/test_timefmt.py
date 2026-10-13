@@ -111,6 +111,19 @@ def test_day_labels_use_fixed_english_names() -> None:
     assert timefmt.day_heading(date(2026, 9, 1)) == "Tuesday, September 1"
 
 
+def test_a_weekday_is_named_in_full() -> None:
+    assert timefmt.weekday_name(date(2026, 5, 15)) == "Friday"
+    assert timefmt.weekday_name(date(2026, 5, 18)) == "Monday"
+
+
+def test_a_span_of_days_names_its_month_once_when_it_can() -> None:
+    assert timefmt.date_range_label(date(2026, 5, 13), date(2026, 5, 19)) == "May 13–19"
+    assert (
+        timefmt.date_range_label(date(2027, 5, 30), date(2027, 6, 2)) == "May 30–June 2"
+    )
+    assert timefmt.date_range_label(date(2026, 5, 13), date(2026, 5, 13)) == "May 13"
+
+
 def test_zone_note_only_when_the_device_offset_differs() -> None:
     now = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     in_long_beach = now.astimezone(PACIFIC).utcoffset()

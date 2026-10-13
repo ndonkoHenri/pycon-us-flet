@@ -83,6 +83,25 @@ def day_heading(day: date) -> str:
     return f"{_WEEKDAYS[day.weekday()]}, {_MONTHS[day.month - 1]} {day.day}"
 
 
+def weekday_name(day: date) -> str:
+    """Return the day's name, e.g. "Friday"."""
+    return _WEEKDAYS[day.weekday()]
+
+
+def date_range_label(first: date, last: date) -> str:
+    """Return a span of days as people write it: "May 13–19", "May 30–June 2".
+
+    One date when both ends are the same day ("May 13"); the year is left out, as the
+    screens name the conference beside it.
+    """
+    start = f"{_MONTHS[first.month - 1]} {first.day}"
+    if first == last:
+        return start
+    if (first.year, first.month) == (last.year, last.month):
+        return f"{start}–{last.day}"
+    return f"{start}–{_MONTHS[last.month - 1]} {last.day}"
+
+
 def ago_label(then: datetime, now: datetime) -> str:
     """Return how long before ``now`` ``then`` was, in words (DATA-31).
 

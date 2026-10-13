@@ -146,6 +146,7 @@ def SessionRow(
     tokens: Tokens,
     *,
     screen: str,
+    elapsed: int | None = None,
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
 
@@ -166,6 +167,9 @@ def SessionRow(
         screen: The screen's name in semantics identifiers: the row's text is
             ``<screen>.session.<key>``, its star ``<screen>.favorite.<key>``, the key
             from ``semantics_key()``.
+        elapsed: For a row that is on (Now), how much has passed, in whole percent
+            (``agenda.elapsed_percent()``): a 3 dp bar in ``Tokens.live`` under the
+            text, and "60 percent elapsed." at the end of the phrase; None for none.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -175,6 +179,7 @@ def SessionRow(
         on_toggle,
         tokens,
         screen=screen,
+        elapsed=elapsed,
         key=key,  # pyright: ignore[reportCallIssue]
     )
 
@@ -188,6 +193,7 @@ def _SessionRow(
     tokens: Tokens,
     *,
     screen: str,
+    elapsed: int | None = None,
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
@@ -213,9 +219,13 @@ def _SessionRow(
     lines.append(_meta(view))
     if view.speakers:
         lines.append(_secondary(view.speakers))
+    phrase = spoken_phrase([label for label, _ in specs], view)
+    if elapsed is not None:
+        lines.append(_elapsed_bar(elapsed, tokens.live))
+        phrase = f"{phrase} {elapsed_phrase(elapsed)}"
     key = semantics_key(session.id)
     text = ft.Semantics(
-        label=spoken_phrase([label for label, _ in specs], view),
+        label=phrase,
         identifier=f"{screen}.session.{key}",
         button=True,  # it opens the session: "…, button" (D-33)
         # The phrase replaces the texts, which would otherwise be read again after it.
@@ -245,6 +255,45 @@ def _SessionRow(
         ],
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.START,
+    )
+
+
+def elapsed_phrase(elapsed: int) -> str:
+    """Return the sentence that ends the phrase of a row that is on.
+
+    "60 percent elapsed." In the phrase, not on the bar: merged into the row, its value
+    would be a bare "60", and Flet sends ``semantics_value`` as a number, "60.0".
+
+    Args:
+        elapsed: The share of the session that has passed, in whole percent.
+    """
+    return f"{elapsed} percent elapsed."
+
+
+TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
+"""The elapsed bar's track: a tint of the text, so it shows on every surface, the
+next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or more
+on it."""
+
+
+def _elapsed_bar(elapsed: int, color: str) -> ft.Control:
+    """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173).
+
+    M3's current bar (``year_2023=False``): a gap after the fill, then the track, and
+    a stop dot at its end in ``on_surface_variant`` (4.5:1 or more on every surface),
+    which marks where 100 % is, as M3 asks of a track under 3:1 (WCAG 1.4.11).
+    """
+    return ft.Container(
+        ft.ProgressBar(
+            value=elapsed / 100,
+            bar_height=3,
+            color=color,
+            bgcolor=TRACK,
+            border_radius=3,
+            year_2023=False,
+            stop_indicator_color=ft.Colors.ON_SURFACE_VARIANT,
+        ),
+        padding=ft.Padding.only(top=4),  # 8 dp under the text, with the column's 4
     )
 
 
