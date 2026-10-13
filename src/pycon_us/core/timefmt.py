@@ -7,6 +7,7 @@ names come from fixed English tuples and labels are built by hand, so nothing de
 device locale or on ``strftime`` flags. Naive datetimes are refused: they have no instant.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta, tzinfo
 
 _WEEKDAYS = (
@@ -100,6 +101,66 @@ def ago_label(then: datetime, now: datetime) -> str:
     return _ago(minutes // (24 * 60), "day")
 
 
+@dataclass(frozen=True)
+class TimeStatus:
+    """Where a session stands at an instant, as session detail says it (SESS-01).
+
+    Attributes:
+        label: What the screen shows: "Starts in 25 min", "Happening now", "Ended".
+        spoken: The same in words for screen readers: "Starts in 25 minutes"
+            (D-165's rule for "h"); equal to ``label`` when it has no unit.
+        happening: Whether the session is on, which the screen draws in ``live``.
+    """
+
+    label: str
+    spoken: str
+    happening: bool = False
+
+
+HAPPENING_NOW = TimeStatus("Happening now", "Happening now", happening=True)
+"""A session that has started and not ended."""
+
+ENDED = TimeStatus("Ended", "Ended")
+"""A session whose end has come."""
+
+
+def time_status(
+    start: datetime, end: datetime, now: datetime, zone: tzinfo
+) -> TimeStatus | None:
+    """Return where a session stands at ``now``, or None when there is nothing to say.
+
+    A session is on from its start up to, not including, its end (D-179's half-open
+    interval), so at 10:30 a talk that ends then has ended. Before it starts, the
+    countdown shows only on its own conference-local day, in whole minutes rounded up
+    (so it never says "in 0 min"), with hours from 60 minutes: "Starts in 1 h 5 min".
+    A notice has no duration: it is never on, and it never says "Ended" (the
+    registration desk that opened at 7:30 is still open).
+
+    Args:
+        start: When the session starts, aware.
+        end: When it ends, aware; equal to ``start`` for a notice.
+        now: ``clock.now()``.
+        zone: The conference's zone, for "its own day" (D-43).
+    """
+    on_its_day = local_date(now, zone) == local_date(start, zone)  # refuses naive
+    if now < start:
+        if not on_its_day:
+            return None  # the date beside it says when
+        minutes = -(-int((start - now).total_seconds()) // 60)  # rounded up
+        hours, rest = divmod(max(minutes, 1), 60)
+        short = [f"{hours} h"] if hours else []
+        words = [_count(hours, "hour")] if hours else []
+        if rest:
+            short.append(f"{rest} min")
+            words.append(_count(rest, "minute"))
+        return TimeStatus(
+            f"Starts in {' '.join(short)}", f"Starts in {' '.join(words)}"
+        )
+    if start == end:
+        return None
+    return HAPPENING_NOW if now < end else ENDED
+
+
 def zone_note(
     now: datetime, zone: tzinfo, zone_name: str, device_offset: timedelta | None
 ) -> str | None:
@@ -149,4 +210,8 @@ def _meridiem(local: datetime) -> str:
 
 
 def _ago(amount: int, unit: str) -> str:
-    return f"{amount} {unit} ago" if amount == 1 else f"{amount} {unit}s ago"
+    return f"{_count(amount, unit)} ago"
+
+
+def _count(amount: int, unit: str) -> str:
+    return f"{amount} {unit}" if amount == 1 else f"{amount} {unit}s"

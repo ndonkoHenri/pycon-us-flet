@@ -1,5 +1,7 @@
 """Tests for the not-found states of the detail stubs and the Router's ``NotFound`` (#83).
 
+Session detail's own state is tested with the screen (``test_session.py``, #90).
+
 They run outside a renderer, with a fake page bound as Flet binds a session's page and
 the hooks replaced. Every empty state names a way out (ux.md §4.6): the thing's list,
 or Now for a location the app does not have.
@@ -15,7 +17,7 @@ import pytest
 
 from pycon_us import routes
 from pycon_us.favorites import Favorites
-from pycon_us.screens import room, session, speaker
+from pycon_us.screens import room, speaker
 from tests.fakes import FakePage, bound
 from tests.trees import descendants, only, texts
 
@@ -35,14 +37,6 @@ def tap(button: ft.FilledTonalButton) -> None:
 @pytest.mark.parametrize(
     ("module", "screen", "title", "action", "location", "identifier"),
     [
-        (
-            session,
-            "SessionDetail",
-            "This session isn't in the current schedule",
-            "Open schedule",
-            "/schedule",
-            "session.not_found",
-        ),
         (
             speaker,
             "SpeakerDetail",
@@ -76,13 +70,6 @@ def test_an_unknown_id_names_the_thing_and_offers_its_list(
     monkeypatch.setattr(module, "AppScaffold", lambda **kwargs: kwargs)
     empty = SimpleNamespace(sessions={}, speakers={}, rooms={})
     monkeypatch.setattr(module, "use_conference", lambda: SimpleNamespace(data=empty))
-    if module is session:  # its badges read the year's tracks and the tokens (#181)
-        monkeypatch.setattr(
-            module,
-            "use_services",
-            lambda: SimpleNamespace(year=SimpleNamespace(conference=None)),
-        )
-        monkeypatch.setattr(module, "use_tokens", lambda: None)
     if hasattr(module, "use_session_views"):  # the stubs' session rows (#81)
         monkeypatch.setattr(
             module,
