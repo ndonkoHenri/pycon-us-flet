@@ -226,6 +226,16 @@ TALK_START, TALK_END = pacific(16, 10, 30), pacific(16, 11, 0)
             "Starts in 1 min",
             "Starts in 1 minute",
         ),
+        (  # 24 min 30 s before: only rounding up says 25
+            pacific(16, 10, 5) + timedelta(seconds=30),
+            "Starts in 25 min",
+            "Starts in 25 minutes",
+        ),
+        (  # 1 h 0 min 59 s before: rounded up across the hour
+            pacific(16, 9, 29) + timedelta(seconds=1),
+            "Starts in 1 h 1 min",
+            "Starts in 1 hour 1 minute",
+        ),
         (  # from midnight on
             pacific(16, 0, 0),
             "Starts in 10 h 30 min",

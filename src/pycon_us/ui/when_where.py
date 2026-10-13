@@ -98,7 +98,9 @@ def _time_tile(
     """The day and time, where the session stands and the zone: one phrase."""
     view = session_view(session, info.zone, use_24h=use_24h)
     day = day_heading(session.day)
-    lines: list[ft.Control] = [StatusLine(session.start, session.end)]
+    # The status follows the start the tile shows: the Job Fair opens at 9:30, though
+    # the Schedule groups it at 10:00 (DATA-11).
+    lines: list[ft.Control] = [StatusLine(session.display_start, session.end)]
     # The device's offset at the session's own start, so a DST change between today
     # and then gives no note, and a real difference names the session's zone (PDT).
     device_offset = session.start.astimezone().utcoffset()
@@ -113,6 +115,9 @@ def _time_tile(
                 # The day, then the time on a line of its own, so a long day or a
                 # large text size never breaks the range in two; its "AM" keeps to
                 # its digits, and only at the largest sizes it breaks after the dash.
+                # The status and the note are in the title too, styled as supporting
+                # lines: a subtitle would keep a two-line tile's height when both are
+                # absent (another day, on Pacific time), with a blank under the range.
                 title=ft.Column(
                     [
                         ft.Text(day),
@@ -120,10 +125,10 @@ def _time_tile(
                             view.when.replace(" ", "\u00a0"),
                             semantics_label=view.spoken_when,
                         ),
+                        ft.Column(lines, spacing=2),
                     ],
                     spacing=0,
                 ),
-                subtitle=ft.Column(lines, spacing=2),
                 title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
             ),
         )
@@ -207,7 +212,8 @@ def StatusLine(start: datetime, end: datetime) -> ft.Control:
     ("Starts in 25 minutes").
 
     Args:
-        start: When the session starts.
+        start: When the session starts, as its time tile shows it
+            (``Session.display_start``).
         end: When it ends.
     """
     svc = use_services()

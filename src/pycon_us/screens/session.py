@@ -34,11 +34,12 @@ from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.badges import (
     FavoriteButton,
+    TrackBadge,
     badge_row,
-    session_badges,
+    badge_specs,
     use_favorite_toggle,
 )
-from pycon_us.ui.links import open_link
+from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import is_notice
@@ -53,10 +54,15 @@ NOT_FOUND = "This session isn't in the current schedule"
 REMOVED = "Removed from the latest schedule"
 """The note over a session a newer feed dropped (D-47's words, never "cancelled")."""
 
-REGISTRATION_TEXT = (
-    "This session needs its own registration, separate from your conference ticket."
-)
-"""What the registration card says under its title (DATA-09)."""
+SECTION_GAP = 24
+"""The space between the page's sections (ux.md §3.6); 8 dp within one."""
+
+REGISTRATION_TITLE = "Register separately"
+"""The registration card's title: what to do, as the badge above already says why."""
+
+REGISTRATION_TEXT = "Your conference ticket doesn't sign you up for this session."
+"""What the registration card says under its title (DATA-09): true of a paid
+tutorial and of a summit with a free sign-up alike."""
 
 
 @ft.component
@@ -80,6 +86,10 @@ def SessionDetail(session_id: str) -> ft.View:
     current = data.sessions.get(session_id) if data else None
     if current is not None:
         shown.current = current
+    elif shown.current is not None and shown.current.id != session_id:
+        # The same View given another id in place (a deep link at the same depth):
+        # what it showed before belongs to a different session.
+        shown.current = None
     session = shown.current
     if session is None:
         return AppScaffold(
@@ -140,19 +150,31 @@ def SessionDetail(session_id: str) -> ft.View:
         controls.append(ft.Column(speakers, spacing=0))
     # The description (#91) and the posters (#92) follow here.
     body = ft.ListView(
-        controls, expand=True, spacing=16, padding=ft.Padding.only(top=8, bottom=24)
+        controls,
+        expand=True,
+        spacing=SECTION_GAP,
+        padding=ft.Padding.only(top=8, bottom=24),
     )
     return AppScaffold(title="", body=body, actions=actions)
 
 
 def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
     """The app bar's overflow: "Open on us.pycon.org", the host named from the URL."""
+    label = f"Open on {urlsplit(url).hostname}"
     menu = ft.PopupMenuButton(
         icon=ft.Icons.MORE_VERT,
         tooltip="More options",
         items=[
             ft.PopupMenuItem(
-                content=f"Open on {urlsplit(url).hostname}",
+                # It leaves the app: a link, read "Opens in browser" after its text
+                # (ux.md §4.7). Said by the text, not the icon, which comes first and
+                # was read first ("Opens in browser, Open on us.pycon.org").
+                content=ft.Semantics(
+                    link=True,
+                    content=ft.Text(
+                        label, semantics_label=f"{label}\n{OPENS_IN[LinkKind.WEB]}"
+                    ),
+                ),
                 icon=ft.Icons.OPEN_IN_NEW,
                 on_click=on_open,
             )
@@ -171,10 +193,15 @@ def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Contro
             session.name, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, selectable=True
         ),
     )
-    badges = session_badges(session, info, tokens)
+    # A badge that repeats the title (a break's "Break") says nothing more.
+    badges = [
+        TrackBadge(label, colors)
+        for label, colors in badge_specs(session, info, tokens)
+        if label.casefold() != session.name.casefold()
+    ]
     column: list[ft.Control] = [badge_row(badges), title] if badges else [title]
     return ft.Container(
-        ft.Column(column, spacing=12), padding=ft.Padding.symmetric(horizontal=16)
+        ft.Column(column, spacing=8), padding=ft.Padding.symmetric(horizontal=16)
     )
 
 
@@ -186,8 +213,7 @@ def _registration(url: str) -> ft.Control:
             ft.Column(
                 [
                     ft.Text(
-                        "Registration required",
-                        theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                        REGISTRATION_TITLE, theme_style=ft.TextThemeStyle.TITLE_SMALL
                     ),
                     ft.Text(
                         REGISTRATION_TEXT,
@@ -243,7 +269,8 @@ def _speaker_links(
         nav_tile(speakers[sid].name, drill_href(view_path, "speaker", sid))
         for sid in found
     ]
-    return [SectionHeader("Speakers"), *links]
+    # The list's gap already stands above it, so the header adds none of its own.
+    return [SectionHeader("Speakers", level=2, top=0), *links]
 
 
 def _removed_note() -> ft.Control:

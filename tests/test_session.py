@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import flet as ft
@@ -60,6 +61,9 @@ LIGHTNING = "175"
 KEYNOTE = "176"
 """A keynote: no public page in the feed."""
 
+JOB_FAIR = "178"
+"""Sun May 17, shown from 9:30 though grouped at its 10:00 start (DATA-11)."""
+
 BREAK = (
     "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B"
     "-2026-05-16T10:05:00-07:00"
@@ -77,6 +81,7 @@ class Detail:
     launcher: MemoryLauncher
     pushed: list[str]
     titles: list[str]
+    reopen: Callable[[str | None], None]
 
     def nodes(self, identifier: str) -> list[ft.Semantics]:
         return [
@@ -95,6 +100,11 @@ class Detail:
     async def settle(self) -> None:
         for _ in range(20):
             await asyncio.sleep(0)
+
+    async def show(self, session_id: str | None) -> None:
+        """Re-render the same Root with another id in place, or with no detail."""
+        self.reopen(session_id)
+        await self.settle()
 
     async def click(self, control: ft.Control) -> None:
         await self.session.dispatch_event(control._i, "click", None)
@@ -142,9 +152,13 @@ async def render(
         conference = Conference(data=processed(2026), source="bundled", version=1)
         favorites, prefs = Favorites(), Prefs(loaded=True)
         await favorites.load(storage)
+        reopen: list[Callable[[str | None], None]] = []
 
         @ft.component
         def Root() -> ft.Control:
+            # Detail.show() changes the id in place, or leaves the detail (None).
+            shown_id, set_shown_id = ft.use_state(cast(str | None, session_id))
+            reopen[:] = [set_shown_id]
             return ServicesCtx(
                 svc,
                 lambda: ConferenceCtx(
@@ -155,7 +169,11 @@ async def render(
                             favorites,
                             lambda: TokensCtx(
                                 LIGHT_TOKENS,
-                                lambda: screen.SessionDetail(session_id),
+                                lambda: (
+                                    screen.SessionDetail(shown_id)
+                                    if shown_id is not None
+                                    else ft.Text("Elsewhere")
+                                ),
                             ),
                         ),
                     ),
@@ -172,7 +190,15 @@ async def render(
         shown.append((flet_session, svc))
         page.render(Root)
         flet_session.get_page_patch()
-        detail = Detail(flet_session, conference, favorites, launcher, pushed, titles)
+        detail = Detail(
+            flet_session,
+            conference,
+            favorites,
+            launcher,
+            pushed,
+            titles,
+            lambda sid: reopen[0](sid),
+        )
         await detail.settle()
         return detail
 
@@ -253,6 +279,26 @@ async def test_the_badges_come_before_the_title(render: Render) -> None:
     badges = header.controls[0]
     assert isinstance(badges, ft.Row) and badges.wrap
     assert texts(badges) == ["Tutorial", "Registration required"]
+    assert header.spacing == 8  # one group (ux.md §3.6)
+
+
+async def test_a_badge_that_repeats_the_title_is_left_out(render: Render) -> None:
+    """A break's "Break" pill over its "Break" heading said nothing more."""
+    detail = await render(BREAK)
+    header = detail.node("session.title").parent
+    assert isinstance(header, ft.Column)
+    assert header.controls == [detail.node("session.title")]
+
+
+async def test_the_sections_are_level_2_under_the_title(render: Render) -> None:
+    """ux.md §5.5: the title is heading level 1, its sections level 2."""
+    detail = await render(TALK)
+    speakers = next(
+        n
+        for n in detail.session.index.values()
+        if isinstance(n, ft.Semantics) and n.header and words(n) == ["Speakers"]
+    )
+    assert speakers.heading_level == 2
 
 
 # ------------------------------------------------------------------ when (SESS-01)
@@ -298,6 +344,35 @@ async def test_the_day_before_there_is_no_countdown(render: Render) -> None:
     assert time.semantics_label == "10:30 to 11:00 AM"  # "to", not a dash
 
 
+@pytest.mark.parametrize(
+    ("now", "label"),
+    [("2026-05-17 09:20", "Starts in 10 min"), ("2026-05-17 09:45", "Happening now")],
+)
+async def test_the_status_follows_the_start_the_tile_shows(
+    render: Render, now: str, label: str
+) -> None:
+    """The Job Fair opens at 9:30, though the Schedule groups it at 10:00 (DATA-11)."""
+    clock.set_test_now(at(now))
+    detail = await render(JOB_FAIR)
+    lines = detail.text("session.when")
+    assert lines[1].startswith("9:30")
+    assert label in lines
+
+
+async def test_with_nothing_to_add_the_time_tile_has_no_blank_line(
+    render: Render,
+) -> None:
+    """Another day on Pacific time: no status, no note, so no subtitle's height."""
+    clock.set_test_now(at("2026-05-15 18:00"))
+    detail = await render(TALK)
+    tile = next(
+        n
+        for n in descendants(detail.node("session.when"))
+        if isinstance(n, ft.ListTile)
+    )
+    assert tile.subtitle is None
+
+
 async def test_the_status_follows_the_clock_on_the_minute_tick(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -317,6 +392,24 @@ async def test_the_status_follows_the_clock_on_the_minute_tick(
     tick()
     await detail.settle()
     assert "Happening now" in detail.text("session.when")
+
+
+async def test_leaving_the_detail_stops_its_minute_ticks(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2, F39: only the effect's cleanup makes Flet cancel the loop on unmount."""
+    loops: list[asyncio.Task[Any]] = []
+
+    async def run_every(self: Services, seconds: float, action: Callable[[], object]):
+        loops.append(cast(asyncio.Task[Any], asyncio.current_task()))
+        await asyncio.Event().wait()  # until cancelled
+
+    monkeypatch.setattr(Services, "run_every", run_every)
+    detail = await render(TALK)
+    (loop,) = loops
+    assert not loop.done()
+    await detail.show(None)
+    assert loop.cancelled()
 
 
 async def test_a_device_in_another_zone_gets_the_pacific_time_note(
@@ -380,6 +473,14 @@ async def test_a_break_in_many_rooms_lists_them_without_one_place(
     assert detail.nodes("session.room") == []
     folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
     assert cast(ft.Text, folded.title).value == "In 5 rooms"
+    first = (folded.controls or [])[0]
+    await detail.click(
+        next(n for n in descendants(first) if isinstance(n, ft.ListTile))
+    )
+    # Its id holds spaces, commas and colons: quoted, so room detail reads it whole.
+    assert detail.pushed == [
+        f"{VIEW}/room/room-103abc?highlight={quote(BREAK, safe='')}"
+    ]
 
 
 async def test_reduced_motion_opens_the_rooms_without_animation(
@@ -399,7 +500,7 @@ async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
 ) -> None:
     detail = await render(TUTORIAL)
     assert detail.text("session.registration") == [
-        "Registration required",
+        screen.REGISTRATION_TITLE,
         screen.REGISTRATION_TEXT,
     ]
     link = detail.node("session.registration.link")
@@ -440,7 +541,11 @@ async def test_the_overflow_opens_the_public_page(render: Render) -> None:
     menu = cast(ft.PopupMenuButton, detail.node("session.overflow").content)
     assert menu.tooltip == "More options"
     (item,) = menu.items
-    assert item.content == "Open on us.pycon.org"
+    label = cast(ft.Semantics, item.content)
+    assert label.link  # it leaves the app (ux.md §4.7)
+    text = cast(ft.Text, label.content)
+    assert text.value == "Open on us.pycon.org"
+    assert text.semantics_label == "Open on us.pycon.org\nOpens in browser"
     await detail.click(item)
     assert detail.launcher.launched == [
         (
@@ -478,6 +583,17 @@ async def test_an_unknown_id_names_the_session_and_offers_the_schedule(
     await detail.click(button)
     assert detail.pushed == ["/schedule"]
     assert detail.nodes("session.favorite") == []
+
+
+async def test_another_unknown_id_in_place_is_not_found_not_the_last_session(
+    render: Render,
+) -> None:
+    """The same View given another id (a deep link at the same depth) forgets TALK."""
+    detail = await render(TALK)
+    await detail.show("no-such-session")
+    assert detail.text("session.not_found") == [screen.NOT_FOUND]
+    assert detail.nodes("session.removed") == []
+    assert detail.nodes("session.title") == []
 
 
 async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
