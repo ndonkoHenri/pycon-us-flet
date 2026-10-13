@@ -1,9 +1,13 @@
 """Tests for the queries over the processed feed (DATA-17; architecture §7.5)."""
 
+import unicodedata
 from datetime import date
 from typing import Any
 
 import pytest
+from hypothesis import HealthCheck, given
+from hypothesis import settings as hypothesis_settings
+from hypothesis import strategies as st
 
 from pycon_us.config import load_year
 from pycon_us.core.feed import process
@@ -42,15 +46,40 @@ def test_a_session_outside_the_conference_dates_widens_the_days() -> None:
     assert result[:3] == (date(2026, 5, 11), date(2026, 5, 12), date(2026, 5, 13))
 
 
+@hypothesis_settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(st.text())
+def test_fold_is_stable_and_leaves_no_marks(text: str) -> None:
+    """D-180: folding a folded text changes nothing, so a query and the index agree."""
+    folded = fold(text)
+    assert fold(folded) == folded
+    assert not any(unicodedata.category(c) in ("Mn", "Me", "Cf") for c in folded)
+
+
 @pytest.mark.parametrize(
     ("text", "folded"),
     [
         ("Cristián", "cristian"),
         ("ÜBER Python", "uber python"),
         ("Straße", "strasse"),  # case folding, not just lower-casing
-        ("ﬁle", "file"),  # NFKD splits the ligature
+        ("ẞ", "ss"),  # the capital sharp s
+        ("ﬁle ﬂow", "file flow"),  # NFKD splits the ligatures
+        ("ＰＹＴＨＯＮ ①", "python 1"),  # full-width and circled forms
+        ("İstanbul", "istanbul"),  # İ decomposes to I and a dot above
+        ("ıi", "ii"),  # dotless i
+        ("Łukasz Paweł Żal", "lukasz pawel zal"),  # 2025 speakers; ł does not decompose
+        ("Søren Ærø Œuvre", "soren aero oeuvre"),
+        ("Đorđe", "dorde"),
+        ("don’t ‘quote’", "don't 'quote'"),  # iOS types the curly forms
+        ("“Hello” „world‟", '"hello" "world"'),
+        ("type‐safe – fast — done ‒ 1−2 ―", "type-safe - fast - done - 1-2 -"),
+        ("non‑breaking", "non-breaking"),  # NFKD makes it a hyphen, then ASCII
+        ("soft\u00adhyphen zero\u200bwidth", "softhyphen zerowidth"),  # invisible
+        ("\u202eevil\u202c", "evil"),  # bidi controls (2025 has both)
+        ("a\u00a0b", "a b"),  # a no-break space is a space
+        ("Ñandú", "nandu"),
+        ("ΆΘΗΝΑ", "αθηνα"),  # not only Latin
     ],
 )
-def test_fold_ignores_case_and_accents(text: str, folded: str) -> None:
-    """D-46: search and the Speakers sort compare folded text."""
+def test_fold_ignores_case_accents_and_typography(text: str, folded: str) -> None:
+    """D-46, D-180: search and the Speakers sort compare folded text."""
     assert fold(text) == folded

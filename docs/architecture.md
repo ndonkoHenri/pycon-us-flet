@@ -21,7 +21,7 @@
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
  state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      favorites.py  Favorites   (P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
- core/         pure Python, no Flet: feed rules, models, queries, time, slugs, html→md,
+ core/         pure Python, no Flet: feed rules, models, queries, search, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
  data/<year>/  conference.toml · content.toml · map.toml · conference.json (snapshot)
 ```
@@ -587,7 +587,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 |---|---|---|
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
 | `timeline(data, day, excluded)` | one item per time slot, rows ordered by start then room (D-31); a track passes unless excluded | DATA-18, SCHED-02 |
-| `search(data, query, scope)` | folded, **all** words must match `search_text` (D-46); grouped by type, sessions by day; ignores filters | NEW-02, SPKR-02 |
+| `search(index, query, scope)` | in `core/search.py` (below): folded, **all** words must match, each anywhere in the text (D-46); grouped by type, sessions by day; ignores filters (D-180). Built in P1 | NEW-02, DATA-18, DATA-19, SPKR-02 |
 | `now_next(sessions, now)` | Now = `start <= now < end`; Next = the earliest later start; ignores filters | SCHED-25 |
 | `next_for_me(data, favorites, now)` | earliest saved session with `end > now`, within 3 h | SCHED-25 |
 | `my_schedule(data, favorites)` | saved sessions by day, plus `overlaps: dict[id, list[id]]` (sorted sweep) | NEW-01 |
@@ -599,14 +599,19 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 ```python
 # src/pycon_us/core/queries.py (excerpt)
 def fold(text: str) -> str:
-    """Lower-case and strip accents, so 'Cristián' matches 'cristian' (D-46)."""
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+    """Case, accents and typography folded: 'Cristián' → 'cristian', 'don’t' → 'don't'."""
+    folded = unicodedata.normalize("NFKD", text).casefold()
+    folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)  # quotes, dashes, ł, æ
+    return _NON_ASCII.sub(_without_marks, folded)  # marks and format characters go (D-180)
+```
 
+**Search (`core/search.py`; D-46, D-180).** `search_index(data)` pairs each session's `search_text`, each directory speaker's folded name and each room's folded name with what it finds, already in result order (sessions by day in timeline order, speakers by folded name, rooms in natural order), and logs `Search index built in N ms`. It is built once per feed version (`use_memo` on `Conference.version` in #97's `Search`), never per keystroke. `search(index, query, scope)` folds the query, keeps the entries that hold every word as a substring, and returns a frozen `SearchResults(sessions: tuple[DaySessions, ...], speakers, rooms)`; an empty or blank query finds nothing, and `scope` is one of `SCOPES` (`all`, `sessions`, `speakers`, `rooms`).
 
-def matches(query: str, folded_haystack: str) -> bool:
-    """True when every word of the query occurs in the already-folded haystack."""
-    return all(word in folded_haystack for word in fold(query).split())
+```python
+# src/pycon_us/core/search.py (excerpt)
+def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
+    words = fold(query).split()
+    ...  # per type in scope: [item for text, item in entries if all(w in text for w in words)]
 ```
 
 ### 7.6 Time (`clock.py`, `core/timefmt.py`; D-35, D-43)
