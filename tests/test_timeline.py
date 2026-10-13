@@ -25,6 +25,7 @@ from pycon_us.core.timeline import (
     NowPlace,
     Slot,
     now_place,
+    posters,
     schedule_order,
     timeline,
     track_sessions,
@@ -273,6 +274,42 @@ def test_before_posters_are_published_the_posters_track_lists_the_posters_row(
     listed = [s for group in track_sessions(data, "Poster") for s in group.sessions]
     assert len(listed) == 1
     assert listed[0].kind == "poster" and listed[0].in_timeline
+
+
+def posters_row(data: ConferenceData) -> Session:
+    """The feed's Posters row: the poster slots collapsed into one row (DATA-06)."""
+    (row,) = (s for s in data.sessions.values() if s.kind == "poster" and s.in_timeline)
+    return row
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_a_posters_row_lists_its_posters_as_the_posters_track_does(year: int) -> None:
+    """SESS-09: the row's detail lists every poster, in the track page's order."""
+    data = processed(year)
+    listed = posters(data, posters_row(data))
+    assert len(listed) == len(data.posters) > 0
+    track = [s for group in track_sessions(data, "Poster") for s in group.sessions]
+    assert list(listed) == track
+
+
+def test_only_a_posters_row_has_posters() -> None:
+    data = processed(2026)
+    for session_id in ("142", "poster-detail-60", "9119"):
+        assert posters(data, data.sessions[session_id]) == ()
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_before_posters_are_published_the_posters_row_lists_none(year: int) -> None:
+    data = process(changed(year, _without_posters), settings(year))
+    assert posters(data, posters_row(data)) == ()
+
+
+def test_a_posters_row_s_posters_are_memoised_per_feed() -> None:
+    data = processed(2026)
+    row = posters_row(data)
+    assert posters(data, row) is posters(data, row)
+    other = processed(2026)
+    assert posters(other, posters_row(other)) is not posters(data, row)
 
 
 def test_a_track_page_ignores_the_schedule_filter() -> None:

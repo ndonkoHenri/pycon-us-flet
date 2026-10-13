@@ -1,6 +1,7 @@
-"""The schedule queries: a day's slots, the track pages and schedule order (D-178).
+"""The schedule queries: slots, track pages, posters and schedule order (D-178).
 
-#85; DATA-18, DATA-20, DATA-30, SCHED-17; D-20, D-31. Queries never change the model
+A day's slots, a track page's sessions, a Posters row's posters (SESS-09). #85;
+DATA-18, DATA-20, DATA-30, SCHED-17; D-20, D-31. Queries never change the model
 (SCHED-17). Memoised per feed: the same feed, day and filter return the same objects,
 which is what lets the Schedule's memoised day lists, slots and rows skip work (D-153,
 F34).
@@ -208,6 +209,39 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
         )
 
     return _memoised(data, ("track", track), build)
+
+
+def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
+    """Return the posters a Posters row stands for, as its detail lists them (SESS-09).
+
+    The poster details (DATA-07) take the time and place of the Posters row they belong
+    to, so they are the sessions outside the timeline at its start and location, in
+    ``schedule_order`` as the Posters track page lists them (D-199). Memoised per feed
+    and row, so the detail's memoised rows get the same objects on every render (D-153).
+
+    Args:
+        data: The processed feed.
+        session: Any session; only a Posters row has posters.
+
+    Returns:
+        Its posters; ``()`` for any other session, and for a Posters row of a feed that
+        publishes no posters.
+    """
+    if not _is_posters_row(session):
+        return ()
+
+    def build() -> tuple[Session, ...]:
+        found = (
+            s
+            for s in data.sessions.values()
+            if s.kind == session.kind
+            and not s.in_timeline
+            and s.start == session.start
+            and s.location == session.location
+        )
+        return tuple(sorted(found, key=schedule_order))
+
+    return _memoised(data, ("posters", session.id), build)
 
 
 def _is_posters_row(session: Session) -> bool:

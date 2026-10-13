@@ -119,6 +119,7 @@ def SessionRow(
     overlaps: tuple[str, ...] = (),
     elapsed: int | None = None,
     omit: frozenset[str] = frozenset(),
+    show_time: bool = True,
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
 
@@ -148,6 +149,8 @@ def SessionRow(
             text, and "60 percent elapsed." at the end of the phrase; None for none.
         omit: Badge labels the page already shows, left out of the row and its
             phrase (``badge_specs()``): a track page's own badge (D-199).
+        show_time: False where the page above says the time of every row, as the
+            Posters detail does: the row and its phrase leave it out (D-206).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -160,6 +163,7 @@ def SessionRow(
         overlaps=overlaps,
         elapsed=elapsed,
         omit=omit,
+        show_time=show_time,
         key=key,  # pyright: ignore[reportCallIssue]
     )
 
@@ -176,6 +180,7 @@ def _SessionRow(
     overlaps: tuple[str, ...],
     elapsed: int | None = None,
     omit: frozenset[str] = frozenset(),
+    show_time: bool = True,
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
@@ -198,12 +203,16 @@ def _SessionRow(
             overflow=ft.TextOverflow.ELLIPSIS,
         )
     )
-    lines.append(_meta(view))
+    if show_time:
+        lines.append(_meta(view))
+    elif view.place:
+        lines.append(_secondary(view.place))
     if view.speakers:
         lines.append(_secondary(view.speakers))
     if overlaps:
         lines.append(_overlap_line(overlaps, tokens.warning))
-    phrase = spoken_phrase([label for label, _ in specs], view, overlaps=overlaps)
+    labels = [label for label, _ in specs]
+    phrase = spoken_phrase(labels, view, overlaps=overlaps, show_time=show_time)
     if elapsed is not None:
         lines.append(_elapsed_bar(elapsed, tokens.live))
         phrase = f"{phrase} {elapsed_phrase(elapsed)}"

@@ -1,5 +1,6 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
 
+import asyncio
 import dataclasses
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -138,12 +139,25 @@ class MemoryClipboard(ft.Clipboard):
 
 
 class MemoryShare(ft.Share):
-    """Share that records the files it was asked to share instead of opening a sheet."""
+    """Share that records the files and texts it was asked to share instead of a sheet."""
 
     def init(self) -> None:
         self.shared: list[list[ft.ShareFile]] = []
+        self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
         self.error: Exception | None = None
+        # When given, a text's sheet stays up until the test sets the event.
+        self.gate: asyncio.Event | None = None
+
+    async def share_text(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, text: str, **options: Any
+    ) -> ft.ShareResult:
+        if self.error is not None:
+            raise self.error
+        self.texts.append((text, options))
+        if self.gate is not None:
+            await self.gate.wait()
+        return ft.ShareResult(status=self.status, raw="")
 
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any

@@ -4,9 +4,10 @@ Pure functions of the processed feed, like ``queries`` (architecture §7.5): a l
 builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
 that spans days, and ``by_slot`` one day's into time slots. ``places`` gives session
-detail its room tiles (SESS-02), and ``people`` its Speakers section (SESS-07). ``spoken_phrase()``, ``notice_phrase()`` and
-``elapsed_phrase()`` are what a row says to a screen reader, as one phrase (D-33,
-D-200).
+detail its room tiles (SESS-02), ``people`` its Speakers section (SESS-07), and
+``share_text`` what its Share sends (NEW-06). ``spoken_phrase()``,
+``notice_phrase()`` and ``elapsed_phrase()`` are what a row says to a screen reader,
+as one phrase (D-33, D-200).
 """
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -16,7 +17,7 @@ from itertools import groupby
 
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.slugs import slugify_room
-from pycon_us.core.timefmt import local_date, time_range_label
+from pycon_us.core.timefmt import day_heading, local_date, time_range_label
 
 _DASH = "–"
 """The en dash of ``timefmt`` ranges, which a screen reader may skip or call a dash."""
@@ -237,8 +238,46 @@ def people(
     return tuple(found)
 
 
+def share_text(
+    session: Session, conference: str, zone: tzinfo, *, use_24h: bool
+) -> str:
+    """Return what Share sends for a session (NEW-06): its title, when and where, its page.
+
+    "Python for Humans" / "PyCon US 2026 · Saturday, May 16, 10:30–11:00 AM PDT ·
+    Grand Ballroom A" / its public page on the conference site. The time is in
+    conference time, as everywhere (D-35), and names its zone, since the person who
+    reads it may be anywhere; it starts where the session detail's does (the Job
+    Fair's 9:30, DATA-11). The conference's name says what the day belongs to, also
+    when there is no page. The page is the feed's own link (``Session.url``, the one
+    "Open on us.pycon.org" opens): a synthetic id (a collapsed break, the Posters row,
+    a poster detail) and a session the site has no page for (a keynote, a notice)
+    have none, so their text ends with when and where.
+
+    Args:
+        session: The session.
+        conference: The conference's name from the year data, e.g. "PyCon US 2026".
+        zone: The conference's zone.
+        use_24h: Whether the device uses the 24-hour clock.
+    """
+    start = session.display_start
+    when = time_range_label(start, session.end, zone, use_24h=use_24h)
+    day = day_heading(local_date(start, zone))
+    zone_name = start.astimezone(zone).tzname()
+    details = [conference, f"{day}, {when} {zone_name}"]
+    if session.display_location:  # a generic break is everywhere
+        details.append(session.display_location)
+    lines = [session.name, " · ".join(details)]
+    if session.url:
+        lines.append(session.url)
+    return "\n".join(lines)
+
+
 def spoken_phrase(
-    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
+    labels: Sequence[str],
+    view: SessionView,
+    *,
+    overlaps: Sequence[str] = (),
+    show_time: bool = True,
 ) -> str:
     """Return what a screen reader says for a session row: one phrase (D-33).
 
@@ -252,8 +291,12 @@ def spoken_phrase(
         labels: The badges' labels, in order (``badge_specs()``).
         view: The session's row view.
         overlaps: The names of the saved sessions the row overlaps, if any.
+        show_time: False when the page above says the row's time (the Posters
+            detail, D-206): the phrase leaves it out, as the row does.
     """
-    when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
+    when = ", ".join(
+        part for part in (view.spoken_when if show_time else "", view.place) if part
+    )
     clash = ""
     if overlaps:
         *rest, last = (f"“{name}”" for name in overlaps)

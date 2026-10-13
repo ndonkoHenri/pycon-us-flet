@@ -1,6 +1,7 @@
 """Tests for the row views lists hand their rows (``core/row_views.py``; SCHED-03, D-184).
 
-Also the phrases a screen reader hears for a row, built from a view (D-200).
+Also the phrases a screen reader hears for a row, built from a view (D-200), and the
+text session detail's Share sends (NEW-06).
 """
 
 from dataclasses import replace
@@ -20,6 +21,7 @@ from pycon_us.core.row_views import (
     places,
     session_view,
     session_views,
+    share_text,
     spoken_phrase,
 )
 from pycon_us.core.timeline import schedule_order
@@ -330,6 +332,15 @@ def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
     assert no_speakers == "Break. Coffee. 8:00 to 9:00 AM, Expo Hall AB."
 
 
+def test_a_phrase_without_its_time_keeps_its_place() -> None:
+    """The Posters detail says the time above its rows (D-206); a place would stay."""
+    view = view_of(TUTORIAL)
+    phrase = spoken_phrase(["Tutorial"], view, show_time=False)
+    assert phrase == "Tutorial. All about decorators. Room 101B. Reuven M. Lerner."
+    no_place = spoken_phrase([], replace(view, place=""), show_time=False)
+    assert no_place == "All about decorators. Reuven M. Lerner."
+
+
 def test_a_notice_reads_as_its_kind_name_and_time() -> None:
     """ux.md §3.9: "Notice. Registration opens, 7:00 AM"."""
     phrase = notice_phrase("Notice", view_of(NOTICE))
@@ -378,3 +389,76 @@ def test_by_slot_returns_its_slots_by_start_whatever_order_the_views_come_in() -
         assert [start for start, _ in slots] == starts
         for start, group in slots:  # within a slot, the order given
             assert group == [v for v in views if v.session.start == start]
+
+
+# ------------------------------------------------------------------ Share (NEW-06)
+
+CONFERENCE = load_year(2026).conference.name
+
+
+def shared(session_id: str, *, use_24h: bool = False) -> list[str]:
+    """The lines Share sends for a 2026 session."""
+    session = processed(2026).sessions[session_id]
+    return share_text(session, CONFERENCE, ZONE_2026, use_24h=use_24h).split("\n")
+
+
+def test_a_talk_shares_its_title_when_and_where_and_its_public_page() -> None:
+    assert shared(TALK) == [
+        "Python for Humans - Designing Python Code Like a User Interface",
+        "PyCon US 2026 · Saturday, May 16, 10:30–11:00 AM PDT · Grand Ballroom A",
+        "https://us.pycon.org/2026/schedule/presentation/142/",
+    ]
+
+
+def test_the_shared_time_follows_the_device_s_24_hour_clock() -> None:
+    assert shared(TALK, use_24h=True)[1] == (
+        "PyCon US 2026 · Saturday, May 16, 10:30–11:00 PDT · Grand Ballroom A"
+    )
+
+
+@pytest.mark.parametrize(
+    "session_id",
+    [
+        COFFEE,  # a collapsed break: <kind>-<room>-<start>
+        "poster-Expo Hall AB-2026-05-17T09:30:00-07:00",  # the Posters row
+        "poster-detail-60",  # a poster
+    ],
+)
+def test_a_synthetic_id_shares_text_without_a_url(session_id: str) -> None:
+    """NEW-06: only the site's own sessions have a page to link."""
+    lines = shared(session_id)
+    assert len(lines) == 2
+    assert not any("://" in line for line in lines)
+
+
+def test_a_session_the_site_has_no_page_for_shares_no_url() -> None:
+    """A keynote has a numeric id but no page: a URL built from the id would be dead."""
+    assert shared("176") == [
+        "amanda casari",
+        "PyCon US 2026 · Sunday, May 17, 9:00–9:45 AM PDT · Pacific Ballroom - Arena",
+    ]
+
+
+def test_the_shared_page_is_the_feed_s_own_link_not_one_built_from_the_id() -> None:
+    """The lightning talks' id is 175 and their page presentation/177."""
+    assert shared("175")[2] == "https://us.pycon.org/2026/schedule/presentation/177/"
+
+
+def test_an_open_space_shares_its_entry_on_the_open_spaces_page() -> None:
+    assert shared("9119")[2] == (
+        "https://us.pycon.org/2026/schedule/open-spaces/#OpenSpace-119"
+    )
+
+
+def test_the_shared_time_starts_where_the_detail_s_does() -> None:
+    """DATA-11: the Job Fair is grouped at 10:00 and opens at 9:30."""
+    assert shared("178")[1] == (
+        "PyCon US 2026 · Sunday, May 17, 9:30 AM–1:00 PM PDT · Expo Hall AB"
+    )
+
+
+def test_a_generic_break_and_a_notice_share_no_place() -> None:
+    assert shared("break--2026-05-17T10:00:00-07:00")[1] == (
+        "PyCon US 2026 · Sunday, May 17, 10:00 AM–12:00 PM PDT"
+    )
+    assert shared(NOTICE)[1] == "PyCon US 2026 · Wednesday, May 13, 7:30 AM PDT"
