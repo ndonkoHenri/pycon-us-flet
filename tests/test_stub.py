@@ -1,6 +1,7 @@
 """Tests for the not-found states of the detail stubs and the Router's ``NotFound`` (#83).
 
-Session detail's own state is tested with the screen (``test_session.py``, #90).
+Session and room detail's own states are tested with their screens
+(``test_session.py``, #90; ``test_room.py``, #101).
 
 They run outside a renderer, with a fake page bound as Flet binds a session's page and
 the hooks replaced. Every empty state names a way out (ux.md §4.6): the thing's list,
@@ -17,7 +18,7 @@ import pytest
 
 from pycon_us import routes
 from pycon_us.favorites import Favorites
-from pycon_us.screens import room, speaker
+from pycon_us.screens import speaker
 from tests.fakes import FakePage, bound
 from tests.trees import descendants, only, texts
 
@@ -44,14 +45,6 @@ def tap(button: ft.FilledTonalButton) -> None:
             "All speakers",
             "/more/speakers",
             "speaker.not_found",
-        ),
-        (
-            room,
-            "RoomDetail",
-            "This room isn't in the current schedule",
-            "All rooms",
-            "/map",
-            "room.not_found",
         ),
     ],
 )

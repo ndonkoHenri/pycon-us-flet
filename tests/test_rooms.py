@@ -1,7 +1,8 @@
-"""Tests for the Map's rooms list query (#100; ROOM-01, D-188).
+"""Tests for the rooms queries: the Map's list and one room's "now" (ROOM-01, ROOM-02).
 
 On the recorded 2026 feed, at fixed instants in conference time: the rooms' order, the
-other locations, and what is on in a room before, during, between and after sessions.
+other locations, and what is on in a room before, during, between and after sessions
+(#100, D-188), which room detail's "Now in this room" asks of one room (#101, D-194).
 """
 
 from datetime import datetime
@@ -11,7 +12,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
-from pycon_us.core.rooms import RoomEntry, RoomList, room_list, session_count
+from pycon_us.core.rooms import RoomEntry, RoomList, room_list, room_now, session_count
 from pycon_us.core.slugs import room_sort_key
 from tests.feeds import processed
 
@@ -161,3 +162,52 @@ def test_a_naive_now_is_refused(data: ConferenceData) -> None:
 )
 def test_the_count_line_agrees_with_its_number(count: int, line: str) -> None:
     assert session_count(count) == line
+
+
+# ------------------------------------------------------------------ one room (#101)
+
+
+@pytest.mark.parametrize(
+    "now",
+    [
+        at(5, 15, 10, 59),  # a break in the room
+        at(5, 15, 11, 10),  # a talk
+        at(5, 15, 11, 30),  # the talk's end: nothing
+        at(5, 16, 8, 30),  # the lightning talks, streamed here
+        at(5, 12, 12),  # before the conference
+        at(5, 18, 12),  # a sprint day
+    ],
+)
+def test_one_room_s_now_is_its_entry_in_the_rooms_list(
+    data: ConferenceData, now: datetime
+) -> None:
+    """Room detail and the Map say the same: one query, one rule (D-179)."""
+    listing = room_list(data, now, OTHERS)
+    assert room_now(data, "room-103abc", now) == entry(listing, "room-103abc").on_now
+
+
+def test_one_room_s_now_follows_the_session_s_start_and_end(
+    data: ConferenceData,
+) -> None:
+    """From the start up to, not including, the end ("Mind the gap! …", 11:00-11:30)."""
+    assert room_now(data, "room-103abc", at(5, 15, 10, 59))[0].name == "Break"
+    for minute in (0, 29):
+        on = room_now(data, "room-103abc", at(5, 15, 11, minute))
+        assert [s.id for s in on] == ["15"]
+    assert room_now(data, "room-103abc", at(5, 15, 11, 30)) == ()
+
+
+def test_in_one_room_the_session_that_started_last_comes_first(
+    data: ConferenceData,
+) -> None:
+    on = room_now(data, "room-102c", at(5, 16, 16, 30))
+    assert [s.name for s in on] == ["Organizing IRL meetups", "Board Games Prt. 2"]
+
+
+def test_a_room_the_feed_lacks_has_nothing_on(data: ConferenceData) -> None:
+    assert room_now(data, "no-such-room", at(5, 15, 11, 10)) == ()
+
+
+def test_one_room_s_now_refuses_a_naive_now(data: ConferenceData) -> None:
+    with pytest.raises(ValueError, match="aware"):
+        room_now(data, "room-103abc", datetime(2026, 5, 15, 11))  # noqa: DTZ001
