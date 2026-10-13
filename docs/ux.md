@@ -359,10 +359,11 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 | My schedule unavailable (`Favorites.loaded` is False after the gate, D-172) | (its screen) | "Couldn't open My schedule" / "Your saved sessions are still on this device. Close and reopen the app to see them." | none |
 | Filters hide a day | (its screen) | "No sessions on Thursday match your filters" | "Clear filters" |
 | Search miss | (its screen) | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
-| No data, no network | `CLOUD_OFF_OUTLINED` | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
+| No data, no network | `CLOUD_OFF_OUTLINED` | "Can't load the schedule" (the Map: "Can't load the rooms") / "Connect to the internet and try again." | "Try again" |
 | Session not found | `EVENT_BUSY_OUTLINED` (the same as "removed", §3.7: a session that left the schedule) | "This session isn't in the current schedule" | "Open schedule" |
 | Speaker not found | `PERSON_OFF_OUTLINED` | "This speaker isn't in the current schedule" | "All speakers" |
 | Room not found | `WRONG_LOCATION_OUTLINED` | "This room isn't in the current schedule" | "All rooms" (the Map) |
+| No rooms (the Map, D-188) | `MEETING_ROOM_OUTLINED` | "No rooms yet" / "Rooms appear here once the schedule lists them." | "Open schedule" |
 | Page not found (the Router's `NotFound`) | `LINK_OFF_OUTLINED` | "Page not found" / "Nothing in the app is at /x." | "Go to Now" |
 | Next year not published | (its screen) | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
 | Sponsor not found (P2) | (its screen) | "We couldn't find this sponsor" | "All sponsors" |
@@ -503,7 +504,7 @@ A global pattern: §4.3. Route shape per §2.5.
 
 ### 5.8 Map · `/map` (Rooms P1, other panes P2; ROOM-01, MAP-01..03, MAP-07, MAP-08)
 
-- **P1:** `AppBar` "Map" with `SEARCH` (Rooms); the body is the Rooms list: natural sort (grouped by floor from `map.toml` in P2, "Other locations" last), `ListTile(leading=Icon(PLACE_OUTLINED), title="Room 103ABC", subtitle="Now: Building X · 26 sessions", trailing=CHEVRON_RIGHT)`. "Now:" only while something is on; *(P2)* seeded sprint-only rooms read "Sprints" (MAP-08). Skeleton, then "No rooms yet" (Ionic showed "Loading rooms…" forever).
+- **P1 (D-188):** `AppBar` "Map" with `SEARCH` (Rooms); the body is the Rooms list (`core/rooms.py`'s `room_list()`): a `SectionHeader` "Rooms" over the rooms in natural sort (`slugs.room_sort_key`; grouped by floor from `map.toml` in P2), then "Other locations" over the places that are not rooms (`content.toml`'s `other_locations`: Elsewhere, Lobby, Out Front of Hyatt Regency in 2026). Each row is a `LinkTile` (`PLACE_OUTLINED`, the room's name, trailing `CHEVRON_RIGHT`) whose subtitle is "26 sessions" ("1 session") and, only while something is on, a second line "Now: Building X" in `Tokens.live` (at most two lines; "Now: Board games and 1 more" when several are on, the one that started last named first). The count keeps its place under the name in every row; one node reads "Room 103ABC, 26 sessions, Now: Building X"; identifier `map.room.<slug>`; a tap pushes `…/room/<slug>`. "Now:" follows Now & Next's rule (D-179: `start <= now < end` over the timeline, so a poster detail stays inside its Posters row and a notice is never on) and `clock.now()`, recomputed on the minute tick (`use_minute()`, D-175). *(P2)* seeded sprint-only rooms read "Sprints" (MAP-08). States: without data, the status strip and `SkeletonList` "Loading rooms" until the first fetch has failed, then "Can't load the rooms" with Try again (kept, its button disabled, during a retry); data without rooms, "No rooms yet" with "Open schedule" (Ionic showed "Loading rooms…" forever). No control for the P2 panes.
 - **P2:** the body becomes `Tabs` with **Rooms · Floor plans · Expo · Job fair** as the first row and a `TabBarView`. The selected pane and each pane's zoom live in `ViewMemory` (D-18; Ionic destroyed panes). Map panes never scroll the page, so pans are not stolen. Overflow "3D venue tour" opens Concept3D in the in-app browser (no iframe). Search scope becomes Places (rooms, booths, venue spots).
 - **Floor plans:** `Card(OUTLINED)` per plan with a 16:10 thumbnail, title, subtitle and `OPEN_IN_FULL`, in Ionic's order; a tap pushes the floor viewer (§6.1).
 

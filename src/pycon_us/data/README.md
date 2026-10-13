@@ -3,7 +3,8 @@
 Bundled, per-year conference data (D-45): one folder per year, e.g. `2026/`, holding
 
 - `conference.toml`: name, dates, time zone, venue, site and feed URLs, and the track registry;
-- `content.toml`: texts and links for the info pages (today only the display-time overrides);
+- `content.toml`: texts and links for the info pages (today the display-time overrides, the venue's names for
+  feed processing and the places that are not rooms, the Map's "Other locations");
 - `map.toml`: floor plans, room pins and booths (P2);
 - `conference.json`: the feed snapshot used for an offline first launch (NEW-03, D-135), only for the
   active year.

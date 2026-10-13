@@ -371,8 +371,35 @@ def current_minute() -> int:
     return int(clock.now().timestamp()) // 60
 
 
+def use_minute() -> int:
+    """Re-render the calling component whenever the minute of ``clock.now()`` changes.
+
+    A hook for the views that depend on the time, such as the Map's "Now:" lines: they
+    recompute every 60 s while they are mounted and the app is in the foreground, on
+    the strip's loop (``Services.run_every``, ``TICK_SECONDS``; D-40, D-175), and catch
+    up at once on a resume. Leaving the screen stops the ticks. The Developer fake
+    clock moves the minute too.
+
+    Returns:
+        The minute, counted from the epoch; read it to recompute only when it changes.
+    """
+    svc = use_services()
+    minute, set_minute = ft.use_state(current_minute)
+
+    @report_errors
+    def tick() -> None:
+        set_minute(current_minute())  # the same minute renders nothing new
+
+    @report_errors
+    async def keep_up() -> None:
+        await svc.run_every(TICK_SECONDS, tick)
+
+    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    return minute
+
+
 def stop_ticks() -> None:
-    """The strip's effect cleanup: it has nothing of its own to undo.
+    """The ticking effects' cleanup (the strip's, ``use_minute()``'s): nothing to undo.
 
     Flet cancels an effect's task on unmount only when the effect has a cleanup (F2),
     and that cancel is what stops the ticks. A cleanup returned by a sync setup would

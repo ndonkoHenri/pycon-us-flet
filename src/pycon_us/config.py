@@ -23,6 +23,7 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
+from pycon_us.core.slugs import slugify_room
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -131,7 +132,7 @@ class ConferenceInfo:
 
 @dataclass(frozen=True)
 class Content:
-    """The year's content from ``content.toml``; for now only what feed processing needs.
+    """The year's content from ``content.toml``: what feed processing and the Map need.
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -140,11 +141,15 @@ class Content:
             when the feed names its halls the same way everywhere.
         lightning_talks_location: Where lightning talks are shown to happen, whatever
             rooms they are streamed to (D-124); empty to show their first room.
+        other_locations: The places in the feed's room lists that are not rooms
+            ("Elsewhere", "Lobby"), as the feed names them: the Map lists them apart,
+            under "Other locations" (ROOM-01, D-188). Matched by room slug.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
     hall_prefix: str = ""
     lightning_talks_location: str = ""
+    other_locations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, eq=False)
@@ -286,6 +291,12 @@ def _value(expected: object, value: object, file: str, key: str) -> object:
         (expected,) = (
             arg for arg in typing.get_args(expected) if arg is not type(None)
         )
+    if expected == tuple[str, ...]:  # an array of strings
+        if not isinstance(value, list) or not all(type(v) is str for v in value):
+            raise YearDataError(
+                f"{file}: {key}: expected an array of strings, got {value!r}"
+            )
+        return tuple(value)
     if typing.get_origin(expected) is tuple:  # an array of tables
         item_cls = typing.get_args(expected)[0]
         if not isinstance(value, list):
@@ -348,6 +359,16 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
 
 
 def _check_content(content: Content, file: str) -> None:
+    seen: set[str] = set()
+    for index, name in enumerate(content.other_locations):
+        slug = slugify_room(name)
+        if not slug:
+            raise YearDataError(f"{file}: other_locations[{index}]: names no place")
+        if slug in seen:
+            raise YearDataError(
+                f"{file}: other_locations[{index}]: duplicate place {name!r}"
+            )
+        seen.add(slug)
     for index, override in enumerate(content.display_time_overrides):
         try:
             re.compile(override.match)

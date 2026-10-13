@@ -31,7 +31,7 @@ def LinkTile(
     target: str,
     *,
     icon: ft.IconData | None = None,
-    subtitle: str | None = None,
+    subtitle: str | ft.Control | None = None,
     identifier: str | None = None,
     app: bool = False,
 ) -> ft.Control:
@@ -55,7 +55,8 @@ def LinkTile(
             (``link_kind()``).
         icon: A leading icon, outlined (D-27); none for rows of names.
         subtitle: A second line, if any: for a phone or email row, the number or the
-            address.
+            address. A control for lines of their own (the Map's "Now:" line), read
+            with the title as one phrase.
         identifier: The row's semantics identifier for UI tests, e.g.
             ``more.speakers`` (decisions §M); a Copy button gets ``<identifier>.copy``.
         app: A web address opens in the app that handles it: a social profile, a map.
@@ -88,7 +89,7 @@ def _ExternalLinkTile(
     kind: LinkKind,
     *,
     icon: ft.IconData | None,
-    subtitle: str | None,
+    subtitle: str | ft.Control | None,
     identifier: str | None,
 ) -> ft.Control:
     """The external form of ``LinkTile``: a link that leaves the app, maybe with Copy."""
@@ -138,7 +139,7 @@ def _ExternalLinkTile(
 def _tile(
     title: str,
     icon: ft.IconData | None,
-    subtitle: str | None,
+    subtitle: str | ft.Control | None,
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
 ) -> ft.ListTile:
