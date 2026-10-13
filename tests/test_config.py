@@ -1,6 +1,7 @@
 """Tests for the year-data loader (D-45, DATA-34, DATA-14, DATA-28)."""
 
 import shutil
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -46,6 +47,26 @@ def test_the_registration_dashboard_is_year_data_and_optional() -> None:
         == "https://us.pycon.org/2026/accounts/dashboard/"
     )
     assert load_year(2025).conference.registration_url == ""
+
+
+def test_the_sprint_pages_are_year_data_and_optional() -> None:
+    # EVT-08: the Sprints page's menu; 2025's feed has no sprint projects.
+    conference = load_year(2026).conference
+    assert conference.sprints_url == "https://us.pycon.org/2026/events/dev-sprints/"
+    assert (
+        conference.sprint_submit_url
+        == "https://us.pycon.org/2026/sprints/project/submit/"
+    )
+    assert load_year(2025).conference.sprints_url == ""
+    assert load_year(2025).conference.sprint_submit_url == ""
+
+
+def test_the_sprints_follow_the_last_talk_day() -> None:
+    """EVT-05: the feed has no sessions for them; the year's dates say when they are."""
+    conference = load_year(2026).conference
+    assert conference.first_sprint_day == date(2026, 5, 18)
+    without = replace(conference, last_day=conference.last_talk_day)
+    assert without.first_sprint_day is None
 
 
 def test_2025_is_in_eastern_time() -> None:
@@ -301,6 +322,18 @@ def edit(path: Path, old: str, new: str) -> None:
             'registration_url = "https://',
             'registration_url = "http://',
             "2026/conference.toml: registration_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
+            'sprints_url = "https://',
+            'sprints_url = "http://',
+            "2026/conference.toml: sprints_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
+            'sprint_submit_url = "https://us.pycon.org',
+            'sprint_submit_url = "https://',
+            "2026/conference.toml: sprint_submit_url: expected an https:// URL",
         ),
         (
             "conference.toml",

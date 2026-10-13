@@ -12,7 +12,10 @@ them (posters one by one, SCHED-22). A tap pushes the track's page,
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
 left out, and so is a track without sessions in the current feed, which would open an
-empty page. Without data the page loads and fails as the Speakers list does (ux.md §4.1).
+empty page. The sprints are not a track of the feed, which has no sessions for them
+(D-126), but they are a way to take part, so Community ends with a Sprints row, built
+like the others, that pushes the Sprints page (``/more/sprints``, EVT-05). Without data
+the page loads and fails as the Speakers list does (ux.md §4.1).
 """
 
 from dataclasses import dataclass
@@ -23,6 +26,7 @@ import flet as ft
 from pycon_us.config import ConferenceInfo, Track
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.rooms import session_count
+from pycon_us.core.timefmt import date_range_label
 from pycon_us.core.timeline import track_sessions
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -44,6 +48,12 @@ GROUP_TITLES = {
 
 ICON_CIRCLE = 40
 """The diameter of a row's tonal circle, in dp (ux.md §5.10)."""
+
+SPRINTS = "/more/sprints"
+"""The Sprints page, which the hub's Sprints row pushes (EVT-05)."""
+
+SPRINTS_LEGEND = "Two days of coding on open-source projects, after the talks"
+"""The Sprints row's legend line: what the sprints are, as a track's legend says."""
 
 
 @dataclass(frozen=True)
@@ -113,6 +123,30 @@ def hub_phrase(entry: HubEntry) -> str:
     return f"{track.plural}. {track.legend}. {', '.join(marks)}."
 
 
+def sprints_marks(info: ConferenceInfo, projects: int) -> tuple[str, str]:
+    """Return the Sprints row's last line as shown and as spoken.
+
+    Its days from the year's data and how many projects the feed lists: "May 18–19 ·
+    24 projects", read "May 18 to 19, 24 projects". Either part alone when the other is
+    missing; empty for neither.
+
+    Args:
+        info: The year's facts: the sprint days (``first_sprint_day`` to ``last_day``).
+        projects: How many sprint projects the feed lists.
+    """
+    shown: list[str] = []
+    spoken: list[str] = []
+    if (first := info.first_sprint_day) is not None:
+        days = date_range_label(first, info.last_day)
+        shown.append(days)
+        spoken.append(days.replace("\N{EN DASH}", " to "))
+    if projects:
+        count = f"{projects} project" + ("" if projects == 1 else "s")
+        shown.append(count)
+        spoken.append(count)
+    return " · ".join(shown), ", ".join(spoken)
+
+
 @ft.component
 def Tracks() -> ft.View:
     """The Tracks hub: the year's tracks by group, each pushing its page."""
@@ -158,78 +192,138 @@ def Tracks() -> ft.View:
     else:
         items = []
         for title, entries in groups:
-            # A node of its own, so it is not read with the row under it.
-            items.append(
-                ft.Semantics(container=True, content=SectionHeader(title, level=2))
-            )
+            items.append(_heading(title))
             items.extend(hub_row(entry, tokens) for entry in entries)
+        if info.first_sprint_day is not None or data.sprints:
+            # The sprints end the Community section, which may have no track this year.
+            if groups[-1][0] != GROUP_TITLES["community"]:
+                items.append(_heading(GROUP_TITLES["community"]))
+            items.append(sprints_row(info, len(data.sprints)))
     return AppScaffold(
         title="Tracks & session types", body=ft.ListView(items, expand=True)
     )
 
 
+def _heading(title: str) -> ft.Control:
+    """A section's level-2 heading, a node of its own: not read with the row under it."""
+    return ft.Semantics(container=True, content=SectionHeader(title, level=2))
+
+
 def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
     """Return one track of the hub, pushing its page.
 
-    Built like a speaker row (D-189) rather than a ``ListTile``, so that it reads as
-    one phrase (``hub_phrase()``), a button. Nothing has a fixed height but the
-    circle, so it grows with the text; the circle and the chevron stay beside the
-    name at any text size.
+    Its circle in the track's badge colours, its plural name and legend, then its
+    badge, "New track" when it is new, and its count (``hub_tile()``).
 
     Args:
         entry: The track and its count.
         tokens: The scheme's tokens, for the track's badge colours (D-150).
     """
-    page = ft.context.page
     track = entry.track
     colors = tokens.track_badge(track.key)
+    marks: list[ft.Control] = [TrackBadge(track.short, colors)]
+    if track.new:
+        marks.append(TrackBadge(NEW_TRACK, tokens.new_track))
+    marks.append(_supporting(session_count(entry.count)))
+    return hub_tile(
+        circle=track_circle(track, colors),
+        title=track.plural,
+        legend=track.legend,
+        marks=marks,
+        phrase=hub_phrase(entry),
+        identifier=f"{SCREEN}.track.{track.slug}",
+        target=f"/more/tracks/{track.slug}",
+    )
+
+
+def sprints_row(info: ConferenceInfo, projects: int) -> ft.Control:
+    """Return the hub's Sprints row, pushing the Sprints page (EVT-05).
+
+    Built as a track's row, with the sprints' icon (ux.md §3.7) in a neutral circle,
+    since they have no badge colours to be the key to; its last line says when they
+    are and how many projects the feed lists.
+
+    Args:
+        info: The year's facts: the sprint days.
+        projects: How many sprint projects the feed lists.
+    """
+    shown, spoken = sprints_marks(info, projects)
+    return hub_tile(
+        circle=_circle(
+            ft.Icons.ROCKET_LAUNCH_OUTLINED,
+            BadgeColors(
+                text=ft.Colors.ON_SURFACE_VARIANT,
+                fill=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+            ),
+        ),
+        title="Sprints",
+        legend=SPRINTS_LEGEND,
+        marks=[_supporting(shown)] if shown else [],
+        phrase=f"Sprints. {SPRINTS_LEGEND}." + (f" {spoken}." if spoken else ""),
+        identifier=f"{SCREEN}.sprints",
+        target=SPRINTS,
+    )
+
+
+def hub_tile(
+    *,
+    circle: ft.Control,
+    title: str,
+    legend: str,
+    marks: list[ft.Control],
+    phrase: str,
+    identifier: str,
+    target: str,
+) -> ft.Control:
+    """Return a row of the hub: a circle, a name, a legend and marks, pushing a page.
+
+    Built like a speaker row (D-189) rather than a ``ListTile``, so that it reads as
+    one phrase, a button. Nothing has a fixed height but the circle, so it grows with
+    the text; the circle and the chevron stay beside the name at any text size.
+
+    Args:
+        circle: The row's 40 dp circle (``track_circle()``).
+        title: The name, ``TITLE_MEDIUM``.
+        legend: One line on what it is, in the variant colour.
+        marks: The last line's pills and words, in one wrapping row; none for no line.
+        phrase: What a screen reader says for the whole row.
+        identifier: The row's semantics identifier, ``tracks.<element>[.<key>]``.
+        target: The page a tap pushes.
+    """
+    page = ft.context.page
 
     @report_errors
     def go() -> None:
-        page.navigate(f"/more/tracks/{track.slug}")
+        page.navigate(target)
 
-    badges = [TrackBadge(track.short, colors)]
-    if track.new:
-        badges.append(TrackBadge(NEW_TRACK, tokens.new_track))
-    count = ft.Text(
-        session_count(entry.count),
-        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-        color=ft.Colors.ON_SURFACE_VARIANT,
-    )
-    lines = ft.Column(
-        [
-            ft.Text(track.plural, theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
-            ft.Text(
-                track.legend,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            # The badges and the count in one wrapping row, spaced as a badge row
-            # (ux.md §3.6) and centred on the pills: at large text the count moves
-            # under the badges whole.
+    lines: list[ft.Control] = [
+        ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
+        _supporting(legend),
+    ]
+    if marks:
+        # The marks in one wrapping row, spaced as a badge row (ux.md §3.6) and
+        # centred on the pills: at large text the count moves under the badges whole.
+        lines.append(
             ft.Container(
                 ft.Row(
-                    [*badges, count],
+                    marks,
                     wrap=True,
                     spacing=8,
                     run_spacing=4,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 padding=ft.Padding.only(top=4),
-            ),
-        ],
-        spacing=2,
-        expand=True,
-    )
+            )
+        )
     content = ft.Semantics(
-        label=hub_phrase(entry),
-        identifier=f"{SCREEN}.track.{track.slug}",
-        button=True,  # it opens the track's page: "…, button" (D-33)
+        label=phrase,
+        identifier=identifier,
+        button=True,  # it opens a page: "…, button" (D-33)
         exclude_semantics=True,  # the phrase replaces the texts
         content=ft.Row(
             [
-                track_circle(track, colors),
-                lines,
+                circle,
+                ft.Column(lines, spacing=2, expand=True),
                 ft.Icon(ft.Icons.CHEVRON_RIGHT, color=ft.Colors.ON_SURFACE_VARIANT),
             ],
             spacing=16,
@@ -247,6 +341,15 @@ def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
     )
 
 
+def _supporting(text: str) -> ft.Text:
+    """A row's supporting words, in the variant colour."""
+    return ft.Text(
+        text,
+        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+    )
+
+
 def track_circle(track: Track, colors: BadgeColors) -> ft.Control:
     """Return a track's icon in a 40 dp circle of its badge's colours (ux.md §5.10).
 
@@ -257,12 +360,13 @@ def track_circle(track: Track, colors: BadgeColors) -> ft.Control:
         track: The track, whose ``icon`` names an ``ft.Icons`` member.
         colors: Its badge colours in the current scheme.
     """
+    return _circle(cast(ft.IconData, getattr(ft.Icons, track.icon)), colors)
+
+
+def _circle(icon: ft.IconData, colors: BadgeColors) -> ft.Control:
+    """An icon in a 40 dp circle: the fill and the icon in the given colours."""
     return ft.Container(
-        ft.Icon(
-            cast(ft.IconData, getattr(ft.Icons, track.icon)),
-            color=colors.text,
-            size=24,
-        ),
+        ft.Icon(icon, color=colors.text, size=24),
         width=ICON_CIRCLE,
         height=ICON_CIRCLE,
         bgcolor=colors.fill,

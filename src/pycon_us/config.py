@@ -12,7 +12,7 @@ The year's feed snapshot, ``conference.json``, is read only when the app needs i
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -98,6 +98,23 @@ class ConferenceInfo:
     registration_url: str = ""
     """Where an attendee checks their registration and adds tutorials or summits to it,
     for session detail's registration guidance (SESS-01); empty when not known."""
+    sprints_url: str = ""
+    """The site's page about the development sprints, for the Sprints page (EVT-08);
+    empty when not known."""
+    sprint_submit_url: str = ""
+    """Where a project signs up for the sprints, for the Sprints page (EVT-08); empty
+    when not known."""
+
+    @property
+    def first_sprint_day(self) -> date | None:
+        """The first sprint day, the day after the last talk day; None without sprints.
+
+        The sprints run from it to ``last_day``: the feed has no sessions for them
+        (D-126), so the year's dates are where they come from (EVT-05).
+        """
+        if self.last_day == self.last_talk_day:
+            return None
+        return self.last_talk_day + timedelta(days=1)
 
     @property
     def zone(self) -> ZoneInfo:
@@ -292,7 +309,11 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         raise YearDataError(
             f"{file}: snapshot_captured_at: expected a time with a UTC offset"
         )
-    optional = ("registration_url",) if conference.registration_url else ()
+    optional = tuple(
+        key
+        for key in ("registration_url", "sprints_url", "sprint_submit_url")
+        if getattr(conference, key)
+    )
     for key in ("site_url", "feed_url", *optional):
         url = urlsplit(getattr(conference, key))
         if url.scheme != "https" or not url.hostname:
