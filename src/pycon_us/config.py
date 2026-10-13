@@ -97,6 +97,11 @@ list them before ``:slug``, so the loader refuses a track slug that names anothe
 Here, with the registry, the loader stays free of Flet.
 """
 
+KEYNOTE_TRACKS = ("Keynote", "Plenary")
+"""The tracks a ``[[keynotes]]`` entry's session can be of: the keynotes' own
+(``HUB_PAGES["keynotes"]``), and the plenaries', since the feed files the panels there.
+The loader and the snapshot tool refuse an entry on any other track (D-214)."""
+
 
 @dataclass(frozen=True)
 class ConferenceInfo:
@@ -298,7 +303,7 @@ def load_year(
         year: The conference year; its files are in ``data_dir/<year>/``.
         data_dir: The folder that holds the year folders.
         check_sessions: Also refuse a keynote whose session the year's bundled
-            snapshot lacks (D-214). The tests and tools ask; the app does not, since
+            snapshot lacks, or has on a track not in ``KEYNOTE_TRACKS`` (D-214). The tests and tools ask; the app does not, since
             parsing the snapshot at every start would cost what D-38 saves, and a
             keynote a newer feed drops just shows no card.
 
@@ -323,7 +328,7 @@ def load_year(
     _check_content(content, content_file)
     data = YearData(conference, content, folder)
     if check_sessions:
-        check_snapshot_sessions(data, content_file)
+        check_snapshot_sessions(data, KEYNOTE_TRACKS, content_file)
     return data
 
 

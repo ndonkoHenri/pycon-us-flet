@@ -112,6 +112,22 @@ def test_the_loader_refuses_a_session_id_the_snapshot_lacks(data_dir: Path) -> N
     )
 
 
+def test_the_loader_refuses_a_session_id_of_another_track(data_dir: Path) -> None:
+    """A typo that lands on a talk would put it on the Keynotes page, its speakers
+    replaced by the year data's people on its detail."""
+    edit(data_dir / "2026" / "content.toml", 'session_id = "153"', 'session_id = "142"')
+    with pytest.raises(YearDataError) as error:
+        load_year(2026, data_dir, check_sessions=True)
+    assert str(error.value) == (
+        "2026/content.toml: keynotes[0].session_id: '142' is a Talk session, not a "
+        "keynote or a plenary"
+    )
+
+
+def test_the_keynote_tracks_include_the_hubs_keynotes_page() -> None:
+    assert config.HUB_PAGES["keynotes"] in config.KEYNOTE_TRACKS
+
+
 def test_the_app_loads_without_reading_the_snapshot(data_dir: Path) -> None:
     """D-38: the app never parses the snapshot to start; a keynote a newer feed
     drops just has no card."""
@@ -199,7 +215,11 @@ def test_a_keynote_needs_someone_on_stage(data_dir: Path) -> None:
 
 def test_the_session_check_takes_any_feed() -> None:
     """The snapshot tool checks a new feed with it before writing (D-214)."""
+    sessions = processed(2026).sessions
     keynote = Keynote("153", "keynote", ())
-    check_keynote_sessions((keynote,), {"153", "154"}, "x.toml")
+    check_keynote_sessions((keynote,), sessions, {"Keynote"}, "x.toml")
+    others = {k: s for k, s in sessions.items() if k != "153"}
     with pytest.raises(YearDataError, match=r"^x\.toml: keynotes\[0\]\.session_id"):
-        check_keynote_sessions((keynote,), {"154"}, "x.toml")
+        check_keynote_sessions((keynote,), others, {"Keynote"}, "x.toml")
+    with pytest.raises(YearDataError, match=r"is a Keynote session"):
+        check_keynote_sessions((keynote,), sessions, {"Plenary"}, "x.toml")

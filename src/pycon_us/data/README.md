@@ -13,7 +13,7 @@ Bundled, per-year conference data (D-45): one folder per year, e.g. `2026/`, hol
 `pycon_us.config.load_year()` loads them with `tomllib` into frozen dataclasses. The dataclasses are
 the schema: an unknown or missing key, a wrong type or a broken rule fails with an error naming the
 file, the key and the problem, and `tests/test_config.py` loads every year. The keynotes name sessions of
-the feed: `load_year(check_sessions=True)` checks them against the year's snapshot, which
+the feed, each a `Keynote` or a `Plenary`: `load_year(check_sessions=True)` checks them against the year's snapshot, which
 `tests/test_year_keynotes.py` does for every year and `tools/update_snapshot.py` does for a new feed.
 
 The snapshot is the public feed's bytes, unchanged. `conference.toml`'s `snapshot_captured_at` says when
