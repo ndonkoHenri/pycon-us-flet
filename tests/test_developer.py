@@ -44,6 +44,7 @@ from tests.fakes import (
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 FEED = "http://127.0.0.1:8000/conference-2026.json"
+OTHER_FEED = "http://127.0.0.1:8001/conference-2026.json"
 
 
 @pytest.fixture(autouse=True)
@@ -371,8 +372,17 @@ async def test_leaving_a_developer_feed_url_drops_the_feed_it_may_have_cached(
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
     assert svc.storage.feed_path.exists()  # a feed URL in use: kept
+    await type_into(render, "developer.feed_url", OTHER_FEED)
+    await press(render, "developer.apply")
+    assert svc.storage.feed_path.exists()  # from one feed URL to another: kept
+    await type_into(render, "developer.feed_url", "")
+    await press(render, "developer.apply")
+    assert not svc.storage.feed_path.exists()  # Apply back to the year's feed
+    await svc.storage.write_feed(b"{}")
+    await type_into(render, "developer.feed_url", FEED)
+    await press(render, "developer.apply")
     await press(render, "developer.reset")
-    assert not svc.storage.feed_path.exists()
+    assert not svc.storage.feed_path.exists()  # Reset
 
 
 async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
@@ -395,6 +405,8 @@ async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
 async def test_the_pickers_fill_the_clock_field_in_conference_time(
     render: Callable[[], dict[str, Any]], page: FakePage, machine_tz: str
 ) -> None:
+    await press(render, "developer.apply")
+    assert outcome(render) is not None
     text_field = field(render(), "developer.fake_clock")
     assert isinstance(text_field.suffix_icon, ft.IconButton)
     assert text_field.suffix_icon.tooltip == "Pick a date and time"
@@ -416,6 +428,7 @@ async def test_the_pickers_fill_the_clock_field_in_conference_time(
         SimpleNamespace(control=time_picker)
     )
     assert field(render(), "developer.fake_clock").value == "2026-05-15 09:30"
+    assert outcome(render) is None  # a fill is an edit: it clears the line
 
 
 def test_before_the_unlock_a_packaged_build_shows_how_to_unlock(

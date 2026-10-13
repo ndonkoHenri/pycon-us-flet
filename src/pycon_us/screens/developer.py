@@ -79,6 +79,7 @@ def Developer() -> ft.View:
             moment = datetime.combine(picked_day.current, e.control.value, zone)
             set_clock_text(clock.fake_clock_text(moment, zone))
             set_clock_error("")
+            set_outcome(NO_OUTCOME)  # a fill is an edit (ux.md §5.13)
 
     @report_errors
     def pick_day(e: ft.Event[ft.DatePicker]) -> None:
