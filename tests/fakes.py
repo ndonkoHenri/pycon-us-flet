@@ -76,6 +76,24 @@ class MemorySemantics(ft.SemanticsService):
         return dict(self.features)
 
 
+class MemoryHaptics(ft.HapticFeedback):
+    """HapticFeedback that records the effects asked for instead of reaching a device."""
+
+    def init(self) -> None:
+        self.effects: list[str] = []
+        self.error: Exception | None = None
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        if self.error is not None:
+            raise self.error
+        self.effects.append(method_name)
+
+
 class MemoryLauncher(ft.UrlLauncher):
     """UrlLauncher that records what it was asked to open instead of opening it."""
 

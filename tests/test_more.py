@@ -26,6 +26,7 @@ from pycon_us.state import ViewMemory
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
+    MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
@@ -48,6 +49,7 @@ def svc(tmp_path: Path) -> Services:
         storage=storage,
         memory=ViewMemory(),
         semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )

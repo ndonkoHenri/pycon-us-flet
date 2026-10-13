@@ -14,6 +14,7 @@ import flet as ft
 import pytest
 
 from pycon_us import routes
+from pycon_us.favorites import Favorites
 from pycon_us.screens import room, session, speaker
 from tests.fakes import FakePage, bound
 from tests.trees import descendants, only, texts
@@ -82,6 +83,22 @@ def test_an_unknown_id_names_the_thing_and_offers_its_list(
             lambda: SimpleNamespace(year=SimpleNamespace(conference=None)),
         )
         monkeypatch.setattr(module, "use_tokens", lambda: None)
+    if hasattr(module, "use_session_views"):  # the stubs' session rows (#81)
+        monkeypatch.setattr(
+            module,
+            "use_services",
+            lambda: SimpleNamespace(
+                year=SimpleNamespace(conference=SimpleNamespace(zone=None))
+            ),
+        )
+        monkeypatch.setattr(module, "use_favorites", Favorites)
+        monkeypatch.setattr(module, "use_favorite_toggle", lambda favorites: None)
+        monkeypatch.setattr(module, "use_tokens", lambda: None)
+        monkeypatch.setattr(module, "use_session_views", lambda *_, **__: ())
+        monkeypatch.setattr(
+            module, "use_conference", lambda: SimpleNamespace(data=empty, version=0)
+        )
+        monkeypatch.setattr(ft, "use_memo", lambda fn, deps: fn())
     scaffold = cast(dict[str, Any], inspect.unwrap(getattr(module, screen))("bogus"))
     assert scaffold["title"] == "Not found"
     state = scaffold["body"].controls[-1]

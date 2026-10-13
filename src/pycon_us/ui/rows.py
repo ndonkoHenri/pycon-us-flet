@@ -1,7 +1,7 @@
 """The rows lists are made of (decisions §M): so far ``LinkTile``, a row that opens a link.
 
-P1 adds the session, notice and speaker rows, the time gutter and ``LocationCard`` here
-(ux.md §3.9).
+P1 adds ``SpeakerRow`` and P2 ``LocationCard`` here (ux.md §3.9); the session and
+notice rows and the time gutter are in ``ui.session_rows`` (D-184).
 
 ``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
 is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves

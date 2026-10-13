@@ -207,10 +207,11 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
 
 
 async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
-    """Copy the OS's high-contrast and reduced-motion flags into ``prefs`` (D-23, D-34).
+    """Copy the OS's accessibility flags into ``prefs`` (D-23, D-34, D-184).
 
-    The platform reports a snapshot with no change event (F13), so this runs at start
-    and on resume. A failed read is logged and keeps the previous values.
+    High contrast, reduced motion and whether a screen reader is on. The platform
+    reports a snapshot with no change event (F13), so this runs at start and on
+    resume. A failed read is logged and keeps the previous values.
 
     Args:
         semantics: The session's ``SemanticsService``.
@@ -226,6 +227,7 @@ async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> No
         logger.info("Reduced motion is %s", "on" if reduce_motion else "off")
     prefs.os_high_contrast = features.high_contrast
     prefs.reduce_motion = reduce_motion
+    prefs.screen_reader = features.accessible_navigation
 
 
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:
