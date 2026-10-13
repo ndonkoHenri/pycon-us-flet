@@ -33,9 +33,11 @@ from pycon_us.core.speakers import (
     SpeakerEntry,
     directory,
     filter_directory,
+    has_bio,
     initials,
     letter_groups,
     letter_of,
+    speaker_sessions,
 )
 from pycon_us.core.timeline import schedule_order
 from pycon_us.prefs import Prefs, PrefsCtx
@@ -212,6 +214,65 @@ def test_lukasz_langas_first_2025_session_is_the_thursday_talk() -> None:
     assert entry.first_session is not None
     assert entry.first_session.name.startswith("Discover 3D graphics with WebGL")
     assert entry.more == 1
+
+
+# ------------------------------------------------------------------ a speaker's page
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_a_speaker_s_page_lists_every_session_by_day_as_the_list_orders_them(
+    year: int,
+) -> None:
+    """SPKR-03: the page's first session is the Speakers list's first (D-189)."""
+    data = processed(year)
+    for entry in directory(data):
+        days = speaker_sessions(data, entry.speaker.id)
+        sessions = [s for day in days for s in day.sessions]
+        assert sessions[0] is entry.first_session
+        assert len(sessions) == entry.more + 1
+        assert all(s.day == day.day for day in days for s in day.sessions)
+        assert [day.day for day in days] == sorted({s.day for s in sessions})
+
+
+def test_a_speaker_on_two_days_gets_a_group_per_day() -> None:
+    """2026's Catherine Nelson: a Thursday tutorial, then Friday's panel."""
+    days = speaker_sessions(processed(2026), "112")
+    assert [[s.id for s in day.sessions] for day in days] == [["106"], ["110"]]
+    assert days[0].day < days[1].day
+
+
+def test_a_speaker_s_poster_is_one_of_their_sessions() -> None:
+    """DATA-15: poster details link their authors too."""
+    ids = [s.id for d in speaker_sessions(processed(2026), "55") for s in d.sessions]
+    assert sorted(ids) == ["128", "poster-detail-52"]
+
+
+def test_an_unknown_speaker_has_no_sessions() -> None:
+    assert speaker_sessions(processed(2026), "nobody") == ()
+
+
+@pytest.mark.parametrize(
+    ("bio", "says"),
+    [
+        ("<p>Ana writes Python.</p>", True),
+        ("Pythonista", True),
+        ("TBD", True),  # a word: the app cannot tell it is a placeholder
+        ("<p>2 books</p>", True),
+        ("-", False),  # the feed's placeholder (2025: 12 speakers, 2026: 7)
+        ("<p> &#45; </p>", False),
+        ("", False),
+    ],
+)
+def test_a_bio_says_something_when_its_text_has_a_letter_or_digit(
+    bio: str, says: bool
+) -> None:
+    assert has_bio(Speaker("1", "Ana Lima", "", bio)) is says
+
+
+def test_the_panel_s_dashes_are_no_bio() -> None:
+    """2026's "Beyond the Hype" panellists other than Catherine Nelson have "-"."""
+    speakers = processed(2026).speakers
+    assert [has_bio(speakers[i]) for i in ("112", "183", "184")] == [True, False, False]
 
 
 # ------------------------------------------------------------------ the filter
