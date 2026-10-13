@@ -20,7 +20,7 @@ class only: a ``mailto:`` target holds an address, and the platform's error text
 repeats the target (D-72).
 
 A link in a feed text (a description, a bio) is what its author wrote, so
-``feed_link()`` first says which web address it stands for, if any (D-194): only
+``feed_link()`` first says which web address it stands for, if any (D-197): only
 ``http``, ``https`` and ``mailto`` links open, a site-relative path joins the year's
 site, and a web address written without its scheme (2026's ``[pytest](pytest.org)``)
 gets ``https://``.
@@ -93,7 +93,7 @@ _WEB_SCHEMES = ("http", "https")
 _APP_SCHEMES = (*_WEB_SCHEMES, "geo")
 
 FEED_LINK_SCHEMES = (*_WEB_SCHEMES, "mailto")
-"""The schemes a link in a feed text may have to open (D-194)."""
+"""The schemes a link in a feed text may have to open (D-197)."""
 
 _HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}", re.IGNORECASE)
 """A host name with a dot and a top-level domain of letters: ``pytest.org``."""
@@ -179,7 +179,7 @@ def feed_link(href: str | None, site_url: str) -> str | None:
 
     Descriptions converted from the feed's HTML have absolute links already (D-114);
     open-space descriptions are Markdown with their links as their authors wrote them
-    (D-140), so this decides what each form means (D-194):
+    (D-140), so this decides what each form means (D-197):
 
     - ``http``, ``https`` and ``mailto`` links are themselves; any other scheme
       (``javascript:``, ``file:``, ``tel:``) opens nothing.
@@ -202,11 +202,11 @@ def feed_link(href: str | None, site_url: str) -> str | None:
     target = (href or "").strip()
     if not target:
         return None
-    if target.startswith("/"):
-        return urljoin(site_url, target)
     try:
+        if target.startswith("/"):
+            return urljoin(site_url, target)
         scheme = urlsplit(target).scheme.lower()
-    except ValueError:  # an address urlsplit cannot read, e.g. "http://["
+    except ValueError:  # an address urlsplit cannot read, e.g. "http://[" or "//["
         return None
     if scheme:
         return target if scheme in FEED_LINK_SCHEMES else None

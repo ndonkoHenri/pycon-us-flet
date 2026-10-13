@@ -204,7 +204,7 @@ async def test_a_link_the_platform_cannot_open_says_so_and_logs_no_address(
     assert ADDRESS not in caplog.text  # nor in a traceback (D-72)
 
 
-# ------------------------------------------------------------------ feed texts (D-194)
+# ------------------------------------------------------------------ feed texts (D-197)
 
 SITE = "https://us.pycon.org/2026/"
 
@@ -247,6 +247,7 @@ def test_a_feed_link_opens_the_address_its_author_meant(href: str, opens: str) -
         "tel:+1-555-0100",
         "ftp://example.org/",
         "http://[",  # urlsplit cannot read it
+        "//[",  # nor its host when the site URL is joined
     ],
 )
 def test_a_feed_link_that_names_no_web_address_opens_nothing(href: str | None) -> None:

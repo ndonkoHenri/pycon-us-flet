@@ -354,6 +354,14 @@ def test_a_speaker_tile_is_one_button_named_by_the_speaker(page: FakePage) -> No
     assert isinstance(tile.leading.content, ft.CircleAvatar)
 
 
+def test_stacked_speaker_tiles_keep_material_s_space_around_the_avatar(
+    page: FakePage,
+) -> None:
+    """At the default 56 dp, six avatars 8 dp apart read as one column (D-197)."""
+    tile = tile_of(SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17"))
+    assert tile.min_height == 64  # 8 dp, the 48 dp avatar, 8 dp
+
+
 def test_a_tap_on_a_speaker_tile_pushes_the_speaker(page: FakePage) -> None:
     tap(tile_of(SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17")))
     assert page.navigated == ["/x/speaker/17"]

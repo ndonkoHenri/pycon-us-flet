@@ -194,6 +194,9 @@ def icon_top(subtitle: str | ft.Control | None) -> int:
 AVATAR_RADIUS = 24
 """A speaker row's avatar, in dp: a 48 dp circle (ux.md §3.9)."""
 
+SPEAKER_TILE_HEIGHT = 2 * AVATAR_RADIUS + 16
+"""A ``SpeakerTile``'s least height, in dp: the avatar with 8 dp above and below."""
+
 
 def speaker_avatar(speaker: Speaker) -> ft.CircleAvatar:
     """Return a speaker's 48 dp avatar: the feed's photo over their initials.
@@ -218,10 +221,12 @@ def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control
     """Return a speaker in a session's Speakers section (SESS-07): avatar, name, chevron.
 
     Built as an in-app ``LinkTile`` is, so it sits with the page's other rows that push
-    (the room tile): a Material ``ListTile`` of at least 56 dp, its chevron saying that
-    a tap opens the speaker's page, and one node for screen readers, the name as a
-    button; the avatar's initials stay out of it. No subtitle: the speaker's page, one
-    tap away, has the bio and their sessions (D-194).
+    (the room tile): a Material ``ListTile``, its chevron saying that a tap opens the
+    speaker's page, and one node for screen readers, the name as a button; the
+    avatar's initials stay out of it. At least 64 dp tall, Material's 8 dp above and
+    below the 48 dp avatar: the default 56 dp left stacked avatars 8 dp apart, which
+    read as one column (D-197). No subtitle: the speaker's page, one
+    tap away, has the bio and their sessions (D-197).
 
     Args:
         speaker: The directory speaker.
@@ -242,6 +247,7 @@ def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control
         trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
         on_click=go,
         title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+        min_height=SPEAKER_TILE_HEIGHT,
     )
     return ft.MergeSemantics(content=ft.Semantics(identifier=identifier, content=tile))
 

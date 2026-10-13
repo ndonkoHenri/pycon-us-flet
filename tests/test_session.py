@@ -536,16 +536,11 @@ async def test_a_pseudo_speaker_is_plain_text_that_nothing_taps(
     """D-125: "Hosted by …" is no person with a page (DATA-15)."""
     detail = await render(LIGHTNING)
     assert speaker_rows(detail) == []
-    hosts = next(
-        n
-        for n in detail.session.index.values()
-        if isinstance(n, ft.Text) and str(n.value).startswith("Hosted by")
-    )
-    assert hosts.value == "Hosted by Abigail, Chris, Cristián, and Lorena"
     # Its own node, not merged into the "Speakers" heading (seen on Android).
-    node = cast(ft.Control, hosts.parent).parent
-    assert isinstance(node, ft.Semantics) and node.container
-    holder: object = hosts.parent
+    node = detail.node("session.hosts")
+    assert node.container
+    assert words(node) == ["Hosted by Abigail, Chris, Cristián, and Lorena"]
+    holder: object = node
     while isinstance(holder, ft.Control):
         assert getattr(holder, "on_click", None) is None, holder
         holder = holder.parent

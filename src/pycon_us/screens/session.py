@@ -7,7 +7,7 @@ is the title under the badges, so the app bar's title stays empty. Then the "Whe
 where" card (``ui.when_where``), for a session that needs registration a card that
 says so and links the year's registration page, then the speakers (their rows push
 their pages; a pseudo-speaker such as "Hosted by …" is text) and the description, whose
-links open by the link rule (``ui.links.feed_markdown``, D-194).
+links open by the link rule (``ui.links.feed_markdown``, D-197).
 
 An unknown id shows the not-found state under the back arrow, so Back pops one level
 (D-186). A session that a newer feed drops while its detail is open keeps the content
@@ -274,6 +274,7 @@ def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
                 # A node of its own: left bare, Android merged it into the heading
                 # above ("Speakers, Hosted by …").
                 ft.Semantics(
+                    identifier=f"{SCREEN}.hosts",
                     container=True,
                     content=ft.Container(
                         ft.Text(entry, theme_style=ft.TextThemeStyle.BODY_LARGE),
@@ -294,7 +295,7 @@ def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
 
 
 def _about(description: str, svc: Services) -> ft.Control:
-    """The description (SESS-06): the feed's text as Markdown, its links by D-194."""
+    """The description (SESS-06): the feed's text as Markdown, its links by D-197."""
     return ft.Column(
         [
             SectionHeader("About", level=2, top=0),

@@ -449,7 +449,7 @@ def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> Non
             assert style.decoration_color == style.color, field.name
 
 
-def test_markdown_links_are_underlined_and_headings_stay_below_the_title() -> None:
+def test_markdown_links_are_underlined_and_headings_stay_below_the_section() -> None:
     sheet = theme.MARKDOWN_STYLE
     assert sheet.a_text_style is not None
     assert (
@@ -461,12 +461,9 @@ def test_markdown_links_are_underlined_and_headings_stay_below_the_title() -> No
         sheet.h3_text_style,
         sheet.h4_text_style,
     ]
-    assert [style.size for style in headings if style] == [
-        22,
-        18,
-        16,
-        16,
-    ]  # TITLE_LARGE is 22
+    # Under a level-2 "About" (D-197): no larger than a row title (TITLE_MEDIUM, 16)
+    # past h1, which stays below the screen title (TITLE_LARGE, 22).
+    assert [style.size for style in headings if style] == [18, 16, 16, 16]
 
 
 def adaptive_true_calls(source: str) -> list[int]:
@@ -499,7 +496,7 @@ def test_adaptive_scan_finds_the_keyword() -> None:
 
 
 def test_a_markdown_rule_is_a_one_dp_divider() -> None:
-    """D-194: Flet's default rule is a 5 dp bar between a description's paragraphs."""
+    """D-197: Flet's default rule is a 5 dp bar between a description's paragraphs."""
     decoration = theme.MARKDOWN_STYLE.horizontal_rule_decoration
     assert decoration is not None and isinstance(decoration.border, ft.Border)
     top = decoration.border.top

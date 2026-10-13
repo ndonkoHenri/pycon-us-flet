@@ -332,8 +332,9 @@ MARKDOWN_STYLE = ft.MarkdownStyleSheet(
     p_text_style=_BODY,
     list_bullet_text_style=_BODY,
     blockquote_text_style=_BODY,
-    h1_text_style=_heading(22),
-    h2_text_style=_heading(18),
+    # At most 18 sp: a feed heading sits under its section's "About" (D-197).
+    h1_text_style=_heading(18),
+    h2_text_style=_heading(16),
     h3_text_style=_heading(16),
     h4_text_style=_heading(16),
     code_text_style=ft.TextStyle(
@@ -348,7 +349,7 @@ MARKDOWN_STYLE = ft.MarkdownStyleSheet(
         border=ft.Border(left=ft.BorderSide(4, ft.Colors.OUTLINE)),
     ),
     # Material's divider: Flet's default rule is a 5 dp bar, which read as a heavy
-    # block between a description's paragraphs (D-194).
+    # block between a description's paragraphs (D-197).
     horizontal_rule_decoration=ft.BoxDecoration(
         border=ft.Border(top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT))
     ),
