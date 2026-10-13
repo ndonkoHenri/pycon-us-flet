@@ -1,27 +1,29 @@
-"""The Schedule's day lists: one memoised list per day, one memoised item per slot.
+"""What the Schedule shows for each day: its tab, its list and its slots, and "Now".
 
-``screens/schedule.py`` owns the screen: the day tabs, the stores and the jumps. Here is
-what it places in each ``TabBarView`` page (D-31, D-153..D-156):
+``screens/schedule.py`` owns the screen: the stores, the positions and the jumps. Here
+is what it places (D-31, D-153..D-156, D-192):
 
-- ``DayList``, memoised and given only its day's slots and favourites, so a star tap
-  re-renders one day list, one slot and one row (D-153);
+- ``day_tab()``, a day's one-line tab, read as its full date, today's with a dot;
+- ``DayList``, a ``TabBarView`` page, memoised and given only its day's slots and
+  favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
   to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s;
-- the empty days: a sprint day, which has no sessions, and a day the filter empties.
+- the empty days: a sprint day, which has no sessions, and a day the filter empties;
+- ``now_button()``, the "Now" button over today's list (SCHED-15).
 
 A day list is a lazy ``ListView``; today's builds every slot (``FULL_LIST_EXTENT``), so
 Jump to now reaches any of them (D-154). Each list reports where a scroll ended, which
 the Schedule keeps in ``ViewMemory`` and a jump waits for.
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import date
 from typing import Literal
 
 import flet as ft
 
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.timefmt import time_label, weekday_name
+from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, weekday_name
 from pycon_us.core.timeline import Slot
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -41,11 +43,50 @@ FAB_CLEARANCE = 88
 """Room under a list's last slot for the "Now" button: its 56 dp and 16 dp around it,
 so the last row's star is never under it (ux.md §2.4)."""
 
+TAB_HEIGHT = 56
+"""A day tab's height in dp, above Flutter's 46 for a text tab: the tab bar cannot grow
+with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
+iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
+
+TODAY_DOT = 6
+"""The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
+
 type Empty = Literal["sprint", "filtered"]
 """Why a day shows no slots: a sprint day has no sessions; a filter hid all of them."""
 
 type Scrolled = Callable[[date, ft.OnScrollEvent], None]
 """The Schedule's one scroll handler: a day list passes its day and the event."""
+
+
+def day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
+    """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
+
+    The text's semantics label says the day in full; Flutter's tab bar puts its own
+    position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
+    Friday, May 15, today, selected" (D-192).
+    """
+    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
+    label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
+    if is_today:
+        # Beside the text, not a Badge over it: a badge's dot covered the last digit.
+        dot = ft.Container(
+            width=TODAY_DOT,
+            height=TODAY_DOT,
+            border_radius=TODAY_DOT / 2,
+            bgcolor=ft.Colors.PRIMARY,
+        )
+        # Centred on the label, so it stays beside the digits at every text size.
+        label = ft.Row(
+            [label, dot],
+            spacing=4,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+    return ft.Tab(
+        height=TAB_HEIGHT,
+        # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
+        label=ft.Semantics(identifier=f"{SCREEN}.day_tab.{index}", content=label),
+    )
 
 
 def DayList(
@@ -139,8 +180,8 @@ def _DayList(
             EmptyState(
                 f"{weekday_name(day)} is a sprint day",
                 icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
-                body="No talks on sprint days: people work on open-source projects together, "
-                "and anyone can join one.",
+                body="No talks on sprint days: people work on open-source projects "
+                "together, and anyone can join one.",
                 action="See the sprints",
                 on_action=see_sprints,
                 identifier=f"{SCREEN}.sprint_day.{day.isoformat()}",
@@ -255,3 +296,18 @@ def _SlotItem(
     # The divider stays outside the keyed box, so a jump puts the slot's time, not
     # its divider, under the tab bar's own line (one 1 dp line there, not two).
     return ft.Column([ft.Divider(height=1), keyed], spacing=0) if divider else keyed
+
+
+def now_button(
+    *, on_today: bool, on_click: Callable[[], Awaitable[None]]
+) -> ft.FloatingActionButton:
+    """Return the "Now" button (SCHED-15): "Today" while another day shows."""
+    return ft.FloatingActionButton(
+        content=ft.Semantics(
+            identifier=f"{SCREEN}.jump_now",
+            content=ft.Text("Now" if on_today else "Today"),
+        ),
+        icon=ft.Icons.SCHEDULE,
+        tooltip="Jump to the current time",
+        on_click=on_click,
+    )

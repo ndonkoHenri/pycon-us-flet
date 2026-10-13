@@ -5,8 +5,10 @@ providers, so the memoised path (D-153), the two renders (D-156), the tabs' echo
 jumps run as Flet runs them. Two seams stand in for the device: ``AppScaffold`` returns
 the body and the "Now" button in a ``Column`` (the View and its bar are
 ``tests/test_scaffold.py``'s), and ``ListView.scroll_to`` is recorded instead of sent to
-a client, answering a keyed scroll with the scroll end Flutter would report. Whether a
-jump lands, how the tabs read at 200 % and what TalkBack says are device checks (#86).
+a client, answering a keyed scroll with the scroll end Flutter would report (or with
+nothing, for a list already in place) and reading ``self.page`` first, as Flet does, so a
+list that has left the page raises Flet's error. Whether a jump lands, how the tabs read
+at 200 % and what TalkBack says are device checks (#86).
 """
 
 import asyncio
@@ -90,6 +92,8 @@ class Shown:
     """What the screen asked a screen reader to say (``announce_message``)."""
     leave: Callable[[], None] = lambda: None
     """Replace the Schedule with another screen, as a bottom-tab switch does (D-142)."""
+    moves: bool = True
+    """Whether a keyed scroll ends with a scroll end; False: the list is already there."""
 
     @property
     def tabs(self) -> ft.Tabs:
@@ -213,9 +217,10 @@ async def shown(
         )
 
         async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
+            # Flet's _invoke_method reads it first: a list off the page raises.
+            session = cast(Session, self.page.session)  # pyright: ignore[reportOptionalMemberAccess]
             scrolls.append((self, kwargs))
-            if kwargs.get("scroll_key") is not None:  # Flutter reports where it ended
-                session = cast(Session, self.page.session)  # pyright: ignore[reportOptionalMemberAccess]
+            if kwargs.get("scroll_key") is not None and result.moves:  # where it ended
                 asyncio.get_running_loop().call_soon(
                     lambda: asyncio.ensure_future(
                         session.dispatch_event(self._i, "scroll", _scroll_end(4000.0))
@@ -661,6 +666,41 @@ async def test_a_jump_still_waiting_stops_when_the_user_leaves_the_tab(
     assert schedule.scrolls == []
     assert friday.parent is None or not inside(friday, schedule.session.page)
     assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+async def test_a_now_tap_still_waiting_stops_quietly_when_the_user_leaves_the_tab(
+    shown: Callable[..., Awaitable[Shown]], caplog: pytest.LogCaptureFixture
+) -> None:
+    """A tap's jump runs in its handler, which no unmount cancels: it stops at the
+    first ask that finds the list off the page, and no error reaches the next screen."""
+    schedule = await shown(reduce_motion=True)
+    schedule.moves = False  # already in place: no scroll end, so every try waits
+    friday = schedule.list_of(FRIDAY)  # held: the screen's weak ref may resolve it
+    schedule.scrolls.clear()
+    with caplog.at_level(logging.INFO):
+        tap = asyncio.ensure_future(schedule.press_now())
+        await asyncio.sleep(0.05)  # the first ask is waiting for its scroll end
+        schedule.leave()
+        await settle()
+        await asyncio.wait_for(tap, 2)
+    assert len(schedule.scrolls) == 1  # the second ask found the list gone
+    assert schedule.scrolls[0][0] is friday
+    assert "the list left the page" in caplog.text
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+async def test_a_now_tap_on_a_list_already_in_place_is_still_said(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No scroll, so no scroll end: today's list builds every slot (D-154), so a list
+    that never moves is on the slot already, and the user still hears where."""
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
+    schedule = await shown(screen_reader=True, announcements=True, reduce_motion=True)
+    schedule.moves = False
+    schedule.scrolls.clear()
+    await schedule.press_now()
+    assert len(schedule.scrolls) == scrolling.JUMP_TRIES
+    assert schedule.announced == ["Friday, May 15, 10:30 AM"]
 
 
 async def test_a_now_tap_tells_a_screen_reader_where_it_landed(

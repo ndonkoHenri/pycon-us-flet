@@ -2,9 +2,10 @@
 
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
 ``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
-one page per conference day, sprint days included. Each page is a ``DayList`` of
-``SlotItem``s (``screens/schedule_days.py``), memoised down to the rows (D-153). The
-first render fills only the shown day, the second the others (D-156).
+one page per conference day, sprint days included. The tabs, the pages and the "Now"
+button come from ``screens/schedule_days.py``: each page is a ``DayList`` of
+``SlotItem``s, memoised down to the rows (D-153). The first render fills only the shown
+day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
@@ -12,9 +13,10 @@ each list's offset live in ``ViewMemory``, so a tab return or a new session find
 
 Jump to now (D-155) lands on the current slot (``current_slot_key()``) once per process,
 on the first display of today, and again with the "Now" button, which switches to today
-first when another day shows, and tells a screen reader where it landed. Without any data (no snapshot or cache, NEW-03) the
-screen shows the skeleton until the first fetch has failed, then "Can't load the
-schedule", which stays during a retry (D-32, ux.md §4.1).
+first when another day shows, and tells a screen reader where it landed. Without any
+data (no snapshot or cache, NEW-03) the screen shows the skeleton until the first fetch
+has failed, then "Can't load the schedule", which stays during a retry (D-32, ux.md
+§4.1).
 """
 
 import asyncio
@@ -29,11 +31,11 @@ from pycon_us import clock
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
-from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, today
+from pycon_us.core.timefmt import day_heading, time_label, today
 from pycon_us.core.timeline import Slot, current_slot_key, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.schedule_days import SCREEN, DayList, Empty
+from pycon_us.screens.schedule_days import DayList, Empty, day_tab, now_button
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -50,14 +52,6 @@ logger = logging.getLogger(__name__)
 
 TAB_MS = 100
 """How long a day switch made from Python slides (Flet's default for ``Tabs``)."""
-
-TAB_HEIGHT = 56
-"""A day tab's height in dp, above Flutter's 46 for a text tab: the tab bar cannot grow
-with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
-iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
-
-TODAY_DOT = 6
-"""The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
 
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""
@@ -257,7 +251,7 @@ def Schedule() -> ft.View:
             [
                 ft.TabBar(
                     [
-                        _day_tab(index, day, is_today=day == current)
+                        day_tab(index, day, is_today=day == current)
                         for index, day in enumerate(all_days)
                     ],
                     # One-line labels in a scrollable bar: seven days fit no phone,
@@ -277,7 +271,7 @@ def Schedule() -> ft.View:
         actions=[search_button(memory, "sessions")],
         body=tabs,
         on_retap=scroll_to_top,
-        fab=_now_button(on_today=shown == current, on_click=now_pressed)
+        fab=now_button(on_today=shown == current, on_click=now_pressed)
         if today_slots
         else None,
     )
@@ -308,12 +302,14 @@ async def _jump_to_now(
     """Scroll today's list to the current slot (``current_slot_key()``, D-155).
 
     Returns:
-        The slot the list landed on, or None when there is none or it did not land.
+        The slot the list is on: the one it landed on, or the one it was already on
+        (no scroll on any try: today's list builds every slot, D-154). None when there
+        is no slot or the jump failed.
     """
     key = current_slot_key(slots, clock.now())
     if key is None:
         return None
-    if not await jump_to_key(list_ref, key, duration=duration, ended=ended):
+    if await jump_to_key(list_ref, key, duration=duration, ended=ended) == "failed":
         return None
     return next(slot for slot in slots if slot.key == key)
 
@@ -340,52 +336,6 @@ def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | 
     if shown:
         return None
     return "filtered" if timeline(data, day, ()) else "sprint"
-
-
-def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
-    """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
-
-    The text's semantics label says the day in full; Flutter's tab bar puts its own
-    position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
-    Friday, May 15, today, selected" (D-192).
-    """
-    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
-    label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
-    if is_today:
-        # Beside the text, not a Badge over it: a badge's dot covered the last digit.
-        dot = ft.Container(
-            width=TODAY_DOT,
-            height=TODAY_DOT,
-            border_radius=TODAY_DOT / 2,
-            bgcolor=ft.Colors.PRIMARY,
-        )
-        # Centred on the label, so it stays beside the digits at every text size.
-        label = ft.Row(
-            [label, dot],
-            spacing=4,
-            tight=True,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-    return ft.Tab(
-        height=TAB_HEIGHT,
-        # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
-        label=ft.Semantics(identifier=f"{SCREEN}.day_tab.{index}", content=label),
-    )
-
-
-def _now_button(
-    *, on_today: bool, on_click: Callable[[], Awaitable[None]]
-) -> ft.FloatingActionButton:
-    """Return the "Now" button (SCHED-15): "Today" while another day shows."""
-    return ft.FloatingActionButton(
-        content=ft.Semantics(
-            identifier=f"{SCREEN}.jump_now",
-            content=ft.Text("Now" if on_today else "Today"),
-        ),
-        icon=ft.Icons.SCHEDULE,
-        tooltip="Jump to the current time",
-        on_click=on_click,
-    )
 
 
 def _no_data(
