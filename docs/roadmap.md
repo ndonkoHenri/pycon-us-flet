@@ -784,7 +784,7 @@ A release build schedules a reminder 2 minutes ahead; test it with the app kille
 
 upstream, area:shell
 
-Add `RefreshIndicator(content, on_refresh)` to flet-dev/flet; this issue links the flet-dev issue and PR.
+Write up `RefreshIndicator(content, on_refresh)` for Flet core; the owner takes it to flet-dev/flet, and this issue links the flet-dev issue and PR once opened (D-212).
 
 - The flet-dev PR is merged or its status recorded; an app issue exists for the swap after a pin bump.
 
@@ -792,7 +792,7 @@ Add `RefreshIndicator(content, on_refresh)` to flet-dev/flet; this issue links t
 
 upstream, area:quality
 
-A non-fatal mode for handler and effect exceptions with a Python error hook in flet-dev/flet, so an unexpected exception no longer ends the session (F4).
+A non-fatal mode for handler and effect exceptions with a Python error hook, written up here for the owner to take to flet-dev/flet (D-212), so an unexpected exception no longer ends the session (F4).
 
 - The flet-dev PR is merged or its status recorded; an app issue exists to delete `@report_errors`.
 
@@ -894,7 +894,7 @@ epic, upstream, area:quality
 
 epic, upstream, area:staff
 
-Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev using `material_ui`. The staff tools never depend on it.
+Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev, taken upstream by the owner (D-212), using `material_ui`. The staff tools never depend on it.
 
 ### Other issues in this milestone
 
@@ -902,7 +902,7 @@ Spike S8 first (a minimal `mobile_scanner` control in release builds for Android
 
 upstream, area:build
 
-Add `page.get_app_info()` (version, build number, package name) to Flet; the app uses `__version__` until a pin bump brings it in.
+Write up `page.get_app_info()` (version, build number, package name) for Flet, for the owner to take upstream (D-212); the app uses `__version__` until a pin bump brings it in.
 
 - The flet-dev PR is merged or its status recorded; an app issue exists for the swap.
 
@@ -1023,7 +1023,7 @@ The demo script (offline start, Now & Next for me, My schedule, live edit in the
 
 ## 8. Upstream track
 
-Upstream work happens in flet-dev repositories. Each item is tracked here by an issue labelled `upstream` that links the flet-dev issue or PR (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
+Upstream work happens in flet-dev repositories, by the owner: agents work only in this repository (D-212). Each item is tracked here by an issue labelled `upstream` with the full analysis, which links the flet-dev issue or PR once the owner has opened one (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|

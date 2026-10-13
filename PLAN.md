@@ -326,7 +326,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 - **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. CI must be green. Agents squash-merge their own PRs under the merge conditions of D-100; the owner watches and can step in, but is never a blocker.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
 - **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the owner (D-101). Docs change in the same PR as the behaviour.
-- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103). **Upstream work** lives in flet-dev, tracked here by `upstream` issues.
+- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103). **Upstream work** lives in flet-dev and is the owner's; agents act only in this repository and track it here by `upstream` issues (D-212).
 
 ## 11. Risks
 
