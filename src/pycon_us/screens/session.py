@@ -4,19 +4,19 @@ The app bar holds the star (D-30) and, when the session has a public page, an ov
 with "Open on us.pycon.org": Add to calendar joins it in P2, so no dead item waits
 there, and a session without a page has no overflow at all (D-60). The page's heading
 is the title under the badges, so the app bar's title stays empty. Then the "When and
-where" card (``ui.when_where``), and for a session that needs registration a card that
-says so and links the year's registration page.
+where" card (``ui.when_where``), for a session that needs registration a card that
+says so and links the year's registration page, then the speakers (their rows push
+their pages; a pseudo-speaker such as "Hosted by …" is text) and the description, whose
+links open by the link rule (``ui.links.feed_markdown``, D-197).
 
 An unknown id shows the not-found state under the back arrow, so Back pops one level
 (D-186). A session that a newer feed drops while its detail is open keeps the content
 it last showed, under a "Removed from the latest schedule" note (ux.md §4.1).
 
-Still to come, in ux.md §5.5's order: the speakers' rows and the description (#91;
-until then the speakers are plain links), then Share in the app bar and the posters
-list (#92).
+Still to come, in ux.md §5.5's order: Share in the app bar and the posters list (#92).
 """
 
-from collections.abc import Mapping
+from collections.abc import Sequence
 from typing import cast
 from urllib.parse import urlsplit
 
@@ -24,11 +24,11 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import Session, Speaker
-from pycon_us.core.row_views import places
+from pycon_us.core.row_views import people, places
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, not_found
-from pycon_us.services import use_services
+from pycon_us.screens.stub import not_found
+from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
@@ -39,10 +39,10 @@ from pycon_us.ui.badges import (
     badge_specs,
     use_favorite_toggle,
 )
-from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
+from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.session_rows import is_notice
+from pycon_us.ui.session_rows import is_notice, semantics_key
 from pycon_us.ui.when_where import WhenAndWhere
 
 SCREEN = "session"
@@ -67,7 +67,7 @@ tutorial and of a summit with a free sign-up alike."""
 
 @ft.component
 def SessionDetail(session_id: str) -> ft.View:
-    """One session: its header, when and where it is, and its registration.
+    """One session: its header, when and where, registration, speakers and description.
 
     Args:
         session_id: The session id, unquoted (D-42).
@@ -145,10 +145,12 @@ def SessionDetail(session_id: str) -> ft.View:
     )
     if session.pre_registered:
         controls.append(_registration(info.registration_url))
-    speakers = _speaker_links(session, data.speakers if data else {}, view_path)
-    if speakers:  # one block: the list's spacing goes between sections only
-        controls.append(ft.Column(speakers, spacing=0))
-    # The description (#91) and the posters (#92) follow here.
+    speakers = people(session, data.speakers if data else {})
+    if speakers:
+        controls.append(_speakers(speakers, view_path))
+    if session.description_md:
+        controls.append(_about(session.description_md, svc))
+    # The posters (#92) follow here.
     body = ft.ListView(
         controls,
         expand=True,
@@ -258,19 +260,52 @@ def _registration(url: str) -> ft.Control:
     )
 
 
-def _speaker_links(
-    session: Session, speakers: Mapping[str, Speaker], view_path: str
-) -> list[ft.Control]:
-    """The speakers as links, one drill level each, until #91's rows (SPKR-01)."""
-    found = [sid for sid in session.speaker_ids if sid in speakers]
-    if not found:
-        return []
-    links = [
-        nav_tile(speakers[sid].name, drill_href(view_path, "speaker", sid))
-        for sid in found
-    ]
-    # The list's gap already stands above it, so the header adds none of its own.
-    return [SectionHeader("Speakers", level=2, top=0), *links]
+def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
+    """The Speakers section (SESS-07): a row per speaker, a pseudo-speaker as text.
+
+    A speaker's row pushes their page, one drill level (D-17). A name the directory has
+    no one for ("Hosted by …", DATA-15) is not a person with a page, so it is plain text
+    that nothing taps; such names are numbered in the authors' order, so two of them
+    never share an identifier.
+    """
+    rows: list[ft.Control] = [SectionHeader("Speakers", level=2, top=0)]
+    names = 0
+    for entry in speakers:
+        if isinstance(entry, str):
+            rows.append(
+                # A node of its own: left bare, Android merged it into the heading
+                # above ("Speakers, Hosted by …").
+                ft.Semantics(
+                    identifier=f"{SCREEN}.name.{names}",
+                    container=True,
+                    content=ft.Container(
+                        ft.Text(entry, theme_style=ft.TextThemeStyle.BODY_LARGE),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                    ),
+                )
+            )
+            names += 1
+        else:
+            rows.append(
+                SpeakerTile(
+                    entry,
+                    drill_href(view_path, "speaker", entry.id),
+                    identifier=f"{SCREEN}.speaker.{semantics_key(entry.id)}",
+                )
+            )
+    # One block: the list's spacing goes between sections only.
+    return ft.Column(rows, spacing=0)
+
+
+def _about(description: str, svc: Services) -> ft.Control:
+    """The description (SESS-06): the feed's text as Markdown, its links by D-197."""
+    return ft.Column(
+        [
+            SectionHeader("About", level=2, top=0),
+            feed_markdown(description, svc, identifier=f"{SCREEN}.description"),
+        ],
+        spacing=0,
+    )
 
 
 def _removed_note() -> ft.Control:

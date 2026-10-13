@@ -17,11 +17,12 @@ import flet as ft
 import pytest
 
 from pycon_us.config import load_year
+from pycon_us.core.models import Speaker
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
 from pycon_us.ui import rows
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -314,3 +315,53 @@ async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
     clipboard(svc).error = TimeoutError()
     await tap_async(copy_button_of(LinkTile("Call the hotline", HOTLINE)))
     assert said(page) == ["Couldn't copy the phone number"]
+
+
+# ------------------------------------------------------------------ speaker tiles
+
+ANA = Speaker(id="17", name="Ana Lima", photo_url="https://example.org/ana.jpg", bio="")
+NO_PHOTO = Speaker(id="18", name="Bo Chen", photo_url="", bio="")
+
+
+def test_a_speaker_avatar_shows_the_photo_over_the_initials() -> None:
+    avatar = speaker_avatar(ANA)
+    assert avatar.foreground_image_src == ANA.photo_url
+    assert isinstance(avatar.content, ft.Text) and avatar.content.value == "AL"
+    assert (avatar.bgcolor, avatar.color, avatar.radius) == (
+        ft.Colors.PRIMARY_CONTAINER,  # with its on_ pair: a tested contrast
+        ft.Colors.ON_PRIMARY_CONTAINER,
+        24,  # a 48 dp circle
+    )
+
+
+def test_a_speaker_without_a_photo_shows_the_initials_alone() -> None:
+    avatar = speaker_avatar(NO_PHOTO)
+    assert avatar.foreground_image_src is None  # no request for an empty URL
+    assert isinstance(avatar.content, ft.Text) and avatar.content.value == "BC"
+
+
+def test_a_speaker_tile_is_one_button_named_by_the_speaker(page: FakePage) -> None:
+    row = SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17")
+    tile = tile_of(row)
+    assert tile.title == "Ana Lima"
+    assert isinstance(tile.trailing, ft.Icon)
+    assert tile.trailing.icon == ft.Icons.CHEVRON_RIGHT  # it pushes a page (§3.7)
+    node = node_of(row)
+    assert node is not None and node.identifier == "session.speaker.17"
+    assert node.label is None and not node.link  # read as its title, a button
+    # The initials are left out of the merged node, which says the name once.
+    assert isinstance(tile.leading, ft.Semantics) and tile.leading.exclude_semantics
+    assert isinstance(tile.leading.content, ft.CircleAvatar)
+
+
+def test_stacked_speaker_tiles_keep_material_s_space_around_the_avatar(
+    page: FakePage,
+) -> None:
+    """At the default 56 dp, six avatars 8 dp apart read as one column (D-197)."""
+    tile = tile_of(SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17"))
+    assert tile.min_height == 64  # 8 dp, the 48 dp avatar, 8 dp
+
+
+def test_a_tap_on_a_speaker_tile_pushes_the_speaker(page: FakePage) -> None:
+    tap(tile_of(SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17")))
+    assert page.navigated == ["/x/speaker/17"]
