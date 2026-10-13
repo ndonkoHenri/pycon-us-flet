@@ -11,10 +11,10 @@ list that has left the page raises Flet's error. ``Services.run_every`` is recor
 test moves the minute tick by hand (``Shown.at``). Each jump is recorded too
 (``Shown.jumps``): a jump may ask for its scroll more than once (D-155), so the tests
 check which jumps ran and where they went, not how many scrolls they asked for. The
-tests wait for what they expect to happen (``Shown.until``, and every render waits for
-the jumps it started), never for a fixed time, so a loaded host only makes them slower
-(#237). Whether a jump lands, how the tabs read at 200 % and what TalkBack says are
-device checks (#86, #89).
+tests wait for what they expect to happen (``Shown.until``, and every render returns
+only once no jump it started is still on its way), never for a fixed time, so a loaded
+host only makes them slower (#237). Whether a jump lands, how the tabs read at 200 %
+and what TalkBack says are device checks (#86, #89).
 """
 
 import asyncio
@@ -274,8 +274,11 @@ async def shown(
         """Render the Schedule with these ``Prefs``; ``moves`` and ``late`` as in
         ``Shown``.
 
-        With ``wait`` it returns once the jumps the first display started have ended,
-        so the next step never meets one still on its way (#237).
+        With ``wait`` it returns once no jump is on its way, so the next step never
+        meets one (#237). The first display's jump, when there is one, has ended by
+        then: ``settle()`` has already started it, since the effect's chain up to the
+        jump is pure asyncio here (``MemoryPrefs`` answers inline), with no timer or
+        thread hop. A test that expects that jump also checks ``jumps`` right after.
         """
         clock.set_test_now(now[0])
         storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
