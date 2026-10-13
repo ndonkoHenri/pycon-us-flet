@@ -199,22 +199,40 @@ SPEAKER_TILE_HEIGHT = 2 * AVATAR_RADIUS + 16
 """A ``SpeakerTile``'s least height, in dp: the avatar with 8 dp above and below."""
 
 
-def speaker_avatar(speaker: Speaker) -> ft.CircleAvatar:
-    """Return a speaker's 48 dp avatar: the feed's photo over their initials.
+def speaker_avatar(
+    speaker: Speaker,
+    *,
+    radius: int = AVATAR_RADIUS,
+    initials_style: ft.TextThemeStyle | None = None,
+) -> ft.CircleAvatar:
+    """Return a speaker's avatar, 48 dp unless told otherwise: the photo over the initials.
 
     The initials show while the photo loads, offline and when the feed has none, in
     ``primary_container`` with its ``on_`` pair, a contrast the theme's test checks.
-    Decorative for screen readers: the row it is in says the name.
+    Flutter draws them without the text scale, so they always fit the circle.
+    Decorative for screen readers: the row or the heading beside it says the name.
 
     Args:
         speaker: The directory speaker.
+        radius: The circle's radius in dp: a row's 24, or the speaker page's 48.
+        initials_style: The initials' type, for a larger circle; None keeps the
+            avatar's own (``TITLE_MEDIUM``), which suits 48 dp.
     """
+    letters = initials(speaker.name)
+    # A theme style brings the text theme's colour, so the pair is named again.
+    text = (
+        ft.Text(letters)
+        if initials_style is None
+        else ft.Text(
+            letters, theme_style=initials_style, color=ft.Colors.ON_PRIMARY_CONTAINER
+        )
+    )
     return ft.CircleAvatar(
-        content=ft.Text(initials(speaker.name)),
+        content=text,
         foreground_image_src=speaker.photo_url or None,
         bgcolor=ft.Colors.PRIMARY_CONTAINER,
         color=ft.Colors.ON_PRIMARY_CONTAINER,
-        radius=AVATAR_RADIUS,
+        radius=radius,
     )
 
 

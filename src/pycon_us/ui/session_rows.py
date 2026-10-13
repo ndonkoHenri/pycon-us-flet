@@ -63,6 +63,7 @@ def use_session_views(
     *,
     use_24h: bool,
     in_room: str | None = None,
+    of_speaker: str | None = None,
 ) -> tuple[SessionView, ...]:
     """Return the row views of some sessions, built once per feed version (D-153).
 
@@ -78,17 +79,22 @@ def use_session_views(
             (``page.media.always_use_24_hour_format``).
         in_room: On a room's page, the room's slug: its rows leave out the room's own
             name, in what they show and in what they say (``session_view()``).
+        of_speaker: On a speaker's page, the speaker's name: its rows' speakers line
+            names only the co-speakers, shown and said alike (``session_view()``).
     """
     zone = use_services().year.conference.zone
     data = conference.data
     ids = tuple(session_ids)
+
     return ft.use_memo(
         lambda: (
-            session_views(data, ids, zone, use_24h=use_24h, in_room=in_room)
+            session_views(
+                data, ids, zone, use_24h=use_24h, in_room=in_room, of_speaker=of_speaker
+            )
             if data
             else ()
         ),
-        [conference.version, ids, use_24h, in_room],
+        [conference.version, ids, use_24h, in_room, of_speaker],
     )
 
 

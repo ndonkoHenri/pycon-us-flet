@@ -49,7 +49,12 @@ class SessionView:
 
 
 def session_view(
-    session: Session, zone: tzinfo, *, use_24h: bool, in_room: str | None = None
+    session: Session,
+    zone: tzinfo,
+    *,
+    use_24h: bool,
+    in_room: str | None = None,
+    of_speaker: str | None = None,
 ) -> SessionView:
     """Return the row view of one session.
 
@@ -62,6 +67,10 @@ def session_view(
             the room itself is left out, so the row shows its time alone and its
             phrase says no place, while another place stays (the lightning talks'
             Arena on a room they are streamed to). None on every other list.
+        of_speaker: On a speaker's page, that speaker's name (``Speaker.name``): the
+            speakers line names only the others, "With Ana Lima", and is empty when
+            the speaker is alone, so neither the row nor its phrase repeats the page's
+            subject. None on every other list.
 
     Returns:
         The view: the displayed start (the Job Fair's earlier one, DATA-11) to the end,
@@ -72,12 +81,18 @@ def session_view(
     place = session.display_location
     if in_room is not None and place and slugify_room(place) == in_room:
         place = ""  # the page's title already says it (ROOM-02)
+    speakers = ", ".join(session.speaker_names)
+    if of_speaker is not None:
+        # Matched by name: feed processing links each author by name (D-125), so a
+        # linked speaker's name is among the authors'.
+        others = [name for name in session.speaker_names if name != of_speaker]
+        speakers = f"With {', '.join(others)}" if others else ""
     return SessionView(
         session=session,
         when=when,
         spoken_when=when.replace(_DASH, " to "),
         place=place,
-        speakers=", ".join(session.speaker_names),
+        speakers=speakers,
     )
 
 
@@ -88,6 +103,7 @@ def session_views(
     *,
     use_24h: bool,
     in_room: str | None = None,
+    of_speaker: str | None = None,
 ) -> tuple[SessionView, ...]:
     """Return the row views of some sessions, in the given order (D-153).
 
@@ -97,10 +113,13 @@ def session_views(
         zone: The conference's zone.
         use_24h: Whether the device uses the 24-hour clock.
         in_room: On a room's page, the room's slug (``session_view()``).
+        of_speaker: On a speaker's page, the speaker's name (``session_view()``).
     """
     sessions = data.sessions
     return tuple(
-        session_view(sessions[i], zone, use_24h=use_24h, in_room=in_room)
+        session_view(
+            sessions[i], zone, use_24h=use_24h, in_room=in_room, of_speaker=of_speaker
+        )
         for i in session_ids
         if i in sessions
     )
