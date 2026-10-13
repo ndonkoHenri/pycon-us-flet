@@ -515,7 +515,7 @@ The app has no push (D-58): there is no sender, and the PSF's Firebase project i
 
 ## 5. Core and CLI items
 
-Each is a PR to flet-dev/flet with a CHANGELOG entry, docs and integration tests, following the monorepo skills (`write-changelog-entry`, `create-flet-control-integration-tests`, `docs-conventions`).
+Each becomes a PR to flet-dev/flet **by the owner** (D-212), with a CHANGELOG entry, docs and integration tests following the monorepo skills (`write-changelog-entry`, `create-flet-control-integration-tests`, `docs-conventions`). The `upstream` issue here carries the analysis that PR needs.
 
 ### 5.1 U1: `ft.RefreshIndicator` (priority 2; S)
 

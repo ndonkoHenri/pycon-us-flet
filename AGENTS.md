@@ -170,9 +170,10 @@ that date motivates us but never justifies cutting corners.
 
 ### Upstream Flet work
 
-- **This repository is the only one agents work in** (D-212, the owner's direction). Agents never open, comment on,
-  review or send PRs to `flet-dev/flet`, `flet-dev/serious-python`, an extension's repository or any other
-  repository, even when it would help the upstream track.
+- **This repository is the only one agents work in** (D-212, the owner's direction). Agents never open or comment
+  on an issue, nor review or send a PR, nor make any other change, in `flet-dev/flet`, `flet-dev/serious-python`,
+  an extension's repository or any other repository, even when it would help the upstream track. Reading them (the
+  pinned source, issues, PRs) is fine.
 - When the app needs something Flet lacks, open an `upstream` issue **here** with the full analysis: what happens,
   the Flet source at the pin (files and lines), a minimal repro, the suggested fix and the interim. The owner, who
   maintains Flet, decides whether and how to take it to Flet; the issue links the flet-dev issue or PR once the
@@ -229,9 +230,10 @@ that date motivates us but never justifies cutting corners.
 6. Sign your work: agents act through the owner's GitHub account, so end every PR description and issue comment
    you write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work.
 7. Never call private PSF endpoints, commit secrets or edit `excluded/`.
-8. **Act only in this repository** (D-212). Never create or edit issues, PRs, comments, reviews or reactions in any
-   other repository, `flet-dev`'s included, and never ask another agent to. An upstream gap becomes an `upstream`
-   issue here (see Upstream Flet work).
+8. **Act only in this repository** (D-212). Never create or edit issues, PRs, comments, reviews, reactions or
+   anything else in any other repository, the `flet-dev` repositories included, and never ask another agent to;
+   every brief you give another agent (a subagent, a reviewer, Codex) repeats this rule. An upstream gap becomes an
+   `upstream` issue here (see Upstream Flet work).
 
 ## Definition of done
 
