@@ -436,13 +436,13 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "content.toml",
-            'intro = "Open spaces are',
+            'intro = "Hour-long sessions',
             'intro = " "\nx = "',
             "2026/content.toml: open_spaces.x: unknown key",
         ),
         (
             "content.toml",
-            'intro = "Open spaces are',
+            'intro = "Hour-long sessions',
             'intro = " "\n# "',
             "2026/content.toml: open_spaces.intro: is empty",
         ),

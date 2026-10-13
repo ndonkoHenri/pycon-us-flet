@@ -29,7 +29,7 @@ minutes = -30
 # goes, the site's sign-up, which asks the attendee to sign in. Said in our words from
 # https://us.pycon.org/2026/events/open-spaces/ (checked 2026-10-13).
 [open_spaces]
-intro = "Open spaces are hour-long sessions that attendees organize during the conference, on any topic, from security to board games. Join one by showing up. Anyone can host one: sign-ups for a day open the day before."
+intro = "Hour-long sessions that attendees organize during the conference, on any topic, from security to board games. Join one by showing up; host one by signing up, from the day before."
 propose_url = "https://us.pycon.org/2026/signup/open-space/"
 
 # The Lightning talks page (EVT-03): its copy, sign-up and "Think you can't do one?".
@@ -38,9 +38,8 @@ propose_url = "https://us.pycon.org/2026/signup/open-space/"
 [lightning_talks]
 heading = "What's a lightning talk?"
 intro = [
-    "Five minutes at most, on anything other Python people would like to hear about: something you made, something you learned, or a technique you find useful.",
-    "The thing colleagues always ask you about, the trick that saved your week, the topic you wish you understood: each makes a good lightning talk. Slides help, but you don't need any.",
-    "Lightning talks are in the Pacific Ballroom - Arena on Friday, Saturday and Sunday. Sign-ups open on the PyCon US dashboard during the conference; speakers are picked at lunchtime and hear by email whether they speak that evening or the next morning.",
+    "Five minutes at most, on anything Python people would like to hear: something you made or learned, or the thing colleagues always ask you about. Slides help, but you don't need any.",
+    "They run in the Pacific Ballroom - Arena on Friday, Saturday and Sunday. Sign up during the conference: speakers are picked at lunchtime and told by email.",
 ]
 signup_url = "https://us.pycon.org/2026/signup/lightning-talk/"
 info_url = "https://us.pycon.org/2026/events/lightning-talks/"
