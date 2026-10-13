@@ -591,9 +591,9 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 | `now_next(sessions, now)` | Now = `start <= now < end`; Next = the earliest later start; ignores filters | SCHED-25 |
 | `next_for_me(data, favorites, now)` | earliest saved session with `end > now`, within 3 h | SCHED-25 |
 | `my_schedule(data, favorites)` | saved sessions by day, plus `overlaps: dict[id, list[id]]` (sorted sweep) | NEW-01 |
-| `current_slot_key(day, now)` | first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey` | SCHED-16 |
+| `current_slot_key(slots, now)` | over the shown slots (`timeline(data, day, excluded)`, so the key always has an item to scroll to, D-155, D-178): first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey`; `None` when `slots` is empty | SCHED-16 |
 | `speakers(data)` | sorted by folded displayed name (D-46) | SPKR-01 |
-| `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row; ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
+| `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row (the row itself until the feed publishes posters); ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
 | `room_sessions` | flat by start (poster details included), grouped by day | ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
 

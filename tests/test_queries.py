@@ -301,11 +301,34 @@ def test_the_posters_track_lists_the_posters_not_the_posters_row(year: int) -> N
     assert all(s.id.startswith("poster-detail-") for s in listed)
 
 
+def _without_posters(doc: dict[str, Any]) -> None:
+    """Drop the posters from a feed: 2026's ``posters`` list, 2025's poster slot."""
+    doc["posters"] = []
+    for slot in doc["schedule"]:
+        if slot.get("kind") == "poster":
+            slot.pop("sessions", None)
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_before_posters_are_published_the_posters_track_lists_the_posters_row(
+    year: int,
+) -> None:
+    """The page is never empty while the Schedule shows a Posters row."""
+    data = process(changed(year, _without_posters), settings(year))
+    assert data.posters == ()
+    listed = [s for group in track_sessions(data, "Poster") for s in group.sessions]
+    assert len(listed) == 1
+    assert listed[0].kind == "poster" and listed[0].in_timeline
+
+
 def test_a_track_page_ignores_the_schedule_filter() -> None:
-    """Open spaces are hidden on the Schedule by default, never on their own page."""
+    """Open spaces are hidden on the Schedule by default, yet all listed on their page."""
     data = processed(2026)
+    assert "Open Space" in Prefs().excluded_tracks
+    expected = {s.id for s in data.sessions.values() if s.track == "Open Space"}
+    assert expected
     listed = [s for group in track_sessions(data, "Open Space") for s in group.sessions]
-    assert len(listed) == 123
+    assert {s.id for s in listed} == expected
 
 
 def test_a_track_without_sessions_has_an_empty_page() -> None:
@@ -354,8 +377,10 @@ def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
                 names = {node.attr}
             elif isinstance(node, ast.ImportFrom):
                 names = {alias.name for alias in node.names}
-            elif isinstance(node, ast.FunctionDef):
+            elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 names = {node.name}
+            elif isinstance(node, ast.keyword | ast.arg) and node.arg:
+                names = {node.arg}  # excluded_tracks=..., or a parameter of that name
             else:
                 continue
             for name in names & found.keys():

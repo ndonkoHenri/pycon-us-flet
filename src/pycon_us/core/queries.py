@@ -126,10 +126,15 @@ def timeline(
 
     A session passes unless its track key is excluded (SCHED-10); a slot the filter
     empties is left out. A day without sessions (the sprint days) and a filter that hides
-    every track both give ``()``. Memoised on the feed, the day and the set of excluded
-    keys (D-178): the same arguments return the same tuple, a slot the filter does not
-    touch is the same object as in the unfiltered day, and a filter that hides nothing
-    that day returns the unfiltered tuple itself.
+    every track both give ``()``; a screen tells the two empty states apart by asking for
+    the unfiltered day: ``timeline(data, day, ())`` is ``()`` only when the day has no
+    sessions at all (ux.md §4.6). "Jump to now" picks its key from the filtered slots,
+    because a slot the filter leaves out has no item to scroll to (D-155).
+
+    Memoised on the feed, the day and the set of excluded keys (D-178): the same
+    arguments return the same tuple, a slot the filter does not touch is the same object
+    as in the unfiltered day, and a filter that hides nothing that day returns the
+    unfiltered tuple itself.
 
     Args:
         data: The processed feed.
@@ -157,7 +162,9 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
     Every session whose track key is ``track``, in ``schedule_order`` within each day,
     whatever the Schedule's filter (a track page shows its own track, open spaces
     included). The Posters track lists its posters (DATA-07) instead of the Posters row
-    that stands for them on the Schedule. Memoised on the feed and the track (D-178).
+    that stands for them on the Schedule; until the feed publishes posters, the row
+    itself is listed, so the page is never empty while the Schedule shows one. Memoised
+    on the feed and the track (D-178).
 
     Args:
         data: The processed feed.
@@ -170,7 +177,8 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
 
     def build() -> tuple[DaySessions, ...]:
         sessions = [s for s in data.sessions.values() if s.track == track]
-        if any(not s.in_timeline for s in sessions):  # poster details (DATA-07)
+        details = [s for s in sessions if not s.in_timeline]  # posters (DATA-07)
+        if details:
             sessions = [s for s in sessions if not _is_posters_row(s)]
         ordered = sorted(sessions, key=lambda s: (s.day, schedule_order(s)))
         return tuple(
