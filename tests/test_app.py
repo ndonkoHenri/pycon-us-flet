@@ -317,11 +317,11 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
     semantics: MemorySemantics,
     network: Network,
 ) -> None:
-    """D-176: an Undo SnackBar then stays until it is used."""
-    _, prefs = await started(fake_page, svc)
+    """D-177: an Undo SnackBar then stays until it is used."""
+    conference, prefs = await started(fake_page, svc)
     assert not prefs.screen_reader
     semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver
-    await on_resume(svc, prefs)
+    await on_resume(svc, conference, prefs)
     assert prefs.screen_reader
 
 

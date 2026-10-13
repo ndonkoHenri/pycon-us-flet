@@ -294,7 +294,7 @@ async def test_removing_says_so_and_undo_saves_the_session_again(
 async def test_with_a_screen_reader_the_undo_snack_bar_waits_to_be_used(
     rendered: Rendered,
 ) -> None:
-    """D-176: a screen-reader user cannot reach Undo within 4 s."""
+    """D-177: a screen-reader user cannot reach Undo within 4 s."""
     rendered.prefs.screen_reader = True
     await rendered.tap_star(TALK)
     await rendered.tap_star(TALK)

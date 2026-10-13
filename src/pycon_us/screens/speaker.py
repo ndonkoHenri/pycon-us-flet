@@ -1,8 +1,8 @@
 """Speaker detail (``…/speaker/<id>``): a stub until P1 (SPKR-02, SPKR-03).
 
 It lists the speaker's sessions as ``SessionRow``s with their stars, in schedule order,
-as P1's detail will (ux.md §5.7): a tap pushes the session, one drill level. An unknown
-id shows a not-found state under the back arrow (#90 settles P1's).
+as P1's detail will (ux.md §5.7, #99): a tap pushes the session, one drill level. An
+unknown id shows a not-found state under the back arrow (#90 settles P1's).
 """
 
 import flet as ft

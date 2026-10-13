@@ -2,9 +2,9 @@
 
 It lists the room's sessions by day, in time slots (D-31): a ``TimeGutter`` beside the
 slot's rows, ``SessionRow``s with their stars and ``NoticeRow``s for its breaks and
-meals. A tap pushes the session, one drill level. P1's room detail (#90's family)
-brings day tabs and the highlight (ux.md §5.9). An unknown slug shows a not-found state
-under the back arrow.
+meals. A tap pushes the session, one drill level. P1's room detail (#101) brings day
+tabs and the highlight (ux.md §5.9). An unknown slug shows a not-found state under the
+back arrow.
 """
 
 from datetime import date, datetime, tzinfo
