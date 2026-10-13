@@ -9,7 +9,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable, Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
-from pycon_us.state import REFRESH_EVERY, Conference, Status
+from pycon_us.state import REFRESH_EVERY, Conference, Status, ViewMemory
 from tests.fakes import MemoryPrefs
 from tests.feeds import changed
 
@@ -842,3 +842,53 @@ async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
         "https://us.pycon.org/2026/schedule/conference.json",
     ]
     assert conference.source == "network"
+
+
+# ------------------------------------------------------------------ reset (D-195)
+
+
+async def test_reset_shows_the_bundled_snapshot_from_the_year_s_feed(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    conference.set_feed_url("http://127.0.0.1:8000/conference-2026.json")
+    version = conference.version
+    assert await conference.reset(storage, year) is True
+    assert not storage.feed_path.exists()
+    assert conference.source == "bundled"
+    assert conference.fetched_at == year.read_snapshot().captured_at
+    assert conference.version == version + 1  # every screen shows it at once
+    assert conference._feed_url is None
+    assert conference.refresh_due()  # as at a start: the next refresh is due
+
+
+async def test_reset_cancels_a_running_refresh_before_it_writes(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    held = HeldFeed()
+    running = conference.start_refresh(storage, year, transport=held.transport)
+    await held.arrived.wait()
+    await conference.reset(storage, year)
+    assert running.cancelled()
+    assert conference.refreshing is False  # its `finally` ran before the reset ended
+    held.release()
+    await asyncio.sleep(0.05)
+    assert not storage.feed_path.exists()
+    assert conference.source == "bundled"
+
+
+def test_view_memory_reset_forgets_every_place() -> None:
+    memory = ViewMemory(
+        last_location="/more/developer",
+        search_base="/schedule",
+        jumped_to_now=True,
+        search_query="typing",
+        search_scope="speakers",
+    )
+    offsets = memory.schedule_offsets
+    offsets[date(2026, 5, 15)] = 1200.0
+    memory.reset()
+    assert memory == ViewMemory()
+    assert memory.schedule_offsets is not offsets  # a fresh dict, not the old one

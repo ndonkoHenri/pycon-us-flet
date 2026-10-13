@@ -1,0 +1,657 @@
+"""Tests for the Developer screen's Data section: refresh, clear, share the log, reset (#107).
+
+``DataActions`` runs outside a renderer, as ``Developer`` does in ``test_developer.py``:
+its hooks are replaced and a fake page is bound. The feed fetch is replaced too, so no
+test reaches the network. How the section looks, the share sheet and a reset on a
+device are checked on devices (the PR).
+"""
+
+import asyncio
+import inspect
+import logging
+from collections.abc import Callable, Iterator
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
+from typing import Any, cast
+
+import flet as ft
+import pytest
+
+from pycon_us import clock
+from pycon_us import prefs as prefs_module
+from pycon_us.config import load_year
+from pycon_us.favorites import Favorites
+from pycon_us.prefs import Prefs
+from pycon_us.screens import developer_data
+from pycon_us.screens.developer_confirm import confirmation, reset_losses
+from pycon_us.screens.developer_data import (
+    CLEARED,
+    LOG_NOT_FOUND,
+    LOG_SHARED,
+    NO_LOG,
+    NOT_SHARED,
+    RESET_INCOMPLETE,
+    DataActions,
+    refreshed,
+    reset_app,
+    schedule_line,
+)
+from pycon_us.services import Services, api, errors
+from pycon_us.services.storage import Storage
+from pycon_us.state import Conference, ViewMemory
+from pycon_us.theme import LIGHT_TOKENS
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPaths,
+    MemoryPrefs,
+    MemorySemantics,
+    MemoryShare,
+    bound,
+)
+from tests.feeds import recorded
+
+DEV_FEED = "http://127.0.0.1:8000/conference-2026.json"
+
+
+@pytest.fixture(autouse=True)
+def real_time() -> Iterator[None]:
+    """Each test starts on real time, without error details, and leaves them so."""
+    clock.start_fake_clock(None)
+    errors.show_details(False)
+    yield
+    clock.start_fake_clock(None)
+    errors.show_details(False)
+
+
+@pytest.fixture(autouse=True)
+def offline(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """No test reaches the network: every fetch finds no answer. Returns the URLs asked."""
+    asked: list[str] = []
+
+    async def fetch(url: str, **_: Any) -> bytes:
+        asked.append(url)
+        raise api.NetworkError("ConnectError: offline")
+
+    monkeypatch.setattr(api, "fetch_feed", fetch)
+    return asked
+
+
+@pytest.fixture
+def page() -> Iterator[FakePage]:
+    fake = FakePage()
+    with bound(fake):
+        yield fake
+
+
+@pytest.fixture
+def svc(tmp_path: Path) -> Services:
+    return Services(
+        year=load_year(2026),
+        storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
+        memory=ViewMemory(),
+        semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
+        share=MemoryShare(),
+        paths=MemoryPaths(),
+    )
+
+
+@pytest.fixture
+def stored(svc: Services) -> dict[str, Any]:
+    """What SharedPreferences holds, as the fake keeps it."""
+    return cast(MemoryPrefs, svc.storage.prefs).values
+
+
+@pytest.fixture
+def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
+    return Prefs(dev={"unlocked": True}, loaded=True)
+
+
+@pytest.fixture
+async def conference(svc: Services) -> Conference:
+    store = Conference()
+    await store.load_local(svc.storage, svc.year)  # the bundled snapshot
+    return store
+
+
+@pytest.fixture
+def favorites() -> Favorites:
+    return Favorites(ids=frozenset({"1", "2", "3"}), loaded=True)
+
+
+@pytest.fixture
+def packaged(monkeypatch: pytest.MonkeyPatch) -> Callable[[bool], None]:
+    """Make the section see a packaged build, or not."""
+
+    def set_packaged(on: bool) -> None:
+        monkeypatch.setattr(developer_data, "is_embedded", lambda: on)
+
+    set_packaged(True)
+    return set_packaged
+
+
+class Rendered:
+    """``DataActions`` rendered by hand: its state, the dialog it portals, its controls."""
+
+    def __init__(self) -> None:
+        self.values: list[Any] = []
+        self.index = 0
+        self.dialogs: list[ft.DialogControl | None] = []
+
+    def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
+        if self.index == len(self.values):
+            self.values.append(initial() if callable(initial) else initial)
+        index = self.index
+        self.index += 1
+
+        def set_value(value: Any) -> None:
+            self.values[index] = value
+
+        return self.values[index], set_value
+
+    @property
+    def dialog(self) -> ft.AlertDialog | None:
+        """The confirmation the last render showed, or None."""
+        last = self.dialogs[-1]
+        assert last is None or isinstance(last, ft.AlertDialog)
+        return last
+
+
+@pytest.fixture
+def rendered() -> Rendered:
+    return Rendered()
+
+
+@pytest.fixture
+def render(
+    monkeypatch: pytest.MonkeyPatch,
+    rendered: Rendered,
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+    packaged: Callable[[bool], None],
+    page: FakePage,
+) -> Callable[[], ft.Column]:
+    """Render ``DataActions`` and return its column."""
+    monkeypatch.setattr(ft, "use_state", rendered.use_state)
+    monkeypatch.setattr(ft, "use_dialog", rendered.dialogs.append)
+    monkeypatch.setattr(developer_data, "use_services", lambda: svc)
+    monkeypatch.setattr(developer_data, "use_conference", lambda: conference)
+    monkeypatch.setattr(developer_data, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(developer_data, "use_favorites", lambda: favorites)
+    monkeypatch.setattr(developer_data, "use_tokens", lambda: LIGHT_TOKENS)
+
+    def render() -> ft.Column:
+        rendered.index = 0
+        column = inspect.unwrap(DataActions)()
+        assert isinstance(column, ft.Column)
+        return column
+
+    return render
+
+
+def identified(root: ft.Control) -> dict[str, ft.Control]:
+    """The control under each identifier below ``root``."""
+    found: dict[str, ft.Control] = {}
+
+    def visit(control: Any) -> None:
+        if isinstance(control, ft.Semantics) and control.identifier:
+            found[control.identifier] = cast(ft.Control, control.content)
+        for name in ("content", "controls", "actions"):
+            child = getattr(control, name, None)
+            for item in child if isinstance(child, list) else [child]:
+                if isinstance(item, ft.Control):
+                    visit(item)
+
+    visit(root)
+    return found
+
+
+def row(column: ft.Column, identifier: str) -> ft.ListTile:
+    tile = identified(column)[identifier]
+    assert isinstance(tile, ft.ListTile)
+    return tile
+
+
+def subtitle(column: ft.Column, identifier: str) -> str:
+    return str(row(column, identifier).subtitle)
+
+
+async def tap(render: Callable[[], ft.Column], identifier: str) -> None:
+    """Tap a row as Flutter would: a no-argument handler, maybe a coroutine."""
+    result = cast(Callable[[], Any], row(render(), identifier).on_click)()
+    if inspect.isawaitable(result):
+        await result
+
+
+async def press(dialog: ft.AlertDialog | None, identifier: str) -> None:
+    """Press a confirmation's button."""
+    assert dialog is not None
+    button = identified(dialog)[identifier]
+    assert isinstance(button, ft.TextButton)
+    result = cast(Callable[[], Any], button.on_click)()
+    if inspect.isawaitable(result):
+        await result
+
+
+def outcome(column: ft.Column) -> str | None:
+    """The words of the line under the rows, or None while it is hidden."""
+    line = next(
+        c
+        for c in column.controls
+        if isinstance(c, ft.Semantics) and c.identifier == "developer.data_outcome"
+    )
+    assert line.live_region is True
+    if not line.visible:
+        return None
+    text = cast(ft.Row, cast(ft.Container, line.content).content).controls[1]
+    assert isinstance(text, ft.Text)
+    return str(text.value)
+
+
+def said(page: FakePage) -> list[str]:
+    return [
+        str(cast(ft.Text, d.content).value)
+        for d in page.dialogs
+        if isinstance(d, ft.SnackBar)
+    ]
+
+
+# ------------------------------------------------------------------ the rows
+
+
+def test_each_action_carries_the_identifier_ui_flows_use(
+    render: Callable[[], ft.Column],
+) -> None:
+    assert set(identified(render())) == {
+        "developer.refresh_now",
+        "developer.clear_cache",
+        "developer.share_log",
+        "developer.reset_app",
+        "developer.data_outcome",
+    }
+
+
+def test_reset_app_reads_as_destructive(render: Callable[[], ft.Column]) -> None:
+    tile = row(render(), "developer.reset_app")
+    assert isinstance(tile.leading, ft.Icon) and tile.leading.color == ft.Colors.ERROR
+    assert isinstance(tile.title, ft.Text) and tile.title.color == ft.Colors.ERROR
+    assert tile.disabled is False
+
+
+def test_refresh_now_says_what_the_schedule_on_screen_is(
+    render: Callable[[], ft.Column],
+) -> None:
+    # The fixture published the bundled snapshot.
+    assert subtitle(render(), "developer.refresh_now").startswith(
+        "Bundled with the app, updated "
+    )
+
+
+async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(
+    render: Callable[[], ft.Column],
+    conference: Conference,
+    monkeypatch: pytest.MonkeyPatch,
+    page: FakePage,
+) -> None:
+    await tap(render, "developer.refresh_now")
+    assert outcome(render()) == (
+        "No answer from the feed: the app keeps the schedule it has."
+    )
+    assert conference.source == "bundled"  # kept
+
+    async def serve(url: str, **_: Any) -> bytes:
+        return recorded(2026)
+
+    monkeypatch.setattr(api, "fetch_feed", serve)
+    await tap(render, "developer.refresh_now")
+    assert conference.source == "network"
+    assert outcome(render()) == "Schedule updated from the feed."
+    assert subtitle(render(), "developer.refresh_now") == (
+        "From the feed, updated just now"
+    )
+    assert page.dialogs == []  # in place, not a SnackBar (#197)
+
+
+async def test_refresh_now_is_disabled_while_an_asked_for_refresh_runs(
+    render: Callable[[], ft.Column],
+    conference: Conference,
+    svc: Services,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = asyncio.Event()
+
+    async def hold(url: str, **_: Any) -> bytes:
+        await release.wait()
+        return recorded(2026)
+
+    monkeypatch.setattr(api, "fetch_feed", hold)
+    conference.start_refresh(svc.storage, svc.year)  # quiet: the row stays enabled
+    await asyncio.sleep(0)
+    assert row(render(), "developer.refresh_now").disabled is False
+    asked = asyncio.create_task(tap(render, "developer.refresh_now"))
+    await asyncio.sleep(0)
+    tile = row(render(), "developer.refresh_now")
+    assert tile.disabled is True  # D-181: as every Refresh button
+    assert tile.subtitle == "Updating the schedule…"
+    release.set()
+    await asked
+    assert row(render(), "developer.refresh_now").disabled is False
+
+
+# ------------------------------------------------------------------ Clear cached feed
+
+
+async def test_clear_cached_feed_is_disabled_without_a_cache(
+    render: Callable[[], ft.Column],
+) -> None:
+    tile = row(render(), "developer.clear_cache")
+    assert tile.disabled is True
+    assert tile.subtitle == "No cached schedule on this device"
+
+
+async def test_clear_cached_feed_asks_first_and_cancel_keeps_the_cache(
+    render: Callable[[], ft.Column], rendered: Rendered, svc: Services
+) -> None:
+    await svc.storage.write_feed(recorded(2026))
+    assert subtitle(render(), "developer.clear_cache") == (
+        "The next start shows the bundled schedule"
+    )
+    await tap(render, "developer.clear_cache")
+    render()
+    dialog = rendered.dialog
+    assert dialog is not None and dialog.modal is True
+    assert dialog.title == ft.Text("Clear the cached schedule?")
+    assert svc.storage.feed_path.exists()  # nothing deleted before the answer
+    await press(dialog, "developer.clear_cache.cancel")
+    render()
+    assert rendered.dialog is None
+    assert svc.storage.feed_path.exists()
+    assert dialog.on_dismiss is not None  # Back cancels too
+
+
+async def test_clear_cached_feed_deletes_the_cache_and_keeps_the_session_s_data(
+    render: Callable[[], ft.Column],
+    rendered: Rendered,
+    svc: Services,
+    conference: Conference,
+) -> None:
+    await svc.storage.write_feed(recorded(2026))
+    version = conference.version
+    await tap(render, "developer.clear_cache")
+    render()
+    await press(rendered.dialog, "developer.clear_cache.confirm")
+    column = render()
+    assert rendered.dialog is None
+    assert not svc.storage.feed_path.exists()  # the next start: the snapshot (D-39)
+    assert conference.version == version  # this session keeps what it shows
+    assert outcome(column) == CLEARED[0]
+    assert row(column, "developer.clear_cache").disabled is True
+
+
+def test_the_clear_confirmation_names_the_bundled_schedule_s_day() -> None:
+    dialog = confirmation(
+        "clear",
+        saved=0,
+        packaged=True,
+        snapshot_day="Mon, Oct 12",
+        on_confirm=lambda: None,
+        on_cancel=lambda: None,
+    )
+    assert dialog is not None
+    text = cast(ft.Text, cast(ft.Column, dialog.content).controls[0]).value
+    assert "the schedule bundled with the app (Mon, Oct 12)" in str(text)
+
+
+# ------------------------------------------------------------------ Share log
+
+
+def test_share_log_is_off_outside_a_packaged_build_and_says_why(
+    render: Callable[[], ft.Column], packaged: Callable[[bool], None]
+) -> None:
+    packaged(False)
+    tile = row(render(), "developer.share_log")
+    assert tile.disabled is True
+    assert tile.subtitle == (
+        "Not a packaged build: the log is in the terminal that runs it"
+    )
+
+
+async def test_share_log_shares_the_console_log_file(
+    render: Callable[[], ft.Column], svc: Services, tmp_path: Path
+) -> None:
+    log = tmp_path / "console.log"
+    log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
+    cast(MemoryPaths, svc.paths).console_log = str(log)
+    await tap(render, "developer.share_log")
+    [files] = cast(MemoryShare, svc.share).shared
+    assert [file.path for file in files] == [str(log)]
+    assert outcome(render()) == LOG_SHARED[0]
+
+
+async def test_a_dismissed_share_sheet_says_nothing(
+    render: Callable[[], ft.Column], svc: Services, tmp_path: Path
+) -> None:
+    log = tmp_path / "console.log"
+    log.write_text("a line\n")
+    cast(MemoryPaths, svc.paths).console_log = str(log)
+    cast(MemoryShare, svc.share).status = ft.ShareResultStatus.DISMISSED
+    await tap(render, "developer.share_log")
+    assert outcome(render()) is None
+    assert row(render(), "developer.share_log").disabled is False  # usable again
+
+
+@pytest.mark.parametrize("content", [None, ""])
+async def test_without_a_log_there_is_nothing_to_share(
+    render: Callable[[], ft.Column],
+    svc: Services,
+    tmp_path: Path,
+    content: str | None,
+) -> None:
+    log = tmp_path / "console.log"
+    if content is not None:
+        log.write_text(content)
+    cast(MemoryPaths, svc.paths).console_log = str(log)
+    await tap(render, "developer.share_log")
+    assert cast(MemoryShare, svc.share).shared == []
+    assert outcome(render()) == NO_LOG[0]
+
+
+async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
+    render: Callable[[], ft.Column],
+    svc: Services,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    log = tmp_path / "console.log"
+    log.write_text("a line\n")
+    cast(MemoryPaths, svc.paths).console_log = str(log)
+    # Flet's invoke error repeats the call's arguments, the path included (D-72).
+    cast(MemoryShare, svc.share).error = RuntimeError(f"share_files({log}) failed")
+    with caplog.at_level(logging.WARNING):
+        await tap(render, "developer.share_log")
+    assert outcome(render()) == NOT_SHARED[0]
+    assert [r.getMessage() for r in caplog.records] == [
+        "Could not share the log: RuntimeError"
+    ]
+    cast(MemoryPaths, svc.paths).error = TimeoutError("get_console_log_filename")
+    await tap(render, "developer.share_log")
+    assert outcome(render()) == LOG_NOT_FOUND[0]
+
+
+# ------------------------------------------------------------------ Reset app
+
+
+def test_reset_lists_exactly_what_is_lost() -> None:
+    assert reset_losses(3, packaged=True) == (
+        "Your settings: Appearance and the schedule's filters",
+        "Your saved sessions in My schedule (3)",
+        "The cached schedule: the app shows the bundled one until it refreshes",
+        "Developer options: the fake clock and the feed URL, and Developer locks again",
+    )
+    losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
+    assert losses[1] == "Your saved sessions in My schedule (none)"
+    assert losses[3] == "Developer options: the fake clock and the feed URL"
+
+
+async def test_reset_app_asks_first_and_its_dialog_lists_the_losses(
+    render: Callable[[], ft.Column],
+    rendered: Rendered,
+    stored: dict[str, Any],
+) -> None:
+    stored["pycon.theme"] = "dark"
+    await tap(render, "developer.reset_app")
+    render()
+    dialog = rendered.dialog
+    assert dialog is not None and dialog.modal is True and dialog.scrollable is True
+    assert dialog.title == ft.Text("Reset the app?")
+    lines = [
+        str(cast(ft.Text, cast(ft.Row, line).controls[1]).value)
+        for line in cast(ft.Column, dialog.content).controls[1:]
+    ]
+    assert lines == list(reset_losses(3, packaged=True))
+    await press(dialog, "developer.reset_app.cancel")
+    render()
+    assert rendered.dialog is None
+    assert stored["pycon.theme"] == "dark"  # nothing deleted
+
+
+async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install(
+    render: Callable[[], ft.Column],
+    rendered: Rendered,
+    svc: Services,
+    stored: dict[str, Any],
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+    page: FakePage,
+    offline: list[str],
+) -> None:
+    # A session that has been used: settings, favourites of two years, the
+    # Developer options, a cache, a fake clock, a feed URL and remembered places.
+    stored.update(
+        {
+            "pycon.theme": "dark",
+            "pycon.excluded_tracks": [],
+            "pycon.2026.favorites": ["1", "2", "3"],
+            "pycon.2025.favorites": ["9"],
+            "pycon.dev": '{"unlocked": true}',
+            "flutter.not_ours": "kept",
+        }
+    )
+    await svc.storage.write_feed(recorded(2026))
+    await prefs.save(svc.storage, theme="dark", excluded_tracks=())
+    prefs.os_dark = True
+    clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
+    errors.show_details(True)
+    conference.set_feed_url(DEV_FEED)
+    svc.memory.last_location = "/more/developer"
+    svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
+    svc.memory.jumped_to_now = True
+
+    await tap(render, "developer.reset_app")
+    render()
+    await press(rendered.dialog, "developer.reset_app.confirm")
+
+    # On the device: nothing of the app's is left.
+    assert stored == {"flutter.not_ours": "kept"}
+    assert not svc.storage.feed_path.exists()
+    # In memory, without a restart.
+    assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
+    assert errors._details is False
+    assert (prefs.theme, prefs.excluded_tracks, prefs.dev) == (
+        "system",
+        ("Open Space",),
+        {},
+    )
+    assert prefs.developer is False  # a packaged build: locked again
+    assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
+    assert favorites.ids == frozenset()
+    assert svc.memory == ViewMemory()
+    assert conference.source == "bundled"
+    assert conference._feed_url is None
+    # Then, as at a start: a quiet refresh of the year's feed, and the index route.
+    await asyncio.sleep(0)
+    assert offline == [svc.year.conference.feed_url]
+    assert page.navigated == ["/"]
+    assert said(page) == ["App reset"]
+
+
+async def test_a_reset_that_cannot_delete_everything_says_so(
+    render: Callable[[], ft.Column],
+    rendered: Rendered,
+    svc: Services,
+    stored: dict[str, Any],
+    favorites: Favorites,
+    page: FakePage,
+) -> None:
+    stored["pycon.2026.favorites"] = ["1"]
+    cast(MemoryPrefs, svc.storage.prefs).fail_removes = True
+    await tap(render, "developer.reset_app")
+    render()
+    await press(rendered.dialog, "developer.reset_app.confirm")
+    assert favorites.ids == frozenset()  # the session is reset all the same (D-120)
+    assert page.navigated == ["/"]
+    assert said(page) == [RESET_INCOMPLETE]
+
+
+async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it(
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = asyncio.Event()
+    asked: list[str] = []
+
+    async def hold(url: str, **_: Any) -> bytes:
+        asked.append(url)
+        if url != DEV_FEED:
+            raise api.NetworkError("ConnectError: offline")
+        await release.wait()
+        return recorded(2026)
+
+    monkeypatch.setattr(api, "fetch_feed", hold)
+    conference.set_feed_url(DEV_FEED)
+    running = conference.start_refresh(svc.storage, svc.year)
+    await asyncio.sleep(0)
+    assert await reset_app(svc, conference, prefs, favorites) is True
+    assert running.cancelled()
+    release.set()
+    await asyncio.sleep(0.05)
+    assert not svc.storage.feed_path.exists()  # the test feed was never cached
+    assert conference.source == "bundled"
+    assert asked == [DEV_FEED, svc.year.conference.feed_url]  # then the year's feed
+    assert conference.problem == "offline"  # the new refresh's own outcome
+
+
+# ------------------------------------------------------------------ the words
+
+
+def test_refresh_now_says_how_the_refresh_ended() -> None:
+    assert refreshed(None) == ("Schedule updated from the feed.", True)
+    assert refreshed("offline")[1] is False
+    assert refreshed("server") == (
+        "The feed's answer couldn't be used: the app keeps the schedule it has.",
+        False,
+    )
+
+
+def test_the_schedule_line_names_the_source_and_its_age() -> None:
+    now = datetime(2026, 5, 15, 12, tzinfo=UTC)
+    three_hours = now - timedelta(hours=3)
+    assert schedule_line("cache", three_hours, now) == (
+        "From the cache, updated 3 hours ago"
+    )
+    assert (
+        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
+    )
+    assert schedule_line("none", None, now) == "No schedule yet"

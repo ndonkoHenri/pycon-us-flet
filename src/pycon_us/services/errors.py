@@ -6,14 +6,16 @@ event handler ends the session, and one that escapes an async effect is seen by 
 (F4, F37). Delete it once Flet makes handler errors non-fatal (U15).
 
 ``setup_logging()`` sends stdlib ``logging`` to stderr, which a packaged app tees to
-logcat or the unified log and to ``console.log`` (F14, D-72). Never log secrets, keys,
-signatures, emails or badge codes.
+logcat or the unified log and to ``console.log`` (F14, D-72), the file testers share from
+the Developer screen. Never log secrets, keys, signatures, emails or badge codes; as a
+net under that rule, the handler writes every email address as ``<email>`` (D-196).
 """
 
 import functools
 import inspect
 import logging
 import os
+import re
 from collections.abc import Callable, Coroutine
 from typing import Any, overload
 
@@ -32,6 +34,13 @@ LOG_DATE_FORMAT = "%H:%M:%S"
 
 HANDLER_NAME = "pycon_us.console"
 """Names the handler ``setup_logging()`` adds, so a second call finds it."""
+
+EMAIL = re.compile(r"[\w.%+-]+(?:@|%40)[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}")
+"""An email address as a log line can hold one: ``name@host.tld``, or with the ``@``
+percent-encoded, as in a ``mailto:`` URL."""
+
+REDACTED_EMAIL = "<email>"
+"""What ``RedactingFormatter`` writes in an address's place."""
 
 QUIET_LOGGERS = ("httpx", "httpcore")
 """Kept at WARNING: httpx logs every request's URL at INFO, query string included, and
@@ -132,6 +141,21 @@ def _tell_user(error: Exception) -> None:
         logger.warning("Could not show the error message", exc_info=True)
 
 
+class RedactingFormatter(logging.Formatter):
+    """The log's line format, with every email address written as ``<email>`` (D-196).
+
+    Our own lines never hold one (D-72), but a line can quote what the app does not
+    control: an exception's message, which can repeat a platform call's arguments
+    (Android's ``ACTIVITY_NOT_FOUND`` names the ``mailto:`` intent, D-182), or a feed
+    record that a skipped-record line quotes. The whole formatted line is redacted,
+    traceback included, so nothing a tester shares with Share log names a person.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Return the formatted line with its email addresses replaced."""
+        return EMAIL.sub(REDACTED_EMAIL, super().format(record))
+
+
 def setup_logging() -> None:
     """Send the app's log records to stderr, once per process.
 
@@ -139,7 +163,7 @@ def setup_logging() -> None:
     (``flet run -vv`` sets ``debug``; Flet's own handling of it does nothing once a
     handler exists). ``QUIET_LOGGERS`` stay at WARNING. A packaged app replaces
     ``sys.stderr`` with a tee to the platform log and ``console.log`` before the app is
-    imported (F14), so the handler writes to both. Once the handler is there, a second
+    imported (F14), so the handler writes to both, through ``RedactingFormatter``. Once the handler is there, a second
     call returns at once: it neither adds a handler nor resets a level set since.
     """
     root = logging.getLogger()
@@ -147,7 +171,7 @@ def setup_logging() -> None:
         return
     handler = logging.StreamHandler()  # sys.stderr as it is now: the tee
     handler.set_name(HANDLER_NAME)
-    handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
+    handler.setFormatter(RedactingFormatter(LOG_FORMAT, LOG_DATE_FORMAT))
     root.addHandler(handler)
     level = logging.getLevelName(os.getenv("FLET_LOG_LEVEL", "info").strip().upper())
     root.setLevel(level if isinstance(level, int) else logging.INFO)

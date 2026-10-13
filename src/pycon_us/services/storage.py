@@ -65,6 +65,10 @@ class Pref[T]:
 
 
 # ------------------------------------------------------------------ the key table (decisions §M)
+
+PREFIX = "pycon."
+"""Starts every key the app keeps in SharedPreferences, app-wide and per year."""
+
 # P3 adds `pycon.account`, `pycon.staff_sponsor`, `pycon.start_screen` and
 # `pycon.<year>.favorites_dirty` here, with the features that use them.
 
@@ -175,6 +179,16 @@ class CachedFeed:
 
     raw: bytes
     saved_at: float
+
+
+def _unlink(path: Path) -> None:
+    """Delete ``path`` if it exists, after any ``write_atomic`` in progress (the lock).
+
+    A refresh whose task was cancelled can still be writing in its thread (D-120): a
+    deletion that ran first would see the file come back when that write lands.
+    """
+    with _write_lock:
+        path.unlink(missing_ok=True)
 
 
 def _read_feed_file(path: Path) -> CachedFeed | None:
@@ -314,19 +328,55 @@ class Storage:
             return False
         return True
 
-    async def delete_feed(self, reason: str) -> None:
+    async def delete_feed(self, reason: str) -> bool:
         """Delete the feed cache and log why, e.g. because it no longer parses.
 
-        The app then continues from the bundled snapshot (D-39).
+        The one way the cache goes: a cache that no longer parses, the Developer feed
+        URL turned off (D-187), and the Developer screen's Clear cached feed and Reset
+        app (D-195). Without it the next start uses the bundled snapshot (D-39). A
+        write in progress lands first, then the deletion (``_unlink``).
 
         Args:
             reason: Why, for the log, e.g. "it does not parse: <error>".
+
+        Returns:
+            Whether the cache is gone (or there was none); a failure is logged.
         """
         logger.warning("Deleting the cached feed %s: %s", self.feed_path.name, reason)
         try:
-            self.feed_path.unlink(missing_ok=True)
+            await asyncio.to_thread(_unlink, self.feed_path)
         except OSError:
             logger.warning("Could not delete %s", self.feed_path.name, exc_info=True)
+            return False
+        return True
+
+    async def clear_prefs(self) -> bool:
+        """Remove every key the app keeps in SharedPreferences: all of ``PREFIX``.
+
+        Reset app (DEV-05, D-195): the settings, every year's favourites and the
+        Developer options. Keys outside ``PREFIX`` are not the app's and stay.
+
+        Returns:
+            Whether every key is gone; a failure is logged with the key, never the
+            value (D-120).
+        """
+        try:
+            keys = await self.prefs.get_keys(PREFIX)
+        except SERVICE_ERRORS:
+            logger.warning("Could not list the preferences", exc_info=True)
+            return False
+        cleared = True
+        for key in keys:
+            try:
+                removed = await self.prefs.remove(key)
+            except SERVICE_ERRORS:
+                logger.warning("Could not remove preference %s", key, exc_info=True)
+                removed = False
+            else:
+                if not removed:
+                    logger.warning("Could not remove preference %s", key)
+            cleared = cleared and removed
+        return cleared
 
 
 def _decode[T](pref: Pref[T], stored: object) -> T | None:

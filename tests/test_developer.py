@@ -118,6 +118,8 @@ def render(
     monkeypatch.setattr(developer, "use_conference", lambda: conference)
     monkeypatch.setattr(developer, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(developer, "AppScaffold", lambda **kwargs: kwargs)
+    # The Data section is a component of its own: test_developer_data.py's.
+    monkeypatch.setattr(developer, "DataActions", lambda: ft.Container())
 
     def render() -> dict[str, Any]:
         states.index = 0
