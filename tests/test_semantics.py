@@ -83,9 +83,21 @@ def is_unset(value: ast.expr | None) -> bool:
 
 
 def test_the_scan_finds_the_headings_it_checks() -> None:
-    """A scan that matched nothing would pass whatever the code says."""
+    """A scan that matched nothing would pass whatever the code says.
+
+    The modules named here define a heading with its own ``Semantics``, rather than
+    tune a ``SectionHeader``'s level, so they match whatever level a screen picks.
+    """
     found = {path.name for path in SOURCES if heading_calls(path)}
-    assert {"scaffold.py", "states.py", "time_gutter.py", "more.py", "room.py"} <= found
+    defining = {
+        "scaffold.py",
+        "states.py",
+        "time_gutter.py",
+        "now_header.py",
+        "session.py",
+    }
+    assert defining <= found
+    assert len(found) >= 10
 
 
 @pytest.mark.parametrize("path", SOURCES, ids=lambda p: p.name)

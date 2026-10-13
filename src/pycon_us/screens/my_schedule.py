@@ -232,7 +232,7 @@ def _all_over(
     texts: list[ft.Control] = [
         ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
             header=True,
-            heading_level=2,  # as the day headers' level under #205 (F40)
+            heading_level=2,  # a section under the page's title, as the day headings (D-211)
             container=True,
             content=ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL),
         )
