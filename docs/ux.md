@@ -324,14 +324,14 @@ No blocking loaders (SCHED-28 dropped); never a full-screen error while data exi
 - A refresh never deletes the cache; a failure keeps the last good data (fixes EVT-07, SPON-08).
 - *(P2)* A refresh that changed the schedule shows "Schedule updated · 3 changes" with **Review**; unchanged refreshes are silent.
 
-### 4.3 Search (D-19, D-46, NEW-02)
+### 4.3 Search (D-19, D-46, NEW-02, D-191)
 
-- One screen, opened from `SEARCH` on Now, Schedule, Map and More with a preset scope.
-- `AppBar(title=ft.TextField(autofocus=True, hint_text="Search sessions, speakers, rooms", border=ft.NoInputBorder(), keyboard_type=ft.KeyboardType.WEB_SEARCH, on_change=...), actions=[IconButton(CLOSE, tooltip="Clear search")])`; scope `Chip`s All · Sessions · Speakers · Rooms (P1) · Sponsors · Places (P2); results in sections with counts ("Sessions (12)"), sessions grouped by day.
-- 250 ms debounce; NFKD plus casefold; **all words must match**; over titles, description text (never HTML), speaker names, rooms, and in P2 sponsors, booths and venue places; all days.
-- Result taps push details; Back returns to the results with the query intact (§2.5). Search ignores Schedule filters and its no-results text says so.
+- One screen, opened from `SEARCH` on Now, Schedule, Map and More with a preset scope; each opening starts an empty search (D-191).
+- `AppBar` "Search" with the back arrow to the opener; under it, pinned above the results, the Speakers filter's pill (`ui/fields.py`'s `SearchField`, D-189, D-191): `prefix_icon=SEARCH`, `hint_text="Search sessions, speakers, rooms"`, `autofocus=True`, `keyboard_type=WEB_SEARCH`, autocorrect and suggestions off, controlled (D-157), and a Clear button (`CLOSE`, "Clear search") once there is text, which puts the focus back in the field. Not ~~`AppBar(title=ft.TextField(...))`~~: a field in the 56 dp toolbar cannot grow with the text (Flet cannot read the scale, U16), and the pill reflows (D-191). Then the scope `Chip`s All · Sessions · Speakers · Rooms (P1) · Sponsors · Places (P2), the current one selected with its check, in one row that scrolls sideways when it is wider than the screen (wrapped, they took three rows at the largest text and pushed the results under the keyboard). Results in sections with counts ("Sessions (12)", a level-2 heading), sessions grouped by day (level-3 day headings) as `SessionRow`s with the star (notices as `NoticeRow`s), then "Speakers (3)" as `SpeakerRow`s and "Rooms (1)" as `LinkTile`s with their session count, each pushing its detail.
+- 250 ms debounce: the field changes at every keystroke, the search runs once the typing pauses, or at once on the keyboard's action key, a scope chip or Clear; D-180's fold; **all words must match**; over titles, description text (never HTML), speaker names, rooms, and in P2 sponsors, booths and venue places; all days.
+- Result taps push details; Back returns to the results with the query intact (§2.5): the Search View stays mounted below the detail, and the query and scope are in `ViewMemory` too (D-18). Search ignores Schedule filters and says so before the first word and on a miss ("Search covers all days and ignores your filters."); a miss in one scope that All would answer offers "Show all results" (§4.6).
 - A plain View rather than `ft.SearchBar`: simpler to test, normal Back.
-- The field is labelled "Search"; the summary ("12 sessions, 3 speakers") is a `Semantics(live_region=True)` text. *(could)* Recent queries before typing.
+- The field is named "Search" once it holds text (its hint names it while empty); the summary ("12 sessions, 3 speakers") is a polite `Semantics(live_region=True)` line under the chips (`search.count`). Focus on Back: the field gets the focus back only when it had it as the result opened, as Flutter restores a route's focus (D-191). *(could)* Recent queries before typing.
 
 ### 4.4 Filters (D-20) and favourites (D-30, D-48)
 
@@ -358,7 +358,8 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 | My schedule empty | (its screen) | "Nothing saved yet" / "Tap the star on any session to add it to My schedule. It works offline." | "Browse the schedule" |
 | My schedule unavailable (`Favorites.loaded` is False after the gate, D-172) | (its screen) | "Couldn't open My schedule" / "Your saved sessions are still on this device. Close and reopen the app to see them." | none |
 | Filters hide a day | (its screen) | "No sessions on Thursday match your filters" | "Clear filters" |
-| Search miss | (its screen) | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
+| Search miss | `SEARCH_OFF` | "No results for “pydanitc”" / "Search covers all days and ignores your filters." | none; in a narrower scope that All would answer, "Show all results" (D-191) |
+| Search before a word | `SEARCH` | "Find sessions, speakers and rooms" ("Find sessions", … by scope) / "Search covers all days and ignores your filters." | none: the field is focused |
 | No data, no network | `CLOUD_OFF_OUTLINED` | "Can't load the schedule" (the Map: "Can't load the rooms") / "Connect to the internet and try again." | "Try again" |
 | Session not found | `EVENT_BUSY_OUTLINED` (the same as "removed", §3.7: a session that left the schedule) | "This session isn't in the current schedule" | "Open schedule" |
 | Speaker not found | `PERSON_OFF_OUTLINED` | "This speaker isn't in the current schedule" | "All speakers" |

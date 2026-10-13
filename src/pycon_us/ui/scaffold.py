@@ -173,7 +173,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     """Return the app bar action that opens the global search with a preset scope (D-19).
 
     It records the opener's location, query included, so Back from search returns
-    there.
+    there, and clears the last query, so each search starts empty (D-191).
 
     Args:
         memory: The process's ``ViewMemory``.
@@ -184,6 +184,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     @report_errors
     def open_search() -> None:
         memory.search_base = page.route
+        memory.search_query = ""  # a new search; Back to its results keeps the old one
         page.navigate(f"/search?scope={scope}")
 
     return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
