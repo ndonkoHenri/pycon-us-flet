@@ -304,3 +304,15 @@ async def test_an_appearance_that_cannot_be_saved_says_so(
     assert isinstance(snack, ft.SnackBar)
     assert isinstance(snack.content, ft.Text)
     assert snack.content.value == "Couldn't save your change"
+
+
+def test_lightning_talks_appear_once_and_open_their_own_page(
+    render: Callable[[], dict[str, Any]], page: FakePage
+) -> None:
+    """EVT-03, SHELL-10: Ionic listed them twice, under Presentations and Events, with
+    two targets; here one row opens the one page, and so does the Tracks hub's row."""
+    tiles = [t for row in rows_of(render()) if (t := tile_of(row))]
+    lightning = [t for t in tiles if "lightning" in str(t.title).casefold()]
+    assert [str(t.title) for t in lightning] == ["Lightning talks"]
+    cast(Callable[[], None], lightning[0].on_click)()
+    assert page.navigated == ["/more/lightning-talks"]

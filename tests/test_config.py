@@ -428,6 +428,48 @@ def edit(path: Path, old: str, new: str) -> None:
             'other_locations = [" - ",',
             "2026/content.toml: other_locations[0]: names no place",
         ),
+        (
+            "content.toml",
+            'propose_url = "https://',
+            'propose_url = "http://',
+            "2026/content.toml: open_spaces.propose_url: expected an https:// URL",
+        ),
+        (
+            "content.toml",
+            'intro = "Open spaces are',
+            'intro = " "\nx = "',
+            "2026/content.toml: open_spaces.x: unknown key",
+        ),
+        (
+            "content.toml",
+            'intro = "Open spaces are',
+            'intro = " "\n# "',
+            "2026/content.toml: open_spaces.intro: is empty",
+        ),
+        (
+            "content.toml",
+            'signup_url = "https://',
+            'signup_url = "mailto:',
+            "2026/content.toml: lightning_talks.signup_url: expected an https:// URL",
+        ),
+        (
+            "content.toml",
+            'info_url = "https://us.pycon.org/2026/events/lightning-talks/"\n',
+            "",
+            "2026/content.toml: lightning_talks.info_url: missing key",
+        ),
+        (
+            "content.toml",
+            'answer = "They don',
+            'answer = " "\n# "They don',
+            "2026/content.toml: lightning_talks.doubts[0].answer: is empty",
+        ),
+        (
+            "content.toml",
+            'heading = "What',
+            'heading = 5\n# "What',
+            "2026/content.toml: lightning_talks.heading: expected a string, got 5",
+        ),
     ],
 )
 def test_malformed_file_names_file_key_and_problem(
@@ -450,6 +492,15 @@ def test_array_items_must_be_tables(data_dir: Path) -> None:
     )
 
 
+def test_a_pages_copy_must_be_a_table(data_dir: Path) -> None:
+    (data_dir / "2026" / "content.toml").write_text(
+        "open_spaces = 1\n", encoding="utf-8"
+    )
+    with pytest.raises(YearDataError) as error:
+        load_year(2026, data_dir)
+    assert str(error.value) == "2026/content.toml: open_spaces: expected a table, got 1"
+
+
 def test_content_without_overrides_has_none(data_dir: Path) -> None:
     (data_dir / "2026" / "content.toml").write_text("# nothing yet\n", encoding="utf-8")
     content = load_year(2026, data_dir).content
@@ -464,6 +515,30 @@ def test_2026_lists_the_places_that_are_not_rooms() -> None:
         "Lobby",
         "Out Front of Hyatt Regency",
     )
+
+
+def test_2026_has_the_open_spaces_and_lightning_talks_pages_copy() -> None:
+    """EVT-02, EVT-03: their links and words are year data (D-45), never code."""
+    content = load_year(2026).content
+    assert content.open_spaces is not None
+    assert content.open_spaces.propose_url == (
+        "https://us.pycon.org/2026/signup/open-space/"
+    )
+    talks = content.lightning_talks
+    assert talks is not None
+    assert talks.signup_url == "https://us.pycon.org/2026/signup/lightning-talk/"
+    assert talks.info_url == "https://us.pycon.org/2026/events/lightning-talks/"
+    assert talks.heading and talks.intro and len(talks.doubts) == 4
+    # Copy in the app's voice (ux.md §4.9): no exclamation marks.
+    words = [talks.heading, *talks.intro, content.open_spaces.intro]
+    words += [text for d in talks.doubts for text in (d.doubt, d.answer)]
+    assert not any("!" in text for text in words)
+
+
+def test_a_year_may_leave_out_the_pages_copy() -> None:
+    """2025 keeps only what its recorded feed needs: its pages show the sessions."""
+    content = load_year(2025).content
+    assert (content.open_spaces, content.lightning_talks) == (None, None)
 
 
 def test_missing_file_is_named(data_dir: Path) -> None:

@@ -3,15 +3,15 @@
 Pure functions of the processed feed, like ``queries`` (architecture §7.5): a list owner
 builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
-that spans days. ``places`` gives session detail its room tiles (SESS-02), and ``people``
-its Speakers section (SESS-07). ``spoken_phrase()``, ``notice_phrase()`` and
+that spans days, and ``by_slot`` one day's into time slots. ``places`` gives session
+detail its room tiles (SESS-02), and ``people`` its Speakers section (SESS-07). ``spoken_phrase()``, ``notice_phrase()`` and
 ``elapsed_phrase()`` are what a row says to a screen reader, as one phrase (D-33,
 D-200).
 """
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, tzinfo
+from datetime import date, datetime, tzinfo
 from itertools import groupby
 
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
@@ -123,6 +123,26 @@ def by_day(
     """
     for day, group in groupby(views, lambda view: local_date(view.session.start, zone)):
         yield day, list(group)
+
+
+def by_slot(views: Iterable[SessionView]) -> list[tuple[datetime, list[SessionView]]]:
+    """Return one day's row views grouped into time slots, as the Schedule's are (D-31).
+
+    A slot is the sessions of one time group: they share ``Session.start``, so the Job
+    Fair sits in the 10:00 slot while its row says 9:30 (DATA-11, D-41). For a list
+    of gutter slots that is not the Schedule's: a room's day (ROOM-02) and the open
+    spaces' (EVT-01).
+
+    Args:
+        views: One day's views, by start; within a start, in the order to show.
+
+    Returns:
+        Each slot's start and its views, by start.
+    """
+    slots: dict[datetime, list[SessionView]] = {}
+    for view in views:
+        slots.setdefault(view.session.start, []).append(view)
+    return list(slots.items())
 
 
 @dataclass(frozen=True, eq=False)

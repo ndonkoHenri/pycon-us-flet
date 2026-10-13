@@ -174,6 +174,23 @@ async def open_link(svc: Services, target: str, *, app: bool = False) -> None:
         _say(COULD_NOT_OPEN)
 
 
+def external(identifier: str, button: ft.Control) -> ft.Control:
+    """Return a button that opens a web page, marked as a link and named for UI flows.
+
+    One merged node, as ``semantics.named()`` makes it (D-190), with the link flag an
+    external row carries (ux.md §4.7): the lightning talks' sign-up and the open
+    spaces' "Propose an open space". The button's own words end with "Opens in
+    browser" (``OPENS_IN``), since it leaves the app.
+
+    Args:
+        identifier: For UI flows, e.g. ``open_spaces.propose``.
+        button: The button, whose ``on_click`` calls ``open_link()``.
+    """
+    return ft.MergeSemantics(
+        content=ft.Semantics(identifier=identifier, link=True, content=button)
+    )
+
+
 def feed_link(href: str | None, site_url: str) -> str | None:
     """Return the address a link in a feed text opens, or None when it opens nothing.
 

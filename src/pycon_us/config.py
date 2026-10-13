@@ -150,6 +150,54 @@ class ConferenceInfo:
 
 
 @dataclass(frozen=True)
+class OpenSpacesInfo:
+    """What the Open spaces page says of the year's open spaces (EVT-01, EVT-02).
+
+    Attributes:
+        intro: One line on what open spaces are and how to host one, at the head of
+            each day's list.
+        propose_url: Where "Propose an open space" goes: the site's sign-up, opened
+            in the in-app browser (INFO-14).
+    """
+
+    intro: str
+    propose_url: str
+
+
+@dataclass(frozen=True)
+class Doubt:
+    """A reason people give for not giving a lightning talk, and the answer to it.
+
+    Attributes:
+        doubt: What they say: "Everyone already knows that".
+        answer: Why it holds no one back.
+    """
+
+    doubt: str
+    answer: str
+
+
+@dataclass(frozen=True)
+class LightningTalksInfo:
+    """What the Lightning talks page says of the year's lightning talks (EVT-03).
+
+    Attributes:
+        heading: The copy card's heading: "What's a lightning talk?".
+        intro: The card's paragraphs, in order: what one is, and when and where they
+            happen this year.
+        signup_url: Where "Sign up for a lightning talk" goes, in the in-app browser.
+        info_url: The site's page on them, the page's "More about lightning talks".
+        doubts: "Think you can't do one?": the reasons and their answers, in order.
+    """
+
+    heading: str
+    intro: tuple[str, ...]
+    signup_url: str
+    info_url: str
+    doubts: tuple[Doubt, ...]
+
+
+@dataclass(frozen=True)
 class Content:
     """The year's content from ``content.toml``: what feed processing and the Map need.
 
@@ -163,12 +211,18 @@ class Content:
         other_locations: The places in the feed's room lists that are not rooms
             ("Elsewhere", "Lobby"), as the feed names them: the Map lists them apart,
             under "Other locations" (ROOM-01, D-188). Matched by room slug.
+        open_spaces: The Open spaces page's words and link; None for a year that has
+            none, whose page shows its sessions alone.
+        lightning_talks: The Lightning talks page's copy and links; None for a year
+            that has none, whose page shows its sessions alone.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
     hall_prefix: str = ""
     lightning_talks_location: str = ""
     other_locations: tuple[str, ...] = ()
+    open_spaces: OpenSpacesInfo | None = None
+    lightning_talks: LightningTalksInfo | None = None
 
 
 @dataclass(frozen=True, eq=False)
@@ -294,9 +348,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         )
     optional = ("registration_url",) if conference.registration_url else ()
     for key in ("site_url", "feed_url", *optional):
-        url = urlsplit(getattr(conference, key))
-        if url.scheme != "https" or not url.hostname:
-            raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")
+        _check_https(getattr(conference, key), file, key)
     if not conference.site_url.endswith("/"):  # site-relative links resolve against it
         raise YearDataError(f"{file}: site_url: expected a final '/'")
     seen: set[str] = set()
@@ -325,7 +377,33 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
             )
 
 
+def _check_https(url: str, file: str, key: str) -> None:
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname:
+        raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")
+
+
+def _check_text(text: str, file: str, key: str) -> None:
+    if not text.strip():
+        raise YearDataError(f"{file}: {key}: is empty")
+
+
 def _check_content(content: Content, file: str) -> None:
+    if (spaces := content.open_spaces) is not None:
+        _check_text(spaces.intro, file, "open_spaces.intro")
+        _check_https(spaces.propose_url, file, "open_spaces.propose_url")
+    if (talks := content.lightning_talks) is not None:
+        _check_text(talks.heading, file, "lightning_talks.heading")
+        if not talks.intro:
+            raise YearDataError(f"{file}: lightning_talks.intro: is empty")
+        for index, paragraph in enumerate(talks.intro):
+            _check_text(paragraph, file, f"lightning_talks.intro[{index}]")
+        _check_https(talks.signup_url, file, "lightning_talks.signup_url")
+        _check_https(talks.info_url, file, "lightning_talks.info_url")
+        for index, doubt in enumerate(talks.doubts):
+            key = f"lightning_talks.doubts[{index}]"
+            _check_text(doubt.doubt, file, f"{key}.doubt")
+            _check_text(doubt.answer, file, f"{key}.answer")
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)
