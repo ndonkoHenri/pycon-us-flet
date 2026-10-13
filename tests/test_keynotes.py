@@ -9,17 +9,18 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import replace
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import flet as ft
 import pytest
 
 from pycon_us.config import YearData, load_year
+from pycon_us.core.models import Session
 from pycon_us.core.timeline import keynote_sessions
+from pycon_us.screens import keynote_card
 from pycon_us.screens import keynotes as screen
 from pycon_us.screens.keynote_card import (
     CLAMP_LINES,
-    PANEL_NAME_WIDTH,
     card_text,
     clamps,
 )
@@ -151,7 +152,10 @@ async def test_a_panel_shows_its_people_as_a_row_of_photos(show: Show) -> None:
         return [
             str(t.value)
             for t in descendants(row)
-            if isinstance(t, ft.Text) and t.width == PANEL_NAME_WIDTH
+            if isinstance(t, ft.Text)
+            and t.theme_style == ft.TextThemeStyle.BODY_SMALL
+            # Its own width, so the largest text never breaks a surname in two.
+            and t.width is None
         ]
 
     rows = [r for r in page.find(ft.Row) if r.wrap and names(r)]
@@ -203,16 +207,26 @@ async def test_read_more_shows_the_whole_bio_and_show_less_cuts_it_again(
     assert more.expanded is False  # said "collapsed"
     button = cast(ft.TextButton, more.content)
     label = cast(ft.Text, button.content)
+    # The bios it opens are about the person, whom the feed names the keynote by.
     assert (label.value, label.semantics_label) == (
         "Read more",
-        "Read more about Your AI Product Doesn't Have a Moat… Yet",
+        "Read more about Lin Qiao",
     )
+    # Pinned, as Material shrinks it at large text: the label stays on the text's edge.
+    assert button.style is not None
+    assert button.style.padding == ft.Padding.symmetric(horizontal=12, vertical=8)
     await page.click(button)
     assert bio(page, "153").max_lines is None
     more = cast(ft.Semantics, page.node("keynotes.more.153").content)
     assert more.expanded is True
     button = cast(ft.TextButton, more.content)
     assert text_of(button) == "Show less"
+    # A panel's opens its abstract: about the panel, by its own title.
+    council = keynote_of(KEYNOTES, "183")
+    assert council is not None
+    council_more = cast(ft.Semantics, page.node("keynotes.more.183").content)
+    council_label = cast(ft.Text, cast(ft.TextButton, council_more.content).content)
+    assert council_label.semantics_label == f"Read more about {council.title}"
     # The other cards stay cut.
     assert bio(page, "165").max_lines == CLAMP_LINES
     await page.click(button)
@@ -225,15 +239,12 @@ async def test_read_more_shows_the_whole_bio_and_show_less_cuts_it_again(
 async def test_the_tile_says_when_and_where_and_opens_the_session(show: Show) -> None:
     page = await show()
     tile = page.node("keynotes.session.153")
-    assert (
-        texts(tile)
-        == [
-            "Friday, May 15",
-            "9:45 – 10:30 AM".replace(" – ", "–"),
-            "Pacific Ballroom - Arena",
-        ]
-        or texts(tile)[0] == "Friday, May 15"
-    )
+    # The range keeps its period with a no-break space, so it never breaks in two.
+    assert texts(tile) == [
+        "Friday, May 15",
+        "9:45–10:30\u00a0AM",
+        "Pacific Ballroom - Arena",
+    ]
     spoken = [t.semantics_label for t in descendants(tile) if isinstance(t, ft.Text)]
     assert "9:45 to 10:30 AM" in spoken
     await page.click(cast(ft.Control, tile.content))
@@ -247,12 +258,26 @@ async def test_under_the_hub_the_tile_opens_the_session_there(show: Show) -> Non
     assert page.went == ["/more/tracks/keynotes/session/183"]
 
 
-async def test_the_star_saves_the_session_and_rerenders_one_card(show: Show) -> None:
+async def test_the_star_saves_the_session_and_rerenders_one_card(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-153: the page re-renders, but every other card skips its body."""
+    ran: list[str] = []
+    head = keynote_card._head
+
+    def counted_head(session: Session, *args: Any) -> list[ft.Control]:
+        ran.append(session.id)
+        return head(session, *args)
+
+    monkeypatch.setattr(keynote_card, "_head", counted_head)
     page = await show()
+    assert sorted(ran) == sorted(card_ids(page))  # the counter sees every card
+    ran.clear()
     star = page.node("keynotes.favorite.176")
     await page.click(cast(ft.Control, star.content))
     assert "176" in page.favorites.ids
     assert page.node("keynotes.favorite.176").toggled is True
+    assert ran == ["176"]
 
 
 # ------------------------------------------------------------------ states

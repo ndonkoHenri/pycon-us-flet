@@ -36,8 +36,9 @@ leave words hidden with no way to read them at large text."""
 PANEL_PHOTO = 32
 """A panelist's photo radius in dp: the 64 dp photos of ux.md §5.11."""
 
-PANEL_NAME_WIDTH = 88
-"""The width of a panelist's name under the photo: two short words a line."""
+PANEL_GAP = 16
+"""The gap in dp between two panelists, and between two lines of them: their names
+take their own widths, so less would run two names together."""
 
 
 def clamps(text: str) -> bool:
@@ -132,7 +133,11 @@ def _KeynoteCard(
         ft.Container(
             ft.Column(body, spacing=12),
             padding=ft.Padding.only(
-                left=16, top=16, right=16, bottom=0 if long or panel else 16
+                # A little air between a cut text and its "Read more".
+                left=16,
+                top=16,
+                right=16,
+                bottom=4 if long else 0 if panel else 16,
             ),
         )
     ]
@@ -143,7 +148,13 @@ def _KeynoteCard(
             set_expanded(not expanded)
 
         word = "Show less" if expanded else "Read more"
-        about = keynote.title if keynote and keynote.title else session.name
+        # What the text it opens is about: a keynote's bios, its people, whom the
+        # feed's name of it names; a panel's abstract, the panel.
+        about = (
+            session.name
+            if keynote is None or keynote.kind == "keynote" or not keynote.title
+            else keynote.title
+        )
         controls.append(
             ft.Container(
                 named(
@@ -157,10 +168,16 @@ def _KeynoteCard(
                                 semantics_label=f"{word} about {about}",
                             ),
                             on_click=toggle,
+                            # Material scales a text button's side padding down as
+                            # text grows (12 dp to 4); pinned, the label stays on the
+                            # text's edge at every size.
+                            style=ft.ButtonStyle(
+                                padding=ft.Padding.symmetric(horizontal=12, vertical=8)
+                            ),
                         ),
                     ),
                 ),
-                # A text button's label sits 12 dp in: 4 + 12 lines it up with the text.
+                # The button's label sits 12 dp in: 4 + 12 lines it up with the text.
                 padding=ft.Padding.only(left=4, bottom=4),
                 alignment=ft.Alignment.CENTER_LEFT,
             )
@@ -232,7 +249,12 @@ def _head(session: Session, keynote: Keynote | None, key: str) -> list[ft.Contro
 
 
 def _panelists(people: tuple[KeynoteSpeaker, ...]) -> ft.Control:
-    """A panel's people: a wrapping row of 64 dp photos, each over the person's name."""
+    """A panel's people: a wrapping row of 64 dp photos, each over the person's name.
+
+    Each name takes its own width, from the photo's edge, so it breaks only between
+    words, and only when it is wider than the card: in a fixed width, the largest
+    text broke a long surname inside the word.
+    """
     return ft.Row(
         [
             ft.MergeSemantics(  # one stop per person, read as the name
@@ -246,22 +268,18 @@ def _panelists(people: tuple[KeynoteSpeaker, ...]) -> ft.Control:
                                 initials_style=ft.TextThemeStyle.TITLE_LARGE,
                             ),
                         ),
-                        ft.Text(
-                            person.name,
-                            theme_style=ft.TextThemeStyle.BODY_SMALL,
-                            text_align=ft.TextAlign.CENTER,
-                            width=PANEL_NAME_WIDTH,
-                        ),
+                        ft.Text(person.name, theme_style=ft.TextThemeStyle.BODY_SMALL),
                     ],
                     spacing=4,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    # The first photo on the text's edge, as the names under them.
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
                 )
             )
             for person in people
         ],
         wrap=True,
-        spacing=8,
-        run_spacing=12,
+        spacing=PANEL_GAP,
+        run_spacing=PANEL_GAP,
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
