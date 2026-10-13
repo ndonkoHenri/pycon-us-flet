@@ -17,7 +17,8 @@ import unicodedata
 from urllib.parse import quote, urljoin, urlsplit
 
 _LINK_SCHEMES = frozenset({"http", "https", "mailto"})
-_HTML_SPACE_CHARS = " \t\n\r\f"
+# HTML's whitespace; a no-break space is text. html_md collapses this same set.
+SPACE_CHARS = " \t\n\r\f"
 # D-115: characters Markdown, GFM or Flet's LaTeX syntax could read as markup, anywhere.
 _SPECIALS = re.compile(r"[\\`*_\[\](<>|~$&:]")
 # D-115: block markers that matter only at the start of a line (">" is already escaped).
@@ -70,17 +71,6 @@ def _destination(url: str) -> str:
 # Inline tokens
 
 
-def paragraph(tokens: list[Token]) -> str:
-    r"""Render an inline run as a paragraph; ``\n`` in it marks a hard break."""
-    lines = []
-    for line in _resolve(tokens).split("\n"):
-        # Space runs come from blocks inside inline elements; they are never meaningful.
-        line = re.sub(" {2,}", " ", line).strip(_HTML_SPACE_CHARS)
-        if line:
-            lines.append(escape_line_start(line))
-    return "  \n".join(lines)
-
-
 class Emphasis:
     """One emphasis pair; it appears twice in a token list, as its opener then its closer.
 
@@ -100,6 +90,33 @@ class Emphasis:
 
 
 type Token = str | Emphasis
+
+
+def around(inner: list[Token], before: list[Token], after: list[Token]) -> list[Token]:
+    """Put markup around inline tokens, leaving their edge whitespace outside it (D-114)."""
+    tokens = _merged(inner)
+    lead = trail = ""
+    if tokens and isinstance(tokens[0], str):
+        lead = tokens[0][: len(tokens[0]) - len(tokens[0].lstrip(SPACE_CHARS))]
+        tokens[0] = tokens[0][len(lead) :]
+    if tokens and isinstance(tokens[-1], str):
+        trail = tokens[-1][len(tokens[-1].rstrip(SPACE_CHARS)) :]
+        tokens[-1] = tokens[-1][: len(tokens[-1]) - len(trail)]
+    tokens = [t for t in tokens if t != ""]
+    if not tokens:
+        return [lead + trail]
+    return [lead, *before, *tokens, *after, trail]
+
+
+def _merged(tokens: list[Token]) -> list[Token]:
+    """Join neighbouring text tokens, so edge whitespace sits in the first and last."""
+    merged: list[Token] = []
+    for token in tokens:
+        if isinstance(token, str) and merged and isinstance(merged[-1], str):
+            merged[-1] += token
+        elif token != "":
+            merged.append(token)
+    return merged
 
 
 def link(inner: list[Token], href: str, site_url: str) -> list[Token]:
@@ -132,31 +149,15 @@ def code(text: str) -> list[Token]:
     return [lead, f"{fence}{pad}{core}{pad}{fence}", trail]
 
 
-def around(inner: list[Token], before: list[Token], after: list[Token]) -> list[Token]:
-    """Put markup around inline tokens, leaving their edge whitespace outside it (D-114)."""
-    tokens = _merged(inner)
-    lead = trail = ""
-    if tokens and isinstance(tokens[0], str):
-        lead = tokens[0][: len(tokens[0]) - len(tokens[0].lstrip(_HTML_SPACE_CHARS))]
-        tokens[0] = tokens[0][len(lead) :]
-    if tokens and isinstance(tokens[-1], str):
-        trail = tokens[-1][len(tokens[-1].rstrip(_HTML_SPACE_CHARS)) :]
-        tokens[-1] = tokens[-1][: len(tokens[-1]) - len(trail)]
-    tokens = [t for t in tokens if t != ""]
-    if not tokens:
-        return [lead + trail]
-    return [lead, *before, *tokens, *after, trail]
-
-
-def _merged(tokens: list[Token]) -> list[Token]:
-    """Join neighbouring text tokens, so edge whitespace sits in the first and last."""
-    merged: list[Token] = []
-    for token in tokens:
-        if isinstance(token, str) and merged and isinstance(merged[-1], str):
-            merged[-1] += token
-        elif token != "":
-            merged.append(token)
-    return merged
+def paragraph(tokens: list[Token]) -> str:
+    r"""Render an inline run as a paragraph; ``\n`` in it marks a hard break."""
+    lines = []
+    for line in _resolve(tokens).split("\n"):
+        # Space runs come from blocks inside inline elements; they are never meaningful.
+        line = re.sub(" {2,}", " ", line).strip(SPACE_CHARS)
+        if line:
+            lines.append(escape_line_start(line))
+    return "  \n".join(lines)
 
 
 def _resolve(tokens: list[Token]) -> str:

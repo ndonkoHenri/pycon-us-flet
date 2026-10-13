@@ -27,6 +27,7 @@ from html import unescape
 from html.parser import HTMLParser
 
 from pycon_us.core.markdown_inline import (
+    SPACE_CHARS,
     Emphasis,
     Token,
     around,
@@ -49,7 +50,7 @@ _KNOWN_TAGS = _BLOCK_TAGS | {"a", "code", "br", *_EMPHASIS}
 _VOID_TAGS = frozenset({"br", "hr"})  # never have children or end tags
 
 _HAS_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
-_HTML_SPACE = re.compile(r"[ \t\n\r\f]+")  # HTML's whitespace; a no-break space is text
+_HTML_SPACE = re.compile(f"[{SPACE_CHARS}]+")  # the set paragraph() and around() strip
 _NESTED_LIST = re.compile(r"- |\d+\. ")  # an escaped paragraph never starts like this
 
 

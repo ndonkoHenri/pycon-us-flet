@@ -6,15 +6,19 @@ the feed samples and the whole-feed invariant are in ``test_html_md_feeds.py``.
 """
 
 import html
+from pathlib import Path
 
 import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from pycon_us.core.html_md import to_markdown, to_text
+from tests.test_core_is_pure import imported_modules
 from tests.test_html_md_feeds import TAG, html_text, markdown_text
 
 SITE = "https://us.pycon.org/2026/"
+PACKAGE = Path(__file__).resolve().parents[1] / "src" / "pycon_us"
+INLINE = "pycon_us.core.markdown_inline"
 # S3's synthetic line: text Flet's Markdown misreads unless escaped (F27, GFM, markers).
 HAZARD = (
     "Tickets cost 5$ or 10$ at the door. Read ( the notes ) and [ the FAQ ] first.\n"
@@ -435,3 +439,24 @@ def test_any_input_converts_without_raising(text: str) -> None:
     md(f"<p>{text}")
     md(f'<a href="{text}">{text}</a>')
     to_text(f"<p>{text}")
+
+
+# The module boundary (D-200)
+
+
+def test_only_html_md_imports_the_inline_layer() -> None:
+    """D-200: markdown_inline is html_md's inline layer, imported by nothing else."""
+    importers = {
+        path.relative_to(PACKAGE).as_posix()
+        for path in PACKAGE.rglob("*.py")
+        if INLINE in imported_modules(path)
+    }
+    assert importers == {"core/html_md.py"}
+
+
+def test_inline_layer_imports_nothing_from_the_app() -> None:
+    """D-200: the dependency runs one way, so markdown_inline imports no app module."""
+    path = PACKAGE / "core" / "markdown_inline.py"
+    assert {
+        name for name in imported_modules(path) if name.startswith("pycon_us")
+    } == set()
