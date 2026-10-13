@@ -110,11 +110,17 @@ class FoldedAgenda:
         earlier_today: Today's sessions that have ended, by slot, folded under today's
             header; None when none has.
         ahead: Today's other sessions, then the later days.
+        overlaps: The clashes that can still change a plan: for each session ahead,
+            the saved sessions it overlaps that have not ended, in agenda order. A
+            folded row has none, and a session ahead with only ended clashes is left
+            out.
     """
 
     earlier_days: tuple[AgendaDay, ...]
     earlier_today: AgendaDay | None
     ahead: tuple[AgendaDay, ...]
+    # As Agenda's: a dict is not hashable.
+    overlaps: Mapping[Session, tuple[Session, ...]] = field(hash=False)
 
 
 def now_next(data: ConferenceData, now: datetime) -> NowNext:
@@ -217,8 +223,10 @@ def fold_ended(agenda: Agenda, now: datetime, zone: tzinfo) -> FoldedAgenda:
     A day before today has ended whole. Today, a session has ended when ``end <= now``,
     the half-open rule of ``now_next``: a talk that ends at 10:30 is over at 10:30. A
     slot whose sessions end at different times splits, so a three-hour tutorial stays
-    while the talk saved beside it folds. The result compares by value, so a screen that
-    folds every minute gets an equal answer until a session ends.
+    while the talk saved beside it folds. A clash is kept only between a session ahead
+    and one that has not ended: a warning about the past asks for nothing. The result
+    compares by value, so a screen that folds every minute gets an equal answer until a
+    session ends.
 
     Args:
         agenda: ``my_schedule()``'s answer.
@@ -246,7 +254,13 @@ def fold_ended(agenda: Agenda, now: datetime, zone: tzinfo) -> FoldedAgenda:
             if to_come:
                 ahead.append(AgendaDay(day, to_come))
     earlier_days = tuple(d for d in agenda.days if d.day < day)
-    return FoldedAgenda(earlier_days, earlier_today, tuple(ahead))
+    on_or_next = {s for d in ahead for slot in d.slots for s in slot.sessions}
+    overlaps = {
+        session: live
+        for session, others in agenda.overlaps.items()
+        if session in on_or_next and (live := tuple(o for o in others if now < o.end))
+    }
+    return FoldedAgenda(earlier_days, earlier_today, tuple(ahead), overlaps)
 
 
 def _slots_where(day: AgendaDay, keep: Callable[[Session], bool]) -> tuple[Slot, ...]:

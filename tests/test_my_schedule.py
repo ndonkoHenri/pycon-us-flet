@@ -28,7 +28,7 @@ from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import my_schedule as screen
-from pycon_us.screens.my_schedule import MySchedule, overlap_note
+from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
@@ -78,8 +78,13 @@ BEFORE = datetime(2026, 5, 1, 12, 0, tzinfo=ZONE)
 THURSDAY = datetime(2026, 5, 14, 10, 45, tzinfo=ZONE)
 """Wednesday has ended; on Thursday the 9:30 workshop has, the tutorial has not."""
 
+LAST_EVENING = datetime(2026, 5, 17, 20, 0, tzinfo=ZONE)
+"""Sunday evening, the conference's last day: everything saved has ended."""
+
 AFTER = datetime(2026, 6, 1, 12, 0, tzinfo=ZONE)
 """After the conference: everything has ended."""
+
+NBSP = "\N{NO-BREAK SPACE}"
 
 
 def name(session_id: str) -> str:
@@ -398,7 +403,7 @@ async def test_both_rows_of_a_clash_say_so_in_words_and_with_an_icon(
     assert shown.phrase(DECORATORS).endswith(f"Overlaps with “{name(MCP)}”.")
     line = f"Overlaps with “{name(DECORATORS)}”"
     (text,) = [c for c in shown.controls if isinstance(c, ft.Text) and c.value == line]
-    row = text.parent
+    row = cast(ft.Control, text.parent).parent
     assert isinstance(row, ft.Row)
     icon = cast(ft.Container, row.controls[0]).content
     assert isinstance(icon, ft.Icon) and icon.icon == ft.Icons.WARNING_AMBER
@@ -420,12 +425,37 @@ async def test_a_row_without_a_clash_says_nothing_of_one(shown: Shown) -> None:
     assert len(lines) == 5  # Wednesday's pair and Thursday's three, nothing more
 
 
-def test_the_overlap_line_names_one_or_two_and_counts_the_rest() -> None:
-    data = processed(2026)
-    a, b, c = (data.sessions[i] for i in (MCP, DECORATORS, RAG))
-    assert overlap_note([a]) == f"Overlaps with “{a.name}”"
-    assert overlap_note([a, b]) == f"Overlaps with “{a.name}” and “{b.name}”"
-    assert overlap_note([a, b, c]) == f"Overlaps with “{a.name}” and 2 more"
+@pytest.mark.usefixtures("before")
+async def test_more_clashes_are_counted_on_a_line_the_cut_never_hides(
+    shown: Shown,
+) -> None:
+    """D-188's "Now:" line: the name may be cut at three lines, the count never is."""
+    line = f"Overlaps with “{name(CHEESE_SHOP)}”"
+    (text,) = [c for c in shown.controls if isinstance(c, ft.Text) and c.value == line]
+    assert text.max_lines == 3
+    lines = cast(ft.Column, text.parent).controls
+    assert [cast(ft.Text, c).value for c in lines] == [line, f"and 1{NBSP}more"]
+    assert cast(ft.Text, lines[1]).max_lines is None
+    # The phrase names every clash in full.
+    assert shown.phrase(NOTEBOOKS).endswith(
+        f"Overlaps with “{name(CHEESE_SHOP)}” and “{name(INFERENCE)}”."
+    )
+
+
+def test_the_phrase_names_three_clashes_in_a_list() -> None:
+    view = rows.session_views(processed(2026), (TALK,), ZONE, use_24h=False)[0]
+    assert rows.spoken_phrase([], view, overlaps=("A", "B", "C")).endswith(
+        "Overlaps with “A”, “B” and “C”."
+    )
+
+
+async def test_a_clash_that_has_ended_is_not_shown(shown: Shown) -> None:
+    """Thursday 10:45: the 9:30 workshop is over, so the tutorial names only 11:30's,
+    and folded rows carry no clash line: neither can change a plan any more."""
+    assert shown.phrase(NOTEBOOKS).endswith(f"Overlaps with “{name(INFERENCE)}”.")
+    assert f"and 1{NBSP}more" not in shown.texts()
+    for folded in (MCP, DECORATORS, CHEESE_SHOP):
+        assert "Overlaps" not in shown.phrase(folded)
 
 
 # ------------------------------------------------------------------ what has ended
@@ -437,10 +467,10 @@ async def test_earlier_days_and_today_s_ended_sessions_fold_away(
     """Thursday 10:45: Wednesday is over, and so is Thursday's 9:30 workshop."""
     earlier_days = shown.fold("earlier_days")
     title = cast(ft.Text, cast(ft.Semantics, earlier_days.title).content)
-    assert title.value == "Earlier days (3 sessions)"
+    assert title.value == f"Earlier days (3{NBSP}sessions)"
     assert earlier_days.expanded is False  # folded until tapped
     assert shown.folded("earlier_days") == [MCP, DECORATORS, RAG]
-    assert "Earlier today (1 session)" in shown.texts()
+    assert f"Earlier today (1{NBSP}session)" in shown.texts()
     assert shown.folded("earlier_today") == [CHEESE_SHOP]
     # Today's header comes first, then what is still on or to come.
     assert shown.headers()[:2] == ["Thursday, May 14", "Friday, May 15"]
@@ -459,6 +489,17 @@ async def test_a_fold_stays_open_across_renders(shown: Shown) -> None:
     assert shown.fold("earlier_days").expanded is False
 
 
+async def test_the_next_day_s_earlier_today_starts_collapsed(shown: Shown) -> None:
+    """The open state belongs to the day: Friday's tile is not Thursday's."""
+    await shown.toggle_fold("earlier_today", True)
+    assert shown.fold("earlier_today").expanded is True
+    clock.set_test_now(datetime(2026, 5, 15, 10, 0, tzinfo=ZONE))  # the welcome is over
+    shown.tick()
+    await shown.settle()
+    assert shown.folded("earlier_today") == [WELCOME]
+    assert shown.fold("earlier_today").expanded is False
+
+
 async def test_the_minute_tick_folds_a_session_once_it_has_ended(
     shown: Shown,
 ) -> None:
@@ -466,8 +507,27 @@ async def test_the_minute_tick_folds_a_session_once_it_has_ended(
     shown.tick()
     await shown.settle()
     assert shown.folded("earlier_today") == [NOTEBOOKS, CHEESE_SHOP, INFERENCE]
-    assert "Earlier today (3 sessions)" in shown.texts()
+    assert f"Earlier today (3{NBSP}sessions)" in shown.texts()
     assert shown.shown() == [WELCOME, KEYNOTE, TALK, OPEN_SPACE]
+
+
+@pytest.fixture
+def last_evening(setup: Setup) -> None:
+    setup.now = LAST_EVENING
+
+
+@pytest.mark.usefixtures("last_evening")
+async def test_when_everything_has_ended_it_says_so_and_offers_today(
+    shown: Shown,
+) -> None:
+    shown.node("my_schedule.all_over")
+    assert "All your saved sessions are over" in shown.texts()
+    assert shown.shown() == []
+    (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
+    assert button.content == "See what's on today"
+    await shown.session.dispatch_event(button._i, "click", None)
+    await shown.settle()
+    assert shown.navigated == ["/now"]
 
 
 @pytest.fixture
@@ -476,18 +536,26 @@ def after(setup: Setup) -> None:
 
 
 @pytest.mark.usefixtures("after")
-async def test_when_everything_has_ended_it_says_so_and_offers_today(
-    shown: Shown,
-) -> None:
+async def test_after_the_conference_it_offers_no_today(shown: Shown) -> None:
+    """Nothing is on today any more, so no button promises it."""
     shown.node("my_schedule.all_over")
-    assert "All your saved sessions are over" in shown.texts()
+    assert "PyCon US 2026 is over. Your saved sessions stay here." in shown.texts()
     assert shown.folded("earlier_days") == list(SAVED)
     assert shown.shown() == []
-    (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
-    assert button.content == "See what's on today"
-    await shown.session.dispatch_event(button._i, "click", None)
-    await shown.settle()
-    assert shown.navigated == ["/now"]
+    assert not any(isinstance(c, ft.FilledTonalButton) for c in shown.controls)
+
+
+@pytest.mark.usefixtures("after")
+async def test_the_all_over_notice_sits_above_the_earlier_days_tile(
+    shown: Shown,
+) -> None:
+    """Compact, not the full-screen empty state: the tile is still content."""
+    root = shown.root().controls
+    notice, tile = root[1], root[2]
+    assert isinstance(tile, ft.ExpansionTile)
+    assert not any(
+        isinstance(c, ft.Icon) and c.size == states.ICON_SIZE for c in _walk(notice)
+    )
 
 
 # ------------------------------------------------------------------ removal and Undo
@@ -568,6 +636,24 @@ async def test_nothing_saved_says_how_and_opens_the_schedule(shown: Shown) -> No
     await shown.session.dispatch_event(button._i, "click", None)
     await shown.settle()
     assert shown.navigated == ["/schedule"]
+
+
+@pytest.fixture
+def dropped(setup: Setup) -> None:
+    setup.saved = ("no-such-session",)
+
+
+@pytest.mark.usefixtures("dropped")
+async def test_saved_sessions_the_feed_dropped_are_not_nothing_saved(
+    shown: Shown,
+) -> None:
+    """D-172 keeps ids the feed no longer lists: saying "Nothing saved yet" would be
+    untrue."""
+    shown.node("my_schedule.dropped")
+    assert "None of your saved sessions is in the schedule" in shown.texts()
+    assert "Nothing saved yet" not in shown.texts()
+    (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
+    assert button.content == "Browse the schedule"
 
 
 @pytest.fixture

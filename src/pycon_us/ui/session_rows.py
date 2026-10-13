@@ -94,22 +94,28 @@ def use_session_views(
 
 
 def spoken_phrase(
-    labels: Sequence[str], view: SessionView, *, overlap: str = ""
+    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
 ) -> str:
     """Return what a screen reader says for a session row: one phrase (D-33).
 
     "Talk. What's new in typing. 9:25 to 10:10 AM, Room 104A. Ana Lima." (ux.md
     §3.9): the badges, the title, the time and place, then the speakers, each a
-    sentence, so TalkBack and VoiceOver pause between them. My schedule's overlap
-    line ends it, so the clash is heard, not only seen (ux.md §5.6).
+    sentence, so TalkBack and VoiceOver pause between them. On My schedule a last
+    sentence names every clash in full, "Overlaps with “A”, “B” and “C”.", so the
+    clash is heard, not only seen, even where the row counts the rest (ux.md §5.6).
 
     Args:
         labels: The badges' labels, in order (``badge_specs()``).
         view: The session's row view.
-        overlap: The row's overlap line ("Overlaps with “Typing deep dive”"), if any.
+        overlaps: The names of the saved sessions the row overlaps, if any.
     """
     when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
-    parts = (", ".join(labels), view.session.name, when, view.speakers, overlap)
+    clash = ""
+    if overlaps:
+        *rest, last = (f"“{name}”" for name in overlaps)
+        names = f"{', '.join(rest)} and {last}" if rest else last
+        clash = f"Overlaps with {names}"
+    parts = (", ".join(labels), view.session.name, when, view.speakers, clash)
     return " ".join(_sentence(part) for part in parts if part)
 
 
@@ -150,7 +156,7 @@ def SessionRow(
     tokens: Tokens,
     *,
     screen: str,
-    overlap: str = "",
+    overlaps: tuple[str, ...] = (),
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
 
@@ -171,9 +177,10 @@ def SessionRow(
         screen: The screen's name in semantics identifiers: the row's text is
             ``<screen>.session.<key>``, its star ``<screen>.favorite.<key>``, the key
             from ``semantics_key()``.
-        overlap: My schedule's overlap line, "Overlaps with “Typing deep dive”": shown
-            last, after a warning icon, and said at the end of the phrase, so the
-            clash is never told by colour alone (D-33); empty for none.
+        overlaps: On My schedule, the names of the saved sessions the row overlaps,
+            in agenda order: a last line, after a warning icon, names the first and
+            counts the rest, and the phrase names them all, so the clash is never told
+            by colour alone (D-33); empty for none.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -183,7 +190,7 @@ def SessionRow(
         on_toggle,
         tokens,
         screen=screen,
-        overlap=overlap,
+        overlaps=overlaps,
         key=key,  # pyright: ignore[reportCallIssue]
     )
 
@@ -197,7 +204,7 @@ def _SessionRow(
     tokens: Tokens,
     *,
     screen: str,
-    overlap: str,
+    overlaps: tuple[str, ...],
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
@@ -223,11 +230,11 @@ def _SessionRow(
     lines.append(_meta(view))
     if view.speakers:
         lines.append(_secondary(view.speakers))
-    if overlap:
-        lines.append(_overlap_line(overlap, tokens.warning))
+    if overlaps:
+        lines.append(_overlap_line(overlaps, tokens.warning))
     key = semantics_key(session.id)
     text = ft.Semantics(
-        label=spoken_phrase([label for label, _ in specs], view, overlap=overlap),
+        label=spoken_phrase([label for label, _ in specs], view, overlaps=overlaps),
         identifier=f"{screen}.session.{key}",
         button=True,  # it opens the session: "…, button" (D-33)
         # The phrase replaces the texts, which would otherwise be read again after it.
@@ -260,27 +267,36 @@ def _SessionRow(
     )
 
 
-def _overlap_line(text: str, color: str) -> ft.Control:
-    """Return a row's overlap warning: ``WARNING_AMBER`` beside its text (ux.md §3.7).
+def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
+    """Return a row's overlap warning: ``WARNING_AMBER`` beside its lines (ux.md §3.7).
 
-    Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface (ux.md
-    §3.3). The icon tops the text, so a line that wraps at large text keeps it beside
-    its first line.
+    "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
+    "and 2 more" on a line of its own, so the cut never hides the count (D-188's "Now:"
+    line). Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface
+    (§3.3). The icon tops the text, beside its first line when it wraps.
     """
+    first, *rest = names
+    texts: list[ft.Control] = [
+        ft.Text(
+            f"Overlaps with “{first}”",
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+            color=color,
+            max_lines=3,
+            overflow=ft.TextOverflow.ELLIPSIS,  # the phrase says it in full
+        )
+    ]
+    if rest:
+        more = f"and {len(rest)}\N{NO-BREAK SPACE}more"
+        texts.append(
+            ft.Text(more, theme_style=ft.TextThemeStyle.BODY_MEDIUM, color=color)
+        )
     return ft.Row(
         [
             ft.Container(  # 2 dp down: centred on the 20 dp first line
                 ft.Icon(ft.Icons.WARNING_AMBER, size=16, color=color),
                 padding=ft.Padding.only(top=2),
             ),
-            ft.Text(
-                text,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=color,
-                max_lines=2,
-                overflow=ft.TextOverflow.ELLIPSIS,  # the phrase says it in full
-                expand=True,
-            ),
+            ft.Column(texts, spacing=0, expand=True),
         ],
         spacing=8,
         vertical_alignment=ft.CrossAxisAlignment.START,

@@ -3,11 +3,11 @@
 The personal agenda (NEW-01, SCHED-07, SCHED-08; ux.md §5.6): a ``SectionHeader`` per
 day and gutter slots that hold only saved sessions (D-31), from
 ``agenda.my_schedule()``. Two saved sessions that overlap both say so, with an icon and
-words (D-33). What has ended folds away by ``clock.now()``: the days before today into
-one tile at the top, today's ended sessions into a tile under today's header
-(``agenda.fold_ended()``), re-folded every minute while the screen shows (D-40). A
-star tap removes the session at once, with Undo (ux.md §4.4). The Schedule's filters
-never apply (D-20): a saved open space always shows.
+words (D-33), while the clash can still change a plan. What has ended folds away by
+``clock.now()``: the days before today into one tile at the top, today's ended sessions
+into a tile under today's header (``agenda.fold_ended()``), re-folded every minute
+while the screen shows (D-40). A star tap removes the session at once, with Undo (ux.md
+§4.4). The Schedule's filters never apply (D-20): a saved open space always shows.
 
 The list memoises its whole path (D-153): day sections given values that stay equal
 while nothing in the day changes, rows keyed by session id given views built once per
@@ -15,7 +15,9 @@ feed version. A star tap re-renders the day it is in; the other rows skip their 
 """
 
 from collections.abc import Callable, Mapping, Sequence
+from datetime import date
 from functools import partial
+from typing import cast
 
 import flet as ft
 
@@ -23,7 +25,7 @@ from pycon_us import clock
 from pycon_us.core.agenda import AgendaDay, fold_ended, my_schedule
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.timefmt import day_heading, time_label
+from pycon_us.core.timefmt import day_heading, time_label, today
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -43,6 +45,12 @@ EMPTY = "Nothing saved yet"
 EMPTY_BODY = "Tap the star on any session to add it to My schedule. It works offline."
 BROWSE = "Browse the schedule"
 
+DROPPED = "None of your saved sessions is in the schedule"
+DROPPED_BODY = (
+    "The schedule has changed since you saved them. "
+    "If it lists them again, they come back here."
+)
+
 UNAVAILABLE = "Couldn't open My schedule"
 UNAVAILABLE_BODY = (
     "Your saved sessions are still on this device. "
@@ -51,6 +59,7 @@ UNAVAILABLE_BODY = (
 
 ALL_OVER = "All your saved sessions are over"
 SEE_TODAY = "See what's on today"
+CONFERENCE_OVER = "{name} is over. Your saved sessions stay here."
 
 EXPAND_MS = 200
 """A fold tile's expand and collapse (Flutter's default), 0 under reduced motion."""
@@ -69,7 +78,8 @@ def MySchedule() -> ft.View:
     prefs = use_prefs()
     use_minute()  # the fold follows the clock
     earlier_days_open, set_earlier_days_open = ft.use_state(False)
-    earlier_today_open, set_earlier_today_open = ft.use_state(False)
+    # The date whose "Earlier today" is open, so the next day's tile starts collapsed.
+    earlier_today_open, set_earlier_today_open = ft.use_state(cast(date | None, None))
     info = svc.year.conference
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
@@ -107,13 +117,24 @@ def MySchedule() -> ft.View:
                 identifier=f"{SCREEN}.unavailable",
             )
         ]
-    elif agenda is None:
+    elif agenda is None or data is None:
         content = [
             NoDataState(
                 conference.problem,
                 on_retry=refresh,
                 retrying=conference.status(info) == "refreshing",
                 identifier=f"{SCREEN}.no_data",
+            )
+        ]
+    elif not agenda.days and saved:  # saved, but no longer in the feed (D-172)
+        content = [
+            EmptyState(
+                DROPPED,
+                icon=ft.Icons.EVENT_BUSY_OUTLINED,
+                body=DROPPED_BODY,
+                action=BROWSE,
+                on_action=browse,
+                identifier=f"{SCREEN}.dropped",
             )
         ]
     elif not agenda.days:
@@ -129,30 +150,22 @@ def MySchedule() -> ft.View:
         ]
     else:
         day = partial(
-            _day,
-            views=by_id,
-            overlaps=agenda.overlaps,
-            on_toggle=on_toggle,
-            tokens=tokens,
-            use_24h=use_24h,
+            _day, views=by_id, on_toggle=on_toggle, tokens=tokens, use_24h=use_24h
         )
         expand = _expand_style(prefs.motion_ms(EXPAND_MS))
-        folded = fold_ended(agenda, clock.now(), info.zone)
+        now = clock.now()
+        folded = fold_ended(agenda, now, info.zone)
         content = []
         if not folded.ahead:
-            content.append(
-                EmptyState(
-                    ALL_OVER,
-                    icon=ft.Icons.EVENT_AVAILABLE_OUTLINED,
-                    action=SEE_TODAY,
-                    on_action=see_today,
-                    identifier=f"{SCREEN}.all_over",
-                )
-            )
+            if today(now, info.zone) <= data.days[-1].date:  # Now has a day to show
+                content.append(_all_over(see_today))
+            else:
+                content.append(_all_over(body=CONFERENCE_OVER.format(name=info.name)))
         if folded.earlier_days:
             inside: list[ft.Control] = []
             for earlier in folded.earlier_days:
-                inside += [SectionHeader(day_heading(earlier.day)), day(earlier)]
+                # Folded rows carry no clash line: it can no longer change a plan.
+                inside += [SectionHeader(day_heading(earlier.day)), day(earlier, {})]
             content.append(
                 _fold(
                     f"Earlier days ({_sessions(folded.earlier_days)})",
@@ -163,25 +176,33 @@ def MySchedule() -> ft.View:
                     identifier=f"{SCREEN}.earlier_days",
                 )
             )
-        today = folded.earlier_today
+        ended = folded.earlier_today
         ahead = list(folded.ahead)
-        if today is not None:
+        if ended is not None:
+
+            @report_errors
+            def set_open(is_open: bool, shown: date = ended.day) -> None:
+                set_earlier_today_open(shown if is_open else None)
+
             # Today's header, its ended sessions folded, then the rest of today.
             content += [
-                SectionHeader(day_heading(today.day)),
+                SectionHeader(day_heading(ended.day)),
                 _fold(
-                    f"Earlier today ({_sessions([today])})",
-                    [day(today, "ended")],
-                    expanded=earlier_today_open,
-                    on_change=set_earlier_today_open,
+                    f"Earlier today ({_sessions([ended])})",
+                    [day(ended, {}, "ended")],
+                    expanded=earlier_today_open == ended.day,
+                    on_change=set_open,
                     style=expand,
                     identifier=f"{SCREEN}.earlier_today",
                 ),
             ]
-            if ahead and ahead[0].day == today.day:
-                content.append(day(ahead.pop(0)))
+            if ahead and ahead[0].day == ended.day:
+                content.append(day(ahead.pop(0), folded.overlaps))
         for later in ahead:
-            content += [SectionHeader(day_heading(later.day)), day(later)]
+            content += [
+                SectionHeader(day_heading(later.day)),
+                day(later, folded.overlaps),
+            ]
     return AppScaffold(
         title="My schedule",
         body=ft.ListView(
@@ -194,30 +215,67 @@ def MySchedule() -> ft.View:
     )
 
 
-def overlap_note(others: Sequence[Session]) -> str:
-    """Return a row's overlap line: "Overlaps with “Typing deep dive”" (ux.md §5.6).
+def _all_over(
+    on_see_today: Callable[[], None] | None = None, *, body: str | None = None
+) -> ft.Control:
+    """Return the notice that heads the list when every saved session has ended.
 
-    One clash is named, two are both named, more name the first and count the rest,
-    so the line stays short; each row of a clash says it, so the rest are named on
-    their own rows.
+    Compact and start-aligned, its text on the fold tile's text column, rather than
+    the full-screen empty state: the "Earlier days" tile under it is still content and
+    should not be pushed to the middle of the screen (ux.md §5.6).
 
     Args:
-        others: The saved sessions the row overlaps, in agenda order (``Agenda.overlaps``).
+        on_see_today: What "See what's on today" does, while today is a conference
+            day; None after the conference, when Now has nothing on today.
+        body: A second line, after the conference.
     """
-    names = [f"“{session.name}”" for session in others]
-    if len(names) == 1:
-        return f"Overlaps with {names[0]}"
-    if len(names) == 2:
-        return f"Overlaps with {names[0]} and {names[1]}"
-    return f"Overlaps with {names[0]} and {len(names) - 1} more"
+    texts: list[ft.Control] = [
+        ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
+            header=True,
+            container=True,
+            content=ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL),
+        )
+    ]
+    if body is not None:
+        texts.append(
+            ft.Text(
+                body,
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            )
+        )
+    column: list[ft.Control] = [
+        ft.Semantics(
+            identifier=f"{SCREEN}.all_over",
+            container=True,
+            live_region=True,
+            content=ft.Column(texts, spacing=4),
+        )
+    ]
+    if on_see_today is not None:
+        column.append(ft.FilledTonalButton(SEE_TODAY, on_click=on_see_today))
+    return ft.Container(
+        ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.EVENT_AVAILABLE_OUTLINED,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                ft.Column(column, spacing=12, expand=True),
+            ],
+            spacing=16,  # the text on the fold tile's text column, 56 dp in
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        ),
+        padding=ft.Padding.only(left=16, top=16, right=16, bottom=8),
+    )
 
 
 def _day(
     day: AgendaDay,
+    overlaps: Mapping[Session, tuple[Session, ...]],
     part: str = "to_come",
     *,
     views: Mapping[str, SessionView],
-    overlaps: Mapping[Session, tuple[Session, ...]],
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
@@ -226,17 +284,18 @@ def _day(
 
     Args:
         day: The day, or the part of today that has ended or is to come.
+        overlaps: The clashes still to come (``FoldedAgenda.overlaps``); empty for a
+            folded day.
         part: Which part of the day it is, so today's two parts keep their own
             component when the fold moves a session from one to the other.
         views: Every session's row view, by id.
-        overlaps: ``Agenda.overlaps``.
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
     """
-    # Only the day's own lines: a clash elsewhere leaves this day's props equal.
+    # Only the day's own names: a clash elsewhere leaves this day's props equal.
     notes = {
-        session.id: overlap_note(overlaps[session])
+        session.id: tuple(other.name for other in overlaps[session])
         for slot in day.slots
         for session in slot.sessions
         if session in overlaps
@@ -258,20 +317,22 @@ def _day(
 def _Day(
     day: AgendaDay,
     views: Mapping[str, SessionView],
-    notes: Mapping[str, str],
+    notes: Mapping[str, tuple[str, ...]],
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
 ) -> ft.Control:
     """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
 
-    Memoised (D-153): it runs only when the day's slots, their overlap lines, the clock
+    Memoised (D-153): it runs only when the day's slots, their clashes, the clock
     format or the scheme change. Every row is saved, so every star is filled; a tap
     removes the row, with Undo.
     """
     zone = use_services().year.conference.zone  # a plain value: subscribes to nothing
     slots: list[ft.Control] = []
     for index, slot in enumerate(day.slots):
+        # No lookup can miss: the views cover every session of the feed version the
+        # agenda comes from (both memos key on ``conference.version``).
         rows = [
             SessionRow(
                 views[session.id],
@@ -279,10 +340,9 @@ def _Day(
                 on_toggle,
                 tokens,
                 screen=SCREEN,
-                overlap=notes.get(session.id, ""),
+                overlaps=notes.get(session.id, ()),
             )
             for session in slot.sessions
-            if session.id in views
         ]
         label = time_label(slot.start, zone, use_24h=use_24h)
         slots.append(TimeSlot(label, rows, divider=index > 0))
@@ -318,7 +378,15 @@ def _fold(
         on_change(bool(e.data))
 
     return ft.ExpansionTile(
-        title=ft.Semantics(identifier=identifier, content=ft.Text(title)),
+        # Quieter than the day header above it: a fold of what is over (ux.md §5.6).
+        title=ft.Semantics(
+            identifier=identifier,
+            content=ft.Text(
+                title,
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
+        ),
         leading=ft.Icon(ft.Icons.HISTORY, color=ft.Colors.ON_SURFACE_VARIANT),
         controls=controls,
         expanded=expanded,
@@ -343,6 +411,10 @@ def _expand_style(ms: int) -> ft.AnimationStyle:
 
 
 def _sessions(days: Sequence[AgendaDay]) -> str:
-    """Return how many sessions some days hold: "1 session", "6 sessions"."""
+    """Return how many sessions some days hold: "1 session", "6 sessions".
+
+    A no-break space keeps the count on its noun's line when the title wraps.
+    """
     count = sum(len(slot.sessions) for day in days for slot in day.slots)
-    return "1 session" if count == 1 else f"{count} sessions"
+    noun = "session" if count == 1 else "sessions"
+    return f"{count}\N{NO-BREAK SPACE}{noun}"

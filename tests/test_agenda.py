@@ -582,3 +582,21 @@ def test_folding_needs_an_aware_instant() -> None:
     with pytest.raises(ValueError, match="aware"):
         naive = datetime(2026, 5, 14, 10)  # noqa: DTZ001
         fold_ended(agenda, naive, load_year(2026).conference.zone)
+
+
+def test_only_clashes_that_can_still_change_a_plan_are_kept() -> None:
+    """May 14, 10:45: the tutorial still clashes with the 11:30 workshop, not with the
+    9:30 one, which has ended; Wednesday's two tutorials, folded, clash no more."""
+    zone = load_year(2026).conference.zone
+    agenda = my_schedule(processed(2026), FOLDED)
+    result = fold_ended(agenda, may(2026, 14, 10, 45), zone)
+    assert {s.id: ids(others) for s, others in result.overlaps.items()} == {
+        "106": ("22",),
+        "22": ("106",),
+    }
+
+
+def test_before_the_conference_every_clash_is_kept() -> None:
+    zone = load_year(2026).conference.zone
+    agenda = my_schedule(processed(2026), FOLDED)
+    assert fold_ended(agenda, may(2026, 1, 12), zone).overlaps == agenda.overlaps
