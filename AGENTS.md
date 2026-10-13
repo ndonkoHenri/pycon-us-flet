@@ -132,7 +132,7 @@ that date motivates us but never justifies cutting corners.
       # An existing file needs its current blob sha (re-uploading after a timeout, or replacing an image).
       sha=$(gh api "repos/$repo/contents/$pr/$name?ref=pr-assets" --jq .sha 2>/dev/null || true)
       gh api -X PUT "repos/$repo/contents/$pr/$name" -f branch=pr-assets -f message="Add $name for #$pr" \
-        -F content=@"$dir/$name.b64" ${sha:+-f sha="$sha"} --jq .content.path
+        -F content=@"$dir/$name.b64" ${sha:+-f} ${sha:+sha=$sha} --jq .content.path
     done )
   ```
   Each upload is its own commit on `pr-assets`; never force-push it. If a call fails, look before retrying: the file may
