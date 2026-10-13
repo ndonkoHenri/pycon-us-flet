@@ -162,6 +162,9 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         ),
         variant=ft.CardVariant.OUTLINED,
+        # Not one node: as one, TalkBack read "by Nick" and the text before the name,
+        # which as a heading is a node of its own; each part reads in its order.
+        semantic_container=False,
         margin=ft.Margin.symmetric(horizontal=16, vertical=6),
     )
 

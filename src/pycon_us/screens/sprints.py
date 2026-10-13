@@ -284,6 +284,7 @@ def _found_count(found: int) -> ft.Control:
                 theme_style=ft.TextThemeStyle.BODY_SMALL,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
-            padding=ft.Padding.only(left=16, top=4, right=16),
+            # Apart from the list under it, whose first card's edge it touched.
+            padding=ft.Padding.only(left=16, top=4, right=16, bottom=8),
         ),
     )

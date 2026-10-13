@@ -52,7 +52,7 @@ ICON_CIRCLE = 40
 SPRINTS = "/more/sprints"
 """The Sprints page, which the hub's Sprints row pushes (EVT-05)."""
 
-SPRINTS_LEGEND = "Two days of coding on open-source projects, after the talks."
+SPRINTS_LEGEND = "Two days of coding on open-source projects, after the talks"
 """The Sprints row's legend line: what the sprints are, as a track's legend says."""
 
 
@@ -259,7 +259,7 @@ def sprints_row(info: ConferenceInfo, projects: int) -> ft.Control:
         title="Sprints",
         legend=SPRINTS_LEGEND,
         marks=[_supporting(shown)] if shown else [],
-        phrase=f"Sprints. {SPRINTS_LEGEND}" + (f" {spoken}." if spoken else ""),
+        phrase=f"Sprints. {SPRINTS_LEGEND}." + (f" {spoken}." if spoken else ""),
         identifier=f"{SCREEN}.sprints",
         target=SPRINTS,
     )

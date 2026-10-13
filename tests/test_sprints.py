@@ -394,6 +394,8 @@ async def test_a_card_shows_the_logo_on_a_white_tile_over_the_initials(
 ) -> None:
     shown = await show()
     arcade = card_of(shown, named("Arcade"))
+    # Not one node: TalkBack read "by Darren" and the text before the name heading.
+    assert arcade.semantic_container is False
     (image,) = [i for i in shown.find(ft.Image) if under(i, arcade)]
     assert image.src == named("Arcade").logo_url
     assert image.fit == ft.BoxFit.CONTAIN
@@ -571,7 +573,7 @@ async def test_the_tracks_hub_ends_community_with_a_sprints_row(show: Any) -> No
     node = shown.node("tracks.sprints")
     assert node.button and node.exclude_semantics
     assert node.label == (
-        f"Sprints. {hub_screen.SPRINTS_LEGEND} May 18 to 19, 24 projects."
+        f"Sprints. {hub_screen.SPRINTS_LEGEND}. May 18 to 19, 24 projects."
     )
     assert "May 18–19 · 24 projects" in shown.texts()
     await shown.click(cast(ft.Control, node.parent))
