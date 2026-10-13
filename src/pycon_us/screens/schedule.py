@@ -11,7 +11,7 @@ The day opens on today during the conference, else on the first day; the day pic
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
 (D-18). A detail pushed over the Schedule keeps it mounted, and so its place.
 
-Jump to now (D-155, D-202) lands on the slot that is on, else on today's now line
+Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
 when the Schedule opens or when the user swipes to today, and again with the "Now"
 button, which switches to today first when another day shows, and tells a screen reader
@@ -96,7 +96,7 @@ def Schedule() -> ft.View:
     info = svc.year.conference
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
-    use_minute()  # today, its now line and the button follow the clock (D-202)
+    use_minute()  # today, its now line and the button follow the clock (D-204)
     now = clock.now()  # the Developer fake clock moves it (D-43)
     current = today(now, info.zone)
     all_days = days(data, info.first_day, info.last_day) if data else ()
@@ -136,7 +136,7 @@ def Schedule() -> ft.View:
     async def jump_to_now(*, asked: bool) -> None:
         if not today_slots:
             return
-        memory.jumped_on = current  # by itself, never again today (D-18, D-202)
+        memory.jumped_on = current  # by itself, never again today (D-18, D-204)
         at = clock.now()
         target = now_place(today_slots, at)
         ended = await jump_to_key(
@@ -165,7 +165,7 @@ def Schedule() -> ft.View:
     async def opened() -> None:
         if shown is None:  # no data yet: the first display is the render that has it
             return
-        set_picked(shown)  # a midnight while mounted never moves the user (D-202)
+        set_picked(shown)  # a midnight while mounted never moves the user (D-204)
         jumps = _jumps_by_itself(shown, current, today_slots, memory)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
         await svc.storage.get(THEME)
@@ -307,7 +307,7 @@ def Schedule() -> ft.View:
         ),
     )
     # Hidden while the place "Now" goes to is on screen; a slot's start, a scroll away,
-    # a refresh or a filter change brings it back (D-202).
+    # a refresh or a filter change brings it back (D-204).
     at_now = (
         shown == current
         and in_view is not None
@@ -337,7 +337,7 @@ def _cancel_on_unmount() -> None:
 def _jumps_by_itself(
     day: date, current: date, today_slots: tuple[Slot, ...], memory: ViewMemory
 ) -> bool:
-    """Whether showing ``day`` jumps to now unasked: today's first display (D-202).
+    """Whether showing ``day`` jumps to now unasked: today's first display (D-204).
 
     Once per conference day in the process (``ViewMemory.jumped_on``, D-18), read when
     the day shows, since a jump may have run since the render.

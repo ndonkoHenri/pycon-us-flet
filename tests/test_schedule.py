@@ -476,7 +476,7 @@ async def test_each_slot_is_one_keyed_item_beside_its_gutter(
     )
     keys = sorted(str(cast(ft.ScrollKey, item.key).value) for item in items)
     # A jump puts the slot's time under the tab bar, not a second line (ux.md §5.2);
-    # the first slot has none, and the now line stands for the next one's (D-202).
+    # the first slot has none, and the now line stands for the next one's (D-204).
     dividers = find(
         schedule.session, ft.Divider, lambda c: c.visible and inside(c, friday)
     )
@@ -822,7 +822,7 @@ def friday_at(hour: int, minute: int = 0) -> datetime:
 async def test_swiping_to_today_after_opening_on_another_day_jumps_once(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """D-202: today's first display jumps, wherever the Schedule opened."""
+    """D-204: today's first display jumps, wherever the Schedule opened."""
     memory.schedule_day = SATURDAY
     schedule = await shown()
     assert schedule.keyed() == []  # Saturday is not today
@@ -885,7 +885,7 @@ async def test_a_minute_never_jumps_not_even_when_a_slot_starts(
 async def test_each_new_today_jumps_once_by_itself(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """D-202: a process that lives across days jumps on each conference day's first
+    """D-204: a process that lives across days jumps on each conference day's first
     display, as after a fake-clock change; never twice the same day."""
     memory.jumped_on = THURSDAY
     schedule = await shown()
@@ -897,7 +897,7 @@ async def test_each_new_today_jumps_once_by_itself(
 async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime | None]
 ) -> None:
-    """D-202: the day picked at the first display stays; the new today waits for the
+    """D-204: the day picked at the first display stays; the new today waits for the
     user, and jumps on its first display."""
     now[0] = friday_at(23, 58)
     schedule = await shown()
@@ -924,7 +924,7 @@ async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
 async def test_the_button_hides_while_the_place_it_goes_to_is_on_screen(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
-    """D-202: within half a screen (700 px here) of where the jump landed (4,000 px)."""
+    """D-204: within half a screen (700 px here) of where the jump landed (4,000 px)."""
     schedule = await shown()
     assert schedule.fab is None
     await schedule.scroll_end(FRIDAY, 4300.0)
@@ -1035,7 +1035,7 @@ async def test_a_minute_re_renders_the_line_alone_and_a_slot_start_moves_it(
 async def test_between_slots_the_jump_lands_on_the_now_line(
     shown: Callable[..., Awaitable[Shown]], now: list[datetime | None]
 ) -> None:
-    """D-202: at 2:35 PM nothing is on; the line sits above 2:45 PM's slot, and a
+    """D-204: at 2:35 PM nothing is on; the line sits above 2:45 PM's slot, and a
     screen reader hears the time, as the line itself says it."""
     now[0] = friday_at(14, 35)
     schedule = await shown(screen_reader=True, announcements=True)

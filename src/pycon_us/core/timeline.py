@@ -121,13 +121,13 @@ def timeline(
 
 
 NOW_KEY = "now"
-"""The now line's ``ScrollKey`` in today's Schedule list (D-202); no slot key clashes
+"""The now line's ``ScrollKey`` in today's Schedule list (D-204); no slot key clashes
 with it, since every slot key starts with ``slot-``."""
 
 
 @dataclass(frozen=True)
 class NowPlace:
-    """Where now falls among a day's slots: the now line and Jump to now (D-202).
+    """Where now falls among a day's slots: the now line and Jump to now (D-204).
 
     A value: two places compare equal when the line and the slot that is on are the
     same, so the Schedule can tell when its last jump still shows where now is.
@@ -157,7 +157,7 @@ class NowPlace:
 
 
 def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
-    """Return where now falls among the slots a list shows (SCHED-16, D-202).
+    """Return where now falls among the slots a list shows (SCHED-16, D-204).
 
     Only the last slot that has started can be on: a long session in an earlier
     slot (a tutorial, an open space) does not hold the jump back, since the attendee

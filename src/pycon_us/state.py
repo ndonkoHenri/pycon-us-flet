@@ -425,9 +425,9 @@ class ViewMemory:
             the Schedule opens on today during the conference (SCHED-01).
         schedule_offsets: Each day list's scroll offset when its last scroll ended,
             in logical pixels: the Schedule puts it back when the list shows again.
-        jumped_on: The conference day on which the Schedule last jumped to now by
-            itself: it does so on the first display of each today in this process,
-            and never again that day (D-18, D-155, D-202).
+        jumped_on: The conference day on which the Schedule last jumped to now: it
+            jumps by itself on the first display of each today in this process, and
+            not again that day, a "Now" tap included (D-18, D-155, D-204).
         search_query: What is typed in the search field; an opener clears it, so
             each search starts empty (D-193).
         search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search

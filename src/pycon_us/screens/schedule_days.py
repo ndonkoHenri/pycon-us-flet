@@ -8,7 +8,7 @@ is what it places (D-31, D-153..D-156, D-192):
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
   to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s;
-- today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-202);
+- today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
 
@@ -316,7 +316,7 @@ def _SlotItem(
     # The divider stays outside the keyed box, so a jump puts the slot's time, not
     # its divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
     # rather than left out: the box keeps its place in the tree when the now line
-    # takes or gives back the divider, so its rows are kept as they are (D-202).
+    # takes or gives back the divider, so its rows are kept as they are (D-204).
     return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
 
 

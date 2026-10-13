@@ -384,7 +384,7 @@ def test_a_slot_counts_from_its_first_minute() -> None:
 
 def test_once_a_slot_is_over_the_jump_lands_on_the_line_above_the_next() -> None:
     """At 2:35 the 2:00 PM slot is over; the line sits above 2:45 PM, and so the jump
-    shows the line and the slot that comes next together (D-202)."""
+    shows the line and the slot that comes next together (D-204)."""
     slots = friday_slots()
     place = now_place(slots, friday_at(14, 35))
     assert place.on is None and place.target == NOW_KEY

@@ -1,6 +1,6 @@
 """Where now is on the Schedule: today's now line, and what a jump to now left in view.
 
-``screens/schedule.py`` jumps to now (D-155, D-202) and ``screens/schedule_days.py``
+``screens/schedule.py`` jumps to now (D-155, D-204) and ``screens/schedule_days.py``
 lays out the day lists; these are the pieces they share:
 
 - ``NowMark`` and ``NowLine``: today's "Now · 10:42 AM" line, before the first slot still
@@ -24,7 +24,7 @@ NOW_LINE = 2
 
 @dataclass(frozen=True)
 class NowMark:
-    """Where today's list draws its now line, and the time it says (D-202).
+    """Where today's list draws its now line, and the time it says (D-204).
 
     A value, so a day list given the same mark skips its render (D-153): the index
     moves when a slot starts, the time once a minute.
@@ -40,7 +40,7 @@ class NowMark:
 
 
 def NowLine(time: str) -> ft.Control:
-    """Return today's now line: "Now · 10:42 AM" before a 2 dp ``primary`` line (D-202).
+    """Return today's now line: "Now · 10:42 AM" before a 2 dp ``primary`` line (D-204).
 
     A memoised component keyed by ``NOW_KEY``, so a minute re-renders it alone and a
     slot's start moves it rather than building a new one; its box carries
@@ -89,7 +89,7 @@ def _NowLine(time: str) -> ft.Control:
 
 @dataclass(frozen=True)
 class Landing:
-    """Where a jump to now left today's list, and what was on screen there (D-202).
+    """Where a jump to now left today's list, and what was on screen there (D-204).
 
     Attributes:
         day: The list's day, today when it jumped.
