@@ -362,6 +362,17 @@ async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
     assert detail.pushed == [f"{VIEW}/room/room-103abc?highlight={LIGHTNING}"]
 
 
+async def test_the_folded_rooms_stay_open_once_opened(render: Render) -> None:
+    """Coming back from a room's detail re-rendered the tile folded (iOS simulator)."""
+    detail = await render(LIGHTNING)
+    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
+    assert folded.expanded is False
+    await detail.session.dispatch_event(folded._i, "change", True)
+    await detail.settle()
+    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
+    assert folded.expanded is True
+
+
 async def test_a_break_in_many_rooms_lists_them_without_one_place(
     render: Render,
 ) -> None:

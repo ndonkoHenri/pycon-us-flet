@@ -27,7 +27,6 @@ from pycon_us.core.models import Session, Speaker
 from pycon_us.core.row_views import places
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
-from pycon_us.prefs import use_prefs
 from pycon_us.screens.stub import nav_tile, not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -73,7 +72,6 @@ def SessionDetail(session_id: str) -> ft.View:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     svc = use_services()
-    prefs = use_prefs()
     tokens = use_tokens()
     # The session as this View last showed it: a refresh that drops it keeps it here.
     shown = ft.use_ref(cast(Session | None, None))
@@ -132,7 +130,6 @@ def SessionDetail(session_id: str) -> ft.View:
             info,
             view_path=view_path,
             use_24h=bool(page.media and page.media.always_use_24_hour_format),
-            motion_ms=prefs.motion_ms,
             screen=SCREEN,
         )
     )

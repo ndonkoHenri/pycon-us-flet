@@ -11,7 +11,6 @@ one phrase (D-33).
 (D-175): the time passing re-renders the line, not the screen around it.
 """
 
-from collections.abc import Callable
 from datetime import datetime
 from urllib.parse import quote
 
@@ -23,6 +22,7 @@ from pycon_us.core.models import Room, Session
 from pycon_us.core.row_views import Places, session_view
 from pycon_us.core.timefmt import day_heading, time_status, zone_note
 from pycon_us.locations import drill_href
+from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
@@ -54,7 +54,6 @@ def WhenAndWhere(
     *,
     view_path: str,
     use_24h: bool,
-    motion_ms: Callable[[int], int],
     screen: str,
 ) -> ft.Control:
     """Return the "When and where" card: the time tile, then the room tiles.
@@ -69,7 +68,6 @@ def WhenAndWhere(
         info: The year's facts: the zone and its name.
         view_path: The View's own path, so a room opens on top of it (D-17).
         use_24h: The device's 24-hour setting.
-        motion_ms: ``Prefs.motion_ms``, for the rooms' unfolding (D-173).
         screen: The screen's name in the identifiers, ``<screen>.when`` and so on.
     """
     tiles = [_time_tile(session, info, use_24h, screen)]
@@ -85,7 +83,7 @@ def WhenAndWhere(
     elif where.label:
         tiles.append(_place_tile(where.label, screen))
     if where.others:
-        tiles.append(_other_rooms(session, where, view_path, motion_ms, screen))
+        tiles.append(OtherRooms(session, where, view_path, screen))
     return ft.Card(
         variant=ft.CardVariant.OUTLINED,
         margin=ft.Margin.symmetric(horizontal=16),
@@ -146,14 +144,29 @@ def _place_tile(label: str, screen: str) -> ft.Control:
     )
 
 
-def _other_rooms(
-    session: Session,
-    where: Places,
-    view_path: str,
-    motion_ms: Callable[[int], int],
-    screen: str,
+@ft.component
+def OtherRooms(
+    session: Session, where: Places, view_path: str, screen: str
 ) -> ft.Control:
-    """The other rooms, folded: lightning talks and breaks list up to seven."""
+    """The other rooms, folded: lightning talks and breaks list up to seven.
+
+    A component, so it holds whether it is open (D-157's rule for inputs): an
+    ``ExpansionTile`` whose ``expanded`` is left to Flutter folded up again when the
+    user came back from a room's detail.
+
+    Args:
+        session: The session.
+        where: Its places, with at least one other room.
+        view_path: The View's own path.
+        screen: The screen's name in the identifiers.
+    """
+    prefs = use_prefs()
+    is_open, set_open = ft.use_state(False)
+
+    @report_errors
+    def toggled(e: ft.Event[ft.ExpansionTile]) -> None:
+        set_open(bool(e.data))
+
     no_border = ft.RoundedRectangleBorder()  # in a card: no divider lines when open
     return ft.Semantics(
         identifier=f"{screen}.other_rooms",
@@ -164,9 +177,11 @@ def _other_rooms(
             leading=ft.Container(width=24)
             if where.label
             else ft.Icon(ft.Icons.PLACE_OUTLINED),
+            expanded=is_open,
+            on_change=toggled,
             shape=no_border,
             collapsed_shape=no_border,
-            animation_style=ft.AnimationStyle(duration=motion_ms(EXPAND_MS)),
+            animation_style=ft.AnimationStyle(duration=prefs.motion_ms(EXPAND_MS)),
             # Each room's title under the tile's title: 16 + 24 + 16 dp in.
             controls_padding=ft.Padding.only(left=40),
             controls=[
