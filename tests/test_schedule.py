@@ -85,11 +85,14 @@ def test_without_data_the_skeleton_shows_until_the_first_fetch_ends(
     assert render() == [SKELETON]
 
 
-def test_a_retry_after_a_failed_first_fetch_shows_the_skeleton_again(
+def test_a_retry_keeps_the_failed_state_with_its_button_disabled(
     render: Callable[[], list[ft.Control]], conference: SimpleNamespace
 ) -> None:
+    # The button stays where it was, so a screen reader's focus is not lost.
     conference.problem, conference.refreshing = "offline", True
-    assert render() == [SKELETON]
+    (state,) = render()
+    assert texts(state)[0] == "Can't load the schedule"
+    assert only(state, ft.FilledTonalButton).disabled
 
 
 @pytest.mark.parametrize(
@@ -110,6 +113,7 @@ async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     assert texts(state) == ["Can't load the schedule", body]
     button = only(state, ft.FilledTonalButton)
     assert button.content == "Try again"
+    assert not button.disabled
     assert button.on_click is not None
     await cast(Callable[[], Awaitable[None]], button.on_click)()
     assert conference.refreshes == ["refresh"]

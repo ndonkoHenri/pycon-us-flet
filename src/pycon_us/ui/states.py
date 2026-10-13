@@ -32,14 +32,15 @@ def EmptyState(
     body: str | None = None,
     action: str | None = None,
     on_action: Callable[[], Any] | None = None,
+    disabled: bool = False,
     identifier: str | None = None,
 ) -> ft.Control:
     """Return a screen's empty state: an icon, why it is empty, and the way out.
 
     Centred, padded and without a fixed height, so it reflows at 200 % text inside the
-    screen's ``ListView``. For screen readers the title is a heading and, with the
-    body, a live region, so the state is announced when it replaces a list (D-33); the
-    icon is decorative; the button is a stop of its own.
+    screen's ``ListView``. For screen readers the title is a heading node of its own
+    and, with the body, inside a live region, so the state is announced when it
+    replaces a list (D-33); the icon is decorative; the button is a stop of its own.
 
     Every empty state names a way out (ux.md §4.6): ``action`` is a button that takes
     the user somewhere useful ("Open schedule", "Try again"). Only a state where no
@@ -54,6 +55,8 @@ def EmptyState(
         action: The button's label, a verb ("Open schedule"); given with
             ``on_action``.
         on_action: What the button does, wrapped in ``report_errors`` by the caller.
+        disabled: The button is shown but cannot be tapped, while its action runs: it
+            stays in place, so a screen reader's focus stays on it.
         identifier: The text's semantics identifier for UI tests, e.g.
             ``session.not_found`` (decisions §M).
 
@@ -63,8 +66,11 @@ def EmptyState(
     if (action is None) != (on_action is None):
         raise ValueError("an empty state's action needs both a label and a handler")
     texts: list[ft.Control] = [
+        # A container of its own: without it, the heading flag and the body's text
+        # merge into the live region, and the whole state reads as one heading.
         ft.Semantics(
             header=True,
+            container=True,
             content=ft.Text(
                 title,
                 theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
@@ -97,7 +103,7 @@ def EmptyState(
     if action is not None:
         controls.append(
             ft.Container(
-                ft.FilledTonalButton(action, on_click=on_action),
+                ft.FilledTonalButton(action, on_click=on_action, disabled=disabled),
                 padding=ft.Padding.only(top=8),
             )
         )

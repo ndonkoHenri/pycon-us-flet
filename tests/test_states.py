@@ -68,11 +68,25 @@ def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
         "Connect to the internet and try again.",
     ]
     headings = [
-        texts(node)
+        node
         for node in descendants(state)
         if isinstance(node, ft.Semantics) and node.header
     ]
-    assert headings == [["Can't load the schedule"]]
+    assert [texts(node) for node in headings] == [["Can't load the schedule"]]
+    # A node of its own: otherwise Flutter merges the heading flag into the live
+    # region, and the title and body read as one heading.
+    assert headings[0].container
+
+
+def test_a_disabled_way_out_stays_in_place() -> None:
+    state = EmptyState(
+        "Can't load the schedule",
+        icon=ft.Icons.CLOUD_OFF_OUTLINED,
+        action="Try again",
+        on_action=never,
+        disabled=True,
+    )
+    assert only(state, ft.FilledTonalButton).disabled
 
 
 def test_the_way_out_is_outside_the_live_region_so_it_is_its_own_stop() -> None:

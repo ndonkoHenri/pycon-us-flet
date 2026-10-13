@@ -1,4 +1,6 @@
-"""Tests for the shared rows: ``LinkTile`` and the link rule (#77, #83; ux.md §3.9, §4.7).
+"""Tests for the shared rows: ``LinkTile``, in-app and external (#77, #83; ux.md §3.9).
+
+The link rule itself is tested in ``test_links.py``.
 
 The builders run outside a renderer, with a fake page bound as Flet binds a session's
 page; the external form's component body runs unwrapped, with the session's services
@@ -7,7 +9,6 @@ what the in-app browser looks like are checked on devices (the PR).
 """
 
 import inspect
-import logging
 from collections.abc import Awaitable, Callable, Iterator
 from pathlib import Path
 from typing import cast
@@ -20,14 +21,7 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
 from pycon_us.ui import rows
-from pycon_us.ui.rows import (
-    LinkKind,
-    LinkTile,
-    contact_of,
-    copy_contact,
-    link_kind,
-    open_link,
-)
+from pycon_us.ui.rows import LinkTile
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -137,85 +131,6 @@ async def tap_async(control: ft.ListTile | ft.IconButton) -> None:
     await cast(Callable[[], Awaitable[None]], control.on_click)()
 
 
-# ------------------------------------------------------------------ the link rule
-
-
-@pytest.mark.parametrize(
-    ("target", "app", "kind"),
-    [
-        ("/more/speakers", False, LinkKind.PAGE),
-        ("/schedule/session/42", False, LinkKind.PAGE),
-        (WEB, False, LinkKind.WEB),
-        ("http://example.org/page", False, LinkKind.WEB),
-        ("HTTPS://Example.org/", False, LinkKind.WEB),  # schemes ignore case
-        (PROFILE, True, LinkKind.APP),
-        ("https://maps.apple.com/?q=Long+Beach+Convention+Center", True, LinkKind.APP),
-        ("geo:33.7637,-118.1888", False, LinkKind.APP),  # a map always opens its app
-        (HOTLINE, False, LinkKind.PHONE),
-        (EMAIL, False, LinkKind.EMAIL),
-        ("MAILTO:a@b.org", False, LinkKind.EMAIL),
-    ],
-)
-def test_the_link_rule_tells_pages_web_pages_apps_and_contacts_apart(
-    target: str, app: bool, kind: LinkKind
-) -> None:
-    assert link_kind(target, app=app) is kind
-
-
-@pytest.mark.parametrize(
-    ("kind", "mode"),
-    [
-        (
-            LinkKind.WEB,
-            ft.LaunchMode.IN_APP_BROWSER_VIEW,
-        ),  # the attendee stays in context
-        (LinkKind.APP, ft.LaunchMode.EXTERNAL_APPLICATION),
-        (LinkKind.PHONE, ft.LaunchMode.EXTERNAL_APPLICATION),
-        (LinkKind.EMAIL, ft.LaunchMode.EXTERNAL_APPLICATION),
-    ],
-)
-def test_each_external_kind_opens_in_its_launch_mode(
-    kind: LinkKind, mode: ft.LaunchMode
-) -> None:
-    assert rows.LAUNCH_MODES[kind] is mode
-
-
-def test_a_page_has_no_launch_mode_since_it_is_pushed() -> None:
-    assert LinkKind.PAGE not in rows.LAUNCH_MODES
-
-
-@pytest.mark.parametrize(
-    "target",
-    [
-        "javascript:alert(1)",
-        "file:///etc/hosts",
-        "more/speakers",
-        "",
-        "sms:+15555550100",
-    ],
-)
-def test_a_target_the_app_does_not_open_is_refused(target: str) -> None:
-    with pytest.raises(ValueError, match="not a link the app opens"):
-        link_kind(target)
-
-
-def test_a_page_cannot_be_marked_as_another_app_s() -> None:
-    with pytest.raises(ValueError, match="opens no other app"):
-        link_kind("/more/speakers", app=True)
-
-
-@pytest.mark.parametrize(
-    ("target", "copied"),
-    [
-        (HOTLINE, "+1-562-662-4082"),
-        ("tel:+1%20562%20662%204082", "+1 562 662 4082"),
-        (EMAIL, "pycon-coc@python.org"),  # without the query
-    ],
-)
-def test_copy_takes_the_number_or_the_address_alone(target: str, copied: str) -> None:
-    assert contact_of(target) == copied
-
-
 # ------------------------------------------------------------------ in-app rows
 
 
@@ -306,14 +221,12 @@ async def test_a_profile_row_opens_in_its_app(page: FakePage, svc: Services) -> 
     assert launcher(svc).launched == [(PROFILE, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
 
-async def test_a_link_the_platform_cannot_open_says_so_and_logs_no_address(
-    page: FakePage, svc: Services, caplog: pytest.LogCaptureFixture
+async def test_a_row_the_platform_cannot_open_says_so(
+    page: FakePage, svc: Services
 ) -> None:
-    launcher(svc).error = RuntimeError(f"No app for {EMAIL}")
-    with caplog.at_level(logging.WARNING):
-        await tap_async(tile_of(LinkTile("Email the CoC team", EMAIL)))
+    launcher(svc).error = RuntimeError("no app")
+    await tap_async(tile_of(LinkTile("Email the CoC team", EMAIL)))
     assert said(page) == ["Couldn't open the link"]
-    assert [r.getMessage() for r in caplog.records] == ["Could not open the email link"]
 
 
 @pytest.mark.parametrize(
@@ -364,20 +277,4 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
 async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
     clipboard(svc).error = TimeoutError()
     await tap_async(copy_button_of(LinkTile("Call the hotline", HOTLINE)))
-    assert said(page) == ["Couldn't copy"]
-
-
-# ------------------------------------------------------------------ the helpers
-
-
-async def test_open_link_pushes_a_page_as_a_markdown_link_would(
-    page: FakePage, svc: Services
-) -> None:
-    await open_link(svc, "/more/sprints")
-    assert page.navigated == ["/more/sprints"]
-    assert launcher(svc).launched == []
-
-
-async def test_only_phone_and_email_links_copy(page: FakePage, svc: Services) -> None:
-    with pytest.raises(ValueError, match="only phone and email"):
-        await copy_contact(svc, WEB)
+    assert said(page) == ["Couldn't copy the phone number"]

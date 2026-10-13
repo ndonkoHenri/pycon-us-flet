@@ -3,174 +3,27 @@
 P1 adds the session, notice and speaker rows, the time gutter and ``LocationCard`` here
 (ux.md §3.9).
 
-``LinkTile`` follows the link rule (INFO-14, ux.md §4.7), in one place: ``link_kind()``
-says what a target is, and ``open_link()`` opens it the way that kind opens, for rows
-and for Markdown's ``on_tap_link`` alike.
-
-- An in-app page (a location such as ``/more/speakers``) is pushed; its row ends in
-  ``CHEVRON_RIGHT``.
-- A web page opens in the in-app browser view (``LaunchMode.IN_APP_BROWSER_VIEW``), so
-  the attendee stays in context; its row ends in ``OPEN_IN_NEW``.
-- A social profile or a map opens in the app that handles it
-  (``LaunchMode.EXTERNAL_APPLICATION``): the caller says so for a web address
-  (``app=True``), and a ``geo:`` link always does; its row ends in ``OPEN_IN_NEW`` too.
-- ``tel:`` and ``mailto:`` hand off to the phone or mail app, and their row has a Copy
-  button beside it: a simulator, an iPad or a phone without a mail account has nothing
-  to hand off to, and without U6 the app cannot ask first.
+``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
+is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves
+the app and its row ends in ``OPEN_IN_NEW``; a phone or email row has a Copy button
+beside it.
 """
 
-import logging
 from collections.abc import Callable
-from enum import Enum
 from typing import Any
-from urllib.parse import unquote, urlsplit
 
 import flet as ft
 
-from pycon_us.services import Services, use_services
+from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS
-
-logger = logging.getLogger(__name__)
-
-
-class LinkKind(Enum):
-    """What a link's target is, which decides how it opens (ux.md §4.7)."""
-
-    PAGE = "page"
-    """A page of the app: pushed."""
-    WEB = "web"
-    """A web page: the in-app browser view."""
-    APP = "app"
-    """A social profile or a map: the app that handles it."""
-    PHONE = "phone"
-    """A ``tel:`` link: the phone app, with Copy."""
-    EMAIL = "email"
-    """A ``mailto:`` link: the mail app, with Copy."""
-
-
-LAUNCH_MODES: dict[LinkKind, ft.LaunchMode] = {
-    LinkKind.WEB: ft.LaunchMode.IN_APP_BROWSER_VIEW,
-    LinkKind.APP: ft.LaunchMode.EXTERNAL_APPLICATION,
-    LinkKind.PHONE: ft.LaunchMode.EXTERNAL_APPLICATION,
-    LinkKind.EMAIL: ft.LaunchMode.EXTERNAL_APPLICATION,
-}
-"""How ``UrlLauncher.launch_url`` opens each kind of external link."""
-
-OPENS_IN: dict[LinkKind, str] = {
-    LinkKind.WEB: "Opens in browser",
-    LinkKind.APP: "Opens in another app",
-}
-"""What a screen reader hears after a row that leaves the app: the ``OPEN_IN_NEW``
-icon's label, which visually says the same (D-33). Phone and email rows say it in
-their title ("Call the Code of Conduct hotline")."""
-
-COPY_TOOLTIPS = {
-    LinkKind.PHONE: "Copy phone number",
-    LinkKind.EMAIL: "Copy email address",
-}
-COPIED = {LinkKind.PHONE: "Phone number copied", LinkKind.EMAIL: "Email address copied"}
-
-_WEB_SCHEMES = ("http", "https")
-
-
-def link_kind(target: str, *, app: bool = False) -> LinkKind:
-    """Return what ``target`` is, by the link rule (INFO-14).
-
-    Args:
-        target: An app location (``/more/speakers``) or a URL: ``http(s)``, ``geo``,
-            ``tel`` or ``mailto``.
-        app: The web address is a social profile or a map, which opens in the app
-            that handles it rather than in the in-app browser.
-
-    Returns:
-        The kind; ``LAUNCH_MODES`` says how an external one opens.
-
-    Raises:
-        ValueError: ``target`` is none of those, or a page is marked ``app``.
-    """
-    if target.startswith("/"):
-        if app:
-            raise ValueError(f"an app page opens no other app: {target!r}")
-        return LinkKind.PAGE
-    scheme = urlsplit(target).scheme.lower()
-    if scheme in _WEB_SCHEMES:
-        return LinkKind.APP if app else LinkKind.WEB
-    if scheme == "geo":
-        return LinkKind.APP
-    if scheme == "tel":
-        return LinkKind.PHONE
-    if scheme == "mailto":
-        return LinkKind.EMAIL
-    raise ValueError(f"not a link the app opens: {target!r}")
-
-
-def contact_of(target: str) -> str:
-    """Return what Copy copies for a ``tel:`` or ``mailto:`` link.
-
-    Args:
-        target: The link, e.g. ``tel:+1-562-662-4082`` or ``mailto:a@b.org?subject=x``.
-
-    Returns:
-        The number or the address, without the scheme or a query:
-        ``+1-562-662-4082``, ``a@b.org``.
-    """
-    return unquote(urlsplit(target).path)
-
-
-async def open_link(svc: Services, target: str, *, app: bool = False) -> None:
-    """Open ``target`` by the link rule; call it from an event handler.
-
-    A page is pushed. Anything else goes to ``UrlLauncher.launch_url`` with its kind's
-    mode; when the platform reports that it could not open it, a SnackBar says
-    "Couldn't open the link" (an expected failure, D-71). A phone or a simulator with
-    no app for a ``tel:`` link may also do nothing without saying so, which is why
-    those rows offer Copy.
-
-    Args:
-        svc: The session's services, for the launcher.
-        target: An app location or a URL (``link_kind()``).
-        app: The web address opens in the app that handles it (``link_kind()``).
-    """
-    page = ft.context.page
-    kind = link_kind(target, app=app)
-    if kind is LinkKind.PAGE:
-        page.navigate(target)
-        return
-    try:
-        await svc.launcher.launch_url(target, mode=LAUNCH_MODES[kind])
-    except SERVICE_ERRORS:
-        # The kind only: a mailto: target holds an address, which never goes in the log.
-        logger.warning("Could not open the %s link", kind.value, exc_info=True)
-        _say("Couldn't open the link")
-
-
-async def copy_contact(svc: Services, target: str) -> None:
-    """Copy a ``tel:`` or ``mailto:`` link's number or address, and say so.
-
-    Args:
-        svc: The session's services, for the clipboard.
-        target: The link (``contact_of()``).
-
-    Raises:
-        ValueError: ``target`` is not a ``tel:`` or ``mailto:`` link.
-    """
-    kind = link_kind(target)
-    if kind not in COPIED:
-        raise ValueError(f"only phone and email links copy: {target!r}")
-    try:
-        await svc.clipboard.set(contact_of(target))
-    except SERVICE_ERRORS:
-        logger.warning("Could not copy the %s link", kind.value, exc_info=True)
-        _say("Couldn't copy")
-        return
-    _say(COPIED[kind])
-
-
-def _say(text: str) -> None:
-    ft.context.page.show_dialog(
-        ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING)
-    )
+from pycon_us.ui.links import (
+    COPY_TOOLTIPS,
+    OPENS_IN,
+    LinkKind,
+    copy_contact,
+    link_kind,
+    open_link,
+)
 
 
 def LinkTile(
@@ -271,12 +124,14 @@ def _ExternalLinkTile(
     return ft.Row(
         [
             ft.Container(row, expand=True),
-            # 12 dp centres the 24 dp icon of the 48 dp button where a ListTile's
-            # trailing icon sits (24 dp from the edge), so the column of icons lines up.
-            ft.Container(copy_button, padding=ft.Padding.only(right=12)),
+            # 12 dp from the edge puts the 24 dp icon of the 48 dp button where a
+            # ListTile's trailing icon sits, so the column of icons lines up; 4 dp from
+            # the top puts it 16 dp down, level with the leading icon (_tile), so at
+            # 200 % text it stays beside the first line instead of the block's middle.
+            ft.Container(copy_button, padding=ft.Padding.only(top=4, right=12)),
         ],
         spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
 
@@ -287,10 +142,17 @@ def _tile(
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
 ) -> ft.ListTile:
+    """A link row's ``ListTile``, its icons beside the title's first line.
+
+    ``TITLE_HEIGHT`` centres a one-line row's icons and puts them 16 dp from the top
+    once a row grows past 72 dp (two lines at 200 % text), where M3's default centres
+    them against the whole block, far from the title they belong to.
+    """
     return ft.ListTile(
         leading=ft.Icon(icon) if icon is not None else None,
         title=title,
         subtitle=subtitle,
         trailing=trailing,
         on_click=on_click,
+        title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
     )

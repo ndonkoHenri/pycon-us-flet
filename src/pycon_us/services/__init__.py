@@ -42,8 +42,8 @@ class Services:
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
         launcher: Opens web pages, apps, ``tel:`` and ``mailto:`` links, by the link
-            rule in ``ui.rows`` (INFO-14).
-        clipboard: Copy for phone numbers and email addresses (``ui.rows``).
+            rule in ``ui.links`` (INFO-14).
+        clipboard: Copy for phone numbers and email addresses (``ui.links``).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``

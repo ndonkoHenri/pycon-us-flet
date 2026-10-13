@@ -4,8 +4,8 @@ Until P1's day tabs (SCHED-01..04), it shows the status strip, where the feed ca
 and when, a Refresh button, every conference day with its session count, and a few
 sessions to open, so "bundled first, a refresh replaces it" is visible on a phone
 (DATA-35, D-38). Without any data (no snapshot or cache, NEW-03) it shows the skeleton
-while the first fetch runs and "Can't load the schedule" once it has failed (D-32,
-ux.md §4.1).
+until the first fetch has failed, then "Can't load the schedule", which stays during a
+retry (D-32, ux.md §4.1).
 """
 
 from collections.abc import Iterator
@@ -61,7 +61,7 @@ def Schedule() -> ft.View:
     data = conference.data
     counts = _session_counts(data)
     rows: list[ft.Control]
-    if data is None and (conference.refreshing or conference.problem is None):
+    if data is None and conference.problem is None:
         rows = [SkeletonList()]  # the first fetch runs, or is about to (NEW-03)
     elif data is None:
         rows = [
@@ -71,6 +71,9 @@ def Schedule() -> ft.View:
                 body=NO_DATA_BODY[conference.problem or "offline"],
                 action="Try again",
                 on_action=refresh,
+                # A retry keeps the state in place, so a screen reader's focus stays
+                # on the button; the strip's bar shows the work.
+                disabled=conference.refreshing,
                 identifier="schedule.no_data",
             )
         ]
