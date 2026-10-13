@@ -11,26 +11,13 @@ from urllib.parse import parse_qsl, quote, urlparse
 
 import flet as ft
 
+from pycon_us.config import HUB_PAGES
+
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 """The five tab roots, in the bottom bar's order (D-13)."""
 
 DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan")
 """The drill's segment pairs, ``<kind>/<id>``, one pushed View each (D-17, D-141)."""
-
-HUB_PAGES: dict[str, str | None] = {
-    "sprints": None,
-    "lightning-talks": "Lightning-talks",
-    "open-spaces": "Open Space",
-}
-"""The Tracks hub's pages of their own, by segment under ``/more/tracks`` (D-207).
-
-Each is a More page that the hub also pushes as its child, ``/more/tracks/<segment>``,
-so Back returns to the hub (D-17), with the key of the track whose page it is: the
-feed's kinds, which do not change with the year (DATA-14). The sprints are not a track
-(D-126). The route table lists these before ``:slug``, which would match them too, so
-the year loader refuses a track slug that names one of them, unless it is that track's
-page. #104 adds ``keynotes``.
-"""
 
 PAGES = frozenset(
     {

@@ -21,11 +21,11 @@ import pytest
 from flet.controls.context import _context_page
 from flet.messaging.session import Session
 
-from pycon_us.config import load_year
+from pycon_us.config import HUB_PAGES, load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
 from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.locations import HUB_PAGES, PAGES, parent_of
+from pycon_us.locations import PAGES, parent_of
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import track as track_screen
 from pycon_us.screens import tracks as hub_screen
@@ -313,6 +313,7 @@ def test_each_hub_page_of_a_track_is_at_that_tracks_slug() -> None:
     """The hub row of a track with a page of its own opens that page (D-207)."""
     for segment, key in HUB_PAGES.items():
         assert f"/more/tracks/{segment}" in PAGES
+        assert f"/more/{segment}" in PAGES, segment  # its More entry (D-207)
         if key is not None:
             assert INFO.track(key).slug == segment, key
     assert parent_of(hub_screen.SPRINTS) == "/more/tracks"

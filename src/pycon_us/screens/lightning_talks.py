@@ -1,5 +1,8 @@
 """Lightning talks (``/more/lightning-talks``): what they are, how to sign up, and when.
 
+The Tracks hub opens the same page as its child, ``/more/tracks/lightning-talks``, so
+Back returns to the hub (D-207).
+
 One page where Ionic had two near-identical menu entries, a static page and a track
 list (EVT-03, SHELL-10). From the top:
 

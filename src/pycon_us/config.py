@@ -20,7 +20,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.locations import HUB_PAGES
 from pycon_us.year_pages import (
     LightningTalksInfo,
     OpenSpacesInfo,
@@ -81,6 +80,20 @@ class Track:
     slug: str
     legend: str
     new: bool = False
+
+
+HUB_PAGES: dict[str, str | None] = {
+    "sprints": None,
+    "lightning-talks": "Lightning-talks",
+    "open-spaces": "Open Space",
+}
+"""The Tracks hub's pages of their own, by segment under ``/more/tracks``, with the key of
+the track each is the page of (the feed's kinds, DATA-14; the sprints are no track, D-126).
+
+More's pages, also the hub's children, so Back returns to the hub (D-207). The routes
+list them before ``:slug``, so the loader refuses a track slug that names another's page.
+Here, with the registry, the loader stays free of Flet. #104 adds ``keynotes``.
+"""
 
 
 @dataclass(frozen=True)

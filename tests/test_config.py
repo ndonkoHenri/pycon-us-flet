@@ -1,6 +1,8 @@
 """Tests for the year-data loader (D-45, DATA-34, DATA-14, DATA-28)."""
 
 import shutil
+import subprocess
+import sys
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -26,6 +28,16 @@ def test_every_year_loads(year: int) -> None:
         == f"https://us.pycon.org/{year}/schedule/conference.json"
     )
     assert data.conference.tracks
+
+
+def test_the_year_loader_loads_no_flet_module() -> None:
+    """The tools read the year data without Flet: dependencies point down (§1)."""
+    probe = "import sys, pycon_us.config; print('flet' in sys.modules)"
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"
 
 
 def test_the_active_year_is_2026_in_pacific_time() -> None:

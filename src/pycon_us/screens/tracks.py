@@ -9,7 +9,7 @@ track" when it is new this year; and how many sessions it has, counted as its pa
 them (posters one by one, SCHED-22). A tap pushes ``/more/tracks/<slug>``: the track's
 page (``screens/track.py``), or, for the lightning talks and the open spaces, the page of
 their own that More opens too, which the route table puts at that slug under the hub
-(``locations.HUB_PAGES``, D-207), so Back returns here.
+(``config.HUB_PAGES``, D-207), so Back returns here.
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
