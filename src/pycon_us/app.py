@@ -193,8 +193,8 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     3. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
        applies without a restart (D-23, D-34, D-173). On Android such a change can
-       reach Flutter only after this read, and then applies at the next resume
-       (#178). Components follow ``Prefs`` by themselves.
+       reach Flutter only after this read, and then applies at the next resume:
+       accepted until U17 (D-183). Components follow ``Prefs`` by themselves.
 
     Args:
         svc: The session's services.
