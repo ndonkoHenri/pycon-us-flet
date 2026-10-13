@@ -271,9 +271,14 @@ def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
     for entry in speakers:
         if isinstance(entry, str):
             rows.append(
-                ft.Container(
-                    ft.Text(entry, theme_style=ft.TextThemeStyle.BODY_LARGE),
-                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                # A node of its own: left bare, Android merged it into the heading
+                # above ("Speakers, Hosted by …").
+                ft.Semantics(
+                    container=True,
+                    content=ft.Container(
+                        ft.Text(entry, theme_style=ft.TextThemeStyle.BODY_LARGE),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                    ),
                 )
             )
         else:

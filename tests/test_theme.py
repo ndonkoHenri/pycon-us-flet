@@ -498,6 +498,14 @@ def test_adaptive_scan_finds_the_keyword() -> None:
     ) == [1]
 
 
+def test_a_markdown_rule_is_a_one_dp_divider() -> None:
+    """D-194: Flet's default rule is a 5 dp bar between a description's paragraphs."""
+    decoration = theme.MARKDOWN_STYLE.horizontal_rule_decoration
+    assert decoration is not None and isinstance(decoration.border, ft.Border)
+    top = decoration.border.top
+    assert (top.width, top.color) == (1, ft.Colors.OUTLINE_VARIANT)
+
+
 def resolved(role: object, dark: bool) -> str:
     """The #RRGGBB a scheme role (``ft.Colors.ON_SURFACE``, "onsurface") takes."""
     name = str(getattr(role, "value", role))

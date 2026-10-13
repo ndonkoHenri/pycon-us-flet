@@ -347,6 +347,11 @@ MARKDOWN_STYLE = ft.MarkdownStyleSheet(
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
         border=ft.Border(left=ft.BorderSide(4, ft.Colors.OUTLINE)),
     ),
+    # Material's divider: Flet's default rule is a 5 dp bar, which read as a heavy
+    # block between a description's paragraphs (D-194).
+    horizontal_rule_decoration=ft.BoxDecoration(
+        border=ft.Border(top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT))
+    ),
     block_spacing=12,
 )
 """The style sheet of every feed text (D-116): pass it as ``ft.Markdown(md_style_sheet=...)``.

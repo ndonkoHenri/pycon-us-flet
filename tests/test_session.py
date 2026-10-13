@@ -542,6 +542,9 @@ async def test_a_pseudo_speaker_is_plain_text_that_nothing_taps(
         if isinstance(n, ft.Text) and str(n.value).startswith("Hosted by")
     )
     assert hosts.value == "Hosted by Abigail, Chris, Cristián, and Lorena"
+    # Its own node, not merged into the "Speakers" heading (seen on Android).
+    node = cast(ft.Control, hosts.parent).parent
+    assert isinstance(node, ft.Semantics) and node.container
     holder: object = hosts.parent
     while isinstance(holder, ft.Control):
         assert getattr(holder, "on_click", None) is None, holder
