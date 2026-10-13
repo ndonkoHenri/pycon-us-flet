@@ -6,12 +6,16 @@ runs in a real Flet session (``tests/session_detail.py``).
 """
 
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from pathlib import Path
 
 import flet as ft
 import pytest
 
+from pycon_us.core.models import ConferenceData
+from pycon_us.screens import session as screen
 from pycon_us.year_keynotes import keynote_of
+from tests import session_detail
 from tests.feeds import processed
 from tests.session_detail import TALK, YEAR, Detail, Render, headings, rendering
 from tests.trees import descendants
@@ -100,6 +104,27 @@ async def test_a_talk_without_a_title_of_its_own_shows_its_abstract(
     detail = await render(AMANDA)
     assert detail.nodes("session.keynote_title") == []
     assert about(detail) == keynote.abstract
+
+
+async def test_a_keynote_with_nothing_to_say_about_it_has_no_about_heading(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No title, no abstract and an empty feed description: no heading over nothing."""
+    keynote = keynote_of(KEYNOTES, LIN_QIAO)
+    assert keynote is not None
+    bare = replace(keynote, title="", abstract="")
+    monkeypatch.setattr(screen, "keynote_of", lambda _keynotes, _id: bare)
+
+    def without_description(year: int) -> ConferenceData:
+        data = processed(year)
+        sessions = dict(data.sessions)
+        sessions[LIN_QIAO] = replace(sessions[LIN_QIAO], description_md="")
+        return replace(data, sessions=sessions)
+
+    monkeypatch.setattr(session_detail, "processed", without_description)
+    detail = await render(LIN_QIAO)
+    assert [h for h in headings(detail) if h[1] == 2] == [("Speakers", 2)]
+    assert detail.nodes("session.description") == []
 
 
 async def test_a_joint_keynote_lists_both_speakers_in_order(render: Render) -> None:

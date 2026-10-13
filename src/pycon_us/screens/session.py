@@ -172,7 +172,8 @@ def SessionDetail(session_id: str) -> ft.View:
         controls.append(_speakers(speakers, view_path))
     description = session.description_md
     if keynote is not None:
-        controls.append(keynote_about(keynote, description, svc, screen=SCREEN))
+        if keynote.title or keynote.abstract or description:  # no heading over nothing
+            controls.append(keynote_about(keynote, description, svc, screen=SCREEN))
     elif description:
         controls.append(_about(description, svc))
     found = posters(data, session) if data else ()
