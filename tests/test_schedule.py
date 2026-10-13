@@ -42,7 +42,7 @@ from tests.fakes import (
 )
 from tests.feeds import processed
 from tests.sessions import find, rendering, settle
-from tests.trees import descendants, only, texts
+from tests.trees import only, texts
 
 YEAR = load_year(2026)
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -274,7 +274,7 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
     """S2: a second line clipped at 200 %; the spoken label keeps the month."""
     schedule = await shown()
     assert schedule.tabs.length == len(DAYS)
-    labels = [texts(schedule.node(f"schedule.day_tab.{i}"))[0] for i in range(7)]
+    labels = [_tab_text(schedule, i) for i in range(7)]
     assert labels == [
         "Wed 13",
         "Thu 14",
@@ -287,10 +287,10 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
     friday = schedule.node("schedule.day_tab.2")
     assert friday.label == "Friday, May 15, today"  # Flutter adds "Tab 3 of 7"
     assert friday.exclude_semantics
-    assert only(friday, ft.Text).badge is not None  # today's dot
+    assert _has_dot(schedule, friday)  # today's mark
     saturday = schedule.node("schedule.day_tab.3")
     assert saturday.label == "Saturday, May 16"
-    assert only(saturday, ft.Text).badge is None
+    assert not _has_dot(schedule, saturday)
     (bar,) = find(schedule.session, ft.TabBar)
     assert bar.scrollable
 
@@ -317,6 +317,16 @@ async def test_a_remembered_day_wins_over_today(
     memory.schedule_day = SATURDAY
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(SATURDAY)
+
+
+def _tab_text(schedule: Shown, index: int) -> str:
+    node = schedule.node(f"schedule.day_tab.{index}")
+    (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
+    return str(text.value)
+
+
+def _has_dot(schedule: Shown, node: ft.Semantics) -> bool:
+    return bool(find(schedule.session, ft.Container, lambda c: inside(c, node)))
 
 
 def _tab_nodes(schedule: Shown) -> list[ft.Semantics]:

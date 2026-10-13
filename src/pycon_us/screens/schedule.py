@@ -56,8 +56,8 @@ TAB_HEIGHT = 56
 with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
 iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
 
-TODAY_DOT_OFFSET = ft.Offset(7, -3)
-"""Where today's dot sits from the label's top end: clear of the last digit."""
+TODAY_DOT = 6
+"""The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
 
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""
@@ -320,8 +320,21 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
     Flutter's tab bar adds the position and the selection ("Tab 3 of 7") to the
     label, in the tab's one node.
     """
-    dot = ft.Badge(small_size=8, bgcolor=ft.Colors.PRIMARY, offset=TODAY_DOT_OFFSET)
-    label = ft.Text(day_tab_label(day), badge=dot if is_today else None)
+    label: ft.Control = ft.Text(day_tab_label(day))
+    if is_today:
+        # Beside the text, not a Badge over it: a badge's dot covered the last digit.
+        dot = ft.Container(
+            width=TODAY_DOT,
+            height=TODAY_DOT,
+            border_radius=TODAY_DOT / 2,
+            bgcolor=ft.Colors.PRIMARY,
+        )
+        label = ft.Row(
+            [label, dot],
+            spacing=4,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        )
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     return ft.Tab(
         height=TAB_HEIGHT,
@@ -330,7 +343,7 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
             identifier=f"{SCREEN}.day_tab.{index}",
             exclude_semantics=True,  # the label replaces "Fri 15"
             content=label,
-        )
+        ),
     )
 
 
