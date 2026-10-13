@@ -139,7 +139,7 @@ def test_search_text_ignores_accents_and_case() -> None:
 
     data = process(changed(2026, accent), settings(2026))
     (session,) = [s for s in data.sessions.values() if s.name == "Cristián's TALK"]
-    assert session.search_text.startswith("cristian's talk uber python ")
+    assert session.search_text.startswith("cristians talk uber python ")  # D-180
 
 
 def test_the_rules_read_the_raw_description() -> None:

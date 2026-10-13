@@ -1,12 +1,14 @@
 """Tests for the queries over the processed feed (architecture §7.5).
 
-DATA-17's days, D-46's fold, the schedule queries of #85 (DATA-18, DATA-20, DATA-30,
-SCHED-17), and the agenda and Now & Next queries of #93 (SCHED-25, NEW-01).
+DATA-17's days, the fold and Speakers order of D-46 and D-180, the schedule queries
+of #85 (DATA-18, DATA-20, DATA-30, SCHED-17), and the agenda and Now & Next queries
+of #93 (SCHED-25, NEW-01).
 """
 
 import ast
 import gc
 import inspect
+import unicodedata
 import weakref
 from collections.abc import Callable
 from dataclasses import replace
@@ -15,11 +17,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hypothesis import HealthCheck, given
+from hypothesis import settings as hypothesis_settings
+from hypothesis import strategies as st
 
 from pycon_us.config import load_year
 from pycon_us.core import queries
 from pycon_us.core.feed import process
-from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.models import ConferenceData, Session, Speaker
 from pycon_us.core.queries import (
     Agenda,
     AgendaDay,
@@ -33,6 +38,7 @@ from pycon_us.core.queries import (
     next_for_me,
     now_next,
     schedule_order,
+    speaker_order,
     timeline,
     track_sessions,
 )
@@ -71,18 +77,64 @@ def test_a_session_outside_the_conference_dates_widens_the_days() -> None:
     assert result[:3] == (date(2026, 5, 11), date(2026, 5, 12), date(2026, 5, 13))
 
 
+@hypothesis_settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(st.text())
+def test_fold_is_stable_and_leaves_no_marks(text: str) -> None:
+    """D-180: folding a folded text changes nothing, so a query and the index agree."""
+    folded = fold(text)
+    assert fold(folded) == folded
+    assert not any(unicodedata.category(c) in ("Mn", "Me", "Cf") for c in folded)
+
+
 @pytest.mark.parametrize(
     ("text", "folded"),
     [
         ("Cristián", "cristian"),
         ("ÜBER Python", "uber python"),
         ("Straße", "strasse"),  # case folding, not just lower-casing
-        ("ﬁle", "file"),  # NFKD splits the ligature
+        ("ẞ", "ss"),  # the capital sharp s
+        ("ﬁle ﬂow", "file flow"),  # NFKD splits the ligatures
+        ("ＰＹＴＨＯＮ ①", "python 1"),  # full-width and circled forms
+        ("İstanbul", "istanbul"),  # İ decomposes to I and a dot above
+        ("ıi", "ii"),  # dotless i
+        ("Łukasz Paweł Żal", "lukasz pawel zal"),  # 2025 speakers; ł does not decompose
+        ("Søren Ærø Œuvre", "soren aero oeuvre"),
+        ("Đorđe", "dorde"),
+        ("don’t ‘quote’", "dont quote"),  # iOS types the curly forms
+        ("don't O’Reilly", "dont oreilly"),  # apostrophes go: "dont" finds both
+        ("don´t", "dont"),  # an acute accent typed as one would split the word
+        ("Hawaiʻi Oʼahu", "hawaii oahu"),  # modifier letters used as apostrophes
+        ("“Hello” „world‟", '"hello" "world"'),
+        ("type‐safe – fast — done ‒ 1−2 ―", "type-safe - fast - done - 1-2 -"),
+        ("non‑breaking", "non-breaking"),  # NFKD makes it a hyphen, then ASCII
+        ("soft\u00adhyphen zero\u200bwidth", "softhyphen zerowidth"),  # invisible
+        ("\u202eevil\u202c", "evil"),  # bidi controls (2025 has both)
+        ("a\u00a0b", "a b"),  # a no-break space is a space
+        ("Ñandú", "nandu"),
+        ("ΆΘΗΝΑ", "αθηνα"),  # not only Latin
     ],
 )
-def test_fold_ignores_case_and_accents(text: str, folded: str) -> None:
-    """D-46: search and the Speakers sort compare folded text."""
+def test_fold_ignores_case_accents_and_typography(text: str, folded: str) -> None:
+    """D-46, D-180: search and the Speakers sort compare folded text."""
     assert fold(text) == folded
+
+
+def test_speakers_sort_by_folded_name_then_id() -> None:
+    """D-46: the Speakers list and search share one order; equal names keep theirs."""
+    speakers = [
+        Speaker("9", "carla", "", ""),
+        Speaker("2", "Álvaro", "", ""),
+        Speaker("8", "O’Brien", "", ""),
+        Speaker("1", "ALVARO", "", ""),
+        Speaker("3", "Ofelia", "", ""),
+    ]
+    assert [s.id for s in sorted(speakers, key=speaker_order)] == [
+        "1",  # alvaro, 1
+        "2",  # alvaro, 2
+        "9",  # carla
+        "8",  # obrien: the apostrophe does not count
+        "3",  # ofelia
+    ]
 
 
 # --------------------------------------------------------------------------------------
@@ -174,8 +226,8 @@ def test_ties_on_start_and_room_break_by_name_then_id() -> None:
         {"id": "z", "name": "Another"},
         {"id": "a", "name": "Same"},
     )
-    for given in (sessions, sessions[::-1]):
-        assert [s.id for s in sorted(given, key=schedule_order)] == ["z", "a", "b"]
+    for order in (sessions, sessions[::-1]):
+        assert [s.id for s in sorted(order, key=schedule_order)] == ["z", "a", "b"]
 
 
 @pytest.mark.parametrize("year", YEARS)
