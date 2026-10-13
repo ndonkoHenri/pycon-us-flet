@@ -29,7 +29,7 @@ from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.screens import now, schedule
+from pycon_us.screens import schedule
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
@@ -900,8 +900,9 @@ async def test_elsewhere_a_tick_never_refreshes(
 
 @pytest.mark.parametrize(
     ("screen", "auto_refresh"),
-    # My schedule's strip never refreshes by itself: tests/test_my_schedule.py.
-    [(now.Now, True), (schedule.Schedule, True)],
+    # Now's own test is in test_now.py (#95); My schedule's strip never
+    # refreshes by itself: tests/test_my_schedule.py.
+    [(schedule.Schedule, True)],
 )
 def test_only_now_and_schedule_refresh_every_15_minutes(
     hooks: Hooks,
@@ -953,3 +954,35 @@ def test_a_section_header_is_a_heading_in_the_title_small_style() -> None:
     assert isinstance(text, ft.Text)
     assert text.value == "Days"
     assert text.theme_style == ft.TextThemeStyle.TITLE_SMALL
+
+
+def test_a_section_header_s_mark_sits_before_its_text_and_says_nothing() -> None:
+    """Now's Happening now has a live dot (#95); the heading still reads its text."""
+    dot = ft.Container(width=8, height=8, border_radius=4)
+    header = SectionHeader("Happening now", level=2, leading=dot)
+    assert isinstance(header, ft.Semantics)
+    assert header.header is True and header.heading_level == 2
+    assert header.label is None  # the text is the heading's name
+    assert isinstance(header.content, ft.Container)
+    row = header.content.content
+    assert isinstance(row, ft.Row)
+    first, text = row.controls
+    assert first is dot
+    assert isinstance(text, ft.Text) and text.value == "Happening now"
+    # The row's room, so a long heading wraps at large text instead of overflowing.
+    assert text.expand is True
+
+
+def test_a_section_header_can_say_its_text_another_way() -> None:
+    """A "·" reads as a pause, as Now's header phrase reads it (#95)."""
+    header = SectionHeader("Up next · 11:30 AM", level=2, spoken="Up next, 11:30 AM")
+    assert isinstance(header, ft.Semantics)
+    assert isinstance(header.content, ft.Container)
+    text = header.content.content
+    assert isinstance(text, ft.Text)
+    assert text.value == "Up next · 11:30 AM"
+    assert text.semantics_label == "Up next, 11:30 AM"
+    plain = SectionHeader("Days")
+    assert isinstance(plain, ft.Semantics) and isinstance(plain.content, ft.Container)
+    assert isinstance(plain.content.content, ft.Text)
+    assert plain.content.content.semantics_label is None
