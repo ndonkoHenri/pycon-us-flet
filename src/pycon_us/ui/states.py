@@ -14,6 +14,7 @@ from typing import Any
 import flet as ft
 
 from pycon_us.prefs import use_prefs
+from pycon_us.state import Problem
 
 ICON_SIZE = 48
 """The empty state's icon, in dp (ux.md §3.9)."""
@@ -23,6 +24,12 @@ SKELETON_ROWS = 5
 
 SHIMMER_MS = 1500
 """One sweep of the skeleton's shimmer (Flet's default period), 0 under reduced motion."""
+
+NO_DATA_BODY: dict[Problem, str] = {
+    "offline": "Connect to the internet and try again.",
+    "server": "The schedule couldn't be read. Try again in a few minutes.",
+}
+"""The way out after a failed first fetch, by why it failed (D-146, ux.md §4.6)."""
 
 
 def EmptyState(

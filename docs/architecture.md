@@ -65,7 +65,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1), `search`, `row_views`, `speakers` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
-| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
+| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
@@ -293,7 +293,7 @@ def main(page: ft.Page):
 
 `Start` (the index route `/`) navigates to `start_target(memory.last_location, memory.search_base)`: the last location when it is set, else `/now` (`/welcome` on first run, P2), so a new session after an activity recreation rebuilds the stack the user was on (D-143). `AppScaffold` records the top View's `page.route` there. A location under `/search` restores its `search_base` instead: the Router builds a global modal over its last non-modal location, which in a fresh Router is `/`. For the same reason a direct `/search` entry mounts `Start` below the modal, so `Start` navigates only when it is the top View (`is_top_view()`).
 
-`use_query()` (U9 interim) parses `ft.context.page.route`'s query once, when its View mounts, and only for the top View (`is_top_view(page.route, view_path)`, never `use_route_location()`, which under a global modal is the opener's location for the Views below): a deep entry builds the Views below too, and the query is not theirs (D-164). Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown location matches no route and shows `NotFound` (the Router's `not_found`, wrapped in a View) with "Go to Now"; in P0 an unknown id shows a not-found state on its own level under the back arrow, and #90 settles what P1 does (D-21, ux.md §4.1).
+`use_query()` (U9 interim) parses `ft.context.page.route`'s query once, when its View mounts, and only for the top View (`is_top_view(page.route, view_path)`, never `use_route_location()`, which under a global modal is the opener's location for the Views below): a deep entry builds the Views below too, and the query is not theirs (D-164). Each screen reads `view_path = ft.use_view_path()` at the top of its render (rule 4); its handlers call `page.navigate(drill_href(view_path, "speaker", sid))`, never an absolute path, so details work under every root and under search. `parent_of()` is unit-tested against every route shape; the app's `on_view_pop` and the pushed views' back arrow (§5.5) both use it. The handler goes once U18 is in the pinned Flet; the back arrow stays (D-10). `Drill` returns a component, as route components compose (S4 confirmed, D-141). An unknown location matches no route and shows `NotFound` (the Router's `not_found`, wrapped in a View) with "Go to Now"; an unknown id shows its detail's not-found state on its own level under the back arrow, with its list as the way out, never a redirect (D-186, ux.md §4.1).
 
 ### 5.4 Search (D-19)
 
@@ -393,7 +393,7 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
       Tab("/more", "More", ft.Icons.MORE_HORIZ, ft.Icons.MORE_HORIZ),
   )  # Tab.identifier: "app.nav." + the root, "-" as "_" (app.nav.my_schedule)
   ```
-- **Status strip (D-32, D-165, D-175, D-181):** `StatusStrip(auto_refresh=False)` is a component the screens that show the feed's state put first in their body (Now, Schedule, My schedule); hidden when fresh, otherwise an icon, `strip_line()`'s text and Refresh, one live region (`app.status`); its bar shows any refresh (`Conference.refreshing`), its line only the user's (D-181). It ticks every 60 s through `Services.run_every` (re-rendering when the minute has changed), and on Now and Schedule (`auto_refresh=True`) the tick also starts a due refresh (§4.3). `SectionHeader(text)` heads a group of rows.
+- **Status strip (D-32, D-165, D-175, D-181):** `StatusStrip(auto_refresh=False)` is a component the screens that show the feed's state put first in their body (Now, Schedule, My schedule); hidden when fresh, otherwise an icon, `strip_line()`'s text and Refresh, one live region (`app.status`); its bar shows any refresh (`Conference.refreshing`), its line only the user's (D-181). It ticks every 60 s through `Services.run_every` (re-rendering when the minute has changed), and on Now and Schedule (`auto_refresh=True`) the tick also starts a due refresh (§4.3). `use_minute()` is the same tick for any other time-dependent view: it re-renders its component when the minute of `clock.now()` changes (the Map's "Now:" lines, D-188). `SectionHeader(text)` heads a group of rows.
 - **Tablets (P2, D-09):** at 600 dp and wider, `AppScaffold` puts an `ft.NavigationRail` in a `Row` beside the content (`View.navigation_bar` takes a `NavigationBar`, or a `CupertinoNavigationBar`, which D-10 rules out, but not a `NavigationRail`) and centres content at 720/840 dp.
 - **Insets and system bars (#311, D-12):** `SafeArea` bodies, `use_safe_area=True` sheets, and `Theme.system_overlay_style` per colour scheme (§15, D-113); S1 checked 3-button and gesture navigation, in light and dark. The `SafeArea` also keeps landscape content clear of the side navigation bar.
 
@@ -590,7 +590,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 ### 7.5 Queries (`core/queries.py`, `timeline.py`, `agenda.py`, `search.py`)
 
-One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching. Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
+One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
 
 | Query | Rule | Features |
 |---|---|---|
@@ -605,6 +605,7 @@ One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speake
 | `current_slot_key(slots, now)` | over the shown slots (`timeline(data, day, excluded)`, so the key always has an item to scroll to, D-155, D-178): first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey`; `None` when `slots` is empty | SCHED-16 |
 | `directory(data)`, `letter_groups(entries)`, `filter_directory(entries, index, query)` | in `core/speakers.py` (D-189): one frozen `SpeakerEntry(speaker, letter, first_session, more)` per directory speaker, by `speaker_order` (folded displayed name, then id; D-46, D-180), its letter the folded name's first character, its first session the earliest in the Schedule's order with the day first; `LetterGroup`s by letter; the filter keeps the entries whose name holds every word, through `search(index, query, "speakers")`, and a blank one returns the entries themselves. Built in P1 (#98) | SPKR-01, SPKR-02, DATA-21 |
 | `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row (the row itself until the feed publishes posters); ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
+| `room_list(data, now, other_locations)` | in `core/rooms.py`: a frozen `RoomList(rooms, other_locations)` of `RoomEntry(room, on_now)`, both groups in the model's natural order; `other_locations` are `content.toml`'s names, matched by room slug; `on_now` holds the sessions on in the room by `now_next`'s rule (timeline only, `start <= now < end`; a multi-room session in each room), the one that started last first. Built in P1 (#100, D-188) | ROOM-01 |
 | `room_sessions` | flat by start (poster details included), grouped by day | ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
 
@@ -660,6 +661,7 @@ def start_fake_clock(at: datetime | None) -> None:
 | `time_range_label(start, end, zone, use_24h=...)` | `9:25–10:10 AM`, `11:30 AM–12:15 PM`, one time when start equals end |
 | `day_label(day)`, `day_heading(day)` | `Fri, May 15`, `Friday, May 15` |
 | `zone_note(now, zone, zone_name, device_offset)` | `Times are Pacific Time (PDT)` when the device's offset at `now` differs, else None; the UI passes `now.astimezone().utcoffset()` |
+| `time_status(start, end, now, zone)` | a `TimeStatus(label, spoken, happening)`: `Starts in 25 min` / `Starts in 25 minutes` on the session's own day, `Happening now` for `start <= now < end`, `Ended` from the end; None on an earlier day, and for a notice from its time on (D-186) |
 
 Weekday and month names come from fixed tuples, never locale `strftime`, and naive datetimes raise `ValueError`. Tests run under `TZ=America/Los_Angeles` and `Pacific/Kiritimati` (the `machine_tz` fixture), and cover both DST changes and midnight.
 
@@ -757,6 +759,7 @@ body = "Sign up at the board near registration."
 
 hall_prefix = "Expo "                # "Hall AB" in a name is "Expo Hall AB" (D-122)
 lightning_talks_location = "Pacific Ballroom - Arena"   # D-124
+other_locations = ["Elsewhere", "Lobby", "Out Front of Hyatt Regency"]   # the Map's "Other locations" (D-188)
 
 [[display_time_overrides]]          # also: [[venue_hours]] (service, pin, hours), [sponsor_credits]
 match = '\s*job\s*fair\s*&\s*community\s*showcase\s*'   # regex, case-insensitive, fullmatch on the cleaned name

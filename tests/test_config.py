@@ -39,6 +39,15 @@ def test_the_active_year_is_2026_in_pacific_time() -> None:
     )
 
 
+def test_the_registration_dashboard_is_year_data_and_optional() -> None:
+    # SESS-01's registration guidance links it; 2025 has none, and none is needed.
+    assert (
+        load_year(2026).conference.registration_url
+        == "https://us.pycon.org/2026/accounts/dashboard/"
+    )
+    assert load_year(2025).conference.registration_url == ""
+
+
 def test_2025_is_in_eastern_time() -> None:
     conference = load_year(2025).conference
     assert conference.zone == ZoneInfo("America/New_York")
@@ -229,6 +238,12 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
+            'registration_url = "https://',
+            'registration_url = "http://',
+            "2026/conference.toml: registration_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
             'key = "Keynote"',
             'key = "Talk"',
             "2026/conference.toml: tracks[1].key: duplicate track 'Talk'",
@@ -299,6 +314,24 @@ def edit(path: Path, old: str, new: str) -> None:
             r"match = '(\s*job",
             "2026/content.toml: display_time_overrides[0].match: missing ),",
         ),
+        (
+            "content.toml",
+            'other_locations = ["Elsewhere",',
+            "other_locations = [1,",
+            "2026/content.toml: other_locations: expected an array of strings, got [1,",
+        ),
+        (
+            "content.toml",
+            'other_locations = ["Elsewhere",',
+            'other_locations = ["Elsewhere", "ELSEWHERE",',
+            "2026/content.toml: other_locations[1]: duplicate place 'ELSEWHERE'",
+        ),
+        (
+            "content.toml",
+            'other_locations = ["Elsewhere",',
+            'other_locations = [" - ",',
+            "2026/content.toml: other_locations[0]: names no place",
+        ),
     ],
 )
 def test_malformed_file_names_file_key_and_problem(
@@ -323,7 +356,18 @@ def test_array_items_must_be_tables(data_dir: Path) -> None:
 
 def test_content_without_overrides_has_none(data_dir: Path) -> None:
     (data_dir / "2026" / "content.toml").write_text("# nothing yet\n", encoding="utf-8")
-    assert load_year(2026, data_dir).content.display_time_overrides == ()
+    content = load_year(2026, data_dir).content
+    assert content.display_time_overrides == ()
+    assert content.other_locations == ()
+
+
+def test_2026_lists_the_places_that_are_not_rooms() -> None:
+    """The Map's "Other locations" (ROOM-01, D-188): Ionic's map had no pin for them."""
+    assert load_year(2026).content.other_locations == (
+        "Elsewhere",
+        "Lobby",
+        "Out Front of Hyatt Regency",
+    )
 
 
 def test_missing_file_is_named(data_dir: Path) -> None:

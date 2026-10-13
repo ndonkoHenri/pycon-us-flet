@@ -10,6 +10,8 @@ content widths joins in P2 (#30).
 
 ``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
 (U1) arrives (D-32, D-146); ``SectionHeader`` is the heading of a group of rows.
+``use_minute()`` is the strip's minute tick as a hook, for any other view that depends
+on ``clock.now()``, such as the Map's "Now:" lines (D-188).
 """
 
 import asyncio
@@ -187,21 +189,26 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
 
 
-def SectionHeader(text: str) -> ft.Control:
+def SectionHeader(text: str, *, level: int | None = None, top: int = 16) -> ft.Control:
     """Return the heading of a group of rows: a day, a letter, a section (ux.md §3.9).
 
     Not sticky (U2). A header for screen readers, so they can jump group by group.
 
     Args:
         text: The heading, in sentence case.
+        level: Its heading level, on a page that declares an outline: 2 under a
+            detail page's level-1 title (ux.md §5.5).
+        top: The space above it: 16 dp where it opens a group in a list; 0 on a
+            detail page, whose list already puts 24 dp between sections.
     """
     return ft.Semantics(
         header=True,
+        heading_level=level,
         content=ft.Container(
             ft.Text(
                 text, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ft.Colors.PRIMARY
             ),
-            padding=ft.Padding.only(left=16, top=16, right=16, bottom=8),
+            padding=ft.Padding.only(left=16, top=top, right=16, bottom=8),
         ),
     )
 
@@ -371,8 +378,35 @@ def current_minute() -> int:
     return int(clock.now().timestamp()) // 60
 
 
+def use_minute() -> int:
+    """Re-render the calling component whenever the minute of ``clock.now()`` changes.
+
+    A hook for the views that depend on the time, such as the Map's "Now:" lines: they
+    recompute every 60 s while they are mounted and the app is in the foreground, on
+    the strip's loop (``Services.run_every``, ``TICK_SECONDS``; D-40, D-175), and catch
+    up at once on a resume. Leaving the screen stops the ticks. The Developer fake
+    clock moves the minute too.
+
+    Returns:
+        The minute, counted from the epoch; read it to recompute only when it changes.
+    """
+    svc = use_services()
+    minute, set_minute = ft.use_state(current_minute)
+
+    @report_errors
+    def tick() -> None:
+        set_minute(current_minute())  # the same minute renders nothing new
+
+    @report_errors
+    async def keep_up() -> None:
+        await svc.run_every(TICK_SECONDS, tick)
+
+    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    return minute
+
+
 def stop_ticks() -> None:
-    """The strip's effect cleanup: it has nothing of its own to undo.
+    """The ticking effects' cleanup (the strip's, ``use_minute()``'s): nothing to undo.
 
     Flet cancels an effect's task on unmount only when the effect has a cleanup (F2),
     and that cancel is what stops the ticks. A cleanup returned by a sync setup would

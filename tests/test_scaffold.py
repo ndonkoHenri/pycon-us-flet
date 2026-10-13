@@ -807,6 +807,25 @@ async def test_a_tick_shows_the_strip_once_the_data_turns_stale(
     assert text.value == "Updated 1 day ago"
 
 
+async def test_use_minute_re_renders_its_component_only_when_the_minute_changes(
+    hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
+) -> None:
+    """The Map's "Now:" lines keep up on the strip's loop (#100, D-175)."""
+    assert scaffold.use_minute() == scaffold.current_minute()
+    (setup, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
+    assert dependencies == []
+    assert cleanup is scaffold.stop_ticks  # what makes Flet cancel it on unmount (F2)
+    await setup()
+    ((seconds, tick),) = loops.started
+    assert seconds == scaffold.TICK_SECONDS
+    tick()  # at mount: the same minute as the render
+    assert hooks.renders == 0
+    moving_clock.move(timedelta(seconds=60))
+    tick()
+    assert hooks.renders == 1
+    assert hooks.state == scaffold.current_minute()
+
+
 class Network:
     """Stands in for ``api.fetch_feed``: counts requests, each held until released.
 

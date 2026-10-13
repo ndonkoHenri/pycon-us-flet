@@ -3,15 +3,16 @@
 Pure functions of the processed feed, like ``queries`` (architecture §7.5): a list owner
 builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
-that spans days.
+that spans days. ``places`` gives session detail its room tiles (SESS-02).
 """
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import date, tzinfo
 from itertools import groupby
 
-from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.models import ConferenceData, Room, Session
+from pycon_us.core.slugs import slugify_room
 from pycon_us.core.timefmt import local_date, time_range_label
 
 _DASH = "–"
@@ -103,3 +104,45 @@ def by_day(
     """
     for day, group in groupby(views, lambda view: local_date(view.session.start, zone)):
         yield day, list(group)
+
+
+@dataclass(frozen=True, eq=False)
+class Places:
+    """Where a session is, as session detail's room tiles show it (SESS-02).
+
+    Attributes:
+        label: The one place its row shows (``Session.display_location``, DATA-16);
+            empty for a break held in many rooms, or a notice.
+        room: The room ``label`` names, when the feed has one by that name (the
+            lightning talks' Arena is one, D-124); its tile pushes room detail.
+        others: Its other rooms that the feed has, each once, in the feed's order.
+    """
+
+    label: str
+    room: Room | None
+    others: tuple[Room, ...]
+
+    @property
+    def others_label(self) -> str:
+        """The folded rooms' title: "+4 more rooms", or "In 7 rooms" with no label."""
+        count = len(self.others)
+        rooms = "room" if count == 1 else "rooms"
+        return f"+{count} more {rooms}" if self.label else f"In {count} {rooms}"
+
+
+def places(session: Session, rooms: Mapping[str, Room]) -> Places:
+    """Return a session's places: the one it shows, then each other room once.
+
+    Args:
+        session: The session.
+        rooms: ``ConferenceData.rooms``, by slug (``slugs.slugify_room``).
+    """
+    label = session.display_location
+    room = rooms.get(slugify_room(label)) if label else None
+    seen = {room.slug} if room else set()
+    others: list[Room] = []
+    for slug in map(slugify_room, session.rooms):
+        if slug in rooms and slug not in seen:
+            seen.add(slug)
+            others.append(rooms[slug])
+    return Places(label, room, tuple(others))
