@@ -106,6 +106,54 @@ def test_a_room_s_row_views_all_leave_out_the_room() -> None:
     assert {view.place for view in views} == {""}
 
 
+def test_on_a_speaker_s_page_a_row_names_only_the_co_speakers() -> None:
+    """#99: the page names its speaker; the row says who else speaks."""
+    panel = processed(2026).sessions["110"]  # Catherine Nelson is second of six
+    view = session_view(panel, ZONE_2026, use_24h=False, of_speaker="Catherine Nelson")
+    assert view.speakers == (
+        "With Carol Willing, Jelle Zijlstra, Jodie Burchell, Laís Carvalho, "
+        "Maike Scherer"
+    )
+
+
+def test_on_a_speaker_s_page_a_row_given_alone_names_no_one() -> None:
+    talk = processed(2026).sessions["142"]  # Justin Lee's alone
+    view = session_view(talk, ZONE_2026, use_24h=False, of_speaker="Justin Lee")
+    assert view.speakers == ""
+    assert spoken_phrase(["Talk"], view) == (
+        "Talk. Python for Humans - Designing Python Code Like a User Interface. "
+        "10:30 to 11:00 AM, Grand Ballroom A."
+    )
+
+
+def test_a_speaker_s_row_says_its_co_speakers_as_it_shows_them() -> None:
+    """One field for both, so the display and the phrase cannot drift apart."""
+    talk = processed(2026).sessions["106"]
+    view = session_view(talk, ZONE_2026, use_24h=False, of_speaker="Catherine Nelson")
+    assert view.speakers == "With Robert Masson"
+    assert spoken_phrase(["Talk"], view).endswith(" With Robert Masson.")
+    assert "Catherine Nelson" not in spoken_phrase(["Talk"], view)
+
+
+def test_every_other_list_names_every_speaker() -> None:
+    talk = processed(2026).sessions["106"]
+    assert session_view(talk, ZONE_2026, use_24h=False).speakers == (
+        "Catherine Nelson, Robert Masson"
+    )
+
+
+def test_a_speaker_s_row_views_all_leave_out_the_speaker() -> None:
+    data = processed(2026)
+    views = session_views(
+        data,
+        ["128", "poster-detail-52"],
+        ZONE_2026,
+        use_24h=False,
+        of_speaker="Jian Yin",
+    )
+    assert [view.speakers for view in views] == ["With Wenxin Jiang"] * 2
+
+
 def test_row_views_keep_the_list_s_order_and_skip_unknown_ids() -> None:
     views = session_views(
         processed(2026), ["74", "gone", "142"], ZONE_2026, use_24h=False
