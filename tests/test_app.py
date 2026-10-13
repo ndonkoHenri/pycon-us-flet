@@ -376,10 +376,11 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
 ) -> None:
     """D-184: an Undo SnackBar then stays until it is used."""
     conference, prefs = await started(fake_page, svc)
-    assert not prefs.screen_reader
+    assert not prefs.screen_reader and not prefs.announcements
     semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver
+    semantics.features["supports_announcements"] = True  # iOS (F13)
     await on_resume(svc, conference, prefs)
-    assert prefs.screen_reader
+    assert prefs.screen_reader and prefs.announcements
 
 
 async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(

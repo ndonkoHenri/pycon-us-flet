@@ -83,6 +83,16 @@ def day_heading(day: date) -> str:
     return f"{_WEEKDAYS[day.weekday()]}, {_MONTHS[day.month - 1]} {day.day}"
 
 
+def day_tab_label(day: date) -> str:
+    """Return a day tab's one-line label, e.g. "Fri 15" (SCHED-01).
+
+    One line, so the tab keeps its text at 200 %, where a second line is clipped by
+    the tab bar's fixed height (S2); the month is in the spoken label
+    (``day_heading()``).
+    """
+    return f"{_WEEKDAYS[day.weekday()][:3]} {day.day}"
+
+
 def weekday_name(day: date) -> str:
     """Return the day's name, e.g. "Friday"."""
     return _WEEKDAYS[day.weekday()]

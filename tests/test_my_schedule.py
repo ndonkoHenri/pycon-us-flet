@@ -1,14 +1,13 @@
 """Tests for the My schedule tab (#94; NEW-01, SCHED-07, SCHED-08; ux.md §5.6).
 
-The screen runs in a real Flet session, as the rows do in ``test_session_rows.py``:
-the store providers above it, a star tap as a dispatched click, Flet's own scheduler
-re-rendering what changed. ``AppScaffold`` is replaced by its body and the status
-strip by a placeholder (both have their own tests), and the minute tick by a hook the
-test moves by hand, with ``clock.now()`` fixed. The fold itself is a pure function,
-tested in ``test_agenda.py``.
+The screen runs in a real Flet session (``tests/sessions.py``), as the rows do in
+``test_session_rows.py``: the store providers above it, a star tap as a dispatched
+click, Flet's own scheduler re-rendering what changed. ``AppScaffold`` is replaced by
+its body and the status strip by a placeholder (both have their own tests), and the
+minute tick by a hook the test moves by hand, with ``clock.now()`` fixed. The fold
+itself is a pure function, tested in ``test_agenda.py``.
 """
 
-import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -17,10 +16,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.connection import Connection
 from flet.messaging.session import Session
-from flet.pubsub.pubsub_hub import PubSubHub
 
 from pycon_us import clock
 from pycon_us.config import load_year
@@ -43,6 +39,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
+from tests.sessions import rendering, settle
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone
@@ -170,8 +167,7 @@ class Shown:
         return [str(c.value) for c in self.controls if isinstance(c, ft.Text)]
 
     async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
+        await settle()
 
     async def tap_star(self, session_id: str) -> None:
         star = self.node(f"my_schedule.favorite.{session_id}").content
@@ -268,17 +264,13 @@ async def shown(
         return minute
 
     navigated: list[str] = []
-    result = Shown(
-        Session(_connection()),
-        favorites,
-        prefs_service,
-        tick=lambda: ticks[-1](len(ticks)),
-        navigated=navigated,
-    )
+    renders: list[str] = []
+    slots: list[str] = []
+    strips: list[dict[str, Any]] = []
     phrase = rows.spoken_phrase
 
     def counted(*args: Any, **kwargs: Any) -> str:
-        result.renders.append(cast(SessionView, args[-1]).session.id)
+        renders.append(cast(SessionView, args[-1]).session.id)
         return phrase(*args, **kwargs)
 
     # Each row body says its phrase once: counting the calls counts the bodies.
@@ -286,21 +278,19 @@ async def shown(
     time_slot = screen.TimeSlot
 
     def counted_slot(label: str, *args: Any, **kwargs: Any) -> ft.Control:
-        result.slots.append(label)
+        slots.append(label)
         return time_slot(label, *args, **kwargs)
 
     monkeypatch.setattr(screen, "TimeSlot", counted_slot)
     monkeypatch.setattr(screen, "use_minute", use_minute)
 
     def strip(**kwargs: Any) -> ft.Control:
-        result.strips.append(kwargs)
+        strips.append(kwargs)
         return ft.Text("strip")
 
     monkeypatch.setattr(screen, "StatusStrip", strip)
     monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("skeleton"))
     monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs["body"])
-    page = result.session.page
-    monkeypatch.setattr(page, "navigate", navigated.append)
 
     @ft.component
     def Root() -> ft.Control:
@@ -314,25 +304,22 @@ async def shown(
             ),
         )
 
-    token = _context_page.set(page)  # pyright: ignore[reportArgumentType]
     try:
-        page.render(Root)
-        result.session.get_page_patch()
-        await result.settle()
-        yield result
+        async with rendering(Root) as session:
+            # Only a tap navigates, so the first render has not needed it.
+            monkeypatch.setattr(session.page, "navigate", navigated.append)
+            yield Shown(
+                session,
+                favorites,
+                prefs_service,
+                tick=lambda: ticks[-1](len(ticks)),
+                navigated=navigated,
+                renders=renders,
+                strips=strips,
+                slots=slots,
+            )
     finally:
         clock.set_test_now(None)
-        result.session.close()
-        await result.settle()
-        _context_page.reset(token)
-
-
-def _connection() -> Connection:
-    """A connection to no client, as Flet's own component tests use."""
-    conn = Connection()
-    conn.pubsubhub = PubSubHub()
-    conn.send_message = lambda message: None  # pyright: ignore[reportAttributeAccessIssue]
-    return conn
 
 
 # ------------------------------------------------------------------ the agenda

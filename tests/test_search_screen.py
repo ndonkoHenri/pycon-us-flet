@@ -46,7 +46,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
-from tests.test_session_rows import _connection
+from tests.sessions import connection
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -248,7 +248,7 @@ async def show(
     )
     favorites = Favorites()
     await favorites.load(storage)
-    result = Shown(Session(_connection()), memory, favorites, haptics)
+    result = Shown(Session(connection()), memory, favorites, haptics)
 
     def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
         result.searches.append((query, scope))

@@ -11,7 +11,7 @@ have modules of their own (D-160): ``prefs.py`` and ``favorites.py`` (P1).
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal, cast
 
 import flet as ft
@@ -377,13 +377,19 @@ class ViewMemory:
     import and every session's ``App`` gets that one, so a new session in the same
     process (an Android activity recreation, F26, or a relaunch after Back on Now, F29)
     finds it as the user left it. Fields join with the screens that remember something
-    (the day, offsets, the search query and scope from P1).
+    (the Schedule's day and offsets; the search query and scope from P1).
 
     Attributes:
         last_location: The top View's route, where the start route returns a new
             session (D-143, #74); empty until a screen records it.
         search_base: The location, query included, that opened ``/search``; Back from
             search returns there (D-19). The opener records it.
+        schedule_day: The day the Schedule shows; None until the user picks one, so
+            the Schedule opens on today during the conference (SCHED-01).
+        schedule_offsets: Each day list's scroll offset when its last scroll ended,
+            in logical pixels: the Schedule puts it back when the list shows again.
+        jumped_to_now: Whether the Schedule has jumped to the current slot in this
+            process: it does so once, on the first display of today (D-18, D-155).
         search_query: What is typed in the search field; an opener clears it, so
             each search starts empty (D-193).
         search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
@@ -392,5 +398,8 @@ class ViewMemory:
 
     last_location: str = ""
     search_base: str = "/now"
+    schedule_day: date | None = None
+    schedule_offsets: dict[date, float] = field(default_factory=dict)
+    jumped_to_now: bool = False
     search_query: str = ""
     search_scope: str = "all"

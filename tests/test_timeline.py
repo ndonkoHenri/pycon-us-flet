@@ -8,7 +8,7 @@ import gc
 import inspect
 import weakref
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +20,13 @@ from pycon_us.core import agenda, queries, search
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
-from pycon_us.core.timeline import Slot, schedule_order, timeline, track_sessions
+from pycon_us.core.timeline import (
+    Slot,
+    current_slot_key,
+    schedule_order,
+    timeline,
+    track_sessions,
+)
 from pycon_us.prefs import Prefs
 from tests.feeds import YEARS, changed, processed, settings
 
@@ -340,3 +346,73 @@ def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
     # The scan sees where they are defined, so it would see a use anywhere else.
     assert "core/timeline.py" in found["timeline"]
     assert "prefs.py" in found["excluded_tracks"]
+
+
+# ------------------------------------------------------------------ Jump to now (SCHED-16)
+
+PACIFIC = load_year(2026).conference.zone
+FRIDAY = date(2026, 5, 15)
+
+
+def friday_at(hour: int, minute: int = 0) -> datetime:
+    return datetime(2026, 5, 15, hour, minute, tzinfo=PACIFIC)
+
+
+def friday_slots() -> tuple[Slot, ...]:
+    return timeline(processed(2026), FRIDAY, Prefs().excluded_tracks)
+
+
+def test_the_jump_lands_on_the_slot_that_is_on() -> None:
+    """2:00 PM's talks run to 2:30 PM: at 2:10 that slot is the current one."""
+    assert current_slot_key(friday_slots(), friday_at(14, 10)) == (
+        "slot-2026-05-15T14:00:00-07:00"
+    )
+
+
+def test_a_slot_counts_from_its_first_minute() -> None:
+    assert current_slot_key(friday_slots(), friday_at(14)) == (
+        "slot-2026-05-15T14:00:00-07:00"
+    )
+
+
+def test_once_a_slot_is_over_the_jump_lands_on_the_next_one() -> None:
+    """At 2:35 the 2:00 PM slot is over; the next one starts at 2:45 PM."""
+    assert current_slot_key(friday_slots(), friday_at(14, 35)) == (
+        "slot-2026-05-15T14:45:00-07:00"
+    )
+
+
+def test_a_long_session_earlier_does_not_hold_the_jump_back() -> None:
+    """The 1:45 PM slot holds a summit until 5:45 PM; at 2:35 the jump goes on."""
+    slots = friday_slots()
+    earlier = next(s for s in slots if s.key == "slot-2026-05-15T13:45:00-07:00")
+    assert any(s.end > friday_at(14, 35) for s in earlier.sessions)
+    assert current_slot_key(slots, friday_at(14, 35)) != earlier.key
+
+
+def test_before_the_day_the_jump_lands_on_its_first_slot() -> None:
+    slots = friday_slots()
+    assert current_slot_key(slots, friday_at(6)) == slots[0].key
+
+
+def test_after_the_day_the_jump_lands_on_its_last_slot() -> None:
+    slots = friday_slots()
+    assert current_slot_key(slots, friday_at(23, 30)) == slots[-1].key
+
+
+def test_a_slot_of_notices_alone_is_over_once_it_starts() -> None:
+    """7:30 AM holds only "Registration Desk Opens", which has no duration."""
+    slots = friday_slots()
+    assert {s.track for s in slots[0].sessions} == {"Informational"}
+    assert current_slot_key(slots, friday_at(7, 31)) == slots[1].key
+
+
+def test_without_slots_there_is_nowhere_to_jump() -> None:
+    assert current_slot_key((), friday_at(10)) is None
+
+
+def test_the_key_is_always_one_the_filtered_day_shows() -> None:
+    """D-178: a slot the filter leaves out has no item to scroll to."""
+    slots = friday_slots()
+    keys = {s.key for s in slots}
+    assert all(current_slot_key(slots, friday_at(h)) in keys for h in range(6, 24))

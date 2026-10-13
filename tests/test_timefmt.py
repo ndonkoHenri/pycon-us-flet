@@ -111,6 +111,12 @@ def test_day_labels_use_fixed_english_names() -> None:
     assert timefmt.day_heading(date(2026, 9, 1)) == "Tuesday, September 1"
 
 
+def test_a_day_tab_is_one_short_line_and_its_weekday_is_spelt_out() -> None:
+    """SCHED-01: one line, so the tab keeps its text at 200 % (S2)."""
+    assert timefmt.day_tab_label(date(2026, 5, 15)) == "Fri 15"
+    assert timefmt.day_tab_label(date(2026, 5, 9)) == "Sat 9"
+
+
 def test_a_weekday_is_named_in_full() -> None:
     assert timefmt.weekday_name(date(2026, 5, 15)) == "Friday"
     assert timefmt.weekday_name(date(2026, 5, 18)) == "Monday"
