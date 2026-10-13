@@ -25,6 +25,12 @@ from pycon_us.ui.links import (
     open_link,
 )
 
+PLAIN_TOP = 16
+"""A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
+
+SUBTITLED_TOP = 14
+"""A row with a subtitle: its title's and its icons' distance from the top (``_tile``)."""
+
 
 def LinkTile(
     title: str,
@@ -126,10 +132,13 @@ def _ExternalLinkTile(
         [
             ft.Container(row, expand=True),
             # 12 dp from the edge puts the 24 dp icon of the 48 dp button where a
-            # ListTile's trailing icon sits, so the column of icons lines up; 4 dp from
-            # the top puts it 16 dp down, level with the leading icon (_tile), so at
-            # 200 % text it stays beside the first line instead of the block's middle.
-            ft.Container(copy_button, padding=ft.Padding.only(top=4, right=12)),
+            # ListTile's trailing icon sits, so the column of icons lines up; from the
+            # top it sits level with the leading icon (_tile), so at 200 % text it
+            # stays beside the first line instead of the block's middle.
+            ft.Container(
+                copy_button,
+                padding=ft.Padding.only(top=icon_top(subtitle) - 12, right=12),
+            ),
         ],
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.START,
@@ -143,18 +152,34 @@ def _tile(
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
 ) -> ft.ListTile:
-    """A link row's ``ListTile``, its icons beside the title's first line.
+    """A link row's ``ListTile``, its icons beside the title's first line at any height.
 
-    ``TITLE_HEIGHT`` centres a 56 dp row's icons; on a 72 dp row (a subtitle) the
-    leading icon sits 16 dp from the top, beside the title, and past 72 dp (200 % text)
-    both do. M3's default centres them against the whole block, which at 200 % puts
-    them beside the middle of a four-line title, far from the line they belong to.
+    M3's default centres the icons against the whole block, which at 200 % puts them
+    beside the middle of a four-line title, far from the line they belong to. Without a
+    subtitle, ``TITLE_HEIGHT`` centres a 56 dp row's icons and keeps them 16 dp from
+    the top of a taller one. With a subtitle it would not do: it centres the trailing
+    icon of a 72 dp row and moves both icons when the row grows (the Map's "Now:" line
+    comes and goes with the minute), while the title moves the other way. So a row with
+    a subtitle puts its icons and its title ``SUBTITLED_TOP`` from the top (``TOP``
+    and ``min_vertical_padding``): the 24 dp title line and the 24 dp icons share one
+    centre, 26 dp down, at every height, and a two-line row stays 72 dp (14 + 24 + 20
+    + 14).
     """
+    if subtitle is None:
+        alignment, padding = ft.ListTileTitleAlignment.TITLE_HEIGHT, None
+    else:
+        alignment, padding = ft.ListTileTitleAlignment.TOP, SUBTITLED_TOP
     return ft.ListTile(
         leading=ft.Icon(icon) if icon is not None else None,
         title=title,
         subtitle=subtitle,
         trailing=trailing,
         on_click=on_click,
-        title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+        title_alignment=alignment,
+        min_vertical_padding=padding,
     )
+
+
+def icon_top(subtitle: str | ft.Control | None) -> int:
+    """Return how far ``_tile`` puts its leading icon from the row's top, in dp."""
+    return PLAIN_TOP if subtitle is None else SUBTITLED_TOP

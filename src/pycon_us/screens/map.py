@@ -117,9 +117,17 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
 
     A ``LinkTile``, so it is one node for screen readers, read as one phrase ("Room
     103ABC, 26 sessions, Now: Building X"), and a tap pushes the room. The count keeps
-    its place under the name in every row; the "Now:" line, when there is one, comes
-    under it in the ``live`` colour, and its words say the same, so colour is never
+    its place under the name in every row; the "Now:" lines, when there are any, come
+    under it in the ``live`` colour, and their words say the same, so colour is never
     the only signal (D-33).
+
+    The count is every session listed under the room, poster details included, as the
+    room's detail lists them (ROOM-02) and as Ionic counted ("Expo Hall AB 35"), while
+    "Now:" follows Now & Next's timeline-only rule (D-179): so Expo Hall AB counts 35
+    where the Schedule shows 10 rows there.
+
+    The title of the session on is cut at three lines, as a session row's title is
+    (ux.md §3.6); "and 1 more" is a line of its own, so the cut never hides it.
 
     Args:
         entry: The room and the sessions on in it.
@@ -129,16 +137,18 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
     room = entry.room
     count = ft.Text(session_count(len(room.session_ids)))
     subtitle: ft.Control = count
-    if line := now_line(entry):
+    if lines := now_lines(entry):
+        title, *more = lines
         subtitle = ft.Column(
             [
                 count,
                 ft.Text(
-                    line,
+                    title,
                     color=live,
-                    max_lines=2,
+                    max_lines=3,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
+                *(ft.Text(line, color=live) for line in more),
             ],
             spacing=2,
         )
@@ -152,18 +162,24 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
 
 
 def session_count(count: int) -> str:
-    """Return a room's count line: "26 sessions", "1 session"."""
+    """Return a room's count line: "26 sessions", "1 session".
+
+    Args:
+        count: The sessions listed under the room, poster details included (ROOM-02).
+    """
     return f"{count} session" if count == 1 else f"{count} sessions"
 
 
-def now_line(entry: RoomEntry) -> str | None:
-    """Return what is on in the room, "Now: <title>", or None when nothing is.
+def now_lines(entry: RoomEntry) -> list[str]:
+    """Return what is on in the room: ["Now: <title>"], or [] when nothing is.
 
-    With several sessions on, the one that started last is named, and the others are
-    counted: "Now: Organizing IRL meetups and 1 more".
+    With several sessions on, the one that started last is named, and a second line
+    counts the others: ["Now: Organizing IRL meetups", "and 1 more"].
     """
     if not entry.on_now:
-        return None
+        return []
     first, *rest = entry.on_now
-    more = f" and {len(rest)} more" if rest else ""
-    return f"Now: {first.name}{more}"
+    lines = [f"Now: {first.name}"]
+    if rest:
+        lines.append(f"and {len(rest)} more")
+    return lines

@@ -158,6 +158,40 @@ def test_a_link_tile_shows_its_subtitle(page: FakePage) -> None:
     assert tile.subtitle == "Typing deep dive"
 
 
+def test_a_row_without_a_subtitle_centres_its_icons_by_the_title_height(
+    page: FakePage,
+) -> None:
+    tile = tile_of(LinkTile("Keynotes", "/more/keynotes", icon=ft.Icons.MIC))
+    assert tile.title_alignment == ft.ListTileTitleAlignment.TITLE_HEIGHT
+    assert tile.min_vertical_padding is None  # M3's 56 dp row
+
+
+@pytest.mark.parametrize("subtitle", ["26 sessions", ft.Column([ft.Text("a")])])
+def test_a_row_with_a_subtitle_tops_its_icons_level_with_the_title(
+    page: FakePage, subtitle: str | ft.Control
+) -> None:
+    """Icons and the title line share a centre at every height, so none moves (D-188).
+
+    ``TOP`` puts the icons ``min_vertical_padding`` down, and so is the title: 14 dp is
+    more than Flutter's own two-line title offset, so the tile lays out from it.
+    """
+    tile = tile_of(LinkTile("Room 103ABC", "/map/room/x", subtitle=subtitle))
+    assert tile.title_alignment == ft.ListTileTitleAlignment.TOP
+    assert tile.min_vertical_padding == 14  # 14 + 24 + 20 + 14: still a 72 dp row
+
+
+@pytest.mark.parametrize(("subtitle", "top"), [(None, 4), ("+1-562-662-4082", 2)])
+def test_the_copy_button_sits_level_with_the_leading_icon(
+    page: FakePage, subtitle: str | None, top: int
+) -> None:
+    row = LinkTile("Call the hotline", HOTLINE, subtitle=subtitle)
+    assert isinstance(row, ft.Row)
+    holder = row.controls[1]
+    assert isinstance(holder, ft.Container)
+    # The 48 dp button's 24 dp icon is 12 dp inside it: 16 dp, or 14 with a subtitle.
+    assert holder.padding == ft.Padding.only(top=top, right=12)
+
+
 def test_a_tap_on_a_link_tile_pushes_its_location(page: FakePage) -> None:
     tap(tile_of(LinkTile("Keynotes", "/more/keynotes")))
     assert page.navigated == ["/more/keynotes"]

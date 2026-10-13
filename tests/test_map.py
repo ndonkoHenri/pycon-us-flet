@@ -23,7 +23,7 @@ from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.locations import PAGES, drill_href
 from pycon_us.screens import map as map_screen
-from pycon_us.screens.map import Map, now_line, session_count
+from pycon_us.screens.map import Map, now_lines, room_row, session_count
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
@@ -266,20 +266,42 @@ def test_the_screen_ticks_with_the_minute(
 @pytest.mark.parametrize(
     ("names", "expected"),
     [
-        ((), None),
-        (("Lunch",), "Now: Lunch"),
+        ((), []),
+        (("Lunch",), ["Now: Lunch"]),
         (
             ("Organizing IRL meetups", "Board Games"),
-            "Now: Organizing IRL meetups and 1 more",
+            ["Now: Organizing IRL meetups", "and 1 more"],
         ),
-        (("A", "B", "C"), "Now: A and 2 more"),
+        (("A", "B", "C"), ["Now: A", "and 2 more"]),
     ],
 )
-def test_the_now_line_names_one_session_and_counts_the_others(
-    names: tuple[str, ...], expected: str | None
+def test_the_now_lines_name_one_session_and_count_the_others(
+    names: tuple[str, ...], expected: list[str]
 ) -> None:
     entry = SimpleNamespace(on_now=tuple(SimpleNamespace(name=n) for n in names))
-    assert now_line(cast(Any, entry)) == expected
+    assert now_lines(cast(Any, entry)) == expected
+
+
+def test_a_long_title_s_ellipsis_never_hides_the_other_sessions(page: FakePage) -> None:
+    """The cut is the title's alone: "and 1 more" is a line of its own (ux.md §5.8)."""
+    long = "Getting Started with Celery: Building Your First Background Task System"
+    entry = SimpleNamespace(
+        room=SimpleNamespace(
+            name="Room 102C", slug="room-102c", session_ids=("1",) * 4
+        ),
+        on_now=(SimpleNamespace(name=long), SimpleNamespace(name="Board games")),
+    )
+    row = room_row(cast(Any, entry), "/map", live=LIGHT_TOKENS.live)
+    tile = tiles([row])["map.room.room-102c"]
+    assert subtitle_lines(tile) == ["4 sessions", f"Now: {long}", "and 1 more"]
+    assert isinstance(tile.subtitle, ft.Column)
+    lines = [n for n in descendants(tile.subtitle) if isinstance(n, ft.Text)]
+    count, title, more = lines
+    # The title is cut as a session row's title is (three lines, ux.md §3.6) ...
+    assert (title.max_lines, title.overflow) == (3, ft.TextOverflow.ELLIPSIS)
+    # ... and neither the count nor the other sessions' line can be cut.
+    assert count.max_lines is None and more.max_lines is None
+    assert title.color == more.color == LIGHT_TOKENS.live
 
 
 @pytest.mark.parametrize(

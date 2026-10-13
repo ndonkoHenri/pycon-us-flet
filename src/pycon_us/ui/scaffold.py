@@ -10,6 +10,8 @@ content widths joins in P2 (#30).
 
 ``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
 (U1) arrives (D-32, D-146); ``SectionHeader`` is the heading of a group of rows.
+``use_minute()`` is the strip's minute tick as a hook, for any other view that depends
+on ``clock.now()``, such as the Map's "Now:" lines (D-188).
 """
 
 import asyncio
