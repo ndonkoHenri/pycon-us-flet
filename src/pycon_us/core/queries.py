@@ -273,18 +273,23 @@ class Phase(StrEnum):
     """Where an instant falls in the conference's timeline (D-14's seasons).
 
     A day runs from its first start to its last end, over every session listed under it.
+    Between two days, the conference-local date tells the evening from the morning, as
+    ux.md §5.1 words them: "That's a wrap for today", then "First up today at 9:00 AM".
 
     Attributes:
         BEFORE: Before the conference's first start.
+        BEFORE_DAY: Between days, on the conference-local date of the next day's first
+            start: from midnight to that start.
         DAY: Within a day, between slots included.
-        BETWEEN_DAYS: After a day's last end and before the next day's first start: the
-            evening and night, and the morning before the first slot.
+        AFTER_DAY: Between days, on an earlier conference-local date than the next day's
+            first start: from a day's last end to midnight.
         AFTER: From the conference's last end on.
     """
 
     BEFORE = "before"
+    BEFORE_DAY = "before_day"
     DAY = "day"
-    BETWEEN_DAYS = "between_days"
+    AFTER_DAY = "after_day"
     AFTER = "after"
 
 
@@ -341,7 +346,8 @@ class Agenda:
         days: The days with a saved session, oldest first.
         overlaps: For each saved session that overlaps another, the saved sessions it
             overlaps, in agenda order. Sessions overlap when each starts before the other
-            ends, so back-to-back sessions do not.
+            ends, so back-to-back sessions do not, and sessions in the same place at the
+            same time (the posters of one poster session) are one visit, not a clash.
     """
 
     days: tuple[AgendaDay, ...]
@@ -384,11 +390,13 @@ def now_next(data: ConferenceData, now: datetime) -> NowNext:
 def next_for_me(
     data: ConferenceData, favorites: AbstractSet[str], now: datetime
 ) -> str | None:
-    """Return "Your next session": the first saved session that is on or starts soon.
+    """Return "Your next session": the saved session to go to next, else the one that is on.
 
-    That is the saved session that starts first among those with ``end > now`` that have
-    started or start within ``NEXT_SESSION_WINDOW``. Poster details count, since they can
-    be saved. Saved ids that are not in the feed are ignored.
+    That is the first saved session that starts after ``now`` and within
+    ``NEXT_SESSION_WINDOW``; when none does, the saved session that is on and started
+    last. A session that is on never hides the next one: a saved summit or tutorial runs
+    for hours, and the talk after it is what the attendee has to walk to. Poster details
+    count, since they can be saved. Saved ids that are not in the feed are ignored.
 
     Args:
         data: The processed feed.
@@ -402,12 +410,13 @@ def next_for_me(
         ValueError: ``now`` is naive.
     """
     _require_aware(now)
-    due = [
-        session
-        for session in _saved(data, favorites)
-        if now < session.end and session.start <= now + NEXT_SESSION_WINDOW
-    ]
-    return min(due, key=_agenda_order).id if due else None
+    saved = sorted(_saved(data, favorites), key=_agenda_order)
+    upcoming = [s for s in saved if now < s.start <= now + NEXT_SESSION_WINDOW]
+    if upcoming:
+        return upcoming[0].id
+    ongoing = [s for s in saved if s.start <= now < s.end]
+    # ``max`` keeps the first of equal starts, so a tie goes to the agenda's order.
+    return max(ongoing, key=attrgetter("start")).id if ongoing else None
 
 
 def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
@@ -450,7 +459,11 @@ def _phase(data: ConferenceData, now: datetime) -> Phase:
         return Phase.AFTER
     if any(start <= now < end for start, end in spans):
         return Phase.DAY
-    return Phase.BETWEEN_DAYS
+    next_start = min(start for start, _ in spans if start > now)
+    # Compare dates in the conference's zone (the feed's), not in the zone of ``now``.
+    if now.astimezone(next_start.tzinfo).date() == next_start.date():
+        return Phase.BEFORE_DAY
+    return Phase.AFTER_DAY
 
 
 def _day_end(data: ConferenceData, day: Day) -> datetime:
@@ -467,12 +480,20 @@ def _overlaps(saved: list[Session]) -> dict[str, tuple[str, ...]]:
             continue  # an instant overlaps nothing
         running = [other for other in running if other.end > session.start]
         for other in running:
+            if _same_visit(session, other):
+                continue
             found.setdefault(other.id, []).append(session.id)
             found.setdefault(session.id, []).append(other.id)
         running.append(session)
     # Each list is in agenda order: the earlier sessions were added together when the
     # session itself came, then the later ones one by one as they came.
     return {session_id: tuple(ids) for session_id, ids in found.items()}
+
+
+def _same_visit(a: Session, b: Session) -> bool:
+    # The posters of one poster session, its Posters row and the Job Fair listed with it
+    # share one hall and one time: the attendee can see them all, so they do not clash.
+    return (a.location, a.start, a.end) == (b.location, b.start, b.end)
 
 
 def _saved(data: ConferenceData, favorites: AbstractSet[str]) -> list[Session]:

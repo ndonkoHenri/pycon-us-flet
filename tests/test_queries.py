@@ -10,7 +10,7 @@ import inspect
 import weakref
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from typing import Any
 
@@ -404,6 +404,9 @@ def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
 # --- Agenda and Now & Next (D-14, D-179; SCHED-25, NEW-01) ----------------------------
 
 
+POSTERS_ROW = "poster-Expo Hall AB-2026-05-17T09:30:00-07:00"
+
+
 def may(year: int, day: int, hour: int, minute: int = 0) -> datetime:
     """An instant in May of ``year``, in that year's conference zone."""
     zone = load_year(year).conference.zone
@@ -476,19 +479,38 @@ def test_the_last_slot_of_a_day_runs_to_its_end_and_tomorrow_is_up_next() -> Non
 
 
 @pytest.mark.parametrize(
-    ("day", "hour", "minute"),
+    ("day", "hour", "minute", "phase"),
     [
-        (16, 22, 30),  # the moment the day's last session ends
-        (17, 3, 0),  # the night
-        (17, 7, 59),  # the morning, before the day's first slot
+        (16, 22, 30, Phase.AFTER_DAY),  # the moment the day's last session ends
+        (16, 23, 59, Phase.AFTER_DAY),  # still "That's a wrap for today"
+        (17, 0, 0, Phase.BEFORE_DAY),  # midnight: the next slot is today
+        (17, 3, 0, Phase.BEFORE_DAY),  # the night
+        (17, 7, 59, Phase.BEFORE_DAY),  # the morning, before the day's first slot
     ],
 )
 def test_between_days_nothing_is_happening_and_the_next_day_is_up_next(
-    day: int, hour: int, minute: int
+    day: int, hour: int, minute: int, phase: Phase
 ) -> None:
+    """ux.md §5.1: "That's a wrap for today" until midnight, then "First up today"."""
     result = now_next(processed(2026), may(2026, day, hour, minute))
-    assert (result.phase, result.happening) == (Phase.BETWEEN_DAYS, ())
+    assert (result.phase, result.happening) == (phase, ())
     assert result.next_start == may(2026, 17, 8)
+
+
+@pytest.mark.parametrize(
+    ("local", "zone", "phase"),
+    [
+        # 5:30 AM on May 17 in UTC, but still the evening of May 16 at the venue.
+        ((16, 22, 30), UTC, Phase.AFTER_DAY),
+        # 9:30 PM on May 16 in Honolulu, but already the night of May 17 at the venue.
+        ((17, 0, 30), timezone(timedelta(hours=-10)), Phase.BEFORE_DAY),
+    ],
+)
+def test_between_days_the_date_is_the_conference_s_whatever_the_zone_of_now(
+    local: tuple[int, int, int], zone: tzinfo, phase: Phase
+) -> None:
+    now = may(2026, *local).astimezone(zone)
+    assert now_next(processed(2026), now).phase is phase
 
 
 def test_the_closing_day_runs_to_its_last_notice() -> None:
@@ -562,11 +584,29 @@ def test_the_next_session_stays_while_it_is_on_and_goes_when_it_ends() -> None:
     assert next_for_me(data, saved, may(2026, 15, 10, 30)) is None
 
 
-def test_a_saved_session_that_is_on_comes_before_one_starting_soon() -> None:
+def test_a_saved_session_starting_soon_comes_before_a_long_one_that_is_on() -> None:
+    """The Maintainers Summit (10:30 AM to 5:30 PM) and a 2:30 PM talk, both saved."""
+    data, saved = processed(2026), frozenset({"218", "61"})
+    assert next_for_me(data, saved, may(2026, 16, 11, 29)) == "218"  # talk not yet due
+    assert next_for_me(data, saved, may(2026, 16, 11, 30)) == "61"  # 3 h ahead: due
+    assert next_for_me(data, saved, may(2026, 16, 14, 20)) == "61"
+    assert next_for_me(data, saved, may(2026, 16, 14, 40)) == "61"  # on, started last
+    assert next_for_me(data, saved, may(2026, 16, 15)) == "218"  # only the summit is on
+
+
+def test_a_saved_session_that_is_on_shows_when_nothing_is_due() -> None:
     data = processed(2026)
     saved = frozenset({"2", "188"})  # tutorials 9:00 to 12:30 and 1:30 to 5:00 PM
-    assert next_for_me(data, saved, may(2026, 13, 12)) == "2"
-    assert next_for_me(data, saved, may(2026, 13, 12, 30)) == "188"
+    # At 10:29, 188 is 3 h 1 min away.
+    assert next_for_me(data, saved, may(2026, 13, 10, 29)) == "2"
+    assert next_for_me(data, saved, may(2026, 13, 10, 30)) == "188"
+
+
+def test_saved_sessions_with_one_start_are_taken_in_agenda_order() -> None:
+    """Tutorials in Room 101A and Room 101B, both 9:00 to 12:30 on May 13."""
+    data, saved = processed(2026), frozenset({"2", "19"})
+    assert next_for_me(data, saved, may(2026, 13, 8)) == "2"  # both due
+    assert next_for_me(data, saved, may(2026, 13, 10)) == "2"  # both on
 
 
 def test_the_next_session_ignores_unsaved_and_unknown_ids() -> None:
@@ -628,6 +668,40 @@ def test_one_long_session_overlaps_each_session_inside_it_in_agenda_order() -> N
     """A tutorial 9:00-12:30 and two sponsor workshops, 9:30-10:30 and 11:30-12:30."""
     agenda = my_schedule(processed(2026), frozenset({"22", "111", "106"}))
     assert agenda.overlaps == {"106": ("111", "22"), "111": ("106",), "22": ("106",)}
+
+
+def test_a_session_inside_two_earlier_ones_lists_them_in_agenda_order() -> None:
+    """May 14: tutorials 9:00-12:30 in Room 101A and 101B, a workshop 9:30-10:30."""
+    agenda = my_schedule(processed(2026), frozenset({"106", "107", "111"}))
+    assert agenda.overlaps == {
+        "106": ("107", "111"),
+        "107": ("106", "111"),
+        "111": ("106", "107"),
+    }
+
+
+def test_the_posters_of_one_poster_session_are_one_visit() -> None:
+    """Posters, the Posters row and the Job Fair share Expo Hall AB, 9:30 AM-1:00 PM.
+
+    An open space in Room 102C from 10:00 to 11:00 still overlaps each of them.
+    """
+    posters = {"poster-detail-60", "poster-detail-52", POSTERS_ROW, "227"}
+    data = processed(2026)
+    assert my_schedule(data, frozenset(posters)).overlaps == {}
+    overlaps = dict(my_schedule(data, frozenset(posters | {"9028"})).overlaps)
+    assert overlaps.pop("9028") == (
+        "poster-detail-60",
+        "poster-detail-52",
+        "227",
+        POSTERS_ROW,
+    )
+    assert overlaps == dict.fromkeys(posters, ("9028",))
+
+
+def test_sessions_in_one_room_that_end_apart_still_overlap() -> None:
+    """Two open spaces in Room 102C from 2:00 PM, one to 5:00 PM, one to 3:00 PM."""
+    agenda = my_schedule(processed(2026), frozenset({"9163", "9126"}))
+    assert agenda.overlaps == {"9126": ("9163",), "9163": ("9126",)}
 
 
 def test_back_to_back_sessions_do_not_overlap() -> None:
