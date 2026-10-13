@@ -175,9 +175,10 @@ that date motivates us but never justifies cutting corners.
   an extension's repository or any other repository, even when it would help the upstream track. Reading them (the
   pinned source, issues, PRs) is fine.
 - When the app needs something Flet lacks, open an `upstream` issue **here** with the full analysis: what happens,
-  the Flet source at the pin (files and lines), a minimal repro, the suggested fix and the interim. The owner, who
-  maintains Flet, decides whether and how to take it to Flet; the issue links the flet-dev issue or PR once the
-  owner has opened one.
+  the Flet source at the pin (files and lines), a minimal repro, the suggested fix and the interim; a short draft
+  diff in a fenced block when it makes the analysis clearer, never a patch file in the app's tree (D-213). The
+  owner, who maintains Flet, decides whether and how to take it to Flet; the issue links the flet-dev issue or PR
+  once the owner has opened one.
 - App issues that wait on it get `blocked` plus a link; meanwhile the interim from
   `docs/flet-gaps-and-extensions.md` ships.
 

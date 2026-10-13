@@ -22,7 +22,8 @@ App issues that wait on it get `blocked` and a link here. See docs/flet-gaps-and
 
 ## What Flet lacks
 
-<!-- What happens, the Flet source at the pin (files and lines), a minimal repro, the suggested fix. -->
+<!-- What happens, the Flet source at the pin (files and lines), a minimal repro, the suggested fix. A short draft
+diff in a fenced block when it makes the analysis clearer (D-213); nothing for Flet in the app's source tree. -->
 
 ## Interim in the app
 
