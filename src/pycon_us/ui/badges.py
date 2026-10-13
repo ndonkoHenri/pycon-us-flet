@@ -10,12 +10,13 @@ them as an argument, so a memoised row (D-153) that receives the tokens as a pro
 ``FavoriteButton`` is the one favourite control (D-30): a 48 dp star on every session
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
-SnackBar of ux.md §4.4 (D-184). ``selection_click()`` is that click, which search's
-scope chips give too (ux.md §4.5).
+SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to My
+schedule" (SCHED-24), with the same SnackBar and its count (D-207).
+``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
 """
 
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 
 import flet as ft
 
@@ -56,6 +57,10 @@ REMOVED = "Removed from My schedule"
 NOT_SAVED = "Couldn't save your change"
 """The SnackBar when an edit was shown but not written (D-120, D-172)."""
 
+ALREADY_SAVED = "All of them are already in My schedule"
+"""The SnackBar after "Add all" when every session was saved already: nothing changed,
+so there is no Undo (ux.md §5.10, D-207)."""
+
 UNDO = "Undo"
 """The SnackBar's one action when the edit can be taken back (D-29)."""
 
@@ -64,6 +69,9 @@ SNACK_BAR_MS = 4000
 
 type ToggleFavorite = Callable[[str], Awaitable[None]]
 """A list's one star handler: ``await on_toggle(session_id)``."""
+
+type AddAll = Callable[[Iterable[str]], Awaitable[None]]
+"""A track page's "Add all to My schedule": ``await add_all(session_ids)``."""
 
 
 def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
@@ -293,15 +301,94 @@ def _announce(
         reverse = await favorites.undo(storage, change)
         _announce(page, favorites, storage, reverse, keep=keep)
 
-    can_undo = bool(change.removed)
+    _show(page, message, undo=undo if change.removed else None, keep=keep)
+
+
+def added_feedback(change: Change) -> str:
+    """Return what the SnackBar says after "Add all to My schedule" (ux.md §5.10).
+
+    It counts only the sessions the tap saved, never those saved before (D-172):
+    "Added 16 sessions", "Added 1 session", or ``ALREADY_SAVED`` when there were none.
+    An edit that was shown but not saved says ``NOT_SAVED`` instead (ux.md §4.4).
+
+    Args:
+        change: What ``Favorites.add_many()`` returned.
+    """
+    if not change.saved:
+        return NOT_SAVED
+    count = len(change.added)
+    if not count:
+        return ALREADY_SAVED
+    return f"Added {count} {'session' if count == 1 else 'sessions'}"
+
+
+def use_add_all(favorites: Favorites) -> AddAll:
+    """Return a track page's "Add all to My schedule": ``await add_all(ids)`` (D-207).
+
+    A hook for the page that already calls ``use_favorites()``, made once
+    (``use_callback(..., [])``) as ``use_favorite_toggle()``'s handler is. No dialog
+    first: the add is reversible (D-29). It saves every id at once
+    (``Favorites.add_many()``), gives the selection click when it saved any, and shows
+    one SnackBar, ``added_feedback()``'s, with Undo whenever it saved some, also when
+    the write failed. Undo takes back only what the tap added (``Favorites.undo()``),
+    so the list is again what it was, and says nothing more, as a star's Undo does,
+    unless its own write fails ("Couldn't save your change", with no Undo of the Undo:
+    the menu offers the add again).
+
+    Args:
+        favorites: The page's ``use_favorites()`` store.
+
+    Returns:
+        The handler; it reports an unexpected error rather than raising (D-163).
+    """
+    page = ft.context.page
+    svc = use_services()
+    prefs = use_prefs()
+
+    @report_errors
+    async def add_all(session_ids: Iterable[str]) -> None:
+        change = await favorites.add_many(svc.storage, session_ids)
+        if change.added:
+            await selection_click(svc.haptics)
+
+        @report_errors
+        async def undo() -> None:
+            reverse = await favorites.undo(svc.storage, change)
+            if not reverse.saved:
+                _show(page, NOT_SAVED, undo=None, keep=prefs.screen_reader)
+
+        message = added_feedback(change)
+        _show(
+            page, message, undo=undo if change.added else None, keep=prefs.screen_reader
+        )
+
+    return ft.use_callback(add_all, [])
+
+
+def _show(
+    page: ft.Page,
+    message: str,
+    *,
+    undo: Callable[[], Awaitable[None]] | None,
+    keep: bool,
+) -> None:
+    """Show a favourites SnackBar: floating, 4 s, its one action Undo when given (D-29).
+
+    Args:
+        page: The session's page.
+        message: What it says.
+        undo: Undo's handler, or None for a SnackBar without an action.
+        keep: A screen reader is on: an Undo SnackBar stays until it is used or
+            replaced, as Flutter keeps one with an action (D-184).
+    """
     page.show_dialog(
         ft.SnackBar(
             content=ft.Text(message),
-            action=ft.SnackBarAction(UNDO, on_click=undo) if can_undo else None,
+            action=ft.SnackBarAction(UNDO, on_click=undo) if undo else None,
             behavior=ft.SnackBarBehavior.FLOATING,
             duration=SNACK_BAR_MS,
             # Flutter keeps a SnackBar with an action until it is used; only a
             # screen-reader user needs that time to reach Undo (D-184).
-            persist=can_undo and keep,
+            persist=undo is not None and keep,
         )
     )

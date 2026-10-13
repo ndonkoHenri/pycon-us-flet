@@ -14,10 +14,15 @@ re-renders one day and one row.
 The slug is the registry's (``conference.toml``, DATA-29), never derived from a track
 key: an unknown one shows the not-found state under the back arrow, with the hub as
 the way out (D-186). Without data the page loads and fails as the hub does (ux.md
-§4.1). "Add all to My schedule" joins the app bar with #103 (SCHED-24).
+§4.1).
+
+The app bar's overflow holds "Add all to My schedule" (SCHED-24, D-207): every
+session the page lists, on every day, straight to a SnackBar with Undo. It is not
+offered on the open spaces, whose list is the whole unconference rather than a
+programme to follow, nor on the notices and breaks, which have no stars (D-31).
 """
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from urllib.parse import unquote
 
 import flet as ft
@@ -35,11 +40,13 @@ from pycon_us.ui.badges import (
     SPANISH,
     TrackBadge,
     badge_row,
+    use_add_all,
     use_favorite_toggle,
 )
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.semantics import named
+from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
 SCREEN = "track"
@@ -47,6 +54,13 @@ SCREEN = "track"
 
 NOT_FOUND = "This track isn't in the current schedule"
 """The empty state of an unknown slug (ux.md §4.6)."""
+
+ADD_ALL = "Add all to My schedule"
+"""The overflow's item that saves the whole track (SCHED-24, D-207)."""
+
+NO_ADD_ALL = frozenset({"Open Space"})
+"""Track keys whose page has no "Add all" (ux.md §5.10): the open spaces are the whole
+unconference, sessions people propose on the day, not a track to follow end to end."""
 
 
 @ft.component
@@ -70,6 +84,7 @@ def TrackDetail(slug: str) -> ft.View:
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
+    add_all = use_add_all(favorites)
     tokens = use_tokens()
     track = svc.year.conference.track_for_slug(slug)
     data = conference.data
@@ -150,8 +165,46 @@ def TrackDetail(slug: str) -> ft.View:
             )
             for day in days
         )
+    actions: list[ft.Control] = []
+    if ids and offers_add_all(track):
+
+        @report_errors
+        async def add() -> None:
+            await add_all(ids)
+
+        actions.append(_menu(add))
     # The heading below names the page, so the app bar's title stays empty (D-186).
-    return AppScaffold(title="", body=ft.ListView(items, expand=True))
+    return AppScaffold(title="", body=ft.ListView(items, expand=True), actions=actions)
+
+
+def offers_add_all(track: Track) -> bool:
+    """Return whether the track's page offers "Add all to My schedule" (ux.md §5.10).
+
+    Not on the open spaces (``NO_ADD_ALL``) and not on the notices and breaks (the
+    ``logistics`` group), whose rows have no star to fill (D-31).
+
+    Args:
+        track: The page's track.
+    """
+    return track.key not in NO_ADD_ALL and track.group != NOTICE_GROUP
+
+
+def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
+    """The app bar's overflow ("More options"): "Add all to My schedule" (D-207)."""
+    menu = ft.PopupMenuButton(
+        icon=ft.Icons.MORE_VERT,
+        tooltip="More options",
+        items=[
+            ft.PopupMenuItem(
+                content=ft.Semantics(
+                    identifier=f"{SCREEN}.add_all", content=ft.Text(ADD_ALL)
+                ),
+                icon=ft.Icons.PLAYLIST_ADD,
+                on_click=on_add_all,
+            )
+        ],
+    )
+    return named(f"{SCREEN}.menu", menu)
 
 
 def shared_badges(track: Track, days: Sequence[DaySessions]) -> frozenset[str]:
