@@ -49,6 +49,7 @@ TITLE = "Lightning talks"
 """The page's name: its app bar's title and its More row (ux.md §4.9's spelling)."""
 
 SIGN_UP = "Sign up for a lightning talk"
+DOUBTS = "Think you can't do one?"
 
 BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
 """The sign-up's padding: M3's for a button with an icon, plus room above and below.
@@ -56,7 +57,6 @@ BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
 M3 buttons have none above and below, since their height is fixed at 40 dp; at 200 %
 text the label wraps to two lines that would touch the pill's edge. 10 dp keeps the
 one-line button 40 dp tall (20 dp of label)."""
-DOUBTS = "Think you can't do one?"
 
 
 @ft.component
