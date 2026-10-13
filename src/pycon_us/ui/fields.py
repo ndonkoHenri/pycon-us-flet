@@ -69,7 +69,10 @@ def SearchField(
                 autofocus=autofocus,
                 keyboard_type=keyboard_type,
                 hint_text=hint,
-                hint_max_lines=2,  # wraps at the largest text instead of clipping
+                # While empty the hint wraps at the largest text instead of clipping;
+                # with text it is hidden but still laid out, and two lines kept a
+                # blank line under the text at the largest size.
+                hint_max_lines=1 if value else 2,
                 prefix_icon=ft.Icons.SEARCH,
                 # Room for the Clear button above it, so text never runs under it.
                 suffix_icon=ft.Container(width=48, height=48) if value else None,

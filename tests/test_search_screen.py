@@ -628,3 +628,10 @@ async def test_one_type_of_results_gets_no_type_heading(opened: Shown) -> None:
     headings = [r for r in opened.results if r.startswith("h")]
     days = search(INDEX, "typing", "sessions").sessions
     assert headings == [f"h2:{day_heading(day.day)}" for day in days]
+
+
+async def test_the_hint_wraps_only_while_it_shows(opened: Shown) -> None:
+    """At the largest text a two-line hint kept a blank line under typed text."""
+    assert opened.field.hint_max_lines == 2
+    await opened.type("typing")
+    assert opened.field.hint_max_lines == 1
