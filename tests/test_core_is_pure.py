@@ -24,7 +24,11 @@ def is_flet(module: str) -> bool:
 
 
 def imported_modules(path: Path) -> set[str]:
-    """Return the absolute module names that ``path`` imports statically."""
+    """Return the absolute module names that ``path`` imports statically.
+
+    ``from a import b`` gives both ``a`` and ``a.b``, since ``b`` may be a submodule
+    (``from pycon_us.core import html_md``); a name that is not one does no harm.
+    """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     names: set[str] = set()
     for node in ast.walk(tree):
@@ -32,6 +36,7 @@ def imported_modules(path: Path) -> set[str]:
             names.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
             names.add(node.module)
+            names.update(f"{node.module}.{alias.name}" for alias in node.names)
     return names
 
 
@@ -73,4 +78,11 @@ def test_static_scan_sees_both_import_forms(tmp_path: Path) -> None:
     assert {name for name in imported_modules(module) if is_flet(name)} == {
         "flet",
         "flet_map",
+        "flet_map.Map",
     }
+
+
+def test_static_scan_sees_a_submodule_imported_from_its_package(tmp_path: Path) -> None:
+    module = tmp_path / "sample.py"
+    module.write_text("from pycon_us.core import html_md\n", encoding="utf-8")
+    assert "pycon_us.core.html_md" in imported_modules(module)
