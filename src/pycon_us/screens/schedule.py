@@ -2,8 +2,9 @@
 
 Until P1's day tabs (SCHED-01..04), it shows the status strip, where the feed came from
 and when, a Refresh button, every conference day with its session count (today marked
-by ``clock.now()``, so the Developer fake clock shows, D-184), and a few sessions as ``SessionRow``s with their stars, so "bundled first, a refresh replaces it"
-is visible on a phone (DATA-35, D-38) and the star works from a tab root. Without any
+by ``clock.now()``, so the Developer fake clock shows, D-184), and a few sessions as
+``SessionRow``s with their stars, so "bundled first, a refresh replaces it" is visible
+on a phone (DATA-35, D-38) and the star works from a tab root. Without any
 data (no snapshot or cache, NEW-03) it shows the skeleton until the first fetch has
 failed, then "Can't load the schedule", which stays during a retry (D-32, ux.md §4.1).
 """

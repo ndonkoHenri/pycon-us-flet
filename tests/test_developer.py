@@ -21,9 +21,8 @@ from flet.components.hooks.use_ref import MutableRef
 from pycon_us import capabilities, clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
-from pycon_us.core import feed
 from pycon_us.prefs import Prefs
-from pycon_us.screens import developer, now, schedule
+from pycon_us.screens import developer, now
 from pycon_us.screens.developer import (
     Developer,
     dev_options,
@@ -37,7 +36,15 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
 from pycon_us.theme import LIGHT_TOKENS
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 FEED = "http://127.0.0.1:8000/conference-2026.json"
@@ -66,6 +73,9 @@ def svc(tmp_path: Path) -> Services:
         storage=storage,
         memory=ViewMemory(),
         semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 
@@ -394,7 +404,7 @@ def test_the_capability_flags_are_shown_read_only(
     )
 
 
-# ------------------------------------------------------------------ Now and Schedule
+# ------------------------------------------------------------------ Now (Schedule: test_schedule.py)
 
 
 def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
@@ -417,33 +427,6 @@ def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
     assert today_line() == "Today in Pacific Time: Friday, May 15"
     clock.start_fake_clock(None)  # cleared: the next render is on real time
     assert today_line() != "Today in Pacific Time: Friday, May 15"
-
-
-def test_the_schedule_stub_marks_today_by_the_clock(
-    monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage
-) -> None:
-    conference = Conference()
-    monkeypatch.setattr(schedule, "use_services", lambda: svc)
-    monkeypatch.setattr(schedule, "use_conference", lambda: conference)
-    monkeypatch.setattr(schedule, "use_scroll_to_top", lambda: (ft.Ref(), None))
-    monkeypatch.setattr(schedule, "AppScaffold", lambda **kwargs: kwargs)
-    monkeypatch.setattr(schedule, "stub_body", lambda controls, **_: controls)
-    monkeypatch.setattr(ft, "use_view_path", lambda: "/schedule")
-    snapshot = svc.year.read_snapshot()
-    conference.data = feed.process(snapshot.raw, svc.year.feed_settings)
-
-    def marked() -> list[str]:
-        rows = inspect.unwrap(schedule.Schedule)()["body"]
-        return [
-            str(row.title)
-            for row in rows
-            if isinstance(row, ft.ListTile) and str(row.subtitle).endswith("· today")
-        ]
-
-    clock.start_fake_clock(datetime(2026, 5, 15, 9, 0, tzinfo=PACIFIC))
-    assert marked() == ["Fri, May 15"]
-    clock.start_fake_clock(None)  # real time: October, no conference day
-    assert marked() == []
 
 
 # ------------------------------------------------------------------ the helpers

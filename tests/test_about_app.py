@@ -25,7 +25,15 @@ from pycon_us.screens.about_app import UNLOCK_TAPS, AboutApp
 from pycon_us.services import Services, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
 
 
 @pytest.fixture
@@ -43,6 +51,9 @@ def svc(tmp_path: Path) -> Services:
         storage=storage,
         memory=ViewMemory(),
         semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 
