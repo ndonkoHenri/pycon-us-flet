@@ -25,6 +25,7 @@ from pycon_us.ui.rows import LinkTile
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
+    MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
@@ -45,6 +46,7 @@ def svc(tmp_path: Path) -> Services:
         storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
         memory=ViewMemory(),
         semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )

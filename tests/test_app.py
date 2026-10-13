@@ -32,6 +32,7 @@ from pycon_us.state import Conference, ViewMemory
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
+    MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
@@ -67,6 +68,7 @@ def svc(
         storage=storage,
         memory=ViewMemory(),
         semantics=semantics,
+        haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )
@@ -317,6 +319,20 @@ async def test_a_resume_reads_the_accessibility_flags_again(
     await fake_page.on_app_lifecycle_state_change(event(ft.AppLifecycleState.RESUME))
     assert semantics.reads == 2  # a snapshot (F13)
     assert prefs.os_high_contrast and prefs.reduce_motion
+
+
+async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
+    fake_page: FakePage,
+    svc: Services,
+    semantics: MemorySemantics,
+    network: Network,
+) -> None:
+    """D-184: an Undo SnackBar then stays until it is used."""
+    conference, prefs = await started(fake_page, svc)
+    assert not prefs.screen_reader
+    semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver
+    await on_resume(svc, conference, prefs)
+    assert prefs.screen_reader
 
 
 async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(

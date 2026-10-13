@@ -41,6 +41,7 @@ class Services:
         memory: The process's one ``ViewMemory`` (D-143).
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
+        haptics: The platform's haptic feedback: the star's selection click (D-30).
         launcher: Opens web pages, apps, ``tel:`` and ``mailto:`` links, by the link
             rule in ``ui.links`` (INFO-14).
         clipboard: Copy for phone numbers and email addresses (``ui.links``).
@@ -57,6 +58,7 @@ class Services:
     storage: Storage
     memory: ViewMemory
     semantics: ft.SemanticsService
+    haptics: ft.HapticFeedback
     launcher: ft.UrlLauncher
     clipboard: ft.Clipboard
     closed: asyncio.Event = field(default_factory=asyncio.Event)
@@ -86,6 +88,7 @@ class Services:
             storage=Storage(ft.SharedPreferences(), data_dir(), year.conference.year),
             memory=memory,
             semantics=ft.SemanticsService(),
+            haptics=ft.HapticFeedback(),
             launcher=ft.UrlLauncher(),
             clipboard=ft.Clipboard(),
         )
