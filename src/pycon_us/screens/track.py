@@ -18,8 +18,9 @@ the way out (D-186). Without data the page loads and fails as the hub does (ux.m
 
 The app bar's overflow holds "Add all to My schedule" (SCHED-24, D-207): every
 session the page lists, on every day, straight to a SnackBar with Undo. It is not
-offered on the open spaces, whose list is the whole unconference rather than a
-programme to follow, nor on the notices and breaks, which have no stars (D-31).
+offered on the notices and breaks, which have no stars (D-31). The open spaces never
+reach this page: their slug is the Open spaces page's own route (D-205), which has no
+overflow.
 """
 
 from collections.abc import Awaitable, Callable, Sequence
@@ -57,10 +58,6 @@ NOT_FOUND = "This track isn't in the current schedule"
 
 ADD_ALL = "Add all to My schedule"
 """The overflow's item that saves the whole track (SCHED-24, D-207)."""
-
-NO_ADD_ALL = frozenset({"Open Space"})
-"""Track keys whose page has no "Add all" (ux.md §5.10): the open spaces are the whole
-unconference, sessions people propose on the day, not a track to follow end to end."""
 
 
 @ft.component
@@ -168,7 +165,7 @@ def TrackDetail(slug: str) -> ft.View:
     actions: list[ft.Control] = []
     if ids and offers_add_all(track):
 
-        @report_errors
+        @report_errors  # every handler a screen defines has the net (D-163)
         async def add() -> None:
             await add_all(ids)
 
@@ -180,28 +177,30 @@ def TrackDetail(slug: str) -> ft.View:
 def offers_add_all(track: Track) -> bool:
     """Return whether the track's page offers "Add all to My schedule" (ux.md §5.10).
 
-    Not on the open spaces (``NO_ADD_ALL``) and not on the notices and breaks (the
-    ``logistics`` group), whose rows have no star to fill (D-31).
+    Not on the notices and breaks (the ``logistics`` group), whose rows have no star
+    to fill (D-31).
 
     Args:
         track: The page's track.
     """
-    return track.key not in NO_ADD_ALL and track.group != NOTICE_GROUP
+    return track.group != NOTICE_GROUP
 
 
 def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
     """The app bar's overflow ("More options"): "Add all to My schedule" (D-207).
 
-    The icon is in the item's own row, not ``PopupMenuItem.icon``: Flet puts that icon
-    and the text in a ``Row`` without ``Expanded``, so at 200 % text the label ran
-    off the menu's edge (F46). Here the text takes the rest of the row and wraps.
+    The item's content is a ``ListTile``, not ``PopupMenuItem.icon``: Flet puts that
+    icon and the text in a ``Row`` without ``Expanded``, so at 200 % text the label
+    ran off the menu's edge (F46). A tile's title wraps, and the theme's
+    ``TITLE_HEIGHT`` keeps the icon beside its first line (D-188). Flutter's item
+    takes the tile's padding away; ``min_height`` keeps the menu's 48 dp row, and the
+    12 dp gap is the menu's, not a list's 16.
     """
-    label = ft.Row(
-        [
-            ft.Icon(ft.Icons.PLAYLIST_ADD),
-            ft.Text(ADD_ALL, expand=True),
-        ],
-        spacing=12,
+    label = ft.ListTile(
+        leading=ft.Icon(ft.Icons.PLAYLIST_ADD),
+        title=ft.Text(ADD_ALL),
+        horizontal_spacing=12,
+        min_height=48,
     )
     menu = ft.PopupMenuButton(
         icon=ft.Icons.MORE_VERT,

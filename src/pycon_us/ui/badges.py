@@ -325,8 +325,9 @@ def added_feedback(change: Change) -> str:
 def use_add_all(favorites: Favorites) -> AddAll:
     """Return a track page's "Add all to My schedule": ``await add_all(ids)`` (D-207).
 
-    A hook for the page that already calls ``use_favorites()``, made once
-    (``use_callback(..., [])``) as ``use_favorite_toggle()``'s handler is. No dialog
+    A hook for the page that already calls ``use_favorites()``. Unlike
+    ``use_favorite_toggle()``'s handler it is not memoised: no memoised control
+    receives it, since the page builds its menu on every render (D-153). No dialog
     first: the add is reversible (D-29). It saves every id at once
     (``Favorites.add_many()``), gives the selection click when it saved any, and shows
     one SnackBar, ``added_feedback()``'s, with Undo whenever it saved some, also when
@@ -362,7 +363,7 @@ def use_add_all(favorites: Favorites) -> AddAll:
             page, message, undo=undo if change.added else None, keep=prefs.screen_reader
         )
 
-    return ft.use_callback(add_all, [])
+    return add_all
 
 
 def _show(

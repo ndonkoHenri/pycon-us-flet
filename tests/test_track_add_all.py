@@ -95,14 +95,13 @@ def label_of(action: str | ft.SnackBarAction | None) -> str | None:
     return action.label if isinstance(action, ft.SnackBarAction) else action
 
 
-def label_of_item(item: ft.PopupMenuItem) -> ft.Row:
-    """The item's label: its icon and its text in one row, under the identifier."""
-    return cast(ft.Row, cast(ft.Semantics, item.content).content)
+def label_of_item(item: ft.PopupMenuItem) -> ft.ListTile:
+    """The item's label: a tile with its icon and its text, under the identifier."""
+    return cast(ft.ListTile, cast(ft.Semantics, item.content).content)
 
 
 def item_text(item: ft.PopupMenuItem) -> ft.Text:
-    (text,) = [c for c in label_of_item(item).controls if isinstance(c, ft.Text)]
-    return text
+    return cast(ft.Text, label_of_item(item).title)
 
 
 async def add_all(page: Page) -> None:
@@ -222,22 +221,26 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
     assert page.snack_bars == []  # straight to the SnackBar: no dialog (D-29)
 
 
-async def test_the_items_label_wraps_at_large_text(show: Show) -> None:
-    """F46: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the icon
-    is in the label's own row, where the text takes the rest of the width."""
+async def test_the_items_label_wraps_beside_its_icon_at_large_text(show: Show) -> None:
+    """F46: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the label
+    is a tile: its title wraps, with the icon beside the first line (D-188), in the
+    menu's 48 dp row and 12 dp gap."""
     page = await show("charlas")
     (item,) = page.find(ft.PopupMenuItem)
     assert item.icon is None
-    icon, text = label_of_item(item).controls
+    tile = label_of_item(item)
+    assert isinstance(tile, ft.ListTile)
+    icon = cast(ft.Icon, tile.leading)
     assert isinstance(icon, ft.Icon) and icon.icon == ft.Icons.PLAYLIST_ADD
-    assert text is item_text(item) and text.expand
+    assert isinstance(tile.title, ft.Text) and tile.title.value == screen.ADD_ALL
+    assert tile.title_alignment is None  # the theme's TITLE_HEIGHT applies
+    assert (tile.min_height, tile.horizontal_spacing) == (48, 12)
+    assert tile.on_click is None  # the item takes the tap, and closes the menu
 
 
-@pytest.mark.parametrize("slug", ["open-spaces", "notices", "breaks"])
-async def test_it_is_not_offered_on_open_spaces_or_on_tracks_without_stars(
-    show: Show, slug: str
-) -> None:
-    """ux.md §5.10; the notices and breaks have no star to fill (D-31)."""
+@pytest.mark.parametrize("slug", ["notices", "breaks"])
+async def test_it_is_not_offered_on_tracks_without_stars(show: Show, slug: str) -> None:
+    """The notices and breaks have no star to fill (D-31)."""
     page = await show(slug)
     assert page.find(ft.PopupMenuButton) == []
     assert page.nodes("track.menu") == []
@@ -255,6 +258,8 @@ async def test_it_is_not_offered_without_sessions_to_add(show: Show) -> None:
 async def test_the_open_spaces_page_does_not_offer_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """ux.md §5.10: the open spaces' slug is this page's route (D-205), never a
+    track page's, and the page has no overflow."""
     conference = Conference(data=DATA, source="bundled", version=1)
     async with showing(
         open_spaces.OpenSpaces,
