@@ -7,16 +7,20 @@ lays out the day lists; these are the pieces they share:
   to start; a jump lands on it when no slot is on (``NowPlace.target``);
 - ``Landing``, ``PENDING``, ``InView`` and ``shows_now()``: where the last jump left
   today's list, so the "Now" button hides while the list is near it;
+- ``Signals`` and ``jumps_by_itself()``: what the screen's handlers tell its jumps, and
+  whether showing a day jumps by itself (today's first display);
 - ``spoken_place()``: where a jump the user asked for landed, for a screen reader.
 """
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 from datetime import date, datetime, tzinfo
 
 import flet as ft
 
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot
+from pycon_us.state import ViewMemory
 
 NOW_LINE = 2
 """The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in ``primary``."""
@@ -91,6 +95,10 @@ def _NowLine(time: str) -> ft.Control:
 class Landing:
     """Where a jump to now left today's list, and what was on screen there (D-204).
 
+    A scroll of the user's own while a jump is waiting ends it as its landing, since a
+    scroll end does not say who scrolled (the pinned ``ListView.scroll_to()`` returns
+    nothing about where it got to); the next half-screen scroll corrects the button.
+
     Attributes:
         day: The list's day, today when it jumped.
         place: Where now was among its slots: the place the list showed.
@@ -163,6 +171,34 @@ def shows_now(
     if isinstance(in_view, Pending):
         return True
     return in_view is not None and in_view.shows(day, place, version, excluded)
+
+
+@dataclass(eq=False)
+class Signals:
+    """What the Schedule's handlers tell its jumps; one per mounted screen.
+
+    Attributes:
+        ended: Set when the shown list's scroll ends (``jump_to_key()``).
+        settled: Set when ``Tabs`` reports a day, which it does once a switch has
+            finished sliding, the one asked for from Python included.
+        landing: Where the last jump left today's list; each scroll end of that list
+            is measured against it.
+    """
+
+    ended: asyncio.Event = field(default_factory=asyncio.Event)
+    settled: asyncio.Event = field(default_factory=asyncio.Event)
+    landing: Landing | None = None
+
+
+def jumps_by_itself(
+    day: date, current: date, today_slots: tuple[Slot, ...], memory: ViewMemory
+) -> bool:
+    """Whether showing ``day`` jumps to now unasked: today's first display (D-204).
+
+    Once per conference day in the process (``ViewMemory.jumped_on``, D-18), read when
+    the day shows, since a jump may have run since the render.
+    """
+    return day == current and bool(today_slots) and memory.jumped_on != current
 
 
 def spoken_place(

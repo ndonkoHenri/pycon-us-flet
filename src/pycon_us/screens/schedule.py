@@ -25,7 +25,6 @@ schedule", which stays during a retry (D-32, ux.md §4.1).
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
 from datetime import date
 from typing import cast
 
@@ -51,13 +50,15 @@ from pycon_us.screens.schedule_now import (
     InView,
     Landing,
     NowMark,
+    Signals,
+    jumps_by_itself,
     shows_now,
     spoken_place,
 )
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
-from pycon_us.state import ViewMemory, use_conference
+from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
@@ -71,23 +72,6 @@ logger = logging.getLogger(__name__)
 
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""
-
-
-@dataclass(eq=False)
-class Signals:
-    """What the Schedule's handlers tell its jumps; one per mounted screen.
-
-    Attributes:
-        ended: Set when the shown list's scroll ends (``jump_to_key()``).
-        settled: Set when ``Tabs`` reports a day, which it does once a switch has
-            finished sliding, the one asked for from Python included.
-        landing: Where the last jump left today's list; each scroll end of that list
-            is measured against it.
-    """
-
-    ended: asyncio.Event = field(default_factory=asyncio.Event)
-    settled: asyncio.Event = field(default_factory=asyncio.Event)
-    landing: Landing | None = None
 
 
 @ft.component
@@ -180,7 +164,7 @@ def Schedule() -> ft.View:
     async def opened() -> None:
         if shown is None:  # no data yet: the first display is the render that has it
             return
-        jumps = _jumps_by_itself(shown, current, today_slots, memory)
+        jumps = jumps_by_itself(shown, current, today_slots, memory)
         if not jumps:
             set_in_view(None)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
@@ -214,7 +198,7 @@ def Schedule() -> ft.View:
             return
         memory.schedule_day = day
         set_picked(day)
-        if _jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
+        if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
         else:
             await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
@@ -347,17 +331,6 @@ def _cancel_on_unmount() -> None:
     jump still waiting when the user switches tabs (D-142) would scroll a list that has
     left the page, and its error would reach whatever screen shows then.
     """
-
-
-def _jumps_by_itself(
-    day: date, current: date, today_slots: tuple[Slot, ...], memory: ViewMemory
-) -> bool:
-    """Whether showing ``day`` jumps to now unasked: today's first display (D-204).
-
-    Once per conference day in the process (``ViewMemory.jumped_on``, D-18), read when
-    the day shows, since a jump may have run since the render.
-    """
-    return day == current and bool(today_slots) and memory.jumped_on != current
 
 
 def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:

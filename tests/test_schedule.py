@@ -840,6 +840,25 @@ async def test_swiping_to_today_after_opening_on_another_day_jumps_once(
     assert kwargs == {"offset": 2000.0, "duration": 0}
 
 
+async def test_a_today_tap_from_another_day_is_that_day_s_one_jump(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """D-204: a Today tap counts as today's jump: one asked jump, none unasked after."""
+    memory.schedule_day = SATURDAY  # jumped_on is None: today has not shown yet
+    schedule = await shown()
+    await schedule.press_now()
+    await schedule.change_day(FRIDAY)  # Flutter's echo of the switch
+    await schedule.until(lambda: schedule.scrolls)
+    await settle()
+    assert schedule.keyed() == ["slot-2026-05-15T10:30:00-07:00"]  # once, not twice
+    assert memory.jumped_on == FRIDAY
+    await schedule.scroll_end(FRIDAY, 2000.0)
+    await schedule.change_day(SATURDAY)
+    schedule.scrolls.clear()
+    await schedule.change_day(FRIDAY)
+    assert schedule.keyed() == []  # the next display is put back, not moved
+
+
 async def test_a_re_render_as_on_back_from_a_detail_never_jumps(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
@@ -925,7 +944,7 @@ async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
 # ------------------------------------------------------------------ the button (#89)
 
 
-async def test_the_button_hides_while_the_place_it_goes_to_is_on_screen(
+async def test_the_button_hides_within_half_a_screen_of_where_the_jump_landed(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
     """D-204: within half a screen (700 px here) of where the jump landed (4,000 px)."""
