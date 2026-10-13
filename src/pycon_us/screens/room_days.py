@@ -4,7 +4,8 @@
 ``day_tab()``), the highlight's effect and "Now in this room". Here is what it places in
 each ``TabBarView`` page: ``day_list()``, a day's time slots (D-31, ``TimeSlot``: a
 ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s), with the row the
-room was opened from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit.
+room was opened from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit: its
+whole slot when it has the slot to itself.
 """
 
 from collections.abc import Callable
@@ -77,6 +78,9 @@ def day_list(
     """
     items: list[ft.Control] = []
     for start, slot in _slots(views):
+        # The row alone is lit when it shares its slot; else the whole slot, its time
+        # too, edge to edge as a selected list item is (D-194).
+        alone = [view.session.id for view in slot] == [reveal]
         rows: list[ft.Control] = []
         for view in slot:
             session = view.session
@@ -87,11 +91,14 @@ def day_list(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN
                 )
             )
-            if session.id == reveal:
+            if session.id == reveal and not alone:
                 row = _lit(row, row_key(session.id), on=lit, ms=fade_ms)
             rows.append(row)
         label = time_label(start, info.zone, use_24h=use_24h)
-        items.append(TimeSlot(label, rows, divider=bool(items)))
+        item = TimeSlot(label, rows, divider=bool(items))
+        if alone:
+            item = _lit(item, row_key(slot[0].session.id), on=lit, ms=fade_ms)
+        items.append(item)
     return ft.ListView(
         [head, *items] if head is not None else items,
         ref=list_ref,
@@ -116,7 +123,7 @@ def _slots(views: list[SessionView]) -> list[tuple[datetime, list[SessionView]]]
 
 
 def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:
-    """Wrap the row the room was opened from: its scroll target, and its highlight.
+    """Wrap the row the room was opened from, or its slot: the scroll target, lit.
 
     The box carries the ``ScrollKey`` (a plain key is never registered for
     ``scroll_to``) and the tint, which fades out in ``ms``; at 0, under reduced motion

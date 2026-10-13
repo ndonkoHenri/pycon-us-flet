@@ -38,7 +38,7 @@ from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME, LIGHT_TOKENS, TokensCtx
-from pycon_us.ui import scaffold
+from pycon_us.ui import scaffold, scrolling
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,
@@ -70,6 +70,9 @@ LIGHTNING = "163"
 
 SATURDAY_MORNING = datetime(2026, 5, 16, 10, 40, tzinfo=PACIFIC)
 """During "Python for Humans" in Grand Ballroom A."""
+
+SHARED_SLOT = ("9163", "9126")
+"""Room 102C's two sessions that start at 2:00 PM on Saturday: one slot, two rows."""
 
 
 @dataclass
@@ -123,8 +126,28 @@ class Room:
             await asyncio.sleep(0)
 
     async def wait(self, seconds: float) -> None:
+        """Let ``seconds`` pass: for tests that check nothing more happened."""
         await asyncio.sleep(seconds)
         await self.settle()
+
+    async def until(self, holds: Callable[[], bool], *, timeout: float = 2.0) -> None:
+        """Settle until ``holds()`` is true, or fail after ``timeout`` seconds.
+
+        A poll rather than a fixed wait, so a loaded host only makes it slower.
+        """
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while not holds():
+            assert loop.time() < deadline, "the screen did not get there in time"
+            await asyncio.sleep(0.01)
+        await self.settle()
+
+    def day_lists(self) -> list[ft.ListView]:
+        """The day pages, in tab order."""
+        (pages,) = [
+            c for c in self.session.index.values() if isinstance(c, ft.TabBarView)
+        ]
+        return [cast(ft.ListView, page) for page in pages.controls]
 
     async def show(self, shown: bool) -> None:
         """Mount the room again, or leave it (Back), in the same Flet session."""
@@ -322,15 +345,58 @@ async def test_opened_from_a_session_the_room_shows_its_day_and_scrolls_to_it_on
     assert room.memory.room_highlights == {VIEW: TACHYON}
 
 
+async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> None:
+    """``scroll_to`` reaches only a built item (F32): that list is built in full (D-154)."""
+    room = await render(highlighted(TACHYON))
+    lists = room.day_lists()
+    assert [lst.cache_extent for lst in lists] == [
+        None,
+        scrolling.FULL_LIST_EXTENT,
+        None,
+    ]
+    assert [lst.on_scroll is not None for lst in lists] == [False, True, False]
+
+
 async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
     room = await render(highlighted(TACHYON))
     box = room.lit_box()
     assert box.key == ft.ScrollKey("session-31")
-    assert getattr(box.content, "key", None) == TACHYON  # the row, keyed by its id
     assert box.bgcolor == room_days.HIGHLIGHT
     assert isinstance(box.animate, ft.Animation) and box.animate.duration == 250
-    await room.wait(0.1)
-    assert room.lit_box().bgcolor == room_days.UNLIT
+    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
+
+
+async def test_a_row_alone_in_its_slot_is_lit_with_its_time(render: Render) -> None:
+    """The tint spans the slot, the gutter's time too, as a selected item (D-194)."""
+    room = await render(highlighted(TACHYON))
+    box = room.lit_box()
+    assert _inside(room.node(f"room.session.{TACHYON}"), box)
+    assert any(
+        isinstance(c, ft.Semantics) and c.header and c.label == "3:15 PM"
+        for c in descendants(box)
+    )
+
+
+def _inside(node: ft.Control, ancestor: ft.Control) -> bool:
+    """Whether ``node`` renders under ``ancestor``, through components too."""
+    parent = node.parent
+    while parent is not None:
+        if parent is ancestor:
+            return True
+        parent = parent.parent
+    return False
+
+
+async def test_a_row_that_shares_its_slot_is_lit_alone(render: Render) -> None:
+    first, other = SHARED_SLOT
+    room = await render(
+        highlighted(first),  # the fixture's View path; the slug is what counts
+        slug="room-102c",
+        now=datetime(2026, 5, 16, 14, 10, tzinfo=PACIFIC),
+    )
+    box = room.lit_box()
+    assert getattr(box.content, "key", None) == first  # the row, keyed by its id
+    assert not _inside(room.node(f"room.session.{other}"), box)
 
 
 async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes(
@@ -340,8 +406,7 @@ async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes
     assert room.scrolls == [Scroll("session-31", 0)]
     assert room.lit_box().bgcolor == room_days.HIGHLIGHT
     assert room.lit_box().animate is None
-    await room.wait(0.1)
-    assert room.lit_box().bgcolor == room_days.UNLIT
+    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
 
 
 async def test_a_re_render_does_not_scroll_again(render: Render) -> None:
@@ -373,11 +438,11 @@ async def test_after_leaving_the_room_the_next_room_tile_highlights_again(
     render: Render,
 ) -> None:
     room = await render(highlighted(TACHYON))
-    await room.wait(0.1)
+    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
     await room.show(False)  # Back pops the room: it forgets its highlight
     assert room.memory.room_highlights == {}
     await room.show(True)  # the session's room tile, tapped again
-    await room.wait(0.1)
+    await room.until(lambda: len(room.scrolls) == 2)
     assert [scroll.key for scroll in room.scrolls] == ["session-31", "session-31"]
 
 
@@ -392,6 +457,8 @@ async def test_without_a_highlight_nothing_scrolls_and_today_shows(
         isinstance(c, ft.Container) and isinstance(c.key, ft.ScrollKey)
         for c in room.session.index.values()
     )
+    # A room opened from the Map builds no list in full.
+    assert {lst.cache_extent for lst in room.day_lists()} == {None}
 
 
 async def test_a_highlight_of_another_room_s_session_is_ignored(
@@ -500,6 +567,21 @@ async def test_now_in_this_room_names_the_session_on_and_opens_it(
     assert room.pushed == [f"{VIEW}/session/{HUMANS}"]
 
 
+async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
+    """Else the day's first slot reads as the section's second item (D-194)."""
+    room = await render(VIEW, now=SATURDAY_MORNING)
+    today = room.day_lists()[1]
+    # The outermost column between the tile and today's list: NowInRoom's own.
+    columns: list[ft.Column] = []
+    parent = room.node("room.now").parent
+    while parent is not None and parent is not today:
+        if isinstance(parent, ft.Column):
+            columns.append(parent)
+        parent = parent.parent
+    assert parent is today
+    assert isinstance(columns[-1].controls[-1], ft.Divider)
+
+
 async def test_now_in_this_room_says_where_a_streamed_session_is_given(
     render: Render,
 ) -> None:
@@ -533,8 +615,7 @@ async def test_with_several_on_the_latest_is_named_and_the_rest_counted(
 async def test_now_in_this_room_heads_today_s_list_only(render: Render) -> None:
     """It scrolls away with today's slots, so at large text they keep the screen."""
     room = await render(highlighted(SUNDAY_TALK))  # Sunday shows; today is Saturday
-    (pages,) = [c for c in room.session.index.values() if isinstance(c, ft.TabBarView)]
-    heads = [cast(ft.ListView, page).controls[0] for page in pages.controls]
+    heads = [lst.controls[0] for lst in room.day_lists()]
     assert [isinstance(head, ft.Component) for head in heads] == [False, True, False]
     assert len(room.nodes("room.now")) == 1
 
@@ -547,10 +628,9 @@ async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
     room = await render(VIEW, now=SATURDAY_MORNING)
     assert len(room.nodes("room.now")) == 1
     clock.set_test_now(datetime(2026, 5, 16, 11, 5, tzinfo=PACIFIC))  # talk over
-    await room.wait(0.05)
-    assert room.nodes("room.now") == []
+    await room.until(lambda: room.nodes("room.now") == [])
     clock.set_test_now(datetime(2026, 5, 16, 11, 20, tzinfo=PACIFIC))  # the next one
-    await room.wait(0.05)
+    await room.until(lambda: len(room.nodes("room.now")) == 1)
     tile = cast(ft.ListTile, room.node("room.now").content)
     assert cast(ft.Text, tile.title).value.startswith("Don’t Write Polars Code")
 

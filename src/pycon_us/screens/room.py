@@ -252,7 +252,7 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     One ``LinkTile`` that opens the session: its name cut at three lines, as a row's
     title is (ux.md §3.6), its time in ``Tokens.live``, and "and 1 more" on a line of
     its own when several are on (D-188's form), at the head of today's list. A pointer
-    to the session's row below, which has the star (D-194).
+    to the session's row below, which has the star (D-194). A divider closes it.
 
     Args:
         room: The room.
@@ -288,6 +288,9 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
                 subtitle=ft.Column(lines, spacing=2),
                 identifier=f"{SCREEN}.now",
             ),
+            # It closes the section here, so the first slot does not read as its
+            # second item, and only while something is on (D-194).
+            ft.Divider(height=1),
         ],
         spacing=0,
     )
