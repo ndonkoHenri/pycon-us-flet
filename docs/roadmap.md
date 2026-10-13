@@ -1023,7 +1023,7 @@ The demo script (offline start, Now & Next for me, My schedule, live edit in the
 
 ## 8. Upstream track
 
-Upstream work happens in flet-dev repositories. Each item is tracked here by an issue labelled `upstream` that links the flet-dev issue or PR (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
+Upstream work happens in flet-dev repositories, by the owner: agents work only in this repository (D-212). Each item is tracked here by an issue labelled `upstream` with the full analysis, which links the flet-dev issue or PR once the owner has opened one (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|

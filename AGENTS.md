@@ -49,8 +49,8 @@ that date motivates us but never justifies cutting corners.
   - **Owner-only choices** wait for the owner: app identity and bundle id; making anything public (the repo, a
     store listing, builds for people outside the team); accounts or anything that costs money; contacting people
     outside this work (the PSF, social media, blogs); and anything that would lose data or need someone else's
-    help to undo. Routine work is already authorised: issues, PRs and comments in this repo, and the flet-dev
-    issues and PRs the upstream track needs.
+    help to undo. Routine work is already authorised: issues, PRs and comments in this repo,
+    `ndonkoHenri/pycon-us-flet`, **and nowhere else** (D-212).
 - Docs live next to the code they describe and change in the **same PR** as the behaviour.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
@@ -170,8 +170,13 @@ that date motivates us but never justifies cutting corners.
 
 ### Upstream Flet work
 
-- When the app needs something Flet lacks, open (or link) the issue or PR in `flet-dev/flet` (or the extension's
-  repo). Track it here with an `upstream` issue that links it.
+- **This repository is the only one agents work in** (D-212, the owner's direction). Agents never open, comment on,
+  review or send PRs to `flet-dev/flet`, `flet-dev/serious-python`, an extension's repository or any other
+  repository, even when it would help the upstream track.
+- When the app needs something Flet lacks, open an `upstream` issue **here** with the full analysis: what happens,
+  the Flet source at the pin (files and lines), a minimal repro, the suggested fix and the interim. The owner, who
+  maintains Flet, decides whether and how to take it to Flet; the issue links the flet-dev issue or PR once the
+  owner has opened one.
 - App issues that wait on it get `blocked` plus a link; meanwhile the interim from
   `docs/flet-gaps-and-extensions.md` ships.
 
@@ -224,6 +229,9 @@ that date motivates us but never justifies cutting corners.
 6. Sign your work: agents act through the owner's GitHub account, so end every PR description and issue comment
    you write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work.
 7. Never call private PSF endpoints, commit secrets or edit `excluded/`.
+8. **Act only in this repository** (D-212). Never create or edit issues, PRs, comments, reviews or reactions in any
+   other repository, `flet-dev`'s included, and never ask another agent to. An upstream gap becomes an `upstream`
+   issue here (see Upstream Flet work).
 
 ## Definition of done
 

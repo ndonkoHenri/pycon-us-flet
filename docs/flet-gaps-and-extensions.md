@@ -149,7 +149,7 @@ Rules:
 ### 2.2 Interims and tracking
 
 - Every interim is usable, tested and honest, with no controls that do nothing. A missing capability is said in plain words, e.g. "Reminders aren't available in this build" (D-60). An interim is removed only by a tested dependency or pin change here, never because an upstream issue closed (D-64).
-- Each item is an `upstream` issue here, linking the flet-dev issue or PR. It goes in the milestone of the phase that needs it (D-89); items whose app need is "later" or "never" have no milestone until a phase adopts them. App issues that wait on it are `blocked`, and the interim ships meanwhile (D-97). Spikes S6 and S8 are `Spike:` issues labelled `test`, with verdicts in `docs/spikes/` (D-91).
+- Each item is an `upstream` issue here with the full analysis (what happens, the Flet source at the pin, a repro, the suggested fix). Agents never post in flet-dev or any other repository; the owner decides whether to take an item to Flet, and the issue links the flet-dev issue or PR once the owner has opened one (D-212). It goes in the milestone of the phase that needs it (D-89); items whose app need is "later" or "never" have no milestone until a phase adopts them. App issues that wait on it are `blocked`, and the interim ships meanwhile (D-97). Spikes S6 and S8 are `Spike:` issues labelled `test`, with verdicts in `docs/spikes/` (D-91).
 
 ### 2.3 Developing against an unreleased piece (D-81, F18)
 
