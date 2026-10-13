@@ -38,7 +38,7 @@ announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
     """Return whether a session shows as a notice rather than a session row (SCHED-04).
 
-    Year data decides, not a list of names (ux.md §1.9): every track of the
+    Year data decides, not a list of names (ux.md §1, principle 9): every track of the
     ``logistics`` group, which in 2026 are ``Break`` and ``Informational``.
 
     Args:

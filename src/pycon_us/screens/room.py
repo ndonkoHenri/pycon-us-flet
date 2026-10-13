@@ -76,11 +76,13 @@ def RoomDetail(room_slug: str) -> ft.View:
 
 
 def _day(view: SessionView, zone: tzinfo) -> date:
-    return local_date(view.session.display_start, zone)
+    return local_date(view.session.start, zone)
 
 
 def _start(view: SessionView) -> datetime:
-    return view.session.display_start
+    # The time group's start, as the Schedule's slots use it (DATA-13): the Job Fair
+    # sits in the 10:00 slot and its row says 9:30 (DATA-11, D-41).
+    return view.session.start
 
 
 def _slot(label: str, rows: list[ft.Control], *, divider: bool) -> ft.Control:
