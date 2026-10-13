@@ -8,11 +8,19 @@ proves they are drawn on the View the user is looking at (D-209, F47).
 """
 
 import asyncio
+from functools import cache
 
 import flet.testing as ftt
 from flet.testing.remote_tester import RemoteTester
 
+from pycon_us.config import load_year
+from pycon_us.core.feed import process
+from pycon_us.core.queries import days
+from pycon_us.core.timeline import timeline
+from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.session_rows import is_notice
 from tests.ui.helpers import (
+    START_TIMEOUT,
     STEP,
     remote,
     screenshot,
@@ -24,10 +32,6 @@ from tests.ui.helpers import (
     wait_for_tooltip,
 )
 
-START_TIMEOUT = 180.0
-"""Seconds from launch to Now: each run installs the test build afresh (as the shell
-flow allows)."""
-
 SETTLE_SECONDS = 1.0
 """Time for a tap's handler to run on a slow debug build before the next tap, and for
 the SnackBar's 250 ms entrance: a tap on Undo while the bar slides in misses it (on
@@ -36,9 +40,28 @@ the iOS simulator the first try tapped a bar 5 dp tall)."""
 REMOVED = "Removed from My schedule"
 """The removal's SnackBar (``ui.badges.REMOVED``), written out as a person reads it."""
 
-SESSION = "19"
-""""All about decorators", a tutorial on the conference's first day, the day the
-Schedule opens on outside the conference (D-192), in the bundled 2026 snapshot."""
+
+@cache
+def first_saveable() -> str:
+    """The identifier of the first session on the first day that has a star.
+
+    Outside the conference the Schedule opens on its first day (D-192), and a test
+    build is a fresh install with no remembered day, so this row is near the top of the
+    list: a flow cannot scroll (F21). Taken from the bundled snapshot, not written out,
+    so a new year or snapshot moves the flow with it; a notice (the registration desk)
+    has no star (D-31) and is skipped.
+    """
+    year = load_year()
+    info = year.conference
+    data = process(year.read_snapshot().raw, year.feed_settings)
+    first_day = days(data, info.first_day, info.last_day)[0]
+    session = next(
+        session
+        for slot in timeline(data, first_day, ())
+        for session in slot.sessions
+        if not is_notice(session, info)
+    )
+    return f"schedule.session.{semantics_key(session.id)}"
 
 
 async def test_snackbar_from_session_detail_shows_on_session_detail(
@@ -49,7 +72,7 @@ async def test_snackbar_from_session_detail_shows_on_session_detail(
 
     # Schedule › a session: a pushed View, with the back arrow and no bar (D-144).
     await tap_id(t, "app.nav.schedule")
-    await tap_id(t, f"schedule.session.{SESSION}")
+    await tap_id(t, first_saveable())
     await wait_for_id(t, "schedule.title", gone=True)  # the push has finished
     await wait_for_tooltip(t, "Back")
 

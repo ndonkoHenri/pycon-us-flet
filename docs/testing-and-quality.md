@@ -356,6 +356,7 @@ The machine records each row's attribution at enqueue time and compares it in an
 | Helper | What it does |
 |---|---|
 | `remote(flet_app)` | The `RemoteTester`; fails outside device mode |
+| `TIMEOUT`, `START_TIMEOUT`, `STEP` | Seconds a step may take (15), seconds from launch to Now (180: each run installs the build afresh and its first launch unpacks Python), and each poll's pump (100 ms) |
 | `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out.png` if the device still answers, and fails with what it saw |
 | `wait_for_id`, `wait_for_text`, `wait_for_tooltip` | `wait_for` with an identifier, an exact text or a tooltip |
 | `tap(t, finder)`, `tap_id`, `tap_text` | Tap the first match once it is on screen, then pump once |

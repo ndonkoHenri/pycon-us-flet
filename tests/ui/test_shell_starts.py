@@ -16,6 +16,7 @@ from pycon_us.core.queries import fold
 from pycon_us.core.timefmt import day_tab_label
 from tests.ui.helpers import (
     PLATFORM,
+    START_TIMEOUT,
     press_system_back,
     remote,
     screenshot,
@@ -27,10 +28,6 @@ from tests.ui.helpers import (
     wait_for_text,
     wait_for_tooltip,
 )
-
-START_TIMEOUT = 180.0
-"""Seconds from launch to Now. Each run installs the test build afresh, so its first
-launch unpacks Python before it starts, slowly on a busy host's emulator."""
 
 TABS = [  # (the bar's destination, its root's title), in the bar's order (D-13)
     ("app.nav.now", "now.title"),

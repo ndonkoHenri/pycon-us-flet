@@ -25,6 +25,10 @@ STEP = ft.Duration(milliseconds=100)
 TIMEOUT = 15.0
 """Seconds a step may take: a debug build on an emulator is slow, never this slow."""
 
+START_TIMEOUT = 180.0
+"""Seconds from launch to Now. Each run installs the test build afresh, so its first
+launch unpacks Python before it starts, slowly on a busy host's emulator."""
+
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
 """``android`` or ``ios``, set by ``flet test``."""
 
