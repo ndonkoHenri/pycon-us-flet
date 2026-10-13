@@ -496,3 +496,44 @@ def test_adaptive_scan_finds_the_keyword() -> None:
     assert adaptive_true_calls(
         "ft.Switch(adaptive=True)\nft.Switch(adaptive=False)\n"
     ) == [1]
+
+
+def resolved(role: object, dark: bool) -> str:
+    """The #RRGGBB a scheme role (``ft.Colors.ON_SURFACE``, "onsurface") takes."""
+    name = str(getattr(role, "value", role))
+    color_scheme = scheme(dark)
+    by_name = {
+        field.name.replace("_", ""): getattr(color_scheme, field.name)
+        for field in dataclasses.fields(ft.ColorScheme)
+    }
+    value = by_name.get(name)
+    if value is None:  # a role the theme leaves to Flet's neutral ramp
+        value = {key.lower(): v for key, v in NEUTRAL_RAMP[dark].items()}[name]
+    assert isinstance(value, str) and value.startswith("#"), (name, value)
+    return value
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_markdown_text_reads_at_aa_on_every_background_the_sheet_draws(
+    dark: bool,
+) -> None:
+    """SESS-06: a description's text, links and code on the page, on a code span and
+    in a block quote, in both schemes."""
+    sheet = theme.MARKDOWN_STYLE
+    assert sheet.code_text_style is not None and sheet.blockquote_decoration is not None
+    texts = {
+        field.name: resolved(style.color, dark)
+        for field in dataclasses.fields(ft.MarkdownStyleSheet)
+        if field.name.endswith("_text_style")
+        and (style := getattr(sheet, field.name)) is not None
+    }
+    backgrounds = {
+        "surface": resolved(ft.Colors.SURFACE, dark),
+        "code": resolved(sheet.code_text_style.bgcolor, dark),
+        "blockquote": resolved(sheet.blockquote_decoration.bgcolor, dark),
+    }
+    for (text, color), (where, background) in itertools.product(
+        texts.items(), backgrounds.items()
+    ):
+        ratio = contrast_ratio(background, color)
+        assert ratio >= AA_TEXT, (text, where, round(ratio, 2))

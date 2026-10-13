@@ -1,4 +1,6 @@
-"""Tests for session detail (SESS-01..03; ux.md §5.5): header, When and where, the star.
+"""Tests for session detail (SESS-01..03, -06, -07; ux.md §5.5).
+
+The header, When and where, the star, the speakers and the description.
 
 ``SessionDetail`` runs in a real Flet session, as the rows do in ``test_session_rows.py``:
 the store providers are written out above it, ``AppScaffold`` is replaced by a column
@@ -62,6 +64,12 @@ KEYNOTE = "176"
 
 JOB_FAIR = "178"
 """Sun May 17, shown from 9:30 though grouped at its 10:00 start (DATA-11)."""
+
+PANEL = "110"
+"""Beyond the Hype: six speakers, five of them without a photo in the feed."""
+
+OPEN_SPACE = "9086"
+"""pytest for system tests: its Markdown links ``[pytest](pytest.org)`` (D-140)."""
 
 BREAK = (
     "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B"
@@ -481,6 +489,125 @@ async def test_reduced_motion_opens_the_rooms_without_animation(
     detail = await render(LIGHTNING)
     folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
     assert cast(ft.AnimationStyle, folded.animation_style).duration == 0
+
+
+# ------------------------------------------------------------------ speakers (SESS-07)
+
+
+def speaker_rows(detail: Detail) -> list[ft.Semantics]:
+    return [
+        node
+        for node in detail.session.index.values()
+        if isinstance(node, ft.Semantics)
+        and (node.identifier or "").startswith("session.speaker.")
+    ]
+
+
+async def test_a_speaker_s_row_pushes_their_page_one_level_up(render: Render) -> None:
+    detail = await render(TALK)
+    (row,) = speaker_rows(detail)
+    assert row.identifier == "session.speaker.150"
+    assert words(row) == ["JL", "Justin Lee"]  # the avatar's initials, then the name
+    tile = next(n for n in descendants(row) if isinstance(n, ft.ListTile))
+    await detail.click(tile)
+    assert detail.pushed == [f"{VIEW}/speaker/150"]
+
+
+async def test_the_speakers_come_in_the_feed_s_order_with_their_photos(
+    render: Render,
+) -> None:
+    detail = await render(PANEL)
+    session = processed(2026).sessions[PANEL]
+    rows = speaker_rows(detail)
+    assert [words(row)[1] for row in rows] == list(session.speaker_names)
+    avatars = [
+        next(n for n in descendants(row) if isinstance(n, ft.CircleAvatar))
+        for row in rows
+    ]
+    # A speaker without a photo shows their initials alone, with no empty request.
+    missing = [a for a in avatars if a.foreground_image_src is None]
+    assert len(missing) == 5
+    assert all(isinstance(a.content, ft.Text) and a.content.value for a in missing)
+
+
+async def test_a_pseudo_speaker_is_plain_text_that_nothing_taps(
+    render: Render,
+) -> None:
+    """D-125: "Hosted by …" is no person with a page (DATA-15)."""
+    detail = await render(LIGHTNING)
+    assert speaker_rows(detail) == []
+    hosts = next(
+        n
+        for n in detail.session.index.values()
+        if isinstance(n, ft.Text) and str(n.value).startswith("Hosted by")
+    )
+    assert hosts.value == "Hosted by Abigail, Chris, Cristián, and Lorena"
+    holder: object = hosts.parent
+    while isinstance(holder, ft.Control):
+        assert getattr(holder, "on_click", None) is None, holder
+        holder = holder.parent
+
+
+async def test_a_session_without_speakers_has_no_speakers_section(
+    render: Render,
+) -> None:
+    detail = await render(KEYNOTE)
+    assert speaker_rows(detail) == []
+    assert all(text != "Speakers" for text, _ in headings(detail))
+
+
+# ------------------------------------------------------------------ about (SESS-06)
+
+
+def headings(detail: Detail) -> list[tuple[str, int | None]]:
+    return [
+        (" ".join(words(n)), n.heading_level)
+        for n in detail.session.index.values()
+        if isinstance(n, ft.Semantics) and n.header
+    ]
+
+
+def markdown(detail: Detail) -> ft.Markdown:
+    (found,) = [
+        n
+        for n in descendants(detail.node("session.description"))
+        if isinstance(n, ft.Markdown)
+    ]
+    return found
+
+
+async def test_the_description_follows_the_speakers_under_its_own_heading(
+    render: Render,
+) -> None:
+    """ux.md §5.5: speakers, then About, each a level-2 section."""
+    detail = await render(TALK)
+    assert [h for h in headings(detail) if h[1] == 2] == [
+        ("Speakers", 2),
+        ("About", 2),
+    ]
+    text = markdown(detail)
+    assert text.value == processed(2026).sessions[TALK].description_md
+    assert text.selectable
+
+
+async def test_a_link_in_a_description_opens_in_the_in_app_browser(
+    render: Render,
+) -> None:
+    detail = await render(OPEN_SPACE)
+    text = markdown(detail)
+    assert "[pytest](pytest.org)" in text.value
+    await detail.session.dispatch_event(text._i, "tap_link", "pytest.org")
+    await detail.settle()
+    assert detail.launcher.launched == [
+        ("https://pytest.org", ft.LaunchMode.IN_APP_BROWSER_VIEW)
+    ]
+    assert detail.pushed == []
+
+
+async def test_a_session_without_a_description_has_no_about(render: Render) -> None:
+    detail = await render(BREAK)
+    assert detail.nodes("session.description") == []
+    assert all(text != "About" for text, _ in headings(detail))
 
 
 # ------------------------------------------------------------------ registration
