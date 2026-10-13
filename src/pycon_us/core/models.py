@@ -171,6 +171,10 @@ class Sprint:
         logo_url: The logo's URL, or None when the feed has none.
         submitter: Who signed the project up.
         description_md: ``description`` as Markdown (D-130).
+        description_text: ``description``'s visible text, whitespace collapsed
+            (``html_md.to_text``): the Sprints card's preview (EVT-05).
+        search_text: The folded name, submitter and description text, for the
+            Sprints filter (EVT-06, D-46): never markup.
     """
 
     id: str
@@ -180,6 +184,8 @@ class Sprint:
     logo_url: str | None
     submitter: str
     description_md: str = ""
+    description_text: str = ""
+    search_text: str = ""
 
 
 @dataclass(frozen=True, eq=False)
