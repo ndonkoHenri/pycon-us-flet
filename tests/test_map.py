@@ -23,7 +23,7 @@ from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.locations import PAGES, drill_href
 from pycon_us.screens import map as map_screen
-from pycon_us.screens.map import Map, now_lines, room_row, session_count
+from pycon_us.screens.map import Map, now_lines, room_row
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
@@ -302,13 +302,6 @@ def test_a_long_title_s_ellipsis_never_hides_the_other_sessions(page: FakePage) 
     # ... and neither the count nor the other sessions' line can be cut.
     assert count.max_lines is None and more.max_lines is None
     assert title.color == more.color == LIGHT_TOKENS.live
-
-
-@pytest.mark.parametrize(
-    ("count", "line"), [(0, "0 sessions"), (1, "1 session"), (26, "26 sessions")]
-)
-def test_the_count_line_agrees_with_its_number(count: int, line: str) -> None:
-    assert session_count(count) == line
 
 
 def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(

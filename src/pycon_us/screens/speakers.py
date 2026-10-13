@@ -18,9 +18,6 @@ many speakers a filter found, and clearing the filter puts the focus back in the
 since both Clear controls go away when used (ux.md §5.7).
 """
 
-from collections.abc import Callable
-from typing import Any
-
 import flet as ft
 
 from pycon_us.core.search import search_index
@@ -33,6 +30,7 @@ from pycon_us.core.speakers import (
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.ui.fields import SearchField
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
@@ -132,7 +130,16 @@ def Speakers() -> ft.View:
                 # place in the body, and Flet would rebuild it and every row (D-153).
                 ft.Column(
                     [
-                        _filter_field(query, changed, clear, field_ref),
+                        SearchField(
+                            value=query,
+                            on_change=changed,
+                            on_clear=clear,
+                            ref=field_ref,
+                            hint=FILTER_HINT,
+                            label=FILTER_HINT,
+                            clear_tooltip=CLEAR_FILTER,
+                            identifier=f"{SCREEN}.filter",
+                        ),
                         *([count] if count else []),
                     ],
                     spacing=0,
@@ -145,72 +152,6 @@ def Speakers() -> ft.View:
             # The field takes the screen's width; a Column would size it to its own.
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         ),
-    )
-
-
-def _filter_field(
-    query: str,
-    on_change: ft.ControlEventHandler[ft.TextField],
-    on_clear: Callable[[], Any],
-    ref: ft.Ref[ft.TextField],
-) -> ft.Control:
-    """Return the filter field, pinned above the list so it is always in reach.
-
-    Controlled (D-157): its value is the screen's state, which its ``on_change`` sets,
-    so a re-render never wipes what the user typed (F33). A pill on
-    ``surface_container_high`` without a line, focused or not, like Material's search
-    bar (ux.md §3.6), with a Clear button once there is text. Autocorrect and Android's
-    suggestions are off: they would "fix" names.
-
-    The hint names the field only while it is empty, so the field's semantics node
-    is merged with a label once there is text. A merge takes in every descendant, so
-    the Clear button lies over the field, in a ``Stack``, rather than inside it as
-    its suffix, where it would stop being a button of its own.
-
-    Args:
-        query: The filter as typed.
-        on_change: Sets the screen's state from the field.
-        on_clear: Empties the filter and puts the focus back in the field.
-        ref: Set to the field, for ``on_clear``'s focus.
-    """
-    pill = ft.OutlineInputBorder(
-        border_radius=28,  # full radius, as search fields have
-        side=ft.BorderSide(0, ft.Colors.TRANSPARENT),
-    )
-    text_field = ft.MergeSemantics(
-        ft.Semantics(
-            identifier=f"{SCREEN}.filter",
-            # Not while empty: the hint names the field then, and both would read it
-            # twice.
-            label=FILTER_HINT if query else None,
-            content=ft.TextField(
-                ref=ref,
-                value=query,
-                on_change=on_change,
-                hint_text=FILTER_HINT,
-                hint_max_lines=2,  # wraps at the largest text instead of clipping
-                prefix_icon=ft.Icons.SEARCH,
-                # Room for the Clear button above it, so text never runs under it.
-                suffix_icon=ft.Container(width=48, height=48) if query else None,
-                filled=True,
-                fill_color=ft.Colors.SURFACE_CONTAINER_HIGH,
-                # The focused entry too: else the theme draws a 2 dp primary ring.
-                border={ft.ControlState.DEFAULT: pill, ft.ControlState.FOCUSED: pill},
-                autocorrect=False,
-                enable_suggestions=False,
-            ),
-        )
-    )
-    clear_button = ft.IconButton(
-        ft.Icons.CLOSE, tooltip=CLEAR_FILTER, on_click=on_clear, right=4
-    )
-    return ft.Container(
-        ft.Stack(
-            [text_field, *([clear_button] if query else [])],
-            alignment=ft.Alignment.CENTER_RIGHT,  # the button, level with the text
-            fit=ft.StackFit.PASS_THROUGH,  # the field keeps the screen's width
-        ),
-        padding=ft.Padding.only(left=16, top=8, right=16, bottom=4),
     )
 
 

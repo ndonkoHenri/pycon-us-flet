@@ -13,7 +13,7 @@ screen has no control for them.
 import flet as ft
 
 from pycon_us import clock
-from pycon_us.core.rooms import RoomEntry, RoomList, room_list
+from pycon_us.core.rooms import RoomEntry, RoomList, room_list, session_count
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -159,15 +159,6 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
         subtitle=subtitle,
         identifier=f"{SCREEN}.room.{room.slug}",
     )
-
-
-def session_count(count: int) -> str:
-    """Return a room's count line: "26 sessions", "1 session".
-
-    Args:
-        count: The sessions listed under the room, poster details included (ROOM-02).
-    """
-    return f"{count} session" if count == 1 else f"{count} sessions"
 
 
 def now_lines(entry: RoomEntry) -> list[str]:

@@ -45,6 +45,17 @@ class RoomList:
     other_locations: tuple[RoomEntry, ...]
 
 
+def session_count(count: int) -> str:
+    """Return a room's count line: "26 sessions", "1 session".
+
+    The Map's rooms list and search's room results both show it (D-188, D-193).
+
+    Args:
+        count: The sessions listed under the room, poster details included (ROOM-02).
+    """
+    return f"{count} session" if count == 1 else f"{count} sessions"
+
+
 def room_list(
     data: ConferenceData, now: datetime, other_locations: Collection[str]
 ) -> RoomList:

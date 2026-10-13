@@ -1,10 +1,13 @@
 """Tests for the badges (THEME-08, SCHED-20; D-25): the pill, and which a session shows.
 
+Also the selection click the star and search's chips share (ux.md §4.5, D-193).
+
 The colours' contrast is in ``tests/test_theme.py``; here, that a badge draws them and
 always carries a name from ``track_name()`` (DATA-28). How badges look is checked on
 devices (the PR). The sessions are the recorded 2026 feed's.
 """
 
+import logging
 from dataclasses import replace
 
 import flet as ft
@@ -18,8 +21,10 @@ from pycon_us.ui.badges import (
     SPANISH,
     TrackBadge,
     badge_row,
+    selection_click,
     session_badges,
 )
+from tests.fakes import MemoryHaptics
 from tests.feeds import processed
 
 TALK = "142"
@@ -158,3 +163,20 @@ def test_a_session_without_a_track_shows_no_empty_pill(
 ) -> None:
     assert labels(replace(data.sessions[TALK], track=""), info) == []
     assert labels(replace(data.sessions[TUTORIAL], track=""), info) == [REGISTRATION]
+
+
+async def test_selection_click_gives_the_click() -> None:
+    haptics = MemoryHaptics()
+    await selection_click(haptics)
+    assert haptics.effects == ["selection_click"]
+
+
+@pytest.mark.parametrize("error", [TimeoutError(), RuntimeError("no engine")])
+async def test_a_failed_click_is_logged_not_raised(
+    error: Exception, caplog: pytest.LogCaptureFixture
+) -> None:
+    haptics = MemoryHaptics()
+    haptics.error = error
+    with caplog.at_level(logging.WARNING, logger="pycon_us.ui.badges"):
+        await selection_click(haptics)  # a missed click is no error message
+    assert "Haptic feedback failed" in caplog.text
