@@ -18,7 +18,6 @@ list, and a star tap one row. Search covers all days and ignores the Schedule's 
 """
 
 import asyncio
-import logging
 
 import flet as ft
 
@@ -29,16 +28,13 @@ from pycon_us.locations import use_query
 from pycon_us.screens.search_results import SCREEN, ResultList, summary
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
+from pycon_us.ui.badges import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField
 from pycon_us.ui.scaffold import AppScaffold, StatusStrip
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
-
-logger = logging.getLogger(__name__)
 
 DEBOUNCE_SECONDS = 0.25
 """How long the typing must pause before the search runs (D-46)."""
@@ -187,7 +183,7 @@ def Search() -> ft.View:
         memory.search_scope = e.control.data
         set_scope(e.control.data)
         set_query(text)  # the typed words, in the new scope, at once
-        await _click(svc.haptics)  # a chip toggled (ux.md §4.5)
+        await selection_click(svc.haptics)  # a chip toggled (ux.md §4.5)
 
     @report_errors
     async def show_all() -> None:
@@ -286,18 +282,6 @@ def _stop_waiting() -> None:
     and it is passed as ``cleanup=``, since a returned one would be lost at the next
     render (F39).
     """
-
-
-async def _click(haptics: ft.HapticFeedback) -> None:
-    """Give the selection click, logging rather than reporting a failure.
-
-    Args:
-        haptics: ``Services.haptics``.
-    """
-    try:
-        await haptics.selection_click()
-    except SERVICE_ERRORS:  # a missed click is not worth an error message
-        logger.warning("Haptic feedback failed", exc_info=True)
 
 
 def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Control:
