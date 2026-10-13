@@ -48,7 +48,7 @@ YEAR = load_year(2026)
 DATA = processed(2026)
 
 CATHERINE = "112"
-"""Catherine Nelson: a Friday talk with Robert Masson, then Saturday's six-person panel."""
+"""Catherine Nelson: a Thursday tutorial with Robert Masson, then Friday's six-person panel."""
 
 JUSTIN = "150"
 """Justin Lee: one talk, given alone."""
@@ -299,6 +299,18 @@ async def test_a_star_tap_re_renders_one_day_and_one_row(
 
 
 # ------------------------------------------------------------------ states
+
+
+async def test_a_speaker_without_sessions_says_so_above_the_bio(show: Show) -> None:
+    """ux.md §4.6: a speaker whose sessions all left the feed, as a track page's."""
+    ids = {s.id for day in speaker_sessions(DATA, JUSTIN) for s in day.sessions}
+    sessions = {k: v for k, v in DATA.sessions.items() if k not in ids}
+    shown = await show(JUSTIN, Conference(data=replace(DATA, sessions=sessions)))
+    assert shown.node("speaker.empty").live_region
+    assert screen.NO_SESSIONS in shown.texts()
+    assert shown.nodes("speaker.session.") == []
+    assert headings(shown)[0] == ("Justin Lee", 1)
+    assert headings(shown)[-1] == ("About", 2)
 
 
 @pytest.mark.parametrize("speaker_id", ["nobody", "", "112 "])

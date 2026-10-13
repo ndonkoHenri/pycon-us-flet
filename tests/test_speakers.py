@@ -235,7 +235,7 @@ def test_a_speaker_s_page_lists_every_session_by_day_as_the_list_orders_them(
 
 
 def test_a_speaker_on_two_days_gets_a_group_per_day() -> None:
-    """2026's Catherine Nelson: a Friday talk, then Saturday's panel."""
+    """2026's Catherine Nelson: a Thursday tutorial, then Friday's panel."""
     days = speaker_sessions(processed(2026), "112")
     assert [[s.id for s in day.sessions] for day in days] == [["106"], ["110"]]
     assert days[0].day < days[1].day

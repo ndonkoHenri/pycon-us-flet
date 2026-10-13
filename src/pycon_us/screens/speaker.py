@@ -8,7 +8,9 @@ day one memoised item (``ui.day_groups``, D-153). The rows leave out the speaker
 page names: their speakers line names only the co-speakers, "With Ana Lima", in what
 they show and what they say (``session_view(of_speaker=...)``, D-203). Then "About",
 the bio as Markdown whose links open by the link rule (``ui.links.feed_markdown``,
-D-116, D-197), left out when the feed's bio is only a placeholder dash.
+D-116, D-197), left out when the feed's bio is only a placeholder dash. A speaker
+the feed links to no session (neither recorded feed has one) shows an empty state
+where the days would be, as a track page without sessions does (D-199).
 
 A row pushes its session one level down, and the session's speaker tile pushes this
 page, so session → speaker → session → room is a stack that Back pops one step at a
@@ -33,13 +35,16 @@ from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import use_session_views
-from pycon_us.ui.states import NoDataState
+from pycon_us.ui.states import EmptyState, NoDataState
 
 SCREEN = "speaker"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
 NOT_FOUND = "This speaker isn't in the current schedule"
 """The empty state of an unknown id (ux.md §4.6)."""
+
+NO_SESSIONS = "No sessions in the current schedule"
+"""The empty state of a speaker the feed links to no session (ux.md §4.6)."""
 
 PHOTO_RADIUS = 48
 """The intro's avatar, in dp: a 96 dp circle (ux.md §5.7), twice a row's."""
@@ -104,6 +109,16 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
             ),
         )
     items: list[ft.Control] = [intro(speaker)]
+    if not days:  # a directory speaker whose sessions left the feed
+        items.append(
+            EmptyState(
+                NO_SESSIONS,
+                icon=ft.Icons.EVENT_BUSY_OUTLINED,
+                # No button: the app refreshes the feed on its own (D-175).
+                body="They show here as soon as the schedule lists them.",
+                identifier=f"{SCREEN}.empty",
+            )
+        )
     # A speaker's sessions can be on different days, and a row says only its time.
     items.extend(
         DayGroup(
