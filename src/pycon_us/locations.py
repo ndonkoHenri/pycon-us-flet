@@ -23,6 +23,8 @@ PAGES = frozenset(
         "/search",
         "/more/speakers",
         "/more/tracks",
+        "/more/tracks/lightning-talks",
+        "/more/tracks/open-spaces",
         "/more/keynotes",
         "/more/open-spaces",
         "/more/lightning-talks",

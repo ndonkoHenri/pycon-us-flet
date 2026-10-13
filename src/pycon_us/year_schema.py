@@ -14,7 +14,7 @@ import types
 import typing
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -60,8 +60,9 @@ def build[T: DataclassInstance](
     """Build dataclass ``cls`` from a TOML table, checking key names and value types.
 
     Args:
-        cls: The dataclass; its fields name the keys, their annotations the types. An
-            array of tables is a ``tuple`` of a dataclass, built in turn.
+        cls: The dataclass; its fields name the keys, their annotations the types. A
+            table is a dataclass, and an array of tables a ``tuple`` of one, each
+            built in turn.
         raw: The table.
         file: The file's name in error messages.
         key: Where the table is in the file (``tracks[8]``); empty for the top level.
@@ -100,6 +101,8 @@ def _value(expected: object, value: object, file: str, key: str) -> object:
         (expected,) = (
             arg for arg in typing.get_args(expected) if arg is not type(None)
         )
+    if dataclasses.is_dataclass(expected):  # a table of its own, `[lightning_talks]`
+        return build(cast("type[DataclassInstance]", expected), value, file, key)
     if expected == tuple[str, ...]:  # an array of strings
         if not isinstance(value, list) or not all(type(v) is str for v in value):
             raise YearDataError(

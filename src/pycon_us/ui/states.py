@@ -16,6 +16,7 @@ import flet as ft
 
 from pycon_us.prefs import use_prefs
 from pycon_us.state import Problem
+from pycon_us.ui.links import OPENS_IN, LinkKind, external
 
 ICON_SIZE = 48
 """The empty state's icon, in dp (ux.md §3.9)."""
@@ -41,6 +42,7 @@ def EmptyState(
     action: str | None = None,
     on_action: Callable[[], Any] | None = None,
     disabled: bool = False,
+    link_id: str | None = None,
     identifier: str | None = None,
 ) -> ft.Control:
     """Return a screen's empty state: an icon, why it is empty, and the way out.
@@ -65,6 +67,10 @@ def EmptyState(
         on_action: What the button does, wrapped in ``report_errors`` by the caller.
         disabled: The button is shown but cannot be tapped, while its action runs: it
             stays in place, so a screen reader's focus stays on it.
+        link_id: For a button that opens a web page (``on_action`` calls
+            ``open_link()``), its identifier: the button then looks and reads as any
+            link that leaves the app, ``OPEN_IN_NEW`` and "Opens in browser", and is
+            marked as one (``links.external()``, ux.md §4.7).
         identifier: The text's semantics identifier for UI tests, e.g.
             ``session.not_found`` (decisions §M).
 
@@ -109,12 +115,23 @@ def EmptyState(
         ),
     ]
     if action is not None:
-        controls.append(
-            ft.Container(
-                ft.FilledTonalButton(action, on_click=on_action, disabled=disabled),
-                padding=ft.Padding.only(top=8),
+        button: ft.Control
+        if link_id is None:
+            button = ft.FilledTonalButton(action, on_click=on_action, disabled=disabled)
+        else:
+            button = external(
+                link_id,
+                ft.FilledTonalButton(
+                    # On the text: an icon's label would be read before it (D-186).
+                    ft.Text(
+                        action, semantics_label=f"{action}\n{OPENS_IN[LinkKind.WEB]}"
+                    ),
+                    icon=ft.Icons.OPEN_IN_NEW,
+                    on_click=on_action,
+                    disabled=disabled,
+                ),
             )
-        )
+        controls.append(ft.Container(button, padding=ft.Padding.only(top=8)))
     return ft.Container(
         ft.Column(
             controls,

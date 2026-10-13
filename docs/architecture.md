@@ -62,11 +62,11 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
-| `config.py`, `year_schema.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
+| `config.py`, `year_schema.py`, `year_pages.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers filter; D-193), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203) | P0+ |
-| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202) | P0+ |
+| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202); `/more/open-spaces` and `/more/lightning-talks` are `open_spaces.py` and `lightning_talks.py` (D-205) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
 
@@ -192,7 +192,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
 | `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
-| `/more/speakers`, `tracks`, `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
+| `/more/speakers`, `tracks`, `tracks/lightning-talks`, `tracks/open-spaces` (the hub's rows to the same two pages, listed before `:slug`, D-205), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
 | `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social`, `settings` | sponsors and info screens; Settings | child | P2 | SPON, MAP-09..11, INFO, THEME-01, NOTIF-01 |
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
@@ -224,7 +224,9 @@ ROUTES = [
     pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
-    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks, pushed(":slug", TrackPage)),
+    pushed("more", More, pushed("speakers", Speakers),
+           pushed("tracks", Tracks, pushed("lightning-talks", LightningTalks), pushed("open-spaces", OpenSpaces),
+                  pushed(":slug", TrackPage)),
            pushed("keynotes", Keynotes), pushed("open-spaces", OpenSpaces), pushed("sprints", Sprints),
            pushed("lightning-talks", LightningTalks), pushed("app", AboutApp), pushed("developer", Developer)),
 ]
@@ -596,7 +598,7 @@ One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speake
 
 | Query | Rule | Features |
 |---|---|---|
-| `session_view(session, zone, use_24h=...)`, `session_views(data, ids, zone, use_24h=...)` | a row's frozen `SessionView`: the displayed start to the end in conference time ("9:25–10:10 AM", and "9:25 to 10:10 AM" for screen readers), the display location, the authors' names; built once per feed version (D-153, D-184); `by_day(views, zone)` groups them by conference-local day. In `core/row_views.py`, beside this module. Built in P1 (#81) | SCHED-03 |
+| `session_view(session, zone, use_24h=...)`, `session_views(data, ids, zone, use_24h=...)` | a row's frozen `SessionView`: the displayed start to the end in conference time ("9:25–10:10 AM", and "9:25 to 10:10 AM" for screen readers), the display location, the authors' names; built once per feed version (D-153, D-184); `by_day(views, zone)` groups them by conference-local day, and `by_slot(views)` one day's into time slots by their time group's start (room detail and the open spaces, D-205). In `core/row_views.py`, beside this module. Built in P1 (#81) | SCHED-03 |
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
 | `timeline(data, day, excluded)` | a tuple of `Slot(start, sessions)`, one per time slot; its `key`, derived from the start (D-185), is `"slot-<iso>"`, the slot item's `ScrollKey`; rows in `schedule_order`: shown start, then shown room in natural order (D-31), then name and id, rows without a place first; a track passes unless excluded, and a slot the filter empties is left out. The only query that takes `excluded`, called only by the Schedule (a test checks both). Memoised (below). Built in P1 (#85, D-178) | DATA-18, DATA-30, SCHED-02 |
 | `day_slots(data, day)` | a day's slots, unfiltered and memoised: what `now_next` reads, and what `timeline` filters (D-185) | SCHED-25 |
@@ -737,10 +739,22 @@ Every field without a phase note exists today (P0-08); the others arrive with th
 
 ```toml
 # data/2026/content.toml
-[links]
-lightning_talks_signup = "https://us.pycon.org/2026/events/lightning-talks/"
-open_space_signup = "https://us.pycon.org/2026/events/open-spaces/"
+[links]                             # P2 (INFO-03): the app's own links
 report_app_issue = "https://github.com/OWNER/pycon-us/issues"
+
+[open_spaces]                       # optional: the Open spaces page (EVT-01, EVT-02; D-205)
+intro = "Open spaces are hour-long sessions that attendees organize during the conference, ..."
+propose_url = "https://us.pycon.org/2026/signup/open-space/"   # "Propose an open space"
+
+[lightning_talks]                   # optional: the Lightning talks page (EVT-03; D-205)
+heading = "What's a lightning talk?"
+intro = ["Five minutes at most, ...", "..."]   # the copy card's paragraphs
+signup_url = "https://us.pycon.org/2026/signup/lightning-talk/"
+info_url = "https://us.pycon.org/2026/events/lightning-talks/"
+
+[[lightning_talks.doubts]]          # "Think you can't do one?", in order
+doubt = "“Everyone already knows that”"
+answer = "They don't, and those who think they do still learn from the way you explain it."
 
 [wifi]
 network = "PyCon2026"
@@ -795,7 +809,7 @@ number = "613"
 x = 0.412                           # ratios of the expo image; also y, w, h
 ```
 
-### 8.2 Loader (`config.py`, `year_schema.py`)
+### 8.2 Loader (`config.py`, `year_schema.py`, `year_pages.py`)
 
 `tomllib` loads each file into frozen dataclasses (`Track`, `Wifi`, `SafetyContact`, `Keynote`, `EventReminder`, `Plan`, `Pin`, `Booth`, …) gathered in `YearData`. The loader is the schema:
 
@@ -823,7 +837,7 @@ def checked(raw: dict, cls: type, where: str) -> dict:
     return raw
 ```
 
-As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table and turns arrays of tables into tuples of their dataclass; errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations".
+As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205).
 
 ---
 

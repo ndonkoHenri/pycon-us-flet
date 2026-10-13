@@ -7,7 +7,8 @@ the track's badge colours holding its icon, so the hub is also the key to the ba
 colours; its plural name; its legend line; its badge as the schedule shows it, "New
 track" when it is new this year; and how many sessions it has, counted as its page lists
 them (posters one by one, SCHED-22). A tap pushes the track's page,
-``/more/tracks/<slug>`` (``screens/track.py``).
+``/more/tracks/<slug>`` (``screens/track.py``), or, for the lightning talks and the open
+spaces, their own page, More's, at their slug under the hub (``OWN_PAGES``).
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
@@ -48,6 +49,15 @@ GROUP_TITLES = {
 
 ICON_CIRCLE = 40
 """The diameter of a row's tonal circle, in dp (ux.md §5.10)."""
+
+OWN_PAGES = {
+    "Lightning-talks": "/more/tracks/lightning-talks",
+    "Open Space": "/more/tracks/open-spaces",
+}
+"""Tracks with a page of their own, which their hub row opens instead of the generic
+track page (ux.md §5.10, EVT-01, EVT-03), by track key: the feed's kinds, which do not
+change with the year (DATA-14). It is the page More opens, at an address under the
+hub, so Back returns to the hub (D-17)."""
 
 SPRINTS = "/more/sprints"
 """The Sprints page, which the hub's Sprints row pushes (EVT-05)."""
@@ -102,6 +112,15 @@ def hub_groups(
         if entries:
             groups.append((title, entries))
     return tuple(groups)
+
+
+def hub_target(track: Track) -> str:
+    """Return where a hub row goes: the track's own page, else its track page.
+
+    Args:
+        track: The registry's entry.
+    """
+    return OWN_PAGES.get(track.key, f"/more/tracks/{track.slug}")
 
 
 def hub_phrase(entry: HubEntry) -> str:
@@ -232,7 +251,7 @@ def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
         marks=marks,
         phrase=hub_phrase(entry),
         identifier=f"{SCREEN}.track.{track.slug}",
-        target=f"/more/tracks/{track.slug}",
+        target=hub_target(track),
     )
 
 
