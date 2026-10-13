@@ -250,7 +250,8 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     on follows Now & Next's rule (``rooms.room_now``, D-179), as the Map's "Now:" line.
 
     One ``LinkTile`` that opens the session: its name cut at three lines, as a row's
-    title is (ux.md §3.6), its time in ``Tokens.live``, and "and 1 more" on a line of
+    title is (ux.md §3.6), its time in ``Tokens.live`` (and a place given elsewhere,
+    the two in a wrapping row as a row's meta, D-184), and "and 1 more" on a line of
     its own when several are on (D-188's form), at the head of today's list. A pointer
     to the session's row below, which has the star (D-194). A divider closes it.
 
@@ -270,10 +271,20 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     first, *rest = on
     view = session_view(first, info.zone, use_24h=use_24h, in_room=room.slug)
     when = view.when.replace(" ", "\N{NO-BREAK SPACE}")  # "AM" keeps to its time
-    spoken = view.spoken_when
+    first_line: ft.Control = ft.Text(
+        when, color=tokens.live, semantics_label=view.spoken_when
+    )
     if view.place:  # streamed here from elsewhere: the lightning talks' Arena
-        when, spoken = f"{when} · {view.place}", f"{spoken}, {view.place}"
-    lines: list[ft.Control] = [ft.Text(when, color=tokens.live, semantics_label=spoken)]
+        # Two texts in a wrapping row, as a row's meta (D-184): at large text the
+        # place moves down whole and the "·" ends the time's line.
+        time = ft.Text(
+            f"{when}\N{NO-BREAK SPACE}·",
+            color=tokens.live,
+            semantics_label=f"{view.spoken_when},",
+        )
+        place = ft.Text(view.place, color=tokens.live)
+        first_line = ft.Row([time, place], wrap=True, spacing=4, run_spacing=0)
+    lines: list[ft.Control] = [first_line]
     if rest:
         lines.append(ft.Text(f"and {len(rest)}\N{NO-BREAK SPACE}more"))
     # As Now's "Happening now" (D-190): a live dot, and a heading screen readers know

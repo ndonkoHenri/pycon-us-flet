@@ -95,9 +95,13 @@ def day_list(
                 row = _lit(row, row_key(session.id), on=lit, ms=fade_ms)
             rows.append(row)
         label = time_label(start, info.zone, use_24h=use_24h)
-        item = TimeSlot(label, rows, divider=bool(items))
+        item = TimeSlot(label, rows, divider=False)
         if alone:
             item = _lit(item, row_key(slot[0].session.id), on=lit, ms=fade_ms)
+        if items:
+            # The divider stays outside the lit box, as the Schedule's slots keep it
+            # outside theirs: the jump puts the time, not a line, under the tab bar's.
+            item = ft.Column([ft.Divider(height=1), item], spacing=0)
         items.append(item)
     return ft.ListView(
         [head, *items] if head is not None else items,

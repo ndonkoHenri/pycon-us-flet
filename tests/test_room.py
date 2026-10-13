@@ -367,7 +367,12 @@ async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
 
 
 async def test_a_row_alone_in_its_slot_is_lit_with_its_time(render: Render) -> None:
-    """The tint spans the slot, the gutter's time too, as a selected item (D-194)."""
+    """The tint spans the slot, the gutter's time too, as a selected item (D-194).
+
+    The slot's divider stays above the box, as the Schedule's (ux.md §5.2): the jump
+    puts the time under the tab bar's line, not a second line. 3:15 PM is not the
+    day's first slot, so it has one.
+    """
     room = await render(highlighted(TACHYON))
     box = room.lit_box()
     assert _inside(room.node(f"room.session.{TACHYON}"), box)
@@ -375,6 +380,9 @@ async def test_a_row_alone_in_its_slot_is_lit_with_its_time(render: Render) -> N
         isinstance(c, ft.Semantics) and c.header and c.label == "3:15 PM"
         for c in descendants(box)
     )
+    assert not any(isinstance(c, ft.Divider) for c in descendants(box))
+    slot = cast(ft.Column, box.parent)
+    assert isinstance(slot.controls[0], ft.Divider) and slot.controls[1] is box
 
 
 def _inside(node: ft.Control, ancestor: ft.Control) -> bool:
@@ -509,6 +517,18 @@ async def test_one_tab_per_day_the_room_has_sessions_today_marked(
     assert labels  # each tab has its label
 
 
+async def test_a_picked_day_survives_a_re_render(render: Render) -> None:
+    """The picked day is state that on_change sets: a star tap keeps the tab (D-194)."""
+    room = await render(VIEW)
+    assert room.tabs.selected_index == 1  # today, Saturday
+    room.session.apply_patch(room.tabs._i, {"selected_index": 0})  # as Flutter does
+    await room.session.dispatch_event(room.tabs._i, "change", 0)
+    await room.settle()
+    await room.favorites.toggle(room.services[0].storage, HUMANS)
+    await room.settle()
+    assert room.tabs.selected_index == 0
+
+
 async def test_the_room_s_rows_leave_out_its_name(render: Render) -> None:
     """The page's title names the room: the rows say the time alone (#101's comment)."""
     room = await render(VIEW)
@@ -585,15 +605,19 @@ async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
 async def test_now_in_this_room_says_where_a_streamed_session_is_given(
     render: Render,
 ) -> None:
+    """Time and place are two texts in a wrapping row, as a row's meta (D-184)."""
     room = await render(VIEW, now=datetime(2026, 5, 16, 8, 30, tzinfo=PACIFIC))
     tile = cast(ft.ListTile, room.node("room.now").content)
-    (line,) = [
-        t
-        for t in descendants(cast(ft.Control, tile.subtitle))
-        if isinstance(t, ft.Text)
+    subtitle = cast(ft.Control, tile.subtitle)
+    assert texts(subtitle) == [
+        "8:00–9:00\N{NO-BREAK SPACE}AM\N{NO-BREAK SPACE}·",
+        "Pacific Ballroom - Arena",
     ]
-    assert line.value == "8:00–9:00\N{NO-BREAK SPACE}AM · Pacific Ballroom - Arena"
-    assert line.semantics_label == "8:00 to 9:00 AM, Pacific Ballroom - Arena"
+    (line,) = [c for c in descendants(subtitle) if isinstance(c, ft.Row)]
+    assert line.wrap
+    time, place = cast(list[ft.Text], line.controls)
+    spoken = [time.semantics_label, place.semantics_label or place.value]
+    assert " ".join(spoken) == "8:00 to 9:00 AM, Pacific Ballroom - Arena"
 
 
 async def test_with_several_on_the_latest_is_named_and_the_rest_counted(
@@ -633,6 +657,27 @@ async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
     await room.until(lambda: len(room.nodes("room.now")) == 1)
     tile = cast(ft.ListTile, room.node("room.now").content)
     assert cast(ft.Text, tile.title).value.startswith("Don’t Write Polars Code")
+
+
+async def test_the_minute_tick_re_renders_only_now_in_this_room(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A leaf component on ``use_minute()``: the day lists are not built again (D-194)."""
+    monkeypatch.setattr(scaffold, "TICK_SECONDS", 0.01)
+    built: list[int] = []
+    original = room_days.day_list
+
+    def counted(*args: Any, **kwargs: Any) -> ft.ListView:
+        built.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(screen, "day_list", counted)  # room.py imports the name
+    room = await render(VIEW, now=SATURDAY_MORNING)
+    before = len(built)
+    assert before == 3  # one per day
+    clock.set_test_now(datetime(2026, 5, 16, 11, 5, tzinfo=PACIFIC))  # talk over
+    await room.until(lambda: room.nodes("room.now") == [])
+    assert len(built) == before
 
 
 @pytest.mark.parametrize(
