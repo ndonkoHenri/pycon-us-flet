@@ -49,7 +49,7 @@ def EmptyState(
 
     Centred, padded and without a fixed height, so it reflows at 200 % text inside the
     screen's ``ListView``. For screen readers the title is a level-2 heading node of
-    its own, under the page's title (D-208), and, with the body, inside a live region,
+    its own, under the page's title (D-211), and, with the body, inside a live region,
     so the state is announced when it replaces a list (D-33); the icon is decorative;
     the button is a stop of its own.
 

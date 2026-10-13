@@ -92,7 +92,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
             identifier=f"{SCREEN}.no_data",
         )
         # No name to show in the page yet: the bar names it, the page's level-1
-        # heading, as "Not found" does below (D-208).
+        # heading, as "Not found" does below (D-211).
         return AppScaffold(title="Speaker", body=ft.ListView([no_data], expand=True))
     if speaker is None:
         return AppScaffold(

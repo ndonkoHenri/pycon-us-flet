@@ -80,7 +80,7 @@ async def test_the_card_holds_the_years_copy_and_the_sign_up(show: Show) -> None
 async def test_the_card_s_heading_is_read_alone_before_its_paragraphs(
     show: Show,
 ) -> None:
-    """D-208: a Card merges what it holds into one node, a heading over the whole card.
+    """D-211: a Card merges what it holds into one node, a heading over the whole card.
 
     So the card is no node of its own, and the heading and the paragraphs are each a
     container, the heading first.

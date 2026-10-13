@@ -130,7 +130,7 @@ def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
     assert isinstance(header, ft.Container) and isinstance(header.content, ft.Column)
     name, lines = header.content.controls
     assert isinstance(name, ft.Semantics) and name.header
-    assert name.heading_level == 2  # under the bar's "About this app" (D-208)
+    assert name.heading_level == 2  # under the bar's "About this app" (D-211)
     # Nodes of their own, so the name is read alone, and before the lines under it.
     assert isinstance(lines, ft.Semantics) and name.container and lines.container
     assert isinstance(lines.content, ft.Column)

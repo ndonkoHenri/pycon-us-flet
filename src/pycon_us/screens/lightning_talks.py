@@ -1,5 +1,8 @@
 """Lightning talks (``/more/lightning-talks``): what they are, how to sign up, and when.
 
+The Tracks hub opens the same page as its child, ``/more/tracks/lightning-talks``, so
+Back returns to the hub (D-207).
+
 One page where Ionic had two near-identical menu entries, a static page and a track
 list (EVT-03, SHELL-10). From the top:
 
@@ -154,7 +157,7 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     A filled card (M3's ``surface_container_highest``), its heading a level-2 heading
     (F40) and its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
     screen readers the heading, the paragraphs and the button are nodes of their own,
-    the heading read first and alone (D-208). The
+    the heading read first and alone (D-211). The
     button leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with
     "Opens in browser", on the text: an icon's label is read before the text (D-186);
     it is a link, as an external row is (``links.external()``).
@@ -169,7 +172,7 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
         await open_link(svc, copy.signup_url)
 
     # The heading and the paragraphs each a node of its own, as About's app name and
-    # its lines (D-208): in one node, the whole card read as one heading.
+    # its lines (D-211): in one node, the whole card read as one heading.
     heading = ft.Semantics(
         header=True,
         heading_level=2,
@@ -212,7 +215,7 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
             ),
             variant=ft.CardVariant.FILLED,
             margin=0,
-            # Not one node: Flutter's Card merges what it holds into its own (D-208).
+            # Not one node: Flutter's Card merges what it holds into its own (D-211).
             semantic_container=False,
         ),
         padding=ft.Padding.only(left=16, top=8, right=16, bottom=8),

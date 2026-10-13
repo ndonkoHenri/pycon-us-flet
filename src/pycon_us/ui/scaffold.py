@@ -48,7 +48,7 @@ def AppScaffold(
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
-            page's level-1 heading (D-208). On a tab root it carries the identifier
+            page's level-1 heading (D-211). On a tab root it carries the identifier
             ``<tab>.title`` for UI flows (D-170). Empty on a detail page whose own
             title, in the page, is its level-1 heading (ux.md §5.5): no heading then.
         body: What the View shows under the app bar, usually an ``expand=True``
@@ -96,8 +96,8 @@ def AppScaffold(
     title_control: ft.Control = ft.Text(title)
     if title:
         # Flutter's AppBar flags its title a header without a level, which neither
-        # screen reader takes for a heading (F46): the level makes it the page's
-        # level-1 heading (D-208). The identifier tells UI flows which root shows
+        # screen reader takes for a heading (F49): the level makes it the page's
+        # level-1 heading (D-211). The identifier tells UI flows which root shows
         # (D-170). An unlabelled Semantics merges both into the title's own node, as
         # the bar's do (D-166).
         title_control = ft.Semantics(
@@ -209,7 +209,7 @@ def SectionHeader(
     """Return the heading of a group of rows: a day, a letter, a section (ux.md §3.9).
 
     Not sticky (U2). A heading for screen readers, so they can jump group by group:
-    TalkBack and VoiceOver take a heading from its level, not the flag (F40, D-208).
+    TalkBack and VoiceOver take a heading from its level, not the flag (F40, D-211).
 
     Args:
         text: The heading, in sentence case.

@@ -367,7 +367,7 @@ def test_a_root_s_title_carries_its_screen_identifier_for_ui_tests(
     title = app_bar(view_at(hooks, page, tab.root)).title
     assert isinstance(title, ft.Semantics)
     assert title.identifier == tab.title_identifier
-    assert title.heading_level == 1  # the root's heading (D-208)
+    assert title.heading_level == 1  # the root's heading (D-211)
     assert title.label is None  # the text names the node, once (D-166)
     assert isinstance(title.content, ft.Text)
     assert title.content.value == "Title"

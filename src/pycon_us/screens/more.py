@@ -123,7 +123,7 @@ def appearance(
         on_change: Saves the choice.
     """
     # A heading, as a SectionHeader is, so screen readers can jump to the group (D-33);
-    # level 3, a group inside "You" (D-208). Merged, since a ListTile is a node of its
+    # level 3, a group inside "You" (D-211). Merged, since a ListTile is a node of its
     # own: unmerged, the heading was an unlabelled node around it (UiAutomation, #205).
     label = ft.MergeSemantics(
         content=ft.Semantics(

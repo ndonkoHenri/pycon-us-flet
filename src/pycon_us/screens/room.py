@@ -290,7 +290,7 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
         lines.append(ft.Text(f"and {len(rest)}\N{NO-BREAK SPACE}more"))
     # As Now's "Happening now" (D-190): a live dot, and a heading screen readers know
     # (a level, F40). Level 3, a group inside the day as the slots under it are: the
-    # selected day tab heads the list (D-208).
+    # selected day tab heads the list (D-211).
     dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=tokens.live)
     return ft.Column(
         [

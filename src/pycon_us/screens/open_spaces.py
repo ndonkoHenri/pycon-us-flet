@@ -1,5 +1,8 @@
 """Open spaces (``/more/open-spaces``): the open spaces by day and time (EVT-01, EVT-02).
 
+The Tracks hub opens the same page as its child, ``/more/tracks/open-spaces``, so Back
+returns to the hub (D-207).
+
 The app bar's ``+`` proposes one: "Propose an open space" opens the site's sign-up,
 from the year data (``content.toml``'s ``[open_spaces]``, D-45), in the in-app browser
 (the link rule, INFO-14). Under it, day tabs over swipeable day lists, a tab for each

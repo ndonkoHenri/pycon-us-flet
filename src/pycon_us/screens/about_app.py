@@ -99,7 +99,7 @@ def header(conference: str) -> ft.Control:
         content=ft.Column(
             spacing=8,
             controls=[
-                # A level-2 heading under the bar's "About this app" (D-208), and the
+                # A level-2 heading under the bar's "About this app" (D-211), and the
                 # lines under it, each a node of its own: without the containers the
                 # lines merged into the heading, and with only the heading's, the
                 # lines' node came first, read before the name (UiAutomation, #205).

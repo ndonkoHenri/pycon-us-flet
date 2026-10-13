@@ -281,7 +281,7 @@ def test_the_appearance_label_is_a_heading_for_screen_readers(
     assert isinstance(merged, ft.MergeSemantics)
     label = merged.content
     assert isinstance(label, ft.Semantics) and label.header  # D-33
-    assert label.heading_level == 3  # a group inside "You" (D-208)
+    assert label.heading_level == 3  # a group inside "You" (D-211)
     assert isinstance(label.content, ft.ListTile)
     assert label.content.title == "Appearance"
     assert label.content.on_click is None  # a label, not a link

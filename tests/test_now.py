@@ -539,7 +539,7 @@ async def test_the_header_is_the_first_heading_under_the_page_s_title(
 ) -> None:
     shown = await render(may(15, 11, 10))
     node = shown.node("now.header")
-    # Level 2: the bar's "Now" is the page's one level-1 heading (F40, D-208).
+    # Level 2: the bar's "Now" is the page's one level-1 heading (F40, D-211).
     assert node.header is True and node.heading_level == 2
     assert node.exclude_semantics is True  # read once, as its phrase
     assert shown.body.controls[0] is node
