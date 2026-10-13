@@ -401,7 +401,9 @@ def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
     assert "prefs.py" in found["excluded_tracks"]
 
 
-# --- Agenda and Now & Next (D-14, D-179; SCHED-25, NEW-01) ----------------------------
+# --------------------------------------------------------------------------------------
+# Agenda and Now & Next (#93): Now, your next session and My schedule
+# --------------------------------------------------------------------------------------
 
 
 POSTERS_ROW = "poster-Expo Hall AB-2026-05-17T09:30:00-07:00"
@@ -549,6 +551,16 @@ def test_the_phase_turns_at_the_first_start_and_the_last_end(
     assert now_next(data, may(year, *last_end)).phase is Phase.AFTER
 
 
+def test_now_lists_a_slot_as_the_schedule_does() -> None:
+    """One order in the app (D-178): the Job Fair, shown at 9:30, leads the 10:00 slot."""
+    data = processed(2026)
+    result = now_next(data, may(2026, 17, 9, 59))
+    shown = timeline(data, date(2026, 5, 17), ())
+    slot = next(slot for slot in shown if slot.start == result.next_start)
+    assert result.up_next[:3] == ("178", "break--2026-05-17T10:00:00-07:00", "228")
+    assert result.up_next == tuple(session.id for session in slot.sessions)
+
+
 def test_the_zone_of_now_does_not_matter() -> None:
     data, local = processed(2026), may(2026, 15, 10, 15)
     assert now_next(data, local.astimezone(UTC)) == now_next(data, local)
@@ -638,6 +650,18 @@ def test_my_schedule_lists_saved_sessions_by_day_and_slot_in_timeline_order() ->
             ),
         ),
     )
+
+
+def test_my_schedule_and_the_next_session_follow_the_schedule_s_room_order() -> None:
+    """Natural room order, ignoring case (D-178): "garden outside 315" before "Lounge".
+
+    Two open spaces from 2:00 PM on May 18, 2025; the raw location string put the
+    lounge first.
+    """
+    data, saved = processed(2025), frozenset({"9199", "9164"})
+    slot = AgendaSlot(may(2025, 18, 14), ("9164", "9199"))
+    assert my_schedule(data, saved).days == (AgendaDay(date(2025, 5, 18), (slot,)),)
+    assert next_for_me(data, saved, may(2025, 18, 13)) == "9164"
 
 
 def test_my_schedule_lists_a_saved_poster_on_its_day() -> None:

@@ -258,12 +258,15 @@ def _memoised[T](
     return cast(T, results[key])
 
 
-# --- Agenda and Now & Next (D-14, D-179; SCHED-25, NEW-01) ----------------------------
+# --------------------------------------------------------------------------------------
+# Agenda and Now & Next (#93; SCHED-25, NEW-01; D-14, D-179)
 #
 # Now and My schedule ask these. Each takes ``now`` and the saved ids as arguments, so
 # they stay pure (D-43), and none takes the Schedule's filters (D-20). Their results are
 # frozen values that compare by value, so a screen that recomputes them every 60 s
-# re-renders only what changed (D-153). They name sessions by id, as ``TimeGroup`` does.
+# re-renders only what changed (D-153). They name sessions by id, as ``TimeGroup`` does,
+# and list a slot's sessions in schedule order, as the Schedule does (D-178).
+# --------------------------------------------------------------------------------------
 
 NEXT_SESSION_WINDOW = timedelta(hours=3)
 """How soon a saved session must start to be "Your next session" on Now (SCHED-25)."""
@@ -299,11 +302,13 @@ class NowNext:
 
     Attributes:
         phase: Where the instant falls in the conference.
-        happening: The sessions with ``start <= now < end``, by start, then in their time
-            slot's order; a notice (no duration) is never happening.
+        happening: The sessions with ``start <= now < end``, by time slot, then in
+            schedule order (``schedule_order``); a notice (no duration) is never
+            happening.
         next_start: The start of the first time slot after ``now``, on any day; None
             after the last one.
-        up_next: That slot's sessions, in its order; empty when ``next_start`` is None.
+        up_next: That slot's sessions, in schedule order; empty when ``next_start`` is
+            None.
     """
 
     phase: Phase
@@ -318,7 +323,8 @@ class AgendaSlot:
 
     Attributes:
         start: Their shared start, as in the day's ``TimeGroup``.
-        session_ids: The sessions, by location, then name, as the timeline orders them.
+        session_ids: The sessions in schedule order (``schedule_order``), as the
+            Schedule lists the slot.
     """
 
     start: datetime
@@ -358,9 +364,10 @@ class Agenda:
 def now_next(data: ConferenceData, now: datetime) -> NowNext:
     """Return the conference's phase, what is on and what is next at ``now`` (SCHED-25).
 
-    Only the timeline counts (``data.days``): poster details share the Posters row's time
-    and would crowd it out. A slot is never happening once it has ended, which Ionic got
-    wrong (it kept the last slot that had started until midnight).
+    Only the timeline counts, in the Schedule's slots and order (unfiltered): poster
+    details share the Posters row's time and would crowd it out. A slot is never
+    happening once it has ended, which Ionic got wrong (it kept the last slot that had
+    started until midnight).
 
     Args:
         data: The processed feed.
@@ -373,18 +380,19 @@ def now_next(data: ConferenceData, now: datetime) -> NowNext:
         ValueError: ``now`` is naive.
     """
     _require_aware(now)
-    groups = [group for day in data.days for group in day.groups]
+    slots = [slot for day in data.days for slot in _day_slots(data, day.date)]
     happening = tuple(
-        session_id
-        for group in groups
-        if group.start <= now
-        for session_id in group.session_ids
-        if now < data.sessions[session_id].end
+        session.id
+        for slot in slots
+        if slot.start <= now
+        for session in slot.sessions
+        if now < session.end
     )
-    upcoming = next((group for group in groups if group.start > now), None)
+    upcoming = next((slot for slot in slots if slot.start > now), None)
     if upcoming is None:
         return NowNext(_phase(data, now), happening, None, ())
-    return NowNext(_phase(data, now), happening, upcoming.start, upcoming.session_ids)
+    up_next = tuple(session.id for session in upcoming.sessions)
+    return NowNext(_phase(data, now), happening, upcoming.start, up_next)
 
 
 def next_for_me(
@@ -500,9 +508,10 @@ def _saved(data: ConferenceData, favorites: AbstractSet[str]) -> list[Session]:
     return [data.sessions[i] for i in favorites if i in data.sessions]
 
 
-def _agenda_order(session: Session) -> tuple[datetime, str, str, str]:
-    # The timeline's order within a start (location, then name); the id breaks ties.
-    return session.start, session.location, session.name, session.id
+def _agenda_order(session: Session) -> tuple[datetime, tuple[object, ...]]:
+    # The Schedule's order: by slot (``start``), then as the slot lists its rows. The
+    # slot comes first because the Job Fair shows 9:30 but sits in the 10:00 slot.
+    return session.start, schedule_order(session)
 
 
 def _require_aware(now: datetime) -> None:
