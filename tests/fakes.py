@@ -229,3 +229,38 @@ def android_device(sdk: int) -> ft.AndroidDeviceInfo:
         code_name="REL", incremental="", release="", sdk=sdk
     )
     return ft.AndroidDeviceInfo(**fields, version=version)  # pyright: ignore[reportArgumentType]
+
+
+@dataclass
+class Hooks:
+    """The hooks the builders call, answered by the test instead of a renderer."""
+
+    view_path: str = "/now"
+    effects: list[tuple[Callable[[], Any], list[Any] | None]] = field(
+        default_factory=list
+    )
+    cleanups: list[Callable[[], Any] | None] = field(default_factory=list)
+    state: Any = None
+    renders: int = 0
+    """How many re-renders a state setter asked for: only for a changed value."""
+
+    def use_effect(
+        self,
+        setup: Callable[[], Any],
+        dependencies: Any = None,
+        cleanup: Callable[[], Any] | None = None,
+    ) -> None:
+        self.effects.append((setup, dependencies))
+        self.cleanups.append(cleanup)
+
+    def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
+        """One state per test, set as Flet's setter sets it: unchanged, no render."""
+        if self.state is None:
+            self.state = initial() if callable(initial) else initial
+
+        def set_state(value: Any) -> None:
+            if value != self.state:
+                self.state = value
+                self.renders += 1
+
+        return self.state, set_state

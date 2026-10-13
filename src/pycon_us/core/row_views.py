@@ -4,10 +4,12 @@ Pure functions of the processed feed, like ``queries`` (architecture §7.5): a l
 builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
 that spans days. ``places`` gives session detail its room tiles (SESS-02), and ``people``
-its Speakers section (SESS-07).
+its Speakers section (SESS-07). ``spoken_phrase()``, ``notice_phrase()`` and
+``elapsed_phrase()`` are what a row says to a screen reader, as one phrase (D-33,
+D-200).
 """
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, tzinfo
 from itertools import groupby
@@ -191,3 +193,60 @@ def people(
             found.append(entry)
     found.extend(speaker for speaker in linked if speaker not in found)
     return tuple(found)
+
+
+def spoken_phrase(
+    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
+) -> str:
+    """Return what a screen reader says for a session row: one phrase (D-33).
+
+    "Talk. What's new in typing. 9:25 to 10:10 AM, Room 104A. Ana Lima." (ux.md
+    §3.9): the badges, the title, the time and place, then the speakers, each a
+    sentence, so TalkBack and VoiceOver pause between them. On My schedule a last
+    sentence names every clash in full, "Overlaps with “A”, “B” and “C”.", so the
+    clash is heard, not only seen, even where the row counts the rest (ux.md §5.6).
+
+    Args:
+        labels: The badges' labels, in order (``badge_specs()``).
+        view: The session's row view.
+        overlaps: The names of the saved sessions the row overlaps, if any.
+    """
+    when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
+    clash = ""
+    if overlaps:
+        *rest, last = (f"“{name}”" for name in overlaps)
+        names = f"{', '.join(rest)} and {last}" if rest else last
+        clash = f"Overlaps with {names}"
+    parts = (", ".join(labels), view.session.name, when, view.speakers, clash)
+    return " ".join(_sentence(part) for part in parts if part)
+
+
+def notice_phrase(label: str, view: SessionView) -> str:
+    """Return what a screen reader says for a notice row, as one phrase (D-33).
+
+    "Notice. Registration opens, 7:00 AM." (ux.md §3.9), with the place when there
+    is one: "Break. Lunch, 12:00 to 1:00 PM, Expo Hall AB."
+
+    Args:
+        label: The notice's track name, e.g. "Notice" or "Break".
+        view: The notice's row view.
+    """
+    place = f", {view.place}" if view.place else ""
+    return _sentence(f"{label}. {view.session.name}, {view.spoken_when}{place}")
+
+
+def _sentence(text: str) -> str:
+    """End ``text`` with a full stop unless it already ends a sentence."""
+    return text if text.endswith((".", "?", "!", "…")) else f"{text}."
+
+
+def elapsed_phrase(elapsed: int) -> str:
+    """Return the sentence that ends the phrase of a row that is on.
+
+    "60 percent elapsed." In the phrase, not on the bar: merged into the row, its value
+    would be a bare "60", and Flet sends ``semantics_value`` as a number, "60.0".
+
+    Args:
+        elapsed: The share of the session that has passed, in whole percent.
+    """
+    return f"{elapsed} percent elapsed."
