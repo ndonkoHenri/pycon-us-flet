@@ -1,13 +1,14 @@
-"""The rooms list the Map tab shows (ROOM-01; D-13, D-188).
+"""The rooms list the Map tab shows, and what is on in one room (ROOM-01, ROOM-02).
 
 ``room_list()`` answers "where is it, and what is on there now?": every room of the feed
 in natural order, each with the sessions on in it at an instant, and apart from them the
-places the feed lists that are not rooms (year data, ``Content.other_locations``). What
-is on comes from Now & Next's own rule (``agenda.now_next``, D-179), so the Map and Now
-never disagree.
+places the feed lists that are not rooms (year data, ``Content.other_locations``).
+``room_now()`` is one room's part of it, for room detail's "Now in this room". What is
+on comes from Now & Next's own rule (``agenda.now_next``, D-179), so the Map, room
+detail and Now never disagree.
 """
 
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from operator import attrgetter
@@ -82,16 +83,43 @@ def room_list(
     Raises:
         ValueError: ``now`` is naive.
     """
-    on: dict[str, list[Session]] = {}
-    for session in now_next(data, now).happening:
-        for name in session.rooms:
-            on.setdefault(slugify_room(name), []).append(session)
+    on = _on_by_room(data, now)
     others = {slugify_room(name) for name in other_locations}
     rooms: list[RoomEntry] = []
     elsewhere: list[RoomEntry] = []
     for room in data.rooms.values():  # in natural order of name (D-125)
-        # A stable sort keeps the Schedule's order among equal starts.
-        sessions = sorted(on.get(room.slug, ()), key=attrgetter("start"), reverse=True)
-        entry = RoomEntry(room, tuple(sessions))
+        entry = RoomEntry(room, _latest_first(on.get(room.slug, ())))
         (elsewhere if room.slug in others else rooms).append(entry)
     return RoomList(tuple(rooms), tuple(elsewhere))
+
+
+def room_now(data: ConferenceData, slug: str, now: datetime) -> tuple[Session, ...]:
+    """Return the sessions on in one room at ``now``: "Now in this room" (ROOM-02).
+
+    The same sessions in the same order as that room's ``RoomEntry.on_now`` in
+    ``room_list()``: the timeline only, ``start <= now < end``, the one that started
+    last first.
+
+    Args:
+        data: The processed feed.
+        slug: The room's slug (``Room.slug``); a slug no room has gives ``()``.
+        now: An aware instant, in any zone (``clock.now()``).
+
+    Raises:
+        ValueError: ``now`` is naive.
+    """
+    return _latest_first(_on_by_room(data, now).get(slug, ()))
+
+
+def _on_by_room(data: ConferenceData, now: datetime) -> dict[str, list[Session]]:
+    """Return the sessions on at ``now`` by room slug, each in the Schedule's order."""
+    on: dict[str, list[Session]] = {}
+    for session in now_next(data, now).happening:
+        for name in session.rooms:
+            on.setdefault(slugify_room(name), []).append(session)
+    return on
+
+
+def _latest_first(sessions: Iterable[Session]) -> tuple[Session, ...]:
+    """Return sessions by start, the latest first; a stable sort keeps ties in order."""
+    return tuple(sorted(sessions, key=attrgetter("start"), reverse=True))

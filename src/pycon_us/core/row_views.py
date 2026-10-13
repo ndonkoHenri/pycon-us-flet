@@ -34,7 +34,8 @@ class SessionView:
         when: Its conference-local time range, e.g. "9:25–10:10 AM" (DATA-12), or one
             time for a notice.
         spoken_when: The same range as a screen reader should say it: "9:25 to 10:10 AM".
-        place: Where it is (DATA-16); empty for a generic break, which is everywhere.
+        place: Where it is (DATA-16); empty for a generic break, which is everywhere,
+            and on a room's page for that room, which the page's title names (ROOM-02).
         speakers: Its authors as one line, "Ana Lima, Bo Chen"; empty when none.
     """
 
@@ -45,7 +46,9 @@ class SessionView:
     speakers: str
 
 
-def session_view(session: Session, zone: tzinfo, *, use_24h: bool) -> SessionView:
+def session_view(
+    session: Session, zone: tzinfo, *, use_24h: bool, in_room: str | None = None
+) -> SessionView:
     """Return the row view of one session.
 
     Args:
@@ -53,6 +56,10 @@ def session_view(session: Session, zone: tzinfo, *, use_24h: bool) -> SessionVie
         zone: The conference's zone; every time shows in it (D-35, D-43).
         use_24h: Whether the device uses the 24-hour clock
             (``page.media.always_use_24_hour_format``).
+        in_room: On a room's page, that room's slug (``Room.slug``): a place that is
+            the room itself is left out, so the row shows its time alone and its
+            phrase says no place, while another place stays (the lightning talks'
+            Arena on a room they are streamed to). None on every other list.
 
     Returns:
         The view: the displayed start (the Job Fair's earlier one, DATA-11) to the end,
@@ -60,17 +67,25 @@ def session_view(session: Session, zone: tzinfo, *, use_24h: bool) -> SessionVie
         DATA-15).
     """
     when = time_range_label(session.display_start, session.end, zone, use_24h=use_24h)
+    place = session.display_location
+    if in_room is not None and place and slugify_room(place) == in_room:
+        place = ""  # the page's title already says it (ROOM-02)
     return SessionView(
         session=session,
         when=when,
         spoken_when=when.replace(_DASH, " to "),
-        place=session.display_location,
+        place=place,
         speakers=", ".join(session.speaker_names),
     )
 
 
 def session_views(
-    data: ConferenceData, session_ids: Iterable[str], zone: tzinfo, *, use_24h: bool
+    data: ConferenceData,
+    session_ids: Iterable[str],
+    zone: tzinfo,
+    *,
+    use_24h: bool,
+    in_room: str | None = None,
 ) -> tuple[SessionView, ...]:
     """Return the row views of some sessions, in the given order (D-153).
 
@@ -79,10 +94,11 @@ def session_views(
         session_ids: The sessions; ids that are not in the feed are left out.
         zone: The conference's zone.
         use_24h: Whether the device uses the 24-hour clock.
+        in_room: On a room's page, the room's slug (``session_view()``).
     """
     sessions = data.sessions
     return tuple(
-        session_view(sessions[i], zone, use_24h=use_24h)
+        session_view(sessions[i], zone, use_24h=use_24h, in_room=in_room)
         for i in session_ids
         if i in sessions
     )
