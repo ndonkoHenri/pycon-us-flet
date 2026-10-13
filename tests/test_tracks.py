@@ -209,9 +209,9 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         shown = Shown(flet_session, favorites, went, titles)
         phrase = session_rows.spoken_phrase
 
-        def counted_phrase(labels: Any, view: Any) -> str:
+        def counted_phrase(labels: Any, view: Any, **kwargs: Any) -> str:
             shown.rows.append(view.session.id)
-            return phrase(labels, view)
+            return phrase(labels, view, **kwargs)
 
         # Each row body says its phrase once: counting the calls counts the bodies.
         monkeypatch.setattr(session_rows, "spoken_phrase", counted_phrase)
