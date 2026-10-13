@@ -563,7 +563,7 @@ The two hero features: a personal agenda, and a Now that answers "what next?" co
 
 feature, area:schedule · after P0-13, P0-09
 
-Pure `my_schedule()` and `now_next()` in `core/queries.py`: conference phase, happening now (`start <= now < end`), up next, your next saved session, and overlaps between saved sessions.
+Pure `my_schedule()` and `now_next()` in `core/queries.py` (since D-185, `core/agenda.py`): conference phase, happening now (`start <= now < end`), up next, your next saved session, and overlaps between saved sessions.
 
 - Fixed-`now` tests cover before, between slots, the last slot of a day and after.
 - A slot is never "happening" after its end; overlap detection is tested.
