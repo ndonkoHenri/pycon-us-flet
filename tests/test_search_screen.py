@@ -196,16 +196,17 @@ class Shown:
     async def go(self, location: str) -> None:
         """Navigate as ``page.navigate`` does through Flutter: a new route, heard."""
         self.page.route = location
-        assert self.page.on_route_change is not None
-        self.page.on_route_change(cast(Any, SimpleNamespace(route=location)))
+        # The Router's own handler, which reads only the event's route.
+        handler: Any = self.page.on_route_change
+        handler(SimpleNamespace(route=location))
         await self.settle()
 
-    async def type(self, text: str, *, settle: bool = True) -> None:
+    async def type(self, text: str) -> None:
+        """Type into the field as Flutter reports it: the value, then the event."""
         text_field = self.field
         self.session.apply_patch(text_field._i, {"value": text})
         await self.session.dispatch_event(text_field._i, "change", None)
-        if settle:
-            await self.settle()
+        await self.settle()
 
     async def event(self, control: ft.BaseControl, name: str, data: Any = None) -> None:
         await self.session.dispatch_event(control._i, name, data)
@@ -260,7 +261,7 @@ async def show(
     monkeypatch.setattr(screen, "DEBOUNCE_SECONDS", 0.05)
 
     @ft.component
-    def Root() -> list[ft.View]:
+    def Root() -> ft.Control:
         return ServicesCtx(
             svc,
             lambda: ConferenceCtx(
