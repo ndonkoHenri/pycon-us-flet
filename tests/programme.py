@@ -1,9 +1,10 @@
 """A More page rendered in a real Flet session, for the programme pages' tests (#105).
 
 ``tests/test_open_spaces.py``, ``tests/test_lightning_talks.py`` and
-``tests/test_track_add_all.py`` render their screen over a feed with the store providers written out above it, as the other screens' tests
-do (``tests/test_tracks.py``): ``AppScaffold`` is replaced by its actions over its
-body, so both are in the tree, and ``page.navigate`` and the launcher are recorded.
+``tests/test_track_add_all.py`` render their screen over a feed with the store
+providers written out above it, as the other screens' tests do
+(``tests/test_tracks.py``): ``AppScaffold`` is replaced by its actions over its body,
+so both are in the tree, and ``page.navigate`` and the launcher are recorded.
 Each row body's phrase is counted, so a test can tell which rows re-rendered.
 """
 

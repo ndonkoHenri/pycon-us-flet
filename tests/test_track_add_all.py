@@ -4,7 +4,7 @@ SCHED-24, D-207, ux.md §5.10: the overflow item saves every session the page li
 on every day, with ``Favorites.add_many()`` (D-172), then one SnackBar with Undo, and
 no dialog (D-29). The page runs in a real Flet session over the recorded 2026 feed
 (``tests/programme.py``); the store's own rules are in ``tests/test_favorites.py``.
-That the SnackBar is seen on the pushed View waits for #197 (the PR).
+On devices the SnackBar showed on the pushed track page itself (#255; #197).
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
