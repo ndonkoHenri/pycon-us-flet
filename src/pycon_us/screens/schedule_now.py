@@ -5,8 +5,8 @@ lays out the day lists; these are the pieces they share:
 
 - ``NowMark`` and ``NowLine``: today's "Now · 10:42 AM" line, before the first slot still
   to start; a jump lands on it when no slot is on (``NowPlace.target``);
-- ``Landing``: where the last jump left today's list, so the "Now" button hides while
-  that place is on screen;
+- ``Landing``, ``PENDING``, ``InView`` and ``shows_now()``: where the last jump left
+  today's list, so the "Now" button hides while the list is near it;
 - ``spoken_place()``: where a jump the user asked for landed, for a screen reader.
 """
 
@@ -118,12 +118,51 @@ class Landing:
         )
 
     def near(self, pixels: float, viewport: float) -> bool:
-        """Whether a list scrolled to ``pixels`` still shows the place it landed on.
+        """Whether a list scrolled to ``pixels`` is within half a screen of the landing.
 
-        Within half a screen of the landing: the place's top is then in the upper half
-        of the screen, or less than half a screen above it, where its rows still show.
+        A plain distance, not whether the place is on screen: a scroll offset alone
+        does not say where a keyed item sits (a jump near the list's end stops short
+        of it), so the place may show in the lower half while the button is back. A
+        tap then still moves it, so the button is never a dead control.
         """
         return abs(pixels - self.pixels) < viewport / 2
+
+
+@dataclass(frozen=True)
+class Pending:
+    """A jump by itself is on its way to now; ``PENDING`` is the one value."""
+
+
+PENDING = Pending()
+"""What the Schedule knows of today's list while its first jump runs (D-204)."""
+
+type InView = Landing | Pending | None
+"""What the "Now" button knows of today's list: where a jump left it; ``PENDING``
+while a jump by itself is on its way; None when it is nowhere in particular."""
+
+
+def shows_now(
+    in_view: InView,
+    day: date,
+    place: NowPlace | None,
+    version: int,
+    excluded: tuple[str, ...],
+) -> bool:
+    """Whether today's list is where "Now" goes, so the button hides (D-204).
+
+    ``PENDING`` counts: a first display's jump on a list already in place answers only
+    after its tries, and the button must not flash for those seconds.
+
+    Args:
+        in_view: What the screen knows of today's list.
+        day: Today, the list's day.
+        place: Where now is among today's slots, as the screen shows it.
+        version: The feed version the slots were laid out from.
+        excluded: The filter they were laid out with.
+    """
+    if isinstance(in_view, Pending):
+        return True
+    return in_view is not None and in_view.shows(day, place, version, excluded)
 
 
 def spoken_place(

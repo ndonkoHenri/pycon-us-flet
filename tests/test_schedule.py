@@ -228,7 +228,8 @@ async def shown(
     monkeypatch.setattr(scrolling, "LANDING_S", 5.0)
     monkeypatch.setattr(screen, "SETTLE_S", 5.0)
 
-    async def show(**settings: Any) -> Shown:
+    async def show(*, moves: bool = True, **settings: Any) -> Shown:
+        """Render the Schedule with these ``Prefs``; ``moves`` as ``Shown.moves``."""
         clock.set_test_now(now[0])
         storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
         semantics = MemorySemantics()
@@ -257,6 +258,7 @@ async def shown(
             strips,
             storage,
             announced=semantics.announced,
+            moves=moves,
         )
 
         async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
@@ -844,8 +846,10 @@ async def test_a_re_render_as_on_back_from_a_detail_never_jumps(
     """#313: a detail pushed over the Schedule keeps it mounted; Back re-renders it."""
     schedule = await shown()
     schedule.scrolls.clear()
+    renders = len(schedule.retaps)  # one per Schedule render
     schedule.rerender()
     await settle()
+    assert len(schedule.retaps) > renders  # it did re-render
     assert schedule.scrolls == []
 
 
@@ -932,6 +936,52 @@ async def test_the_button_hides_while_the_place_it_goes_to_is_on_screen(
     await schedule.scroll_end(FRIDAY, 3600.0)
     assert schedule.fab is not None
     await schedule.scroll_end(FRIDAY, 3800.0)  # back near the landing
+    assert schedule.fab is None
+
+
+async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
+    shown: Callable[..., Awaitable[Shown]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A list already in place sends no scroll end, so the jump answers only after its
+    tries: the button must not show for those seconds and then vanish (D-204)."""
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.2)
+    with caplog.at_level(logging.INFO):
+        schedule = await shown(moves=False, reduce_motion=True)
+        assert schedule.fab is None  # the jump is on its way
+        await schedule.until(lambda: "did not move" in caplog.text)
+    assert len(schedule.scrolls) == scrolling.JUMP_TRIES
+    assert schedule.fab is None  # "still": the place is in view
+    await schedule.scroll_end(FRIDAY, 3000.0)
+    assert schedule.fab is not None  # the landing was kept, so a scroll away counts
+
+
+async def test_a_screen_reader_keeps_the_button_so_a_tap_never_drops_its_focus(
+    shown: Callable[..., Awaitable[Shown]],
+) -> None:
+    """ux.md §5.2 item 5: a control that hides under the focus sends the reader
+    elsewhere, over the announcement of where the list went."""
+    schedule = await shown(screen_reader=True, announcements=True)
+    assert schedule.fab is not None  # after the first display's jump too
+    await schedule.press_now()
+    assert schedule.announced == ["Friday, May 15, 10:30 AM"]
+    assert schedule.fab is not None
+
+
+async def test_a_tap_after_a_slot_started_since_the_tick_goes_there_and_hides(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """The tap reads the clock, and so does the render its landing causes: the line
+    moves with the jump and the button hides at once, not at the next tick."""
+    schedule = await shown()
+    await schedule.scroll_away()
+    clock.set_test_now(friday_at(11, 0))  # the 11:00 AM slot starts before the tick
+    schedule.scrolls.clear()
+    await schedule.press_now()
+    assert schedule.keyed() == ["slot-2026-05-15T11:00:00-07:00"]
+    keys = _list_items(schedule, FRIDAY)
+    assert keys[keys.index(NOW_KEY) - 1] == "slot-2026-05-15T11:00:00-07:00"
     assert schedule.fab is None
 
 

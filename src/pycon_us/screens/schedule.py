@@ -15,7 +15,8 @@ Jump to now (D-155, D-204) lands on the slot that is on, else on today's now lin
 (``now_place()``): by itself on the first display of each today in the process, be it
 when the Schedule opens or when the user swipes to today, and again with the "Now"
 button, which switches to today first when another day shows, and tells a screen reader
-where it landed. The button hides while the place it goes to is on screen. A minute tick
+where it landed. The button hides while the list is near where a jump left it, and
+while today's first jump is on its way; a screen reader keeps it (D-204). A minute tick
 (``use_minute()``) keeps today's dot, the button and the now line with the clock; the
 day shown stays put across midnight. Without any data (no snapshot or cache, NEW-03)
 the screen shows the skeleton until the first fetch has failed, then "Can't load the
@@ -45,7 +46,14 @@ from pycon_us.screens.schedule_days import (
     now_button,
 )
 from pycon_us.screens.schedule_filter import use_track_filter
-from pycon_us.screens.schedule_now import Landing, NowMark, spoken_place
+from pycon_us.screens.schedule_now import (
+    PENDING,
+    InView,
+    Landing,
+    NowMark,
+    shows_now,
+    spoken_place,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -101,10 +109,12 @@ def Schedule() -> ft.View:
     current = today(now, info.zone)
     all_days = days(data, info.first_day, info.last_day) if data else ()
     picked, set_picked = ft.use_state(memory.schedule_day)
-    shown = picked if picked in all_days else _default_day(all_days, current)
+    # The default day is pinned at the first display, so midnight never moves it.
+    opened_on = ft.use_memo(lambda: current, [data is None])
+    shown = picked if picked in all_days else _default_day(all_days, opened_on)
     rest, set_rest = ft.use_state(False)  # the other days are rendered (D-156)
     jump, set_jump = ft.use_state(0)  # a "Now" tap from another day's tab
-    in_view, set_in_view = ft.use_state(cast(Landing | None, None))  # where now shows
+    in_view, set_in_view = ft.use_state(cast(InView, PENDING))  # opened() settles it
     refs = ft.use_memo(dict[date, ft.Ref[ft.ListView]], [])
     signals = ft.use_memo(Signals, [])
     excluded = prefs.excluded_tracks
@@ -136,7 +146,11 @@ def Schedule() -> ft.View:
     async def jump_to_now(*, asked: bool) -> None:
         if not today_slots:
             return
-        memory.jumped_on = current  # by itself, never again today (D-18, D-204)
+        memory.jumped_on = current  # asked or not, today's jump is done (D-18, D-204)
+        if not asked:
+            signals.landing = None
+            set_in_view(PENDING)
+        # The clock's place: the landing's render lays the line out at it too.
         at = clock.now()
         target = now_place(today_slots, at)
         ended = await jump_to_key(
@@ -146,6 +160,7 @@ def Schedule() -> ft.View:
             ended=signals.ended,
         )
         if ended == "failed":
+            set_in_view(None)
             return
         # "landed" recorded the offset at its scroll end; "still" left it as it was.
         pixels = memory.schedule_offsets.get(current, 0.0)
@@ -165,8 +180,9 @@ def Schedule() -> ft.View:
     async def opened() -> None:
         if shown is None:  # no data yet: the first display is the render that has it
             return
-        set_picked(shown)  # a midnight while mounted never moves the user (D-204)
         jumps = _jumps_by_itself(shown, current, today_slots, memory)
+        if not jumps:
+            set_in_view(None)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
         await svc.storage.get(THEME)
         set_rest(True)
@@ -306,12 +322,11 @@ def Schedule() -> ft.View:
             expand=True,
         ),
     )
-    # Hidden while the place "Now" goes to is on screen; a slot's start, a scroll away,
-    # a refresh or a filter change brings it back (D-204).
+    # A screen reader keeps the button, so a tap never removes the focused control.
     at_now = (
-        shown == current
-        and in_view is not None
-        and in_view.shows(current, place, conference.version, excluded)
+        not prefs.screen_reader
+        and shown == current
+        and shows_now(in_view, current, place, conference.version, excluded)
     )
     return AppScaffold(
         title="Schedule",
