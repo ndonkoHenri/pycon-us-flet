@@ -135,7 +135,7 @@ def test_a_badge_that_repeats_the_name_is_not_read_twice() -> None:
 
 
 def test_a_track_page_shares_its_badge_and_the_charlas_en_espanol() -> None:
-    """D-197: what every row would repeat, the intro shows once."""
+    """D-199: what every row would repeat, the intro shows once."""
     charlas = track_sessions(DATA, "Charla")
     assert track_screen.shared_badges(track("charlas"), charlas) == {
         "Charla",
@@ -367,7 +367,7 @@ async def test_the_intro_shows_the_badge_the_new_mark_and_the_legend(
 
 
 async def test_rows_leave_out_the_badges_the_intro_shows(show: Show) -> None:
-    """D-197, as D-186 leaves out a badge that repeats the title: once, not per row."""
+    """D-199, as D-186 leaves out a badge that repeats the title: once, not per row."""
     charlas = await show(page_of("charlas"))
     rows = charlas.nodes("track.session.")
     assert len(rows) == 16

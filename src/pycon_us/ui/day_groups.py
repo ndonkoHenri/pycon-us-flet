@@ -53,7 +53,7 @@ def DayGroup(
             title, 3 under a heading of its own (search's "Sessions").
         top: The space above the day heading: 0 right under another heading.
         omit: Badge labels the page already shows, left out of every row: a track
-            page's own badge (``badge_specs()``, D-197).
+            page's own badge (``badge_specs()``, D-199).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _DayGroup(

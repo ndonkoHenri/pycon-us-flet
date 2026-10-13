@@ -4,7 +4,7 @@ An intro shows the track's badge as the schedule does, "New track" when it is ne
 this year, the track's plural name as the page's heading (the app bar's title stays
 empty, as on session detail, D-186) and its legend line (EVT-04). Then
 every session of the track, by day under level-2 day headings (F40), as ``SessionRow``s
-with their stars (D-184), without the badges the intro already shows (D-197):
+with their stars (D-184), without the badges the intro already shows (D-199):
 ``track_sessions()``'s list, so the Posters track lists each
 poster rather than the Posters row, and the Schedule's filter never applies, so the
 open spaces it hides by default show on their own page (D-20, D-178). No paging: each

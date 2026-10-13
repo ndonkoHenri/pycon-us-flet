@@ -390,7 +390,7 @@ def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
-    # D-197: a status mark beside a track's badge, not one more tonal fill, which in
+    # D-199: a status mark beside a track's badge, not one more tonal fill, which in
     # light sat 6.8 from the En Español pink and in dark outshone every track.
     new_track = theme.build_tokens(dark=dark, high_contrast=False).new_track
     assert new_track == theme.BadgeColors(text=hex_role(scheme(dark), "primary"))

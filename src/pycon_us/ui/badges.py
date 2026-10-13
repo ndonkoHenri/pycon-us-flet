@@ -38,7 +38,7 @@ REGISTRATION = "Registration required"
 
 NEW_TRACK = "New track"
 """The badge of a track new this year (SCHED-21), shown beside the track's own badge
-on the Tracks hub and the track's page, outlined in ``Tokens.new_track`` (D-197)."""
+on the Tracks hub and the track's page, outlined in ``Tokens.new_track`` (D-199)."""
 
 FAVORITE_LABEL = "Save to My schedule"
 """The star's name for screen readers, the same in both states: its toggle state says
@@ -111,7 +111,7 @@ def badge_specs(
         info: The year's facts, for the track's display name (DATA-28).
         tokens: The current scheme's tokens.
         omit: Labels the page already shows, left out of every row: a track page's
-            own badge, and "En Español" on the Charlas page (D-197).
+            own badge, and "En Español" on the Charlas page (D-199).
 
     Returns:
         The label and colours of each badge; none for a session without a track and

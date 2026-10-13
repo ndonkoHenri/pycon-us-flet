@@ -122,7 +122,7 @@ def test_track_icons_are_material_icon_names(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_track_has_an_icon_of_its_own(year: int) -> None:
-    """The hub shows the icons side by side as the key to the tracks (D-197): two
+    """The hub shows the icons side by side as the key to the tracks (D-199): two
     rows told apart by their circle's colour alone would break D-33."""
     icons = [track.icon for track in load_year(year).conference.tracks]
     assert len(icons) == len(set(icons)), sorted(icons)

@@ -187,7 +187,7 @@ def SessionRow(
             (``agenda.elapsed_percent()``): a 3 dp bar in ``Tokens.live`` under the
             text, and "60 percent elapsed." at the end of the phrase; None for none.
         omit: Badge labels the page already shows, left out of the row and its
-            phrase (``badge_specs()``): a track page's own badge (D-197).
+            phrase (``badge_specs()``): a track page's own badge (D-199).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id

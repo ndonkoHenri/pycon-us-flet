@@ -223,7 +223,7 @@ class Tokens:
         spanish: The "En Español" badge (D-25).
         registration: The "Registration required" badge, outlined in ``error``.
         new_track: The "New track" badge, outlined in ``primary``: a mark of status,
-            not another category among the tonal track fills (D-197).
+            not another category among the tonal track fills (D-199).
     """
 
     live: str
