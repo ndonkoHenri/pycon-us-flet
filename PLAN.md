@@ -152,7 +152,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | Handler exceptions crash the session | `@report_errors` decorator | **U15** non-fatal mode + Python error hook | 3 (P1–P2) |
 | Barcode scanning | Manual + USB/Bluetooth HID entry | **E1** extension over `mobile_scanner` | 4 (spike S8; before P3) |
 | App version at runtime | `__version__` constant | **U4** `page.get_app_info()` | 5 (P2) |
-| OS text scale; accessibility-setting changes | Fluid layouts; re-read on resume | **U16** `PageMediaData.text_scale_factor`; **U17** change event | 6 (P2) |
+| OS text scale; accessibility-setting changes | Fluid layouts; re-read on resume | **U16** `PageMediaData.text_scale_factor`; **U17** change event | 6 (U16: P2; U17: P1, #178's late resume, D-183) |
 | Sticky headers, `AppBar.bottom` | Time gutter; tabs as the first body row | **U2**, **U10** | 6 (app: later) |
 | Zoom-to-booth | Select + highlight, no camera move | **U3** absolute `InteractiveViewer` transform | 6 (app: later) |
 | Query-string hook | `use_query()` | **U9** `use_route_search()` | 6 (app: later) |

@@ -41,6 +41,10 @@ class Services:
         memory: The process's one ``ViewMemory`` (D-143).
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
+        haptics: The platform's haptic feedback: the star's selection click (D-30).
+        launcher: Opens web pages, apps, ``tel:`` and ``mailto:`` links, by the link
+            rule in ``ui.links`` (INFO-14).
+        clipboard: Copy for phone numbers and email addresses (``ui.links``).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
@@ -54,6 +58,9 @@ class Services:
     storage: Storage
     memory: ViewMemory
     semantics: ft.SemanticsService
+    haptics: ft.HapticFeedback
+    launcher: ft.UrlLauncher
+    clipboard: ft.Clipboard
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
     shown_versions: set[int] = field(default_factory=set)
@@ -81,6 +88,9 @@ class Services:
             storage=Storage(ft.SharedPreferences(), data_dir(), year.conference.year),
             memory=memory,
             semantics=ft.SemanticsService(),
+            haptics=ft.HapticFeedback(),
+            launcher=ft.UrlLauncher(),
+            clipboard=ft.Clipboard(),
         )
 
     def close(self) -> None:

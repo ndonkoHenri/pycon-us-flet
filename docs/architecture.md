@@ -21,7 +21,7 @@
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
  state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      favorites.py  Favorites   (P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
- core/         pure Python, no Flet: feed rules, models, queries, time, slugs, html→md,
+ core/         pure Python, no Flet: feed rules, models, queries, search, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
  data/<year>/  conference.toml · content.toml · map.toml · conference.json (snapshot)
 ```
@@ -63,9 +63,9 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1), `search`, `row_views` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
-| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SessionRow`, `NoticeRow`, `SpeakerRow`, `TimeGutter`, `LinkTile`, `LocationCard`), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
+| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
@@ -114,7 +114,7 @@ def App(memory: ViewMemory):
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) and `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 `ft.UrlLauncher()`, `ft.Share()`, `ft.Clipboard()`, `ft.HapticFeedback()` and `ft.StoragePaths()`; P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `launcher` (`ft.UrlLauncher()`) and `clipboard` (`ft.Clipboard()`), which `ui/links.py`'s link rule uses (D-182), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) and `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 also `ft.Share()`, `ft.HapticFeedback()` and `ft.StoragePaths()`; P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
 
 ### 4.3 Bootstrap (DATA-35)
 
@@ -532,7 +532,7 @@ Filters are preferences (persisted in `Prefs`); positions are process memory (he
 
 ### 6.4 Screen pattern
 
-A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, favorites.ids, ...])` (lists passed as tuples; `favorites.ids` is a frozenset already, D-172), builds handlers and effects as named functions, each wrapped in `report_errors` (sync or async, D-163), and returns `AppScaffold(...)`. Undo is a `SnackBar(content=..., action="Undo", on_action=..., behavior=ft.SnackBarBehavior.FLOATING)` shown with `page.show_dialog`; an async undo runs through `page.run_task(favorites.undo, svc.storage, change)` with the `Change` the edit returned (D-172). Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `ft.memo` rows keyed by session id on `(row view, is_favorite)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
+A screen reads its stores through hooks, memoises its view model with `ft.use_memo(lambda: queries.x(conference.data, ...), [conference.version, favorites.ids, ...])` (lists passed as tuples; `favorites.ids` is a frozenset already, D-172), builds handlers and effects as named functions, each wrapped in `report_errors` (sync or async, D-163), and returns `AppScaffold(...)`. A list of sessions gets its row views from `use_session_views(conference, ids, use_24h=...)` and its one star handler from `use_favorite_toggle(favorites)` (`ui/session_rows.py`, `ui/badges.py`; D-184): the handler toggles, gives the selection click on an add, and shows the one SnackBar of ux.md §4.4 with `page.show_dialog`, whose `SnackBarAction("Undo")` awaits `favorites.undo(svc.storage, change)` with the `Change` the edit returned (D-172). Lists memoise the whole path (D-153): `ft.memo` day lists or sections given only the favourites under them, memoised group items (slots), and `SessionRow` / `NoticeRow`, memoised components keyed by session id on `(row view, is_favorite, on_toggle, tokens)`; props are frozen values built once per feed version and stable callbacks (`use_callback`), since `ft.memo` compares by identity first and only skips its own body (F34). Text fields are controlled (D-157). A list whose keyed items `scroll_to(scroll_key=...)` must reach gets `cache_extent=FULL_LIST_EXTENT` so every item is built; other lists stay lazy (D-154).
 
 ---
 
@@ -592,28 +592,37 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 | Query | Rule | Features |
 |---|---|---|
+| `session_view(session, zone, use_24h=...)`, `session_views(data, ids, zone, use_24h=...)` | a row's frozen `SessionView`: the displayed start to the end in conference time ("9:25–10:10 AM", and "9:25 to 10:10 AM" for screen readers), the display location, the authors' names; built once per feed version (D-153, D-184); `by_day(views, zone)` groups them by conference-local day. In `core/row_views.py`, beside this module. Built in P1 (#81) | SCHED-03 |
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
-| `timeline(data, day, excluded)` | one item per time slot, rows ordered by start then room (D-31); a track passes unless excluded | DATA-18, SCHED-02 |
-| `search(data, query, scope)` | folded, **all** words must match `search_text` (D-46); grouped by type, sessions by day; ignores filters | NEW-02, SPKR-02 |
-| `now_next(sessions, now)` | Now = `start <= now < end`; Next = the earliest later start; ignores filters | SCHED-25 |
-| `next_for_me(data, favorites, now)` | earliest saved session with `end > now`, within 3 h | SCHED-25 |
-| `my_schedule(data, favorites)` | saved sessions by day, plus `overlaps: dict[id, list[id]]` (sorted sweep) | NEW-01 |
-| `current_slot_key(day, now)` | first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey` | SCHED-16 |
-| `speakers(data)` | sorted by folded displayed name (D-46) | SPKR-01 |
-| `track_sessions`, `room_sessions` | flat by start (poster details included), grouped by day | SCHED-22, ROOM-02 |
+| `timeline(data, day, excluded)` | a tuple of `Slot(key, start, sessions)`, one per time slot; `key` is `"slot-<iso>"`, the slot item's `ScrollKey`; rows in `schedule_order`: shown start, then shown room in natural order (D-31), then name and id, rows without a place first; a track passes unless excluded, and a slot the filter empties is left out. The only query that takes `excluded`, called only by the Schedule (a test checks both). Memoised (below). Built in P1 (#85, D-178) | DATA-18, DATA-30, SCHED-02 |
+| `search(index, query, scope)` | in `core/search.py` (below): folded, **all** words must match, each anywhere in the text (D-46); grouped by type, sessions by day; ignores filters (D-180). Built in P1 | NEW-02, DATA-18, DATA-19, SPKR-02 |
+| `now_next(data, now)` | a frozen `NowNext`: the `Phase` (`before`, `before_day`, `day`, `after_day`, `after`; a day runs from its first start to its last end, and between days the conference-local date tells the evening from the morning), `happening` = `start <= now < end` over the timeline (`data.days`), and the first time slot after `now` on any day (`next_start`, `up_next`); ids, each slot in `schedule_order`, ignores filters (D-179) | SCHED-25 |
+| `next_for_me(data, favorites, now)` | the first saved session that starts within 3 h (`NEXT_SESSION_WINDOW`), else the saved session that is on and started last, else None (D-179) | SCHED-25 |
+| `my_schedule(data, favorites)` | a frozen `Agenda`: saved sessions by day and slot (`AgendaDay`, `AgendaSlot`), each slot in `schedule_order`, plus `overlaps: Mapping[id, tuple[id, ...]]` from one sorted sweep; back-to-back sessions, and sessions with the same location, start and end (posters), don't overlap (D-179) | NEW-01 |
+| `current_slot_key(slots, now)` | over the shown slots (`timeline(data, day, excluded)`, so the key always has an item to scroll to, D-155, D-178): first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey`; `None` when `slots` is empty | SCHED-16 |
+| `speakers(data)` | sorted by `speaker_order` (folded displayed name, then id; D-46, D-180), the key search's index and the Speakers stub already use | SPKR-01 |
+| `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row (the row itself until the feed publishes posters); ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
+| `room_sessions` | flat by start (poster details included), grouped by day | ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
+
+**Memo (D-178).** The schedule queries keep their results per processed feed, in a `WeakKeyDictionary` keyed by the `ConferenceData` (one object per `Conference.version`, so a replaced feed's results go with it), then by day and the excluded set (order-free). The same arguments return the same objects; a slot the filter leaves alone is the same object filtered or not, and a filter that hides nothing on a day returns the whole day's tuple. That is what lets the Schedule's memoised day lists and slot items skip their bodies (D-153, F34); `Slot` and `DaySessions` are also frozen values, so equal ones compare equal, and their sessions are the model's own objects, compared by identity. A screen still wraps the call in `use_memo` on `conference.version` (§6.4); the query's memo keeps the objects stable across a filter change and a remount.
 
 ```python
 # src/pycon_us/core/queries.py (excerpt)
 def fold(text: str) -> str:
-    """Lower-case and strip accents, so 'Cristián' matches 'cristian' (D-46)."""
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+    """Case, accents and typography folded: 'Cristián' → 'cristian', 'don’t' → 'dont'."""
+    folded = unicodedata.normalize("NFKD", text.replace("´", "")).casefold()  # ´ as apostrophe
+    folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)  # ' ’ go; “ —, ł, æ
+    return _NON_ASCII.sub(_without_marks, folded)  # marks and format characters go (D-180)
+```
 
+**Search (`core/search.py`; D-46, D-180).** `search_index(data)` pairs each session's `search_text`, each directory speaker's folded name and each room's folded name with what it finds, already in result order (sessions by day in the Schedule's order: shown start, then place in natural order, name and id, D-31; speakers by `queries.speaker_order`; rooms in natural order), and logs `Search index built in N ms`. It is built once per feed version (`use_memo` on `Conference.version` in #97's `Search`), never per keystroke. `search(index, query, scope)` folds the query, keeps the entries that hold every word as a substring, and returns a frozen `SearchResults(sessions: tuple[DaySessions, ...], speakers, rooms)`; an empty or blank query finds nothing, and `scope` is one of `SCOPES` (`all`, `sessions`, `speakers`, `rooms`).
 
-def matches(query: str, folded_haystack: str) -> bool:
-    """True when every word of the query occurs in the already-folded haystack."""
-    return all(word in folded_haystack for word in fold(query).split())
+```python
+# src/pycon_us/core/search.py (excerpt)
+def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
+    words = fold(query).split()
+    ...  # per type in scope: [item for text, item in entries if all(w in text for w in words)]
 ```
 
 ### 7.6 Time (`clock.py`, `core/timefmt.py`; D-35, D-43)
@@ -1249,7 +1258,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
 | Corrupt cache | `Conference.load_local` | cache deleted, snapshot shown, logged |
 | Storage read or write fails | `services/storage.py` | logged; `False` or `None` returned; the previous file and the data in memory kept (D-120) |
 | Unreadable preference | `Prefs.load` | its default; logged (bad year data is a build bug: the loader test fails) |
-| Share, URL, clipboard failure | the handler | SnackBar "Couldn't open the link" / "Couldn't share" |
+| Share, URL, clipboard failure | the handler (`ui/links.py`'s `open_link()` and `copy_contact()` for links, D-182) | SnackBar "Couldn't open the link" / "Couldn't copy the phone number" / "Couldn't share"; logged with the link's kind and the error's class, never its target nor the error's text |
 | Permission denied | permission flows | `Banner` with "Open settings"; the task continues |
 | `NetworkError`, `ApiError` (P3) | `Account`, `SyncWorker`, staff screens | inline errors, queued rows, "Retry failed" |
 

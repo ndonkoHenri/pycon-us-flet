@@ -40,6 +40,7 @@
 | Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
+| Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
 | Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---
@@ -107,6 +108,8 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
    3.47.7). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
    and the configuration, not on the pin's SHA; the reported version stays `1.0.4` across bumps (§2.2 quirks).
+   It also deletes the worktree's pub cache clone (§5.8), as `flet clean` and a change of the bundled Python version
+   do: if `build/pub-cache` is missing, clone it again before the next build.
 4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
 5. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
@@ -408,6 +411,7 @@ What is different in the companion client:
 - Without `-v`, `flet debug` shows only a spinner ("Running debug version of the app on … device...") and hides `flutter run`'s output, including errors. `-v` streams it, and `-vv` adds Flutter's `--verbose` (`CLI/commands/build_base.py:3173`).
 - Ctrl+C ends the session ("Debug session ended."); the app stays installed.
 - The debug build has `versionCode` 1 and `versionName` 1.0.0, because `flet debug` passes no `--build-number` or `--build-name` (`CLI/commands/debug.py:144-163`).
+- When another build may run on the Mac (agents in parallel), prefix it with the worktree's own pub cache, `PUB_CACHE=$PWD/build/pub-cache uv run flet debug …`, or it may run another worktree's Python (§5.8).
 - On an iPhone it signs with the `debugging` table (§8.2), so it needs a valid Apple Development certificate and a development profile that includes the device. The owner's Mac has neither today (its Apple Development certificate is revoked); #121 creates them. Simulators need no signing.
 
 Use it for anything the companion client cannot show:
@@ -476,6 +480,64 @@ LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
 - The bundle id is the app's own (`io.github.ndonkohenri.pyconus`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
 - Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out.png`: look there first when a flow fails.
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
+- When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
+
+### 5.8 Several builds at once: a pub cache per worktree (D-176)
+
+**Why.** serious_python 5.0.0, which embeds Python in the app, stages each build's Python app inside its own plugin folder in the **pub cache**, and every Flutter project on the Mac shares that folder. Two builds that overlap can ship each other's Python; nothing fails or warns, and the app runs another worktree's code. It happened three times on 2026-10-12 with agents building in parallel (#176).
+- **iOS:** the packaging step copies `build/python-app/` into `<pub cache>/hosted/pub.dev/serious_python_darwin-5.0.0/darwin/` (`dist_ios/app`, then the Swift package's `serious_python_darwin/Sources/serious_python_darwin/Resources/app`; site-packages and the native extension frameworks go there too). Xcode copies that folder into the app's `serious_python_darwin_serious_python_darwin.bundle/app` minutes later, so a build that packages in between wins.
+- **Android: the same race, with a shorter window.** The plugin's Gradle tasks write `app.zip`, `stdlib.zip` and `sitepackages.zip` to `serious_python_android-5.0.0/android/src/main/assets/` and the native libraries to `src/main/jniLibs/<abi>/`, paths relative to the plugin's folder in the pub cache (`build.gradle.kts:151, 423-454`); the APK takes them when Gradle merges assets later in the same run. Two Gradle builds that overlap there can package each other's `app.zip`.
+- `flet debug` and `flet test` run the same pipeline (§5.3, §5.7). The companion client (§5.2) does not embed Python and is not affected.
+
+**The rule.** When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree uses a pub cache of its own under `build/`:
+
+```bash
+# Once per worktree, and again whenever build/pub-cache is gone: an APFS clone of the shared cache.
+# The test keeps a second run from nesting a copy inside the first (see below).
+mkdir -p build && { test -d build/pub-cache || cp -cR ~/.pub-cache build/pub-cache; }
+
+# Then prefix every build, debug and test command in this worktree:
+PUB_CACHE=$PWD/build/pub-cache LANG=en_US.UTF-8 uv run flet build ios-simulator --yes
+PUB_CACHE=$PWD/build/pub-cache uv run flet debug android -d emulator-5580
+PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/ui -v
+```
+
+- `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On the owner's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
+- Keep the `test -d`: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the line again.
+- The clone carries whatever another build last staged in the plugin folders; your build replaces it in your copy only.
+- Keep the same `PUB_CACHE` for every command in the worktree: switching makes Flutter resolve the packages again. `build/` is git-ignored, so the clone goes with it: `rm -rf build` (§2.2), `flet clean` (`CLI/commands/clean.py:68`) and a build after a change of the bundled Python version (flet-cli wipes `build/` first, `CLI/commands/build_base.py:963`) all delete it. If `build/pub-cache` is missing, run the setup line again before the next build; otherwise that build quietly fills a new cache from the network (as the build that changes the Python version does anyway, since it empties `build/` itself).
+- On a Mac where only one build runs at a time, the shared `~/.pub-cache` is fine.
+
+**The check after an iOS build.** No output (exit status 0) means the bundle holds this worktree's app; the bundle's own `.keep` placeholder is the one expected difference, hence `-x .keep`:
+
+```bash
+diff -rq -x .keep build/python-app build/ios-simulator/*.app/serious_python_darwin_serious_python_darwin.bundle/app
+```
+
+For an APK, unpack its `assets/app.zip` under `build/` and compare it the same way (no output means a match):
+
+```bash
+rm -rf build/apk-app build/apk-app.zip && unzip -p build/apk/pycon-us.apk assets/app.zip > build/apk-app.zip \
+  && unzip -q build/apk-app.zip -d build/apk-app && diff -rq build/python-app build/apk-app
+```
+
+The release builds of §8.3 keep the app elsewhere: an AAB under `base/assets/`, an IPA in `Payload/*.app`, and an unsigned `flet build ipa` (today, until #121; §8.2) in the `.xcarchive`'s `Products/Applications/*.app`:
+
+```bash
+# AAB (flet build aab)
+rm -rf build/aab-app build/aab-app.zip && unzip -p build/aab/pycon-us.aab base/assets/app.zip > build/aab-app.zip \
+  && unzip -q build/aab-app.zip -d build/aab-app && diff -rq build/python-app build/aab-app
+# Signed IPA (flet build ipa with a provisioning profile)
+rm -rf build/ipa-app && unzip -q build/ipa/pycon_us.ipa -d build/ipa-app && diff -rq -x .keep build/python-app \
+  build/ipa-app/Payload/*.app/serious_python_darwin_serious_python_darwin.bundle/app
+# Unsigned archive (flet build ipa without one)
+diff -rq -x .keep build/python-app \
+  build/ipa/pycon-us.xcarchive/Products/Applications/*.app/serious_python_darwin_serious_python_darwin.bundle/app
+```
+
+Checked on 2026-10-12 (#176), from a fresh clone of the cache: `flet build ios-simulator` took 4 minutes and `flet build apk --arch arm64-v8a` 2 minutes. Both staged into `build/pub-cache` (`dist_ios/app` and `assets/app.zip` written by these builds) while the copies in `~/.pub-cache` still held another worktree's app from half an hour earlier, both checks printed nothing, and the app ran on an iPhone 17 simulator (iOS 26.5). On 2026-10-13, `flet build aab` (`build/aab/pycon-us.aab`) and an unsigned `flet build ipa` (`build/ipa/pycon-us.xcarchive`) from the same clone passed the AAB and archive checks; the signed-IPA line was tried on an IPA zipped by hand from that archive's app, since no profile exists to export one yet (#121).
+
+The upstream fix, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When the pin brings it, this subsection and D-176 go.
 
 ---
 
@@ -757,6 +819,7 @@ There is no release train. The procedure:
 4. **Tag** `vX.Y.Z` on `main`. `build-android.yml` builds the quick-look APK.
 5. **Locally, at the same commit:**
    - check the pin (§2.2) and run `uv sync`;
+   - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
    - signed AAB → Play internal testing;
    - IPA (`--ios-export-method app-store-connect`, §8.2) → TestFlight.
 6. **Smoke-test** on an Android emulator (the signed APK or AAB build, installed over the previous one, then force-stopped; §5.5) and on the iPhone (the TestFlight build, installed over the previous one): airplane-mode start and the core journeys. At a phase exit, run the full device checklist (D-79, D-102).
@@ -794,3 +857,4 @@ S5 closed the rows it answered: builds from the `.flet-src` setup (§2.2, §8), 
 | App identity: name, icon, bundle id, URL scheme | O-4 | Placeholders as in §3.1 |
 | Distribution routes | O-5 | Internal only (D-85) |
 | Cleartext HTTP and iOS local-network behaviour with the LAN mock | The first P3 device test | Use the companion client or the emulator |
+| serious_python stages the app in the shared pub cache, so overlapping builds can ship each other's Python (§5.8) | U28 (#185, flet-dev/serious-python#255) | A pub cache per worktree and the bundle check (§5.8, D-176) |
