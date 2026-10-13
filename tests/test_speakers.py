@@ -26,7 +26,7 @@ from flet.messaging.session import Session
 
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData, Speaker
-from pycon_us.core.queries import speaker_order
+from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.search import search_index
 from pycon_us.core.speakers import (
     NO_LETTER,
@@ -233,6 +233,10 @@ FILTER_CASES = ["Cristián Maureira-Fredes", "Łukasz Langa", "Mike Müller", "A
         ("mike zzz", []),  # all words must match
         ("lang", ["Łukasz Langa"]),  # anywhere in the name
         ("a", ["Ana Typing", "Cristián Maureira-Fredes", "Łukasz Langa"]),  # in order
+        # No word to match: the lone apostrophe iOS types before O’Brien, a zero-width
+        # space. Both fold to nothing, and must not empty the list.
+        ("\N{RIGHT SINGLE QUOTATION MARK}", sorted(FILTER_CASES, key=fold)),
+        ("\N{ZERO WIDTH SPACE}", sorted(FILTER_CASES, key=fold)),
     ],
 )
 def test_the_filter_finds_names_by_every_word_folded(
@@ -241,10 +245,13 @@ def test_the_filter_finds_names_by_every_word_folded(
     assert filtered(with_speakers(FILTER_CASES), query) == found
 
 
-def test_a_blank_filter_keeps_the_whole_list_as_the_same_object() -> None:
+@pytest.mark.parametrize("query", ["", "  ", " ' ", "\N{RIGHT SINGLE QUOTATION MARK}"])
+def test_a_filter_without_a_word_keeps_the_whole_list_as_the_same_object(
+    query: str,
+) -> None:
     data = with_speakers(FILTER_CASES)
     entries = directory(data)
-    assert filter_directory(entries, search_index(data), "  ") is entries
+    assert filter_directory(entries, search_index(data), query) is entries
 
 
 def test_the_filter_never_matches_a_session_title() -> None:
@@ -325,7 +332,7 @@ class Shown:
         return found[0]
 
     @property
-    def field(self) -> ft.TextField:
+    def text_field(self) -> ft.TextField:
         (text_field,) = self.find(ft.TextField)
         return text_field
 
@@ -357,7 +364,7 @@ class Shown:
 
     async def type(self, text: str) -> None:
         """Type into the filter as Flutter reports it: the value, then the event."""
-        text_field = self.field
+        text_field = self.text_field
         self.session.apply_patch(text_field._i, {"value": text})
         await self.session.dispatch_event(text_field._i, "change", None)
         await self.settle()
@@ -451,14 +458,16 @@ async def test_a_keystroke_re_renders_no_row_that_stays(shown: Shown) -> None:
     assert shown.listed == [cristian.speaker.id]
     assert shown.rows == []
     assert shown.sections == ["C"]  # its section changed; the others went
-    assert shown.field.value == "cristian"  # controlled: the text stays (D-157)
+    assert shown.text_field.value == "cristian"  # controlled: the text stays (D-157)
 
     shown.sections.clear()
     await shown.type("cristian ")  # the same speakers: nothing re-renders
     assert (shown.rows, shown.sections) == ([], [])
 
 
-async def test_a_filter_that_finds_nothing_offers_to_clear_it(shown: Shown) -> None:
+async def test_a_filter_that_finds_nothing_offers_to_clear_it(
+    shown: Shown, focused: list[ft.TextField]
+) -> None:
     await shown.type("zzz")
     assert shown.listed == []
     state = shown.node("speakers.no_match")
@@ -467,27 +476,98 @@ async def test_a_filter_that_finds_nothing_offers_to_clear_it(shown: Shown) -> N
     assert button.content == screen.CLEAR_FILTER
 
     await shown.click(button)
-    assert shown.field.value == ""
+    assert shown.text_field.value == ""
     assert len(shown.listed) == len(ALL)
+    # The button went: the field takes the focus.
+    assert [f._i for f in focused] == [shown.text_field._i]
 
 
-async def test_the_fields_clear_button_shows_only_with_text(shown: Shown) -> None:
-    assert shown.field.suffix_icon is None
+async def test_the_fields_clear_button_shows_only_with_text(
+    shown: Shown, focused: list[ft.TextField]
+) -> None:
+    def clear_buttons() -> list[ft.IconButton]:
+        return [b for b in shown.find(ft.IconButton) if b.parent is not None]
+
+    assert clear_buttons() == []
     await shown.type("ana")
-    clear = shown.field.suffix_icon
-    assert isinstance(clear, ft.IconButton)
+    (clear,) = clear_buttons()
     assert clear.tooltip == screen.CLEAR_FILTER  # its accessible name (D-27)
+    # Over the field, not in it: the field's merged node would swallow it.
+    assert not _under(clear, shown.node("speakers.filter"))
 
     await shown.click(clear)
-    assert shown.field.value == ""
-    assert shown.field.suffix_icon is None
+    assert shown.text_field.value == ""
+    assert clear_buttons() == []
+    # The button went: the field takes the focus.
+    assert [f._i for f in focused] == [shown.text_field._i]
 
 
 async def test_the_filter_field_is_named_and_identified(shown: Shown) -> None:
     node = shown.node("speakers.filter")
-    assert node.content is shown.field
-    assert shown.field.hint_text == screen.FILTER_HINT
-    assert shown.field.autocorrect is False  # it would "fix" names
+    assert node.content is shown.text_field
+    assert shown.text_field.hint_text == screen.FILTER_HINT
+    # The hint names the empty field; it leaves the semantics tree once there is
+    # text, and the node's label takes over, never both at once (read twice).
+    assert node.label is None
+    assert isinstance(node.parent, ft.MergeSemantics)  # one node with the field's
+    await shown.type("mu")
+    assert shown.node("speakers.filter").label == screen.FILTER_HINT
+    await shown.type("")
+    assert shown.node("speakers.filter").label is None
+
+
+async def test_the_filter_field_never_fixes_names(shown: Shown) -> None:
+    assert shown.text_field.autocorrect is False
+    assert shown.text_field.enable_suggestions is False  # Android's own switch
+
+
+async def test_the_filter_field_has_no_line_even_when_focused(shown: Shown) -> None:
+    """ux.md §5.7: a pill like Material's search bar, not the theme's focus ring."""
+    border = cast(dict[ft.ControlState, ft.OutlineInputBorder], shown.text_field.border)
+    assert border.keys() == {ft.ControlState.DEFAULT, ft.ControlState.FOCUSED}
+    for state in border.values():
+        assert state.side == ft.BorderSide(0, ft.Colors.TRANSPARENT)
+        assert state.border_radius == 28
+
+
+async def test_a_filter_says_how_many_it_found_in_a_live_region(shown: Shown) -> None:
+    def counted() -> list[ft.Semantics]:
+        return [
+            s
+            for s in shown.find(ft.Semantics)
+            if s.identifier == "speakers.count" and s.parent is not None
+        ]
+
+    assert counted() == []  # no filter: nothing to count
+    await shown.type("mu")
+    (count,) = counted()
+    assert count.live_region
+    found = len(shown.listed)
+    assert found > 1
+    assert cast(ft.Text, cast(ft.Container, count.content).content).value == (
+        f"{found} speakers"
+    )
+    await shown.type("mike müller")
+    (count,) = counted()
+    assert cast(ft.Text, cast(ft.Container, count.content).content).value == (
+        "1 speaker"
+    )
+    await shown.type("zzz")  # a miss: the no-match state announces itself
+    assert counted() == []
+
+
+@pytest.fixture
+def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
+    """The fields asked to take the focus; the harness has no Flutter to answer."""
+    asked: list[ft.TextField] = []
+
+    async def focus(self: ft.TextField) -> None:
+        # As the real one, which invokes the method through the field's page.
+        assert self.page is not None, "the field is not on the page"
+        asked.append(self)
+
+    monkeypatch.setattr(ft.TextField, "focus", focus)
+    return asked
 
 
 async def test_each_letter_is_a_heading_node_of_its_own(shown: Shown) -> None:
@@ -501,9 +581,9 @@ async def test_each_letter_is_a_heading_node_of_its_own(shown: Shown) -> None:
 
 
 async def test_a_row_is_one_button_read_as_its_phrase(shown: Shown) -> None:
-    (lukasz,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
-    node = shown.node(f"speakers.speaker.{lukasz.speaker.id}")
-    assert node.label == speaker_phrase(lukasz)
+    (mike,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
+    node = shown.node(f"speakers.speaker.{mike.speaker.id}")
+    assert node.label == speaker_phrase(mike)
     assert node.button
     assert node.exclude_semantics  # the texts and initials are not read again
     tap = node.parent
@@ -594,3 +674,45 @@ async def test_after_a_failed_first_fetch_it_offers_to_try_again(
         assert buttons == ["Try again"]
     finally:
         await close(failed)
+
+
+async def test_a_feed_without_speakers_says_none_are_announced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not a filter miss: nothing was filtered, so there is nothing to clear."""
+    data = replace(processed(2026), speakers={})
+    empty = await show(Conference(data=data, version=1), tmp_path, monkeypatch)
+    try:
+        state = empty.node("speakers.not_announced")
+        assert state.live_region
+        titles = [str(t.value) for t in empty.find(ft.Text)]
+        assert screen.NOT_ANNOUNCED in titles
+        assert not any(t.startswith("No speakers match") for t in titles)
+        assert empty.find(ft.FilledTonalButton) == []  # no Clear filter, no button
+    finally:
+        await close(empty)
+
+
+async def test_a_new_feed_version_rebuilds_the_list_and_its_filter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The memo keys on ``Conference.version``: a refresh must reach the list."""
+    full = processed(2026)
+    (mike,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
+    speakers = {k: v for k, v in full.speakers.items() if k != mike.speaker.id}
+    conference = Conference(data=replace(full, speakers=speakers), version=1)
+    refreshed = await show(conference, tmp_path, monkeypatch)
+    try:
+        assert mike.speaker.id not in refreshed.listed
+        await refreshed.type("mike müller")
+        assert refreshed.listed == []
+
+        conference.data = full  # as a refresh publishes it (Conference._publish)
+        conference.version += 1
+        await refreshed.settle()
+        assert refreshed.listed == [mike.speaker.id]  # the new index finds him
+        await refreshed.type("")
+        assert mike.speaker.id in refreshed.listed
+        assert len(refreshed.listed) == len(ALL)
+    finally:
+        await close(refreshed)

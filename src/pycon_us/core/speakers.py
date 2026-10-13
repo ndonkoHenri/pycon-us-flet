@@ -141,8 +141,10 @@ def filter_directory(
     """Return the entries a filter keeps: those whose name holds every word (D-46).
 
     The matching is search's, over the same folded names (``search(index, query,
-    "speakers")``): accents and case ignored, each word anywhere in the name. A blank
-    filter keeps every entry and returns ``entries`` itself.
+    "speakers")``): accents and case ignored, each word anywhere in the name. A filter
+    with no word to match keeps every entry and returns ``entries`` itself: a blank one,
+    and one that folds to nothing, such as the lone ``’`` iOS types before ``O’Brien``,
+    which search would answer with nothing.
 
     Args:
         entries: The list's entries (``directory()``).
@@ -152,7 +154,7 @@ def filter_directory(
     Returns:
         The entries found, in the list's order.
     """
-    if not query.strip():
+    if not fold(query).split():
         return entries
     found = {speaker.id for speaker in search(index, query, "speakers").speakers}
     return tuple(entry for entry in entries if entry.speaker.id in found)
