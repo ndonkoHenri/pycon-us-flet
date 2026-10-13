@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
+from pycon_us.locations import HUB_PAGES
 from pycon_us.year_pages import (
     LightningTalksInfo,
     OpenSpacesInfo,
@@ -351,6 +352,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
                 f"{file}: tracks[{index}].slug: duplicate slug {track.slug!r}"
             )
         slugs.add(track.slug)
+        _check_hub_page(track, file, index)
         if not track.legend.strip():
             raise YearDataError(f"{file}: tracks[{index}].legend: is empty")
         if track.group not in TRACK_GROUPS:
@@ -378,3 +380,24 @@ def _check_content(content: Content, file: str) -> None:
             raise YearDataError(
                 f"{file}: display_time_overrides[{index}].match: {error}"
             ) from None
+
+
+def _check_hub_page(track: Track, file: str, index: int) -> None:
+    """Refuse a track slug that names a page of the hub's other than the track's own.
+
+    The hub's pages (``HUB_PAGES``) come before ``:slug`` under ``/more/tracks``
+    (D-207), so a track at ``sprints`` would have no page. A track with a page of its
+    own keeps the page's segment as its slug: its hub row pushes
+    ``/more/tracks/<slug>``, which must be that page.
+    """
+    own = next((seg for seg, key in HUB_PAGES.items() if key == track.key), None)
+    if own is not None and track.slug != own:
+        raise YearDataError(
+            f"{file}: tracks[{index}].slug: expected {own!r}, the segment of "
+            f"the track's own page, /more/tracks/{own}"
+        )
+    if own is None and track.slug in HUB_PAGES:
+        raise YearDataError(
+            f"{file}: tracks[{index}].slug: {track.slug!r} is the segment of "
+            f"another page, /more/tracks/{track.slug}"
+        )

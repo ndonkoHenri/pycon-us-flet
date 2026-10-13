@@ -437,6 +437,24 @@ def edit(path: Path, old: str, new: str) -> None:
             "",
             "2026/conference.toml: tracks[4].slug: missing key",
         ),
+        (  # the hub's pages come before :slug: such a track has no page (D-207)
+            "conference.toml",
+            'slug = "charlas"',
+            'slug = "sprints"',
+            "2026/conference.toml: tracks[6].slug: 'sprints' is the segment of",
+        ),
+        (
+            "conference.toml",
+            'slug = "charlas"',
+            'slug = "open-spaces"',
+            "2026/conference.toml: tracks[6].slug: 'open-spaces' is the segment of",
+        ),
+        (  # its hub row pushes its slug, which must be its own page
+            "conference.toml",
+            'slug = "lightning-talks"',
+            'slug = "lightning"',
+            "2026/conference.toml: tracks[3].slug: expected 'lightning-talks', the",
+        ),
         (
             "conference.toml",
             'legend = "Talks given in Spanish"',

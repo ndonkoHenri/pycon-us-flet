@@ -59,7 +59,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound` (§5) | P0 |
-| `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
+| `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `HUB_PAGES`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `year_schema.py`, `year_pages.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
@@ -192,7 +192,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
 | `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
-| `/more/speakers`, `tracks`, `tracks/lightning-talks`, `tracks/open-spaces` (the hub's rows to the same two pages, listed before `:slug`, D-205), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
+| `/more/speakers`, `tracks`, `tracks/sprints`, `tracks/lightning-talks`, `tracks/open-spaces` (the hub's pages of their own, More's pages again, listed before `:slug` so Back returns to the hub; `locations.HUB_PAGES`, D-207; #104 adds `tracks/keynotes`), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
 | `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social`, `settings` | sponsors and info screens; Settings | child | P2 | SPON, MAP-09..11, INFO, THEME-01, NOTIF-01 |
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
@@ -204,7 +204,7 @@ Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99
 
 ### 5.3 `routes.py` and `locations.py`
 
-`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-164): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `DRILL_KINDS` and `PAGES`. `PAGES` lists every page path without a parameter; a test keeps it equal to the table's.
+`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-164): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `DRILL_KINDS`, `HUB_PAGES` and `PAGES`. `PAGES` lists every page path without a parameter; a test keeps it equal to the table's. `HUB_PAGES` names the Tracks hub's pages of their own by their segment under `/more/tracks`, with the track each one is the page of (D-207); the year loader refuses a track slug that names one of them unless it is that track's page.
 
 ```python
 # src/pycon_us/routes.py (excerpt)
@@ -225,8 +225,9 @@ ROUTES = [
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
     pushed("more", More, pushed("speakers", Speakers),
-           pushed("tracks", Tracks, pushed("lightning-talks", LightningTalks), pushed("open-spaces", OpenSpaces),
-                  pushed(":slug", TrackPage)),
+           pushed("tracks", Tracks,  # the hub's pages of their own first (HUB_PAGES, D-207)
+                  pushed("sprints", Sprints), pushed("lightning-talks", LightningTalks),
+                  pushed("open-spaces", OpenSpaces), pushed(":slug", TrackPage)),
            pushed("keynotes", Keynotes), pushed("open-spaces", OpenSpaces), pushed("sprints", Sprints),
            pushed("lightning-talks", LightningTalks), pushed("app", AboutApp), pushed("developer", Developer)),
 ]
