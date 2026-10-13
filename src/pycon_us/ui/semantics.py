@@ -21,9 +21,13 @@ def named(identifier: str, control: ft.Control) -> ft.Control:
     The ``Semantics`` takes ``control``'s ``disabled``: Flet's says it is enabled
     unless it is disabled itself, whatever the control under it says, and the merged
     node kept that "enabled", so a disabled row read as enabled (F42, D-214). Read
-    from the control, so no caller can forget to pass it. A merge takes in every
-    descendant, so a control with a button inside it (a field with a picker) needs
-    another shape, as ``SearchField``'s (D-189).
+    from the control, so callers pass no keyword for it. Only from ``control``
+    itself, though: a ``Semantics`` passed in place of the button (to add a label or
+    ``expanded``) says "enabled" in turn, so give it the button's ``disabled`` too.
+
+    The one way to put an identifier on a button, chip or row (ux.md §9). A merge
+    takes in every descendant, so a control with a button inside it (a field with a
+    picker) needs another shape, as ``SearchField``'s (D-189).
 
     Args:
         identifier: For UI flows, e.g. ``developer.reset_app``.

@@ -17,6 +17,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.semantics import named
 
 UNLOCK_TAPS = 7
 """Taps on the version row that unlock Developer, as on Android's build number (D-73)."""
@@ -50,13 +51,9 @@ def AboutApp() -> ft.View:
     rows: list[ft.Control] = [
         header(info.name),
         SectionHeader("This build"),
-        ft.MergeSemantics(
-            content=ft.Semantics(
-                identifier="about_app.version",
-                content=ft.ListTile(
-                    title="Version", subtitle=__version__, on_click=count_tap
-                ),
-            )
+        named(
+            "about_app.version",
+            ft.ListTile(title="Version", subtitle=__version__, on_click=count_tap),
         ),
         ft.ListTile(title="Python", subtitle=platform.python_version()),
         ft.ListTile(title="Flet", subtitle=FLET_VERSION),

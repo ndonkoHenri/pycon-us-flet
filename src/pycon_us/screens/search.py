@@ -33,6 +33,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField
 from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip
@@ -304,20 +305,18 @@ def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Con
             [
                 ft.Container(width=8),  # with the 8 dp spacing: the 16 dp gutter
                 *(
-                    ft.MergeSemantics(
-                        ft.Semantics(
-                            identifier=f"{SCREEN}.scope.{key}",
-                            content=ft.Chip(
-                                label=label,
-                                selected=key == scope,
-                                show_checkmark=True,  # not colour alone (D-33)
-                                data=key,
-                                # A click, not on_select: Flutter would toggle the
-                                # chip itself, so a tap on the selected one showed no
-                                # scope selected; here ``selected`` is only ours.
-                                on_click=on_pick,
-                            ),
-                        )
+                    named(
+                        f"{SCREEN}.scope.{key}",
+                        ft.Chip(
+                            label=label,
+                            selected=key == scope,
+                            show_checkmark=True,  # not colour alone (D-33)
+                            data=key,
+                            # A click, not on_select: Flutter would toggle the
+                            # chip itself, so a tap on the selected one showed no
+                            # scope selected; here ``selected`` is only ours.
+                            on_click=on_pick,
+                        ),
                     )
                     for key, label in SCOPE_LABELS.items()
                 ),

@@ -268,7 +268,7 @@ def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control
         title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
         min_height=SPEAKER_TILE_HEIGHT,
     )
-    return ft.MergeSemantics(content=ft.Semantics(identifier=identifier, content=tile))
+    return named(identifier, tile)
 
 
 def more_label(more: int) -> str:
