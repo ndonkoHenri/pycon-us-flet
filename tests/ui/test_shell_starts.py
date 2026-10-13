@@ -13,7 +13,7 @@ import flet.testing as ftt
 from pycon_us.config import load_year
 from pycon_us.core.feed import process
 from pycon_us.core.queries import fold
-from pycon_us.core.timefmt import day_label
+from pycon_us.core.timefmt import day_tab_label
 from tests.ui.helpers import (
     PLATFORM,
     press_system_back,
@@ -72,10 +72,10 @@ async def test_shell_starts(flet_app: ftt.FletTestApp) -> None:
         await wait_for_id(t, shown, gone=True)
         shown = title
         if title == "schedule.title":
-            # The Schedule stub: where the feed came from, and the conference's days.
-            await wait_for_id(t, "schedule.source")
+            # The Schedule: a tab per conference day, the first one "Wed 13" (#86).
+            await wait_for_id(t, "schedule.day_tab.0")
             first_day = load_year().conference.first_day
-            await wait_for_text(t, day_label(first_day))
+            await wait_for_text(t, day_tab_label(first_day))
             await screenshot("02-schedule")
 
     # More, its Speakers page, a speaker one drill level deeper (D-141).

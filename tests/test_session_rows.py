@@ -6,14 +6,12 @@ own scheduler re-renders what changed, so a test sees what a device would get. H
 a row is, how it wraps at 200 % and what TalkBack reads are checked on devices (#81's
 PR); here, the semantics a screen reader is given.
 
-The harness reaches into Flet internals, as Flet's own component tests do: it sets
-``flet.controls.context._context_page``, finds controls in ``Session.index``, reads
-SnackBars from ``page._dialogs`` and clicks with ``Session.dispatch_event(control._i,
-...)``. A Flet pin bump (D-81) that renames one of them breaks this module's fixture,
-not the rows: look there first.
+The session is ``tests/sessions.py``'s, which reaches into Flet internals as Flet's own
+component tests do; this module also reads SnackBars from ``page._dialogs`` and clicks
+with ``Session.dispatch_event(control._i, ...)``. A Flet pin bump (D-81) that renames one
+of them breaks the fixture, not the rows: look there first.
 """
 
-import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -21,10 +19,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.connection import Connection
 from flet.messaging.session import Session
-from flet.pubsub.pubsub_hub import PubSubHub
 
 from pycon_us.config import load_year
 from pycon_us.core.row_views import SessionView, session_view
@@ -63,6 +58,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
+from tests.sessions import rendering, settle
 from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
 
 YEAR = load_year(2026)
@@ -153,8 +149,7 @@ class Rendered:
 
     async def settle(self) -> None:
         """Let handlers, store writes and Flet's re-render run to the end."""
-        for _ in range(20):
-            await asyncio.sleep(0)
+        await settle()
 
     async def tap_star(self, session_id: str) -> None:
         await self.session.dispatch_event(self.star(session_id)._i, "click", None)
@@ -186,13 +181,13 @@ async def rendered(
     conference = Conference(data=processed(2026), source="bundled", version=1)
     favorites, prefs = Favorites(), Prefs(loaded=True)
     await favorites.load(storage)
-    result = Rendered(Session(_connection()), favorites, prefs, prefs_service, haptics)
+    renders: list[str] = []
 
     def counted(name: str) -> Callable[..., str]:
         phrase = getattr(rows, name)
 
         def count(*args: Any) -> str:
-            result.renders.append(cast(SessionView, args[-1]).session.id)
+            renders.append(cast(SessionView, args[-1]).session.id)
             return phrase(*args)
 
         return count
@@ -213,25 +208,10 @@ async def rendered(
             ),
         )
 
-    page = result.session.page
-    token = _context_page.set(page)  # pyright: ignore[reportArgumentType]
-    try:
-        page.render(Root)
-        result.session.get_page_patch()
-        await result.settle()
-        yield result
-    finally:
-        result.session.close()
-        await result.settle()
-        _context_page.reset(token)
-
-
-def _connection() -> Connection:
-    """A connection to no client, as Flet's own component tests use."""
-    conn = Connection()
-    conn.pubsubhub = PubSubHub()
-    conn.send_message = lambda message: None  # pyright: ignore[reportAttributeAccessIssue]
-    return conn
+    async with rendering(Root) as session:
+        yield Rendered(
+            session, favorites, prefs, prefs_service, haptics, renders=renders
+        )
 
 
 # ------------------------------------------------------------------ the memoised path

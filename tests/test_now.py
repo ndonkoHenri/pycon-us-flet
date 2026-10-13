@@ -7,7 +7,7 @@ resume, and the states without data.
 
 The words are pure (``season()``, ``header_copy()``, ``up_next_when()``) and run on
 their own. The screen runs in a real Flet session, as the session rows' tests do
-(``tests/test_session_rows.py`` names the Flet internals the harness uses), with the
+(``tests/sessions.py`` names the Flet internals the harness uses), with the
 clock held by the test: Flet's scheduler re-renders what changed, so a test sees which
 row bodies ran (D-153). How Now looks, wraps at 200 % and reads to TalkBack and
 VoiceOver is checked on devices (the PR).
@@ -58,7 +58,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
-from tests.test_session_rows import _connection
+from tests.sessions import connection
 from tests.test_theme import contrast_ratio
 
 YEAR = load_year(2026)
@@ -434,7 +434,7 @@ async def show(
         await favorites.add_many(storage, saved)
     held = [now]
     ticker = ticks or Ticks()
-    result = Shown(Session(_connection()), svc, favorites, held, ticker)
+    result = Shown(Session(connection()), svc, favorites, held, ticker)
 
     def counted(name: str) -> Callable[..., str]:
         phrase = getattr(rows, name)

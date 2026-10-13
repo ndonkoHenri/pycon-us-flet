@@ -91,6 +91,9 @@ class Prefs:
         screen_reader: A screen reader is on (TalkBack, VoiceOver; Flutter's
             ``accessible_navigation``). Not persisted, read at start and on resume;
             an Undo SnackBar then stays until it is used or replaced (D-184).
+        announcements: The platform takes ``announce_message()`` (F13's
+            ``supports_announcements``: true on iOS, never on Android). Not
+            persisted, read with ``screen_reader``.
         loaded: The stored values have been read; it opens the boot gate.
     """
 
@@ -104,6 +107,7 @@ class Prefs:
     os_high_contrast: bool = False
     reduce_motion: bool = False
     screen_reader: bool = False
+    announcements: bool = False
     loaded: bool = False
 
     @property

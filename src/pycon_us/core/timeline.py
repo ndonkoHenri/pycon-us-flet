@@ -6,7 +6,7 @@ which is what lets the Schedule's memoised day lists, slots and rows skip work (
 F34).
 """
 
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from itertools import groupby
@@ -118,6 +118,33 @@ def timeline(
     return _memoised(
         data, ("timeline", day, hidden), lambda: _without(day_slots(data, day), hidden)
     )
+
+
+def current_slot_key(slots: Sequence[Slot], now: datetime) -> str | None:
+    """Return the key of the slot "Jump to now" lands on (SCHED-16, D-155).
+
+    The slot that is on: the last one that has started, while one of its sessions
+    has not ended (``start <= now < end``, the same half-open rule as Now, D-179).
+    Once it is over, the next slot to start; after the day's last slot, the last
+    one. A notice has no duration, so a slot of notices alone is over as soon as it
+    starts. A long session in an earlier slot (a tutorial, an open space) does not
+    hold the jump back: the attendee wants what is starting next.
+
+    Args:
+        slots: The slots the list shows (``timeline(data, day, excluded)``), so the
+            key always has an item to scroll to (D-178).
+        now: The current instant (``clock.now()``), aware.
+
+    Returns:
+        The slot's ``key``, or None when there are no slots.
+    """
+    if not slots:
+        return None
+    started = [slot for slot in slots if slot.start <= now]
+    if started and any(s.end > now for s in started[-1].sessions):
+        return started[-1].key
+    upcoming = slots[len(started) :]
+    return (upcoming[0] if upcoming else slots[-1]).key
 
 
 def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
