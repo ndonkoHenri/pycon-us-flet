@@ -132,4 +132,3 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         speakers=tuple(found(index.speakers, "speakers")),
         rooms=tuple(found(index.rooms, "rooms")),
     )
-

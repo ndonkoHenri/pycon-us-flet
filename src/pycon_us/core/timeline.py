@@ -19,22 +19,29 @@ from pycon_us.core.slugs import room_sort_key
 
 @dataclass(frozen=True)
 class Slot:
-    """One time slot of a day, as the Schedule lists it: one list item (D-31).
+    """Sessions that start at the same instant: one list item with a time gutter (D-31).
 
-    A value: two slots with the same key and the same session objects are equal. Its
-    sessions are the model's own, which compare by identity, so comparing two slots
-    never compares a session's fields.
+    The Schedule's slots (``timeline``), Now's next slot and My schedule's slots
+    (``agenda``) are all ``Slot``s. A value: two slots with the same start and the same
+    session objects are equal. Its sessions are the model's own, which compare by
+    identity, so comparing two slots never compares a session's fields.
 
     Attributes:
-        key: ``slot-<start in ISO 8601>``: the slot item's ``ScrollKey``, which Jump to
-            now targets (D-155), and its key in the list.
         start: The slot's start (``TimeGroup.start``): aware, in the conference zone.
         sessions: Its rows in schedule order (``schedule_order``); never empty.
     """
 
-    key: str
     start: datetime
     sessions: tuple[Session, ...]
+
+    @property
+    def key(self) -> str:
+        """``slot-<start in ISO 8601>``: the item's ``ScrollKey`` and list key (D-155).
+
+        Derived from the start, so the Schedule's slot and My schedule's slot at one
+        start share it, and Jump to now finds either by it.
+        """
+        return f"slot-{self.start.isoformat()}"
 
 
 @dataclass(frozen=True)
@@ -171,7 +178,6 @@ def day_slots(data: ConferenceData, day: date) -> tuple[Slot, ...]:
             if schedule_day.date == day:
                 return tuple(
                     Slot(
-                        key=f"slot-{group.start.isoformat()}",
                         start=group.start,
                         sessions=tuple(
                             sorted(
@@ -202,7 +208,7 @@ def _without(slots: tuple[Slot, ...], hidden: frozenset[str]) -> tuple[Slot, ...
             continue
         changed = True
         if sessions:
-            kept.append(Slot(slot.key, slot.start, sessions))
+            kept.append(Slot(slot.start, sessions))
     return tuple(kept) if changed else slots
 
 

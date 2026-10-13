@@ -3,8 +3,10 @@
 Now and My schedule ask these. Each takes ``now`` and the saved ids as arguments, so they
 stay pure (D-43), and none takes the Schedule's filters (D-20). Their results are frozen
 values that compare by value, so a screen that recomputes them every 60 s re-renders only
-what changed (D-153). They name sessions by id, as ``TimeGroup`` does, and list a slot's
-sessions in schedule order, as the Schedule does (D-178).
+what changed (D-153). Like the schedule queries, they hold the model's own sessions, in
+the Schedule's ``Slot``s and its order (D-178, D-184): the sessions compare by identity,
+so comparing two results never compares a session's fields, and a screen needs no lookup
+by id.
 """
 
 from collections.abc import Mapping
@@ -16,7 +18,7 @@ from itertools import groupby
 from operator import attrgetter
 
 from pycon_us.core.models import ConferenceData, Day, Session
-from pycon_us.core.timeline import day_slots, schedule_order
+from pycon_us.core.timeline import Slot, day_slots, schedule_order
 
 NEXT_SESSION_WINDOW = timedelta(hours=3)
 """How soon a saved session must start to be "Your next session" on Now (SCHED-25)."""
@@ -55,43 +57,28 @@ class NowNext:
         happening: The sessions with ``start <= now < end``, by time slot, then in
             schedule order (``schedule_order``); a notice (no duration) is never
             happening.
-        next_start: The start of the first time slot after ``now``, on any day; None
-            after the last one.
-        up_next: That slot's sessions, in schedule order; empty when ``next_start`` is
-            None.
+        up_next: The first time slot after ``now``, on any day: the Schedule's own
+            ``Slot`` (unfiltered), whose ``start`` Now names and whose ``key`` the
+            Schedule scrolls to; None after the last one.
     """
 
     phase: Phase
-    happening: tuple[str, ...]
-    next_start: datetime | None
-    up_next: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class AgendaSlot:
-    """The saved sessions of one day that start at the same instant.
-
-    Attributes:
-        start: Their shared start, as in the day's ``TimeGroup``.
-        session_ids: The sessions in schedule order (``schedule_order``), as the
-            Schedule lists the slot.
-    """
-
-    start: datetime
-    session_ids: tuple[str, ...]
+    happening: tuple[Session, ...]
+    up_next: Slot | None
 
 
 @dataclass(frozen=True)
 class AgendaDay:
-    """One day of My schedule.
+    """One day of My schedule: a day of slots, where ``DaySessions`` is a flat day.
 
     Attributes:
-        date: The day the sessions are listed under (``Session.day``).
-        slots: Its slots, by start.
+        day: The day the sessions are listed under (``Session.day``).
+        slots: Its slots, by start, each holding only saved sessions, in schedule order;
+            a slot's ``key`` is the Schedule's slot's at that start.
     """
 
-    date: date
-    slots: tuple[AgendaSlot, ...]
+    day: date
+    slots: tuple[Slot, ...]
 
 
 @dataclass(frozen=True)
@@ -108,7 +95,7 @@ class Agenda:
 
     days: tuple[AgendaDay, ...]
     # A dict is not hashable; leaving it out of the hash keeps ``Agenda`` hashable.
-    overlaps: Mapping[str, tuple[str, ...]] = field(hash=False)
+    overlaps: Mapping[Session, tuple[Session, ...]] = field(hash=False)
 
 
 def now_next(data: ConferenceData, now: datetime) -> NowNext:
@@ -132,22 +119,19 @@ def now_next(data: ConferenceData, now: datetime) -> NowNext:
     _require_aware(now)
     slots = [slot for day in data.days for slot in day_slots(data, day.date)]
     happening = tuple(
-        session.id
+        session
         for slot in slots
         if slot.start <= now
         for session in slot.sessions
         if now < session.end
     )
-    upcoming = next((slot for slot in slots if slot.start > now), None)
-    if upcoming is None:
-        return NowNext(_phase(data, now), happening, None, ())
-    up_next = tuple(session.id for session in upcoming.sessions)
-    return NowNext(_phase(data, now), happening, upcoming.start, up_next)
+    up_next = next((slot for slot in slots if slot.start > now), None)
+    return NowNext(_phase(data, now), happening, up_next)
 
 
 def next_for_me(
     data: ConferenceData, favorites: AbstractSet[str], now: datetime
-) -> str | None:
+) -> Session | None:
     """Return "Your next session": the saved session to go to next, else the one that is on.
 
     That is the first saved session that starts after ``now`` and within
@@ -162,7 +146,7 @@ def next_for_me(
         now: An aware instant, in any zone.
 
     Returns:
-        The session's id, or None when no saved session is on or due within the window.
+        The session, or None when no saved session is on or due within the window.
 
     Raises:
         ValueError: ``now`` is naive.
@@ -171,10 +155,10 @@ def next_for_me(
     saved = sorted(_saved(data, favorites), key=_agenda_order)
     upcoming = [s for s in saved if now < s.start <= now + NEXT_SESSION_WINDOW]
     if upcoming:
-        return upcoming[0].id
+        return upcoming[0]
     ongoing = [s for s in saved if s.start <= now < s.end]
     # ``max`` keeps the first of equal starts, so a tie goes to the agenda's order.
-    return max(ongoing, key=attrgetter("start")).id if ongoing else None
+    return max(ongoing, key=attrgetter("start")) if ongoing else None
 
 
 def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
@@ -197,7 +181,7 @@ def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
         AgendaDay(
             day,
             tuple(
-                AgendaSlot(start, tuple(session.id for session in slot))
+                Slot(start, tuple(slot))
                 for start, slot in groupby(on_day, key=attrgetter("start"))
             ),
         )
@@ -228,9 +212,9 @@ def _day_end(data: ConferenceData, day: Day) -> datetime:
     return max(data.sessions[i].end for group in day.groups for i in group.session_ids)
 
 
-def _overlaps(saved: list[Session]) -> dict[str, tuple[str, ...]]:
+def _overlaps(saved: list[Session]) -> dict[Session, tuple[Session, ...]]:
     """Pair the sessions that overlap, in one sweep over ``saved``, sorted by start."""
-    found: dict[str, list[str]] = {}
+    found: dict[Session, list[Session]] = {}
     # The sessions that started before the current one and have not ended at its start.
     running: list[Session] = []
     for session in saved:
@@ -240,12 +224,12 @@ def _overlaps(saved: list[Session]) -> dict[str, tuple[str, ...]]:
         for other in running:
             if _same_visit(session, other):
                 continue
-            found.setdefault(other.id, []).append(session.id)
-            found.setdefault(session.id, []).append(other.id)
+            found.setdefault(other, []).append(session)
+            found.setdefault(session, []).append(other)
         running.append(session)
     # Each list is in agenda order: the earlier sessions were added together when the
     # session itself came, then the later ones one by one as they came.
-    return {session_id: tuple(ids) for session_id, ids in found.items()}
+    return {session: tuple(others) for session, others in found.items()}
 
 
 def _same_visit(a: Session, b: Session) -> bool:
