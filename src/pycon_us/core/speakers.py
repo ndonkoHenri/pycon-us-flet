@@ -6,6 +6,9 @@ displayed name, folded, then by id); each entry knows its letter, its first sess
 how many more it has (SPKR-01, DATA-21). ``letter_groups()`` cuts them into the list's
 sections, and ``filter_directory()`` keeps the entries a filter finds, with search's own
 matching (``search.search``, D-180), so no screen folds or matches on its own.
+``speaker_sessions()`` is a speaker's page's list (SPKR-03): their sessions by day, in
+the order the list's first session comes from; ``has_bio()`` says whether the page has a
+bio to show.
 
 Pseudo-speakers ("Hosted by …") never reach the directory: feed processing keeps them as
 text only (D-125), so the list has nothing to leave out.
@@ -16,10 +19,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import groupby
 
+from pycon_us.core.html_md import to_text
 from pycon_us.core.models import ConferenceData, Session, Speaker
 from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.search import SearchIndex, search
-from pycon_us.core.timeline import schedule_order
+from pycon_us.core.timeline import DaySessions, schedule_order
 
 NO_LETTER = "#"
 """The heading of a name with nothing to fold, which a feed should never send."""
@@ -121,9 +125,7 @@ def directory(data: ConferenceData) -> tuple[SpeakerEntry, ...]:
             sessions.setdefault(speaker_id, []).append(session)
     entries = []
     for speaker in sorted(data.speakers.values(), key=speaker_order):
-        own = sorted(
-            sessions.get(speaker.id, ()), key=lambda s: (s.day, schedule_order(s))
-        )
+        own = sorted(sessions.get(speaker.id, ()), key=_listing_order)
         entries.append(
             SpeakerEntry(
                 speaker=speaker,
@@ -133,6 +135,48 @@ def directory(data: ConferenceData) -> tuple[SpeakerEntry, ...]:
             )
         )
     return tuple(entries)
+
+
+def speaker_sessions(data: ConferenceData, speaker_id: str) -> tuple[DaySessions, ...]:
+    """Return a speaker's sessions by conference-local day, for their page (SPKR-03).
+
+    Every session that links the speaker (DATA-15), poster details included, in the
+    Schedule's order with the day first: the order ``directory()`` takes the Speakers
+    list's first session from, so the list and the page agree.
+
+    Args:
+        data: The processed feed.
+        speaker_id: The speaker's id; an unknown one has no sessions.
+
+    Returns:
+        One group per day with sessions, oldest first; empty for none.
+    """
+    own = sorted(
+        (s for s in data.sessions.values() if speaker_id in s.speaker_ids),
+        key=_listing_order,
+    )
+    return tuple(
+        DaySessions(day, tuple(group))
+        for day, group in groupby(own, key=lambda session: session.day)
+    )
+
+
+def has_bio(speaker: Speaker) -> bool:
+    """Return whether a speaker's bio says anything: a letter or a digit in its text.
+
+    The feed fills a bio nobody wrote with a dash (2026: the five panellists of
+    "Beyond the Hype" and two others; 2025: twelve), which an "About" section would
+    show as a lone "-".
+
+    Args:
+        speaker: The directory speaker.
+    """
+    return any(char.isalnum() for char in to_text(speaker.bio))
+
+
+def _listing_order(session: Session) -> tuple[object, ...]:
+    """The order a speaker's sessions are listed in: by day, then as the Schedule's."""
+    return (session.day, schedule_order(session))
 
 
 def filter_directory(
