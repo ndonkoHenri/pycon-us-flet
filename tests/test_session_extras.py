@@ -1,4 +1,4 @@
-"""Tests for session detail's extras (NEW-06, SESS-09, SESS-11; ux.md §5.5, D-203).
+"""Tests for session detail's extras (NEW-06, SESS-09, SESS-11; ux.md §5.5, D-206).
 
 Share and its text, a Posters row's posters, an open space's image and site link
 (``screens/session_extras.py``), in ``SessionDetail`` as ``tests/session_detail.py``
@@ -259,7 +259,7 @@ async def test_the_image_fits_a_frame_the_content_s_width(render: Render) -> Non
 async def test_the_frame_around_the_image_is_its_own_blurred_copy(
     render: Render,
 ) -> None:
-    """D-203: no grey bars beside a portrait image; one name, one error message."""
+    """D-206: no grey bars beside a portrait image; one name, one error message."""
     detail = await render(SPACE_WITH_IMAGE)
     copy, shown = backdrop(detail), image(detail)
     assert copy.src == shown.src
@@ -301,7 +301,7 @@ async def test_an_open_space_without_an_image_has_no_frame(render: Render) -> No
 async def test_an_open_space_links_its_entry_on_the_site_in_the_page(
     render: Render,
 ) -> None:
-    """SESS-11, D-203: the link is in the page, so there is no overflow to repeat it."""
+    """SESS-11, D-206: the link is in the page, so there is no overflow to repeat it."""
     detail = await render(SPACE_WITH_IMAGE)
     assert detail.nodes("session.overflow") == []
     link = detail.node("session.site")

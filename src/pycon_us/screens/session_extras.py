@@ -111,8 +111,8 @@ def Posters(
 
     Each is a ``SessionRow`` with its star, as on the Posters track page, without what
     the page above already says: the "Poster" badge, the time and the place, which
-    every poster shares with the row (DATA-07). The rows are memoised and their views built once per feed
-    version, so a star tap re-renders one row (D-153).
+    every poster shares with the row (DATA-07). The rows are memoised and their views
+    built once per feed version, so a star tap re-renders one row (D-153).
 
     Args:
         row: The Posters row the page shows.
@@ -180,7 +180,7 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
     A small image keeps its size, centred, rather than blur at the frame's. Around an
     image of other proportions (a portrait flyer, a screenshot) the frame shows the
     same image again, cropped to fill it and blurred under a scrim, so it is the
-    picture's own colours rather than bars of grey (D-203). The frame's fill shows
+    picture's own colours rather than bars of grey (D-206). The frame's fill shows
     while the image loads, and the image fades in over it. No ``placeholder_src``:
     Flet sizes the placeholder with the image's own width and height (F44), which an
     image of unknown size does not have, so it could not fill the frame. When the

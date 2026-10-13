@@ -268,7 +268,7 @@ def spoken_phrase(
         view: The session's row view.
         overlaps: The names of the saved sessions the row overlaps, if any.
         show_time: False when the page above says the row's time (the Posters
-            detail, D-203): the phrase leaves it out, as the row does.
+            detail, D-206): the phrase leaves it out, as the row does.
     """
     when = ", ".join(
         part for part in (view.spoken_when if show_time else "", view.place) if part

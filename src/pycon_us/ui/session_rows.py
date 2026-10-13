@@ -150,7 +150,7 @@ def SessionRow(
         omit: Badge labels the page already shows, left out of the row and its
             phrase (``badge_specs()``): a track page's own badge (D-199).
         show_time: False where the page above says the time of every row, as the
-            Posters detail does: the row and its phrase leave it out (D-203).
+            Posters detail does: the row and its phrase leave it out (D-206).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
