@@ -9,6 +9,7 @@ star is a separate stop (D-33). ``TimeGutter`` is the slot's time column (D-158)
 adds ``SpeakerRow`` and P2 ``LocationCard`` here (ux.md §3.9).
 """
 
+import re
 from collections.abc import Sequence
 from typing import cast
 
@@ -33,6 +34,25 @@ from pycon_us.ui.badges import (
 NOTICE_GROUP = "logistics"
 """The track group (``conference.toml``) whose sessions are notices: breaks, meals and
 announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
+
+_NBSP = "\u00a0"
+"""A no-break space: "AM" stays on its time's line."""
+
+_NOT_KEY = re.compile(r"[^a-z0-9]+")
+
+
+def semantics_key(session_id: str) -> str:
+    """Return a session id as the key of a semantics identifier (decisions §M).
+
+    A synthetic break id holds spaces and colons (``break-Expo Hall AB-2026-05-15T08:
+    00:00-07:00``, D-42), which a UI-test selector would have to match literally; the
+    key is lower case, each run of other characters a ``-``:
+    ``break-expo-hall-ab-2026-05-15t08-00-00-07-00``. Numeric ids stay as they are.
+
+    Args:
+        session_id: The session's id, unchanged everywhere else.
+    """
+    return _NOT_KEY.sub("-", session_id.lower()).strip("-")
 
 
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
@@ -144,7 +164,8 @@ def SessionRow(
         on_toggle: The list's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150): a memoised row does not read context.
         screen: The screen's name in semantics identifiers: the row's text is
-            ``<screen>.session.<id>``, its star ``<screen>.favorite.<id>``.
+            ``<screen>.session.<key>``, its star ``<screen>.favorite.<key>``, the key
+            from ``semantics_key()``.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -189,12 +210,14 @@ def _SessionRow(
             overflow=ft.TextOverflow.ELLIPSIS,
         )
     )
-    lines.append(_secondary(view.meta))
+    lines.append(_meta(view))
     if view.speakers:
         lines.append(_secondary(view.speakers))
+    key = semantics_key(session.id)
     text = ft.Semantics(
         label=spoken_phrase([label for label, _ in specs], view),
-        identifier=f"{screen}.session.{session.id}",
+        identifier=f"{screen}.session.{key}",
+        button=True,  # it opens the session: "…, button" (D-33)
         # The phrase replaces the texts, which would otherwise be read again after it.
         exclude_semantics=True,
         content=ft.Column(lines, spacing=4),
@@ -215,7 +238,7 @@ def _SessionRow(
                     is_favorite,
                     star,
                     color=tokens.favorite,
-                    identifier=f"{screen}.favorite.{session.id}",
+                    identifier=f"{screen}.favorite.{key}",
                 ),
                 padding=ft.Padding.only(top=4, right=4),
             ),
@@ -232,13 +255,13 @@ def NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
     track's, from the year data (a cup for breaks, an info sign for notices). It
     opens the session's detail only when there is something to read there (a
     description); otherwise it is not a button. It is its own node for screen
-    readers, read as ``notice_phrase()``: without its own merge, a notice's text
-    joined the slot's heading in TalkBack's tree (S2).
+    readers, read as ``notice_phrase()``, and a button when it opens: without its own
+    merge, a notice's text joined the slot's heading in TalkBack's tree (S2).
 
     Args:
         view: The notice's row view, the same object on every render.
         screen: The screen's name in its semantics identifier,
-            ``<screen>.notice.<id>``.
+            ``<screen>.notice.<key>`` (``semantics_key()``).
     """
     # As in SessionRow: the key= is real, its type is not.
     return _NoticeRow(view, screen=screen, key=view.session.id)  # pyright: ignore[reportCallIssue]
@@ -252,9 +275,11 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
     info = use_services().year.conference
     session = view.session
     track = info.track(session.track)
+    tappable = bool(session.description)
     content = ft.Semantics(
         label=notice_phrase(track.short, view),
-        identifier=f"{screen}.notice.{session.id}",
+        identifier=f"{screen}.notice.{semantics_key(session.id)}",
+        button=tappable,
         exclude_semantics=True,
         content=ft.Row(
             controls=[
@@ -269,7 +294,7 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
                         ft.Text(
                             session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL
                         ),
-                        _secondary(view.meta, style=ft.TextThemeStyle.BODY_SMALL),
+                        _meta(view, style=ft.TextThemeStyle.BODY_SMALL),
                     ],
                     spacing=2,
                     expand=True,
@@ -279,14 +304,14 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
             vertical_alignment=ft.CrossAxisAlignment.START,
         ),
     )
-    tappable = bool(session.description)
     return ft.MergeSemantics(
         content=ft.Container(
             content,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border_radius=12,  # a card's shape (ux.md §3.6)
-            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            margin=ft.Margin.symmetric(horizontal=16, vertical=6),
+            # The title starts 12 dp down, on the gutter's and a SessionRow's line.
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+            margin=ft.Margin.symmetric(horizontal=16, vertical=4),
             ink=tappable,
             on_click=_open_session(view_path, session.id) if tappable else None,
         )
@@ -338,10 +363,38 @@ def _gutter_lines(time: str, meridiem: str, opacity: float = 1.0) -> ft.Control:
     return ft.Column(controls, spacing=0, opacity=opacity)
 
 
+def _meta(
+    view: SessionView, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
+) -> ft.Control:
+    """Return a row's time and place line: "9:25–10:10 AM · Room 104A".
+
+    The time and the place are two texts in a wrapping row, so at large text a place
+    that does not fit after the time moves to the next line whole, and the "·" ends
+    the time's line rather than starting one; only a place wider than the row wraps
+    inside itself. A no-break space keeps "AM" on its time's line.
+
+    Args:
+        view: The session's row view.
+        style: The line's type style; a notice's is smaller.
+    """
+    when = view.when.replace(" ", _NBSP)
+    if not view.place:
+        return _secondary(when, style=style)
+    return ft.Row(
+        [
+            _secondary(f"{when}{_NBSP}·", style=style),
+            _secondary(view.place, style=style),
+        ],
+        wrap=True,
+        spacing=4,  # a space's width at 100 %
+        run_spacing=0,
+    )
+
+
 def _secondary(
     text: str, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
 ) -> ft.Text:
-    """Return a row's supporting line: its meta or speakers, in the variant colour."""
+    """Return a row's supporting text: its time, place or speakers, in the variant colour."""
     return ft.Text(text, theme_style=style, color=ft.Colors.ON_SURFACE_VARIANT)
 
 

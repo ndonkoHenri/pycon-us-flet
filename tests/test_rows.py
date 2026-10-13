@@ -5,6 +5,12 @@ memoised rows under the store providers, a star tap is a dispatched click, and F
 own scheduler re-renders what changed, so a test sees what a device would get. How tall
 a row is, how it wraps at 200 % and what TalkBack reads are checked on devices (#81's
 PR); here, the semantics a screen reader is given.
+
+The harness reaches into Flet internals, as Flet's own component tests do: it sets
+``flet.controls.context._context_page``, finds controls in ``Session.index``, reads
+SnackBars from ``page._dialogs`` and clicks with ``Session.dispatch_event(control._i,
+...)``. A Flet pin bump (D-81) that renames one of them breaks this module's fixture,
+not the rows: look there first.
 """
 
 import asyncio
@@ -31,6 +37,7 @@ from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import rows
 from pycon_us.ui.badges import (
     ADD_LABEL,
+    FAVORITE_LABEL,
     NOT_SAVED,
     REMOVE_LABEL,
     REMOVED,
@@ -44,6 +51,7 @@ from pycon_us.ui.rows import (
     TimeGutter,
     is_notice,
     notice_phrase,
+    semantics_key,
     spoken_phrase,
     use_session_views,
 )
@@ -134,6 +142,13 @@ class Rendered:
         button = self.node(f"test.favorite.{session_id}").content
         assert isinstance(button, ft.IconButton)
         return button
+
+    def filled(self, session_id: str) -> bool:
+        """Whether the session's star is drawn filled."""
+        return self.star(session_id).icon == ft.Icons.STAR
+
+    def notice(self, session_id: str) -> ft.Semantics:
+        return self.node(f"test.notice.{semantics_key(session_id)}")
 
     async def settle(self) -> None:
         """Let handlers, store writes and Flet's re-render run to the end."""
@@ -231,8 +246,8 @@ async def test_a_star_tap_re_renders_exactly_one_row(rendered: Rendered) -> None
     await rendered.tap_star(CHARLA)
     assert rendered.favorites.ids == {CHARLA}
     assert rendered.renders == [CHARLA]
-    assert rendered.star(CHARLA).selected
-    assert not rendered.star(TALK).selected
+    assert rendered.filled(CHARLA)
+    assert not rendered.filled(TALK)
 
     rendered.renders.clear()
     await rendered.tap_star(CHARLA)  # and back
@@ -287,14 +302,14 @@ async def test_removing_says_so_and_undo_saves_the_session_again(
     await rendered.settle()
     assert rendered.favorites.ids == {TALK}
     assert rendered.prefs_service.values["pycon.2026.favorites"] == [TALK]
-    assert rendered.star(TALK).selected
+    assert rendered.filled(TALK)
     assert len(rendered.snack_bars) == 1  # Undo itself says nothing more
 
 
 async def test_with_a_screen_reader_the_undo_snack_bar_waits_to_be_used(
     rendered: Rendered,
 ) -> None:
-    """D-177: a screen-reader user cannot reach Undo within 4 s."""
+    """D-181: a screen-reader user cannot reach Undo within 4 s."""
     rendered.prefs.screen_reader = True
     await rendered.tap_star(TALK)
     await rendered.tap_star(TALK)
@@ -307,7 +322,7 @@ async def test_an_add_that_was_not_saved_says_so_without_undo(
 ) -> None:
     rendered.prefs_service.fail_writes = True
     await rendered.tap_star(TALK)
-    assert rendered.star(TALK).selected  # shown first, as the store does (D-172)
+    assert rendered.filled(TALK)  # shown first, as the store does (D-172)
     (snack,) = rendered.snack_bars
     assert cast(ft.Text, snack.content).value == NOT_SAVED
     assert snack.action is None
@@ -331,22 +346,38 @@ async def test_a_failed_click_does_not_stop_the_star(rendered: Rendered) -> None
     assert rendered.snack_bars == []  # neither the click nor "Something went wrong"
 
 
-async def test_the_star_is_one_named_toggle_button_for_screen_readers(
+async def test_the_star_is_one_named_toggle_for_screen_readers(
     rendered: Rendered,
 ) -> None:
     """S2: the IconButton alone was a nameless Button without a state in TalkBack."""
     node = rendered.node(f"test.favorite.{TALK}")
-    assert (node.label, node.button, node.toggled) == (ADD_LABEL, True, False)
+    assert (node.label, node.button, node.toggled) == (FAVORITE_LABEL, True, False)
     assert isinstance(node.parent, ft.MergeSemantics)
     button = rendered.star(TALK)
-    assert button.tooltip == ADD_LABEL  # the tooltip is its name (D-27)
-    assert (button.icon, button.selected_icon) == (ft.Icons.STAR_BORDER, ft.Icons.STAR)
-    assert button.selected_icon_color == LIGHT_TOKENS.favorite
+    assert (button.icon, button.icon_color) == (ft.Icons.STAR_BORDER, None)
 
     await rendered.tap_star(TALK)
     node = rendered.node(f"test.favorite.{TALK}")
-    assert (node.label, node.toggled) == (REMOVE_LABEL, True)
-    assert rendered.star(TALK).tooltip == REMOVE_LABEL
+    # The same name; only the state changes: "Save to My schedule, switch, on".
+    assert (node.label, node.toggled) == (FAVORITE_LABEL, True)
+    button = rendered.star(TALK)
+    assert (button.icon, button.icon_color) == (ft.Icons.STAR, LIGHT_TOKENS.favorite)
+
+
+async def test_the_star_s_state_is_said_once(rendered: Rendered) -> None:
+    """VoiceOver read the tooltip after the label, and a "selected" after the "on"."""
+    await rendered.tap_star(TALK)
+    button = rendered.star(TALK)
+    assert button.selected is None  # IconButton.selected adds Semantics(selected:)
+    tooltip = button.tooltip
+    assert isinstance(tooltip, ft.Tooltip) and tooltip.exclude_from_semantics
+
+
+async def test_the_star_s_tooltip_says_what_a_tap_does(rendered: Rendered) -> None:
+    """D-27, D-30: "Add to My schedule", then "Remove from My schedule"."""
+    assert cast(ft.Tooltip, rendered.star(TALK).tooltip).message == ADD_LABEL
+    await rendered.tap_star(TALK)
+    assert cast(ft.Tooltip, rendered.star(TALK).tooltip).message == REMOVE_LABEL
 
 
 # ------------------------------------------------------------------ SessionRow (SCHED-03)
@@ -361,6 +392,7 @@ async def test_a_row_s_text_is_one_node_read_as_one_phrase(
         "10:30 to 11:00 AM, Grand Ballroom A. Justin Lee."
     )
     assert node.exclude_semantics  # the texts are not read again after the phrase
+    assert node.button  # it opens the session: "…, button"
     tappable = node.parent
     assert isinstance(tappable, ft.Container) and tappable.on_click is not None
     assert isinstance(tappable.parent, ft.MergeSemantics)  # phrase and tap: one node
@@ -381,8 +413,22 @@ async def test_a_row_shows_badges_title_meta_and_speakers(
     ]
     assert isinstance(title, ft.Text)
     assert (title.theme_style, title.max_lines) == (ft.TextThemeStyle.TITLE_MEDIUM, 3)
-    assert cast(ft.Text, meta).value == "10:30–11:00 AM · Room 104C"
+    assert isinstance(meta, ft.Row)
+    assert [cast(ft.Text, t).value for t in meta.controls] == [
+        "10:30–11:00\u00a0AM\u00a0·",
+        "Room 104C",
+    ]
     assert cast(ft.Text, speakers).value == "Veronica Rodriguez Viveros"
+
+
+async def test_a_place_that_does_not_fit_moves_down_whole(rendered: Rendered) -> None:
+    """At 200 %, "AM · Room" / "104C" broke the place and left the dot dangling."""
+    column = rendered.node(f"test.session.{CHARLA}").content
+    meta = cast(ft.Column, column).controls[2]
+    assert isinstance(meta, ft.Row) and meta.wrap  # time and place wrap as units
+    time, place = (cast(ft.Text, t).value or "" for t in meta.controls)
+    assert " " not in time  # "AM" and the "·" stay on the time's line
+    assert time.endswith("·") and not place.startswith("·")
 
 
 async def test_no_row_part_has_a_fixed_height(rendered: Rendered) -> None:
@@ -443,7 +489,7 @@ def test_breaks_and_announcements_are_notices_and_talks_are_not() -> None:
 
 async def test_a_notice_is_its_own_node_and_has_no_star(rendered: Rendered) -> None:
     """S2: without its own merge, a notice joined the slot's heading in TalkBack."""
-    node = rendered.node(f"test.notice.{COFFEE}")
+    node = rendered.notice(COFFEE)
     assert node.label == "Break. Coffee, 8:00 to 9:00 AM, Expo Hall AB."
     assert node.exclude_semantics
     assert isinstance(cast(ft.Control, node.parent).parent, ft.MergeSemantics)
@@ -459,11 +505,30 @@ async def test_a_notice_is_its_own_node_and_has_no_star(rendered: Rendered) -> N
 async def test_a_notice_opens_only_when_it_has_something_to_read(
     rendered: Rendered,
 ) -> None:
-    with_text = rendered.node(f"test.notice.{NOTICE}").parent
-    without = rendered.node(f"test.notice.{COFFEE}").parent
-    assert isinstance(with_text, ft.Container) and with_text.on_click is not None
-    assert isinstance(without, ft.Container) and without.on_click is None
-    assert not without.ink  # not a button
+    with_text = rendered.notice(NOTICE)
+    without = rendered.notice(COFFEE)
+    assert with_text.button and not without.button
+    opens, does_not = with_text.parent, without.parent
+    assert isinstance(opens, ft.Container) and opens.on_click is not None
+    assert isinstance(does_not, ft.Container) and does_not.on_click is None
+    assert not does_not.ink
+
+
+async def test_a_notice_s_title_starts_on_the_gutter_s_line(
+    rendered: Rendered,
+) -> None:
+    """The gutter's time and a SessionRow's text start 12 dp down; so does a notice's."""
+    tile = rendered.notice(COFFEE).parent
+    assert isinstance(tile, ft.Container)
+    margin, padding = cast(ft.Margin, tile.margin), cast(ft.Padding, tile.padding)
+    assert margin.top + padding.top == 12
+
+
+def test_a_semantics_key_is_safe_in_a_selector() -> None:
+    """Decisions §M: a break's id has spaces and colons; its key has neither."""
+    assert semantics_key(COFFEE) == "break-expo-hall-ab-2026-05-15t08-00-00-07-00"
+    assert semantics_key("poster-detail-60") == "poster-detail-60"
+    assert semantics_key(TALK) == TALK
 
 
 def test_a_notice_reads_as_its_kind_name_and_time() -> None:

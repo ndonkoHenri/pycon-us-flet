@@ -13,7 +13,7 @@ from itertools import islice
 import flet as ft
 
 from pycon_us.core.models import ConferenceData, Session
-from pycon_us.core.queries import days
+from pycon_us.core.queries import by_day, days
 from pycon_us.core.timefmt import day_label, local_date, time_label
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import note, stub_body
@@ -61,6 +61,18 @@ def Schedule() -> ft.View:
     counts = _session_counts(data)
     samples = [s.id for s in islice(_with_speakers(data), SAMPLE_SIZE)]
     views = use_session_views(conference, samples, use_24h=use_24h)
+    samples_by_day: list[ft.Control] = []
+    # A row says only its time: its day is the heading above it.
+    for day, day_views in by_day(views, info.zone):
+        samples_by_day.append(
+            SectionHeader(f"Sessions with speakers, {day_label(day)}")
+        )
+        samples_by_day.extend(
+            SessionRow(
+                view, view.session.id in favorites.ids, on_toggle, tokens, screen=SCREEN
+            )
+            for view in day_views
+        )
     return AppScaffold(
         title="Schedule",
         actions=[search_button(svc.memory, "sessions")],
@@ -89,17 +101,7 @@ def Schedule() -> ft.View:
                         days(data, info.first_day, info.last_day) if data else ()
                     )
                 ),
-                SectionHeader("Sessions with speakers"),
-                *(
-                    SessionRow(
-                        view,
-                        view.session.id in favorites.ids,
-                        on_toggle,
-                        tokens,
-                        screen=SCREEN,
-                    )
-                    for view in views
-                ),
+                *samples_by_day,
             ],
             status=True,
             auto_refresh=True,

@@ -4,12 +4,13 @@ Queries never change the model (SCHED-17): they return new values computed from 
 """
 
 import unicodedata
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import date, timedelta, tzinfo
+from itertools import groupby
 
 from pycon_us.core.models import ConferenceData, Session
-from pycon_us.core.timefmt import time_range_label
+from pycon_us.core.timefmt import local_date, time_range_label
 
 _DASH = "–"
 """The en dash of ``timefmt`` ranges, which a screen reader may skip or call a dash."""
@@ -76,11 +77,6 @@ class SessionView:
     place: str
     speakers: str
 
-    @property
-    def meta(self) -> str:
-        """The time and place line: "9:25–10:10 AM · Room 104A", or the time alone."""
-        return f"{self.when} · {self.place}" if self.place else self.when
-
 
 def session_view(session: Session, zone: tzinfo, *, use_24h: bool) -> SessionView:
     """Return the row view of one session.
@@ -123,3 +119,22 @@ def session_views(
         for i in session_ids
         if i in sessions
     )
+
+
+def by_day(
+    views: Iterable[SessionView], zone: tzinfo
+) -> Iterator[tuple[date, list[SessionView]]]:
+    """Yield row views grouped by their conference-local day, keeping their order.
+
+    A row says a time but not a day, so a list that is not one day's (a speaker's or a
+    room's sessions) puts each day's rows under the day's heading (ux.md §3.9).
+
+    Args:
+        views: The views, in schedule order.
+        zone: The conference's zone; days are conference-local (D-43).
+
+    Yields:
+        Each day and its views, in the order given.
+    """
+    for day, group in groupby(views, lambda view: local_date(view.session.start, zone)):
+        yield day, list(group)

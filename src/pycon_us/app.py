@@ -207,7 +207,7 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
 
 
 async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
-    """Copy the OS's accessibility flags into ``prefs`` (D-23, D-34, D-177).
+    """Copy the OS's accessibility flags into ``prefs`` (D-23, D-34, D-181).
 
     High contrast, reduced motion and whether a screen reader is on. The platform
     reports a snapshot with no change event (F13), so this runs at start and on

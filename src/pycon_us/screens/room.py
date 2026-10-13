@@ -7,13 +7,13 @@ tabs and the highlight (ux.md §5.9). An unknown slug shows a not-found state un
 back arrow.
 """
 
-from datetime import date, datetime, tzinfo
+from datetime import datetime
 from itertools import groupby
 
 import flet as ft
 
-from pycon_us.core.queries import SessionView
-from pycon_us.core.timefmt import day_heading, local_date, time_label
+from pycon_us.core.queries import SessionView, by_day
+from pycon_us.core.timefmt import day_heading, time_label
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import note, stub_body
 from pycon_us.services import use_services
@@ -59,7 +59,7 @@ def RoomDetail(room_slug: str) -> ft.View:
         )
 
     controls: list[ft.Control] = []
-    for day, day_views in groupby(views, lambda view: _day(view, info.zone)):
+    for day, day_views in by_day(views, info.zone):
         controls.append(SectionHeader(day_heading(day)))
         for index, (start, slot) in enumerate(groupby(day_views, _start)):
             label = time_label(start, info.zone, use_24h=use_24h)
@@ -73,10 +73,6 @@ def RoomDetail(room_slug: str) -> ft.View:
             ]
             controls.append(_slot(label, rows, divider=index > 0))
     return AppScaffold(title=room.name, body=stub_body(controls))
-
-
-def _day(view: SessionView, zone: tzinfo) -> date:
-    return local_date(view.session.start, zone)
 
 
 def _start(view: SessionView) -> datetime:
