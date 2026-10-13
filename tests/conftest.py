@@ -21,7 +21,7 @@ settings.register_profile("ci", settings.get_profile("ci"), max_examples=200)
 # example, which a Mac busy with builds and emulators overran in a correctness test
 # (`test_html_md.py`, 268 ms). Speed is measured on devices (testing-and-quality.md §8),
 # not by a property's deadline. `--hypothesis-profile=ci` still overrides it.
-settings.register_profile("dev", deadline=None)
+settings.register_profile("dev", settings.get_profile("default"), deadline=None)
 settings.load_profile("dev")
 
 
