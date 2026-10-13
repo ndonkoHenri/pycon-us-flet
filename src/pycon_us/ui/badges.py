@@ -10,7 +10,8 @@ them as an argument, so a memoised row (D-153) that receives the tokens as a pro
 ``FavoriteButton`` is the one favourite control (D-30): a 48 dp star on every session
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
-SnackBar of ux.md §4.4 (D-184).
+SnackBar of ux.md §4.4 (D-184). ``selection_click()`` is that click, which search's
+scope chips give too (ux.md §4.5).
 """
 
 import logging
@@ -208,6 +209,18 @@ def feedback(change: Change) -> str | None:
     return None
 
 
+async def selection_click(haptics: ft.HapticFeedback) -> None:
+    """Give the selection click (ux.md §4.5), logging rather than reporting a failure.
+
+    Args:
+        haptics: ``Services.haptics``.
+    """
+    try:
+        await haptics.selection_click()
+    except SERVICE_ERRORS:  # a missed click is not worth an error message
+        logger.warning("Haptic feedback failed", exc_info=True)
+
+
 def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     """Return the one star handler of a list: ``await on_toggle(session_id)`` (D-172).
 
@@ -237,10 +250,7 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     async def toggle(session_id: str) -> None:
         change = await favorites.toggle(svc.storage, session_id)
         if change.added:
-            try:
-                await svc.haptics.selection_click()
-            except SERVICE_ERRORS:  # a missed click is not worth an error message
-                logger.warning("Haptic feedback failed", exc_info=True)
+            await selection_click(svc.haptics)
         _announce(page, favorites, svc.storage, change, keep=prefs.screen_reader)
 
     return ft.use_callback(toggle, [])

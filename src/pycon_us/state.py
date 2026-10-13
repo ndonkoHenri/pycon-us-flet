@@ -390,6 +390,10 @@ class ViewMemory:
             in logical pixels: the Schedule puts it back when the list shows again.
         jumped_to_now: Whether the Schedule has jumped to the current slot in this
             process: it does so once, on the first display of today (D-18, D-155).
+        search_query: What is typed in the search field; an opener clears it, so
+            each search starts empty (D-193).
+        search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
+            View that mounts without its ``?scope=`` (a deep entry below a result).
     """
 
     last_location: str = ""
@@ -397,3 +401,5 @@ class ViewMemory:
     schedule_day: date | None = None
     schedule_offsets: dict[date, float] = field(default_factory=dict)
     jumped_to_now: bool = False
+    search_query: str = ""
+    search_scope: str = "all"
