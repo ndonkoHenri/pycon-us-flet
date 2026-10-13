@@ -271,5 +271,5 @@ def doubts_fold(
     )
     # Around the tile, not on its title, which it split from the tile's button, read
     # "Collapsed" alone on Android; not merged, which would take in the answers. An
-    # empty node of its own until Flet's Semantics stops forcing `enabled` (U34, D-214).
+    # empty node of its own, the price of an identifier on a fold (F50, D-214).
     return ft.Semantics(identifier=f"{SCREEN}.doubts", content=fold)

@@ -382,8 +382,8 @@ def _fold(
         # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on).
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
     )
-    # Not merged, which would take in the rows it holds: an empty node of its own
-    # until Flet's Semantics stops forcing `enabled` (U34).
+    # Not merged, which would take in the rows it holds: an empty node of its own,
+    # the price of an identifier on a fold (F50).
     return ft.Semantics(identifier=identifier, content=fold)
 
 
