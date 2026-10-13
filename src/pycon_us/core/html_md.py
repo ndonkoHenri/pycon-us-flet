@@ -16,13 +16,26 @@ The rules are D-114 and D-115 (S3, ``docs/spikes/03-html-markdown.md``; DATA-25,
   decide where it ends.
 
 ``to_text`` gives the visible text with no markup, for search (D-46).
+
+This module holds the HTML side: the tree, its blocks and the walk over inline elements.
+The Markdown they become, escaped text, emphasis, links and code spans, is
+``markdown_inline`` (D-200).
 """
 
 import re
-import unicodedata
 from html import unescape
 from html.parser import HTMLParser
-from urllib.parse import quote, urljoin, urlsplit
+
+from pycon_us.core.markdown_inline import (
+    Emphasis,
+    Token,
+    around,
+    code,
+    escape,
+    escape_line_start,
+    link,
+    paragraph,
+)
 
 _HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _BLOCK_TAGS = frozenset({"p", "ul", "ol", "li", "blockquote", "hr", *_HEADINGS})
@@ -161,7 +174,7 @@ def _plain_to_markdown(value: str) -> str:
     paragraphs: list[list[str]] = [[]]
     for line in unescape(value).splitlines():
         if line.strip():
-            paragraphs[-1].append(_escape_line_start(_escape(line.strip())))
+            paragraphs[-1].append(escape_line_start(escape(line.strip())))
         elif paragraphs[-1]:
             paragraphs.append([])
     return "\n\n".join("  \n".join(lines) for lines in paragraphs if lines)
@@ -173,11 +186,11 @@ def _plain_to_markdown(value: str) -> str:
 def _blocks(container: _Element, site_url: str) -> list[str]:
     """Render a container's children as Markdown blocks; inline runs become paragraphs."""
     blocks: list[str] = []
-    run: list[_Token] = []
+    run: list[Token] = []
 
     def end_run() -> None:
-        if paragraph := _paragraph(run):
-            blocks.append(paragraph)
+        if text := paragraph(run):
+            blocks.append(text)
         run.clear()
 
     for child in container.children:
@@ -204,7 +217,7 @@ def _block(element: _Element, site_url: str) -> list[str]:
     if tag in _HEADINGS:
         tokens = [t for child in element.children for t in _inline(child, site_url)]
         # Markdown headings are one line, so a br becomes a space (D-114).
-        text = _paragraph(tokens).replace("  \n", " ")
+        text = paragraph(tokens).replace("  \n", " ")
         return [f"{'#' * int(tag[1])} {text}"] if text else []
     return _blocks(element, site_url)  # p
 
@@ -255,15 +268,15 @@ def _item_body(blocks: list[str]) -> str:
 
 def _inline(
     node: _Element | str, site_url: str, *, in_link: bool = False
-) -> list[_Token]:
+) -> list[Token]:
     r"""Render inline content as tokens: Markdown text, ``\n`` for a break, and emphasis."""
     if isinstance(node, str):
-        return [_escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)]
+        return [escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)]
     tag = node.tag
     if tag == "br":
         return ["\n"]
     if tag == "code":
-        return _code(_HTML_SPACE.sub(" ", _text_of(node)))
+        return code(_HTML_SPACE.sub(" ", _text_of(node)))
     inner_in_link = in_link or tag == "a"  # inside a link, URLs and links stay text
     inner = [
         t
@@ -271,12 +284,10 @@ def _inline(
         for t in _inline(child, site_url, in_link=inner_in_link)
     ]
     if tag in _EMPHASIS:
-        emphasis = _Emphasis(_EMPHASIS[tag])
-        return _around(inner, [emphasis], [emphasis])
+        emphasis = Emphasis(_EMPHASIS[tag])
+        return around(inner, [emphasis], [emphasis])
     if tag == "a" and not in_link:
-        return _link(inner, node.attrs.get("href", "").strip(), site_url)
+        return link(inner, node.attrs.get("href", "").strip(), site_url)
     if tag in _BLOCK_TAGS:  # a block inside an inline element: keep words apart
         return [" ", *inner, " "]
     return inner  # a nested a
-
-
