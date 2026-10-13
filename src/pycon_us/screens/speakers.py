@@ -27,14 +27,13 @@ from pycon_us.core.speakers import (
     filter_directory,
     letter_groups,
 )
-from pycon_us.screens.schedule import NO_DATA_BODY
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.ui.fields import SearchField
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.states import EmptyState, SkeletonList
+from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
 SCREEN = "speakers"
 """The screen's name in its semantics identifiers (decisions §M)."""

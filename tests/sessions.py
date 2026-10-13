@@ -2,10 +2,10 @@
 
 Flet's own component tests render this way: a ``Session`` on a connection that sends to
 nothing, ``page.render(...)`` with the page bound as Flet binds it, and Flet's scheduler
-re-rendering what changed. ``tests/test_session_rows.py`` and ``tests/test_schedule.py``
-use it. It reaches into Flet internals (``_context_page``, ``Session.index``,
-``Session.dispatch_event``): a Flet pin bump (D-81) that renames one breaks this module,
-not the components: look here first.
+re-rendering what changed. ``tests/test_session_rows.py``, ``tests/test_schedule.py``
+and ``tests/test_my_schedule.py`` use it. It reaches into Flet internals
+(``_context_page``, ``Session.index``, ``Session.dispatch_event``): a Flet pin bump
+(D-81) that renames one breaks this module, not the components: look here first.
 """
 
 import asyncio

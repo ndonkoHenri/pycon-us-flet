@@ -237,9 +237,9 @@ async def shown(
             fab = kwargs.get("fab")
             return ft.Column([kwargs["body"], *([fab] if fab else [])], expand=True)
 
-        def counted_phrase(*args: Any) -> str:
+        def counted_phrase(*args: Any, **kwargs: Any) -> str:
             result.rows.append(cast(Any, args[-1]).session.id)
-            return phrase(*args)
+            return phrase(*args, **kwargs)
 
         def counted_gutter(label: str) -> ft.Control:
             result.slots.append(label)

@@ -439,9 +439,9 @@ async def show(
     def counted(name: str) -> Callable[..., str]:
         phrase = getattr(rows, name)
 
-        def count(*args: Any) -> str:
+        def count(*args: Any, **kwargs: Any) -> str:
             result.renders.append(args[-1].session.id)
-            return phrase(*args)
+            return phrase(*args, **kwargs)
 
         return count
 

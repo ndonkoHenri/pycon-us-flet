@@ -256,9 +256,9 @@ async def show(
 
     phrase = session_rows.spoken_phrase
 
-    def counted_phrase(labels: Any, view: Any) -> str:
+    def counted_phrase(labels: Any, view: Any, **kwargs: Any) -> str:
         result.rows.append(view.session.id)
-        return phrase(labels, view)
+        return phrase(labels, view, **kwargs)
 
     async def focus(self: ft.TextField) -> None:
         result.focused.append(self)

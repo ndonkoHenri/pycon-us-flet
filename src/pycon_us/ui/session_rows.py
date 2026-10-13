@@ -4,9 +4,9 @@
 a list owner builds each session's ``SessionView`` once per feed version
 (``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
 tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
-star is a separate stop (D-33). ``TimeGutter`` is the slot's time column (D-158). The
-other rows (``LinkTile``; P1's ``SpeakerRow``, P2's ``LocationCard``) are in
-``ui.rows`` (ux.md §3.9, D-184).
+star is a separate stop (D-33). ``TimeGutter`` is the slot's time column (D-158) and
+``TimeSlot`` a slot, the gutter beside its rows. The other rows (``LinkTile``; P1's
+``SpeakerRow``, P2's ``LocationCard``) are in ``ui.rows`` (ux.md §3.9, D-184).
 """
 
 import re
@@ -93,19 +93,29 @@ def use_session_views(
     )
 
 
-def spoken_phrase(labels: Sequence[str], view: SessionView) -> str:
+def spoken_phrase(
+    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
+) -> str:
     """Return what a screen reader says for a session row: one phrase (D-33).
 
     "Talk. What's new in typing. 9:25 to 10:10 AM, Room 104A. Ana Lima." (ux.md
     §3.9): the badges, the title, the time and place, then the speakers, each a
-    sentence, so TalkBack and VoiceOver pause between them.
+    sentence, so TalkBack and VoiceOver pause between them. On My schedule a last
+    sentence names every clash in full, "Overlaps with “A”, “B” and “C”.", so the
+    clash is heard, not only seen, even where the row counts the rest (ux.md §5.6).
 
     Args:
         labels: The badges' labels, in order (``badge_specs()``).
         view: The session's row view.
+        overlaps: The names of the saved sessions the row overlaps, if any.
     """
     when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
-    parts = (", ".join(labels), view.session.name, when, view.speakers)
+    clash = ""
+    if overlaps:
+        *rest, last = (f"“{name}”" for name in overlaps)
+        names = f"{', '.join(rest)} and {last}" if rest else last
+        clash = f"Overlaps with {names}"
+    parts = (", ".join(labels), view.session.name, when, view.speakers, clash)
     return " ".join(_sentence(part) for part in parts if part)
 
 
@@ -146,6 +156,7 @@ def SessionRow(
     tokens: Tokens,
     *,
     screen: str,
+    overlaps: tuple[str, ...] = (),
     elapsed: int | None = None,
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
@@ -167,6 +178,10 @@ def SessionRow(
         screen: The screen's name in semantics identifiers: the row's text is
             ``<screen>.session.<key>``, its star ``<screen>.favorite.<key>``, the key
             from ``semantics_key()``.
+        overlaps: On My schedule, the names of the saved sessions the row overlaps,
+            in agenda order: a last line, after a warning icon, names the first and
+            counts the rest, and the phrase names them all, so the clash is never told
+            by colour alone (D-33); empty for none.
         elapsed: For a row that is on (Now), how much has passed, in whole percent
             (``agenda.elapsed_percent()``): a 3 dp bar in ``Tokens.live`` under the
             text, and "60 percent elapsed." at the end of the phrase; None for none.
@@ -179,6 +194,7 @@ def SessionRow(
         on_toggle,
         tokens,
         screen=screen,
+        overlaps=overlaps,
         elapsed=elapsed,
         key=key,  # pyright: ignore[reportCallIssue]
     )
@@ -193,6 +209,7 @@ def _SessionRow(
     tokens: Tokens,
     *,
     screen: str,
+    overlaps: tuple[str, ...],
     elapsed: int | None = None,
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
@@ -219,7 +236,9 @@ def _SessionRow(
     lines.append(_meta(view))
     if view.speakers:
         lines.append(_secondary(view.speakers))
-    phrase = spoken_phrase([label for label, _ in specs], view)
+    if overlaps:
+        lines.append(_overlap_line(overlaps, tokens.warning))
+    phrase = spoken_phrase([label for label, _ in specs], view, overlaps=overlaps)
     if elapsed is not None:
         lines.append(_elapsed_bar(elapsed, tokens.live))
         phrase = f"{phrase} {elapsed_phrase(elapsed)}"
@@ -254,6 +273,42 @@ def _SessionRow(
             ),
         ],
         spacing=0,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+    )
+
+
+def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
+    """Return a row's overlap warning: ``WARNING_AMBER`` beside its lines (ux.md §3.7).
+
+    "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
+    "and 2 more" on a line of its own, so the cut never hides the count (D-188's "Now:"
+    line). Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface
+    (§3.3). The icon tops the text, beside its first line when it wraps.
+    """
+    first, *rest = names
+    texts: list[ft.Control] = [
+        ft.Text(
+            f"Overlaps with “{first}”",
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+            color=color,
+            max_lines=3,
+            overflow=ft.TextOverflow.ELLIPSIS,  # the phrase says it in full
+        )
+    ]
+    if rest:
+        more = f"and {len(rest)}\N{NO-BREAK SPACE}more"
+        texts.append(
+            ft.Text(more, theme_style=ft.TextThemeStyle.BODY_MEDIUM, color=color)
+        )
+    return ft.Row(
+        [
+            ft.Container(  # 2 dp down: centred on the 20 dp first line
+                ft.Icon(ft.Icons.WARNING_AMBER, size=16, color=color),
+                padding=ft.Padding.only(top=2),
+            ),
+            ft.Column(texts, spacing=0, expand=True),
+        ],
+        spacing=8,
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
@@ -394,6 +449,22 @@ def TimeGutter(label: str) -> ft.Control:
             padding=ft.Padding.only(left=16, top=12, right=8),
         ),
     )
+
+
+def TimeSlot(label: str, rows: Sequence[ft.Control], *, divider: bool) -> ft.Control:
+    """Return one time slot of a list (D-31): the ``TimeGutter`` beside the slot's rows.
+
+    Args:
+        label: The slot's start, for ``TimeGutter``.
+        rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
+        divider: Draw a 1 dp divider above it: every slot of a day but the first.
+    """
+    slot = ft.Row(
+        [TimeGutter(label), ft.Column(list(rows), spacing=0, expand=True)],
+        spacing=0,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+    )
+    return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
 
 
 def _gutter_lines(time: str, meridiem: str, opacity: float = 1.0) -> ft.Control:
