@@ -163,6 +163,35 @@ def next_for_me(
     return max(ongoing, key=attrgetter("start")) if ongoing else None
 
 
+def elapsed_percent(session: Session, now: datetime) -> int:
+    """Return how much of a session has passed at ``now``, in whole percent (SCHED-25).
+
+    Counted over the time its row shows, from ``display_start`` to ``end``: the Job
+    Fair's row says 9:30, though it is happening only from its 10:00 slot (DATA-11), so
+    at 10:00 its bar already stands at a seventh. Rounded down, so a session that is on
+    reads 0 to 99 and never "100 percent" before its end: 0 before it starts, 100 from
+    its end on; a session without a duration (a notice) is 0 before it, 100 after.
+
+    Args:
+        session: A session of the model.
+        now: An aware instant, in any zone.
+
+    Returns:
+        The share of the session that has passed, from 0 to 100.
+
+    Raises:
+        ValueError: ``now`` is naive.
+    """
+    _require_aware(now)
+    start, end = session.display_start, session.end
+    if now >= end:
+        return 100
+    if now <= start:
+        return 0
+    # Whole timedeltas floor-divided: a float share would make 29 percent 28.999….
+    return (now - start) * 100 // (end - start)
+
+
 def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
     """Return My schedule: the saved sessions by day and slot, and their overlaps (NEW-01).
 

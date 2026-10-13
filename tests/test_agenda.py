@@ -13,6 +13,7 @@ from pycon_us.core.agenda import (
     Agenda,
     NowNext,
     Phase,
+    elapsed_percent,
     my_schedule,
     next_for_me,
     now_next,
@@ -473,6 +474,7 @@ def test_the_same_saved_sessions_give_an_equal_agenda() -> None:
     [
         lambda data, naive: now_next(data, naive),
         lambda data, naive: next_for_me(data, frozenset({"153"}), naive),
+        lambda data, naive: elapsed_percent(data.sessions["142"], naive),
     ],
 )
 def test_a_naive_now_is_refused(
@@ -480,3 +482,32 @@ def test_a_naive_now_is_refused(
 ) -> None:
     with pytest.raises(ValueError, match="aware"):
         ask(processed(2026), datetime(2026, 5, 15, 10))  # noqa: DTZ001
+
+
+# ------------------------------------------------------------------ elapsed (#95)
+
+
+def test_the_elapsed_share_counts_whole_percents_rounded_down() -> None:
+    talk = processed(2026).sessions["142"]  # 10:30-11:00 AM on Saturday, May 16
+    assert elapsed_percent(talk, may(2026, 16, 10, 30)) == 0
+    assert elapsed_percent(talk, may(2026, 16, 10, 39)) == 30  # 9 of 30 minutes
+    assert elapsed_percent(talk, may(2026, 16, 10, 48)) == 60
+    # 29 minutes is 96.67 %: rounded down, so a session that is on never says 100.
+    assert elapsed_percent(talk, may(2026, 16, 10, 59)) == 96
+    assert elapsed_percent(talk, may(2026, 16, 11, 0)) == 100
+    assert elapsed_percent(talk, may(2026, 16, 9, 0)) == 0
+    assert elapsed_percent(talk, may(2026, 16, 12, 0)) == 100
+
+
+def test_a_share_that_floats_would_round_badly_counts_exactly() -> None:
+    talk = processed(2026).sessions["142"]
+    # 8.7 of 30 minutes is exactly 29 %; 0.29 * 100 in floats is 28.999….
+    at = may(2026, 16, 10, 38) + timedelta(seconds=42)
+    assert elapsed_percent(talk, at) == 29
+
+
+def test_the_elapsed_share_follows_the_start_a_row_shows() -> None:
+    """The Job Fair's row says 9:30, though its slot is 10:00 (DATA-11)."""
+    fair = processed(2026).sessions["178"]  # 9:30 AM-1:00 PM, in the 10:00 slot
+    assert fair.display_start < fair.start
+    assert elapsed_percent(fair, may(2026, 17, 10, 0)) == 14  # 30 of 210 minutes

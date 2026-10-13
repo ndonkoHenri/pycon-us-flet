@@ -22,7 +22,7 @@ from pycon_us import capabilities, clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.prefs import Prefs
-from pycon_us.screens import developer, now
+from pycon_us.screens import developer
 from pycon_us.screens.developer import Developer, zone_line
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
@@ -456,31 +456,6 @@ def test_the_capability_flags_are_shown_read_only(
     assert all(
         row.on_click is None for row in body.controls if isinstance(row, ft.ListTile)
     )
-
-
-# ------------------------------------------------------------------ Now (Schedule: test_schedule.py)
-
-
-def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
-    monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage, machine_tz: str
-) -> None:
-    monkeypatch.setattr(now, "use_services", lambda: svc)
-    monkeypatch.setattr(now, "use_scroll_to_top", lambda: (ft.Ref(), None))
-    monkeypatch.setattr(now, "AppScaffold", lambda **kwargs: kwargs)
-    monkeypatch.setattr(now, "stub_body", lambda controls, **_: controls)
-
-    def today_line() -> str:
-        line = inspect.unwrap(now.Now)()["body"][0]
-        assert isinstance(line, ft.Semantics) and line.identifier == "now.today"
-        assert isinstance(line.content, ft.Container)
-        assert isinstance(line.content.content, ft.Text)
-        return str(line.content.content.value)
-
-    # 23:30 in Long Beach is already Saturday on Kiritimati: the conference's day counts.
-    clock.start_fake_clock(datetime(2026, 5, 15, 23, 30, tzinfo=PACIFIC))
-    assert today_line() == "Today in Pacific Time: Friday, May 15"
-    clock.start_fake_clock(None)  # cleared: the next render is on real time
-    assert today_line() != "Today in Pacific Time: Friday, May 15"
 
 
 # ------------------------------------------------------------------ the helpers
