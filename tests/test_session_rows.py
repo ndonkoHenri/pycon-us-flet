@@ -33,7 +33,7 @@ from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx, use_services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory, use_conference
-from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import (
     ADD_LABEL,
@@ -63,6 +63,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
+from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone
@@ -473,6 +474,45 @@ def test_a_row_that_is_on_says_how_much_has_passed_last() -> None:
     """Now's elapsed bar is said in the row's phrase, as a sentence of its own (#95)."""
     assert elapsed_phrase(60) == "60 percent elapsed."
     assert elapsed_phrase(0) == "0 percent elapsed."
+
+
+def _over(color: str, alpha: float, background: str) -> str:
+    """``color`` at ``alpha`` painted over ``background``, as #RRGGBB."""
+    mix = (
+        round(
+            alpha * int(color[i : i + 2], 16)
+            + (1 - alpha) * int(background[i : i + 2], 16)
+        )
+        for i in (1, 3, 5)
+    )
+    return "#" + "".join(f"{channel:02X}" for channel in mix)
+
+
+@pytest.mark.parametrize("dark", [False, True])
+def test_the_elapsed_bar_shows_its_fill_and_its_end_on_every_surface(
+    dark: bool,
+) -> None:
+    """WCAG 1.4.11: the fill reads 3:1 on its track, and the stop dot marks the end.
+
+    The track itself is only a hint (about 1.4:1), on the list's ``surface`` and on
+    the next-session card's ``surface_container_highest`` alike; M3's stop dot is what
+    marks 100 % (#95).
+    """
+    live = DARK_TOKENS.live if dark else LIGHT_TOKENS.live
+    padded = rows._elapsed_bar(60, live)
+    assert isinstance(padded, ft.Container)
+    bar = padded.content
+    assert isinstance(bar, ft.ProgressBar)
+    assert bar.year_2023 is False  # the gap and the stop dot
+    assert bar.stop_indicator_color == ft.Colors.ON_SURFACE_VARIANT
+    role, alpha = str(bar.bgcolor).split(",")
+    assert role == ft.Colors.ON_SURFACE
+    ramp = NEUTRAL_RAMP[dark]
+    for surface in (ramp["surface"], ramp["surfaceContainerHighest"]):
+        track = _over(ramp["onSurface"], float(alpha), surface)
+        assert contrast_ratio(live, track) >= 3
+        assert contrast_ratio(track, surface) >= 1.3  # a visible rail
+        assert contrast_ratio(ramp["onSurfaceVariant"], surface) >= 3  # the dot
 
 
 def test_a_title_that_ends_a_sentence_gets_no_second_full_stop() -> None:

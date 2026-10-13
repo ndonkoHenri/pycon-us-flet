@@ -36,10 +36,13 @@ from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import now as screen
 from pycon_us.screens.now_header import (
     GOLD,
+    HeaderCopy,
     Season,
+    StatusHeader,
     header_copy,
     header_phrase,
     season,
+    spoken,
     up_next_when,
 )
 from pycon_us.services import Services, ServicesCtx
@@ -72,6 +75,9 @@ AT_11 = ("105", "4", "9113", "9040", "9072", "15", "102", "41", "9059", "9086")
 OPEN_SPACE = "9086"
 """pytest for system tests, an open space at 11:00 AM on Friday: last of AT_11, and
 hidden on the Schedule by default (D-20)."""
+
+KEYNOTE = "153"
+"""Lin Qiao's keynote, 9:45-10:30 AM on Friday: alone until the 10:00 open spaces."""
 
 
 def may(day: int, hour: int, minute: int = 0) -> datetime:
@@ -192,6 +198,29 @@ def test_the_header_names_pacific_time_on_a_device_elsewhere(
     assert copy.note == "Times are Pacific Time (PDT)"
 
 
+@pytest.mark.parametrize(
+    "now",
+    [datetime(2026, 4, 20, 9, tzinfo=PACIFIC), may(18, 10), may(25, 10)],
+    ids=["countdown", "sprints", "over"],
+)
+def test_the_zone_note_shows_only_in_the_season_with_times(
+    data: ConferenceData, now: datetime
+) -> None:
+    """The countdown, the sprints and the end show dates only: no zone to name."""
+    kiritimati = now.astimezone(ZoneInfo("Pacific/Kiritimati")).utcoffset()
+    copy = header_copy(
+        now_next(data, now), now, data, INFO, use_24h=False, device_offset=kiritimati
+    )
+    assert copy.season is not Season.CONFERENCE
+    assert copy.note is None
+
+
+def test_a_screen_reader_hears_pauses_and_ranges_in_words() -> None:
+    assert spoken("Up next · 11:30 AM") == "Up next, 11:30 AM"
+    assert spoken("Join a project · May 18–19") == "Join a project, May 18 to 19"
+    assert spoken("Wed, May 13 – Sun, May 17") == "Wed, May 13 to Sun, May 17"
+
+
 def test_the_header_reads_as_one_phrase(data: ConferenceData) -> None:
     now = datetime(2026, 4, 20, 9, tzinfo=PACIFIC)
     copy = header_copy(
@@ -222,6 +251,29 @@ def test_up_next_names_its_day_when_it_is_not_today(data: ConferenceData) -> Non
 def test_gold_reads_on_the_header_s_indigo() -> None:
     """Gold is for icons on the indigo only: 6.2:1, as ux.md §3.1 computes it."""
     assert contrast_ratio(GOLD, "#3B3EA9") >= 6.0
+
+
+@pytest.mark.parametrize(
+    ("dark", "fill", "ink"),
+    [
+        (False, ft.Colors.PRIMARY, ft.Colors.ON_PRIMARY),
+        # The dark primary is a pale indigo; its container is the brand's (D-190).
+        (True, ft.Colors.PRIMARY_CONTAINER, ft.Colors.ON_PRIMARY_CONTAINER),
+    ],
+)
+def test_the_header_is_the_brand_indigo_in_both_schemes(
+    dark: bool, fill: ft.Colors, ink: ft.Colors
+) -> None:
+    copy = HeaderCopy(Season.CONFERENCE, "Day 3 of 5 · Friday", "Long Beach")
+    header = StatusHeader("PyCon US 2026", copy, dark=dark)
+    assert isinstance(header, ft.Semantics)
+    card = header.content
+    assert isinstance(card, ft.Container)
+    assert card.bgcolor == fill
+    texts = [c for c in _walk(card) if isinstance(c, ft.Text)]
+    assert texts and all(text.color == ink for text in texts)
+    (icon,) = [c for c in _walk(card) if isinstance(c, ft.Icon)]
+    assert icon.color == GOLD
 
 
 # ------------------------------------------------------------------ the screen
@@ -497,6 +549,18 @@ async def test_on_a_conference_day_it_shows_what_is_on_then_what_is_next(
     assert "See the rest of today in Schedule" in shown.texts()
 
 
+async def test_up_next_s_heading_reads_its_dot_as_a_pause(
+    render: Callable[..., Any],
+) -> None:
+    shown = await render(may(15, 11, 10))
+    (heading,) = [
+        c
+        for c in shown.all()
+        if isinstance(c, ft.Text) and c.value == "Up next · 11:30 AM"
+    ]
+    assert heading.semantics_label == "Up next, 11:30 AM"
+
+
 async def test_happening_now_ignores_the_schedule_s_filters(
     render: Callable[..., Any],
 ) -> None:
@@ -509,9 +573,11 @@ async def test_happening_now_ignores_the_schedule_s_filters(
 async def test_saved_sessions_come_first_in_happening_now(
     render: Callable[..., Any],
 ) -> None:
-    shown = await render(may(15, 11, 10), saved=(OPEN_SPACE,))
-    happening = shown.rows()[: len(AT_11)]
-    assert happening == [OPEN_SPACE, *(i for i in AT_11 if i != OPEN_SPACE)]
+    shown = await render(may(15, 11, 10), saved=(OPEN_SPACE, "9072"))
+    (mine,) = shown.rows("now.next.session.")  # one of the two, in the card
+    (other,) = {OPEN_SPACE, "9072"} - {mine}
+    happening = shown.rows()[: len(AT_11) - 1]
+    assert happening == [other, *(i for i in AT_11 if i not in (mine, other))]
 
 
 async def test_each_session_on_shows_and_says_how_much_has_passed(
@@ -562,6 +628,18 @@ async def test_after_a_day_it_wraps_up_and_points_at_tomorrow(
     assert "See the rest of today in Schedule" not in shown.texts()
 
 
+async def test_in_the_evening_saved_sessions_are_for_a_later_day(
+    render: Callable[..., Any],
+) -> None:
+    """At 9 PM "nothing in the next 3 hours" is true but odd: the day is over."""
+    shown = await render(may(15, 21), saved=(TALK,))  # tomorrow morning
+    tile = shown.node("now.next_session")
+    assert _texts(tile)[:2] == [
+        "Nothing more saved for today",
+        "See your saved sessions in My schedule",
+    ]
+
+
 async def test_after_the_last_session_the_sprints_are_next(
     render: Callable[..., Any],
 ) -> None:
@@ -571,6 +649,8 @@ async def test_after_the_last_session_the_sprints_are_next(
         assert shown.rows() == []
         sprints = shown.node("now.sprints")
         assert _texts(sprints) == ["Sprints", "Join a project · May 18–19"]
+        (subtitle,) = [c for c in _walk(sprints) if isinstance(c, ft.Text)]
+        assert subtitle.semantics_label == "Join a project, May 18 to 19"
 
 
 async def test_after_the_sprints_it_says_see_you_next_year(
@@ -597,10 +677,56 @@ async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
         for c in _walk(card)
     )
     assert "Starts in 1 h 30 min" in _texts(card)
+    # Not on yet: no bar.
+    assert not [c for c in _walk(card) if isinstance(c, ft.ProgressBar)]
     show_room = shown.node("now.show_room").content
     assert isinstance(show_room, ft.TextButton)
     await shown.click(show_room)
     assert shown.pushed == [f"/now/room/grand-ballroom-a?highlight={TALK}"]
+
+
+async def test_the_card_s_status_is_a_stop_of_its_own(
+    render: Callable[..., Any],
+) -> None:
+    """Row, status, star and "Show room": four stops (ux.md §5.1)."""
+    shown = await render(may(16, 9), saved=(TALK,))
+    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
+    (status,) = [
+        c
+        for c in _walk(card)
+        if isinstance(c, ft.Text) and c.value == "Starts in 1 h 30 min"
+    ]
+    assert status.semantics_label == "Starts in 1 hour 30 minutes"
+    # Not in the row's merged node: the row's phrase does not say it.
+    assert "Starts in" not in str(shown.node(f"now.next.session.{TALK}").label)
+    # At large text "Show room" moves under the status whole.
+    (actions,) = [
+        c for c in _walk(card) if isinstance(c, ft.Row) and status in _walk(c)
+    ][-1:]
+    assert actions.wrap is True
+
+
+async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
+    render: Callable[..., Any],
+) -> None:
+    shown = await render(may(15, 11, 10), saved=(OPEN_SPACE,))
+    assert shown.rows("now.next.session.") == [OPEN_SPACE]
+    card = shown.node(f"now.next.session.{OPEN_SPACE}")
+    assert str(card.label).endswith(" 16 percent elapsed.")
+    assert [c.value for c in _walk(card) if isinstance(c, ft.ProgressBar)] == [0.16]
+    assert shown.rows()[: len(AT_11) - 1] == [i for i in AT_11 if i != OPEN_SPACE]
+
+
+async def test_when_only_your_session_is_on_the_card_says_so(
+    render: Callable[..., Any],
+) -> None:
+    """A keynote is alone in its slot: no Happening now section to say "nothing"."""
+    shown = await render(may(15, 9, 50), saved=(KEYNOTE,))
+    assert shown.rows("now.next.session.") == [KEYNOTE]
+    assert "Happening now" not in shown.headings()
+    assert "Nothing in session right now" not in shown.texts()
+    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
+    assert "Happening now" in _texts(card)  # the card's status says it
 
 
 async def test_with_nothing_saved_it_says_how_to_save_a_session(

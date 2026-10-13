@@ -270,15 +270,28 @@ def elapsed_phrase(elapsed: int) -> str:
     return f"{elapsed} percent elapsed."
 
 
+TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
+"""The elapsed bar's track: a tint of the text, so it shows on every surface, the
+next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or more
+on it."""
+
+
 def _elapsed_bar(elapsed: int, color: str) -> ft.Control:
-    """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173)."""
+    """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173).
+
+    M3's current bar (``year_2023=False``): a gap after the fill, then the track, and
+    a stop dot at its end in ``on_surface_variant`` (4.5:1 or more on every surface),
+    which marks where 100 % is, as M3 asks of a track under 3:1 (WCAG 1.4.11).
+    """
     return ft.Container(
         ft.ProgressBar(
             value=elapsed / 100,
             bar_height=3,
             color=color,
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+            bgcolor=TRACK,
             border_radius=3,
+            year_2023=False,
+            stop_indicator_color=ft.Colors.ON_SURFACE_VARIANT,
         ),
         padding=ft.Padding.only(top=4),  # 8 dp under the text, with the column's 4
     )

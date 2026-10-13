@@ -103,7 +103,8 @@ class HeaderCopy:
         title: The headline: "Day 3 of 5 · Friday", "Starts in 23 days".
         subtitle: The line under it: "First up today at 9:00 AM", "May 13–19 ·
             Long Beach, CA".
-        note: "Times are Pacific Time (PDT)" when the device's clock differs (D-35).
+        note: "Times are Pacific Time (PDT)" when the device's clock differs (D-35),
+            in the conference season only: the other seasons show no times.
     """
 
     season: Season
@@ -134,14 +135,13 @@ def header_copy(
     """
     zone = info.zone
     day = today(now, zone)
-    note = zone_note(now, zone, info.time_zone_name, device_offset)
     current = season(now_next.phase, day, data, info)
     match current:
         case Season.COUNTDOWN:
             first = data.days[0].date if data.days else info.first_day
             dates = date_range_label(info.first_day, info.last_day)
             return HeaderCopy(
-                current, _countdown((first - day).days), f"{dates} · {info.city}", note
+                current, _countdown((first - day).days), f"{dates} · {info.city}"
             )
         case Season.SPRINTS:
             subtitle = (
@@ -149,12 +149,14 @@ def header_copy(
                 if day == info.last_day
                 else f"The sprints run until {day_heading(info.last_day)}"
             )
-            return HeaderCopy(current, f"Sprints · {weekday_name(day)}", subtitle, note)
+            return HeaderCopy(current, f"Sprints · {weekday_name(day)}", subtitle)
         case Season.OVER:
-            return HeaderCopy(current, "See you next year", "Thanks for coming.", note)
+            return HeaderCopy(current, "See you next year", "Thanks for coming.")
         case Season.CONFERENCE:
             number = sum(1 for d in data.days if d.date <= day)
             title = f"Day {number} of {len(data.days)} · {weekday_name(day)}"
+            # Only this season shows times, so only it says which zone they are in.
+            note = zone_note(now, zone, info.time_zone_name, device_offset)
             return HeaderCopy(current, title, _day_line(now_next, info, use_24h), note)
 
 
@@ -176,19 +178,31 @@ def _day_line(now_next: NowNext, info: ConferenceInfo, use_24h: bool) -> str:
             return "That's a wrap for today"
 
 
+def spoken(text: str) -> str:
+    """Return ``text`` as a screen reader should say it: "Up next, 11:30 AM".
+
+    A " · " is read as a pause and a range's dash as "to": "May 13 to 19", "Wed, May
+    13 to Sun, May 17".
+
+    Args:
+        text: What the screen shows.
+    """
+    return text.replace(" · ", ", ").replace(" – ", " to ").replace("–", " to ")
+
+
 def header_phrase(name: str, copy: HeaderCopy) -> str:
     """Return what a screen reader says for the header: one phrase (D-33).
 
-    "PyCon US 2026. Day 3 of 5, Friday. First up today at 9:00 AM." A "·" is read
-    as a pause and a range's dash as "to".
+    "PyCon US 2026. Day 3 of 5, Friday. First up today at 9:00 AM." (``spoken()``).
 
     Args:
         name: The conference's name, the header's first line.
         copy: What the header says.
     """
     parts = [name, copy.title, copy.subtitle, copy.note or ""]
-    spoken = (p.replace(" · ", ", ").replace("–", " to ") for p in parts if p)
-    return " ".join(p if p.endswith(".") else f"{p}." for p in spoken)
+    return " ".join(
+        p if p.endswith(".") else f"{p}." for p in (spoken(p) for p in parts if p)
+    )
 
 
 def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
@@ -310,7 +324,7 @@ def _fact(icon: ft.IconData, title: str, subtitle: str) -> ft.Control:
         content=ft.ListTile(
             leading=ft.Icon(icon),
             title=title,
-            subtitle=ft.Text(subtitle, semantics_label=subtitle.replace("–", "to")),
+            subtitle=ft.Text(subtitle, semantics_label=spoken(subtitle)),
             # As a LinkTile with a subtitle: the icon beside the title's first line.
             title_alignment=ft.ListTileTitleAlignment.TOP,
             min_vertical_padding=SUBTITLED_TOP,
@@ -348,10 +362,12 @@ def sprints_link(info: ConferenceInfo) -> ft.Control:
         info: The year's facts: the sprint days.
     """
     first = info.last_talk_day + timedelta(days=1)
+    subtitle = f"Join a project · {date_range_label(first, info.last_day)}"
     return LinkTile(
         "Sprints",
         "/more/sprints",
         icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
-        subtitle=f"Join a project · {date_range_label(first, info.last_day)}",
+        # A control, to be read "Join a project, May 18 to 19"; the tile styles it.
+        subtitle=ft.Text(subtitle, semantics_label=spoken(subtitle)),
         identifier="now.sprints",
     )

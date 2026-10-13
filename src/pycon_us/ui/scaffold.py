@@ -195,6 +195,7 @@ def SectionHeader(
     level: int | None = None,
     top: int = 16,
     leading: ft.Control | None = None,
+    spoken: str | None = None,
 ) -> ft.Control:
     """Return the heading of a group of rows: a day, a letter, a section (ux.md §3.9).
 
@@ -209,9 +210,17 @@ def SectionHeader(
         leading: A decorative mark before the text, such as Now's live dot: a
             control without a label (a shape, an unlabelled icon), so the heading
             still reads as ``text``.
+        spoken: What a screen reader says instead of ``text``, when it differs:
+            "Up next, 11:30 AM" for "Up next · 11:30 AM".
     """
     label: ft.Control = ft.Text(
-        text, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ft.Colors.PRIMARY
+        text,
+        theme_style=ft.TextThemeStyle.TITLE_SMALL,
+        color=ft.Colors.PRIMARY,
+        semantics_label=spoken,
+        # Beside a mark, the row's room: in a row a text gets unbounded width and
+        # would overflow instead of wrapping at large text.
+        expand=leading is not None,
     )
     if leading is not None:
         label = ft.Row(

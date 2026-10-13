@@ -968,3 +968,20 @@ def test_a_section_header_s_mark_sits_before_its_text_and_says_nothing() -> None
     first, text = row.controls
     assert first is dot
     assert isinstance(text, ft.Text) and text.value == "Happening now"
+    # The row's room, so a long heading wraps at large text instead of overflowing.
+    assert text.expand is True
+
+
+def test_a_section_header_can_say_its_text_another_way() -> None:
+    """A "·" reads as a pause, as Now's header phrase reads it (#95)."""
+    header = SectionHeader("Up next · 11:30 AM", level=2, spoken="Up next, 11:30 AM")
+    assert isinstance(header, ft.Semantics)
+    assert isinstance(header.content, ft.Container)
+    text = header.content.content
+    assert isinstance(text, ft.Text)
+    assert text.value == "Up next · 11:30 AM"
+    assert text.semantics_label == "Up next, 11:30 AM"
+    plain = SectionHeader("Days")
+    assert isinstance(plain, ft.Semantics) and isinstance(plain.content, ft.Container)
+    assert isinstance(plain.content.content, ft.Text)
+    assert plain.content.content.semantics_label is None
