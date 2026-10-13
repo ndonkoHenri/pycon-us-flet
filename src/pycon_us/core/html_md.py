@@ -19,7 +19,7 @@ The rules are D-114 and D-115 (S3, ``docs/spikes/03-html-markdown.md``; DATA-25,
 
 This module holds the HTML side: the tree, its blocks and the walk over inline elements.
 The Markdown they become, escaped text, emphasis, links and code spans, is
-``markdown_inline`` (D-200).
+``markdown_inline`` (D-201).
 """
 
 import re

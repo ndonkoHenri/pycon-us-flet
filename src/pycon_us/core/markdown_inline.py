@@ -1,7 +1,7 @@
 r"""Markdown's inline layer for ``html_md``: escaped text, emphasis, links and code spans.
 
 ``html_md`` walks the parsed HTML and asks this module for the Markdown each inline
-piece becomes; nothing else imports it (D-200). It knows no HTML tree and imports nothing
+piece becomes; nothing else imports it (D-201). It knows no HTML tree and imports nothing
 from ``html_md``, so the dependency runs one way. The rules are D-114, D-115 and D-131:
 
 - Text is escaped with numeric character references, never backslashes (D-115), and a

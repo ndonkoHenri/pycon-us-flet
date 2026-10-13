@@ -441,11 +441,11 @@ def test_any_input_converts_without_raising(text: str) -> None:
     to_text(f"<p>{text}")
 
 
-# The module boundary (D-200)
+# The module boundary (D-201)
 
 
 def test_only_html_md_imports_the_inline_layer() -> None:
-    """D-200: markdown_inline is html_md's inline layer, imported by nothing else."""
+    """D-201: markdown_inline is html_md's inline layer, imported by nothing else."""
     importers = {
         path.relative_to(PACKAGE).as_posix()
         for path in PACKAGE.rglob("*.py")
@@ -455,7 +455,7 @@ def test_only_html_md_imports_the_inline_layer() -> None:
 
 
 def test_inline_layer_imports_nothing_from_the_app() -> None:
-    """D-200: the dependency runs one way, so markdown_inline imports no app module."""
+    """D-201: the dependency runs one way, so markdown_inline imports no app module."""
     path = PACKAGE / "core" / "markdown_inline.py"
     assert {
         name for name in imported_modules(path) if name.startswith("pycon_us")
