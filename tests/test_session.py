@@ -287,13 +287,15 @@ async def test_the_day_before_there_is_no_countdown(render: Render) -> None:
     clock.set_test_now(at("2026-05-15 18:00"))
     detail = await render(TALK)
     lines = detail.text("session.when")
-    # The date says when; the range never breaks inside (no-break space, word joiner).
-    assert lines[0] == "Saturday, May 16 · 10:30–\u206011:00\u00a0AM"
+    # The date says when; the range has a line of its own, its "AM" kept to it.
+    assert lines[:2] == ["Saturday, May 16", "10:30–11:00\u00a0AM"]
     assert not any(line.startswith("Starts") for line in lines)
-    title = next(
-        t for t in descendants(detail.node("session.when")) if isinstance(t, ft.Text)
+    time = next(
+        t
+        for t in descendants(detail.node("session.when"))
+        if isinstance(t, ft.Text) and t.value == lines[1]
     )
-    assert title.semantics_label == "Saturday, May 16, 10:30 to 11:00 AM"
+    assert time.semantics_label == "10:30 to 11:00 AM"  # "to", not a dash
 
 
 async def test_the_status_follows_the_clock_on_the_minute_tick(

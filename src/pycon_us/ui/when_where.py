@@ -112,22 +112,24 @@ def _time_tile(
             identifier=f"{screen}.when",
             content=ft.ListTile(
                 leading=ft.Icon(ft.Icons.SCHEDULE),
-                # The range never breaks inside ("12:30" / "PM"); a line too narrow
-                # for it breaks after the "·", as the rows' meta does (D-184).
-                title=ft.Text(
-                    f"{day} · {_unbroken(view.when)}",
-                    semantics_label=f"{day}, {view.spoken_when}",
+                # The day, then the time on a line of its own, so a long day or a
+                # large text size never breaks the range in two; its "AM" keeps to
+                # its digits, and only at the largest sizes it breaks after the dash.
+                title=ft.Column(
+                    [
+                        ft.Text(day),
+                        ft.Text(
+                            view.when.replace(" ", "\u00a0"),
+                            semantics_label=view.spoken_when,
+                        ),
+                    ],
+                    spacing=0,
                 ),
                 subtitle=ft.Column(lines, spacing=2),
                 title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
             ),
         )
     )
-
-
-def _unbroken(when: str) -> str:
-    """``when`` with no break inside: no-break spaces, and a word joiner after the dash."""
-    return when.replace(" ", "\u00a0").replace("–", "–\u2060")
 
 
 def _place_tile(label: str, screen: str) -> ft.Control:
