@@ -21,7 +21,7 @@
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
  state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      favorites.py  Favorites   (P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
- core/         pure Python, no Flet: feed rules, models, queries, time, slugs, html→md,
+ core/         pure Python, no Flet: feed rules, models, queries, search, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
  data/<year>/  conference.toml · content.toml · map.toml · conference.json (snapshot)
 ```
@@ -587,12 +587,12 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 |---|---|---|
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
 | `timeline(data, day, excluded)` | a tuple of `Slot(key, start, sessions)`, one per time slot; `key` is `"slot-<iso>"`, the slot item's `ScrollKey`; rows in `schedule_order`: shown start, then shown room in natural order (D-31), then name and id, rows without a place first; a track passes unless excluded, and a slot the filter empties is left out. The only query that takes `excluded`, called only by the Schedule (a test checks both). Memoised (below). Built in P1 (#85, D-178) | DATA-18, DATA-30, SCHED-02 |
-| `search(data, query, scope)` | folded, **all** words must match `search_text` (D-46); grouped by type, sessions by day; ignores filters | NEW-02, SPKR-02 |
+| `search(index, query, scope)` | in `core/search.py` (below): folded, **all** words must match, each anywhere in the text (D-46); grouped by type, sessions by day; ignores filters (D-180). Built in P1 | NEW-02, DATA-18, DATA-19, SPKR-02 |
 | `now_next(data, now)` | a frozen `NowNext`: the `Phase` (`before`, `before_day`, `day`, `after_day`, `after`; a day runs from its first start to its last end, and between days the conference-local date tells the evening from the morning), `happening` = `start <= now < end` over the timeline (`data.days`), and the first time slot after `now` on any day (`next_start`, `up_next`); ids, each slot in `schedule_order`, ignores filters (D-179) | SCHED-25 |
 | `next_for_me(data, favorites, now)` | the first saved session that starts within 3 h (`NEXT_SESSION_WINDOW`), else the saved session that is on and started last, else None (D-179) | SCHED-25 |
 | `my_schedule(data, favorites)` | a frozen `Agenda`: saved sessions by day and slot (`AgendaDay`, `AgendaSlot`), each slot in `schedule_order`, plus `overlaps: Mapping[id, tuple[id, ...]]` from one sorted sweep; back-to-back sessions, and sessions with the same location, start and end (posters), don't overlap (D-179) | NEW-01 |
 | `current_slot_key(slots, now)` | over the shown slots (`timeline(data, day, excluded)`, so the key always has an item to scroll to, D-155, D-178): first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey`; `None` when `slots` is empty | SCHED-16 |
-| `speakers(data)` | sorted by folded displayed name (D-46) | SPKR-01 |
+| `speakers(data)` | sorted by `speaker_order` (folded displayed name, then id; D-46, D-180), the key search's index and the Speakers stub already use | SPKR-01 |
 | `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row (the row itself until the feed publishes posters); ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
 | `room_sessions` | flat by start (poster details included), grouped by day | ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
@@ -602,14 +602,19 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 ```python
 # src/pycon_us/core/queries.py (excerpt)
 def fold(text: str) -> str:
-    """Lower-case and strip accents, so 'Cristián' matches 'cristian' (D-46)."""
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+    """Case, accents and typography folded: 'Cristián' → 'cristian', 'don’t' → 'dont'."""
+    folded = unicodedata.normalize("NFKD", text.replace("´", "")).casefold()  # ´ as apostrophe
+    folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)  # ' ’ go; “ —, ł, æ
+    return _NON_ASCII.sub(_without_marks, folded)  # marks and format characters go (D-180)
+```
 
+**Search (`core/search.py`; D-46, D-180).** `search_index(data)` pairs each session's `search_text`, each directory speaker's folded name and each room's folded name with what it finds, already in result order (sessions by day in the Schedule's order: shown start, then place in natural order, name and id, D-31; speakers by `queries.speaker_order`; rooms in natural order), and logs `Search index built in N ms`. It is built once per feed version (`use_memo` on `Conference.version` in #97's `Search`), never per keystroke. `search(index, query, scope)` folds the query, keeps the entries that hold every word as a substring, and returns a frozen `SearchResults(sessions: tuple[DaySessions, ...], speakers, rooms)`; an empty or blank query finds nothing, and `scope` is one of `SCOPES` (`all`, `sessions`, `speakers`, `rooms`).
 
-def matches(query: str, folded_haystack: str) -> bool:
-    """True when every word of the query occurs in the already-folded haystack."""
-    return all(word in folded_haystack for word in fold(query).split())
+```python
+# src/pycon_us/core/search.py (excerpt)
+def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
+    words = fold(query).split()
+    ...  # per type in scope: [item for text, item in entries if all(w in text for w in words)]
 ```
 
 ### 7.6 Time (`clock.py`, `core/timefmt.py`; D-35, D-43)

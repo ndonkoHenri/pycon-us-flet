@@ -5,7 +5,7 @@ Every speaker, by name folded as search folds it (D-46), each opening its detail
 
 import flet as ft
 
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import speaker_order
 from pycon_us.locations import drill_href
 from pycon_us.screens.stub import nav_tile, stub_body
 from pycon_us.state import use_conference
@@ -23,7 +23,7 @@ def Speakers() -> ft.View:
         body=stub_body(
             [
                 nav_tile(speaker.name, drill_href(view_path, "speaker", speaker.id))
-                for speaker in sorted(speakers, key=lambda speaker: fold(speaker.name))
+                for speaker in sorted(speakers, key=speaker_order)
             ]
         ),
     )
