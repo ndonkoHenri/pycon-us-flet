@@ -5,7 +5,7 @@ the feed URL; and the capability flags, read-only (``capabilities.py``, D-63). A
 the clock and the feed URL into effect at once and saves them in ``pycon.dev``, so they
 hold across launches; Reset returns to real time and the year's feed (D-184). The screen
 is always available when not embedded, and in a packaged build once unlocked in About
-this app; a warning-tone "Developer" chip marks it (ux.md §5.13). #107 adds the data
+this app; a warning-tone "Developer" chip at its top marks it (ux.md §5.13). #107 adds the data
 actions (Refresh now, Clear cached feed, Reset app, Share log).
 """
 
@@ -146,15 +146,22 @@ def Developer() -> ft.View:
     now = clock.now()
     return AppScaffold(
         title="Developer options",
-        actions=[chip],
         body=ft.ListView(
             [
+                # The mark opens the page rather than sitting in the app bar: there,
+                # at 200 % text it pushed the title out ("Develope…").
                 padded(
-                    ft.Text(
-                        "For testing and demos. Apply keeps these on this device "
-                        "until you reset them.",
-                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ft.Column(
+                        [
+                            chip,
+                            ft.Text(
+                                "For testing and demos. Apply keeps these on this "
+                                "device until you reset them.",
+                                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ),
+                        ],
+                        spacing=8,
                     )
                 ),
                 SectionHeader("Clock"),
@@ -325,7 +332,7 @@ def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> 
 
 
 def developer_chip(color: str) -> ft.Control:
-    """Return the app bar's warning-tone "Developer" mark (ux.md §5.13).
+    """Return the warning-tone "Developer" mark at the top of the page (ux.md §5.13).
 
     A chip's look without a ``Chip``: a Chip with no handler is drawn disabled (faded
     label) at the pin, and a mark is not a control (ux.md §3.9, as ``TrackBadge``).
@@ -334,7 +341,6 @@ def developer_chip(color: str) -> ft.Control:
         color: ``Tokens.warning``: the label, icon and outline.
     """
     return ft.Container(
-        margin=ft.Margin.only(right=16),
         padding=ft.Padding.symmetric(horizontal=8, vertical=4),
         border=ft.Border.all(1, color),
         border_radius=8,

@@ -200,7 +200,11 @@ def test_the_controls_carry_the_identifiers_ui_flows_use(
 def test_a_warning_tone_chip_marks_the_screen(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    [chip] = render()["actions"]
+    scaffold = render()
+    assert "actions" not in scaffold  # at 200 % text it pushed the title out
+    top = cast(ft.ListView, scaffold["body"]).controls[0]
+    assert isinstance(top, ft.Container) and isinstance(top.content, ft.Column)
+    chip = top.content.controls[0]
     assert isinstance(chip, ft.Container)
     assert chip.border == ft.Border.all(1, LIGHT_TOKENS.warning)
     assert chip.on_click is None  # a mark, not a control
@@ -363,7 +367,6 @@ def test_before_the_unlock_a_packaged_build_shows_how_to_unlock(
     prefs.dev = {}
     scaffold = render()
     assert by_identifier(scaffold) == {}  # no options to change
-    assert "actions" not in scaffold
 
 
 def test_the_capability_flags_are_shown_read_only(
