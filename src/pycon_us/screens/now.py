@@ -306,6 +306,9 @@ def _next_session(
                 ),
             ],
             spacing=0,
+            # A wrapping row is only as wide as its content: stretched, its
+            # SPACE_BETWEEN puts the button at the card's end.
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         ),
     )
     return [

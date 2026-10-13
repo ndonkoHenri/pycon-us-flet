@@ -704,6 +704,10 @@ async def test_the_card_s_status_is_a_stop_of_its_own(
         c for c in _walk(card) if isinstance(c, ft.Row) and status in _walk(c)
     ][-1:]
     assert actions.wrap is True
+    # Stretched across the card, so the button sits at its end on one line.
+    assert actions.alignment == ft.MainAxisAlignment.SPACE_BETWEEN
+    (column,) = [c for c in _walk(card) if isinstance(c, ft.Column)][:1]
+    assert column.horizontal_alignment == ft.CrossAxisAlignment.STRETCH
 
 
 async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
