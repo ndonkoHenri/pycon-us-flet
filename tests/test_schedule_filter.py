@@ -182,6 +182,12 @@ def show_button(schedule: Shown) -> ft.FilledButton:
     return next(c for c in _descendants(current) if isinstance(c, ft.FilledButton))
 
 
+def button_label(schedule: Shown) -> str:
+    content = show_button(schedule).content
+    assert isinstance(content, ft.Text)
+    return str(content.value)
+
+
 def _descendants(control: Any) -> list[Any]:
     """Every control under ``control``, through ``content`` and ``controls``."""
     found = [control]
@@ -220,9 +226,13 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
     assert schedule.prefs.excluded_tracks == ("Open Space",)
     assert summary(schedule) == "Hiding: Open space"
     button = filter_button(schedule)
-    assert button.icon == ft.Icons.TUNE
-    assert button.tooltip == "Filter sessions"
-    assert button.badge is None
+    assert cast(ft.Icon, button.icon).icon == ft.Icons.TUNE
+    assert cast(ft.Tooltip, button.tooltip).message == "Filter sessions"
+    node = find(
+        schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.filter"
+    )[0]
+    assert (node.label, node.value) == ("Filter sessions", None)
+    assert cast(ft.Icon, button.icon).badge is None
 
 
 async def test_show_all_restores_every_track_and_stores_an_explicit_empty_list(
@@ -240,7 +250,9 @@ async def test_show_all_restores_every_track_and_stores_an_explicit_empty_list(
     node = find(
         schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.filter"
     )[0]
-    assert filter_button(schedule).badge is not None  # differs from the default
+    assert (
+        cast(ft.Icon, filter_button(schedule).icon).badge is not None
+    )  # differs from the default
     assert node.value == "Changed"  # said too, not only drawn
     assert schedule.scrolls == []  # never scrolled unasked (#313)
 
@@ -264,7 +276,7 @@ async def test_a_stored_filter_reads_back_absent_as_the_default_and_empty_as_non
     await schedule.prefs.load(schedule.storage)
     await settle()
     assert summary(schedule) == "Hiding: Open space"
-    assert filter_button(schedule).badge is None
+    assert cast(ft.Icon, filter_button(schedule).icon).badge is None
 
 
 async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
@@ -281,22 +293,20 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     assert not chip(schedule, "open-space").selected
     assert chip(schedule, "talk").selected and chip(schedule, "talk").show_checkmark
     default = shown_count(conference, ("Open Space",))
-    assert show_button(schedule).content == count_label(default)
+    assert button_label(schedule) == count_label(default)
 
     await tap_chip(schedule, "talk")  # hides talks at once, and persists
     assert schedule.prefs.excluded_tracks == ("Open Space", "Talk")
     assert stored(schedule)[STORED] == ["Open Space", "Talk"]
     fewer = shown_count(conference, ("Open Space", "Talk"))
     assert fewer < default
-    assert show_button(schedule).content == count_label(fewer)
+    assert button_label(schedule) == count_label(fewer)
     assert summary(schedule) == "Hiding: Talk and Open space"
-    assert filter_button(schedule).badge is not None
+    assert cast(ft.Icon, filter_button(schedule).icon).badge is not None
 
     await tap_chip(schedule, "open-space")
     assert schedule.prefs.excluded_tracks == ("Talk",)
-    assert show_button(schedule).content == count_label(
-        shown_count(conference, ("Talk",))
-    )
+    assert button_label(schedule) == count_label(shown_count(conference, ("Talk",)))
     assert summary(schedule) == "Hiding: Talk"
 
 
@@ -315,7 +325,7 @@ async def test_reset_returns_to_the_default(
     assert schedule.prefs.excluded_tracks == ("Open Space",)
     assert stored(schedule)[STORED] == ["Open Space"]
     assert summary(schedule) == "Hiding: Open space"
-    assert filter_button(schedule).badge is None
+    assert cast(ft.Icon, filter_button(schedule).icon).badge is None
     assert sheet(schedule) is not None  # Reset applies; the sheet stays
 
 
@@ -376,7 +386,7 @@ async def test_with_every_chip_off_the_button_is_disabled_and_says_why(
     schedule = await shown(excluded_tracks=tuple(feed_tracks(conference)))
     current = await open_sheet(schedule)
     button = show_button(schedule)
-    assert button.content == "Show 0 sessions"
+    assert button_label(schedule) == "Show 0 sessions"
     assert button.disabled
     assert "Select at least one type" in [
         c.value for c in _descendants(current) if isinstance(c, ft.Text)
@@ -470,3 +480,27 @@ def test_the_registry_is_what_the_sheet_reads() -> None:
     )
     groups = {g.label: g.tracks for g in filter_groups(edited, {"Talk", "Keynote"})}
     assert groups == {"Talks and keynotes": ("Keynote",), "Community": ("Talk",)}
+
+
+async def test_the_summary_keeps_its_place_so_the_day_pages_keep_theirs(
+    shown: Show,
+) -> None:
+    """#313: a line that came and went shifted the day pages, which Flutter rebuilt."""
+    schedule = await shown()
+
+    def column() -> list[ft.Control]:
+        content = schedule.tabs.content
+        assert isinstance(content, ft.Column)
+        return content.controls
+
+    before = column()
+    assert summary(schedule) == "Hiding: Open space"
+    (show_all,) = find(
+        schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.show_all"
+    )
+    await click(schedule, show_all.content)  # pyright: ignore[reportArgumentType]
+    after = column()
+    assert summary(schedule) is None
+    assert len(after) == len(before)
+    assert [type(c) for c in after][2:] == [type(c) for c in before][2:]
+    assert isinstance(after[-1], ft.TabBarView)

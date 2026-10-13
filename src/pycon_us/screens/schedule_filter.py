@@ -50,13 +50,17 @@ class TrackFilter:
 
     Attributes:
         button: The app bar's ``TUNE`` action, which opens the sheet.
-        summary: The line under the day tabs, or None while nothing is hidden.
+        summary: The line under the day tabs, or an empty placeholder while nothing
+            is hidden: always one control, so the controls after it keep their
+            places. Without it, the line coming or going shifted the day pages in
+            Flutter's ``Column``, which rebuilt them and put every day list back at
+            its top (#313).
         show_all: Hide no track; stable across renders, so a memoised day list given
             it ("Clear filters") stays skipped (D-153).
     """
 
     button: ft.Control
-    summary: ft.Control | None
+    summary: ft.Control
     show_all: Callable[[], object]
 
 
@@ -181,7 +185,7 @@ def use_track_filter(
     text = summary_text(info, hidden_tracks(info, tracks, excluded))
     return TrackFilter(
         button=_button(differs_from_default(tracks, excluded), open_sheet),
-        summary=_summary(text, on_show_all) if text else None,
+        summary=_summary(text, on_show_all) if text else ft.Container(),
         show_all=on_show_all,
     )
 
@@ -227,12 +231,21 @@ def _button(changed: bool, on_click: Callable[[], None]) -> ft.Control:
     return ft.MergeSemantics(  # the identifier on the button's own node (D-190)
         content=ft.Semantics(
             identifier=f"{SCREEN}.filter",
-            # The dot says it to the eye; a screen reader hears it after the name.
+            # The name is the node's label, not the tooltip: beside a value,
+            # Android read the node as "Changed" alone. The dot says "changed" to
+            # the eye; a screen reader hears it after the name.
+            label="Filter sessions",
             value="Changed" if changed else None,
+            button=True,
             content=ft.IconButton(
-                ft.Icons.TUNE,
-                tooltip="Filter sessions",
-                badge=ft.Badge(small_size=8) if changed else None,
+                # The dot on the icon itself: on the 48 dp button it sat at the
+                # target's corner, by the screen's edge.
+                ft.Icon(
+                    ft.Icons.TUNE, badge=ft.Badge(small_size=8) if changed else None
+                ),
+                # Shown on a long press, but not said again: iOS reads a node's
+                # tooltip after its label (D-184).
+                tooltip=ft.Tooltip("Filter sessions", exclude_from_semantics=True),
                 on_click=on_click,
             ),
         )
@@ -240,27 +253,51 @@ def _button(changed: bool, on_click: Callable[[], None]) -> ft.Control:
 
 
 def _summary(text: str, on_show_all: Callable[[], object]) -> ft.Control:
-    """Return the line under the day tabs: what is hidden, and "Show all" (D-20)."""
-    controls: list[ft.Control] = [
-        # Unlabelled, so decorative: the text says it.
-        ft.Icon(ft.Icons.FILTER_LIST, size=18, color=ft.Colors.ON_SURFACE_VARIANT),
-        ft.Semantics(
-            identifier=f"{SCREEN}.filter_summary",
-            expand=True,  # a text in a row wraps only in a bounded width
-            content=ft.Text(
-                text,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
+    """Return the line under the day tabs: what is hidden, and "Show all" (D-20).
+
+    The words and the button share a wrapping row, the button at its end: at large
+    text the button moves under the words whole, instead of squeezing them into a
+    narrow column beside it.
+    """
+    words = ft.Semantics(
+        identifier=f"{SCREEN}.filter_summary",
+        content=ft.Text(
+            text,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+            color=ft.Colors.ON_SURFACE_VARIANT,
         ),
-        ft.MergeSemantics(
-            content=ft.Semantics(
-                identifier=f"{SCREEN}.show_all",
-                content=ft.TextButton("Show all", on_click=on_show_all),
-            )
-        ),
-    ]
+    )
+    show_all = ft.MergeSemantics(
+        content=ft.Semantics(
+            identifier=f"{SCREEN}.show_all",
+            content=ft.TextButton("Show all", on_click=on_show_all),
+        )
+    )
     return ft.Container(
-        ft.Row(controls, spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        ft.Row(
+            [
+                # Unlabelled, so decorative: the words say it. In a 48 dp box, so it
+                # stays beside the first line, which the button's height centres.
+                ft.Container(
+                    ft.Icon(
+                        ft.Icons.FILTER_LIST,
+                        size=18,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                    height=48,
+                    alignment=ft.Alignment.CENTER,
+                ),
+                ft.Row(
+                    [words, show_all],
+                    wrap=True,
+                    spacing=8,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,  # a bounded width, so the words wrap in it
+                ),
+            ],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        ),
         padding=ft.Padding.only(left=16, right=8),
     )

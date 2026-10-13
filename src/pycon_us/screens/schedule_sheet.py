@@ -123,7 +123,6 @@ def filter_sheet(
             ft.Semantics(
                 header=True,
                 heading_level=1,  # the sheet is a page of its own for a screen reader
-                expand=True,
                 content=ft.Text(
                     "Filter sessions", theme_style=ft.TextThemeStyle.TITLE_LARGE
                 ),
@@ -139,6 +138,10 @@ def filter_sheet(
                 )
             ),
         ],
+        # Wrapping, Reset at the end: at large text it moves under the title whole,
+        # where beside it the title broke inside "sessions".
+        wrap=True,
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )
     body: list[ft.Control] = []
@@ -165,7 +168,7 @@ def filter_sheet(
                 ],
                 wrap=True,
                 spacing=8,
-                run_spacing=0,  # each chip's 48 dp target already spaces the runs
+                run_spacing=4,  # beside the 48 dp targets; at 200 % chips outgrow them
             )
         )
     body.append(
@@ -174,8 +177,10 @@ def filter_sheet(
                 "What do these mean?",
                 icon=ft.Icons.HELP_OUTLINE,
                 on_click=on_tracks_page,
+                # Its icon near the chips' edge, as a link under them; still 48 dp tall.
+                style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=4)),
             ),
-            margin=ft.Margin.only(left=-12, top=8),  # its label on the chips' edge
+            padding=ft.Padding.only(top=8),
         )
     )
     footer: list[ft.Control] = []
@@ -193,38 +198,53 @@ def filter_sheet(
             content=ft.Semantics(
                 identifier=f"{SCREEN}.filter.show",
                 content=ft.FilledButton(
-                    count_label(count),
+                    # Centred when it wraps at large text, with its own padding:
+                    # Flutter shrinks a button's padding as the text grows, and the
+                    # label then touched the rounded ends.
+                    content=ft.Text(count_label(count), text_align=ft.TextAlign.CENTER),
+                    style=ft.ButtonStyle(
+                        padding=ft.Padding.symmetric(horizontal=24, vertical=12)
+                    ),
                     disabled=count == 0,
                     on_click=on_close,
-                    expand=True,
+                    # Full width from the column's STRETCH: an expand here would
+                    # take the sheet's whole height.
                 ),
             )
         )
     )
     return ft.BottomSheet(
-        ft.Column(
-            [
-                header,
-                ft.Column(  # the chips scroll; the title and the button stay
-                    body,
-                    spacing=0,
-                    tight=True,
-                    scroll=ft.ScrollMode.AUTO,
-                    expand=True,
-                    expand_loose=True,
-                ),
-                ft.Column(
-                    footer,
-                    spacing=8,
-                    tight=True,
-                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-                ),
-            ],
-            spacing=8,
-            tight=True,
+        ft.Container(  # 16 dp gutters (ux.md §3.6); the button clears the home bar
+            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            content=ft.Column(
+                [
+                    header,
+                    # The chips scroll; the title and the button stay. Flet sizes a
+                    # scrolling Column to at least the room it is given
+                    # (scrollable_control.dart, #6450), and a ListView shrink-wraps
+                    # only without a bound, so the sheet takes the screen's height.
+                    ft.Column(
+                        body,
+                        spacing=0,
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                    ),
+                    ft.Column(
+                        footer,
+                        spacing=8,
+                        tight=True,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                ],
+                spacing=8,
+                tight=True,
+                # Full width for the header too, so its wrapping row puts Reset at
+                # the end; it shrank to its content and Reset sat by the title.
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+            ),
         ),
         show_drag_handle=True,
-        scrollable=True,  # as tall as the chips need, up to the screen (200 % text)
+        scrollable=True,  # the screen's height, so the chips have room at 200 % text
         use_safe_area=True,
         on_dismiss=lambda _: on_close(),
         # Its slide is motion: none under reduced motion (D-34, D-173).

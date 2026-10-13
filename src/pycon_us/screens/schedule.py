@@ -261,7 +261,7 @@ def Schedule() -> ft.View:
                     scrollable=True,
                     tab_alignment=ft.TabAlignment.START,
                 ),
-                *([track_filter.summary] if track_filter.summary else []),
+                track_filter.summary,
                 StatusStrip(auto_refresh=True),
                 ft.TabBarView(pages, expand=True),
             ],
