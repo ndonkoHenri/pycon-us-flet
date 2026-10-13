@@ -40,7 +40,9 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def embedded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A packaged build with Developer locked."""
     monkeypatch.setattr(errors, "is_embedded", lambda: True)
+    monkeypatch.setattr(errors, "_details", False)
 
 
 def snack_text(page: FakePage) -> str:
@@ -107,6 +109,20 @@ def test_a_caught_error_shows_the_exception_when_not_embedded(
     monkeypatch.setattr(errors, "is_embedded", lambda: False)
     report_errors(fail)(object())
     assert snack_text(page) == "Something went wrong: ValueError: bad value"
+
+
+def test_a_packaged_build_shows_the_exception_once_developer_is_unlocked(
+    page: FakePage, embedded: None
+) -> None:
+    errors.show_details(True)  # bootstrap() and the unlock in About this app (D-184)
+    report_errors(fail)(object())
+    errors.show_details(False)  # #107's Reset app locks it again
+    report_errors(fail)(object())
+    first, second = page.dialogs
+    assert isinstance(first, ft.SnackBar) and isinstance(second, ft.SnackBar)
+    assert isinstance(first.content, ft.Text) and isinstance(second.content, ft.Text)
+    assert first.content.value == "Something went wrong: ValueError: bad value"
+    assert second.content.value == MESSAGE
 
 
 def test_a_handler_that_succeeds_returns_its_value_and_shows_nothing(

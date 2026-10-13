@@ -6,6 +6,7 @@ nothing reaches the network. The components themselves are checked on devices (t
 """
 
 import asyncio
+import json
 import logging
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
@@ -26,7 +27,7 @@ from pycon_us.app import (
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
-from pycon_us.services import Services, api
+from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
 from tests.fakes import (
@@ -88,8 +89,10 @@ class Network:
     def __init__(self) -> None:
         self.answer: bytes | Exception = recorded(2026)
         self.released = asyncio.Event()
+        self.urls: list[str] = []
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
+        self.urls.append(url)
         await self.released.wait()
         if isinstance(self.answer, Exception):
             raise self.answer
@@ -186,6 +189,48 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
     # No star fills in after the first screen (D-48).
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
+
+
+@pytest.fixture
+def real_time() -> Iterator[None]:
+    """Return the process to real time after a test that starts the fake clock."""
+    yield
+    clock.start_fake_clock(None)
+
+
+async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
+    fake_page: FakePage,
+    svc: Services,
+    shared: MemoryPrefs,
+    network: Network,
+    real_time: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(errors, "_details", False)
+    shared.values["pycon.dev"] = json.dumps(
+        {
+            "unlocked": True,
+            "fake_now": "2026-05-15T09:00:00-07:00",
+            "feed_url": "http://127.0.0.1:8000/conference-2026.json",
+        }
+    )
+    await started(fake_page, svc)
+    # Each start runs the fake clock from its stored start again (D-184).
+    start = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+    assert timedelta(0) <= clock.now() - start < timedelta(seconds=5)
+    assert errors._details is True  # error details, as the unlock shows them
+    await asyncio.sleep(0)  # the refresh's first step
+    assert network.urls == ["http://127.0.0.1:8000/conference-2026.json"]
+
+
+async def test_without_developer_options_the_app_runs_on_real_time_and_its_feed(
+    fake_page: FakePage, svc: Services, network: Network, real_time: None
+) -> None:
+    clock.start_fake_clock(datetime(2030, 1, 1, tzinfo=UTC))  # left by a session before
+    await started(fake_page, svc)
+    assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
+    await asyncio.sleep(0)
+    assert network.urls == ["https://us.pycon.org/2026/schedule/conference.json"]
 
 
 @pytest.mark.parametrize("flag", ["reduce_motion", "disable_animations"])

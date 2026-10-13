@@ -8,9 +8,11 @@ first screen (the boot gate), so neither the theme nor the filters flash.
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Literal, get_args
 
 import flet as ft
+from flet.utils import is_embedded
 
 from pycon_us.services.storage import (
     DEV,
@@ -46,6 +48,19 @@ _PERSISTED: dict[str, Pref[Any]] = {
     "dev": DEV,
 }
 """The persisted fields of ``Prefs`` and their keys in the storage table (decisions §M)."""
+
+DEV_UNLOCKED = "unlocked"
+"""``Prefs.dev`` key: True once 7 taps on About this app's version unlocked Developer."""
+
+DEV_FAKE_NOW = "fake_now"
+"""``Prefs.dev`` key: the fake clock's start, an ISO 8601 instant with its offset."""
+
+DEV_FEED_URL = "feed_url"
+"""``Prefs.dev`` key: the feed URL that refreshes use instead of the year's."""
+
+DEVELOPER_ALWAYS = not is_embedded()
+"""Developer is always available when not embedded: the companion app and a desktop host
+(D-73). A packaged build needs the unlock."""
 
 
 @ft.observable
@@ -101,6 +116,37 @@ class Prefs:
         if self.high_contrast == "system":
             return self.os_high_contrast
         return self.high_contrast == "on"
+
+    @property
+    def developer_unlocked(self) -> bool:
+        """Whether Developer was unlocked in About this app; it stays so (D-73, D-184)."""
+        return self.dev.get(DEV_UNLOCKED) is True
+
+    @property
+    def developer(self) -> bool:
+        """Whether the Developer screen is available: when not embedded, or once unlocked."""
+        return DEVELOPER_ALWAYS or self.developer_unlocked
+
+    @property
+    def fake_now(self) -> datetime | None:
+        """The instant the fake clock starts from at each start, or None for real time.
+
+        A value that is not an aware ISO 8601 instant reads as None: real time.
+        """
+        value = self.dev.get(DEV_FAKE_NOW)
+        if not isinstance(value, str):
+            return None
+        try:
+            moment = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        return moment if moment.utcoffset() is not None else None
+
+    @property
+    def feed_url(self) -> str | None:
+        """The feed URL set in Developer, or None for the year's (``conference.toml``)."""
+        value = self.dev.get(DEV_FEED_URL)
+        return value if isinstance(value, str) and value else None
 
     def motion_ms(self, ms: int) -> int:
         """Return how long an animation of ``ms`` milliseconds runs: 0 under reduced motion.

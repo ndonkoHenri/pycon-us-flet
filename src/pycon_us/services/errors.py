@@ -37,6 +37,22 @@ QUIET_LOGGERS = ("httpx", "httpcore")
 """Kept at WARNING: httpx logs every request's URL at INFO, query string included, and
 P3's private-API requests may carry what D-72 forbids in a log."""
 
+_details = False
+"""Whether a packaged build shows the exception text too: Developer is unlocked (D-73)."""
+
+
+def show_details(on: bool) -> None:
+    """Show the exception text in packaged builds too, or stop showing it (D-73, D-184).
+
+    Without it, only an app that is not embedded (the companion app) shows the text.
+    ``bootstrap()`` sets it from the stored unlock, and About this app when it unlocks.
+
+    Args:
+        on: Whether Developer is unlocked (``Prefs.developer_unlocked``).
+    """
+    global _details
+    _details = on
+
 
 @overload
 def report_errors[**P, R](
@@ -53,8 +69,9 @@ def report_errors(fn: Callable[..., Any]) -> Callable[..., Any]:
 
     The wrapper logs the exception with its traceback and the wrapped function's name,
     shows a floating "Something went wrong" SnackBar (with the exception when not
-    embedded, D-73) and returns None; the session goes on. ``CancelledError`` and other
-    ``BaseException``s propagate, so cancelling an effect still cancels it. The log
+    embedded or once Developer is unlocked, D-73) and returns None; the session goes
+    on. ``CancelledError`` and other ``BaseException``s propagate, so cancelling an
+    effect still cancels it. The log
     holds the exception's message verbatim, so code that can raise must keep URLs,
     tokens and badge codes out of its messages (D-72).
 
@@ -103,7 +120,8 @@ def report_errors(fn: Callable[..., Any]) -> Callable[..., Any]:
 
 
 def _tell_user(error: Exception) -> None:
-    text = MESSAGE if is_embedded() else f"{MESSAGE}: {type(error).__name__}: {error}"
+    detailed = _details or not is_embedded()
+    text = f"{MESSAGE}: {type(error).__name__}: {error}" if detailed else MESSAGE
     try:
         ft.context.page.show_dialog(
             ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING)

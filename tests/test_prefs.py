@@ -5,11 +5,14 @@ SharedPreferences is the in-memory fake from ``tests/fakes.py``; Flet's own type
 """
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import flet as ft
 import pytest
 
+from pycon_us import prefs as prefs_module
 from pycon_us.prefs import APPEARANCES, HIGH_CONTRAST_SETTINGS, Prefs
 from pycon_us.services import storage
 from pycon_us.services.storage import Storage
@@ -264,3 +267,45 @@ async def test_reduced_motion_is_never_stored(
     # A device fact, read at start and on resume (F13), not a setting (D-34).
     assert not any("motion" in key for key in shared.values)
     assert not (await loaded(store)).reduce_motion
+
+
+# ------------------------------------------------------------------ Developer options
+
+
+def test_developer_options_are_read_from_dev(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
+    prefs = Prefs()
+    assert (prefs.developer, prefs.fake_now, prefs.feed_url) == (False, None, None)
+    prefs.dev = {
+        "unlocked": True,
+        "fake_now": "2026-05-15T09:00:00-07:00",
+        "feed_url": "http://127.0.0.1:8000/conference-2026.json",
+    }
+    assert prefs.developer and prefs.developer_unlocked
+    assert prefs.fake_now == datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+    assert prefs.feed_url == "http://127.0.0.1:8000/conference-2026.json"
+
+
+def test_developer_is_always_available_when_not_embedded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)  # the companion app
+    prefs = Prefs()
+    assert prefs.developer is True
+    assert prefs.developer_unlocked is False  # no unlock: details come from elsewhere
+
+
+@pytest.mark.parametrize(
+    "dev",
+    [
+        {"fake_now": "2026-05-15T09:00"},  # naive: a stored start carries its offset
+        {"fake_now": "next Friday"},
+        {"fake_now": 1747324800},
+        {"unlocked": "yes", "feed_url": ""},
+    ],
+)
+def test_unusable_developer_values_read_as_their_defaults(dev: dict[str, Any]) -> None:
+    prefs = Prefs(dev=dict(dev))
+    assert prefs.fake_now is None
+    assert prefs.feed_url is None
+    assert prefs.developer_unlocked is False

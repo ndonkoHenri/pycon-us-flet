@@ -30,7 +30,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
 | 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
 | 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
-| 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` plus the build number constant (D-83) | `page.get_app_info()` | P2 | XS | proposed |
+| 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` alone: no build number (D-83, D-184) | `page.get_app_info()` | P2 | XS | proposed |
 | 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
 | 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
@@ -578,7 +578,7 @@ The Flet team decides the final shape. A page event keeps it per session, discov
 | Field | Value |
 |---|---|
 | Serves | INFO-03 (About this app) |
-| Interim | `pycon_us.__version__`, kept equal to `[project].version` by a unit test, plus the build number (D-83). `importlib.metadata` cannot see the app in packaged builds (F15). |
+| Interim | `pycon_us.__version__`, kept equal to `[project].version` by a unit test (D-83), and no build number (D-184): `flet build` passes `--build-number` only to Flutter (Android `versionCode`, iOS `CFBundleVersion`), the template puts nothing about it in the app's environment, and `importlib.metadata` cannot see the app in packaged builds (F15). About this app shows the version alone. |
 | Today | Absent. `package_info_plus: ^9.0.0` is already in `packages/flet/pubspec.yaml`, unused (latest 10.2.2); add the case next to `get_device_info` (`DART/controls/page.dart:338`). In the companion app it would report the companion's version, so the app uses it only when `is_embedded()`. |
 
 ```python
@@ -597,7 +597,7 @@ class AppInfo:
 #     async def get_app_info(self) -> AppInfo: ...
 ```
 
-**Upgrade.** About this app reads `version` and `build_number` from `await page.get_app_info()` when embedded, and the PR deletes the build-number constant. **Test:** on the flet test host, the result equals `--build-version`/`--build-number` and the bundle id.
+**Upgrade.** About this app reads `version` and `build_number` from `await page.get_app_info()` when embedded, and shows the build number beside the version. **Test:** on the flet test host, the result equals `--build-version`/`--build-number` and the bundle id.
 
 ### 5.4 U16 + U17: text scale and accessibility changes (priority 6; XS, one PR)
 

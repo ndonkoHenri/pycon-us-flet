@@ -1,8 +1,8 @@
 """Schedule (``/schedule``): a stub that shows what the start sequence published.
 
 Until P1's day tabs (SCHED-01..04), it shows the status strip, where the feed came from
-and when, a Refresh button, every conference day with its session count, and a few
-sessions as ``SessionRow``s with their stars, so "bundled first, a refresh replaces it"
+and when, a Refresh button, every conference day with its session count (today marked
+by ``clock.now()``, so the Developer fake clock shows, D-184), and a few sessions as ``SessionRow``s with their stars, so "bundled first, a refresh replaces it"
 is visible on a phone (DATA-35, D-38) and the star works from a tab root. Without any
 data (no snapshot or cache, NEW-03) it shows the skeleton until the first fetch has
 failed, then "Can't load the schedule", which stays during a retry (D-32, ux.md §4.1).
@@ -14,10 +14,11 @@ from itertools import islice
 
 import flet as ft
 
+from pycon_us import clock
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.row_views import by_day
-from pycon_us.core.timefmt import day_label, local_date, time_label
+from pycon_us.core.timefmt import day_label, local_date, time_label, today
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import note, stub_body
 from pycon_us.services import use_services
@@ -71,6 +72,7 @@ def Schedule() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     counts = _session_counts(data)
+    this_day = today(clock.now(), info.zone)
     samples = [s.id for s in islice(_with_speakers(data), SAMPLE_SIZE)]
     views = use_session_views(conference, samples, use_24h=use_24h)
     samples_by_day: list[ft.Control] = []
@@ -121,7 +123,9 @@ def Schedule() -> ft.View:
             SectionHeader("Days"),
             *(
                 ft.ListTile(
-                    title=day_label(day), subtitle=f"{counts.get(day, 0)} sessions"
+                    title=day_label(day),
+                    subtitle=f"{counts.get(day, 0)} sessions"
+                    + (" · today" if day == this_day else ""),
                 )
                 for day in days(data, info.first_day, info.last_day)
             ),

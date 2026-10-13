@@ -3,16 +3,16 @@
 A section shows once its pages exist, so no row is dead. In P0 that is **Programme**,
 whose pages are stubs until P1, and **You**: the Appearance control, which stands in for
 Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
-then About this app and, when not embedded, Developer (D-73; #88 adds the unlock in
-packaged builds). Expo & sponsors, At the venue and About join with their P2 pages; the
-profile row and Staff tools, first in the list, with P3's mock account (D-16, D-51).
+then About this app and Developer, which is always there when not embedded and, in a
+packaged build, once unlocked in About this app (D-73, D-184). Expo & sponsors, At the
+venue and About join with their P2 pages; the profile row and Staff tools, first in the
+list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
 """
 
 from typing import NamedTuple, cast
 
 import flet as ft
-from flet.utils import is_embedded
 
 from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.services import use_services
@@ -51,10 +51,6 @@ DEVELOPER = MoreEntry("Developer", "/more/developer", ft.Icons.DEVELOPER_MODE_OU
 MORE_PAGES = (*PROGRAMME, ABOUT_APP, DEVELOPER)
 """Every page the list links to; later phases add theirs with their sections."""
 
-SHOW_DEVELOPER = not is_embedded()
-"""Whether the list shows Developer: always in the companion app and on a desktop host;
-in packaged builds only after the unlock in About this app, which #88 adds (D-73)."""
-
 APPEARANCE_LABELS: dict[Appearance, str] = {
     "system": "System",
     "light": "Light",
@@ -81,7 +77,7 @@ def More() -> ft.View:
                 )
             )
 
-    you = (ABOUT_APP, DEVELOPER) if SHOW_DEVELOPER else (ABOUT_APP,)
+    you = (ABOUT_APP, DEVELOPER) if prefs.developer else (ABOUT_APP,)
     return AppScaffold(
         title="More",
         actions=[search_button(svc.memory, "all")],
@@ -92,14 +88,6 @@ def More() -> ft.View:
                 SectionHeader("You"),
                 appearance(prefs.theme, choose_appearance),
                 *(link(entry) for entry in you),
-                ft.Container(
-                    ft.Text(
-                        "Not an official PSF app.",  # until About this app says it (D-36)
-                        theme_style=ft.TextThemeStyle.BODY_SMALL,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    ),
-                    padding=ft.Padding.all(16),
-                ),
             ],
             expand=True,
             ref=list_ref,

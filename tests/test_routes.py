@@ -92,8 +92,8 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/speakers", ["More", "Speakers"]),
         ("/more/tracks", ["More", "MorePage"]),
         ("/more/tracks/python", ["More", "MorePage", "Track"]),
-        ("/more/app", ["More", "MorePage"]),
-        ("/more/developer", ["More", "MorePage"]),
+        ("/more/app", ["More", "AboutApp"]),
+        ("/more/developer", ["More", "Developer"]),
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (
