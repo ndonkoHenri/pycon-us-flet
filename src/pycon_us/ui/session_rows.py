@@ -69,7 +69,11 @@ def is_notice(session: Session, info: ConferenceInfo) -> bool:
 
 
 def use_session_views(
-    conference: Conference, session_ids: Sequence[str], *, use_24h: bool
+    conference: Conference,
+    session_ids: Sequence[str],
+    *,
+    use_24h: bool,
+    in_room: str | None = None,
 ) -> tuple[SessionView, ...]:
     """Return the row views of some sessions, built once per feed version (D-153).
 
@@ -83,13 +87,19 @@ def use_session_views(
         session_ids: The sessions, in the order the list shows them.
         use_24h: Whether the device uses the 24-hour clock
             (``page.media.always_use_24_hour_format``).
+        in_room: On a room's page, the room's slug: its rows leave out the room's own
+            name, in what they show and in what they say (``session_view()``).
     """
     zone = use_services().year.conference.zone
     data = conference.data
     ids = tuple(session_ids)
     return ft.use_memo(
-        lambda: session_views(data, ids, zone, use_24h=use_24h) if data else (),
-        [conference.version, ids, use_24h],
+        lambda: (
+            session_views(data, ids, zone, use_24h=use_24h, in_room=in_room)
+            if data
+            else ()
+        ),
+        [conference.version, ids, use_24h, in_room],
     )
 
 

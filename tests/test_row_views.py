@@ -6,8 +6,14 @@ from datetime import date
 import pytest
 
 from pycon_us.config import load_year
-from pycon_us.core.models import Room
-from pycon_us.core.row_views import by_day, places, session_view, session_views
+from pycon_us.core.models import Room, Speaker
+from pycon_us.core.row_views import (
+    by_day,
+    people,
+    places,
+    session_view,
+    session_views,
+)
 from tests.feeds import processed
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -52,6 +58,44 @@ def test_pseudo_speakers_show_on_the_speakers_line() -> None:
     """DATA-15: the lightning talks' hosts are text, not directory speakers."""
     view = session_view(processed(2026).sessions["175"], ZONE_2026, use_24h=False)
     assert view.speakers == "Hosted by Abigail, Chris, Cristián, and Lorena"
+
+
+def test_on_a_room_s_page_a_row_leaves_out_the_room_s_own_name() -> None:
+    """The page's title names the room (#101): no place, shown or said."""
+    talk = processed(2026).sessions["142"]  # in Grand Ballroom A
+    view = session_view(talk, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert (view.when, view.place) == ("10:30–11:00 AM", "")
+
+
+def test_on_a_room_s_page_another_place_stays() -> None:
+    """The lightning talks are given in the Arena and streamed to Grand Ballroom A."""
+    talks = processed(2026).sessions["175"]
+    view = session_view(talks, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert view.place == "Pacific Ballroom - Arena"
+
+
+def test_the_room_s_name_is_matched_by_slug() -> None:
+    """``Session.display_location`` and ``Room.slug`` meet through ``slugify_room``."""
+    talk = replace(processed(2026).sessions["142"], display_location="grand ballroom A")
+    view = session_view(talk, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert view.place == ""
+
+
+def test_every_other_list_keeps_the_place() -> None:
+    talk = processed(2026).sessions["142"]
+    assert session_view(talk, ZONE_2026, use_24h=False).place == "Grand Ballroom A"
+    elsewhere = session_view(talk, ZONE_2026, use_24h=False, in_room="room-103abc")
+    assert elsewhere.place == "Grand Ballroom A"
+
+
+def test_a_room_s_row_views_all_leave_out_the_room() -> None:
+    data = processed(2026)
+    room = data.rooms["expo-hall-ab"]
+    views = session_views(
+        data, room.session_ids, ZONE_2026, use_24h=False, in_room=room.slug
+    )
+    assert len(views) == len(room.session_ids)
+    assert {view.place for view in views} == {""}
 
 
 def test_row_views_keep_the_list_s_order_and_skip_unknown_ids() -> None:
@@ -144,3 +188,55 @@ def test_a_room_listed_twice_is_folded_once() -> None:
     data = processed(2026)
     twice = replace(data.sessions["219"], rooms=("Room 101A", "Room 101B", "Room 101B"))
     assert room_names(places(twice, data.rooms).others) == ["Room 101B"]
+
+
+# ------------------------------------------------------------------ people (SESS-07)
+
+
+def names(found: tuple[Speaker | str, ...]) -> list[str]:
+    """Each entry's name, a pseudo-speaker's text marked with ``text:``."""
+    return [f"text:{e}" if isinstance(e, str) else e.name for e in found]
+
+
+def test_a_panel_lists_its_speakers_in_the_feed_s_order() -> None:
+    data = processed(2026)
+    session = data.sessions["110"]  # Beyond the Hype: six speakers
+    found = people(session, data.speakers)
+    assert all(isinstance(entry, Speaker) for entry in found)
+    assert names(found) == list(session.speaker_names)
+    assert [s.id for s in found if isinstance(s, Speaker)] == list(session.speaker_ids)
+
+
+@pytest.mark.parametrize("year", [2025, 2026])
+def test_a_pseudo_speaker_is_text_not_a_speaker(year: int) -> None:
+    """D-125: the lightning talks' hosts are not a person with a page."""
+    data = processed(year)
+    lightning = next(s for s in data.sessions.values() if s.kind == "lightning-talks")
+    found = people(lightning, data.speakers)
+    assert names(found) == ["text:Hosted by Abigail, Chris, Cristián, and Lorena"]
+
+
+def test_speakers_and_names_keep_the_authors_order_each_once() -> None:
+    data = processed(2026)
+    ana, bo = data.speakers["183"], data.speakers["184"]
+    session = replace(
+        data.sessions["110"],
+        speaker_ids=(ana.id, bo.id),
+        speaker_names=(ana.name, "Hosted by the PSF", bo.name, ana.name),
+    )
+    assert people(session, data.speakers) == (ana, "Hosted by the PSF", bo)
+
+
+def test_a_speaker_linked_by_id_under_another_name_still_gets_a_row() -> None:
+    """Poster authors link by id (D-125); the row must not depend on the spelling."""
+    data = processed(2026)
+    ana = data.speakers["183"]
+    session = replace(
+        data.sessions["110"], speaker_ids=(ana.id,), speaker_names=("C. Willing",)
+    )
+    assert people(session, data.speakers) == ("C. Willing", ana)
+
+
+def test_a_session_without_authors_has_no_one() -> None:
+    data = processed(2026)
+    assert people(data.sessions["176"], data.speakers) == ()  # a keynote
