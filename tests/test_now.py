@@ -468,8 +468,8 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
         assert line in texts
     assert shown.rows() == []  # nothing is on or next for weeks
     button = shown.node("now.build_schedule").content
-    assert isinstance(button, ft.Container)
-    await shown.click(cast(ft.Control, button.content))
+    assert isinstance(button, ft.FilledTonalButton)
+    await shown.click(button)
     assert shown.pushed == ["/schedule"]
 
 
@@ -570,7 +570,7 @@ async def test_after_the_last_session_the_sprints_are_next(
         assert shown.headings() == []
         assert shown.rows() == []
         sprints = shown.node("now.sprints")
-        assert _texts(sprints) == ["Sprints", "May 18–19"]
+        assert _texts(sprints) == ["Sprints", "Join a project · May 18–19"]
 
 
 async def test_after_the_sprints_it_says_see_you_next_year(
@@ -589,8 +589,9 @@ async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(16, 9), saved=(TALK,))  # it starts in 1 h 30 min
-    card = shown.node("now.next_session")
+    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
     assert shown.rows("now.next.session.") == [TALK]
+    assert not shown.has("now.next_session")  # the tile's: nothing to explain
     assert any(
         isinstance(c, ft.Semantics) and c.identifier == f"now.next.favorite.{TALK}"
         for c in _walk(card)

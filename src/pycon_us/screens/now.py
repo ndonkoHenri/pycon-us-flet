@@ -261,14 +261,15 @@ def _next_session(
         page.navigate(room_href(view_path, room, session.id))
 
     actions: list[ft.Control] = [
-        # Its own minute tick: "Starts in 12 min", then "Happening now" in live.
-        StatusLine(session.display_start, session.end)
+        # Its own minute tick: "Starts in 12 min", then "Happening now" in live. It
+        # takes the room the button leaves, so at large text it wraps beside it.
+        ft.Container(StatusLine(session.display_start, session.end), expand=True)
     ]
     if room is not None:
         actions.append(
-            ft.Semantics(
-                identifier=f"{SCREEN}.show_room",
-                content=ft.TextButton(
+            _named(
+                f"{SCREEN}.show_room",
+                ft.TextButton(
                     "Show room", icon=ft.Icons.PLACE_OUTLINED, on_click=show_room
                 ),
             )
@@ -283,11 +284,11 @@ def _next_session(
                 ft.Container(
                     ft.Row(
                         actions,
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        spacing=8,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        wrap=True,
                     ),
-                    padding=ft.Padding.only(left=16, right=8, bottom=8),
+                    # Under the row's own 12 dp; the button's end 8 dp from the card's.
+                    padding=ft.Padding.only(left=16, right=8, bottom=4),
                 ),
             ],
             spacing=0,
@@ -295,7 +296,7 @@ def _next_session(
     )
     return [
         SectionHeader("Your next session", level=2),
-        ft.Semantics(identifier=f"{SCREEN}.next_session", container=True, content=card),
+        card,
     ]
 
 
@@ -388,24 +389,36 @@ def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.C
         )
     else:
         button = ft.FilledTonalButton(label, on_click=go)
-    return ft.Semantics(
-        identifier=f"{SCREEN}.{name}",
-        content=ft.Container(
-            button, padding=ft.Padding.only(left=8 if text else 16, top=8, right=16)
-        ),
+    return ft.Container(
+        _named(f"{SCREEN}.{name}", button),
+        # At the list's start, as its rows' text: a text button's label sits 8 dp
+        # inside it, so 8 dp in puts the label 16 dp in.
+        padding=ft.Padding.only(left=8 if text else 16, top=8, right=16),
+        alignment=ft.Alignment.CENTER_LEFT,
     )
 
 
 def _note(text: str, identifier: str) -> ft.Control:
     """A line of supporting text in the list's side padding."""
-    return ft.Semantics(
-        identifier=identifier,
-        content=ft.Container(
+    return ft.Container(
+        _named(
+            identifier,
             ft.Text(
                 text,
                 theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
-            padding=ft.Padding.symmetric(horizontal=16, vertical=4),
         ),
+        padding=ft.Padding.symmetric(horizontal=16, vertical=4),
+    )
+
+
+def _named(identifier: str, control: ft.Control) -> ft.Control:
+    """Give ``control`` a semantics identifier on its own node (decisions §M).
+
+    Merged: an identifier's ``Semantics`` alone is a node of its own, an empty extra
+    stop for TalkBack around the button (seen in ``uiautomator dump``).
+    """
+    return ft.MergeSemantics(
+        content=ft.Semantics(identifier=identifier, content=control)
     )

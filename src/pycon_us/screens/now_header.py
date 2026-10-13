@@ -206,9 +206,21 @@ def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
     """
     fill = ft.Colors.PRIMARY_CONTAINER if dark else ft.Colors.PRIMARY
     ink = ft.Colors.ON_PRIMARY_CONTAINER if dark else ft.Colors.ON_PRIMARY
+    # The icon shares the name's line, so the title and its line have the card's whole
+    # width: beside them, at the largest text sizes, "Saturday" broke inside itself.
+    top = ft.Row(
+        [
+            ft.Text(
+                name, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ink, expand=True
+            ),
+            ft.Icon(SEASON_ICONS[copy.season], size=ICON_SIZE, color=GOLD),
+        ],
+        spacing=16,
+        vertical_alignment=ft.CrossAxisAlignment.START,
+    )
     lines: list[ft.Control] = [
-        ft.Text(name, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ink),
-        ft.Text(copy.title, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, color=ink),
+        top,
+        _title(copy.title, ink),
         ft.Text(copy.subtitle, theme_style=ft.TextThemeStyle.BODY_LARGE, color=ink),
     ]
     if copy.note:
@@ -226,19 +238,31 @@ def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
         container=True,
         exclude_semantics=True,  # the phrase replaces the lines
         content=ft.Container(
-            ft.Row(
-                [
-                    ft.Column(lines, spacing=4, expand=True),
-                    ft.Icon(SEASON_ICONS[copy.season], size=ICON_SIZE, color=GOLD),
-                ],
-                spacing=16,
-                vertical_alignment=ft.CrossAxisAlignment.START,
-            ),
+            ft.Column(lines, spacing=4),
             bgcolor=fill,
             border_radius=16,  # the Now header's shape (ux.md §3.6)
             padding=20,
             margin=ft.Margin.only(left=16, top=8, right=16, bottom=8),
         ),
+    )
+
+
+def _title(title: str, color: str) -> ft.Control:
+    """The headline, its parts in a wrapping row: "Day 4 of 5 ·" then "Saturday".
+
+    At large text the second part moves down whole, as a row's place does (D-184),
+    instead of the line breaking wherever it runs out.
+    """
+    first, dot, rest = title.partition(" · ")
+    parts = [f"{first} ·", rest] if dot else [title]
+    return ft.Row(
+        [
+            ft.Text(part, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, color=color)
+            for part in parts
+        ],
+        wrap=True,
+        spacing=8,  # a space at the headline's size
+        run_spacing=0,
     )
 
 
@@ -328,6 +352,6 @@ def sprints_link(info: ConferenceInfo) -> ft.Control:
         "Sprints",
         "/more/sprints",
         icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
-        subtitle=date_range_label(first, info.last_day),
+        subtitle=f"Join a project · {date_range_label(first, info.last_day)}",
         identifier="now.sprints",
     )
