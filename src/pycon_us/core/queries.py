@@ -4,14 +4,17 @@ Queries never change the model (SCHED-17): they return new values computed from 
 """
 
 import unicodedata
-from collections.abc import Callable, Collection
-from dataclasses import dataclass
+from collections.abc import Callable, Collection, Mapping
+from collections.abc import Set as AbstractSet
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from enum import StrEnum
 from itertools import groupby
+from operator import attrgetter
 from typing import cast
 from weakref import WeakKeyDictionary
 
-from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.models import ConferenceData, Day, Session
 from pycon_us.core.slugs import room_sort_key
 
 
@@ -253,3 +256,234 @@ def _memoised[T](
     if key not in results:
         results[key] = build()
     return cast(T, results[key])
+
+
+# --- Agenda and Now & Next (D-14, D-179; SCHED-25, NEW-01) ----------------------------
+#
+# Now and My schedule ask these. Each takes ``now`` and the saved ids as arguments, so
+# they stay pure (D-43), and none takes the Schedule's filters (D-20). Their results are
+# frozen values that compare by value, so a screen that recomputes them every 60 s
+# re-renders only what changed (D-153). They name sessions by id, as ``TimeGroup`` does.
+
+NEXT_SESSION_WINDOW = timedelta(hours=3)
+"""How soon a saved session must start to be "Your next session" on Now (SCHED-25)."""
+
+
+class Phase(StrEnum):
+    """Where an instant falls in the conference's timeline (D-14's seasons).
+
+    A day runs from its first start to its last end, over every session listed under it.
+
+    Attributes:
+        BEFORE: Before the conference's first start.
+        DAY: Within a day, between slots included.
+        BETWEEN_DAYS: After a day's last end and before the next day's first start: the
+            evening and night, and the morning before the first slot.
+        AFTER: From the conference's last end on.
+    """
+
+    BEFORE = "before"
+    DAY = "day"
+    BETWEEN_DAYS = "between_days"
+    AFTER = "after"
+
+
+@dataclass(frozen=True)
+class NowNext:
+    """What Now shows at one instant, whatever is saved.
+
+    Attributes:
+        phase: Where the instant falls in the conference.
+        happening: The sessions with ``start <= now < end``, by start, then in their time
+            slot's order; a notice (no duration) is never happening.
+        next_start: The start of the first time slot after ``now``, on any day; None
+            after the last one.
+        up_next: That slot's sessions, in its order; empty when ``next_start`` is None.
+    """
+
+    phase: Phase
+    happening: tuple[str, ...]
+    next_start: datetime | None
+    up_next: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AgendaSlot:
+    """The saved sessions of one day that start at the same instant.
+
+    Attributes:
+        start: Their shared start, as in the day's ``TimeGroup``.
+        session_ids: The sessions, by location, then name, as the timeline orders them.
+    """
+
+    start: datetime
+    session_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AgendaDay:
+    """One day of My schedule.
+
+    Attributes:
+        date: The day the sessions are listed under (``Session.day``).
+        slots: Its slots, by start.
+    """
+
+    date: date
+    slots: tuple[AgendaSlot, ...]
+
+
+@dataclass(frozen=True)
+class Agenda:
+    """My schedule: the saved sessions by day and time slot, and where they overlap.
+
+    Attributes:
+        days: The days with a saved session, oldest first.
+        overlaps: For each saved session that overlaps another, the saved sessions it
+            overlaps, in agenda order. Sessions overlap when each starts before the other
+            ends, so back-to-back sessions do not.
+    """
+
+    days: tuple[AgendaDay, ...]
+    # A dict is not hashable; leaving it out of the hash keeps ``Agenda`` hashable.
+    overlaps: Mapping[str, tuple[str, ...]] = field(hash=False)
+
+
+def now_next(data: ConferenceData, now: datetime) -> NowNext:
+    """Return the conference's phase, what is on and what is next at ``now`` (SCHED-25).
+
+    Only the timeline counts (``data.days``): poster details share the Posters row's time
+    and would crowd it out. A slot is never happening once it has ended, which Ionic got
+    wrong (it kept the last slot that had started until midnight).
+
+    Args:
+        data: The processed feed.
+        now: An aware instant, in any zone.
+
+    Returns:
+        The phase, the sessions happening now and the next time slot.
+
+    Raises:
+        ValueError: ``now`` is naive.
+    """
+    _require_aware(now)
+    groups = [group for day in data.days for group in day.groups]
+    happening = tuple(
+        session_id
+        for group in groups
+        if group.start <= now
+        for session_id in group.session_ids
+        if now < data.sessions[session_id].end
+    )
+    upcoming = next((group for group in groups if group.start > now), None)
+    if upcoming is None:
+        return NowNext(_phase(data, now), happening, None, ())
+    return NowNext(_phase(data, now), happening, upcoming.start, upcoming.session_ids)
+
+
+def next_for_me(
+    data: ConferenceData, favorites: AbstractSet[str], now: datetime
+) -> str | None:
+    """Return "Your next session": the first saved session that is on or starts soon.
+
+    That is the saved session that starts first among those with ``end > now`` that have
+    started or start within ``NEXT_SESSION_WINDOW``. Poster details count, since they can
+    be saved. Saved ids that are not in the feed are ignored.
+
+    Args:
+        data: The processed feed.
+        favorites: The saved session ids (``Favorites.ids``, D-172).
+        now: An aware instant, in any zone.
+
+    Returns:
+        The session's id, or None when no saved session is on or due within the window.
+
+    Raises:
+        ValueError: ``now`` is naive.
+    """
+    _require_aware(now)
+    due = [
+        session
+        for session in _saved(data, favorites)
+        if now < session.end and session.start <= now + NEXT_SESSION_WINDOW
+    ]
+    return min(due, key=_agenda_order).id if due else None
+
+
+def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
+    """Return My schedule: the saved sessions by day and slot, and their overlaps (NEW-01).
+
+    Every saved session in the feed is listed, wherever it is (a poster detail too) and
+    whatever the Schedule's filters hide (a saved open space stays). Saved ids that are
+    not in the feed are left out. What has ended is the screen's to fold away, since it
+    depends on ``now``.
+
+    Args:
+        data: The processed feed.
+        favorites: The saved session ids (``Favorites.ids``, D-172).
+
+    Returns:
+        The agenda.
+    """
+    saved = sorted(_saved(data, favorites), key=_agenda_order)
+    days = tuple(
+        AgendaDay(
+            day,
+            tuple(
+                AgendaSlot(start, tuple(session.id for session in slot))
+                for start, slot in groupby(on_day, key=attrgetter("start"))
+            ),
+        )
+        # Sorted by start, sessions are sorted by day too: a day is the local date of
+        # its sessions' start.
+        for day, on_day in groupby(saved, key=attrgetter("day"))
+    )
+    return Agenda(days, _overlaps(saved))
+
+
+def _phase(data: ConferenceData, now: datetime) -> Phase:
+    """Place ``now`` against each day's span, from its first start to its last end."""
+    spans = [(day.groups[0].start, _day_end(data, day)) for day in data.days]
+    if not spans or now < spans[0][0]:
+        return Phase.BEFORE
+    if now >= max(end for _, end in spans):
+        return Phase.AFTER
+    if any(start <= now < end for start, end in spans):
+        return Phase.DAY
+    return Phase.BETWEEN_DAYS
+
+
+def _day_end(data: ConferenceData, day: Day) -> datetime:
+    return max(data.sessions[i].end for group in day.groups for i in group.session_ids)
+
+
+def _overlaps(saved: list[Session]) -> dict[str, tuple[str, ...]]:
+    """Pair the sessions that overlap, in one sweep over ``saved``, sorted by start."""
+    found: dict[str, list[str]] = {}
+    # The sessions that started before the current one and have not ended at its start.
+    running: list[Session] = []
+    for session in saved:
+        if session.end == session.start:
+            continue  # an instant overlaps nothing
+        running = [other for other in running if other.end > session.start]
+        for other in running:
+            found.setdefault(other.id, []).append(session.id)
+            found.setdefault(session.id, []).append(other.id)
+        running.append(session)
+    # Each list is in agenda order: the earlier sessions were added together when the
+    # session itself came, then the later ones one by one as they came.
+    return {session_id: tuple(ids) for session_id, ids in found.items()}
+
+
+def _saved(data: ConferenceData, favorites: AbstractSet[str]) -> list[Session]:
+    return [data.sessions[i] for i in favorites if i in data.sessions]
+
+
+def _agenda_order(session: Session) -> tuple[datetime, str, str, str]:
+    # The timeline's order within a start (location, then name); the id breaks ties.
+    return session.start, session.location, session.name, session.id
+
+
+def _require_aware(now: datetime) -> None:
+    if now.utcoffset() is None:
+        raise ValueError(f"expected an aware datetime, got {now!r}")
