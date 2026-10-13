@@ -495,6 +495,8 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
     shown = await show()
     (menu,) = shown.find(ft.PopupMenuButton)
     assert menu.tooltip == "More options"
+    assert shown.node("sprints.menu").content is menu
+    assert isinstance(shown.node("sprints.menu").parent, ft.MergeSemantics)  # D-190
     labels = [text_of(item.content) for item in menu.items]
     assert labels == ["Sprint info on us.pycon.org", screen.SUBMIT]
     for item in menu.items:

@@ -35,6 +35,7 @@ from pycon_us.state import use_conference
 from pycon_us.ui.fields import SearchField
 from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
 FILTER_HINT = "Filter projects"
@@ -243,7 +244,7 @@ def _menu(info: ConferenceInfo, svc: Services) -> list[ft.Control]:
         tooltip="More options",
         items=[_menu_item(label, url, svc) for label, url in links],
     )
-    return [ft.Semantics(identifier=f"{SCREEN}.menu", content=menu)]
+    return [named(f"{SCREEN}.menu", menu)]
 
 
 def _menu_item(label: str, url: str, svc: Services) -> ft.PopupMenuItem:
