@@ -182,6 +182,19 @@ def zone_note(
     return f"Times are {zone_name} ({local.tzname()})"
 
 
+def utc_offset_label(offset: timedelta) -> str:
+    """Return a UTC offset as people write it: "UTC−07:00", "UTC+05:30" or "UTC".
+
+    Args:
+        offset: The offset from UTC, e.g. ``now.astimezone().utcoffset()``.
+    """
+    if not offset:
+        return "UTC"
+    sign = "+" if offset > timedelta(0) else "−"  # a minus sign, not a hyphen
+    minutes = abs(int(offset.total_seconds())) // 60
+    return f"UTC{sign}{minutes // 60:02d}:{minutes % 60:02d}"
+
+
 def _local(moment: datetime, zone: tzinfo) -> datetime:
     if moment.utcoffset() is None:
         raise ValueError(f"expected an aware datetime, got {moment!r}")

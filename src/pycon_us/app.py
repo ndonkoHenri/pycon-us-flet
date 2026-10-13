@@ -11,11 +11,12 @@ import logging
 
 import flet as ft
 
+from pycon_us import clock
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import (
@@ -124,7 +125,9 @@ async def bootstrap(
     0. ``page.on_close``, before anything is awaited (D-147).
     1. Settings, the OS's accessibility flags and brightness, then the theme they ask
        for, all while the boot view shows. ``main.prepare_first_page()`` has turned
-       the theme animation off, so the theme lands at once.
+       the theme animation off, so the theme lands at once. The Developer options
+       take effect with the settings: the fake clock runs from its stored start, the
+       feed URL serves the refreshes, and an unlock shows error details (D-187).
     2. The year's favourites (D-48), so no star fills in after the first screen.
     3. The feed cache, else the bundled snapshot (D-38, D-145).
     4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
@@ -149,6 +152,7 @@ async def bootstrap(
     page.on_close = svc.close
     try:
         await prefs.load(svc.storage)
+        start_developer_options(prefs, conference)
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
@@ -180,6 +184,24 @@ async def bootstrap(
 
     page.on_platform_brightness_change = on_brightness
     page.on_app_lifecycle_state_change = on_lifecycle
+
+
+def start_developer_options(prefs: Prefs, conference: Conference) -> None:
+    """Put the stored Developer options into effect for this session (D-73, D-187).
+
+    The fake clock runs from its stored start again, so each start of the app begins
+    at the same simulated moment; the feed URL serves the refreshes; and an unlock
+    shows the exception text in ``report_errors``' message.
+
+    Args:
+        prefs: The loaded settings.
+        conference: The session's ``Conference`` store.
+    """
+    clock.start_fake_clock(prefs.fake_now)
+    if prefs.fake_now is not None:
+        logger.info("Fake clock on: it starts at %s", prefs.fake_now.isoformat())
+    conference.set_feed_url(prefs.feed_url)
+    show_details(prefs.developer_unlocked)
 
 
 async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None:

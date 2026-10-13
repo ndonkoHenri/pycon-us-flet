@@ -210,6 +210,18 @@ def test_ago_label_refuses_naive_datetimes() -> None:
         timefmt.ago_label(NAIVE, pacific(15, 10, 0))
 
 
+@pytest.mark.parametrize(
+    ("hours", "minutes", "text"),
+    [(-7, 0, "UTC−07:00"), (5, 30, "UTC+05:30"), (0, 0, "UTC"), (14, 0, "UTC+14:00")],
+)
+def test_utc_offsets_read_as_people_write_them(
+    hours: int, minutes: int, text: str
+) -> None:
+    sign = -1 if hours < 0 else 1
+    offset = timedelta(hours=hours) + sign * timedelta(minutes=minutes)
+    assert timefmt.utc_offset_label(offset) == text
+
+
 # A talk on Saturday, May 16, 10:30-11:00 AM in Long Beach.
 TALK_START, TALK_END = pacific(16, 10, 30), pacific(16, 11, 0)
 

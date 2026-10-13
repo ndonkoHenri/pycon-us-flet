@@ -15,9 +15,10 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
+from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
-from pycon_us.prefs import Prefs
+from pycon_us.prefs import DEV_UNLOCKED, Prefs
 from pycon_us.screens import more
 from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
@@ -77,7 +78,7 @@ def render(
     monkeypatch.setattr(more, "use_prefs", lambda: prefs)
     monkeypatch.setattr(more, "AppScaffold", lambda **kwargs: kwargs)
     # The companion app's list, wherever pytest runs (FLET_PLATFORM may be set, F14)
-    monkeypatch.setattr(more, "SHOW_DEVELOPER", True)
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)
 
     def render() -> dict[str, Any]:
         return cast(dict[str, Any], inspect.unwrap(More)())
@@ -137,18 +138,21 @@ def test_the_list_has_programme_then_you_under_section_headers(
         "# You",
         "more.appearance",
         "About this app",
-        "Developer",
-        "Container",  # "Not an official PSF app." (D-36)
-    ]
+        "Developer options",
+    ]  # About this app says "Not an official PSF app." now (D-36)
 
 
 def test_developer_is_hidden_in_packaged_builds_until_unlocked(
-    monkeypatch: pytest.MonkeyPatch, render: Callable[[], dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch,
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
 ) -> None:
-    monkeypatch.setattr(more, "SHOW_DEVELOPER", False)
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)
     titles = outline(rows_of(render()))
     assert "About this app" in titles
-    assert "Developer" not in titles  # D-73: #88 adds the unlock
+    assert "Developer options" not in titles  # D-73
+    prefs.dev = {DEV_UNLOCKED: True}  # 7 taps on the version (D-187)
+    assert outline(rows_of(render()))[-1] == "Developer options"
 
 
 def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(

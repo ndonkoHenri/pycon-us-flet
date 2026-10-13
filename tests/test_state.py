@@ -813,3 +813,32 @@ async def test_after_a_refresh_the_user_asked_for_the_next_automatic_one_is_quie
     assert conference.status(year.conference) == "offline"
     feed.release()
     await task
+
+
+# ------------------------------------------------------------------ the Developer feed URL
+
+
+def recording(urls: list[str]) -> httpx.MockTransport:
+    """A transport that serves ``NETWORK_FEED`` at any URL and records each one."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        urls.append(str(request.url))
+        return httpx.Response(200, content=NETWORK_FEED)
+
+    return httpx.MockTransport(handle)
+
+
+async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    urls: list[str] = []
+    conference.set_feed_url("http://127.0.0.1:8000/conference-2026.json")
+    await conference.refresh(storage, year, transport=recording(urls))
+    conference.set_feed_url(None)  # Reset: the year's feed again, without a restart
+    await conference.refresh(storage, year, transport=recording(urls))
+    assert urls == [
+        "http://127.0.0.1:8000/conference-2026.json",
+        "https://us.pycon.org/2026/schedule/conference.json",
+    ]
+    assert conference.source == "network"

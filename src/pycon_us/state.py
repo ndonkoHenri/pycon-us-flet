@@ -86,6 +86,23 @@ class Conference:
     # Whether the user asked for the running refresh (D-181): only then does status()
     # say "refreshing". Private, so setting it notifies nobody unless refresh() asks.
     _asked: bool = field(default=False, repr=False)
+    _feed_url: str | None = field(default=None, repr=False)
+
+    def set_feed_url(self, url: str | None) -> None:
+        """Refresh from ``url`` from the next refresh on; None returns to the year's feed.
+
+        The Developer screen's feed URL (D-73, D-187): ``bootstrap()`` sets the stored
+        one, and Apply a new one, with no restart. A refresh already running keeps the
+        URL it started with.
+
+        Args:
+            url: An ``http://`` or ``https://`` feed URL, or None.
+        """
+        if url != self._feed_url:
+            logger.info(
+                "Feed refreshes use %s", "a Developer feed URL" if url else "the year's"
+            )
+        self._feed_url = url
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the feed cache, or the bundled snapshot when there is no usable cache.
@@ -134,7 +151,8 @@ class Conference:
 
         Args:
             storage: Where the feed cache lives.
-            year: The year's data: the feed URL and feed settings.
+            year: The year's data: the feed URL (unless ``set_feed_url()`` gave one)
+                and feed settings.
             transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
             closed: Set when the store's session has been replaced (``Services.closed``,
                 D-147). A refresh that ends after it is set writes nothing: neither the
@@ -146,8 +164,9 @@ class Conference:
         """
         if self._task is None or self._task.done():
             self._started_at = clock.now()
+            url = self._feed_url or year.conference.feed_url
             self._task = asyncio.create_task(
-                self._refresh(storage, year, transport, closed)
+                self._refresh(url, storage, year, transport, closed)
             )
             self._task.add_done_callback(_log_unexpected)
         return self._task
@@ -265,6 +284,7 @@ class Conference:
 
     async def _refresh(
         self,
+        url: str,
         storage: Storage,
         year: YearData,
         transport: httpx.AsyncBaseTransport | None,
@@ -280,7 +300,7 @@ class Conference:
 
         self.refreshing = True
         try:
-            result = await _fetch(year, transport)
+            result = await _fetch(url, year, transport)
             if session_closed():
                 return
             if isinstance(result, str):
@@ -309,11 +329,11 @@ class Conference:
 
 
 async def _fetch(
-    year: YearData, transport: httpx.AsyncBaseTransport | None
+    url: str, year: YearData, transport: httpx.AsyncBaseTransport | None
 ) -> tuple[bytes, ConferenceData] | Problem:
     """Fetch and process the feed; return its bytes and data, or why that failed (D-146)."""
     try:
-        raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
+        raw = await api.fetch_feed(url, transport=transport)
         return raw, feed.process(raw, year.feed_settings)  # on the loop (D-109)
     except api.NetworkError as error:
         logger.info("Feed refresh: no answer (%s); keeping the current data", error)

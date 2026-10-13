@@ -7,12 +7,15 @@ session's page. P1's real Schedule keeps these states (D-32, ux.md §4.1).
 
 import inspect
 from collections.abc import Awaitable, Callable, Iterator
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
 
+from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites
@@ -24,6 +27,8 @@ from pycon_us.theme import LIGHT_TOKENS
 from tests.fakes import FakePage, bound
 from tests.feeds import processed
 from tests.trees import descendants, only, texts
+
+PACIFIC = ZoneInfo("America/Los_Angeles")
 
 SKELETON = ft.Text("skeleton")
 """What the test's ``SkeletonList`` stands in for: the component's own tests check it."""
@@ -175,3 +180,25 @@ def test_with_data_the_stub_shows_its_source_and_days_again(
     ]
     assert "schedule.source" in identifiers  # never a full-screen error with data
     assert "schedule.no_data" not in identifiers
+
+
+def test_the_days_mark_today_by_the_clock_so_the_fake_clock_shows(
+    render: Callable[[], list[ft.Control]], conference: SimpleNamespace
+) -> None:
+    conference.data, conference.source = processed(2026), "bundled"
+
+    def marked() -> list[str]:
+        return [
+            str(row.title)
+            for row in render()
+            if isinstance(row, ft.ListTile) and str(row.subtitle).endswith("· today")
+        ]
+
+    try:
+        # The Developer fake clock (D-187); 23:30 in Long Beach is Saturday in UTC.
+        clock.start_fake_clock(datetime(2026, 5, 15, 23, 30, tzinfo=PACIFIC))
+        assert marked() == ["Fri, May 15"]
+        clock.start_fake_clock(datetime(2026, 10, 13, 9, 0, tzinfo=PACIFIC))
+        assert marked() == []  # no conference day: nothing is today
+    finally:
+        clock.start_fake_clock(None)

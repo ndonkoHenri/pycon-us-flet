@@ -5,12 +5,22 @@ SharedPreferences is the in-memory fake from ``tests/fakes.py``; Flet's own type
 """
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
 
-from pycon_us.prefs import APPEARANCES, HIGH_CONTRAST_SETTINGS, Prefs
+from pycon_us import prefs as prefs_module
+from pycon_us.prefs import (
+    APPEARANCES,
+    HIGH_CONTRAST_SETTINGS,
+    Prefs,
+    parse_feed_url,
+    with_dev_options,
+)
 from pycon_us.services import storage
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
@@ -264,3 +274,73 @@ async def test_reduced_motion_is_never_stored(
     # A device fact, read at start and on resume (F13), not a setting (D-34).
     assert not any("motion" in key for key in shared.values)
     assert not (await loaded(store)).reduce_motion
+
+
+# ------------------------------------------------------------------ Developer options
+
+
+def test_developer_options_are_read_from_dev(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
+    prefs = Prefs()
+    assert (prefs.developer, prefs.fake_now, prefs.feed_url) == (False, None, None)
+    prefs.dev = {
+        "unlocked": True,
+        "fake_now": "2026-05-15T09:00:00-07:00",
+        "feed_url": "http://127.0.0.1:8000/conference-2026.json",
+    }
+    assert prefs.developer and prefs.developer_unlocked
+    assert prefs.fake_now == datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+    assert prefs.feed_url == "http://127.0.0.1:8000/conference-2026.json"
+
+
+def test_developer_is_always_available_when_not_embedded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)  # the companion app
+    prefs = Prefs()
+    assert prefs.developer is True
+    assert prefs.developer_unlocked is False  # no unlock: details come from elsewhere
+
+
+@pytest.mark.parametrize(
+    "dev",
+    [
+        {"fake_now": "2026-05-15T09:00"},  # naive: a stored start carries its offset
+        {"fake_now": "next Friday"},
+        {"fake_now": 1747324800},
+        {"unlocked": "yes", "feed_url": ""},
+    ],
+)
+def test_unusable_developer_values_read_as_their_defaults(dev: dict[str, Any]) -> None:
+    prefs = Prefs(dev=dict(dev))
+    assert prefs.fake_now is None
+    assert prefs.feed_url is None
+    assert prefs.developer_unlocked is False
+
+
+def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
+    start = datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
+    feed = "http://127.0.0.1:8000/conference-2026.json"
+    dev = with_dev_options({"unlocked": True}, fake_now=start, feed_url=feed)
+    assert dev == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": feed}
+    assert with_dev_options(dev, fake_now=None, feed_url=None) == {"unlocked": True}
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://127.0.0.1:8000/conference-2026.json", "https://example.test/feed.json"],
+)
+def test_http_and_https_feed_urls_are_taken(url: str) -> None:
+    assert parse_feed_url(f" {url} ") == url
+
+
+@pytest.mark.parametrize(
+    "text", ["us.pycon.org/feed.json", "ftp://example.test/f", "https://", "file:///x"]
+)
+def test_other_feed_urls_are_refused(text: str) -> None:
+    with pytest.raises(ValueError, match="http:// or https://"):
+        parse_feed_url(text)
+
+
+def test_an_empty_feed_url_is_the_year_s() -> None:
+    assert parse_feed_url("") is None

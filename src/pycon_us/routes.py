@@ -14,6 +14,8 @@ from urllib.parse import unquote
 import flet as ft
 
 from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
+from pycon_us.screens.about_app import AboutApp
+from pycon_us.screens.developer import Developer
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
 from pycon_us.screens.more_pages import MorePage, Track
@@ -146,8 +148,8 @@ ROUTES = [
         pushed("open-spaces", MorePage),
         pushed("lightning-talks", MorePage),
         pushed("sprints", MorePage),
-        pushed("app", MorePage),
-        pushed("developer", MorePage),
+        pushed("app", AboutApp),
+        pushed("developer", Developer),
     ),
 ]
 """Every route of P0 and P1's More pages; later phases add theirs (architecture §5.2).

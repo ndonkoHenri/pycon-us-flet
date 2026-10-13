@@ -70,3 +70,36 @@ def test_clearing_the_fake_clock_returns_to_real_time() -> None:
 def test_naive_datetimes_are_refused(setter) -> None:
     with pytest.raises(ValueError, match="aware"):
         setter(datetime(2026, 5, 15, 9, 0))  # noqa: DTZ001
+
+
+# ------------------------------------------------------------------ the Developer field (D-187)
+
+
+def test_a_clock_without_an_offset_is_conference_time() -> None:
+    assert clock.parse_fake_clock(
+        " 2026-05-15 09:00 ", ZoneInfo("America/Los_Angeles")
+    ) == datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
+    assert clock.parse_fake_clock(
+        "2026-05-15T09:00", ZoneInfo("America/Los_Angeles")
+    ) == datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
+
+
+def test_a_clock_with_an_offset_keeps_it() -> None:
+    moment = clock.parse_fake_clock(
+        "2026-05-15T18:00:00+02:00", ZoneInfo("America/Los_Angeles")
+    )
+    assert moment == datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+
+
+def test_an_empty_clock_is_real_time_and_garbage_is_refused() -> None:
+    assert clock.parse_fake_clock("  ", ZoneInfo("America/Los_Angeles")) is None
+    with pytest.raises(ValueError, match="YYYY-MM-DD HH:MM"):
+        clock.parse_fake_clock("15/05/2026 9am", ZoneInfo("America/Los_Angeles"))
+
+
+def test_the_field_writes_the_start_in_conference_time() -> None:
+    start = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
+    zone = ZoneInfo("America/Los_Angeles")
+    assert clock.fake_clock_text(start, zone) == "2026-05-15 09:00"
+    assert clock.parse_fake_clock(clock.fake_clock_text(start, zone), zone) == start
+    assert clock.fake_clock_text(None, zone) == ""

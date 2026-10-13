@@ -8,9 +8,12 @@ first screen (the boot gate), so neither the theme nor the filters flash.
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Literal, get_args
+from urllib.parse import urlsplit
 
 import flet as ft
+from flet.utils import is_embedded
 
 from pycon_us.services.storage import (
     DEV,
@@ -46,6 +49,19 @@ _PERSISTED: dict[str, Pref[Any]] = {
     "dev": DEV,
 }
 """The persisted fields of ``Prefs`` and their keys in the storage table (decisions §M)."""
+
+DEV_UNLOCKED = "unlocked"
+"""``Prefs.dev`` key: True once 7 taps on About this app's version unlocked Developer."""
+
+DEV_FAKE_NOW = "fake_now"
+"""``Prefs.dev`` key: the fake clock's start, an ISO 8601 instant with its offset."""
+
+DEV_FEED_URL = "feed_url"
+"""``Prefs.dev`` key: the feed URL that refreshes use instead of the year's."""
+
+DEVELOPER_ALWAYS = not is_embedded()
+"""Developer is always available when not embedded: the companion app and a desktop host
+(D-73). A packaged build needs the unlock."""
 
 
 @ft.observable
@@ -101,6 +117,37 @@ class Prefs:
         if self.high_contrast == "system":
             return self.os_high_contrast
         return self.high_contrast == "on"
+
+    @property
+    def developer_unlocked(self) -> bool:
+        """Whether Developer was unlocked in About this app; it stays so (D-73, D-187)."""
+        return self.dev.get(DEV_UNLOCKED) is True
+
+    @property
+    def developer(self) -> bool:
+        """Whether the Developer screen is available: when not embedded, or once unlocked."""
+        return DEVELOPER_ALWAYS or self.developer_unlocked
+
+    @property
+    def fake_now(self) -> datetime | None:
+        """The instant the fake clock starts from at each start, or None for real time.
+
+        A value that is not an aware ISO 8601 instant reads as None: real time.
+        """
+        value = self.dev.get(DEV_FAKE_NOW)
+        if not isinstance(value, str):
+            return None
+        try:
+            moment = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        return moment if moment.utcoffset() is not None else None
+
+    @property
+    def feed_url(self) -> str | None:
+        """The feed URL set in Developer, or None for the year's (``conference.toml``)."""
+        value = self.dev.get(DEV_FEED_URL)
+        return value if isinstance(value, str) and value else None
 
     def motion_ms(self, ms: int) -> int:
         """Return how long an animation of ``ms`` milliseconds runs: 0 under reduced motion.
@@ -199,6 +246,45 @@ class Prefs:
         for name, value in changes.items():
             setattr(self, name, value)
         return saved
+
+
+def with_dev_options(
+    dev: dict[str, Any], *, fake_now: datetime | None, feed_url: str | None
+) -> dict[str, Any]:
+    """Return ``dev`` with the fake clock and the feed URL set; None removes one (D-187).
+
+    The other keys, the unlock among them, are kept. Pass the result to ``Prefs.save``.
+
+    Args:
+        dev: The current ``Prefs.dev``.
+        fake_now: The fake clock's start (aware), or None for real time.
+        feed_url: The feed URL, or None for the year's.
+    """
+    options = {k: v for k, v in dev.items() if k not in (DEV_FAKE_NOW, DEV_FEED_URL)}
+    if fake_now is not None:
+        options[DEV_FAKE_NOW] = fake_now.isoformat()
+    if feed_url is not None:
+        options[DEV_FEED_URL] = feed_url
+    return options
+
+
+def parse_feed_url(text: str) -> str | None:
+    """Return the feed URL the field names, or None when it is empty (the year's feed).
+
+    Args:
+        text: An ``http://`` or ``https://`` URL; plain HTTP for a test server on the
+            laptop (testing-and-quality.md §5.2).
+
+    Raises:
+        ValueError: The text is not such a URL; its message is the field's error.
+    """
+    text = text.strip()
+    if not text:
+        return None
+    parts = urlsplit(text)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError("Use an http:// or https:// address")
+    return text
 
 
 def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:
