@@ -481,6 +481,16 @@ def test_malformed_file_names_file_key_and_problem(
     assert str(error.value).startswith(message)
 
 
+def test_lightning_talks_need_a_doubt_to_fold(data_dir: Path) -> None:
+    """An empty "Think you can't do one?" would open on nothing (EVT-03)."""
+    file = data_dir / "2026" / "content.toml"
+    head = file.read_text(encoding="utf-8").split("[[lightning_talks.doubts]]")[0]
+    file.write_text(head + "doubts = []\n", encoding="utf-8")
+    with pytest.raises(YearDataError) as error:
+        load_year(2026, data_dir)
+    assert str(error.value) == "2026/content.toml: lightning_talks.doubts: is empty"
+
+
 def test_array_items_must_be_tables(data_dir: Path) -> None:
     (data_dir / "2026" / "content.toml").write_text(
         'display_time_overrides = ["Job Fair"]\n', encoding="utf-8"

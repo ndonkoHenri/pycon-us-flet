@@ -147,7 +147,15 @@ ROUTES = [
         "more",
         More,
         pushed("speakers", Speakers),
-        pushed("tracks", Tracks, pushed(":slug", TrackPage)),
+        pushed(
+            "tracks",
+            Tracks,
+            # The hub's rows for the two pages of their own (D-205), before the slug
+            # route, which would match them too: under the hub, Back returns to it.
+            pushed("lightning-talks", LightningTalks),
+            pushed("open-spaces", OpenSpaces),
+            pushed(":slug", TrackPage),
+        ),
         pushed("keynotes", MorePage),
         pushed("open-spaces", OpenSpaces),
         pushed("lightning-talks", LightningTalks),

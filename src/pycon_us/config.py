@@ -199,7 +199,10 @@ class LightningTalksInfo:
 
 @dataclass(frozen=True)
 class Content:
-    """The year's content from ``content.toml``: what feed processing and the Map need.
+    """The year's content from ``content.toml`` (D-45).
+
+    What feed processing and the Map need, and the copy and links of the Open spaces
+    and Lightning talks pages (D-205).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -400,6 +403,8 @@ def _check_content(content: Content, file: str) -> None:
             _check_text(paragraph, file, f"lightning_talks.intro[{index}]")
         _check_https(talks.signup_url, file, "lightning_talks.signup_url")
         _check_https(talks.info_url, file, "lightning_talks.info_url")
+        if not talks.doubts:  # a fold with nothing in it
+            raise YearDataError(f"{file}: lightning_talks.doubts: is empty")
         for index, doubt in enumerate(talks.doubts):
             key = f"lightning_talks.doubts[{index}]"
             _check_text(doubt.doubt, file, f"{key}.doubt")

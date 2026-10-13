@@ -8,7 +8,7 @@ colours; its plural name; its legend line; its badge as the schedule shows it, "
 track" when it is new this year; and how many sessions it has, counted as its page lists
 them (posters one by one, SCHED-22). A tap pushes the track's page,
 ``/more/tracks/<slug>`` (``screens/track.py``), or, for the lightning talks and the open
-spaces, their own page in More (``OWN_PAGES``).
+spaces, their own page, More's, at their slug under the hub (``OWN_PAGES``).
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
@@ -47,12 +47,13 @@ ICON_CIRCLE = 40
 """The diameter of a row's tonal circle, in dp (ux.md §5.10)."""
 
 OWN_PAGES = {
-    "Lightning-talks": "/more/lightning-talks",
-    "Open Space": "/more/open-spaces",
+    "Lightning-talks": "/more/tracks/lightning-talks",
+    "Open Space": "/more/tracks/open-spaces",
 }
-"""Tracks with a page of their own in More, which their hub row opens instead of the
+"""Tracks with a page of their own, which their hub row opens instead of the generic
 track page (ux.md §5.10, EVT-01, EVT-03), by track key: the feed's kinds, which do not
-change with the year (DATA-14)."""
+change with the year (DATA-14). It is the page More opens, at an address under the
+hub, so Back returns to the hub (D-17)."""
 
 
 @dataclass(frozen=True)

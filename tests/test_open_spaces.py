@@ -233,6 +233,10 @@ async def test_a_year_without_the_page_s_data_has_no_propose_and_no_intro(
     page = await show(year=2025)
     assert page.nodes("open_spaces.propose") == []
     assert len(page.nodes("open_spaces.session.")) == len(open_spaces(2025))
+    lists = [v for v in page.find(ft.ListView) if str(v.key).startswith("day-")]
+    assert lists
+    for day_list in lists:  # each starts with its first slot (a Row), not the intro
+        assert isinstance(day_list.controls[0], ft.Row)
 
 
 async def test_a_feed_without_open_spaces_offers_to_propose_one(show: Show) -> None:
@@ -243,11 +247,33 @@ async def test_a_feed_without_open_spaces_offers_to_propose_one(show: Show) -> N
     assert page.node("open_spaces.none").live_region
     assert page.find(ft.Tabs) == []
     (button,) = page.find(ft.FilledTonalButton)
-    assert button.content == "Propose one"
+    assert text_of(button) == "Propose one"
     await page.click(button)
     assert (
         page.launcher.launched[0][0] == "https://us.pycon.org/2026/signup/open-space/"
     )
+
+
+async def test_propose_one_is_a_link_said_to_leave_the_app(show: Show) -> None:
+    """ux.md §4.7: the same sign-up as "+", so the same icon, words and link flag."""
+    sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Open Space"}
+    page = await show(conference=Conference(data=replace(DATA, sessions=sessions)))
+    node = page.node("open_spaces.propose_one")
+    assert node.link
+    (button,) = page.find(ft.FilledTonalButton)
+    assert button.icon == ft.Icons.OPEN_IN_NEW
+    assert isinstance(button.content, ft.Text)
+    assert button.content.semantics_label == "Propose one\nOpens in browser"
+
+
+async def test_a_year_without_a_sign_up_offers_no_button(show: Show) -> None:
+    """D-175: with nowhere to propose, the sentence alone; the app refreshes itself."""
+    data = processed(2025)
+    sessions = {k: s for k, s in data.sessions.items() if s.track != "Open Space"}
+    conference = Conference(data=replace(data, sessions=sessions))
+    page = await show(year=2025, conference=conference)
+    assert page.node("open_spaces.none").live_region
+    assert page.find(ft.FilledTonalButton) == []
 
 
 async def test_without_data_it_loads_then_offers_to_try_again(show: Show) -> None:

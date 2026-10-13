@@ -89,6 +89,10 @@ async def test_sign_up_opens_the_years_sign_up_in_the_in_app_browser(
     assert cast(ft.Text, button.content).semantics_label == (
         "Sign up for a lightning talk\nOpens in browser"
     )
+    # Room above and below a label that wraps at 200 %; still 40 dp on one line.
+    assert button.style is not None
+    padding = cast(ft.Padding, button.style.padding)
+    assert padding.top == padding.bottom == 10
     await page.click(button)
     assert page.launcher.launched == [
         (COPY.signup_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
@@ -108,6 +112,9 @@ async def test_think_you_cant_do_one_starts_folded_and_opens(show: Show) -> None
     page = await show()
     (fold,) = page.find(ft.ExpansionTile)
     assert text_of(fold.title) == "Think you can't do one?"
+    # A row's title, as the link row under it, not a heading's size (ux.md §5.11).
+    title = cast(ft.Text, cast(ft.Semantics, fold.title).content)
+    assert title.theme_style is None
     assert fold.expanded is False
     await page.event(fold, "change", True)
     (fold,) = page.find(ft.ExpansionTile)

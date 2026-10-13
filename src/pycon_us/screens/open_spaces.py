@@ -77,7 +77,7 @@ def OpenSpaces() -> ft.View:
     all_views = use_session_views(conference, ids, use_24h=use_24h)
     # Each day's views as one tuple, the same object until the views change, so the
     # memoised day lists skip a render that leaves their day as it was.
-    days = ft.use_memo(lambda: day_views(all_views, groups), [all_views])
+    days = ft.use_memo(lambda: day_views(all_views, groups), [all_views, groups])
     # The badge every row would repeat; one object, so the day lists still skip.
     omit = ft.use_memo(lambda: frozenset({info.track_name(TRACK)}), [])
 
@@ -218,12 +218,14 @@ def none_yet(url: str | None, svc: Services) -> ft.Control:
             the sentence says the app shows them on its own (D-175).
         svc: The session's services, for the launcher.
     """
+    on_action = None
+    if url is not None:
 
-    @report_errors
-    async def propose() -> None:
-        if url is not None:
+        @report_errors
+        async def propose() -> None:
             await open_link(svc, url)
 
+        on_action = propose
     return ft.ListView(
         [
             EmptyState(
@@ -231,8 +233,9 @@ def none_yet(url: str | None, svc: Services) -> ft.Control:
                 icon=ft.Icons.FORUM_OUTLINED,
                 body="Attendees propose them during the conference. They show here "
                 "as soon as the schedule lists them.",
-                action="Propose one" if url is not None else None,
-                on_action=propose if url is not None else None,
+                action="Propose one" if on_action is not None else None,
+                on_action=on_action,
+                link_id=f"{SCREEN}.propose_one",
                 identifier=f"{SCREEN}.none",
             )
         ],

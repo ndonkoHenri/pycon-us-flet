@@ -25,7 +25,7 @@ from pycon_us.config import load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
 from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.locations import PAGES
+from pycon_us.locations import PAGES, parent_of
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import track as track_screen
 from pycon_us.screens import tracks as hub_screen
@@ -297,8 +297,8 @@ async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> N
 @pytest.mark.parametrize(
     ("slug", "target"),
     [
-        ("lightning-talks", "/more/lightning-talks"),
-        ("open-spaces", "/more/open-spaces"),
+        ("lightning-talks", "/more/tracks/lightning-talks"),
+        ("open-spaces", "/more/tracks/open-spaces"),
         ("talks", "/more/tracks/talks"),
         ("keynotes", "/more/tracks/keynotes"),  # until #104's page
     ],
@@ -306,12 +306,13 @@ async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> N
 async def test_tracks_with_a_page_of_their_own_open_it(
     show: Show, slug: str, target: str
 ) -> None:
-    """ux.md §5.10, #105: the lightning talks and the open spaces open their More
-    pages, not the generic track page."""
+    """ux.md §5.10, #105: the lightning talks and the open spaces open their own
+    pages, not the generic track page, under the hub, so Back returns to it (D-17)."""
     shown = await show(hub_screen.Tracks)
     await shown.click(cast(ft.Control, shown.node(f"tracks.track.{slug}").parent))
     assert shown.went == [target]
     assert hub_screen.hub_target(track(slug)) == target
+    assert parent_of(target) == "/more/tracks"
 
 
 def test_every_own_page_is_a_page_of_the_route_table() -> None:
