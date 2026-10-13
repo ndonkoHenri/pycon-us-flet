@@ -23,6 +23,7 @@ from pycon_us.core.timefmt import (
     date_range_label,
     day_heading,
     day_label,
+    day_range_label,
     local_date,
     time_label,
     today,
@@ -295,27 +296,19 @@ def key_dates(info: ConferenceInfo) -> list[ft.Control]:
         _fact(
             ft.Icons.EVENT_OUTLINED,
             "Tutorials and talks",
-            _days(info.first_day, info.last_talk_day),
+            day_range_label(info.first_day, info.last_talk_day),
         )
     )
-    if info.last_day > info.last_talk_day:
-        first_sprint = info.last_talk_day + timedelta(days=1)
+    if (first_sprint := info.first_sprint_day) is not None:
         rows.append(
             _fact(
                 ft.Icons.ROCKET_LAUNCH_OUTLINED,
                 "Sprints",
-                _days(first_sprint, info.last_day),
+                day_range_label(first_sprint, info.last_day),
             )
         )
     rows.append(_fact(ft.Icons.PLACE_OUTLINED, info.venue, info.city))
     return rows
-
-
-def _days(first: date, last: date) -> str:
-    """'Wed, May 13 – Sun, May 17', or one day."""
-    if first == last:
-        return day_label(first)
-    return f"{day_label(first)} – {day_label(last)}"
 
 
 def _fact(icon: ft.IconData, title: str, subtitle: str) -> ft.Control:

@@ -112,6 +112,18 @@ def date_range_label(first: date, last: date) -> str:
     return f"{start}–{_MONTHS[last.month - 1]} {last.day}"
 
 
+def day_range_label(first: date, last: date) -> str:
+    """Return a span of days with their weekdays: "Mon, May 18 – Tue, May 19".
+
+    One day when both ends are the same ("Mon, May 18"). For a span whose weekdays
+    matter, as the key dates and the sprints are; ``date_range_label()`` is the short
+    form.
+    """
+    if first == last:
+        return day_label(first)
+    return f"{day_label(first)} – {day_label(last)}"
+
+
 def ago_label(then: datetime, now: datetime) -> str:
     """Return how long before ``now`` ``then`` was, in words (DATA-31).
 
