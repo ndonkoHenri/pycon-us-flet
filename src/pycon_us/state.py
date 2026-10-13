@@ -384,7 +384,13 @@ class ViewMemory:
             session (D-143, #74); empty until a screen records it.
         search_base: The location, query included, that opened ``/search``; Back from
             search returns there (D-19). The opener records it.
+        search_query: What is typed in the search field; an opener clears it, so
+            each search starts empty (D-193).
+        search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
+            View that mounts without its ``?scope=`` (a deep entry below a result).
     """
 
     last_location: str = ""
     search_base: str = "/now"
+    search_query: str = ""
+    search_scope: str = "all"

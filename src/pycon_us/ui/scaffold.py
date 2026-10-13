@@ -173,7 +173,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     """Return the app bar action that opens the global search with a preset scope (D-19).
 
     It records the opener's location, query included, so Back from search returns
-    there.
+    there, and clears the last query, so each search starts empty (D-193).
 
     Args:
         memory: The process's ``ViewMemory``.
@@ -184,6 +184,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     @report_errors
     def open_search() -> None:
         memory.search_base = page.route
+        memory.search_query = ""  # a new search; Back to its results keeps the old one
         page.navigate(f"/search?scope={scope}")
 
     return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
@@ -194,6 +195,8 @@ def SectionHeader(
     *,
     level: int | None = None,
     top: int = 16,
+    theme_style: ft.TextThemeStyle = ft.TextThemeStyle.TITLE_SMALL,
+    color: ft.ColorValue = ft.Colors.PRIMARY,
     leading: ft.Control | None = None,
     spoken: str | None = None,
 ) -> ft.Control:
@@ -207,6 +210,9 @@ def SectionHeader(
             detail page's level-1 title (ux.md §5.5).
         top: The space above it: 16 dp where it opens a group in a list; 0 on a
             detail page, whose list already puts 24 dp between sections.
+        theme_style: Its type: ``TITLE_SMALL``, or ``TITLE_MEDIUM`` for a heading that
+            holds headings of its own (search's "Sessions" over its days, D-193).
+        color: Its colour role: ``primary``, or ``on_surface`` with ``TITLE_MEDIUM``.
         leading: A decorative mark before the text, such as Now's live dot: a
             control without a label (a shape, an unlabelled icon), so the heading
             still reads as ``text``.
@@ -215,8 +221,8 @@ def SectionHeader(
     """
     label: ft.Control = ft.Text(
         text,
-        theme_style=ft.TextThemeStyle.TITLE_SMALL,
-        color=ft.Colors.PRIMARY,
+        theme_style=theme_style,
+        color=color,
         semantics_label=spoken,
         # Beside a mark, the row's room: in a row a text gets unbounded width and
         # would overflow instead of wrapping at large text.
