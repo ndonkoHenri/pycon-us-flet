@@ -18,6 +18,7 @@ list, and a star tap one row. Search covers all days and ignores the Schedule's 
 """
 
 import asyncio
+import logging
 
 import flet as ft
 
@@ -28,7 +29,8 @@ from pycon_us.locations import use_query
 from pycon_us.screens.search_results import SCREEN, ResultList, summary
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import use_conference
+from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.fields import SearchField
@@ -36,11 +38,19 @@ from pycon_us.ui.scaffold import AppScaffold, StatusStrip
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
+logger = logging.getLogger(__name__)
+
 DEBOUNCE_SECONDS = 0.25
 """How long the typing must pause before the search runs (D-46)."""
 
-HINT = "Search sessions, speakers, rooms"
-"""The field's hint, which also names it while it is empty (ux.md §4.3)."""
+HINTS = {
+    "all": "Search sessions, speakers, rooms",
+    "sessions": "Search sessions",
+    "speakers": "Search speakers",
+    "rooms": "Search rooms",
+}
+"""The field's hint by scope, which also names it while it is empty (ux.md §4.3): it
+says what will be searched, as the idle title under it does."""
 
 LABEL = "Search"
 """The field's name for screen readers once it holds text."""
@@ -85,6 +95,17 @@ def scope_of(requested: str | None, remembered: str) -> str:
     return requested if requested in SCOPES else "all"
 
 
+def _start_scope(requested: str | None, memory: ViewMemory) -> str:
+    """Return a new Search View's scope, recorded in ``memory`` for a later rebuild.
+
+    Args:
+        requested: The ``?scope=`` the opener passed, or None.
+        memory: The process's ``ViewMemory``.
+    """
+    memory.search_scope = scope_of(requested, memory.search_scope)
+    return memory.search_scope
+
+
 @ft.component
 def Search() -> ft.View:
     """The global search: the field, the scope chips and the grouped results."""
@@ -97,12 +118,10 @@ def Search() -> ft.View:
     options = use_query()
     page = ft.context.page
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
-    scope, set_scope = ft.use_state(
-        lambda: scope_of(options.get("scope"), memory.search_scope)
-    )
+    # Decided once, as the View mounts; the handlers record every later change.
+    scope, set_scope = ft.use_state(lambda: _start_scope(options.get("scope"), memory))
     text, set_text = ft.use_state(memory.search_query)  # the field, every keystroke
     query, set_query = ft.use_state(memory.search_query)  # what was searched
-    memory.search_scope = scope
     data = conference.data
     # Once per feed version: never per keystroke (D-180).
     index = ft.use_memo(
@@ -162,16 +181,22 @@ def Search() -> ft.View:
             await field_ref.current.focus()
 
     @report_errors
-    def picked(e: ft.Event[ft.Chip]) -> None:
-        # A tap on the selected chip keeps its scope: one scope is always on.
+    async def picked(e: ft.Event[ft.Chip]) -> None:
+        if e.control.data == scope:
+            return  # one scope is always on: a tap on the selected chip keeps it
         memory.search_scope = e.control.data
         set_scope(e.control.data)
         set_query(text)  # the typed words, in the new scope, at once
+        await _click(svc.haptics)  # a chip toggled (ux.md §4.5)
 
     @report_errors
-    def show_all() -> None:
+    async def show_all() -> None:
         memory.search_scope = "all"
         set_scope("all")
+        # As Clear: the button goes away with the miss, so the focus goes to the field
+        # rather than nowhere.
+        if field_ref.current is not None:
+            await field_ref.current.focus()
 
     @report_errors
     async def refresh() -> None:
@@ -229,7 +254,7 @@ def Search() -> ft.View:
                             on_change=changed,
                             on_clear=clear,
                             ref=field_ref,
-                            hint=HINT,
+                            hint=HINTS[scope],
                             label=LABEL,
                             clear_tooltip=CLEAR,
                             identifier=f"{SCREEN}.field",
@@ -263,6 +288,18 @@ def _stop_waiting() -> None:
     """
 
 
+async def _click(haptics: ft.HapticFeedback) -> None:
+    """Give the selection click, logging rather than reporting a failure.
+
+    Args:
+        haptics: ``Services.haptics``.
+    """
+    try:
+        await haptics.selection_click()
+    except SERVICE_ERRORS:  # a missed click is not worth an error message
+        logger.warning("Haptic feedback failed", exc_info=True)
+
+
 def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Control:
     """Return the scope chips, one per scope, the current one selected with its check.
 
@@ -290,7 +327,10 @@ def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Con
                                 selected=key == scope,
                                 show_checkmark=True,  # not colour alone (D-33)
                                 data=key,
-                                on_select=on_pick,
+                                # A click, not on_select: Flutter would toggle the
+                                # chip itself, so a tap on the selected one showed no
+                                # scope selected; here ``selected`` is only ours.
+                                on_click=on_pick,
                             ),
                         )
                     )

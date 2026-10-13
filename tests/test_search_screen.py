@@ -115,6 +115,7 @@ class Shown:
     session: Session
     memory: ViewMemory
     favorites: Favorites
+    haptics: MemoryHaptics
     searches: list[tuple[str, str]] = field(default_factory=list)
     """Each ``search(index, query, scope)`` the screen ran, as (query, scope)."""
     rows: list[str] = field(default_factory=list)
@@ -216,6 +217,13 @@ class Shown:
         return cast(ft.Chip, self.node(f"search.scope.{scope}").content)
 
 
+def _first[T: ft.BaseControl](control: object, kind: type[T]) -> T | None:
+    """The first ``kind`` under ``control``, following ``content``."""
+    while control is not None and not isinstance(control, kind):
+        control = getattr(control, "content", None)
+    return control
+
+
 def _text(control: object) -> str:
     """The first ``Text`` value under ``control``."""
     while control is not None and not isinstance(control, ft.Text):
@@ -228,18 +236,19 @@ async def show(
 ) -> Shown:
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     memory = ViewMemory()
+    haptics = MemoryHaptics()
     svc = Services(
         year=YEAR,
         storage=storage,
         memory=memory,
         semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
+        haptics=haptics,
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )
     favorites = Favorites()
     await favorites.load(storage)
-    result = Shown(Session(_connection()), memory, favorites)
+    result = Shown(Session(_connection()), memory, favorites, haptics)
 
     def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
         result.searches.append((query, scope))
@@ -352,7 +361,7 @@ async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) ->
 
 
 async def test_the_field_is_named_by_its_hint_then_by_its_label(opened: Shown) -> None:
-    assert opened.field.hint_text == screen.HINT
+    assert opened.field.hint_text == screen.HINTS["sessions"]
     assert opened.node("search.field").label is None  # the hint names it
     await opened.type("typing")
     assert opened.node("search.field").label == screen.LABEL
@@ -432,8 +441,9 @@ async def test_switching_scope_keeps_the_query_and_searches_at_once(
     await opened.type("grand")
     await opened.pause()
     opened.searches.clear()
-    await opened.event(opened.chip("rooms"), "select", "true")
+    await opened.event(opened.chip("rooms"), "click")
     assert opened.searches == [("grand", "rooms")]
+    assert opened.haptics.effects == ["selection_click"]  # a chip toggled (ux.md §4.5)
     assert opened.field.value == "grand"
     assert opened.chip("rooms").selected
     assert not opened.chip("sessions").selected
@@ -442,6 +452,31 @@ async def test_switching_scope_keeps_the_query_and_searches_at_once(
         "search.room.grand-ballroom-a",
         "search.room.grand-ballroom-b",
     ]
+
+
+async def test_a_tap_on_the_selected_chip_keeps_its_scope_and_searches_nothing(
+    opened: Shown,
+) -> None:
+    """The chips are only ours: Flutter never toggles one, so one scope stays on."""
+    await opened.type("grand")
+    await opened.pause()
+    opened.searches.clear()
+    before = {scope: opened.chip(scope).selected for scope in screen.SCOPE_LABELS}
+    assert all(opened.chip(scope).on_select is None for scope in before)
+    await opened.event(opened.chip("sessions"), "click")
+    after = {scope: opened.chip(scope).selected for scope in screen.SCOPE_LABELS}
+    assert after == before
+    assert [scope for scope, on in after.items() if on] == ["sessions"]
+    assert opened.searches == []
+    assert opened.haptics.effects == []  # nothing toggled
+
+
+async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
+    assert opened.field.hint_text == "Search sessions"  # the Schedule's scope
+    await opened.event(opened.chip("all"), "click")
+    assert opened.field.hint_text == "Search sessions, speakers, rooms"
+    await opened.event(opened.chip("rooms"), "click")
+    assert opened.field.hint_text == "Search rooms"
 
 
 async def test_an_unknown_scope_opens_on_all(
@@ -462,23 +497,50 @@ async def test_an_unknown_scope_opens_on_all(
 async def test_results_are_grouped_by_type_then_day_under_headings(
     opened: Shown,
 ) -> None:
-    await opened.event(opened.chip("all"), "select", "true")
+    await opened.event(opened.chip("all"), "click")
     await opened.type("a")
     await opened.pause()
     found = search(INDEX, "a", "all")
-    expected: list[str] = [f"h2:Sessions ({found.session_count})"]
+    # No counts: the count line above the list says them (D-191).
+    expected: list[str] = ["h2:Sessions"]
     for day in found.sessions:
         expected.append(f"h3:{day_heading(day.day)}")
         for session in day.sessions:
             notice = session_rows.is_notice(session, YEAR.conference)
             kind = "notice" if notice else "session"
             expected.append(f"search.{kind}.{semantics_key(session.id)}")
-    expected.append(f"h2:Speakers ({len(found.speakers)})")
+    expected.append("h2:Speakers")
     expected += [f"search.speaker.{semantics_key(s.id)}" for s in found.speakers]
-    expected.append(f"h2:Rooms ({len(found.rooms)})")
+    expected.append("h2:Rooms")
     expected += [f"search.room.{room.slug}" for room in found.rooms]
     listed = [r for r in opened.results if not r.startswith("search.favorite.")]
     assert listed == expected
+
+
+async def test_a_type_heading_looks_a_step_above_a_day_heading(opened: Shown) -> None:
+    """On screen too, "Speakers" must not read as one more day (D-191)."""
+    await opened.event(opened.chip("all"), "click")
+    await opened.type("a")
+    await opened.pause()
+    (body,) = opened.find(ft.ListView)
+    headings = {
+        _text(h): h
+        for h in opened.find(ft.Semantics)
+        if h.header and h.heading_level in (2, 3)
+    }
+    first_day = day_heading(search(INDEX, "a", "all").sessions[0].day)
+    type_text = cast(ft.Text, _first(headings["Speakers"], ft.Text))
+    day_text = cast(ft.Text, _first(headings[first_day], ft.Text))
+    assert type_text.theme_style == ft.TextThemeStyle.TITLE_MEDIUM
+    assert type_text.color == ft.Colors.ON_SURFACE
+    assert day_text.theme_style == ft.TextThemeStyle.TITLE_SMALL
+    assert day_text.color == ft.Colors.PRIMARY
+    # A divider before each type but the first, and the first day close under its type.
+    kinds = [type(c).__name__ for c in body.controls]
+    assert kinds.count("Divider") == 2
+    assert not isinstance(body.controls[0], ft.Divider)
+    day_box = cast(ft.Container, headings[first_day].content)
+    assert day_box.padding == ft.Padding.only(left=16, top=0, right=16, bottom=8)
 
 
 async def test_what_was_found_is_said_in_a_polite_live_region(opened: Shown) -> None:
@@ -580,7 +642,7 @@ async def test_before_a_word_the_screen_says_what_search_covers(opened: Shown) -
 async def test_a_miss_says_search_covers_all_days_and_ignores_filters(
     opened: Shown,
 ) -> None:
-    await opened.event(opened.chip("all"), "select", "true")
+    await opened.event(opened.chip("all"), "click")
     await opened.type("pydanitc")
     await opened.pause()
     miss = opened.node("search.no_match")
@@ -593,7 +655,7 @@ async def test_a_miss_says_search_covers_all_days_and_ignores_filters(
 async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
     opened: Shown,
 ) -> None:
-    await opened.event(opened.chip("rooms"), "select", "true")
+    await opened.event(opened.chip("rooms"), "click")
     await opened.type("typing")  # sessions, no room
     await opened.pause()
     assert opened.has("search.no_match")
@@ -602,6 +664,8 @@ async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
     await opened.event(button, "click")
     assert opened.chip("all").selected
     assert opened.field.value == "typing"
+    # The button went away with the miss: the focus goes to the field, not nowhere.
+    assert [f._i for f in opened.focused] == [opened.field._i]
     assert any(r.startswith("search.session.") for r in opened.results)
 
 

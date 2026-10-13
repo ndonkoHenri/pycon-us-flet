@@ -11,7 +11,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
-from pycon_us.core.rooms import RoomEntry, RoomList, room_list
+from pycon_us.core.rooms import RoomEntry, RoomList, room_list, session_count
 from pycon_us.core.slugs import room_sort_key
 from tests.feeds import processed
 
@@ -154,3 +154,10 @@ def test_now_may_be_in_any_zone(data: ConferenceData) -> None:
 def test_a_naive_now_is_refused(data: ConferenceData) -> None:
     with pytest.raises(ValueError, match="aware"):
         room_list(data, datetime(2026, 5, 15, 11), OTHERS)  # noqa: DTZ001
+
+
+@pytest.mark.parametrize(
+    ("count", "line"), [(0, "0 sessions"), (1, "1 session"), (26, "26 sessions")]
+)
+def test_the_count_line_agrees_with_its_number(count: int, line: str) -> None:
+    assert session_count(count) == line

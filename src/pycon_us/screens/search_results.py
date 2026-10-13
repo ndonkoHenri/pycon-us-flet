@@ -11,13 +11,13 @@ from collections.abc import Mapping
 import flet as ft
 
 from pycon_us.core.models import Room
+from pycon_us.core.rooms import session_count
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.search import SearchResults
 from pycon_us.core.speakers import SpeakerEntry
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import DaySessions
 from pycon_us.locations import drill_href
-from pycon_us.screens.map import session_count
 from pycon_us.services import use_services
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
@@ -68,10 +68,13 @@ def ResultList(
     body is skipped (F34). Its items are memoised too, so new results re-render only
     the days and rows that changed (D-153).
 
-    A type gets its heading, with its count ("Speakers (3)", level 2, the day headings
-    under it level 3), only when the results hold more than one type: alone, it would
-    repeat the count line above the list ("7 sessions") and stack two headings over
-    the first row, so the day headings take level 2 then.
+    A type gets its heading ("Speakers", level 2, the day headings under it level 3)
+    only when the results hold more than one type: alone, it would only repeat the
+    count line above the list ("7 sessions") and stack two headings over the first
+    row, so the day headings take level 2 then. The count line already says each
+    type's count, so the type headings leave it out. A type heading is a step up from
+    a day's (``TITLE_MEDIUM`` in ``on_surface``, with a divider before every type but
+    the first), so that on screen too it opens a kind of result, not one more day.
 
     Args:
         results: The last search's results.
@@ -87,7 +90,7 @@ def ResultList(
         return ft.ListView([state], expand=True)
     titled = sum(map(bool, (results.sessions, results.speakers, results.rooms))) > 1
     day_level = 3 if titled else 2
-    sections: list[tuple[str, int, list[ft.Control]]] = []
+    sections: list[tuple[str, list[ft.Control]]] = []
     if results.sessions:
         days = [
             DayGroup(
@@ -97,22 +100,40 @@ def ResultList(
                 on_toggle,
                 tokens,
                 level=day_level,
+                # Right under its type heading, the first day sits close to it.
+                top=0 if titled and i == 0 else 16,
             )
-            for group in results.sessions
+            for i, group in enumerate(results.sessions)
         ]
-        sections.append(("Sessions", results.session_count, days))
+        sections.append(("Sessions", days))
     if results.speakers:
         speakers = [SpeakerRow(entries[s.id], screen=SCREEN) for s in results.speakers]
-        sections.append(("Speakers", len(speakers), speakers))
+        sections.append(("Speakers", speakers))
     if results.rooms:
         rooms = [room_row(room, view_path) for room in results.rooms]
-        sections.append(("Rooms", len(rooms), rooms))
+        sections.append(("Rooms", rooms))
     items: list[ft.Control] = []
-    for name, count, rows in sections:
+    for i, (name, rows) in enumerate(sections):
         if titled:
-            items.append(SectionHeader(f"{name} ({count})", level=2))
+            if i:
+                items.append(ft.Divider(height=1))
+            items.append(type_heading(name))
         items.extend(rows)
     return ft.ListView(items, expand=True)
+
+
+def type_heading(name: str) -> ft.Control:
+    """Return the heading of one type of result ("Sessions"), a level-2 heading.
+
+    Args:
+        name: The type, as the scope chip says it.
+    """
+    return SectionHeader(
+        name,
+        level=2,
+        theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
+        color=ft.Colors.ON_SURFACE,
+    )
 
 
 def DayGroup(
@@ -123,6 +144,7 @@ def DayGroup(
     tokens: Tokens,
     *,
     level: int,
+    top: int = 16,
 ) -> ft.Control:
     """Return one day of session results: its heading and its rows, one list item.
 
@@ -136,7 +158,8 @@ def DayGroup(
         saved: The day's saved sessions (``Favorites.ids`` ∩ the day's ids).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens.
-        level: The day heading's level: 3 under a "Sessions (12)" heading, else 2.
+        level: The day heading's level: 3 under a "Sessions" heading, else 2.
+        top: The space above the day heading: 0 right under the "Sessions" heading.
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _DayGroup(
@@ -146,6 +169,7 @@ def DayGroup(
         on_toggle,
         tokens,
         level=level,
+        top=top,
         key=group.day.isoformat(),  # pyright: ignore[reportCallIssue]
     )
 
@@ -160,6 +184,7 @@ def _DayGroup(
     tokens: Tokens,
     *,
     level: int,
+    top: int,
 ) -> ft.Control:
     """The body of ``DayGroup``; it runs only when its props change (F34)."""
     info = use_services().year.conference
@@ -176,7 +201,7 @@ def _DayGroup(
             # A node of its own: else the heading joins the list item's node.
             ft.Semantics(
                 container=True,
-                content=SectionHeader(day_heading(group.day), level=level),
+                content=SectionHeader(day_heading(group.day), level=level, top=top),
             ),
             *rows,
         ],
