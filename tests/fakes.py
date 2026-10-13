@@ -1,5 +1,6 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
 
+import asyncio
 import dataclasses
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -145,6 +146,8 @@ class MemoryShare(ft.Share):
         self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
         self.error: Exception | None = None
+        # When given, a text's sheet stays up until the test sets the event.
+        self.gate: asyncio.Event | None = None
 
     async def share_text(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, text: str, **options: Any
@@ -152,6 +155,8 @@ class MemoryShare(ft.Share):
         if self.error is not None:
             raise self.error
         self.texts.append((text, options))
+        if self.gate is not None:
+            await self.gate.wait()
         return ft.ShareResult(status=self.status, raw="")
 
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]

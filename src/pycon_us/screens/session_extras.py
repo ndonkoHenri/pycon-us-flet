@@ -44,6 +44,12 @@ OPEN_SPACE = "open-space"
 IMAGE_RATIO = 16 / 9
 """The open-space image's frame: the content's width, and nine sixteenths of it high."""
 
+IMAGE_BLUR = 24
+"""How much the frame's copy of the image is blurred, in logical pixels (sigma)."""
+
+IMAGE_SCRIM = 0.3
+"""The opacity of the surface colour over the blurred copy, so the image stands out."""
+
 IMAGE_FADE_MS = 250
 """How long a loaded image takes to fade in (ux.md §3.8)."""
 
@@ -89,6 +95,7 @@ def ShareButton(session: Session) -> ft.Control:
             on_click=share,
             disabled=sharing,
         ),
+        disabled=sharing,
     )
 
 
@@ -103,8 +110,8 @@ def Posters(
     """The posters of a Posters row's detail (SESS-09), under "Posters (25)".
 
     Each is a ``SessionRow`` with its star, as on the Posters track page, without what
-    the page above already says: the "Poster" badge and the place, which every poster
-    shares with the row. The rows are memoised and their views built once per feed
+    the page above already says: the "Poster" badge, the time and the place, which
+    every poster shares with the row (DATA-07). The rows are memoised and their views built once per feed
     version, so a star tap re-renders one row (D-153).
 
     Args:
@@ -138,6 +145,7 @@ def Posters(
             tokens,
             screen=SCREEN,
             omit=omit,
+            show_time=False,
         )
         for view in views
     ]
@@ -169,24 +177,49 @@ def open_space_extras(session: Session, *, fade_ms: int) -> list[ft.Control]:
 def _image(session: Session, *, fade_ms: int) -> ft.Control:
     """The open space's image, scaled down to fit a 16:9 frame the content's width.
 
-    The frame's fill shows while the image loads, and it fades in over it; a small image
-    keeps its size, centred, rather than blur at the frame's. ``placeholder_src`` is not
-    used: Flet sizes the placeholder with the image's own width and height (F44), which
-    an image of unknown size does not have, so it could not fill the frame. When the
+    A small image keeps its size, centred, rather than blur at the frame's. Around an
+    image of other proportions (a portrait flyer, a screenshot) the frame shows the
+    same image again, cropped to fill it and blurred under a scrim, so it is the
+    picture's own colours rather than bars of grey (D-203). The frame's fill shows
+    while the image loads, and the image fades in over it. No ``placeholder_src``:
+    Flet sizes the placeholder with the image's own width and height (F44), which an
+    image of unknown size does not have, so it could not fill the frame. When the
     image does not load, the frame says so (``error_content``). Its name for screen
     readers is the session's: the feed has no description of the picture.
     """
+    fade = ft.Animation(fade_ms, ft.AnimationCurve.EASE_OUT)
+    backdrop = ft.Image(
+        session.image_url,
+        # No fade: Flet lays a fading image out in a loose Stack, so the copy would
+        # keep the image's own proportions instead of covering the frame (F45).
+        fit=ft.BoxFit.COVER,
+        exclude_from_semantics=True,  # the same picture: the one below names it
+        error_content=ft.Container(),  # the image's own error says it once
+        left=0,  # left to bottom 0: it fills the frame
+        top=0,
+        right=0,
+        bottom=0,
+    )
+    scrim = ft.Container(
+        blur=ft.Blur(IMAGE_BLUR, IMAGE_BLUR),
+        bgcolor=ft.Colors.with_opacity(IMAGE_SCRIM, ft.Colors.SURFACE),
+        left=0,
+        top=0,
+        right=0,
+        bottom=0,
+    )
     image = ft.Image(
         session.image_url,
         fit=ft.BoxFit.CONTAIN,
         semantics_label=f"Image for “{session.name}”",
-        fade_in_animation=ft.Animation(fade_ms, ft.AnimationCurve.EASE_OUT),
+        fade_in_animation=fade,
         error_content=_image_error(),
     )
     frame = ft.Container(
-        image,
+        # The Stack takes the frame's size; the image, not positioned, is given at
+        # most that size, so it scales down and a small one stays small, centred.
+        ft.Stack([backdrop, scrim, image], alignment=ft.Alignment.CENTER),
         aspect_ratio=IMAGE_RATIO,
-        alignment=ft.Alignment.CENTER,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
         border_radius=12,  # a card's shape (ux.md §3.6)
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
@@ -198,9 +231,13 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
 
 
 def _image_error() -> ft.Control:
-    """What the frame shows when the image does not load: an icon and a line."""
+    """What the frame shows when the image does not load: an icon beside a line.
+
+    Side by side, so at large text the line grows sideways before it grows down: the
+    frame's height is fixed, and two lines fit it at iOS's largest text size.
+    """
     return ft.Container(
-        ft.Column(
+        ft.Row(
             [
                 ft.Icon(
                     ft.Icons.HIDE_IMAGE_OUTLINED, color=ft.Colors.ON_SURFACE_VARIANT
@@ -209,12 +246,14 @@ def _image_error() -> ft.Control:
                     IMAGE_ERROR,
                     theme_style=ft.TextThemeStyle.BODY_MEDIUM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
-                    text_align=ft.TextAlign.CENTER,
+                    expand=True,
+                    expand_loose=True,  # as wide as it needs, so the row stays centred
                 ),
             ],
-            spacing=8,
+            spacing=12,
             tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=16,
+        padding=12,
     )

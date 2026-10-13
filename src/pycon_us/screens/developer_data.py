@@ -40,6 +40,7 @@ from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, Problem, Source, use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.share import NOT_SHARED as SHEET_NOT_OPENED
 from pycon_us.ui.share import centre
 from pycon_us.ui.status_strip import use_minute
 
@@ -62,7 +63,10 @@ CLEARED: Outcome = (
 NOT_CLEARED: Outcome = ("Couldn't delete the cached schedule.", False)
 NO_LOG: Outcome = ("There's no log to share yet.", False)
 LOG_NOT_FOUND: Outcome = ("Couldn't find the log.", False)
-NOT_SHARED: Outcome = ("Couldn't open the share sheet.", False)
+NOT_SHARED: Outcome = (
+    f"{SHEET_NOT_OPENED}.",
+    False,
+)  # as session detail's Share says it
 LOG_SHARED: Outcome = ("Log shared.", True)
 LOG_OFFERED: Outcome = ("Log handed to the share sheet.", True)
 """When the platform cannot say how the sheet ended (``UNAVAILABLE``): true either way."""

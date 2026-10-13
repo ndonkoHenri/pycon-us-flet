@@ -1,6 +1,7 @@
 """The schedule queries: slots, track pages, posters and schedule order (D-178).
 
-A day's slots, a track page's sessions, a Posters row's posters (SESS-09). #85; DATA-18, DATA-20, DATA-30, SCHED-17; D-20, D-31. Queries never change the model
+A day's slots, a track page's sessions, a Posters row's posters (SESS-09). #85;
+DATA-18, DATA-20, DATA-30, SCHED-17; D-20, D-31. Queries never change the model
 (SCHED-17). Memoised per feed: the same feed, day and filter return the same objects,
 which is what lets the Schedule's memoised day lists, slots and rows skip work (D-153,
 F34).

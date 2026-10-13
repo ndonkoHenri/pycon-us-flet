@@ -11,7 +11,9 @@ import re
 import flet as ft
 
 
-def named(identifier: str, control: ft.Control) -> ft.Control:
+def named(
+    identifier: str, control: ft.Control, *, disabled: bool = False
+) -> ft.Control:
     """Return ``control`` carrying ``identifier``, merged into one node with it.
 
     Merged because an identifier's ``Semantics`` alone is a node of its own: around a
@@ -20,9 +22,12 @@ def named(identifier: str, control: ft.Control) -> ft.Control:
     Args:
         identifier: For UI flows, e.g. ``developer.reset_app``.
         control: The button or row that the identifier names.
+        disabled: Whether ``control`` is disabled. Flet's ``Semantics`` says it is
+            enabled unless it is disabled itself, whatever the control under it says,
+            so the merged node would read as enabled (F42, D-195).
     """
     return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, content=control)
+        content=ft.Semantics(identifier=identifier, disabled=disabled, content=control)
     )
 
 

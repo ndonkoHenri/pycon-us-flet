@@ -282,6 +282,15 @@ def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
     assert no_speakers == "Break. Coffee. 8:00 to 9:00 AM, Expo Hall AB."
 
 
+def test_a_phrase_without_its_time_keeps_its_place() -> None:
+    """The Posters detail says the time above its rows (D-203); a place would stay."""
+    view = view_of(TUTORIAL)
+    phrase = spoken_phrase(["Tutorial"], view, show_time=False)
+    assert phrase == "Tutorial. All about decorators. Room 101B. Reuven M. Lerner."
+    no_place = spoken_phrase([], replace(view, place=""), show_time=False)
+    assert no_place == "All about decorators. Reuven M. Lerner."
+
+
 def test_a_notice_reads_as_its_kind_name_and_time() -> None:
     """ux.md §3.9: "Notice. Registration opens, 7:00 AM"."""
     phrase = notice_phrase("Notice", view_of(NOTICE))

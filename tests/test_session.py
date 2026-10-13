@@ -1,63 +1,43 @@
 """Tests for session detail (SESS-01..03, -06, -07; ux.md §5.5).
 
-The header, When and where, the star, the speakers and the description; Share, a
-Posters row's posters and an open space's image and site link (NEW-06, SESS-09,
-SESS-11).
+The header, When and where, the star, the speakers and the description; Share, the
+posters and an open space's extras are ``test_session_extras.py``'s.
 
-``SessionDetail`` runs in a real Flet session, as the rows do in ``test_session_rows.py``:
-the store providers are written out above it, ``AppScaffold`` is replaced by a column
-that keeps the title, the actions and the body, and taps are dispatched clicks. The
-sessions are the recorded 2026 feed's. How the screen looks, at 200 % text and in dark
+``SessionDetail`` runs in a real Flet session (``tests/session_detail.py``), as the
+rows do in ``test_session_rows.py``. How the screen looks, at 200 % text and in dark
 mode, is checked on devices (the PR); here, what it says and what a tap does.
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass, replace
-from datetime import datetime
+from collections.abc import AsyncIterator, Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
-from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us import clock
-from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
-from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.locations import parent_of
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.prefs import Prefs
 from pycon_us.screens import session as screen
-from pycon_us.screens import session_extras as extras
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.theme import LIGHT_TOKENS, TokensCtx
+from pycon_us.services import Services
 from pycon_us.ui.badges import REMOVED, UNDO
-from pycon_us.ui.share import NOT_SHARED
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-    MemoryShare,
-)
 from tests.feeds import processed
-from tests.sessions import connection
+from tests.session_detail import (
+    BREAK,
+    TALK,
+    VIEW,
+    YEAR,
+    Detail,
+    Render,
+    at,
+    headings,
+    rendering,
+    words,
+)
 from tests.trees import descendants, texts
-
-YEAR = load_year(2026)
-PACIFIC = ZoneInfo("America/Los_Angeles")
-VIEW = "/schedule/session/x"
-"""The View path the screen is rendered at: links push on top of it."""
-
-TALK = "142"
-"""Python for Humans, Sat May 16 10:30-11:00 AM, Grand Ballroom A; a public page."""
 
 TUTORIAL = "19"
 """A tutorial: registration required."""
@@ -77,192 +57,14 @@ PANEL = "110"
 OPEN_SPACE = "9086"
 """pytest for system tests: its Markdown links ``[pytest](pytest.org)`` (D-140)."""
 
-BREAK = (
-    "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, Grand Ballroom B"
-    "-2026-05-16T10:05:00-07:00"
-)
-"""A break in five rooms with no one place to show (DATA-16)."""
-
-
-@dataclass
-class Detail:
-    """A Flet session showing one ``SessionDetail``."""
-
-    session: Session
-    conference: Conference
-    favorites: Favorites
-    launcher: MemoryLauncher
-    share: MemoryShare
-    pushed: list[str]
-    titles: list[str]
-    reopen: Callable[[str | None], None]
-
-    def nodes(self, identifier: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        (found,) = self.nodes(identifier)
-        return found
-
-    def text(self, identifier: str) -> list[str]:
-        return words(self.node(identifier))
-
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
-    async def show(self, session_id: str | None) -> None:
-        """Re-render the same Root with another id in place, or with no detail."""
-        self.reopen(session_id)
-        await self.settle()
-
-    async def click(self, control: ft.Control) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
-
-    @property
-    def snack_bars(self) -> list[ft.SnackBar]:
-        return [
-            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
-        ]
-
-
-type Render = Callable[[str], Awaitable[Detail]]
-
 
 @pytest.fixture
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
     """Return render(session_id): the detail of that session at ``VIEW``."""
-    shown: list[tuple[Session, Services]] = []
-    titles: list[str] = []
-
-    def scaffold(
-        *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
-    ) -> ft.Control:
-        titles.append(title)
-        return ft.Column([ft.Row(actions or []), body])
-
-    monkeypatch.setattr(screen, "AppScaffold", scaffold)
-    monkeypatch.setattr(ft, "use_view_path", lambda: VIEW)
-
-    async def show(session_id: str) -> Detail:
-        storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-        launcher = MemoryLauncher()
-        share = MemoryShare()
-        svc = Services(
-            year=YEAR,
-            storage=storage,
-            memory=ViewMemory(),
-            semantics=MemorySemantics(),
-            haptics=MemoryHaptics(),
-            launcher=launcher,
-            clipboard=MemoryClipboard(),
-            share=share,
-        )
-        conference = Conference(data=processed(2026), source="bundled", version=1)
-        favorites, prefs = Favorites(), Prefs(loaded=True)
-        await favorites.load(storage)
-        reopen: list[Callable[[str | None], None]] = []
-
-        @ft.component
-        def Root() -> ft.Control:
-            # Detail.show() changes the id in place, or leaves the detail (None).
-            shown_id, set_shown_id = ft.use_state(cast(str | None, session_id))
-            reopen[:] = [set_shown_id]
-            return ServicesCtx(
-                svc,
-                lambda: ConferenceCtx(
-                    conference,
-                    lambda: PrefsCtx(
-                        prefs,
-                        lambda: FavoritesCtx(
-                            favorites,
-                            lambda: TokensCtx(
-                                LIGHT_TOKENS,
-                                lambda: (
-                                    screen.SessionDetail(shown_id)
-                                    if shown_id is not None
-                                    else ft.Text("Elsewhere")
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            )
-
-        flet_session = Session(connection())
-        page = flet_session.page
-        pushed: list[str] = []
-        monkeypatch.setattr(page, "navigate", pushed.append)
-        # Bound as Flet binds it while a handler runs; the test runs in a context of
-        # its own (a task), so the binding goes with it.
-        _context_page.set(page)  # pyright: ignore[reportArgumentType]
-        shown.append((flet_session, svc))
-        page.render(Root)
-        flet_session.get_page_patch()
-        detail = Detail(
-            flet_session,
-            conference,
-            favorites,
-            launcher,
-            share,
-            pushed,
-            titles,
-            lambda sid: reopen[0](sid),
-        )
-        await detail.settle()
-        return detail
-
-    try:
+    async with rendering(tmp_path, monkeypatch) as show:
         yield show
-    finally:
-        for flet_session, svc in shown:
-            svc.close()  # the status line's ticks end (D-147)
-            flet_session.close()
-        await asyncio.sleep(0)
-        clock.set_test_now(None)
-
-
-def words(control: ft.Control) -> list[str]:
-    """The visible text under ``control`` in reading order, components and tiles included.
-
-    Unlike ``trees.texts``, it reads a ``ListTile``'s string title and what a component
-    (the status line) rendered.
-    """
-    found: list[str] = []
-
-    def walk(node: object) -> None:
-        if isinstance(node, ft.Control) and node.visible is False:
-            return
-        if isinstance(node, ft.Text):
-            found.append(str(node.value))
-        if isinstance(node, str):
-            found.append(node)
-            return
-        if isinstance(node, ft.Component):
-            body = node._b
-            for child in body if isinstance(body, list) else [body]:
-                walk(child)
-        for name in ("content", "leading", "title", "subtitle", "trailing"):
-            child = getattr(node, name, None)
-            if isinstance(child, (ft.Control, str)) and not isinstance(node, ft.Text):
-                walk(child)
-        for child in getattr(node, "controls", None) or ():
-            walk(child)
-
-    walk(control)
-    return found
-
-
-def at(text: str) -> datetime:
-    """An instant in conference time, e.g. ``at("2026-05-16 10:05")``."""
-    return datetime.fromisoformat(text).replace(tzinfo=PACIFIC)
 
 
 # ------------------------------------------------------------------ header (SESS-01)
@@ -599,14 +401,6 @@ async def test_a_session_without_speakers_has_no_speakers_section(
 # ------------------------------------------------------------------ about (SESS-06)
 
 
-def headings(detail: Detail) -> list[tuple[str, int | None]]:
-    return [
-        (" ".join(words(n)), n.heading_level)
-        for n in detail.session.index.values()
-        if isinstance(n, ft.Semantics) and n.header
-    ]
-
-
 def markdown(detail: Detail) -> ft.Markdown:
     (found,) = [
         n
@@ -770,235 +564,3 @@ async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
     assert words(note)[0] == screen.REMOVED
     assert detail.nodes("session.title")  # the content stays
     assert detail.nodes("session.favorite")  # and the star still works
-
-
-# ------------------------------------------------------------------ Share (NEW-06)
-
-POSTERS = "poster-Expo Hall AB-2026-05-17T09:30:00-07:00"
-"""The Posters row: the poster session, Sun May 17 9:30 AM-1:00 PM, Expo Hall AB."""
-
-FIRST_POSTER = "poster-detail-60"
-"""The first of its 25 posters by title: Beyond “LGTM”, by Daaimah Tibrey."""
-
-SPACE_WITH_IMAGE = "9119"
-"""5K Fun Run: an open space with an image."""
-
-SPACE_WITHOUT_IMAGE = "9078"
-"""GeoData Show & Tell / Meetup: an open space without one."""
-
-
-def actions(detail: Detail) -> list[str | None]:
-    """The app bar's actions, by identifier, in order: the row that holds Share."""
-    for row in detail.session.index.values():
-        if isinstance(row, ft.Row):
-            found = [identifier(control) for control in row.controls]
-            if "session.share" in found:
-                return found
-    raise AssertionError("no Share in the app bar")
-
-
-def identifier(control: ft.Control) -> str | None:
-    """The semantics identifier a control carries, merged or not; None for none."""
-    node: object = control
-    while node is not None:
-        if isinstance(node, ft.Semantics) and node.identifier:
-            return node.identifier
-        node = (
-            node._b
-            if isinstance(node, ft.Component)
-            else getattr(node, "content", None)
-        )
-    return None
-
-
-def share_button(detail: Detail) -> ft.IconButton:
-    return cast(ft.IconButton, detail.node("session.share").content)
-
-
-async def test_share_sits_between_the_star_and_the_overflow(render: Render) -> None:
-    """ux.md §5.5: the star, Share, then More options."""
-    detail = await render(TALK)
-    assert actions(detail) == ["session.favorite", "session.share", "session.overflow"]
-    button = share_button(detail)
-    assert button.icon == ft.Icons.SHARE_OUTLINED
-    assert button.tooltip == extras.SHARE_TOOLTIP
-
-
-async def test_share_sends_the_title_when_and_where_and_the_public_page(
-    render: Render,
-) -> None:
-    detail = await render(TALK)
-    await detail.click(share_button(detail))
-    ((text, options),) = detail.share.texts
-    assert text.split("\n") == [
-        "Python for Humans - Designing Python Code Like a User Interface",
-        "PyCon US 2026 · Saturday, May 16, 10:30–11:00 AM PDT · Grand Ballroom A",
-        "https://us.pycon.org/2026/schedule/presentation/142/",
-    ]
-    assert options["subject"] == (
-        "Python for Humans - Designing Python Code Like a User Interface"
-    )
-
-
-async def test_a_break_shares_its_time_without_a_url(render: Render) -> None:
-    """NEW-06: a synthetic id has no page; a break has no star, but can be shared."""
-    detail = await render(BREAK)
-    assert actions(detail) == ["session.share"]
-    await detail.click(share_button(detail))
-    ((text, _),) = detail.share.texts
-    assert text == "Break\nPyCon US 2026 · Saturday, May 16, 10:05–10:30 AM PDT"
-
-
-async def test_a_share_sheet_that_fails_to_open_says_so(render: Render) -> None:
-    detail = await render(TALK)
-    detail.share.error = RuntimeError("share_text failed")
-    await detail.click(share_button(detail))
-    (snack,) = detail.snack_bars
-    assert cast(ft.Text, snack.content).value == NOT_SHARED
-    assert not share_button(detail).disabled  # it can be tried again
-
-
-# ------------------------------------------------------------------ posters (SESS-09)
-
-
-def poster_rows(detail: Detail) -> list[ft.Semantics]:
-    return [
-        node
-        for node in detail.session.index.values()
-        if isinstance(node, ft.Semantics)
-        and (node.identifier or "").startswith("session.session.poster-detail-")
-    ]
-
-
-async def test_the_posters_row_lists_its_posters_under_a_count(render: Render) -> None:
-    detail = await render(POSTERS)
-    assert ("Posters (25)", 2) in headings(detail)
-    rows = poster_rows(detail)
-    assert len(rows) == 25
-    assert rows[0].identifier == f"session.session.{FIRST_POSTER}"
-    # Neither the badge nor the place: the page above says both.
-    assert rows[0].label == (
-        "Beyond “LGTM”: Building a Python Bot That Teaches Teams How to Actually "
-        "Talk to Each Other. 9:30 AM to 1:00 PM. Daaimah Tibrey."
-    )
-
-
-async def test_a_poster_pushes_its_detail_and_back_returns_to_the_posters(
-    render: Render,
-) -> None:
-    """D-17: one View per hop, so Back from the poster pops to the Posters detail."""
-    detail = await render(POSTERS)
-    row = next(
-        c
-        for c in detail.session.index.values()
-        if isinstance(c, ft.Container) and c.content is poster_rows(detail)[0]
-    )
-    await detail.click(row)
-    assert detail.pushed == [f"{VIEW}/session/{FIRST_POSTER}"]
-    assert parent_of(detail.pushed[0]) == VIEW
-
-
-async def test_a_poster_s_star_saves_that_poster(render: Render) -> None:
-    detail = await render(POSTERS)
-    star = cast(ft.IconButton, detail.node(f"session.favorite.{FIRST_POSTER}").content)
-    await detail.click(star)
-    assert detail.favorites.ids == {FIRST_POSTER}
-
-
-async def test_other_sessions_list_no_posters(render: Render) -> None:
-    detail = await render(FIRST_POSTER)
-    assert poster_rows(detail) == []
-    assert "Posters (25)" not in [text for text, _ in headings(detail)]
-
-
-# ------------------------------------------------------------------ open spaces (SESS-11)
-
-
-def image(detail: Detail) -> ft.Image:
-    (found,) = (c for c in detail.session.index.values() if isinstance(c, ft.Image))
-    return found
-
-
-async def test_an_open_space_shows_its_image_named_for_screen_readers(
-    render: Render,
-) -> None:
-    detail = await render(SPACE_WITH_IMAGE)
-    shown = image(detail)
-    assert shown.src == (
-        "https://pycon-assets.s3.amazonaws.com/2026/media/open_spaces_images/"
-        "running-sand.png"
-    )
-    assert shown.semantics_label == "Image for “5K Fun Run”"
-    assert not shown.exclude_from_semantics
-    assert detail.nodes("session.image")
-
-
-async def test_an_image_that_does_not_load_says_so_in_its_frame(render: Render) -> None:
-    detail = await render(SPACE_WITH_IMAGE)
-    fallback = image(detail).error_content
-    assert fallback is not None
-    assert words(fallback) == [extras.IMAGE_ERROR]
-
-
-async def test_the_image_fits_a_frame_the_content_s_width(render: Render) -> None:
-    """Scaled down within the content width, never cropped (fit, not cover)."""
-    detail = await render(SPACE_WITH_IMAGE)
-    shown = image(detail)
-    assert shown.fit == ft.BoxFit.CONTAIN
-    assert (shown.width, shown.height) == (None, None)  # its frame decides
-    frame = next(
-        c
-        for c in detail.session.index.values()
-        if isinstance(c, ft.Container) and c.content is shown
-    )
-    assert frame.aspect_ratio == extras.IMAGE_RATIO
-
-
-async def test_the_image_fades_in_once_loaded(render: Render) -> None:
-    detail = await render(SPACE_WITH_IMAGE)
-    animation = cast(ft.Animation, image(detail).fade_in_animation)
-    assert animation.duration == extras.IMAGE_FADE_MS
-
-
-async def test_under_reduced_motion_the_image_appears_at_once(
-    render: Render, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(Prefs, "motion_ms", lambda self, ms: 0)
-    detail = await render(SPACE_WITH_IMAGE)
-    assert cast(ft.Animation, image(detail).fade_in_animation).duration == 0
-
-
-async def test_an_open_space_without_an_image_has_no_frame(render: Render) -> None:
-    detail = await render(SPACE_WITHOUT_IMAGE)
-    assert not [c for c in detail.session.index.values() if isinstance(c, ft.Image)]
-    assert detail.nodes("session.site")
-
-
-async def test_an_open_space_links_its_entry_on_the_site_in_the_page(
-    render: Render,
-) -> None:
-    """SESS-11, D-203: the link is in the page, so there is no overflow to repeat it."""
-    detail = await render(SPACE_WITH_IMAGE)
-    assert detail.nodes("session.overflow") == []
-    link = detail.node("session.site")
-    assert link.link  # it leaves the app (ux.md §4.7)
-    tile = next(
-        c
-        for c in detail.session.index.values()
-        if isinstance(c, ft.ListTile) and c.title == "Open on us.pycon.org"
-    )
-    await detail.click(tile)
-    assert detail.launcher.launched == [
-        (
-            "https://us.pycon.org/2026/schedule/open-spaces/#OpenSpace-119",
-            ft.LaunchMode.IN_APP_BROWSER_VIEW,
-        )
-    ]
-
-
-async def test_a_talk_has_no_image_and_no_site_link_in_the_page(
-    render: Render,
-) -> None:
-    detail = await render(TALK)
-    assert detail.nodes("session.site") == []
-    assert detail.nodes("session.image") == []

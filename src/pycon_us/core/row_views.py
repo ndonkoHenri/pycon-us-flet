@@ -230,7 +230,11 @@ def share_text(
 
 
 def spoken_phrase(
-    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
+    labels: Sequence[str],
+    view: SessionView,
+    *,
+    overlaps: Sequence[str] = (),
+    show_time: bool = True,
 ) -> str:
     """Return what a screen reader says for a session row: one phrase (D-33).
 
@@ -244,8 +248,12 @@ def spoken_phrase(
         labels: The badges' labels, in order (``badge_specs()``).
         view: The session's row view.
         overlaps: The names of the saved sessions the row overlaps, if any.
+        show_time: False when the page above says the row's time (the Posters
+            detail, D-203): the phrase leaves it out, as the row does.
     """
-    when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
+    when = ", ".join(
+        part for part in (view.spoken_when if show_time else "", view.place) if part
+    )
     clash = ""
     if overlaps:
         *rest, last = (f"“{name}”" for name in overlaps)
