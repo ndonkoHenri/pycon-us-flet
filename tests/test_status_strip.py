@@ -3,7 +3,7 @@
 The strip's body runs outside a renderer: the hooks it calls (``ft.use_effect``,
 ``ft.use_state`` and the store hooks) are replaced by ``Hooks``, and a fake page is
 bound as Flet binds a session's page. What the strip looks like at 200 % text is
-checked on devices (#76's and #87's PRs).
+checked on devices (#76's, #87's and #195's PRs).
 """
 
 import asyncio
@@ -133,7 +133,8 @@ def strip_rows(strip: ft.Semantics) -> tuple[ft.Row, ft.Row]:
     box = cast(ft.Container, strip.content)
     padded = cast(ft.Container, cast(ft.Column, box.content).controls[0])
     row = cast(ft.Row, padded.content)
-    return row, cast(ft.Row, row.controls[0])
+    line_box = cast(ft.Container, row.controls[0])
+    return row, cast(ft.Row, line_box.content)
 
 
 def icon_of(strip: ft.Semantics) -> ft.Icon:
@@ -175,7 +176,10 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
     assert isinstance(padded.content, ft.Row)
     # Room around a line that wraps at 200 % text (ux.md §3.9).
     assert padded.padding == ft.Padding.only(left=16, top=4, right=8, bottom=4)
-    line_row, button = padded.content.controls
+    line_box, button_box = padded.content.controls
+    assert isinstance(line_box, ft.Container)
+    assert isinstance(button_box, ft.Container)
+    line_row, button = line_box.content, button_box.content
     assert isinstance(line_row, ft.Row)
     icon, text = line_row.controls
     assert isinstance(icon, ft.Icon)
@@ -292,6 +296,14 @@ def test_a_line_too_long_for_the_buttons_side_moves_the_button_under_it(
     assert line_row.tight is True
     assert line_row.expand is None
     assert text.expand and text.expand_loose is True
+    # Alone on its run, Refresh's label starts under the words, and the line keeps
+    # off the strip's top edge; beside the button, both are centred as before.
+    line_box, button_box = cast(list[ft.Container], row.controls)
+    # 8 + a 16 dp line + 8 still fits the 48 dp button's height at 100 %.
+    assert line_box.padding == ft.Padding.symmetric(vertical=8)
+    assert button_box.padding == ft.Padding.only(left=16)  # 16 + 12 - the label's 12
+    assert line_row.spacing == 12 and icon_of(strip).size == 16
+    assert row.spacing == 0  # the indent is the gap beside the line
 
 
 def looks(strip: ft.Semantics) -> tuple[object, ...]:

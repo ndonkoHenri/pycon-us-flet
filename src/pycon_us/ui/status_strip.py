@@ -71,6 +71,12 @@ def strip_line(
 ICON_SIZE = 16
 """The strip's icon at 100 % text, in dp: the height of a ``BODY_SMALL`` line (12/16)."""
 
+LINE_PAD = 8
+"""Space above and below the strip's line, in dp, inside its run."""
+
+REFRESH_INDENT = 16
+"""Space before Refresh, in dp: on a run of its own, its label starts under the words."""
+
 PROGRESS_HEIGHT = 2
 """The height of the strip's refresh bar, in dp (ux.md §3.9)."""
 
@@ -163,15 +169,24 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         tight=True,  # the line's own width, so the wrap below can measure it
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
-    # When the line fits beside the button (any one-line strip at 100 %), the two
-    # share a run, the line centred against the 48 dp button and the button at the
-    # end. When it does not (large text), the button moves under the line, which keeps
-    # the whole width instead of wrapping word by word beside it (as the Schedule's
-    # filter bar does, D-195).
+    # 8 dp above and below the line: centred against the 48 dp button they change
+    # nothing, and when Refresh is on a run of its own they keep the line off the
+    # strip's top edge.
+    line_box = ft.Container(line_row, padding=ft.Padding.symmetric(vertical=LINE_PAD))
+    # The icon's 16 dp and its 12 dp gap, less the button's own 12 dp inset: on a run
+    # of its own, Refresh's label starts under the line's words at 100 % text, as
+    # "Show all" does under the filter bar's (D-195).
+    button_box = ft.Container(button, padding=ft.Padding.only(left=REFRESH_INDENT))
+    # When the line fits beside the button, the two share a run, the line centred
+    # against the 48 dp button and the button at the end. When it does not (large
+    # text, or a long line such as "Couldn't update · …" at 100 %), the button moves
+    # under the line, which keeps the whole width instead of wrapping word by word
+    # beside it. The icon stays in the line's row rather than before the wrap (as the
+    # filter bar has it), so it is level with the line on either layout.
     row = ft.Row(
-        [line_row, button],
+        [line_box, button_box],
         wrap=True,
-        spacing=12,
+        spacing=0,  # the button's indent is the gap between them
         run_spacing=0,  # the button's 48 dp height already spaces it from the line
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
