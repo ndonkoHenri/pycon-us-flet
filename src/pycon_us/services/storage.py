@@ -38,8 +38,11 @@ FALLBACK_DATA_DIR = Path(".flet", "storage", "data")
 """Used under the working directory when the variable is unset, as ``flet run`` would set it."""
 
 SERVICE_ERRORS = (TimeoutError, RuntimeError)
-"""What a Flet service call (SharedPreferences, SemanticsService) raises when the Flutter
-side times out or fails; the app's one name for it."""
+"""What any call to the Flutter side raises (``session.invoke_method``: SharedPreferences,
+SemanticsService, UrlLauncher, Clipboard, ``page.get_device_info``) when it times out
+(``TimeoutError``) or reports an error (``RuntimeError``); the app's one name for it.
+Both messages can repeat the call's arguments: where those hold personal data (an email
+address), a log names the class only (D-72)."""
 
 _write_lock = threading.Lock()
 """Serialises ``write_atomic``: a cancelled ``to_thread`` write keeps running (D-120)."""

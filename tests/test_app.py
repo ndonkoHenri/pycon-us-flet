@@ -29,7 +29,15 @@ from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
-from tests.fakes import FakePage, MemoryHaptics, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
 from tests.feeds import recorded
 
 type Fetch = Callable[..., Awaitable[bytes]]
@@ -61,6 +69,8 @@ def svc(
         memory=ViewMemory(),
         semantics=semantics,
         haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 
@@ -317,7 +327,7 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
     semantics: MemorySemantics,
     network: Network,
 ) -> None:
-    """D-181: an Undo SnackBar then stays until it is used."""
+    """D-184: an Undo SnackBar then stays until it is used."""
     conference, prefs = await started(fake_page, svc)
     assert not prefs.screen_reader
     semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver

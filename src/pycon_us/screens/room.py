@@ -12,22 +12,22 @@ from itertools import groupby
 
 import flet as ft
 
-from pycon_us.core.queries import SessionView, by_day
+from pycon_us.core.row_views import SessionView, by_day
 from pycon_us.core.timefmt import day_heading, time_label
 from pycon_us.favorites import use_favorites
-from pycon_us.screens.stub import note, stub_body
+from pycon_us.screens.stub import not_found, stub_body
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
-from pycon_us.ui.rows import (
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.session_rows import (
     NoticeRow,
     SessionRow,
     TimeGutter,
     is_notice,
     use_session_views,
 )
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 
 SCREEN = "room"
 """The screen's name in its rows' semantics identifiers (decisions §M)."""
@@ -55,7 +55,17 @@ def RoomDetail(room_slug: str) -> ft.View:
     if room is None:
         return AppScaffold(
             title="Not found",
-            body=stub_body([note(f"No room {room_slug!r} in this year's schedule.")]),
+            body=stub_body(
+                [
+                    not_found(
+                        "This room isn't in the current schedule",
+                        icon=ft.Icons.WRONG_LOCATION_OUTLINED,
+                        action="All rooms",
+                        location="/map",
+                        identifier="room.not_found",
+                    )
+                ]
+            ),
         )
 
     controls: list[ft.Control] = []

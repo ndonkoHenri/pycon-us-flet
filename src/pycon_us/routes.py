@@ -30,6 +30,7 @@ from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
+from pycon_us.ui.states import EmptyState
 
 
 @ft.component
@@ -94,18 +95,18 @@ def NotFound() -> ft.Control:
 
     return ft.SafeArea(
         expand=True,
-        content=ft.Column(
-            spacing=16,
-            controls=[
-                ft.Semantics(
-                    header=True,
-                    content=ft.Text(
-                        "Page not found", theme_style=ft.TextThemeStyle.HEADLINE_SMALL
-                    ),
-                ),
-                ft.Text(f"Nothing in the app is at {page.route}.", selectable=True),
-                ft.FilledButton("Go to Now", on_click=go_to_now),
+        content=ft.ListView(
+            [
+                EmptyState(
+                    "Page not found",
+                    icon=ft.Icons.LINK_OFF_OUTLINED,
+                    body=f"Nothing in the app is at {page.route}.",
+                    action="Go to Now",
+                    on_action=go_to_now,
+                    identifier="app.not_found",
+                )
             ],
+            expand=True,
         ),
     )
 

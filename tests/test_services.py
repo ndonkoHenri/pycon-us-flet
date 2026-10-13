@@ -13,7 +13,13 @@ from pycon_us.config import load_year
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import ViewMemory
-from tests.fakes import MemoryHaptics, MemoryPrefs, MemorySemantics
+from tests.fakes import (
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+)
 
 INTERVAL = 0.01
 """Seconds between two ticks in these tests."""
@@ -28,6 +34,8 @@ def svc(tmp_path: Path) -> Services:
         memory=ViewMemory(),
         semantics=MemorySemantics(),
         haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 

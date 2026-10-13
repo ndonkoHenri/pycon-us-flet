@@ -2,23 +2,23 @@
 
 It lists the speaker's sessions as ``SessionRow``s with their stars, in schedule order
 under a heading per day, as P1's detail will (ux.md §5.7, #99): a tap pushes the
-session, one drill level. An
-unknown id shows a not-found state under the back arrow (#90 settles P1's).
+session, one drill level. An unknown id shows a not-found state under the back arrow
+(#90 settles P1's).
 """
 
 import flet as ft
 
 from pycon_us.core.models import ConferenceData
-from pycon_us.core.queries import by_day
+from pycon_us.core.row_views import by_day
 from pycon_us.core.timefmt import day_heading
 from pycon_us.favorites import use_favorites
-from pycon_us.screens.stub import note, stub_body
+from pycon_us.screens.stub import not_found, stub_body
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
-from pycon_us.ui.rows import SessionRow, use_session_views
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.session_rows import SessionRow, use_session_views
 
 SCREEN = "speaker"
 """The screen's name in its rows' semantics identifiers (decisions §M)."""
@@ -52,7 +52,15 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         return AppScaffold(
             title="Not found",
             body=stub_body(
-                [note(f"No speaker {speaker_id!r} in this year's schedule.")]
+                [
+                    not_found(
+                        "This speaker isn't in the current schedule",
+                        icon=ft.Icons.PERSON_OFF_OUTLINED,
+                        action="All speakers",
+                        location="/more/speakers",
+                        identifier="speaker.not_found",
+                    )
+                ]
             ),
         )
     controls: list[ft.Control] = []

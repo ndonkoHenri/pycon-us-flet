@@ -472,7 +472,7 @@ feature, area:data · after P0-18, P0-24 · DATA-03, DATA-31, SCHED-13, SCHED-14
 
 feature, area:shell · after P0-24 · INFO-14
 
-Shared states in `ui/states.py` (one sentence, one action; skeletons only with no data) and `LinkTile` in `ui/rows.py` with the link rule for in-app, web, app and `tel:`/`mailto:` targets.
+Shared states in `ui/states.py` (one sentence, one action; skeletons only with no data) and `LinkTile` in `ui/rows.py` with the link rule (`ui/links.py`) for in-app, web, app and `tel:`/`mailto:` targets.
 
 - External rows are links for screen readers and say they open in the browser.
 - Every empty state names a way out.

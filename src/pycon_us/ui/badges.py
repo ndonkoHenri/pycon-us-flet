@@ -10,7 +10,7 @@ them as an argument, so a memoised row (D-153) that receives the tokens as a pro
 ``FavoriteButton`` is the one favourite control (D-30): a 48 dp star on every session
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
-SnackBar of ux.md §4.4 (D-181).
+SnackBar of ux.md §4.4 (D-184).
 """
 
 import logging
@@ -37,7 +37,7 @@ REGISTRATION = "Registration required"
 
 FAVORITE_LABEL = "Save to My schedule"
 """The star's name for screen readers, the same in both states: its toggle state says
-whether the session is saved ("Save to My schedule, switch, on"; D-181)."""
+whether the session is saved ("Save to My schedule, switch, on"; D-184)."""
 
 ADD_LABEL = "Add to My schedule"
 """The star's tooltip while the session is not saved (D-30): what a tap does."""
@@ -55,7 +55,7 @@ UNDO = "Undo"
 """The SnackBar's one action when the edit can be taken back (D-29)."""
 
 SNACK_BAR_MS = 4000
-"""How long a SnackBar shows (ux.md §4.5), unless a screen reader keeps it (D-181)."""
+"""How long a SnackBar shows (ux.md §4.5), unless a screen reader keeps it (D-184)."""
 
 type ToggleFavorite = Callable[[str], Awaitable[None]]
 """A list's one star handler: ``await on_toggle(session_id)``."""
@@ -156,7 +156,7 @@ def FavoriteButton(
     the scheme's ``Tokens.favorite`` as ``color``. Its tooltip says what a tap does,
     "Add to My schedule" or "Remove from My schedule" (D-27). A screen reader gets one
     node: the stable name ``FAVORITE_LABEL``, a switch, and the saved state as on or
-    off (D-181). The ``IconButton`` alone came out nameless and stateless in
+    off (D-184). The ``IconButton`` alone came out nameless and stateless in
     TalkBack's tree (S2), since a tooltip is not an Android content description.
 
     The state is said once: the tooltip is left out of the semantics (iOS would read
@@ -262,7 +262,7 @@ def _announce(
         storage: Where the favourites are kept.
         change: The edit.
         keep: A screen reader is on: an Undo SnackBar stays until it is used or
-            replaced, as Flutter keeps one with an action (D-181).
+            replaced, as Flutter keeps one with an action (D-184).
     """
     message = feedback(change)
     if message is None:
@@ -281,7 +281,7 @@ def _announce(
             behavior=ft.SnackBarBehavior.FLOATING,
             duration=SNACK_BAR_MS,
             # Flutter keeps a SnackBar with an action until it is used; only a
-            # screen-reader user needs that time to reach Undo (D-181).
+            # screen-reader user needs that time to reach Undo (D-184).
             persist=can_undo and keep,
         )
     )

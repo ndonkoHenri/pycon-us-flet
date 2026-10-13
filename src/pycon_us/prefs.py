@@ -74,7 +74,7 @@ class Prefs:
             ask through ``motion_ms()``.
         screen_reader: A screen reader is on (TalkBack, VoiceOver; Flutter's
             ``accessible_navigation``). Not persisted, read at start and on resume;
-            an Undo SnackBar then stays until it is used or replaced (D-181).
+            an Undo SnackBar then stays until it is used or replaced (D-184).
         loaded: The stored values have been read; it opens the boot gate.
     """
 
