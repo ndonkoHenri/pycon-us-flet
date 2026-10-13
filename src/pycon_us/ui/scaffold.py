@@ -44,7 +44,9 @@ def AppScaffold(
 
     On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
     instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
-    to the system, which leaves the app (D-17, D-142).
+    to the system, which leaves the app (D-17, D-142). Back on a pushed View closes a
+    dialog, a picker, a sheet or a menu open over it, and only then pops the View
+    (D-208).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -83,6 +85,11 @@ def AppScaffold(
         await e.control.confirm_pop(False)  # this View stays; Now replaces the root
 
     @report_errors
+    async def let_pop(e: ft.Event[ft.View]) -> None:
+        # Flet asks only when can_pop refuses a pop, which a pushed View never does.
+        await e.control.confirm_pop(True)
+
+    @report_errors
     async def switch_tab(e: ft.Event[ft.NavigationBar]) -> None:
         # Flutter reports the active destination too, so a re-tap lands here (S4).
         root = TAB_ROOTS[e.control.selected_index]
@@ -100,6 +107,14 @@ def AppScaffold(
         title_control = ft.Semantics(
             identifier=tab.title_identifier, content=title_control
         )
+    on_confirm_pop: ft.ControlEventHandler[ft.View] | None = None  # Now: the system's
+    if back_to_now:
+        on_confirm_pop = leave_for_now
+    elif not is_root:
+        # A handler, though the View can always pop: with one, Flet leaves the system
+        # Back to Flutter's Navigator, which pops the topmost route, the dialog when one
+        # is open; without one, Flet pops this View itself, and the dialog with it (F46).
+        on_confirm_pop = let_pop
     return ft.View(
         route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
         padding=0,
@@ -115,7 +130,7 @@ def AppScaffold(
         navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,
         floating_action_button=fab,
         can_pop=not back_to_now,
-        on_confirm_pop=leave_for_now if back_to_now else None,
+        on_confirm_pop=on_confirm_pop,
         controls=[ft.SafeArea(expand=True, content=Shown(body))],
     )
 
