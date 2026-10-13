@@ -53,7 +53,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import YEARS, processed
-from tests.test_session_rows import _connection
+from tests.sessions import connection
 
 YEAR = load_year(2026)
 ROW = "speakers.speaker."
@@ -388,7 +388,7 @@ async def show(
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )
-    result = Shown(Session(_connection()))
+    result = Shown(Session(connection()))
     header = screen.SectionHeader
 
     def counted_phrase(entry: SpeakerEntry) -> str:

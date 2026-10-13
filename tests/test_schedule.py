@@ -148,8 +148,8 @@ def _scroll_end(pixels: float) -> dict[str, object]:
 
 
 @pytest.fixture
-def now() -> list[datetime]:
-    """The frozen clock: set ``now[0]`` before the screen renders."""
+def now() -> list[datetime | None]:
+    """The frozen clock: set ``now[0]`` before the screen renders; None lifts it."""
     return [DURING]
 
 
@@ -167,7 +167,7 @@ def conference() -> Conference:
 async def shown(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    now: list[datetime],
+    now: list[datetime | None],
     memory: ViewMemory,
     conference: Conference,
 ) -> AsyncIterator[Callable[[], Awaitable[Shown]]]:
@@ -309,6 +309,20 @@ async def test_the_first_day_is_selected_outside_the_conference(
     schedule = await shown()
     assert schedule.tabs.selected_index == 0
     assert all("today" not in _spoken(schedule, i) for i in range(len(DAYS)))
+
+
+async def test_the_developer_fake_clock_picks_today(
+    shown: Callable[[], Awaitable[Shown]], now: list[datetime | None]
+) -> None:
+    """D-187: the fake clock moves ``clock.now()``, and with it the Schedule's today."""
+    now[0] = None  # no test override: the fake clock answers
+    clock.start_fake_clock(datetime(2026, 5, 16, 23, 30, tzinfo=PACIFIC))
+    try:
+        schedule = await shown()
+        assert schedule.tabs.selected_index == DAYS.index(SATURDAY)
+        assert _spoken(schedule, DAYS.index(SATURDAY)) == "Saturday, May 16, today"
+    finally:
+        clock.start_fake_clock(None)
 
 
 async def test_a_remembered_day_wins_over_today(

@@ -19,9 +19,7 @@ from zoneinfo import ZoneInfo
 import flet as ft
 import pytest
 from flet.controls.context import _context_page
-from flet.messaging.connection import Connection
 from flet.messaging.session import Session
-from flet.pubsub.pubsub_hub import PubSubHub
 
 from pycon_us import clock
 from pycon_us.config import load_year
@@ -42,6 +40,7 @@ from tests.fakes import (
     MemorySemantics,
 )
 from tests.feeds import processed
+from tests.sessions import connection
 from tests.trees import descendants, texts
 
 YEAR = load_year(2026)
@@ -180,7 +179,7 @@ async def render(
                 ),
             )
 
-        flet_session = Session(_connection())
+        flet_session = Session(connection())
         page = flet_session.page
         pushed: list[str] = []
         monkeypatch.setattr(page, "navigate", pushed.append)
@@ -210,14 +209,6 @@ async def render(
             flet_session.close()
         await asyncio.sleep(0)
         clock.set_test_now(None)
-
-
-def _connection() -> Connection:
-    """A connection to no client, as Flet's own component tests use."""
-    conn = Connection()
-    conn.pubsubhub = PubSubHub()
-    conn.send_message = lambda message: None  # pyright: ignore[reportAttributeAccessIssue]
-    return conn
 
 
 def words(control: ft.Control) -> list[str]:
