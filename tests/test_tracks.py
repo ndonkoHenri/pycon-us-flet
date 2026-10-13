@@ -294,6 +294,18 @@ async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> N
     assert shown.titles[-1] == "Tracks & session types"
 
 
+async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> None:
+    """D-199's rule, D-214: the Keynotes page lists the four keynotes and the two
+    panels, which the feed calls plenaries; the row opens it under the hub (D-207)."""
+    shown = await show(hub_screen.Tracks)
+    node = shown.node("tracks.track.keynotes")
+    assert node.label == (
+        "Keynotes. Featured talks and panels by invited speakers. Keynote, 6 sessions."
+    )
+    await shown.click(cast(ft.Control, node.parent))
+    assert shown.went == ["/more/tracks/keynotes"]
+
+
 @pytest.mark.parametrize(
     "slug", ["lightning-talks", "open-spaces", "talks", "keynotes"]
 )
@@ -301,8 +313,8 @@ async def test_every_track_row_pushes_its_slug_under_the_hub(
     show: Show, slug: str
 ) -> None:
     """ux.md §5.10, D-207: one rule for every row; the route table opens the
-    lightning talks' and the open spaces' own pages at their slugs, and Back from
-    any of them returns to the hub (D-17). Keynotes is a track page until #104."""
+    keynotes', lightning talks' and open spaces' own pages at their slugs, and Back
+    from any of them returns to the hub (D-17)."""
     shown = await show(hub_screen.Tracks)
     await shown.click(cast(ft.Control, shown.node(f"tracks.track.{slug}").parent))
     assert shown.went == [f"/more/tracks/{slug}"]

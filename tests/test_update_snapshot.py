@@ -185,6 +185,26 @@ def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
     assert files(data_dir) == before
 
 
+def test_a_feed_without_a_keynote_s_session_is_refused_and_nothing_changes(
+    data_dir: Path,
+) -> None:
+    """D-214: the keynotes' year data must fit the snapshot the app ships with."""
+
+    def drop_lin_qiao(doc: dict[str, Any]) -> None:
+        doc["schedule"] = [s for s in doc["schedule"] if s["conf_key"] != 153]
+
+    before = files(data_dir)
+    with pytest.raises(SnapshotError) as error:
+        update_snapshot(
+            2026, data_dir, transport=serving(changed(drop_lin_qiao)), now=NOW
+        )
+    assert str(error.value) == (
+        "the year data does not fit the feed: 2026/content.toml: "
+        "keynotes[0].session_id: '153' is not a session of the year's feed"
+    )
+    assert files(data_dir) == before
+
+
 def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
     data_dir: Path,
 ) -> None:

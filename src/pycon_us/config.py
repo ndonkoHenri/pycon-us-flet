@@ -2,8 +2,8 @@
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
 frozen dataclasses below (the Open spaces and Lightning talks pages' tables, and their
-checks, are in ``year_pages``), through ``year_schema``, then checks their rules. The dataclasses
-are the schema: an unknown or missing key, a wrong type or a broken rule fails at load time
+checks, are in ``year_pages``; the keynotes' in ``year_keynotes``), through
+``year_schema``, then checks their rules. The dataclasses are the schema: an unknown or missing key, a wrong type or a broken rule fails at load time
 with a ``YearDataError`` that names the file, the key and the problem. Years, dates, names and URLs live in the data
 files, never in code; rolling over is a new ``data/<year>/`` folder and a new ``YEAR``.
 
@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
+from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_pages import (
     LightningTalksInfo,
     OpenSpacesInfo,
@@ -86,13 +87,14 @@ HUB_PAGES: dict[str, str | None] = {
     "sprints": None,
     "lightning-talks": "Lightning-talks",
     "open-spaces": "Open Space",
+    "keynotes": "Keynote",
 }
 """The Tracks hub's pages of their own, by segment under ``/more/tracks``, with the key of
 the track each is the page of (the feed's kinds, DATA-14; the sprints are no track, D-126).
 
 More's pages, also the hub's children, so Back returns to the hub (D-207). The routes
 list them before ``:slug``, so the loader refuses a track slug that names another's page.
-Here, with the registry, the loader stays free of Flet. #104 adds ``keynotes``.
+Here, with the registry, the loader stays free of Flet.
 """
 
 
@@ -190,8 +192,8 @@ class ConferenceInfo:
 class Content:
     """The year's content from ``content.toml`` (D-45).
 
-    What feed processing and the Map need, and the copy and links of the Open spaces
-    and Lightning talks pages (D-205).
+    What feed processing and the Map need, the copy and links of the Open spaces and
+    Lightning talks pages (D-205), and the keynotes' people and abstracts (D-214).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -207,6 +209,7 @@ class Content:
             none, whose page shows its sessions alone.
         lightning_talks: The Lightning talks page's copy and links; None for a year
             that has none, whose page shows its sessions alone.
+        keynotes: The keynotes and panels, one entry per session (SESS-08, SPKR-04).
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -215,6 +218,7 @@ class Content:
     other_locations: tuple[str, ...] = ()
     open_spaces: OpenSpacesInfo | None = None
     lightning_talks: LightningTalksInfo | None = None
+    keynotes: tuple[Keynote, ...] = ()
 
 
 @dataclass(frozen=True, eq=False)
@@ -285,12 +289,18 @@ class YearData:
         return Snapshot(raw, captured_at)
 
 
-def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
+def load_year(
+    year: int = YEAR, data_dir: Path = DATA_DIR, *, check_sessions: bool = False
+) -> YearData:
     """Load and check the data files of ``year``.
 
     Args:
         year: The conference year; its files are in ``data_dir/<year>/``.
         data_dir: The folder that holds the year folders.
+        check_sessions: Also refuse a keynote whose session the year's bundled
+            snapshot lacks (D-214). The tests and tools ask; the app does not, since
+            parsing the snapshot at every start would cost what D-38 saves, and a
+            keynote a newer feed drops just shows no card.
 
     Returns:
         The year's data.
@@ -311,7 +321,10 @@ def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
         Content, read_table(folder / "content.toml", content_file), content_file
     )
     _check_content(content, content_file)
-    return YearData(conference, content, folder)
+    data = YearData(conference, content, folder)
+    if check_sessions:
+        check_snapshot_sessions(data, content_file)
+    return data
 
 
 def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
@@ -376,6 +389,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
 
 def _check_content(content: Content, file: str) -> None:
     check_pages(content.open_spaces, content.lightning_talks, file)
+    check_keynotes(content.keynotes, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)

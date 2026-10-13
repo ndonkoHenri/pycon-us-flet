@@ -1,7 +1,7 @@
 # PyCon US 2026: content the app shows (D-45). Loaded by pycon_us.config.load_year().
-# For now it holds what feed processing and the Map need, and the copy and links of the
-# Open spaces and Lightning talks pages (D-205); Wi-Fi, safety contacts, keynotes and the
-# rest arrive with their screens.
+# For now it holds what feed processing and the Map need, the copy and links of the
+# Open spaces and Lightning talks pages (D-205), and the keynotes (D-214); Wi-Fi, safety
+# contacts and the rest arrive with their screens.
 
 # The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
 # names ("Lunch (Hall AB)") and "Expo Hall AB" elsewhere, so a room named "Hall ..." gets
@@ -63,3 +63,150 @@ answer = "Everyone is nervous, even the speakers who look calm. The audience at 
 [[lightning_talks.doubts]]
 doubt = "“My idea isn't good enough”"
 answer = "It's better than you think. There are hardly any bad ideas for a lightning talk."
+
+# The keynotes and panels (SESS-08, SPKR-04, D-214): one entry per session, keyed by the
+# feed's session id, which the tests check against the bundled snapshot. The feed names
+# a keynote by its speaker and links its description to the site, so the talk's title,
+# what it is about and the people on stage are here. Said in our own words from
+# https://us.pycon.org/2026/about/keynote-speakers/ (checked 2026-10-13). The photos are
+# the site's 165 px copies: its originals weigh up to 5.7 MB each.
+# kind: "keynote" (each speaker's photo and bio on the Keynotes card) or "panel" (the
+# abstract on the card, the people as a row of avatars). abstract is Markdown.
+
+[[keynotes]]
+session_id = "153"
+kind = "keynote"
+title = "Your AI Product Doesn't Have a Moat… Yet"
+abstract = """
+Calling the same AI model through the same API as everyone else gives a product no lasting edge: a competitor can ship the same feature tomorrow. The teams pulling ahead, such as Cursor, Notion and Vercel, put fine-tuned models into production and design the product and the model together, in a loop where every correction a user makes improves the model, which improves the product.
+
+Lin Qiao shows what that loop takes in practice (evaluation, reinforcement fine-tuning, infrastructure) and its trade-offs: when to fine-tune rather than write prompts, how to design for cost and latency from the start, and what handing your data to someone else's API can give away.
+"""
+
+[[keynotes.speakers]]
+name = "Lin Qiao"
+role = "CEO and co-founder, Fireworks AI"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/lin_qiao.max-165x165.jpg"
+bio = "Lin Qiao co-founded Fireworks AI, a cloud platform for running generative AI models, and leads it as CEO; teams such as Cursor, Uber, DoorDash and Shopify build, tune and scale their AI products on it. Before Fireworks, Lin co-created PyTorch at Meta and led the team behind it."
+
+[[keynotes]]
+session_id = "164"
+kind = "panel"
+title = "Python is for Everyone: Growing the Community Without Limits"
+abstract = "Hosted by the PSF's Diversity & Inclusion Workgroup. Organizers and contributors from PyLadies and Python groups in Brazil, the United States, Ghana and Malaysia talk about growing the Python community so that it has room for everyone."
+
+[[keynotes.speakers]]
+name = "Débora Azevedo"
+role = "Co-founder, PyLadies Brazil"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/deborah.max-165x165.png"
+bio = "Débora Azevedo teaches in a public school in Brazil and co-founded PyLadies Brazil, the largest PyLadies chapter. Her PhD research is on educational software development; she organizes Python Nordeste, a regional conference, and sat on the PSF board from 2021 to 2024."
+
+[[keynotes.speakers]]
+name = "Alla Barbalat"
+role = "Lead organizer, PyLadies San Francisco"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/alla.max-165x165.png"
+bio = "Alla Barbalat was a lawyer before moving into tech. She leads PyLadies San Francisco, uses Python every day and speaks about where Python, AI and the law meet."
+
+[[keynotes.speakers]]
+name = "Georgi Ker"
+role = "Director and Fellow, Python Software Foundation"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/georgi.max-165x165.jpg"
+bio = "Georgi Ker is a Director and a Fellow of the PSF, where she chairs the Diversity & Inclusion Workgroup, and co-organizes PyLadiesCon. With Mariatta Wijaya, Cheuk Ting Ho and Tereza Iofciu she co-hosts the podcast The Hidden Figures of Python."
+
+[[keynotes.speakers]]
+name = "Theresa Seyram Agbenyegah"
+role = "Programmes and Events Lead, PyLadies Ghana"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Stancy-Portrait.max-165x165.jpg"
+bio = "Theresa Seyram Agbenyegah, Stancy to the tech community, is a software engineer, an open-source advocate and a social entrepreneur. She runs programs and events for PyLadies Ghana, belongs to Python Ghana, the PSF's Diversity & Inclusion Workgroup and the DSF's event support working group, and organizes Django Girls events."
+
+[[keynotes.speakers]]
+name = "Abhijeet Mote"
+role = "Lead Python AI engineer; Fellow, Python Software Foundation"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/MNTN_Matt-Lief-Anderson_2856-Edit.max-165x165.jpg"
+bio = "Abhijeet Mote is a lead Python AI engineer and a PSF Fellow. He founded Python Penang in Malaysia, speaks at conferences such as PyCon Italia, runs workshops and mentors students and people under-represented in tech. His work covers AI systems at scale, distributed systems, data pipelines and LLM applications."
+
+[[keynotes]]
+session_id = "165"
+kind = "keynote"
+title = "Horizonte de sucesos / Event Horizon"
+abstract = """
+Given in Spanish, with live English captions on screen and English audio you can stream to your phone: bring headphones and a charged battery.
+
+Keeping one of the world's most used programming languages going takes more than code: decisions that reach millions of people, a community that never sleeps, and reasons to carry on when nobody asks and nobody pays. Pablo shares what his years in open source have taught him about being a maintainer, what it gives, what it costs, and why it is still worth it.
+
+*En español:* mantener uno de los lenguajes de programación más usados del mundo exige más que código: decisiones que llegan a millones de personas, una comunidad que nunca duerme y motivos para seguir cuando nadie lo pide ni lo paga. Pablo cuenta lo que le han enseñado sus años en el software libre sobre ser maintainer, lo que da, lo que cuesta y por qué sigue valiendo la pena.
+"""
+
+[[keynotes.speakers]]
+name = "Pablo Galindo Salgado"
+role = "CPython core developer, Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Pablo_Galindo_Salgado.max-165x165.jpg"
+bio = "Pablo Galindo Salgado is a CPython core developer, in his sixth term on the Python Steering Council, and was the release manager of Python 3.10 and 3.11. He works on the Python team at Hudson River Trading, and is a theoretical physicist by training, specialized in general relativity and black holes."
+
+[[keynotes]]
+session_id = "176"
+kind = "keynote"
+abstract = """
+In 2026 open-source work is hard to leave at the office: its future, and technology's, is in the news, with hard and often personal questions about ethics, intellectual property and the worth of volunteer work. New contributors and long-time maintainers alike may wonder what they are building for.
+
+amanda asks how a worldwide Python community can stay hopeful, and make room for hope in each other, while building for a shared future we may never see but can still believe in.
+"""
+
+[[keynotes.speakers]]
+name = "amanda casari"
+role = "Engineer and researcher"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/amcasari-headshot.max-165x165.png"
+bio = "amanda casari has worked for more than 20 years across technical and socio-technical fields: developer relations, product management, data science and underwater robotics. amanda has been External Faculty at the Vermont Complex Systems Center since 2021, co-wrote O'Reilly's Feature Engineering for Machine Learning, and is fascinated by complexity, by the gap between the systems we design and the ones that emerge, by roller derby and by pie."
+
+[[keynotes]]
+session_id = "182"
+kind = "keynote"
+title = "Djangonaut Space"
+abstract = """
+Djangonaut Space is a free mentoring program for Django contributors: eight weeks in small groups, each person working at their own pace with guidance. Its pilot ran at the end of 2023, and its sixth session began in April 2026.
+
+It set out to make contributing to Django more sustainable, to help people grow their contributions, to widen who contributes and to prepare them to lead. After seven rounds in three years, Rachell and Tim show what has come of it: more contributions, new leaders, and what a community that welcomes people does for their open-source journeys. Space puns included.
+"""
+
+[[keynotes.speakers]]
+name = "Rachell Calhoun"
+role = "Co-founder, Djangonaut Space"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/rachell_calhoun.max-165x165.jpg"
+bio = "Rachell Calhoun co-founded Djangonaut Space and builds practical tools with Django. For more than ten years she has organized Django Girls workshops on several continents, the work that led to Djangonaut Space; she is a Django Girls trustee and helps organize PyLadies and DjangoCon US events."
+
+[[keynotes.speakers]]
+name = "Tim Schilling"
+role = "Co-founder, Djangonaut Space; Django Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Tim_Schilling.max-165x165.jpg"
+bio = "Tim Schilling is a software engineer who loves Django and its community. He sits on the Django Steering Council, co-founded Djangonaut Space, helps run Django Commons and maintains django-debug-toolbar among other packages. Away from code he bakes bread, roasts coffee and is learning the violin."
+
+[[keynotes]]
+session_id = "183"
+kind = "panel"
+title = "Python Steering Council"
+abstract = "The five elected members of the Python Steering Council. The council looks after the quality and stability of the language and of CPython, the experience of contributing, the core team's relationship with the PSF and how Python Enhancement Proposals are decided, and settles what the core team can't agree on."
+
+[[keynotes.speakers]]
+name = "Barry Warsaw"
+role = "Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Barry_PyCon.max-165x165.jpg"
+
+[[keynotes.speakers]]
+name = "Donghee Na"
+role = "Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/donghee_na.max-165x165.jpg"
+
+[[keynotes.speakers]]
+name = "Pablo Galindo Salgado"
+role = "Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Pablo_Galindo_Salgado.max-165x165.jpg"
+
+[[keynotes.speakers]]
+name = "Savannah Ostrowski"
+role = "Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/savannah.max-165x165.jpg"
+
+[[keynotes.speakers]]
+name = "Thomas Wouters"
+role = "Python Steering Council"
+photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Thomas_Wouters.max-165x165.jpg"

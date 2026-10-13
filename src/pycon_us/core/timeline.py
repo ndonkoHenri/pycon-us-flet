@@ -1,6 +1,7 @@
 """The schedule queries: slots, track pages, posters and schedule order (D-178).
 
-A day's slots, a track page's sessions, a Posters row's posters (SESS-09). #85;
+A day's slots, a track page's sessions, the Keynotes page's sessions (SPKR-04), a
+Posters row's posters (SESS-09). #85;
 DATA-18, DATA-20, DATA-30, SCHED-17; D-20, D-31. Queries never change the model
 (SCHED-17). Memoised per feed: the same feed, day and filter return the same objects,
 which is what lets the Schedule's memoised day lists, slots and rows skip work (D-153,
@@ -209,6 +210,32 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
         )
 
     return _memoised(data, ("track", track), build)
+
+
+def keynote_sessions(
+    data: ConferenceData, track: str, ids: Collection[str]
+) -> tuple[Session, ...]:
+    """Return the Keynotes page's sessions, in the order they happen (SPKR-04, D-214).
+
+    Every session of the keynotes' track, and every session the year's keynote data
+    names: the panels are plenaries in the feed. A keynote the year data has nothing
+    for yet is listed too, so a keynote announced after the build still has its card.
+    Memoised per feed, track and ids.
+
+    Args:
+        data: The processed feed.
+        track: The keynotes' track key (``Keynote``).
+        ids: The session ids of the year's keynote data; one the feed lacks is left out.
+    """
+    wanted = frozenset(ids)
+
+    def build() -> tuple[Session, ...]:
+        found = (
+            s for s in data.sessions.values() if s.track == track or s.id in wanted
+        )
+        return tuple(sorted(found, key=schedule_order))
+
+    return _memoised(data, ("keynotes", track, wanted), build)
 
 
 def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
