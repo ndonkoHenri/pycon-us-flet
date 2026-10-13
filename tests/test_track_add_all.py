@@ -95,10 +95,19 @@ def label_of(action: str | ft.SnackBarAction | None) -> str | None:
     return action.label if isinstance(action, ft.SnackBarAction) else action
 
 
+def label_of_item(item: ft.PopupMenuItem) -> ft.Row:
+    """The item's label: its icon and its text in one row, under the identifier."""
+    return cast(ft.Row, cast(ft.Semantics, item.content).content)
+
+
+def item_text(item: ft.PopupMenuItem) -> ft.Text:
+    (text,) = [c for c in label_of_item(item).controls if isinstance(c, ft.Text)]
+    return text
+
+
 async def add_all(page: Page) -> None:
-    (item,) = [
-        i for i in page.find(ft.PopupMenuItem) if text_of(i.content) == screen.ADD_ALL
-    ]
+    (item,) = page.find(ft.PopupMenuItem)
+    assert item_text(item).value == screen.ADD_ALL
     await page.click(item)
 
 
@@ -208,9 +217,20 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
     assert menu.icon == ft.Icons.MORE_VERT and menu.tooltip == "More options"
     assert page.node("track.menu").content is menu
     (item,) = menu.items
-    assert text_of(item.content) == screen.ADD_ALL
+    assert item_text(item).value == screen.ADD_ALL
     assert cast(ft.Semantics, item.content).identifier == "track.add_all"
     assert page.snack_bars == []  # straight to the SnackBar: no dialog (D-29)
+
+
+async def test_the_items_label_wraps_at_large_text(show: Show) -> None:
+    """F46: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the icon
+    is in the label's own row, where the text takes the rest of the width."""
+    page = await show("charlas")
+    (item,) = page.find(ft.PopupMenuItem)
+    assert item.icon is None
+    icon, text = label_of_item(item).controls
+    assert isinstance(icon, ft.Icon) and icon.icon == ft.Icons.PLAYLIST_ADD
+    assert text is item_text(item) and text.expand
 
 
 @pytest.mark.parametrize("slug", ["open-spaces", "notices", "breaks"])

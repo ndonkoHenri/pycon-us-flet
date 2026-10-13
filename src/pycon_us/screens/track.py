@@ -190,16 +190,25 @@ def offers_add_all(track: Track) -> bool:
 
 
 def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
-    """The app bar's overflow ("More options"): "Add all to My schedule" (D-207)."""
+    """The app bar's overflow ("More options"): "Add all to My schedule" (D-207).
+
+    The icon is in the item's own row, not ``PopupMenuItem.icon``: Flet puts that icon
+    and the text in a ``Row`` without ``Expanded``, so at 200 % text the label ran
+    off the menu's edge (F46). Here the text takes the rest of the row and wraps.
+    """
+    label = ft.Row(
+        [
+            ft.Icon(ft.Icons.PLAYLIST_ADD),
+            ft.Text(ADD_ALL, expand=True),
+        ],
+        spacing=12,
+    )
     menu = ft.PopupMenuButton(
         icon=ft.Icons.MORE_VERT,
         tooltip="More options",
         items=[
             ft.PopupMenuItem(
-                content=ft.Semantics(
-                    identifier=f"{SCREEN}.add_all", content=ft.Text(ADD_ALL)
-                ),
-                icon=ft.Icons.PLAYLIST_ADD,
+                content=ft.Semantics(identifier=f"{SCREEN}.add_all", content=label),
                 on_click=on_add_all,
             )
         ],
