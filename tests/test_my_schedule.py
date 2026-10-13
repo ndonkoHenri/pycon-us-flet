@@ -32,8 +32,8 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
-from pycon_us.ui import states
 from pycon_us.ui.badges import REMOVED, UNDO
 from tests.fakes import (
     MemoryClipboard,
@@ -226,6 +226,7 @@ class Setup:
     loaded: bool = True
     data: bool = True
     problem: Any = None
+    reduce_motion: bool = False
 
 
 @pytest.fixture
@@ -253,7 +254,8 @@ async def shown(
         conference = Conference(data=processed(2026), source="bundled", version=1)
     else:
         conference = Conference(problem=setup.problem)
-    favorites, prefs = Favorites(), Prefs(loaded=True)
+    favorites = Favorites()
+    prefs = Prefs(loaded=True, reduce_motion=setup.reduce_motion)
     if setup.loaded:
         await favorites.load(storage)
     clock.set_test_now(setup.now)
@@ -469,12 +471,29 @@ async def test_earlier_days_and_today_s_ended_sessions_fold_away(
     title = cast(ft.Text, cast(ft.Semantics, earlier_days.title).content)
     assert title.value == f"Earlier days (3{NBSP}sessions)"
     assert earlier_days.expanded is False  # folded until tapped
+    style = cast(ft.AnimationStyle, earlier_days.animation_style)
+    assert style.duration == fold.EXPAND_MS
     assert shown.folded("earlier_days") == [MCP, DECORATORS, RAG]
     assert f"Earlier today (1{NBSP}session)" in shown.texts()
     assert shown.folded("earlier_today") == [CHEESE_SHOP]
     # Today's header comes first, then what is still on or to come.
     assert shown.headers()[:2] == ["Thursday, May 14", "Friday, May 15"]
     assert shown.shown() == [NOTEBOOKS, INFERENCE, WELCOME, KEYNOTE, TALK, OPEN_SPACE]
+
+
+@pytest.fixture
+def reduced(setup: Setup) -> None:
+    setup.reduce_motion = True
+
+
+@pytest.mark.usefixtures("reduced")
+async def test_the_folds_open_without_animation_under_reduced_motion(
+    shown: Shown,
+) -> None:
+    """D-173: the tiles' animation is ``prefs.motion_ms()`` long, 0 here."""
+    for identifier in ("earlier_days", "earlier_today"):
+        style = cast(ft.AnimationStyle, shown.fold(identifier).animation_style)
+        assert style.duration == 0
 
 
 async def test_a_fold_stays_open_across_renders(shown: Shown) -> None:
@@ -522,6 +541,15 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
 ) -> None:
     shown.node("my_schedule.all_over")
     assert "All your saved sessions are over" in shown.texts()
+    # A level, or it is no heading for TalkBack or VoiceOver (F40).
+    (title,) = [
+        c
+        for c in shown.controls
+        if isinstance(c, ft.Semantics)
+        and isinstance(c.content, ft.Text)
+        and c.content.value == screen.ALL_OVER
+    ]
+    assert (title.header, title.heading_level) == (True, 2)
     assert shown.shown() == []
     (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
     assert button.content == "See what's on today"

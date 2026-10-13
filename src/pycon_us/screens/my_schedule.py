@@ -33,6 +33,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.badges import ToggleFavorite, use_favorite_toggle
+from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, StatusStrip, use_minute
 from pycon_us.ui.session_rows import SessionRow, TimeSlot, use_session_views
@@ -60,9 +61,6 @@ UNAVAILABLE_BODY = (
 ALL_OVER = "All your saved sessions are over"
 SEE_TODAY = "See what's on today"
 CONFERENCE_OVER = "{name} is over. Your saved sessions stay here."
-
-EXPAND_MS = 200
-"""A fold tile's expand and collapse (Flutter's default), 0 under reduced motion."""
 
 
 @ft.component
@@ -152,7 +150,7 @@ def MySchedule() -> ft.View:
         day = partial(
             _day, views=by_id, on_toggle=on_toggle, tokens=tokens, use_24h=use_24h
         )
-        expand = _expand_style(prefs.motion_ms(EXPAND_MS))
+        expand = expand_style(prefs)
         now = clock.now()
         folded = fold_ended(agenda, now, info.zone)
         content = []
@@ -232,6 +230,7 @@ def _all_over(
     texts: list[ft.Control] = [
         ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
             header=True,
+            heading_level=2,  # as the day headers' level under #205 (F40)
             container=True,
             content=ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL),
         )
@@ -358,28 +357,14 @@ def _fold(
     style: ft.AnimationStyle,
     identifier: str,
 ) -> ft.Control:
-    """Return a tile that folds what has ended away: collapsed until it is tapped.
+    """Return a ``FoldTile`` that folds what has ended away, collapsed until tapped.
 
-    Controlled (as D-157 asks of text fields): Flutter reports the new state, the
-    screen keeps it, and its next render passes it back. Left to Flutter, the next
-    render would send the default and collapse a tile the user had just opened.
-
-    Args:
-        title: "Earlier days (6 sessions)".
-        controls: What it holds when expanded.
-        expanded: Whether it is open.
-        on_change: Where the screen keeps whether it is open.
-        style: Its expand and collapse animation.
-        identifier: Its semantics identifier, merged into the tile's own node.
+    ``title`` is "Earlier days (6 sessions)"; ``identifier`` goes on the title, so it
+    is merged into the tile's own node. The rest is ``FoldTile``'s.
     """
-
-    @report_errors
-    def changed(e: ft.Event[ft.ExpansionTile]) -> None:
-        on_change(bool(e.data))
-
-    return ft.ExpansionTile(
+    return FoldTile(
         # Quieter than the day header above it: a fold of what is over (ux.md §5.6).
-        title=ft.Semantics(
+        ft.Semantics(
             identifier=identifier,
             content=ft.Text(
                 title,
@@ -387,27 +372,15 @@ def _fold(
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
         ),
-        leading=ft.Icon(ft.Icons.HISTORY, color=ft.Colors.ON_SURFACE_VARIANT),
-        controls=controls,
+        controls,
         expanded=expanded,
-        on_change=changed,
-        animation_style=style,
-        expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,
+        on_change=on_change,
+        style=style,
+        leading=ft.Icon(ft.Icons.HISTORY, color=ft.Colors.ON_SURFACE_VARIANT),
         # Open, a tonal fill sets what has ended apart from what is still to come
-        # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on),
-        # in place of the default lines above and below.
+        # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on).
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-        shape=ft.RoundedRectangleBorder(),
-        collapsed_shape=ft.RoundedRectangleBorder(),
     )
-
-
-def _expand_style(ms: int) -> ft.AnimationStyle:
-    """Return a fold tile's animation: ``ms`` long, none under reduced motion (D-173)."""
-    if not ms:
-        return ft.AnimationStyle.no_animation()
-    duration = ft.Duration(milliseconds=ms)
-    return ft.AnimationStyle(duration=duration, reverse_duration=duration)
 
 
 def _sessions(days: Sequence[AgendaDay]) -> str:

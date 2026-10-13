@@ -26,11 +26,9 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
+from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import TICK_SECONDS, current_minute, stop_ticks
-
-EXPAND_MS = 200
-"""The folded rooms' opening, an M3 small change (ux.md §3.8); 0 under reduced motion."""
 
 
 def room_href(view_path: str, room: Room, session_id: str) -> str:
@@ -155,8 +153,8 @@ def OtherRooms(
 ) -> ft.Control:
     """The other rooms, folded: lightning talks and breaks list up to seven.
 
-    A component, so it holds whether it is open (D-157's rule for inputs): an
-    ``ExpansionTile`` whose ``expanded`` is left to Flutter folded up again when the
+    A component, so it holds whether it is open: a ``FoldTile`` (D-157's rule for
+    inputs), since one whose ``expanded`` was left to Flutter folded up again when the
     user came back from a room's detail.
 
     Args:
@@ -167,29 +165,11 @@ def OtherRooms(
     """
     prefs = use_prefs()
     is_open, set_open = ft.use_state(False)
-
-    @report_errors
-    def toggled(e: ft.Event[ft.ExpansionTile]) -> None:
-        set_open(bool(e.data))
-
-    no_border = ft.RoundedRectangleBorder()  # in a card: no divider lines when open
     return ft.Semantics(
         identifier=f"{screen}.other_rooms",
-        content=ft.ExpansionTile(
-            title=ft.Text(where.others_label),
-            # Under the room tile, a blank as wide as its icon lines the two titles
-            # up; alone (a break in many rooms), the place icon.
-            leading=ft.Container(width=24)
-            if where.label
-            else ft.Icon(ft.Icons.PLACE_OUTLINED),
-            expanded=is_open,
-            on_change=toggled,
-            shape=no_border,
-            collapsed_shape=no_border,
-            animation_style=ft.AnimationStyle(duration=prefs.motion_ms(EXPAND_MS)),
-            # Each room's title under the tile's title: 16 + 24 + 16 dp in.
-            controls_padding=ft.Padding.only(left=40),
-            controls=[
+        content=FoldTile(
+            ft.Text(where.others_label),
+            [
                 LinkTile(
                     room.name,
                     room_href(view_path, room, session.id),
@@ -197,6 +177,16 @@ def OtherRooms(
                 )
                 for room in where.others
             ],
+            expanded=is_open,
+            on_change=set_open,
+            style=expand_style(prefs),
+            # Under the room tile, a blank as wide as its icon lines the two titles
+            # up; alone (a break in many rooms), the place icon.
+            leading=ft.Container(width=24)
+            if where.label
+            else ft.Icon(ft.Icons.PLACE_OUTLINED),
+            # Each room's title under the tile's title: 16 + 24 + 16 dp in.
+            controls_padding=ft.Padding.only(left=40),
         ),
     )
 
