@@ -17,8 +17,7 @@ left out, and so is a track without sessions in the current feed, which would op
 empty page. The sprints are not a track of the feed, which has no sessions for them
 (D-126), but they are a way to take part, so Community ends with a Sprints row, built
 like the others, that pushes the Sprints page under the hub (``/more/tracks/sprints``,
-EVT-05). Without data
-the page loads and fails as the Speakers list does (ux.md §4.1).
+EVT-05). Without data the page loads and fails as the Speakers list does (ux.md §4.1).
 """
 
 from dataclasses import dataclass
