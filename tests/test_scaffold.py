@@ -187,6 +187,34 @@ async def test_back_on_a_root_other_than_now_goes_to_now(
     assert confirmed == [False]
 
 
+@pytest.mark.parametrize(
+    "view_path",
+    ["/more/developer", "/schedule/session/42", "/search", "/more/sprints"],
+)
+async def test_back_on_a_pushed_view_is_left_to_flutters_navigator(
+    hooks: Hooks, page: FakePage, view_path: str
+) -> None:
+    """With a handler, Flet leaves Back to the Navigator, which closes a dialog first.
+
+    Without one, Flet pops a View that can pop by itself, and the dialog open over it
+    with it (F46, D-208, #235). The handler lets any pop it is asked about through:
+    the pop then reaches ``main.py``'s ``on_view_pop``, which navigates.
+    """
+    view = view_at(hooks, page, view_path)
+    assert view.can_pop is True  # the iOS edge swipe and predictive Back stay (D-148)
+    assert view.on_confirm_pop is not None
+
+    confirmed: list[bool] = []
+
+    async def confirm_pop(should_pop: bool) -> None:
+        confirmed.append(should_pop)
+
+    event = SimpleNamespace(control=SimpleNamespace(confirm_pop=confirm_pop))
+    await cast(Any, view.on_confirm_pop)(event)
+    assert confirmed == [True]
+    assert page.navigated == []
+
+
 def test_back_on_now_is_left_to_the_system(hooks: Hooks, page: FakePage) -> None:
     view = view_at(hooks, page, "/now")
     assert app_bar(view).leading is None
