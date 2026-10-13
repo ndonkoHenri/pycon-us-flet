@@ -32,7 +32,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
 | 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` plus the build number constant (D-83) | `page.get_app_info()` | P2 | XS | proposed |
 | 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
-| 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P2 | XS | proposed (one PR with U16) |
+| 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
 | 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
@@ -604,7 +604,7 @@ class AppInfo:
 | Field | Value |
 |---|---|
 | Serves | THEME-11 (text at 200 %), THEME-09 (reduced motion), the high-contrast switch default (D-23) |
-| Interim | Fluid layouts with no fixed heights around text (D-26). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). |
+| Interim | Fluid layouts with no fixed heights around text (D-26). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). On Android a change made while the app is in the background often reaches Flutter seconds after that read, so the app's own durations follow only at the following resume (#178, accepted until U17 by D-183). |
 | Today | `PageMediaData` has `padding`, `view_padding`, `view_insets`, `device_pixel_ratio`, `orientation` and `always_use_24_hour_format`. Its Dart builder (`DART/widgets/page_media.dart:56-64`) already sends a `media_change` event whenever these change, and `page.on_media_change` receives the new `PageMediaData` (exists). |
 | Change | Add five fields, read in the same Dart builder:<br>• `text_scale_factor` from `MediaQuery.textScalerOf(context)`;<br>• `disable_animations`, `high_contrast`, `bold_text` and `accessible_navigation` from `MediaQuery`.<br>Reading them makes the builder depend on them, so the **existing** `on_media_change` becomes the change event. That covers U17 with no new event type. |
 
@@ -619,7 +619,7 @@ class AppInfo:
 
 **Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live.
 
-**Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values.
+**Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values, also when the change was made with the app in the background and reaches Flutter seconds after the return (#178's case, D-183; tracked by #183).
 
 ### 5.5 U10: `AppBar.bottom` (later; S)
 
