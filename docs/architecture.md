@@ -586,15 +586,18 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 | Query | Rule | Features |
 |---|---|---|
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
-| `timeline(data, day, excluded)` | one item per time slot, rows ordered by start then room (D-31); a track passes unless excluded | DATA-18, SCHED-02 |
+| `timeline(data, day, excluded)` | a tuple of `Slot(key, start, sessions)`, one per time slot; `key` is `"slot-<iso>"`, the slot item's `ScrollKey`; rows in `schedule_order`: shown start, then shown room in natural order (D-31), then name and id, rows without a place first; a track passes unless excluded, and a slot the filter empties is left out. The only query that takes `excluded`, called only by the Schedule (a test checks both). Memoised (below). Built in P1 (#85, D-178) | DATA-18, DATA-30, SCHED-02 |
 | `search(data, query, scope)` | folded, **all** words must match `search_text` (D-46); grouped by type, sessions by day; ignores filters | NEW-02, SPKR-02 |
 | `now_next(sessions, now)` | Now = `start <= now < end`; Next = the earliest later start; ignores filters | SCHED-25 |
 | `next_for_me(data, favorites, now)` | earliest saved session with `end > now`, within 3 h | SCHED-25 |
 | `my_schedule(data, favorites)` | saved sessions by day, plus `overlaps: dict[id, list[id]]` (sorted sweep) | NEW-01 |
 | `current_slot_key(day, now)` | first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey` | SCHED-16 |
 | `speakers(data)` | sorted by folded displayed name (D-46) | SPKR-01 |
-| `track_sessions`, `room_sessions` | flat by start (poster details included), grouped by day | SCHED-22, ROOM-02 |
+| `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row; ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
+| `room_sessions` | flat by start (poster details included), grouped by day | ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
+
+**Memo (D-178).** The schedule queries keep their results per processed feed, in a `WeakKeyDictionary` keyed by the `ConferenceData` (one object per `Conference.version`, so a replaced feed's results go with it), then by day and the excluded set (order-free). The same arguments return the same objects; a slot the filter leaves alone is the same object filtered or not, and a filter that hides nothing on a day returns the whole day's tuple. That is what lets the Schedule's memoised day lists and slot items skip their bodies (D-153, F34); `Slot` and `DaySessions` are also frozen values, so equal ones compare equal, and their sessions are the model's own objects, compared by identity. A screen still wraps the call in `use_memo` on `conference.version` (§6.4); the query's memo keeps the objects stable across a filter change and a remount.
 
 ```python
 # src/pycon_us/core/queries.py (excerpt)
