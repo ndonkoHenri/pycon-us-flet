@@ -22,13 +22,13 @@ from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import note, stub_body
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import Conference, Problem, use_conference
+from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.session_rows import SessionRow, use_session_views
-from pycon_us.ui.states import EmptyState, SkeletonList
+from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
 SOURCE_LABELS = {
     "none": "No schedule yet",
@@ -36,12 +36,6 @@ SOURCE_LABELS = {
     "cache": "Schedule saved on this device",
     "network": "Schedule downloaded",
 }
-
-NO_DATA_BODY: dict[Problem, str] = {
-    "offline": "Connect to the internet and try again.",
-    "server": "The schedule couldn't be read. Try again in a few minutes.",
-}
-"""The way out after a failed first fetch, by why it failed (D-146, ux.md §4.6)."""
 
 SAMPLE_SIZE = 5
 """How many sessions with speakers the stub shows, for the drill and the star."""
