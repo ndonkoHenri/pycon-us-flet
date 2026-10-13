@@ -64,6 +64,11 @@ class SearchResults:
         """How many sessions matched, over all days."""
         return sum(len(day.sessions) for day in self.sessions)
 
+    @property
+    def empty(self) -> bool:
+        """Whether nothing matched, of any type."""
+        return not (self.sessions or self.speakers or self.rooms)
+
 
 def search_index(data: ConferenceData) -> SearchIndex:
     """Return the index that ``search()`` scans, and log how long building it took.
