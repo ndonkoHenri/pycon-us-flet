@@ -212,9 +212,9 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | Component | Flet building blocks | Spec | Accessibility |
 |---|---|---|---|
 | `AppScaffold` | `View(appbar, navigation_bar` or rail`, floating_action_button, controls=[SafeArea(...)])` | `AppBar(title, actions, elevation_on_scroll)`, title always visible; bar or rail on roots; back arrow on pushed Views | Title is the page name |
-| `SessionRow` | sketch below; a memoised component keyed by session id (D-153, D-177) | Badges; title ≤ 3 lines; meta "9:25–10:10 AM · Room 104A" and speakers in `on_surface_variant`; optional elapsed `ProgressBar(bar_height=3)` | One phrase: "Talk. Title. 9:25 to 10:10 AM, Room 104A. Ana Lima."; star is its own stop; identifiers `<screen>.session.<id>`, `<screen>.favorite.<id>` |
-| `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add; feedback per §4.4 from `use_favorite_toggle()` (D-177) | Tooltip is the name; `Semantics(label, button=True, toggled=...)`, so the state is announced (D-177) |
-| `NoticeRow` | `MergeSemantics(Container(bgcolor=surface_container, border_radius=12, Row[Icon(<track icon>), Column[Text(TITLE_SMALL), Text(meta)]]))`, memoised and keyed like `SessionRow` | Notices, breaks, meals (the `logistics` track group); no star; tappable only with a description (SCHED-04); the icon is the track's from `conference.toml` (`INFO_OUTLINE` notices, `COFFEE_OUTLINED` breaks) | "Notice. Registration opens, 7:00 AM."; its own node (D-177) |
+| `SessionRow` | sketch below; a memoised component keyed by session id (D-153, D-181) | Badges; title ≤ 3 lines; meta "9:25–10:10 AM · Room 104A" and speakers in `on_surface_variant`; optional elapsed `ProgressBar(bar_height=3)`. The meta's time and place are two texts in a wrapping row, so at large text the place moves down whole and the "·" ends a line; "AM" keeps to its time. A row says no day: a list that spans days (a speaker's, a room's) puts a `SectionHeader` per day above its rows (`queries.by_day()`) | One phrase, then its role: "Talk. Title. 9:25 to 10:10 AM, Room 104A. Ana Lima." and "button"; star is its own stop; identifiers `<screen>.session.<key>`, `<screen>.favorite.<key>`, the key from `semantics_key()` (lower case, `-` for spaces and colons) |
+| `FavoriteButton` | sketch below | 48 dp; `selection_click()` on add; feedback per §4.4 from `use_favorite_toggle()` (D-181); tooltip "Add to My schedule" / "Remove from My schedule" (what a tap does) | One stable name and a state, said once: `Semantics(label="Save to My schedule", button=True, toggled=...)`, heard as "Save to My schedule, switch, on"; the tooltip is left out of the semantics and the icon swaps without `IconButton.selected` (D-181) |
+| `NoticeRow` | `MergeSemantics(Container(bgcolor=surface_container, border_radius=12, Row[Icon(<track icon>), Column[Text(TITLE_SMALL), Text(meta)]]))`, memoised and keyed like `SessionRow` | Notices, breaks, meals (the `logistics` track group); no star; tappable only with a description (SCHED-04); the icon is the track's from `conference.toml` (`INFO_OUTLINE` notices, `COFFEE_OUTLINED` breaks); padding 12 × 8 and margin 16 × 4, so its title starts 12 dp down, on the gutter's line | "Notice. Registration opens, 7:00 AM."; its own node, a button when it opens (D-181); identifier `<screen>.notice.<key>` |
 | `TrackBadge` | `Container(bgcolor, border=Border.all(1, fill or text), border_radius=8, padding=Padding.symmetric(horizontal=8, vertical=2), Text(LABEL_SMALL))`, a plain builder given its `BadgeColors` (D-174); `session_badges()` and `badge_row()` (`Row(wrap=True, spacing=8, run_spacing=4)`, §3.6's grid) beside it | §3.4; not a `Chip` (Chips are interactive); the label wraps inside the pill at large text, never clipped | Text carries the meaning |
 | `TimeGutter` | `Column[Text("9:25", TITLE_SMALL), Text("AM", LABEL_SMALL)]` over an invisible "10:00" / "AM" in a `Stack`, padding 16 left and 8 right: no fixed width, so it grows with the text and is the same for every slot (D-158) | Left of each slot; replaces sticky headers (**GAP** U2) | `Semantics(header=True, label="9:25 AM", exclude_semantics=True)` |
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
@@ -231,19 +231,20 @@ import flet as ft
 
 def FavoriteButton(selected: bool, on_click, *, color: str, identifier: str) -> ft.Control:
     """The one favourite control (D-30): a 48 dp labelled star (ui/badges.py)."""
-    label = "Remove from My schedule" if selected else "Add to My schedule"
-    return ft.MergeSemantics(  # one node: name, button role, saved state (D-177)
+    return ft.MergeSemantics(  # one node: a stable name, a switch, on or off (D-181)
         content=ft.Semantics(
-            label=label,
+            label="Save to My schedule",
             button=True,
             toggled=selected,
             identifier=identifier,
             content=ft.IconButton(
-                icon=ft.Icons.STAR_BORDER,
-                selected_icon=ft.Icons.STAR,
-                selected=selected,
-                selected_icon_color=color,  # Tokens.favorite, a prop (D-150)
-                tooltip=label,
+                # Not IconButton.selected: its Semantics(selected:) would add "selected".
+                icon=ft.Icons.STAR if selected else ft.Icons.STAR_BORDER,
+                icon_color=color if selected else None,  # Tokens.favorite (D-150)
+                tooltip=ft.Tooltip(  # what a tap does; iOS would read it after the name
+                    message="Remove from My schedule" if selected else "Add to My schedule",
+                    exclude_from_semantics=True,
+                ),
                 on_click=on_click,
             ),
         )
@@ -262,14 +263,15 @@ def _SessionRow(view: SessionView, is_favorite, on_toggle, tokens: Tokens, *, sc
     specs = badge_specs(view.session, info, tokens)  # (label, colours), D-174
     text = ft.Semantics(
         label=spoken_phrase([label for label, _ in specs], view),
-        identifier=f"{screen}.session.{view.session.id}",
+        identifier=f"{screen}.session.{semantics_key(view.session.id)}",
+        button=True,  # it opens the session
         exclude_semantics=True,  # the phrase replaces the texts
         content=ft.Column(
             spacing=4,
             controls=[
                 badge_row([TrackBadge(label, colors) for label, colors in specs]),
                 ft.Text(view.session.name, theme_style=ft.TextThemeStyle.TITLE_MEDIUM, max_lines=3),
-                ft.Text(view.meta, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                _meta(view),  # Row(wrap=True)[Text("9:25–10:10 AM ·"), Text(place)]
                 ft.Text(view.speakers, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
             ],
         ),
@@ -290,7 +292,7 @@ def _SessionRow(view: SessionView, is_favorite, on_toggle, tokens: Tokens, *, sc
     )
 ```
 
-`SessionView` is a frozen view model from a pure query in `core/queries.py` (`session_view()`, `session_views()`); rows never format times themselves. A list owner gets its views from `use_session_views(conference, ids, use_24h=...)`, memoised on the feed version, the ids and the clock format, and its one star handler from `use_favorite_toggle(favorites)` (D-177). The Schedule memoises the whole path (D-153, S2): `ft.memo` day lists given only their day's favourites, `ft.memo` slot items given only their slot's favourites, and `ft.memo` rows keyed by session id on `(row view, is_favorite)`, with view models built once per feed version and `on_toggle` from `use_callback`. A star tap then re-renders one row; memoising the rows alone left the parents' rebuild (38 ms against 3 ms on the busiest day, F34).
+`SessionView` is a frozen view model from a pure query in `core/queries.py` (`session_view()`, `session_views()`); rows never format times themselves. A list owner gets its views from `use_session_views(conference, ids, use_24h=...)`, memoised on the feed version, the ids and the clock format, and its one star handler from `use_favorite_toggle(favorites)` (D-181). The Schedule memoises the whole path (D-153, S2): `ft.memo` day lists given only their day's favourites, `ft.memo` slot items given only their slot's favourites, and `ft.memo` rows keyed by session id on `(row view, is_favorite)`, with view models built once per feed version and `on_toggle` from `use_callback`. A star tap then re-renders one row; memoising the rows alone left the parents' rebuild (38 ms against 3 ms on the busiest day, F34).
 
 ---
 
@@ -337,7 +339,7 @@ No blocking loaders (SCHED-28 dropped); never a full-screen error while data exi
 
 ### 4.5 Feedback (D-29) and haptics
 
-- **Transient result, maybe undoable:** `SnackBar(behavior=SnackBarBehavior.FLOATING, duration=4000, action=SnackBarAction(...))`, one action: "Removed from My schedule · Undo", "Password copied". Flutter keeps a SnackBar with an action until it is used (`persist` defaults to true then), so ours set `persist` to `Prefs.screen_reader`: 4 s for everyone, until used or replaced while TalkBack or VoiceOver is on (D-177).
+- **Transient result, maybe undoable:** `SnackBar(behavior=SnackBarBehavior.FLOATING, duration=4000, action=SnackBarAction(...))`, one action: "Removed from My schedule · Undo", "Password copied". Flutter keeps a SnackBar with an action until it is used (`persist` defaults to true then), so ours set `persist` to `Prefs.screen_reader`: 4 s for everyone, until used or replaced while TalkBack or VoiceOver is on (D-181).
 - **Persistent condition needing action:** `Banner(leading, content, actions)`: "Notifications are off · Open settings", "3 scans haven't synced · Sync now".
 - **Data status:** `StatusStrip`. **A result the user waits for** (sign-in errors, scan outcomes): in place.
 - **Choice in context:** `BottomSheet(show_drag_handle=True, use_safe_area=True)`: filters, permission primer, lead note.
