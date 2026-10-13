@@ -7,7 +7,7 @@ not-found state under the back arrow (#90 settles P1's).
 import flet as ft
 
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_body
+from pycon_us.screens.stub import nav_tile, not_found, stub_body
 from pycon_us.state import use_conference
 from pycon_us.ui.scaffold import AppScaffold
 
@@ -27,7 +27,15 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         return AppScaffold(
             title="Not found",
             body=stub_body(
-                [note(f"No speaker {speaker_id!r} in this year's schedule.")]
+                [
+                    not_found(
+                        "This speaker isn't in the current schedule",
+                        icon=ft.Icons.PERSON_OFF_OUTLINED,
+                        action="All speakers",
+                        location="/more/speakers",
+                        identifier="speaker.not_found",
+                    )
+                ]
             ),
         )
     sessions = sorted(

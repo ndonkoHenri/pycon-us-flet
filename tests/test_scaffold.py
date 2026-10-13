@@ -43,7 +43,14 @@ from pycon_us.ui.scaffold import (
     search_button,
     strip_line,
 )
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
@@ -57,7 +64,12 @@ def year() -> YearData:
 def svc(year: YearData, tmp_path: Path) -> Services:
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
-        year=year, storage=storage, memory=ViewMemory(), semantics=MemorySemantics()
+        year=year,
+        storage=storage,
+        memory=ViewMemory(),
+        semantics=MemorySemantics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 
@@ -749,6 +761,8 @@ def test_only_now_and_schedule_refresh_every_15_minutes(
     for name, fake in (("use_services", svc), ("use_conference", conference)):
         if hasattr(module, name):
             monkeypatch.setattr(module, name, lambda fake=fake: fake)
+    if hasattr(module, "SkeletonList"):  # without data the Schedule shows it (#83)
+        monkeypatch.setattr(module, "SkeletonList", lambda: ft.Text("loading"))
 
     inspect.unwrap(screen)()
 

@@ -29,7 +29,14 @@ from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics, bound
+from tests.fakes import (
+    FakePage,
+    MemoryClipboard,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
 from tests.feeds import recorded
 
 type Fetch = Callable[..., Awaitable[bytes]]
@@ -56,7 +63,12 @@ def svc(
 ) -> Services:
     storage = Storage(prefs=shared, directory=tmp_path, year=2026)
     return Services(
-        year=year, storage=storage, memory=ViewMemory(), semantics=semantics
+        year=year,
+        storage=storage,
+        memory=ViewMemory(),
+        semantics=semantics,
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
     )
 
 

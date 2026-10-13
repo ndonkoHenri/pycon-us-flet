@@ -1,5 +1,6 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
 
+import dataclasses
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, cast
@@ -75,6 +76,34 @@ class MemorySemantics(ft.SemanticsService):
         return dict(self.features)
 
 
+class MemoryLauncher(ft.UrlLauncher):
+    """UrlLauncher that records what it was asked to open instead of opening it."""
+
+    def init(self) -> None:
+        self.launched: list[tuple[str, ft.LaunchMode]] = []
+        self.error: Exception | None = None
+
+    async def launch_url(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, url: str, *, mode: ft.LaunchMode = ft.LaunchMode.PLATFORM_DEFAULT
+    ) -> None:
+        if self.error is not None:
+            raise self.error
+        self.launched.append((url, mode))
+
+
+class MemoryClipboard(ft.Clipboard):
+    """Clipboard that keeps what was copied instead of reaching the platform."""
+
+    def init(self) -> None:
+        self.value: str | None = None
+        self.error: Exception | None = None
+
+    async def set(self, value: str) -> None:
+        if self.error is not None:
+            raise self.error
+        self.value = value
+
+
 class FakePage:
     """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
 
@@ -94,6 +123,15 @@ class FakePage:
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
         self.dialogs: list[ft.DialogControl] = []
+        self.platform = ft.PagePlatform.IOS
+        self.device: ft.DeviceInfo | None = None
+        self.device_error: Exception | None = None
+
+    async def get_device_info(self) -> ft.DeviceInfo | None:
+        """Return ``device``, or raise ``device_error``, as the Flutter side would."""
+        if self.device_error is not None:
+            raise self.device_error
+        return self.device
 
     def show_dialog(self, dialog: ft.DialogControl) -> None:
         self.dialogs.append(dialog)
@@ -112,3 +150,17 @@ def bound(page: FakePage) -> Iterator[ft.Page]:
         yield cast(ft.Page, page)
     finally:
         _context_page.reset(token)
+
+
+def android_device(sdk: int) -> ft.AndroidDeviceInfo:
+    """An Android device on API level ``sdk``; every other field is blank."""
+    blank: dict[object, object] = {str: "", int: 0, bool: False}
+    fields = {
+        field.name: blank.get(field.type, [])
+        for field in dataclasses.fields(ft.AndroidDeviceInfo)
+        if field.name != "version"
+    }
+    version = ft.AndroidBuildVersion(
+        code_name="REL", incremental="", release="", sdk=sdk
+    )
+    return ft.AndroidDeviceInfo(**fields, version=version)  # pyright: ignore[reportArgumentType]

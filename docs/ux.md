@@ -220,10 +220,10 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 | `SpeakerRow` | `ListTile(leading=CircleAvatar(foreground_image_src, content=initials, radius=24), title, subtitle)` | Subtitle: first session, "· +1 more" | "Ana Lima, speaking: Title" |
 | `SectionHeader` | `Semantics(header=True, content=Container(Text(TITLE_SMALL, color=primary)))` | Day, letter, floor, section titles; not sticky | Heading navigation |
 | `StatusStrip` | `Row[Row[Icon(16), Text(BODY_SMALL)], TextButton("Refresh")]`, the inner row top-aligned so a wrapped line keeps the icon beside its first line, and centred against the 48 dp button + `ProgressBar(bar_height=2, value=None)` in a 2 dp slot that stays when the bar hides (nothing moves when a refresh starts or ends), on `surface_container_high`; padding 16 start, 8 end, 4 above and below (56 dp at 100 %, and room around the wrapped line at 200 %) | Hidden when fresh (§4.2); Refresh disabled while refreshing (D-165); re-reads the clock every 60 s, and on Now and Schedule starts the 15-min refresh (D-175) | `live_region=True`, identifier `app.status` |
-| `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM), FilledTonalButton?]` | One sentence, one way out | Live region on first show |
-| `SkeletonList` | `Shimmer` over 5 placeholder rows | Only with no data at all | "Loading schedule" |
+| `EmptyState` | `Column[Icon(48), Text(TITLE_MEDIUM), Text(BODY_MEDIUM)?, FilledTonalButton?]`, centred, 32/48 dp padding, no fixed height (D-182) | One sentence, one way out: the button, or the sentence where no button can help (§4.6); a label and its handler come as a pair | The title is a heading node of its own (`container=True`); title and body are in one live region with the identifier, announced on first show; the icon is decorative; the button is its own stop, `disabled` (not removed) while its action runs |
+| `SkeletonList` | `Shimmer(period=prefs.motion_ms(1500))` over 5 session-shaped placeholder rows in `surface_container_highest`, highlight `surface_container_low`; no `Shimmer` under reduced motion (D-173, D-182) | Only with no data at all: while the first fetch runs, before it has failed (§4.1) | One node, "Loading schedule"; the placeholders are excluded |
 | `LocationCard` (P2) | `Card(OUTLINED, Row[Stack[Image(width=112), pin], Column[label, sublabel, floor]])` | Pin pulses twice; pushes the floor viewer | One button: "Show Room 104A on the Concourse level floor plan" |
-| `LinkTile` | `MergeSemantics(ListTile(leading, title, subtitle, trailing, on_click))`, with an optional `Semantics(identifier=...)` | In-app (#77): trailing `CHEVRON_RIGHT`, pushes a location, M3 heights (56 dp, 72 with a subtitle). External (#83): trailing `OPEN_IN_NEW`, link rule §4.7 | One node read as its title and subtitle; external rows add `Semantics(link=True)`, "opens in browser" |
+| `LinkTile` | `MergeSemantics(ListTile(leading, title, subtitle, trailing, on_click, title_alignment=TITLE_HEIGHT))`, icons beside the title's first line at any text size, with an optional `Semantics(identifier=...)`; a phone or email row is `Row[that, IconButton(CONTENT_COPY_OUTLINED)]` | In-app (#77): trailing `CHEVRON_RIGHT`, pushes a location, M3 heights (56 dp, 72 with a subtitle). External (#83, D-182): the link rule §4.7; web pages and apps end in `OPEN_IN_NEW`, phone and email rows in Copy | One node read as its title and subtitle; external rows add `Semantics(link=True)`, and the `OPEN_IN_NEW` icon is read "Opens in browser" ("Opens in another app"); Copy is its own stop, `<identifier>.copy` |
 
 ```python
 import flet as ft
@@ -285,8 +285,8 @@ def SessionRow(row: SessionView, tokens: Tokens, on_open, on_toggle) -> ft.Contr
 | Stale | Older than 6 h on conference days, 24 h otherwise | "Updated 9 hours ago · Refresh" |
 | Offline | The last refresh failed with a network error (`Conference.problem == "offline"`; no `ft.Connectivity` before P3) | "Offline · schedule from Tue, May 12, 10:42 AM"; Refresh still tries |
 | Not updated | The last refresh got an answer it could not use (`problem == "server"`, D-146) | "Couldn't update · schedule from Tue, May 12, 10:42 AM"; Refresh |
-| First load | No snapshot or cache, fetch running (rare, NEW-03) | `SkeletonList` |
-| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again"; the strip says "Offline · no schedule yet" or "Couldn't update · no schedule yet" |
+| First load | No snapshot or cache, before the first fetch has failed (rare, NEW-03) | `SkeletonList` |
+| No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again", which stays during a retry with its button disabled; the strip says "Offline · no schedule yet" or "Couldn't update · no schedule yet" |
 | Empty | Nothing matches | `EmptyState` with a specific way out (§4.6) |
 | Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list |
 | Removed (P2) | Session left the latest feed while open | Content kept, inline note "Removed from the latest schedule" |
@@ -330,20 +330,37 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 
 ### 4.6 Errors and empty copy
 
-| Case | Title / body | Action |
-|---|---|---|
-| My schedule empty | "Nothing saved yet" / "Tap the star on any session to add it to My schedule. It works offline." | "Browse the schedule" |
-| My schedule unavailable (`Favorites.loaded` is False after the gate, D-172) | "Couldn't open My schedule" / "Your saved sessions are still on this device. Close and reopen the app to see them." | none |
-| Filters hide a day | "No sessions on Thursday match your filters" | "Clear filters" |
-| Search miss | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
-| No data, no network | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
-| Session / speaker not found | "This session isn't in the current schedule" | "Open schedule" / "All speakers" |
-| Next year not published | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
-| Sponsor not found (P2) | "We couldn't find this sponsor" | "All sponsors" |
+| Case | Icon | Title / body | Action |
+|---|---|---|---|
+| My schedule empty | (its screen) | "Nothing saved yet" / "Tap the star on any session to add it to My schedule. It works offline." | "Browse the schedule" |
+| My schedule unavailable (`Favorites.loaded` is False after the gate, D-172) | (its screen) | "Couldn't open My schedule" / "Your saved sessions are still on this device. Close and reopen the app to see them." | none |
+| Filters hide a day | (its screen) | "No sessions on Thursday match your filters" | "Clear filters" |
+| Search miss | (its screen) | "No results for "pydanitc"" / "Search covers all days and ignores your filters." | none |
+| No data, no network | `CLOUD_OFF_OUTLINED` | "Can't load the schedule" / "Connect to the internet and try again." | "Try again" |
+| Session not found | `EVENT_BUSY_OUTLINED` (the same as "removed", §3.7: a session that left the schedule) | "This session isn't in the current schedule" | "Open schedule" |
+| Speaker not found | `PERSON_OFF_OUTLINED` | "This speaker isn't in the current schedule" | "All speakers" |
+| Room not found | `WRONG_LOCATION_OUTLINED` | "This room isn't in the current schedule" | "All rooms" (the Map) |
+| Page not found (the Router's `NotFound`) | `LINK_OFF_OUTLINED` | "Page not found" / "Nothing in the app is at /x." | "Go to Now" |
+| Next year not published | (its screen) | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
+| Sponsor not found (P2) | (its screen) | "We couldn't find this sponsor" | "All sponsors" |
+
+Every empty state names a way out (D-182): its one button, or, where no button can help (the search miss: the query is right there; My schedule unavailable: only a relaunch helps), its sentence. The "No data, no network" row reads by the failure (`Conference.problem`): offline, "Connect to the internet and try again."; an answer the app could not use, "The schedule couldn't be read. Try again in a few minutes." The icons are outlined (D-27) and decorative; a screen that shows one of these states reuses its icon, and a case marked "(its screen)" gets one, recorded here, with the PR that builds it. Until the P1 screens, the Schedule stub shows the no-data state and the skeleton, and the session, speaker and room stubs and the Router's `NotFound` show theirs.
 
 ### 4.7 Links (INFO-14)
 
-In-app screen: push, `CHEVRON_RIGHT`. Web page: `UrlLauncher().launch_url(url, mode=LaunchMode.IN_APP_BROWSER_VIEW)`, `OPEN_IN_NEW`. Social profiles and maps: `LaunchMode.EXTERNAL_APPLICATION`. `tel:` and `mailto:`: external, with a Copy button beside them (no `can_launch_url` probe until U6). `Markdown` links go through `on_tap_link` with the same rule. External rows carry `Semantics(link=True)`.
+One rule, in `ui/links.py` (D-182): `link_kind(target, *, app=False)` says what a target is, `LAUNCH_MODES` how it opens, and `open_link(svc, target, app=...)` opens it, for `LinkTile` and for `Markdown`'s `on_tap_link` alike.
+
+| Target | Kind | Opens with | Row |
+|---|---|---|---|
+| An app location (`/more/speakers`, a drill href) | page | `page.navigate`, pushed | trailing `CHEVRON_RIGHT`; a button for screen readers |
+| `http(s)` | web page | `svc.launcher.launch_url(url, mode=LaunchMode.IN_APP_BROWSER_VIEW)`, so the attendee stays in context | trailing `OPEN_IN_NEW`, read "Opens in browser"; a link |
+| `http(s)` with `app=True` (a social profile, Apple Maps directions), or `geo:` | app | `LaunchMode.EXTERNAL_APPLICATION` | trailing `OPEN_IN_NEW`, read "Opens in another app"; a link |
+| `tel:`, `mailto:` | phone, email | `LaunchMode.EXTERNAL_APPLICATION` | no trailing icon (the title is the verb: "Call the Code of Conduct hotline", the subtitle the number); a Copy `IconButton` beside it ("Copy phone number"), level with the leading icon |
+
+- The caller marks a social profile or a map with `app=True`: a host cannot say it (Mastodon has many instances). Only a web address (or a `geo:` link, which opens its app anyway) can be marked; marking a page, a `tel:` or a `mailto:` link is refused with `ValueError`, as is any other scheme (`javascript:`, `file:`, `sms:`).
+- There is no `can_launch_url` probe until U6: a simulator, an iPad or a phone without a mail account may do nothing on a `tel:` or `mailto:` tap, which is why Copy is always beside them. When the platform reports a failure, a SnackBar says "Couldn't open the link" (architecture §16.1); a failed copy says "Couldn't copy the phone number" ("…the email address"). Logs name the kind and the error's class, never the target nor the error's text, which repeats it (a `mailto:` holds an address, D-72).
+- A copy is confirmed by a SnackBar, "Phone number copied" ("Email address copied"), except on Android 13 (API 33) and later: the system shows its own overlay for every copy, and Android's copy-and-paste guidance asks apps not to add a second one. Android 12 and earlier, and iOS, get the SnackBar.
+- External rows carry `Semantics(link=True)`. "Opens in browser" is the `OPEN_IN_NEW` icon's `semantics_label`, read after the title in the merged node, not `Semantics.hint_text`, which never reaches Flutter at the pin (#187).
 
 ### 4.8 Permissions (D-61)
 
