@@ -60,6 +60,44 @@ def test_pseudo_speakers_show_on_the_speakers_line() -> None:
     assert view.speakers == "Hosted by Abigail, Chris, Cristián, and Lorena"
 
 
+def test_on_a_room_s_page_a_row_leaves_out_the_room_s_own_name() -> None:
+    """The page's title names the room (#101): no place, shown or said."""
+    talk = processed(2026).sessions["142"]  # in Grand Ballroom A
+    view = session_view(talk, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert (view.when, view.place) == ("10:30–11:00 AM", "")
+
+
+def test_on_a_room_s_page_another_place_stays() -> None:
+    """The lightning talks are given in the Arena and streamed to Grand Ballroom A."""
+    talks = processed(2026).sessions["175"]
+    view = session_view(talks, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert view.place == "Pacific Ballroom - Arena"
+
+
+def test_the_room_s_name_is_matched_by_slug() -> None:
+    """``Session.display_location`` and ``Room.slug`` meet through ``slugify_room``."""
+    talk = replace(processed(2026).sessions["142"], display_location="grand ballroom A")
+    view = session_view(talk, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
+    assert view.place == ""
+
+
+def test_every_other_list_keeps_the_place() -> None:
+    talk = processed(2026).sessions["142"]
+    assert session_view(talk, ZONE_2026, use_24h=False).place == "Grand Ballroom A"
+    elsewhere = session_view(talk, ZONE_2026, use_24h=False, in_room="room-103abc")
+    assert elsewhere.place == "Grand Ballroom A"
+
+
+def test_a_room_s_row_views_all_leave_out_the_room() -> None:
+    data = processed(2026)
+    room = data.rooms["expo-hall-ab"]
+    views = session_views(
+        data, room.session_ids, ZONE_2026, use_24h=False, in_room=room.slug
+    )
+    assert len(views) == len(room.session_ids)
+    assert {view.place for view in views} == {""}
+
+
 def test_row_views_keep_the_list_s_order_and_skip_unknown_ids() -> None:
     views = session_views(
         processed(2026), ["74", "gone", "142"], ZONE_2026, use_24h=False

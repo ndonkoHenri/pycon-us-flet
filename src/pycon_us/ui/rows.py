@@ -39,7 +39,7 @@ SUBTITLED_TOP = 14
 
 
 def LinkTile(
-    title: str,
+    title: str | ft.Text,
     target: str,
     *,
     icon: ft.IconData | None = None,
@@ -61,7 +61,8 @@ def LinkTile(
 
     Args:
         title: The row's text, in sentence case; a phone or email row says what a tap
-            does ("Call the Code of Conduct hotline").
+            does ("Call the Code of Conduct hotline"). A ``Text`` for a title cut at
+            some lines, as a session's name is (room detail's "Now in this room").
         target: Where a tap goes: a page (``/more/speakers``), for a detail
             ``drill_href(view_path, ...)`` so Back returns to this row's View, or a URL
             (``link_kind()``).
@@ -96,7 +97,7 @@ def LinkTile(
 
 @ft.component
 def _ExternalLinkTile(
-    title: str,
+    title: str | ft.Text,
     target: str,
     kind: LinkKind,
     *,
@@ -152,7 +153,7 @@ def _ExternalLinkTile(
 
 
 def _tile(
-    title: str,
+    title: str | ft.Text,
     icon: ft.IconData | None,
     subtitle: str | ft.Control | None,
     trailing: ft.Control | None,

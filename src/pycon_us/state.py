@@ -431,6 +431,11 @@ class ViewMemory:
             each search starts empty (D-193).
         search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
             View that mounts without its ``?scope=`` (a deep entry below a result).
+        room_highlights: The session each mounted room View has highlighted, by its
+            View path (ROOM-03): a View rebuilt in a new session from the same
+            location (D-143) finds its own and neither scrolls nor lights up again
+            (D-18). The View removes its entry when it leaves, so the next room tile
+            highlights again.
     """
 
     last_location: str = ""
@@ -440,6 +445,7 @@ class ViewMemory:
     jumped_to_now: bool = False
     search_query: str = ""
     search_scope: str = "all"
+    room_highlights: dict[str, str] = field(default_factory=dict)
 
     def reset(self) -> None:
         """Forget where the user was, as after a fresh install (Reset app, D-195).
