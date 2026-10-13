@@ -63,7 +63,7 @@ BEFORE = datetime(2026, 4, 1, 12, 0, tzinfo=PACIFIC)
 """Six weeks before the conference."""
 
 TALK = "142"
-"""A Friday talk: "Python for Humans - …", 10:30-11:00 AM, in the 10:30 slot."""
+"""A Saturday talk: "Python for Humans - …", 10:30-11:00 AM, in the 10:30 slot."""
 
 
 @dataclass
@@ -285,11 +285,11 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
         "Tue 19",
     ]
     friday = schedule.node("schedule.day_tab.2")
-    assert friday.label == "Friday, May 15, today"  # Flutter adds "Tab 3 of 7"
-    assert friday.exclude_semantics
+    assert _spoken(schedule, 2) == "Friday, May 15, today"  # then "Tab 3 of 7"
+    assert friday.label is None  # merged into the tab's node with the identifier
     assert _has_dot(schedule, friday)  # today's mark
     saturday = schedule.node("schedule.day_tab.3")
-    assert saturday.label == "Saturday, May 16"
+    assert _spoken(schedule, 3) == "Saturday, May 16"
     assert not _has_dot(schedule, saturday)
     (bar,) = find(schedule.session, ft.TabBar)
     assert bar.scrollable
@@ -308,7 +308,7 @@ async def test_the_first_day_is_selected_outside_the_conference(
     now[0] = BEFORE
     schedule = await shown()
     assert schedule.tabs.selected_index == 0
-    assert all(n.label and "today" not in n.label for n in _tab_nodes(schedule))
+    assert all("today" not in _spoken(schedule, i) for i in range(len(DAYS)))
 
 
 async def test_a_remembered_day_wins_over_today(
@@ -325,12 +325,14 @@ def _tab_text(schedule: Shown, index: int) -> str:
     return str(text.value)
 
 
+def _spoken(schedule: Shown, index: int) -> str:
+    node = schedule.node(f"schedule.day_tab.{index}")
+    (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
+    return str(text.semantics_label)
+
+
 def _has_dot(schedule: Shown, node: ft.Semantics) -> bool:
     return bool(find(schedule.session, ft.Container, lambda c: inside(c, node)))
-
-
-def _tab_nodes(schedule: Shown) -> list[ft.Semantics]:
-    return [schedule.node(f"schedule.day_tab.{i}") for i in range(len(DAYS))]
 
 
 async def test_a_day_change_is_remembered_and_its_echo_changes_nothing(

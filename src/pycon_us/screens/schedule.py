@@ -317,10 +317,12 @@ def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | 
 def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
     """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
 
-    Flutter's tab bar adds the position and the selection ("Tab 3 of 7") to the
-    label, in the tab's one node.
+    The text's own semantics label says the day in full, so Flutter's tab bar reads it
+    first and then the position and the selection: "Friday, May 15, today, Tab 3 of
+    7" (an explicit ``Semantics`` label came after the position in TalkBack's node).
     """
-    label: ft.Control = ft.Text(day_tab_label(day))
+    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
+    label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
     if is_today:
         # Beside the text, not a Badge over it: a badge's dot covered the last digit.
         dot = ft.Container(
@@ -335,15 +337,10 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
             tight=True,
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
-    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     return ft.Tab(
         height=TAB_HEIGHT,
-        label=ft.Semantics(
-            label=spoken,
-            identifier=f"{SCREEN}.day_tab.{index}",
-            exclude_semantics=True,  # the label replaces "Fri 15"
-            content=label,
-        ),
+        # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
+        label=ft.Semantics(identifier=f"{SCREEN}.day_tab.{index}", content=label),
     )
 
 
