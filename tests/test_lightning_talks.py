@@ -77,6 +77,28 @@ async def test_the_card_holds_the_years_copy_and_the_sign_up(show: Show) -> None
     assert page.titles[-1] == "Lightning talks"
 
 
+async def test_the_card_s_heading_is_read_alone_before_its_paragraphs(
+    show: Show,
+) -> None:
+    """D-208: a Card merges what it holds into one node, a heading over the whole card.
+
+    So the card is no node of its own, and the heading and the paragraphs are each a
+    container, the heading first.
+    """
+    assert COPY is not None
+    page = await show()
+    (card,) = page.find(ft.Card)
+    assert card.semantic_container is False
+    column = cast(ft.Column, cast(ft.Container, card.content).content)
+    heading, paragraphs = column.controls[:2]
+    assert isinstance(heading, ft.Semantics) and heading.header and heading.container
+    assert text_of(heading) == COPY.heading
+    assert isinstance(paragraphs, ft.Semantics) and paragraphs.container
+    assert not paragraphs.header
+    lines = cast(ft.Column, paragraphs.content).controls
+    assert [cast(ft.Text, line).value for line in lines] == list(COPY.intro)
+
+
 async def test_sign_up_opens_the_years_sign_up_in_the_in_app_browser(
     show: Show,
 ) -> None:

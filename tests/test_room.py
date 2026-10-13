@@ -579,7 +579,7 @@ async def test_now_in_this_room_names_the_session_on_and_opens_it(
     assert any(
         isinstance(c, ft.Semantics)
         and c.header
-        and c.heading_level == 2
+        and c.heading_level == 3  # in the day, beside its slots (D-208)
         and texts(c) == ["Now in this room"]
         for c in room.session.index.values()
     )

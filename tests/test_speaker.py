@@ -336,6 +336,8 @@ async def test_without_data_the_page_loads_then_offers_to_try_again(
     assert "Loading schedule" in [n.label for n in loading.find(ft.Semantics)]
     failed = await show(CATHERINE, Conference(problem="offline"))
     assert failed.node("speaker.no_data").live_region
+    # No name in the page to head it: the bar's title is its level-1 heading (D-208).
+    assert loading.titles[-1] == failed.titles[-1] == "Speaker"
     assert [b.content for b in failed.find(ft.FilledTonalButton)] == ["Try again"]
     assert failed.nodes("speaker.not_found") == []
 

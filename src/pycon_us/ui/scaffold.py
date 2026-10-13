@@ -100,11 +100,12 @@ def AppScaffold(
         # level-1 heading (D-208). The identifier tells UI flows which root shows
         # (D-170). An unlabelled Semantics merges both into the title's own node, as
         # the bar's do (D-166).
-        tab = TABS[TAB_ROOTS.index(view_path)] if is_root else None
         title_control = ft.Semantics(
             header=True,
             heading_level=1,
-            identifier=tab.title_identifier if tab else None,
+            identifier=(
+                TABS[TAB_ROOTS.index(view_path)].title_identifier if is_root else None
+            ),
             content=title_control,
         )
     return ft.View(

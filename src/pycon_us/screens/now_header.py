@@ -211,8 +211,8 @@ def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
 
     Brand colour at an identity moment (D-28): the indigo ``#3B3EA9`` in both schemes,
     as the light ``primary`` (white text, 8.6:1) and the dark ``primary_container``
-    (``#E1E0FF``, 6.7:1); its icon is decorative, in gold. One heading node, the page's
-    first (level 1), read as ``header_phrase()``.
+    (``#E1E0FF``, 6.7:1); its icon is decorative, in gold. One heading node, the first
+    under the bar's "Now" (level 2, D-208), read as ``header_phrase()``.
 
     Args:
         name: The conference's name, e.g. "PyCon US 2026".
@@ -248,7 +248,7 @@ def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
     return ft.Semantics(
         label=header_phrase(name, copy),
         header=True,
-        heading_level=1,  # a heading needs its level (F40)
+        heading_level=2,  # under the bar's "Now", the page's title (D-208)
         identifier="now.header",
         container=True,
         exclude_semantics=True,  # the phrase replaces the lines

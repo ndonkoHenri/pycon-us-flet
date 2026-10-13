@@ -1,4 +1,8 @@
-"""Tests for the semantics helpers (``ui/semantics.py``; decisions §M, D-200)."""
+"""Tests for the semantics helpers and the heading scan of every app module.
+
+The helpers are ``ui/semantics.py``'s (decisions §M, D-200); the scan holds every
+``Semantics`` heading to a level (F40, F46, D-208).
+"""
 
 import ast
 from pathlib import Path

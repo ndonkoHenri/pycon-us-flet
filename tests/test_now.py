@@ -333,11 +333,14 @@ class Shown:
         )
 
     def headings(self) -> list[str]:
-        """The section headings (level 2), in order."""
+        """The section headings (level 2) under the status header, in order."""
         return [
             _texts(c)[0]
             for c in self.all()
-            if isinstance(c, ft.Semantics) and c.header and c.heading_level == 2
+            if isinstance(c, ft.Semantics)
+            and c.header
+            and c.heading_level == 2
+            and c.identifier != "now.header"
         ]
 
     def rows(self, prefix: str = "now.session.") -> list[str]:
@@ -531,12 +534,13 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
     assert shown.pushed == ["/schedule"]
 
 
-async def test_the_header_is_the_page_s_first_heading(
+async def test_the_header_is_the_first_heading_under_the_page_s_title(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(15, 11, 10))
     node = shown.node("now.header")
-    assert node.header is True and node.heading_level == 1  # a heading (F40)
+    # Level 2: the bar's "Now" is the page's one level-1 heading (F40, D-208).
+    assert node.header is True and node.heading_level == 2
     assert node.exclude_semantics is True  # read once, as its phrase
     assert shown.body.controls[0] is node
 

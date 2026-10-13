@@ -136,6 +136,13 @@ def test_the_title_is_left_aligned_and_is_the_page_s_level_1_heading(
     assert bar.adaptive is not True  # Material only (D-10)
 
 
+def test_an_empty_title_is_no_heading(hooks: Hooks, page: FakePage) -> None:
+    """A detail page's bar is empty: its own title in the page is its heading."""
+    view = view_at(hooks, page, "/schedule/session/42", title="")
+    title = app_bar(view).title
+    assert isinstance(title, ft.Text) and title.value == ""
+
+
 def test_a_pushed_view_has_the_material_back_arrow_to_its_parent(
     hooks: Hooks, page: FakePage
 ) -> None:
@@ -434,13 +441,6 @@ async def test_a_retap_that_fails_is_reported_and_the_bar_keeps_working(
 
 
 # ------------------------------------------------------------------ SectionHeader
-
-
-def test_an_empty_title_is_no_heading(hooks: Hooks, page: FakePage) -> None:
-    """A detail page's bar is empty: its own title in the page is its heading."""
-    view = view_at(hooks, page, "/schedule/session/42", title="")
-    title = app_bar(view).title
-    assert isinstance(title, ft.Text) and title.value == ""
 
 
 def test_a_section_header_is_a_level_2_heading_in_the_title_small_style() -> None:
