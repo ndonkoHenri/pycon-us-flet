@@ -282,7 +282,7 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     stored = json.loads(cast(MemoryPrefs, svc.storage.prefs).values["pycon.dev"])
     assert stored == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": FEED}
     assert prefs.fake_now == start
-    # In place, not a SnackBar: one would show on More under this View (#197).
+    # In place, under the buttons, not a SnackBar (D-29, D-210).
     assert page.dialogs == []
     assert outcome(render) == "Applied: a fake clock in Pacific Time and your feed URL."
     row = outcome_row(render)
