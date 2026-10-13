@@ -1,8 +1,8 @@
 """Room detail (``…/room/<slug>``): what is on in one room, day by day (ROOM-02, ROOM-03).
 
 The app bar names the room. Under it, day tabs over swipeable day lists, one tab per
-day the room has sessions, today preselected (ux.md §5.9; the tabs and lists are
-``screens/room_days.py``). Today's list starts with "Now in this room" while something
+day the room has sessions, today preselected (ux.md §5.9; the Schedule's tabs, the lists
+in ``screens/room_days.py``). Today's list starts with "Now in this room" while something
 is on there (``NowInRoom``, on the minute tick). Each day lists its time slots (D-31),
 whose rows leave out the room's own name, since the title already says it
 (``in_room``). A tap pushes the session, one drill level.
@@ -32,13 +32,9 @@ from pycon_us.core.timefmt import local_date, today
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href, use_query
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.room_days import (
-    SCREEN,
-    day_list,
-    day_tab,
-    row_key,
-    scroll_to_row,
-)
+from pycon_us.screens.room_days import SCREEN, day_list, row_key
+from pycon_us.screens.schedule import TAB_MS
+from pycon_us.screens.schedule_days import day_tab
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -48,6 +44,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, use_minute
+from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 
 HIGHLIGHT_S = 2.0
@@ -55,12 +52,6 @@ HIGHLIGHT_S = 2.0
 
 FADE_MS = 250
 """How long the highlight fades out (ux.md §3.8's fades); none under reduced motion."""
-
-JUMP_MS = 400
-"""How long the scroll to the row takes (ux.md §3.8); a jump under reduced motion."""
-
-TAB_MS = 100
-"""How long a day switch slides (Flet's default for ``Tabs``)."""
 
 
 def highlight_of(query: Mapping[str, str], room: Room | None) -> str | None:
@@ -158,12 +149,12 @@ def RoomDetail(room_slug: str) -> ft.View:
         await svc.storage.get(THEME)
         loop = asyncio.get_running_loop()
         shown_at = loop.time()
-        moved = await scroll_to_row(
+        jump = await jump_to_key(
             list_ref, row_key(reveal), duration=prefs.motion_ms(JUMP_MS), ended=ended
         )
         # Lit for HIGHLIGHT_S once in place: after the scroll, or from the start when
         # the row was in place already and nothing scrolled.
-        waited = 0.0 if moved else loop.time() - shown_at
+        waited = 0.0 if jump == "landed" else loop.time() - shown_at
         await asyncio.sleep(max(0.0, HIGHLIGHT_S - waited))
         set_lit(False)
 
@@ -228,7 +219,10 @@ def RoomDetail(room_slug: str) -> ft.View:
     ]
     bar: list[ft.Control] = [
         ft.TabBar(
-            [day_tab(i, day, is_today=day == current) for i, day in enumerate(days)],
+            [
+                day_tab(i, day, is_today=day == current, screen=SCREEN)
+                for i, day in enumerate(days)
+            ],
             scrollable=True,  # five days fit no phone at large text
             tab_alignment=ft.TabAlignment.START,
         ),

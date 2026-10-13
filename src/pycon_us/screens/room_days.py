@@ -1,32 +1,26 @@
-"""Room detail's day tabs and day lists, the lit row and the scroll to it (ROOM-02, -03).
+"""Room detail's day lists and the lit row (ROOM-02, ROOM-03; ux.md §5.9).
 
-``screens/room.py`` owns the screen: the stores, the highlight's effect and "Now in this
-room". Here is what it places under the tab bar (ux.md §5.9):
-
-- ``day_tab()``, one tab per day the room has sessions, today marked by a dot;
-- ``day_list()``, one per day: its time slots (D-31), a ``TimeGutter`` beside the slot's
-  ``SessionRow``s and ``NoticeRow``s, the row the room was opened from lit and keyed;
-- ``scroll_to_row()``, the one scroll to that row (D-155).
-
-The day tab and the scroll are local versions of the Schedule's (#220), to be shared
-once both are on ``main`` (#228).
+``screens/room.py`` owns the screen: the stores, the day tabs (the Schedule's
+``day_tab()``), the highlight's effect and "Now in this room". Here is what it places in
+each ``TabBarView`` page: ``day_list()``, a day's time slots (D-31), a ``TimeGutter``
+beside the slot's ``SessionRow``s and ``NoticeRow``s, with the row the room was opened
+from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit. The slot itself is a
+local version of My schedule's ``TimeSlot`` (#209), to be shared once both are on
+``main`` (#228).
 """
 
-import asyncio
-import logging
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import datetime
 
 import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.timefmt import day_heading, day_label, time_label
+from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, TimeGutter, is_notice
-
-logger = logging.getLogger(__name__)
 
 SCREEN = "room"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -41,26 +35,6 @@ the tint it reads 5.0:1 in light and 5.9:1 in dark (D-194)."""
 
 UNLIT = ft.Colors.with_opacity(0, ft.Colors.PRIMARY)
 """The same fill, clear: the fade runs from one to the other."""
-
-TAB_HEIGHT = 56
-"""A day tab's height in dp: the tab bar cannot grow with the text and Flet cannot read
-the text scale (U16), so it is sized for the largest iOS size, as the Schedule's."""
-
-TODAY_DOT = 6
-"""The diameter of the dot that marks today's tab, in dp, as on the Schedule."""
-
-LIST_EXTENT = 100_000
-"""The highlighted day's ``cache_extent``: it builds every row, so the row's
-``ScrollKey`` is registered wherever it is (D-154, F32)."""
-
-SCROLL_EVENT_MS = 250
-"""How often the highlighted day's list may report a scroll; only its end is read."""
-
-JUMP_TRIES = 3
-"""How many times the scroll to the row is asked for before it gives up."""
-
-LANDING_S = 0.5
-"""How long after its duration a scroll may take to report its end, in seconds."""
 
 
 def row_key(session_id: str) -> str:
@@ -126,7 +100,7 @@ def day_list(
         expand=True,
         padding=ft.Padding.only(bottom=8),
         # Only the list that scrolls needs every row built (D-154).
-        cache_extent=LIST_EXTENT if list_ref is not None else None,
+        cache_extent=FULL_LIST_EXTENT if list_ref is not None else None,
         scroll_interval=SCROLL_EVENT_MS,
         on_scroll=on_scroll,
     )
@@ -166,82 +140,3 @@ def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:
         bgcolor=HIGHLIGHT if on else UNLIT,
         animate=ft.Animation(ms, ft.AnimationCurve.EASE_OUT) if ms else None,
     )
-
-
-def day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
-    """Return a day's tab: "Fri, May 15", today with a dot, read "Friday, May 15, today".
-
-    Flutter's tab bar adds the tab's position and its selection to what it reads.
-
-    Args:
-        index: The tab's position, in its semantics identifier ``room.day_tab.<n>``.
-        day: The conference-local date.
-        is_today: Mark it as today (``clock.now()`` in conference time).
-    """
-    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
-    label: ft.Control = ft.Text(day_label(day), semantics_label=spoken)
-    if is_today:
-        # Beside the text, centred on it, so it stays by the digits at every size.
-        dot = ft.Container(
-            width=TODAY_DOT,
-            height=TODAY_DOT,
-            border_radius=TODAY_DOT / 2,
-            bgcolor=ft.Colors.PRIMARY,
-        )
-        label = ft.Row(
-            [label, dot],
-            spacing=4,
-            tight=True,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-    return ft.Tab(
-        height=TAB_HEIGHT,
-        # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
-        label=ft.Semantics(identifier=f"{SCREEN}.day_tab.{index}", content=label),
-    )
-
-
-async def scroll_to_row(
-    list_ref: ft.Ref[ft.ListView],
-    key: str,
-    *,
-    duration: int,
-    ended: asyncio.Event,
-) -> bool:
-    """Scroll the list so the row with this ``ScrollKey`` is at its top (D-155).
-
-    Flutter answers ``scroll_to`` before the scroll runs, and does nothing for a row it
-    has not built yet (F7), so the call alone proves nothing: the list's ``on_scroll``
-    sets ``ended`` when a scroll ends, and without an end in time the scroll is asked
-    for again, up to ``JUMP_TRIES`` times. A row already in place never scrolls, so it
-    ends the same way. A list that has left the page (the user swiped to another day)
-    makes Flutter time out, which Flet raises as a ``RuntimeError``: logged, and the
-    row stays where it is.
-
-    Args:
-        list_ref: The day list's ref; nothing happens while it is unset.
-        key: The row's ``ScrollKey`` value (``row_key()``).
-        duration: The scroll's length in milliseconds, through ``prefs.motion_ms()``.
-        ended: Set by the list's ``on_scroll`` when a scroll ends.
-
-    Returns:
-        Whether the list reported a scroll that ended.
-    """
-    for _ in range(JUMP_TRIES):
-        list_view = list_ref.current
-        if list_view is None:
-            return False
-        ended.clear()
-        try:
-            await list_view.scroll_to(scroll_key=ft.ScrollKey(key), duration=duration)
-        except RuntimeError as error:
-            if "TimeoutException" not in str(error):
-                raise
-            logger.warning("Room highlight: the list was not shown in time")
-            return False
-        try:
-            await asyncio.wait_for(ended.wait(), duration / 1000 + LANDING_S)
-        except TimeoutError:
-            continue  # not built yet, or already in place
-        return True
-    return False

@@ -166,13 +166,13 @@ async def render(
             *,
             duration: int,
             ended: asyncio.Event,
-        ) -> bool:
+        ) -> str:
             assert list_ref.current is not None  # the day list that shows the row
             scrolls.append(Scroll(key, duration))
-            return True
+            return "landed"
 
         monkeypatch.setattr(screen, "AppScaffold", scaffold)
-        monkeypatch.setattr(screen, "scroll_to_row", scroll)
+        monkeypatch.setattr(screen, "jump_to_key", scroll)
         monkeypatch.setattr(ft, "use_view_path", lambda: VIEW)
         storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
         svc = Services(

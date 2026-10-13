@@ -58,12 +58,18 @@ type Scrolled = Callable[[date, ft.OnScrollEvent], None]
 """The Schedule's one scroll handler: a day list passes its day and the event."""
 
 
-def day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
+def day_tab(index: int, day: date, *, is_today: bool, screen: str = SCREEN) -> ft.Tab:
     """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
 
     The text's semantics label says the day in full; Flutter's tab bar puts its own
     position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
-    Friday, May 15, today, selected" (D-192).
+    Friday, May 15, today, selected" (D-192). Room detail's tabs are these too (D-194).
+
+    Args:
+        index: The tab's position, in its identifier ``<screen>.day_tab.<index>``.
+        day: The conference-local date.
+        is_today: Mark it as today, with a dot and ", today".
+        screen: The screen's name in the identifier: the Schedule's, or ``room``.
     """
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
@@ -85,7 +91,7 @@ def day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
     return ft.Tab(
         height=TAB_HEIGHT,
         # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
-        label=ft.Semantics(identifier=f"{SCREEN}.day_tab.{index}", content=label),
+        label=ft.Semantics(identifier=f"{screen}.day_tab.{index}", content=label),
     )
 
 
