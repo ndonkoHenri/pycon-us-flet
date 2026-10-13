@@ -23,10 +23,16 @@ from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_data
-from pycon_us.screens.developer_confirm import confirmation, reset_losses
+from pycon_us.screens.developer_confirm import (
+    NBSP,
+    confirmation,
+    reset_losses,
+    snapshot_day,
+)
 from pycon_us.screens.developer_data import (
     CLEARED,
     LOG_NOT_FOUND,
+    LOG_OFFERED,
     LOG_SHARED,
     NO_LOG,
     NOT_SHARED,
@@ -221,7 +227,7 @@ def row(column: ft.Column, identifier: str) -> ft.ListTile:
 
 
 def subtitle(column: ft.Column, identifier: str) -> str:
-    return str(row(column, identifier).subtitle)
+    return str(cast(ft.Text, row(column, identifier).subtitle).value)
 
 
 async def tap(render: Callable[[], ft.Column], identifier: str) -> None:
@@ -353,10 +359,40 @@ async def test_refresh_now_is_disabled_while_an_asked_for_refresh_runs(
     await asyncio.sleep(0)
     tile = row(render(), "developer.refresh_now")
     assert tile.disabled is True  # D-181: as every Refresh button
-    assert tile.subtitle == "Updating the schedule…"
+    assert subtitle(render(), "developer.refresh_now") == "Updating the schedule…"
+    assert isinstance(tile.trailing, ft.ProgressRing)  # something moves (ux.md §4)
     release.set()
     await asked
-    assert row(render(), "developer.refresh_now").disabled is False
+    tile = row(render(), "developer.refresh_now")
+    assert tile.disabled is False
+    assert tile.trailing is None
+
+
+async def test_a_reset_during_an_asked_for_refresh_ends_the_tap_without_an_outcome(
+    render: Callable[[], ft.Column],
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = asyncio.Event()
+
+    async def hold(url: str, **_: Any) -> bytes:
+        await release.wait()
+        return recorded(2026)
+
+    monkeypatch.setattr(api, "fetch_feed", hold)
+    asked = asyncio.create_task(tap(render, "developer.refresh_now"))
+    await asyncio.sleep(0)
+    async with asyncio.timeout(5):
+        await reset_app(svc, conference, prefs, favorites)
+    # The tap awaited the refresh that the reset cancelled: it ends cancelled too
+    # (Conference.reset()), not with a claim that the schedule was updated.
+    await asyncio.wait({asked})
+    assert asked.cancelled()
+    assert outcome(render()) is None
+    release.set()
 
 
 # ------------------------------------------------------------------ Clear cached feed
@@ -367,7 +403,11 @@ async def test_clear_cached_feed_is_disabled_without_a_cache(
 ) -> None:
     tile = row(render(), "developer.clear_cache")
     assert tile.disabled is True
-    assert tile.subtitle == "No cached schedule on this device"
+    assert subtitle(render(), "developer.clear_cache") == (
+        "No cached schedule on this device"
+    )
+    # Why it is off stays readable: not at the disabled 38 % (ux.md principle 8).
+    assert cast(ft.Text, tile.subtitle).color == ft.Colors.ON_SURFACE_VARIANT
 
 
 async def test_clear_cached_feed_asks_first_and_cancel_keeps_the_cache(
@@ -421,6 +461,13 @@ def test_the_clear_confirmation_names_the_bundled_schedule_s_day() -> None:
     assert dialog is not None
     text = cast(ft.Text, cast(ft.Column, dialog.content).controls[0]).value
     assert "the schedule bundled with the app (Mon, Oct 12)" in str(text)
+    assert "You keep seeing it until you close the app" in str(text)
+
+
+def test_the_bundled_schedule_s_day_never_wraps_in_its_middle(svc: Services) -> None:
+    day = snapshot_day(svc.year.conference)
+    assert day and " " not in day  # "(Sun, Oct" / "11)" on a phone before
+    assert day.replace(NBSP, " ").count(" ") == 2  # e.g. "Sun, Oct 11"
 
 
 # ------------------------------------------------------------------ Share log
@@ -432,7 +479,7 @@ def test_share_log_is_off_outside_a_packaged_build_and_says_why(
     packaged(False)
     tile = row(render(), "developer.share_log")
     assert tile.disabled is True
-    assert tile.subtitle == (
+    assert subtitle(render(), "developer.share_log") == (
         "Not a packaged build: the log is in the terminal that runs it"
     )
 
@@ -449,15 +496,27 @@ async def test_share_log_shares_the_console_log_file(
     assert outcome(render()) == LOG_SHARED[0]
 
 
+@pytest.mark.parametrize(
+    ("status", "says"),
+    [
+        (ft.ShareResultStatus.DISMISSED, None),
+        # Some Android targets report neither: the sheet had the log either way.
+        (ft.ShareResultStatus.UNAVAILABLE, LOG_OFFERED[0]),
+    ],
+)
 async def test_a_dismissed_share_sheet_says_nothing(
-    render: Callable[[], ft.Column], svc: Services, tmp_path: Path
+    render: Callable[[], ft.Column],
+    svc: Services,
+    tmp_path: Path,
+    status: ft.ShareResultStatus,
+    says: str | None,
 ) -> None:
     log = tmp_path / "console.log"
     log.write_text("a line\n")
     cast(MemoryPaths, svc.paths).console_log = str(log)
-    cast(MemoryShare, svc.share).status = ft.ShareResultStatus.DISMISSED
+    cast(MemoryShare, svc.share).status = status
     await tap(render, "developer.share_log")
-    assert outcome(render()) is None
+    assert outcome(render()) == says
     assert row(render(), "developer.share_log").disabled is False  # usable again
 
 
@@ -505,12 +564,12 @@ async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
 def test_reset_lists_exactly_what_is_lost() -> None:
     assert reset_losses(3, packaged=True) == (
         "Your settings: Appearance and the schedule's filters",
-        "Your saved sessions: 3 in My schedule",
+        "Your saved sessions in My schedule: 3",
         "The cached schedule: the app shows the bundled one until it refreshes",
         "Developer options: the fake clock and the feed URL, and Developer locks again",
     )
     losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
-    assert losses[1] == "Your saved sessions: none in My schedule"
+    assert losses[1] == "Your saved sessions in My schedule: none"
     assert losses[3] == "Developer options: the fake clock and the feed URL"
 
 
@@ -525,6 +584,8 @@ async def test_reset_app_asks_first_and_its_dialog_lists_the_losses(
     dialog = rendered.dialog
     assert dialog is not None and dialog.modal is True and dialog.scrollable is True
     assert dialog.title == ft.Text("Reset the app?")
+    # Its icon in error, as the row that opened it: one destructive accent.
+    assert dialog.icon == ft.Icon(ft.Icons.RESTART_ALT, color=ft.Colors.ERROR)
     lines = [
         str(cast(ft.Text, cast(ft.Row, line).controls[1]).value)
         for line in cast(ft.Column, dialog.content).controls[1:]

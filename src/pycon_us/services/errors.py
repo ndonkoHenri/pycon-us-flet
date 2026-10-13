@@ -8,7 +8,8 @@ event handler ends the session, and one that escapes an async effect is seen by 
 ``setup_logging()`` sends stdlib ``logging`` to stderr, which a packaged app tees to
 logcat or the unified log and to ``console.log`` (F14, D-72), the file testers share from
 the Developer screen. Never log secrets, keys, signatures, emails or badge codes; as a
-net under that rule, the handler writes every email address as ``<email>`` (D-196).
+net under that rule, the handler writes every email address in the lines it formats as
+``<email>`` (D-196).
 """
 
 import functools
@@ -148,7 +149,11 @@ class RedactingFormatter(logging.Formatter):
     control: an exception's message, which can repeat a platform call's arguments
     (Android's ``ACTIVITY_NOT_FOUND`` names the ``mailto:`` intent, D-182), or a feed
     record that a skipped-record line quotes. The whole formatted line is redacted,
-    traceback included, so nothing a tester shares with Share log names a person.
+    traceback included. It covers what goes through ``logging`` only: text written to
+    ``sys.stderr`` directly, such as ``sys.excepthook``'s report of an exception that
+    escapes everything, or a warning (``warnings`` is not routed to ``logging``),
+    reaches ``console.log`` as it is. The app never writes there itself, and
+    ``report_errors`` keeps handlers and effects inside ``logging`` (D-163).
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -163,8 +168,9 @@ def setup_logging() -> None:
     (``flet run -vv`` sets ``debug``; Flet's own handling of it does nothing once a
     handler exists). ``QUIET_LOGGERS`` stay at WARNING. A packaged app replaces
     ``sys.stderr`` with a tee to the platform log and ``console.log`` before the app is
-    imported (F14), so the handler writes to both, through ``RedactingFormatter``. Once the handler is there, a second
-    call returns at once: it neither adds a handler nor resets a level set since.
+    imported (F14), so the handler writes to both, through ``RedactingFormatter``. Once
+    the handler is there, a second call returns at once: it neither adds a handler nor
+    resets a level set since.
     """
     root = logging.getLogger()
     if any(handler.get_name() == HANDLER_NAME for handler in root.handlers):

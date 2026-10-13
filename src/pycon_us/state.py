@@ -140,7 +140,9 @@ class Conference:
         for, so one from a Developer feed URL cannot cache or publish its feed after the
         reset; the feed URL returns to the year's; the cache is deleted; the snapshot
         is published, so every screen shows it at once. The caller starts the next
-        refresh, as ``bootstrap()`` does.
+        refresh, as ``bootstrap()`` does. A caller awaiting ``refresh()`` ends with
+        ``CancelledError`` too (the shield passes the inner cancel on), so a Refresh
+        tapped before the reset says nothing about a refresh that never ended.
 
         Args:
             storage: Where the feed cache lives.

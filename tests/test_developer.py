@@ -188,10 +188,19 @@ def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
     row = outcome_row(render)
     if row is None:
         return None
-    icon, text = row.controls
-    assert isinstance(icon, ft.Icon) and isinstance(text, ft.Text)
+    _, text = row.controls
+    assert isinstance(text, ft.Text)
     assert text.text_align == ft.TextAlign.START  # as the page's other text
     return str(text.value)
+
+
+def outcome_icon(row: ft.Row) -> ft.Icon:
+    """The outcome line's icon, in the slot that lines its words up with the tiles."""
+    slot = row.controls[0]
+    # A ListTile's leading slot and gap: the words start where the tiles' do (56 dp).
+    assert isinstance(slot, ft.Container) and slot.width == 24 and row.spacing == 16
+    assert isinstance(slot.content, ft.Icon)
+    return slot.content
 
 
 # ------------------------------------------------------------------ the screen
@@ -278,8 +287,7 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     assert outcome(render) == "Applied: a fake clock in Pacific Time and your feed URL."
     row = outcome_row(render)
     assert row is not None
-    icon = row.controls[0]
-    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.success
+    assert outcome_icon(row).color == LIGHT_TOKENS.success
     await type_into(render, "developer.feed_url", "")
     assert outcome(render) is None  # an edit clears it
 
@@ -394,8 +402,7 @@ async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
     )
     row = outcome_row(render)
     assert row is not None
-    icon = row.controls[0]
-    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.warning
+    assert outcome_icon(row).color == LIGHT_TOKENS.warning
 
 
 async def test_the_pickers_fill_the_clock_field_in_conference_time(

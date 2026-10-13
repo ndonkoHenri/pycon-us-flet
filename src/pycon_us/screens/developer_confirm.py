@@ -12,6 +12,7 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.timefmt import day_label, local_date
+from pycon_us.ui.semantics import named
 
 type Asking = Literal["clear", "reset"] | None
 """Which confirmation is open: Clear cached feed's, Reset app's, or none."""
@@ -25,10 +26,19 @@ def none_open() -> Asking:
     return None
 
 
+NBSP = "\u00a0"
+"""A non-breaking space: the dialog never wraps a date in its middle."""
+
+
 def snapshot_day(info: ConferenceInfo) -> str:
-    """Return the day the bundled snapshot was fetched, e.g. "Mon, Oct 12", or "" if none."""
+    """Return the day the bundled snapshot was fetched, e.g. "Mon, Oct 12", or "" if none.
+
+    Its spaces are ``NBSP``, so the dialog never wraps it as "(Sun, Oct" / "11)".
+    """
     captured = info.snapshot_captured_at
-    return "" if captured is None else day_label(local_date(captured, info.zone))
+    if captured is None:
+        return ""
+    return day_label(local_date(captured, info.zone)).replace(" ", NBSP)
 
 
 def reset_losses(saved: int, *, packaged: bool) -> tuple[str, ...]:
@@ -44,7 +54,7 @@ def reset_losses(saved: int, *, packaged: bool) -> tuple[str, ...]:
         developer += ", and Developer locks again"
     return (
         "Your settings: Appearance and the schedule's filters",
-        f"Your saved sessions: {saved or 'none'} in My schedule",
+        f"Your saved sessions in My schedule: {saved or 'none'}",
         "The cached schedule: the app shows the bundled one until it refreshes",
         developer,
     )
@@ -94,8 +104,8 @@ def confirmation(
             "Clear the cached schedule?",
             [
                 _body(
-                    "This deletes the schedule saved by the last refresh. The app "
-                    f"keeps showing it until you close it; the next start shows "
+                    "This deletes the schedule saved by the last refresh. You keep "
+                    "seeing it until you close the app; the next start shows "
                     f"{bundled} until a refresh saves a new copy."
                 )
             ],
@@ -115,6 +125,7 @@ def confirmation(
             ),
             *(_loss(icon, text) for icon, text in zip(LOSS_ICONS, losses, strict=True)),
         ],
+        icon_color=ft.Colors.ERROR,  # as the row that opens it
         confirm="Reset app",
         on_confirm=on_confirm,
         on_cancel=on_cancel,
@@ -127,20 +138,25 @@ def _dialog(
     title: str,
     content: list[ft.Control],
     *,
+    icon_color: ft.ColorValue | None = None,
     confirm: str,
     on_confirm: Callable[[], Any],
     on_cancel: Callable[[], Any],
 ) -> ft.AlertDialog:
-    """A destructive action's confirmation: Cancel, then the action, in ``error``."""
+    """A destructive action's confirmation: Cancel, then the action, in ``error``.
+
+    The icon is the row's, in the row's colour when it has one (``error`` for Reset
+    app), else the dialog's default (``secondary``).
+    """
     return ft.AlertDialog(
         modal=True,
         scrollable=True,
-        icon=ft.Icon(icon),
+        icon=ft.Icon(icon, color=icon_color),
         title=ft.Text(title),
         content=ft.Column(content, tight=True, spacing=12),
         actions=[
-            merged(f"{identifier}.cancel", ft.TextButton("Cancel", on_click=on_cancel)),
-            merged(
+            named(f"{identifier}.cancel", ft.TextButton("Cancel", on_click=on_cancel)),
+            named(
                 f"{identifier}.confirm",
                 ft.TextButton(
                     confirm,
@@ -176,8 +192,3 @@ def _loss(icon: ft.IconData, text: str) -> ft.Control:
         spacing=12,
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
-
-
-def merged(identifier: str, control: ft.Control) -> ft.Control:
-    """``control`` with an identifier for UI flows, in its own node (D-190's merge)."""
-    return ft.MergeSemantics(ft.Semantics(identifier=identifier, content=control))

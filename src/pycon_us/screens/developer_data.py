@@ -28,7 +28,6 @@ from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_confirm import (
     Asking,
     confirmation,
-    merged,
     none_open,
     snapshot_day,
 )
@@ -37,6 +36,7 @@ from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, Problem, Source, use_conference
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.ui.semantics import named
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,8 @@ NO_LOG: Outcome = ("There's no log to share yet.", False)
 LOG_NOT_FOUND: Outcome = ("Couldn't find the log.", False)
 NOT_SHARED: Outcome = ("Couldn't open the share sheet.", False)
 LOG_SHARED: Outcome = ("Log shared.", True)
+LOG_OFFERED: Outcome = ("Log handed to the share sheet.", True)
+"""When the platform cannot say how the sheet ended (``UNAVAILABLE``): true either way."""
 
 RESET_INCOMPLETE = (
     "App reset, but some saved data couldn't be deleted: it returns when you reopen "
@@ -160,6 +162,10 @@ def DataActions() -> ft.Control:
                 else schedule_line(conference.source, conference.fetched_at),
                 refresh_now,
                 disabled=refreshing,
+                # Something moves while it runs (ux.md §4), the words say what.
+                trailing=ft.ProgressRing(width=20, height=20, stroke_width=2)
+                if refreshing
+                else None,
             ),
             action_row(
                 "developer.clear_cache",
@@ -251,7 +257,9 @@ async def share_console_log(
 
     Returns:
         What to say: that it was shared, that there is no log or that it failed;
-        nothing (``NO_OUTCOME``) when the sheet was dismissed.
+        nothing (``NO_OUTCOME``) when the sheet was dismissed; that the sheet had the
+        log when the platform cannot say which (``UNAVAILABLE``, share_plus on some
+        Android share targets).
     """
     try:
         path = await svc.paths.get_console_log_filename()
@@ -271,7 +279,13 @@ async def share_console_log(
         # The class only: an invoke error's text repeats the call's arguments (D-72).
         logger.warning("Could not share the log: %s", type(error).__name__)
         return NOT_SHARED
-    return LOG_SHARED if result.status == ft.ShareResultStatus.SUCCESS else NO_OUTCOME
+    match result.status:
+        case ft.ShareResultStatus.SUCCESS:
+            return LOG_SHARED
+        case ft.ShareResultStatus.DISMISSED:
+            return NO_OUTCOME
+        case _:
+            return LOG_OFFERED
 
 
 def has_text(path: Path) -> bool:
@@ -329,11 +343,14 @@ def action_row(
     *,
     disabled: bool = False,
     color: ft.ColorValue | None = None,
+    trailing: ft.Control | None = None,
 ) -> ft.Control:
     """Return one action: a two-line ``ListTile``, one node named by both lines.
 
     Its icons and title sit 14 dp from the top at every height, as a ``LinkTile`` with
-    a subtitle does (D-188). A disabled row says so to screen readers.
+    a subtitle does (D-188). A disabled row says so to screen readers; its icon and
+    title take the disabled colour, but its second line, which says why, stays in
+    ``on_surface_variant``: at the disabled 38 % it is too faint to read (ux.md §9).
 
     Args:
         identifier: For UI flows, e.g. ``developer.reset_app``.
@@ -343,13 +360,17 @@ def action_row(
         on_click: The action.
         disabled: Whether the action is unavailable now.
         color: The icon's and the title's colour: ``ERROR`` for Reset app.
+        trailing: A decorative control at the end: Refresh now's ring while it runs.
     """
-    return merged(
+    return named(
         identifier,
         ft.ListTile(
             leading=ft.Icon(icon, color=None if disabled else color),
             title=ft.Text(title, color=None if disabled else color),
-            subtitle=subtitle,
+            subtitle=ft.Text(
+                subtitle, color=ft.Colors.ON_SURFACE_VARIANT if disabled else None
+            ),
+            trailing=trailing,
             on_click=on_click,
             disabled=disabled,
             title_alignment=ft.ListTileTitleAlignment.TOP,
@@ -368,6 +389,9 @@ def padded(control: ft.Control) -> ft.Container:
 def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
     """Return the line under a group of buttons: an icon and what was done.
 
+    Laid out as the screen's ``ListTile``s are, the icon in a 24 dp slot and the words
+    16 dp after it, so they start in the tiles' text column (56 dp).
+
     Args:
         text: What was done, or why not, e.g. "Back to real time and the year's feed."
         ok: Whether it went as asked: a check in ``success``, else a warning in
@@ -378,10 +402,14 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
         ft.Row(
             [
                 # Decorative: the words carry the meaning (ux.md §9).
-                ft.Icon(
-                    ft.Icons.CHECK_CIRCLE_OUTLINE if ok else ft.Icons.WARNING_AMBER,
-                    color=tokens.success if ok else tokens.warning,
-                    size=20,
+                ft.Container(
+                    ft.Icon(
+                        ft.Icons.CHECK_CIRCLE_OUTLINE if ok else ft.Icons.WARNING_AMBER,
+                        color=tokens.success if ok else tokens.warning,
+                        size=20,
+                    ),
+                    width=24,
+                    alignment=ft.Alignment.CENTER,
                 ),
                 ft.Text(
                     text,
@@ -390,7 +418,7 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
                     expand=True,
                 ),
             ],
-            spacing=8,
+            spacing=16,
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
     )
