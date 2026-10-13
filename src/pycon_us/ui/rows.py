@@ -1,7 +1,8 @@
-"""The rows lists are made of (decisions §M): so far ``LinkTile``, a row that opens a link.
+"""The rows lists are made of (decisions §M): ``LinkTile`` and ``SpeakerRow``.
 
-P1 adds ``SpeakerRow`` and P2 ``LocationCard`` here (ux.md §3.9); the session and
-notice rows and the time gutter are in ``ui.session_rows`` (D-184).
+``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
+session (SPKR-01). P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice
+rows and the time gutter are in ``ui.session_rows`` (D-184).
 
 ``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
 is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves
@@ -14,6 +15,8 @@ from typing import Any
 
 import flet as ft
 
+from pycon_us.core.speakers import SpeakerEntry, initials
+from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.links import (
@@ -24,6 +27,7 @@ from pycon_us.ui.links import (
     link_kind,
     open_link,
 )
+from pycon_us.ui.session_rows import semantics_key
 
 PLAIN_TOP = 16
 """A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
@@ -183,3 +187,129 @@ def _tile(
 def icon_top(subtitle: str | ft.Control | None) -> int:
     """Return how far ``_tile`` puts its leading icon from the row's top, in dp."""
     return PLAIN_TOP if subtitle is None else SUBTITLED_TOP
+
+
+AVATAR_RADIUS = 24
+"""A speaker row's avatar, in dp: a 48 dp circle (ux.md §3.9)."""
+
+
+def more_label(more: int) -> str:
+    """Return the line a speaker row adds under its first session: "+1 more".
+
+    Args:
+        more: How many other sessions the speaker has; at least 1.
+    """
+    return f"+{more}\N{NO-BREAK SPACE}more"
+
+
+def speaker_phrase(entry: SpeakerEntry) -> str:
+    """Return what a screen reader says for a speaker row: one phrase (D-33).
+
+    "Ana Lima, speaking: Typing deep dive" (ux.md §3.9), with "and 1 more session"
+    when there are more, and the name alone for a speaker without a session.
+
+    Args:
+        entry: The speaker's entry (``core.speakers.directory()``).
+    """
+    name = entry.speaker.name
+    if entry.first_session is None:
+        return name
+    phrase = f"{name}, speaking: {entry.first_session.name}"
+    if entry.more:
+        sessions = "session" if entry.more == 1 else "sessions"
+        phrase = f"{phrase}, and {entry.more} more {sessions}"
+    return phrase
+
+
+def SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
+    """Return a speaker in a list (SPKR-01): avatar, name and first session.
+
+    A memoised component keyed by the speaker id, as session rows are (D-153): given
+    the same entry it skips its body, so a filter keystroke re-renders no row that
+    stays. A tap pushes the speaker's detail on top of the current View (D-17).
+
+    The avatar is the feed's photo over the speaker's initials, which show while the
+    photo loads, offline and when there is none, in ``primary_container``. The row
+    reads as one phrase for screen readers (``speaker_phrase()``), a button; nothing
+    has a fixed height but the avatar, so it grows with the text.
+
+    Args:
+        entry: The speaker's entry, equal on every render while it is unchanged.
+        screen: The screen's name in the row's semantics identifier,
+            ``<screen>.speaker.<key>`` (decisions §M, ``semantics_key()``).
+    """
+    # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
+    return _SpeakerRow(entry, screen=screen, key=entry.speaker.id)  # pyright: ignore[reportCallIssue]
+
+
+@ft.memo
+@ft.component
+def _SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
+    """The body of ``SpeakerRow``; it runs only when its entry changes (F34)."""
+    view_path = ft.use_view_path()
+    page = ft.context.page
+    speaker = entry.speaker
+
+    @report_errors
+    def go() -> None:
+        page.navigate(drill_href(view_path, "speaker", speaker.id))
+
+    lines: list[ft.Control] = [
+        ft.Text(speaker.name, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
+    ]
+    if entry.first_session is not None:
+        # Two lines at most: at large text a long title would make the row a page;
+        # the speaker's own page has it in full, and the phrase says it whole.
+        lines.append(
+            _supporting(
+                entry.first_session.name,
+                max_lines=2,
+                overflow=ft.TextOverflow.ELLIPSIS,
+            )
+        )
+    if entry.more:
+        # A line of its own, so a long title never cuts it.
+        lines.append(_supporting(more_label(entry.more)))
+    avatar = ft.CircleAvatar(
+        content=ft.Text(initials(speaker.name)),
+        foreground_image_src=speaker.photo_url or None,
+        bgcolor=ft.Colors.PRIMARY_CONTAINER,  # with its on_ pair: a tested contrast
+        color=ft.Colors.ON_PRIMARY_CONTAINER,
+        radius=AVATAR_RADIUS,
+    )
+    text = ft.Semantics(
+        label=speaker_phrase(entry),
+        identifier=f"{screen}.speaker.{semantics_key(speaker.id)}",
+        button=True,  # it opens the speaker: "…, button" (D-33)
+        # The phrase replaces the texts and the initials, which would be read too.
+        exclude_semantics=True,
+        content=ft.Row(
+            [avatar, ft.Column(lines, spacing=2, expand=True)],
+            spacing=16,
+            # Beside the name at any text size, not the middle of a wrapped title.
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        ),
+    )
+    return ft.MergeSemantics(  # the phrase and the tap's action: one node
+        content=ft.Container(
+            text,
+            ink=True,
+            on_click=go,
+            padding=ft.Padding.symmetric(horizontal=16, vertical=12),
+        )
+    )
+
+
+def _supporting(text: str, **cut: Any) -> ft.Text:
+    """Return a speaker row's supporting line, in the variant colour.
+
+    Args:
+        text: The line.
+        **cut: ``max_lines`` and ``overflow``, for a line that may be cut short.
+    """
+    return ft.Text(
+        text,
+        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        **cut,
+    )
