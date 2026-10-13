@@ -261,14 +261,15 @@ def doubts_fold(
         )
         for doubt in copy.doubts
     ]
-    return FoldTile(
-        ft.Semantics(
-            identifier=f"{SCREEN}.doubts",
-            content=ft.Text(DOUBTS),  # a row's title, as the link row under it
-        ),
+    fold = FoldTile(
+        ft.Text(DOUBTS),  # a row's title, as the link row under it
         answers,
         expanded=expanded,
         on_change=on_change,
         style=style,
         leading=ft.Icon(ft.Icons.LIGHTBULB_OUTLINE),
     )
+    # Around the tile, not on its title, which it split from the tile's button, read
+    # "Collapsed" alone on Android; not merged, which would take in the answers. An
+    # empty node of its own until Flet's Semantics stops forcing `enabled` (U34, D-214).
+    return ft.Semantics(identifier=f"{SCREEN}.doubts", content=fold)

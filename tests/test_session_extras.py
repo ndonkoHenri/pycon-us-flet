@@ -91,6 +91,15 @@ async def test_share_sits_between_the_star_and_the_overflow(render: Render) -> N
     assert button.tooltip == extras.SHARE_TOOLTIP
 
 
+async def test_more_options_is_one_node_with_its_identifier(render: Render) -> None:
+    """#239: bare, the identifier's node took the tooltip and the button went unnamed."""
+    detail = await render(TALK)
+    node = detail.node("session.overflow")
+    assert isinstance(node.parent, ft.MergeSemantics)
+    assert isinstance(node.content, ft.PopupMenuButton)
+    assert node.content.tooltip == "More options"
+
+
 async def test_share_sends_the_title_when_and_where_and_the_public_page(
     render: Render,
 ) -> None:

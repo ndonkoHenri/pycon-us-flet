@@ -118,8 +118,8 @@ def copy_button_of(row: ft.Control) -> ft.IconButton:
     holder = row.controls[1]
     assert isinstance(holder, ft.Container)
     button = holder.content
-    if isinstance(button, ft.Semantics):
-        button = button.content
+    if isinstance(button, ft.MergeSemantics):  # with an identifier (D-214)
+        button = cast(ft.Semantics, button.content).content
     assert isinstance(button, ft.IconButton)
     return button
 
@@ -307,8 +307,11 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
     assert isinstance(merged.content, ft.MergeSemantics)  # Copy is outside the merge
     holder = row.controls[1]
     assert isinstance(holder, ft.Container)
-    assert isinstance(holder.content, ft.Semantics)
-    assert holder.content.identifier == "help.coc.copy"
+    # Merged: bare, an identifier is a node of its own around the button (D-190).
+    assert isinstance(holder.content, ft.MergeSemantics)
+    node = holder.content.content
+    assert isinstance(node, ft.Semantics) and node.identifier == "help.coc.copy"
+    assert isinstance(node.content, ft.IconButton)
 
 
 async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:

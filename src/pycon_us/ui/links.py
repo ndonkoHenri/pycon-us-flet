@@ -187,7 +187,12 @@ def external(identifier: str, button: ft.Control) -> ft.Control:
         button: The button, whose ``on_click`` calls ``open_link()``.
     """
     return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, link=True, content=button)
+        content=ft.Semantics(
+            identifier=identifier,
+            link=True,
+            disabled=button.disabled,  # else the merged node reads as enabled (F42)
+            content=button,
+        )
     )
 
 

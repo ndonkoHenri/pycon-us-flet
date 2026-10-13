@@ -134,8 +134,11 @@ async def test_think_you_cant_do_one_starts_folded_and_opens(show: Show) -> None
     page = await show()
     (fold,) = page.find(ft.ExpansionTile)
     assert text_of(fold.title) == "Think you can't do one?"
+    # The identifier is around the tile: on the title, it split the title from the
+    # tile's button, which Android read as "Collapsed" alone (D-214).
+    assert page.node("lightning_talks.doubts").content is fold
     # A row's title, as the link row under it, not a heading's size (ux.md §5.11).
-    title = cast(ft.Text, cast(ft.Semantics, fold.title).content)
+    title = cast(ft.Text, fold.title)
     assert title.theme_style is None
     assert fold.expanded is False
     await page.event(fold, "change", True)

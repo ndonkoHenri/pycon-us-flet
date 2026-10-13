@@ -29,9 +29,12 @@ def test_a_semantics_key_is_safe_in_a_selector() -> None:
 
 
 def test_a_named_disabled_button_s_node_says_it_is_disabled() -> None:
-    """F42: Flutter's ``enabled`` comes from the ``Semantics``' own ``disabled``."""
+    """F42: Flutter's ``enabled`` comes from the ``Semantics``' own ``disabled``.
+
+    ``named()`` reads it from the control, so a caller cannot forget it (D-214).
+    """
     button = ft.IconButton(ft.Icons.SHARE_OUTLINED, disabled=True)
-    merged = named("session.share", button, disabled=True)
+    merged = named("session.share", button)
     assert isinstance(merged, ft.MergeSemantics)
     node = merged.content
     assert isinstance(node, ft.Semantics)
@@ -42,6 +45,14 @@ def test_a_named_disabled_button_s_node_says_it_is_disabled() -> None:
     )
     enabled = named("session.share", ft.IconButton(ft.Icons.SHARE_OUTLINED))
     assert not cast(ft.Semantics, cast(ft.MergeSemantics, enabled).content).disabled
+
+
+def test_a_named_row_follows_its_tile_s_state() -> None:
+    """#239: a disabled Developer row read as enabled; its node now follows the tile."""
+    for disabled in (True, False):
+        tile = ft.ListTile(title="Clear cached feed", disabled=disabled)
+        node = cast(ft.MergeSemantics, named("developer.clear_cache", tile)).content
+        assert cast(ft.Semantics, node).disabled is disabled
 
 
 # ------------------------------------------------------------------ headings
