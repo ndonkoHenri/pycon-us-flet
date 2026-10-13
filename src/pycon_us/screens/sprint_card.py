@@ -96,11 +96,14 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
                 theme_style=ft.TextThemeStyle.BODY_LARGE,
                 style=ft.TextStyle(height=1.5),
                 max_lines=4 if long else None,
+                # Not ELLIPSIS for both: without max_lines Flutter ellipsizes the first
+                # line wider than the card (a long URL) and drops the rest of the text.
                 overflow=ft.TextOverflow.ELLIPSIS if long else ft.TextOverflow.CLIP,
             )
         )
     actions: list[ft.Control] = []
     if long:
+        word = "Less" if expanded else "More"
         actions.append(
             named(
                 f"{SCREEN}.more.{key}",
@@ -108,8 +111,10 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
                     expanded=expanded,  # said "collapsed" or "expanded"
                     content=ft.TextButton(
                         content=ft.Text(
-                            "Less" if expanded else "More",
-                            semantics_label=f"Full description of {sprint.name}",
+                            word,
+                            # The visible word first, so "tap More" works for voice
+                            # control users (WCAG 2.5.3), then whose description.
+                            semantics_label=f"{word} about {sprint.name}",
                         ),
                         on_click=toggle,
                     ),
@@ -196,7 +201,6 @@ def logo_tile(sprint: Sprint) -> ft.Control:
             src=sprint.logo_url,
             fit=ft.BoxFit.CONTAIN,
             error_content=monogram,
-            exclude_from_semantics=True,
         )
     return ft.Semantics(
         exclude_semantics=True,

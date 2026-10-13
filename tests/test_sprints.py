@@ -464,9 +464,8 @@ async def test_more_shows_the_whole_description_with_its_links(show: Any) -> Non
     assert toggle.expanded is False  # said "collapsed"
     button = cast(ft.TextButton, toggle.content)
     assert text_of(button) == "More"
-    assert (
-        cast(ft.Text, button.content).semantics_label == "Full description of BeeWare"
-    )
+    # The visible word first (WCAG 2.5.3), and it follows the state.
+    assert cast(ft.Text, button.content).semantics_label == "More about BeeWare"
 
     await shown.click(button)
     (markdown,) = shown.find(ft.Markdown)
@@ -475,7 +474,9 @@ async def test_more_shows_the_whole_description_with_its_links(show: Any) -> Non
     toggle = cast(ft.Semantics, shown.node(f"sprints.more.{beeware.id}").content)
     assert toggle.expanded is True
     assert text_of(toggle.content) == "Less"
-    await shown.click(cast(ft.TextButton, toggle.content))
+    less = cast(ft.TextButton, toggle.content)
+    assert cast(ft.Text, less.content).semantics_label == "Less about BeeWare"
+    await shown.click(less)
     assert shown.find(ft.Markdown) == []
 
 
