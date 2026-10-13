@@ -26,8 +26,9 @@ def person_head(
     initials_style: ft.TextThemeStyle | None = None,
     heading_level: int | None = None,
     identifier: str | None = None,
+    stacked: bool = False,
 ) -> ft.Control:
-    """Return a person's photo beside their name and role.
+    """Return a person's photo beside, or over, their name and role.
 
     The photo is ``speaker_avatar()``'s (the photo over the initials), decorative: the
     name beside it says who. With a heading level the name is a heading (a Keynotes
@@ -42,6 +43,8 @@ def person_head(
         initials_style: The initials' type, for a larger photo (``speaker_avatar()``).
         heading_level: The name's heading level; None for no heading.
         identifier: The name's node's semantics identifier.
+        stacked: The photo over the name, as on a Keynotes card: beside a 96 dp photo,
+            the largest text left the name a word a line. A 48 dp photo stays beside.
     """
     name: ft.Control = ft.Text(person.name, theme_style=name_style)
     if heading_level is not None:
@@ -56,20 +59,20 @@ def person_head(
         theme_style=ft.TextThemeStyle.BODY_MEDIUM,
         color=ft.Colors.ON_SURFACE_VARIANT,
     )
-    row = ft.Row(
-        [
-            ft.Semantics(
-                exclude_semantics=True,
-                content=speaker_avatar(
-                    person, radius=radius, initials_style=initials_style
-                ),
-            ),
-            # Expanded, so at large text the name and role wrap beside the photo.
-            ft.Column([name, role], spacing=2, expand=True),
-        ],
-        spacing=16,
-        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    photo = ft.Semantics(
+        exclude_semantics=True,
+        content=speaker_avatar(person, radius=radius, initials_style=initials_style),
     )
+    row: ft.Control
+    if stacked:
+        row = ft.Column([photo, ft.Column([name, role], spacing=2)], spacing=12)
+    else:
+        row = ft.Row(
+            # Expanded, so at large text the name and role wrap beside the photo.
+            [photo, ft.Column([name, role], spacing=2, expand=True)],
+            spacing=16,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
     if heading_level is not None:
         return row
     return ft.MergeSemantics(

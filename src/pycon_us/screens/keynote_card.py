@@ -201,6 +201,7 @@ def _head(session: Session, keynote: Keynote | None, key: str) -> list[ft.Contro
                 initials_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
                 heading_level=2,
                 identifier=f"{SCREEN}.name.{key}.{number}",
+                stacked=True,
             )
             for number, person in enumerate(keynote.speakers)
         ]
