@@ -253,6 +253,7 @@ def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
     )
     for text_field in (clock_field, field(scaffold, "developer.feed_url")):
         assert text_field.max_lines == 3  # wraps instead of hiding the end
+        assert text_field.hint_max_lines == 1  # an empty field keeps one line
         # Not multiline: it would swap in the multiline keyboard, whose Return types
         # a line break, for the date-time and URL keyboards.
         assert text_field.multiline is False

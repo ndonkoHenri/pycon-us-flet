@@ -301,6 +301,7 @@ def option_field(
                 max_lines=3,
                 label=label,
                 hint_text=hint,
+                hint_max_lines=1,  # else a long hint (the feed URL) heightens the field
                 helper=helper,
                 helper_max_lines=3,
                 error=error or None,
