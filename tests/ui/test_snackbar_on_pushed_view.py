@@ -4,7 +4,7 @@ Session detail is a pushed View (D-141, D-144). Unstarring there shows "Removed 
 My schedule" with Undo (D-30, D-184), through ``page.show_dialog`` like every SnackBar
 in the app. Finders skip offstage widgets (testing-and-quality.md §5.1), and the tab
 root under a finished push is offstage, so finding the SnackBar's text and its Undo
-proves they are drawn on the View the user is looking at (D-209, F47).
+proves they are drawn on the View the user is looking at (D-210, F48).
 """
 
 import asyncio

@@ -31,7 +31,7 @@ async def share_text(svc: Services, text: str, *, subject: str) -> None:
     """Open the share sheet with ``text``; call it from an event handler.
 
     When the platform reports that the sheet could not open, a SnackBar says so, on the
-    View the button is on (D-209). Whether the person then shared or dismissed it needs
+    View the button is on (D-210). Whether the person then shared or dismissed it needs
     no answer.
 
     Args:

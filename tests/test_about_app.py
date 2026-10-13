@@ -181,7 +181,7 @@ async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
     stored = cast(MemoryPrefs, svc.storage.prefs).values["pycon.dev"]
     assert json.loads(stored) == {"unlocked": True}  # survives a relaunch (D-187)
     assert errors._details is True  # handler errors now say what failed
-    # Said in place, where the taps were, not in a SnackBar (D-29, D-209).
+    # Said in place, where the taps were, not in a SnackBar (D-29, D-210).
     assert page.dialogs == []
     row = developer_row(render())
     assert row is not None

@@ -70,7 +70,7 @@ def developer_row(unsaved: bool) -> ft.Control:
     """Return the row the unlock adds: the way to Developer, said where the taps were.
 
     In place, where the taps were, rather than in a SnackBar: the row is the result the
-    taps wait for, and the way on (D-29, D-209). A live region, so a screen reader says
+    taps wait for, and the way on (D-29, D-210). A live region, so a screen reader says
     it when the 7th tap adds it.
 
     Args:
