@@ -657,7 +657,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     conference.set_feed_url(DEV_FEED)
     svc.memory.last_location = "/more/developer"
     svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
-    svc.memory.jumped_to_now = True
+    svc.memory.jumped_on = date(2026, 5, 15)
 
     await tap(render, "developer.reset_app")
     render()

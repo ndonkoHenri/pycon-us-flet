@@ -92,8 +92,8 @@ def timeline(
     empties is left out. A day without sessions (the sprint days) and a filter that hides
     every track both give ``()``; a screen tells the two empty states apart by asking for
     the unfiltered day: ``timeline(data, day, ())`` is ``()`` only when the day has no
-    sessions at all (ux.md §4.6). "Jump to now" picks its key from the filtered slots,
-    because a slot the filter leaves out has no item to scroll to (D-155).
+    sessions at all (ux.md §4.6). "Jump to now" picks its target from the filtered
+    slots, because a slot the filter leaves out has no item to scroll to (D-155).
 
     Memoised on the feed, the day and the set of excluded keys (D-178): the same
     arguments return the same tuple, a slot the filter does not touch is the same object
@@ -120,31 +120,61 @@ def timeline(
     )
 
 
-def current_slot_key(slots: Sequence[Slot], now: datetime) -> str | None:
-    """Return the key of the slot "Jump to now" lands on (SCHED-16, D-155).
+NOW_KEY = "now"
+"""The now line's ``ScrollKey`` in today's Schedule list (D-202); no slot key clashes
+with it, since every slot key starts with ``slot-``."""
 
-    The slot that is on: the last one that has started, while one of its sessions
-    has not ended (``start <= now < end``, the same half-open rule as Now, D-179).
-    Once it is over, the next slot to start; after the day's last slot, the last
-    one. A notice has no duration, so a slot of notices alone is over as soon as it
-    starts. A long session in an earlier slot (a tutorial, an open space) does not
-    hold the jump back: the attendee wants what is starting next.
+
+@dataclass(frozen=True)
+class NowPlace:
+    """Where now falls among a day's slots: the now line and Jump to now (D-202).
+
+    A value: two places compare equal when the line and the slot that is on are the
+    same, so the Schedule can tell when its last jump still shows where now is.
+
+    Attributes:
+        line: How many slots have started: the now line sits just before
+            ``slots[line]``, so 0 puts it above the first slot and ``len(slots)``
+            after the last.
+        on: The key of the slot that is on, else None: the last slot that has
+            started, while one of its sessions has not ended (``start <= now < end``,
+            Now's half-open rule, D-179). A notice has no duration, so a slot of
+            notices alone is over as soon as it starts.
+    """
+
+    line: int
+    on: str | None
+
+    @property
+    def target(self) -> str:
+        """Where Jump to now lands: the slot that is on, else the now line.
+
+        Between two slots, before the day's first and after its last, nothing is
+        on, and the line sits just above what comes next (or ends the day), so
+        landing on it shows the line and the next slot together.
+        """
+        return self.on or NOW_KEY
+
+
+def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
+    """Return where now falls among the slots a list shows (SCHED-16, D-202).
+
+    Only the last slot that has started can be on: a long session in an earlier
+    slot (a tutorial, an open space) does not hold the jump back, since the attendee
+    wants what is starting next.
 
     Args:
         slots: The slots the list shows (``timeline(data, day, excluded)``), so the
-            key always has an item to scroll to (D-178).
+            target always has an item to scroll to (D-178); may be empty.
         now: The current instant (``clock.now()``), aware.
 
     Returns:
-        The slot's ``key``, or None when there are no slots.
+        The now line's index and the slot that is on.
     """
-    if not slots:
-        return None
-    started = [slot for slot in slots if slot.start <= now]
-    if started and any(s.end > now for s in started[-1].sessions):
-        return started[-1].key
-    upcoming = slots[len(started) :]
-    return (upcoming[0] if upcoming else slots[-1]).key
+    line = sum(1 for slot in slots if slot.start <= now)  # slots come by start
+    if line and any(s.end > now for s in slots[line - 1].sessions):
+        return NowPlace(line, slots[line - 1].key)
+    return NowPlace(line, None)
 
 
 def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:

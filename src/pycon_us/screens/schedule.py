@@ -11,18 +11,22 @@ The day opens on today during the conference, else on the first day; the day pic
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
 (D-18). A detail pushed over the Schedule keeps it mounted, and so its place.
 
-Jump to now (D-155) lands on the current slot (``current_slot_key()``) once per process,
-on the first display of today, and again with the "Now" button, which switches to today
-first when another day shows, and tells a screen reader where it landed. Without any
-data (no snapshot or cache, NEW-03) the screen shows the skeleton until the first fetch
-has failed, then "Can't load the schedule", which stays during a retry (D-32, ux.md
-§4.1).
+Jump to now (D-155, D-202) lands on the slot that is on, else on today's now line
+(``now_place()``): by itself on the first display of each today in the process, be it
+when the Schedule opens or when the user swipes to today, and again with the "Now"
+button, which switches to today first when another day shows, and tells a screen reader
+where it landed. The button hides while the place it goes to is on screen. A minute tick
+(``use_minute()``) keeps today's dot, the button and the now line with the clock; the
+day shown stays put across midnight. Without any data (no snapshot or cache, NEW-03)
+the screen shows the skeleton until the first fetch has failed, then "Can't load the
+schedule", which stays during a retry (D-32, ux.md §4.1).
 """
 
 import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import date
+from typing import cast
 
 import flet as ft
 
@@ -30,7 +34,7 @@ from pycon_us import clock
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_heading, time_label, today
-from pycon_us.core.timeline import Slot, current_slot_key, timeline
+from pycon_us.core.timeline import Slot, now_place, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.schedule_days import (
@@ -41,10 +45,11 @@ from pycon_us.screens.schedule_days import (
     now_button,
 )
 from pycon_us.screens.schedule_filter import use_track_filter
+from pycon_us.screens.schedule_now import Landing, NowMark, spoken_place
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
-from pycon_us.state import use_conference
+from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
@@ -52,7 +57,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.status_strip import StatusStrip, use_minute
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +73,13 @@ class Signals:
         ended: Set when the shown list's scroll ends (``jump_to_key()``).
         settled: Set when ``Tabs`` reports a day, which it does once a switch has
             finished sliding, the one asked for from Python included.
+        landing: Where the last jump left today's list; each scroll end of that list
+            is measured against it.
     """
 
     ended: asyncio.Event = field(default_factory=asyncio.Event)
     settled: asyncio.Event = field(default_factory=asyncio.Event)
+    landing: Landing | None = None
 
 
 @ft.component
@@ -88,12 +96,15 @@ def Schedule() -> ft.View:
     info = svc.year.conference
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
-    current = today(clock.now(), info.zone)  # the Developer fake clock moves it (D-43)
+    use_minute()  # today, its now line and the button follow the clock (D-202)
+    now = clock.now()  # the Developer fake clock moves it (D-43)
+    current = today(now, info.zone)
     all_days = days(data, info.first_day, info.last_day) if data else ()
     picked, set_picked = ft.use_state(memory.schedule_day)
     shown = picked if picked in all_days else _default_day(all_days, current)
     rest, set_rest = ft.use_state(False)  # the other days are rendered (D-156)
     jump, set_jump = ft.use_state(0)  # a "Now" tap from another day's tab
+    in_view, set_in_view = ft.use_state(cast(Landing | None, None))  # where now shows
     refs = ft.use_memo(dict[date, ft.Ref[ft.ListView]], [])
     signals = ft.use_memo(Signals, [])
     excluded = prefs.excluded_tracks
@@ -114,6 +125,7 @@ def Schedule() -> ft.View:
     views = use_session_views(conference, ids, use_24h=use_24h)
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     today_slots = slots.get(current, ())
+    place = now_place(today_slots, now) if today_slots else None
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
@@ -122,18 +134,30 @@ def Schedule() -> ft.View:
 
     @report_errors
     async def jump_to_now(*, asked: bool) -> None:
-        landed = await _jump_to_now(
+        if not today_slots:
+            return
+        memory.jumped_on = current  # by itself, never again today (D-18, D-202)
+        at = clock.now()
+        target = now_place(today_slots, at)
+        ended = await jump_to_key(
             _ref(refs, current),
-            today_slots,
+            target.target,
             duration=prefs.motion_ms(JUMP_MS),
             ended=signals.ended,
         )
+        if ended == "failed":
+            return
+        # "landed" recorded the offset at its scroll end; "still" left it as it was.
+        pixels = memory.schedule_offsets.get(current, 0.0)
+        landing = Landing(current, target, conference.version, excluded, pixels)
+        signals.landing = landing
+        set_in_view(landing)
         # The user's own tap: a screen reader hears where the list went, since the
         # tab switch and the scroll are silent. The first display's jump is not asked.
-        if asked and landed is not None and prefs.screen_reader and prefs.announcements:
-            when = time_label(landed.start, info.zone, use_24h=use_24h)
+        if asked and prefs.screen_reader and prefs.announcements:
+            where = spoken_place(target, today_slots, at, info.zone, use_24h=use_24h)
             try:
-                await svc.semantics.announce_message(f"{day_heading(current)}, {when}")
+                await svc.semantics.announce_message(f"{day_heading(current)}, {where}")
             except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
                 logger.warning("Could not announce the jump", exc_info=True)
 
@@ -141,12 +165,12 @@ def Schedule() -> ft.View:
     async def opened() -> None:
         if shown is None:  # no data yet: the first display is the render that has it
             return
-        jumps = not memory.jumped_to_now and shown == current and bool(today_slots)
+        set_picked(shown)  # a midnight while mounted never moves the user (D-202)
+        jumps = _jumps_by_itself(shown, current, today_slots, memory)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
         await svc.storage.get(THEME)
         set_rest(True)
         if jumps:
-            memory.jumped_to_now = True  # once per process (D-18)
             await jump_to_now(asked=False)
         else:
             await _restore(_ref(refs, shown), memory.schedule_offsets.get(shown))
@@ -174,7 +198,10 @@ def Schedule() -> ft.View:
             return
         memory.schedule_day = day
         set_picked(day)
-        await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
+        if _jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
+            await jump_to_now(asked=False)
+        else:
+            await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
 
     @report_errors
     async def now_pressed() -> None:
@@ -194,9 +221,15 @@ def Schedule() -> ft.View:
 
     @report_errors
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
-        if e.event_type == ft.ScrollType.END:
-            memory.schedule_offsets[day] = e.pixels
-            signals.ended.set()
+        if e.event_type != ft.ScrollType.END:
+            return
+        memory.schedule_offsets[day] = e.pixels
+        signals.ended.set()
+        landing = signals.landing
+        if landing is not None and landing.day == day:
+            set_in_view(
+                landing if landing.near(e.pixels, e.viewport_dimension) else None
+            )
 
     on_scroll = ft.use_callback(scrolled, [])
 
@@ -239,6 +272,9 @@ def Schedule() -> ft.View:
                 full=day == current,  # the one list a jump targets (D-154)
                 clearance=bool(today_slots),
                 empty=_empty(data, day, slots[day]),
+                now=NowMark(place.line, time_label(now, info.zone, use_24h=use_24h))
+                if day == current and place is not None
+                else None,
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
                 on_clear_filters=track_filter.show_all,
@@ -270,13 +306,20 @@ def Schedule() -> ft.View:
             expand=True,
         ),
     )
+    # Hidden while the place "Now" goes to is on screen; a slot's start, a scroll away,
+    # a refresh or a filter change brings it back (D-202).
+    at_now = (
+        shown == current
+        and in_view is not None
+        and in_view.shows(current, place, conference.version, excluded)
+    )
     return AppScaffold(
         title="Schedule",
         actions=[search_button(memory, "sessions"), track_filter.button],
         body=tabs,
         on_retap=scroll_to_top,
         fab=now_button(on_today=shown == current, on_click=now_pressed)
-        if today_slots
+        if today_slots and not at_now
         else None,
     )
 
@@ -291,31 +334,20 @@ def _cancel_on_unmount() -> None:
     """
 
 
+def _jumps_by_itself(
+    day: date, current: date, today_slots: tuple[Slot, ...], memory: ViewMemory
+) -> bool:
+    """Whether showing ``day`` jumps to now unasked: today's first display (D-202).
+
+    Once per conference day in the process (``ViewMemory.jumped_on``, D-18), read when
+    the day shows, since a jump may have run since the render.
+    """
+    return day == current and bool(today_slots) and memory.jumped_on != current
+
+
 def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:
     """Return the day list's ref, one per day for the screen's life (F38)."""
     return refs.setdefault(day, ft.Ref[ft.ListView]())
-
-
-async def _jump_to_now(
-    list_ref: ft.Ref[ft.ListView],
-    slots: tuple[Slot, ...],
-    *,
-    duration: int,
-    ended: asyncio.Event,
-) -> Slot | None:
-    """Scroll today's list to the current slot (``current_slot_key()``, D-155).
-
-    Returns:
-        The slot the list is on: the one it landed on, or the one it was already on
-        (no scroll on any try: today's list builds every slot, D-154). None when there
-        is no slot or the jump failed.
-    """
-    key = current_slot_key(slots, clock.now())
-    if key is None:
-        return None
-    if await jump_to_key(list_ref, key, duration=duration, ended=ended) == "failed":
-        return None
-    return next(slot for slot in slots if slot.key == key)
 
 
 async def _restore(list_ref: ft.Ref[ft.ListView], offset: float | None) -> None:
