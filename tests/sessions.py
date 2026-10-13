@@ -1,8 +1,9 @@
 """A real Flet session with no client, for tests that render components (D-153, D-184).
 
-Flet's own component tests render this way: a ``Session`` on a connection that encodes
-each message as a transport does and sends it nowhere, ``page.render(...)`` with the
-page bound as Flet binds it, and Flet's scheduler re-rendering what changed.
+Flet's own component tests render this way: a ``Session`` on a connection that sends to
+nothing (and, for dialogs, encodes each message as a transport does: ``ENCODE``),
+``page.render(...)`` with the page bound as Flet binds it, and Flet's scheduler
+re-rendering what changed.
 ``tests/test_session_rows.py``, ``tests/test_schedule.py`` and
 ``tests/test_my_schedule.py`` use it. It reaches into Flet internals
 (``_context_page``, ``Session.index``, ``Session.dispatch_event``, the msgpack encoder
@@ -24,20 +25,26 @@ from flet.pubsub.pubsub_hub import PubSubHub
 
 _ENCODE = configure_encode_object_for_msgpack(ft.BaseControl)
 
+ENCODE = False
+"""Encode each message as a transport does. Off by default, since encoding a long list
+costs time a timed test (a jump's wait) may not have on a loaded host; a test of
+``ft.use_dialog`` turns it on (``monkeypatch.setattr(sessions, "ENCODE", True)``)."""
+
 
 def pack(payload: object) -> None:
-    """Encode ``payload`` as a transport does, and send the bytes nowhere.
+    """Encode ``payload`` as a transport does, and send the bytes nowhere (``ENCODE``).
 
     Encoding is what records the lists and fields a control was last sent with, which
     the next patch of that control is diffed against (``protocol.py``); a control that
     is only ever updated in place, such as the page's dialog list (``ft.use_dialog``),
     patches nothing until it has been encoded once.
     """
-    msgpack.packb(payload, default=_ENCODE)
+    if ENCODE:
+        msgpack.packb(payload, default=_ENCODE)
 
 
 def connection() -> Connection:
-    """Return a connection to no client that encodes each message as a client's would."""
+    """Return a connection to no client; it encodes each message when ``ENCODE`` is on."""
     conn = Connection()
     conn.pubsubhub = PubSubHub()
 

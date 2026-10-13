@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 import flet as ft
+import pytest
 
 from pycon_us.config import Track, load_year
 from pycon_us.core.timefmt import time_label
@@ -26,7 +27,7 @@ from pycon_us.screens.schedule_filter import (
 )
 from pycon_us.screens.schedule_sheet import DEFAULT_HIDDEN, count_label, filter_groups
 from pycon_us.state import Conference
-from tests import test_schedule
+from tests import sessions, test_schedule
 from tests.fakes import MemoryPrefs
 from tests.sessions import find, settle
 from tests.test_schedule import DAYS, Shown
@@ -37,6 +38,13 @@ now = test_schedule.now
 memory = test_schedule.memory
 conference = test_schedule.conference
 shown = test_schedule.shown
+
+
+@pytest.fixture(autouse=True)
+def encoded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The sheet is a dialog: its updates need the encoded snapshots (``sessions.ENCODE``)."""
+    monkeypatch.setattr(sessions, "ENCODE", True)
+
 
 INFO = load_year(2026).conference
 STORED = "pycon.excluded_tracks"
