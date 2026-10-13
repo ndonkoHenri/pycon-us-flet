@@ -32,7 +32,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
 | 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` plus the build number constant (D-83) | `page.get_app_info()` | P2 | XS | proposed |
 | 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
-| 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: fixes #178 (D-183) | XS | proposed (one PR with U16); #183 |
+| 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
 | 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
@@ -619,7 +619,7 @@ class AppInfo:
 
 **Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live.
 
-**Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values, also when the change was made with the app in the background and reaches Flutter seconds after the return (fixes #178; tracked by #183).
+**Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values, also when the change was made with the app in the background and reaches Flutter seconds after the return (#178's case, D-183; tracked by #183).
 
 ### 5.5 U10: `AppBar.bottom` (later; S)
 
