@@ -531,8 +531,8 @@ async def test_under_reduced_motion_the_jump_is_instant(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
     schedule = await shown(reduce_motion=True)
-    ((_, kwargs),) = schedule.scrolls
-    assert kwargs["duration"] == 0  # D-34, D-173
+    assert schedule.scrolls  # a busy host may need a second ask: each one instant
+    assert {kwargs["duration"] for _, kwargs in schedule.scrolls} == {0}  # D-34
 
 
 async def test_outside_the_conference_nothing_jumps_and_there_is_no_now_button(

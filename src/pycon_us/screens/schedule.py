@@ -319,7 +319,7 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
 
     The text's semantics label says the day in full; Flutter's tab bar puts its own
     position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
-    Friday, May 15, today, selected" (D-189).
+    Friday, May 15, today, selected" (D-192).
     """
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)

@@ -139,7 +139,7 @@ def _DayList(
             EmptyState(
                 f"{weekday_name(day)} is a sprint day",
                 icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
-                body="No talks today: people work on open-source projects together, "
+                body="No talks on sprint days: people work on open-source projects together, "
                 "and anyone can join one.",
                 action="See the sprints",
                 on_action=see_sprints,
