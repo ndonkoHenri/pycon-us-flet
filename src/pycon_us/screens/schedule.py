@@ -33,7 +33,13 @@ from pycon_us.core.timefmt import day_heading, time_label, today
 from pycon_us.core.timeline import Slot, current_slot_key, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.schedule_days import DayList, Empty, day_tab, now_button
+from pycon_us.screens.schedule_days import (
+    TAB_MS,
+    DayList,
+    Empty,
+    day_tab,
+    now_button,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -47,9 +53,6 @@ from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
 
 logger = logging.getLogger(__name__)
-
-TAB_MS = 100
-"""How long a day switch made from Python slides (Flet's default for ``Tabs``)."""
 
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""

@@ -33,8 +33,7 @@ from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href, use_query
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
-from pycon_us.screens.schedule import TAB_MS
-from pycon_us.screens.schedule_days import day_tab
+from pycon_us.screens.schedule_days import TAB_MS, day_tab
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors

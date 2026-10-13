@@ -48,6 +48,10 @@ TAB_HEIGHT = 56
 with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
 iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
 
+TAB_MS = 100
+"""How long a day switch made from Python slides (Flet's default for ``Tabs``); the
+Schedule's and a room's tabs (D-194)."""
+
 TODAY_DOT = 6
 """The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
 
