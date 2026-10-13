@@ -144,9 +144,10 @@ def _tile(
 ) -> ft.ListTile:
     """A link row's ``ListTile``, its icons beside the title's first line.
 
-    ``TITLE_HEIGHT`` centres a one-line row's icons and puts them 16 dp from the top
-    once a row grows past 72 dp (two lines at 200 % text), where M3's default centres
-    them against the whole block, far from the title they belong to.
+    ``TITLE_HEIGHT`` centres a 56 dp row's icons; on a 72 dp row (a subtitle) the
+    leading icon sits 16 dp from the top, beside the title, and past 72 dp (200 % text)
+    both do. M3's default centres them against the whole block, which at 200 % puts
+    them beside the middle of a four-line title, far from the line they belong to.
     """
     return ft.ListTile(
         leading=ft.Icon(icon) if icon is not None else None,
