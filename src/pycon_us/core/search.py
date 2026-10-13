@@ -10,11 +10,12 @@ words, grouped by type and day. Screens never fold or match on their own (NEW-02
 import logging
 import time
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from itertools import groupby
 
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, speaker_order
+from pycon_us.core.slugs import room_sort_key
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,10 @@ class SearchIndex:
     Each entry pairs a folded text with what it finds, already in the order results show.
 
     Attributes:
-        sessions: Every session with its ``search_text``, by day, then as the timeline
-            orders a day.
-        speakers: The speaker directory with each folded name, by folded name.
+        sessions: Every session with its ``search_text``, by day, then as the Schedule
+            orders a day (D-31).
+        speakers: The speaker directory with each folded name, as the Speakers list
+            orders it (``queries.speaker_order``).
         rooms: The rooms with each folded name, in natural order (D-125).
     """
 
@@ -46,7 +48,7 @@ class DaySessions:
 
     Attributes:
         day: The conference-local date the sessions are listed under.
-        sessions: The matches, in timeline order; never empty.
+        sessions: The matches, in the Schedule's order (D-31); never empty.
     """
 
     day: date
@@ -62,7 +64,7 @@ class SearchResults:
 
     Attributes:
         sessions: The matching sessions by day, oldest day first.
-        speakers: The matching speakers, by folded name.
+        speakers: The matching speakers, by folded name, then id.
         rooms: The matching rooms, in natural order.
     """
 
@@ -90,10 +92,10 @@ def search_index(data: ConferenceData) -> SearchIndex:
     """
     started = time.perf_counter()
     sessions = sorted(data.sessions.values(), key=_timeline_order)
-    speakers = sorted(((fold(s.name), s) for s in data.speakers.values()), key=_by_name)
+    speakers = sorted(data.speakers.values(), key=speaker_order)
     index = SearchIndex(
         sessions=tuple((s.search_text, s) for s in sessions),
-        speakers=tuple(speakers),
+        speakers=tuple((fold(s.name), s) for s in speakers),
         rooms=tuple((fold(room.name), room) for room in data.rooms.values()),
     )
     logger.info(
@@ -143,15 +145,19 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
     )
 
 
-def _timeline_order(session: Session) -> tuple[date, datetime, str, str, str]:
-    """The Schedule's order: by day and start, then location and name (D-31, DATA-13).
+def _timeline_order(session: Session) -> tuple[object, ...]:
+    """The Schedule's order: by day, the start a row shows, then its place (D-31, DATA-30).
 
+    Places sort naturally (``Room 102A`` before ``Room 1000``, as the printed grid
+    reads), and a row without one, such as a generic break, comes first in its slot.
     Poster details, which no time group lists, take their place by the Posters row's
-    start; the id breaks the remaining ties, so the order never depends on the feed's.
+    start; name and id break the remaining ties, so the order never depends on the feed's.
+    #194 replaces this key with the schedule queries' own once both are on ``main``.
     """
-    return (session.day, session.start, session.location, session.name, session.id)
-
-
-def _by_name(entry: tuple[str, Speaker]) -> tuple[str, str]:
-    folded, speaker = entry
-    return folded, speaker.id
+    return (
+        session.day,
+        session.display_start,
+        room_sort_key(session.display_location),
+        session.name,
+        session.id,
+    )

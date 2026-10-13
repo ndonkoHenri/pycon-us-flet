@@ -11,7 +11,8 @@ from hypothesis import strategies as st
 
 from pycon_us.config import load_year
 from pycon_us.core.feed import process
-from pycon_us.core.queries import days, fold
+from pycon_us.core.models import Speaker
+from pycon_us.core.queries import days, fold, speaker_order
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -69,7 +70,10 @@ def test_fold_is_stable_and_leaves_no_marks(text: str) -> None:
         ("Łukasz Paweł Żal", "lukasz pawel zal"),  # 2025 speakers; ł does not decompose
         ("Søren Ærø Œuvre", "soren aero oeuvre"),
         ("Đorđe", "dorde"),
-        ("don’t ‘quote’", "don't 'quote'"),  # iOS types the curly forms
+        ("don’t ‘quote’", "dont quote"),  # iOS types the curly forms
+        ("don't O’Reilly", "dont oreilly"),  # apostrophes go: "dont" finds both
+        ("don´t", "dont"),  # an acute accent typed as one would split the word
+        ("Hawaiʻi Oʼahu", "hawaii oahu"),  # modifier letters used as apostrophes
         ("“Hello” „world‟", '"hello" "world"'),
         ("type‐safe – fast — done ‒ 1−2 ―", "type-safe - fast - done - 1-2 -"),
         ("non‑breaking", "non-breaking"),  # NFKD makes it a hyphen, then ASCII
@@ -83,3 +87,21 @@ def test_fold_is_stable_and_leaves_no_marks(text: str) -> None:
 def test_fold_ignores_case_accents_and_typography(text: str, folded: str) -> None:
     """D-46, D-180: search and the Speakers sort compare folded text."""
     assert fold(text) == folded
+
+
+def test_speakers_sort_by_folded_name_then_id() -> None:
+    """D-46: the Speakers list and search share one order; equal names keep theirs."""
+    speakers = [
+        Speaker("9", "carla", "", ""),
+        Speaker("2", "Álvaro", "", ""),
+        Speaker("8", "O’Brien", "", ""),
+        Speaker("1", "ALVARO", "", ""),
+        Speaker("3", "Ofelia", "", ""),
+    ]
+    assert [s.id for s in sorted(speakers, key=speaker_order)] == [
+        "1",  # alvaro, 1
+        "2",  # alvaro, 2
+        "9",  # carla
+        "8",  # obrien: the apostrophe does not count
+        "3",  # ofelia
+    ]

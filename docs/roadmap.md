@@ -593,7 +593,7 @@ One search over sessions, speakers and rooms on all days, replacing per-page sea
 
 feature, area:schedule · after P0-13, P0-15 · DATA-18, DATA-19
 
-Pure `fold()` (NFKD plus casefold) and an index over session text, speakers and rooms with AND matching, grouped by type and day.
+Pure `fold()` (NFKD plus casefold) and an index over session text, speakers and rooms with AND matching, grouped by type and day (built as D-180: the fold also folds typography and drops apostrophes; index and matching in `core/search.py`).
 
 - "cristian" finds "Cristián"; markup never matches.
 - Index build time is logged.

@@ -15,9 +15,9 @@ import pytest
 
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.search import DaySessions, SearchResults, search, search_index
-from pycon_us.core.slugs import slugify_room
+from pycon_us.core.slugs import room_sort_key, slugify_room
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -89,6 +89,12 @@ def model(
     )
 
 
+def _schedule_order(session: Session) -> tuple[object, ...]:
+    """D-31 written out on its own, so the index's order is checked, not restated."""
+    place = room_sort_key(session.display_location)
+    return session.day, session.display_start, place, session.name, session.id
+
+
 def ids(results: SearchResults) -> list[str]:
     return [session.id for day in results.sessions for session in day.sessions]
 
@@ -144,6 +150,7 @@ def test_curly_quotes_and_dashes_in_a_query_match_straight_ones() -> None:
         )
     )
     assert ids(search(index, "don’t")) == ["1"]
+    assert ids(search(index, "dont")) == ["1"]  # the apostrophe left out on a phone
     assert ids(search(index, "type-safe")) == ["2"]
     assert ids(search(index, "safe —")) == ["2"]
 
@@ -153,16 +160,22 @@ def test_an_empty_or_blank_query_finds_nothing(query: str) -> None:
     assert search(search_index(TYPING), query) == SearchResults()
 
 
-def test_sessions_are_grouped_by_day_then_ordered_as_the_timeline() -> None:
-    """Days oldest first; within a day by start, then location, then name (D-31)."""
+def test_sessions_are_grouped_by_day_then_ordered_as_the_schedule() -> None:
+    """Days oldest first; in a day by shown start, then place in natural order (D-31)."""
+    job_fair = dataclasses.replace(
+        talk("fair", "Python job fair", at(14, 11)), display_start=at(14, 9, 30)
+    )
     index = search_index(
         model(
             [
                 talk("late", "Python late", at(15, 16)),
-                talk("b", "Python b", at(14, 10), location="Room 2"),
+                talk("b10", "Python b", at(14, 10), location="Room 10"),
+                talk("b2", "Python b", at(14, 10), location="Room 2"),
+                talk("break", "Python break", at(14, 10), location=""),
                 talk("poster", "Python poster", at(14, 9), in_timeline=False),
                 talk("a2", "Python z", at(14, 10), location="Room 1"),
                 talk("a1", "Python a", at(14, 10), location="Room 1"),
+                job_fair,
                 talk("first", "Python first", at(13, 9)),
             ]
         )
@@ -173,8 +186,18 @@ def test_sessions_are_grouped_by_day_then_ordered_as_the_timeline() -> None:
         date(2026, 5, 14),
         date(2026, 5, 15),
     ]
-    assert ids(results) == ["first", "poster", "a1", "a2", "b", "late"]
-    assert results.session_count == 6
+    assert ids(results) == [
+        "first",
+        "poster",
+        "fair",  # by the start it shows, 9:30, not its slot's
+        "break",  # a row without a place comes first in its slot
+        "a1",
+        "a2",
+        "b2",  # Room 2 before Room 10, as the printed grid reads
+        "b10",
+        "late",
+    ]
+    assert results.session_count == 9
 
 
 def test_speakers_sort_by_folded_name_and_rooms_keep_their_order() -> None:
@@ -301,14 +324,13 @@ def test_the_index_holds_everything_in_the_schedules_order(year: int) -> None:
     data = processed(year)
     index = search_index(data)
     assert {s.id for _, s in index.sessions} == set(data.sessions)
-    assert [s.id for _, s in index.sessions if s.in_timeline] == [
-        session_id
-        for day in data.days
-        for group in day.groups
-        for session_id in group.session_ids
-    ]
+    sessions = [s for _, s in index.sessions]
+    for day in data.days:
+        listed = {i for group in day.groups for i in group.session_ids}
+        assert {s.id for s in sessions if s.in_timeline and s.day == day.date} == listed
+    assert sessions == sorted(sessions, key=_schedule_order)
     assert [s for _, s in index.speakers] == sorted(
-        data.speakers.values(), key=lambda s: (fold(s.name), s.id)
+        data.speakers.values(), key=speaker_order
     )
     assert [r for _, r in index.rooms] == list(data.rooms.values())
 

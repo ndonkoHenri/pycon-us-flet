@@ -7,7 +7,7 @@ import re
 import unicodedata
 from datetime import date, timedelta
 
-from pycon_us.core.models import ConferenceData
+from pycon_us.core.models import ConferenceData, Speaker
 
 
 def days(data: ConferenceData, first_day: date, last_day: date) -> tuple[date, ...]:
@@ -34,12 +34,17 @@ def days(data: ConferenceData, first_day: date, last_day: date) -> tuple[date, .
 # What NFKD leaves alone but a reader takes as the same text (D-180): typographic quotes
 # and dashes, which the feeds use and iOS's smart punctuation types, and letters with a
 # stroke or ligatures that Unicode does not decompose. Keys are case folded already.
-_SINGLE_QUOTES = (
+# Apostrophes, straight, curly or look-alike, are dropped rather than made straight:
+# people leave them out when typing on a phone, and "dont" should find "don’t".
+_APOSTROPHES = (
+    "'"
     "\N{LEFT SINGLE QUOTATION MARK}"
     "\N{RIGHT SINGLE QUOTATION MARK}"
     "\N{SINGLE LOW-9 QUOTATION MARK}"
     "\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}"
     "\N{PRIME}"
+    "\N{MODIFIER LETTER APOSTROPHE}"
+    "\N{MODIFIER LETTER TURNED COMMA}"
 )
 _DOUBLE_QUOTES = (
     "\N{LEFT DOUBLE QUOTATION MARK}"
@@ -52,7 +57,7 @@ _DASHES = (
 )
 _FOLD_TABLE = str.maketrans(
     {
-        **dict.fromkeys(_SINGLE_QUOTES, "'"),
+        **dict.fromkeys(_APOSTROPHES, ""),
         **dict.fromkeys(_DOUBLE_QUOTES, '"'),
         **dict.fromkeys(_DASHES, "-"),
         "ł": "l",
@@ -75,22 +80,24 @@ def fold(text: str) -> str:
     """Return text as search compares it: case, accents and typography folded (D-46, D-180).
 
     So ``Cristián`` and ``CRISTIAN`` both fold to ``cristian``, ``Straße`` to
-    ``strasse``, ``ﬁle`` to ``file``, ``Łukasz`` to ``lukasz`` and ``don’t`` to
-    ``don't``. Feed processing folds ``Session.search_text`` once, ``search`` folds the
+    ``strasse``, ``ﬁle`` to ``file``, ``Łukasz`` to ``lukasz``, and ``don’t``, ``don't``
+    and ``dont`` all to ``dont``. Feed processing folds ``Session.search_text`` once, ``search`` folds the
     names it indexes and every query the same way, so both sides always agree.
 
     Args:
         text: Any text.
 
     Returns:
-        The text decomposed (NFKD), case folded and decomposed again, with typographic
-        quotes and dashes as ASCII, the letters in ``_FOLD_TABLE`` replaced, and marks
-        and format characters removed.
+        The text decomposed (NFKD), case folded and decomposed again, with apostrophes
+        removed, typographic double quotes and dashes as ASCII, the letters in
+        ``_FOLD_TABLE`` replaced, and marks and format characters removed.
     """
     # NFKD around casefold is the Unicode Standard's compatibility caseless match (§3.13):
     # case folding can leave text that is not decomposed, and folding twice must not
-    # change it again.
-    folded = unicodedata.normalize("NFKD", text).casefold()
+    # change it again. The acute accent, typed as an apostrophe on some Spanish and
+    # Portuguese layouts, goes first: NFKD would make it a space and split the word.
+    folded = unicodedata.normalize("NFKD", text.replace("\N{ACUTE ACCENT}", ""))
+    folded = folded.casefold()
     folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)
     # Only non-ASCII runs can hold a mark: checking them alone keeps this fast (D-180).
     return _NON_ASCII.sub(_without_marks, folded)
@@ -98,3 +105,18 @@ def fold(text: str) -> str:
 
 def _without_marks(run: re.Match[str]) -> str:
     return "".join(c for c in run[0] if unicodedata.category(c) not in _DROPPED)
+
+
+def speaker_order(speaker: Speaker) -> tuple[str, str]:
+    """Return the key that orders speakers as the Speakers list and search show them.
+
+    By displayed name, folded (D-46), then by id, so two people with the same name always
+    come out in the same order.
+
+    Args:
+        speaker: A speaker of the directory.
+
+    Returns:
+        A key for ``sorted``.
+    """
+    return fold(speaker.name), speaker.id

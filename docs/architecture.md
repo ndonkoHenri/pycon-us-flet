@@ -592,20 +592,20 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 | `next_for_me(data, favorites, now)` | earliest saved session with `end > now`, within 3 h | SCHED-25 |
 | `my_schedule(data, favorites)` | saved sessions by day, plus `overlaps: dict[id, list[id]]` (sorted sweep) | NEW-01 |
 | `current_slot_key(day, now)` | first slot with `start >= now`, else the last: `"slot-<iso>"`, the slot item's `ScrollKey` | SCHED-16 |
-| `speakers(data)` | sorted by folded displayed name (D-46) | SPKR-01 |
+| `speakers(data)` | sorted by `speaker_order` (folded displayed name, then id; D-46, D-180), the key search's index and the Speakers stub already use | SPKR-01 |
 | `track_sessions`, `room_sessions` | flat by start (poster details included), grouped by day | SCHED-22, ROOM-02 |
 | `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
 
 ```python
 # src/pycon_us/core/queries.py (excerpt)
 def fold(text: str) -> str:
-    """Case, accents and typography folded: 'Cristián' → 'cristian', 'don’t' → 'don't'."""
-    folded = unicodedata.normalize("NFKD", text).casefold()
-    folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)  # quotes, dashes, ł, æ
+    """Case, accents and typography folded: 'Cristián' → 'cristian', 'don’t' → 'dont'."""
+    folded = unicodedata.normalize("NFKD", text.replace("´", "")).casefold()  # ´ as apostrophe
+    folded = unicodedata.normalize("NFKD", folded).translate(_FOLD_TABLE)  # ' ’ go; “ —, ł, æ
     return _NON_ASCII.sub(_without_marks, folded)  # marks and format characters go (D-180)
 ```
 
-**Search (`core/search.py`; D-46, D-180).** `search_index(data)` pairs each session's `search_text`, each directory speaker's folded name and each room's folded name with what it finds, already in result order (sessions by day in timeline order, speakers by folded name, rooms in natural order), and logs `Search index built in N ms`. It is built once per feed version (`use_memo` on `Conference.version` in #97's `Search`), never per keystroke. `search(index, query, scope)` folds the query, keeps the entries that hold every word as a substring, and returns a frozen `SearchResults(sessions: tuple[DaySessions, ...], speakers, rooms)`; an empty or blank query finds nothing, and `scope` is one of `SCOPES` (`all`, `sessions`, `speakers`, `rooms`).
+**Search (`core/search.py`; D-46, D-180).** `search_index(data)` pairs each session's `search_text`, each directory speaker's folded name and each room's folded name with what it finds, already in result order (sessions by day in the Schedule's order: shown start, then place in natural order, name and id, D-31; speakers by `queries.speaker_order`; rooms in natural order), and logs `Search index built in N ms`. It is built once per feed version (`use_memo` on `Conference.version` in #97's `Search`), never per keystroke. `search(index, query, scope)` folds the query, keeps the entries that hold every word as a substring, and returns a frozen `SearchResults(sessions: tuple[DaySessions, ...], speakers, rooms)`; an empty or blank query finds nothing, and `scope` is one of `SCOPES` (`all`, `sessions`, `speakers`, `rooms`).
 
 ```python
 # src/pycon_us/core/search.py (excerpt)
