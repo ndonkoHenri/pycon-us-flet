@@ -325,7 +325,10 @@ def _fold(
         on_change=changed,
         animation_style=style,
         expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,
-        # No lines above and below when open: the day headers inside separate it.
+        # Open, a tonal fill sets what has ended apart from what is still to come
+        # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on),
+        # in place of the default lines above and below.
+        bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
         shape=ft.RoundedRectangleBorder(),
         collapsed_shape=ft.RoundedRectangleBorder(),
     )
