@@ -173,7 +173,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     """Return the app bar action that opens the global search with a preset scope (D-19).
 
     It records the opener's location, query included, so Back from search returns
-    there, and clears the last query, so each search starts empty (D-191).
+    there, and clears the last query, so each search starts empty (D-193).
 
     Args:
         memory: The process's ``ViewMemory``.
@@ -209,7 +209,7 @@ def SectionHeader(
         top: The space above it: 16 dp where it opens a group in a list; 0 on a
             detail page, whose list already puts 24 dp between sections.
         theme_style: Its type: ``TITLE_SMALL``, or ``TITLE_MEDIUM`` for a heading that
-            holds headings of its own (search's "Sessions" over its days, D-191).
+            holds headings of its own (search's "Sessions" over its days, D-193).
         color: Its colour role: ``primary``, or ``on_surface`` with ``TITLE_MEDIUM``.
     """
     return ft.Semantics(

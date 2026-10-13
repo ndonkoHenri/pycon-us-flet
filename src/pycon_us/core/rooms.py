@@ -48,7 +48,7 @@ class RoomList:
 def session_count(count: int) -> str:
     """Return a room's count line: "26 sessions", "1 session".
 
-    The Map's rooms list and search's room results both show it (D-188, D-191).
+    The Map's rooms list and search's room results both show it (D-188, D-193).
 
     Args:
         count: The sessions listed under the room, poster details included (ROOM-02).

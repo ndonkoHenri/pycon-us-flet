@@ -1,7 +1,7 @@
 """The text fields screens share: ``SearchField``, the pill that search and filters use.
 
 One look and one behaviour for every field that narrows a list as the user types: the
-Speakers filter (D-189) and the global search (D-191). A pill on
+Speakers filter (D-189) and the global search (D-193). A pill on
 ``surface_container_high`` without a line, focused or not, like Material's search bar
 (ux.md §3.6), pinned above its list so it is always in reach, with a Clear button once
 there is text.

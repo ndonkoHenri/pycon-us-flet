@@ -1,4 +1,4 @@
-"""Tests for the global search screen (``screens/search.py``, #97; NEW-02, D-19, D-191).
+"""Tests for the global search screen (``screens/search.py``, #97; NEW-02, D-19, D-193).
 
 The matching is ``core/search.py``'s, tested in ``tests/test_search.py``; here the
 screen around it. It runs in a real Flet session under the real Router with
@@ -501,7 +501,7 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     await opened.type("a")
     await opened.pause()
     found = search(INDEX, "a", "all")
-    # No counts: the count line above the list says them (D-191).
+    # No counts: the count line above the list says them (D-193).
     expected: list[str] = ["h2:Sessions"]
     for day in found.sessions:
         expected.append(f"h3:{day_heading(day.day)}")
@@ -518,7 +518,7 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
 
 
 async def test_a_type_heading_looks_a_step_above_a_day_heading(opened: Shown) -> None:
-    """On screen too, "Speakers" must not read as one more day (D-191)."""
+    """On screen too, "Speakers" must not read as one more day (D-193)."""
     await opened.event(opened.chip("all"), "click")
     await opened.type("a")
     await opened.pause()
