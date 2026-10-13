@@ -4,7 +4,7 @@ Now and My schedule ask these. Each takes ``now`` and the saved ids as arguments
 stay pure (D-43), and none takes the Schedule's filters (D-20). Their results are frozen
 values that compare by value, so a screen that recomputes them every 60 s re-renders only
 what changed (D-153). Like the schedule queries, they hold the model's own sessions, in
-the Schedule's ``Slot``s and its order (D-178, D-184): the sessions compare by identity,
+the Schedule's ``Slot``s and its order (D-178, D-185): the sessions compare by identity,
 so comparing two results never compares a session's fields, and a screen needs no lookup
 by id.
 """
@@ -58,8 +58,10 @@ class NowNext:
             schedule order (``schedule_order``); a notice (no duration) is never
             happening.
         up_next: The first time slot after ``now``, on any day: the Schedule's own
-            ``Slot`` (unfiltered), whose ``start`` Now names and whose ``key`` the
-            Schedule scrolls to; None after the last one.
+            ``Slot`` (unfiltered), whose ``start`` Now names; None after the last one.
+            Its ``key`` has an item in the Schedule only when the filter keeps the
+            slot on the shown day (D-155, D-185); otherwise scroll to
+            ``current_slot_key()`` over that day's filtered slots.
     """
 
     phase: Phase

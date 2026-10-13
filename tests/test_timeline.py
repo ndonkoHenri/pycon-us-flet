@@ -308,7 +308,10 @@ FILTER_USERS = {
     "excluded_tracks": {"prefs.py", "screens/schedule.py"},
 }
 """The modules that may name the Schedule's filter: its query, its preference and the
-Schedule. The filter sheet (#87) adds its module here if it gets one of its own."""
+Schedule. The filter sheet (#87) adds its module here if it gets one of its own. The
+module ``core/timeline.py`` shares the function's name, so outside the Schedule import
+its names directly (``from pycon_us.core.timeline import DaySessions``);
+``from pycon_us.core import timeline`` trips this scan (D-185)."""
 
 
 def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:

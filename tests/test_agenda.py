@@ -33,7 +33,7 @@ def may(year: int, day: int, hour: int, minute: int = 0) -> datetime:
     return datetime(year, 5, day, hour, minute, tzinfo=zone)
 
 
-# The answers hold the model's sessions (D-184); these read them by id, so the expected
+# The answers hold the model's sessions (D-185); these read them by id, so the expected
 # values stay as the feed names them.
 
 
@@ -225,7 +225,7 @@ def test_the_phase_turns_at_the_first_start_and_the_last_end(
 
 
 def test_now_lists_a_slot_as_the_schedule_does() -> None:
-    """One order and one slot in the app (D-178, D-184): Now's next slot is the
+    """One order and one slot in the app (D-178, D-185): Now's next slot is the
     Schedule's own, which the Job Fair, shown at 9:30, leads at 10:00."""
     data = processed(2026)
     result = now_next(data, may(2026, 17, 9, 59))
@@ -258,7 +258,7 @@ def test_the_same_answer_at_two_instants_compares_equal() -> None:
 
 
 def test_now_and_the_next_session_hold_the_model_s_own_sessions() -> None:
-    """D-184: a row gets its session itself, with no lookup by id."""
+    """D-185: a row gets its session itself, with no lookup by id."""
     data = processed(2026)
     result = now_next(data, may(2026, 15, 10, 15))
     assert result.happening
@@ -270,7 +270,7 @@ def test_now_and_the_next_session_hold_the_model_s_own_sessions() -> None:
 
 def test_a_new_feed_version_gives_answers_of_its_own() -> None:
     """Sessions compare by identity, so the answer over a refreshed feed, where a
-    session may have moved, never equals the old feed's (D-153, D-184)."""
+    session may have moved, never equals the old feed's (D-153, D-185)."""
     now, saved = may(2026, 15, 10, 15), frozenset({"2", "19", "153"})
     assert now_next(processed(2026), now) != now_next(processed(2026), now)
     assert my_schedule(processed(2026), saved) != my_schedule(processed(2026), saved)
@@ -363,7 +363,7 @@ def test_my_schedule_lists_a_saved_poster_on_its_day() -> None:
 
 
 def test_my_schedule_holds_the_schedule_s_slots_and_the_model_s_sessions() -> None:
-    """One ``Slot`` (D-184): a saved slot has the key of the Schedule's slot at its
+    """One ``Slot`` (D-185): a saved slot has the key of the Schedule's slot at its
     start (D-155's ``slot-<iso>``); its rows and the overlaps are the sessions."""
     data = processed(2026)
     agenda = my_schedule(data, frozenset({"2", "19", "153"}))
