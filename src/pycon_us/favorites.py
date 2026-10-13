@@ -94,6 +94,15 @@ class Favorites:
         self.ids = frozenset(stored)
         self.loaded = True
 
+    def reset(self) -> None:
+        """Forget every saved session, as after a fresh install, without writing.
+
+        Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
+        the stored list, so there is nothing to write; ``loaded`` stays as it is, and
+        the next edit saves as usual.
+        """
+        self.ids = frozenset()
+
     async def toggle(self, storage: Storage, session_id: str) -> Change:
         """Save a session, or remove it when it is saved already (D-30).
 

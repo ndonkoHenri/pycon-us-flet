@@ -3,7 +3,7 @@
 ``next_session()`` shows ``agenda.next_for_me()``'s answer in a filled card: the
 session's row with its star and, once the row's own time has come, its elapsed bar,
 then session detail's status line and "Show room". ``nothing_next()`` says why there is
-no card and where to look. ``named()`` gives Now's buttons and notes their identifiers.
+no card and where to look.
 Apart from ``now.py`` so that the screen stays under about 400 lines (D-66, D-190).
 """
 
@@ -18,6 +18,7 @@ from pycon_us.core.row_views import places
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
+from pycon_us.ui.semantics import named
 from pycon_us.ui.when_where import StatusLine, room_href
 
 NEXT = "now.next"
@@ -120,14 +121,3 @@ def nothing_next(has_saved: bool, *, tonight: bool) -> list[ft.Control]:
             identifier="now.next_session",
         )
     return [SectionHeader(HEADING, level=2), tile]
-
-
-def named(identifier: str, control: ft.Control) -> ft.Control:
-    """Give ``control`` a semantics identifier on its own node (decisions §M).
-
-    Merged: an identifier's ``Semantics`` alone is a node of its own, an empty extra
-    stop for TalkBack around the button (seen in ``uiautomator dump``).
-    """
-    return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, content=control)
-    )

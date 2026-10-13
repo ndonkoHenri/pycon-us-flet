@@ -45,7 +45,7 @@ from pycon_us.core.timefmt import (
 from pycon_us.core.timeline import Slot
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.now_card import Row, named, next_session, nothing_next
+from pycon_us.screens.now_card import Row, next_session, nothing_next
 from pycon_us.screens.now_header import (
     Season,
     StatusHeader,
@@ -69,6 +69,7 @@ from pycon_us.ui.scaffold import (
     search_button,
     use_minute,
 )
+from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import (
     NoticeRow,
     SessionRow,

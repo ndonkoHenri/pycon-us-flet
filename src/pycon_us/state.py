@@ -10,7 +10,7 @@ have modules of their own (D-160): ``prefs.py`` and ``favorites.py`` (P1).
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal, cast
 
@@ -132,6 +132,43 @@ class Conference:
         snapshot = year.read_snapshot()
         data = feed.process(snapshot.raw, year.feed_settings)
         self._publish(data, "bundled", snapshot.captured_at)
+
+    async def reset(self, storage: Storage, year: YearData) -> bool:
+        """Return to what a fresh install shows: the bundled snapshot, from the year's feed.
+
+        Reset app (DEV-05, D-198). A refresh that is running is cancelled, and waited
+        for, so one from a Developer feed URL cannot cache or publish its feed after the
+        reset; the feed URL returns to the year's; the cache is deleted; the snapshot
+        is published, so every screen shows it at once. The caller starts the next
+        refresh, as ``bootstrap()`` does. A caller awaiting ``refresh()`` ends with
+        ``CancelledError`` too (the shield passes the inner cancel on), so a Refresh
+        tapped before the reset says nothing about a refresh that never ended.
+
+        Args:
+            storage: Where the feed cache lives.
+            year: The year's data: the bundled snapshot and the feed settings.
+
+        Returns:
+            Whether the cache is gone; when it is not (logged), the snapshot is still
+            shown, and the next start publishes the cache again.
+        """
+        task = self._task
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.wait({task})  # its `finally` runs now, not over the next one
+        self._task = None
+        self._started_at = None
+        self._asked = False
+        self.refreshing = False
+        self.set_feed_url(None)
+        deleted = await storage.delete_feed("Reset app")
+        snapshot = year.read_snapshot()
+        self._publish(
+            feed.process(snapshot.raw, year.feed_settings),
+            "bundled",
+            snapshot.captured_at,
+        )
+        return deleted
 
     def start_refresh(
         self,
@@ -409,3 +446,13 @@ class ViewMemory:
     search_query: str = ""
     search_scope: str = "all"
     room_highlights: dict[str, str] = field(default_factory=dict)
+
+    def reset(self) -> None:
+        """Forget where the user was, as after a fresh install (Reset app, D-198).
+
+        Every field returns to its default, so the Schedule opens on today and jumps
+        to now again, and a new session starts on Now.
+        """
+        fresh = ViewMemory()
+        for each in fields(self):
+            setattr(self, each.name, getattr(fresh, each.name))

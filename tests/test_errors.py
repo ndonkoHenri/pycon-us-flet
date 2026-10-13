@@ -8,6 +8,7 @@ alive is checked on devices (the PR).
 import ast
 import asyncio
 import inspect
+import io
 import logging
 import sys
 from collections.abc import Iterator
@@ -379,3 +380,35 @@ async def test_request_urls_with_personal_data_stay_out_of_the_log(
         assert value not in caplog.text
     for name in QUIET_LOGGERS:
         assert logging.getLogger(name).level == logging.WARNING
+
+
+def test_an_email_address_never_reaches_the_shared_log(
+    clean_logging: logging.Logger,
+) -> None:
+    # A line can quote what the app does not control: a platform error that repeats a
+    # mailto: intent (D-182), or a skipped feed record. console.log, which Share log
+    # sends, holds what this handler writes (D-72, D-196).
+    setup_logging()
+    (handler,) = ours(clean_logging)
+    written = io.StringIO()
+    assert isinstance(handler, logging.StreamHandler)
+    handler.setStream(written)
+    logger = logging.getLogger("pycon_us.test")
+    logger.warning("Skipped a feed record: contact %s", "Ana.Lima+pycon@example.org")
+    try:
+        raise RuntimeError("No Activity found for mailto:coc%40us.pycon.org")
+    except RuntimeError:
+        logger.exception("Unexpected error in pycon_us.ui.links.open_link")
+    line = written.getvalue()
+    assert "example.org" not in line and "pycon.org" not in line
+    assert "Skipped a feed record: contact <email>" in line
+    assert "mailto:<email>" in line  # in the traceback too
+    assert "pycon_us.ui.links.open_link" in line  # the rest is kept
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["@ft.component", "flet@1.1.0", "https://fosstodon.org/@pycon", "user@localhost"],
+)
+def test_text_that_is_not_an_address_is_kept(text: str) -> None:
+    assert errors.EMAIL.sub(errors.REDACTED_EMAIL, text) == text

@@ -344,3 +344,28 @@ def test_other_feed_urls_are_refused(text: str) -> None:
 
 def test_an_empty_feed_url_is_the_year_s() -> None:
     assert parse_feed_url("") is None
+
+
+def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> None:
+    prefs = Prefs(
+        theme="dark",
+        high_contrast="on",
+        onboarded=True,
+        excluded_tracks=(),
+        reminders={"minutes": 10},
+        dev={"unlocked": True},
+        os_dark=True,
+        reduce_motion=True,
+        screen_reader=True,
+        loaded=True,
+    )
+    prefs.reset()
+    assert (prefs.theme, prefs.high_contrast, prefs.onboarded) == (
+        "system",
+        "system",
+        False,
+    )
+    assert prefs.excluded_tracks == ("Open Space",)  # the default filter (D-20)
+    assert (prefs.reminders, prefs.dev) == ({}, {})
+    assert prefs.os_dark and prefs.reduce_motion and prefs.screen_reader
+    assert prefs.loaded is True
