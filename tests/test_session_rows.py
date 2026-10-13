@@ -48,6 +48,7 @@ from pycon_us.ui.session_rows import (
     NoticeRow,
     SessionRow,
     TimeGutter,
+    elapsed_phrase,
     is_notice,
     notice_phrase,
     semantics_key,
@@ -466,6 +467,12 @@ def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
     )
     no_speakers = spoken_phrase(["Break"], view_of(COFFEE))
     assert no_speakers == "Break. Coffee. 8:00 to 9:00 AM, Expo Hall AB."
+
+
+def test_a_row_that_is_on_says_how_much_has_passed_last() -> None:
+    """Now's elapsed bar is said in the row's phrase, as a sentence of its own (#95)."""
+    assert elapsed_phrase(60) == "60 percent elapsed."
+    assert elapsed_phrase(0) == "0 percent elapsed."
 
 
 def test_a_title_that_ends_a_sentence_gets_no_second_full_stop() -> None:

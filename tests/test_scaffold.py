@@ -29,7 +29,7 @@ from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.screens import my_schedule, now, schedule
+from pycon_us.screens import my_schedule, schedule
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
@@ -900,7 +900,8 @@ async def test_elsewhere_a_tick_never_refreshes(
 
 @pytest.mark.parametrize(
     ("screen", "auto_refresh"),
-    [(now.Now, True), (schedule.Schedule, True), (my_schedule.MySchedule, False)],
+    # Now's own test is in test_now.py: its strip is not in a stub body (#95).
+    [(schedule.Schedule, True), (my_schedule.MySchedule, False)],
 )
 def test_only_now_and_schedule_refresh_every_15_minutes(
     hooks: Hooks,
@@ -952,3 +953,18 @@ def test_a_section_header_is_a_heading_in_the_title_small_style() -> None:
     assert isinstance(text, ft.Text)
     assert text.value == "Days"
     assert text.theme_style == ft.TextThemeStyle.TITLE_SMALL
+
+
+def test_a_section_header_s_mark_sits_before_its_text_and_says_nothing() -> None:
+    """Now's Happening now has a live dot (#95); the heading still reads its text."""
+    dot = ft.Container(width=8, height=8, border_radius=4)
+    header = SectionHeader("Happening now", level=2, leading=dot)
+    assert isinstance(header, ft.Semantics)
+    assert header.header is True and header.heading_level == 2
+    assert header.label is None  # the text is the heading's name
+    assert isinstance(header.content, ft.Container)
+    row = header.content.content
+    assert isinstance(row, ft.Row)
+    first, text = row.controls
+    assert first is dot
+    assert isinstance(text, ft.Text) and text.value == "Happening now"
