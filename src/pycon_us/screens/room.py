@@ -42,9 +42,10 @@ from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader, use_minute
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.status_strip import use_minute
 
 HIGHLIGHT_S = 2.0
 """How long the row the room was opened from stays lit, once it is in place (ROOM-03)."""

@@ -1,5 +1,10 @@
 """Tests for the time gutter: ``TimeGutter`` (D-158, D-200)."""
 
+from typing import cast
+
+import flet as ft
+
+from pycon_us.ui.time_gutter import TimeGutter
 
 
 def test_the_gutter_is_a_heading_read_once() -> None:

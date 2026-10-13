@@ -1,4 +1,4 @@
-"""Tests for the session rows: ``SessionRow``, ``NoticeRow``, ``TimeGutter`` (D-184).
+"""Tests for the session rows: ``SessionRow`` and ``NoticeRow`` (D-184).
 
 Rows run in a real Flet session (``Rendered``): a list owner like the screens' renders
 memoised rows under the store providers, a star tap is a dispatched click, and Flet's
@@ -22,7 +22,13 @@ import pytest
 from flet.messaging.session import Session
 
 from pycon_us.config import load_year
-from pycon_us.core.row_views import SessionView, session_view
+from pycon_us.core.row_views import (
+    SessionView,
+    elapsed_phrase,
+    notice_phrase,
+    session_view,
+    spoken_phrase,
+)
 from pycon_us.favorites import Favorites, FavoritesCtx, use_favorites
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx, use_services
@@ -39,15 +45,11 @@ from pycon_us.ui.badges import (
     UNDO,
     use_favorite_toggle,
 )
+from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import (
     NoticeRow,
     SessionRow,
-    TimeGutter,
-    elapsed_phrase,
     is_notice,
-    notice_phrase,
-    semantics_key,
-    spoken_phrase,
     use_session_views,
 )
 from tests.fakes import (

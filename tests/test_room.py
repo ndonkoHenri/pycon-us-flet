@@ -38,7 +38,7 @@ from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME, LIGHT_TOKENS, TokensCtx
-from pycon_us.ui import scaffold, scrolling
+from pycon_us.ui import scrolling, status_strip
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,
@@ -648,7 +648,7 @@ async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The Developer fake clock moves it, with no touch (D-175, D-187)."""
-    monkeypatch.setattr(scaffold, "TICK_SECONDS", 0.01)
+    monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     room = await render(VIEW, now=SATURDAY_MORNING)
     assert len(room.nodes("room.now")) == 1
     clock.set_test_now(datetime(2026, 5, 16, 11, 5, tzinfo=PACIFIC))  # talk over
@@ -663,7 +663,7 @@ async def test_the_minute_tick_re_renders_only_now_in_this_room(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A leaf component on ``use_minute()``: the day lists are not built again (D-194)."""
-    monkeypatch.setattr(scaffold, "TICK_SECONDS", 0.01)
+    monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     built: list[int] = []
     original = room_days.day_list
 

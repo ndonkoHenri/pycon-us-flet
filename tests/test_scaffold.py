@@ -1,7 +1,8 @@
-"""Tests for the shared chrome: ``AppScaffold``, ``StatusStrip`` and ``SectionHeader`` (#76).
+"""Tests for the shared chrome: ``AppScaffold`` and ``SectionHeader`` (#76).
 
 ``AppScaffold``'s bottom bar and its tab switches are here too (#75); the bar's own
-parts are in ``test_navigation.py``.
+parts are in ``test_navigation.py``, and the status strip's in
+``test_status_strip.py`` (D-200).
 
 The builders run outside a renderer: the hooks they call (``ft.use_view_path``,
 ``ft.use_effect`` and the store hooks) are replaced by ``Hooks``, and a fake page is
@@ -13,8 +14,7 @@ import asyncio
 import inspect
 import logging
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -24,25 +24,22 @@ import flet as ft
 import pytest
 from flet.components.component import Renderer
 
-from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.services import Services, api
+from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, Status, ViewMemory
-from pycon_us.theme import DARK_TOKENS
+from pycon_us.state import Conference, ViewMemory
 from pycon_us.ui import scaffold
 from pycon_us.ui.navigation import TABS, Tab
 from pycon_us.ui.scaffold import (
     AppScaffold,
     SectionHeader,
     Shown,
-    StatusStrip,
     search_button,
-    strip_line,
 )
 from tests.fakes import (
     FakePage,
+    Hooks,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
@@ -92,11 +89,9 @@ def hooks(
     hooks = Hooks()
     monkeypatch.setattr(ft, "use_view_path", lambda: hooks.view_path)
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
-    monkeypatch.setattr(ft, "use_state", hooks.use_state)
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
-    monkeypatch.setattr(scaffold, "use_tokens", lambda: DARK_TOKENS)
-    # ``Shown``'s body runs inline, as ``StatusStrip``'s does below: no renderer here.
+    # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
     return hooks
 

@@ -6,6 +6,89 @@ bound as Flet binds a session's page. What the strip looks like at 200 % text is
 checked on devices (#76's and #87's PRs).
 """
 
+import asyncio
+import inspect
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, cast
+from zoneinfo import ZoneInfo
+
+import flet as ft
+import pytest
+
+from pycon_us import clock
+from pycon_us.config import YearData, load_year
+from pycon_us.services import Services, api
+from pycon_us.services.storage import Storage
+from pycon_us.state import Conference, Status, ViewMemory
+from pycon_us.theme import DARK_TOKENS
+from pycon_us.ui import status_strip
+from pycon_us.ui.status_strip import StatusStrip, strip_line
+from tests.fakes import (
+    FakePage,
+    Hooks,
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    bound,
+)
+
+PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+@pytest.fixture(scope="module")
+def year() -> YearData:
+    return load_year(2026)
+
+
+@pytest.fixture
+def svc(year: YearData, tmp_path: Path) -> Services:
+    storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
+    return Services(
+        year=year,
+        storage=storage,
+        memory=ViewMemory(),
+        semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
+    )
+
+
+@pytest.fixture
+def page() -> Iterator[FakePage]:
+    fake = FakePage()
+    with bound(fake):
+        yield fake
+
+
+@pytest.fixture
+def conference() -> Conference:
+    return Conference()
+
+
+@pytest.fixture
+def hooks(
+    monkeypatch: pytest.MonkeyPatch, svc: Services, conference: Conference
+) -> Hooks:
+    hooks = Hooks()
+    monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
+    monkeypatch.setattr(ft, "use_state", hooks.use_state)
+    monkeypatch.setattr(status_strip, "use_services", lambda: svc)
+    monkeypatch.setattr(status_strip, "use_conference", lambda: conference)
+    monkeypatch.setattr(status_strip, "use_tokens", lambda: DARK_TOKENS)
+    return hooks
+
+
+def press(button: ft.TextButton) -> asyncio.Task[None]:
+    """Run a button's async handler as Flet does, as a task of the event loop."""
+    assert button.on_click is not None
+    return asyncio.create_task(cast(Callable[[], Any], button.on_click)())
+
 
 # ------------------------------------------------------------------ StatusStrip
 
@@ -290,7 +373,7 @@ async def mounted_strip(
     setup, _ = hooks.effects[-1]
     await setup()
     ((seconds, tick),) = loops.started
-    assert seconds == scaffold.TICK_SECONDS == 60
+    assert seconds == status_strip.TICK_SECONDS == 60
     return tick
 
 
@@ -300,7 +383,7 @@ def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) ->
     assert dependencies == [True]
     # Flet cancels an effect's task on unmount only when it has a cleanup (F2), and a
     # cleanup returned by a sync setup is lost at the next render (F39).
-    assert cleanup is scaffold.stop_ticks
+    assert cleanup is status_strip.stop_ticks
 
 
 async def test_a_tick_re_renders_the_strip_only_when_the_minute_changed(
@@ -339,19 +422,19 @@ async def test_use_minute_re_renders_its_component_only_when_the_minute_changes(
     hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
 ) -> None:
     """The Map's "Now:" lines keep up on the strip's loop (#100, D-175)."""
-    assert scaffold.use_minute() == scaffold.current_minute()
+    assert status_strip.use_minute() == status_strip.current_minute()
     (setup, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
     assert dependencies == []
-    assert cleanup is scaffold.stop_ticks  # what makes Flet cancel it on unmount (F2)
+    assert cleanup is status_strip.stop_ticks  # Flet cancels it on unmount (F2)
     await setup()
     ((seconds, tick),) = loops.started
-    assert seconds == scaffold.TICK_SECONDS
+    assert seconds == status_strip.TICK_SECONDS
     tick()  # at mount: the same minute as the render
     assert hooks.renders == 0
     moving_clock.move(timedelta(seconds=60))
     tick()
     assert hooks.renders == 1
-    assert hooks.state == scaffold.current_minute()
+    assert hooks.state == status_strip.current_minute()
 
 
 class Network:
@@ -426,6 +509,5 @@ async def test_elsewhere_a_tick_never_refreshes(
     assert conference._task is None
 
 
-# No screen puts its strip in a stub body any more: Now, the Schedule and My
-# schedule each check their own (test_now.py, test_schedule.py,
-# test_my_schedule.py; D-40).
+# Now, the Schedule and My schedule each check their own strip (test_now.py,
+# test_schedule.py, test_my_schedule.py; D-40).

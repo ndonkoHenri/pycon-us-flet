@@ -40,7 +40,7 @@ from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, Problem, Source, use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.scaffold import use_minute
+from pycon_us.ui.status_strip import use_minute
 
 logger = logging.getLogger(__name__)
 

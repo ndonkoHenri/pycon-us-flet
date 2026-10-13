@@ -1,7 +1,7 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
 
 import dataclasses
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any, cast
 
@@ -231,15 +231,15 @@ def android_device(sdk: int) -> ft.AndroidDeviceInfo:
     return ft.AndroidDeviceInfo(**fields, version=version)  # pyright: ignore[reportArgumentType]
 
 
-@dataclass
+@dataclasses.dataclass
 class Hooks:
     """The hooks the builders call, answered by the test instead of a renderer."""
 
     view_path: str = "/now"
-    effects: list[tuple[Callable[[], Any], list[Any] | None]] = field(
+    effects: list[tuple[Callable[[], Any], list[Any] | None]] = dataclasses.field(
         default_factory=list
     )
-    cleanups: list[Callable[[], Any] | None] = field(default_factory=list)
+    cleanups: list[Callable[[], Any] | None] = dataclasses.field(default_factory=list)
     state: Any = None
     renders: int = 0
     """How many re-renders a state setter asked for: only for a changed value."""

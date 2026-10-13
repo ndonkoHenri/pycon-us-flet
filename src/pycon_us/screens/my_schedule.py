@@ -35,9 +35,11 @@ from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.badges import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.navigation import use_scroll_to_top
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader, StatusStrip, use_minute
-from pycon_us.ui.session_rows import SessionRow, TimeSlot, use_session_views
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.session_rows import SessionRow, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.time_gutter import TimeSlot
 
 SCREEN = "my_schedule"
 """The screen's name in its semantics identifiers (decisions §M)."""
