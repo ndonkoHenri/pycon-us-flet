@@ -11,7 +11,7 @@ them as an argument, so a memoised row (D-153) that receives the tokens as a pro
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
 SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to My
-schedule" (SCHED-24), with the same SnackBar and its count (D-207).
+schedule" (SCHED-24), with the same SnackBar and its count (D-209).
 ``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
 """
 
@@ -59,7 +59,7 @@ NOT_SAVED = "Couldn't save your change"
 
 ALREADY_SAVED = "All of them are already in My schedule"
 """The SnackBar after "Add all" when every session was saved already: nothing changed,
-so there is no Undo (ux.md §5.10, D-207)."""
+so there is no Undo (ux.md §5.10, D-209)."""
 
 UNDO = "Undo"
 """The SnackBar's one action when the edit can be taken back (D-29)."""
@@ -323,7 +323,7 @@ def added_feedback(change: Change) -> str:
 
 
 def use_add_all(favorites: Favorites) -> AddAll:
-    """Return a track page's "Add all to My schedule": ``await add_all(ids)`` (D-207).
+    """Return a track page's "Add all to My schedule": ``await add_all(ids)`` (D-209).
 
     A hook for the page that already calls ``use_favorites()``. Unlike
     ``use_favorite_toggle()``'s handler it is not memoised: no memoised control

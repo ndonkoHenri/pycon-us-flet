@@ -1,6 +1,6 @@
 """Tests for "Add all to My schedule" on a track page (``screens/track.py``; #103).
 
-SCHED-24, D-207, ux.md §5.10: the overflow item saves every session the page lists,
+SCHED-24, D-209, ux.md §5.10: the overflow item saves every session the page lists,
 on every day, with ``Favorites.add_many()`` (D-172), then one SnackBar with Undo, and
 no dialog (D-29). The page runs in a real Flet session over the recorded 2026 feed
 (``tests/programme.py``); the store's own rules are in ``tests/test_favorites.py``.
@@ -222,7 +222,7 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
 
 
 async def test_the_items_label_wraps_beside_its_icon_at_large_text(show: Show) -> None:
-    """F46: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the label
+    """F47: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the label
     is a tile: its title wraps, with the icon beside the first line (D-188), in the
     menu's 48 dp row and 12 dp gap."""
     page = await show("charlas")
