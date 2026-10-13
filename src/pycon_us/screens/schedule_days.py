@@ -8,6 +8,7 @@ is what it places (D-31, D-153..D-156, D-192):
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
   to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s;
+- today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
 
@@ -25,6 +26,7 @@ import flet as ft
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, weekday_name
 from pycon_us.core.timeline import Slot
+from pycon_us.screens.schedule_now import NowLine, NowMark
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
@@ -112,6 +114,7 @@ def DayList(
     full: bool,
     clearance: bool,
     empty: Empty | None,
+    now: NowMark | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
@@ -133,6 +136,7 @@ def DayList(
         full: Build every slot (today's list, D-154), so a jump reaches any of them.
         clearance: Leave room at the end for the "Now" button.
         empty: Why ``slots`` is empty, when it is.
+        now: Today's now line; None on the other days.
         list_ref: The day's list ref, which the jumps and the re-tap scroll.
         on_scroll: The screen's scroll handler, given this day.
         on_clear_filters: What "Clear filters" does on a day the filter emptied.
@@ -148,6 +152,7 @@ def DayList(
         full=full,
         clearance=clearance,
         empty=empty,
+        now=now,
         list_ref=list_ref,
         on_scroll=on_scroll,
         on_clear_filters=on_clear_filters,
@@ -169,6 +174,7 @@ def _DayList(
     full: bool,
     clearance: bool,
     empty: Empty | None,
+    now: NowMark | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
@@ -217,10 +223,13 @@ def _DayList(
                 on_toggle,
                 tokens,
                 label=time_label(slot.start, zone, use_24h=use_24h),
-                divider=index > 0,
+                # The now line divides it from the slot above: one line, not two.
+                divider=index > 0 and (now is None or index != now.index),
             )
             for index, slot in enumerate(slots)
         ]
+        if now is not None:
+            items.insert(now.index, NowLine(now.time))
     return ft.ListView(
         items,
         key=f"day-{day.isoformat()}",
@@ -305,8 +314,10 @@ def _SlotItem(
     # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees.
     keyed = ft.Container(content, key=ft.ScrollKey(slot.key))
     # The divider stays outside the keyed box, so a jump puts the slot's time, not
-    # its divider, under the tab bar's own line (one 1 dp line there, not two).
-    return ft.Column([ft.Divider(height=1), keyed], spacing=0) if divider else keyed
+    # its divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
+    # rather than left out: the box keeps its place in the tree when the now line
+    # takes or gives back the divider, so its rows are kept as they are (D-204).
+    return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
 
 
 def now_button(

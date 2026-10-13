@@ -4,8 +4,8 @@
 that must reach any of its items gets ``cache_extent=FULL_LIST_EXTENT``, which builds
 them all (D-154): today's Schedule list, and My schedule's (#94). ``jump_to_key()`` is
 the one jump (D-155): it handles the ways a keyed ``scroll_to`` fails quietly or late,
-and says how it ended. The policy of when to jump (once per process, never on Back, a
-refresh or a filter change: D-18) is the screen's.
+and says how it ended. The policy of when to jump (the Schedule's: once per conference
+day, never on Back, a refresh or a filter change, D-18 and D-204) is the screen's.
 """
 
 import asyncio
@@ -21,8 +21,9 @@ FULL_LIST_EXTENT = 100_000
 than three times the busiest day at 200 % text (about 26,000 px, S2)."""
 
 JUMP_MS = 400
-"""How long the scroll to the current slot takes (ux.md §3.8); ``prefs.motion_ms()``
-makes it 0 under reduced motion (D-34)."""
+"""How long a keyed jump takes (ux.md §3.8): to now on the Schedule, to the slot or
+the now line, and to a row on a room's page; ``prefs.motion_ms()`` makes it 0 under
+reduced motion (D-34)."""
 
 SCROLL_EVENT_MS = 250
 """How often a list may send each kind of scroll event (``scroll_interval``): the

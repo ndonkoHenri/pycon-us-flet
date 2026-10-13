@@ -62,7 +62,7 @@ class NowNext:
             ``Slot`` (unfiltered), whose ``start`` Now names; None after the last one.
             Its ``key`` has an item in the Schedule only when the filter keeps the
             slot on the shown day (D-155, D-185); otherwise scroll to
-            ``current_slot_key()`` over that day's filtered slots.
+            ``now_place()``'s target over that day's filtered slots (D-204).
     """
 
     phase: Phase
