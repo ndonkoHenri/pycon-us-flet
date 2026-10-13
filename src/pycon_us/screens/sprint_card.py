@@ -144,12 +144,14 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
     if actions:
         controls.append(
             ft.Container(
-                # More at the start, under the text it opens; Project page at the end.
-                # At large text the row wraps and each button moves down whole.
+                # More at the start, under the text it opens; Project page at the end,
+                # alone too. At large text the row wraps and each button moves whole.
                 ft.Row(
                     actions,
                     wrap=True,
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                    if long
+                    else ft.MainAxisAlignment.END,
                 ),
                 # A text button's label sits 12 dp in: 4 + 12 lines it up with the text.
                 padding=ft.Padding.only(left=4, top=4, right=4, bottom=4),
