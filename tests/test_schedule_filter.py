@@ -310,8 +310,16 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     schedule = await shown()
     current = await open_sheet(schedule)
     assert current.show_drag_handle and current.scrollable and current.use_safe_area
+    assert current.animation_style is None  # Flutter's slide, as motion is allowed
     labels = [c.label for c in _descendants(current) if isinstance(c, ft.Chip)]
     tracks = feed_tracks(conference)
+    # F40: a heading needs its level. The title, then one per group the feed fills.
+    levels = [
+        c.heading_level
+        for c in _descendants(current)
+        if isinstance(c, ft.Semantics) and c.header
+    ]
+    assert levels == [1, *[2] * len(filter_groups(INFO, tracks))] == [1, 2, 2, 2, 2]
     assert labels == [
         INFO.track_name(key) for g in filter_groups(INFO, tracks) for key in g.tracks
     ]
@@ -333,6 +341,15 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     assert schedule.prefs.excluded_tracks == ("Talk",)
     assert button_label(schedule) == count_label(shown_count(conference, ("Talk",)))
     assert summary(schedule) == "Hidden: Talk"
+
+
+async def test_the_sheet_appears_without_its_slide_under_reduced_motion(
+    shown: Show,
+) -> None:
+    """D-173: every animation the app sets goes through the reduced-motion flag."""
+    schedule = await shown(reduce_motion=True)
+    current = await open_sheet(schedule)
+    assert current.animation_style == ft.AnimationStyle.no_animation()
 
 
 async def test_reset_returns_to_the_default(
