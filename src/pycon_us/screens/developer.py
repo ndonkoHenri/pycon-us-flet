@@ -1,15 +1,16 @@
 """Developer (``/more/developer``): the options for testing and demos (DEV-01, D-73).
 
-The fake clock, in conference time, with a date picker and a time picker; the time zone;
-the feed URL; and the capability flags, read-only (``capabilities.py``, D-63). Apply puts
-the clock and the feed URL into effect at once and saves them in ``pycon.dev``, so they
-hold across launches; Reset returns to real time and the year's feed (D-187). The screen
-is always available when not embedded, and in a packaged build once unlocked in About
-this app; a warning-tone "Developer" chip at its top marks it (ux.md §5.13). #107 adds
-the data actions (Refresh now, Clear cached feed, Reset app, Share log).
+The fake clock, in conference time, with a date picker and a time picker
+(``developer_clock.py``); the time zone; the feed URL; and the capability flags,
+read-only (``capabilities.py``, D-63). Apply puts the clock and the feed URL into effect
+at once and saves them in ``pycon.dev``, so they hold across launches; Reset returns to
+real time and the year's feed (D-187). The screen is always available when not embedded,
+and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
+at its top marks it (ux.md §5.13). #107 adds the data actions (Refresh now, Clear cached
+feed, Reset app, Share log).
 """
 
-from datetime import date, datetime, time, timedelta, tzinfo
+from datetime import datetime, timedelta
 
 import flet as ft
 from flet.utils import is_embedded
@@ -17,6 +18,7 @@ from flet.utils import is_embedded
 from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
+from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
@@ -54,12 +56,9 @@ def Developer() -> ft.View:
     url_text, set_url_text = ft.use_state(lambda: prefs.feed_url or "")
     clock_error, set_clock_error = ft.use_state("")  # "" while the field is fine
     url_error, set_url_error = ft.use_state("")
-    picked_day = ft.use_ref(None)  # the date picker's day, until the time is picked
     # What the last Apply or Reset did and whether it was saved, said under the buttons
     # (in place, D-29: a SnackBar from a pushed View shows on the root under it, #197).
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
-    # Where the pickers open while the field is empty: the moment its hint shows.
-    first_morning = datetime.combine(info.first_day, time(9))
 
     @report_errors
     def edit_clock(e: ft.Event[ft.TextField]) -> None:
@@ -74,39 +73,10 @@ def Developer() -> ft.View:
         set_outcome(NO_OUTCOME)
 
     @report_errors
-    def pick_time(e: ft.Event[ft.TimePicker]) -> None:
-        if picked_day.current is not None and e.control.value is not None:
-            moment = datetime.combine(picked_day.current, e.control.value, zone)
-            set_clock_text(clock.fake_clock_text(moment, zone))
-            set_clock_error("")
-            set_outcome(NO_OUTCOME)  # a fill is an edit (ux.md §5.13)
-
-    @report_errors
-    def pick_day(e: ft.Event[ft.DatePicker]) -> None:
-        if e.control.value is None:
-            return
-        picked_day.current = picked_date(e.control.value)
-        start = shown_start(clock_text, zone, first_morning)
-        page.show_dialog(
-            ft.TimePicker(
-                value=start.time(),
-                help_text=f"Fake clock time, {info.time_zone_name}",
-                on_change=pick_time,
-            )
-        )
-
-    @report_errors
-    def pick() -> None:
-        start = shown_start(clock_text, zone, first_morning)
-        page.show_dialog(
-            ft.DatePicker(
-                value=start.date(),
-                first_date=date(info.year - 1, 1, 1),
-                last_date=date(info.year + 1, 12, 31),
-                help_text="Fake clock date",
-                on_change=pick_day,
-            )
-        )
+    def fill_clock(moment: datetime) -> None:
+        set_clock_text(clock.fake_clock_text(moment, zone))
+        set_clock_error("")
+        set_outcome(NO_OUTCOME)  # a fill is an edit (ux.md §5.13)
 
     @report_errors
     async def apply() -> None:
@@ -183,10 +153,8 @@ def Developer() -> ft.View:
                     error=clock_error,
                     keyboard=ft.KeyboardType.DATETIME,
                     on_change=edit_clock,
-                    suffix=ft.IconButton(
-                        ft.Icons.EDIT_CALENDAR_OUTLINED,
-                        tooltip="Pick a date and time",
-                        on_click=pick,
+                    suffix=clock_picker(
+                        page, text=clock_text, info=info, on_pick=fill_clock
                     ),
                 ),
                 ft.ListTile(
@@ -412,37 +380,6 @@ def developer_chip(color: str) -> ft.Control:
             "Developer", theme_style=ft.TextThemeStyle.LABEL_LARGE, color=color
         ),
     )
-
-
-def picked_date(value: datetime | date) -> date:
-    """Return the day a ``DatePicker`` reports: it sends the device's local midnight in UTC.
-
-    Args:
-        value: ``DatePicker.value`` after a pick.
-    """
-    if isinstance(value, datetime):
-        return (
-            value.astimezone().date() if value.utcoffset() is not None else value.date()
-        )
-    return value
-
-
-def shown_start(text: str, zone: tzinfo, default: datetime) -> datetime:
-    """Return where the pickers open, in naive conference time.
-
-    Args:
-        text: The fake-clock field's text; its instant when it parses.
-        zone: The conference's zone.
-        default: For an empty or unreadable field: the first morning, which a test or
-            a demo wants far more often than today.
-    """
-    try:
-        moment = clock.parse_fake_clock(text, zone)
-    except ValueError:
-        moment = None
-    if moment is None:
-        return default
-    return moment.astimezone(zone).replace(tzinfo=None)
 
 
 def zone_line(zone_name: str, zone_key: str, now: datetime) -> str:

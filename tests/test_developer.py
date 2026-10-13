@@ -1,8 +1,9 @@
 """Tests for the Developer screen: the fake clock, the feed URL and the flags (#88; D-73).
 
 ``Developer`` runs outside a renderer: its hooks and ``AppScaffold`` are replaced, and a
-fake page is bound as Flet binds a session's page. The parsing helpers are pure. How the
-screen looks, and the pickers on a device, are checked on devices (the PR).
+fake page is bound as Flet binds a session's page. The parsing helpers are pure; the
+pickers on their own are ``test_developer_clock.py``'s. How the screen looks, and the
+pickers on a device, are checked on devices (the PR).
 """
 
 import inspect
@@ -16,18 +17,13 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
-from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us import capabilities, clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer, now
-from pycon_us.screens.developer import (
-    Developer,
-    picked_date,
-    zone_line,
-)
+from pycon_us.screens.developer import Developer, zone_line
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
@@ -88,12 +84,11 @@ def conference() -> Conference:
 
 
 class States:
-    """``ft.use_state`` and ``ft.use_ref`` for one component: kept in call order."""
+    """``ft.use_state`` for one component: the values, kept in call order."""
 
     def __init__(self) -> None:
         self.values: list[Any] = []
         self.index = 0
-        self.ref = MutableRef(None)
 
     def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
         if self.index == len(self.values):
@@ -118,7 +113,6 @@ def render(
     """Render ``Developer`` and return what it passed to ``AppScaffold``."""
     states = States()
     monkeypatch.setattr(ft, "use_state", states.use_state)
-    monkeypatch.setattr(ft, "use_ref", lambda initial=None: states.ref)
     monkeypatch.setattr(developer, "use_services", lambda: svc)
     monkeypatch.setattr(developer, "use_prefs", lambda: prefs)
     monkeypatch.setattr(developer, "use_conference", lambda: conference)
@@ -490,12 +484,6 @@ def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
 
 
 # ------------------------------------------------------------------ the helpers
-
-
-def test_a_picked_day_is_the_device_s_day(machine_tz: str) -> None:
-    local_midnight = datetime(2026, 5, 15).astimezone()
-    assert picked_date(local_midnight.astimezone(UTC)) == date(2026, 5, 15)
-    assert picked_date(date(2026, 5, 15)) == date(2026, 5, 15)
 
 
 def test_the_time_zone_row_names_the_conference_zone_and_the_device_offset() -> None:
