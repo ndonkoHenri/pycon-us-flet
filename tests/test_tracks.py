@@ -34,7 +34,7 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import day_groups, session_rows
-from pycon_us.ui.session_rows import semantics_key
+from pycon_us.ui.semantics import semantics_key
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,

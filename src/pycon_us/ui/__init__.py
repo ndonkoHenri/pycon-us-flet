@@ -1,6 +1,6 @@
 """Shared UI components used by several screens.
 
-Grouped by role: ``scaffold.py``, ``navigation.py``, ``rows.py``, ``links.py``,
-``badges.py`` and ``states.py``
-(docs/decisions.md section M).
+Grouped by role: ``scaffold.py``, ``status_strip.py``, ``navigation.py``, ``rows.py``,
+``session_rows.py``, ``time_gutter.py``, ``links.py``, ``badges.py``, ``states.py`` and
+more (docs/decisions.md section M).
 """

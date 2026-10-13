@@ -1,15 +1,13 @@
-"""The session rows of every list (decisions §M): sessions, notices and time gutters.
+"""The session rows of every list (decisions §M): sessions and notices.
 
 ``SessionRow`` and ``NoticeRow`` are memoised components keyed by session id (D-153):
 a list owner builds each session's ``SessionView`` once per feed version
 (``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
 tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
-star is a separate stop (D-33). ``TimeGutter`` is the slot's time column (D-158) and
-``TimeSlot`` a slot, the gutter beside its rows. The other rows (``LinkTile``; P1's
-``SpeakerRow``, P2's ``LocationCard``) are in ``ui.rows`` (ux.md §3.9, D-184).
+star is a separate stop (D-33). The gutter beside the rows is ``ui.time_gutter``, the
+other rows are ``ui.rows``'s (ux.md §3.9, D-184, D-200).
 """
 
-import re
 from collections.abc import Sequence
 from typing import cast
 
@@ -17,7 +15,13 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import Session
-from pycon_us.core.row_views import SessionView, session_views
+from pycon_us.core.row_views import (
+    SessionView,
+    elapsed_phrase,
+    notice_phrase,
+    session_views,
+    spoken_phrase,
+)
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -30,6 +34,7 @@ from pycon_us.ui.badges import (
     badge_row,
     badge_specs,
 )
+from pycon_us.ui.semantics import semantics_key
 
 NOTICE_GROUP = "logistics"
 """The track group (``conference.toml``) whose sessions are notices: breaks, meals and
@@ -37,22 +42,6 @@ announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
 
 _NBSP = "\u00a0"
 """A no-break space: "AM" stays on its time's line."""
-
-_NOT_KEY = re.compile(r"[^a-z0-9]+")
-
-
-def semantics_key(session_id: str) -> str:
-    """Return a session id as the key of a semantics identifier (decisions §M).
-
-    A synthetic break id holds spaces and colons (``break-Expo Hall AB-2026-05-15T08:
-    00:00-07:00``, D-42), which a UI-test selector would have to match literally; the
-    key is lower case, each run of other characters a ``-``:
-    ``break-expo-hall-ab-2026-05-15t08-00-00-07-00``. Numeric ids stay as they are.
-
-    Args:
-        session_id: The session's id, unchanged everywhere else.
-    """
-    return _NOT_KEY.sub("-", session_id.lower()).strip("-")
 
 
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
@@ -101,51 +90,6 @@ def use_session_views(
         ),
         [conference.version, ids, use_24h, in_room],
     )
-
-
-def spoken_phrase(
-    labels: Sequence[str], view: SessionView, *, overlaps: Sequence[str] = ()
-) -> str:
-    """Return what a screen reader says for a session row: one phrase (D-33).
-
-    "Talk. What's new in typing. 9:25 to 10:10 AM, Room 104A. Ana Lima." (ux.md
-    §3.9): the badges, the title, the time and place, then the speakers, each a
-    sentence, so TalkBack and VoiceOver pause between them. On My schedule a last
-    sentence names every clash in full, "Overlaps with “A”, “B” and “C”.", so the
-    clash is heard, not only seen, even where the row counts the rest (ux.md §5.6).
-
-    Args:
-        labels: The badges' labels, in order (``badge_specs()``).
-        view: The session's row view.
-        overlaps: The names of the saved sessions the row overlaps, if any.
-    """
-    when = f"{view.spoken_when}, {view.place}" if view.place else view.spoken_when
-    clash = ""
-    if overlaps:
-        *rest, last = (f"“{name}”" for name in overlaps)
-        names = f"{', '.join(rest)} and {last}" if rest else last
-        clash = f"Overlaps with {names}"
-    parts = (", ".join(labels), view.session.name, when, view.speakers, clash)
-    return " ".join(_sentence(part) for part in parts if part)
-
-
-def notice_phrase(label: str, view: SessionView) -> str:
-    """Return what a screen reader says for a notice row, as one phrase (D-33).
-
-    "Notice. Registration opens, 7:00 AM." (ux.md §3.9), with the place when there
-    is one: "Break. Lunch, 12:00 to 1:00 PM, Expo Hall AB."
-
-    Args:
-        label: The notice's track name, e.g. "Notice" or "Break".
-        view: The notice's row view.
-    """
-    place = f", {view.place}" if view.place else ""
-    return _sentence(f"{label}. {view.session.name}, {view.spoken_when}{place}")
-
-
-def _sentence(text: str) -> str:
-    """End ``text`` with a full stop unless it already ends a sentence."""
-    return text if text.endswith((".", "?", "!", "…")) else f"{text}."
 
 
 def _open_session(view_path: str, session_id: str) -> ft.ControlEventHandler:
@@ -328,18 +272,6 @@ def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
     )
 
 
-def elapsed_phrase(elapsed: int) -> str:
-    """Return the sentence that ends the phrase of a row that is on.
-
-    "60 percent elapsed." In the phrase, not on the bar: merged into the row, its value
-    would be a bare "60", and Flet sends ``semantics_value`` as a number, "60.0".
-
-    Args:
-        elapsed: The share of the session that has passed, in whole percent.
-    """
-    return f"{elapsed} percent elapsed."
-
-
 TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
 """The elapsed bar's track: a tint of the text, so it shows on every surface, the
 next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or more
@@ -435,67 +367,6 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
             on_click=_open_session(view_path, session.id) if tappable else None,
         )
     )
-
-
-def TimeGutter(label: str) -> ft.Control:
-    """Return a slot's time column (D-31, D-158): "9:25" over "AM", left of its rows.
-
-    It has no fixed width: an invisible "10:00" / "AM" under the time sets it, so it
-    grows with the text, is the same for every slot, and the rows beside it keep one
-    left edge; a fixed 64 dp broke "7:30" over two lines at 200 % text (S2). It is a
-    heading, so screen readers move slot by slot, and reads once, as ``label``.
-
-    Args:
-        label: The slot's start from ``timefmt.time_label()``: "9:25 AM", or "09:25"
-            on a 24-hour clock, which needs no second line.
-    """
-    time, _, meridiem = label.partition(" ")
-
-    # Roboto's digits are tabular (D-26), so "10:00" is as wide as any time.
-    widest = _gutter_lines(
-        "10:00" if meridiem else "00:00", "AM" if meridiem else "", 0
-    )
-    return ft.Semantics(
-        header=True,
-        label=label,
-        exclude_semantics=True,  # else it reads "9:25 AM, 9:25, AM"
-        content=ft.Container(
-            ft.Stack([widest, _gutter_lines(time, meridiem)]),
-            padding=ft.Padding.only(left=16, top=12, right=8),
-        ),
-    )
-
-
-def TimeSlot(label: str, rows: Sequence[ft.Control], *, divider: bool) -> ft.Control:
-    """Return one time slot of a list (D-31): the ``TimeGutter`` beside the slot's rows.
-
-    Args:
-        label: The slot's start, for ``TimeGutter``.
-        rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
-        divider: Draw a 1 dp divider above it: every slot of a day but the first.
-    """
-    slot = ft.Row(
-        [TimeGutter(label), ft.Column(list(rows), spacing=0, expand=True)],
-        spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-    )
-    return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
-
-
-def _gutter_lines(time: str, meridiem: str, opacity: float = 1.0) -> ft.Control:
-    """Return the gutter's time over its AM or PM, if any."""
-    controls: list[ft.Control] = [
-        ft.Text(time, theme_style=ft.TextThemeStyle.TITLE_SMALL)
-    ]
-    if meridiem:
-        controls.append(
-            ft.Text(
-                meridiem,
-                theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            )
-        )
-    return ft.Column(controls, spacing=0, opacity=opacity)
 
 
 def _meta(

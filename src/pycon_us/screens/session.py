@@ -42,7 +42,8 @@ from pycon_us.ui.badges import (
 from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
 from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.session_rows import is_notice, semantics_key
+from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
 
 SCREEN = "session"

@@ -20,7 +20,7 @@ from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
-from pycon_us.core.row_views import SessionView
+from pycon_us.core.row_views import SessionView, spoken_phrase
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import my_schedule as screen
@@ -433,7 +433,7 @@ async def test_more_clashes_are_counted_on_a_line_the_cut_never_hides(
 
 def test_the_phrase_names_three_clashes_in_a_list() -> None:
     view = rows.session_views(processed(2026), (TALK,), ZONE, use_24h=False)[0]
-    assert rows.spoken_phrase([], view, overlaps=("A", "B", "C")).endswith(
+    assert spoken_phrase([], view, overlaps=("A", "B", "C")).endswith(
         "Overlaps with “A”, “B” and “C”."
     )
 

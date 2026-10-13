@@ -1,9 +1,12 @@
-"""Semantics helpers shared by screens: ``named()``, an identifier on a control's own node.
+"""Semantics helpers shared by screens: ``named()`` and ``semantics_key()``.
 
 UI flows find a control by its semantics identifier (``<screen>.<element>[.<key>]``,
 D-33). D-190 settled how to attach one to a button or a row: merged, so that the
-identifier and the control are one node (D-198).
+identifier and the control are one node (D-198). ``semantics_key()`` turns an id into
+the identifier's key (decisions §M; D-200).
 """
+
+import re
 
 import flet as ft
 
@@ -21,3 +24,20 @@ def named(identifier: str, control: ft.Control) -> ft.Control:
     return ft.MergeSemantics(
         content=ft.Semantics(identifier=identifier, content=control)
     )
+
+
+_NOT_KEY = re.compile(r"[^a-z0-9]+")
+
+
+def semantics_key(session_id: str) -> str:
+    """Return a session id as the key of a semantics identifier (decisions §M).
+
+    A synthetic break id holds spaces and colons (``break-Expo Hall AB-2026-05-15T08:
+    00:00-07:00``, D-42), which a UI-test selector would have to match literally; the
+    key is lower case, each run of other characters a ``-``:
+    ``break-expo-hall-ab-2026-05-15t08-00-00-07-00``. Numeric ids stay as they are.
+
+    Args:
+        session_id: The session's id, unchanged everywhere else.
+    """
+    return _NOT_KEY.sub("-", session_id.lower()).strip("-")

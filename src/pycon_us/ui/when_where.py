@@ -28,7 +28,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import TICK_SECONDS, current_minute, stop_ticks
+from pycon_us.ui.status_strip import TICK_SECONDS, current_minute, stop_ticks
 
 
 def room_href(view_path: str, room: Room, session_id: str) -> str:

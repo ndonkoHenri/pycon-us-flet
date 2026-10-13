@@ -2,8 +2,8 @@
 
 ``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
 session (SPKR-01), ``SpeakerTile`` a speaker in a session's Speakers section (SESS-07).
-P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice rows and the time
-gutter are in ``ui.session_rows`` (D-184).
+P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice rows are in
+``ui.session_rows`` (D-184), the time gutter in ``ui.time_gutter`` (D-200).
 
 ``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
 is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves
@@ -29,7 +29,7 @@ from pycon_us.ui.links import (
     link_kind,
     open_link,
 )
-from pycon_us.ui.session_rows import semantics_key
+from pycon_us.ui.semantics import semantics_key
 
 PLAIN_TOP = 16
 """A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
