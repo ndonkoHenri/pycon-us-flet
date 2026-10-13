@@ -30,8 +30,9 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, TimeGutter, is_notice
+from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.time_gutter import TimeGutter
 
 SCREEN = "schedule"
 """The screen's name in its rows' semantics identifiers (decisions §M)."""

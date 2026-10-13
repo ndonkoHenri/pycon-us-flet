@@ -48,10 +48,11 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
-from pycon_us.ui.scaffold import AppScaffold, StatusStrip, search_button
+from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
+from pycon_us.ui.status_strip import StatusStrip
 
 logger = logging.getLogger(__name__)
 
@@ -284,9 +285,9 @@ def _cancel_on_unmount() -> None:
     """The jump effects' cleanup: nothing to undo, but it makes Flet cancel their task.
 
     Flet cancels an effect's task on unmount only when the effect has a cleanup (F2,
-    F39), as the strip's ticks rely on (``ui/scaffold.stop_ticks``). Without one, a jump
-    still waiting when the user switches tabs (D-142) would scroll a list that has left
-    the page, and its error would reach whatever screen shows then.
+    F39), as the strip's ticks rely on (``ui/status_strip.stop_ticks``). Without one, a
+    jump still waiting when the user switches tabs (D-142) would scroll a list that has
+    left the page, and its error would reach whatever screen shows then.
     """
 
 

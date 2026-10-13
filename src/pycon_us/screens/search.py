@@ -32,9 +32,10 @@ from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField
-from pycon_us.ui.scaffold import AppScaffold, StatusStrip
+from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.status_strip import StatusStrip
 
 DEBOUNCE_SECONDS = 0.25
 """How long the typing must pause before the search runs (D-46)."""

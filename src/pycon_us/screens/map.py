@@ -21,14 +21,9 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import (
-    AppScaffold,
-    SectionHeader,
-    StatusStrip,
-    search_button,
-    use_minute,
-)
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.status_strip import StatusStrip, use_minute
 
 SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""

@@ -48,8 +48,8 @@ from pycon_us.screens.now_header import (
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.ui import scaffold
 from pycon_us.ui import session_rows as rows
+from pycon_us.ui import status_strip
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,
@@ -449,10 +449,11 @@ async def show(
     monkeypatch.setattr(rows, "notice_phrase", counted("notice_phrase"))
     monkeypatch.setattr(clock, "now", lambda: held[0])
     monkeypatch.setattr(ft, "use_view_path", lambda: "/now")
-    # The scaffold and the strip are tested on their own (test_scaffold.py); here the
-    # screen's body. A real strip would also start refreshes: the network.
+    # The scaffold and the strip are tested on their own (test_scaffold.py,
+    # test_status_strip.py); here the screen's body. A real strip would also start
+    # refreshes: the network.
     monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs["body"])
-    if screen.StatusStrip is scaffold.StatusStrip:
+    if screen.StatusStrip is status_strip.StatusStrip:
         monkeypatch.setattr(screen, "StatusStrip", lambda **_: ft.Text("strip"))
     if ticks is None:
         monkeypatch.setattr(Services, "run_every", ticker.run_every)
@@ -848,7 +849,7 @@ async def test_a_resume_recomputes_at_once(
     render: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """In the background nothing ticks; the return catches up at once (D-40, D-175)."""
-    monkeypatch.setattr(scaffold, "TICK_SECONDS", 0.01)
+    monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     shown = await render(may(15, 11, 10), ticks=Ticks())  # the real loop
     shown.svc.foreground.clear()  # pause
     shown.clock[0] = may(15, 21)
