@@ -113,7 +113,7 @@ Query parameters carry only view options (`?scope=`, `?pin=`, `?highlight=`, `?b
 
 ### 2.6 Deep links (P2, NEW-07, D-21) and launch (SHELL-01, SHELL-03)
 
-- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. Unknown ids land on the root with "That session isn't in the current schedule". Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
+- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. An unknown id opens its detail's not-found state ("This session isn't in the current schedule") pushed on the root, so Back lands there (D-186). Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
 - **Launch:** native splash `#680579` with the app icon (O-4), never the PyCon logo (D-36); Flet's boot screen, shown while Python starts, in the same purple (`[tool.flet.boot_screen.flet]`); a boot View (same purple) until `Prefs.loaded` and the cached or bundled feed are read, so theme and filters never flash; a `ProgressRing` only after 1 s. First run goes to `/welcome` (P2), otherwise Now; in P3 lead-retrieval accounts may open on the Lead scanner (D-16). Never a permission prompt at launch (D-61).
 
 ---
@@ -311,8 +311,8 @@ def _SessionRow(view: SessionView, is_favorite, on_toggle, tokens: Tokens, *, sc
 | First load | No snapshot or cache, before the first fetch has failed (rare, NEW-03) | `SkeletonList` |
 | No data | No snapshot or cache, fetch failed | `EmptyState` "Can't load the schedule" · "Try again", which stays during a retry with its button disabled (enabled during a quiet refresh, which a tap joins, D-181); the strip says "Offline · no schedule yet" or "Couldn't update · no schedule yet" |
 | Empty | Nothing matches | `EmptyState` with a specific way out (§4.6) |
-| Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list |
-| Removed (P2) | Session left the latest feed while open | Content kept, inline note "Removed from the latest schedule" |
+| Not found | Unknown id or slug | `EmptyState` naming the thing, button to its list, on the detail's own level under the back arrow (D-186) |
+| Removed | Session left the latest feed while its detail is open (P1, D-186) | Content kept, inline note "Removed from the latest schedule" on `tertiary_container`, a live region |
 
 No blocking loaders (SCHED-28 dropped); never a full-screen error while data exists (SCHED-14).
 
@@ -393,7 +393,7 @@ Never at launch or on Welcome. Notifications (P2): on the first favourite or the
 ### 4.9 Time, dates and copy (D-35, DATA-12)
 
 - Times are always conference time (the year's IANA zone). When the device zone differs, Session detail, Now and Settings say "Pacific Time" and the Schedule shows a one-line note.
-- 12/24 h follows `page.media.always_use_24_hour_format`; otherwise "9:25 AM". Dates "Fri, May 14"; day headers "Friday, May 14"; ranges "9:25–10:10 AM" (no dash when start equals end); relative "in 25 min", "Started 10 min ago", "Ended".
+- 12/24 h follows `page.media.always_use_24_hour_format`; otherwise "9:25 AM". Dates "Fri, May 14"; day headers "Friday, May 14"; ranges "9:25–10:10 AM" (no dash when start equals end); relative "Starts in 25 min" (spoken "Starts in 25 minutes"), "Happening now", "Ended" (`timefmt.time_status()`, D-186).
 - US English, sentence case, verbs on buttons, no "successfully", no exclamation marks except the Welcome headline. Years, dates, names and URLs come from data. Spellings: "My schedule", "Open spaces", "Lightning talks", "Help & safety", "Wi-Fi".
 
 ---
@@ -466,20 +466,20 @@ A global pattern: §4.3. Route shape per §2.5.
 
 **Purpose:** everything about one session, time and place first. **Entry:** every session row, Now, My schedule, search, speaker and room pages, reminder taps and deep links (P2).
 
-**Layout**
-1. `AppBar`: back arrow; actions `FavoriteButton`, `IconButton(SHARE_OUTLINED, tooltip="Share session")`, `PopupMenuButton` ("Open on us.pycon.org"; P2 "Add to calendar"; P4 "View source"). The title stays empty: the heading below names the page.
-2. **Header:** badges in `Row(wrap=True)`; the title in `HEADLINE_SMALL`, `selectable=True`, inside `Semantics(header=True)`; *(P2)* a Changed chip with the old value ("Moved from Room 102A").
-3. **When and where**, `Card(OUTLINED)` of `ListTile`s: `SCHEDULE` "Friday, May 15 · 9:25–10:00 AM" with "Starts in 25 min" / "Happening now" / "Ended"; `PLACE_OUTLINED` with the display location, pushing room detail with `?highlight=<id>`; multi-room plenaries add an `ExpansionTile` "+3 more rooms" (SESS-02); a "Pacific Time" note when zones differ.
-4. **Registration required** (tutorials, summits): `Card(FILLED)` with `INFO_OUTLINE`, "Registration required. Check your registration on us.pycon.org." and a link.
-5. **Speakers:** `SectionHeader` + `SpeakerRow`s; pseudo-speakers ("Hosted by …") are plain text (DATA-15).
+**Layout** (the sections 24 dp apart, §3.6)
+1. `AppBar`: back arrow; actions `FavoriteButton` (`session.favorite`), `IconButton(SHARE_OUTLINED, tooltip="Share session")` (#92), `PopupMenuButton(MORE_VERT, tooltip="More options")` ("Open on us.pycon.org", the session's public page, a link read "Opens in browser" (§4.7); P2 "Add to calendar"; P4 "View source"). A session without a public page has no overflow until P2 (D-60, D-186). The title stays empty: the heading below names the page.
+2. **Header:** badges in `Row(wrap=True)`, leaving out one that repeats the title (a break's "Break"), 8 dp above the title in `HEADLINE_SMALL`, `selectable=True`, inside `Semantics(header=True, heading_level=1)`; *(P2)* a Changed chip with the old value ("Moved from Room 102A").
+3. **When and where** (`ui/when_where.py`, D-186), `Card(OUTLINED)` of `ListTile`s: `SCHEDULE` "Friday, May 15" over "9:25–10:00 AM" (a line each, so the range never breaks in two) with "Starts in 25 min" (on its day only) / "Happening now" (in `live`) / "Ended", kept current by its own minute tick, and "Times are Pacific Time (PDT)" when the device's offset differs (no blank line when there is neither); `PLACE_OUTLINED` with the display location, pushing room detail with `?highlight=<id>`; the other rooms of a multi-room session in an `ExpansionTile` "+4 more rooms" ("In 5 rooms" for a break with no one place; SESS-02).
+4. **Registration required** (tutorials, summits, some events): `Card(FILLED)` with `INFO_OUTLINE`, "Register separately" / "Your conference ticket doesn't sign you up for this session." (what to do: the badge above already says "Registration required"), and a `LinkTile` "Check your registration" to `conference.toml`'s `registration_url` (D-186).
+5. **Speakers:** `SectionHeader(level=2, top=0)` + `SpeakerRow`s; pseudo-speakers ("Hosted by …") are plain text (DATA-15).
 6. **About:** `Markdown(selectable=True, extension_set=MarkdownExtensionSet.GITHUB_WEB, on_tap_link=..., md_style_sheet=...)` over HTML converted once per feed version (D-44, D-114), with the app's style sheet: underlined primary links, headings below the screen title (D-116). Keynotes and panels add an eyebrow, abstract and speaker cards from `content.toml` (SESS-08).
 7. When relevant: the posters list "Posters (25)" (SESS-09); *(P2)* the job fair `LocationCard` (SESS-10); the open-space image and link (SESS-11). *(could)* "Also at this time".
 
 **Interactions:** Share (NEW-06) uses `await ft.Share().share_text("<title>\n<day> <time> · <room>\n<url>", share_position_origin=origin)` (the origin anchors the sheet on tablets, D-09); the URL pattern comes from `conference.toml` and applies to numeric ids only. *(P2)* Add to calendar shares an `.ics` (UTC, stable UID, `VALARM` 10 min) with `await ft.Share().share_files([ft.ShareFile.from_bytes(data, mime_type="text/calendar", name=f"{slug}.ics")], share_position_origin=origin)` (D-62, SESS-05); the native prompt waits for E4 (SESS-04).
 
-**States:** renders from cache instantly; not found per §4.6 (Ionic rendered a blank page); *(P2)* removed while open keeps the content with an inline note.
+**States:** renders from cache instantly; not found per §4.6 on its own level (Ionic rendered a blank page); removed while open keeps the content under an inline note (§4.1, D-186).
 
-**Accessibility:** title is heading level 1, sections level 2; each "When and where" tile is one phrase ("Room: 103ABC, button"). Markdown links stay inline: on Android each is its own focusable node named by its text (S3, D-116); the P1 accessibility pass checks what TalkBack and VoiceOver call them.
+**Accessibility:** title is heading level 1, sections level 2; each "When and where" tile is one phrase: the time tile "Saturday, May 16, 10:30 to 11:00 AM, Starts in 25 minutes", the room tile "Room 103ABC, button". Markdown links stay inline: on Android each is its own focusable node named by its text (S3, D-116); the P1 accessibility pass checks what TalkBack and VoiceOver call them.
 
 **Improves on Ionic:** time and place first (SESS-01); one room tile (SESS-02); labelled synced star (SESS-03); keynote data, not hard-coded copies (SESS-08); a real back stack, not `prevUrl` (SESS-12); working Share (NEW-06).
 

@@ -1,11 +1,13 @@
 """Tests for the row views lists hand their rows (``core/row_views.py``; SCHED-03, D-184)."""
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
 
 from pycon_us.config import load_year
-from pycon_us.core.row_views import by_day, session_view, session_views
+from pycon_us.core.models import Room
+from pycon_us.core.row_views import by_day, places, session_view, session_views
 from tests.feeds import processed
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -72,3 +74,73 @@ def test_views_group_by_their_conference_local_day_in_order() -> None:
         (date(2026, 5, 13), ["19"]),
         (date(2026, 5, 16), ["142", "76"]),
     ]
+
+
+# ------------------------------------------------------------------ places (SESS-02)
+
+
+def room_names(rooms: tuple[Room, ...]) -> list[str]:
+    return [room.name for room in rooms]
+
+
+def test_a_talk_has_one_room_and_nothing_to_fold() -> None:
+    data = processed(2026)
+    where = places(data.sessions["142"], data.rooms)
+    assert where.label == "Grand Ballroom A"
+    assert where.room is data.rooms["grand-ballroom-a"]
+    assert where.others == ()
+
+
+def test_a_streamed_session_shows_its_place_and_folds_the_rooms_it_lists() -> None:
+    """Lightning talks are shown in the Arena and streamed to four rooms (D-124)."""
+    data = processed(2026)
+    where = places(data.sessions["175"], data.rooms)
+    assert where.label == "Pacific Ballroom - Arena"
+    assert where.room is data.rooms["pacific-ballroom-arena"]
+    assert room_names(where.others) == [
+        "Room 103ABC",
+        "Room 104AB",
+        "Grand Ballroom A",
+        "Grand Ballroom B",
+    ]
+    assert where.others_label == "+4 more rooms"
+
+
+def test_the_place_shown_is_not_folded_again() -> None:
+    """A multi-room event shows its first room; the fold holds the others only."""
+    data = processed(2026)
+    where = places(data.sessions["219"], data.rooms)  # PSF Members Lunch
+    assert where.label == "Room 101A"
+    assert room_names(where.others) == ["Room 101B"]
+    assert where.others_label == "+1 more room"
+
+
+def test_a_break_in_many_rooms_has_no_one_place() -> None:
+    data = processed(2026)
+    break_id = (
+        "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, "
+        "Grand Ballroom B-2026-05-16T10:05:00-07:00"
+    )
+    where = places(data.sessions[break_id], data.rooms)
+    assert (where.label, where.room) == ("", None)
+    assert where.others_label == "In 5 rooms"
+
+
+def test_a_notice_has_no_place() -> None:
+    data = processed(2026)
+    where = places(data.sessions["196"], data.rooms)  # Registration Desk Opens
+    assert (where.label, where.room, where.others) == ("", None, ())
+
+
+def test_a_place_the_feed_has_no_room_for_is_shown_but_opens_nothing() -> None:
+    data = processed(2026)
+    moved = replace(data.sessions["142"], display_location="Hallway track")
+    where = places(moved, data.rooms)
+    assert (where.label, where.room) == ("Hallway track", None)
+    assert room_names(where.others) == ["Grand Ballroom A"]  # its listed room stays
+
+
+def test_a_room_listed_twice_is_folded_once() -> None:
+    data = processed(2026)
+    twice = replace(data.sessions["219"], rooms=("Room 101A", "Room 101B", "Room 101B"))
+    assert room_names(places(twice, data.rooms).others) == ["Room 101B"]

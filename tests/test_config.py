@@ -39,6 +39,15 @@ def test_the_active_year_is_2026_in_pacific_time() -> None:
     )
 
 
+def test_the_registration_dashboard_is_year_data_and_optional() -> None:
+    # SESS-01's registration guidance links it; 2025 has none, and none is needed.
+    assert (
+        load_year(2026).conference.registration_url
+        == "https://us.pycon.org/2026/accounts/dashboard/"
+    )
+    assert load_year(2025).conference.registration_url == ""
+
+
 def test_2025_is_in_eastern_time() -> None:
     conference = load_year(2025).conference
     assert conference.zone == ZoneInfo("America/New_York")
@@ -226,6 +235,12 @@ def edit(path: Path, old: str, new: str) -> None:
             'feed_url = "https://us.pycon.org/2026/schedule/conference.json"',
             'feed_url = "https:///2026/schedule/conference.json"',
             "2026/conference.toml: feed_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
+            'registration_url = "https://',
+            'registration_url = "http://',
+            "2026/conference.toml: registration_url: expected an https:// URL with a host",
         ),
         (
             "conference.toml",
