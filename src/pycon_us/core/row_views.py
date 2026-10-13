@@ -1,7 +1,7 @@
 """The row views lists hand their rows: each session's text, formatted once (D-153, D-184).
 
 Pure functions of the processed feed, like ``queries`` (architecture §7.5): a list owner
-builds one ``SessionView`` per session once per feed version (``ui.rows.use_session_views``)
+builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
 that spans days.
 """

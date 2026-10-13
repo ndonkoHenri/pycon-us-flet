@@ -256,7 +256,7 @@
   - `theme.py`: `build_theme(*, dark, high_contrast)`, `overlay_style()`, `Tokens`, `BadgeColors` (D-174), `build_tokens(*, dark, high_contrast)`, `TokensCtx`, `use_tokens()` (D-150), `MARKDOWN_STYLE` (D-116).
   - `capabilities.py` and `clock.py`.
 - **Packages** in `pycon_us/`:
-  - `core/`: `feed.py` (`process()`, the pipeline), `records.py` (decoding), `rules.py` (Ionic's processing rules), `names.py` (title cleaning), `models.py`, `queries.py`, `search.py` (D-180), `timefmt.py`, `slugs.py`, `html_md.py`, `diff.py`, `ics.py`, `signing.py`, `badges.py`, `admission.py`, `outbox.py`.
+  - `core/`: `feed.py` (`process()`, the pipeline), `records.py` (decoding), `rules.py` (Ionic's processing rules), `names.py` (title cleaning), `models.py`, `queries.py`, `search.py` (D-180), `row_views.py` (`SessionView`, `session_view()`, `session_views()`, `by_day()`; D-184), `timefmt.py`, `slugs.py`, `html_md.py`, `diff.py`, `ics.py`, `signing.py`, `badges.py`, `admission.py`, `outbox.py`.
   - `services/`: `storage.py`, `errors.py` (`report_errors`, logging setup), `reminders.py`, `api.py`, `sync.py`, `scanner.py`.
   - `screens/`: one module per screen, named after its route (`now.py`, `schedule.py`, `my_schedule.py`, `session.py`, `speaker.py`, `search.py`, `map.py`, `more.py`, ...). Staff screens are `staff_<tool>.py`.
 - **Shared components** (`ui/`, grouped by role; split a module at about 400 lines, D-66):

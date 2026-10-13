@@ -63,7 +63,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1), `search`, `row_views` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`), `states.py` (`EmptyState`, `SkeletonList`) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`) | P0+ |

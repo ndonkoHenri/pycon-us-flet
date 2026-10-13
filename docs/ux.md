@@ -292,7 +292,7 @@ def _SessionRow(view: SessionView, is_favorite, on_toggle, tokens: Tokens, *, sc
     )
 ```
 
-`SessionView` is a frozen view model from a pure function in `core/row_views.py` (`session_view()`, `session_views()`); rows never format times themselves. A list owner gets its views from `use_session_views(conference, ids, use_24h=...)`, memoised on the feed version, the ids and the clock format, and its one star handler from `use_favorite_toggle(favorites)` (D-184). The Schedule memoises the whole path (D-153, S2): `ft.memo` day lists given only their day's favourites, `ft.memo` slot items given only their slot's favourites, and `ft.memo` rows keyed by session id on `(row view, is_favorite)`, with view models built once per feed version and `on_toggle` from `use_callback`. A star tap then re-renders one row; memoising the rows alone left the parents' rebuild (38 ms against 3 ms on the busiest day, F34).
+`SessionView` is a frozen view model from a pure function in `core/row_views.py` (`session_view()`, `session_views()`); rows never format times themselves. A list owner gets its views from `use_session_views(conference, ids, use_24h=...)`, memoised on the feed version, the ids and the clock format, and its one star handler from `use_favorite_toggle(favorites)` (D-184). The Schedule memoises the whole path (D-153, S2): `ft.memo` day lists given only their day's favourites, `ft.memo` slot items given only their slot's favourites, and `ft.memo` rows keyed by session id on `(row view, is_favorite, on_toggle, tokens)` (D-184), with view models built once per feed version and `on_toggle` from `use_callback`. A star tap then re-renders one row; memoising the rows alone left the parents' rebuild (38 ms against 3 ms on the busiest day, F34).
 
 ---
 
