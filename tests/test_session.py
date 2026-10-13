@@ -977,7 +977,7 @@ async def test_an_open_space_without_an_image_has_no_frame(render: Render) -> No
 async def test_an_open_space_links_its_entry_on_the_site_in_the_page(
     render: Render,
 ) -> None:
-    """SESS-11, D-202: the link is in the page, so there is no overflow to repeat it."""
+    """SESS-11, D-203: the link is in the page, so there is no overflow to repeat it."""
     detail = await render(SPACE_WITH_IMAGE)
     assert detail.nodes("session.overflow") == []
     link = detail.node("session.site")

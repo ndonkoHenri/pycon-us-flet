@@ -4,7 +4,7 @@ The app bar holds the star (D-30), Share (NEW-06) and, when the session has a pu
 page, an overflow with "Open on us.pycon.org": Add to calendar joins it in P2, so no
 dead item waits there, and a session without a page has no overflow at all (D-60). An
 open space's page is its entry on the site's open-spaces page, which its detail shows
-as a link in the page instead (SESS-11, D-202). The page's heading is the title under
+as a link in the page instead (SESS-11, D-203). The page's heading is the title under
 the badges, so the app bar's title stays empty. Then the "When and where" card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
@@ -141,7 +141,7 @@ def SessionDetail(session_id: str) -> ft.View:
         )
     actions.append(ShareButton(session))
     open_space = session.kind == OPEN_SPACE
-    if session.url and not open_space:  # an open space's link is in the page (D-202)
+    if session.url and not open_space:  # an open space's link is in the page (D-203)
         actions.append(_overflow(session.url, open_site))
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
