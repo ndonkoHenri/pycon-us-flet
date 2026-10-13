@@ -3,7 +3,8 @@
 Pure functions of the processed feed, like ``queries`` (architecture §7.5): a list owner
 builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
 and hands the same object to its row on every render. ``by_day`` groups them for a list
-that spans days. ``places`` gives session detail its room tiles (SESS-02).
+that spans days. ``places`` gives session detail its room tiles (SESS-02), and ``people``
+its Speakers section (SESS-07).
 """
 
 from collections.abc import Iterable, Iterator, Mapping
@@ -11,7 +12,7 @@ from dataclasses import dataclass
 from datetime import date, tzinfo
 from itertools import groupby
 
-from pycon_us.core.models import ConferenceData, Room, Session
+from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.slugs import slugify_room
 from pycon_us.core.timefmt import local_date, time_range_label
 
@@ -162,3 +163,31 @@ def places(session: Session, rooms: Mapping[str, Room]) -> Places:
             seen.add(slug)
             others.append(rooms[slug])
     return Places(label, room, tuple(others))
+
+
+def people(
+    session: Session, speakers: Mapping[str, Speaker]
+) -> tuple[Speaker | str, ...]:
+    """Return who a session's Speakers section lists, in the feed's author order (SESS-07).
+
+    A directory speaker the session links is a ``Speaker``, whose row opens their page;
+    a name the directory has no one for is the name itself, shown as text: the lightning
+    talks' "Hosted by …" (a pseudo-speaker, D-125, DATA-15) is the one in both recorded
+    feeds. Each person and each name comes once; a linked speaker whose name the authors
+    do not spell the same way (poster authors link by id, D-125) comes after them.
+
+    Args:
+        session: The session.
+        speakers: ``ConferenceData.speakers``, by id.
+    """
+    linked = [speakers[sid] for sid in session.speaker_ids if sid in speakers]
+    by_name: dict[str, Speaker] = {}
+    for speaker in linked:
+        by_name.setdefault(speaker.name, speaker)
+    found: list[Speaker | str] = []
+    for name in session.speaker_names:
+        entry = by_name.get(name, name)
+        if entry not in found:
+            found.append(entry)
+    found.extend(speaker for speaker in linked if speaker not in found)
+    return tuple(found)

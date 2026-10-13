@@ -1,8 +1,9 @@
-"""The rows lists are made of (decisions §M): ``LinkTile`` and ``SpeakerRow``.
+"""The rows lists are made of (decisions §M): ``LinkTile``, ``SpeakerRow``, ``SpeakerTile``.
 
 ``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
-session (SPKR-01). P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice
-rows and the time gutter are in ``ui.session_rows`` (D-184).
+session (SPKR-01), ``SpeakerTile`` a speaker in a session's Speakers section (SESS-07).
+P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice rows and the time
+gutter are in ``ui.session_rows`` (D-184).
 
 ``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
 is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves
@@ -15,6 +16,7 @@ from typing import Any
 
 import flet as ft
 
+from pycon_us.core.models import Speaker
 from pycon_us.core.speakers import SpeakerEntry, initials
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
@@ -193,6 +195,63 @@ def icon_top(subtitle: str | ft.Control | None) -> int:
 AVATAR_RADIUS = 24
 """A speaker row's avatar, in dp: a 48 dp circle (ux.md §3.9)."""
 
+SPEAKER_TILE_HEIGHT = 2 * AVATAR_RADIUS + 16
+"""A ``SpeakerTile``'s least height, in dp: the avatar with 8 dp above and below."""
+
+
+def speaker_avatar(speaker: Speaker) -> ft.CircleAvatar:
+    """Return a speaker's 48 dp avatar: the feed's photo over their initials.
+
+    The initials show while the photo loads, offline and when the feed has none, in
+    ``primary_container`` with its ``on_`` pair, a contrast the theme's test checks.
+    Decorative for screen readers: the row it is in says the name.
+
+    Args:
+        speaker: The directory speaker.
+    """
+    return ft.CircleAvatar(
+        content=ft.Text(initials(speaker.name)),
+        foreground_image_src=speaker.photo_url or None,
+        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+        color=ft.Colors.ON_PRIMARY_CONTAINER,
+        radius=AVATAR_RADIUS,
+    )
+
+
+def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control:
+    """Return a speaker in a session's Speakers section (SESS-07): avatar, name, chevron.
+
+    Built as an in-app ``LinkTile`` is, so it sits with the page's other rows that push
+    (the room tile): a Material ``ListTile``, its chevron saying that a tap opens the
+    speaker's page, and one node for screen readers, the name as a button; the
+    avatar's initials stay out of it. At least 64 dp tall, Material's 8 dp above and
+    below the 48 dp avatar: the default 56 dp left stacked avatars 8 dp apart, which
+    read as one column (D-197). No subtitle: the speaker's page, one
+    tap away, has the bio and their sessions (D-197).
+
+    Args:
+        speaker: The directory speaker.
+        target: Their page, ``drill_href(view_path, "speaker", speaker.id)``, so Back
+            returns to the session (D-17).
+        identifier: The row's semantics identifier, e.g. ``session.speaker.<key>``.
+    """
+    page = ft.context.page
+
+    @report_errors
+    def go() -> None:
+        page.navigate(target)
+
+    tile = ft.ListTile(
+        # Excluded: the name is the row's label, and the initials would be read first.
+        leading=ft.Semantics(exclude_semantics=True, content=speaker_avatar(speaker)),
+        title=speaker.name,
+        trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),
+        on_click=go,
+        title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+        min_height=SPEAKER_TILE_HEIGHT,
+    )
+    return ft.MergeSemantics(content=ft.Semantics(identifier=identifier, content=tile))
+
 
 def more_label(more: int) -> str:
     """Return the line a speaker row adds under its first session: "+1 more".
@@ -271,13 +330,7 @@ def _SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
     if entry.more:
         # A line of its own, so a long title never cuts it.
         lines.append(_supporting(more_label(entry.more)))
-    avatar = ft.CircleAvatar(
-        content=ft.Text(initials(speaker.name)),
-        foreground_image_src=speaker.photo_url or None,
-        bgcolor=ft.Colors.PRIMARY_CONTAINER,  # with its on_ pair: a tested contrast
-        color=ft.Colors.ON_PRIMARY_CONTAINER,
-        radius=AVATAR_RADIUS,
-    )
+    avatar = speaker_avatar(speaker)
     text = ft.Semantics(
         label=speaker_phrase(entry),
         identifier=f"{screen}.speaker.{semantics_key(speaker.id)}",
