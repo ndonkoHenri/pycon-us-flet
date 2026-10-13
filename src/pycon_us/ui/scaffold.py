@@ -187,21 +187,26 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
     return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
 
 
-def SectionHeader(text: str) -> ft.Control:
+def SectionHeader(text: str, *, level: int | None = None, top: int = 16) -> ft.Control:
     """Return the heading of a group of rows: a day, a letter, a section (ux.md §3.9).
 
     Not sticky (U2). A header for screen readers, so they can jump group by group.
 
     Args:
         text: The heading, in sentence case.
+        level: Its heading level, on a page that declares an outline: 2 under a
+            detail page's level-1 title (ux.md §5.5).
+        top: The space above it: 16 dp where it opens a group in a list; 0 on a
+            detail page, whose list already puts 24 dp between sections.
     """
     return ft.Semantics(
         header=True,
+        heading_level=level,
         content=ft.Container(
             ft.Text(
                 text, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ft.Colors.PRIMARY
             ),
-            padding=ft.Padding.only(left=16, top=16, right=16, bottom=8),
+            padding=ft.Padding.only(left=16, top=top, right=16, bottom=8),
         ),
     )
 
