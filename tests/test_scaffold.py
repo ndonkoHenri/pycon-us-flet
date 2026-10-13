@@ -761,6 +761,8 @@ def test_only_now_and_schedule_refresh_every_15_minutes(
     for name, fake in (("use_services", svc), ("use_conference", conference)):
         if hasattr(module, name):
             monkeypatch.setattr(module, name, lambda fake=fake: fake)
+    if hasattr(module, "SkeletonList"):  # without data the Schedule shows it (#83)
+        monkeypatch.setattr(module, "SkeletonList", lambda: ft.Text("loading"))
 
     inspect.unwrap(screen)()
 

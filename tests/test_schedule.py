@@ -64,7 +64,7 @@ def render(
     monkeypatch.setattr(screen, "search_button", lambda *_: ft.Text("search"))
     monkeypatch.setattr(screen, "SkeletonList", lambda: SKELETON)
     monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs)
-    monkeypatch.setattr(stub, "StatusStrip", lambda: ft.Text("strip"))
+    monkeypatch.setattr(stub, "StatusStrip", lambda **_: ft.Text("strip"))
     monkeypatch.setattr(ft, "use_view_path", lambda: "/schedule")
     monkeypatch.setattr(ft, "use_route_params", dict)
 
