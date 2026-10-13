@@ -13,6 +13,10 @@ venue = "Long Beach Convention Center"
 city = "Long Beach, CA"
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
+# Where attendees check their registration and add tutorials and summits to it; session
+# detail links it for sessions that need registration (SESS-01). Optional. Source:
+# https://us.pycon.org/2026/attend/information/ (checked 2026-10-13).
+registration_url = "https://us.pycon.org/2026/accounts/dashboard/"
 # When the bundled snapshot, conference.json, was fetched (D-38, NEW-03). Written by
 # tools/update_snapshot.py; the status strip (P1) shows the data's age from it.
 snapshot_captured_at = 2026-10-11T17:56:49-07:00

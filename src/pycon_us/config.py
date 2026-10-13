@@ -99,6 +99,9 @@ class ConferenceInfo:
     snapshot_captured_at: datetime | None = None
     """When ``tools/update_snapshot.py`` fetched the bundled snapshot; aware. None when the
     year bundles no snapshot (only the active year needs one)."""
+    registration_url: str = ""
+    """Where an attendee checks their registration and adds tutorials or summits to it,
+    for session detail's registration guidance (SESS-01); empty when not known."""
 
     @property
     def zone(self) -> ZoneInfo:
@@ -328,7 +331,8 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         raise YearDataError(
             f"{file}: snapshot_captured_at: expected a time with a UTC offset"
         )
-    for key in ("site_url", "feed_url"):
+    optional = ("registration_url",) if conference.registration_url else ()
+    for key in ("site_url", "feed_url", *optional):
         url = urlsplit(getattr(conference, key))
         if url.scheme != "https" or not url.hostname:
             raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")

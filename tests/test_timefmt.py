@@ -165,6 +165,7 @@ AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
         lambda: timefmt.time_range_label(AWARE, NAIVE, PACIFIC, use_24h=True),
         lambda: timefmt.time_range_label(NAIVE, NAIVE, PACIFIC, use_24h=False),
         lambda: timefmt.zone_note(NAIVE, PACIFIC, "Pacific Time", timedelta(0)),
+        lambda: timefmt.time_status(AWARE, AWARE, NAIVE, PACIFIC),
     ],
 )
 def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
@@ -207,3 +208,74 @@ def test_ago_label_says_just_now_for_a_time_after_now() -> None:
 def test_ago_label_refuses_naive_datetimes() -> None:
     with pytest.raises(ValueError, match="aware"):
         timefmt.ago_label(NAIVE, pacific(15, 10, 0))
+
+
+# A talk on Saturday, May 16, 10:30-11:00 AM in Long Beach.
+TALK_START, TALK_END = pacific(16, 10, 30), pacific(16, 11, 0)
+
+
+@pytest.mark.parametrize(
+    ("now", "label", "spoken"),
+    [
+        (pacific(16, 10, 5), "Starts in 25 min", "Starts in 25 minutes"),
+        (pacific(16, 9, 30), "Starts in 1 h", "Starts in 1 hour"),
+        (pacific(16, 8, 25), "Starts in 2 h 5 min", "Starts in 2 hours 5 minutes"),
+        # Rounded up: 30 s before the start is "in 1 min", never "in 0 min".
+        (
+            pacific(16, 10, 29) + timedelta(seconds=30),
+            "Starts in 1 min",
+            "Starts in 1 minute",
+        ),
+        (  # from midnight on
+            pacific(16, 0, 0),
+            "Starts in 10 h 30 min",
+            "Starts in 10 hours 30 minutes",
+        ),
+    ],
+)
+def test_on_its_day_a_session_counts_down_to_its_start(
+    now: datetime, label: str, spoken: str
+) -> None:
+    status = timefmt.time_status(TALK_START, TALK_END, now, PACIFIC)
+    assert status is not None and not status.happening
+    assert (status.label, status.spoken) == (label, spoken)
+
+
+def test_the_day_before_there_is_no_countdown() -> None:
+    eve = pacific(15, 23, 59)
+    assert timefmt.time_status(TALK_START, TALK_END, eve, PACIFIC) is None
+
+
+def test_the_countdown_s_day_is_the_conference_s_not_the_device_s() -> None:
+    # 2 PM in Kiritimati is 4 PM the day before in Long Beach: no countdown yet.
+    now = datetime(2026, 5, 16, 14, 0, tzinfo=KIRITIMATI)
+    assert timefmt.local_date(now, PACIFIC) == date(2026, 5, 15)
+    assert timefmt.time_status(TALK_START, TALK_END, now, PACIFIC) is None
+
+
+@pytest.mark.parametrize(
+    ("now", "expected"),
+    [
+        (TALK_START, timefmt.HAPPENING_NOW),  # from its start
+        (pacific(16, 10, 59), timefmt.HAPPENING_NOW),
+        (TALK_END, timefmt.ENDED),  # at its end it is over (D-179's half-open span)
+        (pacific(18, 9, 0), timefmt.ENDED),  # and stays over, days later
+    ],
+)
+def test_a_session_is_on_from_its_start_until_its_end(
+    now: datetime, expected: timefmt.TimeStatus
+) -> None:
+    status = timefmt.time_status(TALK_START, TALK_END, now, PACIFIC)
+    assert status == expected
+    assert status is not None and status.happening is (
+        expected is timefmt.HAPPENING_NOW
+    )
+
+
+def test_a_notice_counts_down_but_never_ends() -> None:
+    """Registration Desk Opens at 7:30: at 8:00 the desk is open, not "Ended"."""
+    opens = pacific(13, 7, 30)
+    before = timefmt.time_status(opens, opens, pacific(13, 7, 0), PACIFIC)
+    assert before is not None and before.label == "Starts in 30 min"
+    assert timefmt.time_status(opens, opens, opens, PACIFIC) is None
+    assert timefmt.time_status(opens, opens, pacific(13, 8, 0), PACIFIC) is None
