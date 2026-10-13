@@ -12,7 +12,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Literal
+from typing import Literal, cast
 
 import flet as ft
 import httpx
@@ -59,12 +59,17 @@ class Conference:
     frozen and never mutated: a refresh publishes a new one, so screens memoise on
     ``version``.
 
+    A refresh is automatic (``start_refresh``, ``start_refresh_if_due``) or asked for by
+    the user (``refresh``). An automatic one is quiet: ``status()`` keeps saying what it
+    said before, and only ``refreshing`` shows that one runs (D-181).
+
     Attributes:
         data: The processed feed; None until ``load_local`` publishes.
         source: Where ``data`` came from.
         fetched_at: When ``data`` was fetched (aware): the cache file's modification
             time, the snapshot's capture time, or ``clock.now()`` after a refresh.
-        refreshing: Whether a refresh is running.
+        refreshing: Whether a refresh is running, automatic or asked for: the status
+            strip's progress bar (D-181).
         problem: Why the last refresh failed, or None after a good one. The data stays
             whatever was published last.
         version: Incremented on every publish; the memo key of every view model.
@@ -78,6 +83,9 @@ class Conference:
     version: int = 0
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
     _started_at: datetime | None = field(default=None, repr=False)
+    # Whether the user asked for the running refresh (D-181): only then does status()
+    # say "refreshing". Private, so setting it notifies nobody unless refresh() asks.
+    _asked: bool = field(default=False, repr=False)
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the feed cache, or the bundled snapshot when there is no usable cache.
@@ -118,10 +126,11 @@ class Conference:
     ) -> asyncio.Task[None]:
         """Start a background refresh, unless one is running already (single flight).
 
-        Call it from the event loop's thread (D-70 rule 7). Expected failures never raise,
-        they set ``problem``. An unexpected error is logged as soon as the refresh ends,
-        whether or not anyone awaits the task (D-71); ``refresh()`` callers also get it
-        raised.
+        The refresh it starts is automatic, so quiet: it leaves ``status()`` as it was
+        (D-181). Call it from the event loop's thread (D-70 rule 7). Expected failures
+        never raise, they set ``problem``. An unexpected error is logged as soon as the
+        refresh ends, whether or not anyone awaits the task (D-71); ``refresh()``
+        callers also get it raised.
 
         Args:
             storage: Where the feed cache lives.
@@ -197,10 +206,12 @@ class Conference:
         transport: httpx.AsyncBaseTransport | None = None,
         closed: asyncio.Event | None = None,
     ) -> None:
-        """Refresh from the network and wait for it; concurrent calls share one request.
+        """Refresh from the network because the user asked, and wait for it.
 
-        Cancelling one caller does not cancel the shared refresh, which others may be
-        waiting for.
+        Concurrent calls share one request. The user's refresh is not quiet:
+        ``status()`` says ``refreshing`` until it ends, and joining an automatic refresh
+        that is running makes that one the user's at once (D-181). Cancelling one caller
+        does not cancel the shared refresh, which others may be waiting for.
 
         Args:
             storage: Where the feed cache lives.
@@ -209,9 +220,15 @@ class Conference:
             closed: Set when the store's session has been replaced; see
                 ``start_refresh``.
         """
-        await asyncio.shield(
-            self.start_refresh(storage, year, transport=transport, closed=closed)
-        )
+        task = self.start_refresh(storage, year, transport=transport, closed=closed)
+        if not self._asked:
+            self._asked = True
+            # A new refresh notifies when it sets `refreshing`; a quiet one that is
+            # running already has, so the strip learns of the tap from this. The cast:
+            # @ft.observable mixes `notify` in, which pyright cannot see.
+            if self.refreshing:
+                cast(ft.Observable, self).notify()
+        await asyncio.shield(task)
 
     def age(self) -> timedelta | None:
         """Return how old the data is by ``clock.now()``, never negative; None without data."""
@@ -222,15 +239,17 @@ class Conference:
     def status(self, info: ConferenceInfo) -> Status:
         """Return what the status strip says about the data (D-32, D-146).
 
-        In order: ``refreshing`` while a refresh runs; ``offline`` or ``problem`` when the
-        last refresh failed with no answer or a bad one; ``stale`` when the data is older
-        than 6 h on a conference day (``first_day`` to ``last_day`` in conference time) or
-        24 h on another day, or when there is no data yet; otherwise ``fresh``.
+        In order: ``refreshing`` while a refresh the user asked for runs (``refresh()``);
+        ``offline`` or ``problem`` when the last refresh failed with no answer or a bad
+        one; ``stale`` when the data is older than 6 h on a conference day (``first_day``
+        to ``last_day`` in conference time) or 24 h on another day, or when there is no
+        data yet; otherwise ``fresh``. An automatic refresh changes none of it until it
+        ends, so the strip's live region changes only with an outcome (D-181).
 
         Args:
             info: The year's facts: its dates and time zone.
         """
-        if self.refreshing:
+        if self.refreshing and self._asked:
             return "refreshing"
         if self.problem == "offline":
             return "offline"
@@ -274,6 +293,7 @@ class Conference:
             if not session_closed():
                 self._publish(data, "network", clock.now())
         finally:
+            self._asked = False  # private: the next refresh starts quiet (D-181)
             # A closed session's store must not be written at all (F30).
             if closed is None or not closed.is_set():
                 self.refreshing = False

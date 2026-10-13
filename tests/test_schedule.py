@@ -19,6 +19,7 @@ from pycon_us.favorites import Favorites
 from pycon_us.screens import schedule as screen
 from pycon_us.screens import stub
 from pycon_us.screens.schedule import Schedule
+from pycon_us.state import Conference, Problem
 from pycon_us.theme import LIGHT_TOKENS
 from tests.fakes import FakePage, bound
 from tests.feeds import processed
@@ -36,27 +37,26 @@ def page() -> Iterator[FakePage]:
 
 
 @pytest.fixture
-def conference() -> SimpleNamespace:
-    """The store's fields the screen reads, and a refresh that counts its calls."""
-    refreshes: list[str] = []
+def refreshes() -> list[str]:
+    """One entry per call of the store's ``refresh()``."""
+    return []
+
+
+@pytest.fixture
+def conference(monkeypatch: pytest.MonkeyPatch, refreshes: list[str]) -> Conference:
+    """A real store, so ``status()`` decides the buttons, with a refresh that counts."""
 
     async def refresh(*_: Any, **__: Any) -> None:
         refreshes.append("refresh")
 
-    return SimpleNamespace(
-        data=None,
-        source="none",
-        fetched_at=None,
-        refreshing=False,
-        problem=None,
-        refresh=refresh,
-        refreshes=refreshes,
-    )
+    conference = Conference()
+    monkeypatch.setattr(conference, "refresh", refresh)
+    return conference
 
 
 @pytest.fixture
 def render(
-    monkeypatch: pytest.MonkeyPatch, page: FakePage, conference: SimpleNamespace
+    monkeypatch: pytest.MonkeyPatch, page: FakePage, conference: Conference
 ) -> Callable[[], list[ft.Control]]:
     """Render ``Schedule`` once and return the rows under the strip and route line."""
     svc = SimpleNamespace(year=load_year(2026), memory=None, storage=None, closed=None)
@@ -85,7 +85,7 @@ def render(
 
 
 def test_without_data_the_skeleton_shows_until_the_first_fetch_ends(
-    render: Callable[[], list[ft.Control]], conference: SimpleNamespace
+    render: Callable[[], list[ft.Control]], conference: Conference
 ) -> None:
     assert render() == [SKELETON]  # the fetch is about to start (NEW-03)
     conference.refreshing = True
@@ -93,13 +93,46 @@ def test_without_data_the_skeleton_shows_until_the_first_fetch_ends(
 
 
 def test_a_retry_keeps_the_failed_state_with_its_button_disabled(
-    render: Callable[[], list[ft.Control]], conference: SimpleNamespace
+    render: Callable[[], list[ft.Control]], conference: Conference
 ) -> None:
     # The button stays where it was, so a screen reader's focus is not lost.
     conference.problem, conference.refreshing = "offline", True
+    conference._asked = True  # the user's retry (D-181)
     (state,) = render()
     assert texts(state)[0] == "Can't load the schedule"
     assert only(state, ft.FilledTonalButton).disabled
+
+
+def test_try_again_stays_enabled_during_a_quiet_refresh_so_a_tap_joins_it(
+    render: Callable[[], list[ft.Control]], conference: Conference
+) -> None:
+    conference.problem, conference.refreshing = "offline", True  # the 15-min tick
+    (state,) = render()
+    assert texts(state)[0] == "Can't load the schedule"
+    assert not only(state, ft.FilledTonalButton).disabled  # D-181
+
+
+@pytest.mark.parametrize(("asked", "disabled"), [(False, False), (True, True)])
+def test_the_stub_s_refresh_is_disabled_only_while_the_user_s_refresh_runs(
+    render: Callable[[], list[ft.Control]],
+    conference: Conference,
+    asked: bool,
+    disabled: bool,
+) -> None:
+    conference.data, conference.source, conference.problem = (
+        processed(2026),
+        "bundled",
+        "offline",
+    )
+    conference.refreshing, conference._asked = True, asked  # quiet unless asked
+    (refresh,) = (
+        button
+        for row in render()
+        for button in descendants(row)
+        if isinstance(button, ft.FilledTonalButton)
+    )
+    assert refresh.content == "Refresh"
+    assert refresh.disabled is disabled  # as the strip's Refresh (D-181)
 
 
 @pytest.mark.parametrize(
@@ -111,8 +144,9 @@ def test_a_retry_keeps_the_failed_state_with_its_button_disabled(
 )
 async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     render: Callable[[], list[ft.Control]],
-    conference: SimpleNamespace,
-    problem: str,
+    conference: Conference,
+    refreshes: list[str],
+    problem: Problem,
     body: str,
 ) -> None:
     conference.problem = problem
@@ -123,11 +157,11 @@ async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     assert not button.disabled
     assert button.on_click is not None
     await cast(Callable[[], Awaitable[None]], button.on_click)()
-    assert conference.refreshes == ["refresh"]
+    assert refreshes == ["refresh"]
 
 
 def test_with_data_the_stub_shows_its_source_and_days_again(
-    render: Callable[[], list[ft.Control]], conference: SimpleNamespace
+    render: Callable[[], list[ft.Control]], conference: Conference
 ) -> None:
     data: ConferenceData = processed(2026)
     conference.data, conference.source, conference.problem = data, "bundled", "offline"

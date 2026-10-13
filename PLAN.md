@@ -103,7 +103,7 @@ The full spec is [`docs/ux.md`](docs/ux.md), which consolidates three UX studies
 - **Map.** Rooms, floor plans with pins, an expo map with a list alternative, and the job fair. Zoom buttons as well as pinch.
 - **Look.** M3 seeded from PyCon indigo `#3B3EA9` with brand overrides, neutral surfaces, and light, dark and high-contrast schemes. Roboto bundled so iOS matches Android. Quiet chrome: brand colour only at identity moments (D-22..D-28).
 - **Honest states.**
-  - A status strip appears only when data is stale, offline or refreshing.
+  - A status strip appears only when data is stale, offline or being refreshed at the user's request; automatic refreshes are quiet (D-181).
   - Skeletons appear only when there is no data at all, and there are never blocking loaders.
   - A SnackBar with Undo confirms quick actions, a Banner flags conditions that need action, and a dialog appears only before something destructive (D-29, D-32).
   - Permissions are asked in context, never at launch (D-61).

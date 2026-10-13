@@ -157,6 +157,12 @@ def click(button: ft.IconButton) -> None:
     cast(Callable[[], None], button.on_click)()
 
 
+def press(button: ft.TextButton) -> asyncio.Task[None]:
+    """Run a button's async handler as Flet does, as a task of the event loop."""
+    assert button.on_click is not None
+    return asyncio.create_task(cast(Callable[[], Any], button.on_click)())
+
+
 def back_arrow(view: ft.View) -> ft.IconButton:
     leading = app_bar(view).leading
     assert isinstance(leading, ft.IconButton)
@@ -511,6 +517,34 @@ def render_strip(*, auto_refresh: bool = False) -> ft.Semantics:
     return strip
 
 
+def icon_of(strip: ft.Semantics) -> ft.Icon:
+    """The strip's icon, beside its line."""
+    box = cast(ft.Container, strip.content)
+    padded = cast(ft.Container, cast(ft.Column, box.content).controls[0])
+    line_row = cast(ft.Row, cast(ft.Row, padded.content).controls[0])
+    icon = line_row.controls[0]
+    assert isinstance(icon, ft.Icon)
+    return icon
+
+
+@dataclass(eq=False)
+class StripRenders:
+    """Renders the strip at every change of the store, as a subscribed strip does.
+
+    The test keeps it: an observable holds its listeners weakly.
+    """
+
+    conference: Conference
+    strips: list[ft.Semantics] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        assert isinstance(self.conference, ft.Observable)
+        self.conference.subscribe(self)
+
+    def __call__(self, _sender: object, _name: str | None) -> None:
+        self.strips.append(render_strip())
+
+
 def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.ProgressBar]:
     box = strip.content
     assert isinstance(box, ft.Container)
@@ -568,16 +602,118 @@ def test_a_stale_strip_is_a_live_region_with_refresh(
     assert progress.visible is False
 
 
-def test_while_refreshing_the_strip_shows_progress_and_disables_refresh(
-    hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
+async def test_while_a_refresh_the_user_asked_for_runs_it_says_so_and_disables_refresh(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    fake_now: datetime,
+    network: Network,
 ) -> None:
-    conference.fetched_at = fake_now
-    conference.refreshing = True
-    text, button, progress = strip_parts(render_strip())
+    conference.fetched_at = fake_now - timedelta(hours=25)
+    tap = press(strip_parts(render_strip())[1])  # Refresh
+    await network.arrived.wait()
+
+    strip = render_strip()
+    text, button, progress = strip_parts(strip)
+    assert strip.visible is True
     assert text.value == "Updating the schedule…"
+    assert icon_of(strip).color == ft.Colors.ON_SURFACE_VARIANT
     assert button.disabled is True
     assert progress.visible is True
     assert progress.value is None  # indeterminate
+    network.released.set()
+    await tap
+
+
+async def test_an_automatic_refresh_over_fresh_data_keeps_the_strip_hidden(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    svc: Services,
+    fake_now: datetime,
+    network: Network,
+) -> None:
+    conference.fetched_at = fake_now - timedelta(hours=1)
+    conference.start_refresh_if_due(svc.storage, svc.year)
+    await network.arrived.wait()
+
+    assert conference.refreshing
+    assert render_strip().visible is False  # nothing appears, nothing moves (D-181)
+
+
+def looks(strip: ft.Semantics) -> tuple[object, ...]:
+    """What a sighted user and a screen reader get from the strip, but its bar."""
+    text, button, _ = strip_parts(strip)
+    icon = icon_of(strip)
+    return strip.visible, icon.icon, icon.color, text.value, button.disabled
+
+
+async def test_an_automatic_refresh_over_an_offline_strip_shows_only_the_bar(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    svc: Services,
+    fake_now: datetime,
+    network: Network,
+) -> None:
+    conference.fetched_at = datetime(2026, 5, 11, 10, 42, tzinfo=PACIFIC)
+    conference.problem = "offline"  # the last refresh got no answer
+    network.error = api.NetworkError("ConnectError: still offline")
+    offline = looks(render_strip())
+    assert offline == (
+        True,
+        ft.Icons.CLOUD_OFF_OUTLINED,
+        DARK_TOKENS.warning,
+        "Offline · schedule from Mon, May 11, 10:42 AM",
+        False,
+    )
+    renders = StripRenders(conference)
+
+    task = conference.start_refresh_if_due(svc.storage, svc.year)  # the 15-min tick
+    assert task is not None
+    await network.arrived.wait()
+    during = render_strip()
+    network.released.set()
+    await task
+    after = render_strip()
+
+    # Line, icon and button never changed, so the live region announces nothing new;
+    # only the bar came and went, in its fixed slot (D-181).
+    assert {looks(strip) for strip in [during, after, *renders.strips]} == {offline}
+    assert strip_parts(during)[2].visible is True
+    assert strip_parts(after)[2].visible is False
+    assert [strip_parts(strip)[2].visible for strip in renders.strips] == [True, False]
+
+
+async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
+    hooks: Hooks,
+    page: FakePage,
+    conference: Conference,
+    svc: Services,
+    fake_now: datetime,
+    network: Network,
+) -> None:
+    conference.fetched_at = fake_now - timedelta(hours=25)
+    quiet = conference.start_refresh_if_due(svc.storage, svc.year)
+    assert quiet is not None
+    await network.arrived.wait()
+    strip = render_strip()
+    assert strip_parts(strip)[0].value == "Updated 1 day ago"
+    renders = StripRenders(conference)
+
+    tap = press(strip_parts(strip)[1])  # Refresh, while the quiet refresh runs
+    await asyncio.sleep(0)  # the handler runs up to its wait
+
+    (joined,) = renders.strips  # the tap re-renders the strip at once
+    text, button, progress = strip_parts(joined)
+    assert text.value == "Updating the schedule…"
+    assert button.disabled is True
+    assert progress.visible is True
+    assert conference._task is quiet
+    network.released.set()
+    await tap
+    assert quiet.done()
+    assert network.requests == 1  # one request for both (D-145)
 
 
 # ------------------------------------------------------------------ the strip's ticks
@@ -675,16 +811,21 @@ class Network:
     """Stands in for ``api.fetch_feed``: counts requests, each held until released.
 
     Released, it answers with an empty body, which ``feed.process`` rejects: a failed
-    refresh, which is enough to end it.
+    refresh, which is enough to end it; or it raises ``error`` when one is set.
     """
 
     def __init__(self) -> None:
         self.requests = 0
+        self.arrived = asyncio.Event()
         self.released = asyncio.Event()
+        self.error: Exception | None = None
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
         self.requests += 1
+        self.arrived.set()
         await self.released.wait()
+        if self.error is not None:
+            raise self.error
         return b""
 
 

@@ -66,6 +66,8 @@ def Schedule() -> ft.View:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
     info = svc.year.conference
+    # As the strip's Refresh: enabled during a quiet refresh, so a tap joins it (D-181).
+    asked = conference.status(info) == "refreshing"
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     counts = _session_counts(data)
@@ -96,7 +98,7 @@ def Schedule() -> ft.View:
                 on_action=refresh,
                 # A retry keeps the state in place, so a screen reader's focus stays
                 # on the button; the strip's bar shows the work.
-                disabled=conference.refreshing,
+                disabled=asked,
                 identifier="schedule.no_data",
             )
         ]
@@ -112,7 +114,7 @@ def Schedule() -> ft.View:
                     "Refresh",
                     icon=ft.Icons.REFRESH,
                     on_click=refresh,
-                    disabled=conference.refreshing,
+                    disabled=asked,
                 ),
                 padding=ft.Padding.symmetric(horizontal=16, vertical=8),
             ),

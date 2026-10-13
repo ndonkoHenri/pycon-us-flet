@@ -266,8 +266,11 @@ TICK_SECONDS = 60
 def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     """Say when the schedule on screen is not fresh, and offer Refresh (D-32).
 
-    Shown while refreshing, when the data is stale, and after a failed refresh;
-    hidden when fresh. A live region, so a screen reader announces each change.
+    Shown while a refresh the user asked for runs, when the data is stale, and after a
+    failed refresh; hidden when fresh. A live region, so a screen reader announces each
+    change. An automatic refresh is quiet (D-181): the line, its icon and the button
+    stay as they were, and only the 2 dp bar runs, so the strip stays hidden over fresh
+    data and the live region changes only when the outcome does.
 
     While it is mounted and the app is in the foreground, it ticks every
     ``TICK_SECONDS`` (``Services.run_every``): it re-renders when the minute has
@@ -307,11 +310,11 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
-    refreshing = status == "refreshing"
+    asked = status == "refreshing"  # the user's refresh; an automatic one is quiet
     icon = ft.Icon(
         STATUS_ICONS.get(status, ft.Icons.UPDATE),  # fresh: hidden, any icon
         size=16,
-        color=ft.Colors.ON_SURFACE_VARIANT if refreshing else tokens.warning,
+        color=ft.Colors.ON_SURFACE_VARIANT if asked else tokens.warning,
     )
     text = ft.Text(
         line or "",
@@ -319,11 +322,12 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         color=ft.Colors.ON_SURFACE,
         expand=True,
     )
-    button = ft.TextButton("Refresh", on_click=refresh, disabled=refreshing)
+    # Enabled during a quiet refresh: a tap joins it and makes it the user's (D-181).
+    button = ft.TextButton("Refresh", on_click=refresh, disabled=asked)
     progress = ft.ProgressBar(
         bar_height=PROGRESS_HEIGHT,
         value=None,  # indeterminate
-        visible=refreshing,
+        visible=conference.refreshing,  # any refresh, the quiet ones too (D-181)
         # No label: the line says it, and the strip's node would say it twice.
     )
     # The bar's slot keeps its height when the bar hides, so the strip and the list

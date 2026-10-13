@@ -23,7 +23,7 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, Status
+from pycon_us.state import REFRESH_EVERY, Conference, Status
 from tests.fakes import MemoryPrefs
 from tests.feeds import changed
 
@@ -82,9 +82,13 @@ def failing(error: Exception) -> httpx.MockTransport:
 
 
 class HeldFeed:
-    """A transport that serves ``NETWORK_FEED`` once ``release()`` is called, counting requests."""
+    """A transport that serves ``NETWORK_FEED`` once ``release()`` is called, counting requests.
 
-    def __init__(self) -> None:
+    Given an ``error``, it raises that instead once released: a refresh that fails late.
+    """
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
         self.requests = 0
         self.arrived = asyncio.Event()
         self._released = asyncio.Event()
@@ -97,6 +101,8 @@ class HeldFeed:
         self.requests += 1
         self.arrived.set()
         await self._released.wait()
+        if self.error is not None:
+            raise self.error
         return httpx.Response(200, content=NETWORK_FEED)
 
 
@@ -248,7 +254,7 @@ async def test_a_refresh_after_the_last_one_ended_makes_a_new_request(
     assert conference.version == 3
 
 
-async def test_refreshing_is_shown_while_the_request_is_in_flight(
+async def test_refreshing_is_set_while_the_request_is_in_flight(
     storage: Storage, year: YearData
 ) -> None:
     conference = await loaded(storage, year)
@@ -257,12 +263,10 @@ async def test_refreshing_is_shown_while_the_request_is_in_flight(
     task = conference.start_refresh(storage, year, transport=feed.transport)
     await feed.arrived.wait()
     assert conference.refreshing
-    assert conference.status(year.conference) == "refreshing"
     feed.release()
     await task
 
     assert not conference.refreshing
-    assert conference.status(year.conference) == "fresh"
 
 
 async def test_cancelling_one_caller_leaves_the_shared_refresh_running(
@@ -512,10 +516,25 @@ def test_without_data_the_status_is_stale(year: YearData) -> None:
     assert conference.status(year.conference) == "stale"
 
 
-def test_a_running_refresh_outranks_the_last_problem(year: YearData) -> None:
-    conference = Conference(fetched_at=NOW, refreshing=True, problem="offline")
+async def test_a_refresh_the_user_asked_for_outranks_the_last_problem(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(
+        storage, year, transport=failing(httpx.ConnectError("offline"))
+    )
+    feed = HeldFeed()
 
+    asked = asyncio.create_task(
+        conference.refresh(storage, year, transport=feed.transport)
+    )
+    await feed.arrived.wait()
+
+    assert conference.problem == "offline"  # until the outcome
     assert conference.status(year.conference) == "refreshing"
+    feed.release()
+    await asked
+    assert conference.status(year.conference) == "fresh"
 
 
 # ------------------------------------------------------------------ automatic refreshes
@@ -627,3 +646,170 @@ async def test_an_automatic_refresh_that_fails_keeps_the_data_and_the_cache(
     assert title(conference.data) == "Renamed in the cache"
     assert storage.feed_path.read_bytes() == CACHED_FEED
     assert conference.status(year.conference) == status
+
+
+# ------------------------------------------------------------------ quiet automatic refreshes
+
+
+class StatusLog:
+    """Records ``(status(), refreshing)`` at every notification, as the strip renders.
+
+    The test keeps it: an observable holds its listeners weakly.
+    """
+
+    def __init__(self, conference: Conference, year: YearData) -> None:
+        self.conference = conference
+        self.info = year.conference
+        self.seen: list[tuple[Status, bool]] = []
+        assert isinstance(conference, ft.Observable)
+        conference.subscribe(self)
+
+    def __call__(self, _sender: object, _name: str | None) -> None:
+        self.seen.append(
+            (self.conference.status(self.info), self.conference.refreshing)
+        )
+
+
+async def test_an_automatic_refresh_over_fresh_data_keeps_the_status_fresh(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    clock.set_test_now(NOW + REFRESH_EVERY)  # due, and the data is still fresh
+    log = StatusLog(conference, year)
+    feed = HeldFeed()
+
+    task = conference.start_refresh_if_due(storage, year, transport=feed.transport)
+    assert task is not None
+    await feed.arrived.wait()
+    assert conference.refreshing  # the bar's flag (D-181)
+    assert conference.status(year.conference) == "fresh"  # so the strip stays hidden
+    feed.release()
+    await task
+
+    assert ("fresh", True) in log.seen
+    assert {status for status, _ in log.seen} == {"fresh"}  # it never said "refreshing"
+
+
+async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_ends(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    clock.set_test_now(NOW + timedelta(hours=25))  # not a conference day: over 24 h
+    assert conference.status(year.conference) == "stale"
+    log = StatusLog(conference, year)
+    feed = HeldFeed()
+
+    task = conference.start_refresh_if_due(storage, year, transport=feed.transport)
+    assert task is not None
+    await feed.arrived.wait()
+    assert conference.status(year.conference) == "stale"
+    feed.release()
+    await task
+
+    assert conference.status(year.conference) == "fresh"
+    assert "refreshing" not in {status for status, _ in log.seen}
+    assert log.seen[0] == ("stale", True)  # the bar starts over the stale line
+
+
+async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) -> None:
+    conference = await loaded(storage, year)
+    clock.set_test_now(NOW + timedelta(days=3))  # the bundled snapshot is stale
+    feed = HeldFeed()
+
+    # bootstrap()'s call, over the bundled snapshot on a first start.
+    task = conference.start_refresh(storage, year, transport=feed.transport)
+    await feed.arrived.wait()
+
+    assert conference.refreshing
+    assert conference.status(year.conference) == "stale"  # "Updated 3 days ago"
+    feed.release()
+    await task
+    assert conference.status(year.conference) == "fresh"
+
+
+async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    clock.set_test_now(NOW + timedelta(days=3))
+    log = StatusLog(conference, year)
+    feed = HeldFeed()
+
+    asked = asyncio.create_task(
+        conference.refresh(storage, year, transport=feed.transport)
+    )
+    await feed.arrived.wait()
+
+    assert log.seen == [("refreshing", True)]  # announced as it starts
+    feed.release()
+    await asked
+    assert conference.status(year.conference) == "fresh"
+    assert log.seen[-1] == ("fresh", False)
+
+
+async def test_an_automatic_refresh_that_fails_offline_again_changes_no_status(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(
+        storage, year, transport=failing(httpx.ConnectError("offline"))
+    )
+    clock.set_test_now(NOW + REFRESH_EVERY)
+    log = StatusLog(conference, year)
+    feed = HeldFeed(error=httpx.ConnectError("still offline"))
+
+    task = conference.start_refresh_if_due(storage, year, transport=feed.transport)
+    assert task is not None
+    await feed.arrived.wait()
+    assert conference.status(year.conference) == "offline"
+    feed.release()
+    await task
+
+    # Only the bar came and went: `problem` was set to what it was (no notification,
+    # F5), so the strip's live region has nothing new to announce.
+    assert log.seen == [("offline", True), ("offline", False)]
+
+
+async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    clock.set_test_now(NOW + timedelta(days=3))
+    feed = HeldFeed()
+    quiet = conference.start_refresh_if_due(storage, year, transport=feed.transport)
+    assert quiet is not None
+    await feed.arrived.wait()
+    assert conference.status(year.conference) == "stale"
+    log = StatusLog(conference, year)
+
+    asked = asyncio.create_task(
+        conference.refresh(storage, year, transport=feed.transport)
+    )
+    await asyncio.sleep(0)  # the tap's handler runs up to its wait
+
+    assert log.seen == [("refreshing", True)]  # the strip changes on the tap
+    assert conference._task is quiet  # single flight: the same request
+    feed.release()
+    await asked
+    assert feed.requests == 1
+    assert conference.status(year.conference) == "fresh"
+
+
+async def test_after_a_refresh_the_user_asked_for_the_next_automatic_one_is_quiet(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    offline = failing(httpx.ConnectError("offline"))
+    await conference.refresh(storage, year, transport=offline)  # Refresh, offline
+    clock.set_test_now(NOW + REFRESH_EVERY)
+    feed = HeldFeed(error=httpx.ConnectError("still offline"))
+
+    task = conference.start_refresh_if_due(storage, year, transport=feed.transport)
+    assert task is not None
+    await feed.arrived.wait()
+
+    assert conference.status(year.conference) == "offline"
+    feed.release()
+    await task
