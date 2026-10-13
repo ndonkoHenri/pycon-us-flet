@@ -151,8 +151,10 @@ ROUTES = [
         pushed(
             "tracks",
             Tracks,
-            # The hub's rows for the two pages of their own (D-205), before the slug
-            # route, which would match them too: under the hub, Back returns to it.
+            # The hub's pages of their own, More's pages again (config.HUB_PAGES,
+            # D-207): under the hub, Back returns to it. Before the slug route, which
+            # would match them too.
+            pushed("sprints", Sprints),
             pushed("lightning-talks", LightningTalks),
             pushed("open-spaces", OpenSpaces),
             pushed(":slug", TrackPage),
