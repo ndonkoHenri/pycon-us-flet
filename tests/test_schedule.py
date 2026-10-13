@@ -3,9 +3,9 @@
 ``Schedule`` renders in a real Flet session (``tests/sessions.py``) under the store
 providers, so the memoised path (D-153), the two renders (D-156), the tabs' echo and the
 jumps run as Flet runs them. Two seams stand in for the device: ``AppScaffold`` returns
-the body and the "Now" button in a ``Column`` (the View and its bar are
-``tests/test_scaffold.py``'s), and ``ListView.scroll_to`` is recorded instead of sent to
-a client, answering a keyed scroll with the scroll end Flutter would report (or with
+the app bar's actions, the body and the "Now" button in a ``Column`` (the View and its
+bar are ``tests/test_scaffold.py``'s), and ``ListView.scroll_to`` is recorded instead of
+sent to a client, answering a keyed scroll with the scroll end Flutter would report (or with
 nothing, for a list already in place) and reading ``self.page`` first, as Flet does, so a
 list that has left the page raises Flet's error. Whether a jump lands, how the tabs read
 at 200 % and what TalkBack says are device checks (#86).
@@ -235,7 +235,10 @@ async def shown(
         def scaffold(**kwargs: Any) -> ft.Control:
             result.retaps.append(kwargs.get("on_retap"))
             fab = kwargs.get("fab")
-            return ft.Column([kwargs["body"], *([fab] if fab else [])], expand=True)
+            actions = kwargs.get("actions") or []  # Search, and the filter (#87)
+            return ft.Column(
+                [*actions, kwargs["body"], *([fab] if fab else [])], expand=True
+            )
 
         def counted_phrase(*args: Any, **kwargs: Any) -> str:
             result.rows.append(cast(Any, args[-1]).session.id)

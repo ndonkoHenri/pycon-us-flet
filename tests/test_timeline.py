@@ -311,11 +311,15 @@ def test_only_the_timeline_takes_the_schedule_filter() -> None:
 
 FILTER_USERS = {
     "timeline": {"core/timeline.py", "screens/schedule.py"},
-    "excluded_tracks": {"prefs.py", "screens/schedule.py"},
+    "excluded_tracks": {
+        "prefs.py",
+        "screens/schedule.py",
+        "screens/schedule_filter.py",
+    },
 }
-"""The modules that may name the Schedule's filter: its query, its preference and the
-Schedule. The filter sheet (#87) adds its module here if it gets one of its own. The
-module ``core/timeline.py`` shares the function's name, so outside the Schedule import
+"""The modules that may name the Schedule's filter: its query, its preference, the
+Schedule and its filter (#87, which edits the preference; its sheet module is given the
+hidden keys and names neither). The module ``core/timeline.py`` shares the function's name, so outside the Schedule import
 its names directly (``from pycon_us.core.timeline import DaySessions``);
 ``from pycon_us.core import timeline`` trips this scan (D-185)."""
 

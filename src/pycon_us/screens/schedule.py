@@ -40,12 +40,13 @@ from pycon_us.screens.schedule_days import (
     day_tab,
     now_button,
 )
+from pycon_us.screens.schedule_filter import use_track_filter
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import NOT_SAVED, SNACK_BAR_MS, use_favorite_toggle
+from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, StatusStrip, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
@@ -112,6 +113,11 @@ def Schedule() -> ft.View:
     views = use_session_views(conference, ids, use_24h=use_24h)
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     today_slots = slots.get(current, ())
+    tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
+    count = sum(
+        len(slot.sessions) for day_slots in slots.values() for slot in day_slots
+    )
+    track_filter = use_track_filter(info, tracks, count)  # the filter sheet (D-20)
 
     @report_errors
     async def jump_to_now(*, asked: bool) -> None:
@@ -194,19 +200,6 @@ def Schedule() -> ft.View:
     on_scroll = ft.use_callback(scrolled, [])
 
     @report_errors
-    async def clear_filters() -> None:
-        if not await prefs.save(svc.storage, excluded_tracks=()):
-            page.show_dialog(
-                ft.SnackBar(
-                    ft.Text(NOT_SAVED),
-                    behavior=ft.SnackBarBehavior.FLOATING,
-                    duration=SNACK_BAR_MS,
-                )
-            )
-
-    on_clear_filters = ft.use_callback(clear_filters, [])
-
-    @report_errors
     async def try_again() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
@@ -247,7 +240,7 @@ def Schedule() -> ft.View:
                 empty=_empty(data, day, slots[day]),
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
-                on_clear_filters=on_clear_filters,
+                on_clear_filters=track_filter.show_all,
             )
         )
     tabs = ft.Tabs(
@@ -268,6 +261,7 @@ def Schedule() -> ft.View:
                     scrollable=True,
                     tab_alignment=ft.TabAlignment.START,
                 ),
+                *([track_filter.summary] if track_filter.summary else []),
                 StatusStrip(auto_refresh=True),
                 ft.TabBarView(pages, expand=True),
             ],
@@ -277,7 +271,7 @@ def Schedule() -> ft.View:
     )
     return AppScaffold(
         title="Schedule",
-        actions=[search_button(memory, "sessions")],
+        actions=[search_button(memory, "sessions"), track_filter.button],
         body=tabs,
         on_retap=scroll_to_top,
         fab=now_button(on_today=shown == current, on_click=now_pressed)
@@ -338,6 +332,22 @@ def _default_day(all_days: tuple[date, ...], current: date) -> date | None:
     if current in all_days:
         return current
     return all_days[0] if all_days else None
+
+
+def _tracks(data: ConferenceData | None, all_days: tuple[date, ...]) -> frozenset[str]:
+    """Return the track keys of the sessions the Schedule can show, on any day.
+
+    The filter offers these and no other (D-20): a chip for a track without sessions
+    would change nothing.
+    """
+    if data is None:
+        return frozenset()
+    return frozenset(
+        s.track
+        for day in all_days
+        for slot in timeline(data, day, ())
+        for s in slot.sessions
+    )
 
 
 def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | None:
