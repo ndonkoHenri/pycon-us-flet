@@ -43,7 +43,10 @@ class MemoryPrefs(ft.SharedPreferences):
 
 
 class MemorySemantics(ft.SemanticsService):
-    """SemanticsService whose accessibility features come from a dict, not the platform."""
+    """SemanticsService whose accessibility features come from a dict, not the platform.
+
+    Announcements are recorded in ``announced`` instead of reaching a screen reader.
+    """
 
     def init(self) -> None:
         self.features: dict[str, bool] = dict.fromkeys(
@@ -61,6 +64,7 @@ class MemorySemantics(ft.SemanticsService):
         )
         self.error: Exception | None = None
         self.reads = 0
+        self.announced: list[str] = []
 
     async def _invoke_method(
         self,
@@ -68,6 +72,9 @@ class MemorySemantics(ft.SemanticsService):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
+        if method_name == "announce_message":
+            self.announced.append((arguments or {})["message"])
+            return None
         if method_name != "get_accessibility_features":
             raise AssertionError(f"unexpected call {method_name}")
         self.reads += 1

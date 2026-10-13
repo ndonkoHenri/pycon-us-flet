@@ -12,7 +12,7 @@ each list's offset live in ``ViewMemory``, so a tab return or a new session find
 
 Jump to now (D-155) lands on the current slot (``current_slot_key()``) once per process,
 on the first display of today, and again with the "Now" button, which switches to today
-first when another day shows. Without any data (no snapshot or cache, NEW-03) the
+first when another day shows, and tells a screen reader where it landed. Without any data (no snapshot or cache, NEW-03) the
 screen shows the skeleton until the first fetch has failed, then "Can't load the
 schedule", which stays during a retry (D-32, ux.md §4.1).
 """
@@ -29,14 +29,14 @@ from pycon_us import clock
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
-from pycon_us.core.timefmt import day_heading, day_tab_label, today
+from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, today
 from pycon_us.core.timeline import Slot, current_slot_key, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.schedule_days import SCREEN, DayList, Empty
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
+from pycon_us.services.storage import SERVICE_ERRORS, THEME
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import NOT_SAVED, SNACK_BAR_MS, use_favorite_toggle
@@ -119,27 +119,38 @@ def Schedule() -> ft.View:
     today_slots = slots.get(current, ())
 
     @report_errors
-    async def jump_to_now() -> None:
-        await _jump_to_now(
+    async def jump_to_now(*, asked: bool) -> None:
+        landed = await _jump_to_now(
             _ref(refs, current),
             today_slots,
             duration=prefs.motion_ms(JUMP_MS),
             ended=signals.ended,
         )
+        # The user's own tap: a screen reader hears where the list went, since the
+        # tab switch and the scroll are silent. The first display's jump is not asked.
+        if asked and landed is not None and prefs.screen_reader and prefs.announcements:
+            when = time_label(landed.start, info.zone, use_24h=use_24h)
+            try:
+                await svc.semantics.announce_message(f"{day_heading(current)}, {when}")
+            except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
+                logger.warning("Could not announce the jump", exc_info=True)
 
     @report_errors
     async def opened() -> None:
+        if shown is None:  # no data yet: the first display is the render that has it
+            return
         jumps = not memory.jumped_to_now and shown == current and bool(today_slots)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
         await svc.storage.get(THEME)
         set_rest(True)
         if jumps:
             memory.jumped_to_now = True  # once per process (D-18)
-            await jump_to_now()
-        elif shown is not None:
+            await jump_to_now(asked=False)
+        else:
             await _restore(_ref(refs, shown), memory.schedule_offsets.get(shown))
 
-    ft.use_effect(opened, [])
+    # Runs again once, when the first data arrives (no snapshot or cache, NEW-03).
+    ft.use_effect(opened, [shown is None], cleanup=_cancel_on_unmount)
 
     @report_errors
     async def jump_after_switch() -> None:
@@ -149,9 +160,9 @@ def Schedule() -> ft.View:
             await asyncio.wait_for(signals.settled.wait(), SETTLE_S)
         except TimeoutError:
             logger.info("Jump to now: the switch to today did not report back")
-        await jump_to_now()
+        await jump_to_now(asked=True)
 
-    ft.use_effect(jump_after_switch, [jump])
+    ft.use_effect(jump_after_switch, [jump], cleanup=_cancel_on_unmount)
 
     @report_errors
     async def changed(e: ft.Event[ft.Tabs]) -> None:
@@ -166,7 +177,7 @@ def Schedule() -> ft.View:
     @report_errors
     async def now_pressed() -> None:
         if shown == current:
-            await jump_to_now()
+            await jump_to_now(asked=True)
             return
         signals.settled.clear()
         memory.schedule_day = current
@@ -272,6 +283,16 @@ def Schedule() -> ft.View:
     )
 
 
+def _cancel_on_unmount() -> None:
+    """The jump effects' cleanup: nothing to undo, but it makes Flet cancel their task.
+
+    Flet cancels an effect's task on unmount only when the effect has a cleanup (F2,
+    F39), as the strip's ticks rely on (``ui/scaffold.stop_ticks``). Without one, a jump
+    still waiting when the user switches tabs (D-142) would scroll a list that has left
+    the page, and its error would reach whatever screen shows then.
+    """
+
+
 def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:
     """Return the day list's ref, one per day for the screen's life (F38)."""
     return refs.setdefault(day, ft.Ref[ft.ListView]())
@@ -283,11 +304,18 @@ async def _jump_to_now(
     *,
     duration: int,
     ended: asyncio.Event,
-) -> None:
-    """Scroll today's list to the current slot (``current_slot_key()``, D-155)."""
+) -> Slot | None:
+    """Scroll today's list to the current slot (``current_slot_key()``, D-155).
+
+    Returns:
+        The slot the list landed on, or None when there is none or it did not land.
+    """
     key = current_slot_key(slots, clock.now())
-    if key is not None:
-        await jump_to_key(list_ref, key, duration=duration, ended=ended)
+    if key is None:
+        return None
+    if not await jump_to_key(list_ref, key, duration=duration, ended=ended):
+        return None
+    return next(slot for slot in slots if slot.key == key)
 
 
 async def _restore(list_ref: ft.Ref[ft.ListView], offset: float | None) -> None:
@@ -331,11 +359,12 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
             border_radius=TODAY_DOT / 2,
             bgcolor=ft.Colors.PRIMARY,
         )
+        # Centred on the label, so it stays beside the digits at every text size.
         label = ft.Row(
             [label, dot],
             spacing=4,
             tight=True,
-            vertical_alignment=ft.CrossAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
     return ft.Tab(
         height=TAB_HEIGHT,

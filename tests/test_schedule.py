@@ -10,6 +10,7 @@ jump lands, how the tabs read at 200 % and what TalkBack says are device checks 
 """
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -29,7 +30,7 @@ from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import schedule as screen
 from pycon_us.screens import schedule_days
 from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
+from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference, ConferenceCtx, Problem, ViewMemory
 from pycon_us.ui import scrolling
 from pycon_us.ui import session_rows as rows
@@ -85,6 +86,10 @@ class Shown:
     """The session ids whose row bodies ran, in order."""
     slots: list[str] = field(default_factory=list)
     """The gutter labels of the slot bodies that ran, in order."""
+    announced: list[str] = field(default_factory=list)
+    """What the screen asked a screen reader to say (``announce_message``)."""
+    leave: Callable[[], None] = lambda: None
+    """Replace the Schedule with another screen, as a bottom-tab switch does (D-142)."""
 
     @property
     def tabs(self) -> ft.Tabs:
@@ -179,11 +184,12 @@ async def shown(
     async def show(**settings: Any) -> Shown:
         clock.set_test_now(now[0])
         storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
+        semantics = MemorySemantics()
         svc = Services(
             year=YEAR,
             storage=storage,
             memory=memory,
-            semantics=MemorySemantics(),
+            semantics=semantics,
             haptics=MemoryHaptics(),
             launcher=MemoryLauncher(),
             clipboard=MemoryClipboard(),
@@ -203,6 +209,7 @@ async def shown(
             navigated,
             strips,
             storage,
+            announced=semantics.announced,
         )
 
         async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
@@ -241,14 +248,19 @@ async def shown(
         monkeypatch.setattr(schedule_days, "TimeGutter", counted_gutter)
 
         @ft.component
+        def Elsewhere() -> ft.Control:
+            return ft.Text("another tab")
+
+        @ft.component
         def Root() -> ft.Control:
+            here, set_here = ft.use_state(True)
+            result.leave = lambda: set_here(False)
+            body = screen.Schedule if here else Elsewhere
             return ServicesCtx(
                 svc,
                 lambda: ConferenceCtx(
                     conference,
-                    lambda: PrefsCtx(
-                        prefs, lambda: FavoritesCtx(favorites, screen.Schedule)
-                    ),
+                    lambda: PrefsCtx(prefs, lambda: FavoritesCtx(favorites, body)),
                 ),
             )
 
@@ -288,6 +300,8 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
     assert _spoken(schedule, 2) == "Friday, May 15, today"  # after "Tab 3 of 7"
     assert friday.label is None  # merged into the tab's node with the identifier
     assert _has_dot(schedule, friday)  # today's mark
+    (row,) = find(schedule.session, ft.Row, lambda c: inside(c, friday))
+    assert row.vertical_alignment == ft.CrossAxisAlignment.CENTER  # at every size
     saturday = schedule.node("schedule.day_tab.3")
     assert _spoken(schedule, 3) == "Saturday, May 16"
     assert not _has_dot(schedule, saturday)
@@ -398,6 +412,10 @@ async def test_each_slot_is_one_keyed_item_beside_its_gutter(
         lambda c: isinstance(c.key, ft.ScrollKey) and inside(c, friday),
     )
     keys = sorted(str(cast(ft.ScrollKey, item.key).value) for item in items)
+    # A jump puts the slot's time under the tab bar, not a second line (ux.md §5.2).
+    dividers = find(schedule.session, ft.Divider, lambda c: inside(c, friday))
+    assert len(dividers) == len(items) - 1
+    assert not any(inside(d, item) for d in dividers for item in items)
     expected = timeline(processed(2026), FRIDAY, Prefs().excluded_tracks)
     assert keys == sorted(slot.key for slot in expected)
     shown_ids = {
@@ -615,6 +633,74 @@ async def test_the_re_tap_scrolls_the_shown_day_to_the_top(
     assert kwargs == {"offset": 0, "duration": 300}
 
 
+async def test_a_jump_still_waiting_stops_when_the_user_leaves_the_tab(
+    shown: Callable[[], Awaitable[Shown]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """D-70 rule 3, F2: the effect's cleanup is what makes Flet cancel its task."""
+    round_trip = asyncio.Event()
+    get = Storage.get
+
+    async def slow_get(self: Storage, pref: Any) -> Any:
+        if pref is THEME:  # the first display's round trip (D-156)
+            await round_trip.wait()
+        return await get(self, pref)
+
+    monkeypatch.setattr(Storage, "get", slow_get)
+    schedule = await shown()
+    friday = schedule.list_of(FRIDAY)  # held: the screen's weak ref may resolve it
+    schedule.leave()
+    await settle()
+    assert find(schedule.session, ft.Tabs) == []
+    with caplog.at_level(logging.ERROR):
+        round_trip.set()
+        await settle()
+        await asyncio.sleep(0.05)
+        await settle()
+    assert schedule.scrolls == []
+    assert friday.parent is None or not inside(friday, schedule.session.page)
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+async def test_a_now_tap_tells_a_screen_reader_where_it_landed(
+    shown: Callable[..., Awaitable[Shown]],
+) -> None:
+    """ux.md §5.2: the switch and the scroll are silent, so the landing is said once."""
+    schedule = await shown(screen_reader=True, announcements=True)
+    assert schedule.announced == []  # the first display's jump is not the user's
+    await schedule.press_now()
+    assert schedule.announced == ["Friday, May 15, 10:30 AM"]
+
+
+async def test_today_from_another_day_tells_a_screen_reader_once_it_landed(
+    shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    memory.schedule_day, memory.jumped_to_now = SATURDAY, True
+    schedule = await shown(screen_reader=True, announcements=True)
+    await schedule.press_now()
+    assert schedule.announced == []  # not before the switch has slid in
+    await schedule.change_day(FRIDAY)
+    await asyncio.sleep(0.02)
+    await settle()
+    assert schedule.announced == ["Friday, May 15, 10:30 AM"]
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [{}, {"screen_reader": True}, {"announcements": True}],
+    ids=["neither", "no-announcements", "no-screen-reader"],
+)
+async def test_without_a_screen_reader_that_takes_announcements_nothing_is_said(
+    shown: Callable[..., Awaitable[Shown]], settings: dict[str, bool]
+) -> None:
+    """F13: Flutter reports no announcements on Android, so nothing is said there."""
+    schedule = await shown(**settings)
+    schedule.scrolls.clear()
+    await schedule.press_now()
+    assert schedule.scrolls and schedule.announced == []
+
+
 # ------------------------------------------------------------------ without data (D-32)
 
 
@@ -637,6 +723,37 @@ async def test_without_data_the_skeleton_shows_until_the_first_fetch_ends(
     schedule = await shown()
     assert find(schedule.session, ft.Semantics, lambda c: c.label == "Loading schedule")
     assert find(schedule.session, ft.Tabs) == []
+
+
+async def test_the_first_data_is_the_first_display_it_renders_today_first_and_jumps(
+    shown: Callable[[], Awaitable[Shown]],
+    conference: Conference,
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NEW-03, then the first fetch: D-156's two renders and the one jump still hold."""
+    lists: list[date] = []
+    spy = schedule_days._DayList
+
+    def counted(day: date, *args: Any, **kwargs: Any) -> ft.Control:
+        lists.append(day)
+        return spy(day, *args, **kwargs)
+
+    monkeypatch.setattr(schedule_days, "_DayList", counted)
+    conference.data, conference.source = None, "none"
+    schedule = await shown()
+    assert schedule.scrolls == [] and not memory.jumped_to_now
+
+    conference.data, conference.source = processed(2026), "network"
+    conference.version += 1
+    await settle()
+    await asyncio.sleep(0.05)
+    await settle()
+    assert lists[0] == FRIDAY and set(lists) == set(DAYS)  # today alone, then the rest
+    ((target, kwargs),) = schedule.scrolls
+    assert target is schedule.list_of(FRIDAY)
+    assert kwargs["scroll_key"].value == "slot-2026-05-15T10:30:00-07:00"
+    assert memory.jumped_to_now  # so a tab return does not jump (SCHED-16)
 
 
 @pytest.mark.parametrize(

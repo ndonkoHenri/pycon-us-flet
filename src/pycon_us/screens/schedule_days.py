@@ -194,8 +194,9 @@ def SlotItem(
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter, beside its rows.
 
-    A memoised component keyed by the slot key (D-153); its control carries
-    ``ScrollKey(slot.key)``, the target of a jump (D-155). Rows are in schedule order
+    A memoised component keyed by the slot key (D-153); the box around its time and
+    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155), and its divider
+    sits above that box. Rows are in schedule order
     (by room, D-31); breaks and notices are ``NoticeRow``s, without a star.
 
     Args:
@@ -249,7 +250,8 @@ def _SlotItem(
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
-    if divider:
-        content = ft.Column([ft.Divider(height=1), content], spacing=0)
     # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees.
-    return ft.Container(content, key=ft.ScrollKey(slot.key))
+    keyed = ft.Container(content, key=ft.ScrollKey(slot.key))
+    # The divider stays outside the keyed box, so a jump puts the slot's time, not
+    # its divider, under the tab bar's own line (one 1 dp line there, not two).
+    return ft.Column([ft.Divider(height=1), keyed], spacing=0) if divider else keyed
