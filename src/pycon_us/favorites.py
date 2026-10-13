@@ -97,7 +97,7 @@ class Favorites:
     def reset(self) -> None:
         """Forget every saved session, as after a fresh install, without writing.
 
-        Reset app (DEV-05, D-195) calls it once ``Storage.clear_prefs()`` has removed
+        Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
         the stored list, so there is nothing to write; ``loaded`` stays as it is, and
         the next edit saves as usual.
         """

@@ -136,7 +136,7 @@ class Conference:
     async def reset(self, storage: Storage, year: YearData) -> bool:
         """Return to what a fresh install shows: the bundled snapshot, from the year's feed.
 
-        Reset app (DEV-05, D-195). A refresh that is running is cancelled, and waited
+        Reset app (DEV-05, D-198). A refresh that is running is cancelled, and waited
         for, so one from a Developer feed URL cannot cache or publish its feed after the
         reset; the feed URL returns to the year's; the cache is deleted; the snapshot
         is published, so every screen shows it at once. The caller starts the next
@@ -448,7 +448,7 @@ class ViewMemory:
     room_highlights: dict[str, str] = field(default_factory=dict)
 
     def reset(self) -> None:
-        """Forget where the user was, as after a fresh install (Reset app, D-195).
+        """Forget where the user was, as after a fresh install (Reset app, D-198).
 
         Every field returns to its default, so the Schedule opens on today and jumps
         to now again, and a new session starts on Now.

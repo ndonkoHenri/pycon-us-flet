@@ -1,16 +1,16 @@
 """The Developer screen's Data section: refresh, clear the cache, share the log, reset.
 
-``DataActions`` is the section's rows (DEV-04, DEV-05, STORE-13; D-195): **Refresh now**,
+``DataActions`` is the section's rows (DEV-04, DEV-05, STORE-13; D-198): **Refresh now**,
 a refresh the user asked for (D-181), with what the schedule on screen is; **Clear cached
 feed**, after which the next start shows the bundled snapshot; **Share log**, the
 packaged app's ``console.log`` on the share sheet (D-72); and **Reset app**, which deletes
 what the app keeps and resets every store in memory, so the app is as after a fresh
 install without a restart. The two that delete are confirmed first by an
 ``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
-rows (#197). Apart from ``developer.py`` so that the screen stays under about 400 lines
-(D-66), as the pickers are in ``developer_clock.py``, and the confirmations are
-``developer_confirm.py``'s; ``padded()`` and ``outcome_line()``, which the screen draws
-with too, are here.
+rows (#197). This module is what the actions do and say; how the screen draws them (the
+rows, the outcome line, the confirmations) is ``developer_ui.py``'s. Apart from
+``developer.py`` so that the screen stays under about 400 lines (D-66), as the pickers
+are in ``developer_clock.py``.
 """
 
 import logging
@@ -25,26 +25,24 @@ from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
-from pycon_us.screens.developer_confirm import (
+from pycon_us.screens.developer_ui import (
+    NO_OUTCOME,
     Asking,
+    Outcome,
+    action_row,
     confirmation,
     none_open,
+    outcome_line,
     snapshot_day,
 )
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, Problem, Source, use_conference
-from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.semantics import named
+from pycon_us.theme import use_tokens
+from pycon_us.ui.scaffold import use_minute
 
 logger = logging.getLogger(__name__)
-
-type Outcome = tuple[str, bool]
-"""What an action did, in words, and whether it went as asked: the line under the rows."""
-
-NO_OUTCOME: Outcome = ("", True)
-"""The outcome line's state before an action and after an edit: no words, hidden."""
 
 SOURCES: dict[Source, str] = {
     "bundled": "Bundled with the app",
@@ -80,7 +78,8 @@ def DataActions() -> ft.Control:
     """The Data section: four action rows, their confirmations and their outcome line.
 
     A component of its own: its confirmations and its outcome are its own state, and it
-    re-renders with the stores it reads (the feed's status, the saved sessions' count).
+    re-renders with the stores it reads (the feed's status, the saved sessions' count)
+    and each minute, so the schedule's age stays current while the screen is open.
     """
     page = ft.context.page
     svc = use_services()
@@ -88,6 +87,7 @@ def DataActions() -> ft.Control:
     prefs = use_prefs()
     favorites = use_favorites()
     tokens = use_tokens()
+    use_minute()  # Refresh now's second line says the schedule's age
     info = svc.year.conference
     asking, set_asking = ft.use_state(none_open)  # the open confirmation
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
@@ -212,7 +212,7 @@ async def reset_app(
 ) -> bool:
     """Delete what the app keeps and reset every store, as after a fresh install.
 
-    DEV-05, D-195. On the device: every ``pycon.`` preference (the settings, every
+    DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
     year's favourites, the Developer options and their unlock) and the feed cache. In
     memory, without a restart: real time and no error details, as Developer's own Reset
     sets them before the stores change (D-187); the bundled snapshot, from the year's
@@ -332,93 +332,3 @@ def schedule_line(
     if source == "none" or fetched_at is None:
         return "No schedule yet"
     return f"{SOURCES[source]}, updated {ago_label(fetched_at, now or clock.now())}"
-
-
-def action_row(
-    identifier: str,
-    icon: ft.IconData,
-    title: str,
-    subtitle: str,
-    on_click: ft.ControlEventHandler[ft.ListTile],
-    *,
-    disabled: bool = False,
-    color: ft.ColorValue | None = None,
-    trailing: ft.Control | None = None,
-) -> ft.Control:
-    """Return one action: a two-line ``ListTile``, one node named by both lines.
-
-    Its icons and title sit 14 dp from the top at every height, as a ``LinkTile`` with
-    a subtitle does (D-188). A disabled row says so to screen readers; its icon and
-    title take the disabled colour, but its second line, which says why, stays in
-    ``on_surface_variant``: at the disabled 38 % it is too faint to read (ux.md §9).
-
-    Args:
-        identifier: For UI flows, e.g. ``developer.reset_app``.
-        icon: The leading icon, outlined (D-27).
-        title: What a tap does, a verb first.
-        subtitle: What it touches, or why the row is disabled.
-        on_click: The action.
-        disabled: Whether the action is unavailable now.
-        color: The icon's and the title's colour: ``ERROR`` for Reset app.
-        trailing: A decorative control at the end: Refresh now's ring while it runs.
-    """
-    return named(
-        identifier,
-        ft.ListTile(
-            leading=ft.Icon(icon, color=None if disabled else color),
-            title=ft.Text(title, color=None if disabled else color),
-            subtitle=ft.Text(
-                subtitle, color=ft.Colors.ON_SURFACE_VARIANT if disabled else None
-            ),
-            trailing=trailing,
-            on_click=on_click,
-            disabled=disabled,
-            title_alignment=ft.ListTileTitleAlignment.TOP,
-            min_vertical_padding=14,
-        ),
-    )
-
-
-def padded(control: ft.Control) -> ft.Container:
-    """Return ``control`` with the list's 16 dp sides and 8 dp above and below (ux.md §3.6)."""
-    return ft.Container(
-        control, padding=ft.Padding.symmetric(horizontal=16, vertical=8)
-    )
-
-
-def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
-    """Return the line under a group of buttons: an icon and what was done.
-
-    Laid out as the screen's ``ListTile``s are, the icon in a 24 dp slot and the words
-    16 dp after it, so they start in the tiles' text column (56 dp).
-
-    Args:
-        text: What was done, or why not, e.g. "Back to real time and the year's feed."
-        ok: Whether it went as asked: a check in ``success``, else a warning in
-            ``warning``; the words carry the meaning (ux.md §9).
-        tokens: The scheme's tokens.
-    """
-    return padded(
-        ft.Row(
-            [
-                # Decorative: the words carry the meaning (ux.md §9).
-                ft.Container(
-                    ft.Icon(
-                        ft.Icons.CHECK_CIRCLE_OUTLINE if ok else ft.Icons.WARNING_AMBER,
-                        color=tokens.success if ok else tokens.warning,
-                        size=20,
-                    ),
-                    width=24,
-                    alignment=ft.Alignment.CENTER,
-                ),
-                ft.Text(
-                    text,
-                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE,
-                    expand=True,
-                ),
-            ],
-            spacing=16,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-        )
-    )

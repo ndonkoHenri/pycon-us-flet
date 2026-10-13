@@ -333,7 +333,7 @@ class Storage:
 
         The one way the cache goes: a cache that no longer parses, the Developer feed
         URL turned off (D-187), and the Developer screen's Clear cached feed and Reset
-        app (D-195). Without it the next start uses the bundled snapshot (D-39). A
+        app (D-198). Without it the next start uses the bundled snapshot (D-39). A
         write in progress lands first, then the deletion (``_unlink``).
 
         Args:
@@ -353,7 +353,7 @@ class Storage:
     async def clear_prefs(self) -> bool:
         """Remove every key the app keeps in SharedPreferences: all of ``PREFIX``.
 
-        Reset app (DEV-05, D-195): the settings, every year's favourites and the
+        Reset app (DEV-05, D-198): the settings, every year's favourites and the
         Developer options. Keys outside ``PREFIX`` are not the app's and stay.
 
         Returns:

@@ -844,7 +844,7 @@ async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
     assert conference.source == "network"
 
 
-# ------------------------------------------------------------------ reset (D-195)
+# ------------------------------------------------------------------ reset (D-198)
 
 
 async def test_reset_shows_the_bundled_snapshot_from_the_year_s_feed(

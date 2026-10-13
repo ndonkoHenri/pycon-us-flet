@@ -2,7 +2,7 @@
 
 UI flows find a control by its semantics identifier (``<screen>.<element>[.<key>]``,
 D-33). D-190 settled how to attach one to a button or a row: merged, so that the
-identifier and the control are one node (D-195).
+identifier and the control are one node (D-198).
 """
 
 import flet as ft

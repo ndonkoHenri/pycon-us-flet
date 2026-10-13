@@ -23,12 +23,6 @@ from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_data
-from pycon_us.screens.developer_confirm import (
-    NBSP,
-    confirmation,
-    reset_losses,
-    snapshot_day,
-)
 from pycon_us.screens.developer_data import (
     CLEARED,
     LOG_NOT_FOUND,
@@ -41,6 +35,12 @@ from pycon_us.screens.developer_data import (
     refreshed,
     reset_app,
     schedule_line,
+)
+from pycon_us.screens.developer_ui import (
+    NBSP,
+    confirmation,
+    reset_losses,
+    snapshot_day,
 )
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
@@ -175,6 +175,12 @@ def rendered() -> Rendered:
 
 
 @pytest.fixture
+def minutes() -> list[int]:
+    """The ``use_minute()`` calls: one per render."""
+    return []
+
+
+@pytest.fixture
 def render(
     monkeypatch: pytest.MonkeyPatch,
     rendered: Rendered,
@@ -184,6 +190,7 @@ def render(
     favorites: Favorites,
     packaged: Callable[[bool], None],
     page: FakePage,
+    minutes: list[int],
 ) -> Callable[[], ft.Column]:
     """Render ``DataActions`` and return its column."""
     monkeypatch.setattr(ft, "use_state", rendered.use_state)
@@ -193,6 +200,8 @@ def render(
     monkeypatch.setattr(developer_data, "use_prefs", lambda: prefs)
     monkeypatch.setattr(developer_data, "use_favorites", lambda: favorites)
     monkeypatch.setattr(developer_data, "use_tokens", lambda: LIGHT_TOKENS)
+    # The minute tick needs a renderer; its own test is test_scaffold.py's.
+    monkeypatch.setattr(developer_data, "use_minute", lambda: minutes.append(0) or 0)
 
     def render() -> ft.Column:
         rendered.index = 0
@@ -312,6 +321,26 @@ def test_refresh_now_says_what_the_schedule_on_screen_is(
     assert subtitle(render(), "developer.refresh_now").startswith(
         "Bundled with the app, updated "
     )
+
+
+def test_refresh_now_s_age_follows_the_clock_while_the_screen_is_open(
+    render: Callable[[], ft.Column],
+    conference: Conference,
+    minutes: list[int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-198: the minute tick re-renders the section, so "updated ..." stays current."""
+    fetched_at = conference.fetched_at
+    assert fetched_at is not None
+    monkeypatch.setattr(clock, "now", lambda: fetched_at)
+    assert subtitle(render(), "developer.refresh_now") == (
+        "Bundled with the app, updated just now"
+    )
+    monkeypatch.setattr(clock, "now", lambda: fetched_at + timedelta(hours=3))
+    assert subtitle(render(), "developer.refresh_now") == (
+        "Bundled with the app, updated 3 hours ago"
+    )
+    assert len(minutes) == 2  # on the tick at every render (D-70: never conditional)
 
 
 async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(

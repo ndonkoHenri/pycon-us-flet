@@ -7,7 +7,7 @@ at once and saves them in ``pycon.dev``, so they hold across launches; Reset ret
 real time and the year's feed (D-187). The screen is always available when not embedded,
 and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
 at its top marks it (ux.md §5.13). Its Data section (Refresh now, Clear cached feed,
-Share log, Reset app) is ``developer_data.py``'s (D-195).
+Share log, Reset app) is ``developer_data.py``'s (D-198).
 """
 
 from datetime import datetime, timedelta
@@ -19,12 +19,8 @@ from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.screens.developer_clock import clock_picker
-from pycon_us.screens.developer_data import (
-    NO_OUTCOME,
-    DataActions,
-    outcome_line,
-    padded,
-)
+from pycon_us.screens.developer_data import DataActions
+from pycon_us.screens.developer_ui import NO_OUTCOME, outcome_line, padded
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
