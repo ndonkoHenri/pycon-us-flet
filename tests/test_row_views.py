@@ -1,4 +1,7 @@
-"""Tests for the row views lists hand their rows (``core/row_views.py``; SCHED-03, D-184)."""
+"""Tests for the row views lists hand their rows (``core/row_views.py``; SCHED-03, D-184).
+
+Also the phrases a screen reader hears for a row, built from a view (D-200).
+"""
 
 from dataclasses import replace
 from datetime import date
@@ -8,11 +11,15 @@ import pytest
 from pycon_us.config import load_year
 from pycon_us.core.models import Room, Speaker
 from pycon_us.core.row_views import (
+    SessionView,
     by_day,
+    elapsed_phrase,
+    notice_phrase,
     people,
     places,
     session_view,
     session_views,
+    spoken_phrase,
 )
 from tests.feeds import processed
 
@@ -240,3 +247,54 @@ def test_a_speaker_linked_by_id_under_another_name_still_gets_a_row() -> None:
 def test_a_session_without_authors_has_no_one() -> None:
     data = processed(2026)
     assert people(data.sessions["176"], data.speakers) == ()  # a keynote
+
+
+# ------------------------------------------------------------------ spoken phrases
+
+TALK = "142"
+"""A talk with one speaker: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
+
+TUTORIAL = "19"
+"""A tutorial that needs registration."""
+
+NOTICE = "196"
+"""Registration Desk Opens, 7:30 AM: a notice with a description."""
+
+COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
+"""A collapsed break with nothing to read."""
+
+
+def view_of(session_id: str) -> SessionView:
+    """The 2026 session's row view, on a 12-hour clock."""
+    return session_view(processed(2026).sessions[session_id], ZONE_2026, use_24h=False)
+
+
+def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
+    view = view_of(TUTORIAL)
+    phrase = spoken_phrase(["Tutorial", "Registration required"], view)
+    assert phrase == (
+        "Tutorial, Registration required. All about decorators. "
+        "9:00 AM to 12:30 PM, Room 101B. Reuven M. Lerner."
+    )
+    no_speakers = spoken_phrase(["Break"], view_of(COFFEE))
+    assert no_speakers == "Break. Coffee. 8:00 to 9:00 AM, Expo Hall AB."
+
+
+def test_a_notice_reads_as_its_kind_name_and_time() -> None:
+    """ux.md §3.9: "Notice. Registration opens, 7:00 AM"."""
+    phrase = notice_phrase("Notice", view_of(NOTICE))
+    assert phrase == "Notice. Registration Desk Opens, 7:30 AM."
+
+
+def test_a_row_that_is_on_says_how_much_has_passed_last() -> None:
+    """Now's elapsed bar is said in the row's phrase, as a sentence of its own (#95)."""
+    assert elapsed_phrase(60) == "60 percent elapsed."
+    assert elapsed_phrase(0) == "0 percent elapsed."
+
+
+def test_a_title_that_ends_a_sentence_gets_no_second_full_stop() -> None:
+    view = view_of(TALK)
+    asked = replace(
+        view, session=replace(view.session, name="Is Python fast?"), place=""
+    )
+    assert spoken_phrase([], asked) == "Is Python fast? 10:30 to 11:00 AM. Justin Lee."

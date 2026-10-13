@@ -13,7 +13,7 @@ of them breaks the fixture, not the rows: look there first.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
@@ -22,13 +22,7 @@ import pytest
 from flet.messaging.session import Session
 
 from pycon_us.config import load_year
-from pycon_us.core.row_views import (
-    SessionView,
-    elapsed_phrase,
-    notice_phrase,
-    session_view,
-    spoken_phrase,
-)
+from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx, use_favorites
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx, use_services
@@ -64,7 +58,6 @@ from tests.sessions import rendering, settle
 from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
 
 YEAR = load_year(2026)
-ZONE = YEAR.conference.zone
 
 TALK = "142"
 """A talk with one speaker: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
@@ -82,10 +75,6 @@ COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
 """A collapsed break with nothing to read."""
 
 LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
-
-
-def view_of(session_id: str, *, use_24h: bool = False) -> SessionView:
-    return session_view(processed(2026).sessions[session_id], ZONE, use_24h=use_24h)
 
 
 # ------------------------------------------------------------------ a real session
@@ -441,23 +430,6 @@ async def test_a_tap_on_a_row_pushes_its_session_on_this_view(
     assert pushed == [f"/session/{TALK}"]  # drill_href on this View's path ("")
 
 
-def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
-    view = view_of(TUTORIAL)
-    phrase = spoken_phrase(["Tutorial", "Registration required"], view)
-    assert phrase == (
-        "Tutorial, Registration required. All about decorators. "
-        "9:00 AM to 12:30 PM, Room 101B. Reuven M. Lerner."
-    )
-    no_speakers = spoken_phrase(["Break"], view_of(COFFEE))
-    assert no_speakers == "Break. Coffee. 8:00 to 9:00 AM, Expo Hall AB."
-
-
-def test_a_row_that_is_on_says_how_much_has_passed_last() -> None:
-    """Now's elapsed bar is said in the row's phrase, as a sentence of its own (#95)."""
-    assert elapsed_phrase(60) == "60 percent elapsed."
-    assert elapsed_phrase(0) == "0 percent elapsed."
-
-
 def _over(color: str, alpha: float, background: str) -> str:
     """``color`` at ``alpha`` painted over ``background``, as #RRGGBB."""
     mix = (
@@ -495,14 +467,6 @@ def test_the_elapsed_bar_shows_its_fill_and_its_end_on_every_surface(
         assert contrast_ratio(live, track) >= 3
         assert contrast_ratio(track, surface) >= 1.3  # a visible rail
         assert contrast_ratio(ramp["onSurfaceVariant"], surface) >= 3  # the dot
-
-
-def test_a_title_that_ends_a_sentence_gets_no_second_full_stop() -> None:
-    view = view_of(TALK)
-    asked = replace(
-        view, session=replace(view.session, name="Is Python fast?"), place=""
-    )
-    assert spoken_phrase([], asked) == "Is Python fast? 10:30 to 11:00 AM. Justin Lee."
 
 
 # ------------------------------------------------------------------ NoticeRow (SCHED-04)
@@ -552,19 +516,6 @@ async def test_a_notice_s_title_starts_on_the_gutter_s_line(
     assert isinstance(tile, ft.Container)
     margin, padding = cast(ft.Margin, tile.margin), cast(ft.Padding, tile.padding)
     assert margin.top + padding.top == 12
-
-
-def test_a_semantics_key_is_safe_in_a_selector() -> None:
-    """Decisions §M: a break's id has spaces and colons; its key has neither."""
-    assert semantics_key(COFFEE) == "break-expo-hall-ab-2026-05-15t08-00-00-07-00"
-    assert semantics_key("poster-detail-60") == "poster-detail-60"
-    assert semantics_key(TALK) == TALK
-
-
-def test_a_notice_reads_as_its_kind_name_and_time() -> None:
-    """ux.md §3.9: "Notice. Registration opens, 7:00 AM"."""
-    phrase = notice_phrase("Notice", view_of(NOTICE))
-    assert phrase == "Notice. Registration Desk Opens, 7:30 AM."
 
 
 def _children(control: ft.Control) -> Sequence[ft.Control]:

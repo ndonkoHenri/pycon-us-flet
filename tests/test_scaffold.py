@@ -111,12 +111,6 @@ def click(button: ft.IconButton) -> None:
     cast(Callable[[], None], button.on_click)()
 
 
-def press(button: ft.TextButton) -> asyncio.Task[None]:
-    """Run a button's async handler as Flet does, as a task of the event loop."""
-    assert button.on_click is not None
-    return asyncio.create_task(cast(Callable[[], Any], button.on_click)())
-
-
 def back_arrow(view: ft.View) -> ft.IconButton:
     leading = app_bar(view).leading
     assert isinstance(leading, ft.IconButton)
