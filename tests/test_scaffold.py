@@ -898,6 +898,41 @@ def test_only_now_and_schedule_refresh_every_15_minutes(
     assert kwargs.get("auto_refresh", False) is auto_refresh
 
 
+@pytest.mark.parametrize(("asked", "disabled"), [(False, False), (True, True)])
+def test_the_schedule_stub_s_refresh_stays_enabled_during_a_quiet_refresh(
+    hooks: Hooks,
+    page: FakePage,
+    svc: Services,
+    conference: Conference,
+    monkeypatch: pytest.MonkeyPatch,
+    asked: bool,
+    disabled: bool,
+) -> None:
+    bodies: list[list[ft.Control]] = []
+
+    def stub_body(controls: list[ft.Control], **kwargs: Any) -> None:
+        bodies.append(controls)
+
+    monkeypatch.setattr(schedule, "stub_body", stub_body)
+    monkeypatch.setattr(schedule, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(schedule, "use_scroll_to_top", lambda: (ft.Ref(), None))
+    monkeypatch.setattr(schedule, "use_services", lambda: svc)
+    monkeypatch.setattr(schedule, "use_conference", lambda: conference)
+    conference.refreshing = True  # automatic, unless the user asked (D-181)
+    conference._asked = asked
+
+    inspect.unwrap(schedule.Schedule)()
+
+    ((controls),) = bodies
+    (button,) = (
+        control.content
+        for control in controls
+        if isinstance(control, ft.Container)
+        and isinstance(control.content, ft.FilledTonalButton)
+    )
+    assert button.disabled is disabled
+
+
 # ------------------------------------------------------------------ SectionHeader
 
 
