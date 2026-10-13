@@ -623,7 +623,7 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_strip_hidden(
     await network.arrived.wait()
 
     assert conference.refreshing
-    assert render_strip().visible is False  # nothing appears, nothing moves (D-177)
+    assert render_strip().visible is False  # nothing appears, nothing moves (D-181)
 
 
 def looks(strip: ft.Semantics) -> tuple[object, ...]:
@@ -663,7 +663,7 @@ async def test_an_automatic_refresh_over_an_offline_strip_shows_only_the_bar(
     after = render_strip()
 
     # Line, icon and button never changed, so the live region announces nothing new;
-    # only the bar came and went, in its fixed slot (D-177).
+    # only the bar came and went, in its fixed slot (D-181).
     assert {looks(strip) for strip in [during, after, *renders.strips]} == {offline}
     assert strip_parts(during)[2].visible is True
     assert strip_parts(after)[2].visible is False

@@ -682,7 +682,7 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_status_fresh(
     task = conference.start_refresh_if_due(storage, year, transport=feed.transport)
     assert task is not None
     await feed.arrived.wait()
-    assert conference.refreshing  # the bar's flag (D-177)
+    assert conference.refreshing  # the bar's flag (D-181)
     assert conference.status(year.conference) == "fresh"  # so the strip stays hidden
     feed.release()
     await task

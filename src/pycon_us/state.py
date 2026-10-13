@@ -61,7 +61,7 @@ class Conference:
 
     A refresh is automatic (``start_refresh``, ``start_refresh_if_due``) or asked for by
     the user (``refresh``). An automatic one is quiet: ``status()`` keeps saying what it
-    said before, and only ``refreshing`` shows that one runs (D-177).
+    said before, and only ``refreshing`` shows that one runs (D-181).
 
     Attributes:
         data: The processed feed; None until ``load_local`` publishes.
@@ -69,7 +69,7 @@ class Conference:
         fetched_at: When ``data`` was fetched (aware): the cache file's modification
             time, the snapshot's capture time, or ``clock.now()`` after a refresh.
         refreshing: Whether a refresh is running, automatic or asked for: the status
-            strip's progress bar (D-177).
+            strip's progress bar (D-181).
         problem: Why the last refresh failed, or None after a good one. The data stays
             whatever was published last.
         version: Incremented on every publish; the memo key of every view model.
@@ -83,7 +83,7 @@ class Conference:
     version: int = 0
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
     _started_at: datetime | None = field(default=None, repr=False)
-    # Whether the user asked for the running refresh (D-177): only then does status()
+    # Whether the user asked for the running refresh (D-181): only then does status()
     # say "refreshing". Private, so setting it notifies nobody unless refresh() asks.
     _asked: bool = field(default=False, repr=False)
 
@@ -127,7 +127,7 @@ class Conference:
         """Start a background refresh, unless one is running already (single flight).
 
         The refresh it starts is automatic, so quiet: it leaves ``status()`` as it was
-        (D-177). Call it from the event loop's thread (D-70 rule 7). Expected failures
+        (D-181). Call it from the event loop's thread (D-70 rule 7). Expected failures
         never raise, they set ``problem``. An unexpected error is logged as soon as the
         refresh ends, whether or not anyone awaits the task (D-71); ``refresh()``
         callers also get it raised.
@@ -210,7 +210,7 @@ class Conference:
 
         Concurrent calls share one request. The user's refresh is not quiet:
         ``status()`` says ``refreshing`` until it ends, and joining an automatic refresh
-        that is running makes that one the user's at once (D-177). Cancelling one caller
+        that is running makes that one the user's at once (D-181). Cancelling one caller
         does not cancel the shared refresh, which others may be waiting for.
 
         Args:
@@ -244,7 +244,7 @@ class Conference:
         one; ``stale`` when the data is older than 6 h on a conference day (``first_day``
         to ``last_day`` in conference time) or 24 h on another day, or when there is no
         data yet; otherwise ``fresh``. An automatic refresh changes none of it until it
-        ends, so the strip's live region changes only with an outcome (D-177).
+        ends, so the strip's live region changes only with an outcome (D-181).
 
         Args:
             info: The year's facts: its dates and time zone.
@@ -293,7 +293,7 @@ class Conference:
             if not session_closed():
                 self._publish(data, "network", clock.now())
         finally:
-            self._asked = False  # private: the next refresh starts quiet (D-177)
+            self._asked = False  # private: the next refresh starts quiet (D-181)
             # A closed session's store must not be written at all (F30).
             if closed is None or not closed.is_set():
                 self.refreshing = False

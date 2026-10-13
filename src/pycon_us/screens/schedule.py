@@ -66,7 +66,7 @@ def Schedule() -> ft.View:
                         "Refresh",
                         icon=ft.Icons.REFRESH,
                         on_click=refresh,
-                        # As the strip's: enabled during a quiet refresh (D-177).
+                        # As the strip's: enabled during a quiet refresh (D-181).
                         disabled=conference.status(info) == "refreshing",
                     ),
                     padding=ft.Padding.symmetric(horizontal=16, vertical=8),

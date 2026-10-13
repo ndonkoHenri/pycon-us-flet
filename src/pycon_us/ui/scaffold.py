@@ -268,7 +268,7 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
 
     Shown while a refresh the user asked for runs, when the data is stale, and after a
     failed refresh; hidden when fresh. A live region, so a screen reader announces each
-    change. An automatic refresh is quiet (D-177): the line, its icon and the button
+    change. An automatic refresh is quiet (D-181): the line, its icon and the button
     stay as they were, and only the 2 dp bar runs, so the strip stays hidden over fresh
     data and the live region changes only when the outcome does.
 
@@ -322,12 +322,12 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         color=ft.Colors.ON_SURFACE,
         expand=True,
     )
-    # Enabled during a quiet refresh: a tap joins it and makes it the user's (D-177).
+    # Enabled during a quiet refresh: a tap joins it and makes it the user's (D-181).
     button = ft.TextButton("Refresh", on_click=refresh, disabled=asked)
     progress = ft.ProgressBar(
         bar_height=PROGRESS_HEIGHT,
         value=None,  # indeterminate
-        visible=conference.refreshing,  # any refresh, the quiet ones too (D-177)
+        visible=conference.refreshing,  # any refresh, the quiet ones too (D-181)
         # No label: the line says it, and the strip's node would say it twice.
     )
     # The bar's slot keeps its height when the bar hides, so the strip and the list

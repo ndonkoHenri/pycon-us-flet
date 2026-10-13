@@ -115,7 +115,7 @@ async def test_the_gate_opens_on_the_bundled_feed_without_waiting_for_the_networ
     assert conference.data is not None
     await asyncio.sleep(0)  # the refresh task's first step
     assert conference.refreshing  # in the background, not awaited
-    # Automatic, so quiet: the strip keeps what it says about the bundled data (D-177).
+    # Automatic, so quiet: the strip keeps what it says about the bundled data (D-181).
     assert conference.status(svc.year.conference) != "refreshing"
 
 
