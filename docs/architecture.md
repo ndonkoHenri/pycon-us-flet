@@ -180,6 +180,7 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
 - **Modal caveat:** with the stock pop handler, when the matched chain contains a `modal=True` route, *every* pop navigates to the modal's base URL, including a pop from a view pushed on top of the modal. An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead (`router.py` delegates before its modal branch; `e.route` is the popped view's route). We use that for search (§5.4, D-19) until U18 lands.
 - `not_found()` output is wrapped in a View. `use_route_location()` is the pathname only (no `use_route_search`, *not in Flet yet: U9*).
 - `View.can_pop=False` with `on_confirm_pop` intercepts system Back even on a one-View stack (Dart `view.dart` wraps the View in `PopScope`); the handler must `await view.confirm_pop(...)`, or the pop waits for a timeout.
+- **Back with a dialog open (F46, D-208):** Flet takes the Android Back before Flutter's Navigator and pops a top View that can pop and has no `on_confirm_pop` by itself, with the dialog, picker, sheet or menu open over it. So every pushed View declares an `on_confirm_pop` (`AppScaffold`, §5.5): Flet then leaves Back to `Navigator.maybePop()`, which closes the topmost route first, and the View's own pop still reaches `on_view_pop`. The handler goes once U33 is in the pinned Flet.
 
 ### 5.2 Route table (D-13..D-21, decisions §M)
 
@@ -330,6 +331,10 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         await e.control.confirm_pop(False)
 
     @report_errors
+    async def let_pop(e: ft.Event[ft.View]):                         # asked only if can_pop refused
+        await e.control.confirm_pop(True)
+
+    @report_errors
     async def switch_tab(e: ft.Event[ft.NavigationBar]):                # a re-tap fires it too (S4)
         root = TAB_ROOTS[e.control.selected_index]
         if root != view_path:
@@ -348,7 +353,9 @@ def AppScaffold(*, title: str, body: ft.Control, actions: list[ft.Control] | Non
         ),
         navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,  # roots only (D-144)
         can_pop=not back_to_now,
-        on_confirm_pop=leave_for_now if back_to_now else None,
+        # Pushed Views too: with a handler Flet leaves Back to the Navigator, which closes
+        # a dialog open over the View before it pops the View (F46, D-208); Now has none.
+        on_confirm_pop=leave_for_now if back_to_now else None if is_root else let_pop,
         controls=[ft.SafeArea(expand=True, content=Shown(body))],
     )
 
@@ -1355,7 +1362,7 @@ A last-resort net, not error handling (§16.1). Every handler and effect setup i
 | S5 | the pinned Flet 1.1 build; Roboto weights through the pubspec; both deep-linking tables |
 | S6, S7, S8 | E3 reminders; floor plans in `InteractiveViewer`; E1 scanning |
 
-**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); a shell bar outside the `Navigator` (U23 → the bar on roots only, D-144); unmounting a replaced session (U24 → `page.on_close` stops our loops, D-147); a typed brightness event and the boot screen kept until `main()`'s first patch (U25 → read `page.platform_brightness`, and `before_main` paints the default View, F35, F36); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
+**Not in Flet yet, and the interim:** `RefreshIndicator` (U1 → strip Refresh plus automatic refresh); sticky headers (U2 → time gutter per slot); absolute `InteractiveViewer` transform (U3 → highlight plus `reset`/`zoom`/`pan`); `page.get_app_info()` (U4 → `__version__`); `use_route_search` (U9 → `use_query()`); Router Back inside a modal sub-chain (U18 → our `page.on_view_pop` with `parent_of()`, D-19); Back that closes a dialog open over a View before the View (U33 → an `on_confirm_pop` on every pushed View, D-208); a shell bar outside the `Navigator` (U23 → the bar on roots only, D-144); unmounting a replaced session (U24 → `page.on_close` stops our loops, D-147); a typed brightness event and the boot screen kept until `main()`'s first patch (U25 → read `page.platform_brightness`, and `before_main` paints the default View, F35, F36); `AppBar.bottom` (U10 → day tabs as the first body row); non-fatal handler errors (U15 → `report_errors`); `PageMediaData.text_scale_factor` (U16 → fluid layouts); an accessibility change event (U17 → re-read on resume); scheduled notifications (E3 → §14.2); barcode scanner (E1 → manual and HID entry); native calendar (E4 → `.ics`); HTML (`html_md`; E5 cut, D-117); LaTeX always on in `Markdown` (U21 → escaping, D-115); a style sheet that replaces the theme's styles (U22 → explicit colours, D-116); multi-weight families in `page.fonts` (→ pubspec fonts).
 
 ---
 
