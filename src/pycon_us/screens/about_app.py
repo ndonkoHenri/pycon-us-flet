@@ -69,9 +69,9 @@ def AboutApp() -> ft.View:
 def developer_row(unsaved: bool) -> ft.Control:
     """Return the row the unlock adds: the way to Developer, said where the taps were.
 
-    In place, not a SnackBar (D-29): at the pin a SnackBar shows on the tab root under
-    a pushed View, so on this page it would not be seen (#197). A live region, so a
-    screen reader says it when the 7th tap adds it.
+    In place, where the taps were, rather than in a SnackBar: the row is the result the
+    taps wait for, and the way on (D-29, D-209). A live region, so a screen reader says
+    it when the 7th tap adds it.
 
     Args:
         unsaved: The unlock could not be saved, so it ends with the app (D-120).

@@ -365,7 +365,7 @@ async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(
     assert subtitle(render(), "developer.refresh_now") == (
         "From the feed, updated just now"
     )
-    assert page.dialogs == []  # in place, not a SnackBar (#197)
+    assert page.dialogs == []  # in place, not a SnackBar (D-29, D-209)
 
 
 async def test_refresh_now_is_disabled_while_an_asked_for_refresh_runs(

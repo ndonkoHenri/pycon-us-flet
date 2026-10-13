@@ -30,9 +30,9 @@ def centre(page: ft.Page) -> ft.Offset | None:
 async def share_text(svc: Services, text: str, *, subject: str) -> None:
     """Open the share sheet with ``text``; call it from an event handler.
 
-    When the platform reports that the sheet could not open, a SnackBar says so; on a
-    pushed View it is drawn on the tab root underneath until #197 is fixed, as a failed
-    link's is (D-197). Whether the person then shared or dismissed it needs no answer.
+    When the platform reports that the sheet could not open, a SnackBar says so, on the
+    View the button is on (D-209). Whether the person then shared or dismissed it needs
+    no answer.
 
     Args:
         svc: The session's services, for the share sheet.
