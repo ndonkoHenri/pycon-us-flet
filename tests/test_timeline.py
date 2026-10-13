@@ -21,8 +21,10 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.timeline import (
+    NOW_KEY,
+    NowPlace,
     Slot,
-    current_slot_key,
+    now_place,
     posters,
     schedule_order,
     timeline,
@@ -405,23 +407,25 @@ def friday_slots() -> tuple[Slot, ...]:
 
 
 def test_the_jump_lands_on_the_slot_that_is_on() -> None:
-    """2:00 PM's talks run to 2:30 PM: at 2:10 that slot is the current one."""
-    assert current_slot_key(friday_slots(), friday_at(14, 10)) == (
-        "slot-2026-05-15T14:00:00-07:00"
-    )
+    """2:00 PM's talks run to 2:30 PM: at 2:10 that slot is on, the line under it."""
+    slots = friday_slots()
+    place = now_place(slots, friday_at(14, 10))
+    assert place.on == place.target == "slot-2026-05-15T14:00:00-07:00"
+    assert slots[place.line - 1].key == place.on  # the line follows the slot that is on
 
 
 def test_a_slot_counts_from_its_first_minute() -> None:
-    assert current_slot_key(friday_slots(), friday_at(14)) == (
-        "slot-2026-05-15T14:00:00-07:00"
-    )
+    place = now_place(friday_slots(), friday_at(14))
+    assert place.on == "slot-2026-05-15T14:00:00-07:00"
 
 
-def test_once_a_slot_is_over_the_jump_lands_on_the_next_one() -> None:
-    """At 2:35 the 2:00 PM slot is over; the next one starts at 2:45 PM."""
-    assert current_slot_key(friday_slots(), friday_at(14, 35)) == (
-        "slot-2026-05-15T14:45:00-07:00"
-    )
+def test_once_a_slot_is_over_the_jump_lands_on_the_line_above_the_next() -> None:
+    """At 2:35 the 2:00 PM slot is over; the line sits above 2:45 PM, and so the jump
+    shows the line and the slot that comes next together (D-204)."""
+    slots = friday_slots()
+    place = now_place(slots, friday_at(14, 35))
+    assert place.on is None and place.target == NOW_KEY
+    assert slots[place.line].key == "slot-2026-05-15T14:45:00-07:00"
 
 
 def test_a_long_session_earlier_does_not_hold_the_jump_back() -> None:
@@ -429,32 +433,33 @@ def test_a_long_session_earlier_does_not_hold_the_jump_back() -> None:
     slots = friday_slots()
     earlier = next(s for s in slots if s.key == "slot-2026-05-15T13:45:00-07:00")
     assert any(s.end > friday_at(14, 35) for s in earlier.sessions)
-    assert current_slot_key(slots, friday_at(14, 35)) != earlier.key
+    assert now_place(slots, friday_at(14, 35)).target != earlier.key
 
 
-def test_before_the_day_the_jump_lands_on_its_first_slot() -> None:
+def test_before_the_day_the_line_tops_the_list() -> None:
+    assert now_place(friday_slots(), friday_at(6)) == NowPlace(0, None)
+
+
+def test_after_the_day_the_line_ends_the_list() -> None:
     slots = friday_slots()
-    assert current_slot_key(slots, friday_at(6)) == slots[0].key
-
-
-def test_after_the_day_the_jump_lands_on_its_last_slot() -> None:
-    slots = friday_slots()
-    assert current_slot_key(slots, friday_at(23, 30)) == slots[-1].key
+    assert now_place(slots, friday_at(23, 30)) == NowPlace(len(slots), None)
 
 
 def test_a_slot_of_notices_alone_is_over_once_it_starts() -> None:
     """7:30 AM holds only "Registration Desk Opens", which has no duration."""
     slots = friday_slots()
     assert {s.track for s in slots[0].sessions} == {"Informational"}
-    assert current_slot_key(slots, friday_at(7, 31)) == slots[1].key
+    assert now_place(slots, friday_at(7, 31)) == NowPlace(1, None)
 
 
-def test_without_slots_there_is_nowhere_to_jump() -> None:
-    assert current_slot_key((), friday_at(10)) is None
+def test_without_slots_the_line_is_all_there_is() -> None:
+    assert now_place((), friday_at(10)) == NowPlace(0, None)
 
 
-def test_the_key_is_always_one_the_filtered_day_shows() -> None:
-    """D-178: a slot the filter leaves out has no item to scroll to."""
+def test_the_target_is_always_an_item_the_filtered_day_shows() -> None:
+    """D-178: a slot the filter leaves out has no item to scroll to; the line has one."""
     slots = friday_slots()
-    keys = {s.key for s in slots}
-    assert all(current_slot_key(slots, friday_at(h)) in keys for h in range(6, 24))
+    keys = {s.key for s in slots} | {NOW_KEY}
+    instants = [friday_at(h, m) for h in range(6, 24) for m in (0, 20, 40)]
+    assert all(now_place(slots, at).target in keys for at in instants)
+    assert all(0 <= now_place(slots, at).line <= len(slots) for at in instants)

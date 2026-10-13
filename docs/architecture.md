@@ -62,11 +62,11 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
 | `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
-| `config.py`, `year_schema.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `config.py`, `year_schema.py`, `year_pages.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers filter; D-193), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203), `share.py` (the share sheet: `centre()`, where it points from on a tablet, and `share_text()`; D-206) | P0+ |
-| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `session_extras.py` holds session detail's Share, a Posters row's posters and an open space's image and site link (D-206) | P0+ |
+| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202); `/more/open-spaces` and `/more/lightning-talks` are `open_spaces.py` and `lightning_talks.py` (D-205); `session_extras.py` holds session detail's Share, a Posters row's posters and an open space's image and site link (D-206) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
 
@@ -192,7 +192,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
 | `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
-| `/more/speakers`, `tracks`, `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
+| `/more/speakers`, `tracks`, `tracks/lightning-talks`, `tracks/open-spaces` (the hub's rows to the same two pages, listed before `:slug`, D-205), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
 | `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social`, `settings` | sponsors and info screens; Settings | child | P2 | SPON, MAP-09..11, INFO, THEME-01, NOTIF-01 |
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
@@ -224,7 +224,9 @@ ROUTES = [
     pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
-    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks, pushed(":slug", TrackPage)),
+    pushed("more", More, pushed("speakers", Speakers),
+           pushed("tracks", Tracks, pushed("lightning-talks", LightningTalks), pushed("open-spaces", OpenSpaces),
+                  pushed(":slug", TrackPage)),
            pushed("keynotes", Keynotes), pushed("open-spaces", OpenSpaces), pushed("sprints", Sprints),
            pushed("lightning-talks", LightningTalks), pushed("app", AboutApp), pushed("developer", Developer)),
 ]
@@ -521,7 +523,7 @@ class ViewMemory:
 
     schedule_day: date | None = None     # the Schedule's day; None opens on today (D-192)
     schedule_offsets: dict[date, float] = field(default_factory=dict)  # each day's scroll end
-    jumped_to_now: bool = False          # the first display of today has jumped (D-18)
+    jumped_on: date | None = None        # the conference day of the last jump, asked or not (D-204)
     search_query: str = ""
     search_scope: str = "all"
     search_base: str = "/now"            # where search was opened from; Back returns there (D-19)
@@ -586,34 +588,35 @@ Top level: `conference` (`sponsors` by level, `content` HTML blocks), `schedule`
 
 ### 7.4 Models (`core/models.py`)
 
-Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (`id`, `name`, `kind`, `track`, `location`, `display_location`, `rooms`, `description`, aware `start`/`display_start`/`end`, `day`, `speaker_ids`, `speaker_names`, `pre_registered`, `spanish`, `url`, `image_url`, `in_timeline`), `Room` (`slug`, `name`, `session_ids`), `TimeGroup` (`start`, `session_ids`), `Day` (`date`, `groups`), `Poster`, `Sprint`, `JobListing` and `ConferenceData` (`sessions` and `speakers` by id, `days`, `rooms` by slug, `posters`, `sprints`, `job_listings`, `dropped`, `skipped`), all `@dataclass(frozen=True, eq=False)`. #134 added the converted markup (D-140): `Session.description_md` and `search_text`, `Speaker.bio_md`, `description_md` on `Poster`, `Sprint` and `JobListing`, and `ConferenceData.content` (the raw `conference.content` blocks) with `content_md`. The rules add the rest of the target shape:
+Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (`id`, `name`, `kind`, `track`, `location`, `display_location`, `rooms`, `description`, aware `start`/`display_start`/`end`, `day`, `speaker_ids`, `speaker_names`, `pre_registered`, `spanish`, `url`, `image_url`, `in_timeline`), `Room` (`slug`, `name`, `session_ids`), `TimeGroup` (`start`, `session_ids`), `Day` (`date`, `groups`), `Poster`, `Sprint`, `JobListing` and `ConferenceData` (`sessions` and `speakers` by id, `days`, `rooms` by slug, `posters`, `sprints`, `job_listings`, `dropped`, `skipped`), all `@dataclass(frozen=True, eq=False)`. #134 added the converted markup (D-140): `Session.description_md` and `search_text`, `Speaker.bio_md`, `description_md` on `Poster`, `Sprint` and `JobListing`, and `ConferenceData.content` (the raw `conference.content` blocks) with `content_md`. #106 gave `Sprint` its `description_text` (`to_text`) and a folded `search_text` (name, submitter and that text; D-202). The rules add the rest of the target shape:
 
 `Session` (`id: str`, name, track, kind, flags, `location`, `display_location`, `rooms`, `description_md`, `search_text` = folded title + description text + speaker names, speaker ids and names, aware `start`/`end`/`display_start`, `day`, URLs, `in_timeline`), `Speaker`, `Room`, `TimeGroup`, and `ConferenceData` (frozen, `eq=False`: `sessions: dict[str, Session]`, speakers, rooms, days, sponsors by level, sprints, job listings, `content_md`, `skipped`). Objects refer to each other by id only; queries return fresh view models and never mutate the model (Ionic wrote `hide` flags onto shared objects, SCHED-17).
 
 ### 7.5 Queries (`core/queries.py`, `timeline.py`, `agenda.py`, `search.py`)
 
-One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
+One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
 
 | Query | Rule | Features |
 |---|---|---|
-| `session_view(session, zone, use_24h=...)`, `session_views(data, ids, zone, use_24h=...)` | a row's frozen `SessionView`: the displayed start to the end in conference time ("9:25–10:10 AM", and "9:25 to 10:10 AM" for screen readers), the display location, the authors' names; built once per feed version (D-153, D-184); `by_day(views, zone)` groups them by conference-local day. In `core/row_views.py`, beside this module. Built in P1 (#81) | SCHED-03 |
+| `session_view(session, zone, use_24h=...)`, `session_views(data, ids, zone, use_24h=...)` | a row's frozen `SessionView`: the displayed start to the end in conference time ("9:25–10:10 AM", and "9:25 to 10:10 AM" for screen readers), the display location, the authors' names; built once per feed version (D-153, D-184); `by_day(views, zone)` groups them by conference-local day, and `by_slot(views)` one day's into time slots by their time group's start (room detail and the open spaces, D-205). In `core/row_views.py`, beside this module. Built in P1 (#81) | SCHED-03 |
 | `days(data, first_day, last_day)` | every date from the conference's first day to its last (sprint days included), widened to any schedule day outside them; an immutable tuple, so a day index never moves (D-126); ignores filters. Built in P0 | DATA-17 |
 | `timeline(data, day, excluded)` | a tuple of `Slot(start, sessions)`, one per time slot; its `key`, derived from the start (D-185), is `"slot-<iso>"`, the slot item's `ScrollKey`; rows in `schedule_order`: shown start, then shown room in natural order (D-31), then name and id, rows without a place first; a track passes unless excluded, and a slot the filter empties is left out. The only query that takes `excluded`, called only by the Schedule (a test checks both). Memoised (below). Built in P1 (#85, D-178) | DATA-18, DATA-30, SCHED-02 |
 | `day_slots(data, day)` | a day's slots, unfiltered and memoised: what `now_next` reads, and what `timeline` filters (D-185) | SCHED-25 |
 | `search(index, query, scope)` | in `core/search.py` (below): folded, **all** words must match, each anywhere in the text (D-46); grouped by type, sessions by day (`DaySessions`) in `(day, schedule_order)`, as the track pages (D-185); ignores filters (D-180). Built in P1 | NEW-02, DATA-18, DATA-19, SPKR-02 |
-| `now_next(data, now)` | a frozen `NowNext`: the `Phase` (`before`, `before_day`, `day`, `after_day`, `after`; a day runs from its first start to its last end, and between days the conference-local date tells the evening from the morning), `happening` = `start <= now < end` over the timeline (`data.days`), and `up_next`, the first time slot after `now` on any day: the Schedule's own unfiltered `Slot` (D-185), or None (its `key` has an item only while the filter keeps the slot on the shown day; else scroll to `current_slot_key()` over that day's filtered slots, D-155); sessions, each slot in `schedule_order`, ignores filters (D-179) | SCHED-25 |
+| `now_next(data, now)` | a frozen `NowNext`: the `Phase` (`before`, `before_day`, `day`, `after_day`, `after`; a day runs from its first start to its last end, and between days the conference-local date tells the evening from the morning), `happening` = `start <= now < end` over the timeline (`data.days`), and `up_next`, the first time slot after `now` on any day: the Schedule's own unfiltered `Slot` (D-185), or None (its `key` has an item only while the filter keeps the slot on the shown day; else scroll to `now_place()`'s target over that day's filtered slots, D-155, D-204); sessions, each slot in `schedule_order`, ignores filters (D-179) | SCHED-25 |
 | `next_for_me(data, favorites, now)` | the `Session`: the first saved session that starts within 3 h (`NEXT_SESSION_WINDOW`), else the saved session that is on and started last, else None (D-179) | SCHED-25 |
 | `elapsed_percent(session, now)` | how much of a session has passed, in whole percent from the start its row shows (`display_start`) to its end, rounded down: 0 before it, 100 from its end; Now's elapsed bars (D-190) | SCHED-25 |
 | `my_schedule(data, favorites)` | a frozen `Agenda`: saved sessions by day and slot (`AgendaDay(day, slots)` of `Slot`s, D-185), each slot in `schedule_order`, plus `overlaps: Mapping[Session, tuple[Session, ...]]` from one sorted sweep; back-to-back sessions, and sessions with the same location, start and end (posters), don't overlap (D-179) | NEW-01 |
 | `fold_ended(agenda, now, zone)` | a frozen `FoldedAgenda(earlier_days, earlier_today, ahead, overlaps)`: the days before the conference-local today whole, today's sessions with `end <= now` by slot, what is still to come, and its clashes with sessions that have not ended; equal from minute to minute until a session ends (D-191) | NEW-01 |
-| `current_slot_key(slots, now)` | in `core/timeline.py`, over the shown slots (`timeline(data, day, excluded)`, so the key always has an item to scroll to, D-155, D-178): the last slot that has started while one of its sessions has not ended, else the next to start, else the last (D-192): `"slot-<iso>"`, the slot item's `ScrollKey`; `None` when `slots` is empty. Built in P1 (#86) | SCHED-16 |
+| `now_place(slots, now)` | in `core/timeline.py`, over the shown slots (`timeline(data, day, excluded)`, so the target always has an item to scroll to, D-155, D-178): a frozen `NowPlace` with `line`, how many slots have started (the now line goes before `slots[line]`), and `on`, the key of the last of them while one of its sessions has not ended, else None; `target` is `on`, else `NOW_KEY`, the now line's `ScrollKey` (D-204). Built in P1 (#86 as `current_slot_key()`, #89) | SCHED-16 |
 | `directory(data)`, `letter_groups(entries)`, `filter_directory(entries, index, query)` | in `core/speakers.py` (D-189): one frozen `SpeakerEntry(speaker, letter, first_session, more)` per directory speaker, by `speaker_order` (folded displayed name, then id; D-46, D-180), its letter the folded name's first character, its first session the earliest in the Schedule's order with the day first; `LetterGroup`s by letter; the filter keeps the entries whose name holds every word, through `search(index, query, "speakers")`, and a blank one returns the entries themselves. Built in P1 (#98) | SPKR-01, SPKR-02, DATA-21 |
 | `speaker_sessions(data, speaker_id)`, `has_bio(speaker)` | in `core/speakers.py`: a speaker's sessions as `DaySessions`, every session that links them (poster details included), in the order `directory()` takes the first session from (the day first, then `schedule_order`), so the list and the page agree; their rows come from `use_session_views(..., of_speaker=speaker.name)`, whose speakers line names only the co-speakers; `has_bio()` is False for the feed's placeholder "-", so the page shows no "About". Built in P1 (#99, D-203) | SPKR-03 |
 | `track_sessions(data, track)` | a tuple of `DaySessions(day, sessions)`, each day in `schedule_order`; the Posters track lists its poster details instead of the Posters row (the row itself until the feed publishes posters); ignores filters. Memoised (below). Built in P1 (#85, D-178) | DATA-20, SCHED-22 |
 | `posters(data, session)` | in `core/timeline.py`: the posters a Posters row stands for, its poster details (the sessions outside the timeline at its start and location), in `schedule_order` as the Posters track lists them; `()` for any other session and before the feed publishes posters. Memoised per feed and row. Built in P1 (#92, D-206) | SESS-09 |
 | `room_list(data, now, other_locations)` | in `core/rooms.py`: a frozen `RoomList(rooms, other_locations)` of `RoomEntry(room, on_now)`, both groups in the model's natural order; `other_locations` are `content.toml`'s names, matched by room slug; `on_now` holds the sessions on in the room by `now_next`'s rule (timeline only, `start <= now < end`; a multi-room session in each room), the one that started last first. Built in P1 (#100, D-188) | ROOM-01 |
 | `room_now(data, slug, now)` | in `core/rooms.py`: the sessions on in one room at `now`, the same ones in the same order as its `RoomEntry.on_now` (room detail's "Now in this room"); the room's list itself is `Room.session_ids` (by start, then name; poster details included) through `use_session_views(..., in_room=slug)`, grouped by `row_views.by_day()`. Built in P1 (#101, D-194) | ROOM-02 |
-| `sprints(query)`, `jobs(query)` | all words over name, submitter or sponsor, and text (never raw HTML) | EVT-06, SPON-07 |
+| `projects(data)`, `filter_projects(listed, query)`, `cut_short(sprint)` | in `core/sprints.py` (D-202): the sprint projects by folded name, then id; a filter keeps those whose `search_text` (folded name, submitter and description text, never markup) holds every word, and returns `listed` itself for a filter with no word; a card cuts a description at four lines with "More" when it is over `PREVIEW_CHARS` (160) or its Markdown has a line break or a link. Built in P1 (#106) | EVT-05, EVT-06 |
+| `jobs(query)` | all words over sponsor and text (never raw HTML) | SPON-07 |
 
 **Memo (D-178).** The schedule queries keep their results per processed feed, in a `WeakKeyDictionary` keyed by the `ConferenceData` (one object per `Conference.version`, so a replaced feed's results go with it), then by day and the excluded set (order-free). The same arguments return the same objects; a slot the filter leaves alone is the same object filtered or not, and a filter that hides nothing on a day returns the whole day's tuple. That is what lets the Schedule's memoised day lists and slot items skip their bodies (D-153, F34); `Slot` and `DaySessions` are also frozen values, so equal ones compare equal, and their sessions are the model's own objects, compared by identity. A screen still wraps the call in `use_memo` on `conference.version` (§6.4); the query's memo keeps the objects stable across a filter change and a remount.
 
@@ -697,7 +700,7 @@ Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `ligh
 
 | File | Holds | Replaces |
 |---|---|---|
-| `conference.toml` | name, dates, zone, venue, URLs, feed URL, snapshot time, tracks | `/2026/` literals |
+| `conference.toml` | name, dates, zone, venue, URLs (the feed, registration, the sprints' page and project form), snapshot time, tracks | `/2026/` literals |
 | `content.toml` | links, Wi-Fi, safety contacts, keynotes, event reminders, venue hours, overrides, sponsor credits | hard-coded copy; `'temporal'`/`'google'` matching |
 | `map.toml` | floor plans, pins, booths, sprint rooms | `ROOM_LOCATIONS`, booth tables |
 | `conference.json` | the feed snapshot (NEW-03) | the first-launch spinner |
@@ -737,10 +740,22 @@ Every field without a phase note exists today (P0-08); the others arrive with th
 
 ```toml
 # data/2026/content.toml
-[links]
-lightning_talks_signup = "https://us.pycon.org/2026/events/lightning-talks/"
-open_space_signup = "https://us.pycon.org/2026/events/open-spaces/"
+[links]                             # P2 (INFO-03): the app's own links
 report_app_issue = "https://github.com/OWNER/pycon-us/issues"
+
+[open_spaces]                       # optional: the Open spaces page (EVT-01, EVT-02; D-205)
+intro = "Open spaces are hour-long sessions that attendees organize during the conference, ..."
+propose_url = "https://us.pycon.org/2026/signup/open-space/"   # "Propose an open space"
+
+[lightning_talks]                   # optional: the Lightning talks page (EVT-03; D-205)
+heading = "What's a lightning talk?"
+intro = ["Five minutes at most, ...", "..."]   # the copy card's paragraphs
+signup_url = "https://us.pycon.org/2026/signup/lightning-talk/"
+info_url = "https://us.pycon.org/2026/events/lightning-talks/"
+
+[[lightning_talks.doubts]]          # "Think you can't do one?", in order
+doubt = "“Everyone already knows that”"
+answer = "They don't, and those who think they do still learn from the way you explain it."
 
 [wifi]
 network = "PyCon2026"
@@ -795,7 +810,7 @@ number = "613"
 x = 0.412                           # ratios of the expo image; also y, w, h
 ```
 
-### 8.2 Loader (`config.py`, `year_schema.py`)
+### 8.2 Loader (`config.py`, `year_schema.py`, `year_pages.py`)
 
 `tomllib` loads each file into frozen dataclasses (`Track`, `Wifi`, `SafetyContact`, `Keynote`, `EventReminder`, `Plan`, `Pin`, `Booth`, …) gathered in `YearData`. The loader is the schema:
 
@@ -823,7 +838,7 @@ def checked(raw: dict, cls: type, where: str) -> dict:
     return raw
 ```
 
-As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table and turns arrays of tables into tuples of their dataclass; errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations".
+As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins, keynote sessions and sponsor slugs exist; safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205).
 
 ---
 

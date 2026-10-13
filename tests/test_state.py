@@ -884,7 +884,7 @@ def test_view_memory_reset_forgets_every_place() -> None:
     memory = ViewMemory(
         last_location="/more/developer",
         search_base="/schedule",
-        jumped_to_now=True,
+        jumped_on=date(2026, 5, 15),
         search_query="typing",
         search_scope="speakers",
     )

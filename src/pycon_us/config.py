@@ -1,7 +1,8 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below, through ``year_schema``, then checks their rules. The dataclasses
+frozen dataclasses below (the Open spaces and Lightning talks pages' tables, and their
+checks, are in ``year_pages``), through ``year_schema``, then checks their rules. The dataclasses
 are the schema: an unknown or missing key, a wrong type or a broken rule fails at load time
 with a ``YearDataError`` that names the file, the key and the problem. Years, dates, names and URLs live in the data
 files, never in code; rolling over is a new ``data/<year>/`` folder and a new ``YEAR``.
@@ -12,14 +13,19 @@ The year's feed snapshot, ``conference.json``, is read only when the app needs i
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
+from pycon_us.year_pages import (
+    LightningTalksInfo,
+    OpenSpacesInfo,
+    check_https,
+    check_pages,
+)
 from pycon_us.year_schema import YearDataError, build, read_table
 
 YEAR = 2026
@@ -98,6 +104,23 @@ class ConferenceInfo:
     registration_url: str = ""
     """Where an attendee checks their registration and adds tutorials or summits to it,
     for session detail's registration guidance (SESS-01); empty when not known."""
+    sprints_url: str = ""
+    """The site's page about the development sprints, for the Sprints page (EVT-08);
+    empty when not known."""
+    sprint_submit_url: str = ""
+    """Where a project signs up for the sprints, for the Sprints page (EVT-08); empty
+    when not known."""
+
+    @property
+    def first_sprint_day(self) -> date | None:
+        """The first sprint day, the day after the last talk day; None without sprints.
+
+        The sprints run from it to ``last_day``: the feed has no sessions for them
+        (D-126), so the year's dates are where they come from (EVT-05).
+        """
+        if self.last_day == self.last_talk_day:
+            return None
+        return self.last_talk_day + timedelta(days=1)
 
     @property
     def zone(self) -> ZoneInfo:
@@ -151,7 +174,10 @@ class ConferenceInfo:
 
 @dataclass(frozen=True)
 class Content:
-    """The year's content from ``content.toml``: what feed processing and the Map need.
+    """The year's content from ``content.toml`` (D-45).
+
+    What feed processing and the Map need, and the copy and links of the Open spaces
+    and Lightning talks pages (D-205).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -163,12 +189,18 @@ class Content:
         other_locations: The places in the feed's room lists that are not rooms
             ("Elsewhere", "Lobby"), as the feed names them: the Map lists them apart,
             under "Other locations" (ROOM-01, D-188). Matched by room slug.
+        open_spaces: The Open spaces page's words and link; None for a year that has
+            none, whose page shows its sessions alone.
+        lightning_talks: The Lightning talks page's copy and links; None for a year
+            that has none, whose page shows its sessions alone.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
     hall_prefix: str = ""
     lightning_talks_location: str = ""
     other_locations: tuple[str, ...] = ()
+    open_spaces: OpenSpacesInfo | None = None
+    lightning_talks: LightningTalksInfo | None = None
 
 
 @dataclass(frozen=True, eq=False)
@@ -292,11 +324,13 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         raise YearDataError(
             f"{file}: snapshot_captured_at: expected a time with a UTC offset"
         )
-    optional = ("registration_url",) if conference.registration_url else ()
+    optional = tuple(
+        key
+        for key in ("registration_url", "sprints_url", "sprint_submit_url")
+        if getattr(conference, key)
+    )
     for key in ("site_url", "feed_url", *optional):
-        url = urlsplit(getattr(conference, key))
-        if url.scheme != "https" or not url.hostname:
-            raise YearDataError(f"{file}: {key}: expected an https:// URL with a host")
+        check_https(getattr(conference, key), file, key)
     if not conference.site_url.endswith("/"):  # site-relative links resolve against it
         raise YearDataError(f"{file}: site_url: expected a final '/'")
     seen: set[str] = set()
@@ -326,6 +360,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
 
 
 def _check_content(content: Content, file: str) -> None:
+    check_pages(content.open_spaces, content.lightning_talks, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)

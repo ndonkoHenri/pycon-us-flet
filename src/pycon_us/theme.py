@@ -119,6 +119,11 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
             ios=ft.PageTransitionTheme.CUPERTINO,  # keeps the iOS edge swipe (D-11)
         ),
         system_overlay_style=overlay_style(dark=dark),
+        # A tall tile's icons beside its title's first line, not the middle of the
+        # block (D-188); fold headers (ExpansionTile) have no setting of their own.
+        list_tile_theme=ft.ListTileTheme(
+            title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT
+        ),
     )
 
 

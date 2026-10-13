@@ -9,12 +9,11 @@ whole slot when it has the slot to itself.
 """
 
 from collections.abc import Callable
-from datetime import datetime
 
 import flet as ft
 
 from pycon_us.config import ConferenceInfo
-from pycon_us.core.row_views import SessionView
+from pycon_us.core.row_views import SessionView, by_slot
 from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
@@ -78,7 +77,7 @@ def day_list(
         head: What comes before the slots: today's "Now in this room".
     """
     items: list[ft.Control] = []
-    for start, slot in _slots(views):
+    for start, slot in by_slot(views):
         # The row alone is lit when it shares its slot; else the whole slot, its time
         # too, edge to edge as a selected list item is (D-194).
         alone = [view.session.id for view in slot] == [reveal]
@@ -114,17 +113,6 @@ def day_list(
         scroll_interval=SCROLL_EVENT_MS,
         on_scroll=on_scroll,
     )
-
-
-def _slots(views: list[SessionView]) -> list[tuple[datetime, list[SessionView]]]:
-    """Group a day's views by their time group's start, as the Schedule's slots are.
-
-    The Job Fair sits in the 10:00 slot and its row says 9:30 (DATA-11, D-41).
-    """
-    slots: dict[datetime, list[SessionView]] = {}
-    for view in views:
-        slots.setdefault(view.session.start, []).append(view)
-    return list(slots.items())
 
 
 def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:

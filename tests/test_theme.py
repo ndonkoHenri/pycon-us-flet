@@ -253,6 +253,17 @@ def test_ios_defaults_are_pinned_to_material(dark: bool) -> None:
     assert built.page_transitions.ios == ft.PageTransitionTheme.CUPERTINO
 
 
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_a_tall_tiles_icons_sit_by_its_titles_first_line(dark: bool) -> None:
+    """D-188, D-205: also a fold's header, which has no alignment of its own, so a
+    wrapped "Think you can't do one?" lines its icons up with the link row under it."""
+    built = theme.build_theme(dark=dark, high_contrast=False)
+    assert built.list_tile_theme is not None
+    assert built.list_tile_theme.title_alignment == (
+        ft.ListTileTitleAlignment.TITLE_HEIGHT
+    )
+
+
 def test_light_overlay_style_has_dark_icons() -> None:
     style = theme.build_theme(dark=False, high_contrast=False).system_overlay_style
     assert style == ft.SystemOverlayStyle(

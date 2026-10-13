@@ -16,11 +16,13 @@ import flet as ft
 from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
 from pycon_us.screens.more_pages import MorePage
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
+from pycon_us.screens.open_spaces import OpenSpaces
 from pycon_us.screens.plan import PlanViewer
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
@@ -29,6 +31,7 @@ from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
+from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.services import use_services
@@ -145,11 +148,19 @@ ROUTES = [
         "more",
         More,
         pushed("speakers", Speakers),
-        pushed("tracks", Tracks, pushed(":slug", TrackPage)),
+        pushed(
+            "tracks",
+            Tracks,
+            # The hub's rows for the two pages of their own (D-205), before the slug
+            # route, which would match them too: under the hub, Back returns to it.
+            pushed("lightning-talks", LightningTalks),
+            pushed("open-spaces", OpenSpaces),
+            pushed(":slug", TrackPage),
+        ),
         pushed("keynotes", MorePage),
-        pushed("open-spaces", MorePage),
-        pushed("lightning-talks", MorePage),
-        pushed("sprints", MorePage),
+        pushed("open-spaces", OpenSpaces),
+        pushed("lightning-talks", LightningTalks),
+        pushed("sprints", Sprints),
         pushed("app", AboutApp),
         pushed("developer", Developer),
     ),

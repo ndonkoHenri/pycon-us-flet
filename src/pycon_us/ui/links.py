@@ -174,6 +174,23 @@ async def open_link(svc: Services, target: str, *, app: bool = False) -> None:
         _say(COULD_NOT_OPEN)
 
 
+def external(identifier: str, button: ft.Control) -> ft.Control:
+    """Return a button that opens a web page, marked as a link and named for UI flows.
+
+    One merged node, as ``semantics.named()`` makes it (D-190), with the link flag an
+    external row carries (ux.md §4.7): the lightning talks' sign-up and the open
+    spaces' "Propose an open space". The button's own words end with "Opens in
+    browser" (``OPENS_IN``), since it leaves the app.
+
+    Args:
+        identifier: For UI flows, e.g. ``open_spaces.propose``.
+        button: The button, whose ``on_click`` calls ``open_link()``.
+    """
+    return ft.MergeSemantics(
+        content=ft.Semantics(identifier=identifier, link=True, content=button)
+    )
+
+
 def feed_link(href: str | None, site_url: str) -> str | None:
     """Return the address a link in a feed text opens, or None when it opens nothing.
 
@@ -233,7 +250,7 @@ async def open_feed_link(svc: Services, href: str | None) -> None:
 
 
 def feed_markdown(
-    value: str, svc: Services, *, identifier: str | None = None
+    value: str, svc: Services, *, identifier: str | None = None, inset: int = 16
 ) -> ft.Control:
     """Return a feed text (a description, a bio) as the app renders every one (D-116).
 
@@ -246,6 +263,8 @@ def feed_markdown(
         value: The Markdown, converted once per feed version (D-130).
         svc: The session's services, for the links.
         identifier: The text's semantics identifier, e.g. ``session.description``.
+        inset: Its distance from the sides, in dp: 16 on a page, 0 inside a card,
+            whose own padding already sets it in (the Sprints page's projects).
     """
 
     @report_errors
@@ -262,7 +281,7 @@ def feed_markdown(
     return ft.Semantics(
         identifier=identifier,
         container=True,  # one node holds the text's, so the identifier has a home
-        content=ft.Container(text, padding=ft.Padding.symmetric(horizontal=16)),
+        content=ft.Container(text, padding=ft.Padding.symmetric(horizontal=inset)),
     )
 
 
