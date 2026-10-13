@@ -51,6 +51,14 @@ logger = logging.getLogger(__name__)
 TAB_MS = 100
 """How long a day switch made from Python slides (Flet's default for ``Tabs``)."""
 
+TAB_HEIGHT = 56
+"""A day tab's height in dp, above Flutter's 46 for a text tab: the tab bar cannot grow
+with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
+iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
+
+TODAY_DOT_OFFSET = ft.Offset(7, -3)
+"""Where today's dot sits from the label's top end: clear of the last digit."""
+
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""
 
@@ -312,12 +320,11 @@ def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
     Flutter's tab bar adds the position and the selection ("Tab 3 of 7") to the
     label, in the tab's one node.
     """
-    label = ft.Text(
-        day_tab_label(day),
-        badge=ft.Badge(small_size=8, bgcolor=ft.Colors.PRIMARY) if is_today else None,
-    )
+    dot = ft.Badge(small_size=8, bgcolor=ft.Colors.PRIMARY, offset=TODAY_DOT_OFFSET)
+    label = ft.Text(day_tab_label(day), badge=dot if is_today else None)
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     return ft.Tab(
+        height=TAB_HEIGHT,
         label=ft.Semantics(
             label=spoken,
             identifier=f"{SCREEN}.day_tab.{index}",
