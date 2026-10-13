@@ -4,9 +4,9 @@ ux.md §5.3. ``screens/schedule_filter.py`` owns the filter (the stored list, th
 the action and the summary) and shows this sheet through ``ft.use_dialog``; here is what
 it shows, so each module stays under about 400 lines (D-66):
 
-- ``filter_sheet()``, a modal ``BottomSheet`` with a drag handle, as tall as its chips
-  need and scrolling past the screen at large text: "Filter sessions" and Reset on top,
-  "Show N sessions" at the bottom, both in place while the chips scroll between them;
+- ``filter_sheet()``, a modal ``BottomSheet`` with a drag handle, the screen's height
+  until U32 (#238): "Filter sessions" and Reset scroll with the chips, and "Show N
+  sessions" stays pinned under them;
 - a ``Chip`` per track the feed has, with its check (not colour alone, D-33), named by
   ``track_name()`` as its badge is and grouped under ``conference.toml``'s track groups
   (``filter_groups()``), then "What do these mean?" to the Tracks hub;
@@ -35,7 +35,12 @@ GROUP_LABELS = {
     "community": "Community",
     "logistics": "Breaks and notices",
 }
-"""The sheet's heading for each track group of ``conference.toml`` (``TRACK_GROUPS``)."""
+"""The sheet's heading for each of ``conference.toml``'s ``TRACK_GROUPS``."""
+
+SHEET_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
+"""M3's bottom sheet background, which the unselected chips paint. The sheet keeps its
+default rather than being given it: a colour given to a shown sheet stayed light when
+the device turned dark."""
 
 type Toggle = Callable[[str, bool], Awaitable[None]]
 """What a chip tap does: show (True) or hide (False) a track, by its key."""
@@ -94,6 +99,7 @@ def filter_sheet(
     excluded: set[str],
     count: int,
     *,
+    changed: bool,
     on_toggle: Toggle,
     on_reset: Callable[[], object],
     on_close: Callable[[], None],
@@ -102,14 +108,16 @@ def filter_sheet(
 ) -> ft.BottomSheet:
     """Return the filter sheet (ux.md §5.3): title and Reset, chips, the count button.
 
-    The title and the button stay in place while the chips scroll between them, so at
-    200 % text the way out is always on screen.
+    Only the button is pinned: the title and Reset scroll with the chips, so at the
+    largest text the chips keep most of the sheet and the way out is still on screen.
 
     Args:
         info: The year's facts: the tracks' names.
         groups: The chips to offer, by heading (``filter_groups()``).
         excluded: The hidden track keys; their chips are not selected.
         count: The sessions the Schedule shows with this filter, on all days.
+        changed: The filter differs from the default (``differs_from_default()``);
+            Reset is disabled while it does not, since it would do nothing.
         on_toggle: A chip's tap: the track's key, and whether it now shows.
         on_reset: Reset: back to the default.
         on_close: "Show N sessions", and a dismissal (a swipe, a tap outside).
@@ -130,9 +138,13 @@ def filter_sheet(
             ft.MergeSemantics(
                 content=ft.Semantics(
                     identifier=f"{SCREEN}.filter.reset",
+                    # Disabled here too: Flet's Semantics says `enabled` from its
+                    # own `disabled`, and the merged node read as enabled.
+                    disabled=not changed,
                     content=ft.TextButton(
                         "Reset",
                         tooltip=f"Reset to the default: hide {default}",
+                        disabled=not changed,
                         on_click=on_reset,
                     ),
                 )
@@ -144,7 +156,8 @@ def filter_sheet(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )
-    body: list[ft.Control] = []
+    # 8 dp under it, as when it sat above the scrolling chips.
+    body: list[ft.Control] = [ft.Container(header, padding=ft.Padding.only(bottom=8))]
     for group in groups:
         body.append(
             ft.Semantics(
@@ -168,19 +181,33 @@ def filter_sheet(
                 ],
                 wrap=True,
                 spacing=8,
-                run_spacing=4,  # beside the 48 dp targets; at 200 % chips outgrow them
+                # 8 dp, as between the chips beside each other: at large text a chip
+                # outgrows its 48 dp target, and with 4 dp the rows touched.
+                run_spacing=8,
             )
         )
     body.append(
         ft.Container(
-            ft.TextButton(
-                "What do these mean?",
-                icon=ft.Icons.HELP_OUTLINE,
-                on_click=on_tracks_page,
-                # Its icon near the chips' edge, as a link under them; still 48 dp tall.
-                style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=4)),
+            ft.MergeSemantics(
+                content=ft.Semantics(
+                    # No track's key is "tracks", as none is "reset" or "show".
+                    identifier=f"{SCREEN}.filter.tracks",
+                    content=ft.TextButton(
+                        "What do these mean?",
+                        icon=ft.Icons.HELP_OUTLINE,
+                        on_click=on_tracks_page,
+                        # Its icon near the chips' edge, as a link under them; still
+                        # 48 dp tall.
+                        style=ft.ButtonStyle(
+                            padding=ft.Padding.symmetric(horizontal=4)
+                        ),
+                    ),
+                )
             ),
             padding=ft.Padding.only(top=8),
+            # At the start: the column stretches its children, and a stretched
+            # button would centre its label across the sheet.
+            alignment=ft.Alignment.CENTER_LEFT,
         )
     )
     footer: list[ft.Control] = []
@@ -197,6 +224,7 @@ def filter_sheet(
         ft.MergeSemantics(
             content=ft.Semantics(
                 identifier=f"{SCREEN}.filter.show",
+                disabled=count == 0,  # as Reset's: so the node says it is disabled
                 content=ft.FilledButton(
                     # Centred when it wraps at large text, with its own padding:
                     # Flutter shrinks a button's padding as the text grows, and the
@@ -205,6 +233,10 @@ def filter_sheet(
                     style=ft.ButtonStyle(
                         padding=ft.Padding.symmetric(horizontal=24, vertical=12)
                     ),
+                    # M3's filled button lies flat. With a style, Flet sets every
+                    # state's elevation to this (1 by default), and the shadow then
+                    # showed through the disabled button's faint fill, dark grey.
+                    elevation=0,
                     disabled=count == 0,
                     on_click=on_close,
                     # Full width from the column's STRETCH: an expand here would
@@ -218,9 +250,9 @@ def filter_sheet(
             padding=ft.Padding.only(left=16, right=16, bottom=16),
             content=ft.Column(
                 [
-                    header,
-                    # The chips scroll; the title and the button stay. Flet sizes a
-                    # scrolling Column to at least the room it is given
+                    # The title and the chips scroll; the button stays: pinned, the
+                    # title took about half the sheet at the largest text. Flet sizes
+                    # a scrolling Column to at least the room it is given
                     # (scrollable_control.dart, #6450), and a ListView shrink-wraps
                     # only without a bound, so the sheet takes the screen's height.
                     ft.Column(
@@ -228,6 +260,10 @@ def filter_sheet(
                         spacing=0,
                         scroll=ft.ScrollMode.AUTO,
                         expand=True,
+                        # Full width for the header, so its wrapping row puts Reset
+                        # at the end; it shrank to its content and Reset sat by the
+                        # title.
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                     ),
                     ft.Column(
                         footer,
@@ -238,8 +274,6 @@ def filter_sheet(
                 ],
                 spacing=8,
                 tight=True,
-                # Full width for the header too, so its wrapping row puts Reset at
-                # the end; it shrank to its content and Reset sat by the title.
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
@@ -258,7 +292,7 @@ def _chip(
     shown: bool,
     on_toggle: Toggle,
 ) -> ft.Control:
-    """Return a track's chip: selected while its sessions show; a tap applies at once."""
+    """Return a track's chip: selected while its sessions show; a tap applies now."""
 
     @report_errors
     async def selected(e: ft.Event[ft.Chip]) -> None:
@@ -272,6 +306,11 @@ def _chip(
                 label=info.track_name(key),
                 selected=shown,
                 show_checkmark=True,
+                # Unselected, only its outline on the sheet (M3's filter chip). Flutter
+                # draws a chip on a canvas Material, which paints `surface` whatever
+                # the chip's colour (a transparent one still showed white in light,
+                # a dark well in dark), so the chip paints the sheet's colour on it.
+                bgcolor=SHEET_COLOR,
                 on_select=selected,
             ),
         )

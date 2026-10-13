@@ -4,17 +4,17 @@ Only the Schedule filters (D-20, D-178): this module is what it places for that.
 
 - ``use_track_filter()``, the Schedule's hook: the ``TUNE`` action ("Filter sessions"),
   with a dot only when the filter differs from the default; the summary under the day
-  tabs whenever a track is hidden, the default included ("Hiding: Open space" with
+  tabs whenever a track is hidden, the default included ("Hidden: Open space" with
   "Show all"); and the sheet (``screens/schedule_sheet.py``, ux.md §5.3), a modal
   ``BottomSheet`` shown through ``ft.use_dialog``.
 - The words, as pure functions: ``hidden_tracks()``, ``summary_text()`` and
   ``differs_from_default()``.
 
-A chip applies at once and persists (``Prefs.save``), so a swipe that dismisses the sheet
-keeps it (Ionic dropped the changes). The filter is the stored list of hidden track keys,
-``Prefs.excluded_tracks``: absent, the default (open spaces hidden); an explicit empty
-list hides nothing. Changing it never scrolls a list (#313): the Schedule's memoised
-path re-renders only the slots the change touched (D-153, D-178).
+A chip applies at once and persists (``Prefs.save``), so a swipe that dismisses the
+sheet keeps it (Ionic dropped the changes). The filter is the stored list of hidden
+track keys, ``Prefs.excluded_tracks``: absent, the default (open spaces hidden); an
+explicit empty list hides nothing. Changing it never scrolls a list (#313): the
+Schedule's memoised path re-renders only the slots the change touched (D-153, D-178).
 """
 
 import asyncio
@@ -87,11 +87,12 @@ def hidden_tracks(
 
 
 def summary_text(info: ConferenceInfo, hidden: Sequence[str]) -> str | None:
-    """Return the summary under the day tabs: "Hiding: Open space", or None.
+    """Return the summary under the day tabs: "Hidden: Open space", or None.
 
     Names the first ``SUMMARY_NAMES`` tracks by ``track_name()``, as their chips and
-    badges do, then "and N more": "Hiding: Talk, Tutorial and Poster", "Hiding: Talk,
-    Keynote, AI and 4 more".
+    badges do, then "and N more": "Hidden: Talk, Tutorial, Poster", "Hidden: Talk,
+    Keynote, AI and 4 more". A list of labels, not a sentence: "Hiding: Talk and Open
+    space" read as one talk and one open space, where the badge names stand for kinds.
 
     Args:
         info: The year's facts.
@@ -100,12 +101,10 @@ def summary_text(info: ConferenceInfo, hidden: Sequence[str]) -> str | None:
     if not hidden:
         return None
     names = [info.track_name(key) for key in hidden]
+    named = ", ".join(names[:SUMMARY_NAMES])
     if len(names) > SUMMARY_NAMES:
-        named = ", ".join(names[:SUMMARY_NAMES])
-        return f"Hiding: {named} and {len(names) - SUMMARY_NAMES} more"
-    if len(names) == 1:
-        return f"Hiding: {names[0]}"
-    return f"Hiding: {', '.join(names[:-1])} and {names[-1]}"
+        return f"Hidden: {named} and {len(names) - SUMMARY_NAMES} more"
+    return f"Hidden: {named}"
 
 
 def differs_from_default(tracks: Collection[str], excluded: Iterable[str]) -> bool:
@@ -170,21 +169,28 @@ def use_track_filter(
     def close_sheet() -> None:
         set_open(False)
 
-    sheet = filter_sheet(
-        info,
-        filter_groups(info, tracks),
-        set(excluded),
-        count,
-        on_toggle=toggle,
-        on_reset=reset,
-        on_close=close_sheet,
-        on_tracks_page=what_they_mean,
-        reduce_motion=prefs.reduce_motion,
+    changed = differs_from_default(tracks, excluded)
+    # Built only while shown: the Schedule re-renders on every favourite and day
+    # switch (D-153). The hook itself is called on every render (D-70).
+    ft.use_dialog(
+        filter_sheet(
+            info,
+            filter_groups(info, tracks),
+            set(excluded),
+            count,
+            changed=changed,
+            on_toggle=toggle,
+            on_reset=reset,
+            on_close=close_sheet,
+            on_tracks_page=what_they_mean,
+            reduce_motion=prefs.reduce_motion,
+        )
+        if is_open and tracks
+        else None
     )
-    ft.use_dialog(sheet if is_open and tracks else None)
     text = summary_text(info, hidden_tracks(info, tracks, excluded))
     return TrackFilter(
-        button=_button(differs_from_default(tracks, excluded), open_sheet),
+        button=_button(changed, open_sheet),
         summary=_summary(text, on_show_all) if text else ft.Container(),
         show_all=on_show_all,
     )

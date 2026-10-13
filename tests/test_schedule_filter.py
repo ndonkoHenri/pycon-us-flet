@@ -42,7 +42,7 @@ shown = test_schedule.shown
 
 @pytest.fixture(autouse=True)
 def encoded(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The sheet is a dialog: its updates need the encoded snapshots (``sessions.ENCODE``)."""
+    """The sheet is a dialog: its updates need encoded messages (sessions.ENCODE)."""
     monkeypatch.setattr(sessions, "ENCODE", True)
 
 
@@ -105,17 +105,18 @@ def test_every_registry_group_has_a_heading() -> None:
     assert sum(len(g.tracks) for g in filter_groups(INFO, every)) == len(every)
 
 
-def test_the_summary_names_up_to_three_tracks() -> None:
+def test_the_summary_lists_up_to_three_tracks_as_labels() -> None:
+    # A list, not a sentence: "Hidden: Talk, Open space" read as one talk.
     assert summary_text(INFO, ()) is None
-    assert summary_text(INFO, ("Open Space",)) == "Hiding: Open space"
-    assert summary_text(INFO, ("Talk", "Open Space")) == "Hiding: Talk and Open space"
+    assert summary_text(INFO, ("Open Space",)) == "Hidden: Open space"
+    assert summary_text(INFO, ("Talk", "Open Space")) == "Hidden: Talk, Open space"
     assert (
         summary_text(INFO, ("Talk", "Ai", "Open Space"))
-        == "Hiding: Talk, AI and Open space"
+        == "Hidden: Talk, AI, Open space"
     )
     assert (
         summary_text(INFO, ("Talk", "Keynote", "Ai", "Tutorial", "Break"))
-        == "Hiding: Talk, Keynote, AI and 2 more"
+        == "Hidden: Talk, Keynote, AI and 2 more"
     )
 
 
@@ -172,16 +173,32 @@ def sheet(schedule: Shown) -> ft.BottomSheet | None:
     return found[0] if found else None
 
 
-def chip(schedule: Shown, key: str) -> ft.Chip:
+def node(schedule: Shown, identifier: str) -> ft.Semantics:
+    """Return the sheet's semantics node ``identifier``."""
     current = sheet(schedule)
     assert current is not None
-    node = next(
+    return next(
         c
         for c in _descendants(current)
-        if isinstance(c, ft.Semantics) and c.identifier == f"schedule.filter.{key}"
+        if isinstance(c, ft.Semantics) and c.identifier == identifier
     )
-    assert isinstance(node.content, ft.Chip)
-    return node.content
+
+
+def in_sheet(schedule: Shown, identifier: str) -> Any:
+    """Return the control under the sheet's semantics node ``identifier``."""
+    return node(schedule, identifier).content
+
+
+def chip(schedule: Shown, key: str) -> ft.Chip:
+    found = in_sheet(schedule, f"schedule.filter.{key}")
+    assert isinstance(found, ft.Chip)
+    return found
+
+
+def reset_button(schedule: Shown) -> ft.TextButton:
+    found = in_sheet(schedule, "schedule.filter.reset")
+    assert isinstance(found, ft.TextButton)
+    return found
 
 
 def show_button(schedule: Shown) -> ft.FilledButton:
@@ -232,7 +249,7 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
     """D-20: Ionic hid its default; here it is a visible filter state."""
     schedule = await shown()
     assert schedule.prefs.excluded_tracks == ("Open Space",)
-    assert summary(schedule) == "Hiding: Open space"
+    assert summary(schedule) == "Hidden: Open space"
     button = filter_button(schedule)
     assert cast(ft.Icon, button.icon).icon == ft.Icons.TUNE
     assert cast(ft.Tooltip, button.tooltip).message == "Filter sessions"
@@ -274,7 +291,7 @@ async def test_a_stored_filter_reads_back_absent_as_the_default_and_empty_as_non
     assert STORED not in values
     await schedule.prefs.load(schedule.storage)
     await settle()
-    assert summary(schedule) == "Hiding: Open space"
+    assert summary(schedule) == "Hidden: Open space"
     values[STORED] = []
     await schedule.prefs.load(schedule.storage)
     await settle()
@@ -283,7 +300,7 @@ async def test_a_stored_filter_reads_back_absent_as_the_default_and_empty_as_non
     values[STORED] = ["Open Space"]  # the default, stored explicitly
     await schedule.prefs.load(schedule.storage)
     await settle()
-    assert summary(schedule) == "Hiding: Open space"
+    assert summary(schedule) == "Hidden: Open space"
     assert cast(ft.Icon, filter_button(schedule).icon).badge is None
 
 
@@ -309,13 +326,13 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     fewer = shown_count(conference, ("Open Space", "Talk"))
     assert fewer < default
     assert button_label(schedule) == count_label(fewer)
-    assert summary(schedule) == "Hiding: Talk and Open space"
+    assert summary(schedule) == "Hidden: Talk, Open space"
     assert cast(ft.Icon, filter_button(schedule).icon).badge is not None
 
     await tap_chip(schedule, "open-space")
     assert schedule.prefs.excluded_tracks == ("Talk",)
     assert button_label(schedule) == count_label(shown_count(conference, ("Talk",)))
-    assert summary(schedule) == "Hiding: Talk"
+    assert summary(schedule) == "Hidden: Talk"
 
 
 async def test_reset_returns_to_the_default(
@@ -332,9 +349,25 @@ async def test_reset_returns_to_the_default(
     await click(schedule, reset)
     assert schedule.prefs.excluded_tracks == ("Open Space",)
     assert stored(schedule)[STORED] == ["Open Space"]
-    assert summary(schedule) == "Hiding: Open space"
+    assert summary(schedule) == "Hidden: Open space"
     assert cast(ft.Icon, filter_button(schedule).icon).badge is None
     assert sheet(schedule) is not None  # Reset applies; the sheet stays
+
+
+async def test_reset_is_disabled_while_the_filter_is_the_default(
+    shown: Show,
+) -> None:
+    schedule = await shown()
+    await open_sheet(schedule)
+    assert reset_button(schedule).disabled  # a tap would do nothing
+    # The node too: Flet's Semantics says enabled unless it is disabled itself.
+    assert node(schedule, "schedule.filter.reset").disabled
+    await tap_chip(schedule, "talk")
+    assert not reset_button(schedule).disabled
+    assert not node(schedule, "schedule.filter.reset").disabled
+    await click(schedule, reset_button(schedule))
+    assert schedule.prefs.excluded_tracks == ("Open Space",)
+    assert reset_button(schedule).disabled
 
 
 async def test_the_filter_survives_a_relaunch(
@@ -396,6 +429,9 @@ async def test_with_every_chip_off_the_button_is_disabled_and_says_why(
     button = show_button(schedule)
     assert button_label(schedule) == "Show 0 sessions"
     assert button.disabled
+    assert node(schedule, "schedule.filter.show").disabled  # said, not only shown
+    # Flat: Flet's default elevation of 1 showed a shadow through the faint fill.
+    assert button.elevation == 0
     assert "Select at least one type" in [
         c.value for c in _descendants(current) if isinstance(c, ft.Text)
     ]
@@ -431,12 +467,9 @@ async def test_what_do_these_mean_opens_the_tracks_hub(
     shown: Show,
 ) -> None:
     schedule = await shown()
-    current = await open_sheet(schedule)
-    (link,) = [
-        c
-        for c in _descendants(current)
-        if isinstance(c, ft.TextButton) and c.content == "What do these mean?"
-    ]
+    await open_sheet(schedule)
+    link = in_sheet(schedule, "schedule.filter.tracks")
+    assert isinstance(link, ft.TextButton) and link.content == "What do these mean?"
     await click(schedule, link)
     assert schedule.navigated == ["/more/tracks"]
     assert sheet(schedule) is None
@@ -502,7 +535,7 @@ async def test_the_summary_keeps_its_place_so_the_day_pages_keep_theirs(
         return content.controls
 
     before = column()
-    assert summary(schedule) == "Hiding: Open space"
+    assert summary(schedule) == "Hidden: Open space"
     (show_all,) = find(
         schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.show_all"
     )

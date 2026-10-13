@@ -319,9 +319,10 @@ FILTER_USERS = {
 }
 """The modules that may name the Schedule's filter: its query, its preference, the
 Schedule and its filter (#87, which edits the preference; its sheet module is given the
-hidden keys and names neither). The module ``core/timeline.py`` shares the function's name, so outside the Schedule import
-its names directly (``from pycon_us.core.timeline import DaySessions``);
-``from pycon_us.core import timeline`` trips this scan (D-185)."""
+hidden keys and names neither). The module ``core/timeline.py`` shares the function's
+name, so outside the Schedule import its names directly
+(``from pycon_us.core.timeline import DaySessions``); ``from pycon_us.core import
+timeline`` trips this scan (D-185)."""
 
 
 def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
