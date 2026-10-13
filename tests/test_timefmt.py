@@ -207,3 +207,15 @@ def test_ago_label_says_just_now_for_a_time_after_now() -> None:
 def test_ago_label_refuses_naive_datetimes() -> None:
     with pytest.raises(ValueError, match="aware"):
         timefmt.ago_label(NAIVE, pacific(15, 10, 0))
+
+
+@pytest.mark.parametrize(
+    ("hours", "minutes", "text"),
+    [(-7, 0, "UTC−07:00"), (5, 30, "UTC+05:30"), (0, 0, "UTC"), (14, 0, "UTC+14:00")],
+)
+def test_utc_offsets_read_as_people_write_them(
+    hours: int, minutes: int, text: str
+) -> None:
+    sign = -1 if hours < 0 else 1
+    offset = timedelta(hours=hours) + sign * timedelta(minutes=minutes)
+    assert timefmt.utc_offset_label(offset) == text

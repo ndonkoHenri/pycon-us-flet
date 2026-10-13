@@ -8,12 +8,13 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
 
 from pycon_us import prefs as prefs_module
-from pycon_us.prefs import APPEARANCES, HIGH_CONTRAST_SETTINGS, Prefs
+from pycon_us.prefs import APPEARANCES, HIGH_CONTRAST_SETTINGS, Prefs, with_dev_options
 from pycon_us.services import storage
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
@@ -309,3 +310,11 @@ def test_unusable_developer_values_read_as_their_defaults(dev: dict[str, Any]) -
     assert prefs.fake_now is None
     assert prefs.feed_url is None
     assert prefs.developer_unlocked is False
+
+
+def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
+    start = datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
+    feed = "http://127.0.0.1:8000/conference-2026.json"
+    dev = with_dev_options({"unlocked": True}, fake_now=start, feed_url=feed)
+    assert dev == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": feed}
+    assert with_dev_options(dev, fake_now=None, feed_url=None) == {"unlocked": True}

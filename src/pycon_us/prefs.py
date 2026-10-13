@@ -247,6 +247,26 @@ class Prefs:
         return saved
 
 
+def with_dev_options(
+    dev: dict[str, Any], *, fake_now: datetime | None, feed_url: str | None
+) -> dict[str, Any]:
+    """Return ``dev`` with the fake clock and the feed URL set; None removes one (D-184).
+
+    The other keys, the unlock among them, are kept. Pass the result to ``Prefs.save``.
+
+    Args:
+        dev: The current ``Prefs.dev``.
+        fake_now: The fake clock's start (aware), or None for real time.
+        feed_url: The feed URL, or None for the year's.
+    """
+    options = {k: v for k, v in dev.items() if k not in (DEV_FAKE_NOW, DEV_FEED_URL)}
+    if fake_now is not None:
+        options[DEV_FAKE_NOW] = fake_now.isoformat()
+    if feed_url is not None:
+        options[DEV_FEED_URL] = feed_url
+    return options
+
+
 def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:
     """Return ``value`` when it is one of ``choices``, else the first, the default (logged)."""
     for choice in choices:

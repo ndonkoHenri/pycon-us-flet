@@ -25,11 +25,8 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import developer, now
 from pycon_us.screens.developer import (
     Developer,
-    dev_options,
-    parse_fake_clock,
     parse_feed_url,
     picked_date,
-    utc_offset,
     zone_line,
 )
 from pycon_us.services import Services
@@ -432,26 +429,6 @@ def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
 # ------------------------------------------------------------------ the helpers
 
 
-def test_a_clock_without_an_offset_is_conference_time() -> None:
-    assert parse_fake_clock(" 2026-05-15 09:00 ", PACIFIC) == datetime(
-        2026, 5, 15, 9, 0, tzinfo=PACIFIC
-    )
-    assert parse_fake_clock("2026-05-15T09:00", PACIFIC) == datetime(
-        2026, 5, 15, 9, 0, tzinfo=PACIFIC
-    )
-
-
-def test_a_clock_with_an_offset_keeps_it() -> None:
-    moment = parse_fake_clock("2026-05-15T18:00:00+02:00", PACIFIC)
-    assert moment == datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
-
-
-def test_an_empty_clock_is_real_time_and_garbage_is_refused() -> None:
-    assert parse_fake_clock("  ", PACIFIC) is None
-    with pytest.raises(ValueError, match="YYYY-MM-DD HH:MM"):
-        parse_fake_clock("15/05/2026 9am", PACIFIC)
-
-
 @pytest.mark.parametrize("url", [FEED, "https://example.test/feed.json"])
 def test_http_and_https_feed_urls_are_taken(url: str) -> None:
     assert parse_feed_url(f" {url} ") == url
@@ -469,13 +446,6 @@ def test_an_empty_feed_url_is_the_year_s() -> None:
     assert parse_feed_url("") is None
 
 
-def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
-    start = datetime(2026, 5, 15, 9, 0, tzinfo=PACIFIC)
-    dev = dev_options({"unlocked": True}, start, FEED)
-    assert dev == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": FEED}
-    assert dev_options(dev, None, None) == {"unlocked": True}
-
-
 def test_a_picked_day_is_the_device_s_day(machine_tz: str) -> None:
     local_midnight = datetime(2026, 5, 15).astimezone()
     assert picked_date(local_midnight.astimezone(UTC)) == date(2026, 5, 15)
@@ -485,15 +455,3 @@ def test_a_picked_day_is_the_device_s_day(machine_tz: str) -> None:
 def test_the_time_zone_row_names_the_conference_zone_and_the_device_offset() -> None:
     line = zone_line("Pacific Time", "America/Los_Angeles", datetime.now(UTC))
     assert line.startswith("Pacific Time (America/Los_Angeles). This device: UTC")
-
-
-@pytest.mark.parametrize(
-    ("hours", "minutes", "text"),
-    [(-7, 0, "UTC−07:00"), (5, 30, "UTC+05:30"), (0, 0, "UTC"), (14, 0, "UTC+14:00")],
-)
-def test_utc_offsets_read_as_people_write_them(
-    hours: int, minutes: int, text: str
-) -> None:
-    sign = -1 if hours < 0 else 1
-    offset = timedelta(hours=hours) + sign * timedelta(minutes=minutes)
-    assert utc_offset(offset) == text

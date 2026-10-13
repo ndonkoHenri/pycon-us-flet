@@ -10,23 +10,20 @@ actions (Refresh now, Clear cached feed, Reset app, Share log).
 """
 
 from datetime import date, datetime, timedelta, tzinfo
-from typing import Any
 from urllib.parse import urlsplit
 
 import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import capabilities, clock
-from pycon_us.prefs import DEV_FAKE_NOW, DEV_FEED_URL, use_prefs
+from pycon_us.core.timefmt import utc_offset_label
+from pycon_us.prefs import use_prefs, with_dev_options
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-
-CLOCK_FORMAT = "%Y-%m-%d %H:%M"
-"""How the fake-clock field writes an instant: ISO 8601 with a space, in conference time."""
 
 CAPABILITIES = (
     ("Secure storage", capabilities.SECURE_STORAGE),
@@ -48,7 +45,9 @@ def Developer() -> ft.View:
     info = svc.year.conference
     zone = info.zone
     # Controlled fields (D-157), seeded from what is in effect.
-    clock_text, set_clock_text = ft.use_state(lambda: clock_field(prefs.fake_now, zone))
+    clock_text, set_clock_text = ft.use_state(
+        lambda: clock.fake_clock_text(prefs.fake_now, zone)
+    )
     url_text, set_url_text = ft.use_state(lambda: prefs.feed_url or "")
     clock_error, set_clock_error = ft.use_state("")  # "" while the field is fine
     url_error, set_url_error = ft.use_state("")
@@ -73,7 +72,7 @@ def Developer() -> ft.View:
     def pick_time(e: ft.Event[ft.TimePicker]) -> None:
         if picked_day.current is not None and e.control.value is not None:
             moment = datetime.combine(picked_day.current, e.control.value, zone)
-            set_clock_text(moment.strftime(CLOCK_FORMAT))
+            set_clock_text(clock.fake_clock_text(moment, zone))
             set_clock_error("")
 
     @report_errors
@@ -108,7 +107,7 @@ def Developer() -> ft.View:
         valid = True
         fake_now = feed_url = None
         try:
-            fake_now = parse_fake_clock(clock_text, zone)
+            fake_now = clock.parse_fake_clock(clock_text, zone)
         except ValueError as error:
             set_clock_error(str(error))
             valid = False
@@ -125,7 +124,7 @@ def Developer() -> ft.View:
         if fake_now != prefs.fake_now:
             clock.start_fake_clock(fake_now)
         conference.set_feed_url(feed_url)
-        dev = dev_options(prefs.dev, fake_now, feed_url)
+        dev = with_dev_options(prefs.dev, fake_now=fake_now, feed_url=feed_url)
         saved = await prefs.save(svc.storage, dev=dev)
         set_outcome(said(saved, applied(fake_now, feed_url, info.time_zone_name)))
 
@@ -137,7 +136,8 @@ def Developer() -> ft.View:
         set_url_error("")
         clock.start_fake_clock(None)
         conference.set_feed_url(None)
-        saved = await prefs.save(svc.storage, dev=dev_options(prefs.dev, None, None))
+        dev = with_dev_options(prefs.dev, fake_now=None, feed_url=None)
+        saved = await prefs.save(svc.storage, dev=dev)
         set_outcome(said(saved, "Back to real time and the year's feed."))
 
     chip = developer_chip(tokens.warning)
@@ -165,52 +165,35 @@ def Developer() -> ft.View:
                     )
                 ),
                 SectionHeader("Clock"),
-                padded(
-                    ft.Semantics(
-                        identifier="developer.fake_clock",
-                        content=ft.TextField(
-                            value=clock_text,
-                            label="Fake clock",
-                            hint_text=f"{info.first_day.isoformat()} 09:00",
-                            helper=f"In {info.time_zone_name}. Empty for real time.",
-                            helper_max_lines=3,
-                            error=clock_error or None,
-                            error_max_lines=3,
-                            keyboard_type=ft.KeyboardType.DATETIME,
-                            autocorrect=False,
-                            enable_suggestions=False,
-                            on_change=edit_clock,
-                            suffix_icon=ft.IconButton(
-                                ft.Icons.EDIT_CALENDAR_OUTLINED,
-                                tooltip="Pick a date and time",
-                                on_click=pick,
-                            ),
-                        ),
-                    )
+                option_field(
+                    "developer.fake_clock",
+                    clock_text,
+                    label="Fake clock",
+                    hint=f"{info.first_day.isoformat()} 09:00",
+                    helper=f"In {info.time_zone_name}. Empty for real time.",
+                    error=clock_error,
+                    keyboard=ft.KeyboardType.DATETIME,
+                    on_change=edit_clock,
+                    suffix=ft.IconButton(
+                        ft.Icons.EDIT_CALENDAR_OUTLINED,
+                        tooltip="Pick a date and time",
+                        on_click=pick,
+                    ),
                 ),
                 ft.ListTile(
                     title="Time zone",
                     subtitle=zone_line(info.time_zone_name, info.time_zone, now),
                 ),
                 SectionHeader("Schedule feed"),
-                padded(
-                    ft.Semantics(
-                        identifier="developer.feed_url",
-                        content=ft.TextField(
-                            value=url_text,
-                            label="Feed URL",
-                            hint_text=info.feed_url,
-                            helper="Empty for the year's feed. Used from the next "
-                            "refresh.",
-                            helper_max_lines=3,
-                            error=url_error or None,
-                            error_max_lines=3,
-                            keyboard_type=ft.KeyboardType.URL,
-                            autocorrect=False,
-                            enable_suggestions=False,
-                            on_change=edit_url,
-                        ),
-                    )
+                option_field(
+                    "developer.feed_url",
+                    url_text,
+                    label="Feed URL",
+                    hint=info.feed_url,
+                    helper="Empty for the year's feed. Used from the next refresh.",
+                    error=url_error,
+                    keyboard=ft.KeyboardType.URL,
+                    on_change=edit_url,
                 ),
                 padded(
                     ft.Row(
@@ -271,6 +254,45 @@ def locked() -> ft.Control:
             LinkTile("About this app", "/more/app", icon=ft.Icons.INFO_OUTLINE),
         ],
         expand=True,
+    )
+
+
+def option_field(
+    identifier: str,
+    value: str,
+    *,
+    label: str,
+    hint: str,
+    helper: str,
+    error: str,
+    keyboard: ft.KeyboardType,
+    on_change: ft.ControlEventHandler[ft.TextField],
+    suffix: ft.Control | None = None,
+) -> ft.Control:
+    """Return one option's text field, found by flows through ``identifier``.
+
+    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The helper
+    and the error (``""`` when the text parses) wrap to three lines at large text, and
+    the text is taken as typed, with no autocorrect or suggestions (a date, a URL).
+    """
+    return padded(
+        ft.Semantics(
+            identifier=identifier,
+            content=ft.TextField(
+                value=value,
+                label=label,
+                hint_text=hint,
+                helper=helper,
+                helper_max_lines=3,
+                error=error or None,
+                error_max_lines=3,
+                keyboard_type=keyboard,
+                autocorrect=False,
+                enable_suggestions=False,
+                on_change=on_change,
+                suffix_icon=suffix,
+            ),
+        )
     )
 
 
@@ -357,37 +379,6 @@ def developer_chip(color: str) -> ft.Control:
     )
 
 
-def clock_field(moment: datetime | None, zone: tzinfo) -> str:
-    """Return the fake-clock field's text for ``moment``: empty for real time.
-
-    Args:
-        moment: The fake clock's start, or None.
-        zone: The conference's zone, which the field writes in.
-    """
-    return "" if moment is None else moment.astimezone(zone).strftime(CLOCK_FORMAT)
-
-
-def parse_fake_clock(text: str, zone: tzinfo) -> datetime | None:
-    """Return the instant the fake-clock field names, or None when it is empty.
-
-    Args:
-        text: ISO 8601, e.g. ``2026-05-15 09:00`` or ``2026-05-15T09:00:00-07:00``;
-            without an offset it is conference time.
-        zone: The conference's zone.
-
-    Raises:
-        ValueError: The text is not a date and time; its message is the field's error.
-    """
-    text = text.strip()
-    if not text:
-        return None
-    try:
-        moment = datetime.fromisoformat(text)
-    except ValueError:
-        raise ValueError("Write it as YYYY-MM-DD HH:MM") from None
-    return moment.replace(tzinfo=zone) if moment.utcoffset() is None else moment
-
-
 def parse_feed_url(text: str) -> str | None:
     """Return the feed URL the field names, or None when it is empty (the year's feed).
 
@@ -405,26 +396,6 @@ def parse_feed_url(text: str) -> str | None:
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise ValueError("Use an http:// or https:// address")
     return text
-
-
-def dev_options(
-    dev: dict[str, Any], fake_now: datetime | None, feed_url: str | None
-) -> dict[str, Any]:
-    """Return ``Prefs.dev`` with the fake clock and the feed URL set; None removes one.
-
-    Other keys (the unlock) are kept.
-
-    Args:
-        dev: The current ``Prefs.dev``.
-        fake_now: The fake clock's start, or None for real time.
-        feed_url: The feed URL, or None for the year's.
-    """
-    options = {k: v for k, v in dev.items() if k not in (DEV_FAKE_NOW, DEV_FEED_URL)}
-    if fake_now is not None:
-        options[DEV_FAKE_NOW] = fake_now.isoformat()
-    if feed_url is not None:
-        options[DEV_FEED_URL] = feed_url
-    return options
 
 
 def picked_date(value: datetime | date) -> date:
@@ -448,7 +419,7 @@ def shown_start(text: str, zone: tzinfo) -> datetime:
         zone: The conference's zone.
     """
     try:
-        moment = parse_fake_clock(text, zone)
+        moment = clock.parse_fake_clock(text, zone)
     except ValueError:
         moment = None
     return (moment or clock.now()).astimezone(zone).replace(tzinfo=None)
@@ -463,17 +434,4 @@ def zone_line(zone_name: str, zone_key: str, now: datetime) -> str:
         now: ``clock.now()``; the device's offset is the one at that instant.
     """
     offset = now.astimezone().utcoffset() or timedelta(0)
-    return f"{zone_name} ({zone_key}). This device: {utc_offset(offset)}."
-
-
-def utc_offset(offset: timedelta) -> str:
-    """Return a UTC offset as people write it: ``UTC−07:00``, ``UTC+05:30``, ``UTC``.
-
-    Args:
-        offset: The offset from UTC.
-    """
-    if not offset:
-        return "UTC"
-    sign = "+" if offset > timedelta(0) else "−"  # a minus sign, not a hyphen
-    minutes = abs(int(offset.total_seconds())) // 60
-    return f"UTC{sign}{minutes // 60:02d}:{minutes % 60:02d}"
+    return f"{zone_name} ({zone_key}). This device: {utc_offset_label(offset)}."
