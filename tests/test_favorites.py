@@ -290,3 +290,17 @@ async def test_undo_after_the_user_changed_the_same_session_does_nothing_twice(
     assert await favorites.undo(store, removal) == Change()
     assert favorites.ids == {"42"}
     assert notified.seen == []
+
+
+async def test_reset_forgets_every_saved_session_without_writing(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    favorites = await loaded(store)
+    await favorites.add_many(store, ["1", "2"])
+    shared.values.clear()  # Reset app removed the stored list
+    notified = Notifications(favorites)
+    favorites.reset()
+    assert favorites.ids == frozenset()
+    assert notified.seen == ["ids"]  # the lists show it at once
+    assert shared.values == {}  # nothing written back
+    assert favorites.loaded is True  # the next star saves as usual

@@ -1,5 +1,6 @@
 """Tests for the storage service: the key table, preferences and the feed cache (STORE-01)."""
 
+import asyncio
 import logging
 import os
 import threading
@@ -361,3 +362,64 @@ def test_data_dir_raises_when_it_cannot_be_created(
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "taken"))
     with pytest.raises(OSError):
         storage.data_dir()
+
+
+async def test_deleting_the_cache_says_whether_it_is_gone(
+    store: Storage, tmp_path: Path
+) -> None:
+    await store.write_feed(b"feed")
+    assert await store.delete_feed("Clear cached feed (Developer)") is True
+    assert not store.feed_path.exists()
+    assert await store.delete_feed("Reset app") is True  # none left: gone all the same
+    (tmp_path / "feed-2026.json").mkdir()  # IsADirectoryError, an OSError
+    assert await store.delete_feed("Reset app") is False
+
+
+async def test_a_deletion_waits_for_a_write_in_progress(store: Storage) -> None:
+    # A cancelled refresh's write keeps running in its thread (D-120): a deletion
+    # that went first would see the file come back when the write lands.
+    await store.write_feed(b"feed")
+    with storage._write_lock:  # a write in progress
+        deleting = asyncio.create_task(store.delete_feed("Reset app"))
+        await asyncio.sleep(0.05)
+        assert store.feed_path.exists()
+    assert await deleting is True
+    assert not store.feed_path.exists()
+
+
+# ------------------------------------------------------------------ clearing preferences
+
+
+async def test_clearing_removes_every_key_of_the_app_and_only_those(
+    store: Storage, prefs: MemoryPrefs
+) -> None:
+    prefs.values.update(
+        {
+            "pycon.theme": "dark",
+            "pycon.dev": '{"unlocked": true}',
+            "pycon.2026.favorites": ["1"],
+            "pycon.2025.favorites": ["9"],
+            "another.key": "not ours",
+        }
+    )
+    assert await store.clear_prefs() is True
+    assert prefs.values == {"another.key": "not ours"}
+
+
+async def test_a_key_that_cannot_be_removed_is_reported_by_name_only(
+    store: Storage, prefs: MemoryPrefs, caplog: pytest.LogCaptureFixture
+) -> None:
+    prefs.values["pycon.2026.favorites"] = ["secret-session-id"]
+    prefs.fail_removes = True
+    with caplog.at_level(logging.WARNING):
+        assert await store.clear_prefs() is False
+    assert "Could not remove preference pycon.2026.favorites" in caplog.text
+    assert "secret-session-id" not in caplog.text
+
+
+async def test_preferences_that_cannot_be_listed_are_not_cleared(
+    store: Storage, prefs: MemoryPrefs
+) -> None:
+    prefs.values["pycon.theme"] = "dark"
+    prefs.error = TimeoutError("get_keys")
+    assert await store.clear_prefs() is False

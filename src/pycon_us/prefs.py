@@ -194,6 +194,17 @@ class Prefs:
         self.reminders = reminders
         self.dev = dev
 
+    def reset(self) -> None:
+        """Return every persisted setting to its default, as after a fresh install.
+
+        Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
+        the stored values. The device facts (``os_dark`` and the accessibility flags)
+        and ``loaded`` stay: they describe the device and the session, not a choice.
+        """
+        fresh = Prefs()
+        for name in _PERSISTED:
+            setattr(self, name, getattr(fresh, name))
+
     async def save(
         self,
         storage: Storage,

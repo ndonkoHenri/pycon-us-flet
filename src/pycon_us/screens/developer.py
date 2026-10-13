@@ -6,8 +6,8 @@ read-only (``capabilities.py``, D-63). Apply puts the clock and the feed URL int
 at once and saves them in ``pycon.dev``, so they hold across launches; Reset returns to
 real time and the year's feed (D-187). The screen is always available when not embedded,
 and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
-at its top marks it (ux.md §5.13). #107 adds the data actions (Refresh now, Clear cached
-feed, Reset app, Share log).
+at its top marks it (ux.md §5.13). Its Data section (Refresh now, Clear cached feed,
+Share log, Reset app) is ``developer_data.py``'s (D-198).
 """
 
 from datetime import datetime, timedelta
@@ -19,11 +19,13 @@ from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.screens.developer_clock import clock_picker
+from pycon_us.screens.developer_data import DataActions
+from pycon_us.screens.developer_ui import NO_OUTCOME, outcome_line, padded
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
-from pycon_us.theme import Tokens, use_tokens
+from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 
@@ -34,9 +36,6 @@ CAPABILITIES = (
     ("Badge scanner", capabilities.SCANNER),
 )
 """The capability flags the screen shows, fixed at import as they are (D-63)."""
-
-NO_OUTCOME: tuple[str, bool] = ("", True)
-"""The outcome line's state before Apply or Reset and after an edit: no words, hidden."""
 
 
 @ft.component
@@ -103,7 +102,7 @@ def Developer() -> ft.View:
         await leave_test_feed(svc.storage, prefs.feed_url, feed_url)
         dev = with_dev_options(prefs.dev, fake_now=fake_now, feed_url=feed_url)
         saved = await prefs.save(svc.storage, dev=dev)
-        set_outcome((applied(fake_now, feed_url, info.time_zone_name), saved))
+        set_outcome(said(applied(fake_now, feed_url, info.time_zone_name), saved))
 
     @report_errors
     async def reset() -> None:
@@ -116,7 +115,7 @@ def Developer() -> ft.View:
         await leave_test_feed(svc.storage, prefs.feed_url, None)
         dev = with_dev_options(prefs.dev, fake_now=None, feed_url=None)
         saved = await prefs.save(svc.storage, dev=dev)
-        set_outcome(("Back to real time and the year's feed.", saved))
+        set_outcome(said("Back to real time and the year's feed.", saved))
 
     chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
@@ -195,6 +194,8 @@ def Developer() -> ft.View:
                     visible=bool(outcome[0]),
                     content=outcome_line(*outcome, tokens=tokens),
                 ),
+                SectionHeader("Data"),
+                DataActions(),
                 SectionHeader("Capabilities"),
                 padded(
                     ft.Text(
@@ -285,13 +286,6 @@ def option_field(
     )
 
 
-def padded(control: ft.Control) -> ft.Container:
-    """Return ``control`` with the list's 16 dp sides and 8 dp above and below (ux.md §3.6)."""
-    return ft.Container(
-        control, padding=ft.Padding.symmetric(horizontal=16, vertical=8)
-    )
-
-
 def capability_row(name: str, available: bool) -> ft.Control:
     """Return one capability flag: its name and, in words, whether this build has it.
 
@@ -317,36 +311,17 @@ def capabilities_note() -> str:
     return "Not a packaged build: every capability uses its interim."
 
 
-def outcome_line(done: str, saved: bool, *, tokens: Tokens) -> ft.Control:
-    """Return the line under the buttons: an icon and what was done, or that it won't last.
+def said(done: str, saved: bool) -> tuple[str, bool]:
+    """Return the outcome line's state after Apply or Reset: what was done, and whether it lasts.
 
     Args:
         done: What was done, e.g. "Back to real time and the year's feed."
-        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120).
-        tokens: The scheme's tokens: ``success``, or ``warning`` when not saved.
+        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120),
+            which the line says, beside a warning icon.
     """
     if not saved:
         done += " Couldn't save your change: it ends when you close the app."
-    return padded(
-        ft.Row(
-            [
-                # Decorative: the words carry the meaning (ux.md §9).
-                ft.Icon(
-                    ft.Icons.CHECK_CIRCLE_OUTLINE if saved else ft.Icons.WARNING_AMBER,
-                    color=tokens.success if saved else tokens.warning,
-                    size=20,
-                ),
-                ft.Text(
-                    done,
-                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE,
-                    expand=True,
-                ),
-            ],
-            spacing=8,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-        )
-    )
+    return done, saved
 
 
 def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> str:

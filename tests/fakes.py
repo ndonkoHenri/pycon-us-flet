@@ -21,6 +21,7 @@ class MemoryPrefs(ft.SharedPreferences):
     def init(self) -> None:
         self.values: dict[str, Any] = {}
         self.fail_writes = False
+        self.fail_removes = False  # `remove` answers False, as a failed commit does
         self.error: Exception | None = None
 
     async def _invoke_method(
@@ -39,6 +40,13 @@ class MemoryPrefs(ft.SharedPreferences):
                 return False
             self.values[arguments["key"]] = arguments["value"]
             return True
+        if method_name == "get_keys":
+            prefix = arguments["key_prefix"]
+            return [key for key in self.values if key.startswith(prefix)]
+        if method_name == "remove":
+            if self.fail_removes:
+                return False
+            return self.values.pop(arguments["key"], None) is not None
         raise AssertionError(f"unexpected call {method_name}")
 
 
@@ -129,6 +137,36 @@ class MemoryClipboard(ft.Clipboard):
         self.value = value
 
 
+class MemoryShare(ft.Share):
+    """Share that records the files it was asked to share instead of opening a sheet."""
+
+    def init(self) -> None:
+        self.shared: list[list[ft.ShareFile]] = []
+        self.status = ft.ShareResultStatus.SUCCESS
+        self.error: Exception | None = None
+
+    async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, files: list[ft.ShareFile], **options: Any
+    ) -> ft.ShareResult:
+        if self.error is not None:
+            raise self.error
+        self.shared.append(files)
+        return ft.ShareResult(status=self.status, raw="")
+
+
+class MemoryPaths(ft.StoragePaths):
+    """StoragePaths whose console log is a path the test chooses."""
+
+    def init(self) -> None:
+        self.console_log = ""
+        self.error: Exception | None = None
+
+    async def get_console_log_filename(self) -> str:
+        if self.error is not None:
+            raise self.error
+        return self.console_log
+
+
 class FakePage:
     """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
 
@@ -137,6 +175,8 @@ class FakePage:
 
     def __init__(self, brightness: ft.Brightness = ft.Brightness.LIGHT) -> None:
         self.route = "/"
+        self.width: float | None = None
+        self.height: float | None = None
         self.navigated: list[str] = []
         self.media: ft.PageMediaData | None = None
         self.platform_brightness = brightness
