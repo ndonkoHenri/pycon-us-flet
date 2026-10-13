@@ -166,10 +166,18 @@ async def test_the_talks_are_listed_by_day_each_with_its_star(show: Show) -> Non
 
 
 async def test_rows_leave_out_the_lightning_talks_badge(show: Show) -> None:
-    """D-199: the page is all lightning talks, so no row repeats it."""
+    """D-199: the page is all lightning talks, so no row repeats it.
+
+    The badge's text and its place at the head of the phrase are checked, not the
+    session's name, which differs from the badge's only by a letter's case.
+    """
     page = await show()
-    for row in page.nodes("lightning_talks.session."):
-        assert str(row.label).startswith("Lightning Talks."), row.label
+    badge = YEAR.conference.track_name("Lightning-talks")
+    assert badge not in page.texts()
+    rows = page.nodes("lightning_talks.session.")
+    assert rows
+    for row in rows:
+        assert f"{badge}." not in str(row.label), row.label
 
 
 async def test_a_row_pushes_its_session_and_a_star_saves_it(show: Show) -> None:

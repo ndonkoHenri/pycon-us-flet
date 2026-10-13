@@ -153,15 +153,18 @@ def by_slot(views: Iterable[SessionView]) -> list[tuple[datetime, list[SessionVi
     spaces' (EVT-01).
 
     Args:
-        views: One day's views, by start; within a start, in the order to show.
+        views: One day's views; within a start, in the order to show. They may come by
+            the start a row shows (``timeline.schedule_order``, as the open spaces'
+            do), which a display-time override can put before an earlier slot.
 
     Returns:
-        Each slot's start and its views, by start.
+        Each slot's start and its views, by start whatever order the views came in;
+        within a slot, in the order given.
     """
     slots: dict[datetime, list[SessionView]] = {}
     for view in views:
         slots.setdefault(view.session.start, []).append(view)
-    return list(slots.items())
+    return sorted(slots.items(), key=lambda slot: slot[0])
 
 
 @dataclass(frozen=True, eq=False)

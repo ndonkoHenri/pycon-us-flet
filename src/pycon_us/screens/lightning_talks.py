@@ -22,7 +22,6 @@ from urllib.parse import urlsplit
 
 import flet as ft
 
-from pycon_us.config import LightningTalksInfo
 from pycon_us.core.timeline import track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
@@ -38,6 +37,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.year_pages import LightningTalksInfo
 
 SCREEN = "lightning_talks"
 """The screen's name in its semantics identifiers (decisions §M)."""

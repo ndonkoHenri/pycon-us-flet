@@ -22,6 +22,7 @@ from pycon_us.core.row_views import (
     session_views,
     spoken_phrase,
 )
+from pycon_us.core.timeline import schedule_order
 from tests.feeds import processed
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -361,3 +362,19 @@ def test_by_slot_groups_a_days_rows_by_their_time_group_keeping_their_order() ->
     fair = next(v for v in views if v.session.display_start != v.session.start)
     (start,) = [start for start, group in slots if fair in group]
     assert start == fair.session.start != fair.session.display_start
+
+
+def test_by_slot_returns_its_slots_by_start_whatever_order_the_views_come_in() -> None:
+    """The open spaces hand it ``schedule_order``'s order, by the start a row shows."""
+    data = processed(2026)
+    sunday = [s for s in data.sessions.values() if s.day == date(2026, 5, 17)]
+    starts = sorted({s.start for s in sunday})
+    for order in (
+        sorted(sunday, key=schedule_order),
+        sorted(sunday, key=lambda s: s.start, reverse=True),
+    ):
+        views = session_views(data, [s.id for s in order], ZONE_2026, use_24h=False)
+        slots = by_slot(views)
+        assert [start for start, _ in slots] == starts
+        for start, group in slots:  # within a slot, the order given
+            assert group == [v for v in views if v.session.start == start]
