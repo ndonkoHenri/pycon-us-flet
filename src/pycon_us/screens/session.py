@@ -10,7 +10,7 @@ import flet as ft
 
 from pycon_us.core.slugs import slugify_room
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_body
+from pycon_us.screens.stub import nav_tile, not_found, note, stub_body
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
@@ -35,7 +35,15 @@ def SessionDetail(session_id: str) -> ft.View:
         return AppScaffold(
             title="Not found",
             body=stub_body(
-                [note(f"No session {session_id!r} in this year's schedule.")]
+                [
+                    not_found(
+                        "This session isn't in the current schedule",
+                        icon=ft.Icons.EVENT_BUSY_OUTLINED,
+                        action="Open schedule",
+                        location="/schedule",
+                        identifier="session.not_found",
+                    )
+                ]
             ),
         )
     slugs = [slugify_room(name) for name in session.rooms]

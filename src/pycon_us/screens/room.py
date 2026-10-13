@@ -7,7 +7,7 @@ not-found state under the back arrow (#90 settles P1's).
 import flet as ft
 
 from pycon_us.locations import drill_href
-from pycon_us.screens.stub import nav_tile, note, stub_body
+from pycon_us.screens.stub import nav_tile, not_found, stub_body
 from pycon_us.state import use_conference
 from pycon_us.ui.scaffold import AppScaffold
 
@@ -26,7 +26,17 @@ def RoomDetail(room_slug: str) -> ft.View:
     if data is None or room is None:
         return AppScaffold(
             title="Not found",
-            body=stub_body([note(f"No room {room_slug!r} in this year's schedule.")]),
+            body=stub_body(
+                [
+                    not_found(
+                        "This room isn't in the current schedule",
+                        icon=ft.Icons.WRONG_LOCATION_OUTLINED,
+                        action="All rooms",
+                        location="/map",
+                        identifier="room.not_found",
+                    )
+                ]
+            ),
         )
     return AppScaffold(
         title=room.name,
