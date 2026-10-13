@@ -2,11 +2,9 @@
 
 ``screens/room.py`` owns the screen: the stores, the day tabs (the Schedule's
 ``day_tab()``), the highlight's effect and "Now in this room". Here is what it places in
-each ``TabBarView`` page: ``day_list()``, a day's time slots (D-31), a ``TimeGutter``
-beside the slot's ``SessionRow``s and ``NoticeRow``s, with the row the room was opened
-from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit. The slot itself is a
-local version of My schedule's ``TimeSlot`` (#209), to be shared once both are on
-``main`` (#228).
+each ``TabBarView`` page: ``day_list()``, a day's time slots (D-31, ``TimeSlot``: a
+``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s), with the row the
+room was opened from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit.
 """
 
 from collections.abc import Callable
@@ -20,7 +18,7 @@ from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, TimeGutter, is_notice
+from pycon_us.ui.session_rows import NoticeRow, SessionRow, TimeSlot, is_notice
 
 SCREEN = "room"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -93,7 +91,7 @@ def day_list(
                 row = _lit(row, row_key(session.id), on=lit, ms=fade_ms)
             rows.append(row)
         label = time_label(start, info.zone, use_24h=use_24h)
-        items.append(_slot(label, rows, divider=bool(items)))
+        items.append(TimeSlot(label, rows, divider=bool(items)))
     return ft.ListView(
         [head, *items] if head is not None else items,
         ref=list_ref,
@@ -115,16 +113,6 @@ def _slots(views: list[SessionView]) -> list[tuple[datetime, list[SessionView]]]
     for view in views:
         slots.setdefault(view.session.start, []).append(view)
     return list(slots.items())
-
-
-def _slot(label: str, rows: list[ft.Control], *, divider: bool) -> ft.Control:
-    """One time slot (D-31): the gutter beside its rows, under a divider after the first."""
-    slot = ft.Row(
-        [TimeGutter(label), ft.Column(rows, spacing=0, expand=True)],
-        spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-    )
-    return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
 
 
 def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:
