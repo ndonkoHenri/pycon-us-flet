@@ -4,12 +4,13 @@ From the top (ux.md §5.1): the status header (``now_header``), the status strip
 refreshes the feed every 15 min while Now shows (D-175), then by season:
 
 - before the conference, the key dates and "Build your schedule";
-- on its days, **Your next session** (``agenda.next_for_me()``: the saved session to go
-  to next, with its star, its countdown and "Show room", and its elapsed bar once it
-  is on), **Happening now** (the other sessions on, saved ones first, each with an
-  elapsed bar), **Up next** (the next slot, ``NowNext.up_next``) and a link to the
-  Schedule;
-- on the sprint days, the Sprints page; afterwards, the schedule to look back at.
+- on its days, **Your next session** (``now_card``: ``agenda.next_for_me()``'s saved
+  session to go to next, with its star, its countdown and "Show room", and its elapsed
+  bar once it is on), **Happening now** (the other sessions on, saved ones first, each
+  with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
+  card's session) and a link to the Schedule;
+- on the last evening and the sprint days, the Sprints page; afterwards, the schedule
+  to look back at.
 
 Schedule filters never apply (D-20). The screen recomputes on the minute tick
 (``use_minute()``): every 60 s while it is mounted and the app is in the foreground,
@@ -19,7 +20,7 @@ feed version (D-153, D-184), and a row pushes its session over Now, so Back retu
 here (D-17). Without data, the skeleton, then "Can't load the schedule" (D-32).
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from datetime import datetime
 from functools import partial
 
@@ -35,7 +36,7 @@ from pycon_us.core.agenda import (
     now_next,
 )
 from pycon_us.core.models import ConferenceData, Session
-from pycon_us.core.row_views import SessionView, places
+from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import (
     local_date,
     time_status,
@@ -44,6 +45,7 @@ from pycon_us.core.timefmt import (
 from pycon_us.core.timeline import Slot
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.now_card import Row, named, next_session, nothing_next
 from pycon_us.screens.now_header import (
     Season,
     StatusHeader,
@@ -74,20 +76,12 @@ from pycon_us.ui.session_rows import (
     use_session_views,
 )
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
-from pycon_us.ui.when_where import StatusLine, room_href
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
-NEXT = "now.next"
-"""The identifiers' prefix of the next-session card's row: ``now.next.session.<key>``,
-``now.next.favorite.<key>``."""
-
 NOTHING_ON = "Nothing in session right now"
 """Happening now between two slots of a day (ux.md §5.1)."""
-
-type Row = Callable[..., ft.Control]
-"""Builds one session's row: ``row(session, screen=..., elapsed=...)``."""
 
 
 @ft.component
@@ -223,125 +217,39 @@ def _sections(
             )
         )
         return sections
-    if answer.phase is Phase.AFTER and day <= info.last_day:  # the sprints come
+    if answer.phase is Phase.AFTER:  # the last evening and the sprint days
         sections.append(sprints_link(info))
-    if current is Season.SPRINTS:
         return sections
 
     upcoming = answer.up_next
     mine = next_for_me(data, saved, now)
     if mine is not None:
-        sections += _next_session(mine, now, data, row, view_path)
-    elif upcoming is not None:
+        sections += next_session(mine, now, data, row, view_path)
+    else:
         has_saved = any(session_id in data.sessions for session_id in saved)
-        sections += _nothing_next(has_saved, tonight=answer.phase is Phase.AFTER_DAY)
-    # The card already shows your session; when it is all that is on, the card's
-    # "Happening now" says it, and an empty section would claim nothing is.
-    others = tuple(s for s in answer.happening if mine is None or s.id != mine.id)
+        sections += nothing_next(has_saved, tonight=answer.phase is Phase.AFTER_DAY)
+    # The card already shows your session; when it is all that is on, or all that is
+    # next, the card says so, and an empty Happening now would claim nothing is.
+    others = _without(answer.happening, mine)
     if answer.phase is Phase.DAY and (others or not answer.happening):
         sections += _happening(others, now, row, saved, live)
-    if upcoming is not None:
-        sections += _up_next(upcoming, now, row, info, use_24h=use_24h)
-        # Only a navigation: the Schedule (#86) opens on today during the conference.
-        rest_of_today = local_date(upcoming.start, info.zone) == day
-        label = (
-            "See the rest of today in Schedule"
-            if rest_of_today
-            else "Open the schedule"
-        )
-        sections.append(_button(label, "/schedule", "schedule", text=True))
+    if upcoming is not None and (later := _without(upcoming.sessions, mine)):
+        sections += _up_next(upcoming, later, now, row, info, use_24h=use_24h)
+    # Only a navigation: the Schedule (#86) opens on today during the conference. With
+    # no slot after this one, the rest of today is the slot that is on.
+    rest_of_today = upcoming is None or local_date(upcoming.start, info.zone) == day
+    label = (
+        "See the rest of today in Schedule" if rest_of_today else "Open the schedule"
+    )
+    sections.append(_button(label, "/schedule", "schedule", text=True))
     return sections
 
 
-def _next_session(
-    session: Session, now: datetime, data: ConferenceData, row: Row, view_path: str
-) -> list[ft.Control]:
-    """Your next session: its row, star and bar, then its countdown and "Show room"."""
-    page = ft.context.page
-    room = places(session, data.rooms).room
-    on = session.start <= now < session.end  # as next_for_me() counts it
-
-    @report_errors
-    def show_room() -> None:
-        assert room is not None  # the button shows only with a room
-        page.navigate(room_href(view_path, room, session.id))
-
-    actions: list[ft.Control] = [
-        # Its own minute tick: "Starts in 12 min", then "Happening now" in live.
-        StatusLine(session.display_start, session.end)
-    ]
-    if room is not None:
-        actions.append(
-            _named(
-                f"{SCREEN}.show_room",
-                ft.TextButton(
-                    "Show room", icon=ft.Icons.PLACE_OUTLINED, on_click=show_room
-                ),
-            )
-        )
-    card = ft.Card(
-        variant=ft.CardVariant.FILLED,
-        margin=ft.Margin.symmetric(horizontal=16),
-        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,  # the row's ink stays inside
-        content=ft.Column(
-            [
-                row(
-                    session,
-                    screen=NEXT,
-                    elapsed=elapsed_percent(session, now) if on else None,
-                ),
-                ft.Container(
-                    # Wrapping: at large text the button moves under the status
-                    # whole, instead of squeezing "Happening now" into two lines.
-                    ft.Row(
-                        actions,
-                        wrap=True,
-                        spacing=8,
-                        run_spacing=0,
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    # Under the row's own 12 dp; the button's end 8 dp from the card's.
-                    padding=ft.Padding.only(left=16, right=8, bottom=4),
-                ),
-            ],
-            spacing=0,
-            # A wrapping row is only as wide as its content: stretched, its
-            # SPACE_BETWEEN puts the button at the card's end.
-            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-        ),
-    )
-    return [
-        SectionHeader("Your next session", level=2),
-        card,
-    ]
-
-
-def _nothing_next(has_saved: bool, *, tonight: bool) -> list[ft.Control]:
-    """No saved session is on or due within 3 hours: say so, and where to look.
-
-    ``tonight``: the day is over (phase ``after_day``), when "the next 3 hours" would
-    be true but odd; what is saved is for a later day.
-    """
-    if has_saved:
-        tile = LinkTile(
-            "Nothing more saved for today"
-            if tonight
-            else "Nothing saved for the next 3 hours",
-            "/my-schedule",
-            icon=ft.Icons.STAR_BORDER,
-            subtitle="See your saved sessions in My schedule",
-            identifier=f"{SCREEN}.next_session",
-        )
-    else:
-        tile = LinkTile(
-            "Nothing saved yet",
-            "/schedule",
-            icon=ft.Icons.STAR_BORDER,
-            subtitle="Tap the star on a session, and your next one shows here",
-            identifier=f"{SCREEN}.next_session",
-        )
-    return [SectionHeader("Your next session", level=2), tile]
+def _without(
+    sessions: tuple[Session, ...], mine: Session | None
+) -> tuple[Session, ...]:
+    """``sessions`` but your next session, which the card shows."""
+    return tuple(s for s in sessions if mine is None or s.id != mine.id)
 
 
 def _happening(
@@ -371,9 +279,18 @@ def _happening(
 
 
 def _up_next(
-    slot: Slot, now: datetime, row: Row, info: ConferenceInfo, *, use_24h: bool
+    slot: Slot,
+    sessions: tuple[Session, ...],
+    now: datetime,
+    row: Row,
+    info: ConferenceInfo,
+    *,
+    use_24h: bool,
 ) -> list[ft.Control]:
-    """Up next: the next slot's start, its countdown on its own day, then its rows."""
+    """Up next: the next slot's start, its countdown on its own day, then its rows.
+
+    ``sessions`` are the slot's rows but your next session, which the card shows.
+    """
     heading = f"Up next · {up_next_when(slot, now, info, use_24h=use_24h)}"
     controls: list[ft.Control] = [
         SectionHeader(heading, level=2, spoken=spoken(heading))
@@ -392,7 +309,7 @@ def _up_next(
                 padding=ft.Padding.only(left=16, right=16),
             )
         )
-    controls.append(ft.Column([row(session) for session in slot.sessions], spacing=0))
+    controls.append(ft.Column([row(session) for session in sessions], spacing=0))
     return controls
 
 
@@ -412,7 +329,7 @@ def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.C
     else:
         button = ft.FilledTonalButton(label, on_click=go)
     return ft.Container(
-        _named(f"{SCREEN}.{name}", button),
+        named(f"{SCREEN}.{name}", button),
         # At the list's start, as its rows' text: a text button's label sits 8 dp
         # inside it, so 8 dp in puts the label 16 dp in.
         padding=ft.Padding.only(left=8 if text else 16, top=8, right=16),
@@ -423,7 +340,7 @@ def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.C
 def _note(text: str, identifier: str) -> ft.Control:
     """A line of supporting text in the list's side padding."""
     return ft.Container(
-        _named(
+        named(
             identifier,
             ft.Text(
                 text,
@@ -432,15 +349,4 @@ def _note(text: str, identifier: str) -> ft.Control:
             ),
         ),
         padding=ft.Padding.symmetric(horizontal=16, vertical=4),
-    )
-
-
-def _named(identifier: str, control: ft.Control) -> ft.Control:
-    """Give ``control`` a semantics identifier on its own node (decisions §M).
-
-    Merged: an identifier's ``Semantics`` alone is a node of its own, an empty extra
-    stop for TalkBack around the button (seen in ``uiautomator dump``).
-    """
-    return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, content=control)
     )

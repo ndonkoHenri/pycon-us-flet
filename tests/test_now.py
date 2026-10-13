@@ -15,7 +15,7 @@ VoiceOver is checked on devices (the PR).
 
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -78,6 +78,11 @@ hidden on the Schedule by default (D-20)."""
 
 KEYNOTE = "153"
 """Lin Qiao's keynote, 9:45-10:30 AM on Friday: alone until the 10:00 open spaces."""
+
+
+JOB_FAIR = "178"
+"""The Job Fair & Community Showcase on Sunday: its row says 9:30 AM, its slot is the
+10:00 one (DATA-11), and it ends at 1:00 PM."""
 
 
 def may(day: int, hour: int, minute: int = 0) -> datetime:
@@ -653,6 +658,25 @@ async def test_after_the_last_session_the_sprints_are_next(
         assert subtitle.semantics_label == "Join a project, May 18 to 19"
 
 
+async def test_in_the_last_slot_of_the_conference_the_schedule_is_still_linked(
+    render: Callable[..., Any], data: ConferenceData
+) -> None:
+    """Without Sunday's 8 PM notice, the 5:05 PM Closing is the last slot: no Up next,
+    but the day still runs, so the card's tile and the Schedule link stay."""
+    sunday = data.days[-1]
+    trimmed = replace(
+        data, days=(*data.days[:-1], replace(sunday, groups=sunday.groups[:-1]))
+    )
+    now = may(17, 17, 10)
+    assert now_next(trimmed, now).phase is Phase.DAY
+    assert now_next(trimmed, now).up_next is None
+    conference = Conference(data=trimmed, source="bundled", version=1, fetched_at=now)
+    shown = await render(now, conference=conference)
+    assert shown.headings() == ["Your next session", "Happening now"]
+    assert _texts(shown.node("now.next_session"))[0] == "Nothing saved yet"
+    assert "See the rest of today in Schedule" in shown.texts()
+
+
 async def test_after_the_sprints_it_says_see_you_next_year(
     render: Callable[..., Any],
 ) -> None:
@@ -719,6 +743,37 @@ async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
     assert str(card.label).endswith(" 16 percent elapsed.")
     assert [c.value for c in _walk(card) if isinstance(c, ft.ProgressBar)] == [0.16]
     assert shown.rows()[: len(AT_11) - 1] == [i for i in AT_11 if i != OPEN_SPACE]
+
+
+async def test_your_next_session_is_not_repeated_in_up_next(
+    render: Callable[..., Any],
+) -> None:
+    """The 11:30 talk is alone in its slot: the card says when, Up next is left out."""
+    shown = await render(may(15, 11, 10), saved=("27",))
+    assert shown.rows("now.next.session.") == ["27"]
+    assert "27" not in shown.rows()
+    assert shown.texts().count("Starts in 20 min") == 1  # the card's status
+    assert shown.headings() == ["Your next session", "Happening now"]
+    assert "See the rest of today in Schedule" in shown.texts()
+
+
+async def test_up_next_lists_the_rest_of_its_slot_but_your_session(
+    render: Callable[..., Any],
+) -> None:
+    shown = await render(may(15, 10, 50), saved=("4",))
+    assert shown.rows("now.next.session.") == ["4"]
+    assert "Up next · 11:00 AM" in shown.headings()
+    assert shown.rows()[-(len(AT_11) - 1) :] == [i for i in AT_11 if i != "4"]
+
+
+async def test_the_card_s_bar_follows_the_time_its_row_shows(
+    render: Callable[..., Any],
+) -> None:
+    """The Job Fair shows 9:30 though its slot is 10:00 (DATA-11): on from 9:30 (D-186)."""
+    shown = await render(may(17, 9, 45), saved=(JOB_FAIR,))
+    card = shown.node(f"now.next.session.{JOB_FAIR}")
+    assert str(card.label).endswith(" 7 percent elapsed.")
+    assert [c.value for c in _walk(card) if isinstance(c, ft.ProgressBar)] == [0.07]
 
 
 async def test_when_only_your_session_is_on_the_card_says_so(
