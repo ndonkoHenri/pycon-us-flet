@@ -222,6 +222,8 @@ class Tokens:
         unknown_track: The badge of a track the palette lacks: the neutral grey.
         spanish: The "En Español" badge (D-25).
         registration: The "Registration required" badge, outlined in ``error``.
+        new_track: The "New track" badge, outlined in ``primary``: a mark of status,
+            not another category among the tonal track fills (D-197).
     """
 
     live: str
@@ -234,13 +236,16 @@ class Tokens:
     unknown_track: BadgeColors
     spanish: BadgeColors
     registration: BadgeColors
+    new_track: BadgeColors
 
     def track_badge(self, key: str) -> BadgeColors:
         """Return the badge colours of track ``key``; the neutral grey if it has none."""
         return self.tracks.get(key, self.unknown_track)
 
 
-def _tokens(*, dark: bool, live: str, warning: str, favorite: str) -> Tokens:
+def _tokens(
+    *, dark: bool, live: str, warning: str, favorite: str, primary: str
+) -> Tokens:
     """Build one scheme's tokens: the given colours and that scheme's badges."""
     return Tokens(
         live=live,
@@ -254,6 +259,7 @@ def _tokens(*, dark: bool, live: str, warning: str, favorite: str) -> Tokens:
         unknown_track=_badge(_NEUTRAL, dark=dark),
         spanish=_badge(_SPANISH, dark=dark),
         registration=BadgeColors(text=_ERROR_DARK if dark else _ERROR_LIGHT),
+        new_track=BadgeColors(text=primary),
     )
 
 
@@ -262,6 +268,7 @@ LIGHT_TOKENS = _tokens(
     live="#1B6E35",
     warning="#7A5900",
     favorite="#A1009A",  # the light tertiary (tested)
+    primary=SEED,  # the light primary (tested)
 )
 """Tokens for the light scheme (ux.md §3.3, §3.4)."""
 
@@ -270,6 +277,7 @@ DARK_TOKENS = _tokens(
     live="#8BD89A",
     warning="#F2C14E",
     favorite="#FFACEB",  # the dark tertiary (tested)
+    primary="#BFC1FF",  # the dark primary (tested)
 )
 """Tokens for the dark scheme (ux.md §3.3, §3.4)."""
 

@@ -4,7 +4,8 @@ An intro shows the track's badge as the schedule does, "New track" when it is ne
 this year, the track's plural name as the page's heading (the app bar's title stays
 empty, as on session detail, D-186) and its legend line (EVT-04). Then
 every session of the track, by day under level-2 day headings (F40), as ``SessionRow``s
-with their stars (D-184): ``track_sessions()``'s list, so the Posters track lists each
+with their stars (D-184), without the badges the intro already shows (D-197):
+``track_sessions()``'s list, so the Posters track lists each
 poster rather than the Posters row, and the Schedule's filter never applies, so the
 open spaces it hides by default show on their own page (D-20, D-178). No paging: each
 day is one memoised item of a lazy list (``ui.day_groups``, D-153), so a star tap
@@ -16,20 +17,26 @@ the way out (D-186). Without data the page loads and fails as the hub does (ux.m
 §4.1). "Add all to My schedule" joins the app bar with #103 (SCHED-24).
 """
 
+from collections.abc import Sequence
 from urllib.parse import unquote
 
 import flet as ft
 
 from pycon_us.config import Track
-from pycon_us.core.timeline import track_sessions
+from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import not_found
-from pycon_us.screens.tracks import NEW_TRACK, NEW_TRACK_COLORS
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import TrackBadge, badge_row, use_favorite_toggle
+from pycon_us.ui.badges import (
+    NEW_TRACK,
+    SPANISH,
+    TrackBadge,
+    badge_row,
+    use_favorite_toggle,
+)
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_session_views
@@ -79,6 +86,10 @@ def TrackDetail(slug: str) -> ft.View:
         use_24h=bool(page.media and page.media.always_use_24_hour_format),
     )
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
+    # The same frozenset per feed version, so the memoised day items still skip.
+    shared = ft.use_memo(
+        lambda: shared_badges(track, days) if track else frozenset[str](), [days]
+    )
 
     @report_errors
     async def refresh() -> None:
@@ -100,7 +111,7 @@ def TrackDetail(slug: str) -> ft.View:
                 expand=True,
             ),
         )
-    items: list[ft.Control] = [intro(track, tokens)]
+    items: list[ft.Control] = [intro(track, tokens, spanish=SPANISH in shared)]
     if data is None and conference.problem is None:
         items.append(SkeletonList())  # the first fetch runs (NEW-03)
     elif data is None:
@@ -135,6 +146,7 @@ def TrackDetail(slug: str) -> ft.View:
                 tokens,
                 screen=SCREEN,
                 level=2,
+                omit=shared,
             )
             for day in days
         )
@@ -142,7 +154,24 @@ def TrackDetail(slug: str) -> ft.View:
     return AppScaffold(title="", body=ft.ListView(items, expand=True))
 
 
-def intro(track: Track, tokens: Tokens) -> ft.Control:
+def shared_badges(track: Track, days: Sequence[DaySessions]) -> frozenset[str]:
+    """Return the badge labels every row of the page shares, which the intro shows once.
+
+    The track's own badge, and "En Español" when every session is given in Spanish
+    (the charlas). A row that repeated them would spend a line, and a screen reader a
+    sentence, on what the page already said, as session detail leaves out a badge
+    that repeats its title (D-186). "Registration required" stays on its rows.
+
+    Args:
+        track: The page's track.
+        days: Its sessions by day.
+    """
+    sessions = [session for day in days for session in day.sessions]
+    spanish = bool(sessions) and all(session.spanish for session in sessions)
+    return frozenset({track.short, *([SPANISH] if spanish else [])})
+
+
+def intro(track: Track, tokens: Tokens, *, spanish: bool) -> ft.Control:
     """Return the page's intro: the badges, the track's name and its legend line.
 
     The name is the page's heading (level 1, F40) in ``HEADLINE_SMALL``, as on session
@@ -152,10 +181,14 @@ def intro(track: Track, tokens: Tokens) -> ft.Control:
     Args:
         track: The track.
         tokens: The scheme's tokens, for the badge's colours (D-150).
+        spanish: Whether every session is in Spanish: "En Español" joins the track's
+            badge here, and leaves the rows (``shared_badges()``).
     """
     badges = [TrackBadge(track.short, tokens.track_badge(track.key))]
+    if spanish:
+        badges.append(TrackBadge(SPANISH, tokens.spanish))
     if track.new:
-        badges.append(TrackBadge(NEW_TRACK, NEW_TRACK_COLORS))
+        badges.append(TrackBadge(NEW_TRACK, tokens.new_track))
     title = ft.Semantics(
         header=True,
         heading_level=1,

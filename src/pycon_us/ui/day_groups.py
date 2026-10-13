@@ -31,6 +31,7 @@ def DayGroup(
     screen: str,
     level: int,
     top: int = 16,
+    omit: frozenset[str] = frozenset(),
 ) -> ft.Control:
     """Return one day of sessions: its heading and its rows, one list item.
 
@@ -51,6 +52,8 @@ def DayGroup(
         level: The day heading's level in the page's outline (F40): 2 under the page's
             title, 3 under a heading of its own (search's "Sessions").
         top: The space above the day heading: 0 right under another heading.
+        omit: Badge labels the page already shows, left out of every row: a track
+            page's own badge (``badge_specs()``, D-197).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _DayGroup(
@@ -62,6 +65,7 @@ def DayGroup(
         screen=screen,
         level=level,
         top=top,
+        omit=omit,
         key=group.day.isoformat(),  # pyright: ignore[reportCallIssue]
     )
 
@@ -78,6 +82,7 @@ def _DayGroup(
     screen: str,
     level: int,
     top: int,
+    omit: frozenset[str],
 ) -> ft.Control:
     """The body of ``DayGroup``; it runs only when its props change (F34)."""
     info = use_services().year.conference
@@ -85,7 +90,12 @@ def _DayGroup(
         NoticeRow(view, screen=screen)
         if is_notice(view.session, info)
         else SessionRow(
-            view, view.session.id in saved, on_toggle, tokens, screen=screen
+            view,
+            view.session.id in saved,
+            on_toggle,
+            tokens,
+            screen=screen,
+            omit=omit,
         )
         for view in (views[session.id] for session in group.sessions)
     ]

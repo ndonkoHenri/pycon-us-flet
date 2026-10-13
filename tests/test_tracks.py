@@ -127,6 +127,25 @@ def test_a_new_track_says_so_after_its_badge() -> None:
     )
 
 
+def test_a_badge_that_repeats_the_name_is_not_read_twice() -> None:
+    """Lightning talks' badge says "Lightning talks", as its name does."""
+    assert hub_phrase(HubEntry(track("lightning-talks"), 4)) == (
+        "Lightning talks. Five-minute talks, back to back. 4 sessions."
+    )
+
+
+def test_a_track_page_shares_its_badge_and_the_charlas_en_espanol() -> None:
+    """D-197: what every row would repeat, the intro shows once."""
+    charlas = track_sessions(DATA, "Charla")
+    assert track_screen.shared_badges(track("charlas"), charlas) == {
+        "Charla",
+        "En Español",
+    }
+    keynotes = track_sessions(DATA, "Keynote")  # one keynote of several is in Spanish
+    assert track_screen.shared_badges(track("keynotes"), keynotes) == {"Keynote"}
+    assert track_screen.shared_badges(track("charlas"), ()) == {"Charla"}
+
+
 # ------------------------------------------------------------------ the screens
 
 
@@ -345,6 +364,25 @@ async def test_the_intro_shows_the_badge_the_new_mark_and_the_legend(
     assert {"AI", "New track", track("ai").legend} <= set(ai.texts())
     talks = await show(page_of("talks"))
     assert "New track" not in talks.texts()
+
+
+async def test_rows_leave_out_the_badges_the_intro_shows(show: Show) -> None:
+    """D-197, as D-186 leaves out a badge that repeats the title: once, not per row."""
+    charlas = await show(page_of("charlas"))
+    rows = charlas.nodes("track.session.")
+    assert len(rows) == 16
+    assert charlas.texts().count("Charla") == 1  # the intro's
+    assert charlas.texts().count("En Español") == 1
+    for row in rows:
+        label = str(row.label)
+        assert not label.startswith(("Charla", "En Español")), label
+    # Another track's flag stays on its rows: the tutorials need registration.
+    tutorials = await show(page_of("tutorials"))
+    rows = tutorials.nodes("track.session.")
+    assert rows and all(
+        str(row.label).startswith("Registration required. ") for row in rows
+    )
+    assert tutorials.texts().count("Tutorial") == 1
 
 
 async def test_the_tracks_name_is_the_pages_heading_not_the_app_bars(

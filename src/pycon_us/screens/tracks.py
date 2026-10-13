@@ -28,7 +28,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import BadgeColors, Tokens, use_tokens
-from pycon_us.ui.badges import TrackBadge
+from pycon_us.ui.badges import NEW_TRACK, TrackBadge
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
@@ -41,15 +41,6 @@ GROUP_TITLES = {
     "community": "Community",
 }
 """The hub's sections: the registry's groups that hold session types, in order."""
-
-NEW_TRACK = "New track"
-"""The badge of a track new this year (SCHED-21), shown beside its own badge."""
-
-NEW_TRACK_COLORS = BadgeColors(
-    text=ft.Colors.ON_SECONDARY_CONTAINER, fill=ft.Colors.SECONDARY_CONTAINER
-)
-"""The "New track" badge's colours: ``secondary_container`` and its ``on_`` pair, a
-role pair the theme's contrast test checks (ux.md §3.4)."""
 
 ICON_CIRCLE = 40
 """The diameter of a row's tonal circle, in dp (ux.md §5.10)."""
@@ -107,14 +98,19 @@ def hub_phrase(entry: HubEntry) -> str:
     """Return what a screen reader says for a hub row: one phrase (D-33).
 
     "Charlas. Talks given in Spanish. Charla, 16 sessions.", in the order the row
-    shows them, with "New track" after the badge when the track is new.
+    shows them, with "New track" after the badge when the track is new. A badge that
+    says the name again ("Lightning talks") is not read twice.
 
     Args:
         entry: The row's track and count.
     """
     track = entry.track
-    marks = [track.short, *([NEW_TRACK] if track.new else [])]
-    return f"{track.plural}. {track.legend}. {', '.join(marks)}, {session_count(entry.count)}."
+    marks = [
+        *([track.short] if track.short.casefold() != track.plural.casefold() else []),
+        *([NEW_TRACK] if track.new else []),
+        session_count(entry.count),
+    ]
+    return f"{track.plural}. {track.legend}. {', '.join(marks)}."
 
 
 @ft.component
@@ -194,7 +190,7 @@ def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
 
     badges = [TrackBadge(track.short, colors)]
     if track.new:
-        badges.append(TrackBadge(NEW_TRACK, NEW_TRACK_COLORS))
+        badges.append(TrackBadge(NEW_TRACK, tokens.new_track))
     count = ft.Text(
         session_count(entry.count),
         theme_style=ft.TextThemeStyle.BODY_MEDIUM,
