@@ -266,6 +266,7 @@
   - `state.py`: ~~stores and `use_*` hooks~~ `Conference`, `ConferenceCtx`, `use_conference()` and `ViewMemory` (D-160).
   - `prefs.py`: `Prefs`, `PrefsCtx`, `use_prefs()` (D-160); P1 adds `favorites.py`, P3 `account.py` and `staff.py`, one store each with its context and hook.
   - `config.py`: `YEAR` and the year-data loader.
+  - `year_schema.py`: the loader's schema half, `read_table()`, `build()` and `YearDataError`, which `config.py` imports (#102).
   - `theme.py`: `build_theme(*, dark, high_contrast)`, `overlay_style()`, `Tokens`, `BadgeColors` (D-174), `build_tokens(*, dark, high_contrast)`, `TokensCtx`, `use_tokens()` (D-150), `MARKDOWN_STYLE` (D-116).
   - `capabilities.py` and `clock.py`.
 - **Packages** in `pycon_us/`:

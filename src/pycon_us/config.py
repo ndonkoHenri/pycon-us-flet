@@ -1,32 +1,26 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
-``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files with
-``tomllib`` into the frozen dataclasses below. The dataclasses are the schema: an unknown or
-missing key, a wrong type or a broken rule fails at load time with a ``YearDataError`` that
-names the file, the key and the problem. Years, dates, names and URLs live in the data
+``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
+frozen dataclasses below, through ``year_schema``, then checks their rules. The dataclasses
+are the schema: an unknown or missing key, a wrong type or a broken rule fails at load time
+with a ``YearDataError`` that names the file, the key and the problem. Years, dates, names and URLs live in the data
 files, never in code; rolling over is a new ``data/<year>/`` folder and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).
 """
 
-import dataclasses
 import re
-import tomllib
-import types
-import typing
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-
-if TYPE_CHECKING:
-    from _typeshed import DataclassInstance
+from pycon_us.year_schema import YearDataError, build, read_table
 
 YEAR = 2026
 """The conference year the app shows (D-05)."""
@@ -48,18 +42,6 @@ TRACK_GROUPS = ("talks", "hands-on", "community", "logistics")
 """The filter-sheet groups a track can belong to, in display order (DATA-14)."""
 
 type TrackFormat = Literal["short", "plural", "long"]
-
-_TYPE_NAMES = {
-    str: "a string",
-    int: "an integer",
-    bool: "true or false",
-    date: "a date",
-    datetime: "a date and time",
-}
-
-
-class YearDataError(ValueError):
-    """A year data file is missing or invalid; the message names the file, key and problem."""
 
 
 @dataclass(frozen=True)
@@ -272,84 +254,18 @@ def load_year(year: int = YEAR, data_dir: Path = DATA_DIR) -> YearData:
     """
     folder = data_dir / str(year)
     conference_file = f"{year}/conference.toml"
-    conference = _build(
+    conference = build(
         ConferenceInfo,
-        _read(folder / "conference.toml", conference_file),
+        read_table(folder / "conference.toml", conference_file),
         conference_file,
     )
     _check_conference(conference, year, conference_file)
     content_file = f"{year}/content.toml"
-    content = _build(
-        Content, _read(folder / "content.toml", content_file), content_file
+    content = build(
+        Content, read_table(folder / "content.toml", content_file), content_file
     )
     _check_content(content, content_file)
     return YearData(conference, content, folder)
-
-
-def _read(path: Path, file: str) -> dict[str, object]:
-    try:
-        with path.open("rb") as stream:
-            return tomllib.load(stream)
-    except FileNotFoundError:
-        raise YearDataError(f"{file}: file not found") from None
-    except tomllib.TOMLDecodeError as error:
-        raise YearDataError(f"{file}: invalid TOML: {error}") from None
-
-
-def _build[T: DataclassInstance](
-    cls: type[T], raw: object, file: str, key: str = ""
-) -> T:
-    """Build dataclass ``cls`` from a TOML table, checking key names and value types."""
-    if not isinstance(raw, dict):
-        raise YearDataError(f"{file}: {key}: expected a table, got {raw!r}")
-    fields = {field.name: field for field in dataclasses.fields(cls)}
-    prefix = f"{key}." if key else ""
-    if unknown := sorted(raw.keys() - fields.keys()):
-        raise YearDataError(f"{file}: {prefix}{unknown[0]}: unknown key")
-    required = [
-        name
-        for name, field in fields.items()
-        if field.default is dataclasses.MISSING
-        and field.default_factory is dataclasses.MISSING
-    ]
-    if missing := [name for name in required if name not in raw]:
-        raise YearDataError(f"{file}: {prefix}{missing[0]}: missing key")
-    hints = typing.get_type_hints(cls)
-    values = {
-        name: _value(hints[name], value, file, prefix + name)
-        for name, value in raw.items()
-    }
-    return cls(**values)
-
-
-def _value(expected: object, value: object, file: str, key: str) -> object:
-    if isinstance(expected, types.UnionType):  # an optional key, `X | None`
-        # TOML has no null: a key that is present holds an X.
-        (expected,) = (
-            arg for arg in typing.get_args(expected) if arg is not type(None)
-        )
-    if expected == tuple[str, ...]:  # an array of strings
-        if not isinstance(value, list) or not all(type(v) is str for v in value):
-            raise YearDataError(
-                f"{file}: {key}: expected an array of strings, got {value!r}"
-            )
-        return tuple(value)
-    if typing.get_origin(expected) is tuple:  # an array of tables
-        item_cls = typing.get_args(expected)[0]
-        if not isinstance(value, list):
-            raise YearDataError(
-                f"{file}: {key}: expected an array of tables, got {value!r}"
-            )
-        return tuple(
-            _build(item_cls, item, file, f"{key}[{index}]")
-            for index, item in enumerate(value)
-        )
-    # type() rather than isinstance(): a bool is not an integer, and a datetime is not a date.
-    if type(value) is not expected:
-        raise YearDataError(
-            f"{file}: {key}: expected {_TYPE_NAMES[expected]}, got {value!r}"
-        )
-    return value
 
 
 def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
