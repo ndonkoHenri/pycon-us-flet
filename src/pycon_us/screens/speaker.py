@@ -6,7 +6,7 @@ level-1 heading (the app bar's title stays empty, as on session detail, D-186). 
 day under level-2 day headings (F40), as ``SessionRow``s with their stars (D-184), each
 day one memoised item (``ui.day_groups``, D-153). The rows leave out the speaker the
 page names: their speakers line names only the co-speakers, "With Ana Lima", in what
-they show and what they say (``session_view(of_speaker=...)``, D-202). Then "About",
+they show and what they say (``session_view(of_speaker=...)``, D-203). Then "About",
 the bio as Markdown whose links open by the link rule (``ui.links.feed_markdown``,
 D-116, D-197), left out when the feed's bio is only a placeholder dash.
 
