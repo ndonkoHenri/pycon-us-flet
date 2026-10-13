@@ -537,13 +537,45 @@ async def test_a_pseudo_speaker_is_plain_text_that_nothing_taps(
     detail = await render(LIGHTNING)
     assert speaker_rows(detail) == []
     # Its own node, not merged into the "Speakers" heading (seen on Android).
-    node = detail.node("session.hosts")
+    node = detail.node("session.name.0")
     assert node.container
     assert words(node) == ["Hosted by Abigail, Chris, Cristián, and Lorena"]
     holder: object = node
     while isinstance(holder, ft.Control):
         assert getattr(holder, "on_click", None) is None, holder
         holder = holder.parent
+
+
+async def test_names_with_no_speaker_each_get_an_identifier_in_the_authors_order(
+    render: Render,
+) -> None:
+    """D-197: two free names must not share one node id (a UI test finds each)."""
+    detail = await render(PANEL)
+    data = cast(ConferenceData, detail.conference.data)
+    ana = data.speakers[data.sessions[PANEL].speaker_ids[0]]
+    session = replace(
+        data.sessions[PANEL],
+        speaker_ids=(ana.id,),
+        speaker_names=("Hosted by the PSF", ana.name, "A. Guest"),
+    )
+    newer = replace(data, sessions={**data.sessions, PANEL: session})
+    detail.conference.data, detail.conference.version = newer, 2
+    await detail.settle()
+    assert words(detail.node("session.name.0")) == ["Hosted by the PSF"]
+    assert words(detail.node("session.name.1")) == ["A. Guest"]
+    assert [row.identifier for row in speaker_rows(detail)] == [
+        f"session.speaker.{ana.id}"
+    ]
+    # In the authors' order, read down the section: a name, the speaker, a name.
+    section = detail.node("session.name.0").parent
+    assert isinstance(section, ft.Column)
+    order = [
+        node.identifier
+        for node in descendants(section)
+        if isinstance(node, ft.Semantics)
+        and (node.identifier or "").startswith(("session.name.", "session.speaker."))
+    ]
+    assert order == ["session.name.0", f"session.speaker.{ana.id}", "session.name.1"]
 
 
 async def test_a_session_without_speakers_has_no_speakers_section(

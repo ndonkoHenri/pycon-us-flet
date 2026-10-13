@@ -266,7 +266,7 @@ async def test_a_feed_link_opens_in_the_in_app_browser(
     assert launcher(svc).launched == [
         ("https://pytest.org", ft.LaunchMode.IN_APP_BROWSER_VIEW)
     ]
-    assert page.navigated == []  # a site path is a web page, never an app page
+    assert page.navigated == []  # a web address is launched, never pushed
 
 
 async def test_a_site_relative_feed_link_is_a_web_page_not_an_app_page(

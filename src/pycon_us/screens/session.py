@@ -265,16 +265,18 @@ def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
 
     A speaker's row pushes their page, one drill level (D-17). A name the directory has
     no one for ("Hosted by …", DATA-15) is not a person with a page, so it is plain text
-    that nothing taps.
+    that nothing taps; such names are numbered in the authors' order, so two of them
+    never share an identifier.
     """
     rows: list[ft.Control] = [SectionHeader("Speakers", level=2, top=0)]
+    names = 0
     for entry in speakers:
         if isinstance(entry, str):
             rows.append(
                 # A node of its own: left bare, Android merged it into the heading
                 # above ("Speakers, Hosted by …").
                 ft.Semantics(
-                    identifier=f"{SCREEN}.hosts",
+                    identifier=f"{SCREEN}.name.{names}",
                     container=True,
                     content=ft.Container(
                         ft.Text(entry, theme_style=ft.TextThemeStyle.BODY_LARGE),
@@ -282,6 +284,7 @@ def _speakers(speakers: Sequence[Speaker | str], view_path: str) -> ft.Control:
                     ),
                 )
             )
+            names += 1
         else:
             rows.append(
                 SpeakerTile(
