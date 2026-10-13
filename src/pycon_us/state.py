@@ -91,7 +91,7 @@ class Conference:
     def set_feed_url(self, url: str | None) -> None:
         """Refresh from ``url`` from the next refresh on; None returns to the year's feed.
 
-        The Developer screen's feed URL (D-73, D-184): ``bootstrap()`` sets the stored
+        The Developer screen's feed URL (D-73, D-187): ``bootstrap()`` sets the stored
         one, and Apply a new one, with no restart. A refresh already running keeps the
         URL it started with.
 

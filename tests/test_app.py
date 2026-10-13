@@ -215,7 +215,7 @@ async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
         }
     )
     await started(fake_page, svc)
-    # Each start runs the fake clock from its stored start again (D-184).
+    # Each start runs the fake clock from its stored start again (D-187).
     start = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
     assert timedelta(0) <= clock.now() - start < timedelta(seconds=5)
     assert errors._details is True  # error details, as the unlock shows them

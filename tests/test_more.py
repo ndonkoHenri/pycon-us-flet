@@ -151,7 +151,7 @@ def test_developer_is_hidden_in_packaged_builds_until_unlocked(
     titles = outline(rows_of(render()))
     assert "About this app" in titles
     assert "Developer" not in titles  # D-73
-    prefs.dev = {DEV_UNLOCKED: True}  # 7 taps on the version (D-184)
+    prefs.dev = {DEV_UNLOCKED: True}  # 7 taps on the version (D-187)
     assert outline(rows_of(render()))[-1] == "Developer"
 
 

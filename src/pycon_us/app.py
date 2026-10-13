@@ -127,7 +127,7 @@ async def bootstrap(
        for, all while the boot view shows. ``main.prepare_first_page()`` has turned
        the theme animation off, so the theme lands at once. The Developer options
        take effect with the settings: the fake clock runs from its stored start, the
-       feed URL serves the refreshes, and an unlock shows error details (D-184).
+       feed URL serves the refreshes, and an unlock shows error details (D-187).
     2. The year's favourites (D-48), so no star fills in after the first screen.
     3. The feed cache, else the bundled snapshot (D-38, D-145).
     4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
@@ -187,7 +187,7 @@ async def bootstrap(
 
 
 def start_developer_options(prefs: Prefs, conference: Conference) -> None:
-    """Put the stored Developer options into effect for this session (D-73, D-184).
+    """Put the stored Developer options into effect for this session (D-73, D-187).
 
     The fake clock runs from its stored start again, so each start of the app begins
     at the same simulated moment; the feed URL serves the refreshes; and an unlock

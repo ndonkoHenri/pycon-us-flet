@@ -1,7 +1,7 @@
 """Now, the start screen (``/now``): a stub until P1's dashboard (SCHED-25, D-14).
 
 It shows the data's status and today's date by ``clock.now()``, so the Developer fake
-clock shows here (D-184); the other tab roots are in the bottom bar (D-13).
+clock shows here (D-187); the other tab roots are in the bottom bar (D-13).
 """
 
 import flet as ft

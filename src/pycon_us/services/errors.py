@@ -42,7 +42,7 @@ _details = False
 
 
 def show_details(on: bool) -> None:
-    """Show the exception text in packaged builds too, or stop showing it (D-73, D-184).
+    """Show the exception text in packaged builds too, or stop showing it (D-73, D-187).
 
     Without it, only an app that is not embedded (the companion app) shows the text.
     ``bootstrap()`` sets it from the stored unlock, and About this app when it unlocks.

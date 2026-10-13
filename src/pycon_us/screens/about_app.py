@@ -3,7 +3,7 @@
 The minimal P1 page (D-73): the app's name and what it is, "Not an official PSF app."
 (D-36), then the build's version, Python and Flet. Seven taps on the version row unlock
 the Developer screen in a packaged build, and a row to it appears under the version; it
-stays unlocked (D-184). P2 completes the
+stays unlocked (D-187). P2 completes the
 page (#30): the feed's age, links, licences and "Share log".
 """
 

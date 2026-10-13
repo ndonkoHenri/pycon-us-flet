@@ -3,7 +3,7 @@
 The fake clock, in conference time, with a date picker and a time picker; the time zone;
 the feed URL; and the capability flags, read-only (``capabilities.py``, D-63). Apply puts
 the clock and the feed URL into effect at once and saves them in ``pycon.dev``, so they
-hold across launches; Reset returns to real time and the year's feed (D-184). The screen
+hold across launches; Reset returns to real time and the year's feed (D-187). The screen
 is always available when not embedded, and in a packaged build once unlocked in About
 this app; a warning-tone "Developer" chip at its top marks it (ux.md §5.13). #107 adds the data
 actions (Refresh now, Clear cached feed, Reset app, Share log).
@@ -119,7 +119,7 @@ def Developer() -> ft.View:
         if not valid:
             set_outcome("")
             return
-        # Before the save: the re-render it causes reads the new clock (D-184). An
+        # Before the save: the re-render it causes reads the new clock (D-187). An
         # unchanged start keeps the clock running instead of setting it back.
         if fake_now != prefs.fake_now:
             clock.start_fake_clock(fake_now)

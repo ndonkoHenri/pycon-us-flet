@@ -179,7 +179,7 @@ async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
     await tap_version(render, 7)
     assert prefs.developer
     stored = cast(MemoryPrefs, svc.storage.prefs).values["pycon.dev"]
-    assert json.loads(stored) == {"unlocked": True}  # survives a relaunch (D-184)
+    assert json.loads(stored) == {"unlocked": True}  # survives a relaunch (D-187)
     assert errors._details is True  # handler errors now say what failed
     # Said in place, where the taps were: no SnackBar on a pushed View (#197).
     assert page.dialogs == []

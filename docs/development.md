@@ -454,7 +454,7 @@ Physical devices:
 ### 5.6 Fake clock and feed
 
 Off-season and in demos, the Developer screen (DEV-01, D-73; More › Developer, after 7 taps on About this app's version in a packaged build) sets:
-- a fake "now", stored in preferences and read by `clock.now()` (D-43): type it (`2026-05-15 09:00`, conference time) or pick it, then Apply. It runs forward from there, and every start of the app begins at it again until Reset (D-184);
+- a fake "now", stored in preferences and read by `clock.now()` (D-43): type it (`2026-05-15 09:00`, conference time) or pick it, then Apply. It runs forward from there, and every start of the app begins at it again until Reset (D-187);
 - the feed URL, used from the next refresh (the Schedule stub's Refresh, or the 15-min trigger), e.g. the `feed_url` fixture's server, or a closed port to test offline.
 
 Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now, Jump to now and reminders, until the 2027 feed exists (PLAN §7). Environment variables do not reach packaged apps, so there are no build flavours.

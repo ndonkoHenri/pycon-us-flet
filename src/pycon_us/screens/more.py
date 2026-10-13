@@ -4,7 +4,7 @@ A section shows once its pages exist, so no row is dead. In P0 that is **Program
 whose pages are stubs until P1, and **You**: the Appearance control, which stands in for
 Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
 then About this app and Developer, which is always there when not embedded and, in a
-packaged build, once unlocked in About this app (D-73, D-184). Expo & sponsors, At the
+packaged build, once unlocked in About this app (D-73, D-187). Expo & sponsors, At the
 venue and About join with their P2 pages; the profile row and Staff tools, first in the
 list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).

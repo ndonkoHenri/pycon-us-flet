@@ -195,7 +195,7 @@ def test_the_days_mark_today_by_the_clock_so_the_fake_clock_shows(
         ]
 
     try:
-        # The Developer fake clock (D-184); 23:30 in Long Beach is Saturday in UTC.
+        # The Developer fake clock (D-187); 23:30 in Long Beach is Saturday in UTC.
         clock.start_fake_clock(datetime(2026, 5, 15, 23, 30, tzinfo=PACIFIC))
         assert marked() == ["Fri, May 15"]
         clock.start_fake_clock(datetime(2026, 10, 13, 9, 0, tzinfo=PACIFIC))

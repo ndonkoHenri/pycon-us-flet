@@ -119,7 +119,7 @@ class Prefs:
 
     @property
     def developer_unlocked(self) -> bool:
-        """Whether Developer was unlocked in About this app; it stays so (D-73, D-184)."""
+        """Whether Developer was unlocked in About this app; it stays so (D-73, D-187)."""
         return self.dev.get(DEV_UNLOCKED) is True
 
     @property
@@ -250,7 +250,7 @@ class Prefs:
 def with_dev_options(
     dev: dict[str, Any], *, fake_now: datetime | None, feed_url: str | None
 ) -> dict[str, Any]:
-    """Return ``dev`` with the fake clock and the feed URL set; None removes one (D-184).
+    """Return ``dev`` with the fake clock and the feed URL set; None removes one (D-187).
 
     The other keys, the unlock among them, are kept. Pass the result to ``Prefs.save``.
 

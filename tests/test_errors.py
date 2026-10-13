@@ -114,7 +114,7 @@ def test_a_caught_error_shows_the_exception_when_not_embedded(
 def test_a_packaged_build_shows_the_exception_once_developer_is_unlocked(
     page: FakePage, embedded: None
 ) -> None:
-    errors.show_details(True)  # bootstrap() and the unlock in About this app (D-184)
+    errors.show_details(True)  # bootstrap() and the unlock in About this app (D-187)
     report_errors(fail)(object())
     errors.show_details(False)  # #107's Reset app locks it again
     report_errors(fail)(object())

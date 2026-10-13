@@ -72,7 +72,7 @@ def test_naive_datetimes_are_refused(setter) -> None:
         setter(datetime(2026, 5, 15, 9, 0))  # noqa: DTZ001
 
 
-# ------------------------------------------------------------------ the Developer field (D-184)
+# ------------------------------------------------------------------ the Developer field (D-187)
 
 
 def test_a_clock_without_an_offset_is_conference_time() -> None:

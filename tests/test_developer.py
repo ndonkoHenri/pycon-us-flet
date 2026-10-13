@@ -262,7 +262,7 @@ async def test_the_clock_is_set_before_the_save_re_renders_the_screens(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
     # App subscribes to Prefs, so the save re-renders the tree (D-150); every screen
-    # that renders then must already read the new time (D-184).
+    # that renders then must already read the new time (D-187).
     seen: list[datetime] = []
 
     def listener(_sender: object, name: str | None) -> None:

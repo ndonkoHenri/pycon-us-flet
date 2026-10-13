@@ -3,7 +3,7 @@
 ``now()`` answers, in order: a test override, then the Developer screen's fake clock, then
 real time. Only screens and stores call it; ``core`` functions take ``now`` as an argument,
 so they stay pure and testable with fixed instants. The fake clock's text form, as the
-Developer screen writes and reads it, is here too (D-184).
+Developer screen writes and reads it, is here too (D-187).
 """
 
 from datetime import UTC, datetime, timedelta, tzinfo
