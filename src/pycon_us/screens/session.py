@@ -1,32 +1,42 @@
 """Session detail (``…/session/<id>``): time and place first (SESS-01..03; ux.md §5.5).
 
-The app bar holds the star (D-30) and, when the session has a public page, an overflow
-with "Open on us.pycon.org": Add to calendar joins it in P2, so no dead item waits
-there, and a session without a page has no overflow at all (D-60). The page's heading
-is the title under the badges, so the app bar's title stays empty. Then the "When and
-where" card (``ui.when_where``), for a session that needs registration a card that
-says so and links the year's registration page, then the speakers (their rows push
-their pages; a pseudo-speaker such as "Hosted by …" is text) and the description, whose
-links open by the link rule (``ui.links.feed_markdown``, D-197).
+The app bar holds the star (D-30), Share (NEW-06) and, when the session has a public
+page, an overflow with "Open on us.pycon.org": Add to calendar joins it in P2, so no
+dead item waits there, and a session without a page has no overflow at all (D-60). An
+open space's page is its entry on the site's open-spaces page, which its detail shows
+as a link in the page instead (SESS-11, D-202). The page's heading is the title under
+the badges, so the app bar's title stays empty. Then the "When and where" card
+(``ui.when_where``), for a session that needs registration a card that says so and
+links the year's registration page, then the speakers (their rows push their pages; a
+pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
+the link rule (``ui.links.feed_markdown``, D-197). Last, a Posters row's posters and an
+open space's image and site link (``screens.session_extras``).
 
 An unknown id shows the not-found state under the back arrow, so Back pops one level
 (D-186). A session that a newer feed drops while its detail is open keeps the content
 it last showed, under a "Removed from the latest schedule" note (ux.md §4.1).
-
-Still to come, in ux.md §5.5's order: Share in the app bar and the posters list (#92).
 """
 
 from collections.abc import Sequence
 from typing import cast
-from urllib.parse import urlsplit
 
 import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import Session, Speaker
 from pycon_us.core.row_views import people, places
+from pycon_us.core.timeline import posters
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
+from pycon_us.prefs import use_prefs
+from pycon_us.screens.session_extras import (
+    IMAGE_FADE_MS,
+    OPEN_SPACE,
+    Posters,
+    ShareButton,
+    open_space_extras,
+    site_title,
+)
 from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
@@ -68,7 +78,7 @@ tutorial and of a summit with a free sign-up alike."""
 
 @ft.component
 def SessionDetail(session_id: str) -> ft.View:
-    """One session: its header, when and where, registration, speakers and description.
+    """One session: its header, when and where, speakers, description and extras.
 
     Args:
         session_id: The session id, unquoted (D-42).
@@ -80,6 +90,7 @@ def SessionDetail(session_id: str) -> ft.View:
     on_toggle = use_favorite_toggle(favorites)
     svc = use_services()
     tokens = use_tokens()
+    prefs = use_prefs()
     # The session as this View last showed it: a refresh that drops it keeps it here.
     shown = ft.use_ref(cast(Session | None, None))
     info = svc.year.conference
@@ -117,7 +128,7 @@ def SessionDetail(session_id: str) -> ft.View:
     async def open_site() -> None:
         await open_link(svc, session.url)
 
-    # Share (#92) goes between the star and the overflow (ux.md §5.5).
+    # The star, Share, then the overflow (ux.md §5.5).
     actions: list[ft.Control] = []
     if not is_notice(session, info):  # breaks and notices have no star (D-31)
         actions.append(
@@ -128,7 +139,9 @@ def SessionDetail(session_id: str) -> ft.View:
                 identifier=f"{SCREEN}.favorite",
             )
         )
-    if session.url:
+    actions.append(ShareButton(session))
+    open_space = session.kind == OPEN_SPACE
+    if session.url and not open_space:  # an open space's link is in the page (D-202)
         actions.append(_overflow(session.url, open_site))
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
@@ -151,7 +164,13 @@ def SessionDetail(session_id: str) -> ft.View:
         controls.append(_speakers(speakers, view_path))
     if session.description_md:
         controls.append(_about(session.description_md, svc))
-    # The posters (#92) follow here.
+    found = posters(data, session) if data else ()
+    if found:  # a Posters row (SESS-09)
+        controls.append(Posters(session, found, favorites.ids, on_toggle, tokens))
+    if open_space:  # its image and its entry on the site (SESS-11)
+        controls.extend(
+            open_space_extras(session, fade_ms=prefs.motion_ms(IMAGE_FADE_MS))
+        )
     body = ft.ListView(
         controls,
         expand=True,
@@ -163,7 +182,7 @@ def SessionDetail(session_id: str) -> ft.View:
 
 def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
     """The app bar's overflow: "Open on us.pycon.org", the host named from the URL."""
-    label = f"Open on {urlsplit(url).hostname}"
+    label = site_title(url)
     menu = ft.PopupMenuButton(
         icon=ft.Icons.MORE_VERT,
         tooltip="More options",

@@ -138,12 +138,21 @@ class MemoryClipboard(ft.Clipboard):
 
 
 class MemoryShare(ft.Share):
-    """Share that records the files it was asked to share instead of opening a sheet."""
+    """Share that records the files and texts it was asked to share instead of a sheet."""
 
     def init(self) -> None:
         self.shared: list[list[ft.ShareFile]] = []
+        self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
         self.error: Exception | None = None
+
+    async def share_text(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, text: str, **options: Any
+    ) -> ft.ShareResult:
+        if self.error is not None:
+            raise self.error
+        self.texts.append((text, options))
+        return ft.ShareResult(status=self.status, raw="")
 
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any

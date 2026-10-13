@@ -40,6 +40,7 @@ from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, Problem, Source, use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.share import centre
 from pycon_us.ui.status_strip import use_minute
 
 logger = logging.getLogger(__name__)
@@ -294,13 +295,6 @@ def has_text(path: Path) -> bool:
         return path.is_file() and path.stat().st_size > 0
     except OSError:
         return False
-
-
-def centre(page: ft.Page) -> ft.Offset | None:
-    """Return the middle of the window, where the share sheet points from on a tablet."""
-    if not page.width or not page.height:
-        return None
-    return ft.Offset(page.width / 2, page.height / 2)
 
 
 def refreshed(problem: Problem | None) -> Outcome:
