@@ -285,7 +285,7 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
         "Tue 19",
     ]
     friday = schedule.node("schedule.day_tab.2")
-    assert _spoken(schedule, 2) == "Friday, May 15, today"  # then "Tab 3 of 7"
+    assert _spoken(schedule, 2) == "Friday, May 15, today"  # after "Tab 3 of 7"
     assert friday.label is None  # merged into the tab's node with the identifier
     assert _has_dot(schedule, friday)  # today's mark
     saturday = schedule.node("schedule.day_tab.3")

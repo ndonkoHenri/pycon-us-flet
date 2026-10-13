@@ -317,9 +317,9 @@ def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | 
 def _day_tab(index: int, day: date, *, is_today: bool) -> ft.Tab:
     """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
 
-    The text's own semantics label says the day in full, so Flutter's tab bar reads it
-    first and then the position and the selection: "Friday, May 15, today, Tab 3 of
-    7" (an explicit ``Semantics`` label came after the position in TalkBack's node).
+    The text's semantics label says the day in full; Flutter's tab bar puts its own
+    position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
+    Friday, May 15, today, selected" (D-189).
     """
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
