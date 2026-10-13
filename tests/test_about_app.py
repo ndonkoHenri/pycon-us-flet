@@ -59,10 +59,17 @@ def render(
 ) -> Callable[[], dict[str, Any]]:
     """Render ``AboutApp`` and return what it passed to ``AppScaffold``.
 
-    The tap count is one ref that lives as long as the page, as ``use_ref``'s does.
+    The tap count is one ref, and the unsaved flag one state, that live as long as the
+    page, as Flet's do.
     """
     ref = MutableRef(0)
+    unsaved: list[bool] = [False]  # the one use_state: whether the unlock was saved
+
+    def use_state(initial: bool) -> tuple[bool, Callable[[bool], None]]:
+        return unsaved[0], lambda value: unsaved.__setitem__(0, value)
+
     monkeypatch.setattr(ft, "use_ref", lambda initial=None: ref)
+    monkeypatch.setattr(ft, "use_state", use_state)
     monkeypatch.setattr(about_app, "use_services", lambda: svc)
     monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
     monkeypatch.setattr(about_app, "AppScaffold", lambda **kwargs: kwargs)
@@ -70,11 +77,13 @@ def render(
 
 
 def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
-    """The page's rows by title, the version row's ``ListTile`` included."""
+    """The build's rows by title, the version row's ``ListTile`` included."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     found = {}
     for row in body.controls:
+        if isinstance(row, ft.Semantics) and row.live_region:
+            continue  # the Developer row, below
         if isinstance(row, ft.MergeSemantics):
             assert isinstance(row.content, ft.Semantics)
             row = row.content.content
@@ -86,14 +95,6 @@ def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
 async def tap_version(render: Callable[[], dict[str, Any]], times: int) -> None:
     for _ in range(times):
         await cast(Any, tiles(render())["Version"].on_click)()
-
-
-def snack(page: FakePage) -> ft.SnackBar:
-    (dialog,) = page.dialogs
-    assert isinstance(dialog, ft.SnackBar)
-    assert dialog.behavior == ft.SnackBarBehavior.FLOATING
-    assert dialog.persist is False  # it goes by itself, Open or not
-    return dialog
 
 
 def test_the_page_says_which_build_this_is(
@@ -135,11 +136,28 @@ def test_the_version_row_carries_its_identifier_for_ui_flows(
     assert row.content.identifier == "about_app.version"
 
 
+def developer_row(scaffold: dict[str, Any]) -> ft.ListTile | None:
+    """The row the unlock adds, or None."""
+    body = scaffold["body"]
+    assert isinstance(body, ft.ListView)
+    for row in body.controls:
+        if isinstance(row, ft.Semantics) and row.live_region:
+            link = row.content
+            assert isinstance(link, ft.MergeSemantics)
+            assert isinstance(link.content, ft.Semantics)
+            assert link.content.identifier == "about_app.developer"
+            tile = link.content.content
+            assert isinstance(tile, ft.ListTile)
+            return tile
+    return None
+
+
 async def test_six_taps_unlock_nothing(
     render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
 ) -> None:
     await tap_version(render, UNLOCK_TAPS - 1)
     assert not prefs.developer
+    assert developer_row(render()) is None
     assert page.dialogs == []
 
 
@@ -152,11 +170,12 @@ async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
     stored = cast(MemoryPrefs, svc.storage.prefs).values["pycon.dev"]
     assert json.loads(stored) == {"unlocked": True}  # survives a relaunch (D-184)
     assert errors._details is True  # handler errors now say what failed
-    bar = snack(page)
-    assert isinstance(bar.content, ft.Text)
-    assert bar.content.value == "Developer options unlocked"
-    assert bar.action == "Open"
-    cast(Callable[[], None], bar.on_action)()  # Flet calls it without the event
+    # Said in place, where the taps were: no SnackBar on a pushed View (#197).
+    assert page.dialogs == []
+    row = developer_row(render())
+    assert row is not None
+    assert (row.title, row.subtitle) == ("Developer options", "On")
+    cast(Callable[[], None], row.on_click)()
     assert page.navigated == ["/more/developer"]
 
 
@@ -171,39 +190,33 @@ async def test_the_unlock_keeps_the_other_developer_options(
     }
 
 
-async def test_seven_more_taps_say_it_is_already_on_and_count_again(
-    render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
+async def test_taps_once_it_is_on_change_nothing(
+    render: Callable[[], dict[str, Any]], svc: Services
 ) -> None:
     await tap_version(render, 7)
-    page.dialogs.clear()
-    await tap_version(render, 6)
-    assert page.dialogs == []  # the count starts again after an unlock
-    await tap_version(render, 1)
-    bar = snack(page)
-    assert isinstance(bar.content, ft.Text)
-    assert bar.content.value == "Developer options are already on"
+    writes = dict(cast(MemoryPrefs, svc.storage.prefs).values)
+    await tap_version(render, 14)
+    assert cast(MemoryPrefs, svc.storage.prefs).values == writes
 
 
-async def test_when_not_embedded_the_taps_only_say_it_is_on(
+async def test_when_not_embedded_developer_is_listed_without_taps(
     render: Callable[[], dict[str, Any]],
     prefs: Prefs,
-    page: FakePage,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)  # the companion app
+    assert developer_row(render()) is not None
     await tap_version(render, 7)
     assert prefs.dev == {}  # nothing to unlock or store
-    bar = snack(page)
-    assert isinstance(bar.content, ft.Text)
-    assert bar.content.value == "Developer options are already on"
+    assert errors._details is False  # the companion app shows details by itself
 
 
 async def test_an_unlock_that_cannot_be_saved_holds_for_the_session_and_says_so(
-    render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage, svc: Services
+    render: Callable[[], dict[str, Any]], prefs: Prefs, svc: Services
 ) -> None:
     cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
     await tap_version(render, 7)
     assert prefs.developer  # D-120: kept in memory
-    bar = snack(page)
-    assert isinstance(bar.content, ft.Text)
-    assert bar.content.value == "Developer options unlocked until you close the app"
+    row = developer_row(render())
+    assert row is not None
+    assert row.subtitle == "On until you close the app"

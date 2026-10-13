@@ -165,10 +165,19 @@ async def press(render: Callable[[], dict[str, Any]], identifier: str) -> None:
     await cast(Any, button.on_click)()
 
 
-def snack_text(page: FakePage) -> str:
-    bar = page.dialogs[-1]
-    assert isinstance(bar, ft.SnackBar) and isinstance(bar.content, ft.Text)
-    return str(bar.content.value)
+def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
+    """The line under the buttons, or None while it is hidden."""
+    line = next(
+        c
+        for c in cast(ft.ListView, render()["body"]).controls
+        if isinstance(c, ft.Semantics) and c.identifier == "developer.outcome"
+    )
+    assert line.live_region is True
+    if not line.visible:
+        return None
+    assert isinstance(line.content, ft.Container)
+    assert isinstance(line.content.content, ft.Text)
+    return str(line.content.content.value)
 
 
 # ------------------------------------------------------------------ the screen
@@ -183,6 +192,7 @@ def test_the_controls_carry_the_identifiers_ui_flows_use(
         "developer.feed_url",
         "developer.reset",
         "developer.apply",
+        "developer.outcome",
     }
     assert scaffold["title"] == "Developer options"
 
@@ -190,12 +200,15 @@ def test_the_controls_carry_the_identifiers_ui_flows_use(
 def test_a_warning_tone_chip_marks_the_screen(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    [box] = render()["actions"]
-    assert isinstance(box, ft.Container) and isinstance(box.content, ft.Chip)
-    chip = box.content
-    assert chip.label == "Developer"
-    assert chip.border_side == ft.BorderSide(1, LIGHT_TOKENS.warning)
-    assert chip.on_click is None and chip.on_select is None  # a mark, not a control
+    [chip] = render()["actions"]
+    assert isinstance(chip, ft.Container)
+    assert chip.border == ft.Border.all(1, LIGHT_TOKENS.warning)
+    assert chip.on_click is None  # a mark, not a control
+    assert isinstance(chip.content, ft.Row)
+    icon, label = chip.content.controls
+    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.warning
+    assert isinstance(label, ft.Text) and label.value == "Developer"
+    assert label.color == LIGHT_TOKENS.warning
 
 
 def test_the_fields_show_what_is_in_effect(
@@ -227,7 +240,11 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     stored = json.loads(cast(MemoryPrefs, svc.storage.prefs).values["pycon.dev"])
     assert stored == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": FEED}
     assert prefs.fake_now == start
-    assert snack_text(page) == "Developer options applied"
+    # In place, not a SnackBar: one would show on More under this View (#197).
+    assert page.dialogs == []
+    assert outcome(render) == "Applied: a fake clock in Pacific Time and your feed URL."
+    await type_into(render, "developer.feed_url", "")
+    assert outcome(render) is None  # an edit clears it
 
 
 async def test_the_clock_is_set_before_the_save_re_renders_the_screens(
@@ -280,7 +297,7 @@ async def test_a_clock_or_url_that_does_not_parse_is_shown_and_nothing_applies(
     )
     assert prefs.dev == {"unlocked": True}
     assert conference._feed_url is None
-    assert page.dialogs == []
+    assert outcome(render) is None
     await type_into(render, "developer.fake_clock", "2026-05-15 09:00")
     assert field(render(), "developer.fake_clock").error is None  # typing clears it
 
@@ -301,7 +318,7 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
     scaffold = render()
     assert field(scaffold, "developer.fake_clock").value == ""
     assert field(scaffold, "developer.feed_url").value == ""
-    assert snack_text(page) == "Back to real time and the year's feed"
+    assert outcome(render) == "Back to real time and the year's feed."
 
 
 async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
@@ -311,7 +328,10 @@ async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
     await type_into(render, "developer.fake_clock", "2026-05-15 09:00")
     await press(render, "developer.apply")
     assert clock.now().astimezone(PACIFIC).date() == date(2026, 5, 15)
-    assert snack_text(page) == "Couldn't save your change"  # D-120
+    assert outcome(render) == (  # D-120
+        "Applied: a fake clock in Pacific Time and the year's feed. "
+        "Couldn't save your change: it ends when you close the app."
+    )
 
 
 async def test_the_pickers_fill_the_clock_field_in_conference_time(

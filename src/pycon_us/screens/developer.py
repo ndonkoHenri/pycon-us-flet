@@ -17,10 +17,9 @@ import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import capabilities, clock
-from pycon_us.prefs import DEV_FAKE_NOW, DEV_FEED_URL, Prefs, use_prefs
+from pycon_us.prefs import DEV_FAKE_NOW, DEV_FEED_URL, use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
@@ -54,16 +53,21 @@ def Developer() -> ft.View:
     clock_error, set_clock_error = ft.use_state("")  # "" while the field is fine
     url_error, set_url_error = ft.use_state("")
     picked_day = ft.use_ref(None)  # the date picker's day, until the time is picked
+    # What the last Apply or Reset did, said under the buttons (in place, D-29: a
+    # SnackBar from a pushed View shows on the root under it, #197).
+    outcome, set_outcome = ft.use_state("")
 
     @report_errors
     def edit_clock(e: ft.Event[ft.TextField]) -> None:
         set_clock_text(e.control.value)
         set_clock_error("")
+        set_outcome("")
 
     @report_errors
     def edit_url(e: ft.Event[ft.TextField]) -> None:
         set_url_text(e.control.value)
         set_url_error("")
+        set_outcome("")
 
     @report_errors
     def pick_time(e: ft.Event[ft.TimePicker]) -> None:
@@ -114,6 +118,7 @@ def Developer() -> ft.View:
             set_url_error(str(error))
             valid = False
         if not valid:
+            set_outcome("")
             return
         # Before the save: the re-render it causes reads the new clock (D-184). An
         # unchanged start keeps the clock running instead of setting it back.
@@ -121,7 +126,8 @@ def Developer() -> ft.View:
             clock.start_fake_clock(fake_now)
         conference.set_feed_url(feed_url)
         dev = dev_options(prefs.dev, fake_now, feed_url)
-        await save(page, prefs, svc.storage, dev, "Developer options applied")
+        saved = await prefs.save(svc.storage, dev=dev)
+        set_outcome(said(saved, applied(fake_now, feed_url, info.time_zone_name)))
 
     @report_errors
     async def reset() -> None:
@@ -131,20 +137,10 @@ def Developer() -> ft.View:
         set_url_error("")
         clock.start_fake_clock(None)
         conference.set_feed_url(None)
-        dev = dev_options(prefs.dev, None, None)
-        await save(
-            page, prefs, svc.storage, dev, "Back to real time and the year's feed"
-        )
+        saved = await prefs.save(svc.storage, dev=dev_options(prefs.dev, None, None))
+        set_outcome(said(saved, "Back to real time and the year's feed."))
 
-    chip = ft.Container(
-        padding=ft.Padding.only(right=16),
-        content=ft.Chip(
-            label="Developer",
-            leading=ft.Icon(ft.Icons.DEVELOPER_MODE_OUTLINED, color=tokens.warning),
-            label_text_style=ft.TextStyle(color=tokens.warning),
-            border_side=ft.BorderSide(1, tokens.warning),
-        ),
-    )
+    chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
         return AppScaffold(title="Developer options", body=locked())
     now = clock.now()
@@ -226,6 +222,19 @@ def Developer() -> ft.View:
                         wrap=True,
                     )
                 ),
+                ft.Semantics(
+                    identifier="developer.outcome",
+                    live_region=True,
+                    visible=bool(outcome),
+                    content=padded(
+                        ft.Text(
+                            outcome,
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                            color=ft.Colors.ON_SURFACE,
+                            text_align=ft.TextAlign.END,
+                        )
+                    ),
+                ),
                 SectionHeader("Capabilities"),
                 padded(
                     ft.Text(
@@ -290,21 +299,56 @@ def capabilities_note() -> str:
     return "Not a packaged build: every capability uses its interim."
 
 
-async def save(
-    page: ft.Page, prefs: Prefs, storage: Storage, dev: dict[str, Any], done: str
-) -> None:
-    """Save the Developer options and say so; they are in effect even when unsaved.
+def said(saved: bool, done: str) -> str:
+    """Return the outcome line: what was done, or that it holds only until the app closes.
 
     Args:
-        page: The session's page, for the SnackBar.
-        prefs: The ``Prefs`` store.
-        storage: Where the settings are kept.
-        dev: The new ``Prefs.dev``.
-        done: What the SnackBar says once they are saved.
+        saved: Whether ``Prefs.save`` saved it (D-120).
+        done: What was done, e.g. "Back to real time and the year's feed."
     """
-    saved = await prefs.save(storage, dev=dev)
-    text = done if saved else "Couldn't save your change"  # lost on relaunch (D-120)
-    page.show_dialog(ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING))
+    if saved:
+        return done
+    return f"{done} Couldn't save your change: it ends when you close the app."
+
+
+def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> str:
+    """Return what Apply put into effect, in words.
+
+    Args:
+        fake_now: The fake clock's start, or None for real time.
+        feed_url: The feed URL, or None for the year's.
+        zone_name: The conference zone's name, e.g. "Pacific Time".
+    """
+    clock_part = "real time" if fake_now is None else f"a fake clock in {zone_name}"
+    feed_part = "the year's feed" if feed_url is None else "your feed URL"
+    return f"Applied: {clock_part} and {feed_part}."
+
+
+def developer_chip(color: str) -> ft.Control:
+    """Return the app bar's warning-tone "Developer" mark (ux.md §5.13).
+
+    A chip's look without a ``Chip``: a Chip with no handler is drawn disabled (faded
+    label) at the pin, and a mark is not a control (ux.md §3.9, as ``TrackBadge``).
+
+    Args:
+        color: ``Tokens.warning``: the label, icon and outline.
+    """
+    return ft.Container(
+        margin=ft.Margin.only(right=16),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+        border=ft.Border.all(1, color),
+        border_radius=8,
+        content=ft.Row(
+            [
+                ft.Icon(ft.Icons.DEVELOPER_MODE_OUTLINED, size=18, color=color),
+                ft.Text(
+                    "Developer", theme_style=ft.TextThemeStyle.LABEL_LARGE, color=color
+                ),
+            ],
+            spacing=4,
+            tight=True,
+        ),
+    )
 
 
 def clock_field(moment: datetime | None, zone: tzinfo) -> str:
