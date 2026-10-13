@@ -279,6 +279,19 @@ def test_each_action_carries_the_identifier_ui_flows_use(
     }
 
 
+def test_each_action_is_one_node_with_its_identifier(
+    render: Callable[[], ft.Column],
+) -> None:
+    # A bare Semantics(identifier) around a control is an empty extra node for
+    # TalkBack; merged, the row is one button node that carries it (D-190).
+    rows = [c for c in render().controls if isinstance(c, ft.MergeSemantics)]
+    assert len(rows) == 4
+    for merged in rows:
+        inner = merged.content
+        assert isinstance(inner, ft.Semantics) and inner.identifier
+        assert isinstance(inner.content, ft.ListTile)
+
+
 def test_reset_app_reads_as_destructive(render: Callable[[], ft.Column]) -> None:
     tile = row(render(), "developer.reset_app")
     assert isinstance(tile.leading, ft.Icon) and tile.leading.color == ft.Colors.ERROR
@@ -623,7 +636,8 @@ async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it
     conference.set_feed_url(DEV_FEED)
     running = conference.start_refresh(svc.storage, svc.year)
     await asyncio.sleep(0)
-    assert await reset_app(svc, conference, prefs, favorites) is True
+    async with asyncio.timeout(5):  # without the cancel it waits for the feed forever
+        assert await reset_app(svc, conference, prefs, favorites) is True
     assert running.cancelled()
     release.set()
     await asyncio.sleep(0.05)

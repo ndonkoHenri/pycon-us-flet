@@ -870,7 +870,8 @@ async def test_reset_cancels_a_running_refresh_before_it_writes(
     held = HeldFeed()
     running = conference.start_refresh(storage, year, transport=held.transport)
     await held.arrived.wait()
-    await conference.reset(storage, year)
+    async with asyncio.timeout(5):  # without the cancel it waits for the feed forever
+        await conference.reset(storage, year)
     assert running.cancelled()
     assert conference.refreshing is False  # its `finally` ran before the reset ended
     held.release()
