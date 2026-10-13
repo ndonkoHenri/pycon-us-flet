@@ -107,13 +107,15 @@ def AppScaffold(
         title_control = ft.Semantics(
             identifier=tab.title_identifier, content=title_control
         )
-    on_confirm_pop: ft.ControlEventHandler[ft.View] | None = None  # Now: the system's
+    # Now keeps none: Back there is left to the system, which exits (D-142).
+    on_confirm_pop: ft.ControlEventHandler[ft.View] | None = None
     if back_to_now:
         on_confirm_pop = leave_for_now
     elif not is_root:
-        # A handler, though the View can always pop: with one, Flet leaves the system
-        # Back to Flutter's Navigator, which pops the topmost route, the dialog when one
-        # is open; without one, Flet pops this View itself, and the dialog with it (F46).
+        # A handler, though the View can always pop: with one, Flet leaves a system pop
+        # (the Android Back, VoiceOver's escape on iOS) to Flutter's Navigator, which
+        # pops the topmost route, the dialog when one is open; without one, Flet pops
+        # this View itself, and the dialog with it (F46).
         on_confirm_pop = let_pop
     return ft.View(
         route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
