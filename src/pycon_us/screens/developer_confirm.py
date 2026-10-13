@@ -44,7 +44,7 @@ def reset_losses(saved: int, *, packaged: bool) -> tuple[str, ...]:
         developer += ", and Developer locks again"
     return (
         "Your settings: Appearance and the schedule's filters",
-        f"Your saved sessions in My schedule ({saved or 'none'})",
+        f"Your saved sessions: {saved or 'none'} in My schedule",
         "The cached schedule: the app shows the bundled one until it refreshes",
         developer,
     )

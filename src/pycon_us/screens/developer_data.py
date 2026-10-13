@@ -23,6 +23,7 @@ from flet.utils import is_embedded
 from pycon_us import clock
 from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites, use_favorites
+from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_confirm import (
     Asking,
@@ -124,7 +125,10 @@ def DataActions() -> ft.Control:
     async def reset() -> None:
         set_asking(None)
         complete = await reset_app(svc, conference, prefs, favorites)
-        page.navigate("/")  # the index route: Now, and Welcome from P2 (DEV-05)
+        # Where a fresh start goes (D-143): Now, and Welcome from P2 (DEV-05). Not
+        # "/" itself: on the iOS simulator that left the app on this View, locked.
+        memory = svc.memory
+        page.navigate(start_target(memory.last_location, memory.search_base))
         page.show_dialog(
             ft.SnackBar(
                 ft.Text("App reset" if complete else RESET_INCOMPLETE),

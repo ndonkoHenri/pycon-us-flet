@@ -492,12 +492,12 @@ async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
 def test_reset_lists_exactly_what_is_lost() -> None:
     assert reset_losses(3, packaged=True) == (
         "Your settings: Appearance and the schedule's filters",
-        "Your saved sessions in My schedule (3)",
+        "Your saved sessions: 3 in My schedule",
         "The cached schedule: the app shows the bundled one until it refreshes",
         "Developer options: the fake clock and the feed URL, and Developer locks again",
     )
     losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
-    assert losses[1] == "Your saved sessions in My schedule (none)"
+    assert losses[1] == "Your saved sessions: none in My schedule"
     assert losses[3] == "Developer options: the fake clock and the feed URL"
 
 
@@ -580,7 +580,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # Then, as at a start: a quiet refresh of the year's feed, and the index route.
     await asyncio.sleep(0)
     assert offline == [svc.year.conference.feed_url]
-    assert page.navigated == ["/"]
+    assert page.navigated == ["/now"]
     assert said(page) == ["App reset"]
 
 
@@ -598,7 +598,7 @@ async def test_a_reset_that_cannot_delete_everything_says_so(
     render()
     await press(rendered.dialog, "developer.reset_app.confirm")
     assert favorites.ids == frozenset()  # the session is reset all the same (D-120)
-    assert page.navigated == ["/"]
+    assert page.navigated == ["/now"]
     assert said(page) == [RESET_INCOMPLETE]
 
 
