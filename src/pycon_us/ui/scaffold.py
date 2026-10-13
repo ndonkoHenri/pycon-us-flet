@@ -39,6 +39,7 @@ def AppScaffold(
     body: ft.Control,
     actions: list[ft.Control] | None = None,
     on_retap: Retap | None = None,
+    fab: ft.FloatingActionButton | None = None,
 ) -> ft.View:
     """Return a screen's View: the app bar, the bottom bar, the Back rules and the body.
 
@@ -63,6 +64,8 @@ def AppScaffold(
         on_retap: A tab root's action when its active tab is tapped again, usually
             the one ``ui.navigation.use_scroll_to_top()`` returns; ignored on pushed
             Views, which have no bar.
+        fab: The screen's floating action button, if any: the Schedule's "Now"
+            (ux.md §5.2). The body leaves room for it at its end.
 
     Returns:
         The View for this route level.
@@ -116,6 +119,7 @@ def AppScaffold(
         ),
         # On roots only: on pushed Views the bar moved with the page (D-144).
         navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,
+        floating_action_button=fab,
         can_pop=not back_to_now,
         on_confirm_pop=leave_for_now if back_to_now else None,
         controls=[ft.SafeArea(expand=True, content=Shown(body))],

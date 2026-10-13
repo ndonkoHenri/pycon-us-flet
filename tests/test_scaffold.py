@@ -27,9 +27,8 @@ from flet.components.component import Renderer
 
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
-from pycon_us.favorites import Favorites
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.screens import my_schedule, now, schedule
+from pycon_us.screens import my_schedule, now
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
@@ -900,7 +899,8 @@ async def test_elsewhere_a_tick_never_refreshes(
 
 @pytest.mark.parametrize(
     ("screen", "auto_refresh"),
-    [(now.Now, True), (schedule.Schedule, True), (my_schedule.MySchedule, False)],
+    # The Schedule places its own strip: tests/test_schedule.py checks it.
+    [(now.Now, True), (my_schedule.MySchedule, False)],
 )
 def test_only_now_and_schedule_refresh_every_15_minutes(
     hooks: Hooks,
@@ -924,14 +924,6 @@ def test_only_now_and_schedule_refresh_every_15_minutes(
     for name, fake in (("use_services", svc), ("use_conference", conference)):
         if hasattr(module, name):
             monkeypatch.setattr(module, name, lambda fake=fake: fake)
-    # The Schedule stub's sample rows (#81) ask for their own hooks.
-    if hasattr(module, "use_session_views"):
-        monkeypatch.setattr(module, "use_favorites", Favorites)
-        monkeypatch.setattr(module, "use_favorite_toggle", lambda favorites: None)
-        monkeypatch.setattr(module, "use_tokens", lambda: DARK_TOKENS)
-        monkeypatch.setattr(module, "use_session_views", lambda *args, **kwargs: ())
-    if hasattr(module, "SkeletonList"):  # without data the Schedule shows it (#83)
-        monkeypatch.setattr(module, "SkeletonList", lambda: ft.Text("loading"))
 
     inspect.unwrap(screen)()
 
