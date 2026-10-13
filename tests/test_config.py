@@ -120,6 +120,58 @@ def test_track_icons_are_material_icon_names(year: int) -> None:
         assert hasattr(ft.Icons, track.icon), track.key
 
 
+def test_track_pages_have_clean_explicit_slugs() -> None:
+    """DATA-29: written in the year data, never Ionic's derived ``ais`` or ``…talkss``."""
+    slugs = {t.key: t.slug for t in load_year(2026).conference.tracks}
+    assert slugs == {
+        "Talk": "talks",
+        "Keynote": "keynotes",
+        "Plenary": "plenaries",
+        "Lightning-talks": "lightning-talks",
+        "Ai": "ai",
+        "Security": "security",
+        "Charla": "charlas",
+        "Poster": "posters",
+        "Tutorial": "tutorials",
+        "Sponsor Presentation": "sponsor-presentations",
+        "Open Space": "open-spaces",
+        "Summit": "summits",
+        "Event": "events",
+        "Informational": "notices",
+        "Break": "breaks",
+    }
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_every_track_has_a_slug_and_a_legend_line(year: int) -> None:
+    tracks = load_year(year).conference.tracks
+    assert len({t.slug for t in tracks}) == len(tracks)
+    assert all(t.legend.strip() for t in tracks)
+
+
+def test_a_slug_finds_its_track_and_an_unknown_one_none() -> None:
+    conference = load_year(2026).conference
+    track = conference.track_for_slug("charlas")
+    assert track is not None and track.key == "Charla"
+    for slug in ("ais", "lightning-talkss", "Charlas", "", "python"):
+        assert conference.track_for_slug(slug) is None, slug
+
+
+def test_a_track_the_registry_lacks_has_no_page() -> None:
+    conference = load_year(2026).conference
+    assert conference.track("Hallway-track").slug == ""
+    assert conference.track_for_slug("") is None
+
+
+def test_ai_and_security_are_the_new_tracks_of_2026() -> None:
+    """SCHED-21: Ionic's "New track!" badge, now a fact of the year data."""
+    assert {t.key for t in load_year(2026).conference.tracks if t.new} == {
+        "Ai",
+        "Security",
+    }
+    assert not any(t.new for t in load_year(2025).conference.tracks)
+
+
 @pytest.mark.parametrize("year", YEARS)
 def test_a_year_bundles_a_snapshot_exactly_when_it_records_its_capture_time(
     year: int,
@@ -319,6 +371,42 @@ def edit(path: Path, old: str, new: str) -> None:
             'other_locations = ["Elsewhere",',
             "other_locations = [1,",
             "2026/content.toml: other_locations: expected an array of strings, got [1,",
+        ),
+        (
+            "conference.toml",
+            'slug = "ai"',
+            'slug = "AI"',
+            "2026/conference.toml: tracks[4].slug: 'AI' is not lower-case words",
+        ),
+        (
+            "conference.toml",
+            'slug = "ai"',
+            'slug = "lightning--talks"',
+            "2026/conference.toml: tracks[4].slug: 'lightning--talks' is not",
+        ),
+        (
+            "conference.toml",
+            'slug = "ai"',
+            'slug = "talks"',
+            "2026/conference.toml: tracks[4].slug: duplicate slug 'talks'",
+        ),
+        (
+            "conference.toml",
+            'slug = "ai"\n',
+            "",
+            "2026/conference.toml: tracks[4].slug: missing key",
+        ),
+        (
+            "conference.toml",
+            'legend = "Talks given in Spanish"',
+            'legend = " "',
+            "2026/conference.toml: tracks[6].legend: is empty",
+        ),
+        (
+            "conference.toml",
+            'slug = "ai"\nlegend = "A dedicated track on AI: machine learning, LLMs and more"\nnew = true',
+            'slug = "ai"\nlegend = "A dedicated track on AI: machine learning, LLMs and more"\nnew = "yes"',
+            "2026/conference.toml: tracks[4].new: expected true or false",
         ),
         (
             "content.toml",

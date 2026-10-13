@@ -27,7 +27,11 @@ snapshot_captured_at = 2026-10-11T17:56:49-07:00
 # track's sessions, `long` the track on session detail. `icon` is an outlined Material
 # icon (an ft.Icons name, D-27); `group` places it in the filter sheet: talks,
 # hands-on, community or logistics. Colours live in the theme tokens (D-24, D-25).
-# An unknown key falls back to its humanised form (config.ConferenceInfo.track).
+# `slug` is the track page's segment in /more/tracks/<slug>, written out rather than
+# derived from the key (DATA-29: `ai`, not Ionic's `ais`); `legend` says in one line
+# what its sessions are (EVT-04); `new = true` marks a track new this year (SCHED-21).
+# An unknown key falls back to its humanised form (config.ConferenceInfo.track), with
+# no page.
 
 [[tracks]]
 key = "Talk"
@@ -36,6 +40,8 @@ plural = "Talks"
 long = "Talk"
 icon = "MIC_NONE_OUTLINED"
 group = "talks"
+slug = "talks"
+legend = "Talks of 30 to 45 minutes on a wide range of Python topics"
 
 [[tracks]]
 key = "Keynote"
@@ -44,6 +50,8 @@ plural = "Keynotes"
 long = "Keynote"
 icon = "CO_PRESENT_OUTLINED"
 group = "talks"
+slug = "keynotes"
+legend = "Featured talks by invited speakers"
 
 [[tracks]]
 key = "Plenary"
@@ -52,6 +60,8 @@ plural = "Plenaries"
 long = "Plenary"
 icon = "CAMPAIGN_OUTLINED"
 group = "talks"
+slug = "plenaries"
+legend = "Sessions for everyone: welcomes, panels and updates from the PSF"
 
 [[tracks]]
 key = "Lightning-talks"
@@ -60,6 +70,8 @@ plural = "Lightning talks"
 long = "Lightning talks"
 icon = "BOLT_OUTLINED"
 group = "talks"
+slug = "lightning-talks"
+legend = "Five-minute talks, back to back"
 
 [[tracks]]
 key = "Ai"
@@ -68,6 +80,9 @@ plural = "Future of AI with Python"
 long = "The Future of AI with Python"
 icon = "MEMORY_OUTLINED"
 group = "talks"
+slug = "ai"
+legend = "A dedicated track on AI: machine learning, LLMs and more"
+new = true
 
 [[tracks]]
 key = "Security"
@@ -76,6 +91,9 @@ plural = "Trailblazing Python Security"
 long = "Trailblazing Python Security"
 icon = "SHIELD_OUTLINED"
 group = "talks"
+slug = "security"
+legend = "A dedicated track on security: application security, the supply chain and more"
+new = true
 
 [[tracks]]
 key = "Charla"
@@ -84,6 +102,8 @@ plural = "Charlas"
 long = "Charla"
 icon = "TRANSLATE"
 group = "talks"
+slug = "charlas"
+legend = "Talks given in Spanish"
 
 [[tracks]]
 key = "Poster"
@@ -92,6 +112,8 @@ plural = "Posters"
 long = "Poster"
 icon = "ARTICLE_OUTLINED"
 group = "talks"
+slug = "posters"
+legend = "Projects on display in the expo hall, with their authors there to talk"
 
 [[tracks]]
 key = "Tutorial"
@@ -100,6 +122,8 @@ plural = "Tutorials"
 long = "Tutorial"
 icon = "SCHOOL_OUTLINED"
 group = "hands-on"
+slug = "tutorials"
+legend = "Hands-on classes of three and a half hours, with separate registration"
 
 [[tracks]]
 key = "Sponsor Presentation"
@@ -108,6 +132,8 @@ plural = "Sponsor presentations"
 long = "Sponsor presentation"
 icon = "BUSINESS_CENTER_OUTLINED"
 group = "hands-on"
+slug = "sponsor-presentations"
+legend = "Hour-long talks and workshops by conference sponsors"
 
 [[tracks]]
 key = "Open Space"
@@ -116,6 +142,8 @@ plural = "Open spaces"
 long = "Open space"
 icon = "FORUM_OUTLINED"
 group = "community"
+slug = "open-spaces"
+legend = "Attendee-organized meetups on any topic: anyone can propose one"
 
 [[tracks]]
 key = "Summit"
@@ -124,6 +152,8 @@ plural = "Summits"
 long = "Summit"
 icon = "GROUPS_OUTLINED"
 group = "community"
+slug = "summits"
+legend = "Gatherings of a community around one topic, such as packaging or typing"
 
 [[tracks]]
 key = "Event"
@@ -132,6 +162,8 @@ plural = "Events"
 long = "Event"
 icon = "GROUPS_OUTLINED"
 group = "community"
+slug = "events"
+legend = "Community gatherings: the job fair, lunches, the PyLadies auction and more"
 
 [[tracks]]
 key = "Informational"
@@ -140,6 +172,8 @@ plural = "Notices"
 long = "Notice"
 icon = "INFO_OUTLINE"
 group = "logistics"
+slug = "notices"
+legend = "Announcements: registration hours, sign-ups and the like"
 
 [[tracks]]
 key = "Break"
@@ -148,3 +182,5 @@ plural = "Breaks"
 long = "Break"
 icon = "COFFEE_OUTLINED"
 group = "logistics"
+slug = "breaks"
+legend = "Breaks and meals"

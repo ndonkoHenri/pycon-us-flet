@@ -38,6 +38,9 @@ A path relative to this module, because ``flet build`` copies ``src/`` into the 
 than installing it (F15): the files sit next to the code on the phone too.
 """
 
+_SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+"""A track slug: lower-case words joined by single hyphens (DATA-29)."""
+
 SNAPSHOT_FILE = "conference.json"
 """The feed snapshot's name in a year folder (D-38, NEW-03)."""
 
@@ -71,6 +74,13 @@ class Track:
         long: The full name, for session detail (``The Future of AI with Python``).
         icon: The name of an outlined ``ft.Icons`` member (D-27).
         group: Its group in the filter sheet, one of ``TRACK_GROUPS``.
+        slug: Its page's segment in ``/more/tracks/<slug>`` (DATA-29): written out,
+            never derived, so a key's spelling (``Ai``, ``Lightning-talks``) never
+            leaks into a route; lower case, words joined by ``-``.
+        legend: One line on what its sessions are, for the Tracks hub and the track's
+            page (EVT-04): "Talks given in Spanish".
+        new: Whether the track is new this year: the hub and its page show a "New
+            track" badge (SCHED-21).
     """
 
     key: str
@@ -79,6 +89,9 @@ class Track:
     long: str
     icon: str
     group: str
+    slug: str
+    legend: str
+    new: bool = False
 
 
 @dataclass(frozen=True)
@@ -119,7 +132,28 @@ class ConferenceInfo:
                 return track
         name = key.replace("-", " ")
         name = name[:1].upper() + name[1:]
-        return Track(key, name, name, name, icon="MIC_NONE_OUTLINED", group="talks")
+        # No slug: a track the registry lacks has no page (DATA-29).
+        return Track(
+            key,
+            name,
+            name,
+            name,
+            icon="MIC_NONE_OUTLINED",
+            group="talks",
+            slug="",
+            legend="",
+        )
+
+    def track_for_slug(self, slug: str) -> Track | None:
+        """Return the registry entry whose page is ``/more/tracks/<slug>``, or None.
+
+        Args:
+            slug: A route segment, unquoted; an unknown one has no track (DATA-29).
+        """
+        for track in self.tracks:
+            if track.slug == slug:
+                return track
+        return None
 
     def track_name(self, key: str, fmt: TrackFormat = "short") -> str:
         """Return the display name of track ``key`` in the given format (DATA-28)."""
@@ -350,12 +384,25 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
     if not conference.site_url.endswith("/"):  # site-relative links resolve against it
         raise YearDataError(f"{file}: site_url: expected a final '/'")
     seen: set[str] = set()
+    slugs: set[str] = set()
     for index, track in enumerate(conference.tracks):
         if track.key in seen:
             raise YearDataError(
                 f"{file}: tracks[{index}].key: duplicate track {track.key!r}"
             )
         seen.add(track.key)
+        if not _SLUG.fullmatch(track.slug):
+            raise YearDataError(
+                f"{file}: tracks[{index}].slug: {track.slug!r} is not lower-case "
+                "words joined by '-'"
+            )
+        if track.slug in slugs:
+            raise YearDataError(
+                f"{file}: tracks[{index}].slug: duplicate slug {track.slug!r}"
+            )
+        slugs.add(track.slug)
+        if not track.legend.strip():
+            raise YearDataError(f"{file}: tracks[{index}].legend: is empty")
         if track.group not in TRACK_GROUPS:
             raise YearDataError(
                 f"{file}: tracks[{index}].group: {track.group!r} is not one of {TRACK_GROUPS}"

@@ -22,6 +22,8 @@ plural = "Talks"
 long = "Talk"
 icon = "MIC_NONE_OUTLINED"
 group = "talks"
+slug = "talks"
+legend = "Talks of 30 to 45 minutes on a wide range of Python topics"
 
 [[tracks]]
 key = "Plenary"
@@ -30,6 +32,8 @@ plural = "Plenaries"
 long = "Plenary"
 icon = "CAMPAIGN_OUTLINED"
 group = "talks"
+slug = "plenaries"
+legend = "Sessions for everyone: welcomes, panels and updates from the PSF"
 
 [[tracks]]
 key = "Lightning-talks"
@@ -38,6 +42,8 @@ plural = "Lightning talks"
 long = "Lightning talks"
 icon = "BOLT_OUTLINED"
 group = "talks"
+slug = "lightning-talks"
+legend = "Five-minute talks, back to back"
 
 [[tracks]]
 key = "Charla"
@@ -46,6 +52,8 @@ plural = "Charlas"
 long = "Charla"
 icon = "TRANSLATE"
 group = "talks"
+slug = "charlas"
+legend = "Talks given in Spanish"
 
 [[tracks]]
 key = "Poster"
@@ -54,6 +62,8 @@ plural = "Posters"
 long = "Poster"
 icon = "ARTICLE_OUTLINED"
 group = "talks"
+slug = "posters"
+legend = "Projects on display in the expo hall, with their authors there to talk"
 
 [[tracks]]
 key = "Tutorial"
@@ -62,6 +72,8 @@ plural = "Tutorials"
 long = "Tutorial"
 icon = "SCHOOL_OUTLINED"
 group = "hands-on"
+slug = "tutorials"
+legend = "Hands-on classes of three and a half hours, with separate registration"
 
 [[tracks]]
 key = "Sponsor Presentation"
@@ -70,6 +82,8 @@ plural = "Sponsor presentations"
 long = "Sponsor presentation"
 icon = "BUSINESS_CENTER_OUTLINED"
 group = "hands-on"
+slug = "sponsor-presentations"
+legend = "Hour-long talks and workshops by conference sponsors"
 
 [[tracks]]
 key = "Open Space"
@@ -78,6 +92,8 @@ plural = "Open spaces"
 long = "Open space"
 icon = "FORUM_OUTLINED"
 group = "community"
+slug = "open-spaces"
+legend = "Attendee-organized meetups on any topic: anyone can propose one"
 
 [[tracks]]
 key = "Summit"
@@ -86,6 +102,8 @@ plural = "Summits"
 long = "Summit"
 icon = "GROUPS_OUTLINED"
 group = "community"
+slug = "summits"
+legend = "Gatherings of a community around one topic, such as packaging or typing"
 
 [[tracks]]
 key = "Event"
@@ -94,6 +112,8 @@ plural = "Events"
 long = "Event"
 icon = "GROUPS_OUTLINED"
 group = "community"
+slug = "events"
+legend = "Community gatherings: the job fair, receptions, lunches and more"
 
 [[tracks]]
 key = "Informational"
@@ -102,6 +122,8 @@ plural = "Notices"
 long = "Notice"
 icon = "INFO_OUTLINE"
 group = "logistics"
+slug = "notices"
+legend = "Announcements: registration hours, sign-ups and the like"
 
 [[tracks]]
 key = "Break"
@@ -110,3 +132,5 @@ plural = "Breaks"
 long = "Break"
 icon = "COFFEE_OUTLINED"
 group = "logistics"
+slug = "breaks"
+legend = "Breaks and meals"

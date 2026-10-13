@@ -65,8 +65,8 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `config.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md`, `queries` (`days`; P0, the rest P1), `search`, `row_views`, `speakers` (P1); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
-| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`, `use_favorite_toggle()`, `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers filter; D-193), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192) | P0+ |
-| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192) | P0+ |
+| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `StatusStrip`), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `TimeGutter`; D-184), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182), `badges.py` (`FavoriteButton`, `TrackBadge`, `use_favorite_toggle()`, `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers filter; D-193), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search and the track pages; D-195) | P0+ |
+| `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-195) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
 
@@ -725,8 +725,9 @@ plural = "Future of AI with Python"
 long = "The Future of AI with Python"
 icon = "MEMORY_OUTLINED"    # an outlined ft.Icons name (D-27); colours stay in the theme tokens (D-24, D-25)
 group = "talks"             # filter-sheet group: talks | hands-on | community | logistics
-slug = "ai"                 # P1 (DATA-29)
-new = true                  # P1: "New track" badge
+slug = "ai"                 # its page, /more/tracks/ai: written out, never derived (DATA-29, D-195)
+legend = "A dedicated track on AI: machine learning, LLMs and more"   # the hub's legend line (EVT-04)
+new = true                  # optional: the "New track" badge (SCHED-21)
 ```
 
 Every field without a phase note exists today (P0-08); the others arrive with their features. An unknown track key falls back to its humanised form (`Hallway-track` → "Hallway track"), so a new kind in next year's feed still reads well.
