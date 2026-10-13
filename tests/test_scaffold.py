@@ -18,7 +18,6 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
@@ -47,8 +46,6 @@ from tests.fakes import (
     MemorySemantics,
     bound,
 )
-
-PACIFIC = ZoneInfo("America/Los_Angeles")
 
 
 @pytest.fixture(scope="module")
