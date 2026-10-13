@@ -97,7 +97,8 @@ def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.V
     """Build the View of view_path while page.route addresses it (the top View)."""
     hooks.view_path = view_path
     page.route = page.route if kwargs.pop("below", False) else view_path
-    return AppScaffold(title="Title", body=ft.Text("body"), **kwargs)
+    kwargs.setdefault("title", "Title")
+    return AppScaffold(body=ft.Text("body"), **kwargs)
 
 
 def app_bar(view: ft.View) -> ft.AppBar:
@@ -120,15 +121,26 @@ def back_arrow(view: ft.View) -> ft.IconButton:
 # ------------------------------------------------------------------ AppScaffold
 
 
-def test_the_title_is_left_aligned_and_stays_a_screen_reader_header(
+def test_the_title_is_left_aligned_and_is_the_page_s_level_1_heading(
     hooks: Hooks, page: FakePage
 ) -> None:
     bar = app_bar(view_at(hooks, page, "/schedule/session/42"))
-    assert isinstance(bar.title, ft.Text)
-    assert bar.title.value == "Title"
+    title = bar.title
+    assert isinstance(title, ft.Semantics)
+    # Flutter's header flag alone is no heading for a screen reader: the level is.
+    assert (title.header, title.heading_level, title.identifier) == (True, 1, None)
+    assert isinstance(title.content, ft.Text)
+    assert title.content.value == "Title"
     assert bar.center_title is False  # iOS would centre it (D-10)
     assert bar.exclude_header_semantics is False  # Flutter marks the title a header
     assert bar.adaptive is not True  # Material only (D-10)
+
+
+def test_an_empty_title_is_no_heading(hooks: Hooks, page: FakePage) -> None:
+    """A detail page's bar is empty: its own title in the page is its heading."""
+    view = view_at(hooks, page, "/schedule/session/42", title="")
+    title = app_bar(view).title
+    assert isinstance(title, ft.Text) and title.value == ""
 
 
 def test_a_pushed_view_has_the_material_back_arrow_to_its_parent(
@@ -383,6 +395,7 @@ def test_a_root_s_title_carries_its_screen_identifier_for_ui_tests(
     title = app_bar(view_at(hooks, page, tab.root)).title
     assert isinstance(title, ft.Semantics)
     assert title.identifier == tab.title_identifier
+    assert title.heading_level == 1  # the root's heading (D-211)
     assert title.label is None  # the text names the node, once (D-166)
     assert isinstance(title.content, ft.Text)
     assert title.content.value == "Title"
@@ -458,10 +471,11 @@ async def test_a_retap_that_fails_is_reported_and_the_bar_keeps_working(
 # ------------------------------------------------------------------ SectionHeader
 
 
-def test_a_section_header_is_a_heading_in_the_title_small_style() -> None:
+def test_a_section_header_is_a_level_2_heading_in_the_title_small_style() -> None:
     header = SectionHeader("Days")
     assert isinstance(header, ft.Semantics)
-    assert header.header is True
+    # A section under the page's title; without a level no screen reader stops (F40).
+    assert header.header is True and header.heading_level == 2
     assert isinstance(header.content, ft.Container)
     text = header.content.content
     assert isinstance(text, ft.Text)

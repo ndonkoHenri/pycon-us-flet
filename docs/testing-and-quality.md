@@ -266,6 +266,7 @@ Deliberate differences live in one dict, `INTENDED_DIFFERENCES` (D-121 nested po
 | Theme contrast | §7.1 | D-25, D-33 |
 | Version | `pycon_us.__version__` equals `[project].version` | D-83 |
 | `core` purity | An `ast` scan of `core/` finds no `flet` import | D-68 |
+| Headings (`tests/test_semantics.py`) | An `ast` scan of every module under `src/pycon_us/` finds no `Semantics` call that sets `header` without a `heading_level`, or a level without `header=True`, and no constant level outside 1 to 6 (Flutter's range), a `SectionHeader(level=...)`'s included; it first checks that it finds the headings it scans, so a scan that matched nothing fails | F40, F49, D-211 |
 | PSF guard | The API client raises before sending any `/api/v1` request to a `*.pycon.org` host, for every endpoint; and with no mock base URL set, sign-in, account and every staff entry are hidden (`staff_entries` and the More list return none), whatever flags are stored | D-51 |
 
 ## 4. Signing, the mock server and the outbox (P3)
@@ -489,7 +490,7 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
 
 ### 7.3 Manual, at every phase exit
 
-- **Screen readers.** TalkBack on an Android emulator (Google APIs images include it) and VoiceOver on the iPhone (the simulator has none) complete the phase's flows (D-102). Every control is reached in visual order and announced with name, role and state; each row reads as one phrase, with the star as its own stop; SnackBars and scan outcomes are announced.
+- **Screen readers.** TalkBack on an Android emulator (Google APIs images include it) and VoiceOver on the iPhone (the simulator has none) complete the phase's flows (D-102). Every control is reached in visual order and announced with name, role and state; each row reads as one phrase, with the star as its own stop; TalkBack's Headings navigation stops on every title, section, day and gutter heading (D-211; `uiautomator dump` does not show the heading attribute, so a check reads `AccessibilityNodeInfo.isHeading()` through `UiAutomation`, as #205 did); SnackBars and scan outcomes are announced.
 
   | Phase | Flows |
   |---|---|

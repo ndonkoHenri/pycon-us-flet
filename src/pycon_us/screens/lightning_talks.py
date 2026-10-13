@@ -155,7 +155,9 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     """Return the card that says what a lightning talk is, with the sign-up button.
 
     A filled card (M3's ``surface_container_highest``), its heading a level-2 heading
-    (F40) and its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6). The
+    (F40) and its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
+    screen readers the heading, the paragraphs and the button are nodes of their own,
+    the heading read first and alone (D-211). The
     button leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with
     "Opens in browser", on the text: an icon's label is read before the text (D-186);
     it is a link, as an external row is (``links.external()``).
@@ -169,15 +171,24 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     async def sign_up() -> None:
         await open_link(svc, copy.signup_url)
 
+    # The heading and the paragraphs each a node of its own, as About's app name and
+    # its lines (D-211): in one node, the whole card read as one heading.
     heading = ft.Semantics(
         header=True,
         heading_level=2,
+        container=True,
         content=ft.Text(copy.heading, theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
     )
-    paragraphs = [
-        ft.Text(paragraph, theme_style=ft.TextThemeStyle.BODY_LARGE)
-        for paragraph in copy.intro
-    ]
+    paragraphs = ft.Semantics(
+        container=True,
+        content=ft.Column(
+            [
+                ft.Text(paragraph, theme_style=ft.TextThemeStyle.BODY_LARGE)
+                for paragraph in copy.intro
+            ],
+            spacing=12,
+        ),
+    )
     button = ft.FilledButton(
         ft.Text(SIGN_UP, semantics_label=f"{SIGN_UP}\n{OPENS_IN[LinkKind.WEB]}"),
         icon=ft.Icons.OPEN_IN_NEW,
@@ -190,7 +201,7 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
                 ft.Column(
                     [
                         heading,
-                        *paragraphs,
+                        paragraphs,
                         # Its own row, so it keeps its width and wraps at large text.
                         ft.Container(
                             external(f"{SCREEN}.sign_up", button),
@@ -204,6 +215,8 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
             ),
             variant=ft.CardVariant.FILLED,
             margin=0,
+            # Not one node: Flutter's Card merges what it holds into its own (D-211).
+            semantic_container=False,
         ),
         padding=ft.Padding.only(left=16, top=8, right=16, bottom=8),
     )

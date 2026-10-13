@@ -91,7 +91,9 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
             retrying=conference.status(svc.year.conference) == "refreshing",
             identifier=f"{SCREEN}.no_data",
         )
-        return AppScaffold(title="", body=ft.ListView([no_data], expand=True))
+        # No name to show in the page yet: the bar names it, the page's level-1
+        # heading, as "Not found" does below (D-211).
+        return AppScaffold(title="Speaker", body=ft.ListView([no_data], expand=True))
     if speaker is None:
         return AppScaffold(
             title="Not found",

@@ -7,11 +7,12 @@ import flet as ft
 from pycon_us.ui.time_gutter import TimeGutter
 
 
-def test_the_gutter_is_a_heading_read_once() -> None:
+def test_the_gutter_is_a_level_3_heading_read_once() -> None:
     gutter = TimeGutter("9:25 AM")
     assert isinstance(gutter, ft.Semantics)
-    assert (gutter.header, gutter.label, gutter.exclude_semantics) == (
-        True,
+    level = (gutter.header, gutter.heading_level)
+    assert level == (True, 3)  # a slot under its day; TalkBack needs it (D-211)
+    assert (gutter.label, gutter.exclude_semantics) == (
         "9:25 AM",
         True,  # else "9:25 AM, 9:25, AM"
     )

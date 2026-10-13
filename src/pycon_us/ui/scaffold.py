@@ -50,8 +50,9 @@ def AppScaffold(
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
-            page's heading (Flutter marks an app bar title as a header). On a tab
-            root it carries the identifier ``<tab>.title`` for UI flows (D-170).
+            page's level-1 heading (D-211). On a tab root it carries the identifier
+            ``<tab>.title`` for UI flows (D-170). Empty on a detail page whose own
+            title, in the page, is its level-1 heading (ux.md §5.5): no heading then.
         body: What the View shows under the app bar, usually an ``expand=True``
             ``ListView``; it is placed in a ``SafeArea``, clear of the notch, the
             home indicator and the navigation bar in either orientation.
@@ -100,12 +101,19 @@ def AppScaffold(
 
     back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
     title_control: ft.Control = ft.Text(title)
-    if is_root:
-        # The identifier tells UI flows which root shows (D-170). An unlabelled
-        # Semantics merges it into the title's own node, as the bar's do (D-166).
-        tab = TABS[TAB_ROOTS.index(view_path)]
+    if title:
+        # Flutter's AppBar flags its title a header without a level, which neither
+        # screen reader takes for a heading (F49): the level makes it the page's
+        # level-1 heading (D-211). The identifier tells UI flows which root shows
+        # (D-170). An unlabelled Semantics merges both into the title's own node, as
+        # the bar's do (D-166).
         title_control = ft.Semantics(
-            identifier=tab.title_identifier, content=title_control
+            header=True,
+            heading_level=1,
+            identifier=(
+                TABS[TAB_ROOTS.index(view_path)].title_identifier if is_root else None
+            ),
+            content=title_control,
         )
     # Now keeps none: Back there is left to the system, which exits (D-142).
     on_confirm_pop: ft.ControlEventHandler[ft.View] | None = None
@@ -208,7 +216,7 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
 def SectionHeader(
     text: str,
     *,
-    level: int | None = None,
+    level: int = 2,
     top: int = 16,
     theme_style: ft.TextThemeStyle = ft.TextThemeStyle.TITLE_SMALL,
     color: ft.ColorValue = ft.Colors.PRIMARY,
@@ -217,12 +225,14 @@ def SectionHeader(
 ) -> ft.Control:
     """Return the heading of a group of rows: a day, a letter, a section (ux.md §3.9).
 
-    Not sticky (U2). A header for screen readers, so they can jump group by group.
+    Not sticky (U2). A heading for screen readers, so they can jump group by group:
+    TalkBack and VoiceOver take a heading from its level, not the flag (F40, D-211).
 
     Args:
         text: The heading, in sentence case.
-        level: Its heading level, on a page that declares an outline: 2 under a
-            detail page's level-1 title (ux.md §5.5).
+        level: Its place in the page's outline: 2, a section under the page's
+            level-1 title (the app bar's, or a detail page's own, ux.md §5.5), or 3
+            under a level-2 heading (search's days under "Sessions", D-193).
         top: The space above it: 16 dp where it opens a group in a list; 0 on a
             detail page, whose list already puts 24 dp between sections.
         theme_style: Its type: ``TITLE_SMALL``, or ``TITLE_MEDIUM`` for a heading that

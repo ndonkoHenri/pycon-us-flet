@@ -128,8 +128,13 @@ def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
     assert isinstance(body, ft.ListView)
     header = body.controls[0]
     assert isinstance(header, ft.Container) and isinstance(header.content, ft.Column)
-    name, about, not_official = header.content.controls
-    assert isinstance(name, ft.Semantics) and name.header  # the page's heading
+    name, lines = header.content.controls
+    assert isinstance(name, ft.Semantics) and name.header
+    assert name.heading_level == 2  # under the bar's "About this app" (D-211)
+    # Nodes of their own, so the name is read alone, and before the lines under it.
+    assert isinstance(lines, ft.Semantics) and name.container and lines.container
+    assert isinstance(lines.content, ft.Column)
+    about, not_official = lines.content.controls
     assert isinstance(name.content, ft.Text)
     assert name.content.value == pycon_us.APP_NAME
     assert isinstance(about, ft.Text) and isinstance(not_official, ft.Text)

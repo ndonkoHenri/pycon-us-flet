@@ -73,6 +73,7 @@ def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
         if isinstance(node, ft.Semantics) and node.header
     ]
     assert [texts(node) for node in headings] == [["Can't load the schedule"]]
+    assert headings[0].heading_level == 2  # under the page's title (D-211)
     # A node of its own: otherwise Flutter merges the heading flag into the live
     # region, and the title and body read as one heading.
     assert headings[0].container
