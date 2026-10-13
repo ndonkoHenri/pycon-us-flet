@@ -217,17 +217,16 @@ def _without(slots: tuple[Slot, ...], hidden: frozenset[str]) -> tuple[Slot, ...
     object and skips its body; when no slot loses anything, ``slots`` itself is returned.
     """
     kept: list[Slot] = []
+    changed = False
     for slot in slots:
         sessions = tuple(s for s in slot.sessions if s.track not in hidden)
         if len(sessions) == len(slot.sessions):
             kept.append(slot)
-        elif sessions:
+            continue
+        changed = True
+        if sessions:
             kept.append(Slot(slot.key, slot.start, sessions))
-    if len(kept) == len(slots) and all(
-        a is b for a, b in zip(kept, slots, strict=True)
-    ):
-        return slots
-    return tuple(kept)
+    return tuple(kept) if changed else slots
 
 
 _MEMO: WeakKeyDictionary[ConferenceData, dict[tuple[object, ...], object]] = (
