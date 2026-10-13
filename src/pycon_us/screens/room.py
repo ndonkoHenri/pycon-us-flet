@@ -174,7 +174,7 @@ def RoomDetail(room_slug: str) -> ft.View:
         if e.event_type == ft.ScrollType.END:
             ended.set()
 
-    if room is None:
+    if data is None or room is None:
         return AppScaffold(
             title="Not found",
             body=ft.ListView(
@@ -191,12 +191,11 @@ def RoomDetail(room_slug: str) -> ft.View:
             ),
         )
 
-    room_sessions = data.sessions if data else {}
     groups = dict(by_day(views, info.zone))
     days = list(groups)
     current = today(clock.now(), info.zone)
     # The day of the session the room was opened from, also in a rebuilt View.
-    highlighted = local_date(room_sessions[target].start, info.zone) if target else None
+    highlighted = local_date(data.sessions[target].start, info.zone) if target else None
     shown = (
         picked
         if picked is not None and picked in groups
@@ -277,12 +276,13 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
         return ft.Container()
     first, *rest = on
     view = session_view(first, info.zone, use_24h=use_24h, in_room=room.slug)
-    when, spoken = view.when.replace(" ", " "), view.spoken_when  # "AM" stays
+    when = view.when.replace(" ", "\N{NO-BREAK SPACE}")  # "AM" keeps to its time
+    spoken = view.spoken_when
     if view.place:  # streamed here from elsewhere: the lightning talks' Arena
         when, spoken = f"{when} · {view.place}", f"{spoken}, {view.place}"
     lines: list[ft.Control] = [ft.Text(when, color=tokens.live, semantics_label=spoken)]
     if rest:
-        lines.append(ft.Text(f"and {len(rest)} more"))
+        lines.append(ft.Text(f"and {len(rest)}\N{NO-BREAK SPACE}more"))
     return ft.Column(
         [
             SectionHeader("Now in this room"),

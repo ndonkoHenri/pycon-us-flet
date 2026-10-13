@@ -488,7 +488,7 @@ async def test_now_in_this_room_names_the_session_on_and_opens_it(
     assert isinstance(tile.title, ft.Text)
     assert tile.title.value.startswith("Python for Humans")
     assert tile.title.max_lines == 3
-    assert texts(cast(ft.Control, tile.subtitle)) == ["10:30–11:00 AM"]
+    assert texts(cast(ft.Control, tile.subtitle)) == ["10:30–11:00\N{NO-BREAK SPACE}AM"]
     assert any(
         isinstance(c, ft.Semantics) and c.header and texts(c) == ["Now in this room"]
         for c in room.session.index.values()
@@ -507,7 +507,7 @@ async def test_now_in_this_room_says_where_a_streamed_session_is_given(
         for t in descendants(cast(ft.Control, tile.subtitle))
         if isinstance(t, ft.Text)
     ]
-    assert line.value == "8:00–9:00 AM · Pacific Ballroom - Arena"
+    assert line.value == "8:00–9:00\N{NO-BREAK SPACE}AM · Pacific Ballroom - Arena"
     assert line.semantics_label == "8:00 to 9:00 AM, Pacific Ballroom - Arena"
 
 
@@ -522,8 +522,8 @@ async def test_with_several_on_the_latest_is_named_and_the_rest_counted(
     tile = cast(ft.ListTile, room.node("room.now").content)
     assert cast(ft.Text, tile.title).value == "Organizing IRL meetups"
     assert texts(cast(ft.Control, tile.subtitle)) == [
-        "4:00–5:00 PM",
-        "and 1 more",
+        "4:00–5:00\N{NO-BREAK SPACE}PM",
+        "and 1\N{NO-BREAK SPACE}more",
     ]
 
 
