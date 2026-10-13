@@ -218,12 +218,15 @@ def speaker_avatar(
         initials_style: The initials' type, for a larger circle; None keeps the
             avatar's own (``TITLE_MEDIUM``), which suits 48 dp.
     """
-    text = ft.Text(initials(speaker.name))
-    if initials_style is not None:
-        # A theme style brings the text theme's colour, so the pair is named again.
-        text = ft.Text(
-            text.value, theme_style=initials_style, color=ft.Colors.ON_PRIMARY_CONTAINER
+    letters = initials(speaker.name)
+    # A theme style brings the text theme's colour, so the pair is named again.
+    text = (
+        ft.Text(letters)
+        if initials_style is None
+        else ft.Text(
+            letters, theme_style=initials_style, color=ft.Colors.ON_PRIMARY_CONTAINER
         )
+    )
     return ft.CircleAvatar(
         content=text,
         foreground_image_src=speaker.photo_url or None,
