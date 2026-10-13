@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, get_args
+from urllib.parse import urlsplit
 
 import flet as ft
 from flet.utils import is_embedded
@@ -265,6 +266,25 @@ def with_dev_options(
     if feed_url is not None:
         options[DEV_FEED_URL] = feed_url
     return options
+
+
+def parse_feed_url(text: str) -> str | None:
+    """Return the feed URL the field names, or None when it is empty (the year's feed).
+
+    Args:
+        text: An ``http://`` or ``https://`` URL; plain HTTP for a test server on the
+            laptop (testing-and-quality.md §5.2).
+
+    Raises:
+        ValueError: The text is not such a URL; its message is the field's error.
+    """
+    text = text.strip()
+    if not text:
+        return None
+    parts = urlsplit(text)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError("Use an http:// or https:// address")
+    return text
 
 
 def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:

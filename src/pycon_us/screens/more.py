@@ -46,7 +46,9 @@ PROGRAMME = (
 """The Programme section, in the list's order (ux.md §2.2; icons §3.7)."""
 
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
-DEVELOPER = MoreEntry("Developer", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED)
+DEVELOPER = MoreEntry(
+    "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
+)
 
 MORE_PAGES = (*PROGRAMME, ABOUT_APP, DEVELOPER)
 """Every page the list links to; later phases add theirs with their sections."""

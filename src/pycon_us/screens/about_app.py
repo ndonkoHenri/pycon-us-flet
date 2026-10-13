@@ -2,9 +2,9 @@
 
 The minimal P1 page (D-73): the app's name and what it is, "Not an official PSF app."
 (D-36), then the build's version, Python and Flet. Seven taps on the version row unlock
-the Developer screen in a packaged build, and a row to it appears under the version; it
-stays unlocked (D-187). P2 completes the
-page (#30): the feed's age, links, licences and "Share log".
+the Developer screen in a packaged build, and a Developer options row appears under the
+build's rows; it stays unlocked (D-187). P2 completes the page (#30): the feed's age,
+links, licences and "Share log".
 """
 
 import platform
@@ -25,8 +25,6 @@ FLET_VERSION = "source build"
 """What the Flet row says while the app builds from the pinned source checkout (D-81): a
 packaged app reports ``0.1.0`` then, the host the nearest tag (development.md §2.2). The
 PR that pins ``flet==1.1.0`` shows ``flet.version.flet_version`` instead."""
-
-DEVELOPER_LOCATION = "/more/developer"
 
 
 @ft.component
@@ -82,7 +80,7 @@ def developer_row(unsaved: bool) -> ft.Control:
         live_region=True,
         content=LinkTile(
             "Developer options",
-            DEVELOPER_LOCATION,
+            "/more/developer",
             icon=ft.Icons.DEVELOPER_MODE_OUTLINED,
             subtitle="On until you close the app" if unsaved else "On",
             identifier="about_app.developer",

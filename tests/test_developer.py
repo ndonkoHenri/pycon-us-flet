@@ -25,7 +25,6 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import developer, now
 from pycon_us.screens.developer import (
     Developer,
-    parse_feed_url,
     picked_date,
     zone_line,
 )
@@ -172,8 +171,8 @@ async def press(render: Callable[[], dict[str, Any]], identifier: str) -> None:
     await cast(Any, button.on_click)()
 
 
-def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
-    """The line under the buttons, or None while it is hidden."""
+def outcome_row(render: Callable[[], dict[str, Any]]) -> ft.Row | None:
+    """The line under the buttons, its icon and its words, or None while it is hidden."""
     line = next(
         c
         for c in cast(ft.ListView, render()["body"]).controls
@@ -183,8 +182,19 @@ def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
     if not line.visible:
         return None
     assert isinstance(line.content, ft.Container)
-    assert isinstance(line.content.content, ft.Text)
-    return str(line.content.content.value)
+    assert isinstance(line.content.content, ft.Row)
+    return line.content.content
+
+
+def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
+    """The words of the line under the buttons, or None while it is hidden."""
+    row = outcome_row(render)
+    if row is None:
+        return None
+    icon, text = row.controls
+    assert isinstance(icon, ft.Icon) and isinstance(text, ft.Text)
+    assert text.text_align == ft.TextAlign.START  # as the page's other text
+    return str(text.value)
 
 
 # ------------------------------------------------------------------ the screen
@@ -215,9 +225,7 @@ def test_a_warning_tone_chip_marks_the_screen(
     assert isinstance(chip, ft.Container)
     assert chip.border == ft.Border.all(1, LIGHT_TOKENS.warning)
     assert chip.on_click is None  # a mark, not a control
-    assert isinstance(chip.content, ft.Row)
-    icon, label = chip.content.controls
-    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.warning
+    label = chip.content  # text only: a fixed-size icon looked lost at 200 % text
     assert isinstance(label, ft.Text) and label.value == "Developer"
     assert label.color == LIGHT_TOKENS.warning
 
@@ -233,6 +241,22 @@ def test_the_fields_show_what_is_in_effect(
     scaffold = render()
     assert field(scaffold, "developer.fake_clock").value == "2026-05-15 09:00"  # PDT
     assert field(scaffold, "developer.feed_url").value == FEED
+
+
+def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    scaffold = render()
+    clock_field = field(scaffold, "developer.fake_clock")
+    assert clock_field.helper == (
+        "YYYY-MM-DD HH:MM, in Pacific Time. Empty for real time."
+    )
+    for text_field in (clock_field, field(scaffold, "developer.feed_url")):
+        assert text_field.max_lines == 3  # wraps instead of hiding the end
+        # Not multiline: it would swap in the multiline keyboard, whose Return types
+        # a line break, for the date-time and URL keyboards.
+        assert text_field.multiline is False
+    assert clock_field.keyboard_type == ft.KeyboardType.DATETIME
 
 
 async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
@@ -254,6 +278,10 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     # In place, not a SnackBar: one would show on More under this View (#197).
     assert page.dialogs == []
     assert outcome(render) == "Applied: a fake clock in Pacific Time and your feed URL."
+    row = outcome_row(render)
+    assert row is not None
+    icon = row.controls[0]
+    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.success
     await type_into(render, "developer.feed_url", "")
     assert outcome(render) is None  # an edit clears it
 
@@ -332,6 +360,20 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
     assert outcome(render) == "Back to real time and the year's feed."
 
 
+async def test_leaving_a_developer_feed_url_drops_the_feed_it_may_have_cached(
+    render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
+) -> None:
+    # An offline start would publish the cache as the schedule (D-187).
+    await svc.storage.write_feed(b"{}")
+    await press(render, "developer.reset")
+    assert svc.storage.feed_path.exists()  # the year's feed: kept
+    await type_into(render, "developer.feed_url", FEED)
+    await press(render, "developer.apply")
+    assert svc.storage.feed_path.exists()  # a feed URL in use: kept
+    await press(render, "developer.reset")
+    assert not svc.storage.feed_path.exists()
+
+
 async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
     render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
@@ -343,6 +385,10 @@ async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
         "Applied: a fake clock in Pacific Time and the year's feed. "
         "Couldn't save your change: it ends when you close the app."
     )
+    row = outcome_row(render)
+    assert row is not None
+    icon = row.controls[0]
+    assert isinstance(icon, ft.Icon) and icon.color == LIGHT_TOKENS.warning
 
 
 async def test_the_pickers_fill_the_clock_field_in_conference_time(
@@ -354,6 +400,7 @@ async def test_the_pickers_fill_the_clock_field_in_conference_time(
     cast(Callable[[], None], text_field.suffix_icon.on_click)()
     day_picker = page.dialogs[-1]
     assert isinstance(day_picker, ft.DatePicker)
+    assert day_picker.value == date(2026, 5, 13)  # empty: the first day, as the hint
     # Flutter reports the device's local midnight of the day, in UTC.
     day_picker.value = datetime(2026, 5, 15).astimezone().astimezone(UTC)
     cast(Callable[[object], None], day_picker.on_change)(
@@ -361,6 +408,8 @@ async def test_the_pickers_fill_the_clock_field_in_conference_time(
     )
     time_picker = page.dialogs[-1]
     assert isinstance(time_picker, ft.TimePicker)
+    assert time_picker.value == time(9, 0)
+    assert time_picker.help_text == "Fake clock time, Pacific Time"
     time_picker.value = time(9, 30)
     cast(Callable[[object], None], time_picker.on_change)(
         SimpleNamespace(control=time_picker)
@@ -427,23 +476,6 @@ def test_now_says_which_day_it_is_by_the_clock_in_conference_time(
 
 
 # ------------------------------------------------------------------ the helpers
-
-
-@pytest.mark.parametrize("url", [FEED, "https://example.test/feed.json"])
-def test_http_and_https_feed_urls_are_taken(url: str) -> None:
-    assert parse_feed_url(f" {url} ") == url
-
-
-@pytest.mark.parametrize(
-    "text", ["us.pycon.org/feed.json", "ftp://example.test/f", "https://", "file:///x"]
-)
-def test_other_feed_urls_are_refused(text: str) -> None:
-    with pytest.raises(ValueError, match="http:// or https://"):
-        parse_feed_url(text)
-
-
-def test_an_empty_feed_url_is_the_year_s() -> None:
-    assert parse_feed_url("") is None
 
 
 def test_a_picked_day_is_the_device_s_day(machine_tz: str) -> None:

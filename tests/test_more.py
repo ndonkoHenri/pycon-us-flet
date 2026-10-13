@@ -138,7 +138,7 @@ def test_the_list_has_programme_then_you_under_section_headers(
         "# You",
         "more.appearance",
         "About this app",
-        "Developer",
+        "Developer options",
     ]  # About this app says "Not an official PSF app." now (D-36)
 
 
@@ -150,9 +150,9 @@ def test_developer_is_hidden_in_packaged_builds_until_unlocked(
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)
     titles = outline(rows_of(render()))
     assert "About this app" in titles
-    assert "Developer" not in titles  # D-73
+    assert "Developer options" not in titles  # D-73
     prefs.dev = {DEV_UNLOCKED: True}  # 7 taps on the version (D-187)
-    assert outline(rows_of(render()))[-1] == "Developer"
+    assert outline(rows_of(render()))[-1] == "Developer options"
 
 
 def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(

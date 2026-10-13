@@ -14,7 +14,13 @@ import flet as ft
 import pytest
 
 from pycon_us import prefs as prefs_module
-from pycon_us.prefs import APPEARANCES, HIGH_CONTRAST_SETTINGS, Prefs, with_dev_options
+from pycon_us.prefs import (
+    APPEARANCES,
+    HIGH_CONTRAST_SETTINGS,
+    Prefs,
+    parse_feed_url,
+    with_dev_options,
+)
 from pycon_us.services import storage
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
@@ -318,3 +324,23 @@ def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
     dev = with_dev_options({"unlocked": True}, fake_now=start, feed_url=feed)
     assert dev == {"unlocked": True, "fake_now": start.isoformat(), "feed_url": feed}
     assert with_dev_options(dev, fake_now=None, feed_url=None) == {"unlocked": True}
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://127.0.0.1:8000/conference-2026.json", "https://example.test/feed.json"],
+)
+def test_http_and_https_feed_urls_are_taken(url: str) -> None:
+    assert parse_feed_url(f" {url} ") == url
+
+
+@pytest.mark.parametrize(
+    "text", ["us.pycon.org/feed.json", "ftp://example.test/f", "https://", "file:///x"]
+)
+def test_other_feed_urls_are_refused(text: str) -> None:
+    with pytest.raises(ValueError, match="http:// or https://"):
+        parse_feed_url(text)
+
+
+def test_an_empty_feed_url_is_the_year_s() -> None:
+    assert parse_feed_url("") is None

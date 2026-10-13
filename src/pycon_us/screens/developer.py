@@ -5,23 +5,23 @@ the feed URL; and the capability flags, read-only (``capabilities.py``, D-63). A
 the clock and the feed URL into effect at once and saves them in ``pycon.dev``, so they
 hold across launches; Reset returns to real time and the year's feed (D-187). The screen
 is always available when not embedded, and in a packaged build once unlocked in About
-this app; a warning-tone "Developer" chip at its top marks it (ux.md §5.13). #107 adds the data
-actions (Refresh now, Clear cached feed, Reset app, Share log).
+this app; a warning-tone "Developer" chip at its top marks it (ux.md §5.13). #107 adds
+the data actions (Refresh now, Clear cached feed, Reset app, Share log).
 """
 
-from datetime import date, datetime, timedelta, tzinfo
-from urllib.parse import urlsplit
+from datetime import date, datetime, time, timedelta, tzinfo
 
 import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
-from pycon_us.prefs import use_prefs, with_dev_options
+from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
-from pycon_us.theme import use_tokens
+from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 
@@ -32,6 +32,9 @@ CAPABILITIES = (
     ("Badge scanner", capabilities.SCANNER),
 )
 """The capability flags the screen shows, fixed at import as they are (D-63)."""
+
+NO_OUTCOME: tuple[str, bool] = ("", True)
+"""The outcome line's state before Apply or Reset and after an edit: no words, hidden."""
 
 
 @ft.component
@@ -52,21 +55,23 @@ def Developer() -> ft.View:
     clock_error, set_clock_error = ft.use_state("")  # "" while the field is fine
     url_error, set_url_error = ft.use_state("")
     picked_day = ft.use_ref(None)  # the date picker's day, until the time is picked
-    # What the last Apply or Reset did, said under the buttons (in place, D-29: a
-    # SnackBar from a pushed View shows on the root under it, #197).
-    outcome, set_outcome = ft.use_state("")
+    # What the last Apply or Reset did and whether it was saved, said under the buttons
+    # (in place, D-29: a SnackBar from a pushed View shows on the root under it, #197).
+    outcome, set_outcome = ft.use_state(NO_OUTCOME)
+    # Where the pickers open while the field is empty: the moment its hint shows.
+    first_morning = datetime.combine(info.first_day, time(9))
 
     @report_errors
     def edit_clock(e: ft.Event[ft.TextField]) -> None:
         set_clock_text(e.control.value)
         set_clock_error("")
-        set_outcome("")
+        set_outcome(NO_OUTCOME)
 
     @report_errors
     def edit_url(e: ft.Event[ft.TextField]) -> None:
         set_url_text(e.control.value)
         set_url_error("")
-        set_outcome("")
+        set_outcome(NO_OUTCOME)
 
     @report_errors
     def pick_time(e: ft.Event[ft.TimePicker]) -> None:
@@ -80,18 +85,18 @@ def Developer() -> ft.View:
         if e.control.value is None:
             return
         picked_day.current = picked_date(e.control.value)
-        start = shown_start(clock_text, zone)
+        start = shown_start(clock_text, zone, first_morning)
         page.show_dialog(
             ft.TimePicker(
                 value=start.time(),
-                help_text=f"Time in {info.time_zone_name}",
+                help_text=f"Fake clock time, {info.time_zone_name}",
                 on_change=pick_time,
             )
         )
 
     @report_errors
     def pick() -> None:
-        start = shown_start(clock_text, zone)
+        start = shown_start(clock_text, zone, first_morning)
         page.show_dialog(
             ft.DatePicker(
                 value=start.date(),
@@ -117,16 +122,17 @@ def Developer() -> ft.View:
             set_url_error(str(error))
             valid = False
         if not valid:
-            set_outcome("")
+            set_outcome(NO_OUTCOME)
             return
         # Before the save: the re-render it causes reads the new clock (D-187). An
         # unchanged start keeps the clock running instead of setting it back.
         if fake_now != prefs.fake_now:
             clock.start_fake_clock(fake_now)
         conference.set_feed_url(feed_url)
+        await leave_test_feed(svc.storage, prefs.feed_url, feed_url)
         dev = with_dev_options(prefs.dev, fake_now=fake_now, feed_url=feed_url)
         saved = await prefs.save(svc.storage, dev=dev)
-        set_outcome(said(saved, applied(fake_now, feed_url, info.time_zone_name)))
+        set_outcome((applied(fake_now, feed_url, info.time_zone_name), saved))
 
     @report_errors
     async def reset() -> None:
@@ -136,9 +142,10 @@ def Developer() -> ft.View:
         set_url_error("")
         clock.start_fake_clock(None)
         conference.set_feed_url(None)
+        await leave_test_feed(svc.storage, prefs.feed_url, None)
         dev = with_dev_options(prefs.dev, fake_now=None, feed_url=None)
         saved = await prefs.save(svc.storage, dev=dev)
-        set_outcome(said(saved, "Back to real time and the year's feed."))
+        set_outcome(("Back to real time and the year's feed.", saved))
 
     chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
@@ -170,7 +177,8 @@ def Developer() -> ft.View:
                     clock_text,
                     label="Fake clock",
                     hint=f"{info.first_day.isoformat()} 09:00",
-                    helper=f"In {info.time_zone_name}. Empty for real time.",
+                    helper=f"YYYY-MM-DD HH:MM, in {info.time_zone_name}. "
+                    "Empty for real time.",
                     error=clock_error,
                     keyboard=ft.KeyboardType.DATETIME,
                     on_change=edit_clock,
@@ -215,15 +223,8 @@ def Developer() -> ft.View:
                 ft.Semantics(
                     identifier="developer.outcome",
                     live_region=True,
-                    visible=bool(outcome),
-                    content=padded(
-                        ft.Text(
-                            outcome,
-                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.ON_SURFACE,
-                            text_align=ft.TextAlign.END,
-                        )
-                    ),
+                    visible=bool(outcome[0]),
+                    content=outcome_line(*outcome, tokens=tokens),
                 ),
                 SectionHeader("Capabilities"),
                 padded(
@@ -257,6 +258,21 @@ def locked() -> ft.Control:
     )
 
 
+async def leave_test_feed(storage: Storage, was: str | None, now: str | None) -> None:
+    """Delete the feed cache when Apply or Reset leaves a Developer feed URL (D-187).
+
+    The cache may hold that feed's data, which an offline start would publish as the
+    schedule; without the cache, that start uses the bundled snapshot.
+
+    Args:
+        storage: Where the feed cache lives.
+        was: The feed URL in effect until now (``Prefs.feed_url``), or None.
+        now: The one that replaces it, or None for the year's feed.
+    """
+    if was is not None and now is None:
+        await storage.delete_feed("the Developer feed URL is off")
+
+
 def option_field(
     identifier: str,
     value: str,
@@ -271,15 +287,18 @@ def option_field(
 ) -> ft.Control:
     """Return one option's text field, found by flows through ``identifier``.
 
-    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The helper
-    and the error (``""`` when the text parses) wrap to three lines at large text, and
-    the text is taken as typed, with no autocorrect or suggestions (a date, a URL).
+    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The value,
+    the helper and the error (``""`` when the text parses) wrap to three lines at large
+    text, and the text is taken as typed, with no autocorrect or suggestions (a date, a
+    URL). ``max_lines`` without ``multiline``, which would swap ``keyboard`` for the
+    multiline keyboard, whose Return types a line break.
     """
     return padded(
         ft.Semantics(
             identifier=identifier,
             content=ft.TextField(
                 value=value,
+                max_lines=3,
                 label=label,
                 hint_text=hint,
                 helper=helper,
@@ -328,16 +347,36 @@ def capabilities_note() -> str:
     return "Not a packaged build: every capability uses its interim."
 
 
-def said(saved: bool, done: str) -> str:
-    """Return the outcome line: what was done, or that it holds only until the app closes.
+def outcome_line(done: str, saved: bool, *, tokens: Tokens) -> ft.Control:
+    """Return the line under the buttons: an icon and what was done, or that it won't last.
 
     Args:
-        saved: Whether ``Prefs.save`` saved it (D-120).
         done: What was done, e.g. "Back to real time and the year's feed."
+        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120).
+        tokens: The scheme's tokens: ``success``, or ``warning`` when not saved.
     """
-    if saved:
-        return done
-    return f"{done} Couldn't save your change: it ends when you close the app."
+    if not saved:
+        done += " Couldn't save your change: it ends when you close the app."
+    return padded(
+        ft.Row(
+            [
+                # Decorative: the words carry the meaning (ux.md §9).
+                ft.Icon(
+                    ft.Icons.CHECK_CIRCLE_OUTLINE if saved else ft.Icons.WARNING_AMBER,
+                    color=tokens.success if saved else tokens.warning,
+                    size=20,
+                ),
+                ft.Text(
+                    done,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=ft.Colors.ON_SURFACE,
+                    expand=True,
+                ),
+            ],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        )
+    )
 
 
 def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> str:
@@ -358,44 +397,19 @@ def developer_chip(color: str) -> ft.Control:
 
     A chip's look without a ``Chip``: a Chip with no handler is drawn disabled (faded
     label) at the pin, and a mark is not a control (ux.md §3.9, as ``TrackBadge``).
+    Text only, as a badge: a fixed-size icon looked lost beside the label at 200 % text.
 
     Args:
-        color: ``Tokens.warning``: the label, icon and outline.
+        color: ``Tokens.warning``: the label and the outline.
     """
     return ft.Container(
         padding=ft.Padding.symmetric(horizontal=8, vertical=4),
         border=ft.Border.all(1, color),
         border_radius=8,
-        content=ft.Row(
-            [
-                ft.Icon(ft.Icons.DEVELOPER_MODE_OUTLINED, size=18, color=color),
-                ft.Text(
-                    "Developer", theme_style=ft.TextThemeStyle.LABEL_LARGE, color=color
-                ),
-            ],
-            spacing=4,
-            tight=True,
+        content=ft.Text(
+            "Developer", theme_style=ft.TextThemeStyle.LABEL_LARGE, color=color
         ),
     )
-
-
-def parse_feed_url(text: str) -> str | None:
-    """Return the feed URL the field names, or None when it is empty (the year's feed).
-
-    Args:
-        text: An ``http://`` or ``https://`` URL; plain HTTP for a test server on the
-            laptop (testing-and-quality.md §5.2).
-
-    Raises:
-        ValueError: The text is not such a URL; its message is the field's error.
-    """
-    text = text.strip()
-    if not text:
-        return None
-    parts = urlsplit(text)
-    if parts.scheme not in ("http", "https") or not parts.hostname:
-        raise ValueError("Use an http:// or https:// address")
-    return text
 
 
 def picked_date(value: datetime | date) -> date:
@@ -411,18 +425,22 @@ def picked_date(value: datetime | date) -> date:
     return value
 
 
-def shown_start(text: str, zone: tzinfo) -> datetime:
-    """Return where the pickers open: the field's instant, else now, in conference time.
+def shown_start(text: str, zone: tzinfo, default: datetime) -> datetime:
+    """Return where the pickers open, in naive conference time.
 
     Args:
-        text: The fake-clock field's text.
+        text: The fake-clock field's text; its instant when it parses.
         zone: The conference's zone.
+        default: For an empty or unreadable field: the first morning, which a test or
+            a demo wants far more often than today.
     """
     try:
         moment = clock.parse_fake_clock(text, zone)
     except ValueError:
         moment = None
-    return (moment or clock.now()).astimezone(zone).replace(tzinfo=None)
+    if moment is None:
+        return default
+    return moment.astimezone(zone).replace(tzinfo=None)
 
 
 def zone_line(zone_name: str, zone_key: str, now: datetime) -> str:
