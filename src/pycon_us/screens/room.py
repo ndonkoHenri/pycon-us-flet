@@ -283,9 +283,12 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     lines: list[ft.Control] = [ft.Text(when, color=tokens.live, semantics_label=spoken)]
     if rest:
         lines.append(ft.Text(f"and {len(rest)}\N{NO-BREAK SPACE}more"))
+    # As Now's "Happening now" (D-190): a live dot, and a heading screen readers know
+    # (a level, F40).
+    dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=tokens.live)
     return ft.Column(
         [
-            SectionHeader("Now in this room"),
+            SectionHeader("Now in this room", level=2, leading=dot),
             LinkTile(
                 ft.Text(first.name, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
                 drill_href(view_path, "session", first.id),
