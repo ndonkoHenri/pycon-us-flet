@@ -30,7 +30,7 @@ from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.session_rows import SessionRow, use_session_views
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import NoDataState
 
 SOURCE_LABELS = {
     "none": "No schedule yet",
@@ -83,19 +83,12 @@ def Schedule() -> ft.View:
             for view in day_views
         )
     rows: list[ft.Control]
-    if data is None and conference.problem is None:
-        rows = [SkeletonList()]  # the first fetch runs, or is about to (NEW-03)
-    elif data is None:
+    if data is None:
         rows = [
-            EmptyState(
-                "Can't load the schedule",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                # A retry keeps the state in place, so a screen reader's focus stays
-                # on the button; the strip's bar shows the work.
-                disabled=asked,
+            NoDataState(
+                conference.problem,
+                on_retry=refresh,
+                retrying=asked,
                 identifier="schedule.no_data",
             )
         ]

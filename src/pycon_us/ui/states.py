@@ -5,7 +5,8 @@ id, no data after a failed first fetch. It says why in one sentence and names a 
 out, as its button or, where no button can help, in its sentence (§4.6).
 ``SkeletonList`` is shown only while there is no data at all and the first fetch runs
 (NEW-03): with data, the screen shows it and the status strip says how old it is
-(D-32).
+(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch for every
+screen that shows the feed.
 """
 
 from collections.abc import Callable
@@ -122,6 +123,40 @@ def EmptyState(
         ),
         padding=ft.Padding.symmetric(horizontal=32, vertical=48),
         alignment=ft.Alignment.TOP_CENTER,
+    )
+
+
+def NoDataState(
+    problem: Problem | None,
+    *,
+    on_retry: Callable[[], Any],
+    retrying: bool,
+    identifier: str,
+) -> ft.Control:
+    """Return what a screen that shows the feed shows without any data (NEW-03).
+
+    The skeleton while the first fetch runs, before it has failed; then "Can't load
+    the schedule" with "Try again", its body by why the fetch failed (ux.md §4.1,
+    §4.6). The state stays during a retry, its button disabled: swapping it for the
+    skeleton would remove the focused button and lose a screen reader's place.
+
+    Args:
+        problem: Why the last fetch failed (``Conference.problem``), None before one has.
+        on_retry: What "Try again" does: the user's refresh, ``Conference.refresh()``.
+        retrying: A refresh the user asked for runs (``status() == "refreshing"``,
+            D-181): the button is disabled, never during a quiet one, which a tap joins.
+        identifier: The failed state's semantics identifier, ``<screen>.no_data``.
+    """
+    if problem is None:
+        return SkeletonList()
+    return EmptyState(
+        "Can't load the schedule",
+        icon=ft.Icons.CLOUD_OFF_OUTLINED,
+        body=NO_DATA_BODY[problem],
+        action="Try again",
+        on_action=on_retry,
+        disabled=retrying,
+        identifier=identifier,
     )
 
 

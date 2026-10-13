@@ -29,12 +29,12 @@ from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.screens import my_schedule, now, schedule
+from pycon_us.screens import now, schedule
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
 from pycon_us.theme import DARK_TOKENS
-from pycon_us.ui import scaffold
+from pycon_us.ui import scaffold, states
 from pycon_us.ui.navigation import TABS, Tab
 from pycon_us.ui.scaffold import (
     AppScaffold,
@@ -900,7 +900,8 @@ async def test_elsewhere_a_tick_never_refreshes(
 
 @pytest.mark.parametrize(
     ("screen", "auto_refresh"),
-    [(now.Now, True), (schedule.Schedule, True), (my_schedule.MySchedule, False)],
+    # My schedule's strip never refreshes by itself: tests/test_my_schedule.py.
+    [(now.Now, True), (schedule.Schedule, True)],
 )
 def test_only_now_and_schedule_refresh_every_15_minutes(
     hooks: Hooks,
@@ -930,8 +931,8 @@ def test_only_now_and_schedule_refresh_every_15_minutes(
         monkeypatch.setattr(module, "use_favorite_toggle", lambda favorites: None)
         monkeypatch.setattr(module, "use_tokens", lambda: DARK_TOKENS)
         monkeypatch.setattr(module, "use_session_views", lambda *args, **kwargs: ())
-    if hasattr(module, "SkeletonList"):  # without data the Schedule shows it (#83)
-        monkeypatch.setattr(module, "SkeletonList", lambda: ft.Text("loading"))
+    # Without data the Schedule shows the skeleton (#83).
+    monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("loading"))
 
     inspect.unwrap(screen)()
 

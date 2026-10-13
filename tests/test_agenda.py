@@ -11,8 +11,10 @@ import pytest
 from pycon_us.config import load_year
 from pycon_us.core.agenda import (
     Agenda,
+    AgendaDay,
     NowNext,
     Phase,
+    fold_ended,
     my_schedule,
     next_for_me,
     now_next,
@@ -480,3 +482,103 @@ def test_a_naive_now_is_refused(
 ) -> None:
     with pytest.raises(ValueError, match="aware"):
         ask(processed(2026), datetime(2026, 5, 15, 10))  # noqa: DTZ001
+
+
+# ------------------------------------------------------------------ folding what has ended
+
+
+FOLDED = frozenset({"2", "19", "188", "106", "111", "22", "153"})
+"""May 13: two tutorials 9:00-12:30 and one 1:30-5:00 PM. May 14: a tutorial 9:00-12:30,
+workshops 9:30-10:30 and 11:30-12:30. May 15: the keynote, 9:45-10:30."""
+
+
+def day_ids(days: Iterable[AgendaDay]) -> list[tuple[date, list[tuple[str, ...]]]]:
+    return [(day.day, [ids(slot.sessions) for slot in day.slots]) for day in days]
+
+
+def folded_at(now: datetime) -> tuple[list[date], list[tuple[str, ...]], list[date]]:
+    """The earlier days, today's ended slots and the days ahead at ``now``."""
+    zone = load_year(2026).conference.zone
+    result = fold_ended(my_schedule(processed(2026), FOLDED), now, zone)
+    today = day_ids([result.earlier_today]) if result.earlier_today else []
+    return (
+        [day.day for day in result.earlier_days],
+        [slot for _, slots in today for slot in slots],
+        [day.day for day in result.ahead],
+    )
+
+
+def test_before_the_conference_nothing_has_ended() -> None:
+    assert folded_at(may(2026, 1, 12)) == (
+        [],
+        [],
+        [date(2026, 5, 13), date(2026, 5, 14), date(2026, 5, 15)],
+    )
+
+
+def test_days_before_today_fold_whole_and_today_folds_what_has_ended() -> None:
+    """May 14, 10:45: the 9:30 workshop has ended; the 9:00 tutorial has not."""
+    zone = load_year(2026).conference.zone
+    result = fold_ended(
+        my_schedule(processed(2026), FOLDED), may(2026, 14, 10, 45), zone
+    )
+    assert [day.day for day in result.earlier_days] == [date(2026, 5, 13)]
+    assert result.earlier_today is not None
+    assert day_ids([result.earlier_today]) == [(date(2026, 5, 14), [("111",)])]
+    assert day_ids(result.ahead) == [
+        (date(2026, 5, 14), [("106",), ("22",)]),
+        (date(2026, 5, 15), [("153",)]),
+    ]
+
+
+def test_a_session_has_ended_at_its_end() -> None:
+    """The half-open rule of Now (D-179): over at 10:30, on at 10:29."""
+    assert folded_at(may(2026, 14, 10, 29))[1] == []
+    assert folded_at(may(2026, 14, 10, 30))[1] == [("111",)]
+
+
+def test_a_slot_splits_when_its_sessions_end_apart() -> None:
+    """May 13, 12:30: the two 9:00 tutorials have ended together; at 3 PM the third
+    is still on, and Wednesday is not over."""
+    assert folded_at(may(2026, 13, 12, 30))[1] == [("2", "19")]
+    earlier, ended, ahead = folded_at(may(2026, 13, 15))
+    assert (earlier, ended) == ([], [("2", "19")])
+    assert ahead[0] == date(2026, 5, 13)
+
+
+def test_when_today_s_sessions_have_all_ended_today_is_not_ahead() -> None:
+    earlier, ended, ahead = folded_at(may(2026, 14, 13))
+    assert (earlier, ended) == ([date(2026, 5, 13)], [("106",), ("111",), ("22",)])
+    assert ahead == [date(2026, 5, 15)]
+
+
+def test_after_the_conference_every_day_is_earlier() -> None:
+    assert folded_at(datetime(2026, 6, 1, tzinfo=UTC)) == (
+        [date(2026, 5, 13), date(2026, 5, 14), date(2026, 5, 15)],
+        [],
+        [],
+    )
+
+
+def test_today_is_the_conference_s_date_whatever_the_zone_of_now() -> None:
+    """May 15, 1:00 AM UTC is still May 14 in Long Beach, 6 PM: Thursday is over."""
+    earlier, ended, ahead = folded_at(datetime(2026, 5, 15, 1, tzinfo=UTC))
+    assert earlier == [date(2026, 5, 13)]
+    assert ended == [("106",), ("111",), ("22",)]
+    assert ahead == [date(2026, 5, 15)]
+
+
+def test_the_fold_is_equal_from_minute_to_minute_until_a_session_ends() -> None:
+    """A screen that folds every minute re-renders only when the answer changes."""
+    zone = load_year(2026).conference.zone
+    agenda = my_schedule(processed(2026), FOLDED)
+    first = fold_ended(agenda, may(2026, 14, 10, 31), zone)
+    assert fold_ended(agenda, may(2026, 14, 10, 32), zone) == first
+    assert fold_ended(agenda, may(2026, 14, 12, 30), zone) != first
+
+
+def test_folding_needs_an_aware_instant() -> None:
+    agenda = my_schedule(processed(2026), FOLDED)
+    with pytest.raises(ValueError, match="aware"):
+        naive = datetime(2026, 5, 14, 10)  # noqa: DTZ001
+        fold_ended(agenda, naive, load_year(2026).conference.zone)

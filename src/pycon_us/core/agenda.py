@@ -9,15 +9,16 @@ so comparing two results never compares a session's fields, and a screen needs n
 by id.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, tzinfo
 from enum import StrEnum
 from itertools import groupby
 from operator import attrgetter
 
 from pycon_us.core.models import ConferenceData, Day, Session
+from pycon_us.core.timefmt import today
 from pycon_us.core.timeline import Slot, day_slots, schedule_order
 
 NEXT_SESSION_WINDOW = timedelta(hours=3)
@@ -98,6 +99,22 @@ class Agenda:
     days: tuple[AgendaDay, ...]
     # A dict is not hashable; leaving it out of the hash keeps ``Agenda`` hashable.
     overlaps: Mapping[Session, tuple[Session, ...]] = field(hash=False)
+
+
+@dataclass(frozen=True)
+class FoldedAgenda:
+    """My schedule at one instant: what has ended, folded away, and what is to come.
+
+    Attributes:
+        earlier_days: The days before today, whole: they fold into one tile at the top.
+        earlier_today: Today's sessions that have ended, by slot, folded under today's
+            header; None when none has.
+        ahead: Today's other sessions, then the later days.
+    """
+
+    earlier_days: tuple[AgendaDay, ...]
+    earlier_today: AgendaDay | None
+    ahead: tuple[AgendaDay, ...]
 
 
 def now_next(data: ConferenceData, now: datetime) -> NowNext:
@@ -192,6 +209,53 @@ def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
         for day, on_day in groupby(saved, key=attrgetter("day"))
     )
     return Agenda(days, _overlaps(saved))
+
+
+def fold_ended(agenda: Agenda, now: datetime, zone: tzinfo) -> FoldedAgenda:
+    """Split My schedule at ``now`` into what has ended and what is to come (ux.md §5.6).
+
+    A day before today has ended whole. Today, a session has ended when ``end <= now``,
+    the half-open rule of ``now_next``: a talk that ends at 10:30 is over at 10:30. A
+    slot whose sessions end at different times splits, so a three-hour tutorial stays
+    while the talk saved beside it folds. The result compares by value, so a screen that
+    folds every minute gets an equal answer until a session ends.
+
+    Args:
+        agenda: ``my_schedule()``'s answer.
+        now: An aware instant, in any zone.
+        zone: The conference's zone, whose date is "today" (D-43).
+
+    Returns:
+        The folded agenda; before the conference nothing has ended, and after it
+        everything has.
+
+    Raises:
+        ValueError: ``now`` is naive.
+    """
+    _require_aware(now)
+    day = today(now, zone)
+    earlier_today: AgendaDay | None = None
+    ahead: list[AgendaDay] = []
+    for agenda_day in agenda.days:
+        if agenda_day.day > day:
+            ahead.append(agenda_day)
+        elif agenda_day.day == day:
+            ended = _slots_where(agenda_day, lambda session: session.end <= now)
+            to_come = _slots_where(agenda_day, lambda session: now < session.end)
+            earlier_today = AgendaDay(day, ended) if ended else None
+            if to_come:
+                ahead.append(AgendaDay(day, to_come))
+    earlier_days = tuple(d for d in agenda.days if d.day < day)
+    return FoldedAgenda(earlier_days, earlier_today, tuple(ahead))
+
+
+def _slots_where(day: AgendaDay, keep: Callable[[Session], bool]) -> tuple[Slot, ...]:
+    """Return a day's slots with only the sessions ``keep`` accepts; empty slots go."""
+    slots = (
+        Slot(slot.start, tuple(s for s in slot.sessions if keep(s)))
+        for slot in day.slots
+    )
+    return tuple(slot for slot in slots if slot.sessions)
 
 
 def _phase(data: ConferenceData, now: datetime) -> Phase:

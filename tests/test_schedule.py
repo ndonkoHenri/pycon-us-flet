@@ -24,6 +24,7 @@ from pycon_us.screens import stub
 from pycon_us.screens.schedule import Schedule
 from pycon_us.state import Conference, Problem
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui import states
 from tests.fakes import FakePage, bound
 from tests.feeds import processed
 from tests.trees import descendants, only, texts
@@ -69,7 +70,7 @@ def render(
     monkeypatch.setattr(screen, "use_services", lambda: svc)
     monkeypatch.setattr(screen, "use_conference", lambda: conference)
     monkeypatch.setattr(screen, "search_button", lambda *_: ft.Text("search"))
-    monkeypatch.setattr(screen, "SkeletonList", lambda: SKELETON)
+    monkeypatch.setattr(states, "SkeletonList", lambda: SKELETON)
     # The sample rows' hooks (#81): the rows themselves are tests/test_session_rows.py's.
     monkeypatch.setattr(screen, "use_favorites", Favorites)
     monkeypatch.setattr(screen, "use_favorite_toggle", lambda favorites: None)

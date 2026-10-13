@@ -24,7 +24,7 @@ from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import (
     NoticeRow,
     SessionRow,
-    TimeGutter,
+    TimeSlot,
     is_notice,
     use_session_views,
 )
@@ -81,7 +81,7 @@ def RoomDetail(room_slug: str) -> ft.View:
                 )
                 for v in slot
             ]
-            controls.append(_slot(label, rows, divider=index > 0))
+            controls.append(TimeSlot(label, rows, divider=index > 0))
     return AppScaffold(title=room.name, body=stub_body(controls))
 
 
@@ -89,13 +89,3 @@ def _start(view: SessionView) -> datetime:
     # The time group's start, as the Schedule's slots use it (DATA-13): the Job Fair
     # sits in the 10:00 slot and its row says 9:30 (DATA-11, D-41).
     return view.session.start
-
-
-def _slot(label: str, rows: list[ft.Control], *, divider: bool) -> ft.Control:
-    """One time slot (D-31): the gutter beside its rows, under a divider after the first."""
-    slot = ft.Row(
-        [TimeGutter(label), ft.Column(rows, spacing=0, expand=True)],
-        spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-    )
-    return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
