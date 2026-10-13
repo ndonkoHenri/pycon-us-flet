@@ -12,7 +12,6 @@ marks the title as a header, is checked on devices (the PR).
 import asyncio
 import inspect
 import logging
-import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
@@ -28,7 +27,6 @@ from flet.components.component import Renderer
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.locations import TAB_ROOTS
-from pycon_us.screens import my_schedule
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, Status, ViewMemory
@@ -897,40 +895,9 @@ async def test_elsewhere_a_tick_never_refreshes(
     assert conference._task is None
 
 
-@pytest.mark.parametrize(
-    ("screen", "auto_refresh"),
-    # Now and the Schedule place their own strips: test_now.py and
-    # test_schedule.py check them.
-    [(my_schedule.MySchedule, False)],
-)
-def test_only_now_and_schedule_refresh_every_15_minutes(
-    hooks: Hooks,
-    page: FakePage,
-    svc: Services,
-    conference: Conference,
-    monkeypatch: pytest.MonkeyPatch,
-    screen: Callable[[], Any],
-    auto_refresh: bool,
-) -> None:
-    module = sys.modules[screen.__module__]
-    bodies: list[dict[str, Any]] = []
-
-    def stub_body(controls: list[ft.Control], **kwargs: Any) -> dict[str, Any]:
-        bodies.append(kwargs)
-        return kwargs
-
-    monkeypatch.setattr(module, "stub_body", stub_body)
-    monkeypatch.setattr(module, "AppScaffold", lambda **kwargs: kwargs)
-    monkeypatch.setattr(module, "use_scroll_to_top", lambda: (ft.Ref(), None))
-    for name, fake in (("use_services", svc), ("use_conference", conference)):
-        if hasattr(module, name):
-            monkeypatch.setattr(module, name, lambda fake=fake: fake)
-
-    inspect.unwrap(screen)()
-
-    ((kwargs),) = bodies
-    assert kwargs["status"] is True
-    assert kwargs.get("auto_refresh", False) is auto_refresh
+# No screen puts its strip in a stub body any more: Now, the Schedule and My
+# schedule each check their own (test_now.py, test_schedule.py,
+# test_my_schedule.py; D-40).
 
 
 # ------------------------------------------------------------------ SectionHeader

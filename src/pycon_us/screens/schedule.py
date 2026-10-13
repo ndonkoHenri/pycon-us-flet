@@ -21,14 +21,12 @@ has failed, then "Can't load the schedule", which stays during a retry (D-32, ux
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date
 
 import flet as ft
 
 from pycon_us import clock
-from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_heading, time_label, today
@@ -39,14 +37,14 @@ from pycon_us.screens.schedule_days import DayList, Empty, day_tab, now_button
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
-from pycon_us.state import Conference, use_conference
+from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import NOT_SAVED, SNACK_BAR_MS, use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, StatusStrip, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import NoDataState
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +212,15 @@ def Schedule() -> ft.View:
             title="Schedule",
             actions=[search_button(memory, "sessions")],
             body=ft.ListView(
-                [StatusStrip(auto_refresh=True), _no_data(conference, info, try_again)],
+                [
+                    StatusStrip(auto_refresh=True),
+                    NoDataState(
+                        conference.problem,
+                        on_retry=try_again,
+                        retrying=conference.status(info) == "refreshing",
+                        identifier="schedule.no_data",
+                    ),
+                ],
                 expand=True,
             ),
         )
@@ -336,25 +342,3 @@ def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | 
     if shown:
         return None
     return "filtered" if timeline(data, day, ()) else "sprint"
-
-
-def _no_data(
-    conference: Conference,
-    info: ConferenceInfo,
-    try_again: Callable[[], Awaitable[None]],
-) -> ft.Control:
-    """Return the state without any data: the skeleton, or the failure with Try again."""
-    if conference.problem is None:
-        return SkeletonList()  # the first fetch runs, or is about to (NEW-03)
-    return EmptyState(
-        "Can't load the schedule",
-        icon=ft.Icons.CLOUD_OFF_OUTLINED,
-        body=NO_DATA_BODY[conference.problem],
-        action="Try again",
-        on_action=try_again,
-        # A retry keeps the state in place, so a screen reader's focus stays on the
-        # button; the strip's bar shows the work. A quiet refresh leaves it enabled,
-        # so a tap joins it (D-181).
-        disabled=conference.status(info) == "refreshing",
-        identifier="schedule.no_data",
-    )
