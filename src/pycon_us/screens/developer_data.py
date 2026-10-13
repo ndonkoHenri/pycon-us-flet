@@ -7,8 +7,8 @@ packaged app's ``console.log`` on the share sheet (D-72); and **Reset app**, whi
 what the app keeps and resets every store in memory, so the app is as after a fresh
 install without a restart. The two that delete are confirmed first by an
 ``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
-rows (#197). This module is what the actions do and say; how the screen draws them (the
-rows, the outcome line, the confirmations) is ``developer_ui.py``'s. Apart from
+rows (D-29, D-210). This module is what the actions do and say; how the screen draws
+them (the rows, the outcome line, the confirmations) is ``developer_ui.py``'s. Apart from
 ``developer.py`` so that the screen stays under about 400 lines (D-66), as the pickers
 are in ``developer_clock.py``.
 """

@@ -1,24 +1,29 @@
 ---
 name: Upstream
-about: Track a missing Flet capability that is being added in flet-dev (D-97).
+about: Write up a missing Flet capability for the owner to take upstream (D-97, D-212).
 title: "Upstream: "
 labels: upstream
 ---
 
 <!--
 Title: "Upstream: <capability> (<U-id or E-id>)", e.g. "Upstream: RefreshIndicator in Flet core (U1)".
-The work happens in flet-dev/flet (or the extension's repo); this issue links it. Add exactly one `area:*` label,
+Agents never post in flet-dev or any other repository (D-212): this issue holds the full analysis, and the owner
+decides whether to take it to Flet. It links the flet-dev issue or PR once the owner has opened one.
+Add exactly one `area:*` label,
 the milestone of the phase that needs it (none if the need is "later") and `--project "PyCon US Flet"`.
 App issues that wait on it get `blocked` and a link here. See docs/flet-gaps-and-extensions.md.
 -->
 
 ## Context
 
-- **Upstream id:** <!-- U1..U20 or E1..E6 (docs/flet-gaps-and-extensions.md) -->
-- **flet-dev link:** <!-- issue or PR in flet-dev/flet, or "to open" -->
+- **Upstream id:** <!-- a U-id or an E-id (docs/flet-gaps-and-extensions.md) -->
+- **flet-dev link:** <!-- added once the owner has opened one; agents never open it (D-212) -->
 - **Decisions:** <!-- e.g. D-97, D-98 -->
 
 ## What Flet lacks
+
+<!-- What happens, the Flet source at the pin (files and lines), a minimal repro, the suggested fix. A short draft
+diff in a fenced block when it makes the analysis clearer (D-213); nothing for Flet in the app's source tree. -->
 
 ## Interim in the app
 
