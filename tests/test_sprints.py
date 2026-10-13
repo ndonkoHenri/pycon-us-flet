@@ -580,7 +580,7 @@ async def test_the_tracks_hub_ends_community_with_a_sprints_row(show: Any) -> No
     )
     assert "May 18–19 · 24 projects" in shown.texts()
     await shown.click(cast(ft.Control, node.parent))
-    assert shown.went == ["/more/sprints"]
+    assert shown.went == ["/more/tracks/sprints"]  # under the hub, Back returns to it
 
 
 async def test_the_sprints_row_keeps_its_community_heading(show: Any) -> None:

@@ -1,9 +1,10 @@
 """A More page rendered in a real Flet session, for the programme pages' tests (#105).
 
-``tests/test_open_spaces.py`` and ``tests/test_lightning_talks.py`` render their screen
-over a feed with the store providers written out above it, as the other screens' tests
-do (``tests/test_tracks.py``): ``AppScaffold`` is replaced by its actions over its
-body, so both are in the tree, and ``page.navigate`` and the launcher are recorded.
+``tests/test_open_spaces.py``, ``tests/test_lightning_talks.py`` and
+``tests/test_track_add_all.py`` render their screen over a feed with the store
+providers written out above it, as the other screens' tests do
+(``tests/test_tracks.py``): ``AppScaffold`` is replaced by its actions over its body,
+so both are in the tree, and ``page.navigate`` and the launcher are recorded.
 Each row body's phrase is counted, so a test can tell which rows re-rendered.
 """
 
@@ -47,6 +48,8 @@ class Page:
     launcher: MemoryLauncher
     went: list[str]
     titles: list[str]
+    services: Services
+    """The services the page was given: its storage, haptics and memory."""
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies ran, in order."""
 
@@ -67,6 +70,12 @@ class Page:
 
     def texts(self) -> list[str]:
         return [str(t.value) for t in self.find(ft.Text)]
+
+    @property
+    def snack_bars(self) -> list[ft.SnackBar]:
+        return [
+            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
+        ]
 
     async def click(self, control: ft.BaseControl) -> None:
         await self.session.dispatch_event(control._i, "click", None)
@@ -128,7 +137,7 @@ async def showing(
     page = session.page
     went: list[str] = []
     monkeypatch.setattr(page, "navigate", went.append)
-    shown = Page(session, favorites, launcher, went, titles)
+    shown = Page(session, favorites, launcher, went, titles, svc)
     phrase = session_rows.spoken_phrase
 
     def counted_phrase(labels: Any, view: Any, **kwargs: Any) -> str:

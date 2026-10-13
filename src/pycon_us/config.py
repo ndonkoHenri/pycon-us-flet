@@ -82,6 +82,20 @@ class Track:
     new: bool = False
 
 
+HUB_PAGES: dict[str, str | None] = {
+    "sprints": None,
+    "lightning-talks": "Lightning-talks",
+    "open-spaces": "Open Space",
+}
+"""The Tracks hub's pages of their own, by segment under ``/more/tracks``, with the key of
+the track each is the page of (the feed's kinds, DATA-14; the sprints are no track, D-126).
+
+More's pages, also the hub's children, so Back returns to the hub (D-207). The routes
+list them before ``:slug``, so the loader refuses a track slug that names another's page.
+Here, with the registry, the loader stays free of Flet. #104 adds ``keynotes``.
+"""
+
+
 @dataclass(frozen=True)
 class ConferenceInfo:
     """The facts about one conference year, from ``conference.toml``."""
@@ -351,6 +365,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
                 f"{file}: tracks[{index}].slug: duplicate slug {track.slug!r}"
             )
         slugs.add(track.slug)
+        _check_hub_page(track, file, index)
         if not track.legend.strip():
             raise YearDataError(f"{file}: tracks[{index}].legend: is empty")
         if track.group not in TRACK_GROUPS:
@@ -378,3 +393,24 @@ def _check_content(content: Content, file: str) -> None:
             raise YearDataError(
                 f"{file}: display_time_overrides[{index}].match: {error}"
             ) from None
+
+
+def _check_hub_page(track: Track, file: str, index: int) -> None:
+    """Refuse a track slug that names a page of the hub's other than the track's own.
+
+    The hub's pages (``HUB_PAGES``) come before ``:slug`` under ``/more/tracks``
+    (D-207), so a track at ``sprints`` would have no page. A track with a page of its
+    own keeps the page's segment as its slug: its hub row pushes
+    ``/more/tracks/<slug>``, which must be that page.
+    """
+    own = next((seg for seg, key in HUB_PAGES.items() if key == track.key), None)
+    if own is not None and track.slug != own:
+        raise YearDataError(
+            f"{file}: tracks[{index}].slug: expected {own!r}, the segment of "
+            f"the track's own page, /more/tracks/{own}"
+        )
+    if own is None and track.slug in HUB_PAGES:
+        raise YearDataError(
+            f"{file}: tracks[{index}].slug: {track.slug!r} is the segment of "
+            f"another page, /more/tracks/{track.slug}"
+        )

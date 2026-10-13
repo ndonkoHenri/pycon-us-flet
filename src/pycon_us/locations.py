@@ -11,6 +11,8 @@ from urllib.parse import parse_qsl, quote, urlparse
 
 import flet as ft
 
+from pycon_us.config import HUB_PAGES
+
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 """The five tab roots, in the bottom bar's order (D-13)."""
 
@@ -23,8 +25,7 @@ PAGES = frozenset(
         "/search",
         "/more/speakers",
         "/more/tracks",
-        "/more/tracks/lightning-talks",
-        "/more/tracks/open-spaces",
+        *(f"/more/tracks/{segment}" for segment in HUB_PAGES),
         "/more/keynotes",
         "/more/open-spaces",
         "/more/lightning-talks",
