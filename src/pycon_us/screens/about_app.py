@@ -99,23 +99,38 @@ def header(conference: str) -> ft.Control:
         content=ft.Column(
             spacing=8,
             controls=[
+                # A level-2 heading under the bar's "About this app" (D-208), and the
+                # lines under it, each a node of its own: without the containers the
+                # lines merged into the heading, and with only the heading's, the
+                # lines' node came first, read before the name (UiAutomation, #205).
                 ft.Semantics(
                     header=True,
+                    heading_level=2,
+                    container=True,
                     content=ft.Text(
                         APP_NAME,
                         theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
                         color=ft.Colors.ON_SURFACE,
                     ),
                 ),
-                ft.Text(
-                    f"A companion for {conference}, built with Python and Flet.",
-                    theme_style=ft.TextThemeStyle.BODY_LARGE,
-                    color=ft.Colors.ON_SURFACE,
-                ),
-                ft.Text(
-                    "Not an official PSF app.",
-                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ft.Semantics(
+                    container=True,
+                    content=ft.Column(
+                        spacing=8,
+                        controls=[
+                            ft.Text(
+                                f"A companion for {conference}, built with Python "
+                                "and Flet.",
+                                theme_style=ft.TextThemeStyle.BODY_LARGE,
+                                color=ft.Colors.ON_SURFACE,
+                            ),
+                            ft.Text(
+                                "Not an official PSF app.",
+                                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ),
+                        ],
+                    ),
                 ),
             ],
         ),

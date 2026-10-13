@@ -48,9 +48,10 @@ def EmptyState(
     """Return a screen's empty state: an icon, why it is empty, and the way out.
 
     Centred, padded and without a fixed height, so it reflows at 200 % text inside the
-    screen's ``ListView``. For screen readers the title is a heading node of its own
-    and, with the body, inside a live region, so the state is announced when it
-    replaces a list (D-33); the icon is decorative; the button is a stop of its own.
+    screen's ``ListView``. For screen readers the title is a level-2 heading node of
+    its own, under the page's title (D-208), and, with the body, inside a live region,
+    so the state is announced when it replaces a list (D-33); the icon is decorative;
+    the button is a stop of its own.
 
     Every empty state names a way out (ux.md §4.6): ``action`` is a button that takes
     the user somewhere useful ("Open schedule", "Try again"). Only a state where no
@@ -84,6 +85,7 @@ def EmptyState(
         # merge into the live region, and the whole state reads as one heading.
         ft.Semantics(
             header=True,
+            heading_level=2,
             container=True,
             content=ft.Text(
                 title,

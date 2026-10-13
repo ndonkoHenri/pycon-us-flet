@@ -16,7 +16,8 @@ def TimeGutter(label: str) -> ft.Control:
     It has no fixed width: an invisible "10:00" / "AM" under the time sets it, so it
     grows with the text, is the same for every slot, and the rows beside it keep one
     left edge; a fixed 64 dp broke "7:30" over two lines at 200 % text (S2). It is a
-    heading, so screen readers move slot by slot, and reads once, as ``label``.
+    level-3 heading, a slot under its day (a level-2 day heading, or the selected day
+    tab), so screen readers move slot by slot (D-208), and reads once, as ``label``.
 
     Args:
         label: The slot's start from ``timefmt.time_label()``: "9:25 AM", or "09:25"
@@ -30,6 +31,7 @@ def TimeGutter(label: str) -> ft.Control:
     )
     return ft.Semantics(
         header=True,
+        heading_level=3,
         label=label,
         exclude_semantics=True,  # else it reads "9:25 AM, 9:25, AM"
         content=ft.Container(

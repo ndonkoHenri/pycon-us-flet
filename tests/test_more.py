@@ -276,8 +276,12 @@ def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
 def test_the_appearance_label_is_a_heading_for_screen_readers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    label = appearance_column(render()).controls[0]
+    merged = appearance_column(render()).controls[0]
+    # One node: the tile's own node is the heading, not an unlabelled one around it.
+    assert isinstance(merged, ft.MergeSemantics)
+    label = merged.content
     assert isinstance(label, ft.Semantics) and label.header  # D-33
+    assert label.heading_level == 3  # a group inside "You" (D-208)
     assert isinstance(label.content, ft.ListTile)
     assert label.content.title == "Appearance"
     assert label.content.on_click is None  # a label, not a link
