@@ -294,7 +294,7 @@ def test_favorite_token_is_the_tertiary_role(dark: bool) -> None:
     assert tokens.success == tokens.live
 
 
-BADGE_TOKENS = ("tracks", "unknown_track", "spanish", "registration")
+BADGE_TOKENS = ("tracks", "unknown_track", "spanish", "registration", "new_track")
 
 YEARS = sorted(
     int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
@@ -308,6 +308,7 @@ def badges(tokens: theme.Tokens) -> dict[str, theme.BadgeColors]:
         "unknown track": tokens.unknown_track,
         "En Español": tokens.spanish,
         "Registration required": tokens.registration,
+        "New track": tokens.new_track,
     }
 
 
@@ -385,6 +386,15 @@ def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
     registration = theme.build_tokens(dark=dark, high_contrast=False).registration
     assert registration == theme.BadgeColors(text=hex_role(scheme(dark), "error"))
     assert registration.fill is None  # outlined
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
+    # D-199: a status mark beside a track's badge, not one more tonal fill, which in
+    # light sat 6.8 from the En Español pink and in dark outshone every track.
+    new_track = theme.build_tokens(dark=dark, high_contrast=False).new_track
+    assert new_track == theme.BadgeColors(text=hex_role(scheme(dark), "primary"))
+    assert new_track.fill is None  # outlined
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

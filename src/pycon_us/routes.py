@@ -18,7 +18,7 @@ from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
-from pycon_us.screens.more_pages import MorePage, Track
+from pycon_us.screens.more_pages import MorePage
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.plan import PlanViewer
@@ -29,6 +29,8 @@ from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
+from pycon_us.screens.track import TrackPage
+from pycon_us.screens.tracks import Tracks
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
@@ -143,7 +145,7 @@ ROUTES = [
         "more",
         More,
         pushed("speakers", Speakers),
-        pushed("tracks", MorePage, pushed(":slug", Track)),
+        pushed("tracks", Tracks, pushed(":slug", TrackPage)),
         pushed("keynotes", MorePage),
         pushed("open-spaces", MorePage),
         pushed("lightning-talks", MorePage),

@@ -2,8 +2,9 @@
 
 Its own module so that the screen stays under about 400 lines (D-66), as the Developer
 screen's pickers are (D-187). ``ResultList`` is memoised, and so is each day of
-sessions, keyed by its date, over the memoised session and speaker rows (D-153): new
-results re-render only the days and rows they changed, and a star tap one row.
+sessions (``ui.day_groups.DayGroup``, keyed by its date), over the memoised session
+and speaker rows (D-153): new results re-render only the days and rows they changed,
+and a star tap one row.
 """
 
 from collections.abc import Mapping
@@ -15,15 +16,12 @@ from pycon_us.core.rooms import session_count
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.search import SearchResults
 from pycon_us.core.speakers import SpeakerEntry
-from pycon_us.core.timefmt import day_heading
-from pycon_us.core.timeline import DaySessions
 from pycon_us.locations import drill_href
-from pycon_us.services import use_services
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.rows import LinkTile, SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 
 SCREEN = "search"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -99,6 +97,7 @@ def ResultList(
                 saved & {s.id for s in group.sessions},
                 on_toggle,
                 tokens,
+                screen=SCREEN,
                 level=day_level,
                 # Right under its type heading, the first day sits close to it.
                 top=0 if titled and i == 0 else 16,
@@ -133,79 +132,6 @@ def type_heading(name: str) -> ft.Control:
         level=2,
         theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
         color=ft.Colors.ON_SURFACE,
-    )
-
-
-def DayGroup(
-    group: DaySessions,
-    views: Mapping[str, SessionView],
-    saved: frozenset[str],
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    *,
-    level: int,
-    top: int = 16,
-) -> ft.Control:
-    """Return one day of session results: its heading and its rows, one list item.
-
-    A memoised component keyed by the day, as S2's slots are (D-153): new results
-    that leave a day's sessions as they were skip it, and a star tap re-renders only
-    its day, whose ``saved`` changed, and in it only the one row.
-
-    Args:
-        group: The day and its matching sessions, in the Schedule's order.
-        views: Every session's row view, by id.
-        saved: The day's saved sessions (``Favorites.ids`` ∩ the day's ids).
-        on_toggle: The list's one star handler.
-        tokens: The scheme's tokens.
-        level: The day heading's level: 3 under a "Sessions" heading, else 2.
-        top: The space above the day heading: 0 right under the "Sessions" heading.
-    """
-    # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
-    return _DayGroup(
-        group,
-        views,
-        saved,
-        on_toggle,
-        tokens,
-        level=level,
-        top=top,
-        key=group.day.isoformat(),  # pyright: ignore[reportCallIssue]
-    )
-
-
-@ft.memo
-@ft.component
-def _DayGroup(
-    group: DaySessions,
-    views: Mapping[str, SessionView],
-    saved: frozenset[str],
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    *,
-    level: int,
-    top: int,
-) -> ft.Control:
-    """The body of ``DayGroup``; it runs only when its props change (F34)."""
-    info = use_services().year.conference
-    rows = [
-        NoticeRow(view, screen=SCREEN)
-        if is_notice(view.session, info)
-        else SessionRow(
-            view, view.session.id in saved, on_toggle, tokens, screen=SCREEN
-        )
-        for view in (views[session.id] for session in group.sessions)
-    ]
-    return ft.Column(
-        [
-            # A node of its own: else the heading joins the list item's node.
-            ft.Semantics(
-                container=True,
-                content=SectionHeader(day_heading(group.day), level=level, top=top),
-            ),
-            *rows,
-        ],
-        spacing=0,
     )
 
 

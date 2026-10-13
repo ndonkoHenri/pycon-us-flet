@@ -16,7 +16,7 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
-from pycon_us.config import Track, load_year
+from pycon_us.config import load_year
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import Slot, timeline
 from pycon_us.prefs import Prefs
@@ -532,7 +532,8 @@ def _changed(slot: Slot, index: int, before: tuple[Slot, ...]) -> bool:
 
 def test_the_registry_is_what_the_sheet_reads() -> None:
     """The groups come from conference.toml, not code: a moved track moves its chip."""
-    moved = Track("Talk", "Talk", "Talks", "Talk", "MIC_NONE_OUTLINED", "community")
+    talk = next(t for t in INFO.tracks if t.key == "Talk")
+    moved = dataclasses.replace(talk, group="community")
     edited = dataclasses.replace(
         INFO, tracks=tuple(moved if t.key == "Talk" else t for t in INFO.tracks)
     )

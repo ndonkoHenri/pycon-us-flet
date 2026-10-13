@@ -168,6 +168,7 @@ def SessionRow(
     screen: str,
     overlaps: tuple[str, ...] = (),
     elapsed: int | None = None,
+    omit: frozenset[str] = frozenset(),
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
 
@@ -195,6 +196,8 @@ def SessionRow(
         elapsed: For a row that is on (Now), how much has passed, in whole percent
             (``agenda.elapsed_percent()``): a 3 dp bar in ``Tokens.live`` under the
             text, and "60 percent elapsed." at the end of the phrase; None for none.
+        omit: Badge labels the page already shows, left out of the row and its
+            phrase (``badge_specs()``): a track page's own badge (D-199).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -206,6 +209,7 @@ def SessionRow(
         screen=screen,
         overlaps=overlaps,
         elapsed=elapsed,
+        omit=omit,
         key=key,  # pyright: ignore[reportCallIssue]
     )
 
@@ -221,12 +225,13 @@ def _SessionRow(
     screen: str,
     overlaps: tuple[str, ...],
     elapsed: int | None = None,
+    omit: frozenset[str] = frozenset(),
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference  # a plain value: subscribes to nothing
     session = view.session
-    specs = badge_specs(session, info, tokens)
+    specs = badge_specs(session, info, tokens, omit=omit)
 
     @report_errors
     async def star() -> None:

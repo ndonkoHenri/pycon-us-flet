@@ -36,6 +36,10 @@ SPANISH = "En Español"
 REGISTRATION = "Registration required"
 """The label of a session that needs registration (DATA-09), as on session detail."""
 
+NEW_TRACK = "New track"
+"""The badge of a track new this year (SCHED-21), shown beside the track's own badge
+on the Tracks hub and the track's page, outlined in ``Tokens.new_track`` (D-199)."""
+
 FAVORITE_LABEL = "Save to My schedule"
 """The star's name for screen readers, the same in both states: its toggle state says
 whether the session is saved ("Save to My schedule, switch, on"; D-184)."""
@@ -90,7 +94,11 @@ def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
 
 
 def badge_specs(
-    session: Session, info: ConferenceInfo, tokens: Tokens
+    session: Session,
+    info: ConferenceInfo,
+    tokens: Tokens,
+    *,
+    omit: frozenset[str] = frozenset(),
 ) -> list[tuple[str, BadgeColors]]:
     """Return a session's badges as labels and colours, in the one order they show in.
 
@@ -102,10 +110,12 @@ def badge_specs(
         session: The session.
         info: The year's facts, for the track's display name (DATA-28).
         tokens: The current scheme's tokens.
+        omit: Labels the page already shows, left out of every row: a track page's
+            own badge, and "En Español" on the Charlas page (D-199).
 
     Returns:
         The label and colours of each badge; none for a session without a track and
-        without either flag.
+        without either flag, or whose badges are all omitted.
     """
     specs: list[tuple[str, BadgeColors]] = []
     key = session.track
@@ -115,7 +125,7 @@ def badge_specs(
         specs.append((SPANISH, tokens.spanish))
     if session.pre_registered:
         specs.append((REGISTRATION, tokens.registration))
-    return specs
+    return [spec for spec in specs if spec[0] not in omit]
 
 
 def session_badges(
