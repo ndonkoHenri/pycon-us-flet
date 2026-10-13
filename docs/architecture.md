@@ -224,7 +224,7 @@ ROUTES = [
     pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
-    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks, pushed(":slug", Track)),
+    pushed("more", More, pushed("speakers", Speakers), pushed("tracks", Tracks, pushed(":slug", TrackPage)),
            pushed("keynotes", Keynotes), pushed("open-spaces", OpenSpaces), pushed("sprints", Sprints),
            pushed("lightning-talks", LightningTalks), pushed("app", AboutApp), pushed("developer", Developer)),
 ]
