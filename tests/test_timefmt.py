@@ -130,6 +130,17 @@ def test_a_span_of_days_names_its_month_once_when_it_can() -> None:
     assert timefmt.date_range_label(date(2026, 5, 13), date(2026, 5, 13)) == "May 13"
 
 
+def test_a_day_range_names_its_weekdays() -> None:
+    """The key dates and the sprints: "Mon, May 18 – Tue, May 19", or one day."""
+    assert (
+        timefmt.day_range_label(date(2026, 5, 18), date(2026, 5, 19))
+        == "Mon, May 18 – Tue, May 19"
+    )
+    assert (
+        timefmt.day_range_label(date(2026, 5, 18), date(2026, 5, 18)) == "Mon, May 18"
+    )
+
+
 def test_zone_note_only_when_the_device_offset_differs() -> None:
     now = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     in_long_beach = now.astimezone(PACIFIC).utcoffset()

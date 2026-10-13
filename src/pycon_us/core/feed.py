@@ -202,6 +202,8 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
     Each distinct value converts once: a poster's description is also its poster
     detail's, and many fields are empty. Open spaces are Markdown already, so their
     descriptions pass through (D-115) and their search text comes from the Markdown.
+    Sprint projects get their description's text and a search text too, for the
+    Sprints card's preview and its filter (EVT-05, EVT-06).
     """
 
     @cache
@@ -221,6 +223,15 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
             search_text=fold(" ".join([session.name, text, *session.speaker_names])),
         )
 
+    def project(sprint: Sprint) -> Sprint:
+        text = html_md.to_text(sprint.description)
+        return replace(
+            sprint,
+            description_md=markdown(sprint.description),
+            description_text=text,
+            search_text=fold(f"{sprint.name} {sprint.submitter} {text}"),
+        )
+
     return replace(
         data,
         sessions={key: marked_up(value) for key, value in data.sessions.items()},
@@ -231,9 +242,7 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
         posters=tuple(
             replace(p, description_md=markdown(p.description)) for p in data.posters
         ),
-        sprints=tuple(
-            replace(s, description_md=markdown(s.description)) for s in data.sprints
-        ),
+        sprints=tuple(project(sprint) for sprint in data.sprints),
         job_listings=tuple(
             replace(j, description_md=markdown(j.description))
             for j in data.job_listings
