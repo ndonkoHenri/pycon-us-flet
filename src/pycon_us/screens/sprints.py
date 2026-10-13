@@ -1,5 +1,8 @@
 """Sprints (``/more/sprints``): the projects of the development sprints (EVT-05..08).
 
+The Tracks hub opens the same page as its child, ``/more/tracks/sprints``, so Back
+returns to the hub (D-207).
+
 The feed lists the projects that sign up for the sprints, the two days of coding after
 the talks, which have no sessions (D-126). The page says when they are, from the year's
 dates (``ConferenceInfo.first_sprint_day`` to ``last_day``), then shows a card per

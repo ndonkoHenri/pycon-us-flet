@@ -94,9 +94,12 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/tracks/python", ["More", "Tracks", "TrackPage"]),
         ("/more/lightning-talks", ["More", "LightningTalks"]),
         ("/more/open-spaces", ["More", "OpenSpaces"]),
-        # The hub's rows open the same pages over the hub (D-205), not TrackPage.
+        ("/more/sprints", ["More", "Sprints"]),
+        # The hub's rows open the same pages over the hub (D-207), not TrackPage.
+        ("/more/tracks/sprints", ["More", "Tracks", "Sprints"]),
         ("/more/tracks/lightning-talks", ["More", "Tracks", "LightningTalks"]),
         ("/more/tracks/open-spaces", ["More", "Tracks", "OpenSpaces"]),
+        ("/more/tracks/keynotes", ["More", "Tracks", "TrackPage"]),  # until #104
         (
             "/more/tracks/open-spaces/session/42",
             ["More", "Tracks", "OpenSpaces", "Drill"],
@@ -235,9 +238,12 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/speakers", "/more"),
         ("/more/tracks/python", "/more/tracks"),
         ("/more/tracks/python/session/42", "/more/tracks/python"),
-        ("/more/tracks/lightning-talks", "/more/tracks"),  # from the hub, to it
+        ("/more/tracks/sprints", "/more/tracks"),  # from the hub, to it (D-207)
+        ("/more/tracks/lightning-talks", "/more/tracks"),
         ("/more/tracks/open-spaces", "/more/tracks"),
-        ("/more/lightning-talks", "/more"),  # from More, to it
+        ("/more/tracks/sprints/session/42", "/more/tracks/sprints"),
+        ("/more/sprints", "/more"),  # from More, to it
+        ("/more/lightning-talks", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
         ("/map/room/hall-a/plan/expo", "/map/room/hall-a"),
         ("/now/session/poster%20detail%2B1", "/now"),
