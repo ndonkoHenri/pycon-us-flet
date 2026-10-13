@@ -42,6 +42,7 @@ from pycon_us.ui.badges import (
 from pycon_us.ui.links import open_link
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
 
 SCREEN = "session"
@@ -108,14 +109,16 @@ def SessionDetail(session_id: str) -> ft.View:
         await open_link(svc, session.url)
 
     # Share (#92) goes between the star and the overflow (ux.md §5.5).
-    actions = [
-        FavoriteButton(
-            session.id in favorites.ids,
-            star,
-            color=tokens.favorite,
-            identifier=f"{SCREEN}.favorite",
+    actions: list[ft.Control] = []
+    if not is_notice(session, info):  # breaks and notices have no star (D-31)
+        actions.append(
+            FavoriteButton(
+                session.id in favorites.ids,
+                star,
+                color=tokens.favorite,
+                identifier=f"{SCREEN}.favorite",
+            )
         )
-    ]
     if session.url:
         actions.append(_overflow(session.url, open_site))
     controls: list[ft.Control] = []
@@ -135,7 +138,9 @@ def SessionDetail(session_id: str) -> ft.View:
     )
     if session.pre_registered:
         controls.append(_registration(info.registration_url))
-    controls += _speaker_links(session, data.speakers if data else {}, view_path)
+    speakers = _speaker_links(session, data.speakers if data else {}, view_path)
+    if speakers:  # one block: the list's spacing goes between sections only
+        controls.append(ft.Column(speakers, spacing=0))
     # The description (#91) and the posters (#92) follow here.
     body = ft.ListView(
         controls, expand=True, spacing=16, padding=ft.Padding.only(top=8, bottom=24)
@@ -217,6 +222,8 @@ def _registration(url: str) -> ft.Control:
             LinkTile(
                 "Check your registration",
                 url,
+                # An icon of its own, so its title lines up with the text above.
+                icon=ft.Icons.HOW_TO_REG_OUTLINED,
                 identifier=f"{SCREEN}.registration.link",
             )
         )

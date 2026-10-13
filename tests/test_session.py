@@ -287,7 +287,8 @@ async def test_the_day_before_there_is_no_countdown(render: Render) -> None:
     clock.set_test_now(at("2026-05-15 18:00"))
     detail = await render(TALK)
     lines = detail.text("session.when")
-    assert lines[0] == "Saturday, May 16 · 10:30–11:00 AM"  # the date says when
+    # The date says when; the range never breaks inside (no-break space, word joiner).
+    assert lines[0] == "Saturday, May 16 · 10:30–\u206011:00\u00a0AM"
     assert not any(line.startswith("Starts") for line in lines)
     title = next(
         t for t in descendants(detail.node("session.when")) if isinstance(t, ft.Text)
@@ -434,6 +435,12 @@ async def test_the_overflow_opens_the_public_page(render: Render) -> None:
             ft.LaunchMode.IN_APP_BROWSER_VIEW,
         )
     ]
+
+
+async def test_a_break_has_no_star_as_its_row_has_none(render: Render) -> None:
+    """D-31: breaks and notices are not saved to My schedule."""
+    detail = await render(BREAK)
+    assert detail.nodes("session.favorite") == []
 
 
 async def test_a_session_without_a_public_page_has_no_overflow(render: Render) -> None:
