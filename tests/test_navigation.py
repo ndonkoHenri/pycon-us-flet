@@ -1,11 +1,13 @@
-"""Tests for the bottom bar's parts and the re-tap scroll (#75; D-13, D-27, D-144).
+"""Tests for the bottom bar and the re-tap scroll (#75; D-13, D-27, D-144).
 
-How the bar sits on a View and what a tap does are ``AppScaffold`` tests
-(``test_scaffold.py``). What the bar looks like, that a re-tap scrolls a real list and
-what TalkBack and VoiceOver read are checked on devices (the PR).
+The bar's own parts, then how it sits on ``AppScaffold``'s Views and what a tap does,
+built outside a renderer with the fixtures of ``tests/chrome.py`` (#264). What the
+bar looks like, that a re-tap scrolls a real list and what TalkBack and VoiceOver read
+are checked on devices (the PR).
 """
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
@@ -17,8 +19,21 @@ from pycon_us.ui import navigation
 from pycon_us.ui.navigation import (
     RETAP_SCROLL_MS,
     TABS,
+    Tab,
     navigation_bar,
     use_scroll_to_top,
+)
+from tests import chrome
+from tests.chrome import app_bar, back_arrow, view_at
+from tests.fakes import FakePage, Hooks
+
+# The harness's fixtures, under this module's names, where pytest looks them up.
+year, svc, page, conference, hooks = (
+    chrome.year,
+    chrome.svc,
+    chrome.page,
+    chrome.conference,
+    chrome.hooks,
 )
 
 
@@ -131,3 +146,106 @@ async def test_a_retap_before_the_list_is_built_does_nothing(prefs: Prefs) -> No
     list_ref, scroll_to_top = use_scroll_to_top()
     assert list_ref.current is None
     await scroll_to_top()  # no error, nothing to scroll
+
+
+# ------------------------------------------------------------------ the bottom bar (#75)
+
+
+def bar_of(view: ft.View) -> ft.NavigationBar:
+    assert isinstance(view.navigation_bar, ft.NavigationBar)
+    return view.navigation_bar
+
+
+async def tap_tab(view: ft.View, root: str) -> None:
+    """Tap a destination as Flutter reports it: selected first, then ``on_change``."""
+    bar = bar_of(view)
+    bar.selected_index = TAB_ROOTS.index(root)
+    await cast(Any, bar.on_change)(SimpleNamespace(control=bar))
+
+
+@pytest.mark.parametrize("root", TAB_ROOTS)
+def test_every_tab_root_shows_the_bar_with_its_own_tab_selected(
+    hooks: Hooks, page: FakePage, root: str
+) -> None:
+    bar = bar_of(view_at(hooks, page, root))
+    assert TABS[bar.selected_index].root == root
+
+
+@pytest.mark.parametrize("tab", TABS)
+def test_a_root_s_title_carries_its_screen_identifier_for_ui_tests(
+    hooks: Hooks, page: FakePage, tab: Tab
+) -> None:
+    title = app_bar(view_at(hooks, page, tab.root)).title
+    assert isinstance(title, ft.Semantics)
+    assert title.identifier == tab.title_identifier
+    assert title.heading_level == 1  # the root's heading (D-211)
+    assert title.label is None  # the text names the node, once (D-166)
+    assert isinstance(title.content, ft.Text)
+    assert title.content.value == "Title"
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "/now/session/42",
+        "/schedule/session/42/speaker/17",
+        "/more/speakers",
+        "/more/tracks/python",
+        "/search",
+        "/search/session/42",
+    ],
+)
+def test_pushed_views_show_the_back_arrow_and_no_bar(
+    hooks: Hooks, page: FakePage, location: str
+) -> None:
+    view = view_at(hooks, page, location)
+    assert view.navigation_bar is None  # it moved with the page (D-144)
+    back_arrow(view)
+
+
+@pytest.mark.parametrize("target", ["/now", "/my-schedule", "/map", "/more"])
+async def test_tapping_another_tab_shows_its_root(
+    hooks: Hooks, page: FakePage, target: str
+) -> None:
+    retaps: list[str] = []
+
+    async def retap() -> None:
+        retaps.append("schedule")
+
+    await tap_tab(view_at(hooks, page, "/schedule", on_retap=retap), target)
+    assert page.navigated == [target]
+    assert retaps == []
+
+
+async def test_re_tapping_the_active_tab_runs_the_root_s_retap_and_stays(
+    hooks: Hooks, page: FakePage
+) -> None:
+    retaps: list[str] = []
+
+    async def retap() -> None:
+        retaps.append("map")
+
+    await tap_tab(view_at(hooks, page, "/map", on_retap=retap), "/map")
+    assert retaps == ["map"]
+    assert page.navigated == []
+
+
+async def test_re_tapping_a_root_without_a_retap_action_does_nothing(
+    hooks: Hooks, page: FakePage
+) -> None:
+    await tap_tab(view_at(hooks, page, "/now"), "/now")
+    assert page.navigated == []
+    assert page.dialogs == []
+
+
+async def test_a_retap_that_fails_is_reported_and_the_bar_keeps_working(
+    hooks: Hooks, page: FakePage
+) -> None:
+    async def retap() -> None:
+        raise RuntimeError("the list is gone")
+
+    view = view_at(hooks, page, "/more", on_retap=retap)
+    await tap_tab(view, "/more")
+    assert len(page.dialogs) == 1  # "Something went wrong" (D-163), not a crash
+    await tap_tab(view, "/now")
+    assert page.navigated == ["/now"]

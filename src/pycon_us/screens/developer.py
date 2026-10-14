@@ -20,7 +20,13 @@ from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.screens.developer_data import DataActions
-from pycon_us.screens.developer_ui import NO_OUTCOME, outcome_line, padded
+from pycon_us.screens.developer_ui import (
+    LABEL_PADDING,
+    NO_OUTCOME,
+    option_field,
+    outcome_line,
+    padded,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -192,13 +198,27 @@ def Developer() -> ft.View:
                     ft.Row(
                         [
                             # Merged: a bare identifier was an empty stop (D-190).
+                            # Their own padding, as the Schedule sheet's Show: Flutter
+                            # shrinks it as the text grows, and at the largest text
+                            # the labels touched the rounded ends (#280).
                             named(
                                 "developer.reset",
-                                ft.OutlinedButton("Reset", on_click=reset),
+                                ft.OutlinedButton(
+                                    "Reset",
+                                    on_click=reset,
+                                    style=ft.ButtonStyle(padding=LABEL_PADDING),
+                                ),
                             ),
                             named(
                                 "developer.apply",
-                                ft.FilledButton("Apply", on_click=apply),
+                                ft.FilledButton(
+                                    "Apply",
+                                    on_click=apply,
+                                    style=ft.ButtonStyle(padding=LABEL_PADDING),
+                                    # M3's filled button lies flat; with a style, Flet
+                                    # lifts every state to this (1 by default).
+                                    elevation=0,
+                                ),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.END,
@@ -244,59 +264,6 @@ def locked() -> ft.Control:
         ],
         expand=True,
     )
-
-
-def option_field(
-    identifier: str,
-    value: str,
-    *,
-    label: str,
-    hint: str,
-    helper: str,
-    error: str,
-    keyboard: ft.KeyboardType,
-    on_change: ft.ControlEventHandler[ft.TextField],
-    suffix: ft.Control | None = None,
-    reveal_below: int = 20,
-) -> ft.Control:
-    """Return one option's text field, found by flows through ``identifier``.
-
-    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The value,
-    the helper and the error (``""`` when the text parses) wrap to three lines at large
-    text, and the text is taken as typed, with no autocorrect or suggestions (a date, a
-    URL). ``max_lines`` without ``multiline``, which would swap ``keyboard`` for the
-    multiline keyboard, whose Return types a line break.
-
-    The identifier is merged into the field's node (D-190), except around a field
-    with a ``suffix``: a merge takes in every descendant, and the clock's picker would
-    stop being a button of its own (D-189). That field keeps a bare identifier, an
-    empty node of its own, until Flet's ``Semantics`` stops forcing ``enabled`` (U34,
-    D-214).
-
-    ``reveal_below`` is how much of the list under the field's text stays in sight when
-    the field takes the focus and the keyboard shrinks the screen (Flutter's
-    ``scrollPadding``; 20 dp by default, as Flutter's).
-    """
-    text_field = ft.TextField(
-        value=value,
-        max_lines=3,
-        label=label,
-        hint_text=hint,
-        hint_max_lines=1,  # else a long hint (the feed URL) heightens the field
-        helper=helper,
-        helper_max_lines=3,
-        error=error or None,
-        error_max_lines=3,
-        keyboard_type=keyboard,
-        autocorrect=False,
-        enable_suggestions=False,
-        on_change=on_change,
-        suffix_icon=suffix,
-        scroll_padding=ft.Padding.only(left=20, top=20, right=20, bottom=reveal_below),
-    )
-    if suffix is None:
-        return padded(named(identifier, text_field))
-    return padded(ft.Semantics(identifier=identifier, content=text_field))
 
 
 def capability_row(name: str, available: bool) -> ft.Control:
