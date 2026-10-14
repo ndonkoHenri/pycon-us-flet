@@ -672,7 +672,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
-    conference.set_feed_url(DEV_FEED)
+    await conference.set_feed_url(DEV_FEED, svc.storage)
     svc.memory.last_location = "/more/developer"
     svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
     svc.memory.jumped_on = date(2026, 5, 15)
@@ -741,7 +741,7 @@ async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it
         return recorded(2026)
 
     monkeypatch.setattr(api, "fetch_feed", hold)
-    conference.set_feed_url(DEV_FEED)
+    await conference.set_feed_url(DEV_FEED, svc.storage)
     running = conference.start_refresh(svc.storage, svc.year)
     await asyncio.sleep(0)
     async with asyncio.timeout(5):  # without the cancel it waits for the feed forever
