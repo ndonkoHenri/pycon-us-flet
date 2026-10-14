@@ -35,7 +35,7 @@ from pycon_us.screens.sprint_card import SCREEN, ProjectCard
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
-from pycon_us.ui.fields import SearchField
+from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
@@ -63,25 +63,11 @@ def Sprints() -> ft.View:
     svc = use_services()
     conference = use_conference()
     info = svc.year.conference
-    query, set_query = ft.use_state("")
+    field = use_field_query()
+    query = field.value
     data = conference.data
     # Once per feed version: a keystroke re-renders this screen, never re-sorts.
     listed = ft.use_memo(lambda: projects(data) if data else (), [conference.version])
-
-    @report_errors
-    def changed(e: ft.Event[ft.TextField]) -> None:
-        set_query(e.control.value)
-
-    # A fresh Ref each render, as the Speakers list's: this render's field.
-    field_ref: ft.Ref[ft.TextField] = ft.Ref()
-
-    @report_errors
-    async def clear() -> None:
-        set_query("")
-        # Both Clear controls go away once the filter is empty: put the focus in the
-        # field, ready to type again, rather than lose a screen reader's place (D-182).
-        if field_ref.current is not None:
-            await field_ref.current.focus()
 
     @report_errors
     async def refresh() -> None:
@@ -124,10 +110,10 @@ def Sprints() -> ft.View:
         found = filter_projects(listed, query)
         pinned = [
             SearchField(
-                value=query,
-                on_change=changed,
-                on_clear=clear,
-                ref=field_ref,
+                value=field.value,
+                on_change=field.changed,
+                on_clear=field.clear,
+                ref=field.ref,
                 hint=FILTER_HINT,
                 label=FILTER_HINT,
                 clear_tooltip=CLEAR_FILTER,
@@ -135,7 +121,12 @@ def Sprints() -> ft.View:
             )
         ]
         if found and found is not listed:  # a filter applies and finds some
-            pinned.append(_found_count(len(found)))
+            pinned.append(
+                found_count(
+                    f"{len(found)} project" + ("" if len(found) == 1 else "s"),
+                    identifier=f"{SCREEN}.count",
+                )
+            )
         items = [*intro(info)]
         if found:
             # A node of its own, so it is not read with the first card.
@@ -150,7 +141,7 @@ def Sprints() -> ft.View:
                     "\N{RIGHT DOUBLE QUOTATION MARK}",
                     icon=ft.Icons.SEARCH_OFF,
                     action=CLEAR_FILTER,
-                    on_action=clear,
+                    on_action=field.clear,  # the focus goes back to the field
                     identifier=f"{SCREEN}.no_match",
                 )
             )
@@ -267,28 +258,4 @@ def _menu_item(label: str, url: str, svc: Services) -> ft.PopupMenuItem:
         ),
         icon=ft.Icons.OPEN_IN_NEW,
         on_click=go,
-    )
-
-
-def _found_count(found: int) -> ft.Control:
-    """Return the line that says how many projects a filter found, a live region.
-
-    As the Speakers list's count (ux.md §9): a screen reader hears what typing did
-    without leaving the field. Shown only while a filter finds some.
-
-    Args:
-        found: How many projects the filter found, at least one.
-    """
-    return ft.Semantics(
-        live_region=True,
-        identifier=f"{SCREEN}.count",
-        content=ft.Container(
-            ft.Text(
-                f"{found} project" + ("" if found == 1 else "s"),
-                theme_style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            # Apart from the list under it, whose first card's edge it touched.
-            padding=ft.Padding.only(left=16, top=4, right=16, bottom=8),
-        ),
     )
