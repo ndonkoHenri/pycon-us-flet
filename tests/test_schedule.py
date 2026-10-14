@@ -8,10 +8,13 @@ bar are ``tests/test_scaffold.py``'s), and ``ListView.scroll_to`` is recorded in
 sent to a client, answering a keyed scroll with the scroll end Flutter would report (or with
 nothing, for a list already in place) and reading ``self.page`` first, as Flet does, so a
 list that has left the page raises Flet's error. ``Services.run_every`` is recorded, so a
-test moves the minute tick by hand (``Shown.at``). The tests wait for what they expect to
-happen (``Shown.until``), never for a fixed time, so a loaded host only makes them slower
-(#237). Whether a jump lands, how the tabs read at 200 % and what TalkBack says are device
-checks (#86, #89).
+test moves the minute tick by hand (``Shown.at``). Each jump is recorded too
+(``Shown.jumps``): a jump may ask for its scroll more than once (D-155), so the tests
+check which jumps ran and where they went, not how many scrolls they asked for. The
+tests wait for what they expect to happen (``Shown.until``, and every render returns
+only once no jump it started is still on its way), never for a fixed time, so a loaded
+host only makes them slower (#237). Whether a jump lands, how the tabs read at 200 %
+and what TalkBack says are device checks (#86, #89).
 """
 
 import asyncio
@@ -68,6 +71,9 @@ DURING = datetime(2026, 5, 15, 10, 40, tzinfo=PACIFIC)
 BEFORE = datetime(2026, 4, 1, 12, 0, tzinfo=PACIFIC)
 """Six weeks before the conference."""
 
+TEN_30 = "slot-2026-05-15T10:30:00-07:00"
+"""Friday's 10:30 AM slot, on at ``DURING``: where a jump to now goes then."""
+
 TALK = "142"
 """A Saturday talk: "Python for Humans - …", 10:30-11:00 AM, in the 10:30 slot."""
 
@@ -97,17 +103,26 @@ class Shown:
     """Replace the Schedule with another screen, as a bottom-tab switch does (D-142)."""
     moves: bool = True
     """Whether a keyed scroll ends with a scroll end; False: the list is already there."""
+    late: bool = False
+    """Whether the first keyed scroll's end comes too late, as on a loaded host (#237)."""
     hold: asyncio.Event | None = None
     """When set to an event, each ``scroll_to`` waits for it before it returns."""
     ticks: list[Callable[[], object]] = field(default_factory=list)
     """The minute ticks' actions (``Services.run_every``), called by ``at``."""
     rerender: Callable[[], None] = lambda: None
     """Re-render the Schedule's parent, keeping the Schedule mounted, as Back does."""
+    jumps: list[tuple[str, scrolling.Jump]] = field(default_factory=list)
+    """Each jump that ended (``jump_to_key``): its target key and how it ended."""
+    jumping: int = 0
+    """How many jumps are on their way."""
 
-    async def until(self, holds: Callable[[], object], *, timeout: float = 5.0) -> None:
+    async def until(
+        self, holds: Callable[[], object], *, timeout: float = 30.0
+    ) -> None:
         """Settle until ``holds()`` is true, or fail after ``timeout`` seconds (#237).
 
-        A poll rather than a fixed wait, so a loaded host only makes it slower.
+        A poll rather than a fixed wait, so a loaded host only makes it slower; the
+        deadline is generous because a passing test never reaches it.
         """
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
@@ -123,8 +138,18 @@ class Shown:
             action()
         await settle()
 
+    def jumped(self) -> list[str]:
+        """The targets of the jumps that ended, in order: one per jump, however many
+        times it asked for its scroll."""
+        return [key for key, _ in self.jumps]
+
+    def forget(self) -> None:
+        """Forget the scrolls and jumps so far, to see what the next step does."""
+        self.scrolls.clear()
+        self.jumps.clear()
+
     def keyed(self) -> list[str]:
-        """The keys of the keyed scrolls so far: the jumps, in order."""
+        """The keys of the keyed scroll asks so far, a jump's second ask included."""
         return [
             kwargs["scroll_key"].value
             for _, kwargs in self.scrolls
@@ -196,6 +221,21 @@ def _scroll_end(pixels: float) -> dict[str, object]:
     }
 
 
+def _assert_asks(schedule: Shown, day: date, key: str, duration: int) -> None:
+    """Assert that every keyed scroll ask so far went to ``key`` on the day's list.
+
+    A jump asks once, or again when its scroll end comes late (D-155): how many asks
+    a loaded host sees is not the jump's behaviour, where they go is (#237).
+    """
+    asks = [(t, kwargs) for t, kwargs in schedule.scrolls if "scroll_key" in kwargs]
+    assert asks
+    day_list = schedule.list_of(day)
+    for target, kwargs in asks:
+        assert target is day_list
+        assert kwargs["scroll_key"].value == key
+        assert kwargs["duration"] == duration
+
+
 @pytest.fixture
 def now() -> list[datetime | None]:
     """The frozen clock: set ``now[0]`` before the screen renders; None lifts it."""
@@ -222,14 +262,24 @@ async def shown(
 ) -> AsyncIterator[Callable[[], Awaitable[Shown]]]:
     """Return a function that renders the Schedule; every render is closed at the end."""
     opened: list[Any] = []
-    # Generous: the stand-in reports a scroll end at once, so a passing test never waits
-    # this long, and a loaded host cannot make a jump ask twice (#237). A test of a list
-    # that never moves sets its own.
-    monkeypatch.setattr(scrolling, "LANDING_S", 5.0)
-    monkeypatch.setattr(screen, "SETTLE_S", 5.0)
+    # Generous: the stand-in reports a scroll end at once and a test reports the tabs'
+    # switch, so a passing test never waits this long. A test of a list that never
+    # moves sets its own.
+    monkeypatch.setattr(scrolling, "LANDING_S", 30.0)
+    monkeypatch.setattr(screen, "SETTLE_S", 30.0)
 
-    async def show(*, moves: bool = True, **settings: Any) -> Shown:
-        """Render the Schedule with these ``Prefs``; ``moves`` as ``Shown.moves``."""
+    async def show(
+        *, moves: bool = True, late: bool = False, wait: bool = True, **settings: Any
+    ) -> Shown:
+        """Render the Schedule with these ``Prefs``; ``moves`` and ``late`` as in
+        ``Shown``.
+
+        With ``wait`` it returns once no jump is on its way, so the next step never
+        meets one (#237). The first display's jump, when there is one, has ended by
+        then: ``settle()`` has already started it, since the effect's chain up to the
+        jump is pure asyncio here (``MemoryPrefs`` answers inline), with no timer or
+        thread hop. A test that expects that jump also checks ``jumps`` right after.
+        """
         clock.set_test_now(now[0])
         storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
         semantics = MemorySemantics()
@@ -259,6 +309,7 @@ async def shown(
             storage,
             announced=semantics.announced,
             moves=moves,
+            late=late,
         )
 
         async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
@@ -267,12 +318,20 @@ async def shown(
             scrolls.append((self, kwargs))
             if result.hold is not None:
                 await result.hold.wait()
-            if kwargs.get("scroll_key") is not None and result.moves:  # where it ended
-                asyncio.get_running_loop().call_soon(
-                    lambda: asyncio.ensure_future(
-                        session.dispatch_event(self._i, "scroll", _scroll_end(4000.0))
-                    )
+            if kwargs.get("scroll_key") is None or not result.moves:
+                return
+            if result.late:
+                # The first ask's wait ends at once, before its end could come; the
+                # next waits as long as any other, so the outcome never hangs on time.
+                first = len(result.keyed()) == 1
+                monkeypatch.setattr(scrolling, "LANDING_S", 0.0 if first else 30.0)
+                if first:
+                    return
+            asyncio.get_running_loop().call_soon(  # where it ended
+                lambda: asyncio.ensure_future(
+                    session.dispatch_event(self._i, "scroll", _scroll_end(4000.0))
                 )
+            )
 
         @ft.component
         def Strip(*, auto_refresh: bool = False) -> ft.Control:
@@ -298,9 +357,21 @@ async def shown(
         async def run_every(_: Services, seconds: float, action: Any) -> None:
             result.ticks.append(action)
 
+        async def recorded_jump(
+            list_ref: ft.Ref[ft.ListView], key: str, **kwargs: Any
+        ) -> scrolling.Jump:
+            result.jumping += 1
+            try:
+                ended = await scrolling.jump_to_key(list_ref, key, **kwargs)
+            finally:
+                result.jumping -= 1
+            result.jumps.append((key, ended))
+            return ended
+
         phrase, layout = rows.spoken_phrase, schedule_days.slot_layout
         monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
         monkeypatch.setattr(Services, "run_every", run_every)
+        monkeypatch.setattr(screen, "jump_to_key", recorded_jump)
         monkeypatch.setattr(screen, "StatusStrip", Strip)
         monkeypatch.setattr(screen, "AppScaffold", scaffold)
         monkeypatch.setattr(rows, "spoken_phrase", counted_phrase)
@@ -330,6 +401,8 @@ async def shown(
         opened.append(context)
         result.session.page.navigate = navigated.append  # pyright: ignore[reportAttributeAccessIssue]
         await settle()
+        if wait:
+            await result.until(lambda: not result.jumping)
         return result
 
     yield cast(Callable[[], Awaitable[Shown]], show)
@@ -649,26 +722,38 @@ async def test_a_return_to_the_tab_restores_the_day_and_its_offset(
 async def test_the_first_display_of_today_jumps_to_the_current_slot_once(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """One jump, through D-156's second render. A late scroll end makes the jump ask
+    again (D-155): a loaded host may see two asks, both to the same place (#237)."""
     schedule = await shown()
     place = now_place(timeline(processed(2026), FRIDAY, ("Open Space",)), DURING)
-    ((target, kwargs),) = schedule.scrolls
-    assert target is schedule.list_of(FRIDAY)
-    assert (
-        kwargs["scroll_key"].value == place.target == "slot-2026-05-15T10:30:00-07:00"
-    )
-    assert kwargs["duration"] == scrolling.JUMP_MS
+    assert place.target == TEN_30
+    assert schedule.jumps == [(place.target, "landed")]
+    _assert_asks(schedule, FRIDAY, place.target, scrolling.JUMP_MS)
     assert memory.jumped_on == FRIDAY
 
     again = await shown()  # a tab return or a new session: never a second jump
-    assert again.scrolls == [] or "scroll_key" not in again.scrolls[0][1]
+    assert again.keyed() == [] and again.jumps == []
 
 
 async def test_under_reduced_motion_the_jump_is_instant(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
     schedule = await shown(reduce_motion=True)
-    assert schedule.scrolls  # a busy host may need a second ask: each one instant
-    assert {kwargs["duration"] for _, kwargs in schedule.scrolls} == {0}  # D-34
+    assert schedule.jumped() == [TEN_30]
+    _assert_asks(schedule, FRIDAY, TEN_30, 0)  # D-34: each ask instant
+
+
+async def test_a_late_scroll_end_makes_the_jump_ask_again_and_it_is_still_one_jump(
+    shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """#237's "expected 1, got 2": on a loaded host the first ask's scroll end came
+    after the jump's wait, so the jump asked again (D-155). Two asks to one place, one
+    jump: the first display's effect runs once, and today's jump is done."""
+    schedule = await shown(late=True, reduce_motion=True)
+    assert schedule.keyed() == [TEN_30, TEN_30]
+    assert schedule.jumps == [(TEN_30, "landed")]
+    assert memory.jumped_on == FRIDAY
+    assert schedule.fab is None  # it landed: the place is on screen
 
 
 async def test_outside_the_conference_nothing_jumps_and_there_is_no_now_button(
@@ -698,11 +783,10 @@ async def test_now_on_today_jumps_again(
     await schedule.scroll_away()
     assert schedule.fab is not None
     assert texts(cast(ft.Control, schedule.fab.content)) == ["Now"]
-    schedule.scrolls.clear()
+    schedule.forget()
     await schedule.press_now()
-    ((target, kwargs),) = schedule.scrolls
-    assert target is schedule.list_of(FRIDAY)
-    assert "scroll_key" in kwargs
+    assert schedule.jumps == [(TEN_30, "landed")]
+    _assert_asks(schedule, FRIDAY, TEN_30, scrolling.JUMP_MS)
 
 
 async def test_now_from_another_day_switches_first_then_jumps_once_it_settled(
@@ -714,16 +798,15 @@ async def test_now_from_another_day_switches_first_then_jumps_once_it_settled(
     assert texts(
         cast(ft.Control, cast(ft.FloatingActionButton, schedule.fab).content)
     ) == ["Today"]
-    schedule.scrolls.clear()
+    schedule.forget()
     await schedule.press_now()
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
     assert memory.schedule_day == FRIDAY
     assert schedule.scrolls == []  # not before the switch has slid in
     await schedule.change_day(FRIDAY)  # Flutter's echo of the switch
-    await schedule.until(lambda: schedule.scrolls)
-    ((target, kwargs),) = schedule.scrolls
-    assert target is schedule.list_of(FRIDAY)
-    assert kwargs["scroll_key"].value == "slot-2026-05-15T10:30:00-07:00"
+    await schedule.until(lambda: schedule.jumps)
+    assert schedule.jumps == [(TEN_30, "landed")]
+    _assert_asks(schedule, FRIDAY, TEN_30, scrolling.JUMP_MS)
 
 
 async def test_the_re_tap_scrolls_the_shown_day_to_the_top(
@@ -787,7 +870,7 @@ async def test_a_now_tap_still_waiting_stops_quietly_when_the_user_leaves_the_ta
         schedule.leave()
         await settle()
         schedule.hold.set()
-        await asyncio.wait_for(tap, 5)
+        await asyncio.wait_for(tap, 30)  # generous: a passing tap ends at once
     assert len(schedule.scrolls) == 1  # the second ask found the list gone
     assert schedule.scrolls[0][0] is friday
     assert "the list left the page" in caplog.text
@@ -863,7 +946,7 @@ async def test_swiping_to_today_after_opening_on_another_day_jumps_once(
     schedule = await shown()
     assert schedule.keyed() == []  # Saturday is not today
     await schedule.change_day(FRIDAY)
-    assert schedule.keyed() == ["slot-2026-05-15T10:30:00-07:00"]
+    assert schedule.jumps == [(TEN_30, "landed")]
     assert memory.jumped_on == FRIDAY
     await schedule.scroll_end(FRIDAY, 2000.0)  # the user scrolls on
     await schedule.change_day(SATURDAY)
@@ -882,9 +965,8 @@ async def test_a_today_tap_from_another_day_is_that_day_s_one_jump(
     schedule = await shown()
     await schedule.press_now()
     await schedule.change_day(FRIDAY)  # Flutter's echo of the switch
-    await schedule.until(lambda: schedule.scrolls)
-    await settle()
-    assert schedule.keyed() == ["slot-2026-05-15T10:30:00-07:00"]  # once, not twice
+    await schedule.until(lambda: schedule.jumps and not schedule.jumping)
+    assert schedule.jumps == [(TEN_30, "landed")]  # once, not twice
     assert memory.jumped_on == FRIDAY
     await schedule.scroll_end(FRIDAY, 2000.0)
     await schedule.change_day(SATURDAY)
@@ -946,9 +1028,9 @@ async def test_each_new_today_jumps_once_by_itself(
     display, as after a fake-clock change; never twice the same day."""
     memory.jumped_on = THURSDAY
     schedule = await shown()
-    assert schedule.keyed() == ["slot-2026-05-15T10:30:00-07:00"]
+    assert schedule.jumped() == [TEN_30]
     again = await shown()  # a tab return the same day
-    assert again.keyed() == []
+    assert again.keyed() == [] and again.jumps == []
 
 
 async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
@@ -960,7 +1042,7 @@ async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
     await schedule.scroll_away()
-    schedule.scrolls.clear()
+    schedule.forget()
     await schedule.at(datetime(2026, 5, 16, 0, 1, tzinfo=PACIFIC))
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)  # not moved
     assert _spoken(schedule, DAYS.index(SATURDAY)) == "Saturday, May 16, today"
@@ -972,7 +1054,7 @@ async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
     assert schedule.list_of(FRIDAY).cache_extent is None
     assert schedule.scrolls == []
     await schedule.change_day(SATURDAY)
-    assert schedule.keyed() == [NOW_KEY]  # before the day's first slot: the line
+    assert schedule.jumped() == [NOW_KEY]  # before the day's first slot: the line
 
 
 # ------------------------------------------------------------------ the button (#89)
@@ -1001,9 +1083,11 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
     tries: the button must not show for those seconds and then vanish (D-204)."""
     monkeypatch.setattr(scrolling, "LANDING_S", 0.2)
     with caplog.at_level(logging.INFO):
-        schedule = await shown(moves=False, reduce_motion=True)
+        schedule = await shown(moves=False, wait=False, reduce_motion=True)
         assert schedule.fab is None  # the jump is on its way
-        await schedule.until(lambda: "did not move" in caplog.text)
+        await schedule.until(lambda: schedule.jumps)
+    assert schedule.jumps == [(TEN_30, "still")]
+    assert "did not move" in caplog.text
     assert len(schedule.scrolls) == scrolling.JUMP_TRIES
     assert schedule.fab is None  # "still": the place is in view
     await schedule.scroll_end(FRIDAY, 3000.0)
@@ -1030,9 +1114,9 @@ async def test_a_tap_after_a_slot_started_since_the_tick_goes_there_and_hides(
     schedule = await shown()
     await schedule.scroll_away()
     clock.set_test_now(friday_at(11, 0))  # the 11:00 AM slot starts before the tick
-    schedule.scrolls.clear()
+    schedule.forget()
     await schedule.press_now()
-    assert schedule.keyed() == ["slot-2026-05-15T11:00:00-07:00"]
+    assert schedule.jumped() == ["slot-2026-05-15T11:00:00-07:00"]
     keys = _list_items(schedule, FRIDAY)
     assert keys[keys.index(NOW_KEY) - 1] == "slot-2026-05-15T11:00:00-07:00"
     assert schedule.fab is None
@@ -1106,7 +1190,7 @@ async def test_today_s_now_line_sits_after_the_last_slot_that_started(
     schedule = await shown()
     keys = _list_items(schedule, FRIDAY)
     line = keys.index(NOW_KEY)
-    assert keys[line - 1] == "slot-2026-05-15T10:30:00-07:00"
+    assert keys[line - 1] == TEN_30
     assert keys[line + 1] == "slot-2026-05-15T11:00:00-07:00"
     node = _now_line(schedule)
     assert node.label == "Current time 10:40 AM"
@@ -1142,7 +1226,7 @@ async def test_between_slots_the_jump_lands_on_the_now_line(
     screen reader hears the time, as the line itself says it."""
     now[0] = friday_at(14, 35)
     schedule = await shown(screen_reader=True, announcements=True)
-    assert schedule.keyed() == [NOW_KEY]
+    assert schedule.jumped() == [NOW_KEY]
     keys = _list_items(schedule, FRIDAY)
     assert keys[keys.index(NOW_KEY) + 1] == "slot-2026-05-15T14:45:00-07:00"
     await schedule.scroll_away()
@@ -1157,7 +1241,7 @@ async def test_after_the_day_the_line_ends_the_list_and_now_goes_there(
     now[0] = friday_at(21, 0)
     schedule = await shown()
     assert _list_items(schedule, FRIDAY)[-1] == NOW_KEY
-    assert schedule.keyed() == [NOW_KEY]
+    assert schedule.jumped() == [NOW_KEY]
     await schedule.scroll_away()
     assert texts(
         cast(ft.Control, cast(ft.FloatingActionButton, schedule.fab).content)
@@ -1209,11 +1293,10 @@ async def test_the_first_data_is_the_first_display_it_renders_today_first_and_ju
 
     conference.data, conference.source = processed(2026), "network"
     conference.version += 1
-    await schedule.until(lambda: schedule.scrolls)
+    await schedule.until(lambda: schedule.jumps and not schedule.jumping)
     assert lists[0] == FRIDAY and set(lists) == set(DAYS)  # today alone, then the rest
-    ((target, kwargs),) = schedule.scrolls
-    assert target is schedule.list_of(FRIDAY)
-    assert kwargs["scroll_key"].value == "slot-2026-05-15T10:30:00-07:00"
+    assert schedule.jumps == [(TEN_30, "landed")]  # one jump, through both renders
+    _assert_asks(schedule, FRIDAY, TEN_30, scrolling.JUMP_MS)
     assert memory.jumped_on == FRIDAY  # so a tab return does not jump (SCHED-16)
 
 
