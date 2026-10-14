@@ -5,6 +5,12 @@ screen's pickers are (D-187). ``ResultList`` is memoised, and so is each day of
 sessions (``ui.day_groups.DayGroup``, keyed by its date), over the memoised session
 and speaker rows (D-153): new results re-render only the days and rows they changed,
 and a star tap one row.
+
+A broad query finds most of the feed, so each type shows its first rows
+(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every room) and a "Show all 326 sessions" row
+renders the rest of its type on request (D-218): the first render of a one-letter
+query stays near that of a query that finds a few dozen rows, and every result stays
+one tap away.
 """
 
 from collections.abc import Mapping
@@ -14,9 +20,10 @@ import flet as ft
 from pycon_us.core.models import Room
 from pycon_us.core.rooms import session_count
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.search import SearchResults
+from pycon_us.core.search import SearchResults, first_results
 from pycon_us.core.speakers import SpeakerEntry
 from pycon_us.locations import drill_href
+from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
 from pycon_us.ui.day_groups import DayGroup
@@ -25,6 +32,15 @@ from pycon_us.ui.scaffold import SectionHeader
 
 SCREEN = "search"
 """The screen's name in its semantics identifiers (decisions §M)."""
+
+FIRST_SESSIONS = 50
+"""How many sessions a search shows until "Show all" (D-218): about eight screens."""
+
+FIRST_SPEAKERS = 20
+"""How many speakers a search shows until "Show all" (D-218): about five screens."""
+
+WHOLE: frozenset[str] = frozenset()
+"""No type shown whole: what every new search starts with (D-218)."""
 
 
 def plural(count: int, noun: str) -> str:
@@ -47,6 +63,11 @@ def summary(results: SearchResults) -> str:
         (len(results.rooms), "room"),
     )
     return ", ".join(plural(count, noun) for count, noun in counts if count)
+
+
+def show_all_label(count: int, noun: str) -> str:
+    """Return a "Show all" row's words: "Show all 326 sessions"."""
+    return f"Show all {plural(count, noun)}"
 
 
 @ft.memo
@@ -74,6 +95,13 @@ def ResultList(
     a day's (``TITLE_MEDIUM`` in ``on_surface``, with a divider before every type but
     the first), so that on screen too it opens a kind of result, not one more day.
 
+    Each type shows its first rows (``first_results()``: ``FIRST_SESSIONS``,
+    ``FIRST_SPEAKERS``, every room), then a "Show all" row when it found more, which
+    renders the rest of that type (D-218). Which types are shown whole is this list's
+    own state, held with the results it was asked of: a search that finds other
+    results starts cut again, and so does the old query typed again after it; the
+    count line above always says the full counts.
+
     Args:
         results: The last search's results.
         views: Every session's row view, by id, built once per feed version.
@@ -84,13 +112,40 @@ def ResultList(
         state: What shows instead of results (the hint, a miss, no data), or None.
     """
     view_path = ft.use_view_path()
+    # The types the user asked to see whole, and the results they asked it of: other
+    # results start cut again (D-218). Equal results are the same search, so a
+    # keystroke that changes nothing keeps what was opened.
+    asked, set_asked = ft.use_state((results, WHOLE))
+    whole = asked[1] if asked[0] == results else WHOLE
+    shown = ft.use_memo(
+        lambda: first_results(
+            results,
+            sessions=None if "sessions" in whole else FIRST_SESSIONS,
+            speakers=None if "speakers" in whole else FIRST_SPEAKERS,
+        ),
+        [results, whole],
+    )
+
+    @report_errors
+    async def forget() -> None:
+        # Once other results show, what was opened goes: typing the old query again
+        # (clearing "a", then "a") is a new search and starts cut, not opened.
+        if asked[1] and asked[0] != results:
+            set_asked((results, WHOLE))
+
+    ft.use_effect(forget, [results])
+
+    @report_errors
+    def show_whole(e: ft.Event[ft.ListTile]) -> None:
+        set_asked((results, whole | {e.control.data}))  # the row's type
+
     if state is not None:
         return ft.ListView([state], expand=True)
     titled = sum(map(bool, (results.sessions, results.speakers, results.rooms))) > 1
     day_level = 3 if titled else 2
     sections: list[tuple[str, list[ft.Control]]] = []
-    if results.sessions:
-        days = [
+    if shown.sessions:
+        days: list[ft.Control] = [
             DayGroup(
                 group,
                 views,
@@ -102,14 +157,18 @@ def ResultList(
                 # Right under its type heading, the first day sits close to it.
                 top=0 if titled and i == 0 else 16,
             )
-            for i, group in enumerate(results.sessions)
+            for i, group in enumerate(shown.sessions)
         ]
+        if shown.session_count < results.session_count:
+            days.append(show_all_row("sessions", results.session_count, show_whole))
         sections.append(("Sessions", days))
-    if results.speakers:
-        speakers = [SpeakerRow(entries[s.id], screen=SCREEN) for s in results.speakers]
+    if shown.speakers:
+        speakers = [SpeakerRow(entries[s.id], screen=SCREEN) for s in shown.speakers]
+        if len(shown.speakers) < len(results.speakers):
+            speakers.append(show_all_row("speakers", len(results.speakers), show_whole))
         sections.append(("Speakers", speakers))
-    if results.rooms:
-        rooms = [room_row(room, view_path) for room in results.rooms]
+    if shown.rooms:
+        rooms = [room_row(room, view_path) for room in shown.rooms]
         sections.append(("Rooms", rooms))
     items: list[ft.Control] = []
     for i, (name, rows) in enumerate(sections):
@@ -132,6 +191,43 @@ def type_heading(name: str) -> ft.Control:
         level=2,
         theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
         color=ft.Colors.ON_SURFACE,
+    )
+
+
+def show_all_row(
+    kind: str, count: int, on_click: ft.ControlEventHandler[ft.ListTile]
+) -> ft.Control:
+    """Return the row under a cut type that renders the rest of it (D-218).
+
+    A real row, not a small text button: a Material ``ListTile`` (56 dp, wider than
+    the 48 dp target) whose words say the full count, "Show all 326 sessions", in
+    ``primary`` with ``EXPAND_MORE`` at its end, where the rows' chevrons and stars
+    sit, so it reads as an action rather than one more result. Its text starts on the
+    session rows' 16 dp line, and in ``BODY_LARGE`` it is no day heading
+    (``TITLE_SMALL`` in ``primary``). One node for screen readers, read as its words
+    and "button"; the icon says nothing. The rows it renders take its place.
+
+    Args:
+        kind: ``sessions`` or ``speakers``: its identifier's key and its noun.
+        count: How many the type found, every row included.
+        on_click: Renders the rest of the type, which it reads from the row's
+            ``data``.
+    """
+    return ft.MergeSemantics(
+        content=ft.Semantics(
+            identifier=f"{SCREEN}.show_all.{kind}",
+            button=True,
+            content=ft.ListTile(
+                title=ft.Text(
+                    show_all_label(count, kind.removesuffix("s")),
+                    theme_style=ft.TextThemeStyle.BODY_LARGE,
+                    color=ft.Colors.PRIMARY,
+                ),
+                trailing=ft.Icon(ft.Icons.EXPAND_MORE, color=ft.Colors.PRIMARY),
+                data=kind,
+                on_click=on_click,
+            ),
+        )
     )
 
 

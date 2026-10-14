@@ -5,6 +5,8 @@ each session's ``search_text`` (its title, its description's text from ``html_md
 speakers' names, never markup; D-140), the speaker directory's names and the rooms' names.
 ``search()`` folds a query the same way and keeps the entries that hold every one of its
 words, grouped by type and day. Screens never fold or match on their own (NEW-02, #97).
+``first_results()`` cuts results to each type's first rows, which is what the result
+list renders until the user asks for the rest (D-218).
 """
 
 import logging
@@ -137,3 +139,56 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         speakers=tuple(found(index.speakers, "speakers")),
         rooms=tuple(found(index.rooms, "rooms")),
     )
+
+
+def first_results(
+    results: SearchResults, *, sessions: int | None, speakers: int | None
+) -> SearchResults:
+    """Return the first rows of each type of ``results``, every room (D-218).
+
+    A broad query finds most of the feed ("p": 319 sessions), and rendering every row
+    of it is what made its first render slow (#216), so the list shows each type's
+    first rows and says how to see the rest. The cut keeps ``search()``'s order: the
+    sessions are the first ``sessions`` by day, the last day shown cut short. Days the
+    cut leaves whole are the same objects, and so is ``results`` when nothing is cut,
+    so a memoised list (D-153) skips what did not change.
+
+    Args:
+        results: A search's results.
+        sessions: How many sessions to keep, or None for all of them.
+        speakers: How many speakers to keep, or None for all of them.
+
+    Returns:
+        The results' first rows, in the same order; rooms are never cut.
+
+    Raises:
+        ValueError: A limit is below 1: a type that matched never shows no row.
+    """
+    if any(limit is not None and limit < 1 for limit in (sessions, speakers)):
+        raise ValueError(f"Limits must be at least 1: {sessions=}, {speakers=}")
+    days = results.sessions
+    if sessions is not None and results.session_count > sessions:
+        days = _first_sessions(days, sessions)
+    found = results.speakers
+    if speakers is not None and len(found) > speakers:
+        found = found[:speakers]
+    if days is results.sessions and found is results.speakers:
+        return results
+    return SearchResults(sessions=days, speakers=found, rooms=results.rooms)
+
+
+def _first_sessions(
+    days: tuple[DaySessions, ...], count: int
+) -> tuple[DaySessions, ...]:
+    """Return the first ``count`` sessions of ``days``, the last day shown cut short."""
+    kept: list[DaySessions] = []
+    for day in days:
+        if count <= 0:
+            break
+        kept.append(
+            day
+            if len(day.sessions) <= count
+            else DaySessions(day.day, day.sessions[:count])
+        )
+        count -= len(day.sessions)
+    return tuple(kept)
