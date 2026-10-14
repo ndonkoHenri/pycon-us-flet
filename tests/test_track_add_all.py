@@ -25,7 +25,7 @@ from pycon_us.state import Conference
 from pycon_us.ui.badges import ALREADY_SAVED, NOT_SAVED, UNDO, added_feedback
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
-from tests.sessions import Shown, settle, showing, text_of
+from tests.sessions import Shown, menu_text, settle, showing, text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -94,18 +94,9 @@ def label_of(action: str | ft.SnackBarAction | None) -> str | None:
     return action.label if isinstance(action, ft.SnackBarAction) else action
 
 
-def label_of_item(item: ft.PopupMenuItem) -> ft.ListTile:
-    """The item's label: a tile with its icon and its text, under the identifier."""
-    return cast(ft.ListTile, cast(ft.Semantics, item.content).content)
-
-
-def item_text(item: ft.PopupMenuItem) -> ft.Text:
-    return cast(ft.Text, label_of_item(item).title)
-
-
 async def add_all(page: Shown) -> None:
     (item,) = page.find(ft.PopupMenuItem)
-    assert item_text(item).value == screen.ADD_ALL
+    assert menu_text(item).value == screen.ADD_ALL
     await page.click(item)
 
 
@@ -215,26 +206,19 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
     assert menu.icon == ft.Icons.MORE_VERT and menu.tooltip == "More options"
     assert page.node("track.menu").content is menu
     (item,) = menu.items
-    assert item_text(item).value == screen.ADD_ALL
+    assert menu_text(item).value == screen.ADD_ALL
     assert cast(ft.Semantics, item.content).identifier == "track.add_all"
     assert page.snack_bars == []  # straight to the SnackBar: no dialog (D-29)
 
 
 async def test_the_items_label_wraps_beside_its_icon_at_large_text(show: Show) -> None:
-    """F47: ``PopupMenuItem.icon`` sits in a row whose text cannot wrap, so the label
-    is a tile: its title wraps, with the icon beside the first line (D-188), in the
-    menu's 48 dp row and 12 dp gap."""
+    """F47: the item is ``menu_item()``'s, whose label is a tile's title (D-233)."""
     page = await show("charlas")
     (item,) = page.find(ft.PopupMenuItem)
     assert item.icon is None
-    tile = label_of_item(item)
-    assert isinstance(tile, ft.ListTile)
-    icon = cast(ft.Icon, tile.leading)
-    assert isinstance(icon, ft.Icon) and icon.icon == ft.Icons.PLAYLIST_ADD
-    assert isinstance(tile.title, ft.Text) and tile.title.value == screen.ADD_ALL
-    assert tile.title_alignment is None  # the theme's TITLE_HEIGHT applies
-    assert (tile.min_height, tile.horizontal_spacing) == (48, 12)
-    assert tile.on_click is None  # the item takes the tap, and closes the menu
+    tile = cast(ft.ListTile, cast(ft.Semantics, item.content).content)
+    assert cast(ft.Icon, tile.leading).icon == ft.Icons.PLAYLIST_ADD
+    assert tile.title is menu_text(item)  # no link: it stays in the app
 
 
 @pytest.mark.parametrize("slug", ["notices", "breaks"])
