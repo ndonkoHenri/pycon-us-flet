@@ -324,6 +324,21 @@ def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
     assert clock_field.keyboard_type == ft.KeyboardType.DATETIME
 
 
+def test_the_url_field_keeps_apply_in_sight_above_the_keyboard(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    # Focused, the field scrolls its helper and the Reset and Apply row under it into
+    # sight, so a URL can be typed and applied without closing the keyboard (#108).
+    scaffold = render()
+    url_padding = field(scaffold, "developer.feed_url").scroll_padding
+    assert url_padding == ft.Padding.only(
+        left=20, top=20, right=20, bottom=developer.APPLY_IN_SIGHT
+    )
+    # The clock field keeps Flutter's 20 dp: Apply is far below it.
+    clock_padding = field(scaffold, "developer.fake_clock").scroll_padding
+    assert clock_padding == ft.Padding.only(left=20, top=20, right=20, bottom=20)
+
+
 async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     render: Callable[[], dict[str, Any]],
     prefs: Prefs,

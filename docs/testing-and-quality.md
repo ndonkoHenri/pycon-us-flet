@@ -351,10 +351,10 @@ The machine records each row's attribution at enqueue time and compares it in an
 
 - **Identifiers.** Key controls carry `Semantics(identifier="<screen>.<element>[.<key>]")` (D-33, §M), e.g. `schedule.favorite.42`, `now.next_session`. They become Android `resource-id` and iOS `accessibilityIdentifier`, so they never contain names, emails or badge codes. Plain string literals; a typo fails a flow.
 - **The Developer screen** (D-73) sets the scene; flows unlock it with 7 taps on the version row (`about_app.version`), as a person would, then the **Developer options** row it adds (`about_app.developer`; #88, D-187). It has `developer.fake_clock` (ISO 8601 text; without an offset it is conference time), `developer.feed_url`, `developer.apply`, `developer.reset` (back to real time and the year's feed, no confirmation) and `developer.outcome`, the line that says what is in effect; the Data section (#107, D-198) has `developer.refresh_now`, `developer.clear_cache`, `developer.share_log` and `developer.reset_app`, whose confirmations' buttons are `<row>.confirm` and `<row>.cancel`, and `developer.data_outcome`; `developer.mock_url` comes in P3. A flow that needs a clean slate in the middle of a run can use Reset app › Reset app, which leaves the app as after a fresh install, on Now. A test build is a fresh install (§5.1), so a flow starts locked, on real time and on the year's feed.
-- **Data.** The `feed_url` fixture (in `tests/ui/conftest.py`) serves `tests/fixtures/feeds/` from the laptop with `http.server.ThreadingHTTPServer` on `127.0.0.1` and returns the URL the app can reach: `http://10.0.2.2:<port>/conference-2026.json` on Android, `http://127.0.0.1:<port>/…` on iOS. The fake clock sits inside the 2026 dates. "Offline" is a feed URL on a closed port: real airplane mode would also cut the tester's socket.
+- **Data.** The `feed_url` fixture (in `tests/ui/conftest.py`) serves `tests/fixtures/feeds/` from the laptop with `http.server.ThreadingHTTPServer` on `127.0.0.1` and returns the URL the app can reach: `http://10.0.2.2:<port>/conference-2026.json` on Android, `http://127.0.0.1:<port>/…` on iOS. "Offline" is the `silent_feed` fixture (`SilentFeed`, in `tests/ui/feeds.py`): a server on the laptop that takes each request and hangs up unanswered, which the app reads as no answer; real airplane mode would also cut the tester's socket. It counts the requests it takes, and `hold()` keeps the next ones open until `hang_up()`, so a flow sees a refresh it asked for run ("Updating the schedule…") and end, where a refused connection on a closed port can start and end between two polls (D-223). F2–F5 run on the recorded feed at 09:00 the day before the conference (`before_conference()`): the Schedule opens on its first day at the top, with no jump to now (D-192, D-204), so the rows a flow taps are on screen. What a flow looks for comes from `tests/ui/targets.py`, which processes the recorded feed (`recorded()`) or the bundled snapshot (`bundled()`) with the app's own code and lists a day's rows as the Schedule shows them, with the default filter, which hides open spaces (`day_rows()`, D-20); no id is written out (D-223).
 - **Which screen.** A `Finder` only counts matches, and a root's title also shows as its tab's label, so each tab root's app-bar title carries `<tab>.title` (`now.title` … `more.title`, D-170); a pushed View is known by its back arrow (`find_by_tooltip("Back")`) and by the bar's absence (D-144).
 - **Back.** Both platforms: tap the app bar's back arrow (`tap_back_arrow`). Android also: the Back key, `adb -s $FLET_TEST_DEVICE shell input keyevent KEYCODE_BACK` from the test (`press_system_back`). The iOS edge swipe and Android predictive back stay manual (§9).
-- **Settling.** Indeterminate progress and shimmer never settle, so helpers poll with `pump(duration)` until a finder matches, or stops matching. While a push or a pop runs, both Views are on screen, and a tap on the one leaving is lost: a flow waits for the leaving View's marker to be gone, and `tap_back_arrow` for exactly one back arrow (#78 lost a tap that way). Android emulators run with the three animation scales at 0 (`adb shell settings put global transition_animation_scale 0`, etc.); Flutter reports that as `disable_animations`, which the app honours (D-34). `RemoteTester.pump(duration)` does not wait that long in real time on a device: a tap after `pump(1 s)` reached a SnackBar 5 dp into its 250 ms entrance on the iOS simulator and missed its Undo (#197). A flow that must wait for an animation (a SnackBar sliding in before its action is tapped, or before a screenshot) sleeps (`asyncio.sleep`) and then pumps, as `test_snackbar_on_pushed_view.py`'s `settle()` does.
+- **Settling.** Indeterminate progress and shimmer never settle, so helpers poll with `pump(duration)` until a finder matches, or stops matching. While a push or a pop runs, both Views are on screen, and a tap on the one leaving is lost: a flow waits for the leaving View's marker to be gone, and `tap_back_arrow` for exactly one back arrow (#78 lost a tap that way). Android emulators run with the three animation scales at 0 (`adb shell settings put global transition_animation_scale 0`, etc.); Flutter reports that as `disable_animations`, which the app honours (D-34). `RemoteTester.pump(duration)` does not wait that long in real time on a device: a tap after `pump(1 s)` reached a SnackBar 5 dp into its 250 ms entrance on the iOS simulator and missed its Undo (#197). So a tap that an animation can swallow, on a control that acts once (a SnackBar's Undo), is repeated until its effect shows (`tap_until`), rather than after a fixed sleep (D-223); `test_snackbar_on_pushed_view.py`'s `settle()`, which sleeps and then pumps, predates it.
 
 `tests/ui/helpers.py` (D-171):
 
@@ -362,44 +362,58 @@ The machine records each row's attribution at enqueue time and compares it in an
 |---|---|
 | `remote(flet_app)` | The `RemoteTester`; fails outside device mode |
 | `TIMEOUT`, `START_TIMEOUT`, `STEP` | Seconds a step may take (15), seconds from launch to Now (180: each run installs the build afresh and its first launch unpacks Python), and each poll's pump (100 ms) |
-| `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out.png` if the device still answers, and fails with what it saw |
+| `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out-<flow>.png` if the device still answers, and fails with what it saw |
 | `wait_for_id`, `wait_for_text`, `wait_for_tooltip` | `wait_for` with an identifier, an exact text or a tooltip |
+| `wait_until(t, met, what)` | Pumps until `met()`, a condition on the host's side, holds, at most 15 s: e.g. a request that reached `SilentFeed` |
 | `tap(t, finder)`, `tap_id`, `tap_text` | Tap the first match once it is on screen, then pump once |
+| `open_tab(t, tab)` | Switch to a tab's root (`app.nav.<tab>`) once one bar shows, tapping again every second until `<tab>.title` shows, then wait for one bar again: while one root replaces another both bars are on screen, and a tap on the leaving one, or one while the root re-renders, is lost (D-223) |
+| `tap_tooltip(t, tooltip)` | Tap an icon button by its tooltip, its accessible name (D-27), e.g. the app bar's Search |
+| `tap_until(t, target, done, what)` | Tap `target()` again every second until `done()` matches, at most 15 s: for a tap an animation can swallow on a control that acts once, such as a SnackBar's Undo (D-223) |
+| `enter_text_id(t, identifier, text)` | Replace a field's text by its identifier, as typing it would (`RemoteTester.enter_text`, one `on_change`) |
 | `tap_first_text(t, texts)` | Tap whichever of these texts shows first: for rows a feed refresh may change, such as the first speakers |
 | `tap_back_arrow(t)`, `press_system_back(t)` | Back, as above |
 | `screenshot(name)` | `build/ui/<platform>/<name>.png` through `adb exec-out screencap -p` or `xcrun simctl io <udid> screenshot`, not `take_screenshot` (§5.1) |
 
-`tests/ui/conftest.py` holds `feed_url`. The harness arrived in P0 with the shell flow (P0-27, #78); `open_developer()` and `fresh_start()` arrive with the first P1 flows (P1-30), once the Developer screen exists. `open_developer(t)` taps More → About this app → the version row (`about_app.version`) 7 times → Developer options (`about_app.developer`). `fresh_start(t, now=..., feed_url=...)` opens Developer, enters the clock and feed URL, applies and returns to Now.
+`tests/ui/conftest.py` holds `feed_url` and `silent_feed`; `tests/ui/feeds.py` holds `laptop_url()` and `SilentFeed`. The harness arrived in P0 with the shell flow (P0-27, #78); the Developer helpers arrived with the first P1 flows (P1-30, #108, D-223), in `tests/ui/developer.py`:
+
+| Helper | What it does |
+|---|---|
+| `open_developer(t)` | From a tab root: More → About this app (`more.app`) → the version row (`about_app.version`) 7 times → Developer options (`about_app.developer`): always through About; once unlocked, the seven version taps are skipped. More's own Developer options row (`more.developer`) is never used: it sits at the list's foot, half under the bar. The View under Developer is the More root. About this app must be on the first screen of the More list: a flow cannot scroll (U35), so the iOS flows run on an iPhone 17 Pro Max simulator (D-223) |
+| `apply_options(t, now=, feed_url=)` | Types the fake clock and the feed URL, taps Apply and waits for "Applied: …" |
+| `refresh_now(t, outcome=None)` | Taps Refresh now and waits up to 60 s for its outcome: these words (`UPDATED`, `NO_ANSWER`, the app's own), or any |
+| `fresh_start(t, now=, feed_url=)` | Waits for Now, then in Developer: a first Refresh now, which only lets the launch's own refresh from the year's feed end (a Refresh now joins a running refresh, which keeps its URL); `apply_options()`; with a feed URL, Developer opened afresh and a Refresh now that must say `UPDATED`; then back to Now |
+| `before_conference()` | 09:00 the day before the conference, as the fake clock field takes it |
 
 ### 5.3 An example flow
 
+F4, `tests/ui/test_favourite_undo.py` (#108), without its docstrings:
+
 ```python
-# tests/ui/test_favourite.py
-"""Save a session, find it in My schedule, remove it and undo (D-30, NEW-01)."""
+async def test_favourite_with_undo(flet_app: ftt.FletTestApp, feed_url: str) -> None:
+    t = remote(flet_app)
+    await fresh_start(t, now=before_conference(), feed_url=feed_url)
+    session = saveable(day_rows(recorded(), 0))[0]  # the first row with a star
+    saved_row = row_id("my_schedule", session)
 
-import flet.testing as ftt
-
-from tests.ui.helpers import fresh_start, tap_id, wait_for_id, wait_for_text
-
-SESSION = "42"  # a talk on Friday in tests/fixtures/feeds/conference-2026.json
-
-
-async def test_favourite_with_undo(flet_app: ftt.FletTestApp, feed_url: str):
-    t = flet_app.tester
-    await fresh_start(t, now="2026-05-15T09:00:00-07:00", feed_url=feed_url)
-
+    # Star it on the Schedule; My schedule lists it.
     await tap_id(t, "app.nav.schedule")
-    await tap_id(t, f"schedule.favorite.{SESSION}")
+    await tap_id(t, star_id("schedule", session))
     await tap_id(t, "app.nav.my_schedule")
-    await wait_for_id(t, f"my_schedule.row.{SESSION}")
+    await wait_for_id(t, "my_schedule.title")
+    await wait_for_id(t, saved_row)
 
-    # The star's tooltip says what a tap does now (D-27, D-30, D-184).
-    assert (await t.find_by_tooltip("Remove from My schedule")).count >= 1
+    # Unstar it there: the row goes, the SnackBar offers Undo (D-30).
+    await tap_id(t, star_id("my_schedule", session))
+    await wait_for_text(t, REMOVED)
+    await wait_for_id(t, saved_row, gone=True)
 
-    await tap_id(t, f"my_schedule.favorite.{SESSION}")
-    # The SnackBar appears only after the on-device handler runs: poll for it.
-    await t.tap((await wait_for_text(t, "Undo")).first)
-    await wait_for_id(t, f"my_schedule.row.{SESSION}")
+    # Undo saves it again, and the row is back.
+    await tap_until(
+        t,
+        lambda: t.find_by_text("Undo"),
+        lambda: t.find_by_semantics_identifier(saved_row),
+        "Undo",
+    )
 ```
 
 Shell controls (the navigation bar, app-wide chrome) use `app.<element>[.<key>]`, such as `app.nav.schedule` (decisions §M).
@@ -412,11 +426,11 @@ About eight journeys, added in the phase that builds them. Each runs on the Andr
 |---|---|---|---|---|
 | Shell | `test_shell_starts` | P0 | The test build starts on Now (`now.title`) with the five `app.nav.*` tabs; each tab shows its root; the Schedule shows its day tabs, the first one the conference's first day (`schedule.day_tab.0`); More → Speakers (a pushed page, no bar) → one of the snapshot's first five speakers (a drill level; a networked device lists the live feed's, P1-30's `fresh_start()` makes it a recorded one); the back arrow pops one level at a time to the More root and its bar; on Android the Back key pops a push and takes the More root to Now; no Flutter error. No offline assertion: the feed-URL override comes with the Developer screen (P1-28) | SHELL-03, SHELL-05, NEW-03, D-17, D-141, D-144 |
 | SnackBar | `test_snackbar_from_session_detail_shows_on_session_detail` (`test_snackbar_on_pushed_view.py`) | P1 | Schedule → a session (a pushed View); star, then unstar: "Removed from My schedule" is found, so it is on session detail (finders skip the covered root, §5.1); Undo saves it again and the bar goes; the back arrow returns to the Schedule | D-30, D-184, D-210 (#197) |
-| F1 | `test_start_offline_shows_schedule` | P1 (after P1-08, P1-28) | With an unreachable feed URL set in Developer, the bundled rows render and no error screen appears; the status strip says offline and Refresh keeps the rows | NEW-03, DATA-02, SCHED-14, D-32, D-39 |
-| F2 | `test_switch_days_keeps_selection` | P1 | Third day tab shows its rows; session → Back keeps the day | DATA-17, SCHED-01, D-18 |
-| F3 | `test_search_finds_session_speaker_room` | P1 | An accent-folded query finds a session, a speaker and a room on different days; result → Back keeps the query | NEW-02, D-19, D-46 |
-| F4 | `test_favourite_with_undo` | P1 | §5.3 | D-30, NEW-01 |
-| F5 | `test_drill_back_one_step` | P1 | Session → speaker → session; each Back returns one step (titles); Back on the Schedule root goes to Now (Android) | SESS-12, SHELL-16, D-17 (#279) |
+| F1 | `test_start_offline_shows_schedule` (`test_start_offline.py`) | P1 | `fresh_start()`, then the `silent_feed` URL set in Developer as a person would; Refresh now says the feed did not answer; the Schedule shows the bundled snapshot's first rows (a networked device may have refreshed them from the year's feed already: the same sessions), no `schedule.no_data`, and the strip says "Offline ·"; the strip's Refresh, which the feed holds, says "Updating the schedule…" and its request reaches the feed; once the feed hangs up the strip says "Offline ·" again and the rows stay. The cold airplane-mode start needs a relaunch and stays on the checklist (§9) | NEW-03, DATA-02, SCHED-14, D-32, D-39, D-223 |
+| F2 | `test_switch_days_keeps_selection` (`test_switch_days.py`) | P1 | The third day tab (`schedule.day_tab.2`) replaces the first day's rows with its own; a session there → Back returns to the third day | DATA-17, SCHED-01, D-18 |
+| F3 | `test_search_finds_and_keeps_query` (`test_search_keeps_query.py`) | P1 | From the Schedule's Search, a speaker's name typed without its accent ("muller" for "Müller": the first such word in the recorded feed that finds exactly one session and that speaker) finds the session in the Sessions scope the Schedule gives search, and the Speakers chip keeps the query and finds the speaker; the speaker → Back returns to search with the query, the Speakers scope and the speaker's row | NEW-02, D-19, D-46, D-193 |
+| F4 | `test_favourite_with_undo` (`test_favourite_undo.py`) | P1 | §5.3: star a Schedule row; My schedule lists it; unstar it there: "Removed from My schedule"; Undo brings the row back | D-30, NEW-01 |
+| F5 | `test_drill_back_one_step` (`test_drill_back.py`) | P1 | A session near a day's top whose speaker has another session → the speaker (`session.speaker.<key>`) → that session (`speaker.session.<key>`); each back arrow returns one View (titles and names); the Schedule keeps the day; on Android the Back key on the Schedule root goes to Now | SESS-12, SHELL-16, D-17, D-142 (#279) |
 | F6 | `test_now_shows_next_session` | P1 | Fake clock during the conference with a saved session 25 min later: `now.next_session` shows it; a session that ended is not "happening now" | SCHED-25, D-14 |
 | F7 | `test_room_pin_from_session` | P2 | Session → "Show on map" → floor plan with `map.pin.<room-slug>`; Back returns to the session | ROOM-04, MAP-05, DATA-32 |
 | F8 | `test_offline_scans_sync_once` | P3 | Mock lead account (in-process mock, URL set in Developer); stop the mock; two manual entries show Queued; restart; Sync now → Confirmed; the mock holds one capture per code with the scan-time sponsor | LEAD-07, API-10, D-56, D-65 |
@@ -591,7 +605,7 @@ Not in Flet today. Each has an interim; the upstream fixes are candidates withou
 
 | Gap | Interim | Candidate upstream fix |
 |---|---|---|
-| `RemoteTester` has no drag, fling or scroll | Reach targets via search, day tabs, Jump to now; `adb shell input swipe` on Android | Drag and `scroll_until_visible` in the device protocol |
+| `RemoteTester` has no drag, fling or scroll, and no keyboard action to close the keyboard `enter_text` opens (U35, #288) | Reach targets via search and its scopes, day tabs, Jump to now; rows near a list's top; the iOS flows on an iPhone 17 Pro Max simulator, whose More root shows About this app; the Android AVD's on-screen keyboard off; Developer's feed URL field keeps Apply in sight (D-223) | Drag, `scroll_until_visible` and `receive_action` in the device protocol |
 | Flows can't reach physical phones (`10.0.2.2` / `127.0.0.1` fixed, `flet_test_app.py:295`) | Emulator and simulator; the iPhone via the checklist | A host override (`adb reverse` on Android) |
 | A `Finder` only counts matches | Assert presence of text, tooltips, identifiers | Finder text, bounds and semantics flags |
 | `RemoteTester.pump_and_settle` has a fixed 60 s timeout | `wait_for_id` polling | A `timeout` argument, as on `Tester` |

@@ -14,8 +14,7 @@ from threading import Thread
 
 import pytest
 
-from pycon_us.config import YEAR
-from tests.ui.helpers import PLATFORM
+from tests.ui.feeds import SilentFeed, laptop_url
 
 FEEDS = Path(__file__).parents[1] / "fixtures" / "feeds"
 
@@ -24,17 +23,29 @@ FEEDS = Path(__file__).parents[1] / "fixtures" / "feeds"
 def feed_url() -> Iterator[str]:
     """Serve the recorded feeds from this machine; return the active year's feed URL.
 
-    The URL is the one the app can reach: the Android emulator sees this machine at
-    ``10.0.2.2``, the iOS simulator shares its network. Flows set it in the Developer
-    screen (P1-28); a closed port stands for "offline", since airplane mode would also
-    cut the tester's own socket (testing-and-quality.md §5.2).
+    The URL is the one the app can reach (``laptop_url()``). Flows set it in the
+    Developer screen with ``fresh_start()`` (``tests/ui/developer.py``).
     """
     handler = partial(SimpleHTTPRequestHandler, directory=str(FEEDS))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     Thread(target=server.serve_forever, daemon=True).start()
-    host = "10.0.2.2" if PLATFORM == "android" else "127.0.0.1"
     try:
-        yield f"http://{host}:{server.server_address[1]}/conference-{YEAR}.json"
+        yield laptop_url(server.server_address[1])
     finally:
         server.shutdown()
         server.server_close()
+
+
+@pytest.fixture
+def silent_feed() -> Iterator[SilentFeed]:
+    """Serve a feed that never answers from this machine (``SilentFeed``).
+
+    Flows set its ``url`` in the Developer screen, as a person would; ``hold()`` and
+    ``hang_up()`` let a flow see a refresh run and end (F1).
+    """
+    feed = SilentFeed()
+    feed.serve()
+    try:
+        yield feed
+    finally:
+        feed.close()
