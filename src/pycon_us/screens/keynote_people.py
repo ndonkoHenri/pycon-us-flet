@@ -15,6 +15,7 @@ from pycon_us.services import Services
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import SectionHeader
+from pycon_us.ui.semantics import named
 from pycon_us.year_keynotes import Keynote, KeynoteSpeaker
 
 
@@ -75,9 +76,9 @@ def person_head(
         )
     if heading_level is not None:
         return row
-    return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, content=row),
-    )
+    if identifier is None:  # one node for screen readers all the same
+        return ft.MergeSemantics(content=row)
+    return named(identifier, row)
 
 
 def keynote_speakers(keynote: Keynote, *, screen: str) -> ft.Control:

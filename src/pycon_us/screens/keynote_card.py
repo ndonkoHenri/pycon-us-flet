@@ -326,11 +326,7 @@ def _when_and_where(
     return ft.Row(
         [
             ft.Container(
-                ft.MergeSemantics(
-                    content=ft.Semantics(
-                        identifier=f"{SCREEN}.session.{key}", content=tile
-                    )
-                ),
+                named(f"{SCREEN}.session.{key}", tile),
                 expand=True,
             ),
             ft.Container(
