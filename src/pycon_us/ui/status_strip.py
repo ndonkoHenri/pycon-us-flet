@@ -68,6 +68,15 @@ def strip_line(
     return f"Couldn't update · {since}"  # an answer we could not use
 
 
+ICON_SIZE = 16
+"""The strip's icon at 100 % text, in dp: the height of a ``BODY_SMALL`` line (12/16)."""
+
+LINE_PAD = 8
+"""Space above and below the strip's line, in dp, inside its run."""
+
+REFRESH_INDENT = 16
+"""Space before Refresh, in dp: on a run of its own, its label starts under the words."""
+
 PROGRESS_HEIGHT = 2
 """The height of the strip's refresh bar, in dp (ux.md §3.9)."""
 
@@ -126,14 +135,20 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     asked = status == "refreshing"  # the user's refresh; an automatic one is quiet
     icon = ft.Icon(
         STATUS_ICONS.get(status, ft.Icons.UPDATE),  # fresh: hidden, any icon
-        size=16,
+        size=ICON_SIZE,
+        # Scaled as the text is, so at any text size it is as tall as the line it
+        # sits beside, not a 16 dp speck at the top of a line three times its height.
+        apply_text_scaling=True,
         color=ft.Colors.ON_SURFACE_VARIANT if asked else tokens.warning,
     )
     text = ft.Text(
         line or "",
         theme_style=ft.TextThemeStyle.BODY_SMALL,
         color=ft.Colors.ON_SURFACE,
+        # Its own width up to what is left beside the icon: wide enough to wrap,
+        # narrow enough to leave the button room on the same run when it fits.
         expand=True,
+        expand_loose=True,
     )
     # Enabled during a quiet refresh: a tap joins it and makes it the user's (D-181).
     button = ft.TextButton("Refresh", on_click=refresh, disabled=asked)
@@ -146,16 +161,36 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     # The bar's slot keeps its height when the bar hides, so the strip and the list
     # under it do not move by 2 dp when a refresh starts or ends.
     progress_slot = ft.Container(progress, height=PROGRESS_HEIGHT)
-    # The icon tops its line, so when the line wraps (large text) the icon stays beside
-    # the first line rather than the middle of the block; the pair stays centred
-    # against the 48 dp button, so a single line still sits mid-strip.
+    # The icon tops its line and is one line tall, so when the line wraps (large text)
+    # it stays beside the first line rather than the middle of the block.
     line_row = ft.Row(
         [icon, text],
         spacing=12,
+        tight=True,  # the line's own width, so the wrap below can measure it
         vertical_alignment=ft.CrossAxisAlignment.START,
-        expand=True,
     )
-    row = ft.Row([line_row, button], spacing=12)
+    # 8 dp above and below the line: centred against the 48 dp button they change
+    # nothing, and when Refresh is on a run of its own they keep the line off the
+    # strip's top edge.
+    line_box = ft.Container(line_row, padding=ft.Padding.symmetric(vertical=LINE_PAD))
+    # The icon's 16 dp and its 12 dp gap, less the button's own 12 dp inset: on a run
+    # of its own, Refresh's label starts under the line's words at 100 % text, as
+    # "Show all" does under the filter bar's (D-195).
+    button_box = ft.Container(button, padding=ft.Padding.only(left=REFRESH_INDENT))
+    # When the line fits beside the button, the two share a run, the line centred
+    # against the 48 dp button and the button at the end. When it does not (large
+    # text, or a long line such as "Couldn't update · …" at 100 %), the button moves
+    # under the line, which keeps the whole width instead of wrapping word by word
+    # beside it. The icon stays in the line's row rather than before the wrap (as the
+    # filter bar has it), so it is level with the line on either layout.
+    row = ft.Row(
+        [line_box, button_box],
+        wrap=True,
+        spacing=0,  # the button's indent is the gap between them
+        run_spacing=0,  # the button's 48 dp height already spaces it from the line
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    )
     return ft.Semantics(
         identifier="app.status",
         container=True,
@@ -174,6 +209,9 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
                     progress_slot,
                 ],
                 spacing=0,
+                # The full width for the wrap: a Wrap is only as wide as its runs,
+                # and SPACE_BETWEEN needs the width to put Refresh at the end.
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
     )

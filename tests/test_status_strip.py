@@ -3,7 +3,7 @@
 The strip's body runs outside a renderer: the hooks it calls (``ft.use_effect``,
 ``ft.use_state`` and the store hooks) are replaced by ``Hooks``, and a fake page is
 bound as Flet binds a session's page. What the strip looks like at 200 % text is
-checked on devices (#76's and #87's PRs).
+checked on devices (#76's, #87's and #195's PRs).
 """
 
 import asyncio
@@ -128,11 +128,18 @@ def render_strip(*, auto_refresh: bool = False) -> ft.Semantics:
     return strip
 
 
-def icon_of(strip: ft.Semantics) -> ft.Icon:
-    """The strip's icon, beside its line."""
+def strip_rows(strip: ft.Semantics) -> tuple[ft.Row, ft.Row]:
+    """The strip's row (the line and Refresh) and the line's row (the icon and words)."""
     box = cast(ft.Container, strip.content)
     padded = cast(ft.Container, cast(ft.Column, box.content).controls[0])
-    line_row = cast(ft.Row, cast(ft.Row, padded.content).controls[0])
+    row = cast(ft.Row, padded.content)
+    line_box = cast(ft.Container, row.controls[0])
+    return row, cast(ft.Row, line_box.content)
+
+
+def icon_of(strip: ft.Semantics) -> ft.Icon:
+    """The strip's icon, beside its line."""
+    _, line_row = strip_rows(strip)
     icon = line_row.controls[0]
     assert isinstance(icon, ft.Icon)
     return icon
@@ -169,11 +176,11 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
     assert isinstance(padded.content, ft.Row)
     # Room around a line that wraps at 200 % text (ux.md §3.9).
     assert padded.padding == ft.Padding.only(left=16, top=4, right=8, bottom=4)
-    line_row, button = padded.content.controls
+    line_box, button_box = padded.content.controls
+    assert isinstance(line_box, ft.Container)
+    assert isinstance(button_box, ft.Container)
+    line_row, button = line_box.content, button_box.content
     assert isinstance(line_row, ft.Row)
-    # The icon tops the line, so a line that wraps keeps it beside its first line.
-    assert line_row.vertical_alignment == ft.CrossAxisAlignment.START
-    assert padded.content.vertical_alignment == ft.CrossAxisAlignment.CENTER
     icon, text = line_row.controls
     assert isinstance(icon, ft.Icon)
     assert isinstance(text, ft.Text)
@@ -250,6 +257,53 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_strip_hidden(
 
     assert conference.refreshing
     assert render_strip().visible is False  # nothing appears, nothing moves (D-181)
+
+
+def test_a_wrapped_line_keeps_its_icon_beside_its_first_line(
+    hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
+) -> None:
+    # At 200 % text the line wraps; the icon tops it and is one line tall at any text
+    # size, so it sits beside the first line, not above it or by the block's middle
+    # (#195). A 16 dp icon that did not scale topped a line three times its height.
+    conference.fetched_at = fake_now - timedelta(hours=25)
+    strip = render_strip()
+    _, line_row = strip_rows(strip)
+    icon, text = line_row.controls
+    assert isinstance(icon, ft.Icon) and isinstance(text, ft.Text)
+    assert line_row.vertical_alignment == ft.CrossAxisAlignment.START
+    assert text.theme_style == ft.TextThemeStyle.BODY_SMALL  # a 16 dp line (12/16)
+    assert icon.size == status_strip.ICON_SIZE == 16
+    assert icon.apply_text_scaling is True
+
+
+def test_a_line_too_long_for_the_buttons_side_moves_the_button_under_it(
+    hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
+) -> None:
+    # One run while the line fits beside Refresh (the line centred against the 48 dp
+    # button, the button at the end); at large text the button takes a run of its own,
+    # so the line keeps the strip's width instead of a column a word wide (#195).
+    conference.fetched_at = fake_now - timedelta(hours=25)
+    strip = render_strip()
+    row, line_row = strip_rows(strip)
+    text = line_row.controls[1]
+    assert row.wrap is True
+    # A wrap is as wide as its runs: the strip's column stretches it to the width.
+    column = cast(ft.Column, cast(ft.Container, strip.content).content)
+    assert column.horizontal_alignment == ft.CrossAxisAlignment.STRETCH
+    assert row.alignment == ft.MainAxisAlignment.SPACE_BETWEEN
+    assert row.vertical_alignment == ft.CrossAxisAlignment.CENTER
+    # The line measures its own width, so the wrap can tell when the button fits.
+    assert line_row.tight is True
+    assert line_row.expand is None
+    assert text.expand and text.expand_loose is True
+    # Alone on its run, Refresh's label starts under the words, and the line keeps
+    # off the strip's top edge; beside the button, both are centred as before.
+    line_box, button_box = cast(list[ft.Container], row.controls)
+    # 8 + a 16 dp line + 8 still fits the 48 dp button's height at 100 %.
+    assert line_box.padding == ft.Padding.symmetric(vertical=8)
+    assert button_box.padding == ft.Padding.only(left=16)  # 16 + 12 - the label's 12
+    assert line_row.spacing == 12 and icon_of(strip).size == 16
+    assert row.spacing == 0  # the indent is the gap beside the line
 
 
 def looks(strip: ft.Semantics) -> tuple[object, ...]:
