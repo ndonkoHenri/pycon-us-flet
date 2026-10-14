@@ -44,8 +44,8 @@ from pycon_us.ui.badges import (
     use_favorite_toggle,
 )
 from pycon_us.ui.day_groups import DayGroup
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.year_tracks import Track
@@ -189,30 +189,12 @@ def offers_add_all(track: Track) -> bool:
 def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
     """The app bar's overflow ("More options"): "Add all to My schedule" (D-209).
 
-    The item's content is a ``ListTile``, not ``PopupMenuItem.icon``: Flet puts that
-    icon and the text in a ``Row`` without ``Expanded``, so at 200 % text the label
-    ran off the menu's edge (F47). A tile's title wraps, and the theme's
-    ``TITLE_HEIGHT`` keeps the icon beside its first line (D-188). Flutter's item
-    takes the tile's padding away; ``min_height`` keeps the menu's 48 dp row, and the
-    12 dp gap is the menu's, not a list's 16.
+    Its label wraps at 200 % text beside its icon (``menu_item()``, F47, D-231).
     """
-    label = ft.ListTile(
-        leading=ft.Icon(ft.Icons.PLAYLIST_ADD),
-        title=ft.Text(ADD_ALL),
-        horizontal_spacing=12,
-        min_height=48,
+    item = menu_item(
+        ft.Icons.PLAYLIST_ADD, ADD_ALL, on_add_all, identifier=f"{SCREEN}.add_all"
     )
-    menu = ft.PopupMenuButton(
-        icon=ft.Icons.MORE_VERT,
-        tooltip="More options",
-        items=[
-            ft.PopupMenuItem(
-                content=ft.Semantics(identifier=f"{SCREEN}.add_all", content=label),
-                on_click=on_add_all,
-            )
-        ],
-    )
-    return named(f"{SCREEN}.menu", menu)
+    return overflow_menu(f"{SCREEN}.menu", [item])
 
 
 def shared_badges(track: Track, days: Sequence[DaySessions]) -> frozenset[str]:

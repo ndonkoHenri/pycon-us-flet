@@ -52,10 +52,11 @@ from pycon_us.ui.badges import (
     badge_specs,
     use_favorite_toggle,
 )
-from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
+from pycon_us.ui.links import feed_markdown, open_link
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.semantics import named, semantics_key
+from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
 from pycon_us.year_keynotes import keynote_of
@@ -193,30 +194,19 @@ def SessionDetail(session_id: str) -> ft.View:
 
 
 def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
-    """The app bar's overflow: "Open on us.pycon.org", the host named from the URL."""
-    label = site_title(url)
-    menu = ft.PopupMenuButton(
-        icon=ft.Icons.MORE_VERT,
-        tooltip="More options",
-        items=[
-            ft.PopupMenuItem(
-                # It leaves the app: a link, read "Opens in browser" after its text
-                # (ux.md §4.7). Said by the text, not the icon, which comes first and
-                # was read first ("Opens in browser, Open on us.pycon.org").
-                content=ft.Semantics(
-                    link=True,
-                    content=ft.Text(
-                        label, semantics_label=f"{label}\n{OPENS_IN[LinkKind.WEB]}"
-                    ),
-                ),
-                icon=ft.Icons.OPEN_IN_NEW,
-                on_click=on_open,
-            )
-        ],
+    """The app bar's overflow: "Open on us.pycon.org", the host named from the URL.
+
+    It leaves the app: a link, read "Opens in browser" after its words (ux.md §4.7);
+    its label wraps at 200 % text (``menu_item()``, F47, D-231).
+    """
+    item = menu_item(
+        ft.Icons.OPEN_IN_NEW,
+        site_title(url),
+        on_open,
+        identifier=f"{SCREEN}.open_site",
+        link=True,
     )
-    # Merged: bare, the tooltip sat on the identifier's node and the button under it
-    # was unnamed (D-214).
-    return named(f"{SCREEN}.overflow", menu)
+    return overflow_menu(f"{SCREEN}.overflow", [item])
 
 
 def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Control:

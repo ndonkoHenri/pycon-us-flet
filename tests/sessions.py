@@ -353,3 +353,14 @@ def text_of(control: object) -> str:
     while control is not None and not isinstance(control, ft.Text):
         control = getattr(control, "content", None)
     return str(control.value) if control is not None else ""
+
+
+def menu_text(item: ft.PopupMenuItem) -> ft.Text:
+    """An overflow item's label: the ``Text`` of ``menu_item()``'s tile (D-231).
+
+    Under the identifier's ``Semantics``, the tile's title, or the link's
+    ``Semantics`` around it.
+    """
+    tile = cast(ft.ListTile, cast(ft.Semantics, item.content).content)
+    title = tile.title
+    return cast(ft.Text, title.content if isinstance(title, ft.Semantics) else title)

@@ -37,6 +37,7 @@ from tests.session_detail import (
     rendering,
     words,
 )
+from tests.sessions import menu_text
 from tests.trees import descendants, texts
 
 TUTORIAL = "19"
@@ -496,9 +497,10 @@ async def test_the_overflow_opens_the_public_page(render: Render) -> None:
     menu = cast(ft.PopupMenuButton, detail.node("session.overflow").content)
     assert menu.tooltip == "More options"
     (item,) = menu.items
-    label = cast(ft.Semantics, item.content)
-    assert label.link  # it leaves the app (ux.md §4.7)
-    text = cast(ft.Text, label.content)
+    assert detail.node("session.open_site") is item.content
+    title = cast(ft.ListTile, cast(ft.Semantics, item.content).content).title
+    assert cast(ft.Semantics, title).link  # it leaves the app (ux.md §4.7)
+    text = menu_text(item)  # a tile's title, which wraps at 200 % (F47, D-231)
     assert text.value == "Open on us.pycon.org"
     assert text.semantics_label == "Open on us.pycon.org\nOpens in browser"
     await detail.click(item)

@@ -223,9 +223,12 @@ ON_PURPOSE = {
         "my_schedule.earlier_days, my_schedule.earlier_today"
     ),
     ("when_where.py", "OtherRooms", "f'{screen}.other_rooms'"): "session.other_rooms",
-    # D-230: inside a PopupMenuItem, whose own MergeSemantics takes the identifier
-    # into the item's node (Flutter's popup_menu.dart); a uiautomator dump shows it.
-    ("track.py", "_menu", "f'{SCREEN}.add_all'"): "track.add_all",
+    # D-230, D-231: inside a PopupMenuItem, whose own MergeSemantics takes the
+    # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
+    # dump shows it. Every overflow item is built there.
+    ("menus.py", "menu_item", "identifier"): (
+        "session.open_site, sprints.info, sprints.submit, track.add_all"
+    ),
 }
 """The bare identifiers left so on purpose, and the identifiers they give at run time.
 

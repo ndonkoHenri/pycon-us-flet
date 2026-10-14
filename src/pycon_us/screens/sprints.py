@@ -36,9 +36,9 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
-from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
+from pycon_us.ui.links import open_link
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 
 FILTER_HINT = "Filter projects"
@@ -221,41 +221,30 @@ def _menu(info: ConferenceInfo, svc: Services) -> list[ft.Control]:
     """The app bar's overflow: the year's sprint page and its project form (EVT-08).
 
     Each item leaves the app: a link, read "Opens in browser" after its words, as
-    session detail's "Open on us.pycon.org" is (D-186). A year without either URL has
-    no item for it, and without both no menu (no dead control, ux.md §1).
+    session detail's "Open on us.pycon.org" is (D-186), whose label wraps at 200 %
+    text (``menu_item()``, F47, D-231). A year without either URL has no item for it,
+    and without both no menu (no dead control, ux.md §1).
     """
-    links: list[tuple[str, str]] = []
+    links: list[tuple[str, str, str]] = []
     if info.sprints_url:
         host = urlsplit(info.sprints_url).hostname
-        links.append((f"Sprint info on {host}", info.sprints_url))
+        links.append((f"Sprint info on {host}", info.sprints_url, "info"))
     if info.sprint_submit_url:
-        links.append((SUBMIT, info.sprint_submit_url))
+        links.append((SUBMIT, info.sprint_submit_url, "submit"))
     if not links:
         return []
 
-    menu = ft.PopupMenuButton(
-        icon=ft.Icons.MORE_VERT,
-        tooltip="More options",
-        items=[_menu_item(label, url, svc) for label, url in links],
-    )
-    return [named(f"{SCREEN}.menu", menu)]
+    items = [_menu_item(label, url, key, svc) for label, url, key in links]
+    return [overflow_menu(f"{SCREEN}.menu", items)]
 
 
-def _menu_item(label: str, url: str, svc: Services) -> ft.PopupMenuItem:
-    """One link of the menu, read "<label>, Opens in browser" (D-186's form)."""
+def _menu_item(label: str, url: str, key: str, svc: Services) -> ft.PopupMenuItem:
+    """One link of the menu, ``sprints.<key>``, read "<label>, Opens in browser"."""
 
     @report_errors
     async def go() -> None:
         await open_link(svc, url)
 
-    return ft.PopupMenuItem(
-        # Said by the text, not the icon, which would be read first (D-186).
-        content=ft.Semantics(
-            link=True,
-            content=ft.Text(
-                label, semantics_label=f"{label}\n{OPENS_IN[LinkKind.WEB]}"
-            ),
-        ),
-        icon=ft.Icons.OPEN_IN_NEW,
-        on_click=go,
+    return menu_item(
+        ft.Icons.OPEN_IN_NEW, label, go, identifier=f"{SCREEN}.{key}", link=True
     )
