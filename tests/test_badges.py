@@ -1,6 +1,8 @@
 """Tests for the badges (THEME-08, SCHED-20; D-25): the pill, and which a session shows.
 
-Also the selection click the star and search's chips share (ux.md §4.5, D-193).
+Also the selection click the star and search's chips share (ux.md §4.5, D-193), and
+the star's last SnackBar, which an edit that says nothing closes (D-251, #334): those
+tests star rows in a real Flet session (``tests/row_sessions.py``).
 
 The colours' contrast is in ``tests/test_theme.py``; here, that a badge draws them and
 always carries a name from ``track_name()`` (DATA-28). How badges look is checked on
@@ -8,7 +10,10 @@ devices (the PR). The sessions are the recorded 2026 feed's.
 """
 
 import logging
+from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
+from pathlib import Path
+from typing import Any, cast
 
 import flet as ft
 import pytest
@@ -18,14 +23,18 @@ from pycon_us.config import ConferenceInfo, load_year
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.ui.badges import (
     REGISTRATION,
+    REMOVED,
     SPANISH,
     TrackBadge,
     badge_row,
     selection_click,
     session_badges,
 )
+from tests import row_sessions
 from tests.fakes import MemoryHaptics
 from tests.feeds import processed
+from tests.row_sessions import Rendered, rendering
+from tests.sessions import text_of
 
 TALK = "142"
 AI = "105"
@@ -180,3 +189,102 @@ async def test_a_failed_click_is_logged_not_raised(
     with caplog.at_level(logging.WARNING, logger="pycon_us.ui.badges"):
         await selection_click(haptics)  # a missed click is no error message
     assert "Haptic feedback failed" in caplog.text
+
+
+# ------------------------------------------------------------------ the last SnackBar
+
+
+@pytest.fixture
+async def rendered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[Rendered]:
+    """A list of starred rows in a real Flet session, a screen reader on (D-184)."""
+    async with rendering(tmp_path, monkeypatch) as shown:
+        shown.prefs.screen_reader = True  # the Undo SnackBar stays until used
+        yield shown
+
+
+def updates(monkeypatch: pytest.MonkeyPatch) -> list[ft.SnackBar]:
+    """Record each SnackBar sent to the client again: a closed one must be sent."""
+    sent: list[ft.SnackBar] = []
+
+    def update(snack: ft.SnackBar) -> None:
+        sent.append(snack)
+
+    monkeypatch.setattr(ft.SnackBar, "update", update)
+    return sent
+
+
+async def removed(rendered: Rendered, session_id: str) -> ft.SnackBar:
+    """Save the session, then remove it: return the "Removed" SnackBar, showing."""
+    await rendered.tap_star(session_id)
+    await rendered.tap_star(session_id)
+    snack = rendered.snack_bars[-1]
+    assert text_of(snack.content) == REMOVED
+    assert snack.open and snack.persist
+    return snack
+
+
+async def test_saving_a_session_again_closes_its_removed_snack_bar(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#334: a screen reader must not go on saying "Removed" about a saved session."""
+    snack = await removed(rendered, row_sessions.TALK)
+    sent = updates(monkeypatch)
+    await rendered.tap_star(row_sessions.TALK)
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    # Flet removes the SnackBar whose open goes false (snack_bar.dart).
+    assert not snack.open and sent == [snack]
+    assert rendered.snack_bars == [snack]  # and the add shows none of its own
+
+
+async def test_undo_closes_the_removed_snack_bar(rendered: Rendered) -> None:
+    snack = await removed(rendered, row_sessions.TALK)
+    await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
+    await rendered.settle()
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    assert not snack.open
+    assert rendered.snack_bars == [snack]
+
+
+async def test_saving_another_session_closes_it_too(rendered: Rendered) -> None:
+    """Any edit that says nothing: the bar would not say which session it removed."""
+    snack = await removed(rendered, row_sessions.TALK)
+    await rendered.tap_star(row_sessions.TUTORIAL)
+    assert not snack.open
+
+
+async def test_a_removal_snack_bar_stays_until_the_next_edit(
+    rendered: Rendered,
+) -> None:
+    """D-184 is unchanged: nothing closes it but an edit, Undo or Flet itself."""
+    snack = await removed(rendered, row_sessions.TALK)
+    await rendered.settle()
+    assert snack.open
+    # A second removal shows its own; Flet's show replaces the first on the device.
+    second = await removed(rendered, row_sessions.TUTORIAL)
+    assert second is not snack and second.open
+
+
+async def test_an_edit_leaves_a_snack_bar_that_is_not_the_stars_alone(
+    rendered: Rendered,
+) -> None:
+    """Never the top dialog (ux.md §4.5): only the star's own SnackBar closes."""
+    snack = await removed(rendered, row_sessions.TALK)
+    other = ft.SnackBar(ft.Text("Something went wrong"))
+    rendered.session.page.show_dialog(other)
+    await rendered.tap_star(row_sessions.TALK)
+    assert not snack.open and other.open
+    await rendered.tap_star(row_sessions.TUTORIAL)  # with no star SnackBar left
+    assert other.open
+
+
+async def test_a_snack_bar_that_has_gone_is_not_closed_again(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snack = await removed(rendered, row_sessions.TALK)
+    snack.open = False  # as Flet reports a SnackBar that timed out or was swiped
+    sent = updates(monkeypatch)
+    await rendered.tap_star(row_sessions.TALK)
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    assert sent == []

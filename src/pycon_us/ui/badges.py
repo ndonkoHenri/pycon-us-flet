@@ -11,12 +11,15 @@ them as an argument, so a memoised row (D-153) that receives the tokens as a pro
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
 SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to My
-schedule" (SCHED-24), with the same SnackBar and its count (D-209).
+schedule" (SCHED-24), with the same SnackBar and its count (D-209). An edit that says
+nothing closes the favourites SnackBar still showing, so a screen reader is never left
+with "Removed" about a session saved again (D-251).
 ``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
 """
 
 import logging
 from collections.abc import Awaitable, Callable, Iterable
+from weakref import WeakKeyDictionary
 
 import flet as ft
 
@@ -66,6 +69,9 @@ UNDO = "Undo"
 
 SNACK_BAR_MS = 4000
 """How long a SnackBar shows (ux.md §4.5), unless a screen reader keeps it (D-184)."""
+
+_SHOWN: WeakKeyDictionary[ft.Page, ft.SnackBar] = WeakKeyDictionary()
+"""The last favourites SnackBar each page showed, which the next edit closes (D-251)."""
 
 type ToggleFavorite = Callable[[str], Awaitable[None]]
 """A list's one star handler: ``await on_toggle(session_id)``."""
@@ -252,7 +258,9 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     - an add gives a selection click (``HapticFeedback``, ux.md §4.5);
     - a removal shows "Removed from My schedule" with Undo;
     - an edit that was not saved shows "Couldn't save your change" instead, keeping
-      Undo when the edit was a removal.
+      Undo when the edit was a removal;
+    - an edit that says nothing (an add, an Undo) closes the favourites SnackBar
+      still showing, as a new one replaces it (D-251).
 
     Args:
         favorites: The list owner's ``use_favorites()`` store.
@@ -282,26 +290,25 @@ def _announce(
     *,
     keep: bool,
 ) -> None:
-    """Show an edit's one SnackBar (``feedback()``), if any, with Undo after a removal.
+    """Report a star edit through ``_report()``: ``feedback()``'s SnackBar, or none.
+
+    A removal's SnackBar has Undo; an edit that says nothing closes the last (D-251).
 
     Args:
         page: The session's page.
         favorites: The store the edit changed; Undo reverses the edit in it.
         storage: Where the favourites are kept.
         change: The edit.
-        keep: A screen reader is on: an Undo SnackBar stays until it is used or
-            replaced, as Flutter keeps one with an action (D-184).
+        keep: A screen reader is on: an Undo SnackBar stays until it is used,
+            replaced or closed by the next edit (D-184, D-251).
     """
-    message = feedback(change)
-    if message is None:
-        return
 
     @report_errors
     async def undo() -> None:
         reverse = await favorites.undo(storage, change)
         _announce(page, favorites, storage, reverse, keep=keep)
 
-    _show(page, message, undo=undo if change.removed else None, keep=keep)
+    _report(page, feedback(change), undo=undo if change.removed else None, keep=keep)
 
 
 def added_feedback(change: Change) -> str:
@@ -333,8 +340,8 @@ def use_add_all(favorites: Favorites) -> AddAll:
     one SnackBar, ``added_feedback()``'s, with Undo whenever it saved some, also when
     the write failed. Undo takes back only what the tap added (``Favorites.undo()``),
     so the list is again what it was, and says nothing more, as a star's Undo does,
-    unless its own write fails ("Couldn't save your change", with no Undo of the Undo:
-    the menu offers the add again).
+    closing the SnackBar (D-251), unless its own write fails ("Couldn't save your
+    change", with no Undo of the Undo: the menu offers the add again).
 
     Args:
         favorites: The page's ``use_favorites()`` store.
@@ -355,41 +362,58 @@ def use_add_all(favorites: Favorites) -> AddAll:
         @report_errors
         async def undo() -> None:
             reverse = await favorites.undo(svc.storage, change)
-            if not reverse.saved:
-                _show(page, NOT_SAVED, undo=None, keep=prefs.screen_reader)
+            message = None if reverse.saved else NOT_SAVED
+            _report(page, message, undo=None, keep=prefs.screen_reader)
 
         message = added_feedback(change)
-        _show(
+        _report(
             page, message, undo=undo if change.added else None, keep=prefs.screen_reader
         )
 
     return add_all
 
 
-def _show(
+def _report(
     page: ft.Page,
-    message: str,
+    message: str | None,
     *,
     undo: Callable[[], Awaitable[None]] | None,
     keep: bool,
 ) -> None:
-    """Show a favourites SnackBar: floating, 4 s, its one action Undo when given (D-29).
+    """Report a favourites edit: its SnackBar, or none, never the last edit's (D-251).
+
+    A message shows a floating SnackBar for 4 s, its one action Undo when given
+    (D-29). Flet's ``SnackBarControl`` removes the current SnackBar before it shows
+    one (``snack_bar.dart``), so a new message replaces the last. An edit that says
+    nothing closes the last favourites SnackBar itself, while it still shows: with a
+    screen reader it stays until used (D-184), and "Removed from My schedule" must not
+    outlive the add or Undo that saved the session again (#334). It closes that
+    SnackBar only, never ``page.pop_dialog()``'s top dialog (ux.md §4.5); and only
+    when nothing is shown, since a close and a show sent together each remove the
+    current SnackBar after the frame, in an order Flet does not promise.
 
     Args:
         page: The session's page.
-        message: What it says.
+        message: What it says, or None when the edit says nothing.
         undo: Undo's handler, or None for a SnackBar without an action.
-        keep: A screen reader is on: an Undo SnackBar stays until it is used or
-            replaced, as Flutter keeps one with an action (D-184).
+        keep: A screen reader is on: an Undo SnackBar stays until it is used,
+            replaced or closed by the next edit, as Flutter keeps one with an
+            action (D-184, D-251).
     """
-    page.show_dialog(
-        ft.SnackBar(
-            content=ft.Text(message),
-            action=ft.SnackBarAction(UNDO, on_click=undo) if undo else None,
-            behavior=ft.SnackBarBehavior.FLOATING,
-            duration=SNACK_BAR_MS,
-            # Flutter keeps a SnackBar with an action until it is used; only a
-            # screen-reader user needs that time to reach Undo (D-184).
-            persist=undo is not None and keep,
-        )
+    if message is None:
+        last = _SHOWN.pop(page, None)
+        if last is not None and last.open:  # Flet sets open False once it has gone
+            last.open = False
+            last.update()
+        return
+    bar = ft.SnackBar(
+        content=ft.Text(message),
+        action=ft.SnackBarAction(UNDO, on_click=undo) if undo else None,
+        behavior=ft.SnackBarBehavior.FLOATING,
+        duration=SNACK_BAR_MS,
+        # Flutter keeps a SnackBar with an action until it is used; only a
+        # screen-reader user needs that time to reach Undo (D-184).
+        persist=undo is not None and keep,
     )
+    page.show_dialog(bar)
+    _SHOWN[page] = bar
