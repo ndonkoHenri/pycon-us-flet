@@ -4,7 +4,7 @@
 providers, so the memoised path (D-153), the two renders (D-156), the tabs' echo and the
 jumps run as Flet runs them. Two seams stand in for the device: ``AppScaffold`` returns
 the app bar's actions, the body and the "Now" button in a ``Column`` (the View and its
-bar are ``tests/test_scaffold.py``'s and ``tests/test_navigation.py``'s), and ``ListView.scroll_to`` is recorded instead of
+bar are tested with ``tests/chrome.py``), and ``ListView.scroll_to`` is recorded instead of
 sent to a client, answering a keyed scroll with the scroll end Flutter would report (or with
 nothing, for a list already in place) and reading ``self.page`` first, as Flet does, so a
 list that has left the page raises Flet's error. ``Services.run_every`` is recorded, so a
