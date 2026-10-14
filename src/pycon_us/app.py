@@ -13,7 +13,7 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
@@ -26,6 +26,7 @@ from pycon_us.theme import (
     build_theme,
     build_tokens,
 )
+from pycon_us.ui.time_gutter import GutterProbe
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,11 @@ def App(memory: ViewMemory):
     ft.use_effect(start, [])
     ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
 
-    if not prefs.loaded:  # the boot gate: no theme or filter flash
-        return [BootView()]
+    # The boot gate: no theme or filter flash, and no slot layout that changes
+    # under the Schedule's first jump (D-216).
+    if not (prefs.loaded and prefs.time_measured):
+        # Under Prefs' provider for GutterProbe, which measures while the app boots.
+        return PrefsCtx(prefs, lambda: [BootView()])
 
     tokens = build_tokens(dark=prefs.dark, high_contrast=prefs.high_contrast_on)
 
@@ -88,14 +92,29 @@ def App(memory: ViewMemory):
 
 @ft.component
 def BootView() -> ft.View:
-    """The boot gate's view: the splash's purple, and a ring only after ``RING_DELAY``."""
+    """The boot gate's view: the splash's purple, and a ring only after ``RING_DELAY``.
+
+    It holds ``GutterProbe`` too, and the gate waits for its answer, so whether a
+    slot's time goes above its rows is known before the first screen: a Schedule
+    that opened with the gutter and switched a moment later lost its jump to the
+    current slot, which ran against the first layout (D-216). Flutter reports the
+    probe's size with its first frame (F51); should no answer come, the gate stops
+    waiting with the ring, after ``RING_DELAY``, and the lists keep the gutter until
+    the screens' own probes answer.
+    """
+    prefs = use_prefs()
     ring, set_ring = ft.use_state(False)
+
+    @report_errors
+    def stop_waiting() -> None:
+        set_ring(True)
+        prefs.time_measured = True
 
     @report_errors
     def show_ring_later():
         # A sync setup whose return value is its cleanup (F2): an unmount within the
         # delay cancels the timer.
-        timer = asyncio.get_running_loop().call_later(RING_DELAY, set_ring, True)
+        timer = asyncio.get_running_loop().call_later(RING_DELAY, stop_waiting)
         return timer.cancel
 
     ft.use_effect(show_ring_later, [])
@@ -105,10 +124,12 @@ def BootView() -> ft.View:
         padding=0,
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        spacing=0,  # the probe is 0 dp high: the ring stays centred
         controls=[
             ft.ProgressRing(
                 color=ft.Colors.WHITE, semantics_label="Loading", visible=ring
-            )
+            ),
+            GutterProbe(),
         ],
     )
 
@@ -130,9 +151,11 @@ async def bootstrap(
        feed URL serves the refreshes, and an unlock shows error details (D-187).
     2. The year's favourites (D-48), so no star fills in after the first screen.
     3. The feed cache, else the bundled snapshot (D-38, D-145).
-    4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
-       changes crossfade again from here on, also under reduced motion: a crossfade
-       changes colour, not position (D-173).
+    4. ``prefs.loaded`` ends the start. The boot gate opens once ``BootView``'s probe
+       has also measured the time's place (``prefs.time_measured``), or after
+       ``RING_DELAY`` without an answer (D-216); the first screen shows that data.
+       Theme changes crossfade again from here on, also under reduced motion: a
+       crossfade changes colour, not position (D-173).
     5. A refresh in the background, not awaited (single flight, D-145).
     6. The page handlers, which only write stores (D-147); a resume runs
        ``on_resume()``.

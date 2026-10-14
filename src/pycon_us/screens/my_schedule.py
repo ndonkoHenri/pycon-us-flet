@@ -150,7 +150,12 @@ def MySchedule() -> ft.View:
         ]
     else:
         day = partial(
-            _day, views=by_id, on_toggle=on_toggle, tokens=tokens, use_24h=use_24h
+            _day,
+            views=by_id,
+            on_toggle=on_toggle,
+            tokens=tokens,
+            use_24h=use_24h,
+            time_above=prefs.time_above,
         )
         expand = expand_style(prefs)
         now = clock.now()
@@ -280,6 +285,7 @@ def _day(
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
+    time_above: bool,
 ) -> ft.Control:
     """Return ``day``'s slots as a memoised ``_Day``, keyed by the day and the part.
 
@@ -293,6 +299,8 @@ def _day(
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
+        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+            D-216).
     """
     # Only the day's own names: a clash elsewhere leaves this day's props equal.
     notes = {
@@ -309,6 +317,7 @@ def _day(
         on_toggle,
         tokens,
         use_24h,
+        time_above,
         key=f"{day.day.isoformat()}-{part}",  # pyright: ignore[reportCallIssue]
     )
 
@@ -322,12 +331,13 @@ def _Day(
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
+    time_above: bool,
 ) -> ft.Control:
     """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
 
     Memoised (D-153): it runs only when the day's slots, their clashes, the clock
-    format or the scheme change. Every row is saved, so every star is filled; a tap
-    removes the row, with Undo.
+    format, the slots' layout (D-216) or the scheme change. Every row is saved, so every
+    star is filled; a tap removes the row, with Undo.
     """
     zone = use_services().year.conference.zone  # a plain value: subscribes to nothing
     slots: list[ft.Control] = []
@@ -346,7 +356,7 @@ def _Day(
             for session in slot.sessions
         ]
         label = time_label(slot.start, zone, use_24h=use_24h)
-        slots.append(TimeSlot(label, rows, divider=index > 0))
+        slots.append(TimeSlot(label, rows, divider=index > 0, above=time_above))
     return ft.Column(slots, spacing=0)
 
 

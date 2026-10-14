@@ -269,6 +269,7 @@ def Schedule() -> ft.View:
                 on_toggle,
                 tokens,
                 use_24h=use_24h,
+                time_above=prefs.time_above,
                 full=day == current,  # the one list a jump targets (D-154)
                 clearance=bool(today_slots),
                 empty=_empty(data, day, slots[day]),

@@ -90,7 +90,22 @@ def hooks(
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
+    # The probe reads Prefs; its own tests are in test_time_gutter.py.
+    monkeypatch.setattr(scaffold, "GutterProbe", Probe)
     return hooks
+
+
+def Probe() -> ft.Control:
+    """``GutterProbe``'s stand-in: a control the tests can find."""
+    return ft.Container(key="probe")
+
+
+def body_of(view: ft.View) -> ft.Control:
+    """The body the screen gave, in the SafeArea above the gutter probe."""
+    safe, _ = view.controls
+    assert isinstance(safe, ft.SafeArea)
+    assert safe.content is not None
+    return safe.content
 
 
 def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.View:
@@ -230,11 +245,22 @@ def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
     view = view_at(hooks, page, "/now", actions=[action])
     assert app_bar(view).actions == [action]
     assert view.padding == 0
-    (safe,) = view.controls
+    safe, _ = view.controls
     assert isinstance(safe, ft.SafeArea)
     assert safe.expand is True
-    assert isinstance(safe.content, ft.Text)
+    assert isinstance(body_of(view), ft.Text)
     assert safe.adaptive is not True
+
+
+def test_the_gutter_probe_sits_under_the_body_taking_no_space(
+    hooks: Hooks, page: FakePage
+) -> None:
+    """D-216: every screen measures the slots' layout, so it is known before a list."""
+    view = view_at(hooks, page, "/now")
+    safe, probe = view.controls
+    assert isinstance(safe, ft.SafeArea) and safe.expand is True
+    assert probe.key == "probe"
+    assert view.spacing == 0  # the View's column puts no gap above the probe
 
 
 def test_only_the_top_view_records_where_a_new_session_returns(
@@ -338,9 +364,7 @@ def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
     with Renderer().with_context():  # what calling a component needs, as in a render
         view = AppScaffold(title="More", body=body)
 
-    (safe,) = view.controls
-    assert isinstance(safe, ft.SafeArea)
-    shown = safe.content
+    shown = body_of(view)
     assert isinstance(shown, ft.Component)
     assert shown.fn is inspect.unwrap(Shown)
     assert shown.args == (body,)
