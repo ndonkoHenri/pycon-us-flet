@@ -132,7 +132,8 @@ that date motivates us but never justifies cutting corners.
       name=$(basename "$f"); cp "$f" "$dir/$name"; sips -Z 1000 "$dir/$name" > /dev/null
       base64 -i "$dir/$name" | tr -d '\n' > "$dir/$name.b64"
       # An existing file needs its current blob sha (re-uploading after a timeout, or replacing an image).
-      sha=$(gh api "repos/$repo/contents/$pr/$name?ref=pr-assets" --jq .sha 2>/dev/null || true)
+      # For a new file the lookup fails and prints the 404 body on stdout, so its output is dropped.
+      sha=$(gh api "repos/$repo/contents/$pr/$name?ref=pr-assets" --jq .sha 2>/dev/null) || sha=""
       gh api -X PUT "repos/$repo/contents/$pr/$name" -f branch=pr-assets -f message="Add $name for #$pr" \
         -F content=@"$dir/$name.b64" ${sha:+-f} ${sha:+sha=$sha} --jq .content.path
     done )
