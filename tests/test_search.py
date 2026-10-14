@@ -1,7 +1,8 @@
 """Tests for global search: the index, matching and results (D-46, D-180; NEW-02).
 
 The fold itself is tested in ``test_queries.py``. Here: AND matching of folded words,
-markup that never matches, grouping and ordering, scopes, empty queries, and both feeds.
+markup that never matches, grouping and ordering, scopes, empty queries, both feeds, and
+the cut to each type's first rows (D-218).
 """
 
 import dataclasses
@@ -16,7 +17,7 @@ import pytest
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.queries import fold, speaker_order
-from pycon_us.core.search import SearchResults, search, search_index
+from pycon_us.core.search import SearchResults, first_results, search, search_index
 from pycon_us.core.slugs import room_sort_key, slugify_room
 from pycon_us.core.timeline import DaySessions, timeline, track_sessions
 from tests.feeds import YEARS, changed, processed, settings
@@ -384,3 +385,62 @@ def test_a_pseudo_speaker_is_found_through_its_sessions_only() -> None:
     results = search(search_index(processed(2026)), "hosted by")
     assert results.session_count > 0
     assert results.speakers == ()
+
+
+# ------------------------------------------------------------------ first rows (D-218)
+
+
+def _ids(results: SearchResults) -> list[str]:
+    return [s.id for day in results.sessions for s in day.sessions]
+
+
+def test_the_first_rows_keep_the_order_and_cut_the_last_day_shown() -> None:
+    found = search(search_index(processed(2026)), "p")
+    assert found.session_count > 60 and len(found.speakers) > 20  # a broad query
+    first = first_results(found, sessions=60, speakers=20)
+    assert _ids(first) == _ids(found)[:60]
+    assert first.speakers == found.speakers[:20]
+    assert first.rooms is found.rooms  # rooms are never cut
+    # The days before the cut are the very same objects, so their memoised groups
+    # skip a render (D-153); only the last one shown is a new, shorter day.
+    *whole, last = first.sessions
+    assert all(a is b for a, b in zip(whole, found.sessions, strict=False))
+    assert last.day == found.sessions[len(whole)].day
+    assert 0 < len(last.sessions) <= len(found.sessions[len(whole)].sessions)
+
+
+def test_a_cut_on_a_day_boundary_leaves_no_empty_day() -> None:
+    found = search(search_index(processed(2026)), "p")
+    first_day = len(found.sessions[0].sessions)
+    first = first_results(found, sessions=first_day, speakers=None)
+    assert first.sessions == found.sessions[:1]
+    assert first.sessions[0] is found.sessions[0]
+    assert first.speakers is found.speakers  # None keeps them all
+
+
+def test_results_within_the_limits_are_the_same_object() -> None:
+    """Nothing to cut, nothing new: a memoised list sees the same results (D-153)."""
+    found = search(search_index(processed(2026)), "typing")
+    assert first_results(found, sessions=50, speakers=20) is found
+    assert first_results(found, sessions=None, speakers=None) is found
+    broad = search(search_index(processed(2026)), "a")
+    assert first_results(broad, sessions=None, speakers=None) is broad
+
+
+def test_each_type_is_cut_on_its_own() -> None:
+    broad = search(search_index(processed(2026)), "a")
+    sessions_only = first_results(broad, sessions=5, speakers=None)
+    assert _ids(sessions_only) == _ids(broad)[:5]
+    assert sessions_only.speakers is broad.speakers
+    speakers_only = first_results(broad, sessions=None, speakers=5)
+    assert speakers_only.sessions is broad.sessions
+    assert speakers_only.speakers == broad.speakers[:5]
+
+
+@pytest.mark.parametrize(("sessions", "speakers"), [(0, 20), (50, 0), (-1, None)])
+def test_a_limit_below_one_is_an_error(
+    sessions: int | None, speakers: int | None
+) -> None:
+    """A type that matched always shows a row: its "Show all" row needs one above it."""
+    with pytest.raises(ValueError, match="at least 1"):
+        first_results(SearchResults(), sessions=sessions, speakers=speakers)
