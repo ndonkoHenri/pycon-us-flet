@@ -418,6 +418,34 @@ async def test_the_developer_fake_clock_picks_today(
         clock.start_fake_clock(None)
 
 
+async def test_a_device_in_another_zone_gets_the_pacific_time_note(
+    shown: Callable[[], Awaitable[Shown]], machine_tz: str
+) -> None:
+    """D-35, D-240: the times are conference time; say so only when the device differs."""
+    schedule = await shown()
+    notes = find(
+        schedule.session,
+        ft.Semantics,
+        lambda c: c.identifier == "schedule.zone_note",
+    )
+    if machine_tz == "America/Los_Angeles":
+        assert notes == []
+    else:
+        (note,) = notes
+        assert texts(note) == ["Times are Pacific Time (PDT)"]
+
+
+async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
+    shown: Callable[[], Awaitable[Shown]], machine_tz: str
+) -> None:
+    """#313: a line that comes and goes would shift the day pages and rebuild them."""
+    schedule = await shown()
+    column = cast(ft.Column, schedule.tabs.content)
+    assert len(column.controls) == 5
+    pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
+    assert isinstance(pages.controls[-1], ft.TabBarView)
+
+
 async def test_a_remembered_day_wins_over_today(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:

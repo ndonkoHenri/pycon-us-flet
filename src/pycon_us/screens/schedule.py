@@ -2,10 +2,11 @@
 
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
 ``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
-one page per conference day, sprint days included. The tabs, the pages and the "Now"
-button come from ``screens/schedule_days.py``: each page is a ``DayList`` of
-``SlotItem``s, memoised down to the rows (D-153). The first render fills only the shown
-day, the second the others (D-156).
+one page per conference day, sprint days included. Under the strip, "Times are Pacific
+Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The
+tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
+is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
+fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
@@ -34,7 +35,7 @@ import flet as ft
 from pycon_us import clock
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
-from pycon_us.core.timefmt import day_heading, time_label, today
+from pycon_us.core.timefmt import day_heading, time_label, today, zone_note
 from pycon_us.core.timeline import Slot, now_place, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
@@ -69,7 +70,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
 
 logger = logging.getLogger(__name__)
 
@@ -321,6 +322,16 @@ def Schedule() -> ft.View:
                 ),
                 track_filter.summary,
                 StatusStrip(auto_refresh=True),
+                # The device's offset now: the packaged app's Python reads the
+                # device's zone (F60), and the minute tick follows a DST change.
+                zone_note_line(
+                    zone_note(
+                        now,
+                        info.zone,
+                        info.time_zone_name,
+                        now.astimezone().utcoffset(),
+                    )
+                ),
                 ft.Stack(
                     [landing_note(said), ft.TabBarView(pages)],
                     fit=ft.StackFit.EXPAND,
