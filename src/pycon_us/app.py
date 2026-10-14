@@ -151,9 +151,11 @@ async def bootstrap(
        feed URL serves the refreshes, and an unlock shows error details (D-187).
     2. The year's favourites (D-48), so no star fills in after the first screen.
     3. The feed cache, else the bundled snapshot (D-38, D-145).
-    4. ``prefs.loaded`` opens the boot gate: the first screen shows that data. Theme
-       changes crossfade again from here on, also under reduced motion: a crossfade
-       changes colour, not position (D-173).
+    4. ``prefs.loaded`` ends the start. The boot gate opens once ``BootView``'s probe
+       has also measured the time's place (``prefs.time_measured``), or after
+       ``RING_DELAY`` without an answer (D-216); the first screen shows that data.
+       Theme changes crossfade again from here on, also under reduced motion: a
+       crossfade changes colour, not position (D-173).
     5. A refresh in the background, not awaited (single flight, D-145).
     6. The page handlers, which only write stores (D-147); a resume runs
        ``on_resume()``.
