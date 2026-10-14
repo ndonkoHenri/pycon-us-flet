@@ -12,7 +12,10 @@
 A test module takes the fixtures by assigning them to its own names, which is where
 pytest looks a fixture up: ``year, svc, page, conference, hooks = (chrome.year,
 ...)``. An import would do the same, but ruff reads an imported fixture as unused and
-each test's parameter as its redefinition (F401, F811).
+each test's parameter as its redefinition (F401, F811). A fixture finds the fixtures
+it takes the same way, by name in the test's module: both families' ``hooks`` take
+``svc`` (which takes ``year``) and ``conference``, so a module that assigns a ``hooks``
+assigns those three too, or pytest stops with "fixture 'svc' not found".
 """
 
 import inspect
