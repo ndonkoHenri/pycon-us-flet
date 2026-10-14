@@ -1,33 +1,24 @@
 """Tests for the session rows: ``SessionRow`` and ``NoticeRow`` (D-184).
 
-Rows run in a real Flet session (``Rendered``): a list owner like the screens' renders
-memoised rows under the store providers, a star tap is a dispatched click, and Flet's
-own scheduler re-renders what changed, so a test sees what a device would get. How tall
-a row is, how it wraps at 200 % and what TalkBack reads are checked on devices (#81's
-PR); here, the semantics a screen reader is given.
+Rows run in a real Flet session (``Rendered``, from ``tests/row_sessions.py``): a list
+owner like the screens' renders memoised rows under the store providers, a star tap is
+a dispatched click, and Flet's own scheduler re-renders what changed, so a test sees
+what a device would get. How tall a row is, how it wraps at 200 % and what TalkBack
+reads are checked on devices (#81's PR); here, the semantics a screen reader is given.
 
-The session is ``tests/sessions.py``'s, which reaches into Flet internals as Flet's own
-component tests do; this module also reads SnackBars from ``page._dialogs`` and clicks
-with ``Session.dispatch_event(control._i, ...)``. A Flet pin bump (D-81) that renames one
-of them breaks the fixture, not the rows: look there first.
+The session is ``tests/sessions.py``'s ``showing()``, which reaches into Flet internals
+as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks through
+``Session.dispatch_event(control._i, ...)``). A Flet pin bump (D-81) that renames one
+of them breaks that module, not the rows: look there first.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.messaging.session import Session
 
-from pycon_us.config import load_year
-from pycon_us.core.row_views import SessionView
-from pycon_us.favorites import Favorites, FavoritesCtx, use_favorites
-from pycon_us.prefs import Prefs, PrefsCtx
-from pycon_us.services import Services, ServicesCtx, use_services
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory, use_conference
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import (
@@ -37,172 +28,30 @@ from pycon_us.ui.badges import (
     REMOVE_LABEL,
     REMOVED,
     UNDO,
-    use_favorite_toggle,
 )
-from pycon_us.ui.semantics import semantics_key
-from pycon_us.ui.session_rows import (
-    NoticeRow,
-    SessionRow,
-    is_notice,
-    use_session_views,
-)
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from pycon_us.ui.session_rows import is_notice
 from tests.feeds import processed
-from tests.sessions import rendering, settle
+from tests.row_sessions import (
+    CHARLA,
+    COFFEE,
+    LIST,
+    NOTICE,
+    TALK,
+    TUTORIAL,
+    YEAR,
+    Rendered,
+    rendering,
+)
 from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
-
-YEAR = load_year(2026)
-
-TALK = "142"
-"""A talk with one speaker: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
-
-CHARLA = "76"
-"""A charla: badges "Charla" and "En Español"."""
-
-TUTORIAL = "19"
-"""A tutorial that needs registration."""
-
-NOTICE = "196"
-"""Registration Desk Opens, 7:30 AM: a notice with a description."""
-
-COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
-"""A collapsed break with nothing to read."""
-
-LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
-
-
-# ------------------------------------------------------------------ a real session
-
-
-@ft.component
-def Owner(session_ids: tuple[str, ...]) -> ft.Control:
-    """A list owner as the screens write one: it subscribes, its rows do not."""
-    conference = use_conference()
-    favorites = use_favorites()
-    on_toggle = use_favorite_toggle(favorites)
-    views = use_session_views(conference, session_ids, use_24h=False)
-    info = use_services().year.conference
-    return ft.Column(
-        [
-            NoticeRow(view, screen="test")
-            if is_notice(view.session, info)
-            else SessionRow(
-                view,
-                view.session.id in favorites.ids,
-                on_toggle,
-                LIGHT_TOKENS,
-                screen="test",
-            )
-            for view in views
-        ]
-    )
-
-
-@dataclass
-class Rendered:
-    """A Flet session showing ``Owner``, and what its rows did."""
-
-    session: Session
-    favorites: Favorites
-    prefs: Prefs
-    prefs_service: MemoryPrefs
-    haptics: MemoryHaptics
-    renders: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order (S2's ``ROW_RENDERS``)."""
-
-    def node(self, identifier: str) -> ft.Semantics:
-        """The mounted ``Semantics`` with this identifier: one, and current."""
-        found = [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-        assert len(found) == 1, identifier
-        return found[0]
-
-    def star(self, session_id: str) -> ft.IconButton:
-        button = self.node(f"test.favorite.{session_id}").content
-        assert isinstance(button, ft.IconButton)
-        return button
-
-    def filled(self, session_id: str) -> bool:
-        """Whether the session's star is drawn filled."""
-        return self.star(session_id).icon == ft.Icons.STAR
-
-    def notice(self, session_id: str) -> ft.Semantics:
-        return self.node(f"test.notice.{semantics_key(session_id)}")
-
-    async def settle(self) -> None:
-        """Let handlers, store writes and Flet's re-render run to the end."""
-        await settle()
-
-    async def tap_star(self, session_id: str) -> None:
-        await self.session.dispatch_event(self.star(session_id)._i, "click", None)
-        await self.settle()
-
-    @property
-    def snack_bars(self) -> list[ft.SnackBar]:
-        return [
-            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
-        ]
 
 
 @pytest.fixture
 async def rendered(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Rendered]:
-    prefs_service = MemoryPrefs()
-    haptics = MemoryHaptics()
-    storage = Storage(prefs=prefs_service, directory=tmp_path, year=2026)
-    svc = Services(
-        year=YEAR,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=haptics,
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-    conference = Conference(data=processed(2026), source="bundled", version=1)
-    favorites, prefs = Favorites(), Prefs(loaded=True)
-    await favorites.load(storage)
-    renders: list[str] = []
-
-    def counted(name: str) -> Callable[..., str]:
-        phrase = getattr(rows, name)
-
-        def count(*args: Any, **kwargs: Any) -> str:
-            renders.append(cast(SessionView, args[-1]).session.id)
-            return phrase(*args, **kwargs)
-
-        return count
-
-    # Each row body says its phrase once: counting the calls counts the bodies.
-    monkeypatch.setattr(rows, "spoken_phrase", counted("spoken_phrase"))
-    monkeypatch.setattr(rows, "notice_phrase", counted("notice_phrase"))
-
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference,
-                lambda: PrefsCtx(
-                    prefs, lambda: FavoritesCtx(favorites, lambda: Owner(LIST))
-                ),
-            ),
-        )
-
-    async with rendering(Root) as session:
-        yield Rendered(
-            session, favorites, prefs, prefs_service, haptics, renders=renders
-        )
+    """``Owner(LIST)`` in a real Flet session (``tests/row_sessions.py``)."""
+    async with rendering(tmp_path, monkeypatch) as shown:
+        yield shown
 
 
 # ------------------------------------------------------------------ the memoised path

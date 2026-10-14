@@ -1,50 +1,36 @@
 """Tests for the Tracks hub and the track pages (``screens/tracks.py``, ``track.py``; #102).
 
 SCHED-21, SCHED-22, EVT-04, DATA-29, SHELL-10. The hub's sections and counts are plain
-functions over the recorded feeds; the screens run in a real Flet session, as the other
-screens' tests do (``tests/test_session.py``): the store providers written out above
-them, ``AppScaffold`` replaced by its body and ``page.navigate`` recorded. The slugs'
-loader rules are in ``tests/test_config.py``; ``track_sessions()`` itself in
-``tests/test_timeline.py``. How the pages look, wrap at 200 % and read to screen readers
-is checked on devices (the PR).
+functions over the recorded feeds; the screens run in a real Flet session under the
+store providers (``tests/sessions.py``'s ``showing()``). The slugs' loader rules are in
+``tests/test_config.py``; ``track_sessions()`` itself in ``tests/test_timeline.py``.
+How the pages look, wrap at 200 % and read to screen readers is checked on devices (the
+PR).
 """
 
-import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass, field, replace
+from contextlib import AsyncExitStack
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us.config import HUB_PAGES, load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
-from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import PAGES, parent_of
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.prefs import Prefs
 from pycon_us.screens import track as track_screen
 from pycon_us.screens import tracks as hub_screen
 from pycon_us.screens.tracks import HubEntry, hub_groups, hub_phrase, track_count
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.theme import LIGHT_TOKENS, TokensCtx
-from pycon_us.ui import day_groups, session_rows
+from pycon_us.state import Conference
+from pycon_us.ui import day_groups
 from pycon_us.ui.semantics import semantics_key
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
 from tests.feeds import YEARS, processed
-from tests.sessions import connection
+from tests.sessions import Shown, showing, text_of
 
 YEAR = load_year(2026)
 INFO = YEAR.conference
@@ -150,128 +136,32 @@ def test_a_track_page_shares_its_badge_and_the_charlas_en_espanol() -> None:
 # ------------------------------------------------------------------ the screens
 
 
-@dataclass
-class Shown:
-    """A Flet session showing one screen, what it navigated to and which rows ran."""
-
-    session: Session
-    favorites: Favorites
-    went: list[str]
-    titles: list[str]
-    rows: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order."""
-
-    def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
-        return [c for c in self.session.index.values() if isinstance(c, kind)]
-
-    def nodes(self, prefix: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.find(ft.Semantics)
-            if str(c.identifier or "").startswith(prefix)
-        ]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        found = [c for c in self.find(ft.Semantics) if c.identifier == identifier]
-        assert len(found) == 1, identifier
-        return found[0]
-
-    def texts(self) -> list[str]:
-        return [str(t.value) for t in self.find(ft.Text)]
-
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
-    async def click(self, control: ft.BaseControl) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
-
-
 type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return show(screen, conference=...): that screen rendered over the feed."""
-    sessions: list[Session] = []
-    titles: list[str] = []
+    async with AsyncExitStack() as stack:
 
-    def scaffold(*, title: str, body: ft.Control, **_: Any) -> ft.Control:
-        titles.append(title)
-        return body
-
-    monkeypatch.setattr(hub_screen, "AppScaffold", scaffold)
-    monkeypatch.setattr(track_screen, "AppScaffold", scaffold)
-    monkeypatch.setattr(ft, "use_view_path", lambda: "/more/tracks/charlas")
-
-    async def render(
-        screen: Callable[[], ft.Control], conference: Conference | None = None
-    ) -> Shown:
-        storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-        svc = Services(
-            year=YEAR,
-            storage=storage,
-            memory=ViewMemory(),
-            semantics=MemorySemantics(),
-            haptics=MemoryHaptics(),
-            launcher=MemoryLauncher(),
-            clipboard=MemoryClipboard(),
-        )
-        if conference is None:
-            conference = Conference(data=DATA, source="bundled", version=1)
-        favorites = Favorites()
-        await favorites.load(storage)
-        flet_session = Session(connection())
-        page = flet_session.page
-        went: list[str] = []
-        monkeypatch.setattr(page, "navigate", went.append)
-        shown = Shown(flet_session, favorites, went, titles)
-        phrase = session_rows.spoken_phrase
-
-        def counted_phrase(labels: Any, view: Any, **kwargs: Any) -> str:
-            shown.rows.append(view.session.id)
-            return phrase(labels, view, **kwargs)
-
-        # Each row body says its phrase once: counting the calls counts the bodies.
-        monkeypatch.setattr(session_rows, "spoken_phrase", counted_phrase)
-
-        @ft.component
-        def Root() -> ft.Control:
-            return ServicesCtx(
-                svc,
-                lambda: ConferenceCtx(
-                    conference,
-                    lambda: PrefsCtx(
-                        Prefs(loaded=True),
-                        lambda: FavoritesCtx(
-                            favorites, lambda: TokensCtx(LIGHT_TOKENS, screen)
-                        ),
-                    ),
-                ),
+        async def render(
+            screen: Callable[[], ft.Control], conference: Conference | None = None
+        ) -> Shown:
+            return await stack.enter_async_context(
+                showing(
+                    screen,
+                    hub_screen,
+                    track_screen,
+                    year=YEAR,
+                    conference=conference
+                    or Conference(data=DATA, source="bundled", version=1),
+                    tmp_path=tmp_path,
+                    monkeypatch=monkeypatch,
+                    view_path="/more/tracks/charlas",
+                )
             )
 
-        _context_page.set(page)  # pyright: ignore[reportArgumentType]
-        sessions.append(flet_session)
-        page.render(Root)
-        flet_session.get_page_patch()
-        await shown.settle()
-        return shown
-
-    try:
         yield render
-    finally:
-        for flet_session in sessions:
-            flet_session.close()
-        await asyncio.sleep(0)
-        _context_page.set(None)
-
-
-def text_of(control: object) -> str:
-    """The first ``Text`` value under ``control``, following ``content``."""
-    while control is not None and not isinstance(control, ft.Text):
-        control = getattr(control, "content", None)
-    return str(control.value) if control is not None else ""
 
 
 def page_of(slug: str) -> Callable[[], ft.Control]:
