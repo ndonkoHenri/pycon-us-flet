@@ -16,7 +16,8 @@ the user is not scrolling:
   scroll of the list, a jump to now and the re-tap cancel it.
 
 A newer scroll (the user's drag, a jump to now, the re-tap) also stops a put-back on
-its way between its two jumps (``TodayPlace.turn``). When Flet drops every scroll end
+its way between its two jumps (``TodayPlace.turn``), and so does a list that still
+moves after the first jump, since Flet may drop the drag's ``USER`` event (F70). When Flet drops every scroll end
 of a keyed put-back (``scroll_interval``, F70), where it went is unknown: today's offset
 is dropped, and without one today comes back by key (``comes_back_by_key()``).
 
@@ -118,10 +119,12 @@ class TodayPlace:
         So does a repeat of the sheet's close's put-back, which may have read heights
         from before the change's layout: Flet sends a size after the frame that laid
         it out, which can come after the close (D-250). The first report after the
-        close takes the repeat, whether or not it runs, so a later one never does.
+        close takes the repeat, whether or not it runs, so a later one never does. A
+        report while the list moves takes it without running it: Flet may have dropped
+        the drag's ``USER`` event, which would have changed the turn (F70).
         """
         self.heights[key] = height
-        repeat, self.again = self.again == self.turn, -1
+        repeat, self.again = self.again == self.turn and not self.moving, -1
         if self.shown and (self.memory.schedule_pending or repeat):
             await self.put_back()
 
@@ -254,7 +257,7 @@ class TodayPlace:
             else:
                 await list_view.scroll_to(scroll_key=ft.ScrollKey(key), duration=0)
             keyed = self.ends
-            if top is None and into and self.turn == turn:
+            if top is None and into and self.turn == turn and not self.moving:
                 await list_view.scroll_to(delta=into, duration=0)
         except RuntimeError as error:
             if LEFT_THE_PAGE not in str(error):
@@ -263,6 +266,12 @@ class TodayPlace:
             return
         if self.turn != turn:  # a newer scroll owns the list and its offset
             logger.info("Put back %s: a newer scroll took over", key)
+            return
+        # Still moving: a drag whose USER event Flet dropped, or the jump's own end
+        # dropped (F70). Where the list ends up is unknown: today comes back by key.
+        if self.moving:
+            self.memory.schedule_offsets.pop(day, None)
+            logger.info("Put back %s: the list moves", key)
             return
         # Flet drops an end within scroll_interval of the last of its type (F70), so
         # the offset a day switch puts back may not be where the put-back went.

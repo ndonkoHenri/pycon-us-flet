@@ -205,6 +205,7 @@ def Schedule() -> ft.View:
         if shown is None:  # no data yet: the first display is the render that has it
             return
         today_place.shows(shown)
+        turn = today_place.turn
         jumps = jumps_by_itself(shown, current, today_slots, memory)
         if not jumps:
             set_in_view(None)
@@ -213,6 +214,8 @@ def Schedule() -> ft.View:
         set_rest(True)
         if jumps:
             await jump_to_now(asked=False)
+        elif today_place.turn != turn or today_place.moving:
+            return  # the user, Now or a day switch moved the lists meanwhile
         elif shown == current and today_place.comes_back_by_key():
             await today_place.put_back()
         else:

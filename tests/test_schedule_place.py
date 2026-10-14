@@ -24,6 +24,7 @@ from flet.messaging.session import Session
 
 from pycon_us.core.feed import process
 from pycon_us.memory import ViewMemory
+from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import sessions, test_schedule
@@ -431,6 +432,76 @@ async def test_a_put_back_whose_ends_were_dropped_comes_back_by_key_on_a_new_mou
     assert device.pixels == pixels
 
 
+async def _held_new_mount(
+    shown: Callable[..., Awaitable[Shown]],
+    device: Device,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[Shown, asyncio.Event, asyncio.Event]:
+    """A new mount that comes back by key, its first display's round trip held.
+
+    Returns the Schedule, the event that releases the round trip, and the one set
+    once it has returned.
+    """
+    schedule = await shown()
+    await lay_out(schedule)
+    await user_scroll(schedule, device, _top(schedule, TWO_45) + 150.0)
+    await show_all(schedule)
+    device.silent = 1
+    await lay_out(schedule, first=1)  # its ends dropped: today comes back by key
+    schedule.leave()
+    await schedule.settle()
+    schedule.forget()
+    device.pixels = 0.0  # a new list, at its top
+    asked, release, returned = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    get = Storage.get
+
+    async def held_get(self: Storage, pref: Any) -> Any:
+        if pref is THEME:  # the first display's round trip (D-156)
+            asked.set()
+            await release.wait()
+            returned.set()
+        return await get(self, pref)
+
+    monkeypatch.setattr(Storage, "get", held_get)
+    schedule.come_back()
+    await schedule.until(asked.is_set)
+    return schedule, release, returned
+
+
+async def test_a_drag_during_a_new_mounts_round_trip_stops_its_put_back(
+    shown: Callable[..., Awaitable[Shown]],
+    device: Device,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    schedule, release, returned = await _held_new_mount(shown, device, monkeypatch)
+    friday = schedule.list_of(FRIDAY)
+    await schedule.event(friday, "scroll", _event("start", 0.0))
+    await schedule.event(friday, "scroll", _event("user", 0.0, direction="forward"))
+    release.set()
+    await schedule.until(returned.is_set)
+    await schedule.settle()
+    assert _asks(schedule) == []
+
+
+async def test_now_during_a_new_mounts_round_trip_stops_its_put_back(
+    shown: Callable[..., Awaitable[Shown]],
+    device: Device,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only Now's jump runs: no zero-duration jump cuts it short."""
+    schedule, release, returned = await _held_new_mount(shown, device, monkeypatch)
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.0)
+    await schedule.press_now()
+    await schedule.until(lambda: schedule.jumps)
+    release.set()
+    await schedule.until(returned.is_set)
+    await schedule.settle()
+    assert schedule.jumped() == [TWO_PM]
+    assert [kwargs["duration"] for _, kwargs in schedule.scrolls] == [
+        scrolling.JUMP_MS
+    ] * len(schedule.scrolls)
+
+
 async def _held_show_all(
     shown: Callable[..., Awaitable[Shown]], device: Device
 ) -> tuple[Shown, asyncio.Event, asyncio.Task[None]]:
@@ -475,6 +546,37 @@ async def test_a_drag_stops_a_put_back_on_its_way(
     hold.set()
     await reports
     assert _asks(schedule) == [("key", TWO_45)]
+
+
+async def _drag_unannounced(schedule: Shown, device: Device) -> None:
+    """A drag whose ``USER`` event Flet dropped (``scroll_interval``, F70): its start
+    and update come, and nothing says who moves the list."""
+    friday = schedule.list_of(FRIDAY)
+    await schedule.event(friday, "scroll", _event("start", device.pixels))
+    await schedule.event(friday, "scroll", _event("update", device.pixels + 40.0))
+
+
+async def test_a_drag_without_its_user_event_stops_a_put_back_on_its_way(
+    shown: Callable[..., Awaitable[Shown]], device: Device, memory: ViewMemory
+) -> None:
+    """The list moves: no delta, and where it ends up is not known, so today comes
+    back by key."""
+    schedule, hold, reports = await _held_show_all(shown, device)
+    await _drag_unannounced(schedule, device)
+    hold.set()
+    await reports
+    assert _asks(schedule) == [("key", TWO_45)]
+    assert FRIDAY not in memory.schedule_offsets
+
+
+async def test_a_drag_without_its_user_event_stops_the_closes_repeat(
+    shown: Callable[..., Awaitable[Shown]], device: Device
+) -> None:
+    schedule = await into_two_pm(shown, device, 150.0)
+    await hide(schedule, "summit", reports=False)
+    await _drag_unannounced(schedule, device)
+    await lay_out(schedule)
+    assert len(_asks(schedule)) == 1
 
 
 async def test_show_all_while_the_list_moves_puts_nothing_back(
