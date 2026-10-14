@@ -16,12 +16,12 @@ Jump to now (D-155, D-204) lands on the slot that is on, else on today's now lin
 when the Schedule opens or when the user swipes to today, and again with the "Now"
 button, which switches to today first when another day shows, and tells a screen reader
 where it landed: VoiceOver through an announcement, TalkBack through a live region
-(``landing_note()``, D-241). The button hides while the list is near where a jump left it, and
-while today's first jump is on its way; a screen reader keeps it (D-204). A minute tick
-(``use_minute()``) keeps today's dot, the button and the now line with the clock; the
-day shown stays put across midnight. Without any data (no snapshot or cache, NEW-03)
-the screen shows the skeleton until the first fetch has failed, then "Can't load the
-schedule", which stays during a retry (D-32, ux.md §4.1).
+(``landing_note()``, D-241). The button hides while the list is near where a jump left
+it, and while today's first jump is on its way; a screen reader keeps it (D-204). A
+minute tick (``use_minute()``) keeps today's dot, the button and the now line with the
+clock; the day shown stays put across midnight. Without any data (no snapshot or
+cache, NEW-03) the screen shows the skeleton until the first fetch has failed, then
+"Can't load the schedule", which stays during a retry (D-32, ux.md §4.1).
 """
 
 import asyncio
@@ -171,6 +171,7 @@ def Schedule() -> ft.View:
         except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
             logger.warning("Could not announce the jump", exc_info=True)
 
+    @report_errors
     async def fade() -> None:
         if said:  # TalkBack has read it by then; empty, the note is no stop (D-241)
             await asyncio.sleep(SAID_S)
