@@ -117,14 +117,20 @@ class Room:
         (found,) = [c for c in self.session.index.values() if isinstance(c, ft.Tabs)]
         return found
 
-    def lit_box(self) -> ft.Container:
-        """The box around the highlighted row: its ``ScrollKey`` and its fill."""
+    def anchor(self) -> ft.Container:
+        """The highlighted row's ``ScrollKey``: an empty anchor at the top of its box."""
         (found,) = [
             c
             for c in self.session.index.values()
             if isinstance(c, ft.Container) and isinstance(c.key, ft.ScrollKey)
         ]
         return found
+
+    def lit_box(self) -> ft.Container:
+        """The box around the highlighted row and its anchor: its fill."""
+        box = cast(ft.Control, self.anchor().parent).parent
+        assert isinstance(box, ft.Container)
+        return box
 
     async def settle(self) -> None:
         for _ in range(30):
@@ -373,7 +379,12 @@ async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> 
 async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
     room = await render(highlighted(TACHYON))
     box = room.lit_box()
-    assert box.key == ft.ScrollKey("session-31")
+    anchor = room.anchor()
+    # D-242: the key marks the row's top; the row is not under it, so it keeps its
+    # nodes, and the screen reader's focus comes back to it after Back (F62).
+    assert anchor.key == ft.ScrollKey("session-31")
+    assert anchor.content is None and anchor.height == 0
+    assert not _inside(room.node(f"room.session.{TACHYON}"), anchor)
     assert box.bgcolor == room_days.HIGHLIGHT
     assert isinstance(box.animate, ft.Animation) and box.animate.duration == 250
     await room.until(lambda: room.sleeps.held == 1)
@@ -419,7 +430,8 @@ async def test_a_row_that_shares_its_slot_is_lit_alone(render: Render) -> None:
         now=datetime(2026, 5, 16, 14, 10, tzinfo=PACIFIC),
     )
     box = room.lit_box()
-    assert getattr(box.content, "key", None) == first  # the row, keyed by its id
+    _, row = cast(ft.Column, box.content).controls  # the anchor, then the row
+    assert getattr(row, "key", None) == first  # the row, keyed by its id
     assert not _inside(room.node(f"room.session.{other}"), box)
 
 
