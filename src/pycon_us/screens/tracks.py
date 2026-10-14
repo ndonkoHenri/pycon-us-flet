@@ -6,10 +6,11 @@ list. Each row is a track of the year's registry (``conference.toml``, D-45): a 
 the track's badge colours holding its icon, so the hub is also the key to the badges'
 colours; its plural name; its legend line; its badge as the schedule shows it, "New
 track" when it is new this year; and how many sessions it has, counted as its page lists
-them (posters one by one, SCHED-22). A tap pushes ``/more/tracks/<slug>``: the track's
-page (``screens/track.py``), or, for the lightning talks and the open spaces, the page of
-their own that More opens too, which the route table puts at that slug under the hub
-(``config.HUB_PAGES``, D-207), so Back returns here.
+them (posters one by one, SCHED-22; the Keynotes page's panels too, D-217). A tap pushes
+``/more/tracks/<slug>``: the track's page (``screens/track.py``), or, for the keynotes,
+the lightning talks and the open spaces, the page of their own that More opens too,
+which the route table puts at that slug under the hub (``config.HUB_PAGES``, D-207), so
+Back returns here.
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
@@ -20,16 +21,17 @@ like the others, that pushes the Sprints page under the hub (``/more/tracks/spri
 EVT-05). Without data the page loads and fails as the Speakers list does (ux.md §4.1).
 """
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import cast
 
 import flet as ft
 
-from pycon_us.config import ConferenceInfo, Track
+from pycon_us.config import HUB_PAGES, ConferenceInfo, Track
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.rooms import session_count
 from pycon_us.core.timefmt import date_range_label
-from pycon_us.core.timeline import track_sessions
+from pycon_us.core.timeline import keynote_sessions, track_sessions
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -72,18 +74,25 @@ class HubEntry:
     count: int
 
 
-def track_count(data: ConferenceData, key: str) -> int:
+def track_count(
+    data: ConferenceData, key: str, keynote_ids: Collection[str] = ()
+) -> int:
     """Return how many sessions track ``key``'s page lists (SCHED-22).
+
+    The keynotes' page lists the panels the year data names too (D-217).
 
     Args:
         data: The processed feed.
         key: A track key.
+        keynote_ids: The sessions of the year's keynote data (``Content.keynotes``).
     """
+    if key == HUB_PAGES["keynotes"]:
+        return len(keynote_sessions(data, key, keynote_ids))
     return sum(len(day.sessions) for day in track_sessions(data, key))
 
 
 def hub_groups(
-    info: ConferenceInfo, data: ConferenceData
+    info: ConferenceInfo, data: ConferenceData, keynote_ids: Collection[str] = ()
 ) -> tuple[tuple[str, tuple[HubEntry, ...]], ...]:
     """Return the hub's sections: a title and its tracks, each with its count.
 
@@ -93,13 +102,16 @@ def hub_groups(
     Args:
         info: The year's facts, with the track registry.
         data: The processed feed.
+        keynote_ids: The sessions of the year's keynote data, which the Keynotes
+            page lists with the keynotes' track.
     """
     groups: list[tuple[str, tuple[HubEntry, ...]]] = []
     for group, title in GROUP_TITLES.items():
         entries = tuple(
             HubEntry(track, count)
             for track in info.tracks
-            if track.group == group and (count := track_count(data, track.key))
+            if track.group == group
+            and (count := track_count(data, track.key, keynote_ids))
         )
         if entries:
             groups.append((title, entries))
@@ -158,8 +170,10 @@ def Tracks() -> ft.View:
     info = svc.year.conference
     data = conference.data
     # Once per feed version: counting walks every track's sessions.
+    keynote_ids = [k.session_id for k in svc.year.content.keynotes]
     groups = ft.use_memo(
-        lambda: hub_groups(info, data) if data else (), [conference.version]
+        lambda: hub_groups(info, data, keynote_ids) if data else (),
+        [conference.version],
     )
 
     @report_errors

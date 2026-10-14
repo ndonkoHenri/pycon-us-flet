@@ -30,6 +30,7 @@ from pycon_us.ui.links import (
     open_link,
 )
 from pycon_us.ui.semantics import named, semantics_key
+from pycon_us.year_keynotes import KeynoteSpeaker
 
 PLAIN_TOP = 16
 """A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
@@ -200,7 +201,7 @@ SPEAKER_TILE_HEIGHT = 2 * AVATAR_RADIUS + 16
 
 
 def speaker_avatar(
-    speaker: Speaker,
+    speaker: Speaker | KeynoteSpeaker,
     *,
     radius: int = AVATAR_RADIUS,
     initials_style: ft.TextThemeStyle | None = None,
@@ -213,7 +214,7 @@ def speaker_avatar(
     Decorative for screen readers: the row or the heading beside it says the name.
 
     Args:
-        speaker: The directory speaker.
+        speaker: The directory speaker, or a keynote's person (D-217).
         radius: The circle's radius in dp: a row's 24, or the speaker page's 48.
         initials_style: The initials' type, for a larger circle; None keeps the
             avatar's own (``TITLE_MEDIUM``), which suits 48 dp.

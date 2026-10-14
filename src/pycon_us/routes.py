@@ -16,10 +16,10 @@ import flet as ft
 from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.keynotes import Keynotes
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
-from pycon_us.screens.more_pages import MorePage
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.open_spaces import OpenSpaces
@@ -157,9 +157,10 @@ ROUTES = [
             pushed("sprints", Sprints),
             pushed("lightning-talks", LightningTalks),
             pushed("open-spaces", OpenSpaces),
+            pushed("keynotes", Keynotes),
             pushed(":slug", TrackPage),
         ),
-        pushed("keynotes", MorePage),
+        pushed("keynotes", Keynotes),
         pushed("open-spaces", OpenSpaces),
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),

@@ -46,7 +46,10 @@ LIGHTNING = "175"
 """Lightning talks: shown in the Arena, streamed to four rooms (D-124)."""
 
 KEYNOTE = "176"
-"""A keynote: no public page in the feed."""
+"""A keynote: no public page in the feed; its people are year data (D-217)."""
+
+WELCOME = "151"
+"""The Friday welcome, a plenary: no speakers in the feed, no keynote data."""
 
 JOB_FAIR = "178"
 """Sun May 17, shown from 9:30 though grouped at its 10:00 start (DATA-11)."""
@@ -393,7 +396,7 @@ async def test_names_with_no_speaker_each_get_an_identifier_in_the_authors_order
 async def test_a_session_without_speakers_has_no_speakers_section(
     render: Render,
 ) -> None:
-    detail = await render(KEYNOTE)
+    detail = await render(WELCOME)
     assert speaker_rows(detail) == []
     assert all(text != "Speakers" for text, _ in headings(detail))
 

@@ -99,7 +99,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/tracks/sprints", ["More", "Tracks", "Sprints"]),
         ("/more/tracks/lightning-talks", ["More", "Tracks", "LightningTalks"]),
         ("/more/tracks/open-spaces", ["More", "Tracks", "OpenSpaces"]),
-        ("/more/tracks/keynotes", ["More", "Tracks", "TrackPage"]),  # until #104
+        ("/more/tracks/keynotes", ["More", "Tracks", "Keynotes"]),
         (
             "/more/tracks/open-spaces/session/42",
             ["More", "Tracks", "OpenSpaces", "Drill"],

@@ -81,7 +81,7 @@ def clean_title(name: str, kind: str) -> Title:
     2. Pre-registration: the name holds ``pre-registration`` (and is cut at
        ", pre-registration"), or the slot is a tutorial or a summit other than Typing.
     3. A plenary, keynote, lightning-talks or event name loses its ``(Room)`` suffix and
-       its kind as a prefix ("Keynote — Lin Qiao" → "Lin Qiao").
+       its kind as a prefix ("Keynote — Ada Lovelace" → "Ada Lovelace").
     4. Spanish: a ``charla``, or "en español" (with or without the tilde, any case) in the
        name, which is cut from it.
 

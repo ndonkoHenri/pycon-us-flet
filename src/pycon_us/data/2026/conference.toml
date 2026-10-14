@@ -56,7 +56,7 @@ long = "Keynote"
 icon = "CO_PRESENT_OUTLINED"
 group = "talks"
 slug = "keynotes"
-legend = "Featured talks by invited speakers"
+legend = "Featured talks and panels by invited speakers"
 
 [[tracks]]
 key = "Plenary"

@@ -6,8 +6,9 @@ Run it before a build for testers (``docs/development.md`` §8.3)::
 
 It fetches the public feed of ``config.YEAR`` from the year's ``feed_url`` and checks it with
 ``feed.process``, the app's own parser. A feed that does not parse, that has a record the
-parser skips, or whose days fall outside the conference dates is refused, and nothing
-changes: the same bar as the test of the committed snapshot (D-135). Otherwise it writes the
+parser skips, whose days fall outside the conference dates, or that lacks a session the
+year's keynote data names, or has it on a track no keynote has (D-217), is refused, and nothing changes: the same bar as the
+tests of the committed snapshot (D-135). Otherwise it writes the
 bytes unchanged to ``data/<year>/conference.json``, records the time in ``conference.toml``'s
 ``snapshot_captured_at``, and prints how the counts changed.
 
@@ -25,6 +26,7 @@ import httpx
 
 from pycon_us.config import (
     DATA_DIR,
+    KEYNOTE_TRACKS,
     SNAPSHOT_FILE,
     YEAR,
     ConferenceInfo,
@@ -36,6 +38,7 @@ from pycon_us.config import (
 from pycon_us.core.feed import FeedError, process
 from pycon_us.core.models import ConferenceData
 from pycon_us.services.storage import write_atomic
+from pycon_us.year_keynotes import check_keynote_sessions
 
 TIMEOUT = 30.0
 """Seconds to wait for the feed; the 2026 feed is about 800 KB."""
@@ -68,8 +71,8 @@ def update_snapshot(
 
     Raises:
         SnapshotError: The feed could not be fetched, does not parse, has records the
-            parser skips, or has days outside the conference dates; or ``conference.toml``
-            could not be updated. Nothing was written.
+            parser skips, has days outside the conference dates, or lacks a keynote's
+            session or has it on another track; or ``conference.toml`` could not be updated. Nothing was written.
         YearDataError: The year's data files are invalid.
         OSError: Writing a file failed; that file is unchanged (``write_atomic``).
     """
@@ -81,6 +84,15 @@ def update_snapshot(
     except FeedError as error:
         raise SnapshotError(f"the feed does not parse: {error}") from None
     _check(new, conference)
+    try:
+        check_keynote_sessions(
+            year_data.content.keynotes,
+            new.sessions,
+            KEYNOTE_TRACKS,
+            f"{year}/content.toml",
+        )
+    except YearDataError as error:
+        raise SnapshotError(f"the year data does not fit the feed: {error}") from None
 
     previous = _previous(year_data)
     captured_at = (now or datetime.now(UTC)).astimezone(conference.zone)

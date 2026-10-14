@@ -9,8 +9,10 @@ the badges, so the app bar's title stays empty. Then the "When and where" card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
-the link rule (``ui.links.feed_markdown``, D-197). Last, a Posters row's posters and an
-open space's image and site link (``screens.session_extras``).
+the link rule (``ui.links.feed_markdown``, D-197); a keynote's or panel's people and
+abstract come from the year data instead (``screens.keynote_people``, SESS-08). Last,
+a Posters row's posters and an open space's image and site link
+(``screens.session_extras``).
 
 An unknown id shows the not-found state under the back arrow, so Back pops one level
 (D-186). A session that a newer feed drops while its detail is open keeps the content
@@ -29,6 +31,7 @@ from pycon_us.core.timeline import posters
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.keynote_people import keynote_about, keynote_speakers
 from pycon_us.screens.session_extras import (
     IMAGE_FADE_MS,
     OPEN_SPACE,
@@ -55,6 +58,7 @@ from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named, semantics_key
 from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
+from pycon_us.year_keynotes import keynote_of
 
 SCREEN = "session"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -159,11 +163,19 @@ def SessionDetail(session_id: str) -> ft.View:
     )
     if session.pre_registered:
         controls.append(_registration(info.registration_url))
+    # A keynote or panel: its people and abstract from the year data (SESS-08).
+    keynote = keynote_of(svc.year.content.keynotes, session.id)
     speakers = people(session, data.speakers if data else {})
-    if speakers:
+    if keynote is not None:
+        controls.append(keynote_speakers(keynote, screen=SCREEN))
+    elif speakers:
         controls.append(_speakers(speakers, view_path))
-    if session.description_md:
-        controls.append(_about(session.description_md, svc))
+    description = session.description_md
+    if keynote is not None:
+        if keynote.title or keynote.abstract or description:  # no heading over nothing
+            controls.append(keynote_about(keynote, description, svc, screen=SCREEN))
+    elif description:
+        controls.append(_about(description, svc))
     found = posters(data, session) if data else ()
     if found:  # a Posters row (SESS-09)
         controls.append(Posters(session, found, favorites.ids, on_toggle, tokens))
