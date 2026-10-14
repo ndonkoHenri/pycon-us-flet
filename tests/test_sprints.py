@@ -3,7 +3,8 @@
 EVT-05..08, D-46. The query is pure and runs on the recorded 2026 feed (2025's has no
 sprint projects) and on projects built from it: the page's order, the all-words filter
 over text that never holds markup, and when a card cuts its description. The screen runs
-in a real Flet session, as the Speakers list's does (``tests/test_speakers.py``): a
+in a real Flet session (``tests/sessions.py``'s ``showing()``), as the Speakers list's
+does (``tests/test_speakers.py``): a
 keystroke is the field's value patched in and its change event dispatched, and a test
 sees which card bodies ran (D-153). How the cards look, wrap at 200 % and read to
 TalkBack and VoiceOver is checked on devices (the PR).

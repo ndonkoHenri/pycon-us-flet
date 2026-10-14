@@ -4,8 +4,8 @@ The query is pure and runs on both recorded feeds and on small built cases: the 
 headings (accents, letters without a Latin base), the first session and its "+1 more",
 pseudo-speakers left out, and the filter's matching (SPKR-01, SPKR-02, DATA-21; D-46).
 
-The screen runs in a real Flet session, as the session rows' tests do
-(``tests/test_session_rows.py`` names the Flet internals the harness uses): a keystroke
+The screen runs in a real Flet session under the store providers (``tests/sessions.py``'s
+``showing()``, which names the Flet internals it uses): a keystroke
 is the field's value patched in and its change event dispatched, as Flutter sends them,
 and Flet's scheduler re-renders what changed, so a test sees which row and section
 bodies ran (D-153). How the list looks, wraps at 200 % and reads to TalkBack and
