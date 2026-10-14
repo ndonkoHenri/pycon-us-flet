@@ -1,0 +1,4 @@
+# The lock depends on the local Flet checkout; `uv sync` recreates it.
+uv.lock
+# setuptools writes this when uv installs the extension in editable mode.
+*.egg-info/
