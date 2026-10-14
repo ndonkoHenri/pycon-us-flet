@@ -4,8 +4,9 @@
 a list owner builds each session's ``SessionView`` once per feed version
 (``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
 tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
-star is a separate stop (D-33). The gutter beside the rows is ``ui.time_gutter``, the
-other rows are ``ui.rows``'s (ux.md §3.9, D-184, D-200).
+star is a separate stop (D-33). The lines under a row's title are
+``ui.row_lines``'s, the gutter beside the rows is ``ui.time_gutter``, the other rows
+are ``ui.rows``'s (ux.md §3.9, D-184, D-200, D-224).
 """
 
 from collections.abc import Sequence
@@ -34,7 +35,7 @@ from pycon_us.ui.badges import (
     badge_row,
     badge_specs,
 )
-from pycon_us.ui.row_lines import _elapsed_bar, _meta, _overlap_line, _secondary
+from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
 from pycon_us.ui.semantics import semantics_key
 
 NOTICE_GROUP = "logistics"
@@ -202,17 +203,17 @@ def _SessionRow(
         )
     )
     if show_time:
-        lines.append(_meta(view))
+        lines.append(meta(view))
     elif view.place:
-        lines.append(_secondary(view.place))
+        lines.append(secondary(view.place))
     if view.speakers:
-        lines.append(_secondary(view.speakers))
+        lines.append(secondary(view.speakers))
     if overlaps:
-        lines.append(_overlap_line(overlaps, tokens.warning))
+        lines.append(overlap_line(overlaps, tokens.warning))
     labels = [label for label, _ in specs]
     phrase = spoken_phrase(labels, view, overlaps=overlaps, show_time=show_time)
     if elapsed is not None:
-        lines.append(_elapsed_bar(elapsed, tokens.live))
+        lines.append(elapsed_bar(elapsed, tokens.live))
         phrase = f"{phrase} {elapsed_phrase(elapsed)}"
     key = semantics_key(session.id)
     text = ft.Semantics(
@@ -295,7 +296,7 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
                         ft.Text(
                             session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL
                         ),
-                        _meta(view, style=ft.TextThemeStyle.BODY_SMALL),
+                        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
                     ],
                     spacing=2,
                     expand=True,

@@ -39,6 +39,7 @@ from pycon_us.ui.badges import (
     UNDO,
     use_favorite_toggle,
 )
+from pycon_us.ui.row_lines import elapsed_bar
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import (
     NoticeRow,
@@ -453,7 +454,7 @@ def test_the_elapsed_bar_shows_its_fill_and_its_end_on_every_surface(
     marks 100 % (#95).
     """
     live = DARK_TOKENS.live if dark else LIGHT_TOKENS.live
-    padded = rows._elapsed_bar(60, live)
+    padded = elapsed_bar(60, live)
     assert isinstance(padded, ft.Container)
     bar = padded.content
     assert isinstance(bar, ft.ProgressBar)

@@ -21,7 +21,7 @@ next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or
 on it."""
 
 
-def _meta(
+def meta(
     view: SessionView, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
 ) -> ft.Control:
     """Return a row's time and place line: "9:25–10:10 AM · Room 104A".
@@ -37,11 +37,11 @@ def _meta(
     """
     when = view.when.replace(" ", _NBSP)
     if not view.place:
-        return _secondary(when, style=style)
+        return secondary(when, style=style)
     return ft.Row(
         [
-            _secondary(f"{when}{_NBSP}·", style=style),
-            _secondary(view.place, style=style),
+            secondary(f"{when}{_NBSP}·", style=style),
+            secondary(view.place, style=style),
         ],
         wrap=True,
         spacing=4,  # a space's width at 100 %
@@ -49,14 +49,14 @@ def _meta(
     )
 
 
-def _secondary(
+def secondary(
     text: str, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
 ) -> ft.Text:
     """Return a row's supporting text: its time, place or speakers, in the variant colour."""
     return ft.Text(text, theme_style=style, color=ft.Colors.ON_SURFACE_VARIANT)
 
 
-def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
+def overlap_line(names: Sequence[str], color: str) -> ft.Control:
     """Return a row's overlap warning: ``WARNING_AMBER`` beside its lines (ux.md §3.7).
 
     "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
@@ -92,7 +92,7 @@ def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
     )
 
 
-def _elapsed_bar(elapsed: int, color: str) -> ft.Control:
+def elapsed_bar(elapsed: int, color: str) -> ft.Control:
     """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173).
 
     M3's current bar (``year_2023=False``): a gap after the fill, then the track, and
