@@ -26,7 +26,6 @@ import httpx
 
 from pycon_us.config import (
     DATA_DIR,
-    KEYNOTE_TRACKS,
     SNAPSHOT_FILE,
     YEAR,
     ConferenceInfo,
@@ -39,6 +38,7 @@ from pycon_us.core.feed import FeedError, process
 from pycon_us.core.models import ConferenceData
 from pycon_us.services.storage import write_atomic
 from pycon_us.year_keynotes import check_keynote_sessions
+from pycon_us.year_tracks import KEYNOTE_TRACKS
 
 TIMEOUT = 30.0
 """Seconds to wait for the feed; the 2026 feed is about 800 KB."""

@@ -13,6 +13,7 @@ import pytest
 
 from pycon_us import config
 from pycon_us.config import YearDataError, load_year
+from pycon_us.year_tracks import TRACK_GROUPS, TrackFormat
 
 YEARS = sorted(
     int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
@@ -105,7 +106,7 @@ def test_job_fair_override_matches_only_the_whole_name() -> None:
         ("long", "The Future of AI with Python"),
     ],
 )
-def test_track_name_formats(fmt: config.TrackFormat, expected: str) -> None:
+def test_track_name_formats(fmt: TrackFormat, expected: str) -> None:
     assert load_year(2026).conference.track_name("Ai", fmt) == expected
 
 
@@ -141,10 +142,10 @@ def test_track_name_defaults_to_short() -> None:
 
 
 @pytest.mark.parametrize("fmt", ["short", "plural", "long"])
-def test_unknown_track_falls_back_to_its_humanised_key(fmt: config.TrackFormat) -> None:
+def test_unknown_track_falls_back_to_its_humanised_key(fmt: TrackFormat) -> None:
     conference = load_year(2026).conference
     assert conference.track_name("Hallway-track", fmt) == "Hallway track"
-    assert conference.track("Hallway-track").group in config.TRACK_GROUPS
+    assert conference.track("Hallway-track").group in TRACK_GROUPS
 
 
 @pytest.mark.parametrize("year", YEARS)

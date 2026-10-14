@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl, quote, urlparse
 
 import flet as ft
 
-from pycon_us.config import HUB_PAGES
+from pycon_us.year_tracks import HUB_PAGES
 
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 """The five tab roots, in the bottom bar's order (D-13)."""

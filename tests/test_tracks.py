@@ -18,7 +18,7 @@ from typing import cast
 import flet as ft
 import pytest
 
-from pycon_us.config import HUB_PAGES, load_year
+from pycon_us.config import load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
 from pycon_us.locations import PAGES, parent_of
@@ -29,6 +29,7 @@ from pycon_us.screens.tracks import HubEntry, hub_groups, hub_phrase, track_coun
 from pycon_us.state import Conference
 from pycon_us.ui import day_groups
 from pycon_us.ui.semantics import semantics_key
+from pycon_us.year_tracks import HUB_PAGES
 from tests.feeds import YEARS, processed
 from tests.sessions import Shown, showing, text_of
 

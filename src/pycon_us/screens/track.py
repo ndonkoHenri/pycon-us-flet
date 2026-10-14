@@ -28,7 +28,6 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.config import Track
 from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.stub import not_found
@@ -49,6 +48,7 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.year_tracks import Track
 
 SCREEN = "track"
 """The screen's name in its semantics identifiers (decisions §M)."""
