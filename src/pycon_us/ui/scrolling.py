@@ -6,6 +6,7 @@ them all (D-154): today's Schedule list, and My schedule's (#94). ``jump_to_key(
 the one jump (D-155): it handles the ways a keyed ``scroll_to`` fails quietly or late,
 and says how it ended. The policy of when to jump (the Schedule's: once per conference
 day, never on Back, a refresh or a filter change, D-18 and D-204) is the screen's.
+A keyed item carries its ``ScrollKey`` on an empty anchor, ``anchored()`` (D-242).
 """
 
 import asyncio
@@ -42,6 +43,29 @@ type Jump = Literal["landed", "still", "failed"]
 
 LEFT_THE_PAGE = "added to the page first"
 """Part of the error Flet raises for a call on a control no longer under the page."""
+
+
+def anchored(key: str, content: ft.Control) -> ft.Control:
+    """Return ``content`` under an empty, 0 dp anchor that carries ``ScrollKey(key)``.
+
+    A keyed scroll puts the anchor's top, which is the content's, at the top of the
+    list, as a key on the content itself would. The key is not on the content
+    because at the pin Flet gives a control with a ``ScrollKey`` a new ``GlobalKey``
+    each time it builds, so Flutter mounts it and everything under it again, with
+    new semantics nodes (F62, U42): the screen reader's focus, which Flutter's
+    ``Navigator`` gives back to a node after Back (F54), found no row to return to
+    (#303). The anchor holds nothing, so only it is mounted again (D-242).
+
+    Args:
+        key: The item's ``ScrollKey`` value, e.g. a ``Slot.key``.
+        content: The item: a slot, a highlighted row, the now line.
+    """
+    return ft.Column(
+        [ft.Container(key=ft.ScrollKey(key), height=0), content],
+        spacing=0,
+        # The content keeps the list's full width, as it had without the anchor.
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )
 
 
 async def jump_to_key(
