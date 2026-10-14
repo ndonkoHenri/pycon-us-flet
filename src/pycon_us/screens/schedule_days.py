@@ -32,7 +32,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
-from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.time_gutter import slot_layout
@@ -267,9 +267,9 @@ def SlotItem(
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
-    A memoised component keyed by the slot key (D-153); the box around its time and
-    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155), and its divider
-    sits above that box. Rows are in schedule order
+    A memoised component keyed by the slot key (D-153); an anchor above its time and
+    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155, D-242), and its
+    divider sits above that anchor. Rows are in schedule order
     (by room, D-31); breaks and notices are ``NoticeRow``s, without a star.
 
     Args:
@@ -321,12 +321,12 @@ def _SlotItem(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN
                 )
             )
-    content = slot_layout(label, rows, above=time_above)
-    # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees.
-    keyed = ft.Container(content, key=ft.ScrollKey(slot.key))
-    # The divider stays outside the keyed box, so a jump puts the slot's time, not
-    # its divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
-    # rather than left out: the box keeps its place in the tree when the now line
+    # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees, on
+    # an anchor above the slot, so the rows keep their nodes (D-242).
+    keyed = anchored(slot.key, slot_layout(label, rows, above=time_above))
+    # The divider stays above the anchor, so a jump puts the slot's time, not its
+    # divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
+    # rather than left out: the slot keeps its place in the tree when the now line
     # takes or gives back the divider, so its rows are kept as they are (D-204).
     return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
 
