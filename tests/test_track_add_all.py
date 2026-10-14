@@ -3,7 +3,7 @@
 SCHED-24, D-209, ux.md §5.10: the overflow item saves every session the page lists,
 on every day, with ``Favorites.add_many()`` (D-172), then one SnackBar with Undo, and
 no dialog (D-29). The page runs in a real Flet session over the recorded 2026 feed
-(``tests/programme.py``); the store's own rules are in ``tests/test_favorites.py``.
+(``tests/sessions.py``); the store's own rules are in ``tests/test_favorites.py``.
 On devices the SnackBar showed on the pushed track page itself (#255; #197).
 """
 
@@ -25,8 +25,7 @@ from pycon_us.state import Conference
 from pycon_us.ui.badges import ALREADY_SAVED, NOT_SAVED, UNDO, added_feedback
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
-from tests.programme import Page, showing, text_of
-from tests.sessions import settle
+from tests.sessions import Shown, settle, showing, text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -37,7 +36,7 @@ CHARLAS = [s.id for day in track_sessions(DATA, "Charla") for s in day.sessions]
 TALK = "142"
 """Python for Humans, a talk: saved before, outside the charlas."""
 
-type Show = Callable[..., Awaitable[Page]]
+type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
@@ -50,7 +49,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             *,
             saved: tuple[str, ...] = (),
             conference: Conference | None = None,
-        ) -> Page:
+        ) -> Shown:
             page = await stack.enter_async_context(
                 showing(
                     lambda: screen.TrackDetail(slug),
@@ -71,20 +70,20 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         yield render
 
 
-def prefs(page: Page) -> MemoryPrefs:
+def prefs(page: Shown) -> MemoryPrefs:
     return cast(MemoryPrefs, page.services.storage.prefs)
 
 
-def stored(page: Page) -> list[str] | None:
+def stored(page: Shown) -> list[str] | None:
     """The favourites as written to SharedPreferences."""
     return prefs(page).values.get(FAVORITES)
 
 
-def effects(page: Page) -> list[str]:
+def effects(page: Shown) -> list[str]:
     return cast(MemoryHaptics, page.services.haptics).effects
 
 
-def said(page: Page) -> list[tuple[str, str | None]]:
+def said(page: Shown) -> list[tuple[str, str | None]]:
     """Each SnackBar's message and its action's label, in order."""
     return [
         (text_of(snack.content), label_of(snack.action)) for snack in page.snack_bars
@@ -104,13 +103,13 @@ def item_text(item: ft.PopupMenuItem) -> ft.Text:
     return cast(ft.Text, label_of_item(item).title)
 
 
-async def add_all(page: Page) -> None:
+async def add_all(page: Shown) -> None:
     (item,) = page.find(ft.PopupMenuItem)
     assert item_text(item).value == screen.ADD_ALL
     await page.click(item)
 
 
-async def undo(page: Page) -> None:
+async def undo(page: Shown) -> None:
     action = cast(ft.SnackBarAction, page.snack_bars[-1].action)
     assert action.label == UNDO
     await cast(Callable[[], Any], action.on_click)()

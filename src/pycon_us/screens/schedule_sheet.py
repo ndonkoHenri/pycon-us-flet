@@ -18,10 +18,11 @@ from dataclasses import dataclass
 
 import flet as ft
 
-from pycon_us.config import TRACK_GROUPS, ConferenceInfo
+from pycon_us.config import ConferenceInfo
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import EXCLUDED_TRACKS
 from pycon_us.ui.semantics import named, semantics_key
+from pycon_us.year_tracks import TRACK_GROUPS
 
 SCREEN = "schedule"
 """The screen's name in the identifiers (decisions §M)."""

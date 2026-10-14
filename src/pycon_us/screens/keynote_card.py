@@ -13,7 +13,7 @@ import flet as ft
 
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.timefmt import day_heading
+from pycon_us.core.timefmt import day_heading, on_screen
 from pycon_us.locations import drill_href
 from pycon_us.screens.keynote_people import person_head
 from pycon_us.services.errors import report_errors
@@ -32,6 +32,12 @@ CLAMP_CHARS = 80
 """A text longer than this gets "Read more". About four lines' worth at 200 % text on
 a phone: Flet cannot say whether a text was cut (U16), so a shorter threshold would
 leave words hidden with no way to read them at large text."""
+
+TALK_TITLE = ft.TextThemeStyle.TITLE_MEDIUM
+"""A talk's title on a card, a keynote's or a panel's (D-229). People's names stay in
+``TITLE_LARGE``: their words are short. At iOS's largest text a ``TITLE_LARGE`` word of
+nine letters ("Community") is wider than the card's 338 dp text column on a 402 dp
+phone, and Flutter breaks it inside itself; ``TITLE_MEDIUM`` holds about twelve."""
 
 PANEL_PHOTO = 32
 """A panelist's photo radius in dp: the 64 dp photos of ux.md §5.11."""
@@ -223,9 +229,7 @@ def _head(session: Session, keynote: Keynote | None, key: str) -> list[ft.Contro
             for number, person in enumerate(keynote.speakers)
         ]
         if keynote.title:
-            head.append(
-                ft.Text(keynote.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
-            )
+            head.append(ft.Text(keynote.title, theme_style=TALK_TITLE))
         return head
     title = keynote.title if keynote is not None and keynote.title else session.name
     head = []
@@ -242,7 +246,10 @@ def _head(session: Session, keynote: Keynote | None, key: str) -> list[ft.Contro
             header=True,
             heading_level=2,
             identifier=f"{SCREEN}.name.{key}.0",
-            content=ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_LARGE),
+            # A talk's title, so in a keynote's talk title's type (D-229): a long
+            # title's words at TITLE_LARGE outgrew the card at the largest text,
+            # "Comm" / "unity", where a name's short ones fit.
+            content=ft.Text(title, theme_style=TALK_TITLE),
         )
     )
     return [ft.Column(head, spacing=4)]
@@ -294,8 +301,9 @@ def _when_and_where(
 ) -> ft.Control:
     """The time-and-room tile, which opens the session, beside its star.
 
-    The day over the time and the place, a line each, so the range never breaks in
-    two (as session detail's time tile, D-186); one phrase for screen readers,
+    The day over the time and the place, a line each (as session detail's time
+    tile, D-186), the range breaking only after its dash, when it is wider than its
+    line (at the largest text, beside the star; D-229); one phrase for screen readers,
     "Friday, May 15, 9:45 to 10:30 AM, Pacific Ballroom - Arena", and the star a
     stop of its own beside it.
     """
@@ -312,7 +320,7 @@ def _when_and_where(
         await on_toggle(session.id)
 
     lines: list[ft.Control] = [
-        ft.Text(view.when.replace(" ", " "), semantics_label=view.spoken_when)
+        ft.Text(on_screen(view.when), semantics_label=view.spoken_when)
     ]
     if view.place:
         lines.append(ft.Text(view.place))

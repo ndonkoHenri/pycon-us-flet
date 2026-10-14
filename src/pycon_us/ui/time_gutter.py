@@ -13,6 +13,7 @@ from collections.abc import Sequence
 
 import flet as ft
 
+from pycon_us.core.timefmt import on_screen
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services.errors import report_errors
 
@@ -79,14 +80,14 @@ def TimeAbove(label: str) -> ft.Control:
     it reads as their heading.
 
     Args:
-        label: The slot's start from ``timefmt.time_label()``; a no-break space keeps
-            "AM" on its time's line.
+        label: The slot's start from ``timefmt.time_label()``; shown through
+            ``timefmt.on_screen()``, so "AM" keeps to its time's line.
     """
     return _heading(
         label,
         ft.Container(
             ft.Text(
-                label.replace(" ", "\N{NO-BREAK SPACE}"),
+                on_screen(label),
                 theme_style=ft.TextThemeStyle.TITLE_SMALL,
             ),
             padding=ft.Padding.only(left=16, top=20, right=16),

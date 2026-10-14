@@ -42,7 +42,7 @@ from tests.fakes import (
     MemorySemantics,
     bound,
 )
-from tests.feeds import recorded
+from tests.feeds import changed, recorded
 
 type Fetch = Callable[..., Awaitable[bytes]]
 
@@ -273,11 +273,24 @@ async def test_an_offline_start_keeps_the_snapshot_and_says_offline(
 async def test_an_online_start_replaces_the_snapshot_with_the_network_feed(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    network.answer = changed(2026, lambda feed: feed["schedule"].pop())
     conference, _ = await started(fake_page, svc)
     await finish_refresh(conference, network)
     assert conference.source == "network"
     assert conference.version == 2
     assert svc.storage.feed_path.exists()
+
+
+async def test_an_online_start_that_finds_the_snapshot_s_feed_keeps_its_version(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    """D-224: the same bytes publish nothing, so no screen re-renders its lists."""
+    network.answer = svc.year.read_snapshot().raw
+    conference, _ = await started(fake_page, svc)
+    await finish_refresh(conference, network)
+    assert conference.source == "network"
+    assert conference.version == 1
+    assert svc.storage.feed_path.read_bytes() == network.answer  # the next start's
 
 
 async def test_an_unexpected_start_error_is_logged_and_the_gate_still_opens(

@@ -1,7 +1,7 @@
 """Tests for the Keynotes page and its cards (``screens/keynotes.py``, ``keynote_card.py``).
 
 SPKR-04, #104, D-217. The page runs in a real Flet session over the recorded feeds
-(``tests/programme.py``). How it looks, wraps at 200 % and reads to screen readers is
+(``tests/sessions.py``). How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
 
@@ -21,6 +21,7 @@ from pycon_us.screens import keynote_card
 from pycon_us.screens import keynotes as screen
 from pycon_us.screens.keynote_card import (
     CLAMP_LINES,
+    TALK_TITLE,
     card_text,
     clamps,
 )
@@ -28,7 +29,7 @@ from pycon_us.screens.tracks import track_count
 from pycon_us.state import Conference
 from pycon_us.year_keynotes import keynote_of
 from tests.feeds import processed
-from tests.programme import Page, showing, text_of
+from tests.sessions import Shown, showing, text_of
 from tests.trees import descendants, texts
 
 YEAR = load_year(2026)
@@ -37,7 +38,7 @@ DATA = processed(2026)
 VIEW = "/more/keynotes"
 IDS = [k.session_id for k in KEYNOTES]
 
-type Show = Callable[..., Awaitable[Page]]
+type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
@@ -51,7 +52,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             year_data: YearData | None = None,
             conference: Conference | None = None,
             view_path: str = VIEW,
-        ) -> Page:
+        ) -> Shown:
             if conference is None:
                 conference = Conference(
                     data=processed(year), source="bundled", version=1
@@ -71,7 +72,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         yield render
 
 
-def card_ids(page: Page) -> list[str]:
+def card_ids(page: Shown) -> list[str]:
     """The sessions of the cards, in order: their tiles' identifiers."""
     return [
         str(n.identifier).removeprefix("keynotes.session.")
@@ -131,6 +132,26 @@ async def test_one_card_per_session_with_its_people(show: Show) -> None:
     assert "Diversity & Inclusion Panel" in shown  # the feed's name, over the title
 
 
+async def test_a_talks_title_is_in_one_type_on_every_card(show: Show) -> None:
+    """#281: a panel's title in TITLE_LARGE broke inside "Community" at iOS's largest
+    text; a talk's title, a keynote's or a panel's, is TALK_TITLE, and only people's
+    names, whose words are short, are TITLE_LARGE."""
+    page = await show()
+    titles = {str(k.title) for k in KEYNOTES if k.title}  # the year data's own
+    styles = {
+        str(t.value): t.theme_style for t in page.find(ft.Text) if t.value in titles
+    }
+    assert set(styles) == titles
+    assert set(styles.values()) == {TALK_TITLE} == {ft.TextThemeStyle.TITLE_MEDIUM}
+    # The other headings are keynote speakers' names.
+    names = [
+        cast(ft.Text, n.content).theme_style
+        for n in page.nodes("keynotes.name.")
+        if text_of(n) not in titles
+    ]
+    assert names and set(names) == {ft.TextThemeStyle.TITLE_LARGE}
+
+
 async def test_the_photos_are_decorative_with_the_initials_under_them(
     show: Show,
 ) -> None:
@@ -188,7 +209,7 @@ def test_a_keynotes_card_cuts_its_bios_and_a_panels_its_abstract() -> None:
     assert clamps("one\ntwo")
 
 
-def bio(page: Page, session_id: str) -> ft.Text:
+def bio(page: Shown, session_id: str) -> ft.Text:
     """The cut text of one card: the Text above its "Read more"."""
     keynote = keynote_of(KEYNOTES, session_id)
     assert keynote is not None

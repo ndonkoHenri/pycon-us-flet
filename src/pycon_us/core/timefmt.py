@@ -73,6 +73,23 @@ def time_range_label(
     return f"{_clock12(first)} {_meridiem(first)}–{_clock12(last)} {_meridiem(last)}"
 
 
+def on_screen(label: str) -> str:
+    """Return a time or a range as a line shows it: it can break only after its dash.
+
+    Its spaces become no-break spaces, so "AM" keeps to its digits, and a time never
+    breaks: "9:45–10:30 AM" stays on one line whenever it fits, and a range wider
+    than its line breaks after its en dash, "9:45–" / "10:30 AM", the one break
+    Unicode allows in it (D-229). No word joiner at the dash: with no break left,
+    Flutter breaks a run wider than its line inside a time ("9:00 AM–12" / ":30 PM",
+    D-186), and a range always starts its own line, so a joiner never keeps one whole.
+    Shared text (``row_views.share_text()``) and spoken labels keep plain spaces.
+
+    Args:
+        label: A ``time_label()`` or ``time_range_label()``.
+    """
+    return label.replace(" ", "\N{NO-BREAK SPACE}")
+
+
 def day_label(day: date) -> str:
     """Return a short date label, e.g. "Fri, May 15"."""
     return f"{_WEEKDAYS[day.weekday()][:3]}, {_MONTHS[day.month - 1][:3]} {day.day}"

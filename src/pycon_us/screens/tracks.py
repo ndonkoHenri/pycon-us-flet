@@ -9,8 +9,8 @@ track" when it is new this year; and how many sessions it has, counted as its pa
 them (posters one by one, SCHED-22; the Keynotes page's panels too, D-217). A tap pushes
 ``/more/tracks/<slug>``: the track's page (``screens/track.py``), or, for the keynotes,
 the lightning talks and the open spaces, the page of their own that More opens too,
-which the route table puts at that slug under the hub (``config.HUB_PAGES``, D-207), so
-Back returns here.
+which the route table puts at that slug under the hub (``year_tracks.HUB_PAGES``,
+D-207), so Back returns here.
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
 and notices (the ``logistics`` group) are not a kind of session to choose, so they are
@@ -27,7 +27,7 @@ from typing import cast
 
 import flet as ft
 
-from pycon_us.config import HUB_PAGES, ConferenceInfo, Track
+from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.rooms import session_count
 from pycon_us.core.timefmt import date_range_label
@@ -39,6 +39,7 @@ from pycon_us.theme import BadgeColors, Tokens, use_tokens
 from pycon_us.ui.badges import NEW_TRACK, TrackBadge
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.year_tracks import HUB_PAGES, Track
 
 SCREEN = "tracks"
 """The screen's name in its semantics identifiers (decisions §M)."""

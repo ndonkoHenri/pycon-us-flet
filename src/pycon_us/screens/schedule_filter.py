@@ -44,6 +44,12 @@ TRACKS_PAGE = "/more/tracks"
 SUMMARY_NAMES = 3
 """How many hidden tracks the summary names before "and N more"."""
 
+SHOW_ALL_INSET = 8
+"""The side padding of "Show all", pinned, and the same inset before the summary's
+words, in dp, so a "Show all" that wraps under the words starts its label under
+theirs (D-229). Material shrinks a text button's side padding as text grows (12 dp
+at 100 %, 8 at 200 %, 4 from 300 %), which left a wrapped label out of line."""
+
 
 @dataclass(frozen=True)
 class TrackFilter:
@@ -264,18 +270,32 @@ def _summary(text: str, on_show_all: Callable[[], object]) -> ft.Control:
 
     The words and the button share a wrapping row, the button at its end: at large
     text the button moves under the words whole, instead of squeezing them into a
-    narrow column beside it.
+    narrow column beside it. The words start ``SHOW_ALL_INSET`` into that row and the
+    button's label as far into the button, so the label lines up with the words when
+    it takes a run of its own; at 100 % it ends 20 dp from the edge, as before.
     """
-    words = ft.Semantics(
-        identifier=f"{SCREEN}.filter_summary",
-        content=ft.Text(
-            text,
-            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=ft.Colors.ON_SURFACE_VARIANT,
+    words = ft.Container(
+        ft.Semantics(
+            identifier=f"{SCREEN}.filter_summary",
+            content=ft.Text(
+                text,
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
         ),
+        padding=ft.Padding.only(left=SHOW_ALL_INSET),
     )
     show_all = named(
-        f"{SCREEN}.show_all", ft.TextButton("Show all", on_click=on_show_all)
+        f"{SCREEN}.show_all",
+        ft.TextButton(
+            "Show all",
+            on_click=on_show_all,
+            # No vertical padding: Material's 8 dp goes at large text too, and at
+            # 100 % the button's 40 dp minimum height holds the label anyway.
+            style=ft.ButtonStyle(
+                padding=ft.Padding.symmetric(horizontal=SHOW_ALL_INSET)
+            ),
+        ),
     )
     return ft.Container(
         ft.Row(
@@ -294,14 +314,17 @@ def _summary(text: str, on_show_all: Callable[[], object]) -> ft.Control:
                 ft.Row(
                     [words, show_all],
                     wrap=True,
-                    spacing=8,
+                    spacing=0,  # the button's own padding parts it from the words
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     expand=True,  # a bounded width, so the words wrap in it
                 ),
             ],
-            spacing=8,
+            # The words' inset is the gap after the icon: 8 dp, as before.
+            spacing=0,
             vertical_alignment=ft.CrossAxisAlignment.START,
         ),
-        padding=ft.Padding.only(left=16, right=8),
+        # 12 + the button's 8 dp: its label ends 20 dp from the edge, as at 100 %
+        # before, when Material gave it 12 dp beside an 8 dp margin.
+        padding=ft.Padding.only(left=16, right=12),
     )

@@ -29,6 +29,9 @@ START_TIMEOUT = 180.0
 """Seconds from launch to Now. Each run installs the test build afresh, so its first
 launch unpacks Python before it starts, slowly on a busy host's emulator."""
 
+RETAP_SECONDS = 1.0
+"""How long ``tap_until`` waits for a tap's effect before it taps again."""
+
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
 """``android`` or ``ios``, set by ``flet test``."""
 
@@ -85,6 +88,27 @@ async def wait_for(
         await t.pump(STEP)
 
 
+async def wait_until(
+    t: RemoteTester, met: Callable[[], bool], what: str, *, timeout: float = TIMEOUT
+) -> None:
+    """Pump frames until ``met()`` holds: for what the host sees, not the screen.
+
+    For example a request that reached a fixture's server (``SilentFeed.requests``).
+
+    Args:
+        t: The tester.
+        met: The condition, e.g. ``lambda: feed.requests > asked``.
+        what: What is awaited, for the failure message.
+        timeout: Seconds before the step fails.
+    """
+    deadline = time.monotonic() + timeout
+    while not met():
+        if time.monotonic() > deadline:
+            await screenshot_on_failure()
+            raise AssertionError(f"{what}: not after {timeout} s")
+        await t.pump(STEP)
+
+
 async def wait_for_id(
     t: RemoteTester, identifier: str, *, gone: bool = False, timeout: float = TIMEOUT
 ) -> Finder:
@@ -134,6 +158,93 @@ async def tap_id(t: RemoteTester, identifier: str) -> None:
 async def tap_text(t: RemoteTester, text: str) -> None:
     """Tap the first control showing exactly this text, once it is on screen."""
     await tap(t, await wait_for_text(t, text))
+
+
+async def open_tab(t: RemoteTester, tab: str) -> None:
+    """Show a tab's root from another root, and wait until the switch has finished.
+
+    Each root has its own bar (D-144), and while one root replaces another both bars
+    are on screen: a tap on the leaving one is lost (#108 lost a My schedule tap that
+    way on the iOS simulator, and a More tap on the Android emulator while Now
+    re-rendered for a new fake clock). So the tab is tapped once one bar shows, and
+    again every ``RETAP_SECONDS`` until its root's title shows (a tap on the tab
+    already shown only scrolls its root to the top, D-166); the switch is over when
+    the title shows with one bar again (D-170).
+
+    Args:
+        t: The tester, on a tab root.
+        tab: The tab's key, as in ``app.nav.<tab>`` and ``<tab>.title``, e.g.
+            ``my_schedule``.
+    """
+    nav = f"app.nav.{tab}"
+
+    async def one_bar() -> Finder:
+        return await wait_for(
+            t, lambda: t.find_by_semantics_identifier(nav), f"one {nav}", count=1
+        )
+
+    await one_bar()
+    await tap_until(
+        t,
+        lambda: t.find_by_semantics_identifier(nav),
+        lambda: t.find_by_semantics_identifier(f"{tab}.title"),
+        f"the {tab} tab",
+    )
+    await one_bar()
+
+
+async def tap_tooltip(t: RemoteTester, tooltip: str) -> None:
+    """Tap the first control with this tooltip, an icon button's name (D-27), once shown."""
+    await tap(t, await wait_for_tooltip(t, tooltip))
+
+
+async def tap_until(
+    t: RemoteTester,
+    target: Callable[[], Awaitable[Finder]],
+    done: Callable[[], Awaitable[Finder]],
+    what: str,
+    *,
+    timeout: float = TIMEOUT,
+) -> None:
+    """Tap ``target`` until ``done()`` matches: for a tap an animation can swallow.
+
+    A SnackBar's action slides in for 250 ms, and a tap on it before it has arrived
+    is lost (#197). Rather than wait a fixed time, the tap is repeated, every
+    ``RETAP_SECONDS`` while its effect has not shown, until it shows. A tap on a list
+    that is still scrolling only stops the scroll, the same way. Only for a target
+    that acts once, as a SnackBar's action does, or whose second tap changes
+    nothing, as Developer's Apply of the same values.
+
+    Args:
+        t: The tester.
+        target: Finds the control to tap, e.g. ``lambda: t.find_by_text("Undo")``.
+        done: Finds what the tap brings, e.g. the row an Undo restores.
+        what: The step, for the failure message.
+        timeout: Seconds before the step fails.
+    """
+    deadline = time.monotonic() + timeout
+    retap_at = 0.0
+    while not (await done()).count:
+        now = time.monotonic()
+        if now > deadline:
+            await screenshot_on_failure()
+            raise AssertionError(f"{what}: no effect after {timeout} s of taps")
+        if now >= retap_at:
+            finder = await target()
+            if finder.count:
+                await t.tap(finder.first)
+                retap_at = now + RETAP_SECONDS
+        await t.pump(STEP)
+
+
+async def enter_text_id(t: RemoteTester, identifier: str, text: str) -> None:
+    """Replace the text of the field with this identifier, as typing it would.
+
+    ``RemoteTester.enter_text`` focuses the field (its ``TextField`` under the
+    identifier's node) and hands it the whole text at once, so ``on_change`` runs once.
+    """
+    await t.enter_text((await wait_for_id(t, identifier)).first, text)
+    await t.pump(STEP)
 
 
 async def tap_first_text(t: RemoteTester, texts: Sequence[str]) -> None:
@@ -191,15 +302,19 @@ async def screenshot(name: str) -> None:
 
 
 async def screenshot_on_failure() -> None:
-    """Save ``timed-out.png``, what the screen showed instead, if the device lets us.
+    """Save ``timed-out-<flow>.png``, what the screen showed instead, if the device lets us.
 
-    A step often times out because the app or the device went away, and then ``adb``
-    or ``simctl`` fails too: that failure must not hide the step's own message.
+    Named after the flow (pytest's ``PYTEST_CURRENT_TEST``), so a run with several
+    failures keeps each one's picture. A step often times out because the app or the
+    device went away, and then ``adb`` or ``simctl`` fails too: that failure must not
+    hide the step's own message.
     """
+    current = os.environ.get("PYTEST_CURRENT_TEST", "")
+    flow = current.split("::")[-1].split(" ")[0] or "flow"
     try:
-        await screenshot("timed-out")
+        await screenshot(f"timed-out-{flow}")
     except (AssertionError, OSError) as error:
-        print(f"No timed-out.png: {error}")
+        print(f"No timed-out-{flow}.png: {error}")
 
 
 async def run(*command: str) -> bytes:

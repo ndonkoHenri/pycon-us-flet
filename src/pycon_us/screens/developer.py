@@ -38,6 +38,16 @@ CAPABILITIES = (
 )
 """The capability flags the screen shows, fixed at import as they are (D-63)."""
 
+APPLY_IN_SIGHT = 304
+"""How far below its text the feed URL field keeps in sight when it takes the focus,
+in dp: its helper line, the Reset and Apply row under it and the outcome line that
+says what Apply did. The keyboard covers half the screen, and without this the list
+stopped at the field, Apply hidden under the keyboard (#108); Flutter's default keeps
+20 dp. Flet does not tell the app its text scale, so it is sized for large text: at
+200 % on Android the outcome's two lines stay in sight too, and at iOS's largest size
+the Apply row does, where 168 dp, enough at 100 %, left the outcome (Android) or Apply
+(iOS) under the keyboard. At 100 % the list only scrolls a little further."""
+
 
 @ft.component
 def Developer() -> ft.View:
@@ -176,6 +186,9 @@ def Developer() -> ft.View:
                     error=url_error,
                     keyboard=ft.KeyboardType.URL,
                     on_change=edit_url,
+                    # Apply sits right below: typing a URL, then Apply, needs no
+                    # closing of the keyboard first.
+                    reveal_below=APPLY_IN_SIGHT,
                 ),
                 padded(
                     ft.Row(
@@ -261,6 +274,7 @@ def option_field(
     keyboard: ft.KeyboardType,
     on_change: ft.ControlEventHandler[ft.TextField],
     suffix: ft.Control | None = None,
+    reveal_below: int = 20,
 ) -> ft.Control:
     """Return one option's text field, found by flows through ``identifier``.
 
@@ -275,6 +289,10 @@ def option_field(
     stop being a button of its own (D-189). That field keeps a bare identifier, an
     empty node of its own, until Flet's ``Semantics`` stops forcing ``enabled`` (U34,
     D-214).
+
+    ``reveal_below`` is how much of the list under the field's text stays in sight when
+    the field takes the focus and the keyboard shrinks the screen (Flutter's
+    ``scrollPadding``; 20 dp by default, as Flutter's).
     """
     text_field = ft.TextField(
         value=value,
@@ -291,6 +309,7 @@ def option_field(
         enable_suggestions=False,
         on_change=on_change,
         suffix_icon=suffix,
+        scroll_padding=ft.Padding.only(left=20, top=20, right=20, bottom=reveal_below),
     )
     if suffix is None:
         return padded(named(identifier, text_field))

@@ -1,11 +1,14 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below (the Open spaces and Lightning talks pages' tables, and their
-checks, are in ``year_pages``; the keynotes' in ``year_keynotes``), through
-``year_schema``, then checks their rules. The dataclasses are the schema: an unknown or missing key, a wrong type or a broken rule fails at load time
-with a ``YearDataError`` that names the file, the key and the problem. Years, dates, names and URLs live in the data
-files, never in code; rolling over is a new ``data/<year>/`` folder and a new ``YEAR``.
+frozen dataclasses below, through ``year_schema``, then checks their rules. Three
+concerns have modules of their own, each with its tables and their checks: the track
+registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
+Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
+(D-217). The dataclasses are the schema: an unknown or missing key, a wrong type or a
+broken rule fails at load time with a ``YearDataError`` that names the file, the key and
+the problem. Years, dates, names and URLs live in the data files, never in code; rolling
+over is a new ``data/<year>/`` folder and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).
@@ -15,7 +18,6 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
@@ -28,6 +30,7 @@ from pycon_us.year_pages import (
     check_pages,
 )
 from pycon_us.year_schema import YearDataError, build, read_table
+from pycon_us.year_tracks import KEYNOTE_TRACKS, Track, TrackFormat, check_tracks
 
 YEAR = 2026
 """The conference year the app shows (D-05)."""
@@ -39,68 +42,8 @@ A path relative to this module, because ``flet build`` copies ``src/`` into the 
 than installing it (F15): the files sit next to the code on the phone too.
 """
 
-_SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
-"""A track slug: lower-case words joined by single hyphens (DATA-29)."""
-
 SNAPSHOT_FILE = "conference.json"
 """The feed snapshot's name in a year folder (D-38, NEW-03)."""
-
-TRACK_GROUPS = ("talks", "hands-on", "community", "logistics")
-"""The filter-sheet groups a track can belong to, in display order (DATA-14)."""
-
-type TrackFormat = Literal["short", "plural", "long"]
-
-
-@dataclass(frozen=True)
-class Track:
-    """One entry of the track registry (DATA-14, DATA-28).
-
-    Attributes:
-        key: The track as feed processing names it: the feed's kind with its first letter
-            upper-cased (``Ai``, ``Lightning-talks``, ``Open Space``).
-        short: The name on badges and rows (``AI``).
-        plural: The title of a list of its sessions (``Future of AI with Python``).
-        long: The full name, for session detail (``The Future of AI with Python``).
-        icon: The name of an outlined ``ft.Icons`` member (D-27).
-        group: Its group in the filter sheet, one of ``TRACK_GROUPS``.
-        slug: Its page's segment in ``/more/tracks/<slug>`` (DATA-29): written out,
-            never derived, so a key's spelling (``Ai``, ``Lightning-talks``) never
-            leaks into a route; lower case, words joined by ``-``.
-        legend: One line on what its sessions are, for the Tracks hub and the track's
-            page (EVT-04): "Talks given in Spanish".
-        new: Whether the track is new this year: the hub and its page show a "New
-            track" badge (SCHED-21).
-    """
-
-    key: str
-    short: str
-    plural: str
-    long: str
-    icon: str
-    group: str
-    slug: str
-    legend: str
-    new: bool = False
-
-
-HUB_PAGES: dict[str, str | None] = {
-    "sprints": None,
-    "lightning-talks": "Lightning-talks",
-    "open-spaces": "Open Space",
-    "keynotes": "Keynote",
-}
-"""The Tracks hub's pages of their own, by segment under ``/more/tracks``, with the key of
-the track each is the page of (the feed's kinds, DATA-14; the sprints are no track, D-126).
-
-More's pages, also the hub's children, so Back returns to the hub (D-207). The routes
-list them before ``:slug``, so the loader refuses a track slug that names another's page.
-Here, with the registry, the loader stays free of Flet.
-"""
-
-KEYNOTE_TRACKS = ("Keynote", "Plenary")
-"""The tracks a ``[[keynotes]]`` entry's session can be of: the keynotes' own
-(``HUB_PAGES["keynotes"]``), and the plenaries', since the feed files the panels there.
-The loader and the snapshot tool refuse an entry on any other track (D-217)."""
 
 
 @dataclass(frozen=True)
@@ -365,31 +308,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         check_https(getattr(conference, key), file, key)
     if not conference.site_url.endswith("/"):  # site-relative links resolve against it
         raise YearDataError(f"{file}: site_url: expected a final '/'")
-    seen: set[str] = set()
-    slugs: set[str] = set()
-    for index, track in enumerate(conference.tracks):
-        if track.key in seen:
-            raise YearDataError(
-                f"{file}: tracks[{index}].key: duplicate track {track.key!r}"
-            )
-        seen.add(track.key)
-        if not _SLUG.fullmatch(track.slug):
-            raise YearDataError(
-                f"{file}: tracks[{index}].slug: {track.slug!r} is not lower-case "
-                "words joined by '-'"
-            )
-        if track.slug in slugs:
-            raise YearDataError(
-                f"{file}: tracks[{index}].slug: duplicate slug {track.slug!r}"
-            )
-        slugs.add(track.slug)
-        _check_hub_page(track, file, index)
-        if not track.legend.strip():
-            raise YearDataError(f"{file}: tracks[{index}].legend: is empty")
-        if track.group not in TRACK_GROUPS:
-            raise YearDataError(
-                f"{file}: tracks[{index}].group: {track.group!r} is not one of {TRACK_GROUPS}"
-            )
+    check_tracks(conference.tracks, file)
 
 
 def _check_content(content: Content, file: str) -> None:
@@ -412,24 +331,3 @@ def _check_content(content: Content, file: str) -> None:
             raise YearDataError(
                 f"{file}: display_time_overrides[{index}].match: {error}"
             ) from None
-
-
-def _check_hub_page(track: Track, file: str, index: int) -> None:
-    """Refuse a track slug that names a page of the hub's other than the track's own.
-
-    The hub's pages (``HUB_PAGES``) come before ``:slug`` under ``/more/tracks``
-    (D-207), so a track at ``sprints`` would have no page. A track with a page of its
-    own keeps the page's segment as its slug: its hub row pushes
-    ``/more/tracks/<slug>``, which must be that page.
-    """
-    own = next((seg for seg, key in HUB_PAGES.items() if key == track.key), None)
-    if own is not None and track.slug != own:
-        raise YearDataError(
-            f"{file}: tracks[{index}].slug: expected {own!r}, the segment of "
-            f"the track's own page, /more/tracks/{own}"
-        )
-    if own is None and track.slug in HUB_PAGES:
-        raise YearDataError(
-            f"{file}: tracks[{index}].slug: {track.slug!r} is the segment of "
-            f"another page, /more/tracks/{track.slug}"
-        )
