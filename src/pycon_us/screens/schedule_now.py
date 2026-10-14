@@ -9,7 +9,8 @@ lays out the day lists; these are the pieces they share:
   today's list, so the "Now" button hides while the list is near it;
 - ``Signals`` and ``jumps_by_itself()``: what the screen's handlers tell its jumps, and
   whether showing a day jumps by itself (today's first display);
-- ``spoken_place()``: where a jump the user asked for landed, for a screen reader.
+- ``spoken_place()``: where a jump the user asked for landed, for a screen reader,
+  and ``landing_note()``, which says it to TalkBack (D-241).
 """
 
 import asyncio
@@ -25,6 +26,10 @@ from pycon_us.ui.scrolling import anchored
 
 NOW_LINE = 2
 """The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in ``primary``."""
+
+SAID_S = 5.0
+"""How long the landing note keeps its words, in seconds (D-241): long enough for
+TalkBack to read them out, short enough that the note is no lasting stop."""
 
 
 @dataclass(frozen=True)
@@ -219,3 +224,32 @@ def spoken_place(
         slot = next(slot for slot in slots if slot.key == place.on)
         return time_label(slot.start, zone, use_24h=use_24h)
     return f"current time {time_label(at, zone, use_24h=use_24h)}"
+
+
+def landing_note(words: str) -> ft.Control:
+    """Return where a jump the user asked for landed, as a polite live region (D-241).
+
+    Flutter reports no announcements on Android (F13), so TalkBack hears the landing
+    through this node: each time ``words`` changes to a phrase, the engine sends a
+    content change for it, which TalkBack reads without moving its focus off the
+    "Now" button. Empty, it has nothing a reader could stop on, so it is only in
+    linear navigation while it holds words (``SAID_S``); the same words twice must
+    pass through empty to be said again. 1 dp square at the list's top start, under
+    the list: a node with no size is dropped from the tree, and the list takes any
+    touch there. iOS keeps ``announce_message()``: a live region there moves
+    VoiceOver's focus to it (F13).
+
+    Args:
+        words: Where the list went, "Friday, May 15, 2:00 PM"; empty between landings.
+    """
+    return ft.Container(
+        ft.Semantics(
+            identifier="schedule.landing",
+            label=words,
+            live_region=True,
+            container=True,
+            content=ft.Container(width=1, height=1),
+        ),
+        left=0,
+        top=0,
+    )

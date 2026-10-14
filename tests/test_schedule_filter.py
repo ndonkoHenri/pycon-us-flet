@@ -518,7 +518,7 @@ async def test_what_do_these_mean_opens_the_tracks_hub(
     link = in_sheet(schedule, "schedule.filter.tracks")
     assert isinstance(link, ft.TextButton) and link.content == "What do these mean?"
     await click(schedule, link)
-    assert schedule.navigated == ["/more/tracks"]
+    assert schedule.went == ["/more/tracks"]
     assert sheet(schedule) is None
 
 
@@ -592,4 +592,5 @@ async def test_the_summary_keeps_its_place_so_the_day_pages_keep_theirs(
     assert summary(schedule) is None
     assert len(after) == len(before)
     assert [type(c) for c in after][2:] == [type(c) for c in before][2:]
-    assert isinstance(after[-1], ft.TabBarView)
+    pages = after[-1]  # the day pages, over the landing note (D-241)
+    assert isinstance(pages, ft.Stack) and isinstance(pages.controls[-1], ft.TabBarView)

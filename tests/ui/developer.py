@@ -147,8 +147,8 @@ async def fresh_start(
 
     A test build is a fresh install (testing-and-quality.md §5.1): it starts on Now with
     the bundled snapshot, and refreshes from the year's feed at once. A Refresh now that
-    found that refresh still running would join it, and so publish the year's feed,
-    since a running refresh keeps its URL (``Conference.set_feed_url``). So the first
+    found that refresh still running after Apply would join it, and publish nothing,
+    since a refresh from a URL no longer in effect writes nothing (D-244). So the first
     Refresh now only lets it end. Developer is then opened afresh, so the second one's
     words are its own, and that one refreshes from the feed URL just applied.
 
