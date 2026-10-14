@@ -1,4 +1,4 @@
-"""The track registry, the Tracks hub's own pages, and the registry's checks (D-224).
+"""The track registry, the Tracks hub's own pages, and the registry's checks (D-228).
 
 ``conference.toml``'s ``[[tracks]]`` build into ``Track`` below, through
 ``year_schema.build()``, as ``config.ConferenceInfo.tracks`` (DATA-14, DATA-28, DATA-29).

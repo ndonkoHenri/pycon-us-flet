@@ -3,7 +3,7 @@
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
 frozen dataclasses below, through ``year_schema``, then checks their rules. Three
 concerns have modules of their own, each with its tables and their checks: the track
-registry and the Tracks hub's pages in ``year_tracks`` (D-224), the Open spaces and
+registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
 (D-217). The dataclasses are the schema: an unknown or missing key, a wrong type or a
 broken rule fails at load time with a ``YearDataError`` that names the file, the key and
