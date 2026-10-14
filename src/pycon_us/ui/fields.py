@@ -146,19 +146,27 @@ def use_field_query(initial: str = "") -> FieldQuery:
     nothing; only the initial text and a Clear are sent to the field. ``changed``
     still sets state, which is what re-renders the screen at each keystroke.
 
-    A Clear goes away once the text is empty, so ``clear()`` puts the focus back in
-    the field, ready to type again, rather than lose a screen reader's place (D-182).
-    A screen that keeps more state with the text (search's ``ViewMemory``, D-193)
-    wraps ``changed`` and ``clear`` in handlers of its own.
+    A Clear does send text, so it can race too: Flutter puts the empty text over any
+    key typed between the tap and the empty text's arrival, so those keys' reports,
+    which come in after the tap, are dropped until Flutter answers the focus request
+    that an effect makes once the render has sent the empty text (Flutter handles
+    messages in order). If one came in after the render, the empty text is sent again
+    over what it left on the field, and waited for the same way. Asking for the focus also serves
+    D-182: a Clear goes away once the text is empty, so the focus goes back in the
+    field, ready to type again, rather than lose a screen reader's place. A screen
+    that keeps more state with the text (search's ``ViewMemory``, D-193) wraps
+    ``changed`` and ``clear`` in handlers of its own.
 
     Args:
         initial: The text the field starts with (search's remembered query).
     """
     typed, set_typed = ft.use_state(initial)
     # Counted rather than flagged: each Clear re-renders, even when the state is
-    # already empty, and is sent to the field exactly once.
+    # already empty, and is sent to the field once.
     clears, set_clears = ft.use_state(0)
     sent_clears = ft.use_ref(0)
+    landing = ft.use_ref(False)  # the empty text is on its way: reports are stale
+    overwritten = ft.use_ref(False)  # a stale report came in meanwhile
     ref = ft.use_memo(ft.Ref[ft.TextField], [])  # one for the screen's life
     shown = ref.current  # the field the last render built, None until the first
     if shown is None or clears != sent_clears.current:
@@ -167,9 +175,17 @@ def use_field_query(initial: str = "") -> FieldQuery:
     else:
         value = shown.value  # what Flutter last reported: the diff sends nothing
 
+    def send_empty() -> None:
+        landing.current, overwritten.current = True, False
+        set_typed("")
+        set_clears(lambda n: n + 1)
+
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> None:
-        set_typed(e.control.value)
+        if landing.current:
+            overwritten.current = True  # Flutter puts the empty text over it
+        else:
+            set_typed(e.control.value)
 
     @report_errors
     async def focus() -> None:
@@ -178,11 +194,33 @@ def use_field_query(initial: str = "") -> FieldQuery:
 
     @report_errors
     async def clear() -> None:
-        set_typed("")
-        set_clears(lambda n: n + 1)
-        await focus()
+        send_empty()
+
+    @report_errors
+    async def land() -> None:
+        # Run after the render that sent the empty text, since Flet runs effects
+        # after its patch: Flutter answers the focus once it has that text.
+        if clears == 0:
+            return  # the first render: no Clear yet
+        await focus()  # reports its own errors; a newer Clear cancels it here
+        landing.current = False
+        if overwritten.current and ref.current is not None and ref.current.value:
+            # Flutter shows "", but a report that came in after the render left
+            # its text on the field here (one before the render did not).
+            send_empty()
+
+    ft.use_effect(land, [clears], cleanup=_nothing_to_undo)
 
     return FieldQuery(value=value, ref=ref, changed=changed, clear=clear, focus=focus)
+
+
+def _nothing_to_undo() -> None:
+    """A Clear's effect's cleanup: nothing to undo.
+
+    Its presence is what makes Flet cancel a pending focus when the screen unmounts
+    (F2), and it is passed as ``cleanup=``, since a returned one would be lost at the
+    next render (F39).
+    """
 
 
 def found_count(line: str, *, identifier: str) -> ft.Control:
@@ -190,6 +228,7 @@ def found_count(line: str, *, identifier: str) -> ft.Control:
 
     A filter or a search changes the list at every keystroke or pause: the live region
     lets a screen reader hear what typing did without leaving the field (ux.md §9).
+    On iOS too: VoiceOver queues the new count and keeps its focus in the field (D-243).
     The caller shows it only while the text finds something; a miss has its no-match
     state, which announces itself. ``BODY_SMALL`` in ``on_surface_variant``, 16 dp from
     the sides, 4 dp under what is above it and 8 dp over the list, which scrolls under

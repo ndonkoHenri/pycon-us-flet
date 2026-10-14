@@ -139,7 +139,17 @@ class Shown:
 
 
 @pytest.fixture
-def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
+def answer() -> asyncio.Event:
+    """Flutter's answer to a focus request: given at once, unless a test clears it."""
+    given = asyncio.Event()
+    given.set()
+    return given
+
+
+@pytest.fixture
+def focused(
+    monkeypatch: pytest.MonkeyPatch, answer: asyncio.Event
+) -> list[ft.TextField]:
     """The fields asked to take the focus; the harness has no Flutter to answer."""
     asked: list[ft.TextField] = []
 
@@ -147,6 +157,7 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
         # As the real one, which invokes the method through the field's page.
         assert self.page is not None, "the field is not on the page"
         asked.append(self)
+        await answer.wait()
 
     monkeypatch.setattr(ft.TextField, "focus", focus)
     return asked
@@ -218,6 +229,53 @@ async def test_clear_empties_a_field_whose_text_the_screen_has_not_seen(
     assert shown.sent == [""]
     assert shown.text_field.value == ""
     assert shown.probe.filtered[-1] == ""
+
+
+async def test_a_key_typed_while_a_clear_lands_is_dropped_with_the_field(
+    shown: Shown, answer: asyncio.Event
+) -> None:
+    """#307: Flutter puts the Clear over a key typed before the empty text arrived.
+
+    Its report comes in after the empty text was sent and before Flutter answers the
+    focus request that followed it; the screen drops it, as Flutter did, and sends
+    the empty text again over what the report left on the field.
+    """
+    await shown.type("mu")
+    answer.clear()  # Flutter has not had the empty text yet
+    (clear,) = shown.clear_buttons()
+    await shown.click(clear)
+    assert shown.sent == [""]
+    await shown.type("mumu")  # typed on the old text, before the Clear landed
+    answer.set()
+    await settle()
+    assert shown.sent == ["", ""]
+    assert shown.text_field.value == ""
+    assert shown.probe.filtered[-1] == ""
+    assert shown.clear_buttons() == []
+    await shown.type("x")  # once landed, keys count again
+    assert shown.probe.filtered[-1] == "x"
+    assert shown.sent == ["", ""]
+
+
+async def test_keys_reported_before_a_clear_renders_are_dropped(
+    shown: Shown, answer: asyncio.Event
+) -> None:
+    """#307: keys typed right after Clear, on the old text, are dropped as Flutter does.
+
+    Seen on the simulator with slow renders: Clear, then "sweigart" in one burst,
+    whose reports all came in before the Clear's re-render; the field and the list
+    must both end empty, never one empty and the other on the keys.
+    """
+    await shown.type("chen")
+    (clear,) = shown.clear_buttons()
+    answer.clear()  # all of it reaches Flutter before the empty text does
+    await shown.session.dispatch_event(clear._i, "click", None)  # no re-render yet
+    await shown.burst("chens", "chensw", "chenswe")
+    answer.set()
+    await settle()
+    assert shown.text_field.value == ""
+    assert shown.probe.filtered[-1] == ""
+    assert set(shown.sent) == {""}  # only ever the empty text
 
 
 async def test_clear_empties_the_field_and_puts_the_focus_back_in_it(
