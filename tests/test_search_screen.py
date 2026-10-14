@@ -7,7 +7,9 @@ the global modal ``/search`` and a drill whose detail is a plain View, so a resu
 Back and a fresh open go through the Router's own view stack (S4, D-141). Navigation is
 ``page.navigate`` replaced by what Flutter does next: the page's route changes and the
 Router hears of it. A keystroke is the field's value patched in and its change event
-dispatched, as Flutter sends them (``tests/test_speakers.py``).
+dispatched, as Flutter sends them (``tests/test_speakers.py``). The debounce's wait is
+held until a test ends it (``Shown.pause()``, ``tests/timers.py``), so on a slow host no
+search runs between two keystrokes (#270).
 
 How the screen looks, wraps at 200 % text and reads to TalkBack and VoiceOver is
 checked on devices (the PR).
@@ -49,6 +51,7 @@ from tests.fakes import (
 )
 from tests.feeds import processed
 from tests.sessions import connection
+from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -123,6 +126,8 @@ class Shown:
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies ran, in order."""
     focused: list[ft.TextField] = field(default_factory=list)
+    sleeps: HeldSleeps = field(default_factory=HeldSleeps)
+    """The screen's sleeps: the debounce waits until ``pause()`` releases it."""
     token: Any = None
 
     @property
@@ -192,8 +197,8 @@ class Shown:
             await asyncio.sleep(0)
 
     async def pause(self) -> None:
-        """Wait out the debounce, then let the re-render through."""
-        await asyncio.sleep(screen.DEBOUNCE_SECONDS * 2)
+        """The typing pauses: end the debounce's wait, then let the re-render through."""
+        await self.sleeps.release()
         await self.settle()
 
     async def go(self, location: str) -> None:
@@ -269,7 +274,7 @@ async def show(
     # Each row body says its phrase once: counting the calls counts the bodies (S2).
     monkeypatch.setattr(session_rows, "spoken_phrase", counted_phrase)
     monkeypatch.setattr(ft.TextField, "focus", focus)
-    monkeypatch.setattr(screen, "DEBOUNCE_SECONDS", 0.05)
+    monkeypatch.setattr(screen, "asyncio", result.sleeps)  # the search module's only
 
     @ft.component
     def Root() -> ft.Control:
@@ -389,9 +394,13 @@ async def test_the_clear_button_empties_the_field_and_focuses_it(
 async def test_typing_searches_once_the_typing_pauses_not_per_keystroke(
     opened: Shown,
 ) -> None:
+    asked = len(opened.sleeps.asked)
     for text in ("t", "ty", "typ", "typi", "typing"):
         await opened.type(text)
-    assert opened.searches == []  # each keystroke restarted the wait
+    assert opened.searches == []
+    # Each keystroke restarted the wait: five waits asked for, the last one left.
+    assert opened.sleeps.asked[asked:] == [screen.DEBOUNCE_SECONDS] * 5
+    assert opened.sleeps.held == 1
     assert opened.has("search.idle")  # and the list still waits for a word
     assert opened.field.value == "typing"  # while the field kept up
 
