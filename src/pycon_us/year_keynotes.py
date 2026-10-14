@@ -8,8 +8,9 @@ description to the site, and has no photo, role or bio for the people on stage.
 ``check_keynote_sessions()`` checks their ids against a feed's sessions, each a keynote
 or a plenary: the loader's against the year's bundled snapshot when asked
 (``check_snapshot_sessions()``, ``config.load_year(check_sessions=True)``), and the
-snapshot tool's against a new feed. The callers pass the tracks (``year_tracks.KEYNOTE_TRACKS``),
-so this module stays free of the config it builds part of.
+snapshot tool's against a new feed. The callers pass the tracks
+(``year_tracks.KEYNOTE_TRACKS``), so this module stays free of the config it builds part
+of.
 A module of its own, as ``year_pages`` is, so ``config.py`` grows by little (D-66).
 """
 
@@ -120,7 +121,8 @@ def check_keynote_sessions(
     Args:
         keynotes: The ``[[keynotes]]`` entries.
         sessions: The feed's sessions, by id.
-        tracks: The track keys a keynote or panel can have (``year_tracks.KEYNOTE_TRACKS``).
+        tracks: The track keys a keynote or panel can have
+            (``year_tracks.KEYNOTE_TRACKS``).
         file: The data file the entries come from, for the message.
 
     Raises:
@@ -146,7 +148,8 @@ def check_snapshot_sessions(year: YearData, tracks: Collection[str], file: str) 
 
     Args:
         year: The year's data, with its keynotes and its snapshot.
-        tracks: The track keys a keynote or panel can have (``year_tracks.KEYNOTE_TRACKS``).
+        tracks: The track keys a keynote or panel can have
+            (``year_tracks.KEYNOTE_TRACKS``).
         file: The keynotes' data file, for the message (``2026/content.toml``).
 
     Raises:

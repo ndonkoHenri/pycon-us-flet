@@ -1,10 +1,11 @@
-"""The year's track registry, the Tracks hub's own pages, and the registry's checks (D-224).
+"""The track registry, the Tracks hub's own pages, and the registry's checks (D-224).
 
 ``conference.toml``'s ``[[tracks]]`` build into ``Track`` below, through
 ``year_schema.build()``, as ``config.ConferenceInfo.tracks`` (DATA-14, DATA-28, DATA-29).
 ``check_tracks()`` then checks the registry's rules. ``HUB_PAGES`` and ``KEYNOTE_TRACKS``
 name tracks by key, so they live here with the registry (D-207, D-217), free of Flet.
-Split from ``config.py`` at D-66's ~400 lines, as ``year_pages`` and ``year_keynotes`` were.
+Split from ``config.py`` at D-66's ~400 lines, as ``year_pages`` and ``year_keynotes``
+were.
 """
 
 import re
@@ -83,7 +84,7 @@ def check_tracks(tracks: Iterable[Track], file: str) -> None:
         file: The file as errors name it, ``2026/conference.toml``.
 
     Raises:
-        YearDataError: An entry breaks a rule; the message names its index and key.
+        YearDataError: An entry breaks a rule; the message names the entry and the field.
     """
     seen: set[str] = set()
     slugs: set[str] = set()
