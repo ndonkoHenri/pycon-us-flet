@@ -20,6 +20,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
+from pycon_us.ui.semantics import named
 
 
 class MoreEntry(NamedTuple):
@@ -136,15 +137,13 @@ def appearance(
         )
     )
     options: list[ft.Control] = [
-        ft.MergeSemantics(
-            content=ft.Semantics(
-                identifier=f"more.appearance.{value}",
-                content=ft.ListTile(
-                    leading=ft.Radio(value=value),
-                    title=text,
-                    toggle_inputs=True,  # a tap anywhere on the row selects it
-                ),
-            )
+        named(
+            f"more.appearance.{value}",
+            ft.ListTile(
+                leading=ft.Radio(value=value),
+                title=text,
+                toggle_inputs=True,  # a tap anywhere on the row selects it
+            ),
         )
         for value, text in APPEARANCE_LABELS.items()
     ]

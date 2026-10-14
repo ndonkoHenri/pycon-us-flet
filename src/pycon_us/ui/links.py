@@ -180,14 +180,21 @@ def external(identifier: str, button: ft.Control) -> ft.Control:
     One merged node, as ``semantics.named()`` makes it (D-190), with the link flag an
     external row carries (ux.md §4.7): the lightning talks' sign-up and the open
     spaces' "Propose an open space". The button's own words end with "Opens in
-    browser" (``OPENS_IN``), since it leaves the app.
+    browser" (``OPENS_IN``), since it leaves the app. As ``named()``, it reads
+    ``button``'s own ``disabled``: a ``Semantics`` passed in its place (for a label)
+    needs the button's ``disabled`` too (F42).
 
     Args:
         identifier: For UI flows, e.g. ``open_spaces.propose``.
         button: The button, whose ``on_click`` calls ``open_link()``.
     """
     return ft.MergeSemantics(
-        content=ft.Semantics(identifier=identifier, link=True, content=button)
+        content=ft.Semantics(
+            identifier=identifier,
+            link=True,
+            disabled=button.disabled,  # else the merged node reads as enabled (F42)
+            content=button,
+        )
     )
 
 
