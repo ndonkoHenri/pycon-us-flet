@@ -10,7 +10,9 @@ fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
-(D-18). A detail pushed over the Schedule keeps it mounted, and so its place.
+(D-18). A detail pushed over the Schedule keeps it mounted, and so its place. Today's
+list keeps the item at its top across a filter change (``screens/schedule_place.py``,
+D-250).
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -59,6 +61,7 @@ from pycon_us.screens.schedule_now import (
     shows_now,
     spoken_place,
 )
+from pycon_us.screens.schedule_place import use_today_place
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -129,7 +132,22 @@ def Schedule() -> ft.View:
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
     )
-    track_filter = use_track_filter(info, tracks, count)  # the filter sheet (D-20)
+    today_place = use_today_place(
+        memory,
+        current,
+        _ref(refs, current),
+        today_slots,
+        place.line if place is not None else None,
+        shown=shown == current,
+        excluded=excluded,
+    )
+    track_filter = use_track_filter(  # the filter sheet (D-20)
+        info,
+        tracks,
+        count,
+        on_open=today_place.sheet_opened,
+        on_close=today_place.sheet_closed,
+    )
 
     @report_errors
     async def jump_to_now(*, asked: bool) -> None:
@@ -144,6 +162,7 @@ def Schedule() -> ft.View:
         # The clock's place: the landing's render lays the line out at it too.
         at = clock.now()
         target = now_place(today_slots, at)
+        today_place.jumps_to(target.target)  # the place it leaves (D-250)
         ended = await jump_to_key(
             _ref(refs, current),
             target.target,
@@ -185,6 +204,7 @@ def Schedule() -> ft.View:
     async def opened() -> None:
         if shown is None:  # no data yet: the first display is the render that has it
             return
+        today_place.shows(shown)
         jumps = jumps_by_itself(shown, current, today_slots, memory)
         if not jumps:
             set_in_view(None)
@@ -215,12 +235,15 @@ def Schedule() -> ft.View:
     async def changed(e: ft.Event[ft.Tabs]) -> None:
         signals.settled.set()
         day = all_days[e.control.selected_index]
+        today_place.shows(day)  # settled, the echo of a switch from Python included
         if day == shown:  # the echo of a switch made from Python
             return
         memory.schedule_day = day
         set_picked(day)
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
+        elif day == current and memory.schedule_pending:  # filtered meanwhile
+            await today_place.put_back()
         else:
             await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
 
@@ -238,10 +261,13 @@ def Schedule() -> ft.View:
     async def scroll_to_top() -> None:
         target = _ref(refs, shown).current if shown else None
         if target is not None:
+            if shown == current:
+                today_place.scrolls_itself(None)  # at the top, no place to keep
             await target.scroll_to(offset=0, duration=prefs.motion_ms(RETAP_SCROLL_MS))
 
     @report_errors
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
+        today_place.scrolled(day, e)
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels
@@ -300,6 +326,7 @@ def Schedule() -> ft.View:
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
                 on_clear_filters=track_filter.show_all,
+                on_size=today_place.measured if day == current else None,
             )
         )
     tabs = ft.Tabs(

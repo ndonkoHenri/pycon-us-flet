@@ -104,7 +104,7 @@ def filter_sheet(
     changed: bool,
     on_toggle: Toggle,
     on_reset: Callable[[], object],
-    on_close: Callable[[], None],
+    on_close: Callable[[], Awaitable[None]],
     on_tracks_page: Callable[[], None],
     reduce_motion: bool,
 ) -> ft.BottomSheet:
@@ -269,7 +269,7 @@ def filter_sheet(
         show_drag_handle=True,
         scrollable=True,  # the screen's height, so the chips have room at 200 % text
         use_safe_area=True,
-        on_dismiss=lambda _: on_close(),
+        on_dismiss=on_close,
         # Its slide is motion: none under reduced motion (D-34, D-173).
         animation_style=ft.AnimationStyle.no_animation() if reduce_motion else None,
     )

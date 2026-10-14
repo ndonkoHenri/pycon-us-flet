@@ -45,7 +45,7 @@ LEFT_THE_PAGE = "added to the page first"
 """Part of the error Flet raises for a call on a control no longer under the page."""
 
 
-def anchored(key: str, content: ft.Control) -> ft.Control:
+def anchored(key: str, content: ft.Control) -> ft.Column:
     """Return ``content`` under an empty, 0 dp anchor that carries ``ScrollKey(key)``.
 
     A keyed scroll puts the anchor's top, which is the content's, at the top of the

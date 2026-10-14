@@ -13,12 +13,14 @@ Only the Schedule filters (D-20, D-178): this module is what it places for that.
 A chip applies at once and persists (``Prefs.save``), so a swipe that dismisses the
 sheet keeps it (Ionic dropped the changes). The filter is the stored list of hidden
 track keys, ``Prefs.excluded_tracks``: absent, the default (open spaces hidden); an
-explicit empty list hides nothing. Changing it never scrolls a list (#313): the
-Schedule's memoised path re-renders only the slots the change touched (D-153, D-178).
+explicit empty list hides nothing. Changing it never scrolls a list by itself (#313):
+the Schedule's memoised path re-renders only the slots the change touched (D-153,
+D-178), and the Schedule hears the sheet open and close, so it can keep the reader's
+place in today's list (D-250).
 """
 
 import asyncio
-from collections.abc import Callable, Collection, Iterable, Sequence
+from collections.abc import Awaitable, Callable, Collection, Iterable, Sequence
 from dataclasses import dataclass
 
 import flet as ft
@@ -129,7 +131,12 @@ def differs_from_default(tracks: Collection[str], excluded: Iterable[str]) -> bo
 
 
 def use_track_filter(
-    info: ConferenceInfo, tracks: frozenset[str], count: int
+    info: ConferenceInfo,
+    tracks: frozenset[str],
+    count: int,
+    *,
+    on_open: Callable[[], None],
+    on_close: Callable[[], Awaitable[None]],
 ) -> TrackFilter:
     """The Schedule's filter: its action, its summary and its sheet (a hook, D-70).
 
@@ -140,6 +147,10 @@ def use_track_filter(
         info: The year's facts.
         tracks: The track keys the feed's schedule holds, on any day.
         count: The sessions the Schedule shows with the current filter, on all days.
+        on_open: Called when the sheet opens.
+        on_close: Called when it closes: by "Show N sessions", then again by the
+            dismissal that follows; by the dismissal alone after a swipe, a tap
+            outside or "What do these mean?".
     """
     page = ft.context.page
     svc = use_services()
@@ -171,10 +182,12 @@ def use_track_filter(
     @report_errors
     def open_sheet() -> None:
         set_open(True)
+        on_open()
 
     @report_errors
-    def close_sheet() -> None:
+    async def close_sheet() -> None:
         set_open(False)
+        await on_close()
 
     changed = differs_from_default(tracks, excluded)
     # Built only while shown: the Schedule re-renders on every favourite and day

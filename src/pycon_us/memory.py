@@ -8,6 +8,8 @@ It is plain, not a store: writing it re-renders nothing, and it has no context o
 from dataclasses import dataclass, field, fields
 from datetime import date
 
+from pycon_us.core.list_place import Place
+
 
 @dataclass
 class ViewMemory:
@@ -28,6 +30,12 @@ class ViewMemory:
             the Schedule opens on today during the conference (SCHED-01).
         schedule_offsets: Each day list's scroll offset when its last scroll ended,
             in logical pixels: the Schedule puts it back when the list shows again.
+        schedule_place: The item at the top of today's list where the user's last
+            scroll of it ended, or where a jump to now put it; a filter change puts it
+            back at the top (D-250).
+        schedule_pending: The place goes back at the next settled moment: today's
+            next height report, or today showing again after a change made while
+            another day showed (D-250).
         jumped_on: The conference day on which the Schedule last jumped to now: it
             jumps by itself on the first display of each today in this process, and
             not again that day, a "Now" tap included (D-18, D-155, D-204).
@@ -46,6 +54,8 @@ class ViewMemory:
     search_base: str = "/now"
     schedule_day: date | None = None
     schedule_offsets: dict[date, float] = field(default_factory=dict)
+    schedule_place: Place | None = None
+    schedule_pending: bool = False
     jumped_on: date | None = None
     search_query: str = ""
     search_scope: str = "all"
