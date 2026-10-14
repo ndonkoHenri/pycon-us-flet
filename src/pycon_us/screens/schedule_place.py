@@ -7,7 +7,9 @@ other rows at the same offset. ``screens/schedule.py`` therefore records an
 heights its slots and now line report (``on_size_change``, F51; today's list builds
 them all, D-154), and puts that slot back at the top:
 
-- after a filter change, once the slots it changed have reported their new heights;
+- after today's slots change, from a filter change or a refresh, once the slots it
+  changed have reported their new heights; a change that only removes whole slots
+  reports none;
 - after any item of today's list reports a new height: a text-size change, a
   rotation, the now line taking a slot's divider;
 - when today's list shows again, from a tab switch or a day switch (``put_back()``).
@@ -36,11 +38,11 @@ RELAID_S = 0.05
 """How long after a height report the Schedule waits for the rest of them, in seconds:
 the items of one layout report from one frame's callbacks, one after the other."""
 
-FILTERED_S = 0.25
-"""How long after a filter change the Schedule waits for the slots it changed to
-report, in seconds: a filter change lays today's whole list out again, one frame of
-up to about 80 ms on the emulator (D-154), and a change that only removes whole slots
-reports nothing."""
+RELISTED_S = 0.25
+"""How long after today's slots change (a filter change, a refresh) the Schedule waits
+for the slots it changed to report, in seconds: such a change lays today's whole list
+out again, one frame of up to about 80 ms on the emulator (D-154), and a change that
+only removes whole slots reports nothing."""
 
 type Measured = Callable[[str, float], Awaitable[None]]
 """What a slot or the now line of today's list calls with its key and new height."""
@@ -58,7 +60,7 @@ class TodayLayout:
             built, so today's list cannot be scrolled then.
         items: Today's slots and now line as last rendered (``list_items()``).
         heights: Each item's height by key, as last reported, in dp.
-        excluded: The filter the list was last rendered with; None before the first.
+        listed: The items the slots effect last saw; None before its first run.
         changes: How many layout changes have come; a wait ends in a restore only
             when no newer change came during it.
     """
@@ -67,7 +69,7 @@ class TodayLayout:
     shown: bool = False
     items: tuple[ListItem, ...] = ()
     heights: dict[str, float] = field(default_factory=dict)
-    excluded: tuple[str, ...] | None = None
+    listed: tuple[ListItem, ...] | None = None
     changes: int = 0
 
     def ended_at(self, memory: ViewMemory, pixels: float) -> None:
@@ -92,7 +94,6 @@ def use_today_place(
     shown_today: bool,
     slots: tuple[Slot, ...],
     line: int | None,
-    excluded: tuple[str, ...],
 ) -> tuple[TodayLayout, Measured]:
     """Keep the reader's place in today's list: the Schedule's hook (D-250).
 
@@ -103,7 +104,6 @@ def use_today_place(
         shown_today: Whether today's list is the one on screen.
         slots: Today's slots as the filter leaves them.
         line: The now line's index among them.
-        excluded: The filter, whose change restores the place.
 
     Returns:
         The screen's ``TodayLayout``, which its scroll handler and ``put_back()``
@@ -114,7 +114,7 @@ def use_today_place(
     # Plain fields the stable handlers read: the list as this render lays it out.
     layout.day, layout.shown, layout.items = today, shown_today, items
 
-    # A lambda, not a handler: what a report or a filter change awaits.
+    # A lambda, not a handler: what a report or a change of slots awaits.
     keep: Callable[[], Awaitable[bool]] = lambda: keep_place(
         layout, memory, list_of(layout.day or today)
     )
@@ -125,17 +125,20 @@ def use_today_place(
             await after_change(layout, RELAID_S, keep)
 
     @report_errors
-    async def refiltered() -> None:
-        before, layout.excluded = layout.excluded, excluded
-        if before is not None and before != excluded and layout.shown:
-            await after_change(layout, FILTERED_S, keep)
+    async def relisted() -> None:
+        # Any change of today's slots, not only a filter's: a refresh can remove a
+        # whole slot above the top and leave every other height as it was (#333).
+        # Not at the first run, on mount: nothing has changed yet.
+        before, layout.listed = layout.listed, items
+        if before is not None and before != items and layout.shown:
+            await after_change(layout, RELISTED_S, keep)
 
-    ft.use_effect(refiltered, [excluded], cleanup=_cancel_on_unmount)
+    ft.use_effect(relisted, [items], cleanup=_cancel_on_unmount)
     return layout, ft.use_callback(measured, [])
 
 
 def _cancel_on_unmount() -> None:
-    """The filter effect's cleanup: it makes Flet cancel a wait on unmount (F2, F39)."""
+    """The slots effect's cleanup: it makes Flet cancel a wait on unmount (F2, F39)."""
 
 
 async def after_change(

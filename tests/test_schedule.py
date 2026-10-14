@@ -36,6 +36,7 @@ from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
+from pycon_us.core.feed import process
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
@@ -48,7 +49,7 @@ from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import sessions
 from tests.fakes import MemoryPrefs, MemorySemantics
-from tests.feeds import changed, processed
+from tests.feeds import changed, processed, settings
 from tests.sessions import find, settle
 from tests.trees import only, texts
 
@@ -246,7 +247,7 @@ async def shown(
     monkeypatch.setattr(screen, "SETTLE_S", 30.0)
     # A layout change restores the place at once; settle() runs it to the end.
     monkeypatch.setattr(schedule_place, "RELAID_S", 0.0)
-    monkeypatch.setattr(schedule_place, "FILTERED_S", 0.0)
+    monkeypatch.setattr(schedule_place, "RELISTED_S", 0.0)
 
     async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
         # Flet's _invoke_method reads it first: a list off the page raises.
@@ -843,6 +844,47 @@ async def test_a_text_size_change_keeps_the_slot_at_the_top(
     schedule, _ = await _at_two(shown)
     heights = await _lay_out(schedule, scale=1.3)
     assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+    assert schedule.keyed() == []
+
+
+async def test_a_text_size_shrinking_the_slot_under_the_place_keeps_the_slot(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """Deep into 2:00 PM, a smaller text size puts its time at the top, not the slot
+    after it, which would then stay the place."""
+    schedule = await shown()
+    heights = await _lay_out(schedule)
+    into = heights[TWO_PM] - ROW_DP / 2  # in its last row
+    await schedule.scroll_end(FRIDAY, _top(heights, TWO_PM) + into)
+    schedule.forget()
+    heights = await _lay_out(schedule, scale=0.5)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+    assert memory.schedule_anchor is not None
+    assert memory.schedule_anchor.key == TWO_PM
+
+
+async def test_a_refresh_that_drops_a_whole_slot_above_keeps_the_slot_at_the_top(
+    shown: Callable[[], Awaitable[Shown]], conference: Conference
+) -> None:
+    """No other height changes, so nothing reports: the change of slots restores it."""
+    schedule, _ = await _at_two(shown)
+    before = {key for key, _ in _measured(schedule)}
+    dropped = "slot-2026-05-15T09:25:00-07:00"
+    assert _tracks_of(dropped) == {"Plenary"}  # one keynote, conf_key 152
+
+    def without_it(document: dict[str, Any]) -> None:
+        document["schedule"] = [
+            s for s in document["schedule"] if s.get("conf_key") != 152
+        ]
+
+    conference.data = process(changed(2026, without_it), settings(2026))
+    conference.version += 1
+    await settle()
+    heights = {
+        key: _height(schedule, item, scale=1.0) for key, item in _measured(schedule)
+    }
+    assert set(heights) == before - {dropped}
+    assert _offsets(schedule) == [_top(heights, TWO_PM) + 1]
     assert schedule.keyed() == []
 
 

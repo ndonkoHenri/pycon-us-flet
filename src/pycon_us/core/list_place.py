@@ -21,6 +21,7 @@ offset and lays the rest out after it, so their slot in view stays put and they 
 none of this.
 """
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -138,7 +139,8 @@ def offset_of(
 ) -> float | None:
     """Return the offset that puts the anchor's slot back at the top of the list.
 
-    The same slot, as far in as it was while its rows are the same; when the filter
+    The same slot, as far in as it was while its rows are the same and that distance
+    still falls within it (or within the now line just above it); when the filter
     changed its rows, its time, under its divider, since the rows that showed may
     have moved within it; when the filter hid it, the next slot shown after it, or
     the day's last slot.
@@ -159,7 +161,7 @@ def offset_of(
         (s for s in slots if s.start is not None and s.start >= anchor.start),
         slots[-1],
     )
-    top = 0.0
+    top = above = 0.0  # above: the now line's height, when it is just above
     for item in items:
         if item is target:
             break
@@ -167,10 +169,19 @@ def offset_of(
         if height is None:
             return None
         top += height
+        above = above + height if item.start is None else 0.0
     if target.key != anchor.key:
         into = target.lead
     elif target.sessions != anchor.sessions:
         into = min(anchor.into, target.lead)
     else:
         into = anchor.into
+    # Kept within the slot, or the line just above it: past either, the top would be
+    # in the next or the previous slot, which the next scroll end would then record
+    # as the place. A smaller text size shrinks the slot under a distance into it;
+    # the line shrinks or moves away from above it.
+    if into >= heights.get(target.key, math.inf):
+        into = target.lead
+    elif into < -above:
+        into = -above if above else target.lead
     return max(0.0, top + into)

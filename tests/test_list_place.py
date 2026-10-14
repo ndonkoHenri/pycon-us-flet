@@ -110,6 +110,28 @@ def test_the_same_slot_comes_back_as_far_in_when_rows_above_it_change() -> None:
     assert offset_of((A, B, C, D), taller, anchor) == 300 + 300 + 30
 
 
+def test_a_slot_that_shrank_under_the_distance_comes_back_at_its_time() -> None:
+    """A smaller text size: 300 dp into B would now be 100 dp into C, and C would
+    become the place; B's time is at the top instead."""
+    anchor = at(B, 300.0)
+    tall = HEIGHTS | {B.key: 400.0}
+    assert offset_of((A, B, C, D), tall, anchor) == 200 + 300
+    smaller = {key: height / 2 for key, height in tall.items()}
+    offset = offset_of((A, B, C, D), smaller, anchor)
+    assert offset == 100 + DIVIDER
+    after = anchor_at((A, B, C, D), smaller, offset)
+    assert after is not None
+    assert after.key == B.key
+
+
+def test_a_line_that_shrank_or_went_keeps_the_slot_under_it_at_the_top() -> None:
+    anchor = at(C, -30.0)  # all of the 30 dp line showed
+    smaller = HEIGHTS | {NOW_KEY: 15.0}
+    assert offset_of((A, B, LINE, C, D), smaller, anchor) == 400 + 15 - 15
+    gone = ListItem(C.key, C.start, C.sessions, DIVIDER)  # it takes the divider back
+    assert offset_of((A, B, gone, D), HEIGHTS, anchor) == 400 + DIVIDER
+
+
 def test_a_slot_whose_rows_changed_comes_back_at_its_time() -> None:
     anchor = at(B, 150.0)
     fewer = ListItem(B.key, B.start, ("4",), DIVIDER)

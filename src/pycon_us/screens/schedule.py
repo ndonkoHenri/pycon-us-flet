@@ -136,7 +136,6 @@ def Schedule() -> ft.View:
         shown_today=shown == current,
         slots=today_slots,
         line=place.line if place is not None else None,
-        excluded=excluded,
     )
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
