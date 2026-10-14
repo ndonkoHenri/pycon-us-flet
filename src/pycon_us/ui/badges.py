@@ -278,10 +278,12 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
 
     @report_errors
     async def toggle(session_id: str) -> None:
+        closes = _SHOWN.get(page)  # before the first await: a later edit's is newer
         change = await favorites.toggle(svc.storage, session_id)
         if change.added:
             await selection_click(svc.haptics)
-        _announce(page, favorites, svc.storage, change, keep=prefs.screen_reader)
+        keep = prefs.screen_reader
+        _announce(page, favorites, svc.storage, change, keep=keep, closes=closes)
 
     return ft.use_callback(toggle, [])
 
@@ -293,6 +295,7 @@ def _announce(
     change: Change,
     *,
     keep: bool,
+    closes: ref[ft.SnackBar] | None,
 ) -> None:
     """Report a star edit through ``_report()``: ``feedback()``'s SnackBar, or none.
 
@@ -305,14 +308,18 @@ def _announce(
         change: The edit.
         keep: A screen reader is on: an Undo SnackBar stays until it is used,
             replaced or closed by the next edit (D-184, D-251).
+        closes: The SnackBar the page showed last when the edit started, which an
+            edit that says nothing may close (``_report()``).
     """
 
     @report_errors
     async def undo() -> None:
+        closes = _SHOWN.get(page)
         reverse = await favorites.undo(storage, change)
-        _announce(page, favorites, storage, reverse, keep=keep)
+        _announce(page, favorites, storage, reverse, keep=keep, closes=closes)
 
-    _report(page, feedback(change), undo=undo if change.removed else None, keep=keep)
+    undoes = undo if change.removed else None
+    _report(page, feedback(change), undo=undoes, keep=keep, closes=closes)
 
 
 def added_feedback(change: Change) -> str:
@@ -359,20 +366,21 @@ def use_add_all(favorites: Favorites) -> AddAll:
 
     @report_errors
     async def add_all(session_ids: Iterable[str]) -> None:
+        closes = _SHOWN.get(page)  # a show ignores it, but read it before any await
         change = await favorites.add_many(svc.storage, session_ids)
         if change.added:
             await selection_click(svc.haptics)
 
         @report_errors
         async def undo() -> None:
+            closes = _SHOWN.get(page)
             reverse = await favorites.undo(svc.storage, change)
             message = None if reverse.saved else NOT_SAVED
-            _report(page, message, undo=None, keep=prefs.screen_reader)
+            _report(page, message, undo=None, keep=prefs.screen_reader, closes=closes)
 
+        undoes = undo if change.added else None
         message = added_feedback(change)
-        _report(
-            page, message, undo=undo if change.added else None, keep=prefs.screen_reader
-        )
+        _report(page, message, undo=undoes, keep=prefs.screen_reader, closes=closes)
 
     return add_all
 
@@ -383,6 +391,7 @@ def _report(
     *,
     undo: Callable[[], Awaitable[None]] | None,
     keep: bool,
+    closes: ref[ft.SnackBar] | None,
 ) -> None:
     """Report a favourites edit: its SnackBar, or none, never the last edit's (D-251).
 
@@ -394,7 +403,10 @@ def _report(
     outlive the add or Undo that saved the session again (#334). It closes that
     SnackBar only, never ``page.pop_dialog()``'s top dialog (ux.md §4.5); and only
     when nothing is shown, since a close and a show sent together each remove the
-    current SnackBar after the frame, in an order Flet does not promise.
+    current SnackBar after the frame, in an order Flet does not promise. Edits
+    overlap (a second tap while the first awaits its write or its haptic click), so
+    it closes only the SnackBar that was last when the edit started, and only while
+    it is still the last: an older edit must not close a newer edit's SnackBar.
 
     Args:
         page: The session's page.
@@ -403,10 +415,14 @@ def _report(
         keep: A screen reader is on: an Undo SnackBar stays until it is used,
             replaced or closed by the next edit, as Flutter keeps one with an
             action (D-184, D-251).
+        closes: ``_SHOWN``'s entry for the page when the edit started, read before
+            its first await; a SnackBar shown since then is a newer edit's.
     """
     if message is None:
-        shown = _SHOWN.pop(page, None)
-        last = shown() if shown else None
+        if closes is None or _SHOWN.get(page) is not closes:
+            return  # there was none, or a newer edit showed its own: leave it
+        del _SHOWN[page]
+        last = closes()
         if last is not None and last.open:  # Flet sets open False once it has gone
             last.open = False
             last.update()

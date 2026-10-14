@@ -9,6 +9,7 @@ always carries a name from ``track_name()`` (DATA-28). How badges look is checke
 devices (the PR). The sessions are the recorded 2026 feed's.
 """
 
+import asyncio
 import gc
 import logging
 from collections.abc import AsyncIterator, Callable
@@ -34,7 +35,7 @@ from pycon_us.ui.badges import (
     session_badges,
 )
 from tests import row_sessions
-from tests.fakes import MemoryHaptics
+from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
 from tests.row_sessions import Rendered, rendering
 from tests.sessions import text_of
@@ -291,6 +292,65 @@ async def test_a_snack_bar_that_has_gone_is_not_closed_again(
     await rendered.tap_star(row_sessions.TALK)
     assert rendered.favorites.ids == {row_sessions.TALK}
     assert sent == []
+
+
+def hold_first(
+    monkeypatch: pytest.MonkeyPatch, service: type[MemoryHaptics | MemoryPrefs]
+) -> asyncio.Event:
+    """Hold the service's first call until the returned event is set; later ones run."""
+    gate = asyncio.Event()
+    calls = 0
+    original = service._invoke_method
+
+    async def held(self: Any, *args: Any, **kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await gate.wait()
+        return await original(self, *args, **kwargs)
+
+    monkeypatch.setattr(service, "_invoke_method", held)
+    return gate
+
+
+async def test_an_older_add_leaves_a_newer_removals_snack_bar(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A fast double tap: the add, still in its haptic click, reports after the removal."""
+    gate = hold_first(monkeypatch, MemoryHaptics)
+    star = rendered.star(row_sessions.TALK)
+    # Flet runs each event as its own task (flet_socket_server.py), so taps overlap.
+    add = asyncio.create_task(rendered.session.dispatch_event(star._i, "click", None))
+    await rendered.settle()
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    await rendered.tap_star(row_sessions.TALK)
+    snack = rendered.snack_bars[-1]
+    assert text_of(snack.content) == REMOVED and snack.open
+    gate.set()
+    await add
+    await rendered.settle()
+    assert rendered.favorites.ids == frozenset()
+    assert snack.open
+    assert badges._SHOWN[rendered.session.page]() is snack  # the next edit closes it
+
+
+async def test_an_older_undo_leaves_a_newer_removals_snack_bar(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An Undo still awaiting its write reports after a newer removal."""
+    first = await removed(rendered, row_sessions.TALK)
+    gate = hold_first(monkeypatch, MemoryPrefs)
+    on_undo = cast(Callable[[], Any], cast(ft.SnackBarAction, first.action).on_click)
+    undo = asyncio.create_task(on_undo())
+    await rendered.settle()
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    await rendered.tap_star(row_sessions.TALK)
+    second = rendered.snack_bars[-1]
+    assert second is not first and text_of(second.content) == REMOVED
+    gate.set()
+    await undo
+    await rendered.settle()
+    assert second.open
 
 
 async def test_a_page_with_an_undo_snack_bar_is_released_when_its_session_ends(
