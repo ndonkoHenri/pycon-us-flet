@@ -2,18 +2,15 @@
 
 Two places, one job each:
 
-* **SharedPreferences** for small values. Every key is a ``Pref`` in the table
-  below, prefixed ``pycon.``, with its type and default. SharedPreferences
-  takes only ``str``, ``int``, ``float``, ``bool`` and ``list[str]`` (F12), so
-  dict values are stored as JSON strings.
-* **Files in the durable data directory** (``FLET_APP_STORAGE_DATA``) for the
-  raw feed cache, ``feed-<year>.json``. Files are replaced atomically, so a
-  reader sees the old file or the new one, never half of one.
+* **SharedPreferences** for small values. Every key is a ``Pref`` in the table below,
+  prefixed ``pycon.``, with its type and default. SharedPreferences takes only ``str``,
+  ``int``, ``float``, ``bool`` and ``list[str]`` (F12), so dict values are JSON strings.
+* **Files in the durable data directory** (``FLET_APP_STORAGE_DATA``) for the raw feed
+  cache, ``feed-<year>.json``, replaced atomically: readers see the old file or the new.
 
-Storage failures are expected failures (D-71): they are logged and returned,
-never raised, because the data in memory stays correct for the session and the
-next write tries again (D-120). The one exception is a data directory that
-cannot be created, which means a broken install.
+Storage failures are expected (D-71): logged and returned, never raised, because the
+data in memory stays correct for the session and the next write tries again (D-120).
+The one exception is a data directory that cannot be created: a broken install.
 """
 
 import asyncio
@@ -23,7 +20,7 @@ import json
 import logging
 import os
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
@@ -45,7 +42,7 @@ Both messages can repeat the call's arguments: where those hold personal data (a
 address), a log names the class only (D-72)."""
 
 _write_lock = threading.Lock()
-"""Serialises ``write_atomic``: a cancelled ``to_thread`` write keeps running (D-120)."""
+"""Gives writes and deletions turns, a cancelled one's too (D-120), not order (D-244)."""
 
 
 @dataclass(frozen=True)
@@ -182,11 +179,7 @@ class CachedFeed:
 
 
 def _unlink(path: Path) -> None:
-    """Delete ``path`` if it exists, after any ``write_atomic`` in progress (the lock).
-
-    A refresh whose task was cancelled can still be writing in its thread (D-120): a
-    deletion that ran first would see the file come back when that write lands.
-    """
+    """Delete ``path`` if it exists, never in the middle of a ``write_atomic`` (the lock)."""
     with _write_lock:
         path.unlink(missing_ok=True)
 
@@ -223,6 +216,8 @@ class Storage:
     prefs: ft.SharedPreferences
     directory: Path
     year: int
+    # The feed writes not landed yet, even those whose caller was cancelled (D-244).
+    _writes: set[asyncio.Task[bool]] = field(default_factory=set, init=False)
 
     async def get[T](self, pref: Pref[T]) -> T:
         """Read a preference.
@@ -319,6 +314,13 @@ class Storage:
             Whether the cache was replaced; a failure is logged and the previous
             cache stays.
         """
+        # Its own task, so a cancelled caller leaves it to land, as its thread does.
+        write = asyncio.create_task(self._write_feed(raw))
+        self._writes.add(write)
+        write.add_done_callback(self._writes.discard)
+        return await asyncio.shield(write)
+
+    async def _write_feed(self, raw: bytes) -> bool:
         try:
             await asyncio.to_thread(write_atomic, self.feed_path, raw)
         except OSError:
@@ -333,8 +335,9 @@ class Storage:
 
         The one way the cache goes: a cache that no longer parses, the Developer feed
         URL turned off (D-187), and the Developer screen's Clear cached feed and Reset
-        app (D-198). Without it the next start uses the bundled snapshot (D-39). A
-        write in progress lands first, then the deletion (``_unlink``).
+        app (D-198). Without it the next start uses the bundled snapshot (D-39). Every
+        ``write_feed`` asked for before it lands first, a cancelled caller's too: the
+        threads' lock gives turns, not order, so it could bring the file back (D-244).
 
         Args:
             reason: Why, for the log, e.g. "it does not parse: <error>".
@@ -343,6 +346,8 @@ class Storage:
             Whether the cache is gone (or there was none); a failure is logged.
         """
         logger.warning("Deleting the cached feed %s: %s", self.feed_path.name, reason)
+        if self._writes:
+            await asyncio.wait(set(self._writes))
         try:
             await asyncio.to_thread(_unlink, self.feed_path)
         except OSError:

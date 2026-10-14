@@ -25,7 +25,7 @@ from pycon_us.feed_refresh import REFRESH_EVERY, Status
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests.fakes import MemoryPrefs
+from tests.fakes import MemoryPrefs, QueuedWrite
 from tests.feeds import changed
 
 NOW = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
@@ -1017,6 +1017,47 @@ async def test_a_refresh_whose_feed_url_is_left_during_its_cache_write_publishes
     await conference.refresh(storage, year, transport=serving_any(NETWORK_FEED))
     assert not storage.feed_path.exists()  # deleted after the write
     assert (conference.source, conference.version) == ("bundled", 1)
+
+
+async def test_a_feed_url_left_before_the_write_takes_its_turn_keeps_no_cache(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The write's worker is queued for the writers' lock when the URL is left: the
+    # deletion asked for after it must not take the lock first (D-244).
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    held = QueuedWrite(monkeypatch)
+    running = conference.start_refresh(
+        storage, year, transport=serving_any(NETWORK_FEED)
+    )
+    await held.queued()
+    leaving = asyncio.create_task(conference.set_feed_url(None, storage))
+    done, _ = await asyncio.wait({leaving}, timeout=0.1)
+    held.release()
+    await asyncio.gather(leaving, running)
+    assert not done  # the deletion waited for the write
+    assert not storage.feed_path.exists()
+    assert (conference.source, conference.version) == ("bundled", 1)
+
+
+async def test_reset_during_a_queued_cache_write_keeps_no_cache(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Reset cancels the refresh, but not its worker thread, which writes on (D-120).
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    held = QueuedWrite(monkeypatch)
+    running = conference.start_refresh(
+        storage, year, transport=serving_any(NETWORK_FEED)
+    )
+    await held.queued()
+    resetting = asyncio.create_task(conference.reset(storage, year))
+    done, _ = await asyncio.wait({resetting}, timeout=0.1)
+    held.release()
+    assert await resetting is True
+    assert not done
+    assert running.cancelled()
+    assert not storage.feed_path.exists()
 
 
 # ------------------------------------------------------------------ reset (D-198)
