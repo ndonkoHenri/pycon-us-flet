@@ -89,7 +89,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 | UI flows on the Android emulator (development.md §5.7) | `uv run flet test android -d <emulator-id> --tests-dir tests/ui -v` |
 | UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui -v` |
 | One flow | add `-k shell` |
-| UI flows while another build may run (parallel agents) | prefix with the worktree's own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-176) |
+| UI flows while another build may run (parallel agents) | from a worktree with its own Flet clone, prefix with its own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-219, D-176) |
 | Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
 | Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
 

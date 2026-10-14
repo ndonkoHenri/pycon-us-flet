@@ -26,7 +26,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 | # | Id | Gap | Feature ids | Interim (ships now) | Upstream piece | App needs it | Effort | Status |
 |---|---|---|---|---|---|---|---|---|
-| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7 and the Android receivers | P2 (spike S6 during P1) | M | #6948 is an open issue (v1 scope, no scheduling); no PR yet |
+| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
 | 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
 | 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
 | 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
@@ -45,7 +45,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 | Id | What | Needed by | Status |
 |---|---|---|---|
-| **U7** | Core library desugaring in the Android `:app` module | E3: `flutter_local_notifications` requires it **even without scheduling**, so #6948 v1 must solve it | needed (§4.1) |
+| **U7** | Core library desugaring in the Android `:app` module | E3: `flutter_local_notifications` requires it **even without scheduling**, so #6948 v1 must solve it | needed: S6's build failed without it (§4.1, [#293](https://github.com/ndonkoHenri/pycon-us-flet/issues/293)) |
 | **U6** | Extra Android `<queries>` entries | E4; `can_launch_url` (INFO-14, which avoids it) | only with E4 |
 | **U12** | Configurable iOS deployment target | A pod needing more than iOS 15 | **not needed**: pod minimums are 11.0–13.0 (§6) |
 | **U13** | App-level `PrivacyInfo.xcprivacy` | ITMS-91053 in the S5 TestFlight upload | only if S5 reports it |
@@ -213,11 +213,11 @@ flet-cli run from a source checkout already uses the local build template and ov
 |---|---|
 | Serves | NOTIF-05 (fixed conference moments), NEW-05 (reminders before saved sessions), NOTIF-01 and STORE-10 (reminder settings), NOTIF-06 (permission in context), NOTIF-10 (the permission card), DEV-06 (test reminder), NATIVE-06 (declarations). Taps open NEW-07 paths. |
 | Interim (D-60) | • Settings › Reminders shows "Reminders aren't available in this build", with no live switches.<br>• Now's "Your next session" covers the app being open, and so does an in-app `Banner` with "Open" and "Dismiss" 10 min before a saved session.<br>• `.ics` with a `VALARM`: "Remind me" on session detail and "Add all to calendar" in My schedule (`core/ics.py`, D-62). |
-| Upstream | Two parts:<br>(a) The official local-notifications extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948), opened by Feodor Fitsner on 2026-10-10. Its v1 scope is `initialize`, `request_permission`, `get_permission_status`, `show`, `cancel`, `cancel_all`, `get_launch_details` and `on_notification_tap`. **Scheduled and periodic notifications are explicitly out of v1.**<br>(b) Our follow-up PR "scheduling", built on v1. |
+| Upstream | Two parts:<br>(a) The official local-notifications extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948), opened by Feodor Fitsner on 2026-10-10. Its v1 scope is `initialize`, `request_permission`, `get_permission_status`, `show`, `cancel`, `cancel_all`, `get_launch_details` and `on_notification_tap`. **Scheduled and periodic notifications are explicitly out of v1.**<br>(b) Our follow-up PR "scheduling", built on v1.<br>(c) Spike S6 ran the scheduling part of this scope and v1's initialize, permission, launch-details and tap members (not `show` or `cancel`), Android and iOS setup included, through a throwaway extension over the same plugin (`docs/spikes/06-reminders/`); D-220 records what it must carry. Written up for the owner in [#294](https://github.com/ndonkoHenri/pycon-us-flet/issues/294) (D-212). |
 | Dart packages | `flutter_local_notifications` **22.3.1** (BSD-3; 2026-09-13; minSdk 24; iOS pod 13.0) with `timezone` **0.11.1**. Flet 1.1 (Flutter 3.47.7, AGP 8.13.2, default minSdk 24) meets every minimum. |
 | Python package | Per #6948: dist `flet-local-notifications`, module `flet_local_notifications`, class `LocalNotifications`. **Both `flet-local-notifications` and `flet-notifications` are taken on PyPI** by unrelated projects (§6). The dist name is the Flet team's call; our code changes in `capabilities.py` and `services/reminders.py` only. |
 | Ownership | The Flet team owns v1; U adds scheduling on top, with no fork or competing package (D-97, D-99). The old `ndonkoHenri/notifications` branch (`awesome_notifications`) is not a base. |
-| Effort | M for scheduling (Dart service, Python API, Android module or CLI hook, tests), plus S6. U7 belongs to v1. |
+| Effort | M for scheduling (Dart service, Python API, an Android library module and a Swift plugin class, tests). U7 belongs to v1. S6 is done. |
 | Gate | `capabilities.REMINDERS`. The dependency is added only once the pinned Flet contains the scheduling PR, in the dependency PR just before adoption, so a v1-only package never turns the capability on. |
 
 **Python API added by the scheduling PR** (proposed; v1 members omitted):
@@ -272,14 +272,20 @@ class LocalNotifications(ft.Service):
         """Return the notifications scheduled but not yet shown."""
         pending = await self._invoke_method("get_pending")  # a list of dicts on the wire
         return [from_dict(PendingNotification, p) for p in pending or []]
+
+    async def cancel_all_pending(self) -> None:
+        """Cancel every scheduled notification, leaving the ones already shown (D-222)."""
+        await self._invoke_method("cancel_all_pending")
 ```
+
+`zoned_schedule` with `EXACT_ALLOW_WHILE_IDLE` while Android denies exact alarms raises the plugin's `exact_alarms_not_permitted` (S6); the caller checks `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` first (D-221).
 
 **Semantics.**
 - **Time.** A one-shot reminder needs only an instant: Dart parses the ISO string and schedules `tz.TZDateTime.from(instant, tz.UTC)`, with no device time-zone lookup. DST is resolved in Python, where `at` is built in the conference zone (D-43). Repeating schedules, which would need an IANA zone, are out of scope.
-- **Ids** are deterministic 32-bit ints. A session reminder uses the numeric session id (schedule 1–1147, open spaces 9025–9177), or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids (`reminder_id()`, architecture §14.1). Event reminders use 8000–8099. The test reminder (DEV-06) uses 8999, as Ionic did. A unit test checks a year's plan for collisions. Because `apply()` cancels everything, a re-plan can remove a pending test reminder; that is acceptable for a developer tool.
-- **Taps.** `on_notification_tap` (v1) and `get_launch_details()` (v1, for cold start) deliver `payload`. The app puts the deep-link path there (`/my-schedule/session/<id>`) and navigates as for a link (D-21).
-- **Inexact by default** (D-59). Android 14+ does not grant exact alarms to new installs, and inexact delivery is usually within minutes. Exact timing is opt-in, only if S6 shows inexact delivery is too late. In that case, declare `SCHEDULE_EXACT_ALARM` and check it with `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` (exists), rather than adding a new API.
-- **Limit.** iOS keeps 64 pending requests, so the app schedules at most the next 60 (D-59).
+- **Ids** are deterministic 32-bit ints. A session reminder uses the numeric session id (schedule 1–1147, open spaces 9025–9177), or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids (`reminder_id()`, architecture §14.1). Event reminders use 8000–8099. The test reminder (DEV-06) uses 8999, as Ionic did. A unit test checks a year's plan for collisions. Because `apply()` cancels every pending reminder, a re-plan can remove a pending test reminder; that is acceptable for a developer tool.
+- **Taps.** `on_notification_tap` (v1) and `get_launch_details()` (v1, for cold start) deliver `payload`. The app puts the deep-link path there (`/my-schedule/session/<id>`) and navigates as for a link (D-21). On iOS both need the notification delegate (Platform setup, F53).
+- **Exact when allowed** (D-221, amends D-59's inexact default). Android 14 gives an inexact alarm a window of 75 % of the time left and delivers it anywhere in it, at its end when nothing else wakes the device (S6: +90 s on 2 min, +180 s on 4 min, +80 s on 10 min, +370 s on 30 min). Outside forced Doze, exact alarms fired within seconds (+0.3 s to +5.4 s over three runs); in forced deep Doze an exact one came +59.3 s late (inexact: +90.1 s), so exact is sooner, not guaranteed on time. Android 14 denies exact alarms to new installs, so the app declares `SCHEDULE_EXACT_ALARM`, asks in context through `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` (exists), and falls back to inexact with honest copy.
+- **Limit.** iOS keeps 64 pending requests and, on the simulator, dropped the **soonest** six of 70 (the first added), so `plan()` returns at most the next 60, soonest first (D-222). Android kept all 70.
 
 **App side** (`services/reminders.py`; `plan()` is pure and tested without Flet):
 
@@ -291,7 +297,7 @@ from datetime import datetime
 
 from pycon_us import capabilities
 
-MAX_PENDING = 60  # iOS keeps 64 pending requests (D-59)
+MAX_PENDING = 60  # iOS keeps 64 pending requests and drops the soonest beyond (D-222)
 
 _service = None  # the E3 service once start() built it; None means the interim (D-60)
 
@@ -323,38 +329,51 @@ def start() -> bool:
     return True
 
 
-async def apply(plan: list[Reminder]) -> None:
-    """Cancel every pending reminder, then schedule the plan ("cancel all, reschedule")."""
+async def apply(plan: list[Reminder], *, exact: bool) -> None:
+    """Cancel every pending reminder, then schedule the plan ("cancel all, reschedule").
+
+    `plan` is already capped at MAX_PENDING (D-222); `exact` is whether Android
+    allows exact alarms (D-221), and is ignored on iOS.
+    """
     if _service is None:
         return
-    await _service.cancel_all()
-    for r in plan[:MAX_PENDING]:
-        await _service.zoned_schedule(r.id, r.title, r.body, r.at, payload=r.route)
+    import flet_local_notifications as fln
+
+    mode = (
+        fln.AndroidScheduleMode.EXACT_ALLOW_WHILE_IDLE
+        if exact
+        else fln.AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE
+    )
+    await _service.cancel_all_pending()  # never the shown ones (D-222)
+    for r in plan:
+        await _service.zoned_schedule(
+            r.id, r.title, r.body, r.at, payload=r.route, android_schedule_mode=mode
+        )
 ```
 
-`apply(plan)` (D-59) re-runs whenever favourites, reminder settings or the feed change, so a moved session moves its reminder. App calls `reminders.start()` and `reminders.apply()` and never imports the extension.
+`apply(plan)` (D-59, D-222) re-runs whenever favourites, reminder settings or the feed change, so a moved session moves its reminder (S6: the same id rescheduled fired once, at the new time), and at every start and resume, which brings back alarms a force-stop cleared. App calls `reminders.start()` and `reminders.apply()` and never imports the extension.
 
 **Platform setup.**
 
 | Platform | Entry | How | Status |
 |---|---|---|---|
 | Android | Core library desugaring | `flutter_local_notifications` requires `isCoreLibraryDesugaringEnabled` and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` in the **app** module, even when nothing is scheduled. The template sets Java 17 and no desugaring (`TPL/android/app/build.gradle.kts:65-68`), and no CLI option adds it. **U7** (§5.10) is therefore a prerequisite of #6948 v1, not only of scheduling. | missing (U7) |
-| Android | Receivers and the boot permission (scheduling only) | `ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver` (boot actions `BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `QUICKBOOT_POWERON`) and `RECEIVE_BOOT_COMPLETED`. The plugin's manifest has only `VIBRATE` and `POST_NOTIFICATIONS` (22.3.1 archive), and the template has no `<receiver>` hook. **Preferred:** the extension ships an Android library module declaring them, merged by Gradle. Flet extensions are plain Dart packages, so this needs a `flutter: plugin: platforms: android:` pubspec entry (with a no-op `pluginClass` if flutter_tools insists) and `"android/**"` in package-data. **Fallback:** a `[tool.flet.android.receiver]` table rendered like `provider` (`TPL/.../AndroidManifest.xml:67-71`). S6 decides. | missing |
+| Android | Receivers and the boot permission (scheduling only) | `ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver` (boot actions `BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `QUICKBOOT_POWERON`) and `RECEIVE_BOOT_COMPLETED`. The plugin's manifest has only `VIBRATE` and `POST_NOTIFICATIONS` (22.3.1 archive), and the template has no `<receiver>` hook. **Preferred:** the extension ships an Android library module declaring them, merged by Gradle. Flet extensions are plain Dart packages, so this needs a `flutter: plugin: platforms: android:` pubspec entry (with a no-op `pluginClass` if flutter_tools insists) and `"android/**"` in package-data. **Fallback:** a `[tool.flet.android.receiver]` table rendered like `provider` (`TPL/.../AndroidManifest.xml:67-71`). **S6 chose the preferred way** (D-220, F52): a Java no-op `pluginClass` (flutter_tools builds a plugin's `android/` only when it names one) and package-data `"**/*"`; the receivers reached the release APK's merged manifest and delivered after a reboot. | in the extension (D-220) |
 | Android | `POST_NOTIFICATIONS` (API 33+) | The plugin's manifest merges it. We also declare it explicitly so the app's manifest is self-describing: `[tool.flet.android.permission] "android.permission.POST_NOTIFICATIONS" = true` (exists, `CLI/build_base.py:1259`). | exists |
-| Android | Exact alarms | Not declared by default (inexact). Declare `SCHEDULE_EXACT_ALARM` only after S6; never `USE_EXACT_ALARM`, which is for alarm and calendar apps. | n/a |
-| Android | R8 in release builds | The plugin serialises scheduled notifications with GSON. The template's default rules include `-keepnames class * { *; }`, and `[tool.flet.android] proguard_rules = [...]` (a list appended to the defaults; exists, `CLI/build_base.py:1267-1270`) can append GSON keep rules. `proguard_default_rules = false` drops the defaults. S6 tests a **release** build: schedule, reboot, fire. | verify in S6 |
-| Android | Small icon | `@mipmap/ic_launcher` (in the template). A monochrome icon needs a drawable resource hook; later. | exists |
+| Android | Exact alarms | Declare `SCHEDULE_EXACT_ALARM` (`[tool.flet.android.permission]`, exists) and ask in context (D-221); never `USE_EXACT_ALARM`, which is for alarm and calendar apps. | exists (D-221) |
+| Android | R8 in release builds | The plugin serialises scheduled notifications with GSON. The template's default rules include `-keepnames class * { *; }`, and `[tool.flet.android] proguard_rules = [...]` (a list appended to the defaults; exists, `CLI/build_base.py:1267-1270`) can append GSON keep rules. `proguard_default_rules = false` drops the defaults. **S6:** with the default rules the R8 mapping keeps the plugin's model names, and a release APK delivered, rebooted and delivered again; no extra rules while the defaults stay on. | exists (S6) |
+| Android | Small icon | `@mipmap/ic_launcher` (in the template) is drawn as a plain disc in the status bar and the shade (S6). The extension ships a monochrome vector drawable in its Android module, with a `res/raw/*_keep.xml` (`tools:keep`) because the plugin finds it by name; S6 saw it survive R8 and show in light and dark. An app that wants its own icon names it in `initialize` (a drawable resource hook for apps is later). | in the extension (D-220) |
 | iOS | Permission | Request through the extension's `request_permission()` (v1). The template's permission_handler macros have no notifications entry (F17), so not through `flet-permission-handler`. | v1 |
-| iOS | Notification delegate | The plugin README requires `UNUserNotificationCenter.current().delegate = self` in `AppDelegate`, for taps and foreground presentation. The template's `AppDelegate.swift` is stock and does not set it, and the plugin does not set it either (checked in 22.3.1). **#6948 v1 must solve this** for `on_notification_tap` to work on iOS: either a template line or a delegate set from the extension's iOS side. | missing (v1) |
+| iOS | Notification delegate | The plugin README requires `UNUserNotificationCenter.current().delegate = self` in `AppDelegate`, for taps and foreground presentation. The template's `AppDelegate.swift` is stock and does not set it, and the plugin does not set it either (checked in 22.3.1). **#6948 v1 must solve this** for `on_notification_tap` to work on iOS. **S6:** with the stock template the simulator delivered reminders but reported no tap, cold or warm; a Swift plugin class in the extension that sets the delegate fixed both, so no template line is needed (D-220, F53). | in the extension (D-220) |
 
-**Spike S6** (during P1, upstream track; PLAN §8). The question: can a release build deliver reminders reliably when the app isn't running? On the iPhone and an Android emulator (D-102): schedule 2 min ahead and kill the app; lock the screen; reboot (the emulator); deny notifications, and exact alarms (the emulator, Android 14+); tap from a cold start; plan more than 64 candidates (iPhone); move a saved session in a fixture feed and check that its reminder moves. The verdict decides the Android receiver approach, whether exact alarms are worth it, and the GSON rules.
+**Spike S6** (done 2026-10-14, [verdict](spikes/06-reminders.md)): yes on both platforms, with the receivers, the icon and the iOS delegate in the extension, U7 in Flet, exact alarms when allowed (D-221) and the cap of 60 in `plan()` (D-222). The release-build checks on the iPhone (locked phone, more than 64, Focus) are held for #121.
 
 **Tests.**
-- **Extension:** `zoned_schedule` at now + 70 s appears in `get_pending`, and `cancel` removes it; a naive `at` raises `ValueError`; the instant is exact across the 2027-03-14 US DST change; scheduling works on an API 34 emulator with exact alarms denied.
-- **App:** unit tests for the pure `plan()` (past instants skipped, the cap of 60, deterministic ids, lead times); `apply()` against a fake service set as `_service`; `start()` picks the interim when not embedded.
+- **Extension:** `zoned_schedule` at now + 70 s appears in `get_pending`, and `cancel` removes it; a naive `at` raises `ValueError`; the instant is exact across the 2027-03-14 US DST change; scheduling works on an API 34 emulator with exact alarms denied; exact scheduling with them denied raises `exact_alarms_not_permitted`; `cancel_all_pending` leaves a shown notification in place; on iOS a cold-start tap carries its payload (the delegate).
+- **App:** unit tests for the pure `plan()` (past instants skipped, the cap of 60 keeping the soonest, deterministic ids, lead times); `apply()` against a fake service set as `_service`; `start()` picks the interim when not embedded.
 
 **Upgrade** (§2.4, plus):
-1. After the pin PR for the Flet release, or commit, that contains #6948 v1 and the scheduling PR, a separate dependency PR adds the extension's exact pin. The adoption PR then adds `POST_NOTIFICATIONS` and anything else S6 required.
+1. After the pin PR for the Flet release, or commit, that contains #6948 v1 and the scheduling PR, a separate dependency PR adds the extension's exact pin. The adoption PR then adds `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221); the receivers, the icon and the iOS delegate come with the extension (D-220).
 2. Settings › Reminders switches become live, and the permission card appears (NOTIF-01, NOTIF-06, NOTIF-10).
 3. The in-app `Banner` stays for the foreground, and the `.ics` actions stay.
 4. Run the P2 exit check: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, and a tap opens the session.
@@ -701,7 +720,8 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 - **Today:** `compileOptions` sets Java 17 with no desugaring (`TPL/android/app/build.gradle.kts:65-68`). None of the existing `:app` options (`min_sdk_version`, `gradle_properties`, `proguard_rules`, signing, splits) enables it.
 - **Change:** `[tool.flet.android] core_library_desugaring = true` (plus a CLI flag) renders `isCoreLibraryDesugaringEnabled = true` and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`.
 - **Alternative for the Flet team:** enable it unconditionally in the template. It is harmless for apps that don't need it, and it removes a knob.
-- **Scope:** if S6 picks the fallback for E3's receivers, this PR also adds a `[tool.flet.android.receiver]` table, rendered like `provider`.
+- **Scope:** desugaring only. S6 put E3's receivers in the extension's Android module (D-220), so no `[tool.flet.android.receiver]` table is needed.
+- **Issue:** [#293](https://github.com/ndonkoHenri/pycon-us-flet/issues/293), with S6's failing build and the draft diff.
 - **Test:** `flet build apk` of an app using `flutter_local_notifications` 22.3.1 fails without the setting and succeeds with it.
 
 ### 5.11 U12 and U13 (conditional)
@@ -761,7 +781,7 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 
 Tracked by `upstream` issues; none needs a decision here:
 1. **E3 package name:** both `flet-local-notifications` (#6948's proposal) and `flet-notifications` are taken on PyPI; the Flet team picks.
-2. **iOS notification delegate** is missing from the stock `AppDelegate.swift`; for #6948 v1, verified in S6.
+2. **iOS notification delegate** is missing from the stock `AppDelegate.swift`; S6 showed the extension can set it (D-220, F53), which E3's write-up ([#294](https://github.com/ndonkoHenri/pycon-us-flet/issues/294)) asks of `flet-dev/flet#6948` v1.
 3. **U16 and U17 as one PR** through `PageMediaData` and the existing `on_media_change`, instead of a separate `SemanticsService` event.
 
 Resolved on 2026-10-11 and applied to PLAN, the decisions record and the matrix: U7 is needed by #6948 v1 itself (PLAN §6); D-64 now reads "replaced only after a PR bumps the pinned Flet; the swap is its own tested PR"; the Developer screen shows capability flags read-only (D-73), so there are no force-interim switches; notification permission goes through E3's `request_permission()` (D-61, NOTIF-06, NATIVE-06); NATIVE-02 no longer depends on U12; NOTIF-10 depends on E3.
