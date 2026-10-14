@@ -29,6 +29,9 @@ START_TIMEOUT = 180.0
 """Seconds from launch to Now. Each run installs the test build afresh, so its first
 launch unpacks Python before it starts, slowly on a busy host's emulator."""
 
+RETAP_SECONDS = 1.0
+"""How long ``tap_until`` waits for a tap's effect before it taps again."""
+
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
 """``android`` or ``ios``, set by ``flet test``."""
 
@@ -134,6 +137,59 @@ async def tap_id(t: RemoteTester, identifier: str) -> None:
 async def tap_text(t: RemoteTester, text: str) -> None:
     """Tap the first control showing exactly this text, once it is on screen."""
     await tap(t, await wait_for_text(t, text))
+
+
+async def tap_tooltip(t: RemoteTester, tooltip: str) -> None:
+    """Tap the first control with this tooltip, an icon button's name (D-27), once shown."""
+    await tap(t, await wait_for_tooltip(t, tooltip))
+
+
+async def tap_until(
+    t: RemoteTester,
+    target: Callable[[], Awaitable[Finder]],
+    done: Callable[[], Awaitable[Finder]],
+    what: str,
+    *,
+    timeout: float = TIMEOUT,
+) -> None:
+    """Tap ``target`` until ``done()`` matches: for a tap an animation can swallow.
+
+    A SnackBar's action slides in for 250 ms, and a tap on it before it has arrived
+    is lost (#197). Rather than wait a fixed time, the tap is repeated, every
+    ``RETAP_SECONDS`` while its effect has not shown, until it shows. Only for a
+    target that acts once, as a SnackBar's action does: a second tap on it does
+    nothing.
+
+    Args:
+        t: The tester.
+        target: Finds the control to tap, e.g. ``lambda: t.find_by_text("Undo")``.
+        done: Finds what the tap brings, e.g. the row an Undo restores.
+        what: The step, for the failure message.
+        timeout: Seconds before the step fails.
+    """
+    deadline = time.monotonic() + timeout
+    retap_at = 0.0
+    while not (await done()).count:
+        now = time.monotonic()
+        if now > deadline:
+            await screenshot_on_failure()
+            raise AssertionError(f"{what}: no effect after {timeout} s of taps")
+        if now >= retap_at:
+            finder = await target()
+            if finder.count:
+                await t.tap(finder.first)
+                retap_at = now + RETAP_SECONDS
+        await t.pump(STEP)
+
+
+async def enter_text_id(t: RemoteTester, identifier: str, text: str) -> None:
+    """Replace the text of the field with this identifier, as typing it would.
+
+    ``RemoteTester.enter_text`` focuses the field (its ``TextField`` under the
+    identifier's node) and hands it the whole text at once, so ``on_change`` runs once.
+    """
+    await t.enter_text((await wait_for_id(t, identifier)).first, text)
+    await t.pump(STEP)
 
 
 async def tap_first_text(t: RemoteTester, texts: Sequence[str]) -> None:

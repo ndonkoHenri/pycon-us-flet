@@ -6,6 +6,7 @@ driven through ``flet_app.tester`` (D-78; testing-and-quality.md §5). Plain
 provisions a Flutter test host.
 """
 
+import socket
 from collections.abc import Iterator
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -24,17 +25,38 @@ FEEDS = Path(__file__).parents[1] / "fixtures" / "feeds"
 def feed_url() -> Iterator[str]:
     """Serve the recorded feeds from this machine; return the active year's feed URL.
 
-    The URL is the one the app can reach: the Android emulator sees this machine at
-    ``10.0.2.2``, the iOS simulator shares its network. Flows set it in the Developer
-    screen (P1-28); a closed port stands for "offline", since airplane mode would also
-    cut the tester's own socket (testing-and-quality.md §5.2).
+    The URL is the one the app can reach (``laptop_url()``). Flows set it in the
+    Developer screen with ``fresh_start()`` (``tests/ui/developer.py``).
     """
     handler = partial(SimpleHTTPRequestHandler, directory=str(FEEDS))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     Thread(target=server.serve_forever, daemon=True).start()
-    host = "10.0.2.2" if PLATFORM == "android" else "127.0.0.1"
     try:
-        yield f"http://{host}:{server.server_address[1]}/conference-{YEAR}.json"
+        yield laptop_url(server.server_address[1])
     finally:
         server.shutdown()
         server.server_close()
+
+
+@pytest.fixture
+def offline_url() -> str:
+    """Return a feed URL on a closed port of this machine: a feed that never answers.
+
+    The port is one the system just handed out and took back, so nothing listens there
+    and the app's request is refused at once: "offline" without airplane mode, which
+    would also cut the tester's own socket (testing-and-quality.md §5.2).
+    """
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    return laptop_url(port)
+
+
+def laptop_url(port: int) -> str:
+    """Return the URL of the active year's feed on this machine's ``port``, as the app reaches it.
+
+    The Android emulator sees this machine at ``10.0.2.2``; the iOS simulator shares its
+    network.
+    """
+    host = "10.0.2.2" if PLATFORM == "android" else "127.0.0.1"
+    return f"http://{host}:{port}/conference-{YEAR}.json"
