@@ -28,7 +28,7 @@ from pycon_us.year_keynotes import keynote_of
 
 TRACK = "Keynote"
 """The keynotes' track key, as feed processing names the feed's kind (DATA-14); the
-hub's Keynotes row is this track's (``config.HUB_PAGES``)."""
+hub's Keynotes row is this track's (``year_tracks.HUB_PAGES``)."""
 
 TITLE = "Keynotes"
 """The page's name: its app bar's title and its More row."""

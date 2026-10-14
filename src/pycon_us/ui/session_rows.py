@@ -4,8 +4,9 @@
 a list owner builds each session's ``SessionView`` once per feed version
 (``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
 tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
-star is a separate stop (D-33). The gutter beside the rows is ``ui.time_gutter``, the
-other rows are ``ui.rows``'s (ux.md §3.9, D-184, D-200).
+star is a separate stop (D-33). The lines under a row's title are
+``ui.row_lines``'s, the gutter beside the rows is ``ui.time_gutter``, the other rows
+are ``ui.rows``'s (ux.md §3.9, D-184, D-200, D-227).
 """
 
 from collections.abc import Sequence
@@ -22,7 +23,6 @@ from pycon_us.core.row_views import (
     session_views,
     spoken_phrase,
 )
-from pycon_us.core.timefmt import on_screen
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -35,14 +35,12 @@ from pycon_us.ui.badges import (
     badge_row,
     badge_specs,
 )
+from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
 from pycon_us.ui.semantics import semantics_key
 
 NOTICE_GROUP = "logistics"
 """The track group (``conference.toml``) whose sessions are notices: breaks, meals and
 announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
-
-_NBSP = "\u00a0"
-"""A no-break space: the "·" stays on its time's line."""
 
 
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
@@ -205,17 +203,17 @@ def _SessionRow(
         )
     )
     if show_time:
-        lines.append(_meta(view))
+        lines.append(meta(view))
     elif view.place:
-        lines.append(_secondary(view.place))
+        lines.append(secondary(view.place))
     if view.speakers:
-        lines.append(_secondary(view.speakers))
+        lines.append(secondary(view.speakers))
     if overlaps:
-        lines.append(_overlap_line(overlaps, tokens.warning))
+        lines.append(overlap_line(overlaps, tokens.warning))
     labels = [label for label, _ in specs]
     phrase = spoken_phrase(labels, view, overlaps=overlaps, show_time=show_time)
     if elapsed is not None:
-        lines.append(_elapsed_bar(elapsed, tokens.live))
+        lines.append(elapsed_bar(elapsed, tokens.live))
         phrase = f"{phrase} {elapsed_phrase(elapsed)}"
     key = semantics_key(session.id)
     text = ft.Semantics(
@@ -249,69 +247,6 @@ def _SessionRow(
         ],
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.START,
-    )
-
-
-def _overlap_line(names: Sequence[str], color: str) -> ft.Control:
-    """Return a row's overlap warning: ``WARNING_AMBER`` beside its lines (ux.md §3.7).
-
-    "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
-    "and 2 more" on a line of its own, so the cut never hides the count (D-188's "Now:"
-    line). Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface
-    (§3.3). The icon tops the text, beside its first line when it wraps.
-    """
-    first, *rest = names
-    texts: list[ft.Control] = [
-        ft.Text(
-            f"Overlaps with “{first}”",
-            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-            color=color,
-            max_lines=3,
-            overflow=ft.TextOverflow.ELLIPSIS,  # the phrase says it in full
-        )
-    ]
-    if rest:
-        more = f"and {len(rest)}\N{NO-BREAK SPACE}more"
-        texts.append(
-            ft.Text(more, theme_style=ft.TextThemeStyle.BODY_MEDIUM, color=color)
-        )
-    return ft.Row(
-        [
-            ft.Container(  # 2 dp down: centred on the 20 dp first line
-                ft.Icon(ft.Icons.WARNING_AMBER, size=16, color=color),
-                padding=ft.Padding.only(top=2),
-            ),
-            ft.Column(texts, spacing=0, expand=True),
-        ],
-        spacing=8,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-    )
-
-
-TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
-"""The elapsed bar's track: a tint of the text, so it shows on every surface, the
-next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or more
-on it."""
-
-
-def _elapsed_bar(elapsed: int, color: str) -> ft.Control:
-    """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173).
-
-    M3's current bar (``year_2023=False``): a gap after the fill, then the track, and
-    a stop dot at its end in ``on_surface_variant`` (4.5:1 or more on every surface),
-    which marks where 100 % is, as M3 asks of a track under 3:1 (WCAG 1.4.11).
-    """
-    return ft.Container(
-        ft.ProgressBar(
-            value=elapsed / 100,
-            bar_height=3,
-            color=color,
-            bgcolor=TRACK,
-            border_radius=3,
-            year_2023=False,
-            stop_indicator_color=ft.Colors.ON_SURFACE_VARIANT,
-        ),
-        padding=ft.Padding.only(top=4),  # 8 dp under the text, with the column's 4
     )
 
 
@@ -361,7 +296,7 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
                         ft.Text(
                             session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL
                         ),
-                        _meta(view, style=ft.TextThemeStyle.BODY_SMALL),
+                        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
                     ],
                     spacing=2,
                     expand=True,
@@ -383,39 +318,3 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
             on_click=_open_session(view_path, session.id) if tappable else None,
         )
     )
-
-
-def _meta(
-    view: SessionView, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
-) -> ft.Control:
-    """Return a row's time and place line: "9:25–10:10 AM · Room 104A".
-
-    The time and the place are two texts in a wrapping row, so at large text a place
-    that does not fit after the time moves to the next line whole, and the "·" ends
-    the time's line rather than starting one; only a place wider than the row wraps
-    inside itself. The time keeps "AM" on its line and breaks only after its dash
-    (``timefmt.on_screen()``, D-229).
-
-    Args:
-        view: The session's row view.
-        style: The line's type style; a notice's is smaller.
-    """
-    when = on_screen(view.when)
-    if not view.place:
-        return _secondary(when, style=style)
-    return ft.Row(
-        [
-            _secondary(f"{when}{_NBSP}·", style=style),
-            _secondary(view.place, style=style),
-        ],
-        wrap=True,
-        spacing=4,  # a space's width at 100 %
-        run_spacing=0,
-    )
-
-
-def _secondary(
-    text: str, *, style: ft.TextThemeStyle = ft.TextThemeStyle.BODY_MEDIUM
-) -> ft.Text:
-    """Return a row's supporting text: its time, place or speakers, in the variant colour."""
-    return ft.Text(text, theme_style=style, color=ft.Colors.ON_SURFACE_VARIANT)

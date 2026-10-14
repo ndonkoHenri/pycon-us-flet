@@ -1,7 +1,7 @@
 """Tests for the Keynotes page and its cards (``screens/keynotes.py``, ``keynote_card.py``).
 
 SPKR-04, #104, D-217. The page runs in a real Flet session over the recorded feeds
-(``tests/programme.py``). How it looks, wraps at 200 % and reads to screen readers is
+(``tests/sessions.py``). How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
 
@@ -29,7 +29,7 @@ from pycon_us.screens.tracks import track_count
 from pycon_us.state import Conference
 from pycon_us.year_keynotes import keynote_of
 from tests.feeds import processed
-from tests.programme import Page, showing, text_of
+from tests.sessions import Shown, showing, text_of
 from tests.trees import descendants, texts
 
 YEAR = load_year(2026)
@@ -38,7 +38,7 @@ DATA = processed(2026)
 VIEW = "/more/keynotes"
 IDS = [k.session_id for k in KEYNOTES]
 
-type Show = Callable[..., Awaitable[Page]]
+type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             year_data: YearData | None = None,
             conference: Conference | None = None,
             view_path: str = VIEW,
-        ) -> Page:
+        ) -> Shown:
             if conference is None:
                 conference = Conference(
                     data=processed(year), source="bundled", version=1
@@ -72,7 +72,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         yield render
 
 
-def card_ids(page: Page) -> list[str]:
+def card_ids(page: Shown) -> list[str]:
     """The sessions of the cards, in order: their tiles' identifiers."""
     return [
         str(n.identifier).removeprefix("keynotes.session.")
@@ -209,7 +209,7 @@ def test_a_keynotes_card_cuts_its_bios_and_a_panels_its_abstract() -> None:
     assert clamps("one\ntwo")
 
 
-def bio(page: Page, session_id: str) -> ft.Text:
+def bio(page: Shown, session_id: str) -> ft.Text:
     """The cut text of one card: the Text above its "Read more"."""
     keynote = keynote_of(KEYNOTES, session_id)
     assert keynote is not None

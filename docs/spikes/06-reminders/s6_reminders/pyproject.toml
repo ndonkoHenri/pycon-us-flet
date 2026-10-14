@@ -1,0 +1,16 @@
+# S6 throwaway extension (docs/spikes/06-reminders.md). Never published.
+[project]
+name = "flet-s6-reminders"
+version = "0.0.1"
+description = "S6 spike: scheduled local notifications for Flet."
+requires-python = ">=3.14"
+dependencies = ["flet"]
+
+# Every file of the Dart package, android/ included: Flutter builds the
+# Android module from the copy that flet build makes of this folder.
+[tool.setuptools.package-data]
+"flutter.flet_s6_reminders" = ["**/*"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
