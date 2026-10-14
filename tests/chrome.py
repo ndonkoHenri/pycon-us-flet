@@ -130,8 +130,14 @@ def click(button: ft.IconButton) -> None:
     cast(Callable[[], None], button.on_click)()
 
 
+def merged_button(control: ft.Control | None) -> ft.IconButton:
+    """Return the icon button that ``merged()`` made one node with its tooltip (F55)."""
+    assert isinstance(control, ft.MergeSemantics)
+    button = control.content
+    assert isinstance(button, ft.IconButton)
+    return button
+
+
 def back_arrow(view: ft.View) -> ft.IconButton:
     """The app bar's Back arrow, which a pushed View has."""
-    leading = app_bar(view).leading
-    assert isinstance(leading, ft.IconButton)
-    return leading
+    return merged_button(app_bar(view).leading)

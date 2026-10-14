@@ -1,10 +1,11 @@
-"""Semantics helpers shared by screens: ``named()`` and ``semantics_key()``.
+"""Semantics helpers shared by screens: ``named()``, ``merged()`` and ``semantics_key()``.
 
 UI flows find a control by its semantics identifier (``<screen>.<element>[.<key>]``,
 D-33). D-190 settled how to attach one to a button or a row: merged, so that the
 identifier and the control are one node (D-198), which says whether the control is
-disabled (D-214). ``semantics_key()`` turns an id into the identifier's key
-(decisions §M; D-200).
+disabled (D-214). ``merged()`` makes a button with a tooltip one node named by the
+tooltip, where it needs no identifier (F55, D-234). ``semantics_key()`` turns an id
+into the identifier's key (decisions §M; D-200).
 """
 
 import re
@@ -38,6 +39,22 @@ def named(identifier: str, control: ft.Control) -> ft.Control:
             identifier=identifier, disabled=control.disabled, content=control
         )
     )
+
+
+def merged(button: ft.Control) -> ft.MergeSemantics:
+    """Return ``button`` merged into one node with its tooltip, which names it.
+
+    Flet puts a control's ``tooltip`` around the whole control, where Flutter's own
+    ``IconButton(tooltip=...)`` puts it inside the button's node: so the tooltip is a
+    node of its own over the button, and the button under it has no name (F55). The
+    merge makes the two one node, a button named by its tooltip, as Flutter's own
+    would be (D-234). For a button that also carries an identifier, ``named()``
+    merges both.
+
+    Args:
+        button: A button whose ``tooltip`` is its name, e.g. the app bar's Back arrow.
+    """
+    return ft.MergeSemantics(content=button)
 
 
 _NOT_KEY = re.compile(r"[^a-z0-9]+")
