@@ -40,11 +40,12 @@ from pycon_us.core.speakers import (
     speaker_sessions,
 )
 from pycon_us.core.timeline import schedule_order
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import speakers as screen
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.ui import rows
 from pycon_us.ui.rows import more_label, speaker_phrase
 from tests.fakes import (

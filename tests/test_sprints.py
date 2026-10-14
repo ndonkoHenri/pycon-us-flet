@@ -27,13 +27,14 @@ from pycon_us.core.html_md import to_text
 from pycon_us.core.models import ConferenceData, Sprint
 from pycon_us.core.queries import fold
 from pycon_us.core.sprints import PREVIEW_CHARS, cut_short, filter_projects, projects
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import sprint_card
 from pycon_us.screens import sprints as screen
 from pycon_us.screens import tracks as hub_screen
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from tests.fakes import (
     MemoryClipboard,

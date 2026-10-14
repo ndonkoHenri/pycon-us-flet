@@ -1,17 +1,16 @@
-"""Tests for the status strip and the minute tick: ``StatusStrip``, ``use_minute()`` (D-200).
+"""Tests for the status strip: ``StatusStrip``'s line, layout and refreshes (D-200).
 
-The strip's body runs outside a renderer: the hooks it calls (``ft.use_effect``,
-``ft.use_state`` and the store hooks) are replaced by ``Hooks``, and a fake page is
-bound as Flet binds a session's page. What the strip looks like at 200 % text is
-checked on devices (#76's, #87's and #195's PRs).
+The strip's body runs outside a renderer, with the fixtures of ``tests/strip.py`` and
+``tests/chrome.py``: the hooks it calls (``ft.use_effect``, ``ft.use_state`` and the
+store hooks) are replaced by ``Hooks``, and a fake page is bound as Flet binds a
+session's page. Its minute tick is ``test_status_strip_ticks.py``'s. What the strip
+looks like at 200 % text is checked on devices (#76's, #87's and #195's PRs).
 """
 
 import asyncio
-import inspect
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
@@ -19,69 +18,19 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
-from pycon_us.config import YearData, load_year
+from pycon_us.feed_refresh import Status
 from pycon_us.services import Services, api
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, Status, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
-from pycon_us.ui.status_strip import StatusStrip, strip_line
-from tests.fakes import (
-    FakePage,
-    Hooks,
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-    bound,
-)
+from pycon_us.ui.status_strip import strip_line
+from tests import chrome, strip
+from tests.fakes import FakePage, Hooks
+from tests.strip import PACIFIC, Network, render_strip, strip_parts
 
-PACIFIC = ZoneInfo("America/Los_Angeles")
-
-
-@pytest.fixture(scope="module")
-def year() -> YearData:
-    return load_year(2026)
-
-
-@pytest.fixture
-def svc(year: YearData, tmp_path: Path) -> Services:
-    storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-    return Services(
-        year=year,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-
-
-@pytest.fixture
-def page() -> Iterator[FakePage]:
-    fake = FakePage()
-    with bound(fake):
-        yield fake
-
-
-@pytest.fixture
-def conference() -> Conference:
-    return Conference()
-
-
-@pytest.fixture
-def hooks(
-    monkeypatch: pytest.MonkeyPatch, svc: Services, conference: Conference
-) -> Hooks:
-    hooks = Hooks()
-    monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
-    monkeypatch.setattr(ft, "use_state", hooks.use_state)
-    monkeypatch.setattr(status_strip, "use_services", lambda: svc)
-    monkeypatch.setattr(status_strip, "use_conference", lambda: conference)
-    monkeypatch.setattr(status_strip, "use_tokens", lambda: DARK_TOKENS)
-    return hooks
+# The harness's fixtures, under this module's names, where pytest looks them up.
+year, svc, page, conference = chrome.year, chrome.svc, chrome.page, chrome.conference
+hooks, network = strip.hooks, strip.network
 
 
 def press(button: ft.TextButton) -> asyncio.Task[None]:
@@ -121,13 +70,6 @@ def test_the_strip_writes_times_in_conference_time_and_the_device_format() -> No
     assert line == "Offline · schedule from Tue, May 12, 10:42"
 
 
-def render_strip(*, auto_refresh: bool = False) -> ft.Semantics:
-    # The body, without @ft.component.
-    strip = inspect.unwrap(StatusStrip)(auto_refresh=auto_refresh)
-    assert isinstance(strip, ft.Semantics)
-    return strip
-
-
 def strip_rows(strip: ft.Semantics) -> tuple[ft.Row, ft.Row]:
     """The strip's row (the line and Refresh) and the line's row (the icon and words)."""
     box = cast(ft.Container, strip.content)
@@ -161,32 +103,6 @@ class StripRenders:
 
     def __call__(self, _sender: object, _name: str | None) -> None:
         self.strips.append(render_strip())
-
-
-def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.ProgressBar]:
-    box = strip.content
-    assert isinstance(box, ft.Container)
-    column = box.content
-    assert isinstance(column, ft.Column)
-    padded, slot = column.controls
-    assert isinstance(slot, ft.Container)
-    assert slot.height == 2  # kept while the bar hides: nothing moves (ux.md §3.9)
-    progress = slot.content
-    assert isinstance(padded, ft.Container)
-    assert isinstance(padded.content, ft.Row)
-    # Room around a line that wraps at 200 % text (ux.md §3.9).
-    assert padded.padding == ft.Padding.only(left=16, top=4, right=8, bottom=4)
-    line_box, button_box = padded.content.controls
-    assert isinstance(line_box, ft.Container)
-    assert isinstance(button_box, ft.Container)
-    line_row, button = line_box.content, button_box.content
-    assert isinstance(line_row, ft.Row)
-    icon, text = line_row.controls
-    assert isinstance(icon, ft.Icon)
-    assert isinstance(text, ft.Text)
-    assert isinstance(button, ft.TextButton)
-    assert isinstance(progress, ft.ProgressBar)
-    return text, button, progress
 
 
 @pytest.fixture
@@ -379,189 +295,3 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
     await tap
     assert quiet.done()
     assert network.requests == 1  # one request for both (D-145)
-
-
-# ------------------------------------------------------------------ the strip's ticks
-
-
-@dataclass
-class Clock:
-    """``clock.now()`` for a test, moved by hand."""
-
-    now: datetime
-
-    def move(self, delta: timedelta) -> None:
-        self.now += delta
-
-
-@pytest.fixture
-def moving_clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
-    fake = Clock(datetime(2026, 5, 11, 12, 0, 30, tzinfo=PACIFIC))
-    monkeypatch.setattr(clock, "now", lambda: fake.now)
-    return fake
-
-
-@dataclass
-class Loops:
-    """Stands in for ``Services.run_every``: records each loop instead of running it."""
-
-    started: list[tuple[float, Callable[[], object]]] = field(default_factory=list)
-
-    # A bound method set on the class is not bound again: no `self` of Services.
-    async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
-        self.started.append((seconds, action))
-
-
-@pytest.fixture
-def loops(monkeypatch: pytest.MonkeyPatch) -> Loops:
-    fake = Loops()
-    monkeypatch.setattr(Services, "run_every", fake.run_every)
-    return fake
-
-
-async def mounted_strip(
-    hooks: Hooks, loops: Loops, **kwargs: Any
-) -> Callable[[], object]:
-    """Render the strip and run its effect as a mount does; return the tick."""
-    render_strip(**kwargs)
-    setup, _ = hooks.effects[-1]
-    await setup()
-    ((seconds, tick),) = loops.started
-    assert seconds == status_strip.TICK_SECONDS == 60
-    return tick
-
-
-def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) -> None:
-    render_strip(auto_refresh=True)
-    (_, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
-    assert dependencies == [True]
-    # Flet cancels an effect's task on unmount only when it has a cleanup (F2), and a
-    # cleanup returned by a sync setup is lost at the next render (F39).
-    assert cleanup is status_strip.stop_ticks
-
-
-async def test_a_tick_re_renders_the_strip_only_when_the_minute_changed(
-    hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
-) -> None:
-    tick = await mounted_strip(hooks, loops)
-    tick()  # at mount: the same minute as the render
-    assert hooks.renders == 0
-    moving_clock.move(timedelta(seconds=60))
-    tick()
-    assert hooks.renders == 1
-
-
-async def test_a_tick_shows_the_strip_once_the_data_turns_stale(
-    hooks: Hooks,
-    page: FakePage,
-    conference: Conference,
-    loops: Loops,
-    moving_clock: Clock,
-) -> None:
-    conference.fetched_at = moving_clock.now - timedelta(
-        hours=23, minutes=59, seconds=30
-    )
-    tick = await mounted_strip(hooks, loops)
-    assert render_strip().visible is False
-    moving_clock.move(timedelta(seconds=60))
-    tick()
-    assert hooks.renders == 1
-    strip = render_strip()  # the re-render the tick asked for
-    text, _, _ = strip_parts(strip)
-    assert strip.visible is True
-    assert text.value == "Updated 1 day ago"
-
-
-async def test_use_minute_re_renders_its_component_only_when_the_minute_changes(
-    hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
-) -> None:
-    """The Map's "Now:" lines keep up on the strip's loop (#100, D-175)."""
-    assert status_strip.use_minute() == status_strip.current_minute()
-    (setup, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
-    assert dependencies == []
-    assert cleanup is status_strip.stop_ticks  # Flet cancels it on unmount (F2)
-    await setup()
-    ((seconds, tick),) = loops.started
-    assert seconds == status_strip.TICK_SECONDS
-    tick()  # at mount: the same minute as the render
-    assert hooks.renders == 0
-    moving_clock.move(timedelta(seconds=60))
-    tick()
-    assert hooks.renders == 1
-    assert hooks.state == status_strip.current_minute()
-
-
-class Network:
-    """Stands in for ``api.fetch_feed``: counts requests, each held until released.
-
-    Released, it answers with an empty body, which ``feed.process`` rejects: a failed
-    refresh, which is enough to end it; or it raises ``error`` when one is set.
-    """
-
-    def __init__(self) -> None:
-        self.requests = 0
-        self.arrived = asyncio.Event()
-        self.released = asyncio.Event()
-        self.error: Exception | None = None
-
-    async def fetch_feed(self, url: str, **_: object) -> bytes:
-        self.requests += 1
-        self.arrived.set()
-        await self.released.wait()
-        if self.error is not None:
-            raise self.error
-        return b""
-
-
-@pytest.fixture
-def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
-    fake = Network()
-    monkeypatch.setattr(api, "fetch_feed", fake.fetch_feed)
-    yield fake
-    fake.released.set()  # a held refresh ends with the test
-
-
-async def test_on_now_and_schedule_a_tick_starts_a_refresh_when_one_is_due(
-    hooks: Hooks,
-    page: FakePage,
-    conference: Conference,
-    loops: Loops,
-    moving_clock: Clock,
-    network: Network,
-) -> None:
-    tick = await mounted_strip(hooks, loops, auto_refresh=True)
-    tick()  # nothing has started in this session yet
-    first = conference._task
-    assert first is not None
-    network.released.set()
-    await first
-    assert network.requests == 1
-
-    moving_clock.move(timedelta(minutes=14, seconds=59))
-    tick()
-    assert conference._task is first  # not yet due
-
-    moving_clock.move(timedelta(seconds=1))  # 15 min after it began (D-40)
-    tick()
-    second = conference._task
-    assert second is not None and second is not first
-    await second
-    assert network.requests == 2
-
-
-async def test_elsewhere_a_tick_never_refreshes(
-    hooks: Hooks,
-    page: FakePage,
-    conference: Conference,
-    loops: Loops,
-    moving_clock: Clock,
-) -> None:
-    tick = await mounted_strip(hooks, loops)  # My schedule's strip
-    tick()
-    moving_clock.move(timedelta(hours=2))
-    tick()
-    assert conference._task is None
-
-
-# Now, the Schedule and My schedule each check their own strip (test_now.py,
-# test_schedule.py, test_my_schedule.py; D-40).
