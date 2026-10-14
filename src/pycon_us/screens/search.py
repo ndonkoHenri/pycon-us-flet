@@ -160,8 +160,9 @@ def Search() -> ft.View:
 
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> None:
-        memory.search_query = e.control.value  # for a View rebuilt below a result
-        field.changed(e)
+        # Not a report a Clear's landing drops: Flutter shows "" over it (D-243).
+        if field.changed(e):
+            memory.search_query = e.control.value  # for a View rebuilt below a result
 
     @report_errors
     def submitted(e: ft.Event[ft.TextField]) -> None:

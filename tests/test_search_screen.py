@@ -388,6 +388,38 @@ async def test_the_clear_button_empties_the_field_and_focuses_it(
     assert [f._i for f in opened.focused] == [opened.field._i]
 
 
+async def test_a_key_a_clear_drops_is_never_remembered_for_a_rebuilt_view(
+    opened: Shown, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-243, D-193: Flutter puts the Clear over it, so a rebuilt View must too.
+
+    A key typed on the old text, whose report comes in before Flutter has the empty
+    text, is dropped by the field; the memory that rebuilds Search below a result
+    must drop it with it, or the rebuilt field brings the cleared text back.
+    """
+    answer = asyncio.Event()  # Flutter's answer to the focus request, held
+
+    async def focus(self: ft.TextField) -> None:
+        opened.focused.append(self)
+        await answer.wait()
+
+    monkeypatch.setattr(ft.TextField, "focus", focus)
+    await opened.type("chen")
+    (clear,) = [b for b in opened.find(ft.IconButton) if b.tooltip == screen.CLEAR]
+    await opened.event(clear, "click")
+    await opened.type("chensweigart")  # before the empty text reached Flutter
+    answer.set()
+    await opened.settle()
+    assert opened.field.value == ""
+    assert opened.memory.search_query == ""
+
+    await opened.go("/schedule")
+    await opened.go("/search/room/grand-ballroom-a")  # mounts Search below it
+    await opened.go("/search")
+    assert opened.field.value == ""
+    assert opened.has("search.idle")
+
+
 # ------------------------------------------------------------------ the debounce
 
 

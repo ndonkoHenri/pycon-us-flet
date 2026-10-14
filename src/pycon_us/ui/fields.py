@@ -118,7 +118,9 @@ class FieldQuery:
             and passes as the field's ``value``: one value for both, so they never
             part (D-243).
         ref: The field's ``ref``; one ``Ref`` for the screen's life (D-243).
-        changed: The field's ``on_change``: re-renders with the typed text.
+        changed: The field's ``on_change``: re-renders with the typed text. Returns
+            whether it took the report, which a Clear's landing drops, so a screen
+            that keeps the text elsewhere too keeps only what was taken.
         clear: The field's ``on_clear``, and a no-match state's "Clear …": empties the
             text, then puts the focus back in the field.
         focus: Puts the focus in the field, for another control that goes away when
@@ -127,7 +129,7 @@ class FieldQuery:
 
     value: str
     ref: ft.Ref[ft.TextField]
-    changed: Callable[[ft.Event[ft.TextField]], None]
+    changed: Callable[[ft.Event[ft.TextField]], bool | None]
     clear: Callable[[], Awaitable[None]]
     focus: Callable[[], Awaitable[None]]
 
@@ -155,7 +157,8 @@ def use_field_query(initial: str = "") -> FieldQuery:
     also serves D-182: a Clear goes away once the text is empty, so the focus goes
     back in the field, ready to type again, rather than lose a screen reader's place.
     A screen that keeps more state with the text (search's ``ViewMemory``, D-193) wraps
-    ``changed`` and ``clear`` in handlers of its own.
+    ``changed`` and ``clear`` in handlers of its own, and keeps a report only when
+    ``changed`` took it.
 
     Args:
         initial: The text the field starts with (search's remembered query).
@@ -182,11 +185,12 @@ def use_field_query(initial: str = "") -> FieldQuery:
         set_clears(lambda n: n + 1)
 
     @report_errors
-    def changed(e: ft.Event[ft.TextField]) -> None:
+    def changed(e: ft.Event[ft.TextField]) -> bool:
         if landing.current:
             overwritten.current = True  # Flutter puts the empty text over it
-        else:
-            set_typed(e.control.value)
+            return False
+        set_typed(e.control.value)
+        return True
 
     @report_errors
     async def focus() -> None:
