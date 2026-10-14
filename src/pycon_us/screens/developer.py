@@ -38,12 +38,15 @@ CAPABILITIES = (
 )
 """The capability flags the screen shows, fixed at import as they are (D-63)."""
 
-APPLY_IN_SIGHT = 168
+APPLY_IN_SIGHT = 304
 """How far below its text the feed URL field keeps in sight when it takes the focus,
 in dp: its helper line, the Reset and Apply row under it and the outcome line that
 says what Apply did. The keyboard covers half the screen, and without this the list
 stopped at the field, Apply hidden under the keyboard (#108); Flutter's default keeps
-20 dp."""
+20 dp. Flet does not tell the app its text scale, so it is sized for large text: at
+200 % on Android the outcome's two lines stay in sight too, and at iOS's largest size
+the Apply row does, where 168 dp, enough at 100 %, left the outcome (Android) or Apply
+(iOS) under the keyboard. At 100 % the list only scrolls a little further."""
 
 
 @ft.component
