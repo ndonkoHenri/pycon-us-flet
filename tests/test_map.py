@@ -22,11 +22,11 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.locations import PAGES, drill_href
+from pycon_us.memory import ViewMemory
 from pycon_us.screens import map as map_screen
 from pycon_us.screens.map import Map, now_lines, room_row
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from pycon_us.theme import LIGHT_TOKENS
 from tests.fakes import (
     FakePage,

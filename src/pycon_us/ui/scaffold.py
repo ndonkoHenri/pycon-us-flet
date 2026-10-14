@@ -17,11 +17,13 @@ import logging
 
 import flet as ft
 
+from pycon_us.feed_refresh import Source
 from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
+from pycon_us.memory import ViewMemory
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
-from pycon_us.state import Source, ViewMemory, use_conference
+from pycon_us.state import use_conference
 from pycon_us.ui.navigation import TABS, Retap, navigation_bar
 from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe

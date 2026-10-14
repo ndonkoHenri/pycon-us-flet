@@ -18,9 +18,9 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.models import Speaker
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from pycon_us.ui import rows
 from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
 from tests.fakes import (

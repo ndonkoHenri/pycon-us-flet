@@ -1,5 +1,7 @@
-"""The Developer screen's drawing: its action rows, its outcome line, its confirmations.
+"""The Developer screen's drawing: its fields, action rows, outcome line, confirmations.
 
+``option_field()`` is one option's text field, the fake clock's or the feed URL's, and
+``LABEL_PADDING`` the padding of Reset and Apply under them (``developer.py``);
 ``action_row()`` is one of the Data section's rows (``developer_data.py``, D-198);
 ``outcome_line()``, in ``padded()``, is the line under a group of buttons that says what
 was done, for the Data section and for Apply (``developer.py``); and ``confirmation()``
@@ -23,6 +25,16 @@ type Outcome = tuple[str, bool]
 
 NO_OUTCOME: Outcome = ("", True)
 """The outcome line's state before an action and after an edit: no words, hidden."""
+
+LABEL_PADDING = ft.Padding.symmetric(horizontal=24, vertical=8)
+"""Reset's and Apply's padding: Material's 24 dp sides at every text size (#280).
+
+Flutter shrinks a button's side padding as the text grows (24 dp at 100 %, 12 at 200 %,
+6 at 300 % and over), and at the largest text the labels touched the rounded ends, as
+the Schedule sheet's Show did. The 8 dp above and below keep a tall label off the
+outline; at 100 % the 20 dp label line and its 16 dp are under Material's 40 dp
+minimum, so the buttons keep their height there.
+"""
 
 type Asking = Literal["clear", "reset"] | None
 """Which confirmation is open: Clear cached feed's, Reset app's, or none."""
@@ -292,4 +304,73 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
             spacing=16,
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
+    )
+
+
+def option_field(
+    identifier: str,
+    value: str,
+    *,
+    label: str,
+    hint: str,
+    helper: str,
+    error: str,
+    keyboard: ft.KeyboardType,
+    on_change: ft.ControlEventHandler[ft.TextField],
+    suffix: ft.Control | None = None,
+    reveal_below: int = 20,
+) -> ft.Control:
+    """Return one option's text field, found by flows through ``identifier``.
+
+    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The value
+    and the error (``""`` when the text parses) wrap to three lines at large text, and
+    the helper as far as it needs (``helper_text()``). The text is taken as typed, with
+    no autocorrect or suggestions (a date, a URL). ``max_lines`` without ``multiline``,
+    which would swap ``keyboard`` for the multiline keyboard, whose Return types a line
+    break.
+
+    The identifier is merged into the field's node (D-190), except around a field
+    with a ``suffix``: a merge takes in every descendant, and the clock's picker would
+    stop being a button of its own (D-189). That field keeps a bare identifier, an
+    empty node of its own, until Flet's ``Semantics`` stops forcing ``enabled`` (U34,
+    D-214).
+
+    ``reveal_below`` is how much of the list under the field's text stays in sight when
+    the field takes the focus and the keyboard shrinks the screen (Flutter's
+    ``scrollPadding``; 20 dp by default, as Flutter's).
+    """
+    text_field = ft.TextField(
+        value=value,
+        max_lines=3,
+        label=label,
+        hint_text=hint,
+        hint_max_lines=1,  # else a long hint (the feed URL) heightens the field
+        helper=helper_text(helper),
+        error=error or None,
+        error_max_lines=3,
+        keyboard_type=keyboard,
+        autocorrect=False,
+        enable_suggestions=False,
+        on_change=on_change,
+        suffix_icon=suffix,
+        scroll_padding=ft.Padding.only(left=20, top=20, right=20, bottom=reveal_below),
+    )
+    if suffix is None:
+        return padded(named(identifier, text_field))
+    return padded(ft.Semantics(identifier=identifier, content=text_field))
+
+
+def helper_text(text: str) -> ft.Text:
+    """Return a field's helper as a ``Text``, so it wraps to every line it needs (#280).
+
+    A string helper is cut at ``helper_max_lines`` with an ellipsis, and Flutter has no
+    "no limit": null means one line. Three lines cut the fake clock's at the largest
+    text, losing "Empty for real time.", the way back. A ``Text`` helper is drawn as
+    given, without the field's helper style, so it takes Material's own: ``BODY_SMALL``
+    in ``on_surface_variant``.
+    """
+    return ft.Text(
+        text,
+        theme_style=ft.TextThemeStyle.BODY_SMALL,
+        color=ft.Colors.ON_SURFACE_VARIANT,
     )

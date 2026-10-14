@@ -20,7 +20,7 @@ import flet as ft
 
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot
-from pycon_us.state import ViewMemory
+from pycon_us.memory import ViewMemory
 
 NOW_LINE = 2
 """The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in ``primary``."""

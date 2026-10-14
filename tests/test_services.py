@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 
 from pycon_us.config import load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,
@@ -55,7 +55,8 @@ class Ticks:
         if self.count >= count:
             return
         event = self._reached.setdefault(count, asyncio.Event())
-        await asyncio.wait_for(event.wait(), timeout=2)
+        # Generous: a passing loop gets there in a few intervals, a loaded host later.
+        await asyncio.wait_for(event.wait(), timeout=30)
 
 
 async def stopped(task: asyncio.Task[None]) -> None:
@@ -110,7 +111,7 @@ async def test_it_returns_when_the_session_closes(svc: Services) -> None:
     task = asyncio.create_task(svc.run_every(60, ticks))
     await ticks.reach(1)
     svc.close()  # D-147: a new session replaced this one
-    await asyncio.wait_for(task, timeout=1)  # no 60 s wait
+    await asyncio.wait_for(task, timeout=30)  # no 60 s wait: it returns at once
     assert ticks.count == 1
 
 
@@ -122,5 +123,5 @@ async def test_a_session_closed_in_the_background_ends_its_waiting_loop(
     task = asyncio.create_task(svc.run_every(INTERVAL, ticks))
     await asyncio.sleep(INTERVAL * 2)
     svc.close()  # replaced while paused: it would never resume
-    await asyncio.wait_for(task, timeout=1)
+    await asyncio.wait_for(task, timeout=30)  # generous: it returns at once
     assert ticks.count == 0

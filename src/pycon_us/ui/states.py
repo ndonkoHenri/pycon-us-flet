@@ -14,8 +14,8 @@ from typing import Any
 
 import flet as ft
 
+from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import use_prefs
-from pycon_us.state import Problem
 from pycon_us.ui.links import OPENS_IN, LinkKind, external
 
 ICON_SIZE = 48

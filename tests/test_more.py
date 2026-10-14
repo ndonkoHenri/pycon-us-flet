@@ -18,12 +18,12 @@ import pytest
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import DEV_UNLOCKED, Prefs
 from pycon_us.screens import more
 from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
