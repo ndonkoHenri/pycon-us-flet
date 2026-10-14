@@ -26,13 +26,14 @@ from flet.controls.context import _context_page
 from flet.messaging.session import Session
 
 from pycon_us.config import load_year
-from pycon_us.core.search import SearchResults, search, search_index
+from pycon_us.core.search import SearchResults, first_results, search, search_index
 from pycon_us.core.timefmt import day_heading
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import parent_of
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import search as screen
 from pycon_us.screens import search_results
+from pycon_us.screens.search_results import FIRST_SESSIONS, FIRST_SPEAKERS
 from pycon_us.services import Services, ServicesCtx, use_services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
@@ -501,16 +502,20 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     await opened.type("a")
     await opened.pause()
     found = search(INDEX, "a", "all")
-    # No counts: the count line above the list says them (D-193).
+    first = first_results(found, sessions=FIRST_SESSIONS, speakers=FIRST_SPEAKERS)
+    # No counts: the count line above the list says them (D-193). Each type shows its
+    # first rows, then a row that shows the rest (D-218).
     expected: list[str] = ["h2:Sessions"]
-    for day in found.sessions:
+    for day in first.sessions:
         expected.append(f"h3:{day_heading(day.day)}")
         for session in day.sessions:
             notice = session_rows.is_notice(session, YEAR.conference)
             kind = "notice" if notice else "session"
             expected.append(f"search.{kind}.{semantics_key(session.id)}")
+    expected.append("search.show_all.sessions")
     expected.append("h2:Speakers")
-    expected += [f"search.speaker.{semantics_key(s.id)}" for s in found.speakers]
+    expected += [f"search.speaker.{semantics_key(s.id)}" for s in first.speakers]
+    expected.append("search.show_all.speakers")
     expected.append("h2:Rooms")
     expected += [f"search.room.{room.slug}" for room in found.rooms]
     listed = [r for r in opened.results if not r.startswith("search.favorite.")]
@@ -692,6 +697,144 @@ async def test_one_type_of_results_gets_no_type_heading(opened: Shown) -> None:
     headings = [r for r in opened.results if r.startswith("h")]
     days = search(INDEX, "typing", "sessions").sessions
     assert headings == [f"h2:{day_heading(day.day)}" for day in days]
+
+
+# ------------------------------------------------------------------ first rows (D-218)
+
+
+def _listed_sessions(shown: Shown) -> list[str]:
+    """The keys of the session and notice rows the list shows, in order."""
+    prefixes = ("search.session.", "search.notice.")
+    return [r.split(".", 2)[2] for r in shown.results if r.startswith(prefixes)]
+
+
+def _listed_speakers(shown: Shown) -> list[str]:
+    return [
+        r.split(".", 2)[2] for r in shown.results if r.startswith("search.speaker.")
+    ]
+
+
+def _tile_text(node: ft.Semantics) -> str:
+    """A "Show all" row's words: its tile's title."""
+    tile = cast(ft.ListTile, node.content)
+    return str(cast(ft.Text, tile.title).value)
+
+
+async def _show_whole(shown: Shown, kind: str) -> None:
+    """Tap a "Show all" row, as Flutter reports a tap on its tile."""
+    tile = cast(ft.ListTile, shown.node(f"search.show_all.{kind}").content)
+    await shown.event(tile, "click")
+
+
+def _keys(ids: list[str]) -> list[str]:
+    return [semantics_key(i) for i in ids]
+
+
+def _row_ids(ids: list[str]) -> list[str]:
+    """Of ``ids``, those shown as session rows: each says its phrase once (S2)."""
+    return [
+        i for i in ids if not session_rows.is_notice(DATA.sessions[i], YEAR.conference)
+    ]
+
+
+async def test_a_broad_query_renders_each_type_s_first_rows_and_the_full_count(
+    opened: Shown,
+) -> None:
+    """#216: rendering every row of a one-letter query made its first render slow."""
+    await opened.event(opened.chip("all"), "click")
+    await opened.type("a")
+    opened.rows.clear()
+    await opened.pause()
+    found = search(INDEX, "a", "all")
+    assert found.session_count > FIRST_SESSIONS
+    assert len(found.speakers) > FIRST_SPEAKERS
+    first = _keys(session_ids("a")[:FIRST_SESSIONS])
+    assert _listed_sessions(opened) == first
+    assert (
+        _listed_speakers(opened)
+        == _keys([s.id for s in found.speakers])[:FIRST_SPEAKERS]
+    )
+    assert len(opened.rows) <= FIRST_SESSIONS  # no row past the cut was built
+    # The count line says what the search found, not what the list shows yet.
+    assert _text(opened.node("search.count")) == search_results.summary(found)
+    # Each "Show all" row says the full count and is a button for screen readers.
+    show = opened.node("search.show_all.sessions")
+    assert show.button
+    assert _tile_text(show) == f"Show all {found.session_count} sessions"
+    assert _tile_text(opened.node("search.show_all.speakers")) == (
+        f"Show all {len(found.speakers)} speakers"
+    )
+    # It ends the shown sessions, before the next type.
+    listed = [r for r in opened.results if not r.startswith("search.favorite.")]
+    at = listed.index("search.show_all.sessions")
+    assert listed[at - 1].endswith(f".{first[-1]}")
+    assert listed[at + 1] == "h2:Speakers"
+
+
+async def test_show_all_renders_the_rest_of_its_type_and_each_new_row_once(
+    opened: Shown,
+) -> None:
+    await opened.event(opened.chip("all"), "click")
+    await opened.type("a")
+    await opened.pause()
+    opened.rows.clear()
+    opened.searches.clear()
+
+    await _show_whole(opened, "sessions")
+    every = session_ids("a")
+    assert _listed_sessions(opened) == _keys(every)  # every one, in search's order
+    assert not opened.has("search.show_all.sessions")
+    # The rows already shown are not built again; the new ones once each (D-153).
+    assert sorted(opened.rows) == sorted(_row_ids(every[FIRST_SESSIONS:]))
+    assert opened.searches == []  # the same results, rendered further
+    # The speakers stay cut until their own row is tapped.
+    assert len(_listed_speakers(opened)) == FIRST_SPEAKERS
+    assert opened.has("search.show_all.speakers")
+
+    await _show_whole(opened, "speakers")
+    found = search(INDEX, "a", "all")
+    assert _listed_speakers(opened) == _keys([s.id for s in found.speakers])
+    assert not opened.has("search.show_all.speakers")
+    assert _listed_sessions(opened) == _keys(every)  # still whole
+
+
+async def test_a_keystroke_keeps_what_was_shown_and_a_new_search_cuts_again(
+    opened: Shown,
+) -> None:
+    await opened.event(opened.chip("all"), "click")
+    await opened.type("a")
+    await opened.pause()
+    await _show_whole(opened, "sessions")
+    opened.rows.clear()
+
+    await opened.type("a ")  # the same words: before and after the pause, no row
+    assert opened.rows == []
+    await opened.pause()
+    assert opened.rows == []
+    assert not opened.has("search.show_all.sessions")  # the same results, still whole
+
+    await opened.type("e")  # other results: cut again
+    await opened.pause()
+    assert _listed_sessions(opened) == _keys(session_ids("e")[:FIRST_SESSIONS])
+    assert opened.has("search.show_all.sessions")
+
+    await opened.type("a")  # the first query again: a new search, cut too
+    await opened.pause()
+    assert _listed_sessions(opened) == _keys(session_ids("a")[:FIRST_SESSIONS])
+    assert opened.has("search.show_all.sessions")
+
+
+async def test_a_keystroke_before_the_pause_re_renders_no_row_of_a_cut_list(
+    opened: Shown,
+) -> None:
+    """D-153 with the cut: the results and what is shown of them stay the same."""
+    await opened.type("p")
+    await opened.pause()
+    assert opened.has("search.show_all.sessions")
+    opened.rows.clear()
+    await opened.type("py")
+    assert opened.rows == []
+    assert opened.has("search.show_all.sessions")
 
 
 async def test_the_hint_wraps_only_while_it_shows(opened: Shown) -> None:
