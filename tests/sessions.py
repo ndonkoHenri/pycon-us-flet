@@ -205,8 +205,8 @@ class Shown:
     """What ``page.navigate`` was asked for, in order."""
     titles: list[str]
     """The titles ``AppScaffold`` was given, in order."""
-    view_path: str
-    """What ``ft.use_view_path()`` answers on this screen."""
+    view_path: str | None
+    """What ``ft.use_view_path()`` answers on this screen; None: its Router answers."""
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies (sessions and notices) ran, in order."""
     retaps: list[Callable[[], object] | None] = field(default_factory=list)
@@ -263,7 +263,7 @@ class Shown:
     async def click(self, control: ft.BaseControl) -> None:
         await self.event(control, "click", None)
 
-    async def event(self, control: ft.BaseControl, name: str, data: Any) -> None:
+    async def event(self, control: ft.BaseControl, name: str, data: Any = None) -> None:
         """Dispatch an event to ``control`` as the client would; let it run out."""
         await self.session.dispatch_event(control._i, name, data)
         await settle()
@@ -349,7 +349,9 @@ def _route(monkeypatch: pytest.MonkeyPatch, modules: tuple[ModuleType, ...]) -> 
 
         def view_path() -> str:
             shown = _shown_now()
-            return shown.view_path if shown else use_view_path()
+            if shown is None or shown.view_path is None:
+                return use_view_path()
+            return shown.view_path
 
         monkeypatch.setattr(ft, "use_view_path", view_path)
 
@@ -362,7 +364,8 @@ async def showing[S: Shown = Shown](
     conference: Conference,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    view_path: str,
+    view_path: str | None,
+    views: bool = False,
     prefs: Prefs | None = None,
     favorites: Favorites | None = None,
     saved: tuple[str, ...] = (),
@@ -379,7 +382,10 @@ async def showing[S: Shown = Shown](
         conference: The ``Conference`` store, with or without data.
         tmp_path: Where the storage writes.
         monkeypatch: To replace the scaffold, the View path and the phrases.
-        view_path: The View's path, which the rows' links start from.
+        view_path: The View's path, which the rows' links start from; None when
+            ``screen`` is a real ``ft.Router``, which answers it.
+        views: Render the screen as the page's Views (``rendering(views=True)``), as
+            the app renders its Router.
         prefs: The ``Prefs`` store, for other settings; by default a loaded one with
             the defaults.
         favorites: The ``Favorites`` store as the test set it up (not loaded yet,
@@ -412,7 +418,7 @@ async def showing[S: Shown = Shown](
         return provide(svc, conference, prefs, favorites, screen)
 
     try:
-        async with rendering(Root, session):
+        async with rendering(Root, session, views=views):
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
