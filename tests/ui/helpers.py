@@ -88,6 +88,27 @@ async def wait_for(
         await t.pump(STEP)
 
 
+async def wait_until(
+    t: RemoteTester, met: Callable[[], bool], what: str, *, timeout: float = TIMEOUT
+) -> None:
+    """Pump frames until ``met()`` holds: for what the host sees, not the screen.
+
+    For example a request that reached a fixture's server (``SilentFeed.requests``).
+
+    Args:
+        t: The tester.
+        met: The condition, e.g. ``lambda: feed.requests > asked``.
+        what: What is awaited, for the failure message.
+        timeout: Seconds before the step fails.
+    """
+    deadline = time.monotonic() + timeout
+    while not met():
+        if time.monotonic() > deadline:
+            await screenshot_on_failure()
+            raise AssertionError(f"{what}: not after {timeout} s")
+        await t.pump(STEP)
+
+
 async def wait_for_id(
     t: RemoteTester, identifier: str, *, gone: bool = False, timeout: float = TIMEOUT
 ) -> Finder:

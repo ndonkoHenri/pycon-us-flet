@@ -6,7 +6,6 @@ driven through ``flet_app.tester`` (D-78; testing-and-quality.md §5). Plain
 provisions a Flutter test host.
 """
 
-import socket
 from collections.abc import Iterator
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -15,8 +14,7 @@ from threading import Thread
 
 import pytest
 
-from pycon_us.config import YEAR
-from tests.ui.helpers import PLATFORM
+from tests.ui.feeds import SilentFeed, laptop_url
 
 FEEDS = Path(__file__).parents[1] / "fixtures" / "feeds"
 
@@ -39,24 +37,15 @@ def feed_url() -> Iterator[str]:
 
 
 @pytest.fixture
-def offline_url() -> str:
-    """Return a feed URL on a closed port of this machine: a feed that never answers.
+def silent_feed() -> Iterator[SilentFeed]:
+    """Serve a feed that never answers from this machine (``SilentFeed``).
 
-    The port is one the system just handed out and took back, so nothing listens there
-    and the app's request is refused at once: "offline" without airplane mode, which
-    would also cut the tester's own socket (testing-and-quality.md §5.2).
+    Flows set its ``url`` in the Developer screen, as a person would; ``hold()`` and
+    ``hang_up()`` let a flow see a refresh run and end (F1).
     """
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-    return laptop_url(port)
-
-
-def laptop_url(port: int) -> str:
-    """Return the URL of the active year's feed on this machine's ``port``, as the app reaches it.
-
-    The Android emulator sees this machine at ``10.0.2.2``; the iOS simulator shares its
-    network.
-    """
-    host = "10.0.2.2" if PLATFORM == "android" else "127.0.0.1"
-    return f"http://{host}:{port}/conference-{YEAR}.json"
+    feed = SilentFeed()
+    feed.serve()
+    try:
+        yield feed
+    finally:
+        feed.close()
