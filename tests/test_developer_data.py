@@ -307,6 +307,23 @@ def test_each_action_is_one_node_with_its_identifier(
         assert isinstance(inner.content, ft.ListTile)
 
 
+async def test_a_disabled_row_s_node_says_it_is_disabled(
+    render: Callable[[], ft.Column],
+) -> None:
+    # Flet's Semantics says "enabled" from its own `disabled`, and the merged node
+    # kept it: Android dumped Clear cached feed, disabled, as enabled="true" (F42,
+    # #239). The row's identifier node takes the tile's state (D-214).
+    nodes = [
+        cast(ft.Semantics, merged.content)
+        for merged in render().controls
+        if isinstance(merged, ft.MergeSemantics)
+    ]
+    rows = {node.identifier: node for node in nodes}
+    assert row(render(), "developer.clear_cache").disabled is True  # no cache yet
+    assert rows["developer.clear_cache"].disabled is True
+    assert rows["developer.reset_app"].disabled is False
+
+
 def test_reset_app_reads_as_destructive(render: Callable[[], ft.Column]) -> None:
     tile = row(render(), "developer.reset_app")
     assert isinstance(tile.leading, ft.Icon) and tile.leading.color == ft.Colors.ERROR

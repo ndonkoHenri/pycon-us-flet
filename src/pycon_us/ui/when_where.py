@@ -28,6 +28,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import TICK_SECONDS, current_minute, stop_ticks
 
 
@@ -105,45 +106,41 @@ def _time_tile(
     note = zone_note(session.start, info.zone, info.time_zone_name, device_offset)
     if note is not None:
         lines.append(_supporting(note))
-    return ft.MergeSemantics(
-        content=ft.Semantics(
-            identifier=f"{screen}.when",
-            content=ft.ListTile(
-                leading=ft.Icon(ft.Icons.SCHEDULE),
-                # The day, then the time on a line of its own, so a long day or a
-                # large text size never breaks the range in two; its "AM" keeps to
-                # its digits, and only at the largest sizes it breaks after the dash.
-                # The status and the note are in the title too, styled as supporting
-                # lines: a subtitle would keep a two-line tile's height when both are
-                # absent (another day, on Pacific time), with a blank under the range.
-                title=ft.Column(
-                    [
-                        ft.Text(day),
-                        ft.Text(
-                            view.when.replace(" ", "\u00a0"),
-                            semantics_label=view.spoken_when,
-                        ),
-                        ft.Column(lines, spacing=2),
-                    ],
-                    spacing=0,
-                ),
-                title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+    return named(
+        f"{screen}.when",
+        ft.ListTile(
+            leading=ft.Icon(ft.Icons.SCHEDULE),
+            # The day, then the time on a line of its own, so a long day or a
+            # large text size never breaks the range in two; its "AM" keeps to
+            # its digits, and only at the largest sizes it breaks after the dash.
+            # The status and the note are in the title too, styled as supporting
+            # lines: a subtitle would keep a two-line tile's height when both are
+            # absent (another day, on Pacific time), with a blank under the range.
+            title=ft.Column(
+                [
+                    ft.Text(day),
+                    ft.Text(
+                        view.when.replace(" ", "\u00a0"),
+                        semantics_label=view.spoken_when,
+                    ),
+                    ft.Column(lines, spacing=2),
+                ],
+                spacing=0,
             ),
-        )
+            title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+        ),
     )
 
 
 def _place_tile(label: str, screen: str) -> ft.Control:
     """A place the feed has no room for: shown, opening nothing."""
-    return ft.MergeSemantics(
-        content=ft.Semantics(
-            identifier=f"{screen}.room",
-            content=ft.ListTile(
-                leading=ft.Icon(ft.Icons.PLACE_OUTLINED),
-                title=label,
-                title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
-            ),
-        )
+    return named(
+        f"{screen}.room",
+        ft.ListTile(
+            leading=ft.Icon(ft.Icons.PLACE_OUTLINED),
+            title=label,
+            title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
+        ),
     )
 
 

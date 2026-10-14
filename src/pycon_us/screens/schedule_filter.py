@@ -33,6 +33,7 @@ from pycon_us.screens.schedule_sheet import (
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.badges import NOT_SAVED, SNACK_BAR_MS, selection_click
+from pycon_us.ui.semantics import named
 
 SCREEN = "schedule"
 """The screen's name in the identifiers (decisions §M)."""
@@ -273,11 +274,8 @@ def _summary(text: str, on_show_all: Callable[[], object]) -> ft.Control:
             color=ft.Colors.ON_SURFACE_VARIANT,
         ),
     )
-    show_all = ft.MergeSemantics(
-        content=ft.Semantics(
-            identifier=f"{SCREEN}.show_all",
-            content=ft.TextButton("Show all", on_click=on_show_all),
-        )
+    show_all = named(
+        f"{SCREEN}.show_all", ft.TextButton("Show all", on_click=on_show_all)
     )
     return ft.Container(
         ft.Row(

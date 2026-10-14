@@ -6,6 +6,7 @@ nothing reaches the network. The components themselves are checked on devices (t
 """
 
 import asyncio
+import inspect
 import json
 import logging
 from collections.abc import Awaitable, Callable, Iterator
@@ -15,6 +16,7 @@ from typing import cast
 
 import flet as ft
 import pytest
+from flet.components.component import Renderer
 
 from pycon_us import app, clock
 from pycon_us.app import (
@@ -30,6 +32,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ViewMemory
+from pycon_us.ui.time_gutter import GutterProbe
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -593,3 +596,64 @@ def test_services_are_built_for_the_active_year_in_the_data_directory(
     assert not svc.closed.is_set()
     svc.close()
     assert svc.closed.is_set()
+
+
+@pytest.mark.parametrize(
+    ("loaded", "measured", "open_"),
+    [
+        (False, False, False),
+        (True, False, False),
+        (False, True, False),
+        (True, True, True),
+    ],
+)
+def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
+    loaded: bool,
+    measured: bool,
+    open_: bool,
+    fake_page: FakePage,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-216: the first screen comes only once the slots' layout is known."""
+    prefs = Prefs(loaded=loaded, time_measured=measured)
+    monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
+    monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
+    monkeypatch.setattr(ft, "use_effect", lambda *_, **__: None)
+    with Renderer().with_context(), bound(fake_page):
+        shown = inspect.unwrap(app.App)(ViewMemory())
+    booting = (
+        isinstance(shown, list)
+        and len(shown) == 1
+        and isinstance(shown[0], ft.Component)
+        and shown[0].fn is inspect.unwrap(app.BootView)
+    )
+    assert booting is not open_
+    if open_:  # the providers end in the Router
+        assert isinstance(shown, ft.Component)
+        assert shown.fn.__name__ == "Router"
+
+
+async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-216: a Schedule opened with the gutter and switched later lost its jump."""
+    prefs, setups = Prefs(), []
+    monkeypatch.setattr(app, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(ft, "use_state", lambda initial: (initial, lambda _: None))
+    monkeypatch.setattr(ft, "use_effect", lambda setup, *_, **__: setups.append(setup))
+    monkeypatch.setattr(app, "RING_DELAY", 0.01)
+    with Renderer().with_context():  # what calling a component needs, as in a render
+        view = inspect.unwrap(app.BootView)()
+    assert isinstance(view, ft.View)
+    ring, probe = view.controls
+    assert isinstance(ring, ft.ProgressRing)
+    assert isinstance(probe, ft.Component)
+    assert probe.fn is inspect.unwrap(GutterProbe)
+    assert view.spacing == 0  # the 0 dp probe leaves the ring centred
+    # Should the probe never answer, the gate stops waiting with the ring.
+    (setup,) = setups
+    setup()
+    assert prefs.time_measured is False
+    await asyncio.sleep(0.05)
+    assert prefs.time_measured is True
+    assert prefs.time_above is False  # the gutter, until a screen's probe answers

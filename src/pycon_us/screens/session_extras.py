@@ -95,7 +95,6 @@ def ShareButton(session: Session) -> ft.Control:
             on_click=share,
             disabled=sharing,
         ),
-        disabled=sharing,
     )
 
 

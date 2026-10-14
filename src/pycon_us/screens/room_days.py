@@ -49,6 +49,7 @@ def day_list(
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
+    time_above: bool,
     reveal: str | None,
     lit: bool,
     fade_ms: int,
@@ -68,6 +69,8 @@ def day_list(
         on_toggle: The screen's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
+        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+            D-216).
         reveal: The session whose row the room was opened from, if this View shows it:
             that row gets its ``ScrollKey`` and the highlight.
         lit: Whether the highlight is on.
@@ -95,7 +98,7 @@ def day_list(
                 row = _lit(row, row_key(session.id), on=lit, ms=fade_ms)
             rows.append(row)
         label = time_label(start, info.zone, use_24h=use_24h)
-        item = TimeSlot(label, rows, divider=False)
+        item = TimeSlot(label, rows, divider=False, above=time_above)
         if alone:
             item = _lit(item, row_key(slot[0].session.id), on=lit, ms=fade_ms)
         if items:

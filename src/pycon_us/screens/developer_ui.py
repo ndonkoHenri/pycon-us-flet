@@ -218,8 +218,9 @@ def action_row(
     """Return one action: a two-line ``ListTile``, one node named by both lines.
 
     Its icons and title sit 14 dp from the top at every height, as a ``LinkTile`` with
-    a subtitle does (D-188). A disabled row says so to screen readers; its icon and
-    title take the disabled colour, but its second line, which says why, stays in
+    a subtitle does (D-188). A disabled row says so to screen readers: its merged node
+    takes the tile's ``disabled`` (``named()``, D-214). Its icon and title take the
+    disabled colour, but its second line, which says why, stays in
     ``on_surface_variant``: at the disabled 38 % it is too faint to read (ux.md §9).
 
     Args:

@@ -21,7 +21,7 @@ import flet as ft
 from pycon_us.config import TRACK_GROUPS, ConferenceInfo
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import EXCLUDED_TRACKS
-from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.semantics import named, semantics_key
 
 SCREEN = "schedule"
 """The screen's name in the identifiers (decisions §M)."""
@@ -135,19 +135,14 @@ def filter_sheet(
                     "Filter sessions", theme_style=ft.TextThemeStyle.TITLE_LARGE
                 ),
             ),
-            ft.MergeSemantics(
-                content=ft.Semantics(
-                    identifier=f"{SCREEN}.filter.reset",
-                    # Disabled here too: Flet's Semantics says `enabled` from its
-                    # own `disabled`, and the merged node read as enabled.
+            named(
+                f"{SCREEN}.filter.reset",
+                ft.TextButton(
+                    "Reset",
+                    tooltip=f"Reset to the default: hide {default}",
                     disabled=not changed,
-                    content=ft.TextButton(
-                        "Reset",
-                        tooltip=f"Reset to the default: hide {default}",
-                        disabled=not changed,
-                        on_click=on_reset,
-                    ),
-                )
+                    on_click=on_reset,
+                ),
             ),
         ],
         # Wrapping, Reset at the end: at large text it moves under the title whole,
@@ -188,21 +183,16 @@ def filter_sheet(
         )
     body.append(
         ft.Container(
-            ft.MergeSemantics(
-                content=ft.Semantics(
-                    # No track's key is "tracks", as none is "reset" or "show".
-                    identifier=f"{SCREEN}.filter.tracks",
-                    content=ft.TextButton(
-                        "What do these mean?",
-                        icon=ft.Icons.HELP_OUTLINE,
-                        on_click=on_tracks_page,
-                        # Its icon near the chips' edge, as a link under them; still
-                        # 48 dp tall.
-                        style=ft.ButtonStyle(
-                            padding=ft.Padding.symmetric(horizontal=4)
-                        ),
-                    ),
-                )
+            named(
+                f"{SCREEN}.filter.tracks",  # no track's key is "tracks", "reset", "show"
+                ft.TextButton(
+                    "What do these mean?",
+                    icon=ft.Icons.HELP_OUTLINE,
+                    on_click=on_tracks_page,
+                    # Its icon near the chips' edge, as a link under them; still
+                    # 48 dp tall.
+                    style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=4)),
+                ),
             ),
             padding=ft.Padding.only(top=8),
             # At the start: the column stretches its children, and a stretched
@@ -221,28 +211,25 @@ def filter_sheet(
             )
         )
     footer.append(
-        ft.MergeSemantics(
-            content=ft.Semantics(
-                identifier=f"{SCREEN}.filter.show",
-                disabled=count == 0,  # as Reset's: so the node says it is disabled
-                content=ft.FilledButton(
-                    # Centred when it wraps at large text, with its own padding:
-                    # Flutter shrinks a button's padding as the text grows, and the
-                    # label then touched the rounded ends.
-                    content=ft.Text(count_label(count), text_align=ft.TextAlign.CENTER),
-                    style=ft.ButtonStyle(
-                        padding=ft.Padding.symmetric(horizontal=24, vertical=12)
-                    ),
-                    # M3's filled button lies flat. With a style, Flet sets every
-                    # state's elevation to this (1 by default), and the shadow then
-                    # showed through the disabled button's faint fill, dark grey.
-                    elevation=0,
-                    disabled=count == 0,
-                    on_click=on_close,
-                    # Full width from the column's STRETCH: an expand here would
-                    # take the sheet's whole height.
+        named(
+            f"{SCREEN}.filter.show",
+            ft.FilledButton(
+                # Centred when it wraps at large text, with its own padding:
+                # Flutter shrinks a button's padding as the text grows, and the
+                # label then touched the rounded ends.
+                content=ft.Text(count_label(count), text_align=ft.TextAlign.CENTER),
+                style=ft.ButtonStyle(
+                    padding=ft.Padding.symmetric(horizontal=24, vertical=12)
                 ),
-            )
+                # M3's filled button lies flat. With a style, Flet sets every
+                # state's elevation to this (1 by default), and the shadow then
+                # showed through the disabled button's faint fill, dark grey.
+                elevation=0,
+                disabled=count == 0,
+                on_click=on_close,
+                # Full width from the column's STRETCH: an expand here would
+                # take the sheet's whole height.
+            ),
         )
     )
     return ft.BottomSheet(
@@ -299,19 +286,17 @@ def _chip(
         # Flutter flips the chip and sends its new state before the event (chip.dart).
         await on_toggle(key, e.control.selected)
 
-    return ft.MergeSemantics(
-        content=ft.Semantics(
-            identifier=f"{SCREEN}.filter.{semantics_key(key)}",
-            content=ft.Chip(
-                label=info.track_name(key),
-                selected=shown,
-                show_checkmark=True,
-                # Unselected, only its outline on the sheet (M3's filter chip). Flutter
-                # draws a chip on a canvas Material, which paints `surface` whatever
-                # the chip's colour (a transparent one still showed white in light,
-                # a dark well in dark), so the chip paints the sheet's colour on it.
-                bgcolor=SHEET_COLOR,
-                on_select=selected,
-            ),
-        )
+    return named(
+        f"{SCREEN}.filter.{semantics_key(key)}",
+        ft.Chip(
+            label=info.track_name(key),
+            selected=shown,
+            show_checkmark=True,
+            # Unselected, only its outline on the sheet (M3's filter chip). Flutter
+            # draws a chip on a canvas Material, which paints `surface` whatever
+            # the chip's colour (a transparent one still showed white in light,
+            # a dark well in dark), so the chip paints the sheet's colour on it.
+            bgcolor=SHEET_COLOR,
+            on_select=selected,
+        ),
     )

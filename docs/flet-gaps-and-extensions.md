@@ -109,6 +109,7 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | `flet_app` docstring (`flet/pytest_plugin.py:132`) says the bound page is the tester session, but in device mode `flet_app.page` raises `RuntimeError` | Flows use `flet_app.tester` only ([`testing-and-quality.md`](testing-and-quality.md) §5.1) | Fix the docstring |
 | `NavigationBarDestination` has no identifier; and the `Semantics.identifier` docstring (`flet/controls/core/semantics.py:42-43`) says it forces its own node, which the Dart control does not do (#163) | Each destination's icon is an unlabelled `Semantics(identifier=...)` that Flutter merges into the destination's node (D-166); pin bumps re-check it ([`development.md`](development.md) §2.2) | An `identifier` on the destination (and the rail's); align the docstring with the Dart |
 | Flet's `Semantics` has no `link_url`, and Flutter's text spans carry none, so TalkBack calls every link a button: link rows (`Semantics(link=True)`) and Markdown links alike (U31, F41, D-197, #230) | Each link is its own named, operable node; rows say "Opens in browser" (D-182) | `Semantics.link_url` (Flutter's `SemanticsProperties.linkUrl`) for rows; for Markdown links, a URL on Flutter's text-span semantics (a Flutter change) |
+| Flet's `Semantics` always sets Flutter's `enabled` (`DART/controls/semantics.dart:23`), so in a `MergeSemantics` around a disabled control the merged node reads as enabled, and a bare identifier around a `TextField` is an empty node of its own (U34, F42, F50, D-214, #273) | `named()` gives its `Semantics` the control's `disabled`; identifiers on buttons and fields are merged; the fake clock field, whose picker a merge would swallow, keeps a bare identifier (D-214) | `enabled: control.disabled ? false : null`, so a `Semantics` claims an enabled state only when it is disabled |
 
 ---
 
@@ -609,7 +610,7 @@ class AppInfo:
 | Field | Value |
 |---|---|
 | Serves | THEME-11 (text at 200 %), THEME-09 (reduced motion), the high-contrast switch default (D-23) |
-| Interim | Fluid layouts with no fixed heights around text (D-26). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). On Android a change made while the app is in the background often reaches Flutter seconds after that read, so the app's own durations follow only at the following resume (#178, accepted until U17 by D-183). |
+| Interim | Fluid layouts with no fixed heights around text (D-26). The one layout that must change with the size, a slot's time beside or above its rows, measures an invisible copy of the widest gutter against the body with `on_size_change` (`GutterProbe`, D-216, F51). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). On Android a change made while the app is in the background often reaches Flutter seconds after that read, so the app's own durations follow only at the following resume (#178, accepted until U17 by D-183). |
 | Today | `PageMediaData` has `padding`, `view_padding`, `view_insets`, `device_pixel_ratio`, `orientation` and `always_use_24_hour_format`. Its Dart builder (`DART/widgets/page_media.dart:56-64`) already sends a `media_change` event whenever these change, and `page.on_media_change` receives the new `PageMediaData` (exists). |
 | Change | Add five fields, read in the same Dart builder:<br>• `text_scale_factor` from `MediaQuery.textScalerOf(context)`;<br>• `disable_animations`, `high_contrast`, `bold_text` and `accessible_navigation` from `MediaQuery`.<br>Reading them makes the builder depend on them, so the **existing** `on_media_change` becomes the change event. That covers U17 with no new event type. |
 
@@ -622,7 +623,7 @@ class AppInfo:
 #     accessible_navigation: bool = False
 ```
 
-**Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live.
+**Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live. `GutterProbe` stays: the share of the width the gutter takes depends on the font and the width as well as on the factor, and measuring it is exact.
 
 **Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values, also when the change was made with the app in the background and reaches Flutter seconds after the return (#178's case, D-183; tracked by #183).
 
