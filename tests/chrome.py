@@ -27,9 +27,10 @@ import flet as ft
 import pytest
 
 from pycon_us.config import YearData, load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.ui import scaffold
 from pycon_us.ui.scaffold import AppScaffold, Shown
 from tests.fakes import (

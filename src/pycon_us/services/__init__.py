@@ -9,15 +9,12 @@ import asyncio
 import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 import flet as ft
 
 from pycon_us.config import YearData, load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.services.storage import Storage, data_dir
-
-if TYPE_CHECKING:  # state.py imports this package
-    from pycon_us.state import ViewMemory
 
 
 def _set_event() -> asyncio.Event:

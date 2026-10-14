@@ -17,8 +17,8 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
-from pycon_us.state import ViewMemory
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from tests import chrome
 from tests.chrome import app_bar, back_arrow, body_of, click, view_at

@@ -22,12 +22,13 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.row_views import SessionView, spoken_phrase
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import my_schedule as screen
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import REMOVED, UNDO

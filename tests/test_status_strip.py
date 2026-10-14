@@ -18,8 +18,9 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
+from pycon_us.feed_refresh import Status
 from pycon_us.services import Services, api
-from pycon_us.state import Conference, Status
+from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import strip_line

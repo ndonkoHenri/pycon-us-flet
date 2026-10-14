@@ -13,12 +13,13 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import (
     BOOT_COLOR,
     THEME_MODES,

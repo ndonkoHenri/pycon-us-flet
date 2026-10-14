@@ -15,9 +15,9 @@ import flet as ft
 import pytest
 
 from pycon_us.config import load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from pycon_us.theme import MARKDOWN_STYLE
 from pycon_us.ui import links
 from pycon_us.ui.links import (
