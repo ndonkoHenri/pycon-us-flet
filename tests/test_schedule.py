@@ -181,6 +181,12 @@ class Shown(sessions.Shown):
         start = {**_scroll_end(pixels), "event_type": "start"}
         await self.event(self.list_of(day), "scroll", start)
 
+    async def user_scroll(self, day: date, pixels: float, direction: str) -> None:
+        """What Flutter sends when the user's drag sets or changes its direction, or
+        once it and its fling have stopped (``"idle"``)."""
+        user = {**_scroll_end(pixels), "event_type": "user", "direction": direction}
+        await self.event(self.list_of(day), "scroll", user)
+
     async def scroll_away(self, day: date = FRIDAY) -> None:
         """Scroll the day's list back to its top, far from where a jump landed."""
         await self.scroll_end(day, 0.0)
@@ -1031,6 +1037,47 @@ async def test_a_scroll_whose_end_was_dropped_holds_the_restores_only_briefly(
     schedule, pixels = await _at_two(shown)
     await schedule.scroll_start(FRIDAY, pixels)  # its end never comes
     await asyncio.sleep(0.1)
+    heights = await _lay_out(schedule, scale=1.3)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+
+
+async def test_a_restore_held_by_a_dropped_scroll_end_comes_once_it_counts_as_still(
+    shown: Callable[[], Awaitable[Shown]],
+    conference: Conference,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refresh that drops a whole slot above reports no height, so nothing else
+    would bring the restore back once the dropped end stops holding it (D-250)."""
+    monkeypatch.setattr(schedule_place, "RELISTED_S", 0.05)
+    monkeypatch.setattr(schedule_place, "MOVING_S", 1.0)
+    schedule, pixels = await _at_two(shown)
+    await schedule.scroll_start(FRIDAY, pixels)  # its end never comes
+    _drop_a_keynote(conference)
+    await settle()
+    await asyncio.sleep(0.1)  # past the wait, while the start still counts
+    await settle()
+    assert _offsets(schedule) == []
+    await schedule.until(lambda: _offsets(schedule), timeout=5.0)
+    assert _offsets(schedule) == [_top(_laid_out(schedule), TWO_PM) + 1]
+    assert schedule.keyed() == []
+
+
+async def test_a_drag_held_still_gets_no_restore_until_it_ends(
+    shown: Callable[[], Awaitable[Shown]],
+    conference: Conference,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A finger held still on the list sends no update, and a restore's jump would
+    cut the drag short: the list is the user's until Flutter reports it idle."""
+    monkeypatch.setattr(schedule_place, "MOVING_S", 0.05)
+    schedule, pixels = await _at_two(shown)
+    await schedule.scroll_start(FRIDAY, pixels)
+    await schedule.user_scroll(FRIDAY, pixels, "forward")
+    await asyncio.sleep(0.1)  # the finger holds still, past MOVING_S
+    _drop_a_keynote(conference)
+    await settle()
+    assert _offsets(schedule) == []
+    await schedule.user_scroll(FRIDAY, pixels, "idle")  # its end was dropped
     heights = await _lay_out(schedule, scale=1.3)
     assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
 

@@ -241,6 +241,7 @@ def Schedule() -> ft.View:
         set_picked(day)
         layout.shown = day == layout.day  # the device shows it before the render
         layout.moved_at = None  # a page that shows again is new on the device
+        layout.user_scrolling = False
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
         else:
@@ -268,6 +269,8 @@ def Schedule() -> ft.View:
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
         if day == layout.day and e.event_type in _MOVING:
             layout.moved()  # a restore would cut the scroll short (D-250)
+        elif day == layout.day and e.event_type == ft.ScrollType.USER:
+            layout.user_scrolling = e.direction != ft.ScrollDirection.IDLE
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels

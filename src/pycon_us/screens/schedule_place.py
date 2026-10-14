@@ -17,7 +17,10 @@ them all, D-154), and puts that slot back at the top:
 It is an instant offset jump, never a jump to now (D-192, D-204), and never on
 another day's list, which is lazy and keeps its slot in place by itself. Nor while
 today's list is scrolling, under the user's finger, in a fling or in a jump to now:
-the jump would cut it short, and where it ends is the place from then on.
+the jump would cut it short, and where it ends is the place from then on. A scroll
+start or update counts for ``MOVING_S`` at most, since Flet can drop its end, so a
+restore it holds waits that long; the user's drag counts until Flutter reports it
+idle or it ends, since a finger held still sends no update.
 """
 
 import asyncio
@@ -50,7 +53,7 @@ MOVING_S = 2 * SCROLL_EVENT_MS / 1000
 """How long after a scroll start or update of today's list it counts as scrolling, in
 seconds: a scroll sends an update at least every ``SCROLL_EVENT_MS`` while it moves,
 and Flet drops an end that comes within that time of the last one, which would
-otherwise leave the list scrolling for good."""
+otherwise leave the list scrolling for good. A restore it holds waits until then."""
 
 type Measured = Callable[[str, float], Awaitable[None]]
 """What a slot or the now line of today's list calls with its key and new height."""
@@ -75,6 +78,10 @@ class TodayLayout:
             when no newer change came during it.
         moved_at: When today's list last reported a scroll start or update, by the
             event loop's clock; None after its scroll end.
+        user_scrolling: Whether the user's own scroll of today's list, a drag or its
+            fling, is on its way, by its last direction report (``ScrollType.USER``):
+            a finger held still sends no update, and Flutter reports idle only once
+            the finger has lifted and the fling has stopped.
         jumping: How many jumps to now are on their way: a keyed scroll reports its
             start only once Flutter has begun it.
     """
@@ -87,6 +94,7 @@ class TodayLayout:
     listed: tuple[ListItem, ...] | None = None
     changes: int = 0
     moved_at: float | None = None
+    user_scrolling: bool = False
     jumping: int = 0
 
     def moved(self) -> None:
@@ -95,15 +103,22 @@ class TodayLayout:
 
     def still(self) -> bool:
         """Whether today's list is at rest: no scroll and no jump on its way."""
-        if self.jumping:
-            return False
+        return not (self.jumping or self.user_scrolling or self.moving_for())
+
+    def moving_for(self) -> float:
+        """How long the last scroll start or update still counts, in seconds.
+
+        0.0 without one since the last scroll end, or once ``MOVING_S`` has passed.
+        """
         if self.moved_at is None:
-            return True
-        return asyncio.get_running_loop().time() - self.moved_at >= MOVING_S
+            return 0.0
+        since = asyncio.get_running_loop().time() - self.moved_at
+        return max(0.0, MOVING_S - since)
 
     def ended_at(self, memory: ViewMemory, pixels: float) -> None:
         """Record where a scroll of today's list ended as the reader's place."""
         self.moved_at = None
+        self.user_scrolling = False  # in case Flet dropped the idle report
         # Even while a change waits for its restore: the end of a jump to now, or of
         # the user's own scroll, is the place from then on. Read on the list the user
         # saw: a slot that has not reported yet has not been laid out on the device,
@@ -186,13 +201,19 @@ async def after_change(
     """Restore the reader's place ``wait`` seconds after a layout change.
 
     A newer change during the wait takes over, so a burst of reports ends in one
-    restore, with every height in.
+    restore, with every height in. A list that may still be scrolling only because
+    its end was dropped (``MOVING_S``) holds the restore until it counts as still; one
+    the user scrolls, or a jump to now, has none: its end records the place (D-250).
     """
     layout.changes += 1
     change = layout.changes
     await asyncio.sleep(wait)
-    if change == layout.changes:
-        await keep()
+    while change == layout.changes:
+        left = layout.moving_for()
+        if not left or layout.user_scrolling or layout.jumping:
+            await keep()
+            return
+        await asyncio.sleep(left)
 
 
 async def keep_place(
@@ -237,6 +258,7 @@ async def keep_place(
         return False
     # The jump stopped any scroll; its own end may be dropped (MOVING_S).
     layout.moved_at = None
+    layout.user_scrolling = False
     logger.info("Kept the place: %s at %.0f dp", anchor.key, offset)
     return True
 
