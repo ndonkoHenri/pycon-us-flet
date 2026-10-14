@@ -88,7 +88,7 @@ Run from a checkout, flet-cli instead finds `sdk/python/templates/build` and the
 - `.flet-src` (git-ignored) is a checkout of `flet-dev/flet` at that SHA:
   - For contributors, a clone.
   - For the owner, a `git worktree` of his Flet repo. His main checkout stays free for upstream work, and the app always builds from the pin.
-  - In a second worktree of this repo (an agent's, for example), an APFS clone of the main checkout's `.flet-src`, never a link to it: every build writes a wheel build folder inside the Flet checkout, so linked worktrees broke each other's builds (§5.8, D-218).
+  - In a second worktree of this repo (an agent's, for example), an APFS clone of the main checkout's `.flet-src`, never a link to it: every build writes a wheel build folder inside the Flet checkout, so linked worktrees broke each other's builds (§5.8, D-219).
 - `pyproject.toml` points uv at the packages in `.flet-src` (`[tool.uv.sources]`) and tells `flet build` to bundle the same `flet` (`[tool.flet.dev_packages]`, §3.1).
 
 ```bash
@@ -485,7 +485,7 @@ LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 - When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
 
-### 5.8 Several builds at once: a Flet checkout and a pub cache per worktree (D-218, D-176)
+### 5.8 Several builds at once: a Flet checkout and a pub cache per worktree (D-219, D-176)
 
 **Why.** Two folders that every worktree's builds wrote to let overlapping builds spoil each other: the Flet checkout's wheel build folder, which fails a build loudly, and the pub cache, which ships the wrong Python silently.
 
