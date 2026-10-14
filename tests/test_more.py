@@ -210,7 +210,9 @@ def test_more_keeps_the_search_and_the_re_tap_scroll_to_top(
     scaffold = render()
     assert scaffold["title"] == "More"
     assert scaffold["on_retap"] is retap  # D-144, D-166
-    [search] = scaffold["actions"]
+    [action] = scaffold["actions"]
+    assert isinstance(action, ft.MergeSemantics)  # one node with its tooltip (D-234)
+    search = action.content
     assert isinstance(search, ft.IconButton)
     assert search.tooltip == "Search"
 

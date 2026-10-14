@@ -118,8 +118,10 @@ def copy_button_of(row: ft.Control) -> ft.IconButton:
     holder = row.controls[1]
     assert isinstance(holder, ft.Container)
     button = holder.content
-    if isinstance(button, ft.MergeSemantics):  # with an identifier (D-214)
-        button = cast(ft.Semantics, button.content).content
+    assert isinstance(button, ft.MergeSemantics)  # one node with its tooltip (D-234)
+    button = button.content
+    if isinstance(button, ft.Semantics):  # with an identifier (D-214)
+        button = button.content
     assert isinstance(button, ft.IconButton)
     return button
 

@@ -127,10 +127,16 @@ def click(button: ft.IconButton) -> None:
     cast(Callable[[], None], button.on_click)()
 
 
+def merged_button(control: ft.Control | None) -> ft.IconButton:
+    """Return the icon button that ``merged()`` made one node with its tooltip (F55)."""
+    assert isinstance(control, ft.MergeSemantics)
+    button = control.content
+    assert isinstance(button, ft.IconButton)
+    return button
+
+
 def back_arrow(view: ft.View) -> ft.IconButton:
-    leading = app_bar(view).leading
-    assert isinstance(leading, ft.IconButton)
-    return leading
+    return merged_button(app_bar(view).leading)
 
 
 # ------------------------------------------------------------------ AppScaffold
@@ -382,8 +388,8 @@ def test_search_records_its_opener_with_the_query_then_opens(
 ) -> None:
     memory = ViewMemory()
     page.route = "/map?highlight=7"
-    button = search_button(memory, "rooms")
-    assert button.tooltip == "Search"
+    button = merged_button(search_button(memory, "rooms"))
+    assert button.tooltip == "Search"  # its name, in its own node (D-234)
     click(button)
     assert memory.search_base == "/map?highlight=7"
     assert page.navigated == ["/search?scope=rooms"]

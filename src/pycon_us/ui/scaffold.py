@@ -23,6 +23,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Source, ViewMemory, use_conference
 from pycon_us.ui.navigation import TABS, Retap, navigation_bar
+from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe
 
 logger = logging.getLogger(__name__)
@@ -101,7 +102,10 @@ def AppScaffold(
         elif on_retap is not None:
             await on_retap()
 
-    back_arrow = ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
+    # Merged, so the tooltip names the arrow's own node (F55, D-234).
+    back_arrow = merged(
+        ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back)
+    )
     title_control: ft.Control = ft.Text(title)
     if title:
         # Flutter's AppBar flags its title a header without a level, which neither
@@ -197,7 +201,7 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
     logger.info("Content shown: %s feed, version %d", source, version)
 
 
-def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
+def search_button(memory: ViewMemory, scope: str) -> ft.Control:
     """Return the app bar action that opens the global search with a preset scope (D-19).
 
     It records the opener's location, query included, so Back from search returns
@@ -215,7 +219,10 @@ def search_button(memory: ViewMemory, scope: str) -> ft.IconButton:
         memory.search_query = ""  # a new search; Back to its results keeps the old one
         page.navigate(f"/search?scope={scope}")
 
-    return ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
+    # Merged, so the tooltip names the button's own node (F55, D-234).
+    return merged(
+        ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
+    )
 
 
 def SectionHeader(

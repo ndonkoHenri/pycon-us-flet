@@ -313,7 +313,9 @@ def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
     scaffold = render(FakeConference(data))
     assert scaffold["title"] == "Map"
     assert scaffold["on_retap"] is retap
-    (search,) = scaffold["actions"]
+    (action,) = scaffold["actions"]
+    assert isinstance(action, ft.MergeSemantics)  # one node with its tooltip (D-234)
+    search = action.content
     assert isinstance(search, ft.IconButton)
     assert search.tooltip == "Search"
     page.route = "/map"
