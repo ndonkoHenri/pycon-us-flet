@@ -151,10 +151,10 @@ def use_field_query(initial: str = "") -> FieldQuery:
     which come in after the tap, are dropped until Flutter answers the focus request
     that an effect makes once the render has sent the empty text (Flutter handles
     messages in order). If one came in after the render, the empty text is sent again
-    over what it left on the field, and waited for the same way. Asking for the focus also serves
-    D-182: a Clear goes away once the text is empty, so the focus goes back in the
-    field, ready to type again, rather than lose a screen reader's place. A screen
-    that keeps more state with the text (search's ``ViewMemory``, D-193) wraps
+    over what it left on the field, and waited for the same way. Asking for the focus
+    also serves D-182: a Clear goes away once the text is empty, so the focus goes
+    back in the field, ready to type again, rather than lose a screen reader's place.
+    A screen that keeps more state with the text (search's ``ViewMemory``, D-193) wraps
     ``changed`` and ``clear`` in handlers of its own.
 
     Args:
