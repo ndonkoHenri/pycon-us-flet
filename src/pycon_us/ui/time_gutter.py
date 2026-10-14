@@ -21,7 +21,8 @@ MAX_GUTTER_SHARE = 0.2
 the column beside it holds a few words a line, and at the largest sizes not even a
 long one, so titles and badge labels broke inside a word. Measured on a phone in
 portrait, the gutter takes 15 % at 100 % text and 18 % at iOS's largest standard size,
-then 21 % to 34 % across iOS's five Accessibility sizes and 22 % at Android's 200 %."""
+then 21 % to 34 % across iOS's five Accessibility sizes, and 21 % and 22 % at Android's
+180 % and 200 % on a 411 dp phone."""
 
 PADDING = ft.Padding.only(left=16, top=12, right=8)
 """Around the gutter's time: 16 dp from the screen's edge, 12 dp down, on the first

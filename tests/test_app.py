@@ -600,7 +600,12 @@ def test_services_are_built_for_the_active_year_in_the_data_directory(
 
 @pytest.mark.parametrize(
     ("loaded", "measured", "open_"),
-    [(False, False, False), (True, False, False), (False, True, False), (True, True, True)],
+    [
+        (False, False, False),
+        (True, False, False),
+        (False, True, False),
+        (True, True, True),
+    ],
 )
 def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     loaded: bool,
