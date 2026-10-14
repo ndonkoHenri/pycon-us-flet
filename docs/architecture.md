@@ -19,7 +19,8 @@
  routes.py     tab roots · More pages · search · recursive drill (session/speaker/room/sponsor/plan)
  locations.py  drill_href · parent_of · use_query: what screens import to link and go back (D-164)
  screens/      one @ft.component per screen, returns an ft.View        ui/  shared components
- state.py      Conference · ViewMemory (plain)     prefs.py  Prefs      favorites.py  Favorites   (P3 account.py, staff.py)
+ state.py      Conference     feed_refresh.py  Source · Status · fetch     memory.py  ViewMemory (plain)
+ prefs.py      Prefs         favorites.py  Favorites   (P3 account.py, staff.py)
  services/     storage · api · reminders · sync · scanner · errors      (Flet services, httpx)
  core/         pure Python, no Flet: feed rules, models, queries, search, time, slugs, html→md,
                diff, ics, signing, badges, admission, outbox
@@ -60,7 +61,9 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound` (§5) | P0 |
 | `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |
-| `state.py` | `Conference`, `ConferenceCtx`, `use_conference()`; `ViewMemory` (§6) | P0 |
+| `state.py` | `Conference`, `ConferenceCtx`, `use_conference()` (§6.2) | P0 |
+| `feed_refresh.py` | the feed refresh without its store: `Source`, `Problem`, `Status`, `STALE_ON_CONFERENCE_DAYS`, `STALE_OTHERWISE`, `REFRESH_EVERY`, `fetch()`, `feed_digest()`, `log_unexpected()` (§6.2, D-231) | P0 |
+| `memory.py` | `ViewMemory` (§6.3, D-231) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_tracks.py` the track registry with `HUB_PAGES`, the Tracks hub's pages of their own (D-207), and its checks, D-228; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205; `year_keynotes.py` the keynotes' entries and their checks, D-217); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
@@ -422,7 +425,7 @@ Both `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]` are c
 
 ### 6.1 Stores (D-69)
 
-All are `@ft.observable @dataclass(eq=False)`, each in its own module with its context and hook: `Conference` in `state.py` (with `ViewMemory`), `Prefs` in `prefs.py`, then `favorites.py` (P1), `account.py` and `staff.py` (P3) (D-160). Fields starting with `_` never notify. A method that persists assigns the field even when the write fails, and says so (`False`, or `Change.saved`) so the caller can say the change was not saved (D-120). `Prefs.save` writes before it assigns; `Favorites` assigns first and writes after, so a star changes at once and two quick taps never lose one another (D-172). Each store and `ViewMemory` has a `reset()` back to what a fresh install has, which only the Developer screen's Reset app calls, after `Storage.clear_prefs()` (D-198).
+All are `@ft.observable @dataclass(eq=False)`, each in its own module with its context and hook: `Conference` in `state.py`, `Prefs` in `prefs.py`, then `favorites.py` (P1), `account.py` and `staff.py` (P3) (D-160); `ViewMemory`, which is no store, is `memory.py`'s (§6.3, D-231). Fields starting with `_` never notify. A method that persists assigns the field even when the write fails, and says so (`False`, or `Change.saved`) so the caller can say the change was not saved (D-120). `Prefs.save` writes before it assigns; `Favorites` assigns first and writes after, so a star changes at once and two quick taps never lose one another (D-172). Each store and `ViewMemory` has a `reset()` back to what a fresh install has, which only the Developer screen's Reset app calls, after `Storage.clear_prefs()` (D-198).
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
@@ -462,11 +465,11 @@ class Conference:
             except feed.FeedError as error:
                 await storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
             else:
-                self._publish(data, _digest(cached.raw), "cache", datetime.fromtimestamp(cached.saved_at, UTC))
+                self._publish(data, feed_digest(cached.raw), "cache", datetime.fromtimestamp(cached.saved_at, UTC))
                 return
         snapshot = year.read_snapshot()                      # bundled with the app (D-135)
         data = feed.process(snapshot.raw, year.feed_settings)
-        self._publish(data, _digest(snapshot.raw), "bundled", snapshot.captured_at)
+        self._publish(data, feed_digest(snapshot.raw), "bundled", snapshot.captured_at)
 
     def start_refresh(self, storage: Storage, year: YearData, *, transport=None, closed=None) -> asyncio.Task[None]:
         """Start a background refresh unless one is in flight; return the one that runs (D-145).
@@ -490,7 +493,7 @@ class Conference:
         self.refreshing = True
         try:
             raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
-            digest = _digest(raw)
+            digest = feed_digest(raw)
             # The published feed's bytes: the same data, so neither processed nor published (D-224).
             data = None if digest == self._digest else feed.process(raw, year.feed_settings)
         except api.NetworkError:
@@ -524,6 +527,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
     ...
 ```
 
+- What the store needs that reads or writes none of its fields is `feed_refresh.py`'s, imported by name (D-231): the types `Source`, `Problem` and `Status`, the stale limits and `REFRESH_EVERY`, `feed_digest()`, `fetch()` (the `try` above: one network attempt that returns the bytes, their digest and the processed feed, or the `Problem`) and `log_unexpected()`, `start_refresh`'s done callback.
 - `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing` (only while a refresh the user asked for runs: an automatic one is quiet, D-181), `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). `start_refresh()` records when it starts a refresh (`_started_at`), and `refresh_due()` / `start_refresh_if_due()` are the automatic triggers' rule (§4.3, D-175). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
@@ -533,6 +537,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 ### 6.3 `ViewMemory` (D-18)
 
 ```python
+# src/pycon_us/memory.py (D-231)
 @dataclass
 class ViewMemory:
     """Where the user left each screen, for this app process (D-143).

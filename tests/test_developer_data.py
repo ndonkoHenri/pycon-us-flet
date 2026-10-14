@@ -21,6 +21,7 @@ from pycon_us import clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
@@ -44,7 +45,7 @@ from pycon_us.screens.developer_ui import (
 )
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from tests.fakes import (
     FakePage,

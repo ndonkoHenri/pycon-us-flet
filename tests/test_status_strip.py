@@ -20,9 +20,11 @@ import pytest
 
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
+from pycon_us.feed_refresh import Status
+from pycon_us.memory import ViewMemory
 from pycon_us.services import Services, api
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, Status, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import StatusStrip, strip_line

@@ -32,6 +32,7 @@ from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, now_next
 from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import now as screen
 from pycon_us.screens.now_header import (
@@ -47,7 +48,7 @@ from pycon_us.screens.now_header import (
 )
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui import status_strip
 from tests.fakes import (

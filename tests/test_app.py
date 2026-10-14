@@ -28,10 +28,11 @@ from pycon_us.app import (
 )
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.ui.time_gutter import GutterProbe
 from tests.fakes import (
     FakePage,

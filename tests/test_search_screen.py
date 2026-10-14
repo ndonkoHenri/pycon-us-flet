@@ -30,13 +30,14 @@ from pycon_us.core.search import SearchResults, first_results, search, search_in
 from pycon_us.core.timefmt import day_heading
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import parent_of
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import search as screen
 from pycon_us.screens import search_results
 from pycon_us.screens.search_results import FIRST_SESSIONS, FIRST_SPEAKERS
 from pycon_us.services import Services, ServicesCtx, use_services
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.ui import scaffold, session_rows
 from pycon_us.ui.semantics import semantics_key
 from tests.fakes import (

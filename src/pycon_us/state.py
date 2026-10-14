@@ -1,19 +1,14 @@
-"""The ``Conference`` store, its context and hook, and ``ViewMemory`` (D-69; architecture §6).
+"""The ``Conference`` store with its context and hook (D-69, D-160; architecture §6.2).
 
-Each store is an ``@ft.observable`` dataclass with its own context (D-70 rule 5): a
-component that reads a store through its hook re-renders when one of the store's public
-fields is assigned (F3, F5). Fields starting with ``_`` never notify. The other stores
-have modules of their own (D-160): ``prefs.py`` and ``favorites.py`` (P1).
-
-``ViewMemory`` is plain, not a store: it lives for the whole process (D-143).
+Assigning a public field re-renders the store's readers (F3, F5); ``_`` fields never
+notify. A refresh's words, timings and network step are ``feed_refresh.py``'s (D-231).
 """
 
 import asyncio
-import hashlib
 import logging
-from dataclasses import dataclass, field, fields
-from datetime import UTC, date, datetime, timedelta
-from typing import Literal, cast
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from typing import cast
 
 import flet as ft
 import httpx
@@ -23,29 +18,20 @@ from pycon_us.config import ConferenceInfo, YearData
 from pycon_us.core import feed
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.timefmt import today
-from pycon_us.services import api
+from pycon_us.feed_refresh import (
+    REFRESH_EVERY,
+    STALE_ON_CONFERENCE_DAYS,
+    STALE_OTHERWISE,
+    Problem,
+    Source,
+    Status,
+    feed_digest,
+    fetch,
+    log_unexpected,
+)
 from pycon_us.services.storage import Storage
 
 logger = logging.getLogger(__name__)
-
-type Source = Literal["none", "bundled", "cache", "network"]
-"""Where the published data came from; ``none`` until ``load_local`` publishes."""
-
-type Problem = Literal["offline", "server"]
-"""Why the last refresh failed: no answer, or an answer that could not be used."""
-
-type Status = Literal["fresh", "stale", "refreshing", "offline", "problem"]
-"""What the status strip says about the data (D-32, D-146)."""
-
-STALE_ON_CONFERENCE_DAYS = timedelta(hours=6)
-"""Data older than this is stale from the first to the last conference day (D-32)."""
-
-STALE_OTHERWISE = timedelta(hours=24)
-"""Data older than this is stale on any other day (D-32)."""
-
-REFRESH_EVERY = timedelta(minutes=15)
-"""How long after a refresh began the next automatic one is due: on resume, and on Now
-and Schedule while they show (D-40)."""
 
 
 # eq=False: a store is one object, compared by identity. A generated __eq__ would compare
@@ -134,11 +120,11 @@ class Conference:
                 await storage.delete_feed(f"it does not parse: {error}")
             else:
                 saved_at = datetime.fromtimestamp(cached.saved_at, UTC)
-                self._publish(data, _digest(cached.raw), "cache", saved_at)
+                self._publish(data, feed_digest(cached.raw), "cache", saved_at)
                 return
         snapshot = year.read_snapshot()
         data = feed.process(snapshot.raw, year.feed_settings)
-        self._publish(data, _digest(snapshot.raw), "bundled", snapshot.captured_at)
+        self._publish(data, feed_digest(snapshot.raw), "bundled", snapshot.captured_at)
 
     async def reset(self, storage: Storage, year: YearData) -> bool:
         """Return to what a fresh install shows: the bundled snapshot, from the year's feed.
@@ -172,7 +158,7 @@ class Conference:
         snapshot = year.read_snapshot()
         self._publish(
             feed.process(snapshot.raw, year.feed_settings),
-            _digest(snapshot.raw),
+            feed_digest(snapshot.raw),
             "bundled",
             snapshot.captured_at,
         )
@@ -213,7 +199,7 @@ class Conference:
             self._task = asyncio.create_task(
                 self._refresh(url, storage, year, transport, closed)
             )
-            self._task.add_done_callback(_log_unexpected)
+            self._task.add_done_callback(log_unexpected)
         return self._task
 
     def refresh_due(self) -> bool:
@@ -352,7 +338,7 @@ class Conference:
 
         self.refreshing = True
         try:
-            result = await _fetch(url, year, transport, self._digest)
+            result = await fetch(url, year, transport, self._digest)
             if session_closed():
                 return
             if isinstance(result, str):
@@ -398,54 +384,6 @@ class Conference:
         self.problem = None
 
 
-def _digest(raw: bytes) -> bytes:
-    """Return the SHA-256 of a raw feed: about 0.3 ms for 2026's 800 kB on the host."""
-    return hashlib.sha256(raw).digest()
-
-
-async def _fetch(
-    url: str,
-    year: YearData,
-    transport: httpx.AsyncBaseTransport | None,
-    published: bytes | None,
-) -> tuple[bytes, bytes, ConferenceData | None] | Problem:
-    """Fetch and process the feed; return its bytes, digest and data, or why that failed.
-
-    Args:
-        url: The feed URL.
-        year: The year's feed settings.
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
-        published: The digest of the published feed: bytes with that digest are not
-            processed, and their data is None (D-224).
-
-    Returns:
-        The bytes, their digest and the processed feed (None when it is the published
-        one), or the ``Problem`` that stopped it (D-146).
-    """
-    try:
-        raw = await api.fetch_feed(url, transport=transport)
-        digest = _digest(raw)
-        if digest == published:
-            return raw, digest, None
-        return raw, digest, feed.process(raw, year.feed_settings)  # on the loop (D-109)
-    except api.NetworkError as error:
-        logger.info("Feed refresh: no answer (%s); keeping the current data", error)
-        return "offline"
-    except (api.ApiError, feed.FeedError) as error:
-        logger.warning("Feed refresh failed (%s); keeping the current data", error)
-        return "server"
-
-
-def _log_unexpected(task: asyncio.Task[None]) -> None:
-    """Log a refresh that failed with an unexpected error, as soon as it ends (D-71).
-
-    Without it, the error of a refresh nobody awaits would surface only when the finished
-    task is garbage collected, which ``Conference._task`` delays until the next refresh.
-    """
-    if not task.cancelled() and (error := task.exception()) is not None:
-        logger.error("Feed refresh failed unexpectedly", exc_info=error)
-
-
 ConferenceCtx: ft.ContextProvider[Conference | None] = ft.create_context(None)
 """Provides the session's ``Conference``; ``App`` writes the provider out (D-69)."""
 
@@ -460,56 +398,3 @@ def use_conference() -> Conference:
     if conference is None:
         raise RuntimeError("use_conference() needs a ConferenceCtx provider above it")
     return conference
-
-
-@dataclass
-class ViewMemory:
-    """Where the user left the app, kept for the whole Python process (D-18, D-143).
-
-    Plain, not observable: writing it re-renders nothing. ``main.py`` creates one at
-    import and every session's ``App`` gets that one, so a new session in the same
-    process (an Android activity recreation, F26, or a relaunch after Back on Now, F29)
-    finds it as the user left it. Fields join with the screens that remember something
-    (the Schedule's day and offsets; the search query and scope from P1).
-
-    Attributes:
-        last_location: The top View's route, where the start route returns a new
-            session (D-143, #74); empty until a screen records it.
-        search_base: The location, query included, that opened ``/search``; Back from
-            search returns there (D-19). The opener records it.
-        schedule_day: The day the Schedule shows; None until the user picks one, so
-            the Schedule opens on today during the conference (SCHED-01).
-        schedule_offsets: Each day list's scroll offset when its last scroll ended,
-            in logical pixels: the Schedule puts it back when the list shows again.
-        jumped_on: The conference day on which the Schedule last jumped to now: it
-            jumps by itself on the first display of each today in this process, and
-            not again that day, a "Now" tap included (D-18, D-155, D-204).
-        search_query: What is typed in the search field; an opener clears it, so
-            each search starts empty (D-193).
-        search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
-            View that mounts without its ``?scope=`` (a deep entry below a result).
-        room_highlights: The session each mounted room View has highlighted, by its
-            View path (ROOM-03): a View rebuilt in a new session from the same
-            location (D-143) finds its own and neither scrolls nor lights up again
-            (D-18). The View removes its entry when it leaves, so the next room tile
-            highlights again.
-    """
-
-    last_location: str = ""
-    search_base: str = "/now"
-    schedule_day: date | None = None
-    schedule_offsets: dict[date, float] = field(default_factory=dict)
-    jumped_on: date | None = None
-    search_query: str = ""
-    search_scope: str = "all"
-    room_highlights: dict[str, str] = field(default_factory=dict)
-
-    def reset(self) -> None:
-        """Forget where the user was, as after a fresh install (Reset app, D-198).
-
-        Every field returns to its default, so the Schedule opens on today and jumps
-        to now again, and a new session starts on Now.
-        """
-        fresh = ViewMemory()
-        for each in fields(self):
-            setattr(self, each.name, getattr(fresh, each.name))
