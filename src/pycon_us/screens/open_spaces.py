@@ -127,6 +127,7 @@ def OpenSpaces() -> ft.View:
             on_toggle,
             tokens,
             use_24h=use_24h,
+            time_above=prefs.time_above,
             intro=copy.intro if copy else "",
             omit=omit,
         )
@@ -254,6 +255,7 @@ def DayList(
     tokens: Tokens,
     *,
     use_24h: bool,
+    time_above: bool,
     intro: str,
     omit: frozenset[str],
 ) -> ft.Control:
@@ -269,6 +271,8 @@ def DayList(
         on_toggle: The page's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
+        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+            D-214).
         intro: The year's intro line; empty for none.
         omit: Badge labels the page already says: "Open space".
     """
@@ -279,6 +283,7 @@ def DayList(
         on_toggle,
         tokens,
         use_24h=use_24h,
+        time_above=time_above,
         intro=intro,
         omit=omit,
         key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
@@ -295,6 +300,7 @@ def _DayList(
     tokens: Tokens,
     *,
     use_24h: bool,
+    time_above: bool,
     intro: str,
     omit: frozenset[str],
 ) -> ft.Control:
@@ -326,7 +332,7 @@ def _DayList(
         ]
         label = time_label(start, zone, use_24h=use_24h)
         # A divider above every slot but a first one with nothing above it.
-        items.append(TimeSlot(label, rows, divider=bool(items)))
+        items.append(TimeSlot(label, rows, divider=bool(items), above=time_above))
     return ft.ListView(
         items,
         key=f"day-{day.isoformat()}",

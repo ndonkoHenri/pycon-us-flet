@@ -7,7 +7,8 @@ is what it places (D-31, D-153..D-156, D-192):
 - ``DayList``, a ``TabBarView`` page, memoised and given only its day's slots and
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
-  to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s;
+  to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s,
+  or its time above them at the largest text sizes (D-214);
 - today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
@@ -34,7 +35,7 @@ from pycon_us.ui.badges import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.states import EmptyState
-from pycon_us.ui.time_gutter import TimeGutter
+from pycon_us.ui.time_gutter import slot_layout
 
 SCREEN = "schedule"
 """The screen's name in its rows' semantics identifiers (decisions §M)."""
@@ -111,6 +112,7 @@ def DayList(
     tokens: Tokens,
     *,
     use_24h: bool,
+    time_above: bool,
     full: bool,
     clearance: bool,
     empty: Empty | None,
@@ -122,7 +124,8 @@ def DayList(
     """Return one day's page: its slots, or the reason it has none (D-31, ux.md §4.6).
 
     A memoised component keyed by the day (D-153): with stable props it re-renders only
-    when its slots, its own favourites, the clock format or the tokens change.
+    when its slots, its own favourites, the clock format, the slots' layout or the
+    tokens change.
 
     Args:
         day: The conference-local date.
@@ -133,6 +136,8 @@ def DayList(
         on_toggle: The screen's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
+        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+            D-214).
         full: Build every slot (today's list, D-154), so a jump reaches any of them.
         clearance: Leave room at the end for the "Now" button.
         empty: Why ``slots`` is empty, when it is.
@@ -149,6 +154,7 @@ def DayList(
         on_toggle,
         tokens,
         use_24h=use_24h,
+        time_above=time_above,
         full=full,
         clearance=clearance,
         empty=empty,
@@ -171,6 +177,7 @@ def _DayList(
     tokens: Tokens,
     *,
     use_24h: bool,
+    time_above: bool,
     full: bool,
     clearance: bool,
     empty: Empty | None,
@@ -223,6 +230,7 @@ def _DayList(
                 on_toggle,
                 tokens,
                 label=time_label(slot.start, zone, use_24h=use_24h),
+                time_above=time_above,
                 # The now line divides it from the slot above: one line, not two.
                 divider=index > 0 and (now is None or index != now.index),
             )
@@ -251,9 +259,10 @@ def SlotItem(
     tokens: Tokens,
     *,
     label: str,
+    time_above: bool,
     divider: bool,
 ) -> ft.Control:
-    """Return one time slot (D-31): its time in the gutter, beside its rows.
+    """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
     A memoised component keyed by the slot key (D-153); the box around its time and
     rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155), and its divider
@@ -266,7 +275,8 @@ def SlotItem(
         favorites: The saved ids among this slot's sessions only.
         on_toggle: The screen's one star handler.
         tokens: The scheme's tokens.
-        label: The gutter's time, e.g. "9:25 AM" (``timefmt.time_label()``).
+        label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
+        time_above: Put the time above the rows rather than in the gutter (D-214).
         divider: Draw a 1 dp divider above the slot (every slot but the first).
     """
     return _SlotItem(
@@ -276,6 +286,7 @@ def SlotItem(
         on_toggle,
         tokens,
         label=label,
+        time_above=time_above,
         divider=divider,
         key=slot.key,  # pyright: ignore[reportCallIssue]  # as SessionRow's
     )
@@ -291,6 +302,7 @@ def _SlotItem(
     tokens: Tokens,
     *,
     label: str,
+    time_above: bool,
     divider: bool,
 ) -> ft.Control:
     """The body of ``SlotItem``; it runs only when the props change (F34)."""
@@ -306,11 +318,7 @@ def _SlotItem(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN
                 )
             )
-    content: ft.Control = ft.Row(
-        [TimeGutter(label), ft.Column(rows, spacing=0, expand=True)],
-        spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-    )
+    content = slot_layout(label, rows, above=time_above)
     # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees.
     keyed = ft.Container(content, key=ft.ScrollKey(slot.key))
     # The divider stays outside the keyed box, so a jump puts the slot's time, not

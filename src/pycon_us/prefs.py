@@ -94,6 +94,12 @@ class Prefs:
         announcements: The platform takes ``announce_message()`` (F13's
             ``supports_announcements``: true on iOS, never on Android). Not
             persisted, read with ``screen_reader``.
+        time_above: The OS text is so large that a slot's time goes above its rows
+            rather than in the gutter beside them (D-214). Not persisted: measured
+            by ``ui.time_gutter.GutterProbe``, since Flet cannot read the text scale
+            (U16).
+        time_measured: ``time_above`` has been measured, or the boot view gave up
+            waiting for it; the boot gate stays closed until then (D-214).
         loaded: The stored values have been read; it opens the boot gate.
     """
 
@@ -108,6 +114,8 @@ class Prefs:
     reduce_motion: bool = False
     screen_reader: bool = False
     announcements: bool = False
+    time_above: bool = False
+    time_measured: bool = False
     loaded: bool = False
 
     @property
@@ -198,8 +206,8 @@ class Prefs:
         """Return every persisted setting to its default, as after a fresh install.
 
         Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
-        the stored values. The device facts (``os_dark`` and the accessibility flags)
-        and ``loaded`` stay: they describe the device and the session, not a choice.
+        the stored values. The device facts (``os_dark``, the accessibility flags,
+        ``time_above`` and ``time_measured``) and ``loaded`` stay: they describe the device and the session, not a choice.
         """
         fresh = Prefs()
         for name in _PERSISTED:

@@ -205,6 +205,7 @@ def RoomDetail(room_slug: str) -> ft.View:
             on_toggle=on_toggle,
             tokens=tokens,
             use_24h=use_24h,
+            time_above=prefs.time_above,
             reveal=reveal,
             lit=lit,
             fade_ms=prefs.motion_ms(FADE_MS),

@@ -90,7 +90,7 @@ class Shown:
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies ran, in order."""
     slots: list[str] = field(default_factory=list)
-    """The gutter labels of the slot bodies that ran, in order."""
+    """The time labels of the slot bodies that ran, in order."""
     announced: list[str] = field(default_factory=list)
     """What the screen asked a screen reader to say (``announce_message``)."""
     leave: Callable[[], None] = lambda: None
@@ -291,20 +291,20 @@ async def shown(
             result.rows.append(cast(Any, args[-1]).session.id)
             return phrase(*args, **kwargs)
 
-        def counted_gutter(label: str) -> ft.Control:
+        def counted_slot(label: str, slot_rows: Any, *, above: bool) -> ft.Control:
             result.slots.append(label)
-            return gutter(label)
+            return layout(label, slot_rows, above=above)
 
         async def run_every(_: Services, seconds: float, action: Any) -> None:
             result.ticks.append(action)
 
-        phrase, gutter = rows.spoken_phrase, schedule_days.TimeGutter
+        phrase, layout = rows.spoken_phrase, schedule_days.slot_layout
         monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
         monkeypatch.setattr(Services, "run_every", run_every)
         monkeypatch.setattr(screen, "StatusStrip", Strip)
         monkeypatch.setattr(screen, "AppScaffold", scaffold)
         monkeypatch.setattr(rows, "spoken_phrase", counted_phrase)
-        monkeypatch.setattr(schedule_days, "TimeGutter", counted_gutter)
+        monkeypatch.setattr(schedule_days, "slot_layout", counted_slot)
 
         @ft.component
         def Elsewhere() -> ft.Control:
@@ -494,6 +494,40 @@ async def test_each_slot_is_one_keyed_item_beside_its_gutter(
     assert shown_ids  # and no open space, which the default filter hides (D-20)
     sessions = processed(2026).sessions
     assert all(sessions[i].track != "Open Space" for i in shown_ids if i in sessions)
+
+
+async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """D-214: the rows get the whole width; the jump's keys stay on the slots."""
+    schedule = await shown()
+
+    def slots() -> list[ft.Container]:
+        friday = schedule.list_of(FRIDAY)  # the list the last render mounted
+        return find(
+            schedule.session,
+            ft.Container,
+            lambda c: (
+                isinstance(c.key, ft.ScrollKey)
+                and c.key != ft.ScrollKey(NOW_KEY)
+                and inside(c, friday)
+            ),
+        )
+
+    beside = {str(cast(ft.ScrollKey, c.key).value) for c in slots()}
+    assert all(isinstance(c.content, ft.Row) for c in slots())  # the gutter
+    schedule.prefs.time_above = True  # what GutterProbe measures at that size
+    await settle()
+    assert {str(cast(ft.ScrollKey, c.key).value) for c in slots()} == beside
+    for slot in slots():
+        column = slot.content
+        assert isinstance(column, ft.Column)
+        heading = column.controls[0]
+        assert isinstance(heading, ft.Semantics) and heading.header
+    friday = schedule.list_of(FRIDAY)
+    assert not find(  # no gutter left in the day
+        schedule.session, ft.Stack, lambda c: inside(c, friday)
+    )
 
 
 def inside(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:

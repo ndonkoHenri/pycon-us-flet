@@ -23,6 +23,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Source, ViewMemory, use_conference
 from pycon_us.ui.navigation import TABS, Retap, navigation_bar
+from pycon_us.ui.time_gutter import GutterProbe
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +40,9 @@ def AppScaffold(
 
     A plain builder that calls hooks, so a screen calls it exactly once per render, in
     every branch (hooks are unconditional, D-70). It records the top View's route for
-    the start route (D-143), and places the body in ``Shown``, which logs D-112's
-    content line (D-165).
+    the start route (D-143), places the body in ``Shown``, which logs D-112's content
+    line (D-165), and puts ``GutterProbe`` under it, which tells the lists whether a
+    slot's time fits beside its rows (D-214).
 
     On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
     instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
@@ -141,7 +143,10 @@ def AppScaffold(
         floating_action_button=fab,
         can_pop=not back_to_now,
         on_confirm_pop=on_confirm_pop,
-        controls=[ft.SafeArea(expand=True, content=Shown(body))],
+        # Under the body, 0 dp high: the probe takes no space, and with no spacing
+        # between them the body keeps all of it (D-214).
+        spacing=0,
+        controls=[ft.SafeArea(expand=True, content=Shown(body)), GutterProbe()],
     )
 
 
