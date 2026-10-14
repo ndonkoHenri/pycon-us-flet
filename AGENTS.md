@@ -61,7 +61,9 @@ that date motivates us but never justifies cutting corners.
 - The owner maintains Flet. Until Flet 1.1.0 is on PyPI we build against a pinned flet-dev/flet commit: the
   `.flet-src` checkout at the SHA in `.flet-ref` (D-81, `docs/development.md` §2.2). That checkout is the source of
   truth for Flet APIs: check controls, properties and signatures there (or by introspection) instead of trusting
-  memory or old docs.
+  memory or old docs. A second worktree of this repo gets its own `.flet-src`, an APFS clone of the main checkout's
+  (never a link to it), then `uv sync --locked`; with other builds running it also builds with its own pub cache
+  (`docs/development.md` §5.8; D-218, D-176). Never edit the main checkout's `.flet-src` or a clone.
 - Declarative style: `@ft.component`, hooks, `@ft.observable` stores, `ft.Router`. Follow the rules in
   `docs/decisions.md` D-70 (async APIs only from `async def` handlers; `use_effect` setups are coroutine
   functions with sync cleanups; one context per observable store; no conditional hooks).
