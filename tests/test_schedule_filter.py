@@ -26,7 +26,12 @@ from pycon_us.screens.schedule_filter import (
     hidden_tracks,
     summary_text,
 )
-from pycon_us.screens.schedule_sheet import DEFAULT_HIDDEN, count_label, filter_groups
+from pycon_us.screens.schedule_sheet import (
+    DEFAULT_HIDDEN,
+    chip_label,
+    count_label,
+    filter_groups,
+)
 from pycon_us.state import Conference
 from tests import sessions, test_schedule
 from tests.fakes import MemoryPrefs
@@ -134,6 +139,38 @@ def test_the_count_says_session_or_sessions() -> None:
     assert count_label(0) == "Show 0 sessions"
     assert count_label(1) == "Show 1 session"
     assert count_label(87) == "Show 87 sessions"
+
+
+def chip_parts(label: Any) -> tuple[ft.Icon | None, ft.Text]:
+    """Return a chip label's check (``None`` when it has none) and its name."""
+    assert isinstance(label, ft.Container)
+    row = label.content
+    assert isinstance(row, ft.Row)
+    *check, name = row.controls
+    assert isinstance(name, ft.Text)
+    assert all(isinstance(c, ft.Icon) for c in check)
+    return (cast(ft.Icon, check[0]) if check else None), name
+
+
+def test_a_chip_name_wraps_beside_its_check_at_large_text() -> None:
+    # #330: a string label stays on one faded line, so "Lightning talks" was cut at
+    # iOS's largest text. The name is a Text that may wrap, loose in its row so the
+    # chip stays as narrow as the name; the label, not the chip, draws the check and
+    # the side padding, so Flutter measures the name at the width it lays it out in
+    # (F69).
+    for shown in (True, False):
+        label = chip_label("Lightning talks", shown)
+        check, name = chip_parts(label)
+        assert name.value == "Lightning talks"
+        assert name.max_lines is not None and name.max_lines > 1
+        assert not name.no_wrap
+        assert name.expand and name.expand_loose
+        assert label.bgcolor == ft.Colors.TRANSPARENT  # hit-tested at its centre
+        if shown:
+            assert check is not None and check.icon == ft.Icons.CHECK
+            assert check.apply_text_scaling  # grows with the text, as Flutter's
+        else:
+            assert check is None  # unselected: the outline and the name only
 
 
 def test_the_dot_shows_only_when_the_filter_differs_from_the_default() -> None:
@@ -341,7 +378,8 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     current = await open_sheet(schedule)
     assert current.show_drag_handle and current.scrollable and current.use_safe_area
     assert current.animation_style is None  # Flutter's slide, as motion is allowed
-    labels = [c.label for c in _descendants(current) if isinstance(c, ft.Chip)]
+    chips = [c for c in _descendants(current) if isinstance(c, ft.Chip)]
+    labels = [chip_parts(c.label)[1].value for c in chips]
     tracks = feed_tracks(conference)
     # F40: a heading needs its level. The title, then one per group the feed fills.
     levels = [
@@ -354,12 +392,18 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
         INFO.track_name(key) for g in filter_groups(INFO, tracks) for key in g.tracks
     ]
     assert not chip(schedule, "open-space").selected
-    assert chip(schedule, "talk").selected and chip(schedule, "talk").show_checkmark
+    assert chip_parts(chip(schedule, "open-space").label)[0] is None
+    assert chip(schedule, "talk").selected
+    assert chip_parts(chip(schedule, "talk").label)[0] is not None  # its check
+    # The label draws the check and the side padding (F69): the chip draws neither.
+    assert not any(c.show_checkmark for c in chips)
+    assert all(c.label_padding == ft.Padding.all(0) for c in chips)
     default = shown_count(conference, ("Open Space",))
     assert button_label(schedule) == count_label(default)
 
     await tap_chip(schedule, "talk")  # hides talks at once, and persists
     assert schedule.prefs.excluded_tracks == ("Open Space", "Talk")
+    assert chip_parts(chip(schedule, "talk").label)[0] is None  # its check goes too
     assert stored(schedule)[STORED] == ["Open Space", "Talk"]
     fewer = shown_count(conference, ("Open Space", "Talk"))
     assert fewer < default
