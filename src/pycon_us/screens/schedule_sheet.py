@@ -9,7 +9,8 @@ it shows, so each module stays under about 400 lines (D-66):
   sessions" stays pinned under them;
 - a ``Chip`` per track the feed has, with its check (not colour alone, D-33), named by
   ``track_name()`` as its badge is and grouped under ``conference.toml``'s track groups
-  (``filter_groups()``), then "What do these mean?" to the Tracks hub;
+  (``filter_groups()``), then "What do these mean?" to the Tracks hub; its label,
+  ``chip_label()``, wraps at large text (D-249);
 - ``count_label()``, the button's words.
 """
 
@@ -290,9 +291,12 @@ def _chip(
     return named(
         f"{SCREEN}.filter.{semantics_key(key)}",
         ft.Chip(
-            label=info.track_name(key),
+            label=chip_label(info.track_name(key), shown),
             selected=shown,
-            show_checkmark=True,
+            # The label draws the check and the side padding (chip_label(), F69).
+            show_checkmark=False,
+            padding=ft.Padding.symmetric(vertical=8),
+            label_padding=ft.Padding.all(0),
             # Unselected, only its outline on the sheet (M3's filter chip). Flutter
             # draws a chip on a canvas Material, which paints `surface` whatever
             # the chip's colour (a transparent one still showed white in light,
@@ -300,4 +304,52 @@ def _chip(
             bgcolor=SHEET_COLOR,
             on_select=selected,
         ),
+    )
+
+
+def chip_label(name: str, shown: bool) -> ft.Container:
+    """Return a filter chip's label: the check while it is selected, then its name.
+
+    The name may wrap, so at the largest text a long one ("Lightning talks") shows
+    whole on two lines (D-249). Flutter's chip puts a string label on one line and
+    fades the rest; a ``Text`` label wraps, but the chip measures the label's height
+    at its whole width, then lays it out beside its check mark and paddings no
+    taller than that, so a name that fits one line only at the whole width lost its
+    second line (F69). So the chip draws neither: the label holds the check and the
+    side padding, and gets the same width both times.
+
+    Args:
+        name: The track's name, as its badge says it (``track_name()``).
+        shown: The chip is selected: its sessions show.
+    """
+    name_text = ft.Text(
+        name,
+        # The chip's text style says one line; the most a track name takes at the
+        # largest text on the narrowest phone is a word per line.
+        max_lines=3,
+        # Loose in the row: as wide as the name, and narrower when it must wrap.
+        expand=True,
+        expand_loose=True,
+    )
+    check = ft.Icon(
+        ft.Icons.CHECK,
+        size=18,  # M3's chip icon
+        color=ft.Colors.PRIMARY,  # Flutter's selected check mark
+        # It grows with the text, as Flutter's own check mark does.
+        apply_text_scaling=True,
+    )
+    return ft.Container(
+        ft.Row(
+            [check, name_text] if shown else [name_text],
+            spacing=8,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        # M3's 8 dp chip padding plus its 8 dp label padding; the check takes the
+        # label padding's place at the start.
+        padding=ft.Padding.only(left=8 if shown else 16, right=16),
+        # Painted, so the label takes a tap anywhere on it: the chip hit-tests only
+        # its label's centre (chip.dart), which for "AI" falls between the check
+        # and the name, where a bare row would miss it.
+        bgcolor=ft.Colors.TRANSPARENT,
     )
