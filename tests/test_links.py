@@ -25,6 +25,7 @@ from pycon_us.ui.links import (
     LinkKind,
     contact_of,
     copy_contact,
+    external,
     feed_link,
     feed_markdown,
     link_kind,
@@ -407,3 +408,14 @@ async def test_a_copy_that_fails_says_what_was_not_copied_and_logs_no_address(
 async def test_only_phone_and_email_links_copy(page: FakePage, svc: Services) -> None:
     with pytest.raises(ValueError, match="only phone and email"):
         await copy_contact(svc, WEB)
+
+
+def test_an_external_button_s_node_says_whether_it_is_disabled() -> None:
+    """F42: the merged node takes the button's state, as ``named()``'s does (D-214)."""
+    for disabled in (True, False):
+        button = ft.FilledTonalButton("Propose one", disabled=disabled)
+        merged = external("open_spaces.propose", button)
+        assert isinstance(merged, ft.MergeSemantics)
+        node = merged.content
+        assert isinstance(node, ft.Semantics) and node.link
+        assert node.disabled is disabled

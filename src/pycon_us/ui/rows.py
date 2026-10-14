@@ -29,7 +29,7 @@ from pycon_us.ui.links import (
     link_kind,
     open_link,
 )
-from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.semantics import named, semantics_key
 
 PLAIN_TOP = 16
 """A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
@@ -134,7 +134,7 @@ def _ExternalLinkTile(
         ft.Icons.CONTENT_COPY_OUTLINED, tooltip=tooltip, on_click=copy
     )
     if identifier is not None:
-        copy_button = ft.Semantics(identifier=f"{identifier}.copy", content=copy_button)
+        copy_button = named(f"{identifier}.copy", copy_button)  # one node (D-190)
     return ft.Row(
         [
             ft.Container(row, expand=True),
@@ -268,7 +268,7 @@ def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control
         title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT,
         min_height=SPEAKER_TILE_HEIGHT,
     )
-    return ft.MergeSemantics(content=ft.Semantics(identifier=identifier, content=tile))
+    return named(identifier, tile)
 
 
 def more_label(more: int) -> str:

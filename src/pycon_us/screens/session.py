@@ -52,7 +52,7 @@ from pycon_us.ui.badges import (
 from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
 from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.semantics import named, semantics_key
 from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
 
@@ -202,7 +202,9 @@ def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
             )
         ],
     )
-    return ft.Semantics(identifier=f"{SCREEN}.overflow", content=menu)
+    # Merged: bare, the tooltip sat on the identifier's node and the button under it
+    # was unnamed (D-214).
+    return named(f"{SCREEN}.overflow", menu)
 
 
 def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Control:

@@ -28,6 +28,7 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.semantics import named
 
 CAPABILITIES = (
     ("Secure storage", capabilities.SECURE_STORAGE),
@@ -152,8 +153,13 @@ def Developer() -> ft.View:
                     error=clock_error,
                     keyboard=ft.KeyboardType.DATETIME,
                     on_change=edit_clock,
-                    suffix=clock_picker(
-                        page, text=clock_text, info=info, on_pick=fill_clock
+                    # Merged: unwrapped, its tooltip and its button were two
+                    # nodes, the button unnamed (D-214).
+                    suffix=named(
+                        "developer.clock_picker",
+                        clock_picker(
+                            page, text=clock_text, info=info, on_pick=fill_clock
+                        ),
                     ),
                 ),
                 ft.ListTile(
@@ -174,13 +180,14 @@ def Developer() -> ft.View:
                 padded(
                     ft.Row(
                         [
-                            ft.Semantics(
-                                identifier="developer.reset",
-                                content=ft.OutlinedButton("Reset", on_click=reset),
+                            # Merged: a bare identifier was an empty stop (D-190).
+                            named(
+                                "developer.reset",
+                                ft.OutlinedButton("Reset", on_click=reset),
                             ),
-                            ft.Semantics(
-                                identifier="developer.apply",
-                                content=ft.FilledButton("Apply", on_click=apply),
+                            named(
+                                "developer.apply",
+                                ft.FilledButton("Apply", on_click=apply),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.END,
@@ -262,28 +269,32 @@ def option_field(
     text, and the text is taken as typed, with no autocorrect or suggestions (a date, a
     URL). ``max_lines`` without ``multiline``, which would swap ``keyboard`` for the
     multiline keyboard, whose Return types a line break.
+
+    The identifier is merged into the field's node (D-190), except around a field
+    with a ``suffix``: a merge takes in every descendant, and the clock's picker would
+    stop being a button of its own (D-189). That field keeps a bare identifier, an
+    empty node of its own, until Flet's ``Semantics`` stops forcing ``enabled`` (U34,
+    D-214).
     """
-    return padded(
-        ft.Semantics(
-            identifier=identifier,
-            content=ft.TextField(
-                value=value,
-                max_lines=3,
-                label=label,
-                hint_text=hint,
-                hint_max_lines=1,  # else a long hint (the feed URL) heightens the field
-                helper=helper,
-                helper_max_lines=3,
-                error=error or None,
-                error_max_lines=3,
-                keyboard_type=keyboard,
-                autocorrect=False,
-                enable_suggestions=False,
-                on_change=on_change,
-                suffix_icon=suffix,
-            ),
-        )
+    text_field = ft.TextField(
+        value=value,
+        max_lines=3,
+        label=label,
+        hint_text=hint,
+        hint_max_lines=1,  # else a long hint (the feed URL) heightens the field
+        helper=helper,
+        helper_max_lines=3,
+        error=error or None,
+        error_max_lines=3,
+        keyboard_type=keyboard,
+        autocorrect=False,
+        enable_suggestions=False,
+        on_change=on_change,
+        suffix_icon=suffix,
     )
+    if suffix is None:
+        return padded(named(identifier, text_field))
+    return padded(ft.Semantics(identifier=identifier, content=text_field))
 
 
 def capability_row(name: str, available: bool) -> ft.Control:

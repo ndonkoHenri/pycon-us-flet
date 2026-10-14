@@ -145,6 +145,36 @@ def by_identifier(scaffold: dict[str, Any]) -> dict[str, ft.Control]:
     return found
 
 
+def merged_identifiers(scaffold: dict[str, Any]) -> set[str]:
+    """The identifiers merged into their control's node: ``MergeSemantics(Semantics)``."""
+    found: set[str] = set()
+
+    def visit(control: Any) -> None:
+        if isinstance(control, ft.MergeSemantics):
+            inner = control.content
+            if isinstance(inner, ft.Semantics) and inner.identifier:
+                found.add(inner.identifier)
+        for name in ("content", "controls", "suffix_icon"):
+            child = getattr(control, name, None)
+            for item in child if isinstance(child, list) else [child]:
+                if isinstance(item, ft.Control):
+                    visit(item)
+
+    visit(scaffold["body"])
+    return found
+
+
+def clock_picker_button(text_field: ft.TextField) -> ft.IconButton:
+    """The fake-clock field's picker, merged with its identifier (D-214)."""
+    merged = text_field.suffix_icon
+    assert isinstance(merged, ft.MergeSemantics)
+    node = merged.content
+    assert isinstance(node, ft.Semantics)
+    assert node.identifier == "developer.clock_picker"
+    assert isinstance(node.content, ft.IconButton)
+    return node.content
+
+
 def field(scaffold: dict[str, Any], identifier: str) -> ft.TextField:
     control = by_identifier(scaffold)[identifier]
     assert isinstance(control, ft.TextField)
@@ -218,6 +248,34 @@ def test_the_controls_carry_the_identifiers_ui_flows_use(
         "developer.outcome",
     }
     assert scaffold["title"] == "Developer options"
+
+
+def test_the_buttons_and_the_url_field_are_one_node_with_their_identifier(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    # A bare Semantics(identifier) around a control dumped as an empty, focusable
+    # View beside the button on Android (#236); merged, the control's own node
+    # carries it (D-190).
+    assert merged_identifiers(render()) == {
+        "developer.reset",
+        "developer.apply",
+        "developer.feed_url",
+        "developer.clock_picker",
+    }
+    nodes = by_identifier(render())
+    assert isinstance(nodes["developer.reset"], ft.OutlinedButton)
+    assert isinstance(nodes["developer.apply"], ft.FilledButton)
+    assert isinstance(nodes["developer.feed_url"], ft.TextField)
+
+
+def test_the_clock_field_keeps_its_picker_a_button_of_its_own(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    # A merge takes in every descendant: around the clock field it would make the
+    # picker part of the field's node (D-189), so that identifier stays bare (U34).
+    scaffold = render()
+    assert "developer.fake_clock" not in merged_identifiers(scaffold)
+    assert clock_picker_button(field(scaffold, "developer.fake_clock"))
 
 
 def test_a_warning_tone_chip_marks_the_screen(
@@ -410,10 +468,9 @@ async def test_the_pickers_fill_the_clock_field_in_conference_time(
 ) -> None:
     await press(render, "developer.apply")
     assert outcome(render) is not None
-    text_field = field(render(), "developer.fake_clock")
-    assert isinstance(text_field.suffix_icon, ft.IconButton)
-    assert text_field.suffix_icon.tooltip == "Pick a date and time"
-    cast(Callable[[], None], text_field.suffix_icon.on_click)()
+    button = clock_picker_button(field(render(), "developer.fake_clock"))
+    assert button.tooltip == "Pick a date and time"
+    cast(Callable[[], None], button.on_click)()
     day_picker = page.dialogs[-1]
     assert isinstance(day_picker, ft.DatePicker)
     assert day_picker.value == date(2026, 5, 13)  # empty: the first day, as the hint

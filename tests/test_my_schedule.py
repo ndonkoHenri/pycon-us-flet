@@ -145,8 +145,9 @@ class Shown:
         ]
 
     def fold(self, identifier: str) -> ft.ExpansionTile:
-        title = self.node(f"my_schedule.{identifier}")
-        tile = title.parent
+        # Around the tile, not on its title, which it split from the tile's button
+        # on Android (D-214).
+        tile = self.node(f"my_schedule.{identifier}").content
         assert isinstance(tile, ft.ExpansionTile)
         return tile
 
@@ -455,7 +456,7 @@ async def test_earlier_days_and_today_s_ended_sessions_fold_away(
 ) -> None:
     """Thursday 10:45: Wednesday is over, and so is Thursday's 9:30 workshop."""
     earlier_days = shown.fold("earlier_days")
-    title = cast(ft.Text, cast(ft.Semantics, earlier_days.title).content)
+    title = cast(ft.Text, earlier_days.title)
     assert title.value == f"Earlier days (3{NBSP}sessions)"
     assert earlier_days.expanded is False  # folded until tapped
     style = cast(ft.AnimationStyle, earlier_days.animation_style)
@@ -567,7 +568,8 @@ async def test_the_all_over_notice_sits_above_the_earlier_days_tile(
     """Compact, not the full-screen empty state: the tile is still content."""
     root = shown.root().controls
     notice, tile = root[1], root[2]
-    assert isinstance(tile, ft.ExpansionTile)
+    assert tile is shown.node("my_schedule.earlier_days")
+    assert isinstance(shown.node("my_schedule.earlier_days").content, ft.ExpansionTile)
     assert not any(
         isinstance(c, ft.Icon) and c.size == states.ICON_SIZE for c in _walk(notice)
     )

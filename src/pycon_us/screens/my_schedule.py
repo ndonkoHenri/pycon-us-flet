@@ -371,18 +371,17 @@ def _fold(
 ) -> ft.Control:
     """Return a ``FoldTile`` that folds what has ended away, collapsed until tapped.
 
-    ``title`` is "Earlier days (6 sessions)"; ``identifier`` goes on the title, so it
-    is merged into the tile's own node. The rest is ``FoldTile``'s.
+    ``title`` is "Earlier days (6 sessions)". ``identifier`` goes around the tile, as
+    session detail's other rooms' does: on the title, it split the title from the
+    tile's button, which Android then read as "Collapsed" alone (D-214). The rest is
+    ``FoldTile``'s.
     """
-    return FoldTile(
+    fold = FoldTile(
         # Quieter than the day header above it: a fold of what is over (ux.md §5.6).
-        ft.Semantics(
-            identifier=identifier,
-            content=ft.Text(
-                title,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
+        ft.Text(
+            title,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+            color=ft.Colors.ON_SURFACE_VARIANT,
         ),
         controls,
         expanded=expanded,
@@ -393,6 +392,9 @@ def _fold(
         # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on).
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
     )
+    # Not merged, which would take in the rows it holds: an empty node of its own,
+    # the price of an identifier on a fold (F50).
+    return ft.Semantics(identifier=identifier, content=fold)
 
 
 def _sessions(days: Sequence[AgendaDay]) -> str:
