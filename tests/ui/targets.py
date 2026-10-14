@@ -15,6 +15,7 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.timeline import timeline
+from pycon_us.prefs import Prefs
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from tests import feeds
@@ -40,12 +41,14 @@ def conference_days(data: ConferenceData) -> tuple[date, ...]:
 
 
 def day_rows(data: ConferenceData, index: int) -> list[Session]:
-    """Return the rows of the Schedule's day ``index``, in the screen's order, unfiltered.
+    """Return the rows of the Schedule's day ``index``, in the screen's order.
 
-    A fresh install hides no track, so the list is the day's whole timeline.
+    Filtered as a fresh install filters them: its stored filter is the default one,
+    which hides open spaces (``Prefs.excluded_tracks``, D-20).
     """
     day = conference_days(data)[index]
-    return [session for slot in timeline(data, day, ()) for session in slot.sessions]
+    hidden = Prefs().excluded_tracks
+    return [s for slot in timeline(data, day, hidden) for s in slot.sessions]
 
 
 def saveable(sessions: list[Session]) -> list[Session]:

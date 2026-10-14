@@ -10,6 +10,7 @@ import flet.testing as ftt
 
 from tests.ui.developer import before_conference, fresh_start
 from tests.ui.helpers import (
+    open_tab,
     remote,
     screenshot,
     tap_back_arrow,
@@ -33,7 +34,7 @@ async def test_switch_days_keeps_selection(
     session = saveable(day_rows(recorded(), DAY))[0]
 
     # The first day shows; the third tab replaces its rows with the third day's.
-    await tap_id(t, "app.nav.schedule")
+    await open_tab(t, "schedule")
     await wait_for_id(t, first_day)
     await tap_id(t, f"schedule.day_tab.{DAY}")
     for row in third_day:

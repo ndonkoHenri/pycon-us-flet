@@ -18,8 +18,11 @@ from pycon_us.screens.developer_data import refreshed
 from tests.ui.helpers import (
     START_TIMEOUT,
     enter_text_id,
+    open_tab,
+    tap,
     tap_back_arrow,
     tap_id,
+    tap_until,
     wait_for,
     wait_for_id,
     wait_for_text,
@@ -53,22 +56,38 @@ async def open_developer(t: RemoteTester) -> None:
     """Open Developer options from a tab root, unlocking them first if they are locked.
 
     More › About this app › the version row 7 times › Developer options, the row the
-    unlock adds there (``about_app.developer``); once unlocked, the More list's own
-    Developer options row (``more.developer``). Either way the View under Developer is
-    the More root, since both rows navigate to ``/more/developer``.
+    unlock adds there (``about_app.developer``); once unlocked, the taps are skipped.
+    Always through About, never the More list's own Developer options row, which
+    sits under About this app, at the list's foot: a flow cannot scroll (U35), and a
+    row half under the bottom bar is found but its tap lands on the bar. The View
+    under Developer is the More root, since the row navigates to ``/more/developer``.
     """
     await wait_for_tooltip(t, "Back", gone=True)  # on a root, any pop to it finished
-    await tap_id(t, "app.nav.more")
-    await wait_for_id(t, "more.title")
-    if (await t.find_by_semantics_identifier("more.developer")).count:
-        await tap_id(t, "more.developer")
-    else:
-        await tap_id(t, "more.app")
-        await wait_for_id(t, "more.title", gone=True)  # About has replaced the root
+    await open_tab(t, "more")
+    about = await wait_for(
+        t,
+        lambda: t.find_by_semantics_identifier("more.app"),
+        "About this app (more.app), off screen on a short phone: a flow cannot "
+        "scroll (U35, D-218)",
+    )
+    await tap(t, about)
+    await wait_for_id(t, "more.title", gone=True)  # About has covered the root
+    if not (await t.find_by_semantics_identifier("about_app.developer")).count:
         for _ in range(UNLOCK_TAPS):
             await tap_id(t, "about_app.version")
-        await tap_id(t, "about_app.developer")
+    await tap_id(t, "about_app.developer")
     await wait_for_id(t, "developer.apply")
+
+
+async def reopen_developer(t: RemoteTester) -> None:
+    """Leave Developer options for the More root and open them again.
+
+    The keyboard that typing left up goes with the View, so the Data rows are on
+    screen again, and Refresh now's outcome line starts empty.
+    """
+    await tap_back_arrow(t)
+    await wait_for_id(t, "more.title")
+    await open_developer(t)
 
 
 async def refresh_now(t: RemoteTester, outcome: str | None = None) -> None:
@@ -76,8 +95,8 @@ async def refresh_now(t: RemoteTester, outcome: str | None = None) -> None:
 
     The line under the Data rows (``developer.data_outcome``) is hidden from the tap
     until the refresh ends, but a Refresh now on a screen that already says something
-    could be read before its own result: open Developer afresh first, which starts
-    with no outcome.
+    could be read before its own result: open Developer afresh first
+    (``reopen_developer()``), which starts with no outcome.
 
     Args:
         t: The tester.
@@ -96,18 +115,27 @@ async def apply_options(
 ) -> None:
     """Type the fake clock and the feed URL into Developer, tap Apply and wait for it.
 
+    The feed URL is typed last, also when it stays empty: the keyboard is up then, and
+    the URL field keeps the Apply row under it in sight (``APPLY_IN_SIGHT``), where
+    the clock field, higher up, leaves it under the keyboard. A flow cannot close the
+    keyboard: ``RemoteTester`` has no keyboard action (U35).
+
     Args:
         t: The tester, on Developer options.
         now: The fake clock's start (``before_conference()``); None leaves the field.
-        feed_url: The feed URL; None leaves the field.
+        feed_url: The feed URL; None empties the field, for the year's feed.
     """
     if now is not None:
         await enter_text_id(t, "developer.fake_clock", now)
-    if feed_url is not None:
-        await enter_text_id(t, "developer.feed_url", feed_url)
-    await tap_id(t, "developer.apply")
-    await wait_for(
-        t, lambda: t.find_by_text_containing("^Applied: "), "Apply's outcome"
+    await enter_text_id(t, "developer.feed_url", feed_url or "")
+    # The list may still be scrolling the field into sight above the keyboard, and a
+    # tap on a moving list only stops it: tap again until Apply says what it did. A
+    # second Apply of the same values changes nothing.
+    await tap_until(
+        t,
+        lambda: t.find_by_semantics_identifier("developer.apply"),
+        lambda: t.find_by_text_containing("^Applied: "),
+        "Apply",
     )
 
 
@@ -134,11 +162,9 @@ async def fresh_start(
     await refresh_now(t)  # any outcome: the launch's refresh has ended
     await apply_options(t, now=now, feed_url=feed_url)
     if feed_url is not None:
-        await tap_back_arrow(t)
-        await open_developer(t)
+        await reopen_developer(t)
         await refresh_now(t, UPDATED)
     await tap_back_arrow(t)
     await wait_for_id(t, "more.title")
     await wait_for_tooltip(t, "Back", gone=True)  # the pop has finished
-    await tap_id(t, "app.nav.now")
-    await wait_for_id(t, "now.title")
+    await open_tab(t, "now")

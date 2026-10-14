@@ -11,6 +11,7 @@ import flet.testing as ftt
 from pycon_us.ui.badges import REMOVED
 from tests.ui.developer import before_conference, fresh_start
 from tests.ui.helpers import (
+    open_tab,
     remote,
     screenshot,
     tap_id,
@@ -28,10 +29,9 @@ async def test_favourite_with_undo(flet_app: ftt.FletTestApp, feed_url: str) -> 
     saved_row = row_id("my_schedule", session)
 
     # Star it on the Schedule; My schedule lists it.
-    await tap_id(t, "app.nav.schedule")
+    await open_tab(t, "schedule")
     await tap_id(t, star_id("schedule", session))
-    await tap_id(t, "app.nav.my_schedule")
-    await wait_for_id(t, "my_schedule.title")
+    await open_tab(t, "my_schedule")
     await wait_for_id(t, saved_row)
     await screenshot("f4-saved")
 

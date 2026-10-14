@@ -20,12 +20,13 @@ from tests.ui.developer import (
     fresh_start,
     open_developer,
     refresh_now,
+    reopen_developer,
 )
 from tests.ui.helpers import (
+    open_tab,
     remote,
     screenshot,
     tap_back_arrow,
-    tap_id,
     tap_text,
     wait_for,
     wait_for_id,
@@ -46,6 +47,7 @@ async def test_start_offline_shows_schedule(
     # Developer: the feed URL a person types, then Refresh now, which gets no answer.
     await open_developer(t)
     await apply_options(t, feed_url=offline_url)
+    await reopen_developer(t)  # the keyboard down, the Data rows in sight
     await refresh_now(t, NO_ANSWER)
     await screenshot("f1-developer-no-answer")
     await tap_back_arrow(t)
@@ -53,8 +55,7 @@ async def test_start_offline_shows_schedule(
 
     # The Schedule: the first day's rows, and the strip says offline (D-32).
     first_rows = [row_id("schedule", session) for session in day_rows(bundled(), 0)[:3]]
-    await tap_id(t, "app.nav.schedule")
-    await wait_for_id(t, "schedule.title")
+    await open_tab(t, "schedule")
     for row in first_rows:
         await wait_for_id(t, row)
     await wait_for_offline_strip(t)

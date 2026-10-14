@@ -139,6 +139,31 @@ async def tap_text(t: RemoteTester, text: str) -> None:
     await tap(t, await wait_for_text(t, text))
 
 
+async def open_tab(t: RemoteTester, tab: str) -> None:
+    """Show a tab's root from another root, and wait until the switch has finished.
+
+    Each root has its own bar (D-144), and while one root replaces another both bars
+    are on screen: a tap on the leaving one is lost (#108 lost a My schedule tap that
+    way on the iOS simulator). So the tab is tapped when exactly one bar shows, and
+    the switch is over when its root's title shows with one bar again (D-170).
+
+    Args:
+        t: The tester, on a tab root.
+        tab: The tab's key, as in ``app.nav.<tab>`` and ``<tab>.title``, e.g.
+            ``my_schedule``.
+    """
+    nav = f"app.nav.{tab}"
+
+    async def one_bar() -> Finder:
+        return await wait_for(
+            t, lambda: t.find_by_semantics_identifier(nav), f"one {nav}", count=1
+        )
+
+    await tap(t, await one_bar())
+    await wait_for_id(t, f"{tab}.title")
+    await one_bar()
+
+
 async def tap_tooltip(t: RemoteTester, tooltip: str) -> None:
     """Tap the first control with this tooltip, an icon button's name (D-27), once shown."""
     await tap(t, await wait_for_tooltip(t, tooltip))
@@ -156,9 +181,10 @@ async def tap_until(
 
     A SnackBar's action slides in for 250 ms, and a tap on it before it has arrived
     is lost (#197). Rather than wait a fixed time, the tap is repeated, every
-    ``RETAP_SECONDS`` while its effect has not shown, until it shows. Only for a
-    target that acts once, as a SnackBar's action does: a second tap on it does
-    nothing.
+    ``RETAP_SECONDS`` while its effect has not shown, until it shows. A tap on a list
+    that is still scrolling only stops the scroll, the same way. Only for a target
+    that acts once, as a SnackBar's action does, or whose second tap changes
+    nothing, as Developer's Apply of the same values.
 
     Args:
         t: The tester.
@@ -247,15 +273,19 @@ async def screenshot(name: str) -> None:
 
 
 async def screenshot_on_failure() -> None:
-    """Save ``timed-out.png``, what the screen showed instead, if the device lets us.
+    """Save ``timed-out-<flow>.png``, what the screen showed instead, if the device lets us.
 
-    A step often times out because the app or the device went away, and then ``adb``
-    or ``simctl`` fails too: that failure must not hide the step's own message.
+    Named after the flow (pytest's ``PYTEST_CURRENT_TEST``), so a run with several
+    failures keeps each one's picture. A step often times out because the app or the
+    device went away, and then ``adb`` or ``simctl`` fails too: that failure must not
+    hide the step's own message.
     """
+    current = os.environ.get("PYTEST_CURRENT_TEST", "")
+    flow = current.split("::")[-1].split(" ")[0] or "flow"
     try:
-        await screenshot("timed-out")
+        await screenshot(f"timed-out-{flow}")
     except (AssertionError, OSError) as error:
-        print(f"No timed-out.png: {error}")
+        print(f"No timed-out-{flow}.png: {error}")
 
 
 async def run(*command: str) -> bytes:
