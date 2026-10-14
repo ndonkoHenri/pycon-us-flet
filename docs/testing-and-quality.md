@@ -555,6 +555,32 @@ Before an emulator run, check that the emulator is not throttled: during S2 it t
 
 Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). S1's reproducer (`docs/spikes/01-packaged-runtime/`) shows the logging, and its verdict the emulator baseline. A busy host moved S1's medians by about 25 %, so repeat a suspect run before filing. A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup, gets a `bug` + `area:quality` issue.
 
+### 8.1 Phase-exit numbers
+
+The numbers go into the phase status issue, and here too, next to the method, so the next phase has something to compare with.
+
+**P1 exit, 2026-10-14 (#219, #110): Android emulator, not comparable.**
+- **Setup.** Release arm64 APKs of `main` (`flet build apk --arch arm64-v8a` with the worktree's pub cache; each APK's `app.zip` matched `build/python-app`), Flet pin `15854a0ac`. Run A used `ff8d43f`, run B `119858d` (#335, the filter sheet's chips, came in between). AVD `pycon_pixel6a_api36` (Android 16, Google APIs arm64, 1080 × 2400), on an instance of its own (`-read-only -no-snapshot-load`, a cold boot at 13:13). Host: Apple M4 (10 cores), macOS 27.0, with other agents' emulators and builds running. The fake clock was at Friday, May 15, 09:00 PT (Developer), on the cached 2026 feed, with every track shown ("Show all"). The default filter hides open spaces, so this is the full busiest day that S2 measured.
+- **Why it is not comparable.** Before run A, the host's 1-minute load stayed under 6 for three polls in a row (13:29-13:31: 5.1, 5.5, 5.3), then other work pushed it back to 9-16 during the run. Over the ten cold starts, the emulator's `Feed processed in N ms` had a median of 280 ms, against 66 ms in S2. On the host itself, `feed.process` of the 2026 snapshot took a median 134 ms (S2: 42 ms). Every qemu thread showed priority 4 (background) at 13:21 while the host's user was active (18 s idle), so S2's slowdown does not come only from an idle host. Polls from 13:39 to 14:26 and from 18:32 to 19:33 never found three readings under 6 in a row. Run B took the best moment, at load 6.2-6.6: processing had a median of 94 ms (67-176), but `TotalTime`, Flutter's start before any Python runs, read 587-2,819 ms against D-112's 426 ms. At 19:46, Python started 3.1-4.3 s after `START u0` (S2: 0.47 s). No number here can say whether P1 regressed. #339 repeats the run on an emulator that runs at full speed.
+
+| Metric | S2 or earlier baseline | Run A, 13:32-13:39, `ff8d43f` | Run B, 19:31-19:35, `119858d` | Method |
+|---|---|---|---|---|
+| Cold start to the content line, `/schedule`, n = 10 | 886 ms (856-958), D-159 | 9,220 ms (6,136-31,542) | 2,232 ms (1,657-6,234) | D-112: `Content shown: cache feed, version 1` minus `START u0` |
+| `TotalTime`, n = 10 | 426 ms (400-507), D-112 | 3,538 ms (1,823-17,051) | 910 ms (587-2,819) | `am start -W` |
+| Feed processing at start, n = 10 | 66 ms, D-159 | 280 ms (187-737) | 94 ms (67-176) | the first `Feed processed in N ms` of each start (the cache) |
+| First frame with session rows, screen recording | 815-886 ms (log proxy, S2) | 6.8 s at load 8.5 (13:23); 10.9, 17.2, 19.5 s at load 11-16 (14:11) | not recorded | `screenrecord`: from the launch animation's first frame to the first frame with the Schedule's rows |
+| Star tap, handler → patch, 12 taps on Friday | 3 ms (2-4), D-159 | 102 ms (50-317) | 44 ms (18-129); again 38 ms (20-241) | a check-only build (below); one row body per tap in every run |
+| Flinging Friday, 12 flings | 888 frames, 2 over 25 ms (0.2 %), worst 28.9 ms (S2, `tree/today/deferred`) | 187 frames, 104 over 25 ms (55.6 %), worst 979 ms | 605 frames, 122 over 25 ms (20.2 %), worst 223 ms | `dumpsys SurfaceFlinger --latency` on the app's `SurfaceView`, as S2's driver does |
+| Release APK, arm64 | 55.6 MB at this pin (S5, D-106) | 56.9 MB (56,900,444 bytes) | 56.9 MB (56,901,828 bytes) | not gated |
+
+What the run still shows, since none of it depends on speed:
+- **Cold start, for #339 to settle.** In run B, the two starts whose processing read 67-70 ms (S2's speed) still showed the content line at 1,657 and 2,393 ms. Scaled by that window's `TotalTime`, which was 1.4-2.3× D-112's, the gap to S2's 886 ms is still about +30 %, over the 20 % threshold. S2 measured a reproducer of the Schedule, not the whole app. #339 decides whether this is a regression to file.
+- **A star tap re-renders one row** (`rows=1` on all 36 taps), as D-153 wants and `test_a_star_tap_re_renders_one_slot_and_one_row` checks. To cross-check Python's share, 24 taps in the unit tests' Schedule session on the host took a median 9.1 ms (handler, render and patch through the test session), against 94 ms for `feed.process` in the same run. That scales to about 6 ms at S2's 66 ms, under a frame. Only a comparable emulator run settles D-159's budget (#339).
+- **The first frame after Flet's boot screen is Friday's list, with its rows and the now line** (all four recordings; D-156's note). No empty page shows before it, and the jump to the 9:00 slot then lands on its first try (`Jumped to slot-… (try 1)`).
+- **`dumpsys gfxinfo` sees no frames from the app** ("Total frames rendered: 0"). Flutter draws into a `SurfaceView`, which the view system's renderer does not count, so use SurfaceFlinger's latency or Perfetto, as the table in §8 says.
+- **The check-only build** (never committed) adds two lines: `PERF star-in` at the start of `use_favorite_toggle()`'s handler, and `PERF patched rows=<n>` from an effect on `favorites.ids` in the Schedule, with a counter of `_SessionRow` bodies. The released app logs neither line, so D-159's star numbers always need a build like this.
+- The iPhone's release numbers, which D-80's targets are held against, belong to #121.
+
 ## 9. Device checklist (D-79)
 
 At each phase exit, with packaged builds on an Android emulator and an iOS simulator, and on the iPhone for the items that need hardware or a release build: items 1 and 2 with a TestFlight install of the phase build, the phase's exit journeys that name the iPhone (PLAN §7), VoiceOver (item 5), reminder delivery (item 12) and the camera (S8, E1) (D-102). Android items that would want hardware (a reboot, exact alarms, TalkBack) run on the emulator, and the results say so. Items marked with a phase start then. Results go into the phase status issue with device or emulator image, OS, build number and Flet pin.
