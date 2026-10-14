@@ -99,8 +99,10 @@ git -C .flet-src checkout --detach "$(cat .flet-ref)"
 # Owner: a worktree of an existing Flet checkout.
 git -C ../../flet worktree add --detach "$PWD/.flet-src" "$(cat .flet-ref)"
 
-# Check the pin before building anything for testers.
-test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin OK"
+# Check the pin before building anything for testers: HEAD, then the files (about 9 s).
+# A worktree's clone (§5.8) reports the main checkout's HEAD, so HEAD alone can pass on stale files.
+test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
+  && git --no-optional-locks -C .flet-src diff --quiet HEAD && echo "Flet pin OK"
 ```
 
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
@@ -521,7 +523,7 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/
 
 **The Flet clone.**
 - It took 2 s for the 178 MB checkout (8,400 files). It leaves out the `flet` package's `build/` folder, which the main checkout's own builds left there, for the reasons above.
-- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits it or a clone (D-213). Cloned from a `git worktree` of a Flet repo (the owner's setup, §2.2), the clone keeps the `.git` file, which names that same Flet worktree: git reads work in the clone (`rev-parse`, `diff`), but a command that writes there (`checkout`, `reset`) would move the main checkout's `.flet-src`. So a clone's HEAD is the main checkout's, and the pin check compares the clone's files too (about 9 s): `test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && git --no-optional-locks -C .flet-src diff --quiet HEAD && echo "Flet pin OK"`.
+- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits it or a clone (D-213). Cloned from a `git worktree` of a Flet repo (the owner's setup, §2.2), the clone keeps the `.git` file, which names that same Flet worktree: git reads work in the clone (`rev-parse`, `diff`), but a command that writes there (`checkout`, `reset`) would move the main checkout's `.flet-src`. So a clone's HEAD is the main checkout's, and the pin check (§2.2) compares the clone's files too: after a bump in the main checkout, HEAD alone would pass on a clone still at the old pin.
 - After a pin bump (§2.2), replace the clone: `rm -rf .flet-src`, then the Flet lines again.
 - If the wheel step fails with `[Errno 17]` or `[Errno 66]` after an interrupted build, delete your clone's leftovers, `rm -rf .flet-src/sdk/python/packages/flet/build`, and build again. Never clean the main checkout's `.flet-src` from a worktree.
 - `rm -rf build` and `flet clean` leave the clone alone: it lives outside `build/`.
