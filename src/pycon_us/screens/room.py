@@ -28,7 +28,7 @@ from pycon_us import clock
 from pycon_us.core.models import Room
 from pycon_us.core.rooms import room_now
 from pycon_us.core.row_views import by_day, session_view
-from pycon_us.core.timefmt import local_date, today
+from pycon_us.core.timefmt import local_date, on_screen, today
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href, use_query
 from pycon_us.prefs import use_prefs
@@ -272,7 +272,7 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
         return ft.Container()
     first, *rest = on
     view = session_view(first, info.zone, use_24h=use_24h, in_room=room.slug)
-    when = view.when.replace(" ", "\N{NO-BREAK SPACE}")  # "AM" keeps to its time
+    when = on_screen(view.when)  # "AM" keeps to its time (D-229)
     first_line: ft.Control = ft.Text(
         when, color=tokens.live, semantics_label=view.spoken_when
     )

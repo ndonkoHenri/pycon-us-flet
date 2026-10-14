@@ -21,6 +21,7 @@ from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import Slot, timeline
 from pycon_us.prefs import Prefs
 from pycon_us.screens.schedule_filter import (
+    SHOW_ALL_INSET,
     differs_from_default,
     hidden_tracks,
     summary_text,
@@ -258,6 +259,35 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
     )[0]
     assert (node.label, node.value) == ("Filter sessions", None)
     assert cast(ft.Icon, button.icon).badge is None
+
+
+async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
+    shown: Show,
+) -> None:
+    """#283: Material shrinks a text button's side padding as text grows (12 dp to
+    4), so at large text a "Show all" on a run of its own started right of the
+    words. Pinned, and the words inset as much, the two share their left edge."""
+    schedule = await shown()
+    (words,) = find(
+        schedule.session,
+        ft.Container,
+        lambda c: (
+            isinstance(c.content, ft.Semantics)
+            and c.content.identifier == "schedule.filter_summary"
+        ),
+    )
+    (show_all,) = find(
+        schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.show_all"
+    )
+    button = cast(ft.TextButton, show_all.content)
+    assert button.content == "Show all"  # the label, its own node's name
+    padding = cast(ft.Padding, cast(ft.ButtonStyle, button.style).padding)
+    inset = cast(ft.Padding, words.padding)
+    assert padding.left == padding.right == inset.left == SHOW_ALL_INSET
+    (wrap,) = find(
+        schedule.session, ft.Row, lambda r: bool(r.wrap) and words in r.controls
+    )
+    assert wrap.spacing == 0  # nothing else between a run's start and the label
 
 
 async def test_show_all_restores_every_track_and_stores_an_explicit_empty_list(

@@ -21,6 +21,7 @@ from pycon_us.screens import keynote_card
 from pycon_us.screens import keynotes as screen
 from pycon_us.screens.keynote_card import (
     CLAMP_LINES,
+    TALK_TITLE,
     card_text,
     clamps,
 )
@@ -129,6 +130,26 @@ async def test_one_card_per_session_with_its_people(show: Show) -> None:
     assert "CEO and co-founder, Fireworks AI" in shown  # the role
     assert "Djangonaut Space" in shown  # the talk's own title
     assert "Diversity & Inclusion Panel" in shown  # the feed's name, over the title
+
+
+async def test_a_talks_title_is_in_one_type_on_every_card(show: Show) -> None:
+    """#281: a panel's title in TITLE_LARGE broke inside "Community" at iOS's largest
+    text; a talk's title, a keynote's or a panel's, is TALK_TITLE, and only people's
+    names, whose words are short, are TITLE_LARGE."""
+    page = await show()
+    titles = {str(k.title) for k in KEYNOTES if k.title}  # the year data's own
+    styles = {
+        str(t.value): t.theme_style for t in page.find(ft.Text) if t.value in titles
+    }
+    assert set(styles) == titles
+    assert set(styles.values()) == {TALK_TITLE} == {ft.TextThemeStyle.TITLE_MEDIUM}
+    # The other headings are keynote speakers' names.
+    names = [
+        cast(ft.Text, n.content).theme_style
+        for n in page.nodes("keynotes.name.")
+        if text_of(n) not in titles
+    ]
+    assert names and set(names) == {ft.TextThemeStyle.TITLE_LARGE}
 
 
 async def test_the_photos_are_decorative_with_the_initials_under_them(

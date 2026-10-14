@@ -20,7 +20,7 @@ from pycon_us import clock
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import Room, Session
 from pycon_us.core.row_views import Places, session_view
-from pycon_us.core.timefmt import day_heading, time_status, zone_note
+from pycon_us.core.timefmt import day_heading, on_screen, time_status, zone_note
 from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -110,9 +110,9 @@ def _time_tile(
         f"{screen}.when",
         ft.ListTile(
             leading=ft.Icon(ft.Icons.SCHEDULE),
-            # The day, then the time on a line of its own, so a long day or a
-            # large text size never breaks the range in two; its "AM" keeps to
-            # its digits, and only at the largest sizes it breaks after the dash.
+            # The day, then the time on a line of its own, so a long day never
+            # pushes the range onto two lines; a range wider than its line, at
+            # the largest text sizes, breaks after its dash only (D-229).
             # The status and the note are in the title too, styled as supporting
             # lines: a subtitle would keep a two-line tile's height when both are
             # absent (another day, on Pacific time), with a blank under the range.
@@ -120,7 +120,7 @@ def _time_tile(
                 [
                     ft.Text(day),
                     ft.Text(
-                        view.when.replace(" ", "\u00a0"),
+                        on_screen(view.when),
                         semantics_label=view.spoken_when,
                     ),
                     ft.Column(lines, spacing=2),

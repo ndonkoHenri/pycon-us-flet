@@ -11,9 +11,10 @@ from collections.abc import Sequence
 import flet as ft
 
 from pycon_us.core.row_views import SessionView
+from pycon_us.core.timefmt import on_screen
 
 _NBSP = "\u00a0"
-"""A no-break space: "AM" stays on its time's line."""
+"""A no-break space: the "·" stays on its time's line."""
 
 TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
 """The elapsed bar's track: a tint of the text, so it shows on every surface, the
@@ -29,13 +30,14 @@ def meta(
     The time and the place are two texts in a wrapping row, so at large text a place
     that does not fit after the time moves to the next line whole, and the "·" ends
     the time's line rather than starting one; only a place wider than the row wraps
-    inside itself. A no-break space keeps "AM" on its time's line.
+    inside itself. The time keeps "AM" on its line and breaks only after its dash
+    (``timefmt.on_screen()``, D-229).
 
     Args:
         view: The session's row view.
         style: The line's type style; a notice's is smaller.
     """
-    when = view.when.replace(" ", _NBSP)
+    when = on_screen(view.when)
     if not view.place:
         return secondary(when, style=style)
     return ft.Row(

@@ -97,6 +97,26 @@ def test_time_range_label(
     assert timefmt.time_range_label(first, last, PACIFIC, use_24h=True) == twenty_four
 
 
+@pytest.mark.parametrize(
+    ("label", "shown"),
+    [
+        ("9:45–10:30 AM", "9:45–10:30\N{NO-BREAK SPACE}AM"),
+        ("11:30 AM–12:15 PM", "11:30\N{NO-BREAK SPACE}AM–12:15\N{NO-BREAK SPACE}PM"),
+        ("09:25–10:10", "09:25–10:10"),
+        ("7:30 AM", "7:30\N{NO-BREAK SPACE}AM"),
+    ],
+)
+def test_a_time_on_screen_can_break_only_after_its_dash(label: str, shown: str) -> None:
+    """D-229: Unicode lets a line break after an en dash and at a space, nowhere else
+    in a time. No-break spaces keep "AM" with its digits; nothing joins the dash, as a
+    range wider than its line would then break inside a time ("9:00 AM–12" / ":30 PM",
+    D-186) rather than after it."""
+    assert timefmt.on_screen(label) == shown
+    assert "\N{WORD JOINER}" not in timefmt.on_screen(
+        label
+    )  # no word joiner at the dash
+
+
 def test_time_range_across_midnight_names_both_meridiems() -> None:
     first, last = pacific(15, 22, 0), pacific(16, 1, 0)
     assert (
