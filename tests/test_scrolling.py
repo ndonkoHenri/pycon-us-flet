@@ -16,7 +16,7 @@ import flet as ft
 import pytest
 
 from pycon_us.ui import scrolling
-from pycon_us.ui.scrolling import JUMP_TRIES, jump_to_key
+from pycon_us.ui.scrolling import JUMP_TRIES, anchored, jump_to_key
 
 KEY = "slot-2026-05-15T14:00:00-07:00"
 
@@ -125,3 +125,18 @@ async def test_any_other_error_is_not_swallowed() -> None:
 async def test_a_list_that_was_never_built_is_not_scrolled() -> None:
     jump = await jump_to_key(ref_to(None), KEY, duration=0, ended=asyncio.Event())
     assert jump == "failed"
+
+
+def test_an_anchor_carries_the_key_above_its_content_and_holds_nothing() -> None:
+    """D-242: Flet mounts a control with a ScrollKey again at each build (F62), so the
+    key goes on an empty 0 dp box above the item, never on a box around its rows."""
+    row = ft.Text("A row")
+    item = anchored(KEY, row)
+    assert isinstance(item, ft.Column) and item.spacing == 0
+    anchor, content = item.controls
+    assert isinstance(anchor, ft.Container)
+    assert anchor.key == ft.ScrollKey(KEY)
+    assert anchor.content is None and anchor.height == 0
+    assert content is row
+    # The item keeps the list's full width, as a box around it did.
+    assert item.horizontal_alignment == ft.CrossAxisAlignment.STRETCH
