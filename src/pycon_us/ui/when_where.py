@@ -112,7 +112,7 @@ def _time_tile(
             leading=ft.Icon(ft.Icons.SCHEDULE),
             # The day, then the time on a line of its own, so a long day never
             # pushes the range onto two lines; a range wider than its line, at
-            # the largest text sizes, breaks after its dash only (D-224).
+            # the largest text sizes, breaks after its dash only (D-229).
             # The status and the note are in the title too, styled as supporting
             # lines: a subtitle would keep a two-line tile's height when both are
             # absent (another day, on Pacific time), with a blank under the range.

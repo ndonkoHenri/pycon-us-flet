@@ -47,7 +47,7 @@ SUMMARY_NAMES = 3
 SHOW_ALL_INSET = 8
 """The side padding of "Show all", pinned, and the same inset before the summary's
 words, in dp, so a "Show all" that wraps under the words starts its label under
-theirs (D-224). Material shrinks a text button's side padding as text grows (12 dp
+theirs (D-229). Material shrinks a text button's side padding as text grows (12 dp
 at 100 %, 8 at 200 %, 4 from 300 %), which left a wrapped label out of line."""
 
 

@@ -79,7 +79,7 @@ def on_screen(label: str) -> str:
     Its spaces become no-break spaces, so "AM" keeps to its digits, and a time never
     breaks: "9:45–10:30 AM" stays on one line whenever it fits, and a range wider
     than its line breaks after its en dash, "9:45–" / "10:30 AM", the one break
-    Unicode allows in it (D-224). No word joiner at the dash: with no break left,
+    Unicode allows in it (D-229). No word joiner at the dash: with no break left,
     Flutter breaks a run wider than its line inside a time ("9:00 AM–12" / ":30 PM",
     D-186), and a range always starts its own line, so a joiner never keeps one whole.
     Shared text (``row_views.share_text()``) and spoken labels keep plain spaces.

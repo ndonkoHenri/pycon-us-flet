@@ -272,7 +272,7 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
         return ft.Container()
     first, *rest = on
     view = session_view(first, info.zone, use_24h=use_24h, in_room=room.slug)
-    when = on_screen(view.when)  # "AM" keeps to its time (D-224)
+    when = on_screen(view.when)  # "AM" keeps to its time (D-229)
     first_line: ft.Control = ft.Text(
         when, color=tokens.live, semantics_label=view.spoken_when
     )

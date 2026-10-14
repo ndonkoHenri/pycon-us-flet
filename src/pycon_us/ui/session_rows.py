@@ -394,7 +394,7 @@ def _meta(
     that does not fit after the time moves to the next line whole, and the "·" ends
     the time's line rather than starting one; only a place wider than the row wraps
     inside itself. The time keeps "AM" on its line and breaks only after its dash
-    (``timefmt.on_screen()``, D-224).
+    (``timefmt.on_screen()``, D-229).
 
     Args:
         view: The session's row view.

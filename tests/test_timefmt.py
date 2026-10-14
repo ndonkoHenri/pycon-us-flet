@@ -107,7 +107,7 @@ def test_time_range_label(
     ],
 )
 def test_a_time_on_screen_can_break_only_after_its_dash(label: str, shown: str) -> None:
-    """D-224: Unicode lets a line break after an en dash and at a space, nowhere else
+    """D-229: Unicode lets a line break after an en dash and at a space, nowhere else
     in a time. No-break spaces keep "AM" with its digits; nothing joins the dash, as a
     range wider than its line would then break inside a time ("9:00 AM–12" / ":30 PM",
     D-186) rather than after it."""

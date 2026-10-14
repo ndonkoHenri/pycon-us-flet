@@ -34,7 +34,7 @@ a phone: Flet cannot say whether a text was cut (U16), so a shorter threshold wo
 leave words hidden with no way to read them at large text."""
 
 TALK_TITLE = ft.TextThemeStyle.TITLE_MEDIUM
-"""A talk's title on a card, a keynote's or a panel's (D-224). People's names stay in
+"""A talk's title on a card, a keynote's or a panel's (D-229). People's names stay in
 ``TITLE_LARGE``: their words are short. At iOS's largest text a ``TITLE_LARGE`` word of
 nine letters ("Community") is wider than the card's 338 dp text column on a 402 dp
 phone, and Flutter breaks it inside itself; ``TITLE_MEDIUM`` holds about twelve."""
@@ -246,7 +246,7 @@ def _head(session: Session, keynote: Keynote | None, key: str) -> list[ft.Contro
             header=True,
             heading_level=2,
             identifier=f"{SCREEN}.name.{key}.0",
-            # A talk's title, so in a keynote's talk title's type (D-224): a long
+            # A talk's title, so in a keynote's talk title's type (D-229): a long
             # title's words at TITLE_LARGE outgrew the card at the largest text,
             # "Comm" / "unity", where a name's short ones fit.
             content=ft.Text(title, theme_style=TALK_TITLE),
@@ -303,7 +303,7 @@ def _when_and_where(
 
     The day over the time and the place, a line each (as session detail's time
     tile, D-186), the range breaking only after its dash, when it is wider than its
-    line (at the largest text, beside the star; D-224); one phrase for screen readers,
+    line (at the largest text, beside the star; D-229); one phrase for screen readers,
     "Friday, May 15, 9:45 to 10:30 AM, Pacific Ballroom - Arena", and the star a
     stop of its own beside it.
     """
