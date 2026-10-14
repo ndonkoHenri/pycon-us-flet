@@ -90,8 +90,8 @@ class Modules:
         """Whether the control that ``node`` builds ends up inside a merge.
 
         Straight, or through a ``Semantics`` around it, a conditional, a name its
-        function assigns it to, or a function that returns it, whose every call must
-        then reach one.
+        function assigns it to, whose every use must then reach one, or a function
+        that returns it, whose every call must then reach one.
         """
         if node in seen:
             return False
@@ -115,7 +115,9 @@ class Modules:
                 and use.id in names
                 and isinstance(use.ctx, ast.Load)
             ]
-            return any(self.reaches_merge(use, seen) for use in uses)
+            # Every use: a button merged on one path and returned bare on another
+            # is unnamed on that other path.
+            return bool(uses) and all(self.reaches_merge(use, seen) for use in uses)
         if isinstance(above, ast.Return):
             function = scope_of(above, self.parents)
             if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -151,6 +153,12 @@ SPLIT = {
     "bare": [f"return {BACK}"],
     "in-a-list": [f"return ft.Row([{BACK}])"],
     "built-first": [f"button = {BACK}", "return ft.Row([button])"],
+    "merged-on-one-path": [
+        f"button = {BACK}",
+        "if control:",
+        "    return merged(button)",
+        "return button",
+    ],
     "identifier-only": [f'return ft.Semantics(identifier="x", content={BACK})'],
     "a-fab": ['return ft.FloatingActionButton(content="Now", tooltip="Jump")'],
     "a-text-button": ['return ft.TextButton("Reset", tooltip="Reset the filter")'],
