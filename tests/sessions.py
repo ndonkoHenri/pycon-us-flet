@@ -356,7 +356,7 @@ def text_of(control: object) -> str:
 
 
 def menu_text(item: ft.PopupMenuItem) -> ft.Text:
-    """An overflow item's label: the ``Text`` of ``menu_item()``'s tile (D-231).
+    """An overflow item's label: the ``Text`` of ``menu_item()``'s tile (D-233).
 
     Under the identifier's ``Semantics``, the tile's title, or the link's
     ``Semantics`` around it.

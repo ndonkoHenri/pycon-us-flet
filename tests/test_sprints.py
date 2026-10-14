@@ -504,7 +504,7 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
     ]
     for item in menu.items:
         title = cast(ft.ListTile, cast(ft.Semantics, item.content).content).title
-        assert cast(ft.Semantics, title).link  # each one wraps (F47, D-231)
+        assert cast(ft.Semantics, title).link  # each one wraps (F47, D-233)
         assert str(menu_text(item).semantics_label).endswith("\nOpens in browser")
         await shown.click(item)
     assert shown.launched == [INFO.sprints_url, INFO.sprint_submit_url]

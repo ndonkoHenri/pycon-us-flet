@@ -1,7 +1,7 @@
 """The app bar's overflow menus: ``overflow_menu()`` and its items, ``menu_item()``.
 
 Session detail, the Sprints page and a track's page each have one (D-186, D-202,
-D-209), built here the same way (D-231). An item is never ``PopupMenuItem.icon``
+D-209), built here the same way (D-233). An item is never ``PopupMenuItem.icon``
 with a text: Flet lays that icon and the text out in a ``Row`` without ``Expanded``,
 so at 200 % text the label ran off the menu's edge instead of wrapping (F47, #260).
 """

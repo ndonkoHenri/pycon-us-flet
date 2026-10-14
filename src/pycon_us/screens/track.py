@@ -189,7 +189,7 @@ def offers_add_all(track: Track) -> bool:
 def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
     """The app bar's overflow ("More options"): "Add all to My schedule" (D-209).
 
-    Its label wraps at 200 % text beside its icon (``menu_item()``, F47, D-231).
+    Its label wraps at 200 % text beside its icon (``menu_item()``, F47, D-233).
     """
     item = menu_item(
         ft.Icons.PLAYLIST_ADD, ADD_ALL, on_add_all, identifier=f"{SCREEN}.add_all"

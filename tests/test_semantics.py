@@ -223,7 +223,7 @@ ON_PURPOSE = {
         "my_schedule.earlier_days, my_schedule.earlier_today"
     ),
     ("when_where.py", "OtherRooms", "f'{screen}.other_rooms'"): "session.other_rooms",
-    # D-230, D-231: inside a PopupMenuItem, whose own MergeSemantics takes the
+    # D-230, D-233: inside a PopupMenuItem, whose own MergeSemantics takes the
     # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
     # dump shows it. Every overflow item is built there.
     ("menus.py", "menu_item", "identifier"): (

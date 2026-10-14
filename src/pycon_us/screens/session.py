@@ -197,7 +197,7 @@ def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
     """The app bar's overflow: "Open on us.pycon.org", the host named from the URL.
 
     It leaves the app: a link, read "Opens in browser" after its words (ux.md §4.7);
-    its label wraps at 200 % text (``menu_item()``, F47, D-231).
+    its label wraps at 200 % text (``menu_item()``, F47, D-233).
     """
     item = menu_item(
         ft.Icons.OPEN_IN_NEW,

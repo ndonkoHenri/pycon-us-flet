@@ -222,7 +222,7 @@ def _menu(info: ConferenceInfo, svc: Services) -> list[ft.Control]:
 
     Each item leaves the app: a link, read "Opens in browser" after its words, as
     session detail's "Open on us.pycon.org" is (D-186), whose label wraps at 200 %
-    text (``menu_item()``, F47, D-231). A year without either URL has no item for it,
+    text (``menu_item()``, F47, D-233). A year without either URL has no item for it,
     and without both no menu (no dead control, ux.md §1).
     """
     links: list[tuple[str, str, str]] = []

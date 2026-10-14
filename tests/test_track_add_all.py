@@ -212,7 +212,7 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
 
 
 async def test_the_items_label_wraps_beside_its_icon_at_large_text(show: Show) -> None:
-    """F47: the item is ``menu_item()``'s, whose label is a tile's title (D-231)."""
+    """F47: the item is ``menu_item()``'s, whose label is a tile's title (D-233)."""
     page = await show("charlas")
     (item,) = page.find(ft.PopupMenuItem)
     assert item.icon is None
