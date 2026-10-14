@@ -3,10 +3,10 @@
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
 ``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
 one page per conference day, sprint days included. Under the strip, "Times are Pacific
-Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The tabs, the pages and the "Now"
-button come from ``screens/schedule_days.py``: each page is a ``DayList`` of
-``SlotItem``s, memoised down to the rows (D-153). The first render fills only the shown
-day, the second the others (D-156).
+Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The
+tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
+is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
+fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them

@@ -4,7 +4,7 @@
 (U1) arrives (D-32, D-146); the screens that show the feed's state place it under
 their app bar. ``zone_note_line()`` is the Schedule's line under it, "Times are
 Pacific Time (PDT)", while the device's clock differs from the conference's (D-35,
-D-240). It ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
+D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 ``use_minute()`` is that tick as a hook, for any other view that depends on
 ``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` and
 ``stop_ticks()`` are the ticking effects' state and cleanup (D-200).
