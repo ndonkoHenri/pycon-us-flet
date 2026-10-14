@@ -151,6 +151,18 @@ async def test_it_counts_only_new_sessions_and_undo_restores_the_list_exactly(
     assert len(page.snack_bars) == 1  # an Undo says nothing more, as a star's
 
 
+async def test_undo_closes_the_added_snack_bar(show: Show) -> None:
+    """D-251: with a screen reader it would stay, saying what Undo took back."""
+    page = await show("charlas")
+    page.prefs.screen_reader = True
+    await add_all(page)
+    (snack,) = page.snack_bars
+    assert snack.open and snack.persist
+    await undo(page)
+    assert not snack.open
+    assert page.snack_bars == [snack]
+
+
 async def test_one_new_session_is_said_in_the_singular(show: Show) -> None:
     page = await show("charlas", saved=tuple(CHARLAS[1:]))
     await add_all(page)
