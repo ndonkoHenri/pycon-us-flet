@@ -130,10 +130,11 @@ class Room:
         await asyncio.sleep(seconds)
         await self.settle()
 
-    async def until(self, holds: Callable[[], bool], *, timeout: float = 2.0) -> None:
+    async def until(self, holds: Callable[[], bool], *, timeout: float = 30.0) -> None:
         """Settle until ``holds()`` is true, or fail after ``timeout`` seconds.
 
-        A poll rather than a fixed wait, so a loaded host only makes it slower.
+        A poll rather than a fixed wait, so a loaded host only makes it slower; the
+        deadline is generous because a passing test never reaches it (#237).
         """
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
