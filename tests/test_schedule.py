@@ -883,12 +883,96 @@ async def test_today_from_another_day_tells_a_screen_reader_once_it_landed(
 async def test_without_a_screen_reader_that_takes_announcements_nothing_is_said(
     shown: Callable[..., Awaitable[Shown]], settings: dict[str, bool]
 ) -> None:
-    """F13: Flutter reports no announcements on Android, so nothing is said there."""
+    """F13: Flutter reports no announcements on Android, so none is sent there."""
     schedule = await shown(**settings)
     await schedule.scroll_away()
     schedule.scrolls.clear()
     await schedule.press_now()
     assert schedule.scrolls and schedule.announced == []
+
+
+def _note(schedule: Shown) -> str:
+    """The words of the landing note, the live region TalkBack hears (D-241)."""
+    return schedule.node("schedule.landing").label or ""
+
+
+async def test_the_landing_note_is_a_polite_live_region_with_nothing_to_stop_on(
+    shown: Callable[..., Awaitable[Shown]],
+) -> None:
+    """D-241: empty, the node has no label, action or state, so TalkBack's linear
+    navigation passes it by; a container, so its label is its own node's."""
+    schedule = await shown(screen_reader=True)
+    note = schedule.node("schedule.landing")
+    assert note.live_region and note.container
+    assert not note.label  # the first display's jump is not the user's
+    assert note.on_tap is None and not note.button and not note.focusable
+
+
+async def test_without_announcements_a_now_tap_tells_talkback_through_the_note(
+    shown: Callable[..., Awaitable[Shown]],
+) -> None:
+    """#223: Android takes no announcement (F13), so the note says where it landed."""
+    schedule = await shown(screen_reader=True)
+    await schedule.scroll_away()
+    await schedule.press_now()
+    assert _note(schedule) == "Friday, May 15, 10:30 AM"
+    assert schedule.announced == []
+
+
+async def test_today_from_another_day_fills_the_note_once_it_landed(
+    shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    memory.schedule_day, memory.jumped_on = SATURDAY, FRIDAY
+    schedule = await shown(screen_reader=True)
+    await schedule.press_now()
+    assert _note(schedule) == ""  # not before the switch has slid in
+    await schedule.change_day(FRIDAY)
+    await schedule.until(lambda: _note(schedule))
+    assert _note(schedule) == "Friday, May 15, 10:30 AM"
+
+
+async def test_a_second_tap_on_the_same_slot_empties_the_note_first(
+    shown: Callable[..., Awaitable[Shown]],
+) -> None:
+    """Flutter sends a live region's change only when its label changes (D-241), so
+    the same words again pass through empty while the jump is on its way."""
+    schedule = await shown(screen_reader=True)
+    await schedule.press_now()
+    assert _note(schedule) == "Friday, May 15, 10:30 AM"
+    schedule.hold = asyncio.Event()
+    tap = asyncio.ensure_future(schedule.press_now())
+    await schedule.until(lambda: schedule.jumping)
+    assert _note(schedule) == ""
+    schedule.hold.set()
+    await asyncio.wait_for(tap, 30)  # generous: a passing tap ends at once
+    await schedule.until(lambda: not schedule.jumping and _note(schedule))
+    assert _note(schedule) == "Friday, May 15, 10:30 AM"
+
+
+async def test_the_note_empties_once_talkback_has_read_it(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-241: with words it is a stop in linear navigation, so only for ``SAID_S``."""
+    monkeypatch.setattr(screen, "SAID_S", 0.01)
+    schedule = await shown(screen_reader=True)
+    await schedule.press_now()
+    await schedule.until(lambda: _note(schedule) == "")
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [{}, {"announcements": True}, {"screen_reader": True, "announcements": True}],
+    ids=["no-screen-reader", "no-screen-reader-ios", "voiceover"],
+)
+async def test_the_note_stays_empty_without_talkback(
+    shown: Callable[..., Awaitable[Shown]], settings: dict[str, bool]
+) -> None:
+    """Nothing extra without a screen reader; VoiceOver hears the announcement, since
+    a live region would move its focus off the button (F13)."""
+    schedule = await shown(**settings)
+    await schedule.scroll_away()
+    await schedule.press_now()
+    assert schedule.jumps and _note(schedule) == ""
 
 
 # ------------------------------------------------------------------ the jump's policy (#89)
