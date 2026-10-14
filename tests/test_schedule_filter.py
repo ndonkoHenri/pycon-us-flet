@@ -518,7 +518,7 @@ async def test_what_do_these_mean_opens_the_tracks_hub(
     link = in_sheet(schedule, "schedule.filter.tracks")
     assert isinstance(link, ft.TextButton) and link.content == "What do these mean?"
     await click(schedule, link)
-    assert schedule.navigated == ["/more/tracks"]
+    assert schedule.went == ["/more/tracks"]
     assert sheet(schedule) is None
 
 

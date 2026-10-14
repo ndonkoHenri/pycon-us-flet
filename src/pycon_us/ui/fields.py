@@ -16,6 +16,7 @@ from typing import Any
 import flet as ft
 
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.semantics import merged
 
 
 def SearchField(
@@ -90,8 +91,11 @@ def SearchField(
             ),
         )
     )
-    clear_button = ft.IconButton(
-        ft.Icons.CLOSE, tooltip=clear_tooltip, on_click=on_clear, right=4
+    # Merged, so the tooltip names the button's own node (F55, D-234); placed in
+    # the Stack by a Container, since a MergeSemantics takes no position.
+    clear_button = ft.Container(
+        merged(ft.IconButton(ft.Icons.CLOSE, tooltip=clear_tooltip, on_click=on_clear)),
+        right=4,
     )
     return ft.Container(
         ft.Stack(

@@ -1,11 +1,11 @@
 """Tests for the My schedule tab (#94; NEW-01, SCHED-07, SCHED-08; ux.md §5.6).
 
-The screen runs in a real Flet session (``tests/sessions.py``), as the rows do in
-``test_session_rows.py``: the store providers above it, a star tap as a dispatched
-click, Flet's own scheduler re-rendering what changed. ``AppScaffold`` is replaced by
-its body and the status strip by a placeholder (both have their own tests), and the
-minute tick by a hook the test moves by hand, with ``clock.now()`` fixed. The fold
-itself is a pure function, tested in ``test_agenda.py``.
+The screen runs in a real Flet session (``tests/sessions.py``'s ``showing()``), as the
+rows do in ``test_session_rows.py``: the store providers above it, a star tap as a
+dispatched click, Flet's own scheduler re-rendering what changed. ``AppScaffold`` is
+the harness's stand-in and the status strip a placeholder (both have their own
+tests), and the minute tick is a hook the test moves by hand, with ``clock.now()``
+fixed. The fold itself is a pure function, tested in ``test_agenda.py``.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -16,31 +16,21 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
-from pycon_us.core.row_views import SessionView, spoken_phrase
-from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.core.row_views import spoken_phrase
+from pycon_us.favorites import Favorites
+from pycon_us.prefs import Prefs
 from pycon_us.screens import my_schedule as screen
 from pycon_us.screens.my_schedule import MySchedule
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx
+from pycon_us.state import Conference
 from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import REMOVED, UNDO
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests import sessions
+from tests.fakes import MemoryPrefs
 from tests.feeds import processed
-from tests.sessions import rendering, settle
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone
@@ -90,36 +80,28 @@ def name(session_id: str) -> str:
 
 
 @dataclass
-class Shown:
-    """A Flet session showing ``MySchedule``, and what its rows did."""
+class Shown(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``) on My schedule."""
 
-    session: Session
-    favorites: Favorites
-    prefs_service: MemoryPrefs
-    tick: Callable[[], None]
-    navigated: list[str]
-    renders: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order."""
     strips: list[dict[str, Any]] = field(default_factory=list)
     """The arguments of each ``StatusStrip`` the screen placed."""
     slots: list[str] = field(default_factory=list)
     """The slots day sections built, by gutter label: a day body builds each of its."""
+    minutes: list[Callable[[int], None]] = field(default_factory=list)
+    """The minute hook's setter on each render: ``tick()`` calls the last one."""
+
+    @property
+    def prefs_service(self) -> MemoryPrefs:
+        return cast(MemoryPrefs, self.storage.prefs)
 
     @property
     def controls(self) -> list[ft.Control]:
         """Every mounted control, in the session's index."""
-        return [c for c in self.session.index.values() if isinstance(c, ft.Control)]
+        return self.find(ft.Control)
 
-    def semantics(self, identifier: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.controls
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        (found,) = self.semantics(identifier)
-        return found
+    def tick(self) -> None:
+        """A minute passing: the minute hook's state changes, so the screen re-renders."""
+        self.minutes[-1](len(self.minutes))
 
     def phrase(self, session_id: str) -> str:
         return str(self.node(f"my_schedule.session.{session_id}").label)
@@ -162,30 +144,16 @@ class Shown:
         ]
 
     def root(self) -> ft.ListView:
-        (found,) = [c for c in self.controls if isinstance(c, ft.ListView)]
+        (found,) = self.find(ft.ListView)
         return found
-
-    def texts(self) -> list[str]:
-        return [str(c.value) for c in self.controls if isinstance(c, ft.Text)]
-
-    async def settle(self) -> None:
-        await settle()
 
     async def tap_star(self, session_id: str) -> None:
         star = self.node(f"my_schedule.favorite.{session_id}").content
         assert isinstance(star, ft.IconButton)
-        await self.session.dispatch_event(star._i, "click", None)
-        await self.settle()
+        await self.click(star)
 
     async def toggle_fold(self, identifier: str, expanded: bool) -> None:
-        await self.session.dispatch_event(self.fold(identifier)._i, "change", expanded)
-        await self.settle()
-
-    @property
-    def snack_bars(self) -> list[ft.SnackBar]:
-        return [
-            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
-        ]
+        await self.event(self.fold(identifier), "change", expanded)
 
 
 _PARTS = ("content", "leading", "title", "subtitle", "trailing")
@@ -236,90 +204,47 @@ def setup() -> Setup:
 async def shown(
     setup: Setup, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Shown]:
-    prefs_service = MemoryPrefs()
-    prefs_service.values[FAVORITES] = list(setup.saved)
-    storage = Storage(prefs=prefs_service, directory=tmp_path, year=2026)
-    svc = Services(
-        year=YEAR,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
     if setup.data:
         conference = Conference(data=processed(2026), source="bundled", version=1)
     else:
         conference = Conference(problem=setup.problem)
-    favorites = Favorites()
-    prefs = Prefs(loaded=True, reduce_motion=setup.reduce_motion)
-    if setup.loaded:
-        await favorites.load(storage)
     clock.set_test_now(setup.now)
-
-    ticks: list[Callable[[int], None]] = []
 
     def use_minute() -> int:
         minute, set_minute = ft.use_state(0)
-        ticks.append(set_minute)
+        sessions.current(Shown).minutes.append(set_minute)
         return minute
 
-    navigated: list[str] = []
-    renders: list[str] = []
-    slots: list[str] = []
-    strips: list[dict[str, Any]] = []
-    phrase = rows.spoken_phrase
-
-    def counted(*args: Any, **kwargs: Any) -> str:
-        renders.append(cast(SessionView, args[-1]).session.id)
-        return phrase(*args, **kwargs)
-
-    # Each row body says its phrase once: counting the calls counts the bodies.
-    monkeypatch.setattr(rows, "spoken_phrase", counted)
     time_slot = screen.TimeSlot
 
     def counted_slot(label: str, *args: Any, **kwargs: Any) -> ft.Control:
-        slots.append(label)
+        sessions.current(Shown).slots.append(label)
         return time_slot(label, *args, **kwargs)
+
+    def strip(**kwargs: Any) -> ft.Control:
+        sessions.current(Shown).strips.append(kwargs)
+        return ft.Text("strip")
 
     monkeypatch.setattr(screen, "TimeSlot", counted_slot)
     monkeypatch.setattr(screen, "use_minute", use_minute)
-
-    def strip(**kwargs: Any) -> ft.Control:
-        strips.append(kwargs)
-        return ft.Text("strip")
-
     monkeypatch.setattr(screen, "StatusStrip", strip)
     monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("skeleton"))
-    monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs["body"])
-
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference,
-                lambda: PrefsCtx(
-                    prefs, lambda: FavoritesCtx(favorites, lambda: MySchedule())
-                ),
-            ),
-        )
 
     try:
-        async with rendering(Root) as session:
-            # Only a tap navigates, so the first render has not needed it.
-            monkeypatch.setattr(session.page, "navigate", navigated.append)
-            yield Shown(
-                session,
-                favorites,
-                prefs_service,
-                tick=lambda: ticks[-1](len(ticks)),
-                navigated=navigated,
-                renders=renders,
-                strips=strips,
-                slots=slots,
-            )
+        async with sessions.showing(
+            MySchedule,
+            screen,
+            year=YEAR,
+            conference=conference,
+            tmp_path=tmp_path,
+            monkeypatch=monkeypatch,
+            view_path="",  # no Router: what ft.use_view_path() says outside one
+            prefs=Prefs(loaded=True, reduce_motion=setup.reduce_motion),
+            favorites=None if setup.loaded else Favorites(),  # not read yet
+            saved=setup.saved,
+            kind=Shown,
+        ) as shown:
+            yield shown
     finally:
         clock.set_test_now(None)
 
@@ -544,7 +469,7 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
     assert button.content == "See what's on today"
     await shown.session.dispatch_event(button._i, "click", None)
     await shown.settle()
-    assert shown.navigated == ["/now"]
+    assert shown.went == ["/now"]
 
 
 @pytest.fixture
@@ -610,13 +535,13 @@ async def test_removing_one_side_of_a_clash_clears_the_other_s_line(
 @pytest.mark.usefixtures("before")
 async def test_a_removal_re_renders_no_other_row(shown: Shown) -> None:
     """D-153: the views stay the same objects, so every other row skips its body."""
-    shown.renders.clear()
+    shown.rows.clear()
     await shown.tap_star(TALK)
-    assert shown.renders == []
+    assert shown.rows == []
     (snack,) = shown.snack_bars
     await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
     await shown.settle()
-    assert shown.renders == [TALK]  # only the row that came back
+    assert shown.rows == [TALK]  # only the row that came back
 
 
 @pytest.mark.usefixtures("before")
@@ -631,9 +556,9 @@ async def test_a_removal_re_renders_only_its_own_day(shown: Shown) -> None:
 async def test_a_clash_removed_re_renders_only_the_row_whose_line_changed(
     shown: Shown,
 ) -> None:
-    shown.renders.clear()
+    shown.rows.clear()
     await shown.tap_star(DECORATORS)
-    assert shown.renders == [MCP]
+    assert shown.rows == [MCP]
 
 
 # ------------------------------------------------------------------ states
@@ -653,7 +578,7 @@ async def test_nothing_saved_says_how_and_opens_the_schedule(shown: Shown) -> No
     assert button.content == "Browse the schedule"
     await shown.session.dispatch_event(button._i, "click", None)
     await shown.settle()
-    assert shown.navigated == ["/schedule"]
+    assert shown.went == ["/schedule"]
 
 
 @pytest.fixture

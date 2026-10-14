@@ -2,9 +2,10 @@
 
 The matching is ``core/search.py``'s, tested in ``tests/test_search.py``; here the
 screen around it. It runs in a real Flet session under the real Router with
-``manage_views``, as the app renders it: a small route table with a Schedule stand-in,
-the global modal ``/search`` and a drill whose detail is a plain View, so a result tap,
-Back and a fresh open go through the Router's own view stack (S4, D-141). Navigation is
+``manage_views``, as the app renders it (``tests/sessions.py``'s ``showing()`` with
+``view_path=None``): a small route table with a Schedule stand-in, the global modal
+``/search`` and a drill whose detail is a plain View, so a result tap, Back and a fresh
+open go through the Router's own view stack (S4, D-141). Navigation is
 ``page.navigate`` replaced by what Flutter does next: the page's route changes and the
 Router hears of it. A keystroke is the field's value patched in and its change event
 dispatched, as Flutter sends them (``tests/test_speakers.py``). The debounce's wait is
@@ -16,41 +17,31 @@ checked on devices (the PR).
 """
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us.config import load_year
 from pycon_us.core.search import SearchResults, first_results, search, search_index
 from pycon_us.core.timefmt import day_heading
-from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import parent_of
-from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import search as screen
 from pycon_us.screens import search_results
 from pycon_us.screens.search_results import FIRST_SESSIONS, FIRST_SPEAKERS
-from pycon_us.services import Services, ServicesCtx, use_services
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx
+from pycon_us.services import use_services
+from pycon_us.state import Conference
 from pycon_us.ui import scaffold, session_rows
 from pycon_us.ui.semantics import semantics_key
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests import sessions
+from tests.fakes import MemoryHaptics
 from tests.feeds import processed
-from tests.sessions import connection
 from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
@@ -114,25 +105,24 @@ ROUTES = [
 
 
 @dataclass
-class Shown:
-    """A Flet session showing the app's views, and what the screen asked for."""
+class Shown(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``) on the app's Views, and what the
+    search screen asked for."""
 
-    session: Session
-    memory: ViewMemory
-    favorites: Favorites
-    haptics: MemoryHaptics
     searches: list[tuple[str, str]] = field(default_factory=list)
     """Each ``search(index, query, scope)`` the screen ran, as (query, scope)."""
-    rows: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order."""
     focused: list[ft.TextField] = field(default_factory=list)
+    """The fields asked to take the focus; no Flutter answers here."""
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
     """The screen's sleeps: the debounce waits until ``pause()`` releases it."""
-    token: Any = None
 
     @property
     def page(self) -> ft.Page:
         return cast(ft.Page, self.session.page)
+
+    @property
+    def haptics(self) -> MemoryHaptics:
+        return cast(MemoryHaptics, self.services.haptics)
 
     def live(self) -> list[ft.BaseControl]:
         """The controls on the page now (the index keeps some that left it)."""
@@ -192,10 +182,6 @@ class Shown:
         walk(body)
         return found
 
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
     async def pause(self) -> None:
         """The typing pauses: end the debounce's wait, then let the re-render through."""
         await self.sleeps.release()
@@ -213,12 +199,7 @@ class Shown:
         """Type into the field as Flutter reports it: the value, then the event."""
         text_field = self.field
         self.session.apply_patch(text_field._i, {"value": text})
-        await self.session.dispatch_event(text_field._i, "change", None)
-        await self.settle()
-
-    async def event(self, control: ft.BaseControl, name: str, data: Any = None) -> None:
-        await self.session.dispatch_event(control._i, name, data)
-        await self.settle()
+        await self.event(text_field, "change")
 
     def chip(self, scope: str) -> ft.Chip:
         return cast(ft.Chip, self.node(f"search.scope.{scope}").content)
@@ -238,91 +219,62 @@ def _text(control: object) -> str:
     return str(control.value) if control is not None else ""
 
 
-async def show(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, conference: Conference
-) -> Shown:
-    storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-    memory = ViewMemory()
-    haptics = MemoryHaptics()
-    svc = Services(
-        year=YEAR,
-        storage=storage,
-        memory=memory,
-        semantics=MemorySemantics(),
-        haptics=haptics,
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-    favorites = Favorites()
-    await favorites.load(storage)
-    result = Shown(Session(connection()), memory, favorites, haptics)
-
-    def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
-        result.searches.append((query, scope))
-        return search(index, query, scope)
-
-    phrase = session_rows.spoken_phrase
-
-    def counted_phrase(labels: Any, view: Any, **kwargs: Any) -> str:
-        result.rows.append(view.session.id)
-        return phrase(labels, view, **kwargs)
-
-    async def focus(self: ft.TextField) -> None:
-        result.focused.append(self)
-
-    monkeypatch.setattr(screen, "search", counted_search)
-    # Each row body says its phrase once: counting the calls counts the bodies (S2).
-    monkeypatch.setattr(session_rows, "spoken_phrase", counted_phrase)
-    monkeypatch.setattr(ft.TextField, "focus", focus)
-    monkeypatch.setattr(screen, "asyncio", result.sleeps)  # the search module's only
-
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference,
-                lambda: PrefsCtx(
-                    Prefs(loaded=True),
-                    lambda: FavoritesCtx(
-                        favorites, lambda: ft.Router(ROUTES, manage_views=True)
-                    ),
-                ),
-            ),
-        )
-
-    page = result.page
-    page.route = "/schedule"
-    result.token = _context_page.set(page)  # pyright: ignore[reportArgumentType]
-
-    def navigate(location: str) -> None:
-        asyncio.get_running_loop().create_task(result.go(location))
-
-    monkeypatch.setattr(page, "navigate", navigate)
-    page.render_views(Root)
-    result.session.get_page_patch()
-    await result.settle()
-    return result
+type Render = Callable[[Conference], Awaitable[Shown]]
 
 
 @pytest.fixture
-async def opened(
+async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> AsyncIterator[Shown]:
+) -> AsyncIterator[Render]:
+    """Return render(conference): the app's Views at the Schedule stand-in."""
+
+    def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
+        sessions.current(Shown).searches.append((query, scope))
+        return search(index, query, scope)
+
+    async def focus(self: ft.TextField) -> None:
+        sessions.current(Shown).focused.append(self)
+
+    monkeypatch.setattr(screen, "search", counted_search)
+    monkeypatch.setattr(ft.TextField, "focus", focus)
+    sleeps = HeldSleeps()
+    monkeypatch.setattr(screen, "asyncio", sleeps)  # the search module's only
+
+    async with AsyncExitStack() as stack:
+
+        async def show(conference: Conference) -> Shown:
+            shown = await stack.enter_async_context(
+                sessions.showing(
+                    lambda: ft.Router(ROUTES, manage_views=True),
+                    year=YEAR,
+                    conference=conference,
+                    tmp_path=tmp_path,
+                    monkeypatch=monkeypatch,
+                    view_path=None,  # a real Router, rendered as the page's Views
+                    route="/schedule",
+                    kind=partial(Shown, sleeps=sleeps),
+                )
+            )
+
+            def navigate(location: str) -> None:
+                asyncio.get_running_loop().create_task(shown.go(location))
+
+            monkeypatch.setattr(shown.page, "navigate", navigate)
+            return shown
+
+        yield show
+
+
+@pytest.fixture
+async def opened(render: Render) -> Shown:
     """Search opened from the Schedule stand-in with its scope, as a tap would."""
-    conference = Conference(data=DATA, source="bundled", version=1)
-    shown = await show(tmp_path, monkeypatch, conference)
-    try:
-        (button,) = shown.find(ft.IconButton)
-        await shown.event(button, "click")
-        await shown.settle()
-        assert shown.views == ["/schedule", "/search"]
-        shown.searches.clear()
-        yield shown
-    finally:
-        shown.session.close()
-        await shown.settle()
-        _context_page.reset(shown.token)
+    shown = await render(Conference(data=DATA, source="bundled", version=1))
+    (button,) = shown.find(ft.IconButton)
+    await shown.event(button, "click")
+    await shown.settle()
+    assert shown.views == ["/schedule", "/search"]
+    shown.searches.clear()
+    return shown
 
 
 def session_ids(query: str, scope: str = "all") -> list[str]:
@@ -347,12 +299,6 @@ def _all_text(control: object) -> str:
 
     walk(control)
     return " ".join(found)
-
-
-async def closed(shown: Shown) -> None:
-    shown.session.close()
-    await shown.settle()
-    _context_page.reset(shown.token)
 
 
 # ------------------------------------------------------------------ the field
@@ -490,16 +436,11 @@ async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
     assert opened.field.hint_text == "Search rooms"
 
 
-async def test_an_unknown_scope_opens_on_all(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
     conference = Conference(data=DATA, source="bundled", version=1)
-    shown = await show(tmp_path, monkeypatch, conference)
-    try:
-        await shown.go("/search?scope=sponsors")  # a P2 scope, or a typo
-        assert shown.chip("all").selected
-    finally:
-        await closed(shown)
+    shown = await render(conference)
+    await shown.go("/search?scope=sponsors")  # a P2 scope, or a typo
+    assert shown.chip("all").selected
 
 
 # ------------------------------------------------------------------ results
@@ -612,20 +553,17 @@ async def test_each_opening_starts_a_new_search_and_back_leaves_for_the_opener(
 
 
 async def test_a_view_rebuilt_below_a_result_gets_the_query_and_scope_back(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    render: Render,
 ) -> None:
     """A deep entry under ``/search`` mounts Search below the top (D-18, D-164)."""
     conference = Conference(data=DATA, source="bundled", version=1)
-    shown = await show(tmp_path, monkeypatch, conference)
-    try:
-        shown.memory.search_query, shown.memory.search_scope = "grand", "rooms"
-        await shown.go("/search/room/grand-ballroom-a")
-        await shown.go("/search")
-        assert shown.field.value == "grand"
-        assert shown.chip("rooms").selected
-        assert "search.room.grand-ballroom-a" in shown.results
-    finally:
-        await closed(shown)
+    shown = await render(conference)
+    shown.memory.search_query, shown.memory.search_scope = "grand", "rooms"
+    await shown.go("/search/room/grand-ballroom-a")
+    await shown.go("/search")
+    assert shown.field.value == "grand"
+    assert shown.chip("rooms").selected
+    assert "search.room.grand-ballroom-a" in shown.results
 
 
 async def test_a_star_in_the_results_saves_the_session_and_re_renders_one_row(
@@ -684,20 +622,15 @@ async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
     assert any(r.startswith("search.session.") for r in opened.results)
 
 
-async def test_without_data_the_skeleton_then_try_again(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_without_data_the_skeleton_then_try_again(render: Render) -> None:
     conference = Conference()
-    shown = await show(tmp_path, monkeypatch, conference)
-    try:
-        await shown.go("/search?scope=all")
-        assert shown.has("app.status")
-        assert not shown.has("search.no_data")  # the first fetch has not failed yet
-        conference.problem = "offline"
-        await shown.settle()
-        assert shown.has("search.no_data")
-    finally:
-        await closed(shown)
+    shown = await render(conference)
+    await shown.go("/search?scope=all")
+    assert shown.has("app.status")
+    assert not shown.has("search.no_data")  # the first fetch has not failed yet
+    conference.problem = "offline"
+    await shown.settle()
+    assert shown.has("search.no_data")
 
 
 async def test_one_type_of_results_gets_no_type_heading(opened: Shown) -> None:
@@ -738,13 +671,6 @@ async def _show_whole(shown: Shown, kind: str) -> None:
 
 def _keys(ids: list[str]) -> list[str]:
     return [semantics_key(i) for i in ids]
-
-
-def _row_ids(ids: list[str]) -> list[str]:
-    """Of ``ids``, those shown as session rows: each says its phrase once (S2)."""
-    return [
-        i for i in ids if not session_rows.is_notice(DATA.sessions[i], YEAR.conference)
-    ]
 
 
 async def test_a_broad_query_renders_each_type_s_first_rows_and_the_full_count(
@@ -794,8 +720,9 @@ async def test_show_all_renders_the_rest_of_its_type_and_each_new_row_once(
     every = session_ids("a")
     assert _listed_sessions(opened) == _keys(every)  # every one, in search's order
     assert not opened.has("search.show_all.sessions")
-    # The rows already shown are not built again; the new ones once each (D-153).
-    assert sorted(opened.rows) == sorted(_row_ids(every[FIRST_SESSIONS:]))
+    # The rows already shown are not built again; the new ones once each (D-153),
+    # notices too (the harness counts every row body).
+    assert sorted(opened.rows) == sorted(every[FIRST_SESSIONS:])
     assert opened.searches == []  # the same results, rendered further
     # The speakers stay cut until their own row is tapped.
     assert len(_listed_speakers(opened)) == FIRST_SPEAKERS
