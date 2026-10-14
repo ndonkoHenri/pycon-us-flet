@@ -176,6 +176,11 @@ class Shown(sessions.Shown):
         """What Flutter sends when a scroll of the day's list ends."""
         await self.event(self.list_of(day), "scroll", _scroll_end(pixels))
 
+    async def scroll_start(self, day: date, pixels: float) -> None:
+        """What Flutter sends when a drag or a fling of the day's list starts."""
+        start = {**_scroll_end(pixels), "event_type": "start"}
+        await self.event(self.list_of(day), "scroll", start)
+
     async def scroll_away(self, day: date = FRIDAY) -> None:
         """Scroll the day's list back to its top, far from where a jump landed."""
         await self.scroll_end(day, 0.0)
@@ -757,15 +762,43 @@ def _top(heights: dict[str, float], key: str) -> float:
 
 
 def _offsets(schedule: Shown) -> list[float]:
-    """The offsets today's list was asked to jump to, in order."""
+    """The offsets today's list was asked to jump to, in order; keyed jumps aside."""
     friday = schedule.list_of(FRIDAY)
-    return [kw["offset"] for target, kw in schedule.scrolls if target is friday]
+    return [
+        kw["offset"]
+        for target, kw in schedule.scrolls
+        if target is friday and "offset" in kw
+    ]
 
 
 def _tracks_of(key: str) -> set[str]:
     """The tracks of a Friday slot's sessions."""
     (slot,) = [s for s in timeline(processed(2026), FRIDAY, ()) if s.key == key]
     return {s.track for s in slot.sessions}
+
+
+KEYNOTE = "slot-2026-05-15T09:25:00-07:00"
+"""Friday's 9:25 AM slot, above 2:00 PM: one keynote, conf_key 152."""
+
+
+def _drop_a_keynote(conference: Conference) -> None:
+    """Refresh the feed without the ``KEYNOTE`` slot, which only it fills."""
+    assert _tracks_of(KEYNOTE) == {"Plenary"}
+
+    def without_it(document: dict[str, Any]) -> None:
+        document["schedule"] = [
+            s for s in document["schedule"] if s.get("conf_key") != 152
+        ]
+
+    conference.data = process(changed(2026, without_it), settings(2026))
+    conference.version += 1
+
+
+def _laid_out(schedule: Shown) -> dict[str, float]:
+    """The heights today's items have now, as ``_lay_out`` reports them, unreported."""
+    return {
+        key: _height(schedule, item, scale=1.0) for key, item in _measured(schedule)
+    }
 
 
 async def _at_two(shown: Callable[[], Awaitable[Shown]]) -> tuple[Shown, float]:
@@ -869,21 +902,10 @@ async def test_a_refresh_that_drops_a_whole_slot_above_keeps_the_slot_at_the_top
     """No other height changes, so nothing reports: the change of slots restores it."""
     schedule, _ = await _at_two(shown)
     before = {key for key, _ in _measured(schedule)}
-    dropped = "slot-2026-05-15T09:25:00-07:00"
-    assert _tracks_of(dropped) == {"Plenary"}  # one keynote, conf_key 152
-
-    def without_it(document: dict[str, Any]) -> None:
-        document["schedule"] = [
-            s for s in document["schedule"] if s.get("conf_key") != 152
-        ]
-
-    conference.data = process(changed(2026, without_it), settings(2026))
-    conference.version += 1
+    _drop_a_keynote(conference)
     await settle()
-    heights = {
-        key: _height(schedule, item, scale=1.0) for key, item in _measured(schedule)
-    }
-    assert set(heights) == before - {dropped}
+    heights = _laid_out(schedule)
+    assert set(heights) == before - {KEYNOTE}
     assert _offsets(schedule) == [_top(heights, TWO_PM) + 1]
     assert schedule.keyed() == []
 
@@ -918,6 +940,75 @@ async def test_away_from_today_nothing_moves_and_back_on_today_the_slot_is_there
     assert memory.schedule_anchor == anchor
     await schedule.change_day(FRIDAY)
     assert _offsets(schedule) == [_top(heights, TWO_PM) + 1]
+
+
+async def test_a_refresh_during_a_scroll_leaves_the_list_where_the_scroll_ends(
+    shown: Callable[[], Awaitable[Shown]],
+    conference: Conference,
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A restore while the user flings would jump back to where the last scroll ended
+    and stop the fling; its end records the place the user chose instead (D-250)."""
+    monkeypatch.setattr(schedule_place, "RELISTED_S", 0.05)
+    # Its updates keep coming: on a loaded host the wait may end late (#237).
+    monkeypatch.setattr(schedule_place, "MOVING_S", 30.0)
+    schedule, pixels = await _at_two(shown)
+    await schedule.scroll_start(FRIDAY, pixels)
+    _drop_a_keynote(conference)
+    await settle()
+    await asyncio.sleep(0.1)  # past the wait, while the fling goes on
+    await settle()
+    assert _offsets(schedule) == []
+    heights = _laid_out(schedule)
+    end = pixels + 1000
+    await schedule.scroll_end(FRIDAY, end)
+    assert _offsets(schedule) == []
+    assert memory.schedule_anchor is not None
+    key = memory.schedule_anchor.key
+    assert key != TWO_PM
+    assert _top(heights, key) <= end < _top(heights, key) + heights[key]
+
+
+async def test_a_now_tap_while_a_restore_waits_lands_where_it_asked(
+    shown: Callable[[], Awaitable[Shown]],
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A restore would cut the jump short at the old place, and its end would count as
+    the jump's landing; the "Now" button would hide away from now (D-204, D-250)."""
+    monkeypatch.setattr(schedule_place, "RELAID_S", 0.05)
+    schedule, _ = await _at_two(shown)
+    assert schedule.fab is not None
+    (_, first), *_ = _measured(schedule)
+    grown = {"w": 400.0, "h": 777.0}  # a new height above: a restore waits
+    report = asyncio.ensure_future(schedule.event(first, "size_change", grown))
+    schedule.hold = asyncio.Event()  # the jump is on its way until it is set
+    tap = asyncio.ensure_future(schedule.press_now())
+    await schedule.until(lambda: schedule.jumping)
+    await asyncio.sleep(0.1)  # past the restore's wait
+    await settle()
+    assert _offsets(schedule) == []
+    schedule.hold.set()
+    await asyncio.wait_for(asyncio.gather(tap, report), 30)  # generous
+    await schedule.until(lambda: not schedule.jumping)
+    assert schedule.jumps == [(TEN_30, "landed")]
+    assert _offsets(schedule) == []
+    assert memory.schedule_offsets[FRIDAY] == 4000.0  # the jump's end
+    assert schedule.fab is None  # landed on now
+
+
+async def test_a_scroll_whose_end_was_dropped_holds_the_restores_only_briefly(
+    shown: Callable[[], Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Flet drops an end that comes within ``SCROLL_EVENT_MS`` of the last one, so a
+    list counts as scrolling only while its starts and updates keep coming."""
+    monkeypatch.setattr(schedule_place, "MOVING_S", 0.05)
+    schedule, pixels = await _at_two(shown)
+    await schedule.scroll_start(FRIDAY, pixels)  # its end never comes
+    await asyncio.sleep(0.1)
+    heights = await _lay_out(schedule, scale=1.3)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
 
 
 # ------------------------------------------------------------------ Jump to now (D-155)

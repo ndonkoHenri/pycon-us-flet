@@ -12,7 +12,8 @@ The day opens on today during the conference, else on the first day; the day pic
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
 (D-18). A detail pushed over the Schedule keeps it mounted, and so its place. Today's
 list keeps the slot at its top across a filter or text-size change, and gets it back
-when it shows again (``screens/schedule_place.py``, D-250).
+when it shows again, without cutting a scroll or a jump short
+(``screens/schedule_place.py``, D-250).
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -80,6 +81,9 @@ logger = logging.getLogger(__name__)
 
 SETTLE_S = 1.0
 """How long the "Now" button waits for the switch to today to settle, in seconds."""
+
+_MOVING = frozenset({ft.ScrollType.START, ft.ScrollType.UPDATE})
+"""The scroll events of a list that is moving: today's holds its restores (D-250)."""
 
 
 @ft.component
@@ -156,12 +160,16 @@ def Schedule() -> ft.View:
         # The clock's place: the landing's render lays the line out at it too.
         at = clock.now()
         target = now_place(today_slots, at)
-        ended = await jump_to_key(
-            _ref(refs, current),
-            target.target,
-            duration=prefs.motion_ms(JUMP_MS),
-            ended=signals.ended,
-        )
+        layout.jumping += 1  # no restore cuts it short, nor ends its wait (D-250)
+        try:
+            ended = await jump_to_key(
+                _ref(refs, current),
+                target.target,
+                duration=prefs.motion_ms(JUMP_MS),
+                ended=signals.ended,
+            )
+        finally:
+            layout.jumping -= 1
         if ended == "failed":
             set_in_view(None)
             return
@@ -232,6 +240,7 @@ def Schedule() -> ft.View:
         memory.schedule_day = day
         set_picked(day)
         layout.shown = day == layout.day  # the device shows it before the render
+        layout.moved_at = None  # a page that shows again is new on the device
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
         else:
@@ -251,10 +260,14 @@ def Schedule() -> ft.View:
     async def scroll_to_top() -> None:
         target = _ref(refs, shown).current if shown else None
         if target is not None:
+            if shown == layout.day:  # no restore before its scroll start comes
+                layout.moved()
             await target.scroll_to(offset=0, duration=prefs.motion_ms(RETAP_SCROLL_MS))
 
     @report_errors
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
+        if day == layout.day and e.event_type in _MOVING:
+            layout.moved()  # a restore would cut the scroll short (D-250)
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels

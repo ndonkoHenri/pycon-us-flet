@@ -28,8 +28,8 @@ reduced motion (D-34)."""
 
 SCROLL_EVENT_MS = 250
 """How often a list may send each kind of scroll event (``scroll_interval``): the
-screens read only the end of a scroll, so the many updates of a fling need not all
-cross to Python."""
+screens read the end of a scroll, and today's Schedule list whether it is moving
+(D-250), so the many updates of a fling need not all cross to Python."""
 
 JUMP_TRIES = 3
 """How many times ``jump_to_key()`` asks for the scroll before it gives up."""

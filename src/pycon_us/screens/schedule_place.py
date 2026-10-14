@@ -15,7 +15,9 @@ them all, D-154), and puts that slot back at the top:
 - when today's list shows again, from a tab switch or a day switch (``put_back()``).
 
 It is an instant offset jump, never a jump to now (D-192, D-204), and never on
-another day's list, which is lazy and keeps its slot in place by itself.
+another day's list, which is lazy and keeps its slot in place by itself. Nor while
+today's list is scrolling, under the user's finger, in a fling or in a jump to now:
+the jump would cut it short, and where it ends is the place from then on.
 """
 
 import asyncio
@@ -30,7 +32,7 @@ from pycon_us.core.list_place import ListItem, anchor_at, list_items, offset_of
 from pycon_us.core.timeline import Slot
 from pycon_us.memory import ViewMemory
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.scrolling import LEFT_THE_PAGE
+from pycon_us.ui.scrolling import LEFT_THE_PAGE, SCROLL_EVENT_MS
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,12 @@ RELISTED_S = 0.25
 for the slots it changed to report, in seconds: such a change lays today's whole list
 out again, one frame of up to about 80 ms on the emulator (D-154), and a change that
 only removes whole slots reports nothing."""
+
+MOVING_S = 2 * SCROLL_EVENT_MS / 1000
+"""How long after a scroll start or update of today's list it counts as scrolling, in
+seconds: a scroll sends an update at least every ``SCROLL_EVENT_MS`` while it moves,
+and Flet drops an end that comes within that time of the last one, which would
+otherwise leave the list scrolling for good."""
 
 type Measured = Callable[[str, float], Awaitable[None]]
 """What a slot or the now line of today's list calls with its key and new height."""
@@ -63,6 +71,10 @@ class TodayLayout:
         listed: The items the slots effect last saw; None before its first run.
         changes: How many layout changes have come; a wait ends in a restore only
             when no newer change came during it.
+        moved_at: When today's list last reported a scroll start or update, by the
+            event loop's clock; None after its scroll end.
+        jumping: How many jumps to now are on their way: a keyed scroll reports its
+            start only once Flutter has begun it.
     """
 
     day: date | None = None
@@ -71,9 +83,24 @@ class TodayLayout:
     heights: dict[str, float] = field(default_factory=dict)
     listed: tuple[ListItem, ...] | None = None
     changes: int = 0
+    moved_at: float | None = None
+    jumping: int = 0
+
+    def moved(self) -> None:
+        """Record that today's list is scrolling: a scroll start or update came."""
+        self.moved_at = asyncio.get_running_loop().time()
+
+    def still(self) -> bool:
+        """Whether today's list is at rest: no scroll and no jump on its way."""
+        if self.jumping:
+            return False
+        if self.moved_at is None:
+            return True
+        return asyncio.get_running_loop().time() - self.moved_at >= MOVING_S
 
     def ended_at(self, memory: ViewMemory, pixels: float) -> None:
         """Record where a scroll of today's list ended as the reader's place."""
+        self.moved_at = None
         # Even while a change waits for its restore: the end of a jump to now, or of
         # the user's own scroll, is the place from then on.
         memory.schedule_anchor = anchor_at(self.items, self.heights, pixels)
@@ -168,7 +195,8 @@ async def keep_place(
 
     Returns:
         Whether it asked the list to scroll: False without an anchor on today, with
-        a height still unreported, or while another day shows.
+        a height still unreported, while another day shows, or while the list is
+        scrolling: the scroll's end records the place it chose (D-250).
     """
     anchor = memory.schedule_anchor
     day = layout.day
@@ -179,6 +207,7 @@ async def keep_place(
         or target is None
         or anchor is None
         or anchor.start.date() != day
+        or not layout.still()
     ):
         return False
     offset = offset_of(layout.items, layout.heights, anchor)
@@ -194,6 +223,8 @@ async def keep_place(
             raise
         logger.info("Keep the place: the list left the page")
         return False
+    # The jump stopped any scroll; its own end may be dropped (MOVING_S).
+    layout.moved_at = None
     logger.info("Kept the place: %s at %.0f dp", anchor.key, offset)
     return True
 
