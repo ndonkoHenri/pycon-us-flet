@@ -43,11 +43,14 @@ class List:
         if self.error is not None and len(self.calls) >= self.fails:
             raise self.error
         if self.ends is not None and len(self.calls) >= self.ends:
-            asyncio.get_running_loop().call_soon(self.ended.set)
+            # Set before the jump starts its wait, so a scroll that ends never races
+            # ``LANDING_S`` on a loaded host (#270): it lands whatever the wait's length.
+            self.ended.set()
 
 
 @pytest.fixture(autouse=True)
 def quick(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Short waits: only an ask that gets no scroll end waits them out."""
     monkeypatch.setattr(scrolling, "LANDING_S", 0.1)
 
 

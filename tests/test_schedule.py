@@ -270,10 +270,15 @@ async def shown(
     monkeypatch.setattr(screen, "SETTLE_S", 30.0)
 
     async def show(
-        *, moves: bool = True, late: bool = False, wait: bool = True, **settings: Any
+        *,
+        moves: bool = True,
+        late: bool = False,
+        hold: asyncio.Event | None = None,
+        wait: bool = True,
+        **settings: Any,
     ) -> Shown:
-        """Render the Schedule with these ``Prefs``; ``moves`` and ``late`` as in
-        ``Shown``.
+        """Render the Schedule with these ``Prefs``; ``moves``, ``late`` and ``hold`` as
+        in ``Shown``.
 
         With ``wait`` it returns once no jump is on its way, so the next step never
         meets one (#237). The first display's jump, when there is one, has ended by
@@ -311,6 +316,7 @@ async def shown(
             announced=semantics.announced,
             moves=moves,
             late=late,
+            hold=hold,
         )
 
         async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
@@ -1082,10 +1088,14 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
 ) -> None:
     """A list already in place sends no scroll end, so the jump answers only after its
     tries: the button must not show for those seconds and then vanish (D-204)."""
-    monkeypatch.setattr(scrolling, "LANDING_S", 0.2)
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
+    asked = asyncio.Event()  # the first ask is held: the jump stays on its way (#270)
     with caplog.at_level(logging.INFO):
-        schedule = await shown(moves=False, wait=False, reduce_motion=True)
+        schedule = await shown(moves=False, hold=asked, wait=False, reduce_motion=True)
+        await schedule.until(lambda: schedule.keyed())
+        assert schedule.jumping == 1
         assert schedule.fab is None  # the jump is on its way
+        asked.set()
         await schedule.until(lambda: schedule.jumps)
     assert schedule.jumps == [(TEN_30, "still")]
     assert "did not move" in caplog.text
