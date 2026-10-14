@@ -592,7 +592,7 @@ At each phase exit, with packaged builds on an Android emulator and an iOS simul
 5. TalkBack and VoiceOver: the phase's flows (§7.3).
 6. Android 3-button and gesture navigation: content never under system bars; edge-to-edge in light and dark, with status- and navigation-bar icons visible (`Theme.system_overlay_style`, #311, D-12).
 7. Back: Android back and predictive back, iOS edge swipe; Back pops one step; Back on a root goes to Now, then exits (D-17).
-8. Position: Schedule opens at the current slot once per app session; it never scrolls on Back, refresh or a filter change (#313, D-18).
+8. Position: Schedule opens at the current slot once per app session; it never scrolls on Back, refresh or a filter change (#313, D-18), except that on today's list a filter change, through the sheet or "Show all", leaves the same slot at the top: hide AI from the first jump's 2:00 PM, and show and hide Open space with rows above the top, several times each, the slot unchanged and no drift (#333, D-250).
 9. Background for more than 15 minutes, then resume: refresh happens, accessibility flags are re-read.
 10. Landscape, and a tablet emulator (rail from P2).
 11. The companion app (`flet run --android` / `--ios`) shows the interim for every capability (P0 exit 3).
