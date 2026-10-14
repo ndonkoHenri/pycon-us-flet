@@ -27,6 +27,7 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import flet as ft
+import httpx
 import pytest
 from flet.messaging.session import Session
 
@@ -49,7 +50,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
 )
-from tests.feeds import processed
+from tests.feeds import changed, processed
 from tests.sessions import find, rendering, settle
 from tests.trees import only, texts
 
@@ -1148,6 +1149,44 @@ async def test_a_refresh_or_a_filter_change_brings_the_button_back(
         await schedule.prefs.save(schedule.storage, excluded_tracks=("Charla",))
     await settle()
     assert schedule.fab is not None
+
+
+async def test_a_refresh_that_brings_the_same_feed_re_renders_nothing(
+    shown: Callable[[], Awaitable[Shown]], conference: Conference, tmp_path: Path
+) -> None:
+    """#290, D-224: the start refresh over the cache re-rendered every slot, remounting
+    each ``ScrollKey`` box, and brought "Now" back over the now line; a changed feed
+    still brings it back (D-204)."""
+    storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
+    await conference.load_local(storage, YEAR)  # the snapshot, as a first start
+    schedule = await shown()
+    assert schedule.jumped() == [TEN_30]
+    assert schedule.fab is None
+    schedule.rows.clear()
+    schedule.slots.clear()
+
+    snapshot = YEAR.read_snapshot().raw
+    await conference.refresh(storage, YEAR, transport=_serving(snapshot))
+    await settle()
+
+    assert conference.source == "network"  # the refresh did end well
+    assert (schedule.slots, schedule.rows) == ([], [])
+    assert schedule.fab is None
+
+    await conference.refresh(storage, YEAR, transport=_serving(changed(2026, _rename)))
+    await settle()
+    assert schedule.fab is not None
+
+
+def _serving(body: bytes) -> httpx.MockTransport:
+    """A transport that answers every request with ``body``."""
+    return httpx.MockTransport(lambda _: httpx.Response(200, content=body))
+
+
+def _rename(document: dict[str, Any]) -> None:
+    """Rename talk 142 in a feed's JSON: a feed that changed."""
+    slot = next(s for s in document["schedule"] if s.get("conf_key") == int(TALK))
+    slot["name"] = "Renamed on the server"
 
 
 async def test_another_day_always_offers_today(

@@ -1,0 +1,35 @@
+# S6 throwaway extension (docs/spikes/06-reminders.md): scheduled local
+# notifications through flutter_local_notifications, with the API that
+# docs/flet-gaps-and-extensions.md §4.1 proposes for E3. Not app code.
+name: flet_s6_reminders
+description: S6 spike, scheduled local notifications for Flet
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+  flutter: ">=3.38.1"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The build template's dependency_overrides point flet at the pinned
+  # checkout, so this constraint is never resolved against pub.dev.
+  flet: any
+  flutter_local_notifications: 22.3.1
+  timezone: 0.11.1
+
+# A plugin entry for Android only: Flutter then builds android/ as a library
+# module, and Gradle merges its manifest (the plugin's receivers and the boot
+# permission) into the app's. This is the "preferred" receivers approach of
+# the gaps doc that S6 tests. On iOS, a Swift package whose plugin class sets
+# the notification center's delegate, without which taps never reach the
+# plugin (S6 ran the stock template first: no tap arrived).
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.github.ndonkohenri.s6reminders
+        pluginClass: S6RemindersPlugin
+      ios:
+        pluginClass: S6RemindersPlugin

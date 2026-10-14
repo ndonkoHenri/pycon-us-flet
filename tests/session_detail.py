@@ -1,16 +1,13 @@
 """The session detail harness: ``SessionDetail`` in a real Flet session (ux.md §5.5).
 
-``tests/test_session.py`` and ``tests/test_session_extras.py`` share it, as
-``tests/sessions.py`` serves the row tests. The store providers are written out above
-the screen, ``AppScaffold`` is replaced by a column that keeps the title, the actions
-and the body, and taps are dispatched clicks. The sessions are the recorded 2026
-feed's.
+``tests/test_session.py`` and ``tests/test_session_extras.py`` share it. The session is
+``tests/sessions.py``'s ``showing()``, under a component that can re-render the detail
+in place with another id, or without it. The sessions are the recorded 2026 feed's.
 """
 
-import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from contextlib import AsyncExitStack, asynccontextmanager
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -18,28 +15,14 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
-from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import session as screen
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.theme import LIGHT_TOKENS, TokensCtx
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-    MemoryShare,
-)
+from pycon_us.state import Conference
+from tests.fakes import MemoryShare
 from tests.feeds import processed
-from tests.sessions import connection
+from tests.sessions import Shown, showing
 
 YEAR = load_year(2026)
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -57,50 +40,27 @@ BREAK = (
 
 
 @dataclass
-class Detail:
+class Detail(Shown):
     """A Flet session showing one ``SessionDetail``."""
 
-    session: Session
-    conference: Conference
-    favorites: Favorites
-    launcher: MemoryLauncher
-    share: MemoryShare
-    pushed: list[str]
-    titles: list[str]
-    reopen: Callable[[str | None], None]
+    opened: list[Callable[[str | None], None]] = field(default_factory=list)
+    """The shown id's setter, once the detail's first render has run."""
 
-    def nodes(self, identifier: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
+    @property
+    def pushed(self) -> list[str]:
+        return self.went
 
-    def node(self, identifier: str) -> ft.Semantics:
-        (found,) = self.nodes(identifier)
-        return found
+    @property
+    def share(self) -> MemoryShare:
+        return cast(MemoryShare, self.services.share)
 
     def text(self, identifier: str) -> list[str]:
         return words(self.node(identifier))
 
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
     async def show(self, session_id: str | None) -> None:
-        """Re-render the same Root with another id in place, or with no detail."""
-        self.reopen(session_id)
+        """Re-render the detail in place with another id, or leave it (``None``)."""
+        self.opened[0](session_id)
         await self.settle()
-
-    async def click(self, control: ft.Control) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
-
-    @property
-    def snack_bars(self) -> list[ft.SnackBar]:
-        return [
-            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
-        ]
 
 
 type Render = Callable[[str], Awaitable[Detail]]
@@ -115,93 +75,39 @@ async def rendering(
     Each test module's ``render`` fixture enters it with its own ``tmp_path`` and
     ``monkeypatch``; leaving it closes every session it rendered.
     """
-    shown: list[tuple[Session, Services]] = []
-    titles: list[str] = []
-
-    def scaffold(
-        *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
-    ) -> ft.Control:
-        titles.append(title)
-        return ft.Column([ft.Row(actions or []), body])
-
-    monkeypatch.setattr(screen, "AppScaffold", scaffold)
-    monkeypatch.setattr(ft, "use_view_path", lambda: VIEW)
-
-    async def show(session_id: str) -> Detail:
-        storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-        launcher = MemoryLauncher()
-        share = MemoryShare()
-        svc = Services(
-            year=YEAR,
-            storage=storage,
-            memory=ViewMemory(),
-            semantics=MemorySemantics(),
-            haptics=MemoryHaptics(),
-            launcher=launcher,
-            clipboard=MemoryClipboard(),
-            share=share,
-        )
-        conference = Conference(data=processed(2026), source="bundled", version=1)
-        favorites, prefs = Favorites(), Prefs(loaded=True)
-        await favorites.load(storage)
-        reopen: list[Callable[[str | None], None]] = []
-
-        @ft.component
-        def Root() -> ft.Control:
-            # Detail.show() changes the id in place, or leaves the detail (None).
-            shown_id, set_shown_id = ft.use_state(cast(str | None, session_id))
-            reopen[:] = [set_shown_id]
-            return ServicesCtx(
-                svc,
-                lambda: ConferenceCtx(
-                    conference,
-                    lambda: PrefsCtx(
-                        prefs,
-                        lambda: FavoritesCtx(
-                            favorites,
-                            lambda: TokensCtx(
-                                LIGHT_TOKENS,
-                                lambda: (
-                                    screen.SessionDetail(shown_id)
-                                    if shown_id is not None
-                                    else ft.Text("Elsewhere")
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            )
-
-        flet_session = Session(connection())
-        page = flet_session.page
-        pushed: list[str] = []
-        monkeypatch.setattr(page, "navigate", pushed.append)
-        # Bound as Flet binds it while a handler runs; the test runs in a context of
-        # its own (a task), so the binding goes with it.
-        _context_page.set(page)  # pyright: ignore[reportArgumentType]
-        shown.append((flet_session, svc))
-        page.render(Root)
-        flet_session.get_page_patch()
-        detail = Detail(
-            flet_session,
-            conference,
-            favorites,
-            launcher,
-            share,
-            pushed,
-            titles,
-            lambda sid: reopen[0](sid),
-        )
-        await detail.settle()
-        return detail
-
     try:
-        yield show
+        async with AsyncExitStack() as stack:
+
+            async def show(session_id: str) -> Detail:
+                opened: list[Callable[[str | None], None]] = []
+
+                @ft.component
+                def Opened() -> ft.Control:
+                    # Detail.show() changes the id in place, or leaves the detail (None).
+                    shown_id, set_shown_id = ft.use_state(cast(str | None, session_id))
+                    opened[:] = [set_shown_id]
+                    if shown_id is None:
+                        return ft.Text("Elsewhere")
+                    return screen.SessionDetail(shown_id)
+
+                shown = await stack.enter_async_context(
+                    showing(
+                        Opened,
+                        screen,
+                        year=YEAR,
+                        conference=Conference(
+                            data=processed(2026), source="bundled", version=1
+                        ),
+                        tmp_path=tmp_path,
+                        monkeypatch=monkeypatch,
+                        view_path=VIEW,
+                    )
+                )
+                # Shown's fields as they are: the rows and the navigation still record.
+                return Detail(**vars(shown), opened=opened)
+
+            yield show
     finally:
-        for flet_session, svc in shown:
-            svc.close()  # the status line's ticks end (D-147)
-            flet_session.close()
-        await asyncio.sleep(0)
         clock.set_test_now(None)
 
 
