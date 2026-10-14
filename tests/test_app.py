@@ -598,6 +598,36 @@ def test_services_are_built_for_the_active_year_in_the_data_directory(
     assert svc.closed.is_set()
 
 
+@pytest.mark.parametrize(
+    ("loaded", "measured", "open_"),
+    [(False, False, False), (True, False, False), (False, True, False), (True, True, True)],
+)
+def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
+    loaded: bool,
+    measured: bool,
+    open_: bool,
+    fake_page: FakePage,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-216: the first screen comes only once the slots' layout is known."""
+    prefs = Prefs(loaded=loaded, time_measured=measured)
+    monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
+    monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
+    monkeypatch.setattr(ft, "use_effect", lambda *_, **__: None)
+    with Renderer().with_context(), bound(fake_page):
+        shown = inspect.unwrap(app.App)(ViewMemory())
+    booting = (
+        isinstance(shown, list)
+        and len(shown) == 1
+        and isinstance(shown[0], ft.Component)
+        and shown[0].fn is inspect.unwrap(app.BootView)
+    )
+    assert booting is not open_
+    if open_:  # the providers end in the Router
+        assert isinstance(shown, ft.Component)
+        assert shown.fn.__name__ == "Router"
+
+
 async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

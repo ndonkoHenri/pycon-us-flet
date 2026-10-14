@@ -207,7 +207,8 @@ class Prefs:
 
         Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
         the stored values. The device facts (``os_dark``, the accessibility flags,
-        ``time_above`` and ``time_measured``) and ``loaded`` stay: they describe the device and the session, not a choice.
+        ``time_above`` and ``time_measured``) and ``loaded`` stay: they describe the
+        device and the session, not a choice.
         """
         fresh = Prefs()
         for name in _PERSISTED:

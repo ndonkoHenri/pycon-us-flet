@@ -336,8 +336,8 @@ def _Day(
     """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
 
     Memoised (D-153): it runs only when the day's slots, their clashes, the clock
-    format, the slots' layout (D-216) or the scheme change. Every row is saved, so every star is filled; a tap
-    removes the row, with Undo.
+    format, the slots' layout (D-216) or the scheme change. Every row is saved, so every
+    star is filled; a tap removes the row, with Undo.
     """
     zone = use_services().year.conference.zone  # a plain value: subscribes to nothing
     slots: list[ft.Control] = []

@@ -106,8 +106,9 @@ def test_the_time_above_is_one_heading_read_once_on_one_line() -> None:
     assert isinstance(text, ft.Text)
     assert text.value == "9:25\N{NO-BREAK SPACE}AM"  # "AM" keeps to its time
     assert text.theme_style == ft.TextThemeStyle.TITLE_SMALL  # the gutter's type
-    # From the screen's edge and on the gutter's line, as the gutter's time.
-    assert container.padding == ft.Padding.only(left=16, top=12, right=16)
+    # From the screen's edge, as the gutter's time; 20 dp above it against the rows'
+    # own 12 dp below, so it sits with the rows it heads rather than midway.
+    assert container.padding == ft.Padding.only(left=16, top=20, right=16)
 
 
 def test_beside_the_gutter_the_rows_take_the_rest_of_the_width() -> None:

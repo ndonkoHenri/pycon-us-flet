@@ -73,7 +73,9 @@ def TimeAbove(label: str) -> ft.Control:
 
     What a slot shows instead of the gutter when the text is too large for one
     (``time_above()``): "9:25 AM" in the gutter's type, from the screen's 16 dp
-    margin, 12 dp down as the gutter's time, and a heading read once, as the gutter.
+    margin, and a heading read once, as the gutter. 20 dp above it and the rows' own
+    12 dp below: further from the divider or now line over it than from its rows, so
+    it reads as their heading.
 
     Args:
         label: The slot's start from ``timefmt.time_label()``; a no-break space keeps
@@ -86,7 +88,7 @@ def TimeAbove(label: str) -> ft.Control:
                 label.replace(" ", "\N{NO-BREAK SPACE}"),
                 theme_style=ft.TextThemeStyle.TITLE_SMALL,
             ),
-            padding=ft.Padding.only(left=16, top=12, right=16),
+            padding=ft.Padding.only(left=16, top=20, right=16),
         ),
     )
 
@@ -143,6 +145,11 @@ def GutterProbe() -> ft.Control:
     shows nothing (``opacity=0``) and is left out of the semantics tree. Not laid over
     the body in a ``Stack``: a positioned control with ``on_size_change`` breaks the
     stack's layout (F51).
+
+    It measures the View's width, beside the body's ``SafeArea``, not inside it. Only
+    in landscape on a phone with a notch or a cutout do the SafeArea's side insets make
+    a slot narrower than that, by up to about 15 %, and there even the largest gutter
+    stays under a fifth of the narrower width (D-216), so the answer is the same.
     """
     prefs = use_prefs()
     # Plain holders: a measurement re-renders nothing; only the answer goes to Prefs.
