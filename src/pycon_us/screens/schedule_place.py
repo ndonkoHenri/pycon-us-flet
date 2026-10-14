@@ -7,8 +7,10 @@ the user is not scrolling:
 
 - the filter sheet closes after a change: the sheet is modal, so the list could not
   move. Its chips' changes are usually laid out and reported under it, but a close
-  that comes before the last change's reports uses stale heights, so the next report
-  of today's items puts the place back again, by key;
+  that comes before the last change's reports uses stale heights, so the first report
+  of today's items after it puts the place back again, by key. That repeat is the
+  close's own layout's: the first report takes it, and so does a newer render of
+  today's items (a refresh, the now line), whose reports are its own;
 - after another change, "Show all" or "Clear filters", at the next height report of
   today's items, which Flutter sends after the frame that laid the change out. Any
   scroll of the list, a jump to now and the re-tap cancel it.
@@ -91,7 +93,8 @@ class TodayPlace:
             ``USER`` event), the app's own scrolls and a day switch. A put-back
             stops between its jumps when the turn is no longer its own.
         again: The turn of the sheet's close's put-back: while it is still the turn,
-            the next height report puts the place back again, by key.
+            the first height report after the close puts the place back again, by
+            key. That report takes it, and so does a newer render of today's items.
     """
 
     memory: ViewMemory
@@ -114,10 +117,12 @@ class TodayPlace:
 
         So does a repeat of the sheet's close's put-back, which may have read heights
         from before the change's layout: Flet sends a size after the frame that laid
-        it out, which can come after the close (D-250).
+        it out, which can come after the close (D-250). The first report after the
+        close takes the repeat, whether or not it runs, so a later one never does.
         """
         self.heights[key] = height
-        if self.shown and (self.memory.schedule_pending or self.again == self.turn):
+        repeat, self.again = self.again == self.turn, -1
+        if self.shown and (self.memory.schedule_pending or repeat):
             await self.put_back()
 
     def scrolled(self, day: date, e: ft.OnScrollEvent) -> None:
@@ -164,6 +169,17 @@ class TodayPlace:
         self.shown = day == self.day
         if self.shown:
             self.user = False
+
+    def lays_out(self, items: tuple[ListItem, ...]) -> None:
+        """A render lays today's ``items`` out: a newer layout's reports are its own.
+
+        So a change of them (a refresh, the now line) ends the sheet's close's repeat:
+        when the close was right, no report follows it, and a refresh's reports minutes
+        later must not put the place back (D-250).
+        """
+        if items is not self.items:
+            self.again = -1
+        self.items = items
 
     def comes_back_by_key(self) -> bool:
         """Whether today, showing again, is put back by key rather than by offset.
@@ -286,7 +302,7 @@ def use_today_place(
         excluded: The filter this render lays out.
     """
     place = ft.use_memo(lambda: TodayPlace(memory), [])
-    place.items = ft.use_memo(lambda: list_items(slots, line), [slots, line])
+    place.lays_out(ft.use_memo(lambda: list_items(slots, line), [slots, line]))
     place.day, place.list_ref, place.shown = day, list_ref, place.shown and shown
 
     @report_errors

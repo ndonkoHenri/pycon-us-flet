@@ -22,9 +22,12 @@ import flet as ft
 import pytest
 from flet.messaging.session import Session
 
+from pycon_us.core.feed import process
 from pycon_us.memory import ViewMemory
+from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import sessions, test_schedule
+from tests.feeds import changed, settings
 from tests.sessions import find
 from tests.test_schedule import FRIDAY, SATURDAY, Shown, friday_at, inside
 from tests.test_schedule_filter import click, open_sheet, show_button, tap_chip
@@ -318,6 +321,35 @@ async def test_the_dismissal_after_the_button_puts_back_nothing_more(
     await schedule.session.dispatch_event(sheet._i, "dismiss", None)
     await schedule.settle()
     assert _asks(schedule) == [("offset", _top(schedule, TWO_PM) + 150.0)]
+
+
+@pytest.mark.parametrize("late", [False, True])
+async def test_a_refresh_long_after_the_close_puts_nothing_back(
+    shown: Callable[..., Awaitable[Shown]],
+    device: Device,
+    conference: Conference,
+    late: bool,
+) -> None:
+    """The repeat is the close's own layout's: its first report takes it (``late``),
+    and when the close was right no report comes, so a refresh's re-render and its
+    reports minutes later must not run it (the Android check of d0119ec, row 9)."""
+    schedule = await into_two_pm(shown, device, 150.0)
+    await hide(schedule, "summit", reports=not late)
+    if late:
+        await lay_out(schedule)  # the close's layout, reported after it: once by key
+    assert len(_asks(schedule)) == (3 if late else 1)
+    schedule.forget()
+    conference.data = process(changed(2026, _rename_a_friday_talk), settings(2026))
+    conference.version += 1
+    await schedule.settle()
+    await lay_out(schedule)  # the refresh's reports
+    assert schedule.scrolls == []
+
+
+def _rename_a_friday_talk(document: dict[str, Any]) -> None:
+    """Rename a talk in Friday's 3:30 PM slot, below the place: a feed that changed."""
+    slot = next(s for s in document["schedule"] if s.get("conf_key") == 63)
+    slot["name"] = "Renamed on the server"
 
 
 # ------------------------------------------------------------------ "Show all" and the reports
