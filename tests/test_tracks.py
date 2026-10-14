@@ -21,7 +21,7 @@ import pytest
 from flet.controls.context import _context_page
 from flet.messaging.session import Session
 
-from pycon_us.config import HUB_PAGES, load_year
+from pycon_us.config import load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
 from pycon_us.favorites import Favorites, FavoritesCtx
@@ -36,6 +36,7 @@ from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import day_groups, session_rows
 from pycon_us.ui.semantics import semantics_key
+from pycon_us.year_tracks import HUB_PAGES
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,

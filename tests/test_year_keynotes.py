@@ -16,6 +16,7 @@ from pycon_us import config
 from pycon_us.config import YearDataError, load_year
 from pycon_us.core.timeline import track_sessions
 from pycon_us.year_keynotes import Keynote, check_keynote_sessions, keynote_of
+from pycon_us.year_tracks import HUB_PAGES, KEYNOTE_TRACKS
 from tests.feeds import processed
 
 PACKAGE = Path(config.__file__).parent
@@ -125,7 +126,7 @@ def test_the_loader_refuses_a_session_id_of_another_track(data_dir: Path) -> Non
 
 
 def test_the_keynote_tracks_include_the_hubs_keynotes_page() -> None:
-    assert config.HUB_PAGES["keynotes"] in config.KEYNOTE_TRACKS
+    assert HUB_PAGES["keynotes"] in KEYNOTE_TRACKS
 
 
 def test_the_app_loads_without_reading_the_snapshot(data_dir: Path) -> None:
