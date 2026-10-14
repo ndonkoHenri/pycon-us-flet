@@ -4,16 +4,16 @@ The query is pure and runs on both recorded feeds and on small built cases: the 
 headings (accents, letters without a Latin base), the first session and its "+1 more",
 pseudo-speakers left out, and the filter's matching (SPKR-01, SPKR-02, DATA-21; D-46).
 
-The screen runs in a real Flet session, as the session rows' tests do
-(``tests/test_session_rows.py`` names the Flet internals the harness uses): a keystroke
-is the field's value patched in and its change event dispatched, as Flutter sends them,
-and Flet's scheduler re-renders what changed, so a test sees which row and section
-bodies ran (D-153). How the list looks, wraps at 200 % and reads to TalkBack and
-VoiceOver is checked on devices (the PR).
+The screen runs in a real Flet session under the store providers (``tests/sessions.py``'s
+``showing()``, which names the Flet internals it uses): a keystroke is the field's value
+patched in and its change event dispatched, as Flutter sends them, and Flet's scheduler
+re-renders what changed, so a test sees which row and section bodies ran (D-153). How
+the list looks, wraps at 200 % and reads to TalkBack and VoiceOver is checked on devices
+(the PR).
 """
 
-import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field, replace
 from datetime import timedelta
 from pathlib import Path
@@ -21,8 +21,6 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData, Speaker
@@ -40,23 +38,12 @@ from pycon_us.core.speakers import (
     speaker_sessions,
 )
 from pycon_us.core.timeline import schedule_order
-from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import speakers as screen
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx
+from pycon_us.state import Conference
 from pycon_us.ui import rows
 from pycon_us.ui.rows import more_label, speaker_phrase
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests import sessions
 from tests.feeds import YEARS, processed
-from tests.sessions import connection
 
 YEAR = load_year(2026)
 ROW = "speakers.speaker."
@@ -374,24 +361,14 @@ def test_more_keeps_its_number_and_word_together() -> None:
 
 
 @dataclass
-class Shown:
-    """A Flet session showing the Speakers screen, and which bodies ran."""
+class Shown(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``) on the Speakers screen.
 
-    session: Session
-    rows: list[str] = field(default_factory=list)
-    """The speaker ids whose row bodies ran, in order."""
+    Its rows are speakers: ``rows`` holds the speaker ids whose row bodies ran.
+    """
+
     sections: list[str] = field(default_factory=list)
     """The letters whose section bodies ran, in order."""
-    token: Any = None
-    """The page binding to undo when the session closes."""
-
-    def find[T: ft.Control](self, kind: type[T]) -> list[T]:
-        return [c for c in self.session.index.values() if isinstance(c, kind)]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        found = [c for c in self.find(ft.Semantics) if c.identifier == identifier]
-        assert len(found) == 1, identifier
-        return found[0]
 
     @property
     def text_field(self) -> ft.TextField:
@@ -420,86 +397,57 @@ class Shown:
         walk(body)
         return found
 
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
     async def type(self, text: str) -> None:
         """Type into the filter as Flutter reports it: the value, then the event."""
         text_field = self.text_field
         self.session.apply_patch(text_field._i, {"value": text})
-        await self.session.dispatch_event(text_field._i, "change", None)
-        await self.settle()
-
-    async def click(self, control: ft.Control) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
+        await self.event(text_field, "change", None)
 
 
-async def show(
-    conference: Conference, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Shown:
-    """Render the Speakers screen over ``conference`` in a new Flet session."""
-    storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-    svc = Services(
-        year=YEAR,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-    result = Shown(Session(connection()))
+type Render = Callable[[Conference], Awaitable[Shown]]
+
+
+@pytest.fixture
+async def render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[Render]:
+    """Return render(conference): the Speakers screen over it; each closes at the end."""
     header = screen.SectionHeader
 
     def counted_phrase(entry: SpeakerEntry) -> str:
-        result.rows.append(entry.speaker.id)
+        sessions.current(Shown).rows.append(entry.speaker.id)
         return speaker_phrase(entry)
 
     def counted_header(text: str) -> ft.Control:
-        result.sections.append(text)
+        sessions.current(Shown).sections.append(text)
         return header(text)
 
     # Each body calls these once: counting the calls counts the bodies (S2).
     monkeypatch.setattr(rows, "speaker_phrase", counted_phrase)
     monkeypatch.setattr(screen, "SectionHeader", counted_header)
-    # The scaffold is tested on its own (test_scaffold.py); here the screen's body.
-    monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs["body"])
 
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference, lambda: PrefsCtx(Prefs(loaded=True), screen.Speakers)
-            ),
-        )
+    async with AsyncExitStack() as stack:
 
-    page = result.session.page
-    result.token = _context_page.set(page)  # pyright: ignore[reportArgumentType]
-    page.render(Root)
-    result.session.get_page_patch()
-    await result.settle()
-    return result
+        async def show(conference: Conference) -> Shown:
+            return await stack.enter_async_context(
+                sessions.showing(
+                    screen.Speakers,
+                    screen,
+                    year=YEAR,
+                    conference=conference,
+                    tmp_path=tmp_path,
+                    monkeypatch=monkeypatch,
+                    view_path="",  # no Router: what ft.use_view_path() says outside one
+                    kind=Shown,
+                )
+            )
 
-
-async def close(shown: Shown) -> None:
-    shown.session.close()
-    await shown.settle()
-    _context_page.reset(shown.token)
+        yield show
 
 
 @pytest.fixture
-async def shown(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> AsyncIterator[Shown]:
-    conference = Conference(data=processed(2026), source="bundled", version=1)
-    result = await show(conference, tmp_path, monkeypatch)
-    try:
-        yield result
-    finally:
-        await close(result)
+async def shown(render: Render) -> Shown:
+    return await render(Conference(data=processed(2026), source="bundled", version=1))
 
 
 ALL = directory(processed(2026))
@@ -691,11 +639,8 @@ async def test_a_row_with_more_sessions_says_so_after_the_first(shown: Shown) ->
     assert title_text.max_lines == 2
 
 
-async def test_a_tap_pushes_the_speakers_detail(
-    shown: Shown, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    went: list[str] = []
-    monkeypatch.setattr(ft.Page, "navigate", lambda page, route: went.append(route))
+async def test_a_tap_pushes_the_speakers_detail(shown: Shown) -> None:
+    went = shown.went  # what page.navigate was asked for
     entry = ALL[0]
     node = shown.node(f"{ROW}{entry.speaker.id}")
     await shown.click(cast(ft.Control, node.parent))
@@ -713,68 +658,56 @@ def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
 
 
 async def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    render: Render,
 ) -> None:
     """ux.md §4.1, NEW-03: no data at all is the only time anything loads."""
-    loading = await show(Conference(), tmp_path, monkeypatch)
-    try:
-        labels = [node.label for node in loading.find(ft.Semantics)]
-        assert "Loading speakers" in labels
-        assert loading.listed == []
-    finally:
-        await close(loading)
+    loading = await render(Conference())
+    labels = [node.label for node in loading.find(ft.Semantics)]
+    assert "Loading speakers" in labels
+    assert loading.listed == []
 
 
 async def test_after_a_failed_first_fetch_it_offers_to_try_again(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    render: Render,
 ) -> None:
-    failed = await show(Conference(problem="offline"), tmp_path, monkeypatch)
-    try:
-        state = failed.node("speakers.no_data")
-        assert state.live_region
-        buttons = [b.content for b in failed.find(ft.FilledTonalButton)]
-        assert buttons == ["Try again"]
-    finally:
-        await close(failed)
+    failed = await render(Conference(problem="offline"))
+    state = failed.node("speakers.no_data")
+    assert state.live_region
+    buttons = [b.content for b in failed.find(ft.FilledTonalButton)]
+    assert buttons == ["Try again"]
 
 
 async def test_a_feed_without_speakers_says_none_are_announced(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    render: Render,
 ) -> None:
     """Not a filter miss: nothing was filtered, so there is nothing to clear."""
     data = replace(processed(2026), speakers={})
-    empty = await show(Conference(data=data, version=1), tmp_path, monkeypatch)
-    try:
-        state = empty.node("speakers.not_announced")
-        assert state.live_region
-        titles = [str(t.value) for t in empty.find(ft.Text)]
-        assert screen.NOT_ANNOUNCED in titles
-        assert not any(t.startswith("No speakers match") for t in titles)
-        assert empty.find(ft.FilledTonalButton) == []  # no Clear filter, no button
-    finally:
-        await close(empty)
+    empty = await render(Conference(data=data, version=1))
+    state = empty.node("speakers.not_announced")
+    assert state.live_region
+    titles = [str(t.value) for t in empty.find(ft.Text)]
+    assert screen.NOT_ANNOUNCED in titles
+    assert not any(t.startswith("No speakers match") for t in titles)
+    assert empty.find(ft.FilledTonalButton) == []  # no Clear filter, no button
 
 
 async def test_a_new_feed_version_rebuilds_the_list_and_its_filter(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    render: Render,
 ) -> None:
     """The memo keys on ``Conference.version``: a refresh must reach the list."""
     full = processed(2026)
     (mike,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
     speakers = {k: v for k, v in full.speakers.items() if k != mike.speaker.id}
     conference = Conference(data=replace(full, speakers=speakers), version=1)
-    refreshed = await show(conference, tmp_path, monkeypatch)
-    try:
-        assert mike.speaker.id not in refreshed.listed
-        await refreshed.type("mike müller")
-        assert refreshed.listed == []
+    refreshed = await render(conference)
+    assert mike.speaker.id not in refreshed.listed
+    await refreshed.type("mike müller")
+    assert refreshed.listed == []
 
-        conference.data = full  # as a refresh publishes it (Conference._publish)
-        conference.version += 1
-        await refreshed.settle()
-        assert refreshed.listed == [mike.speaker.id]  # the new index finds him
-        await refreshed.type("")
-        assert mike.speaker.id in refreshed.listed
-        assert len(refreshed.listed) == len(ALL)
-    finally:
-        await close(refreshed)
+    conference.data = full  # as a refresh publishes it (Conference._publish)
+    conference.version += 1
+    await refreshed.settle()
+    assert refreshed.listed == [mike.speaker.id]  # the new index finds him
+    await refreshed.type("")
+    assert mike.speaker.id in refreshed.listed
+    assert len(refreshed.listed) == len(ALL)
