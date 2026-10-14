@@ -3,7 +3,7 @@
 The helpers are ``ui/semantics.py``'s (decisions §M, D-200). The scans hold every
 ``Semantics`` heading to a level (F40, F49, D-211), every merged identifier to
 ``named()`` (D-214), and keep a bare identifier off a button, chip, field or tile
-(F50, D-224).
+(F50, D-230).
 """
 
 import ast
@@ -223,7 +223,7 @@ ON_PURPOSE = {
         "my_schedule.earlier_days, my_schedule.earlier_today"
     ),
     ("when_where.py", "OtherRooms", "f'{screen}.other_rooms'"): "session.other_rooms",
-    # D-224: inside a PopupMenuItem, whose own MergeSemantics takes the identifier
+    # D-230: inside a PopupMenuItem, whose own MergeSemantics takes the identifier
     # into the item's node (Flutter's popup_menu.dart); a uiautomator dump shows it.
     ("track.py", "_menu", "f'{SCREEN}.add_all'"): "track.add_all",
 }
@@ -431,7 +431,7 @@ def test_the_bare_scan_finds_every_identifier_left_bare_on_purpose() -> None:
 
 @pytest.mark.parametrize("path", SOURCES, ids=lambda p: p.name)
 def test_no_bare_identifier_splits_from_its_control(path: Path) -> None:
-    """F50, D-214, D-224: a bare identifier around a control is a node beside it.
+    """F50, D-214, D-230: a bare identifier around a control is a node beside it.
 
     Around a button TalkBack stops on an empty ``View``, then on the button; around
     one with a tooltip the identifier's node holds the name and the button is
