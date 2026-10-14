@@ -353,6 +353,30 @@ async def test_an_older_undo_leaves_a_newer_removals_snack_bar(
     assert second.open
 
 
+async def test_an_older_removal_shows_nothing_over_a_newer_add(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The removal's write answers first, then the add that saved the session again."""
+    await rendered.tap_star(row_sessions.TALK)  # saved, with no SnackBar
+    write = hold_first(monkeypatch, MemoryPrefs)
+    click = hold_first(monkeypatch, MemoryHaptics)
+    star = rendered.star(row_sessions.TALK)
+    removal = asyncio.create_task(
+        rendered.session.dispatch_event(star._i, "click", None)
+    )
+    await rendered.settle()
+    add = asyncio.create_task(rendered.session.dispatch_event(star._i, "click", None))
+    await rendered.settle()
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    write.set()
+    await removal
+    click.set()
+    await add
+    await rendered.settle()
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    assert not any(snack.open for snack in rendered.snack_bars)
+
+
 async def test_a_page_with_an_undo_snack_bar_is_released_when_its_session_ends(
     tmp_path: Path,
 ) -> None:
