@@ -3,7 +3,7 @@
 The matching is ``core/search.py``'s, tested in ``tests/test_search.py``; here the
 screen around it. It runs in a real Flet session under the real Router with
 ``manage_views``, as the app renders it (``tests/sessions.py``'s ``showing()`` with
-``views=True``): a small route table with a Schedule stand-in, the global modal
+``view_path=None``): a small route table with a Schedule stand-in, the global modal
 ``/search`` and a drill whose detail is a plain View, so a result tap, Back and a fresh
 open go through the Router's own view stack (S4, D-141). Navigation is
 ``page.navigate`` replaced by what Flutter does next: the page's route changes and the
@@ -243,8 +243,7 @@ async def render(
                     conference=conference,
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
-                    view_path=None,  # the Router's
-                    views=True,
+                    view_path=None,  # a real Router, rendered as the page's Views
                     route="/schedule",
                     kind=Shown,
                 )

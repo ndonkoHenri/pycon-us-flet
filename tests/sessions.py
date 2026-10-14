@@ -5,10 +5,10 @@ nothing (and, for dialogs, encodes each message as a transport does: ``ENCODE``)
 ``page.render(...)`` with the page bound as Flet binds it, and Flet's scheduler
 re-rendering what changed.
 
-Two levels, one module (#204, #253):
+Two levels, one module (#204, #253, #286):
 
 - ``rendering(root)`` renders any component in a new session, or as the page's Views
-  under a real Router (``views=True``: the search screen's tests).
+  (``views=True``), as the app renders its Router.
 - ``showing(screen, *modules, ...)`` renders a screen over a feed under the store
   providers (``provide()``) with the memory fakes' services (``memory_services()``):
   each module's ``AppScaffold`` is replaced by a row of its actions over its body (and
@@ -162,7 +162,7 @@ def memory_services(
         storage=Storage(
             prefs=MemoryPrefs(), directory=directory, year=year.conference.year
         ),
-        memory=memory or ViewMemory(),
+        memory=ViewMemory() if memory is None else memory,
         semantics=MemorySemantics(),
         haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
@@ -365,7 +365,6 @@ async def showing[S: Shown = Shown](
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     view_path: str | None,
-    views: bool = False,
     prefs: Prefs | None = None,
     favorites: Favorites | None = None,
     saved: tuple[str, ...] = (),
@@ -383,9 +382,8 @@ async def showing[S: Shown = Shown](
         tmp_path: Where the storage writes.
         monkeypatch: To replace the scaffold, the View path and the phrases.
         view_path: The View's path, which the rows' links start from; None when
-            ``screen`` is a real ``ft.Router``, which answers it.
-        views: Render the screen as the page's Views (``rendering(views=True)``), as
-            the app renders its Router.
+            ``screen`` is a real ``ft.Router``, which answers it: the screen is then
+            rendered as the page's Views, as the app renders it.
         prefs: The ``Prefs`` store, for other settings; by default a loaded one with
             the defaults.
         favorites: The ``Favorites`` store as the test set it up (not loaded yet,
@@ -405,7 +403,7 @@ async def showing[S: Shown = Shown](
     if favorites is None:
         favorites = Favorites()
         await favorites.load(svc.storage)
-    prefs = prefs or Prefs(loaded=True)
+    prefs = Prefs(loaded=True) if prefs is None else prefs
     session = Session(connection())
     if route is not None:
         session.page.route = route
@@ -418,7 +416,7 @@ async def showing[S: Shown = Shown](
         return provide(svc, conference, prefs, favorites, screen)
 
     try:
-        async with rendering(Root, session, views=views):
+        async with rendering(Root, session, views=view_path is None):
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
