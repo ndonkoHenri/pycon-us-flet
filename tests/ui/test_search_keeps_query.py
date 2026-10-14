@@ -38,7 +38,8 @@ def accent_query() -> tuple[str, Session, Speaker]:
 
     The query is a word of a speaker's name folded to plain letters ("muller"), so it
     differs from the name as shown; it is the first such word that finds exactly that
-    speaker and one session, so both results are on screen without scrolling (F21).
+    speaker and one session, so each scope's one result is on screen without scrolling
+    (F21).
     """
     data = recorded()
     index = search_index(data)

@@ -3,7 +3,7 @@
 ``open_developer()`` opens the screen through About this app, unlocking it there with 7
 taps on the version row the first time (D-187). ``fresh_start()`` sets the fake clock
 and the feed URL there, refreshes from that feed, and returns to Now, so a flow runs on
-a known moment and a recorded feed rather than on the live one (D-218).
+a known moment and a recorded feed rather than on the live one (D-223).
 ``apply_options()``, ``reopen_developer()`` and ``refresh_now()`` are its steps, which a
 flow can take on its own (F1 sets an unreachable feed URL). The inventory is
 testing-and-quality.md §5.2.
@@ -69,7 +69,7 @@ async def open_developer(t: RemoteTester) -> None:
         t,
         lambda: t.find_by_semantics_identifier("more.app"),
         "About this app (more.app), off screen on a short phone: a flow cannot "
-        "scroll (U35, D-218)",
+        "scroll (U35, D-223)",
     )
     await tap(t, about)
     await wait_for_id(t, "more.title", gone=True)  # About has covered the root

@@ -1,7 +1,7 @@
 """The feeds a UI flow's app reads from this machine, and the one that never answers.
 
 ``laptop_url()`` is the URL the app reaches this machine at. ``SilentFeed`` is a feed
-server that takes each request and hangs up with no answer, for F1 (D-218): the app
+server that takes each request and hangs up with no answer, for F1 (D-223): the app
 reads that as no answer from the feed (httpx's ``RemoteProtocolError``, a
 ``TransportError``, so ``api.NetworkError``), "offline" without airplane mode, which
 would also cut the tester's own socket (testing-and-quality.md §5.2).

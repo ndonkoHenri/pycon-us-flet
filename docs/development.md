@@ -469,11 +469,11 @@ The flows in `tests/ui/` run on an emulator or a simulator, never in CI (`addopt
 for s in window_animation_scale transition_animation_scale animator_duration_scale; do
   adb -s emulator-5580 shell settings put global $s 0
 done
-# The AVD has a hardware keyboard: keep the on-screen one down, over the rows a flow taps (D-218)
+# The AVD has a hardware keyboard: keep the on-screen one down, over the rows a flow taps (D-223)
 adb -s emulator-5580 shell settings put secure show_ime_with_hard_keyboard 0
 uv run flet test android -d emulator-5580 --tests-dir tests/ui -v
 
-# iOS: a booted iPhone 17 Pro Max simulator on iOS 26.5 of your own (D-107, D-218)
+# iOS: a booted iPhone 17 Pro Max simulator on iOS 26.5 of your own (D-107, D-223)
 xcrun simctl create "<issue>-iphone17promax" "iPhone 17 Pro Max" com.apple.CoreSimulator.SimRuntime.iOS-26-5
 xcrun simctl boot <udid>
 LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
@@ -486,10 +486,10 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 - `-d` is required for both platforms, and `--tests-dir tests/ui` points `flet test` at the flows (its default is `tests`, which would collect the unit tests too). `-v` streams the Flutter test process's output; without it a failure prints only the output's tail. `-k <expression>` runs some flows only.
 - `flet test` first provisions a Flutter test host in `build/flutter` through the `flet build` pipeline (1 to 2½ minutes; the app's Python is packaged again on every run), then pytest runs each flow: `flutter test` builds a debug binary, installs it, launches it and connects the tester, and the app is uninstalled when the flow ends. So every flow starts from a fresh install, with no stored settings or cache. On #78's Mac (M4), with warm Gradle and Xcode caches, the shell flow took about 3½ minutes on Android (provisioning 1 min, Gradle 45 s, install 15 s, the flow about 1 min) and about 5 minutes on iOS (provisioning 2½ min, Xcode build 67 s); a first run on a host busy with other emulators took 15 minutes on Android.
 - The bundle id is the app's own (`io.github.ndonkohenri.pyconus`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
-- Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out-<flow>.png` (D-218): look there first when a flow fails.
+- Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out-<flow>.png` (D-223): look there first when a flow fails.
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 - When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
-- **Why the iOS flows run on an iPhone 17 Pro Max** (D-218): the flows open the Developer screen through More › About this app, and a flow cannot scroll (`RemoteTester` has no drag, U35). On the iPhone 17 (402 x 874 pt) About this app is under the bottom bar, below Appearance; the Pro Max (440 x 956 pt) shows it. `flet_probe_api34` (1080 x 2400 px, 420 dpi) shows it too. `open_developer()` fails with a message naming U35 when the row is off screen.
+- **Why the iOS flows run on an iPhone 17 Pro Max** (D-223): the flows open the Developer screen through More › About this app, and a flow cannot scroll (`RemoteTester` has no drag, U35). On the iPhone 17 (402 x 874 pt) About this app is under the bottom bar, below Appearance; the Pro Max (440 x 956 pt) shows it. `flet_probe_api34` (1080 x 2400 px, 420 dpi) shows it too. `open_developer()` fails with a message naming U35 when the row is off screen.
 - **F1–F5 set the scene in Developer** (`tests/ui/developer.py`): each unlocks it, sets the fake clock to the day before the conference, and F2–F5 refresh from the recorded feed that the `feed_url` fixture serves from the laptop. The app fetches the year's feed at launch, so the flows need no network of their own, but a device without one only makes the first Refresh now wait for the app's 10 s feed timeout.
 
 ### 5.8 Several builds at once: a pub cache per worktree (D-176)
