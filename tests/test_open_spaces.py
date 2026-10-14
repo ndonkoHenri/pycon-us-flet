@@ -1,6 +1,6 @@
 """Tests for the Open spaces page (``screens/open_spaces.py``; #105, EVT-01, EVT-02).
 
-The page runs in a real Flet session over the recorded feeds (``tests/programme.py``).
+The page runs in a real Flet session over the recorded feeds (``tests/sessions.py``).
 How it looks, wraps at 200 % and reads to screen readers is checked on devices (the
 PR).
 """
@@ -24,7 +24,7 @@ from pycon_us.screens import open_spaces as screen
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
 from tests.feeds import processed
-from tests.programme import Page, showing, text_of
+from tests.sessions import Shown, showing, text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -33,7 +33,7 @@ VIEW = "/more/open-spaces"
 SATURDAY = datetime(2026, 5, 16, 10, 0, tzinfo=PACIFIC)
 OCTOBER = datetime(2026, 10, 13, 12, 0, tzinfo=PACIFIC)
 
-type Show = Callable[..., Awaitable[Page]]
+type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             year: int = 2026,
             conference: Conference | None = None,
             now: datetime = OCTOBER,
-        ) -> Page:
+        ) -> Shown:
             clock.set_test_now(now)
             if conference is None:
                 conference = Conference(
@@ -70,12 +70,12 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             clock.set_test_now(None)
 
 
-def tabs(page: Page) -> ft.Tabs:
+def tabs(page: Shown) -> ft.Tabs:
     (found,) = page.find(ft.Tabs)
     return found
 
 
-def tab_labels(page: Page) -> list[tuple[str, str]]:
+def tab_labels(page: Shown) -> list[tuple[str, str]]:
     """Each day tab's text and what it says to screen readers, in tab order."""
     labels: list[tuple[str, str]] = []
     for node in sorted(

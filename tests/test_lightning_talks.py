@@ -1,6 +1,6 @@
 """Tests for the Lightning talks page (``screens/lightning_talks.py``; #105, EVT-03).
 
-The page runs in a real Flet session over the recorded feeds (``tests/programme.py``).
+The page runs in a real Flet session over the recorded feeds (``tests/sessions.py``).
 How it looks, wraps at 200 % and reads to screen readers is checked on devices (the
 PR).
 """
@@ -21,14 +21,14 @@ from pycon_us.screens import lightning_talks as screen
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
 from tests.feeds import processed
-from tests.programme import Page, showing, text_of
+from tests.sessions import Shown, showing, text_of
 
 YEAR = load_year(2026)
 COPY = YEAR.content.lightning_talks
 DATA = processed(2026)
 VIEW = "/more/lightning-talks"
 
-type Show = Callable[..., Awaitable[Page]]
+type Show = Callable[..., Awaitable[Shown]]
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
         async def render(
             *, year: int = 2026, conference: Conference | None = None
-        ) -> Page:
+        ) -> Shown:
             if conference is None:
                 conference = Conference(
                     data=processed(year), source="bundled", version=1

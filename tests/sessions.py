@@ -4,24 +4,57 @@ Flet's own component tests render this way: a ``Session`` on a connection that s
 nothing (and, for dialogs, encodes each message as a transport does: ``ENCODE``),
 ``page.render(...)`` with the page bound as Flet binds it, and Flet's scheduler
 re-rendering what changed.
-``tests/test_session_rows.py``, ``tests/test_schedule.py`` and
-``tests/test_my_schedule.py`` use it. It reaches into Flet internals
-(``_context_page``, ``Session.index``, ``Session.dispatch_event``, the msgpack encoder
-of ``messaging/protocol.py``): a Flet pin bump (D-81) that renames one breaks this
-module, not the components: look here first.
+
+Two levels, one module (#204, #253):
+
+- ``rendering(root)`` renders any component in a new session; the Schedule's and My
+  schedule's tests write their providers out above it.
+- ``showing(screen, *modules, ...)`` renders a screen over a feed under the store
+  providers (``provide()``) with the memory fakes' services (``memory_services()``):
+  each module's ``AppScaffold`` is replaced by a row of its actions over its body, so
+  both are in the tree, ``page.navigate`` is recorded and each row body is counted.
+  The rows', session detail's, Tracks', speaker's and programme pages' tests use it.
+
+It reaches into Flet internals (``_context_page``, ``Session.index``,
+``Session.dispatch_event``, ``Control._i``, ``page._dialogs``, the msgpack encoder of
+``messaging/protocol.py``): a Flet pin bump (D-81) that renames one breaks this module,
+not the components: look here first.
 """
 
 import asyncio
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from pathlib import Path
+from types import ModuleType
+from typing import Any, cast
 
 import flet as ft
 import msgpack
+import pytest
 from flet.controls.context import _context_page
 from flet.messaging.connection import Connection
 from flet.messaging.protocol import Message, configure_encode_object_for_msgpack
 from flet.messaging.session import Session
 from flet.pubsub.pubsub_hub import PubSubHub
+
+from pycon_us.config import YearData
+from pycon_us.core.row_views import SessionView
+from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.services import Services, ServicesCtx
+from pycon_us.services.storage import Storage
+from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.theme import LIGHT_TOKENS, TokensCtx
+from pycon_us.ui import session_rows
+from tests.fakes import (
+    MemoryClipboard,
+    MemoryHaptics,
+    MemoryLauncher,
+    MemoryPrefs,
+    MemorySemantics,
+    MemoryShare,
+)
 
 _ENCODE = configure_encode_object_for_msgpack(ft.BaseControl)
 
@@ -62,17 +95,21 @@ async def settle() -> None:
 
 
 @asynccontextmanager
-async def rendering(root: Callable[[], ft.Control]) -> AsyncIterator[Session]:
-    """Render the component ``root`` in a new session; close it on the way out.
+async def rendering(
+    root: Callable[[], ft.Control], session: Session | None = None
+) -> AsyncIterator[Session]:
+    """Render the component ``root`` in a session; close it on the way out.
 
     Args:
         root: A component taking no arguments, usually the store providers around
             the component under test.
+        session: The session to render in, when the caller prepares its page first
+            (``showing()`` records ``page.navigate``); a new one by default.
 
     Yields:
         The session, with its first render applied and its first effects run.
     """
-    session = Session(connection())
+    session = session or Session(connection())
     page = session.page
     _context_page.set(page)  # pyright: ignore[reportArgumentType]
     try:
@@ -92,3 +129,188 @@ def find[T: ft.BaseControl](
 ) -> list[T]:
     """Return the mounted controls of a type that pass ``test``, in no set order."""
     return [c for c in session.index.values() if isinstance(c, kind) and test(c)]
+
+
+# ------------------------------------------------------------------ a screen over a feed
+
+
+def memory_services(year: YearData, directory: Path) -> Services:
+    """Return a session's services with the memory fakes of ``tests/fakes.py``.
+
+    Args:
+        year: The year data the services carry.
+        directory: Where the storage writes (a test's ``tmp_path``).
+    """
+    return Services(
+        year=year,
+        storage=Storage(
+            prefs=MemoryPrefs(), directory=directory, year=year.conference.year
+        ),
+        memory=ViewMemory(),
+        semantics=MemorySemantics(),
+        haptics=MemoryHaptics(),
+        launcher=MemoryLauncher(),
+        clipboard=MemoryClipboard(),
+        share=MemoryShare(),
+    )
+
+
+def provide(
+    svc: Services,
+    conference: Conference,
+    prefs: Prefs,
+    favorites: Favorites,
+    body: Callable[[], ft.Control],
+) -> ft.Control:
+    """Return ``body`` under the store providers, in ``App``'s order, light tokens last."""
+    return ServicesCtx(
+        svc,
+        lambda: ConferenceCtx(
+            conference,
+            lambda: PrefsCtx(
+                prefs,
+                lambda: FavoritesCtx(favorites, lambda: TokensCtx(LIGHT_TOKENS, body)),
+            ),
+        ),
+    )
+
+
+@dataclass
+class Shown:
+    """A Flet session showing one screen, and what happened on it."""
+
+    session: Session
+    services: Services
+    """The services the screen was given: its storage, haptics, launcher and memory."""
+    conference: Conference
+    prefs: Prefs
+    favorites: Favorites
+    went: list[str]
+    """What ``page.navigate`` was asked for, in order."""
+    titles: list[str]
+    """The titles ``AppScaffold`` was given, in order."""
+    rows: list[str] = field(default_factory=list)
+    """The session ids whose row bodies (sessions and notices) ran, in order."""
+
+    @property
+    def launcher(self) -> MemoryLauncher:
+        return cast(MemoryLauncher, self.services.launcher)
+
+    def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
+        return find(self.session, kind)
+
+    def nodes(self, key: str) -> list[ft.Semantics]:
+        """The ``Semantics`` that ``key`` names, in no set order (D-33's identifiers).
+
+        A key ending in a dot names a family: ``"track.session."`` finds every row's
+        node. Any other key is a whole identifier: ``"session.room"`` finds the room
+        tile's node, never the folded rooms' ``"session.room.<key>"``.
+        """
+        if key.endswith("."):
+            return find(
+                self.session,
+                ft.Semantics,
+                lambda c: str(c.identifier or "").startswith(key),
+            )
+        return find(self.session, ft.Semantics, lambda c: c.identifier == key)
+
+    def node(self, identifier: str) -> ft.Semantics:
+        """The mounted ``Semantics`` with this identifier: one, and current."""
+        found = find(self.session, ft.Semantics, lambda c: c.identifier == identifier)
+        assert len(found) == 1, identifier
+        return found[0]
+
+    def texts(self) -> list[str]:
+        return [str(t.value) for t in self.find(ft.Text)]
+
+    @property
+    def snack_bars(self) -> list[ft.SnackBar]:
+        return [
+            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
+        ]
+
+    async def settle(self) -> None:
+        await settle()
+
+    async def click(self, control: ft.BaseControl) -> None:
+        await self.event(control, "click", None)
+
+    async def event(self, control: ft.BaseControl, name: str, data: Any) -> None:
+        """Dispatch an event to ``control`` as the client would; let it run out."""
+        await self.session.dispatch_event(control._i, name, data)
+        await settle()
+
+
+def count_rows(monkeypatch: pytest.MonkeyPatch, rows: list[str]) -> None:
+    """Append each row body's session id to ``rows`` as the body runs (D-153).
+
+    Each session or notice row body says its phrase once: counting the calls counts
+    the bodies (S2's ``ROW_RENDERS``).
+    """
+    for name in ("spoken_phrase", "notice_phrase"):
+        phrase = getattr(session_rows, name)
+
+        def counted(*args: Any, phrase: Callable[..., str] = phrase, **kw: Any) -> str:
+            rows.append(cast(SessionView, args[-1]).session.id)
+            return phrase(*args, **kw)
+
+        monkeypatch.setattr(session_rows, name, counted)
+
+
+@asynccontextmanager
+async def showing(
+    screen: Callable[[], ft.Control],
+    *modules: ModuleType,
+    year: YearData,
+    conference: Conference,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    view_path: str,
+) -> AsyncIterator[Shown]:
+    """Render ``screen`` under the store providers; close the session on the way out.
+
+    Args:
+        screen: The screen's component, or a component around it.
+        *modules: The modules whose ``AppScaffold`` is replaced: the screen's.
+        year: The year data the services carry.
+        conference: The ``Conference`` store, with or without data.
+        tmp_path: Where the storage writes.
+        monkeypatch: To replace the scaffold, the View path and the phrases.
+        view_path: The View's path, which the rows' links start from.
+    """
+    titles: list[str] = []
+
+    def scaffold(
+        *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
+    ) -> ft.Control:
+        titles.append(title)
+        # The actions in a row of their own, as an app bar holds them.
+        return ft.Column([ft.Row(actions or []), body], expand=True)
+
+    for module in modules:
+        monkeypatch.setattr(module, "AppScaffold", scaffold)
+    monkeypatch.setattr(ft, "use_view_path", lambda: view_path)
+    svc = memory_services(year, tmp_path)
+    prefs, favorites = Prefs(loaded=True), Favorites()
+    await favorites.load(svc.storage)
+    session = Session(connection())
+    shown = Shown(session, svc, conference, prefs, favorites, [], titles)
+    monkeypatch.setattr(session.page, "navigate", shown.went.append)
+    count_rows(monkeypatch, shown.rows)
+
+    @ft.component
+    def Root() -> ft.Control:
+        return provide(svc, conference, prefs, favorites, screen)
+
+    try:
+        async with rendering(Root, session):
+            yield shown
+    finally:
+        svc.close()  # a status line's ticks end (D-147)
+
+
+def text_of(control: object) -> str:
+    """The first ``Text`` value under ``control``, following ``content``."""
+    while control is not None and not isinstance(control, ft.Text):
+        control = getattr(control, "content", None)
+    return str(control.value) if control is not None else ""

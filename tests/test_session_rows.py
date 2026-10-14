@@ -6,28 +6,24 @@ own scheduler re-renders what changed, so a test sees what a device would get. H
 a row is, how it wraps at 200 % and what TalkBack reads are checked on devices (#81's
 PR); here, the semantics a screen reader is given.
 
-The session is ``tests/sessions.py``'s, which reaches into Flet internals as Flet's own
-component tests do; this module also reads SnackBars from ``page._dialogs`` and clicks
-with ``Session.dispatch_event(control._i, ...)``. A Flet pin bump (D-81) that renames one
-of them breaks the fixture, not the rows: look there first.
+The session is ``tests/sessions.py``'s ``showing()``, which reaches into Flet internals
+as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks through
+``Session.dispatch_event(control._i, ...)``). A Flet pin bump (D-81) that renames one
+of them breaks that module, not the rows: look there first.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet.messaging.session import Session
 
 from pycon_us.config import load_year
-from pycon_us.core.row_views import SessionView
-from pycon_us.favorites import Favorites, FavoritesCtx, use_favorites
-from pycon_us.prefs import Prefs, PrefsCtx
-from pycon_us.services import Services, ServicesCtx, use_services
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory, use_conference
+from pycon_us.favorites import use_favorites
+from pycon_us.services import use_services
+from pycon_us.state import Conference, use_conference
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import (
@@ -46,15 +42,9 @@ from pycon_us.ui.session_rows import (
     is_notice,
     use_session_views,
 )
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
-from tests.sessions import rendering, settle
+from tests.sessions import Shown, showing
 from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
 
 YEAR = load_year(2026)
@@ -105,26 +95,21 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
 
 
 @dataclass
-class Rendered:
+class Rendered(Shown):
     """A Flet session showing ``Owner``, and what its rows did."""
 
-    session: Session
-    favorites: Favorites
-    prefs: Prefs
-    prefs_service: MemoryPrefs
-    haptics: MemoryHaptics
-    renders: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order (S2's ``ROW_RENDERS``)."""
+    @property
+    def prefs_service(self) -> MemoryPrefs:
+        return cast(MemoryPrefs, self.services.storage.prefs)
 
-    def node(self, identifier: str) -> ft.Semantics:
-        """The mounted ``Semantics`` with this identifier: one, and current."""
-        found = [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-        assert len(found) == 1, identifier
-        return found[0]
+    @property
+    def haptics(self) -> MemoryHaptics:
+        return cast(MemoryHaptics, self.services.haptics)
+
+    @property
+    def renders(self) -> list[str]:
+        """The session ids whose row bodies ran, in order (S2's ``ROW_RENDERS``)."""
+        return self.rows
 
     def star(self, session_id: str) -> ft.IconButton:
         button = self.node(f"test.favorite.{session_id}").content
@@ -138,71 +123,23 @@ class Rendered:
     def notice(self, session_id: str) -> ft.Semantics:
         return self.node(f"test.notice.{semantics_key(session_id)}")
 
-    async def settle(self) -> None:
-        """Let handlers, store writes and Flet's re-render run to the end."""
-        await settle()
-
     async def tap_star(self, session_id: str) -> None:
-        await self.session.dispatch_event(self.star(session_id)._i, "click", None)
-        await self.settle()
-
-    @property
-    def snack_bars(self) -> list[ft.SnackBar]:
-        return [
-            d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
-        ]
+        await self.click(self.star(session_id))
 
 
 @pytest.fixture
 async def rendered(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Rendered]:
-    prefs_service = MemoryPrefs()
-    haptics = MemoryHaptics()
-    storage = Storage(prefs=prefs_service, directory=tmp_path, year=2026)
-    svc = Services(
+    async with showing(
+        lambda: Owner(LIST),
         year=YEAR,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=haptics,
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-    conference = Conference(data=processed(2026), source="bundled", version=1)
-    favorites, prefs = Favorites(), Prefs(loaded=True)
-    await favorites.load(storage)
-    renders: list[str] = []
-
-    def counted(name: str) -> Callable[..., str]:
-        phrase = getattr(rows, name)
-
-        def count(*args: Any, **kwargs: Any) -> str:
-            renders.append(cast(SessionView, args[-1]).session.id)
-            return phrase(*args, **kwargs)
-
-        return count
-
-    # Each row body says its phrase once: counting the calls counts the bodies.
-    monkeypatch.setattr(rows, "spoken_phrase", counted("spoken_phrase"))
-    monkeypatch.setattr(rows, "notice_phrase", counted("notice_phrase"))
-
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference,
-                lambda: PrefsCtx(
-                    prefs, lambda: FavoritesCtx(favorites, lambda: Owner(LIST))
-                ),
-            ),
-        )
-
-    async with rendering(Root) as session:
-        yield Rendered(
-            session, favorites, prefs, prefs_service, haptics, renders=renders
-        )
+        conference=Conference(data=processed(2026), source="bundled", version=1),
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        view_path="",  # what ft.use_view_path() says outside a Router
+    ) as shown:
+        yield Rendered(**vars(shown))  # Shown's fields, as they are
 
 
 # ------------------------------------------------------------------ the memoised path
