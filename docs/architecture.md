@@ -560,6 +560,7 @@ class ViewMemory:
 
     schedule_day: date | None = None     # the Schedule's day; None opens on today (D-192)
     schedule_offsets: dict[date, float] = field(default_factory=dict)  # each day's scroll end
+    schedule_anchor: Anchor | None = None  # the slot at the top of today's list, and how far in (D-250)
     jumped_on: date | None = None        # the conference day of the last jump, asked or not (D-204)
     search_query: str = ""
     search_scope: str = "all"

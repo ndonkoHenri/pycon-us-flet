@@ -22,6 +22,8 @@ import flet as ft
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot
 from pycon_us.memory import ViewMemory
+from pycon_us.screens.schedule_place import Measured
+from pycon_us.services.errors import report_errors
 from pycon_us.ui.scrolling import anchored
 
 NOW_LINE = 2
@@ -49,7 +51,7 @@ class NowMark:
     time: str
 
 
-def NowLine(time: str) -> ft.Control:
+def NowLine(time: str, *, on_measured: Measured | None = None) -> ft.Control:
     """Return today's now line: "Now · 10:42 AM" before a 2 dp ``primary`` line (D-204).
 
     A memoised component keyed by ``NOW_KEY``, so a minute re-renders it alone and a
@@ -59,13 +61,15 @@ def NowLine(time: str) -> ft.Control:
 
     Args:
         time: The time it says, e.g. "10:42 AM".
+        on_measured: Called with ``NOW_KEY`` and the line's height at each new
+            height, so the Schedule can keep the reader's place (D-250).
     """
-    return _NowLine(time, key=NOW_KEY)  # pyright: ignore[reportCallIssue]  # as SessionRow's
+    return _NowLine(time, on_measured=on_measured, key=NOW_KEY)  # pyright: ignore[reportCallIssue]  # as SessionRow's
 
 
 @ft.memo
 @ft.component
-def _NowLine(time: str) -> ft.Control:
+def _NowLine(time: str, *, on_measured: Measured | None) -> ft.Control:
     """The body of ``NowLine``; it runs only when the time changes (F34)."""
     line = ft.Row(
         [
@@ -94,7 +98,15 @@ def _NowLine(time: str) -> ft.Control:
         ),
         padding=ft.Padding.symmetric(horizontal=16, vertical=4),
     )
-    return anchored(NOW_KEY, box)  # its node stays while TalkBack is on it (D-242)
+
+    @report_errors
+    async def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        if on_measured is not None:
+            await on_measured(NOW_KEY, e.height)
+
+    item = anchored(NOW_KEY, box)  # its node stays while TalkBack is on it (D-242)
+    item.on_size_change = measured if on_measured is not None else None
+    return item
 
 
 @dataclass(frozen=True)

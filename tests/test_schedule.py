@@ -41,7 +41,7 @@ from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule as screen
-from pycon_us.screens import schedule_days, schedule_now
+from pycon_us.screens import schedule_days, schedule_now, schedule_place
 from pycon_us.services import Services
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference
@@ -244,6 +244,9 @@ async def shown(
     # moves sets its own.
     monkeypatch.setattr(scrolling, "LANDING_S", 30.0)
     monkeypatch.setattr(screen, "SETTLE_S", 30.0)
+    # A layout change restores the place at once; settle() runs it to the end.
+    monkeypatch.setattr(schedule_place, "RELAID_S", 0.0)
+    monkeypatch.setattr(schedule_place, "FILTERED_S", 0.0)
 
     async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
         # Flet's _invoke_method reads it first: a list off the page raises.
@@ -702,6 +705,177 @@ async def test_a_return_to_the_tab_restores_the_day_and_its_offset(
     ((target, kwargs),) = schedule.scrolls
     assert target is schedule.list_of(SATURDAY)
     assert kwargs == {"offset": 900.0, "duration": 0}
+
+
+# ------------------------------------------------------------------ the reader's place (D-250)
+
+ROW_DP, LINE_DP = 100.0, 30.0
+"""The heights the stand-in device lays out: a row, and the now line."""
+
+TWO_PM = "slot-2026-05-15T14:00:00-07:00"
+"""Friday's 2:00 PM slot: an AI talk first, then a talk and a charla (#333)."""
+
+
+def _measured(schedule: Shown) -> list[tuple[str, ft.Column]]:
+    """Today's items in order, each with the control that reports its height."""
+    keys = _list_items(schedule, FRIDAY)
+    reporting = find(
+        schedule.session, ft.Column, lambda c: c.on_size_change is not None
+    )
+    items = []
+    for item in schedule.list_of(FRIDAY).controls:  # each a slot's or the line's
+        (column,) = [c for c in reporting if c is item or inside(c, item)]
+        items.append(column)
+    return list(zip(keys, items, strict=True))
+
+
+def _height(schedule: Shown, item: ft.Column, *, scale: float) -> float:
+    """What a device would lay an item out at: its rows' height, or the line's."""
+    nodes = schedule.nodes("schedule.session.") + schedule.nodes("schedule.notice.")
+    rows = [node for node in nodes if inside(node, item)]
+    return scale * (ROW_DP * len(rows) if rows else LINE_DP)
+
+
+async def _lay_out(schedule: Shown, *, scale: float = 1.0) -> dict[str, float]:
+    """Report the height of every item of today's list, as Flutter does after a layout.
+
+    Returns:
+        The heights by key, in the list's order.
+    """
+    heights: dict[str, float] = {}
+    for key, item in _measured(schedule):
+        heights[key] = _height(schedule, item, scale=scale)
+        await schedule.event(item, "size_change", {"w": 400.0, "h": heights[key]})
+    return heights
+
+
+def _top(heights: dict[str, float], key: str) -> float:
+    """Where an item starts in a list of items with these heights, in order."""
+    keys = list(heights)
+    return sum(heights[k] for k in keys[: keys.index(key)])
+
+
+def _offsets(schedule: Shown) -> list[float]:
+    """The offsets today's list was asked to jump to, in order."""
+    friday = schedule.list_of(FRIDAY)
+    return [kw["offset"] for target, kw in schedule.scrolls if target is friday]
+
+
+def _tracks_of(key: str) -> set[str]:
+    """The tracks of a Friday slot's sessions."""
+    (slot,) = [s for s in timeline(processed(2026), FRIDAY, ()) if s.key == key]
+    return {s.track for s in slot.sessions}
+
+
+async def _at_two(shown: Callable[[], Awaitable[Shown]]) -> tuple[Shown, float]:
+    """Open the Schedule laid out, with 2:00 PM at the top, under its divider."""
+    schedule = await shown()
+    heights = await _lay_out(schedule)
+    pixels = _top(heights, TWO_PM) + 1
+    await schedule.scroll_end(FRIDAY, pixels)
+    schedule.forget()
+    return schedule, pixels
+
+
+async def test_hiding_a_track_with_rows_above_keeps_the_slot_in_view_at_the_top(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """#333: 2:00 PM stays at the top, under its divider, without its AI row; the
+    offset alone would show a later slot. Never a jump to now (D-204)."""
+    schedule, pixels = await _at_two(shown)
+    await schedule.prefs.save(schedule.storage, excluded_tracks=("Ai", "Open Space"))
+    await settle()
+    heights = await _lay_out(schedule)  # the slots the filter changed report
+    assert _top(heights, TWO_PM) <= pixels - ROW_DP  # AI rows above went away
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+    assert schedule.keyed() == []
+    assert memory.schedule_anchor is not None
+    assert memory.schedule_anchor.key == TWO_PM
+
+
+async def test_showing_the_track_again_keeps_the_slot_too(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    schedule, _ = await _at_two(shown)
+    await schedule.prefs.save(schedule.storage, excluded_tracks=("Ai", "Open Space"))
+    await settle()
+    await _lay_out(schedule)
+    await schedule.prefs.save(schedule.storage, excluded_tracks=("Open Space",))
+    await settle()
+    heights = await _lay_out(schedule)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+
+
+async def test_a_track_hidden_above_keeps_an_unchanged_slot_as_far_in(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """The slot at the top kept its rows, so the list stays as far into it."""
+    schedule = await shown()
+    heights = await _lay_out(schedule)
+    await schedule.scroll_end(FRIDAY, _top(heights, TWO_PM) + 150)
+    first = next(iter(heights))
+    hidden = _tracks_of(first) - _tracks_of(TWO_PM)
+    assert hidden
+    excluded = (*sorted(hidden), "Open Space")
+    await schedule.prefs.save(schedule.storage, excluded_tracks=excluded)
+    await settle()
+    heights = await _lay_out(schedule)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 150
+
+
+async def test_a_slot_the_filter_hides_gives_way_to_the_next_one(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    schedule, _ = await _at_two(shown)
+    excluded = tuple(sorted(_tracks_of(TWO_PM) | {"Open Space"}))
+    await schedule.prefs.save(schedule.storage, excluded_tracks=excluded)
+    await settle()
+    heights = await _lay_out(schedule)
+    assert TWO_PM not in heights
+    after = next(k for k in heights if k.startswith("slot-") and k > TWO_PM)
+    assert _offsets(schedule)[-1] == _top(heights, after) + 1
+
+
+async def test_a_text_size_change_keeps_the_slot_at_the_top(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """#333: every item reports a new height; the slot comes back as far in."""
+    schedule, _ = await _at_two(shown)
+    heights = await _lay_out(schedule, scale=1.3)
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+    assert schedule.keyed() == []
+
+
+async def test_without_heights_a_filter_change_moves_nothing(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """Before the list reported its layout there is no place to keep (#313)."""
+    schedule = await shown()
+    schedule.forget()
+    await schedule.scroll_end(FRIDAY, 2000.0)
+    assert memory.schedule_anchor is None
+    await schedule.prefs.save(schedule.storage, excluded_tracks=("Ai",))
+    await settle()
+    assert schedule.scrolls == []
+
+
+async def test_away_from_today_nothing_moves_and_back_on_today_the_slot_is_there(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """While Saturday shows, today's list is not built, so a filter or text-size
+    change asks nothing of it; back on today, its slot is at the top at the new size."""
+    schedule, _ = await _at_two(shown)
+    await schedule.change_day(SATURDAY)
+    await schedule.scroll_end(SATURDAY, 800.0)
+    anchor = memory.schedule_anchor
+    schedule.forget()
+    await schedule.prefs.save(schedule.storage, excluded_tracks=("Ai",))
+    await settle()
+    heights = await _lay_out(schedule, scale=1.3)
+    assert schedule.scrolls == []
+    assert memory.schedule_anchor == anchor
+    await schedule.change_day(FRIDAY)
+    assert _offsets(schedule) == [_top(heights, TWO_PM) + 1]
 
 
 # ------------------------------------------------------------------ Jump to now (D-155)

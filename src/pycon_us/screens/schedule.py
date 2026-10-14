@@ -10,7 +10,9 @@ fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
-(D-18). A detail pushed over the Schedule keeps it mounted, and so its place.
+(D-18). A detail pushed over the Schedule keeps it mounted, and so its place. Today's
+list keeps the slot at its top across a filter or text-size change, and gets it back
+when it shows again (``screens/schedule_place.py``, D-250).
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -28,6 +30,7 @@ cache, NEW-03) the screen shows the skeleton until the first fetch has failed, t
 import asyncio
 import logging
 from datetime import date
+from functools import partial
 from typing import cast
 
 import flet as ft
@@ -59,6 +62,7 @@ from pycon_us.screens.schedule_now import (
     shows_now,
     spoken_place,
 )
+from pycon_us.screens.schedule_place import put_back, use_today_place
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -125,6 +129,15 @@ def Schedule() -> ft.View:
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
+    layout, on_measured = use_today_place(
+        memory,
+        partial(_ref, refs),
+        current,
+        shown_today=shown == current,
+        slots=today_slots,
+        line=place.line if place is not None else None,
+        excluded=excluded,
+    )
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
@@ -194,7 +207,7 @@ def Schedule() -> ft.View:
         if jumps:
             await jump_to_now(asked=False)
         else:
-            await _restore(_ref(refs, shown), memory.schedule_offsets.get(shown))
+            await put_back(layout, memory, _ref(refs, shown), shown)
 
     # Runs again once, when the first data arrives (no snapshot or cache, NEW-03).
     ft.use_effect(opened, [shown is None], cleanup=_cancel_on_unmount)
@@ -219,10 +232,11 @@ def Schedule() -> ft.View:
             return
         memory.schedule_day = day
         set_picked(day)
+        layout.shown = day == layout.day  # the device shows it before the render
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
         else:
-            await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
+            await put_back(layout, memory, _ref(refs, day), day)
 
     @report_errors
     async def now_pressed() -> None:
@@ -245,6 +259,8 @@ def Schedule() -> ft.View:
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels
+        if day == layout.day:
+            layout.ended_at(memory, e.pixels)
         signals.ended.set()
         landing = signals.landing
         if landing is not None and landing.day == day:
@@ -300,6 +316,7 @@ def Schedule() -> ft.View:
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
                 on_clear_filters=track_filter.show_all,
+                on_measured=on_measured if day == current else None,
             )
         )
     tabs = ft.Tabs(
@@ -373,16 +390,6 @@ def _cancel_on_unmount() -> None:
 def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:
     """Return the day list's ref, one per day for the screen's life (F38)."""
     return refs.setdefault(day, ft.Ref[ft.ListView]())
-
-
-async def _restore(list_ref: ft.Ref[ft.ListView], offset: float | None) -> None:
-    """Put a day list back where its last scroll ended (D-18).
-
-    A day list that shows again is a new list on the device, at the top: the tab
-    bar's pages keep nothing of a page they no longer show.
-    """
-    if offset and list_ref.current is not None:
-        await list_ref.current.scroll_to(offset=offset, duration=0)
 
 
 def _default_day(all_days: tuple[date, ...], current: date) -> date | None:

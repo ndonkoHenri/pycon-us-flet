@@ -14,8 +14,10 @@ is what it places (D-31, D-153..D-156, D-192):
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
 
 A day list is a lazy ``ListView``; today's builds every slot (``FULL_LIST_EXTENT``), so
-Jump to now reaches any of them (D-154). Each list reports where a scroll ended, which
-the Schedule keeps in ``ViewMemory`` and a jump waits for.
+Jump to now reaches any of them (D-154), and its slots and now line report their heights,
+so the Schedule keeps the reader's place across a filter or text-size change (D-250).
+Each list reports where a scroll ended, which the Schedule keeps in ``ViewMemory`` and a
+jump waits for.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
@@ -24,10 +26,12 @@ from typing import Literal
 
 import flet as ft
 
+from pycon_us.core.list_place import DIVIDER, has_divider
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, weekday_name
 from pycon_us.core.timeline import Slot
 from pycon_us.screens.schedule_now import NowLine, NowMark
+from pycon_us.screens.schedule_place import Measured
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
@@ -123,6 +127,7 @@ def DayList(
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
+    on_measured: Measured | None = None,
 ) -> ft.Control:
     """Return one day's page: its slots, or the reason it has none (D-31, ux.md §4.6).
 
@@ -148,6 +153,8 @@ def DayList(
         list_ref: The day's list ref, which the jumps and the re-tap scroll.
         on_scroll: The screen's scroll handler, given this day.
         on_clear_filters: What "Clear filters" does on a day the filter emptied.
+        on_measured: The Schedule's height handler, on today's list only: its
+            slots and now line report their heights to it (D-250).
     """
     return _DayList(
         day,
@@ -165,6 +172,7 @@ def DayList(
         list_ref=list_ref,
         on_scroll=on_scroll,
         on_clear_filters=on_clear_filters,
+        on_measured=on_measured,
         key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
     )
 
@@ -188,6 +196,7 @@ def _DayList(
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
+    on_measured: Measured | None = None,
 ) -> ft.Control:
     """The body of ``DayList``; it runs only when the props change (F34)."""
     page = ft.context.page
@@ -235,12 +244,13 @@ def _DayList(
                 label=time_label(slot.start, zone, use_24h=use_24h),
                 time_above=time_above,
                 # The now line divides it from the slot above: one line, not two.
-                divider=index > 0 and (now is None or index != now.index),
+                divider=has_divider(index, now.index if now else None),
+                on_measured=on_measured,
             )
             for index, slot in enumerate(slots)
         ]
         if now is not None:
-            items.insert(now.index, NowLine(now.time))
+            items.insert(now.index, NowLine(now.time, on_measured=on_measured))
     return ft.ListView(
         items,
         key=f"day-{day.isoformat()}",
@@ -264,6 +274,7 @@ def SlotItem(
     label: str,
     time_above: bool,
     divider: bool,
+    on_measured: Measured | None = None,
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
@@ -280,7 +291,9 @@ def SlotItem(
         tokens: The scheme's tokens.
         label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
         time_above: Put the time above the rows rather than in the gutter (D-216).
-        divider: Draw a 1 dp divider above the slot (every slot but the first).
+        divider: Draw a 1 dp divider above the slot (``has_divider()``).
+        on_measured: Called with the slot's key and height at each new height, on
+            today's list (D-250); None elsewhere.
     """
     return _SlotItem(
         slot,
@@ -291,6 +304,7 @@ def SlotItem(
         label=label,
         time_above=time_above,
         divider=divider,
+        on_measured=on_measured,
         key=slot.key,  # pyright: ignore[reportCallIssue]  # as SessionRow's
     )
 
@@ -307,6 +321,7 @@ def _SlotItem(
     label: str,
     time_above: bool,
     divider: bool,
+    on_measured: Measured | None = None,
 ) -> ft.Control:
     """The body of ``SlotItem``; it runs only when the props change (F34)."""
     info = use_services().year.conference
@@ -328,7 +343,18 @@ def _SlotItem(
     # divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
     # rather than left out: the slot keeps its place in the tree when the now line
     # takes or gives back the divider, so its rows are kept as they are (D-204).
-    return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
+
+    @report_errors
+    async def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        if on_measured is not None:
+            await on_measured(slot.key, e.height)
+
+    return ft.Column(
+        [ft.Divider(height=DIVIDER, visible=divider), keyed],
+        spacing=0,
+        # Its whole height, divider included: what it takes in the list (D-250).
+        on_size_change=measured if on_measured is not None else None,
+    )
 
 
 def now_button(
