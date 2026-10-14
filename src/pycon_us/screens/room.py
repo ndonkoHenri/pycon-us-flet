@@ -31,6 +31,7 @@ from pycon_us.core.row_views import by_day, session_view
 from pycon_us.core.timefmt import local_date, on_screen, today
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href, use_query
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
 from pycon_us.screens.schedule_days import TAB_MS, day_tab
@@ -38,7 +39,7 @@ from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
-from pycon_us.state import ViewMemory, use_conference
+from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile

@@ -42,10 +42,11 @@ from flet.pubsub.pubsub_hub import PubSubHub
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import session_rows
 from tests.fakes import (
@@ -353,3 +354,14 @@ def text_of(control: object) -> str:
     while control is not None and not isinstance(control, ft.Text):
         control = getattr(control, "content", None)
     return str(control.value) if control is not None else ""
+
+
+def menu_text(item: ft.PopupMenuItem) -> ft.Text:
+    """An overflow item's label: the ``Text`` of ``menu_item()``'s tile (D-233).
+
+    Under the identifier's ``Semantics``, the tile's title, or the link's
+    ``Semantics`` around it.
+    """
+    tile = cast(ft.ListTile, cast(ft.Semantics, item.content).content)
+    title = tile.title
+    return cast(ft.Text, title.content if isinstance(title, ft.Semantics) else title)

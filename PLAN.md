@@ -120,8 +120,9 @@ src/pycon_us/
                time formatting, slugs, HTML→Markdown, diff, .ics, signing, outbox state
   services/    I/O at explicit boundaries: storage, feed fetch (P0) and API client (P3), sync worker (P3),
                reminders, scanner; the @report_errors last-resort net
-  state.py     3 observable stores (Conference, Prefs, Favorites) + Account, Staff in P3,
-               one context each; ViewMemory, a plain holder for positions (D-18)
+  state.py     the Conference store (its refresh's types, timings and fetch in feed_refresh.py);
+               prefs.py, favorites.py (+ account.py, staff.py in P3): one observable store and
+               context each; memory.py: ViewMemory, a plain holder for positions (D-18)
   screens/     one @ft.component module per screen;  ui/  shared components
   routes.py    five tab roots + More pages + global-modal search + recursive drill
   data/<year>/ conference.toml, content.toml, map.toml, conference.json (snapshot)

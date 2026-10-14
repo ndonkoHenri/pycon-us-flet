@@ -21,12 +21,13 @@ import pytest
 from pycon_us import capabilities, clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer
 from pycon_us.screens.developer import Developer, zone_line
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from tests.fakes import (
     FakePage,
@@ -307,12 +308,21 @@ def test_the_fields_show_what_is_in_effect(
     assert field(scaffold, "developer.feed_url").value == FEED
 
 
+def helper(text_field: ft.TextField) -> ft.Text:
+    """A field's helper, a ``Text`` in Material's helper style."""
+    text = text_field.helper
+    assert isinstance(text, ft.Text)
+    assert text.theme_style == ft.TextThemeStyle.BODY_SMALL
+    assert text.color == ft.Colors.ON_SURFACE_VARIANT
+    return text
+
+
 def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
     render: Callable[[], dict[str, Any]],
 ) -> None:
     scaffold = render()
     clock_field = field(scaffold, "developer.fake_clock")
-    assert clock_field.helper == (
+    assert helper(clock_field).value == (
         "YYYY-MM-DD HH:MM, in Pacific Time. Empty for real time."
     )
     for text_field in (clock_field, field(scaffold, "developer.feed_url")):
@@ -322,6 +332,36 @@ def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
         # a line break, for the date-time and URL keyboards.
         assert text_field.multiline is False
     assert clock_field.keyboard_type == ft.KeyboardType.DATETIME
+
+
+def test_the_helpers_are_shown_in_full_at_the_largest_text(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    # A string helper is cut at helper_max_lines, and null is one line: at three, the
+    # largest text cut the clock's at "Empty for r…", the way back to real time (#280).
+    scaffold = render()
+    for identifier in ("developer.fake_clock", "developer.feed_url"):
+        text_field = field(scaffold, identifier)
+        assert text_field.helper_max_lines is None  # the Text helper ignores it
+        text = helper(text_field)
+        assert text.max_lines is None
+        assert text.overflow in (None, ft.TextOverflow.CLIP)  # no ellipsis
+
+
+def test_reset_and_apply_keep_their_padding_at_large_text(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    # Flutter shrinks a button's side padding as the text grows: at the largest text
+    # the labels touched the rounded ends (#280), as the Schedule sheet's Show did.
+    nodes = by_identifier(render())
+    for identifier in ("developer.reset", "developer.apply"):
+        button = nodes[identifier]
+        assert isinstance(button, ft.OutlinedButton | ft.FilledButton)
+        assert button.style is not None
+        assert button.style.padding == ft.Padding.symmetric(horizontal=24, vertical=8)
+    apply = nodes["developer.apply"]
+    # With a style, Flet lifts every state to the button's elevation: M3's lies flat.
+    assert isinstance(apply, ft.FilledButton) and apply.elevation == 0
 
 
 def test_the_url_field_keeps_apply_in_sight_above_the_keyboard(
