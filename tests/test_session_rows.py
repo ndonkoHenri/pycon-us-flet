@@ -1,10 +1,10 @@
 """Tests for the session rows: ``SessionRow`` and ``NoticeRow`` (D-184).
 
-Rows run in a real Flet session (``Rendered``): a list owner like the screens' renders
-memoised rows under the store providers, a star tap is a dispatched click, and Flet's
-own scheduler re-renders what changed, so a test sees what a device would get. How tall
-a row is, how it wraps at 200 % and what TalkBack reads are checked on devices (#81's
-PR); here, the semantics a screen reader is given.
+Rows run in a real Flet session (``Rendered``, from ``tests/row_sessions.py``): a list
+owner like the screens' renders memoised rows under the store providers, a star tap is
+a dispatched click, and Flet's own scheduler re-renders what changed, so a test sees
+what a device would get. How tall a row is, how it wraps at 200 % and what TalkBack
+reads are checked on devices (#81's PR); here, the semantics a screen reader is given.
 
 The session is ``tests/sessions.py``'s ``showing()``, which reaches into Flet internals
 as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks through
@@ -13,17 +13,12 @@ of them breaks that module, not the rows: look there first.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
 
-from pycon_us.config import load_year
-from pycon_us.favorites import use_favorites
-from pycon_us.services import use_services
-from pycon_us.state import Conference, use_conference
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.badges import (
@@ -33,113 +28,30 @@ from pycon_us.ui.badges import (
     REMOVE_LABEL,
     REMOVED,
     UNDO,
-    use_favorite_toggle,
 )
-from pycon_us.ui.semantics import semantics_key
-from pycon_us.ui.session_rows import (
-    NoticeRow,
-    SessionRow,
-    is_notice,
-    use_session_views,
-)
-from tests.fakes import MemoryHaptics, MemoryPrefs
+from pycon_us.ui.session_rows import is_notice
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.row_sessions import (
+    CHARLA,
+    COFFEE,
+    LIST,
+    NOTICE,
+    TALK,
+    TUTORIAL,
+    YEAR,
+    Rendered,
+    rendering,
+)
 from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
-
-YEAR = load_year(2026)
-
-TALK = "142"
-"""A talk with one speaker: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
-
-CHARLA = "76"
-"""A charla: badges "Charla" and "En Español"."""
-
-TUTORIAL = "19"
-"""A tutorial that needs registration."""
-
-NOTICE = "196"
-"""Registration Desk Opens, 7:30 AM: a notice with a description."""
-
-COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
-"""A collapsed break with nothing to read."""
-
-LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
-
-
-# ------------------------------------------------------------------ a real session
-
-
-@ft.component
-def Owner(session_ids: tuple[str, ...]) -> ft.Control:
-    """A list owner as the screens write one: it subscribes, its rows do not."""
-    conference = use_conference()
-    favorites = use_favorites()
-    on_toggle = use_favorite_toggle(favorites)
-    views = use_session_views(conference, session_ids, use_24h=False)
-    info = use_services().year.conference
-    return ft.Column(
-        [
-            NoticeRow(view, screen="test")
-            if is_notice(view.session, info)
-            else SessionRow(
-                view,
-                view.session.id in favorites.ids,
-                on_toggle,
-                LIGHT_TOKENS,
-                screen="test",
-            )
-            for view in views
-        ]
-    )
-
-
-@dataclass
-class Rendered(Shown):
-    """A Flet session showing ``Owner``, and what its rows did."""
-
-    @property
-    def prefs_service(self) -> MemoryPrefs:
-        return cast(MemoryPrefs, self.services.storage.prefs)
-
-    @property
-    def haptics(self) -> MemoryHaptics:
-        return cast(MemoryHaptics, self.services.haptics)
-
-    @property
-    def renders(self) -> list[str]:
-        """The session ids whose row bodies ran, in order (S2's ``ROW_RENDERS``)."""
-        return self.rows
-
-    def star(self, session_id: str) -> ft.IconButton:
-        button = self.node(f"test.favorite.{session_id}").content
-        assert isinstance(button, ft.IconButton)
-        return button
-
-    def filled(self, session_id: str) -> bool:
-        """Whether the session's star is drawn filled."""
-        return self.star(session_id).icon == ft.Icons.STAR
-
-    def notice(self, session_id: str) -> ft.Semantics:
-        return self.node(f"test.notice.{semantics_key(session_id)}")
-
-    async def tap_star(self, session_id: str) -> None:
-        await self.click(self.star(session_id))
 
 
 @pytest.fixture
 async def rendered(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Rendered]:
-    async with showing(
-        lambda: Owner(LIST),
-        year=YEAR,
-        conference=Conference(data=processed(2026), source="bundled", version=1),
-        tmp_path=tmp_path,
-        monkeypatch=monkeypatch,
-        view_path="",  # what ft.use_view_path() says outside a Router
-    ) as shown:
-        yield Rendered(**vars(shown))  # Shown's fields, as they are
+    """``Owner(LIST)`` in a real Flet session (``tests/row_sessions.py``)."""
+    async with rendering(tmp_path, monkeypatch) as shown:
+        yield shown
 
 
 # ------------------------------------------------------------------ the memoised path

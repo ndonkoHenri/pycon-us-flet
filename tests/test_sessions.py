@@ -18,8 +18,8 @@ from pycon_us.config import load_year
 from pycon_us.favorites import use_favorites
 from pycon_us.state import Conference
 from tests.feeds import processed
+from tests.row_sessions import LIST, TALK, Owner
 from tests.sessions import Shown, showing
-from tests.test_session_rows import LIST, TALK, Owner
 
 YEAR = load_year(2026)
 
