@@ -22,6 +22,7 @@ from pycon_us.core.row_views import (
     session_views,
     spoken_phrase,
 )
+from pycon_us.core.timefmt import on_screen
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -41,7 +42,7 @@ NOTICE_GROUP = "logistics"
 announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
 
 _NBSP = "\u00a0"
-"""A no-break space: "AM" stays on its time's line."""
+"""A no-break space: the "·" stays on its time's line."""
 
 
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
@@ -392,13 +393,14 @@ def _meta(
     The time and the place are two texts in a wrapping row, so at large text a place
     that does not fit after the time moves to the next line whole, and the "·" ends
     the time's line rather than starting one; only a place wider than the row wraps
-    inside itself. A no-break space keeps "AM" on its time's line.
+    inside itself. The time keeps "AM" on its line and breaks only after its dash
+    (``timefmt.on_screen()``, D-224).
 
     Args:
         view: The session's row view.
         style: The line's type style; a notice's is smaller.
     """
-    when = view.when.replace(" ", _NBSP)
+    when = on_screen(view.when)
     if not view.place:
         return _secondary(when, style=style)
     return ft.Row(
