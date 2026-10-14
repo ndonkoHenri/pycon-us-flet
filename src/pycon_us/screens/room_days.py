@@ -70,7 +70,7 @@ def day_list(
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
         time_above: Put each slot's time above its rows (``Prefs.time_above``,
-            D-214).
+            D-216).
         reveal: The session whose row the room was opened from, if this View shows it:
             that row gets its ``ScrollKey`` and the highlight.
         lit: Whether the highlight is on.

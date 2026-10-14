@@ -42,7 +42,7 @@ def AppScaffold(
     every branch (hooks are unconditional, D-70). It records the top View's route for
     the start route (D-143), places the body in ``Shown``, which logs D-112's content
     line (D-165), and puts ``GutterProbe`` under it, which tells the lists whether a
-    slot's time fits beside its rows (D-214).
+    slot's time fits beside its rows (D-216).
 
     On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
     instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
@@ -144,7 +144,7 @@ def AppScaffold(
         can_pop=not back_to_now,
         on_confirm_pop=on_confirm_pop,
         # Under the body, 0 dp high: the probe takes no space, and with no spacing
-        # between them the body keeps all of it (D-214).
+        # between them the body keeps all of it (D-216).
         spacing=0,
         controls=[ft.SafeArea(expand=True, content=Shown(body)), GutterProbe()],
     )

@@ -1,4 +1,4 @@
-"""Tests for the time column of a list's slots (D-158, D-200, D-214).
+"""Tests for the time column of a list's slots (D-158, D-200, D-216).
 
 ``TimeGutter`` and ``TimeAbove`` are plain builders, checked as control trees.
 ``GutterProbe`` renders in a real Flet session (``tests/sessions.py``), where its size
@@ -63,7 +63,7 @@ def test_a_24_hour_gutter_has_one_line() -> None:
     assert texts(shown) == ["19:30"]
 
 
-# ------------------------------------------------------- the layout rule (D-214)
+# ------------------------------------------------------- the layout rule (D-216)
 
 
 @pytest.mark.parametrize(
@@ -144,7 +144,7 @@ def test_a_slot_s_divider_sits_above_either_layout(above: bool) -> None:
     assert isinstance(alone, ft.Column if above else ft.Row)
 
 
-# ------------------------------------------------------------- the probe (D-214)
+# ------------------------------------------------------------- the probe (D-216)
 
 
 class Probed:
@@ -172,7 +172,7 @@ async def test_the_probe_measures_the_widest_gutter_against_the_body() -> None:
     probed = Probed()
     async with rendering(probed.root) as session:
         (box,) = find(session, ft.Container, lambda c: c.height == 0)
-        # Not positioned: with on_size_change, a Positioned breaks its Stack (F50).
+        # Not positioned: with on_size_change, a Positioned breaks its Stack (F51).
         assert (box.left, box.top, box.right, box.bottom) == (None,) * 4
         (gutter,) = find(
             session,

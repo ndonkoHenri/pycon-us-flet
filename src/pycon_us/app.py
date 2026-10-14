@@ -68,7 +68,7 @@ def App(memory: ViewMemory):
     ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
-    # under the Schedule's first jump (D-214).
+    # under the Schedule's first jump (D-216).
     if not (prefs.loaded and prefs.time_measured):
         # Under Prefs' provider for GutterProbe, which measures while the app boots.
         return PrefsCtx(prefs, lambda: [BootView()])
@@ -97,8 +97,8 @@ def BootView() -> ft.View:
     It holds ``GutterProbe`` too, and the gate waits for its answer, so whether a
     slot's time goes above its rows is known before the first screen: a Schedule
     that opened with the gutter and switched a moment later lost its jump to the
-    current slot, which ran against the first layout (D-214). Flutter reports the
-    probe's size with its first frame (F50); should no answer come, the gate stops
+    current slot, which ran against the first layout (D-216). Flutter reports the
+    probe's size with its first frame (F51); should no answer come, the gate stops
     waiting with the ring, after ``RING_DELAY``, and the lists keep the gutter until
     the screens' own probes answer.
     """

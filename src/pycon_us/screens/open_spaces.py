@@ -272,7 +272,7 @@ def DayList(
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
         time_above: Put each slot's time above its rows (``Prefs.time_above``,
-            D-214).
+            D-216).
         intro: The year's intro line; empty for none.
         omit: Badge labels the page already says: "Open space".
     """

@@ -8,7 +8,7 @@ is what it places (D-31, D-153..D-156, D-192):
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
   to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s,
-  or its time above them at the largest text sizes (D-214);
+  or its time above them at the largest text sizes (D-216);
 - today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
@@ -137,7 +137,7 @@ def DayList(
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
         time_above: Put each slot's time above its rows (``Prefs.time_above``,
-            D-214).
+            D-216).
         full: Build every slot (today's list, D-154), so a jump reaches any of them.
         clearance: Leave room at the end for the "Now" button.
         empty: Why ``slots`` is empty, when it is.
@@ -276,7 +276,7 @@ def SlotItem(
         on_toggle: The screen's one star handler.
         tokens: The scheme's tokens.
         label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
-        time_above: Put the time above the rows rather than in the gutter (D-214).
+        time_above: Put the time above the rows rather than in the gutter (D-216).
         divider: Draw a 1 dp divider above the slot (every slot but the first).
     """
     return _SlotItem(

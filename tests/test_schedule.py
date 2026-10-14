@@ -499,7 +499,7 @@ async def test_each_slot_is_one_keyed_item_beside_its_gutter(
 async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
-    """D-214: the rows get the whole width; the jump's keys stay on the slots."""
+    """D-216: the rows get the whole width; the jump's keys stay on the slots."""
     schedule = await shown()
 
     def slots() -> list[ft.Container]:

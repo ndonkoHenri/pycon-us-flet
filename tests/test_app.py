@@ -601,7 +601,7 @@ def test_services_are_built_for_the_active_year_in_the_data_directory(
 async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """D-214: a Schedule opened with the gutter and switched later lost its jump."""
+    """D-216: a Schedule opened with the gutter and switched later lost its jump."""
     prefs, setups = Prefs(), []
     monkeypatch.setattr(app, "use_prefs", lambda: prefs)
     monkeypatch.setattr(ft, "use_state", lambda initial: (initial, lambda _: None))

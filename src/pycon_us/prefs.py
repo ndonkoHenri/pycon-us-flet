@@ -95,11 +95,11 @@ class Prefs:
             ``supports_announcements``: true on iOS, never on Android). Not
             persisted, read with ``screen_reader``.
         time_above: The OS text is so large that a slot's time goes above its rows
-            rather than in the gutter beside them (D-214). Not persisted: measured
+            rather than in the gutter beside them (D-216). Not persisted: measured
             by ``ui.time_gutter.GutterProbe``, since Flet cannot read the text scale
             (U16).
         time_measured: ``time_above`` has been measured, or the boot view gave up
-            waiting for it; the boot gate stays closed until then (D-214).
+            waiting for it; the boot gate stays closed until then (D-216).
         loaded: The stored values have been read; it opens the boot gate.
     """
 

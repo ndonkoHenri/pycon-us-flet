@@ -255,7 +255,7 @@ def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
 def test_the_gutter_probe_sits_under_the_body_taking_no_space(
     hooks: Hooks, page: FakePage
 ) -> None:
-    """D-214: every screen measures the slots' layout, so it is known before a list."""
+    """D-216: every screen measures the slots' layout, so it is known before a list."""
     view = view_at(hooks, page, "/now")
     safe, probe = view.controls
     assert isinstance(safe, ft.SafeArea) and safe.expand is True

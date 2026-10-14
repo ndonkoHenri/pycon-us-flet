@@ -4,7 +4,7 @@
 ``TimeSlot`` a slot, its time beside its ``SessionRow``s and ``NoticeRow``s
 (``ui.session_rows``; D-200). At the largest text sizes the gutter would take so much of
 the width that titles and badge labels broke inside a word, so a slot then puts its
-time on a line of its own above its rows (``TimeAbove``; D-214). ``GutterProbe``, on
+time on a line of its own above its rows (``TimeAbove``; D-216). ``GutterProbe``, on
 every screen's ``AppScaffold``, measures which applies, since Flet cannot read the text
 scale (U16).
 """
@@ -17,7 +17,7 @@ from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services.errors import report_errors
 
 MAX_GUTTER_SHARE = 0.2
-"""The largest share of a slot's width the gutter may take (D-214): a fifth. Beyond it
+"""The largest share of a slot's width the gutter may take (D-216): a fifth. Beyond it
 the column beside it holds a few words a line, and at the largest sizes not even a
 long one, so titles and badge labels broke inside a word. Measured on a phone in
 portrait, the gutter takes 15 % at 100 % text and 18 % at iOS's largest standard size,
@@ -29,7 +29,7 @@ row's title line, and 8 dp from the rows."""
 
 
 def time_above(gutter_width: float, width: float) -> bool:
-    """Return whether a slot's time goes above its rows rather than beside them (D-214).
+    """Return whether a slot's time goes above its rows rather than beside them (D-216).
 
     It does when the gutter would take more than ``MAX_GUTTER_SHARE`` of the slot's
     width: at a large text size on a phone in portrait, never at the default size,
@@ -69,7 +69,7 @@ def TimeGutter(label: str) -> ft.Control:
 
 
 def TimeAbove(label: str) -> ft.Control:
-    """Return a slot's time on a line of its own, above its rows (D-214).
+    """Return a slot's time on a line of its own, above its rows (D-216).
 
     What a slot shows instead of the gutter when the text is too large for one
     (``time_above()``): "9:25 AM" in the gutter's type, from the screen's 16 dp
@@ -97,7 +97,7 @@ def slot_layout(label: str, rows: Sequence[ft.Control], *, above: bool) -> ft.Co
     Args:
         label: The slot's start, e.g. "9:25 AM" (``timefmt.time_label()``).
         rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
-        above: Put the time above the rows (``Prefs.time_above``, D-214), which
+        above: Put the time above the rows (``Prefs.time_above``, D-216), which
             then take the slot's whole width.
     """
     if above:
@@ -122,7 +122,7 @@ def TimeSlot(
         label: The slot's start, for ``TimeGutter`` or ``TimeAbove``.
         rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
         divider: Draw a 1 dp divider above it: every slot of a day but the first.
-        above: Put the time above the rows (``Prefs.time_above``, D-214).
+        above: Put the time above the rows (``Prefs.time_above``, D-216).
     """
     slot = slot_layout(label, rows, above=above)
     return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
@@ -130,11 +130,11 @@ def TimeSlot(
 
 @ft.component
 def GutterProbe() -> ft.Control:
-    """Measure whether slots put their time above their rows, into ``Prefs`` (D-214).
+    """Measure whether slots put their time above their rows, into ``Prefs`` (D-216).
 
     Flet cannot read the OS text scale (U16), so an invisible copy of the widest
     gutter reports its width, and the box around it the screen's, through
-    ``on_size_change`` (F50): at mount, after a text size change and after a
+    ``on_size_change`` (F51): at mount, after a text size change and after a
     rotation. ``Prefs.time_above`` changes only when ``time_above()``'s answer does,
     so the lists re-render only then. ``AppScaffold`` places it on every screen, so
     the answer is known before a list with slots opens.
@@ -142,7 +142,7 @@ def GutterProbe() -> ft.Control:
     The probe is 0 dp high, under the body in the View's column: it takes no space,
     shows nothing (``opacity=0``) and is left out of the semantics tree. Not laid over
     the body in a ``Stack``: a positioned control with ``on_size_change`` breaks the
-    stack's layout (F50).
+    stack's layout (F51).
     """
     prefs = use_prefs()
     # Plain holders: a measurement re-renders nothing; only the answer goes to Prefs.

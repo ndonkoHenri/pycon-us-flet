@@ -300,7 +300,7 @@ def _day(
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
         time_above: Put each slot's time above its rows (``Prefs.time_above``,
-            D-214).
+            D-216).
     """
     # Only the day's own names: a clash elsewhere leaves this day's props equal.
     notes = {
@@ -336,7 +336,7 @@ def _Day(
     """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
 
     Memoised (D-153): it runs only when the day's slots, their clashes, the clock
-    format, the slots' layout (D-214) or the scheme change. Every row is saved, so every star is filled; a tap
+    format, the slots' layout (D-216) or the scheme change. Every row is saved, so every star is filled; a tap
     removes the row, with Undo.
     """
     zone = use_services().year.conference.zone  # a plain value: subscribes to nothing
