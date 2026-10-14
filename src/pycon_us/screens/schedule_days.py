@@ -32,7 +32,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
-from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.time_gutter import slot_layout
@@ -58,6 +58,9 @@ Schedule's and a room's tabs (D-194)."""
 
 TODAY_DOT = 6
 """The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
+
+JUMP_TOOLTIP = "Jump to the current time"
+"""What the "Now" button does: its tooltip, said after its label (ux.md §5.2)."""
 
 type Empty = Literal["sprint", "filtered"]
 """Why a day shows no slots: a sprint day has no sessions; a filter hid all of them."""
@@ -264,9 +267,9 @@ def SlotItem(
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
-    A memoised component keyed by the slot key (D-153); the box around its time and
-    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155), and its divider
-    sits above that box. Rows are in schedule order
+    A memoised component keyed by the slot key (D-153); an anchor above its time and
+    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155, D-242), and its
+    divider sits above that anchor. Rows are in schedule order
     (by room, D-31); breaks and notices are ``NoticeRow``s, without a star.
 
     Args:
@@ -318,12 +321,12 @@ def _SlotItem(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN
                 )
             )
-    content = slot_layout(label, rows, above=time_above)
-    # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees.
-    keyed = ft.Container(content, key=ft.ScrollKey(slot.key))
-    # The divider stays outside the keyed box, so a jump puts the slot's time, not
-    # its divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
-    # rather than left out: the box keeps its place in the tree when the now line
+    # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees, on
+    # an anchor above the slot, so the rows keep their nodes (D-242).
+    keyed = anchored(slot.key, slot_layout(label, rows, above=time_above))
+    # The divider stays above the anchor, so a jump puts the slot's time, not its
+    # divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
+    # rather than left out: the slot keeps its place in the tree when the now line
     # takes or gives back the divider, so its rows are kept as they are (D-204).
     return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
 
@@ -331,13 +334,24 @@ def _SlotItem(
 def now_button(
     *, on_today: bool, on_click: Callable[[], Awaitable[None]]
 ) -> ft.FloatingActionButton:
-    """Return the "Now" button (SCHED-15): "Today" while another day shows."""
+    """Return the "Now" button (SCHED-15): "Today" while another day shows.
+
+    What it does is said after its label, from inside the button, which Flutter's
+    button merges into its own node ("Now", then "Jump to the current time"). Flet's
+    ``tooltip`` sits around the button, a node of its own beside it, and a View takes
+    only a ``FloatingActionButton``, so no merge can go around it: the tooltip shown on
+    a long press stays out of the semantics (F55, D-234). Said by the label's
+    ``semantics_label``, as a link's "Opens in browser" is (ux.md §4.7): a
+    ``Semantics``' ``tooltip`` would show a second tooltip too, and its ``hint_text``
+    never reaches Flutter at the pin (#187).
+    """
+    label = "Now" if on_today else "Today"
     return ft.FloatingActionButton(
         content=ft.Semantics(
             identifier=f"{SCREEN}.jump_now",
-            content=ft.Text("Now" if on_today else "Today"),
+            content=ft.Text(label, semantics_label=f"{label}\n{JUMP_TOOLTIP}"),
         ),
         icon=ft.Icons.SCHEDULE,
-        tooltip="Jump to the current time",
+        tooltip=ft.Tooltip(JUMP_TOOLTIP, exclude_from_semantics=True),
         on_click=on_click,
     )

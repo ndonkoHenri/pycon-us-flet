@@ -33,6 +33,7 @@ from pycon_us.state import Conference
 from tests import sessions
 from tests.fakes import MemoryLauncher, MemoryPrefs
 from tests.feeds import processed, recorded
+from tests.sessions import menu_text
 
 YEAR = load_year(2026)
 INFO = YEAR.conference
@@ -421,14 +422,15 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
     assert menu.tooltip == "More options"
     assert shown.node("sprints.menu").content is menu
     assert isinstance(shown.node("sprints.menu").parent, ft.MergeSemantics)  # D-190
-    labels = [text_of(item.content) for item in menu.items]
+    labels = [menu_text(item).value for item in menu.items]
     assert labels == ["Sprint info on us.pycon.org", screen.SUBMIT]
+    assert [shown.node(f"sprints.{key}") for key in ("info", "submit")] == [
+        item.content for item in menu.items
+    ]
     for item in menu.items:
-        semantics = cast(ft.Semantics, item.content)
-        assert semantics.link
-        assert str(cast(ft.Text, semantics.content).semantics_label).endswith(
-            "\nOpens in browser"
-        )
+        title = cast(ft.ListTile, cast(ft.Semantics, item.content).content).title
+        assert cast(ft.Semantics, title).link  # each one wraps (F47, D-233)
+        assert str(menu_text(item).semantics_label).endswith("\nOpens in browser")
         await shown.click(item)
     assert shown.launched == [INFO.sprints_url, INFO.sprint_submit_url]
 
@@ -438,7 +440,7 @@ async def test_a_year_without_the_pages_has_no_menu(show: Any) -> None:
     assert shown.find(ft.PopupMenuButton) == []
     only_form = await show(year=year_with(sprints_url=""))
     (menu,) = only_form.find(ft.PopupMenuButton)
-    assert [text_of(item.content) for item in menu.items] == [screen.SUBMIT]
+    assert [menu_text(item).value for item in menu.items] == [screen.SUBMIT]
 
 
 async def test_no_projects_yet_offers_the_form_and_no_filter(show: Any) -> None:

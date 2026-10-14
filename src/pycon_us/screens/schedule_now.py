@@ -21,6 +21,7 @@ import flet as ft
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot
 from pycon_us.memory import ViewMemory
+from pycon_us.ui.scrolling import anchored
 
 NOW_LINE = 2
 """The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in ``primary``."""
@@ -47,8 +48,8 @@ def NowLine(time: str) -> ft.Control:
     """Return today's now line: "Now · 10:42 AM" before a 2 dp ``primary`` line (D-204).
 
     A memoised component keyed by ``NOW_KEY``, so a minute re-renders it alone and a
-    slot's start moves it rather than building a new one; its box carries
-    ``ScrollKey(NOW_KEY)``, where a jump lands when no slot is on. A screen reader
+    slot's start moves it rather than building a new one; an anchor above it carries
+    ``ScrollKey(NOW_KEY)``, where a jump lands when no slot is on (D-242). A screen reader
     hears "Current time 10:42 AM"; not a live region, which would speak every minute.
 
     Args:
@@ -78,7 +79,7 @@ def _NowLine(time: str) -> ft.Control:
         spacing=8,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )
-    return ft.Container(
+    box = ft.Container(
         ft.Semantics(
             identifier="schedule.now_line",
             label=f"Current time {time}",
@@ -86,9 +87,9 @@ def _NowLine(time: str) -> ft.Control:
             container=True,
             content=line,
         ),
-        key=ft.ScrollKey(NOW_KEY),
         padding=ft.Padding.symmetric(horizontal=16, vertical=4),
     )
+    return anchored(NOW_KEY, box)  # its node stays while TalkBack is on it (D-242)
 
 
 @dataclass(frozen=True)

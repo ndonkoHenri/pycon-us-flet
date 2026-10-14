@@ -213,7 +213,7 @@ ON_PURPOSE = {
     # D-214: a merge would take in the clock's picker, which would stop being a
     # button of its own; an empty node of its own until U34. (The same function
     # merges the feed URL's field, which has no picker, through named().)
-    ("developer.py", "option_field", "identifier"): "developer.fake_clock",
+    ("developer_ui.py", "option_field", "identifier"): "developer.fake_clock",
     # D-214: the folds, around the tile and not merged, which would take in the rows
     # they hold; an empty node of their own until an identifier on the control itself.
     ("lightning_talks.py", "doubts_fold", "f'{SCREEN}.doubts'"): (
@@ -223,9 +223,12 @@ ON_PURPOSE = {
         "my_schedule.earlier_days, my_schedule.earlier_today"
     ),
     ("when_where.py", "OtherRooms", "f'{screen}.other_rooms'"): "session.other_rooms",
-    # D-230: inside a PopupMenuItem, whose own MergeSemantics takes the identifier
-    # into the item's node (Flutter's popup_menu.dart); a uiautomator dump shows it.
-    ("track.py", "_menu", "f'{SCREEN}.add_all'"): "track.add_all",
+    # D-230, D-233: inside a PopupMenuItem, whose own MergeSemantics takes the
+    # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
+    # dump shows it. Every overflow item is built there.
+    ("menus.py", "menu_item", "identifier"): (
+        "session.open_site, sprints.info, sprints.submit, track.add_all"
+    ),
 }
 """The bare identifiers left so on purpose, and the identifiers they give at run time.
 

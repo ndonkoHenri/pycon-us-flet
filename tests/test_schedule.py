@@ -495,13 +495,22 @@ async def test_each_slot_is_one_keyed_item_beside_its_gutter(
         ),
     )
     keys = sorted(str(cast(ft.ScrollKey, item.key).value) for item in items)
+    # D-242: each key is on an empty anchor above its slot, so no row is under a key
+    # and every row keeps its nodes, the screen reader's focus after Back (F62).
+    assert all(item.content is None and item.height == 0 for item in items)
+    slots = [_slot(item) for item in items]
+    assert not any(
+        inside(node, item)
+        for node in find(schedule.session, ft.Semantics, lambda c: inside(c, friday))
+        for item in items
+    )
     # A jump puts the slot's time under the tab bar, not a second line (ux.md §5.2);
     # the first slot has none, and the now line stands for the next one's (D-204).
     dividers = find(
         schedule.session, ft.Divider, lambda c: c.visible and inside(c, friday)
     )
     assert len(dividers) == len(items) - 2
-    assert not any(inside(d, item) for d in dividers for item in items)
+    assert not any(inside(d, slot) for d in dividers for slot in slots)
     expected = timeline(processed(2026), FRIDAY, Prefs().excluded_tracks)
     assert keys == sorted(slot.key for slot in expected)
     shown_ids = {
@@ -533,12 +542,12 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
         )
 
     beside = {str(cast(ft.ScrollKey, c.key).value) for c in slots()}
-    assert all(isinstance(c.content, ft.Row) for c in slots())  # the gutter
+    assert all(isinstance(_slot(c), ft.Row) for c in slots())  # the gutter
     schedule.prefs.time_above = True  # what GutterProbe measures at that size
     await settle()
     assert {str(cast(ft.ScrollKey, c.key).value) for c in slots()} == beside
     for slot in slots():
-        column = slot.content
+        column = _slot(slot)
         assert isinstance(column, ft.Column)
         heading = column.controls[0]
         assert isinstance(heading, ft.Semantics) and heading.header
@@ -546,6 +555,12 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
     assert not find(  # no gutter left in the day
         schedule.session, ft.Stack, lambda c: inside(c, friday)
     )
+
+
+def _slot(anchor: ft.Container) -> ft.Control:
+    """The slot a ``ScrollKey`` anchor marks: the control after it (D-242)."""
+    _, slot = cast(ft.Column, anchor.parent).controls
+    return slot
 
 
 def inside(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
@@ -1175,6 +1190,7 @@ async def test_today_s_now_line_sits_after_the_last_slot_that_started(
 ) -> None:
     """ux.md §5.2 item 4: a 2 dp primary line, "Now · 10:40 AM", read "Current time"."""
     schedule = await shown()
+    now_key = ft.ScrollKey(NOW_KEY)
     keys = _list_items(schedule, FRIDAY)
     line = keys.index(NOW_KEY)
     assert keys[line - 1] == TEN_30
@@ -1183,6 +1199,8 @@ async def test_today_s_now_line_sits_after_the_last_slot_that_started(
     assert node.label == "Current time 10:40 AM"
     assert node.exclude_semantics and not node.live_region
     assert texts(node) == ["Now · 10:40 AM"]
+    (anchor,) = find(schedule.session, ft.Container, lambda c: c.key == now_key)
+    assert anchor.content is None and not inside(node, anchor)  # D-242
     (bar,) = find(schedule.session, ft.Container, lambda c: inside(c, node))
     assert (bar.height, bar.bgcolor) == (schedule_now.NOW_LINE, ft.Colors.PRIMARY)
     assert NOW_KEY not in _list_items(schedule, SATURDAY)  # today's list only

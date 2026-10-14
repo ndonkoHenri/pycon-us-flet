@@ -17,7 +17,7 @@ from pycon_us.core.row_views import SessionView, by_slot
 from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
 from pycon_us.ui.badges import ToggleFavorite
-from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.time_gutter import TimeSlot
 
@@ -121,13 +121,13 @@ def day_list(
 def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:
     """Wrap the row the room was opened from, or its slot: the scroll target, lit.
 
-    The box carries the ``ScrollKey`` (a plain key is never registered for
-    ``scroll_to``) and the tint, which fades out in ``ms``; at 0, under reduced motion
-    (D-173), the highlight simply goes.
+    An anchor at the top of the box carries the ``ScrollKey`` (a plain key is never
+    registered for ``scroll_to``), so the row keeps its nodes (D-242); the box carries
+    the tint, which fades out in ``ms``; at 0, under reduced motion (D-173), the
+    highlight simply goes.
     """
     return ft.Container(
-        row,
-        key=ft.ScrollKey(key),
+        anchored(key, row),
         bgcolor=HIGHLIGHT if on else UNLIT,
         animate=ft.Animation(ms, ft.AnimationCurve.EASE_OUT) if ms else None,
     )
