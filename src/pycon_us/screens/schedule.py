@@ -2,10 +2,11 @@
 
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
 ``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
-one page per conference day, sprint days included. The tabs, the pages and the "Now"
-button come from ``screens/schedule_days.py``: each page is a ``DayList`` of
-``SlotItem``s, memoised down to the rows (D-153). The first render fills only the shown
-day, the second the others (D-156).
+one page per conference day, sprint days included. Under the strip, "Times are Pacific
+Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The
+tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
+is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
+fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
@@ -15,12 +16,13 @@ Jump to now (D-155, D-204) lands on the slot that is on, else on today's now lin
 (``now_place()``): by itself on the first display of each today in the process, be it
 when the Schedule opens or when the user swipes to today, and again with the "Now"
 button, which switches to today first when another day shows, and tells a screen reader
-where it landed. The button hides while the list is near where a jump left it, and
-while today's first jump is on its way; a screen reader keeps it (D-204). A minute tick
-(``use_minute()``) keeps today's dot, the button and the now line with the clock; the
-day shown stays put across midnight. Without any data (no snapshot or cache, NEW-03)
-the screen shows the skeleton until the first fetch has failed, then "Can't load the
-schedule", which stays during a retry (D-32, ux.md §4.1).
+where it landed: VoiceOver through an announcement, TalkBack through a live region
+(``landing_note()``, D-241). The button hides while the list is near where a jump left
+it, and while today's first jump is on its way; a screen reader keeps it (D-204). A
+minute tick (``use_minute()``) keeps today's dot, the button and the now line with the
+clock; the day shown stays put across midnight. Without any data (no snapshot or
+cache, NEW-03) the screen shows the skeleton until the first fetch has failed, then
+"Can't load the schedule", which stays during a retry (D-32, ux.md §4.1).
 """
 
 import asyncio
@@ -33,7 +35,7 @@ import flet as ft
 from pycon_us import clock
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
-from pycon_us.core.timefmt import day_heading, time_label, today
+from pycon_us.core.timefmt import day_heading, time_label, today, zone_note
 from pycon_us.core.timeline import Slot, now_place, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
@@ -47,11 +49,13 @@ from pycon_us.screens.schedule_days import (
 from pycon_us.screens.schedule_filter import use_track_filter
 from pycon_us.screens.schedule_now import (
     PENDING,
+    SAID_S,
     InView,
     Landing,
     NowMark,
     Signals,
     jumps_by_itself,
+    landing_note,
     shows_now,
     spoken_place,
 )
@@ -66,7 +70,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +103,7 @@ def Schedule() -> ft.View:
     rest, set_rest = ft.use_state(False)  # the other days are rendered (D-156)
     jump, set_jump = ft.use_state(0)  # a "Now" tap from another day's tab
     in_view, set_in_view = ft.use_state(cast(InView, PENDING))  # opened() settles it
+    said, set_said = ft.use_state("")  # where an asked jump landed, for TalkBack
     refs = ft.use_memo(dict[date, ft.Ref[ft.ListView]], [])
     signals = ft.use_memo(Signals, [])
     excluded = prefs.excluded_tracks
@@ -131,7 +136,9 @@ def Schedule() -> ft.View:
         if not today_slots:
             return
         memory.jumped_on = current  # asked or not, today's jump is done (D-18, D-204)
-        if not asked:
+        if asked:
+            set_said("")  # the same words again are a change only after a silence
+        else:
             signals.landing = None
             set_in_view(PENDING)
         # The clock's place: the landing's render lays the line out at it too.
@@ -153,12 +160,26 @@ def Schedule() -> ft.View:
         set_in_view(landing)
         # The user's own tap: a screen reader hears where the list went, since the
         # tab switch and the scroll are silent. The first display's jump is not asked.
-        if asked and prefs.screen_reader and prefs.announcements:
-            where = spoken_place(target, today_slots, at, info.zone, use_24h=use_24h)
-            try:
-                await svc.semantics.announce_message(f"{day_heading(current)}, {where}")
-            except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
-                logger.warning("Could not announce the jump", exc_info=True)
+        if not (asked and prefs.screen_reader):
+            return
+        where = spoken_place(target, today_slots, at, info.zone, use_24h=use_24h)
+        words = f"{day_heading(current)}, {where}"
+        if not prefs.announcements:  # Android: Flutter reports none there (F13, D-241)
+            set_said(words)
+            return
+        try:
+            await svc.semantics.announce_message(words)
+        except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
+            logger.warning("Could not announce the jump", exc_info=True)
+
+    @report_errors
+    async def fade() -> None:
+        if said:  # TalkBack has read it by then; empty, the note is no stop (D-241)
+            await asyncio.sleep(SAID_S)
+            set_said("")
+
+    # A new landing restarts the wait: Flet cancels the previous run on a change.
+    ft.use_effect(fade, [said], cleanup=_cancel_on_unmount)
 
     @report_errors
     async def opened() -> None:
@@ -301,7 +322,21 @@ def Schedule() -> ft.View:
                 ),
                 track_filter.summary,
                 StatusStrip(auto_refresh=True),
-                ft.TabBarView(pages, expand=True),
+                # The device's offset now: the packaged app's Python reads the
+                # device's zone (F60), and the minute tick follows a DST change.
+                zone_note_line(
+                    zone_note(
+                        now,
+                        info.zone,
+                        info.time_zone_name,
+                        now.astimezone().utcoffset(),
+                    )
+                ),
+                ft.Stack(
+                    [landing_note(said), ft.TabBarView(pages)],
+                    fit=ft.StackFit.EXPAND,
+                    expand=True,
+                ),
             ],
             spacing=0,
             expand=True,
@@ -325,12 +360,13 @@ def Schedule() -> ft.View:
 
 
 def _cancel_on_unmount() -> None:
-    """The jump effects' cleanup: nothing to undo, but it makes Flet cancel their task.
+    """The screen's effects' cleanup: nothing to undo, but it makes Flet cancel their task.
 
     Flet cancels an effect's task on unmount only when the effect has a cleanup (F2,
     F39), as the strip's ticks rely on (``ui/status_strip.stop_ticks``). Without one, a
     jump still waiting when the user switches tabs (D-142) would scroll a list that has
-    left the page, and its error would reach whatever screen shows then.
+    left the page, and its error would reach whatever screen shows then; the landing
+    note's wait would set the state of a screen that has gone.
     """
 
 

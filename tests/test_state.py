@@ -25,7 +25,7 @@ from pycon_us.feed_refresh import REFRESH_EVERY, Status
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests.fakes import MemoryPrefs
+from tests.fakes import MemoryPrefs, QueuedWrite
 from tests.feeds import changed
 
 NOW = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
@@ -451,6 +451,8 @@ async def test_the_same_feed_makes_stale_data_fresh(
 ) -> None:
     """The strip's age: "Updated 3 days ago" goes when the network confirms the data."""
     assert await storage.write_feed(CACHED_FEED)
+    # The cache's age is its file's time: pinned, so the test holds on any date (#328).
+    os.utime(storage.feed_path, (NOW.timestamp(), NOW.timestamp()))
     conference = await loaded(storage, year)
     clock.set_test_now(NOW + timedelta(days=3))
     assert conference.status(year.conference) == "stale"
@@ -933,6 +935,15 @@ async def test_after_a_refresh_the_user_asked_for_the_next_automatic_one_is_quie
 # ------------------------------------------------------------------ the Developer feed URL
 
 
+DEV_FEED = "http://127.0.0.1:8000/conference-2026.json"
+OTHER_DEV_FEED = "http://127.0.0.1:8000/conference-2025.json"
+
+
+def serving_any(body: bytes) -> httpx.MockTransport:
+    """A transport that answers any URL with ``body``."""
+    return httpx.MockTransport(lambda request: httpx.Response(200, content=body))
+
+
 def recording(urls: list[str]) -> httpx.MockTransport:
     """A transport that serves ``NETWORK_FEED`` at any URL and records each one."""
 
@@ -948,15 +959,107 @@ async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
 ) -> None:
     conference = await loaded(storage, year)
     urls: list[str] = []
-    conference.set_feed_url("http://127.0.0.1:8000/conference-2026.json")
+    await conference.set_feed_url(DEV_FEED, storage)
     await conference.refresh(storage, year, transport=recording(urls))
-    conference.set_feed_url(None)  # Reset: the year's feed again, without a restart
+    # Reset: the year's feed again, without a restart
+    await conference.set_feed_url(None, storage)
     await conference.refresh(storage, year, transport=recording(urls))
-    assert urls == [
-        "http://127.0.0.1:8000/conference-2026.json",
-        "https://us.pycon.org/2026/schedule/conference.json",
-    ]
+    assert urls == [DEV_FEED, "https://us.pycon.org/2026/schedule/conference.json"]
     assert conference.source == "network"
+
+
+async def test_leaving_a_feed_url_for_the_year_s_deletes_the_cache_it_may_have_filled(
+    storage: Storage, year: YearData
+) -> None:
+    # An offline start would publish that feed as the schedule (D-187, D-244).
+    conference = await loaded(storage, year)
+    await storage.write_feed(NETWORK_FEED)
+    await conference.set_feed_url(None, storage)
+    assert storage.feed_path.exists()  # the year's feed all along: kept
+    await conference.set_feed_url(DEV_FEED, storage)
+    assert storage.feed_path.exists()  # a feed URL in use: kept
+    await conference.set_feed_url(OTHER_DEV_FEED, storage)
+    assert storage.feed_path.exists()  # from one feed URL to another: kept
+    await conference.set_feed_url(None, storage)
+    assert not storage.feed_path.exists()  # back to the year's feed
+
+
+@pytest.mark.parametrize("then", [None, OTHER_DEV_FEED])
+async def test_a_refresh_from_a_feed_url_left_while_it_runs_writes_nothing(
+    storage: Storage, year: YearData, then: str | None
+) -> None:
+    # D-187's race: the test feed came back in the cache after Reset (D-244).
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    held = HeldFeed()
+    running = conference.start_refresh(storage, year, transport=held.transport)
+    await held.arrived.wait()
+    await conference.set_feed_url(then, storage)
+    held.release()
+    await running
+    assert not storage.feed_path.exists()
+    assert (conference.source, conference.version) == ("bundled", 1)  # not published
+    assert conference.problem is None
+    assert conference.refreshing is False
+
+
+async def test_a_refresh_whose_feed_url_is_left_during_its_cache_write_publishes_nothing(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    write = Storage.write_feed
+
+    async def write_then_reset(self: Storage, raw: bytes) -> bool:
+        written = await write(self, raw)
+        await conference.set_feed_url(None, self)  # Reset, as the write lands
+        return written
+
+    monkeypatch.setattr(Storage, "write_feed", write_then_reset)  # frozen: the class
+    await conference.refresh(storage, year, transport=serving_any(NETWORK_FEED))
+    assert not storage.feed_path.exists()  # deleted after the write
+    assert (conference.source, conference.version) == ("bundled", 1)
+
+
+async def test_a_feed_url_left_before_the_write_takes_its_turn_keeps_no_cache(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The write's worker is queued for the writers' lock when the URL is left: the
+    # deletion asked for after it must not take the lock first (D-244).
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    held = QueuedWrite(monkeypatch)
+    running = conference.start_refresh(
+        storage, year, transport=serving_any(NETWORK_FEED)
+    )
+    await held.queued()
+    leaving = asyncio.create_task(conference.set_feed_url(None, storage))
+    done, _ = await asyncio.wait({leaving}, timeout=0.1)
+    held.release()
+    await asyncio.gather(leaving, running)
+    assert not done  # the deletion waited for the write
+    assert not storage.feed_path.exists()
+    assert (conference.source, conference.version) == ("bundled", 1)
+
+
+async def test_reset_during_a_queued_cache_write_keeps_no_cache(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Reset cancels the refresh, but not its worker thread, which writes on (D-120).
+    conference = await loaded(storage, year)
+    await conference.set_feed_url(DEV_FEED, storage)
+    held = QueuedWrite(monkeypatch)
+    running = conference.start_refresh(
+        storage, year, transport=serving_any(NETWORK_FEED)
+    )
+    await held.queued()
+    resetting = asyncio.create_task(conference.reset(storage, year))
+    done, _ = await asyncio.wait({resetting}, timeout=0.1)
+    held.release()
+    assert await resetting is True
+    assert not done
+    assert running.cancelled()
+    assert not storage.feed_path.exists()
 
 
 # ------------------------------------------------------------------ reset (D-198)
@@ -967,7 +1070,7 @@ async def test_reset_shows_the_bundled_snapshot_from_the_year_s_feed(
 ) -> None:
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
-    conference.set_feed_url("http://127.0.0.1:8000/conference-2026.json")
+    await conference.set_feed_url(DEV_FEED, storage)
     version = conference.version
     assert await conference.reset(storage, year) is True
     assert not storage.feed_path.exists()

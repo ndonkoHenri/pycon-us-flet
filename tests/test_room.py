@@ -1,20 +1,23 @@
 """Tests for room detail (#101; ROOM-02, ROOM-03; ux.md §5.9).
 
 ``RoomDetail`` runs in a real Flet session, as session detail does in
-``test_session.py``: the store providers are written out above it, ``AppScaffold`` is
-replaced by a column that keeps the title and the body, and the scroll to the row is a
-recorder, since no Flutter answers it here. The sessions are the recorded 2026 feed's,
-and the clock is fixed in conference time. How the page looks, at 200 % text and in
-dark mode, is checked on devices (the PR); here, what it shows, says and does: the
-highlight's parsing, its one scroll, "Now in this room" at fixed times and rows that
-leave out the room's own name. The highlight's wait is held until a test ends it
-(``tests/timers.py``), so a slow host never ends it before the test looks (#270).
+``test_session.py``: ``tests/sessions.py``'s ``showing()`` puts the store providers
+above it and replaces ``AppScaffold`` by a column that keeps the title and the body, and
+the scroll to the row is a recorder, since no Flutter answers it here. The sessions are
+the recorded 2026 feed's, and the clock is fixed in conference time. How the page looks,
+at 200 % text and in dark mode, is checked on devices (the PR); here, what it shows,
+says and does: the highlight's parsing, its one scroll, "Now in this room" at fixed
+times and rows that leave out the room's own name. The highlight's wait is held until a
+test ends it (``tests/timers.py``), so a slow host never ends it before the test looks
+(#270).
 """
 
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
@@ -22,32 +25,19 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.connection import Connection
-from flet.messaging.session import Session
-from flet.pubsub.pubsub_hub import PubSubHub
 
 from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
-from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import query_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.prefs import Prefs
 from pycon_us.screens import room as screen
 from pycon_us.screens import room_days
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx
-from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME, LIGHT_TOKENS, TokensCtx
+from pycon_us.state import Conference
+from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME
 from pycon_us.ui import scrolling, status_strip
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests import sessions
 from tests.feeds import processed
 from tests.test_theme import contrast_ratio
 from tests.timers import HeldSleeps
@@ -87,42 +77,25 @@ class Scroll:
 
 
 @dataclass
-class Room:
-    """A Flet session showing one ``RoomDetail``, and what it asked for."""
+class Room(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``) on one ``RoomDetail``."""
 
-    session: Session
-    memory: ViewMemory
-    favorites: Favorites
-    pushed: list[str]
-    scrolls: list[Scroll]
-    titles: list[str]
-    toggle: Callable[[bool], None]
-    services: list[Services] = field(default_factory=list)
+    scrolls: list[Scroll] = field(default_factory=list)
+    """The scrolls the room asked for, in order."""
+    toggles: list[Callable[[bool], None]] = field(default_factory=list)
+    """The setter that mounts the room or leaves it, once its first render has run."""
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
     """The screen's sleeps: the highlight stays on until the test releases its wait."""
 
-    def nodes(self, identifier: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        (found,) = self.nodes(identifier)
-        return found
-
     @property
     def tabs(self) -> ft.Tabs:
-        (found,) = [c for c in self.session.index.values() if isinstance(c, ft.Tabs)]
+        (found,) = self.find(ft.Tabs)
         return found
 
     def anchor(self) -> ft.Container:
         """The highlighted row's ``ScrollKey``: an empty anchor at the top of its box."""
         (found,) = [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, ft.Container) and isinstance(c.key, ft.ScrollKey)
+            c for c in self.find(ft.Container) if isinstance(c.key, ft.ScrollKey)
         ]
         return found
 
@@ -131,10 +104,6 @@ class Room:
         box = cast(ft.Control, self.anchor().parent).parent
         assert isinstance(box, ft.Container)
         return box
-
-    async def settle(self) -> None:
-        for _ in range(30):
-            await asyncio.sleep(0)
 
     async def wait(self, seconds: float) -> None:
         """Let ``seconds`` pass: for tests that check nothing more happened."""
@@ -161,14 +130,12 @@ class Room:
 
     def day_lists(self) -> list[ft.ListView]:
         """The day pages, in tab order."""
-        (pages,) = [
-            c for c in self.session.index.values() if isinstance(c, ft.TabBarView)
-        ]
+        (pages,) = self.find(ft.TabBarView)
         return [cast(ft.ListView, page) for page in pages.controls]
 
     async def show(self, shown: bool) -> None:
         """Mount the room again, or leave it (Back), in the same Flet session."""
-        self.toggle(shown)
+        self.toggles[0](shown)
         await self.settle()
 
 
@@ -180,11 +147,24 @@ async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
     """Return render(route, ...): ``RoomDetail`` for ``ROOM`` opened at ``route``."""
-    sessions: list[tuple[Session, Services]] = []
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the room module's name only
 
+    async def scroll(
+        list_ref: ft.Ref[ft.ListView],
+        key: str,
+        *,
+        duration: int,
+        ended: asyncio.Event,
+    ) -> str:
+        assert list_ref.current is not None  # the day list that shows the row
+        sessions.current(Room).scrolls.append(Scroll(key, duration))
+        return "landed"
+
+    monkeypatch.setattr(screen, "jump_to_key", scroll)
+
     async def show(
+        stack: AsyncExitStack,
         route: str,
         *,
         slug: str = ROOM,
@@ -194,109 +174,39 @@ async def render(
         data: ConferenceData | None = None,
     ) -> Room:
         clock.set_test_now(now)
-        titles: list[str] = []
-        scrolls: list[Scroll] = []
-
-        def scaffold(*, title: str, body: ft.Control) -> ft.Control:
-            titles.append(title)
-            return ft.Column([body])
-
-        async def scroll(
-            list_ref: ft.Ref[ft.ListView],
-            key: str,
-            *,
-            duration: int,
-            ended: asyncio.Event,
-        ) -> str:
-            assert list_ref.current is not None  # the day list that shows the row
-            scrolls.append(Scroll(key, duration))
-            return "landed"
-
-        monkeypatch.setattr(screen, "AppScaffold", scaffold)
-        monkeypatch.setattr(screen, "jump_to_key", scroll)
-        monkeypatch.setattr(ft, "use_view_path", lambda: VIEW)
-        storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
-        svc = Services(
-            year=YEAR,
-            storage=storage,
-            memory=memory or ViewMemory(),
-            semantics=MemorySemantics(),
-            haptics=MemoryHaptics(),
-            launcher=MemoryLauncher(),
-            clipboard=MemoryClipboard(),
-        )
-        conference = Conference(
-            data=data or processed(2026), source="bundled", version=1
-        )
-        favorites = Favorites()
-        prefs = Prefs(loaded=True, reduce_motion=reduce_motion)
-        await favorites.load(storage)
         toggles: list[Callable[[bool], None]] = []
 
         @ft.component
-        def Root() -> ft.Control:
+        def Opened() -> ft.Control:
             shown, set_shown = ft.use_state(True)
             toggles[:] = [set_shown]
-            return ServicesCtx(
-                svc,
-                lambda: ConferenceCtx(
-                    conference,
-                    lambda: PrefsCtx(
-                        prefs,
-                        lambda: FavoritesCtx(
-                            favorites,
-                            lambda: TokensCtx(
-                                LIGHT_TOKENS,
-                                lambda: (
-                                    screen.RoomDetail(slug)
-                                    if shown
-                                    else ft.Text("Back on the session")
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            )
+            if not shown:
+                return ft.Text("Back on the session")
+            return screen.RoomDetail(slug)
 
-        flet_session = Session(_connection())
-        page = flet_session.page
-        page.route = route
-        pushed: list[str] = []
-        monkeypatch.setattr(page, "navigate", pushed.append)
-        _context_page.set(page)  # pyright: ignore[reportArgumentType]
-        sessions.append((flet_session, svc))
-        page.render(Root)
-        flet_session.get_page_patch()
-        room = Room(
-            flet_session,
-            svc.memory,
-            favorites,
-            pushed,
-            scrolls,
-            titles,
-            lambda shown: toggles[0](shown),
-            [svc],
-            sleeps,
+        return await stack.enter_async_context(
+            sessions.showing(
+                Opened,
+                screen,
+                year=YEAR,
+                conference=Conference(
+                    data=data or processed(2026), source="bundled", version=1
+                ),
+                tmp_path=tmp_path,
+                monkeypatch=monkeypatch,
+                view_path=VIEW,
+                prefs=Prefs(loaded=True, reduce_motion=reduce_motion),
+                memory=memory,
+                route=route,
+                kind=partial(Room, toggles=toggles, sleeps=sleeps),
+            )
         )
-        await room.settle()
-        return room
 
     try:
-        yield show
+        async with AsyncExitStack() as stack:
+            yield partial(show, stack)
     finally:
-        for flet_session, svc in sessions:
-            svc.close()  # the minute ticks end (D-147)
-            flet_session.close()
-        await asyncio.sleep(0)
         clock.set_test_now(None)
-
-
-def _connection() -> Connection:
-    """A connection to no client, as Flet's own component tests use."""
-    conn = Connection()
-    conn.pubsubhub = PubSubHub()
-    conn.send_message = lambda message: None  # pyright: ignore[reportAttributeAccessIssue]
-    return conn
 
 
 def highlighted(session_id: str) -> str:
@@ -450,7 +360,7 @@ async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes
 async def test_a_re_render_does_not_scroll_again(render: Render) -> None:
     """A star tap, a refresh, Back from a detail: the effect ran once (D-18)."""
     room = await render(highlighted(TACHYON))
-    await room.favorites.toggle(room.services[0].storage, HUMANS)
+    await room.favorites.toggle(room.storage, HUMANS)
     await room.wait(0.1)
     assert len(room.scrolls) == 1
 
@@ -554,7 +464,7 @@ async def test_a_picked_day_survives_a_re_render(render: Render) -> None:
     room.session.apply_patch(room.tabs._i, {"selected_index": 0})  # as Flutter does
     await room.session.dispatch_event(room.tabs._i, "change", 0)
     await room.settle()
-    await room.favorites.toggle(room.services[0].storage, HUMANS)
+    await room.favorites.toggle(room.storage, HUMANS)
     await room.settle()
     assert room.tabs.selected_index == 0
 
@@ -582,7 +492,7 @@ async def test_a_row_pushes_its_session_on_top_of_the_room(render: Render) -> No
     box = next(c for c in room.session.index.values() if _holds(c, tap))
     await room.session.dispatch_event(box._i, "click", None)
     await room.settle()
-    assert room.pushed == [f"{VIEW}/session/{HUMANS}"]
+    assert room.went == [f"{VIEW}/session/{HUMANS}"]
 
 
 def _holds(control: Any, node: ft.Semantics) -> bool:
@@ -614,7 +524,7 @@ async def test_now_in_this_room_names_the_session_on_and_opens_it(
         for c in room.session.index.values()
     )
     tile.on_click()  # type: ignore[misc]
-    assert room.pushed == [f"{VIEW}/session/{HUMANS}"]
+    assert room.went == [f"{VIEW}/session/{HUMANS}"]
 
 
 async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
@@ -745,4 +655,4 @@ async def test_an_unknown_room_names_the_thing_and_offers_the_rooms(
     assert button.content == "All rooms"
     await room.session.dispatch_event(button._i, "click", None)
     await room.settle()
-    assert room.pushed == ["/map"]
+    assert room.went == ["/map"]

@@ -29,7 +29,6 @@ from pycon_us.screens.developer_ui import (
 )
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
@@ -115,8 +114,8 @@ def Developer() -> ft.View:
         # unchanged start keeps the clock running instead of setting it back.
         if fake_now != prefs.fake_now:
             clock.start_fake_clock(fake_now)
-        conference.set_feed_url(feed_url)
-        await leave_test_feed(svc.storage, prefs.feed_url, feed_url)
+        # Leaving a feed URL for the year's deletes the cache it may have filled (D-244).
+        await conference.set_feed_url(feed_url, svc.storage)
         dev = with_dev_options(prefs.dev, fake_now=fake_now, feed_url=feed_url)
         saved = await prefs.save(svc.storage, dev=dev)
         set_outcome(said(applied(fake_now, feed_url, info.time_zone_name), saved))
@@ -128,8 +127,7 @@ def Developer() -> ft.View:
         set_clock_error("")
         set_url_error("")
         clock.start_fake_clock(None)
-        conference.set_feed_url(None)
-        await leave_test_feed(svc.storage, prefs.feed_url, None)
+        await conference.set_feed_url(None, svc.storage)
         dev = with_dev_options(prefs.dev, fake_now=None, feed_url=None)
         saved = await prefs.save(svc.storage, dev=dev)
         set_outcome(said("Back to real time and the year's feed.", saved))
@@ -266,21 +264,6 @@ def locked() -> ft.Control:
         ],
         expand=True,
     )
-
-
-async def leave_test_feed(storage: Storage, was: str | None, now: str | None) -> None:
-    """Delete the feed cache when Apply or Reset leaves a Developer feed URL (D-187).
-
-    The cache may hold that feed's data, which an offline start would publish as the
-    schedule; without the cache, that start uses the bundled snapshot.
-
-    Args:
-        storage: Where the feed cache lives.
-        was: The feed URL in effect until now (``Prefs.feed_url``), or None.
-        now: The one that replaces it, or None for the year's feed.
-    """
-    if was is not None and now is None:
-        await storage.delete_feed("the Developer feed URL is off")
 
 
 def capability_row(name: str, available: bool) -> ft.Control:

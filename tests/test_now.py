@@ -15,8 +15,10 @@ VoiceOver is checked on devices (the PR).
 
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
@@ -24,16 +26,12 @@ from zoneinfo import ZoneInfo
 import flet as ft
 import pytest
 from flet.components.component import Component
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, now_next
 from pycon_us.core.models import ConferenceData
-from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx
+from pycon_us.prefs import Prefs
 from pycon_us.screens import now as screen
 from pycon_us.screens.now_header import (
     GOLD,
@@ -46,20 +44,11 @@ from pycon_us.screens.now_header import (
     spoken,
     up_next_when,
 )
-from pycon_us.services import Services, ServicesCtx
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx
-from pycon_us.ui import session_rows as rows
+from pycon_us.services import Services
+from pycon_us.state import Conference
 from pycon_us.ui import status_strip
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from tests import sessions
 from tests.feeds import processed
-from tests.sessions import connection
 from tests.test_theme import contrast_ratio
 
 YEAR = load_year(2026)
@@ -296,36 +285,21 @@ class Ticks:
 
 
 @dataclass
-class Shown:
-    """A Flet session showing ``Now``, and what it did."""
+class Shown(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``) on Now, with the test's clock."""
 
-    session: Session
-    svc: Services
-    favorites: Favorites
-    clock: list[datetime]
-    ticks: Ticks
-    pushed: list[str] = field(default_factory=list)
-    renders: list[str] = field(default_factory=list)
-    """The session ids whose row bodies ran, in order."""
-    token: Any = None
+    clock: list[datetime] = field(default_factory=list)
+    """The time ``clock.now()`` answers: ``clock[0]``."""
+    ticks: Ticks = field(default_factory=Ticks)
 
     @property
     def body(self) -> ft.ListView:
-        (body,) = [c for c in self.session.index.values() if isinstance(c, ft.ListView)]
+        (body,) = self.find(ft.ListView)
         return body
 
     def all(self) -> list[ft.Control]:
         """Every control on screen, in reading order, components entered."""
         return list(_walk(self.body))
-
-    def node(self, identifier: str) -> ft.Semantics:
-        found = [
-            c
-            for c in self.all()
-            if isinstance(c, ft.Semantics) and c.identifier == identifier
-        ]
-        assert len(found) == 1, identifier
-        return found[0]
 
     def has(self, identifier: str) -> bool:
         return any(
@@ -344,7 +318,7 @@ class Shown:
             and c.identifier != "now.header"
         ]
 
-    def rows(self, prefix: str = "now.session.") -> list[str]:
+    def listed(self, prefix: str = "now.session.") -> list[str]:
         """The session rows' keys, in order: ``now.session.<key>``."""
         return [
             str(c.identifier).removeprefix(prefix)
@@ -353,15 +327,8 @@ class Shown:
         ]
 
     def texts(self) -> list[str]:
+        """The texts on screen in reading order, plain strings too (``_texts``)."""
         return _texts(self.body)
-
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
-
-    async def click(self, control: ft.Control) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
 
     async def at(self, now: datetime) -> None:
         """Move the clock to ``now`` and run every minute tick, as a minute passing."""
@@ -404,108 +371,55 @@ def _texts(control: Any) -> list[str]:
     return found
 
 
-async def show(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    now: datetime,
-    *,
-    conference: Conference | None = None,
-    saved: tuple[str, ...] = (),
-    ticks: Ticks | None = None,
-) -> Shown:
-    """Render Now at ``now`` in a new Flet session, with ``saved`` in My schedule."""
-    prefs_service = MemoryPrefs()
-    storage = Storage(prefs=prefs_service, directory=tmp_path, year=2026)
-    svc = Services(
-        year=YEAR,
-        storage=storage,
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-    if conference is None:
-        conference = Conference(
-            data=processed(2026),
-            source="bundled",
-            version=1,
-            fetched_at=now,  # fresh: no strip
-        )
-    favorites = Favorites()
-    await favorites.load(storage)
-    if saved:
-        await favorites.add_many(storage, saved)
-    held = [now]
-    ticker = ticks or Ticks()
-    result = Shown(Session(connection()), svc, favorites, held, ticker)
-
-    def counted(name: str) -> Callable[..., str]:
-        phrase = getattr(rows, name)
-
-        def count(*args: Any, **kwargs: Any) -> str:
-            result.renders.append(args[-1].session.id)
-            return phrase(*args, **kwargs)
-
-        return count
-
-    monkeypatch.setattr(rows, "spoken_phrase", counted("spoken_phrase"))
-    monkeypatch.setattr(rows, "notice_phrase", counted("notice_phrase"))
-    monkeypatch.setattr(clock, "now", lambda: held[0])
-    monkeypatch.setattr(ft, "use_view_path", lambda: "/now")
-    # The scaffold and the strip are tested on their own (test_scaffold.py,
-    # test_status_strip.py); here the screen's body. A real strip would also start
-    # refreshes: the network.
-    monkeypatch.setattr(screen, "AppScaffold", lambda **kwargs: kwargs["body"])
-    if screen.StatusStrip is status_strip.StatusStrip:
-        monkeypatch.setattr(screen, "StatusStrip", lambda **_: ft.Text("strip"))
-    if ticks is None:
-        monkeypatch.setattr(Services, "run_every", ticker.run_every)
-
-    @ft.component
-    def Root() -> ft.Control:
-        return ServicesCtx(
-            svc,
-            lambda: ConferenceCtx(
-                conference,
-                lambda: PrefsCtx(
-                    Prefs(loaded=True), lambda: FavoritesCtx(favorites, screen.Now)
-                ),
-            ),
-        )
-
-    page = result.session.page
-    monkeypatch.setattr(page, "navigate", result.pushed.append)
-    result.token = _context_page.set(page)  # pyright: ignore[reportArgumentType]
-    page.render(Root)
-    result.session.get_page_patch()
-    await result.settle()
-    return result
-
-
-async def close(shown: Shown) -> None:
-    shown.svc.close()  # real ticking loops end with the session (D-147)
-    shown.session.close()
-    await shown.settle()
-    # Set, not reset: a test's renders run in its own context, not the fixture's.
-    _context_page.set(None)  # pyright: ignore[reportArgumentType]
-
-
 @pytest.fixture
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Callable[..., Any]]:
     """Render Now at a time; every session shown is closed at the end."""
-    shown: list[Shown] = []
+    async with AsyncExitStack() as stack:
 
-    async def render(now: datetime, **kwargs: Any) -> Shown:
-        result = await show(tmp_path, monkeypatch, now, **kwargs)
-        shown.append(result)
-        return result
+        async def render(
+            now: datetime,
+            *,
+            conference: Conference | None = None,
+            saved: tuple[str, ...] = (),
+            ticks: Ticks | None = None,
+        ) -> Shown:
+            """Render Now at ``now``, with ``saved`` in My schedule.
 
-    yield render
-    for result in shown:
-        await close(result)
+            With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
+            """
+            held = [now]
+            ticker = ticks or Ticks()
+            monkeypatch.setattr(clock, "now", lambda: held[0])
+            # The strip is tested on its own (test_status_strip.py); a real one would
+            # also start refreshes: the network.
+            if screen.StatusStrip is status_strip.StatusStrip:
+                monkeypatch.setattr(screen, "StatusStrip", lambda **_: ft.Text("strip"))
+            if ticks is None:
+                monkeypatch.setattr(Services, "run_every", ticker.run_every)
+            if conference is None:
+                conference = Conference(
+                    data=processed(2026),
+                    source="bundled",
+                    version=1,
+                    fetched_at=now,  # fresh: no strip
+                )
+            return await stack.enter_async_context(
+                sessions.showing(
+                    screen.Now,
+                    screen,
+                    year=YEAR,
+                    conference=conference,
+                    tmp_path=tmp_path,
+                    monkeypatch=monkeypatch,
+                    view_path="/now",
+                    saved=saved,
+                    kind=partial(Shown, clock=held, ticks=ticker),
+                )
+            )
+
+        yield render
 
 
 def header(shown: Shown) -> str:
@@ -528,11 +442,11 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
         "Long Beach, CA",
     ):
         assert line in texts
-    assert shown.rows() == []  # nothing is on or next for weeks
+    assert shown.listed() == []  # nothing is on or next for weeks
     button = shown.node("now.build_schedule").content
     assert isinstance(button, ft.FilledTonalButton)
     await shown.click(button)
-    assert shown.pushed == ["/schedule"]
+    assert shown.went == ["/schedule"]
 
 
 async def test_the_header_is_the_first_heading_under_the_page_s_title(
@@ -555,7 +469,7 @@ async def test_on_a_conference_day_it_shows_what_is_on_then_what_is_next(
         "Happening now",
         "Up next · 11:30 AM",
     ]
-    assert shown.rows() == [*AT_11, "27"]
+    assert shown.listed() == [*AT_11, "27"]
     assert "Starts in 20 min" in shown.texts()
     assert "See the rest of today in Schedule" in shown.texts()
 
@@ -578,16 +492,16 @@ async def test_happening_now_ignores_the_schedule_s_filters(
     """Open spaces are hidden on the Schedule by default (D-20), never here."""
     shown = await render(may(15, 11, 10))
     assert "Open Space" in Prefs().excluded_tracks
-    assert OPEN_SPACE in shown.rows()
+    assert OPEN_SPACE in shown.listed()
 
 
 async def test_saved_sessions_come_first_in_happening_now(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(15, 11, 10), saved=(OPEN_SPACE, "9072"))
-    (mine,) = shown.rows("now.next.session.")  # one of the two, in the card
+    (mine,) = shown.listed("now.next.session.")  # one of the two, in the card
     (other,) = {OPEN_SPACE, "9072"} - {mine}
-    happening = shown.rows()[: len(AT_11) - 1]
+    happening = shown.listed()[: len(AT_11) - 1]
     assert happening == [other, *(i for i in AT_11 if i not in (mine, other))]
 
 
@@ -657,7 +571,7 @@ async def test_after_the_last_session_the_sprints_are_next(
     for now in (may(17, 21), may(18, 10)):
         shown = await render(now)
         assert shown.headings() == []
-        assert shown.rows() == []
+        assert shown.listed() == []
         sprints = shown.node("now.sprints")
         assert _texts(sprints) == ["Sprints", "Join a project · May 18–19"]
         (subtitle,) = [c for c in _walk(sprints) if isinstance(c, ft.Text)]
@@ -700,7 +614,7 @@ async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
 ) -> None:
     shown = await render(may(16, 9), saved=(TALK,))  # it starts in 1 h 30 min
     (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
-    assert shown.rows("now.next.session.") == [TALK]
+    assert shown.listed("now.next.session.") == [TALK]
     assert not shown.has("now.next_session")  # the tile's: nothing to explain
     assert any(
         isinstance(c, ft.Semantics) and c.identifier == f"now.next.favorite.{TALK}"
@@ -712,7 +626,7 @@ async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
     show_room = shown.node("now.show_room").content
     assert isinstance(show_room, ft.TextButton)
     await shown.click(show_room)
-    assert shown.pushed == [f"/now/room/grand-ballroom-a?highlight={TALK}"]
+    assert shown.went == [f"/now/room/grand-ballroom-a?highlight={TALK}"]
 
 
 async def test_the_card_s_status_is_a_stop_of_its_own(
@@ -744,11 +658,11 @@ async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(15, 11, 10), saved=(OPEN_SPACE,))
-    assert shown.rows("now.next.session.") == [OPEN_SPACE]
+    assert shown.listed("now.next.session.") == [OPEN_SPACE]
     card = shown.node(f"now.next.session.{OPEN_SPACE}")
     assert str(card.label).endswith(" 16 percent elapsed.")
     assert [c.value for c in _walk(card) if isinstance(c, ft.ProgressBar)] == [0.16]
-    assert shown.rows()[: len(AT_11) - 1] == [i for i in AT_11 if i != OPEN_SPACE]
+    assert shown.listed()[: len(AT_11) - 1] == [i for i in AT_11 if i != OPEN_SPACE]
 
 
 async def test_your_next_session_is_not_repeated_in_up_next(
@@ -756,8 +670,8 @@ async def test_your_next_session_is_not_repeated_in_up_next(
 ) -> None:
     """The 11:30 talk is alone in its slot: the card says when, Up next is left out."""
     shown = await render(may(15, 11, 10), saved=("27",))
-    assert shown.rows("now.next.session.") == ["27"]
-    assert "27" not in shown.rows()
+    assert shown.listed("now.next.session.") == ["27"]
+    assert "27" not in shown.listed()
     assert shown.texts().count("Starts in 20 min") == 1  # the card's status
     assert shown.headings() == ["Your next session", "Happening now"]
     assert "See the rest of today in Schedule" in shown.texts()
@@ -767,9 +681,9 @@ async def test_up_next_lists_the_rest_of_its_slot_but_your_session(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(15, 10, 50), saved=("4",))
-    assert shown.rows("now.next.session.") == ["4"]
+    assert shown.listed("now.next.session.") == ["4"]
     assert "Up next · 11:00 AM" in shown.headings()
-    assert shown.rows()[-(len(AT_11) - 1) :] == [i for i in AT_11 if i != "4"]
+    assert shown.listed()[-(len(AT_11) - 1) :] == [i for i in AT_11 if i != "4"]
 
 
 async def test_the_card_s_bar_follows_the_time_its_row_shows(
@@ -787,7 +701,7 @@ async def test_when_only_your_session_is_on_the_card_says_so(
 ) -> None:
     """A keynote is alone in its slot: no Happening now section to say "nothing"."""
     shown = await render(may(15, 9, 50), saved=(KEYNOTE,))
-    assert shown.rows("now.next.session.") == [KEYNOTE]
+    assert shown.listed("now.next.session.") == [KEYNOTE]
     assert "Happening now" not in shown.headings()
     assert "Nothing in session right now" not in shown.texts()
     (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
@@ -814,7 +728,7 @@ async def test_with_nothing_saved_soon_it_points_at_my_schedule(
     (list_tile,) = [c for c in _walk(tile) if isinstance(c, ft.ListTile)]
     assert list_tile.on_click is not None
     cast(Callable[[], None], list_tile.on_click)()
-    assert shown.pushed == ["/my-schedule"]
+    assert shown.went == ["/my-schedule"]
 
 
 async def test_a_row_pushes_its_session_over_now(
@@ -825,7 +739,7 @@ async def test_a_row_pushes_its_session_over_now(
     tappable = shown.node("now.session.4").parent
     assert isinstance(tappable, ft.Container)
     await shown.click(tappable)
-    assert shown.pushed == ["/now/session/4"]
+    assert shown.went == ["/now/session/4"]
 
 
 # ------------------------------------------------------------------ time passing
@@ -835,11 +749,11 @@ async def test_a_minute_moves_the_bars_and_re_renders_only_their_rows(
     render: Callable[..., Any],
 ) -> None:
     shown = await render(may(15, 11, 10))
-    shown.renders.clear()
+    shown.rows.clear()
     await shown.at(may(15, 11, 11))
     assert str(shown.node("now.session.4").label).endswith(" 36 percent elapsed.")
-    assert "27" not in shown.renders  # Up next did not change (D-153)
-    assert "4" in shown.renders
+    assert "27" not in shown.rows  # Up next did not change (D-153)
+    assert "4" in shown.rows
 
 
 async def test_the_minute_tick_turns_the_day_into_its_evening(
@@ -856,12 +770,12 @@ async def test_a_resume_recomputes_at_once(
     """In the background nothing ticks; the return catches up at once (D-40, D-175)."""
     monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     shown = await render(may(15, 11, 10), ticks=Ticks())  # the real loop
-    shown.svc.foreground.clear()  # pause
+    shown.services.foreground.clear()  # pause
     shown.clock[0] = may(15, 21)
     await asyncio.sleep(0.05)
     await shown.settle()
     assert "Long Beach Convention Center" in header(shown)  # still the morning
-    shown.svc.foreground.set()  # resume
+    shown.services.foreground.set()  # resume
     await asyncio.sleep(0)
     await shown.settle()
     assert "That's a wrap for today" in header(shown)

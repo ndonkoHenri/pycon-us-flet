@@ -1,8 +1,10 @@
-"""The status strip and the minute tick: ``StatusStrip``, ``strip_line()``, ``use_minute()``.
+"""The status strip, the zone note and the minute tick.
 
 ``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
 (U1) arrives (D-32, D-146); the screens that show the feed's state place it under
-their app bar. It ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
+their app bar. ``zone_note_line()`` is the Schedule's line under it, "Times are
+Pacific Time (PDT)", while the device's clock differs from the conference's (D-35,
+D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 ``use_minute()`` is that tick as a hook, for any other view that depends on
 ``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` and
 ``stop_ticks()`` are the ticking effects' state and cleanup (D-200).
@@ -215,6 +217,49 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
+    )
+
+
+def zone_note_line(note: str | None) -> ft.Control:
+    """Return the line under the Schedule's strip that names the times' zone (D-240).
+
+    The words are ``core/timefmt.zone_note()``'s, at the minute's ``clock.now()``
+    and the device's offset then. Without a note (the device is on conference time)
+    it is an empty placeholder, so the controls under it keep their places in their
+    column and the day pages are never rebuilt (#313).
+
+    Args:
+        note: "Times are Pacific Time (PDT)", or None.
+    """
+    if note is None:
+        return ft.Container()
+    return ft.Container(
+        ft.Row(
+            [
+                # Decorative: the words say it. One line tall at every text size, at
+                # the top, so a wrapped note keeps it beside its first line.
+                ft.Icon(
+                    ft.Icons.PUBLIC,
+                    size=ICON_SIZE,
+                    apply_text_scaling=True,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                ft.Semantics(
+                    identifier="schedule.zone_note",
+                    content=ft.Text(
+                        note,
+                        theme_style=ft.TextThemeStyle.BODY_SMALL,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                    expand=True,
+                ),
+            ],
+            # 16 + 10 dp: the words start 42 dp in, under the filter summary's
+            # (its 18 dp mark and 8 dp gap), the line it sits under most often.
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        ),
+        padding=ft.Padding.only(left=16, top=LINE_PAD, right=16, bottom=LINE_PAD),
     )
 
 
