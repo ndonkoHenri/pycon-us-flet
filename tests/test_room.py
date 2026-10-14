@@ -31,12 +31,13 @@ from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.locations import query_of
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import room as screen
 from pycon_us.screens import room_days
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME, LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import scrolling, status_strip
 from tests.fakes import (

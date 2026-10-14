@@ -10,8 +10,8 @@ import flet as ft
 from pycon_us import APP_NAME
 from pycon_us.app import NO_THEME_ANIMATION, App
 from pycon_us.locations import parent_of
+from pycon_us.memory import ViewMemory
 from pycon_us.services.errors import report_errors, setup_logging
-from pycon_us.state import ViewMemory
 from pycon_us.theme import BOOT_COLOR
 
 setup_logging()  # once per process, before the first session logs anything (D-72)

@@ -25,10 +25,11 @@ from pycon_us.core.search import SCOPES, SearchResults, search, search_index
 from pycon_us.core.speakers import directory
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import use_query
+from pycon_us.memory import ViewMemory
 from pycon_us.screens.search_results import SCREEN, ResultList, summary
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import ViewMemory, use_conference
+from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query

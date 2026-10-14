@@ -35,12 +35,14 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.feed_refresh import Problem
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import schedule as screen
 from pycon_us.screens import schedule_days, schedule_now
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import THEME, Storage
-from pycon_us.state import Conference, ConferenceCtx, Problem, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.ui import scrolling
 from pycon_us.ui import session_rows as rows
 from tests.fakes import (
