@@ -7,6 +7,7 @@ The helpers are ``ui/semantics.py``'s (decisions §M, D-200). The scans hold eve
 """
 
 import ast
+from collections.abc import Iterator
 from pathlib import Path
 from typing import NamedTuple, cast
 
@@ -292,11 +293,12 @@ def scope_of(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
 def taken_in_names(scope: ast.AST) -> set[str]:
     """Return the names that ``scope`` assigns a button, chip, field or tile to.
 
-    Any of its assignments counts: ``label: ft.Control = ft.Text(...)`` and then
-    ``label = ft.Row(...)`` builds neither, one ``ft.ListTile`` among them does.
+    Any of its own assignments counts (a nested function's or class's does not):
+    ``label: ft.Control = ft.Text(...)`` and then ``label = ft.Row(...)`` builds
+    neither, one ``ft.ListTile`` among them does.
     """
     names = set()
-    for node in ast.walk(scope):
+    for node in own_nodes(scope):
         if isinstance(node, ast.Assign):
             targets = node.targets
         elif isinstance(node, ast.AnnAssign):
@@ -306,6 +308,24 @@ def taken_in_names(scope: ast.AST) -> set[str]:
         if isinstance(node.value, ast.Call) and is_taken_in(called(node.value)):
             names |= {target.id for target in targets if isinstance(target, ast.Name)}
     return names
+
+
+NESTED_SCOPES = ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Lambda
+"""The nodes whose names are their own, not the names of the scope around them."""
+
+
+def own_nodes(scope: ast.AST) -> Iterator[ast.AST]:
+    """Yield the nodes of ``scope``, without those of the functions and classes in it.
+
+    A nested helper's ``control = ft.TextButton(...)`` names its own ``control``, not
+    the outer function's parameter of that name.
+    """
+    pending = list(ast.iter_child_nodes(scope))
+    while pending:
+        node = pending.pop()
+        yield node
+        if not isinstance(node, NESTED_SCOPES):
+            pending.extend(ast.iter_child_nodes(node))
 
 
 def is_merged(node: ast.Call, parents: dict[ast.AST, ast.AST]) -> bool:
@@ -353,9 +373,23 @@ KEPT = {
     "text": ['return ft.Semantics(identifier="x", content=ft.Text("Go"))'],
     "icon": ['return ft.Semantics(identifier="x", content=ft.Icon(ft.Icons.SHARE))'],
     "parameter": ['return ft.Semantics(identifier="x", content=control)'],
+    "shadowed-in-a-helper": [
+        "def helper():",
+        '    control = ft.TextButton("Go")',
+        "    return control",
+        'return ft.Semantics(identifier="x", content=control)',
+    ],
+    "shadowed-in-a-class": [
+        "class Helper:",
+        '    control = ft.TextButton("Go")',
+        'return ft.Semantics(identifier="x", content=control)',
+    ],
     "no-identifier": ['return ft.Semantics(content=ft.TextButton("Go"))'],
 }
-"""Function bodies the scan leaves: merged, saying more, or around no such control."""
+"""Function bodies the scan leaves: merged, saying more, or around no such control.
+
+A nested helper or class names its own ``control``, not the parameter it shadows.
+"""
 
 
 @pytest.mark.parametrize("lines", SPLIT.values(), ids=SPLIT.keys())
