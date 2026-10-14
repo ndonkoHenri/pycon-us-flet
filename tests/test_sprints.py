@@ -9,8 +9,8 @@ sees which card bodies ran (D-153). How the cards look, wrap at 200 % and read t
 TalkBack and VoiceOver is checked on devices (the PR).
 """
 
-import asyncio
 from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -19,31 +19,20 @@ from typing import Any, cast
 import flet as ft
 import httpx
 import pytest
-from flet.controls.context import _context_page
-from flet.messaging.session import Session
 
 from pycon_us.config import YearData, load_year
 from pycon_us.core.html_md import to_text
 from pycon_us.core.models import ConferenceData, Sprint
 from pycon_us.core.queries import fold
 from pycon_us.core.sprints import PREVIEW_CHARS, cut_short, filter_projects, projects
-from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.screens import sprint_card
 from pycon_us.screens import sprints as screen
 from pycon_us.screens import tracks as hub_screen
-from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
-from pycon_us.theme import LIGHT_TOKENS, TokensCtx
-from tests.fakes import (
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-)
+from pycon_us.state import Conference
+from tests import sessions
+from tests.fakes import MemoryLauncher, MemoryPrefs
 from tests.feeds import processed, recorded
-from tests.sessions import connection
 
 YEAR = load_year(2026)
 INFO = YEAR.conference
@@ -154,36 +143,11 @@ def test_a_long_description_or_one_with_links_or_paragraphs_is_cut() -> None:
 
 
 @dataclass
-class Shown:
-    """A Flet session showing one screen, what it opened and which cards ran."""
+class Shown(sessions.Shown):
+    """The harness's ``Shown`` (``tests/sessions.py``), and which cards ran."""
 
-    session: Session
-    svc: Services
-    went: list[str]
     cards: list[str] = field(default_factory=list)
     """The project ids whose card bodies ran, in order."""
-
-    def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
-        return [
-            c
-            for c in self.session.index.values()
-            if isinstance(c, kind) and c.parent is not None
-        ]
-
-    def nodes(self, prefix: str) -> list[ft.Semantics]:
-        return [
-            c
-            for c in self.find(ft.Semantics)
-            if str(c.identifier or "").startswith(prefix)
-        ]
-
-    def node(self, identifier: str) -> ft.Semantics:
-        found = [c for c in self.find(ft.Semantics) if c.identifier == identifier]
-        assert len(found) == 1, identifier
-        return found[0]
-
-    def texts(self) -> list[str]:
-        return [str(t.value) for t in self.find(ft.Text)]
 
     @property
     def listed(self) -> list[str]:
@@ -192,91 +156,51 @@ class Shown:
 
     @property
     def launched(self) -> list[str]:
-        launcher = cast(MemoryLauncher, self.svc.launcher)
-        return [url for url, _ in launcher.launched]
-
-    async def settle(self) -> None:
-        for _ in range(20):
-            await asyncio.sleep(0)
+        return [url for url, _ in self.launcher.launched]
 
     async def type(self, text: str) -> None:
         """Type into the filter as Flutter reports it: the value, then the event."""
         (text_field,) = self.find(ft.TextField)
         self.session.apply_patch(text_field._i, {"value": text})
-        await self.session.dispatch_event(text_field._i, "change", None)
-        await self.settle()
-
-    async def click(self, control: ft.BaseControl) -> None:
-        await self.session.dispatch_event(control._i, "click", None)
-        await self.settle()
+        await self.event(text_field, "change", None)
 
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Return show(screen, conference=..., year=...): that screen over the feed."""
-    shown: list[Shown] = []
-
-    def scaffold(*, body: ft.Control, actions: Any = None, **_: Any) -> ft.Control:
-        # The scaffold is tested on its own (test_scaffold.py): its actions and body.
-        return ft.Column([*(actions or []), body])
-
-    monkeypatch.setattr(screen, "AppScaffold", scaffold)
-    monkeypatch.setattr(hub_screen, "AppScaffold", scaffold)
     counted = sprint_card.cut_short
 
-    async def render(
-        component: Any = screen.Sprints,
-        conference: Conference | None = None,
-        year: YearData = YEAR,
-    ) -> Shown:
-        svc = Services(
-            year=year,
-            storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
-            memory=ViewMemory(),
-            semantics=MemorySemantics(),
-            haptics=MemoryHaptics(),
-            launcher=MemoryLauncher(),
-            clipboard=MemoryClipboard(),
-        )
-        if conference is None:
-            conference = Conference(data=DATA, source="bundled", version=1)
-        result = Shown(Session(connection()), svc, [])
-        monkeypatch.setattr(result.session.page, "navigate", result.went.append)
+    def cut(sprint: Sprint) -> bool:
+        sessions.current(Shown).cards.append(sprint.id)
+        return counted(sprint)
 
-        def cut(sprint: Sprint) -> bool:
-            result.cards.append(sprint.id)
-            return counted(sprint)
+    # Each card body asks once: counting the calls counts the bodies (S2).
+    monkeypatch.setattr(sprint_card, "cut_short", cut)
 
-        # Each card body asks once: counting the calls counts the bodies (S2).
-        monkeypatch.setattr(sprint_card, "cut_short", cut)
+    async with AsyncExitStack() as stack:
 
-        @ft.component
-        def Root() -> ft.Control:
-            return ServicesCtx(
-                svc,
-                lambda: ConferenceCtx(
-                    conference,
-                    lambda: PrefsCtx(
-                        Prefs(loaded=True), lambda: TokensCtx(LIGHT_TOKENS, component)
-                    ),
-                ),
+        async def render(
+            component: Any = screen.Sprints,
+            conference: Conference | None = None,
+            year: YearData = YEAR,
+        ) -> Shown:
+            return await stack.enter_async_context(
+                sessions.showing(
+                    component,
+                    screen,
+                    hub_screen,
+                    year=year,
+                    conference=Conference(data=DATA, source="bundled", version=1)
+                    if conference is None
+                    else conference,
+                    tmp_path=tmp_path,
+                    monkeypatch=monkeypatch,
+                    view_path="",  # no Router: what ft.use_view_path() says outside one
+                    kind=Shown,
+                )
             )
 
-        page = result.session.page
-        _context_page.set(page)  # pyright: ignore[reportArgumentType]
-        page.render(Root)
-        result.session.get_page_patch()
-        await result.settle()
-        shown.append(result)
-        return result
-
-    try:
         yield render
-    finally:
-        for result in shown:
-            result.session.close()
-        await asyncio.sleep(0)
-        _context_page.set(None)
 
 
 @pytest.fixture
@@ -442,7 +366,7 @@ async def test_project_page_opens_the_feeds_url_as_a_web_page(show: Any) -> None
     assert label == "DocumentDB project page\nOpens in browser"
     await shown.click(button)
     assert shown.launched == ["https://documentdb.io"]
-    launcher = cast(MemoryLauncher, shown.svc.launcher)
+    launcher = cast(MemoryLauncher, shown.services.launcher)
     assert launcher.launched[0][1] == ft.LaunchMode.IN_APP_BROWSER_VIEW
 
 

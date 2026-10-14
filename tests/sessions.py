@@ -7,14 +7,16 @@ re-rendering what changed.
 
 Two levels, one module (#204, #253):
 
-- ``rendering(root)`` renders any component in a new session; the Schedule's and My
-  schedule's tests write their providers out above it.
+- ``rendering(root)`` renders any component in a new session, or as the page's Views
+  under a real Router (``views=True``: the search screen's tests).
 - ``showing(screen, *modules, ...)`` renders a screen over a feed under the store
   providers (``provide()``) with the memory fakes' services (``memory_services()``):
-  each module's ``AppScaffold`` is replaced by a row of its actions over its body, so
-  both are in the tree, ``page.navigate`` is recorded and each row body is counted,
-  each in the ``Shown`` of the screen it belongs to, however many are open.
-  The rows', session detail's, Tracks', speaker's and programme pages' tests use it.
+  each module's ``AppScaffold`` is replaced by a row of its actions over its body (and
+  its floating button under it), so all are in the tree, ``page.navigate`` is
+  recorded and each row body is counted, each in the ``Shown`` of the screen it
+  belongs to, however many are open. Every screen's tests use it (#286); what is one
+  screen's own (a held clock, minute ticks, recorded scrolls) stays in its test
+  module, in a ``Shown`` subclass (``kind``) that its stand-ins find with ``current()``.
 
 It reaches into Flet internals (``_context_page``, ``Session.index``,
 ``Session.dispatch_event``, ``Control._i``, ``page._dialogs``, the msgpack encoder of
@@ -45,6 +47,7 @@ from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
+from pycon_us.services.storage import favorites as favorites_key
 from pycon_us.state import Conference, ConferenceCtx, ViewMemory
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import session_rows
@@ -97,7 +100,10 @@ async def settle() -> None:
 
 @asynccontextmanager
 async def rendering(
-    root: Callable[[], ft.Control], session: Session | None = None
+    root: Callable[[], ft.Control],
+    session: Session | None = None,
+    *,
+    views: bool = False,
 ) -> AsyncIterator[Session]:
     """Render the component ``root`` in a session; close it on the way out.
 
@@ -106,6 +112,8 @@ async def rendering(
             the component under test.
         session: The session to render in, when the caller prepares its page first
             (``showing()`` records ``page.navigate``); a new one by default.
+        views: Render ``root`` as the page's Views (``page.render_views``), as the
+            app renders its Router; else as the page's content.
 
     Yields:
         The session, with its first render applied and its first effects run.
@@ -114,7 +122,10 @@ async def rendering(
     page = session.page
     _context_page.set(page)  # pyright: ignore[reportArgumentType]
     try:
-        page.render(root)
+        if views:
+            page.render_views(root)
+        else:
+            page.render(root)
         pack(session.get_page_patch())  # the REGISTER_CLIENT response's page
         await settle()
         yield session
@@ -135,19 +146,23 @@ def find[T: ft.BaseControl](
 # ------------------------------------------------------------------ a screen over a feed
 
 
-def memory_services(year: YearData, directory: Path) -> Services:
+def memory_services(
+    year: YearData, directory: Path, memory: ViewMemory | None = None
+) -> Services:
     """Return a session's services with the memory fakes of ``tests/fakes.py``.
 
     Args:
         year: The year data the services carry.
         directory: Where the storage writes (a test's ``tmp_path``).
+        memory: The view memory, when a test keeps one across sessions, as the app
+            keeps it across a View rebuilt in a new session; a new one by default.
     """
     return Services(
         year=year,
         storage=Storage(
             prefs=MemoryPrefs(), directory=directory, year=year.conference.year
         ),
-        memory=ViewMemory(),
+        memory=memory or ViewMemory(),
         semantics=MemorySemantics(),
         haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
@@ -194,10 +209,20 @@ class Shown:
     """What ``ft.use_view_path()`` answers on this screen."""
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies (sessions and notices) ran, in order."""
+    retaps: list[Callable[[], object] | None] = field(default_factory=list)
+    """The re-tap action ``AppScaffold`` was given on each render, in order."""
 
     @property
     def launcher(self) -> MemoryLauncher:
         return cast(MemoryLauncher, self.services.launcher)
+
+    @property
+    def memory(self) -> ViewMemory:
+        return self.services.memory
+
+    @property
+    def storage(self) -> Storage:
+        return self.services.storage
 
     def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
         return find(self.session, kind)
@@ -259,13 +284,36 @@ def _shown_now() -> Shown | None:
     return _OPEN.get(page) if page is not None else None
 
 
+def current[S: Shown](kind: type[S]) -> S:
+    """The open screen whose session is rendering or handling an event now.
+
+    For a test module's own stand-ins (a recorded scroll, a counted slot): each
+    records in the ``Shown`` of the screen that called it, however many are open.
+
+    Args:
+        kind: The ``Shown`` subclass the screen was opened with (``showing(kind=)``).
+    """
+    shown = _shown_now()
+    assert isinstance(shown, kind), "no screen of that kind is rendering now"
+    return shown
+
+
 def _scaffold(
-    *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
+    *,
+    title: str,
+    body: ft.Control,
+    actions: list[ft.Control] | None = None,
+    on_retap: Callable[[], object] | None = None,
+    fab: ft.FloatingActionButton | None = None,
 ) -> ft.Control:
-    """``AppScaffold``'s stand-in: the actions in a row, as an app bar holds them."""
+    """``AppScaffold``'s stand-in: the actions in a row, as an app bar holds them, the
+    body, and the floating button under it."""
     if shown := _shown_now():
         shown.titles.append(title)
-    return ft.Column([ft.Row(actions or []), body], expand=True)
+        shown.retaps.append(on_retap)
+    return ft.Column(
+        [ft.Row(actions or []), body, *([fab] if fab else [])], expand=True
+    )
 
 
 class _RowCounter:
@@ -307,7 +355,7 @@ def _route(monkeypatch: pytest.MonkeyPatch, modules: tuple[ModuleType, ...]) -> 
 
 
 @asynccontextmanager
-async def showing(
+async def showing[S: Shown = Shown](
     screen: Callable[[], ft.Control],
     *modules: ModuleType,
     year: YearData,
@@ -315,7 +363,13 @@ async def showing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     view_path: str,
-) -> AsyncIterator[Shown]:
+    prefs: Prefs | None = None,
+    favorites: Favorites | None = None,
+    saved: tuple[str, ...] = (),
+    memory: ViewMemory | None = None,
+    route: str | None = None,
+    kind: Callable[..., S] = Shown,
+) -> AsyncIterator[S]:
     """Render ``screen`` under the store providers; close the session on the way out.
 
     Args:
@@ -326,13 +380,30 @@ async def showing(
         tmp_path: Where the storage writes.
         monkeypatch: To replace the scaffold, the View path and the phrases.
         view_path: The View's path, which the rows' links start from.
+        prefs: The ``Prefs`` store, for other settings; by default a loaded one with
+            the defaults.
+        favorites: The ``Favorites`` store as the test set it up (not loaded yet,
+            say); by default a new one, loaded from the storage.
+        saved: The session ids the storage holds as favourites before the screen
+            opens, as an earlier session left them.
+        memory: The view memory, when the test keeps one across sessions.
+        route: The page's route before the first render, for a screen that reads
+            its query (a room's highlight); the page's own by default.
+        kind: What makes the ``Shown``: a test module's subclass that adds what is
+            its screen's own, or a ``functools.partial`` of one.
     """
     _route(monkeypatch, modules)
-    svc = memory_services(year, tmp_path)
-    prefs, favorites = Prefs(loaded=True), Favorites()
-    await favorites.load(svc.storage)
+    svc = memory_services(year, tmp_path, memory)
+    if saved:
+        await svc.storage.set(favorites_key(svc.storage.year), list(saved))
+    if favorites is None:
+        favorites = Favorites()
+        await favorites.load(svc.storage)
+    prefs = prefs or Prefs(loaded=True)
     session = Session(connection())
-    shown = Shown(session, svc, conference, prefs, favorites, [], [], view_path)
+    if route is not None:
+        session.page.route = route
+    shown = kind(session, svc, conference, prefs, favorites, [], [], view_path)
     monkeypatch.setattr(session.page, "navigate", shown.went.append)
     _OPEN[session.page] = shown
 
