@@ -12,7 +12,8 @@ Two levels, one module (#204, #253):
 - ``showing(screen, *modules, ...)`` renders a screen over a feed under the store
   providers (``provide()``) with the memory fakes' services (``memory_services()``):
   each module's ``AppScaffold`` is replaced by a row of its actions over its body, so
-  both are in the tree, ``page.navigate`` is recorded and each row body is counted.
+  both are in the tree, ``page.navigate`` is recorded and each row body is counted,
+  each in the ``Shown`` of the screen it belongs to, however many are open.
   The rows', session detail's, Tracks', speaker's and programme pages' tests use it.
 
 It reaches into Flet internals (``_context_page``, ``Session.index``,
@@ -189,6 +190,8 @@ class Shown:
     """What ``page.navigate`` was asked for, in order."""
     titles: list[str]
     """The titles ``AppScaffold`` was given, in order."""
+    view_path: str
+    """What ``ft.use_view_path()`` answers on this screen."""
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies (sessions and notices) ran, in order."""
 
@@ -241,20 +244,66 @@ class Shown:
         await settle()
 
 
-def count_rows(monkeypatch: pytest.MonkeyPatch, rows: list[str]) -> None:
-    """Append each row body's session id to ``rows`` as the body runs (D-153).
+_OPEN: dict[ft.Page, Shown] = {}
+"""The screens ``showing()`` has open, by page: a test may open several at once."""
+
+
+def _shown_now() -> Shown | None:
+    """The open screen whose session is rendering or handling an event now.
+
+    Flet binds a session's page to the context for each of its renders and events
+    (``_context_page``: its scheduler task, ``Session.dispatch_event``), so the page in
+    the context names the screen a scaffold, a View path or a row body belongs to.
+    """
+    page = _context_page.get()
+    return _OPEN.get(page) if page is not None else None
+
+
+def _scaffold(
+    *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
+) -> ft.Control:
+    """``AppScaffold``'s stand-in: the actions in a row, as an app bar holds them."""
+    if shown := _shown_now():
+        shown.titles.append(title)
+    return ft.Column([ft.Row(actions or []), body], expand=True)
+
+
+class _RowCounter:
+    """A row phrase that appends each row body's id to its own screen's ``rows``.
 
     Each session or notice row body says its phrase once: counting the calls counts
-    the bodies (S2's ``ROW_RENDERS``).
+    the bodies (S2's ``ROW_RENDERS``, D-153).
     """
-    for name in ("spoken_phrase", "notice_phrase"):
-        phrase = getattr(session_rows, name)
 
-        def counted(*args: Any, phrase: Callable[..., str] = phrase, **kw: Any) -> str:
-            rows.append(cast(SessionView, args[-1]).session.id)
-            return phrase(*args, **kw)
+    def __init__(self, phrase: Callable[..., str]) -> None:
+        self.phrase = phrase
 
-        monkeypatch.setattr(session_rows, name, counted)
+    def __call__(self, *args: Any, **kwargs: Any) -> str:
+        if shown := _shown_now():
+            shown.rows.append(cast(SessionView, args[-1]).session.id)
+        return self.phrase(*args, **kwargs)
+
+
+def _route(monkeypatch: pytest.MonkeyPatch, modules: tuple[ModuleType, ...]) -> None:
+    """Send each scaffold, View path and row body to the screen it belongs to.
+
+    One stand-in per name, installed once, routing by the session in the context: a
+    stand-in per screen would chain the second screen's records through the first's.
+    """
+    for module in modules:
+        monkeypatch.setattr(module, "AppScaffold", _scaffold)
+    if not isinstance(session_rows.spoken_phrase, _RowCounter):
+        for name in ("spoken_phrase", "notice_phrase"):
+            monkeypatch.setattr(
+                session_rows, name, _RowCounter(getattr(session_rows, name))
+            )
+        use_view_path = ft.use_view_path
+
+        def view_path() -> str:
+            shown = _shown_now()
+            return shown.view_path if shown else use_view_path()
+
+        monkeypatch.setattr(ft, "use_view_path", view_path)
 
 
 @asynccontextmanager
@@ -278,25 +327,14 @@ async def showing(
         monkeypatch: To replace the scaffold, the View path and the phrases.
         view_path: The View's path, which the rows' links start from.
     """
-    titles: list[str] = []
-
-    def scaffold(
-        *, title: str, body: ft.Control, actions: list[ft.Control] | None = None
-    ) -> ft.Control:
-        titles.append(title)
-        # The actions in a row of their own, as an app bar holds them.
-        return ft.Column([ft.Row(actions or []), body], expand=True)
-
-    for module in modules:
-        monkeypatch.setattr(module, "AppScaffold", scaffold)
-    monkeypatch.setattr(ft, "use_view_path", lambda: view_path)
+    _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path)
     prefs, favorites = Prefs(loaded=True), Favorites()
     await favorites.load(svc.storage)
     session = Session(connection())
-    shown = Shown(session, svc, conference, prefs, favorites, [], titles)
+    shown = Shown(session, svc, conference, prefs, favorites, [], [], view_path)
     monkeypatch.setattr(session.page, "navigate", shown.went.append)
-    count_rows(monkeypatch, shown.rows)
+    _OPEN[session.page] = shown
 
     @ft.component
     def Root() -> ft.Control:
@@ -307,6 +345,7 @@ async def showing(
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
+        del _OPEN[session.page]
 
 
 def text_of(control: object) -> str:
