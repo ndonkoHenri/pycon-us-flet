@@ -65,7 +65,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `config.py`, `year_schema.py`, `year_pages.py`, `year_keynotes.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8, with `config.HUB_PAGES`, the Tracks hub's pages of their own, D-207; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205; `year_keynotes.py` the keynotes' entries and their checks, D-217); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
 | `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
-| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `row_lines.py` (the lines under a row's title: `meta()`, `secondary()`, `overlap_line()`, `elapsed_bar()` and its `TRACK`; D-227), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200; `TimeAbove`, `slot_layout()`, `time_above()` and `GutterProbe`, which `AppScaffold` puts under every body, 0 dp high, and `BootView` holds too; D-216), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `use_add_all()` (a track page's Add all, D-209), `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers filter; D-193), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203), `share.py` (the share sheet: `centre()`, where it points from on a tablet, and `share_text()`; D-206) | P0+ |
+| `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `row_lines.py` (the lines under a row's title: `meta()`, `secondary()`, `overlap_line()`, `elapsed_bar()` and its `TRACK`; D-227), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200; `TimeAbove`, `slot_layout()`, `time_above()` and `GutterProbe`, which `AppScaffold` puts under every body, 0 dp high, and `BootView` holds too; D-216), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `use_add_all()` (a track page's Add all, D-209), `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers and Sprints filters, D-193; `use_field_query()`, its text, `Ref` and refocusing Clear, and `found_count()`, the live count line; D-226), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203), `share.py` (the share sheet: `centre()`, where it points from on a tablet, and `share_text()`; D-206) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202); `/more/open-spaces` and `/more/lightning-talks` are `open_spaces.py` and `lightning_talks.py` (D-205); `session_extras.py` holds session detail's Share, a Posters row's posters and an open space's image and site link (D-206); `/more/keynotes` is `keynotes.py`, its card `keynote_card.py`, and `keynote_people.py` holds a keynote's people for the card and session detail's keynote sections (D-217) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
 | `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
@@ -426,7 +426,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
-| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key); `changes` (last 24 h, P2); `_task`; `_started_at` (D-175); `_asked` (D-181); `_feed_url` (D-187) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `refresh_due`, `start_refresh_if_due` (D-175); `set_feed_url` (D-187); `async reset(storage, year) -> bool` (D-198) | P0 |
+| `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key; not incremented by a refresh that brings the same feed, D-224); `changes` (last 24 h, P2); `_task`; `_started_at` (D-175); `_asked` (D-181); `_feed_url` (D-187); `_digest`, the published feed's SHA-256 (D-224) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `refresh_due`, `start_refresh_if_due` (D-175); `set_feed_url` (D-187); `async reset(storage, year) -> bool` (D-198) | P0 |
 | `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`, `time_above` and `time_measured` (measured by `GutterProbe`; the boot gate waits for it, D-216); `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark`; `motion_ms(ms)`, 0 under reduced motion (D-173); the Developer options read from `dev`: `developer_unlocked`, `developer`, `fake_now`, `feed_url` (D-187); `reset()` (D-198) | P0 |
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo; `reset()`, without a write (D-198) | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
@@ -451,6 +451,7 @@ class Conference:
     version: int = 0
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
     _asked: bool = field(default=False, repr=False)   # the user's refresh; automatic ones are quiet (D-181)
+    _digest: bytes | None = field(default=None, repr=False)   # SHA-256 of the published raw feed (D-224)
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the persistent cache, or the bundled snapshot when there is no usable cache."""
@@ -461,10 +462,11 @@ class Conference:
             except feed.FeedError as error:
                 await storage.delete_feed(f"it does not parse: {error}")   # logs (D-39)
             else:
-                self._publish(data, "cache", datetime.fromtimestamp(cached.saved_at, UTC))
+                self._publish(data, _digest(cached.raw), "cache", datetime.fromtimestamp(cached.saved_at, UTC))
                 return
         snapshot = year.read_snapshot()                      # bundled with the app (D-135)
-        self._publish(feed.process(snapshot.raw, year.feed_settings), "bundled", snapshot.captured_at)
+        data = feed.process(snapshot.raw, year.feed_settings)
+        self._publish(data, _digest(snapshot.raw), "bundled", snapshot.captured_at)
 
     def start_refresh(self, storage: Storage, year: YearData, *, transport=None, closed=None) -> asyncio.Task[None]:
         """Start a background refresh unless one is in flight; return the one that runs (D-145).
@@ -488,7 +490,9 @@ class Conference:
         self.refreshing = True
         try:
             raw = await api.fetch_feed(year.conference.feed_url, transport=transport)
-            data = feed.process(raw, year.feed_settings)          # FeedError: nothing is written
+            digest = _digest(raw)
+            # The published feed's bytes: the same data, so neither processed nor published (D-224).
+            data = None if digest == self._digest else feed.process(raw, year.feed_settings)
         except api.NetworkError:
             self.problem = "offline"                              # D-146
         except (api.ApiError, feed.FeedError):
@@ -496,16 +500,19 @@ class Conference:
             self.problem = "server"
         else:
             await storage.write_feed(raw)                          # atomic, after a good parse (D-39)
+            if data is None:
+                self._confirm()               # fetched_at, problem, source: the freshness only (D-224)
+                return
             previous, previous_source = self.data, self.source
-            self._publish(data, "network", clock.now())
+            self._publish(data, digest, "network", clock.now())
             if previous is not None and previous_source != "bundled":
                 await self._record_changes(storage, diff(previous, data))   # P2, D-47
         finally:
             self._asked = False               # the next refresh starts quiet (D-181)
             self.refreshing = False
 
-    def _publish(self, data: ConferenceData, source: Source, fetched_at: datetime) -> None:
-        self.data = data                  # eq=False: always notifies (F5)
+    def _publish(self, data: ConferenceData, digest: bytes, source: Source, fetched_at: datetime) -> None:
+        self.data, self._digest = data, digest   # eq=False: always notifies (F5)
         self.source, self.fetched_at, self.problem = source, fetched_at, None
         self.version += 1                 # writes in one block give one re-render
 
@@ -520,6 +527,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 - `age()` is the `timedelta` since `fetched_at` by `clock.now()`, never negative; `status(info)` is what the strip says: `refreshing` (only while a refresh the user asked for runs: an automatic one is quiet, D-181), `offline`, `problem`, `stale` (over 6 h on conference days, else 24 h) or `fresh` (D-146). `start_refresh()` records when it starts a refresh (`_started_at`), and `refresh_due()` / `start_refresh_if_due()` are the automatic triggers' rule (§4.3, D-175). One shared `_task` makes refresh single-flight, and it never deletes the cache first (fixes EVT-07, SPON-08). `transport` is for tests (`httpx.MockTransport`); the app leaves it None.
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
+- A refresh that brings the published feed's bytes again (most of them: the feed changes a few times a day) publishes nothing: `data` and `version` stay, so no memo is rebuilt and no list re-renders or remounts, and the Schedule's "Now" button stays hidden; `_confirm()` updates `fetched_at`, `problem` and `source` only, and the bytes are still cached, so the next start's age is the refresh's (D-224). A changed feed publishes a new version, and the P2 diff runs only then.
 - `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)

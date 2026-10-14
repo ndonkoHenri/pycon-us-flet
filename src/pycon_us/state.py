@@ -9,6 +9,7 @@ have modules of their own (D-160): ``prefs.py`` and ``favorites.py`` (P1).
 """
 
 import asyncio
+import hashlib
 import logging
 from dataclasses import dataclass, field, fields
 from datetime import UTC, date, datetime, timedelta
@@ -57,7 +58,8 @@ class Conference:
     ``load_local`` publishes the best local copy before the first frame; ``start_refresh``
     or ``refresh`` then replaces it from the network. A published ``ConferenceData`` is
     frozen and never mutated: a refresh publishes a new one, so screens memoise on
-    ``version``.
+    ``version``. A refresh that brings the very bytes already published publishes
+    nothing: only its freshness changes (D-224).
 
     A refresh is automatic (``start_refresh``, ``start_refresh_if_due``) or asked for by
     the user (``refresh``). An automatic one is quiet: ``status()`` keeps saying what it
@@ -67,12 +69,14 @@ class Conference:
         data: The processed feed; None until ``load_local`` publishes.
         source: Where ``data`` came from.
         fetched_at: When ``data`` was fetched (aware): the cache file's modification
-            time, the snapshot's capture time, or ``clock.now()`` after a refresh.
+            time, the snapshot's capture time, or ``clock.now()`` after a refresh,
+            one that found the same feed included (D-224).
         refreshing: Whether a refresh is running, automatic or asked for: the status
             strip's progress bar (D-181).
         problem: Why the last refresh failed, or None after a good one. The data stays
             whatever was published last.
-        version: Incremented on every publish; the memo key of every view model.
+        version: Incremented on every publish, so on every new feed but not on a
+            refresh that brings the same one (D-224); the memo key of every view model.
     """
 
     data: ConferenceData | None = None
@@ -87,6 +91,9 @@ class Conference:
     # say "refreshing". Private, so setting it notifies nobody unless refresh() asks.
     _asked: bool = field(default=False, repr=False)
     _feed_url: str | None = field(default=None, repr=False)
+    # The SHA-256 of the raw feed `data` was processed from: a refresh whose bytes have
+    # it brings nothing new to publish (D-224).
+    _digest: bytes | None = field(default=None, repr=False)
 
     def set_feed_url(self, url: str | None) -> None:
         """Refresh from ``url`` from the next refresh on; None returns to the year's feed.
@@ -127,11 +134,11 @@ class Conference:
                 await storage.delete_feed(f"it does not parse: {error}")
             else:
                 saved_at = datetime.fromtimestamp(cached.saved_at, UTC)
-                self._publish(data, "cache", saved_at)
+                self._publish(data, _digest(cached.raw), "cache", saved_at)
                 return
         snapshot = year.read_snapshot()
         data = feed.process(snapshot.raw, year.feed_settings)
-        self._publish(data, "bundled", snapshot.captured_at)
+        self._publish(data, _digest(snapshot.raw), "bundled", snapshot.captured_at)
 
     async def reset(self, storage: Storage, year: YearData) -> bool:
         """Return to what a fresh install shows: the bundled snapshot, from the year's feed.
@@ -165,6 +172,7 @@ class Conference:
         snapshot = year.read_snapshot()
         self._publish(
             feed.process(snapshot.raw, year.feed_settings),
+            _digest(snapshot.raw),
             "bundled",
             snapshot.captured_at,
         )
@@ -327,7 +335,14 @@ class Conference:
         transport: httpx.AsyncBaseTransport | None,
         closed: asyncio.Event | None,
     ) -> None:
-        """Fetch, parse, cache and publish; on any expected failure keep what is published."""
+        """Fetch, parse, cache and publish; on any expected failure keep what is published.
+
+        Bytes equal to the published feed's (by digest) are neither parsed nor
+        published: the same bytes give the same data, and a new version would re-render
+        every list and bring the Schedule's "Now" button back for nothing (#290). They
+        are still cached, which creates the cache over the snapshot and dates it, and
+        ``_confirm()`` updates the freshness (D-224).
+        """
 
         def session_closed() -> bool:
             if closed is None or not closed.is_set():
@@ -337,18 +352,22 @@ class Conference:
 
         self.refreshing = True
         try:
-            result = await _fetch(url, year, transport)
+            result = await _fetch(url, year, transport, self._digest)
             if session_closed():
                 return
             if isinstance(result, str):
                 self.problem = result
                 return
-            raw, data = result
+            raw, digest, data = result
             # Only a feed that parsed is cached (D-39). A failed write is logged and the
             # parsed data is still published (D-120).
             await storage.write_feed(raw)
-            if not session_closed():
-                self._publish(data, "network", clock.now())
+            if session_closed():
+                return
+            if data is None:
+                self._confirm()
+            else:
+                self._publish(data, digest, "network", clock.now())
         finally:
             self._asked = False  # private: the next refresh starts quiet (D-181)
             # A closed session's store must not be written at all (F30).
@@ -356,22 +375,59 @@ class Conference:
                 self.refreshing = False
 
     def _publish(
-        self, data: ConferenceData, source: Source, fetched_at: datetime
+        self, data: ConferenceData, digest: bytes, source: Source, fetched_at: datetime
     ) -> None:
         self.data = data  # a new frozen eq=False object: always notifies (F5)
+        self._digest = digest
         self.source = source
         self.fetched_at = fetched_at
         self.problem = None
         self.version += 1
 
+    def _confirm(self) -> None:
+        """Record a good refresh that brought the published feed again (D-224).
+
+        ``data`` and ``version`` stay, so every memo keyed on the version keeps its view
+        models and no list re-renders (D-153). Only the freshness changes, which the
+        strip and the Developer screen read: the data's age, where it came from (the
+        network now, even when the bytes were the snapshot's) and the last problem.
+        """
+        logger.info("Feed refresh: the same feed as shown; nothing new to publish")
+        self.source = "network"
+        self.fetched_at = clock.now()
+        self.problem = None
+
+
+def _digest(raw: bytes) -> bytes:
+    """Return the SHA-256 of a raw feed: about 0.3 ms for 2026's 800 kB on the host."""
+    return hashlib.sha256(raw).digest()
+
 
 async def _fetch(
-    url: str, year: YearData, transport: httpx.AsyncBaseTransport | None
-) -> tuple[bytes, ConferenceData] | Problem:
-    """Fetch and process the feed; return its bytes and data, or why that failed (D-146)."""
+    url: str,
+    year: YearData,
+    transport: httpx.AsyncBaseTransport | None,
+    published: bytes | None,
+) -> tuple[bytes, bytes, ConferenceData | None] | Problem:
+    """Fetch and process the feed; return its bytes, digest and data, or why that failed.
+
+    Args:
+        url: The feed URL.
+        year: The year's feed settings.
+        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+        published: The digest of the published feed: bytes with that digest are not
+            processed, and their data is None (D-224).
+
+    Returns:
+        The bytes, their digest and the processed feed (None when it is the published
+        one), or the ``Problem`` that stopped it (D-146).
+    """
     try:
         raw = await api.fetch_feed(url, transport=transport)
-        return raw, feed.process(raw, year.feed_settings)  # on the loop (D-109)
+        digest = _digest(raw)
+        if digest == published:
+            return raw, digest, None
+        return raw, digest, feed.process(raw, year.feed_settings)  # on the loop (D-109)
     except api.NetworkError as error:
         logger.info("Feed refresh: no answer (%s); keeping the current data", error)
         return "offline"

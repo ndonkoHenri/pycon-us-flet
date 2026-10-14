@@ -30,7 +30,7 @@ from pycon_us.core.speakers import (
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
-from pycon_us.ui.fields import SearchField
+from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
@@ -53,29 +53,14 @@ def Speakers() -> ft.View:
     """The Speakers page: a filter field over the directory, by letter."""
     svc = use_services()
     conference = use_conference()
-    query, set_query = ft.use_state("")
+    field = use_field_query()
+    query = field.value
     data = conference.data
     # Once per feed version: a keystroke re-renders this screen, never rebuilds these.
     entries = ft.use_memo(lambda: directory(data) if data else (), [conference.version])
     index = ft.use_memo(
         lambda: search_index(data) if data else None, [conference.version]
     )
-
-    @report_errors
-    def changed(e: ft.Event[ft.TextField]) -> None:
-        set_query(e.control.value)
-
-    # A fresh Ref each render, as Flet's declarative examples do: it holds this
-    # render's field, the one this render's handlers act on.
-    field_ref: ft.Ref[ft.TextField] = ft.Ref()
-
-    @report_errors
-    async def clear() -> None:
-        set_query("")
-        # Both Clear controls go away once the filter is empty: put the focus in the
-        # field, ready to type again, rather than lose a screen reader's place (D-182).
-        if field_ref.current is not None:
-            await field_ref.current.focus()
 
     @report_errors
     async def refresh() -> None:
@@ -115,12 +100,15 @@ def Speakers() -> ft.View:
                 "\N{RIGHT DOUBLE QUOTATION MARK}",
                 icon=ft.Icons.PERSON_SEARCH_OUTLINED,
                 action=CLEAR_FILTER,
-                on_action=clear,
+                on_action=field.clear,  # the focus goes back to the field (D-182)
                 identifier=f"{SCREEN}.no_match",
             )
         ]
         if found and found is not entries:  # a filter applies and finds someone
-            count = _found_count(len(found))
+            count = found_count(
+                f"{len(found)} speaker" + ("" if len(found) == 1 else "s"),
+                identifier=f"{SCREEN}.count",
+            )
     return AppScaffold(
         title="Speakers",
         body=ft.Column(
@@ -131,10 +119,10 @@ def Speakers() -> ft.View:
                 ft.Column(
                     [
                         SearchField(
-                            value=query,
-                            on_change=changed,
-                            on_clear=clear,
-                            ref=field_ref,
+                            value=field.value,
+                            on_change=field.changed,
+                            on_clear=field.clear,
+                            ref=field.ref,
                             hint=FILTER_HINT,
                             label=FILTER_HINT,
                             clear_tooltip=CLEAR_FILTER,
@@ -151,30 +139,6 @@ def Speakers() -> ft.View:
             expand=True,
             # The field takes the screen's width; a Column would size it to its own.
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-        ),
-    )
-
-
-def _found_count(found: int) -> ft.Control:
-    """Return the line that says how many speakers a filter found, a live region.
-
-    A filter changes the list at every keystroke: the live region lets a screen reader
-    hear what typing did without leaving the field (ux.md §9). Shown only while a
-    filter finds someone; a miss has the no-match state, which announces itself.
-
-    Args:
-        found: How many speakers the filter found, at least one.
-    """
-    return ft.Semantics(
-        live_region=True,
-        identifier=f"{SCREEN}.count",
-        content=ft.Container(
-            ft.Text(
-                f"{found} speaker" + ("" if found == 1 else "s"),
-                theme_style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            padding=ft.Padding.only(left=16, top=4, right=16),
         ),
     )
 

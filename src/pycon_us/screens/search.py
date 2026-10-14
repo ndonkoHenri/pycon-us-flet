@@ -31,7 +31,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.state import ViewMemory, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.badges import selection_click, use_favorite_toggle
-from pycon_us.ui.fields import SearchField
+from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import use_session_views
@@ -118,7 +118,8 @@ def Search() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     # Decided once, as the View mounts; the handlers record every later change.
     scope, set_scope = ft.use_state(lambda: _start_scope(options.get("scope"), memory))
-    text, set_text = ft.use_state(memory.search_query)  # the field, every keystroke
+    field = use_field_query(memory.search_query)  # the field, every keystroke
+    text = field.value
     query, set_query = ft.use_state(memory.search_query)  # what was searched
     data = conference.data
     # Once per feed version: never per keystroke (D-180).
@@ -158,25 +159,18 @@ def Search() -> ft.View:
 
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> None:
-        memory.search_query = e.control.value
-        set_text(e.control.value)
+        memory.search_query = e.control.value  # for a View rebuilt below a result
+        field.changed(e)
 
     @report_errors
     def submitted(e: ft.Event[ft.TextField]) -> None:
         set_query(e.control.value)  # the keyboard's action key: no need to wait
 
-    # A fresh Ref each render, as in the Speakers filter: it holds this render's field.
-    field_ref: ft.Ref[ft.TextField] = ft.Ref()
-
     @report_errors
     async def clear() -> None:
         memory.search_query = ""
-        set_text("")
-        set_query("")
-        # The Clear button goes away once the field is empty: put the focus back in
-        # the field, ready to type again, rather than lose a screen reader's place.
-        if field_ref.current is not None:
-            await field_ref.current.focus()
+        set_query("")  # at once, not after the pause
+        await field.clear()  # the Clear button went: the focus goes back to the field
 
     @report_errors
     async def picked(e: ft.Event[ft.Chip]) -> None:
@@ -193,8 +187,7 @@ def Search() -> ft.View:
         set_scope("all")
         # As Clear: the button goes away with the miss, so the focus goes to the field
         # rather than nowhere.
-        if field_ref.current is not None:
-            await field_ref.current.focus()
+        await field.focus()
 
     @report_errors
     async def refresh() -> None:
@@ -237,7 +230,11 @@ def Search() -> ft.View:
             on_action=show_all if elsewhere else None,
             identifier=f"{SCREEN}.no_match",
         )
-    count = None if state is not None else _found_count(summary(results))
+    count = (
+        None
+        if state is not None
+        else found_count(summary(results), identifier=f"{SCREEN}.count")
+    )
     return AppScaffold(
         title="Search",
         body=ft.Column(
@@ -248,10 +245,10 @@ def Search() -> ft.View:
                 ft.Column(
                     [
                         SearchField(
-                            value=text,
+                            value=field.value,
                             on_change=changed,
                             on_clear=clear,
-                            ref=field_ref,
+                            ref=field.ref,
                             hint=HINTS[scope],
                             label=LABEL,
                             clear_tooltip=CLEAR,
@@ -326,24 +323,4 @@ def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Con
             scroll=ft.ScrollMode.AUTO,
         ),
         padding=ft.Padding.symmetric(vertical=4),
-    )
-
-
-def _found_count(line: str) -> ft.Control:
-    """Return the line that says what the search found, a polite live region.
-
-    Args:
-        line: ``summary()`` of the results.
-    """
-    return ft.Semantics(
-        live_region=True,
-        identifier=f"{SCREEN}.count",
-        content=ft.Container(
-            ft.Text(
-                line,
-                theme_style=ft.TextThemeStyle.BODY_SMALL,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            padding=ft.Padding.only(left=16, top=4, right=16),
-        ),
     )

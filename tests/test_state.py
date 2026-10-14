@@ -251,7 +251,7 @@ async def test_a_refresh_after_the_last_one_ended_makes_a_new_request(
     await conference.refresh(storage, year, transport=feed.transport)
 
     assert feed.requests == 2
-    assert conference.version == 3
+    assert conference.version == 2  # the second brought the same feed (D-224)
 
 
 async def test_refreshing_is_set_while_the_request_is_in_flight(
@@ -376,6 +376,120 @@ async def test_a_publish_notifies_subscribers_and_the_task_does_not(
     assert changes[0] == "refreshing"
     assert "_task" not in changes
     assert changes[-1] == "refreshing"  # cleared last, after the publish
+
+
+# ------------------------------------------------------------------ the same feed again (D-224)
+
+
+async def test_a_refresh_that_brings_the_shown_feed_publishes_nothing_new(
+    storage: Storage, year: YearData
+) -> None:
+    """#290: a new version would re-render every list and bring "Now" back for nothing."""
+    conference = await loaded(storage, year)
+    bundled = conference.data
+    changes: list[str | None] = []
+
+    def listener(_sender: object, name: str | None) -> None:
+        changes.append(name)
+
+    assert isinstance(conference, ft.Observable)
+    conference.subscribe(listener)
+    clock.set_test_now(NOW + timedelta(minutes=5))
+
+    await conference.refresh(storage, year, transport=serving(year.read_snapshot().raw))
+
+    assert conference.data is bundled
+    assert conference.version == 1
+    assert "data" not in changes
+    assert "version" not in changes
+    # Only the freshness changed: the strip's age, and where the data came from.
+    assert conference.source == "network"
+    assert conference.fetched_at == NOW + timedelta(minutes=5)
+    assert conference.problem is None
+    # Cached all the same, so the next start reads the cache, not the snapshot (D-39).
+    assert storage.feed_path.read_bytes() == year.read_snapshot().raw
+
+
+async def test_the_shown_feed_is_not_processed_again(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same bytes give the same data, so the 200 ms of a slow phone are saved."""
+    assert await storage.write_feed(CACHED_FEED)
+    conference = await loaded(storage, year)
+
+    def unexpected(*_: object) -> ConferenceData:
+        raise AssertionError("the shown feed was processed again")
+
+    monkeypatch.setattr("pycon_us.core.feed.process", unexpected)
+    await conference.refresh(storage, year, transport=serving(CACHED_FEED))
+
+    assert conference.version == 1
+    assert conference.source == "network"
+    assert title(conference.data) == "Renamed in the cache"
+
+
+async def test_after_the_same_feed_a_changed_one_still_publishes(
+    storage: Storage, year: YearData
+) -> None:
+    """D-204: a changed feed brings the Schedule's button back; it needs a version."""
+    assert await storage.write_feed(CACHED_FEED)
+    conference = await loaded(storage, year)
+    await conference.refresh(storage, year, transport=serving(CACHED_FEED))
+    assert conference.version == 1
+
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+
+    assert conference.version == 2
+    assert title(conference.data) == "Renamed on the server"
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    assert conference.version == 2  # compared with what is shown now, not the first
+
+
+async def test_the_same_feed_makes_stale_data_fresh(
+    storage: Storage, year: YearData
+) -> None:
+    """The strip's age: "Updated 3 days ago" goes when the network confirms the data."""
+    assert await storage.write_feed(CACHED_FEED)
+    conference = await loaded(storage, year)
+    clock.set_test_now(NOW + timedelta(days=3))
+    assert conference.status(year.conference) == "stale"
+
+    await conference.refresh(storage, year, transport=serving(CACHED_FEED))
+
+    assert conference.age() == timedelta(0)
+    assert conference.status(year.conference) == "fresh"
+    assert conference.version == 1
+
+
+async def test_the_same_feed_clears_the_last_problem(
+    storage: Storage, year: YearData
+) -> None:
+    conference = await loaded(storage, year)
+    await conference.refresh(
+        storage, year, transport=failing(httpx.ConnectError("offline"))
+    )
+    assert conference.status(year.conference) == "offline"
+
+    await conference.refresh(storage, year, transport=serving(year.read_snapshot().raw))
+
+    assert conference.problem is None
+    assert conference.status(year.conference) == "fresh"
+    assert conference.version == 1
+
+
+async def test_the_same_feed_dates_the_cache_for_the_next_start(
+    storage: Storage, year: YearData
+) -> None:
+    """The next start's age is the cache file's mtime (D-145), so the write renews it."""
+    assert await storage.write_feed(CACHED_FEED)
+    long_ago = datetime(2026, 10, 1, 8, 0, tzinfo=UTC).timestamp()
+    os.utime(storage.feed_path, (long_ago, long_ago))
+    conference = await loaded(storage, year)
+
+    await conference.refresh(storage, year, transport=serving(CACHED_FEED))
+
+    assert storage.feed_path.stat().st_mtime > long_ago
+    assert storage.feed_path.read_bytes() == CACHED_FEED
 
 
 async def test_a_refresh_that_ends_after_its_session_closed_writes_nothing(
