@@ -9,11 +9,13 @@ always carries a name from ``track_name()`` (DATA-28). How badges look is checke
 devices (the PR). The sessions are the recorded 2026 feed's.
 """
 
+import gc
 import logging
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
+from weakref import ref
 
 import flet as ft
 import pytest
@@ -21,6 +23,7 @@ import pytest
 from pycon_us import theme
 from pycon_us.config import ConferenceInfo, load_year
 from pycon_us.core.models import ConferenceData, Session
+from pycon_us.ui import badges
 from pycon_us.ui.badges import (
     REGISTRATION,
     REMOVED,
@@ -288,3 +291,21 @@ async def test_a_snack_bar_that_has_gone_is_not_closed_again(
     await rendered.tap_star(row_sessions.TALK)
     assert rendered.favorites.ids == {row_sessions.TALK}
     assert sent == []
+
+
+async def test_a_page_with_an_undo_snack_bar_is_released_when_its_session_ends(
+    tmp_path: Path,
+) -> None:
+    """The last SnackBar is held weakly: its Undo holds the page, which must go."""
+    patches = pytest.MonkeyPatch()  # its own: the test's would hold the page
+    try:
+        async with rendering(tmp_path, patches) as shown:
+            shown.prefs.screen_reader = True
+            await removed(shown, row_sessions.TALK)
+            page = ref(shown.session.page)
+            assert page() in badges._SHOWN
+            del shown
+    finally:
+        patches.undo()
+    gc.collect()
+    assert page() is None  # and with it, its entry in the registry

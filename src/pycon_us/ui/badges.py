@@ -19,7 +19,7 @@ with "Removed" about a session saved again (D-251).
 
 import logging
 from collections.abc import Awaitable, Callable, Iterable
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, ref
 
 import flet as ft
 
@@ -70,8 +70,12 @@ UNDO = "Undo"
 SNACK_BAR_MS = 4000
 """How long a SnackBar shows (ux.md §4.5), unless a screen reader keeps it (D-184)."""
 
-_SHOWN: WeakKeyDictionary[ft.Page, ft.SnackBar] = WeakKeyDictionary()
-"""The last favourites SnackBar each page showed, which the next edit closes (D-251)."""
+_SHOWN: WeakKeyDictionary[ft.Page, ref[ft.SnackBar]] = WeakKeyDictionary()
+"""The last favourites SnackBar each page showed, which the next edit closes (D-251).
+
+Weak both ways: a SnackBar holds its page (its Undo, Flet's dismiss handler), so a
+strong value would keep a page whose session has ended; the page's dialogs own the
+SnackBar while it shows, and drop it once Flet reports it dismissed."""
 
 type ToggleFavorite = Callable[[str], Awaitable[None]]
 """A list's one star handler: ``await on_toggle(session_id)``."""
@@ -401,7 +405,8 @@ def _report(
             action (D-184, D-251).
     """
     if message is None:
-        last = _SHOWN.pop(page, None)
+        shown = _SHOWN.pop(page, None)
+        last = shown() if shown else None
         if last is not None and last.open:  # Flet sets open False once it has gone
             last.open = False
             last.update()
@@ -416,4 +421,4 @@ def _report(
         persist=undo is not None and keep,
     )
     page.show_dialog(bar)
-    _SHOWN[page] = bar
+    _SHOWN[page] = ref(bar)
