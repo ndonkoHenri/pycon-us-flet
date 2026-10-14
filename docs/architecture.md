@@ -1205,7 +1205,7 @@ SCANNER = available("flet_barcode_scanner")          # E1, not published yet: mo
 
 ```python
 # src/pycon_us/services/reminders.py (excerpt)
-MAX_PENDING = 60                         # iOS keeps 64 pending notifications
+MAX_PENDING = 60                         # iOS keeps 64 pending and drops the soonest beyond (D-222)
 
 
 @dataclass(frozen=True)
@@ -1233,7 +1233,7 @@ def plan(data: ConferenceData, favorites: Sequence[str], settings: ReminderSetti
     return sorted(reminders, key=lambda r: r.at)[:MAX_PENDING]
 ```
 
-`apply(plan)` cancels all and schedules the plan (idempotent, inexact by default), re-run when favourites, settings or the feed change. Its scheduling calls *(not in Flet yet: E3, flet-dev/flet#6948 plus scheduling)* live only here; until E3 is pinned, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids. Taps open `route` (§5.6), cold start included; S6 settles killed-app delivery, reboot, denied exact alarms and the 64-notification limit.
+`apply(plan)` cancels every pending reminder (never the shown ones) and schedules the plan, exact on Android when the user allows it and inexact otherwise (D-221, D-222); it is idempotent and re-runs when favourites, settings or the feed change, and at every start and resume. Its scheduling calls *(not in Flet yet: E3, flet-dev/flet#6948 plus scheduling)* live only here; until E3 is pinned, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids. Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
 
 ### 14.2 Interim while the app is open
 
