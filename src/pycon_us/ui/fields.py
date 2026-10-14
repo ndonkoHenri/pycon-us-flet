@@ -175,6 +175,7 @@ def use_field_query(initial: str = "") -> FieldQuery:
     else:
         value = shown.value  # what Flutter last reported: the diff sends nothing
 
+    @report_errors
     def send_empty() -> None:
         landing.current, overwritten.current = True, False
         set_typed("")
