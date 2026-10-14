@@ -40,6 +40,7 @@
 | Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
+| Set up a second worktree of this repo | Clone the main checkout's `.flet-src` into it (`cp -cR`, never a link), then `uv sync --locked` | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
 | Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
@@ -87,6 +88,7 @@ Run from a checkout, flet-cli instead finds `sdk/python/templates/build` and the
 - `.flet-src` (git-ignored) is a checkout of `flet-dev/flet` at that SHA:
   - For contributors, a clone.
   - For the owner, a `git worktree` of his Flet repo. His main checkout stays free for upstream work, and the app always builds from the pin.
+  - In a second worktree of this repo (an agent's, for example), an APFS clone of the main checkout's `.flet-src`, never a link to it: every build writes a wheel build folder inside the Flet checkout, so linked worktrees broke each other's builds (§5.8, D-219).
 - `pyproject.toml` points uv at the packages in `.flet-src` (`[tool.uv.sources]`) and tells `flet build` to bundle the same `flet` (`[tool.flet.dev_packages]`, §3.1).
 
 ```bash
@@ -97,12 +99,14 @@ git -C .flet-src checkout --detach "$(cat .flet-ref)"
 # Owner: a worktree of an existing Flet checkout.
 git -C ../../flet worktree add --detach "$PWD/.flet-src" "$(cat .flet-ref)"
 
-# Check the pin before building anything for testers.
-test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" && echo "Flet pin OK"
+# Check the pin before building anything for testers: HEAD, then the files (about 9 s).
+# A worktree's clone (§5.8) reports the main checkout's HEAD, so HEAD alone can pass on stale files.
+test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
+  && git --no-optional-locks -C .flet-src diff --quiet HEAD && echo "Flet pin OK"
 ```
 
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
-1. Check out the new SHA in `.flet-src`, and write it to `.flet-ref`.
+1. Check out the new SHA in the main checkout's `.flet-src`, and write it to `.flet-ref`. Every other worktree then replaces its clone (§5.8).
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
@@ -389,7 +393,7 @@ cd .flet-src/client && flutter run -d emulator-5554    # or -d <simulator udid>
 - `-w` also opens a browser tab; `BROWSER=true` stops that.
 - An "Exception in ASGI application" traceback ending in "Web root path not found: …/flet_web/web" on any HTTP `GET /` (a browser tab, `curl`) is harmless: a source checkout has no built web client, and the native client uses only the WebSocket.
 - Stopping `flet run` can leave the app's Python child listening on port 8550, and the next `flet run -p 8550` then cannot bind. `lsof -nP -iTCP:8550 -sTCP:LISTEN` names the process; kill it.
-- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src checkout -- <path>`. In a worktree of your own Flet repo, never restore all of `client/`, which would discard your edits.
+- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src checkout -- <path>`. In a worktree of your own Flet repo, never restore all of `client/`, which would discard your edits. In a worktree's clone (§5.8), copy the three files back from the main checkout's `.flet-src` with `cp` instead: git commands that write would act on the main checkout's Flet worktree.
 - Stop with `q` in terminal 2 and Ctrl+C in terminal 1.
 
 What is different in the companion client:
@@ -483,17 +487,31 @@ LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 - When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
 
-### 5.8 Several builds at once: a pub cache per worktree (D-176)
+### 5.8 Several builds at once: a Flet checkout and a pub cache per worktree (D-219, D-176)
 
-**Why.** serious_python 5.0.0, which embeds Python in the app, stages each build's Python app inside its own plugin folder in the **pub cache**, and every Flutter project on the Mac shares that folder. Two builds that overlap can ship each other's Python; nothing fails or warns, and the app runs another worktree's code. It happened three times on 2026-10-12 with agents building in parallel (#176).
+**Why.** Two folders that every worktree's builds wrote to let overlapping builds spoil each other: the Flet checkout's wheel build folder, which fails a build loudly, and the pub cache, which ships the wrong Python silently.
+
+**The Flet checkout** (#208). Every build pip-installs the bundled `flet` from `.flet-src/sdk/python/packages/flet` (`[tool.flet.dev_packages]`, §2.2), and pip builds a local folder in place: setuptools writes `build/lib/`, `build/bdist.<platform>/wheel/` and `src/flet.egg-info/` inside it. Worktrees whose `.flet-src` is a link to the main checkout's all build in that one folder, so one build deletes or rewrites what another is copying, and `flet build` stops in the packaging step with "Failed building wheel for flet" after `[Errno 2] No such file or directory`, `[Errno 66] Directory not empty` or `[Errno 17] File exists` on a path under `build/bdist.macosx-11.0-arm64/wheel/` (three times on 2026-10-13).
+- An interrupted build leaves `build/bdist.*/wheel/flet-0.1.0.dist-info` behind, and from then on every build from that folder fails with `[Errno 17]`, even alone.
+- Files left in `build/lib/` go into the wheel even after the source has dropped them, for example across a pin bump.
+- A link also points `uv sync`'s editable installs at the main checkout, since uv resolves the link: `uv run flet` then runs the main checkout's flet-cli and template, not the worktree's.
+
+**The pub cache.** serious_python 5.0.0, which embeds Python in the app, stages each build's Python app inside its own plugin folder in the **pub cache**, and every Flutter project on the Mac shares that folder. Two builds that overlap can ship each other's Python; nothing fails or warns, and the app runs another worktree's code. It happened three times on 2026-10-12 with agents building in parallel (#176).
 - **iOS:** the packaging step copies `build/python-app/` into `<pub cache>/hosted/pub.dev/serious_python_darwin-5.0.0/darwin/` (`dist_ios/app`, then the Swift package's `serious_python_darwin/Sources/serious_python_darwin/Resources/app`; site-packages and the native extension frameworks go there too). Xcode copies that folder into the app's `serious_python_darwin_serious_python_darwin.bundle/app` minutes later, so a build that packages in between wins.
 - **Android: the same race, with a shorter window.** The plugin's Gradle tasks write `app.zip`, `stdlib.zip` and `sitepackages.zip` to `serious_python_android-5.0.0/android/src/main/assets/` and the native libraries to `src/main/jniLibs/<abi>/`, paths relative to the plugin's folder in the pub cache (`build.gradle.kts:151, 423-454`); the APK takes them when Gradle merges assets later in the same run. Two Gradle builds that overlap there can package each other's `app.zip`.
 - `flet debug` and `flet test` run the same pipeline (§5.3, §5.7). The companion client (§5.2) does not embed Python and is not affected.
 
-**The rule.** When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree uses a pub cache of its own under `build/`:
+**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone:
 
 ```bash
-# Once per worktree, and again whenever build/pub-cache is gone: an APFS clone of the shared cache.
+# Once per worktree, from its root (in the main checkout the Flet lines change nothing).
+# 1. Its own Flet checkout: a clone of the main checkout's .flet-src, without the clone's wheel build folder.
+main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")   # the main checkout
+test -L .flet-src && rm .flet-src                                             # a link to the shared checkout
+test -e .flet-src || { cp -cR "$main/.flet-src" .flet-src && rm -rf .flet-src/sdk/python/packages/flet/build; }
+uv sync --locked                                                              # moves the editable installs to the clone
+
+# 2. Its own pub cache, and again whenever build/pub-cache is gone: a clone of the shared cache.
 # The test keeps a second run from nesting a copy inside the first (see below).
 mkdir -p build && { test -d build/pub-cache || cp -cR ~/.pub-cache build/pub-cache; }
 
@@ -503,6 +521,14 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet debug android -d emulator-5580
 PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/ui -v
 ```
 
+**The Flet clone.**
+- It took 2 s for the 178 MB checkout (8,400 files). It leaves out the `flet` package's `build/` folder, which the main checkout's own builds left there, for the reasons above.
+- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits it or a clone (D-213). Cloned from a `git worktree` of a Flet repo (the owner's setup, §2.2), the clone keeps the `.git` file, which names that same Flet worktree: git reads work in the clone (`rev-parse`, `diff`), but a command that writes there (`checkout`, `reset`) would move the main checkout's `.flet-src`. So a clone's HEAD is the main checkout's, and the pin check (§2.2) compares the clone's files too: after a bump in the main checkout, HEAD alone would pass on a clone still at the old pin.
+- After a pin bump (§2.2), replace the clone: `rm -rf .flet-src`, then the Flet lines again.
+- If the wheel step fails with `[Errno 17]` or `[Errno 66]` after an interrupted build, delete your clone's leftovers, `rm -rf .flet-src/sdk/python/packages/flet/build`, and build again. Never clean the main checkout's `.flet-src` from a worktree.
+- `rm -rf build` and `flet clean` leave the clone alone: it lives outside `build/`.
+
+**The pub cache clone.**
 - `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On the owner's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
 - Keep the `test -d`: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the line again.
 - The clone carries whatever another build last staged in the plugin folders; your build replaces it in your copy only.
@@ -538,7 +564,9 @@ diff -rq -x .keep build/python-app \
 
 Checked on 2026-10-12 (#176), from a fresh clone of the cache: `flet build ios-simulator` took 4 minutes and `flet build apk --arch arm64-v8a` 2 minutes. Both staged into `build/pub-cache` (`dist_ios/app` and `assets/app.zip` written by these builds) while the copies in `~/.pub-cache` still held another worktree's app from half an hour earlier, both checks printed nothing, and the app ran on an iPhone 17 simulator (iOS 26.5). On 2026-10-13, `flet build aab` (`build/aab/pycon-us.aab`) and an unsigned `flet build ipa` (`build/ipa/pycon-us.xcarchive`) from the same clone passed the AAB and archive checks; the signed-IPA line was tried on an IPA zipped by hand from that archive's app, since no profile exists to export one yet (#121).
 
-The upstream fix, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When the pin brings it, this subsection and D-176 go.
+Checked on 2026-10-14 (#208). The race, in scratch copies of the `flet` package (never in a shared checkout): four `pip wheel` runs at once in one folder, five rounds, failed 12 of 20 times with `[Errno 17]`, `[Errno 2]` and `[Errno 66]` under `build/bdist.macosx-11.0-arm64/wheel/`; four runs at once in four clones failed 0 of 20. A planted `build/bdist.*/wheel/flet-0.1.0.dist-info` failed a lone build with `[Errno 17]` until `build/` was deleted, and a file planted in `build/lib/flet/` came out in the wheel. The fix: two worktrees, each set up with the lines above, started `flet build ios-simulator` in the same second. Their three wheel builds each (one per Python platform) ran in step, second for second, each from its own clone; both builds passed (8 and 10 minutes on a busy host), both bundle checks printed nothing, and no log named the main checkout's `.flet-src`. A second round, `flet build ios-simulator` in one and `flet build apk --arch arm64-v8a` in the other, again overlapped their wheel builds: the APK passed and its `app.zip` check printed nothing; the iOS build packaged its Python and then stopped in Xcode with "No Xcode build settings have been found", the Xcode step on a busy host, not the wheel (as on #197); run again, it passed in 4½ minutes and its check printed nothing.
+
+The upstream fix for the pub cache, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When the pin brings it, the pub cache half of this subsection and D-176 go. The Flet clone goes with the source pin (§2.2): with 1.1.0 on PyPI, builds install `flet` from a published wheel and build nothing from `.flet-src`.
 
 ---
 
