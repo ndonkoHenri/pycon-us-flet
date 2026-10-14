@@ -44,11 +44,12 @@ from flet.pubsub.pubsub_hub import PubSubHub
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
 from pycon_us.services.storage import favorites as favorites_key
-from pycon_us.state import Conference, ConferenceCtx, ViewMemory
+from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import session_rows
 from tests.fakes import (

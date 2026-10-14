@@ -4,7 +4,7 @@
 (``tests/sessions.py``'s ``showing()``), so the memoised path (D-153), the two renders
 (D-156), the tabs' echo and the jumps run as Flet runs them. Two seams stand in for the
 device: ``AppScaffold`` is the harness's ``Column`` of the app bar's actions, the body
-and the "Now" button (the View and its bar are ``tests/test_scaffold.py``'s), and
+and the "Now" button (the View and its bar are tested with ``tests/chrome.py``), and
 ``ListView.scroll_to`` is recorded instead of sent to a client, answering a keyed scroll
 with the scroll end Flutter would report (or with nothing, for a list already in place)
 and reading ``self.page`` first, as Flet does, so a list that has left the page raises
@@ -37,12 +37,14 @@ from flet.messaging.session import Session
 from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
+from pycon_us.feed_refresh import Problem
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule as screen
 from pycon_us.screens import schedule_days, schedule_now
 from pycon_us.services import Services
 from pycon_us.services.storage import THEME, Storage
-from pycon_us.state import Conference, Problem, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import sessions
 from tests.fakes import MemoryPrefs, MemorySemantics
@@ -316,11 +318,12 @@ async def shown(
                 *,
                 moves: bool = True,
                 late: bool = False,
+                hold: asyncio.Event | None = None,
                 wait: bool = True,
                 **settings: Any,
             ) -> Shown:
-                """Render the Schedule with these ``Prefs``; ``moves`` and ``late`` as
-                in ``Shown``.
+                """Render the Schedule with these ``Prefs``; ``moves``, ``late`` and
+                ``hold`` as in ``Shown``.
 
                 With ``wait`` it returns once no jump is on its way, so the next step
                 never meets one (#237). The first display's jump, when there is one,
@@ -341,7 +344,7 @@ async def shown(
                         view_path="",  # no Router: what ft.use_view_path() says outside
                         prefs=Prefs(loaded=True, **settings),
                         memory=memory,
-                        kind=partial(Shown, moves=moves, late=late),
+                        kind=partial(Shown, moves=moves, late=late, hold=hold),
                     )
                 )
                 if wait:
@@ -1023,10 +1026,14 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
 ) -> None:
     """A list already in place sends no scroll end, so the jump answers only after its
     tries: the button must not show for those seconds and then vanish (D-204)."""
-    monkeypatch.setattr(scrolling, "LANDING_S", 0.2)
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
+    asked = asyncio.Event()  # the first ask is held: the jump stays on its way (#270)
     with caplog.at_level(logging.INFO):
-        schedule = await shown(moves=False, wait=False, reduce_motion=True)
+        schedule = await shown(moves=False, hold=asked, wait=False, reduce_motion=True)
+        await schedule.until(lambda: schedule.keyed())
+        assert schedule.jumping == 1
         assert schedule.fab is None  # the jump is on its way
+        asked.set()
         await schedule.until(lambda: schedule.jumps)
     assert schedule.jumps == [(TEN_30, "still")]
     assert "did not move" in caplog.text

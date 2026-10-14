@@ -7,7 +7,9 @@ the scroll to the row is a recorder, since no Flutter answers it here. The sessi
 the recorded 2026 feed's, and the clock is fixed in conference time. How the page looks,
 at 200 % text and in dark mode, is checked on devices (the PR); here, what it shows,
 says and does: the highlight's parsing, its one scroll, "Now in this room" at fixed
-times and rows that leave out the room's own name.
+times and rows that leave out the room's own name. The highlight's wait is held until a
+test ends it (``tests/timers.py``), so a slow host never ends it before the test looks
+(#270).
 """
 
 import asyncio
@@ -28,15 +30,17 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.locations import query_of
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import room as screen
 from pycon_us.screens import room_days
-from pycon_us.state import Conference, ViewMemory
+from pycon_us.state import Conference
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME
 from pycon_us.ui import scrolling, status_strip
 from tests import sessions
 from tests.feeds import processed
 from tests.test_theme import contrast_ratio
+from tests.timers import HeldSleeps
 from tests.trees import descendants, texts
 
 YEAR = load_year(2026)
@@ -80,6 +84,8 @@ class Room(sessions.Shown):
     """The scrolls the room asked for, in order."""
     toggles: list[Callable[[bool], None]] = field(default_factory=list)
     """The setter that mounts the room or leaves it, once its first render has run."""
+    sleeps: HeldSleeps = field(default_factory=HeldSleeps)
+    """The screen's sleeps: the highlight stays on until the test releases its wait."""
 
     @property
     def tabs(self) -> ft.Tabs:
@@ -111,6 +117,11 @@ class Room(sessions.Shown):
             await asyncio.sleep(0.01)
         await self.settle()
 
+    async def fade(self) -> None:
+        """End the highlight's wait, as its time passing would, and see the row unlit."""
+        await self.sleeps.release()
+        await self.until(lambda: self.lit_box().bgcolor == room_days.UNLIT)
+
     def day_lists(self) -> list[ft.ListView]:
         """The day pages, in tab order."""
         (pages,) = self.find(ft.TabBarView)
@@ -130,7 +141,8 @@ async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
     """Return render(route, ...): ``RoomDetail`` for ``ROOM`` opened at ``route``."""
-    monkeypatch.setattr(screen, "HIGHLIGHT_S", 0.05)
+    sleeps = HeldSleeps()
+    monkeypatch.setattr(screen, "asyncio", sleeps)  # the room module's name only
 
     async def scroll(
         list_ref: ft.Ref[ft.ListView],
@@ -180,7 +192,7 @@ async def render(
                 prefs=Prefs(loaded=True, reduce_motion=reduce_motion),
                 memory=memory,
                 route=route,
-                kind=partial(Room, toggles=toggles),
+                kind=partial(Room, toggles=toggles, sleeps=sleeps),
             )
         )
 
@@ -274,7 +286,10 @@ async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
     assert box.key == ft.ScrollKey("session-31")
     assert box.bgcolor == room_days.HIGHLIGHT
     assert isinstance(box.animate, ft.Animation) and box.animate.duration == 250
-    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
+    await room.until(lambda: room.sleeps.held == 1)
+    assert room.sleeps.asked == [screen.HIGHLIGHT_S]  # all of it, once in place
+    assert room.lit_box().bgcolor == room_days.HIGHLIGHT  # lit while it waits
+    await room.fade()
 
 
 async def test_a_row_alone_in_its_slot_is_lit_with_its_time(render: Render) -> None:
@@ -325,7 +340,9 @@ async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes
     assert room.scrolls == [Scroll("session-31", 0)]
     assert room.lit_box().bgcolor == room_days.HIGHLIGHT
     assert room.lit_box().animate is None
-    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
+    await room.until(lambda: room.sleeps.held == 1)
+    assert room.sleeps.asked == [screen.HIGHLIGHT_S]
+    await room.fade()
 
 
 async def test_a_re_render_does_not_scroll_again(render: Render) -> None:
@@ -357,7 +374,7 @@ async def test_after_leaving_the_room_the_next_room_tile_highlights_again(
     render: Render,
 ) -> None:
     room = await render(highlighted(TACHYON))
-    await room.until(lambda: room.lit_box().bgcolor == room_days.UNLIT)
+    await room.fade()
     await room.show(False)  # Back pops the room: it forgets its highlight
     assert room.memory.room_highlights == {}
     await room.show(True)  # the session's room tile, tapped again

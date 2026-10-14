@@ -14,9 +14,10 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.core.timefmt import ago_label, day_label, local_date, time_label
+from pycon_us.feed_refresh import Status
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import Status, use_conference
+from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 
 STATUS_ICONS: dict[Status, ft.IconData] = {

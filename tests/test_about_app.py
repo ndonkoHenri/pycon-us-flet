@@ -19,12 +19,12 @@ from flet.components.hooks.use_ref import MutableRef
 import pycon_us
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import about_app
 from pycon_us.screens.about_app import UNLOCK_TAPS, AboutApp
 from pycon_us.services import Services, errors
 from pycon_us.services.storage import Storage
-from pycon_us.state import ViewMemory
 from tests.fakes import (
     FakePage,
     MemoryClipboard,

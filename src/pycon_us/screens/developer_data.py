@@ -23,6 +23,7 @@ from flet.utils import is_embedded
 from pycon_us import clock
 from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites, use_favorites
+from pycon_us.feed_refresh import Problem, Source
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import (
@@ -38,7 +39,7 @@ from pycon_us.screens.developer_ui import (
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS
-from pycon_us.state import Conference, Problem, Source, use_conference
+from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.share import NOT_SHARED as SHEET_NOT_OPENED
 from pycon_us.ui.share import centre
