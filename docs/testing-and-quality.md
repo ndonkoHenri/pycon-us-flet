@@ -365,7 +365,7 @@ The machine records each row's attribution at enqueue time and compares it in an
 | `wait_for(t, find, what, gone=, count=)` | Pumps 100 ms at a time until `find()` matches (or matches none, or exactly `count`), at most 15 s; on a timeout saves `timed-out-<flow>.png` if the device still answers, and fails with what it saw |
 | `wait_for_id`, `wait_for_text`, `wait_for_tooltip` | `wait_for` with an identifier, an exact text or a tooltip |
 | `tap(t, finder)`, `tap_id`, `tap_text` | Tap the first match once it is on screen, then pump once |
-| `open_tab(t, tab)` | Switch to a tab's root (`app.nav.<tab>`) once one bar shows, and wait for `<tab>.title` with one bar again: while one root replaces another both bars are on screen, and a tap on the leaving one is lost (D-218) |
+| `open_tab(t, tab)` | Switch to a tab's root (`app.nav.<tab>`) once one bar shows, tapping again every second until `<tab>.title` shows, then wait for one bar again: while one root replaces another both bars are on screen, and a tap on the leaving one, or one while the root re-renders, is lost (D-218) |
 | `tap_tooltip(t, tooltip)` | Tap an icon button by its tooltip, its accessible name (D-27), e.g. the app bar's Search |
 | `tap_until(t, target, done, what)` | Tap `target()` again every second until `done()` matches, at most 15 s: for a tap an animation can swallow on a control that acts once, such as a SnackBar's Undo (D-218) |
 | `enter_text_id(t, identifier, text)` | Replace a field's text by its identifier, as typing it would (`RemoteTester.enter_text`, one `on_change`) |

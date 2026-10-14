@@ -144,8 +144,11 @@ async def open_tab(t: RemoteTester, tab: str) -> None:
 
     Each root has its own bar (D-144), and while one root replaces another both bars
     are on screen: a tap on the leaving one is lost (#108 lost a My schedule tap that
-    way on the iOS simulator). So the tab is tapped when exactly one bar shows, and
-    the switch is over when its root's title shows with one bar again (D-170).
+    way on the iOS simulator, and a More tap on the Android emulator while Now
+    re-rendered for a new fake clock). So the tab is tapped once one bar shows, and
+    again every ``RETAP_SECONDS`` until its root's title shows (a tap on the tab
+    already shown only scrolls its root to the top, D-166); the switch is over when
+    the title shows with one bar again (D-170).
 
     Args:
         t: The tester, on a tab root.
@@ -159,8 +162,13 @@ async def open_tab(t: RemoteTester, tab: str) -> None:
             t, lambda: t.find_by_semantics_identifier(nav), f"one {nav}", count=1
         )
 
-    await tap(t, await one_bar())
-    await wait_for_id(t, f"{tab}.title")
+    await one_bar()
+    await tap_until(
+        t,
+        lambda: t.find_by_semantics_identifier(nav),
+        lambda: t.find_by_semantics_identifier(f"{tab}.title"),
+        f"the {tab} tab",
+    )
     await one_bar()
 
 

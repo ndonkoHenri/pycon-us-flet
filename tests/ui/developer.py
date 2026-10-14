@@ -1,11 +1,12 @@
 """Set the scene of a UI flow from the Developer screen, as a person would (D-73, D-78).
 
-``open_developer()`` unlocks the screen with 7 taps on About this app's version row the
-first time, and opens it from the More list once it is unlocked (D-187). ``fresh_start()``
-sets the fake clock and the feed URL there, refreshes from that feed, and returns to Now,
-so a flow runs on a known moment and a recorded feed rather than on the live one.
-``apply_options()`` and ``refresh_now()`` are its steps, which a flow can take on its
-own (F1 sets an unreachable feed URL). The inventory is testing-and-quality.md §5.2.
+``open_developer()`` opens the screen through About this app, unlocking it there with 7
+taps on the version row the first time (D-187). ``fresh_start()`` sets the fake clock
+and the feed URL there, refreshes from that feed, and returns to Now, so a flow runs on
+a known moment and a recorded feed rather than on the live one (D-218).
+``apply_options()``, ``reopen_developer()`` and ``refresh_now()`` are its steps, which a
+flow can take on its own (F1 sets an unreachable feed URL). The inventory is
+testing-and-quality.md §5.2.
 """
 
 from datetime import timedelta

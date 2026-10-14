@@ -47,6 +47,7 @@ async def test_start_offline_shows_schedule(
     # Developer: the feed URL a person types, then Refresh now, which gets no answer.
     await open_developer(t)
     await apply_options(t, feed_url=offline_url)
+    await screenshot("f1-developer-applied")  # on iOS, Apply in sight over the keyboard
     await reopen_developer(t)  # the keyboard down, the Data rows in sight
     await refresh_now(t, NO_ANSWER)
     await screenshot("f1-developer-no-answer")
