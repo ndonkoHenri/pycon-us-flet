@@ -29,7 +29,7 @@ from pycon_us.ui.links import (
     link_kind,
     open_link,
 )
-from pycon_us.ui.semantics import named, semantics_key
+from pycon_us.ui.semantics import merged, named, semantics_key
 from pycon_us.year_keynotes import KeynoteSpeaker
 
 PLAIN_TOP = 16
@@ -131,11 +131,15 @@ def _ExternalLinkTile(
     tooltip = COPY_TOOLTIPS.get(kind)
     if tooltip is None:
         return row
-    copy_button: ft.Control = ft.IconButton(
+    button = ft.IconButton(
         ft.Icons.CONTENT_COPY_OUTLINED, tooltip=tooltip, on_click=copy
     )
-    if identifier is not None:
-        copy_button = named(f"{identifier}.copy", copy_button)  # one node (D-190)
+    # One node either way, named by the tooltip (D-190, F55, D-234).
+    copy_button = (
+        named(f"{identifier}.copy", button)
+        if identifier is not None
+        else merged(button)
+    )
     return ft.Row(
         [
             ft.Container(row, expand=True),

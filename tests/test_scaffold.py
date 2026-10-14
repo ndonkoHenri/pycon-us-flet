@@ -21,7 +21,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from tests import chrome
-from tests.chrome import app_bar, back_arrow, body_of, click, view_at
+from tests.chrome import app_bar, back_arrow, body_of, click, merged_button, view_at
 from tests.fakes import FakePage, Hooks
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
@@ -181,8 +181,8 @@ def test_search_records_its_opener_with_the_query_then_opens(
 ) -> None:
     memory = ViewMemory()
     page.route = "/map?highlight=7"
-    button = search_button(memory, "rooms")
-    assert button.tooltip == "Search"
+    button = merged_button(search_button(memory, "rooms"))
+    assert button.tooltip == "Search"  # its name, in its own node (D-234)
     click(button)
     assert memory.search_base == "/map?highlight=7"
     assert page.navigated == ["/search?scope=rooms"]

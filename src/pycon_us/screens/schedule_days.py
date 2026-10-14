@@ -59,6 +59,9 @@ Schedule's and a room's tabs (D-194)."""
 TODAY_DOT = 6
 """The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
 
+JUMP_TOOLTIP = "Jump to the current time"
+"""What the "Now" button does: its tooltip, said after its label (ux.md §5.2)."""
+
 type Empty = Literal["sprint", "filtered"]
 """Why a day shows no slots: a sprint day has no sessions; a filter hid all of them."""
 
@@ -331,13 +334,24 @@ def _SlotItem(
 def now_button(
     *, on_today: bool, on_click: Callable[[], Awaitable[None]]
 ) -> ft.FloatingActionButton:
-    """Return the "Now" button (SCHED-15): "Today" while another day shows."""
+    """Return the "Now" button (SCHED-15): "Today" while another day shows.
+
+    What it does is said after its label, from inside the button, which Flutter's
+    button merges into its own node ("Now", then "Jump to the current time"). Flet's
+    ``tooltip`` sits around the button, a node of its own beside it, and a View takes
+    only a ``FloatingActionButton``, so no merge can go around it: the tooltip shown on
+    a long press stays out of the semantics (F55, D-234). Said by the label's
+    ``semantics_label``, as a link's "Opens in browser" is (ux.md §4.7): a
+    ``Semantics``' ``tooltip`` would show a second tooltip too, and its ``hint_text``
+    never reaches Flutter at the pin (#187).
+    """
+    label = "Now" if on_today else "Today"
     return ft.FloatingActionButton(
         content=ft.Semantics(
             identifier=f"{SCREEN}.jump_now",
-            content=ft.Text("Now" if on_today else "Today"),
+            content=ft.Text(label, semantics_label=f"{label}\n{JUMP_TOOLTIP}"),
         ),
         icon=ft.Icons.SCHEDULE,
-        tooltip="Jump to the current time",
+        tooltip=ft.Tooltip(JUMP_TOOLTIP, exclude_from_semantics=True),
         on_click=on_click,
     )
