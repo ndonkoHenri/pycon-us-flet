@@ -451,6 +451,8 @@ async def test_the_same_feed_makes_stale_data_fresh(
 ) -> None:
     """The strip's age: "Updated 3 days ago" goes when the network confirms the data."""
     assert await storage.write_feed(CACHED_FEED)
+    # The cache's age is its file's time: pinned, so the test holds on any date (#328).
+    os.utime(storage.feed_path, (NOW.timestamp(), NOW.timestamp()))
     conference = await loaded(storage, year)
     clock.set_test_now(NOW + timedelta(days=3))
     assert conference.status(year.conference) == "stale"
