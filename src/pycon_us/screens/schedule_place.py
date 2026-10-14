@@ -68,6 +68,8 @@ class TodayLayout:
             built, so today's list cannot be scrolled then.
         items: Today's slots and now line as last rendered (``list_items()``).
         heights: Each item's height by key, as last reported, in dp.
+        laid_out: The last ``items`` that had all reported a height: the list the
+            device shows until a new slot among ``items`` reports (#338's review).
         listed: The items the slots effect last saw; None before its first run.
         changes: How many layout changes have come; a wait ends in a restore only
             when no newer change came during it.
@@ -81,6 +83,7 @@ class TodayLayout:
     shown: bool = False
     items: tuple[ListItem, ...] = ()
     heights: dict[str, float] = field(default_factory=dict)
+    laid_out: tuple[ListItem, ...] = ()
     listed: tuple[ListItem, ...] | None = None
     changes: int = 0
     moved_at: float | None = None
@@ -102,15 +105,24 @@ class TodayLayout:
         """Record where a scroll of today's list ended as the reader's place."""
         self.moved_at = None
         # Even while a change waits for its restore: the end of a jump to now, or of
-        # the user's own scroll, is the place from then on.
-        memory.schedule_anchor = anchor_at(self.items, self.heights, pixels)
+        # the user's own scroll, is the place from then on. Read on the list the user
+        # saw: a slot that has not reported yet has not been laid out on the device,
+        # and the restore once it reports puts this place back.
+        self._caught_up()
+        memory.schedule_anchor = anchor_at(self.laid_out, self.heights, pixels)
 
     def measured(self, key: str, height: float) -> bool:
         """Record an item's reported height; return whether it is a new one."""
         if self.heights.get(key) == height:
             return False
         self.heights[key] = height
+        self._caught_up()
         return True
+
+    def _caught_up(self) -> None:
+        """Take ``items`` as laid out once each of them has reported a height."""
+        if all(item.key in self.heights for item in self.items):
+            self.laid_out = self.items
 
 
 def use_today_place(

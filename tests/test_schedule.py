@@ -970,6 +970,30 @@ async def test_a_refresh_during_a_scroll_leaves_the_list_where_the_scroll_ends(
     assert _top(heights, key) <= end < _top(heights, key) + heights[key]
 
 
+async def test_a_scroll_end_before_new_slots_report_is_read_on_the_list_shown(
+    shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """A filter change or a refresh that brings a slot back above the top: until the
+    device has laid the new list out, and the slot has reported its height, a scroll
+    end is where the reader is in the list it still shows, and the restore once the
+    slot reports puts that slot back at the top (#338's review)."""
+    schedule = await shown(excluded_tracks=("Plenary",))
+    heights = await _lay_out(schedule)
+    assert KEYNOTE not in heights
+    pixels = _top(heights, TWO_PM) + 1
+    await schedule.scroll_end(FRIDAY, pixels)
+    schedule.forget()
+    await schedule.prefs.save(schedule.storage, excluded_tracks=())
+    await settle()
+    await schedule.scroll_end(FRIDAY, pixels)  # before the keynote's report
+    assert memory.schedule_anchor is not None
+    assert memory.schedule_anchor.key == TWO_PM
+    heights = await _lay_out(schedule)
+    assert KEYNOTE in heights
+    assert _offsets(schedule)[-1] == _top(heights, TWO_PM) + 1
+    assert schedule.keyed() == []
+
+
 async def test_a_now_tap_while_a_restore_waits_lands_where_it_asked(
     shown: Callable[[], Awaitable[Shown]],
     memory: ViewMemory,
