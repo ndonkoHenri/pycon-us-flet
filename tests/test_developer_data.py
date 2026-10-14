@@ -200,7 +200,7 @@ def render(
     monkeypatch.setattr(developer_data, "use_prefs", lambda: prefs)
     monkeypatch.setattr(developer_data, "use_favorites", lambda: favorites)
     monkeypatch.setattr(developer_data, "use_tokens", lambda: LIGHT_TOKENS)
-    # The minute tick needs a renderer; its own test is test_status_strip.py's.
+    # The minute tick needs a renderer; its own tests are test_status_strip_ticks.py's.
     monkeypatch.setattr(developer_data, "use_minute", lambda: minutes.append(0) or 0)
 
     def render() -> ft.Column:
