@@ -1,16 +1,24 @@
-"""Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page."""
+"""Fakes shared by the tests: stand-ins for the Flutter side of Flet services and the page.
+
+And ``QueuedWrite``, a feed cache write held in its worker thread.
+"""
 
 import asyncio
 import dataclasses
+import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
+import pytest
 
 # Private: Flet has no public way to bind a page (its own pytest plugin sets this too).
 # Checked against the .flet-ref pin 15854a0ac; switch when #160's binding lands.
 from flet.controls.context import _context_page
+
+from pycon_us.services import storage
 
 
 class MemoryPrefs(ft.SharedPreferences):
@@ -278,3 +286,31 @@ class Hooks:
                 self.renders += 1
 
         return self.state, set_state
+
+
+class QueuedWrite:
+    """Holds the feed cache's write in its worker thread, before the writers' lock.
+
+    That lock gives the threads turns, not order: a deletion asked for after the write
+    takes the lock first unless ``Storage.delete_feed`` waits for the write (D-244).
+    """
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._queued = threading.Event()
+        self._go = threading.Event()
+        write = storage.write_atomic
+
+        def held(path: Path, data: bytes) -> None:
+            self._queued.set()
+            self._go.wait(5)
+            write(path, data)
+
+        monkeypatch.setattr(storage, "write_atomic", held)
+
+    async def queued(self) -> None:
+        """Wait until a write's worker is held."""
+        await asyncio.to_thread(self._queued.wait, 5)
+
+    def release(self) -> None:
+        """Let the held worker take the lock and write."""
+        self._go.set()

@@ -41,7 +41,6 @@ from tests.fakes import (
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 FEED = "http://127.0.0.1:8000/conference-2026.json"
-OTHER_FEED = "http://127.0.0.1:8001/conference-2026.json"
 
 
 @pytest.fixture(autouse=True)
@@ -479,19 +478,14 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
     assert outcome(render) == "Back to real time and the year's feed."
 
 
-async def test_leaving_a_developer_feed_url_drops_the_feed_it_may_have_cached(
+async def test_apply_and_reset_drop_the_cache_when_they_leave_a_feed_url(
     render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
-    # An offline start would publish the cache as the schedule (D-187).
+    # The rule is the store's (Conference.set_feed_url, D-244); Apply and Reset use it.
     await svc.storage.write_feed(b"{}")
-    await press(render, "developer.reset")
-    assert svc.storage.feed_path.exists()  # the year's feed: kept
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
     assert svc.storage.feed_path.exists()  # a feed URL in use: kept
-    await type_into(render, "developer.feed_url", OTHER_FEED)
-    await press(render, "developer.apply")
-    assert svc.storage.feed_path.exists()  # from one feed URL to another: kept
     await type_into(render, "developer.feed_url", "")
     await press(render, "developer.apply")
     assert not svc.storage.feed_path.exists()  # Apply back to the year's feed

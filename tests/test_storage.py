@@ -11,7 +11,7 @@ import pytest
 
 from pycon_us.services import storage
 from pycon_us.services.storage import Pref, Storage
-from tests.fakes import MemoryPrefs
+from tests.fakes import MemoryPrefs, QueuedWrite
 
 
 @pytest.fixture
@@ -383,6 +383,24 @@ async def test_a_deletion_waits_for_a_write_in_progress(store: Storage) -> None:
         deleting = asyncio.create_task(store.delete_feed("Reset app"))
         await asyncio.sleep(0.05)
         assert store.feed_path.exists()
+    assert await deleting is True
+    assert not store.feed_path.exists()
+
+
+async def test_a_deletion_waits_for_a_write_asked_for_before_it_even_a_cancelled_one(
+    store: Storage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The lock gives the threads turns, not order: a write still queued for it, whose
+    # caller was cancelled (Reset app cancels a refresh, D-198), would land after the
+    # deletion and bring the file back (D-244).
+    held = QueuedWrite(monkeypatch)
+    writing = asyncio.create_task(store.write_feed(b"feed"))
+    await held.queued()
+    writing.cancel()
+    deleting = asyncio.create_task(store.delete_feed("Reset app"))
+    done, _ = await asyncio.wait({deleting}, timeout=0.1)
+    held.release()
+    assert not done  # it waits for the write
     assert await deleting is True
     assert not store.feed_path.exists()
 

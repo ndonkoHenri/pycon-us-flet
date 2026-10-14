@@ -18,7 +18,7 @@ from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES, NotFound
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
-from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.services.storage import SERVICE_ERRORS, Storage
 from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import (
     BOOT_COLOR,
@@ -176,7 +176,7 @@ async def bootstrap(
     page.on_close = svc.close
     try:
         await prefs.load(svc.storage)
-        start_developer_options(prefs, conference)
+        await start_developer_options(prefs, conference, svc.storage)
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
@@ -210,7 +210,9 @@ async def bootstrap(
     page.on_app_lifecycle_state_change = on_lifecycle
 
 
-def start_developer_options(prefs: Prefs, conference: Conference) -> None:
+async def start_developer_options(
+    prefs: Prefs, conference: Conference, storage: Storage
+) -> None:
     """Put the stored Developer options into effect for this session (D-73, D-187).
 
     The fake clock runs from its stored start again, so each start of the app begins
@@ -220,11 +222,12 @@ def start_developer_options(prefs: Prefs, conference: Conference) -> None:
     Args:
         prefs: The loaded settings.
         conference: The session's ``Conference`` store.
+        storage: Where the feed cache lives (``Conference.set_feed_url``).
     """
     clock.start_fake_clock(prefs.fake_now)
     if prefs.fake_now is not None:
         logger.info("Fake clock on: it starts at %s", prefs.fake_now.isoformat())
-    conference.set_feed_url(prefs.feed_url)
+    await conference.set_feed_url(prefs.feed_url, storage)
     show_details(prefs.developer_unlocked)
 
 
