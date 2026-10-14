@@ -92,6 +92,15 @@ class S6Reminders(ft.Service):
         pending = await self._invoke_method("get_pending")
         return [Pending(**p) for p in pending or []]
 
+    async def get_shown(self) -> list[int]:
+        """Return the ids of this app's notifications shown and not dismissed yet."""
+        shown = await self._invoke_method("get_shown")
+        return [i for i in shown or [] if i is not None]
+
     async def cancel_all(self) -> None:
         """Cancel every pending and shown notification of this app."""
         await self._invoke_method("cancel_all")
+
+    async def cancel_all_pending(self) -> None:
+        """Cancel every pending notification, leaving the ones already shown."""
+        await self._invoke_method("cancel_all_pending")

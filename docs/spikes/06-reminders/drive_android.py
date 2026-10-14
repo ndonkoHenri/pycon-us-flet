@@ -250,6 +250,22 @@ def check_many() -> None:
     time.sleep(2)
 
 
+def check_keep_shown() -> None:
+    """D-222: cancel_all_pending() leaves a shown reminder in the shade."""
+    adb("logcat", "-c")
+    if running():
+        main("swipe")
+    main("exact", "allow")
+    main("launch", "/keep-shown/60/exact")
+    end = time.time() + 240
+    while time.time() < end and not any("cancelled-pending" in x for x in app_lines()):
+        time.sleep(3)
+    print("\n".join(app_lines()))
+    main("exact", "deny")
+    main("shade")
+    shot("android-light-kept-shade")
+
+
 CHECKS = {
     "swiped": lambda: scenario(
         "swiped away", "/schedule/120/inexact/42", 42, then=["swipe"]
@@ -308,6 +324,7 @@ CHECKS = {
     "long": check_long_leads,
     "moved": check_moved_and_warm_tap,
     "many": check_many,
+    "keep-shown": check_keep_shown,
 }
 
 

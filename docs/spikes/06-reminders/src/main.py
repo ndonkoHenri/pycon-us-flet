@@ -8,13 +8,14 @@ running). Every step is also printed as a line starting with ``S6 `` (logcat tag
 ``flet.python`` on Android), so the drivers can read it.
 
 A start route runs one step with no tap, which the iOS simulator needs:
-``/schedule/<seconds>[/<exact|inexact>[/<id>]]``, ``/many/<count>/<seconds>``
-and ``/move``.
+``/schedule/<seconds>[/<exact|inexact>[/<id>]]``, ``/many/<count>/<seconds>``,
+``/move`` and ``/keep-shown/<seconds>[/exact]``.
 A reminder's payload is ``/opened/<id>``, the route a tap would open in the app.
 
 Imperative on purpose: the subject is the notification plumbing, not the UI.
 """
 
+import asyncio
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -24,6 +25,7 @@ from flet_s6_reminders import S6Reminders, TapEvent
 FIRST_ID = 42  # a numeric session id, as D-59 uses
 MOVED_ID = 7  # the "moved session" check reuses one id
 MANY_FIRST_ID = 1000  # the "more than 64" plan
+SHOWN_ID = 51  # the "cancel pending only" check: shown first, then a re-plan
 TEST_LEAD_S = 120
 
 
@@ -105,6 +107,25 @@ async def main(page: ft.Page) -> None:
         await schedule(MOVED_ID, 2 * TEST_LEAD_S)
         await refresh_status()
 
+    async def keep_shown(seconds: int, exact: bool) -> None:
+        # D-222's re-plan: one reminder shown, one pending, then cancel pending.
+        await reminders.cancel_all()
+        await schedule(SHOWN_ID, seconds, exact=exact)
+        await schedule(SHOWN_ID + 1, 30 * 60, exact=exact)
+        for _ in range(seconds // 5 + 60):  # up to 5 min past due (inexact)
+            if SHOWN_ID in await reminders.get_shown():
+                break
+            await asyncio.sleep(5)
+        log("before", shown=await reminders.get_shown())
+        await reminders.cancel_all_pending()
+        pending = await reminders.get_pending()
+        log(
+            "cancelled-pending",
+            pending=[p.id for p in pending],
+            shown=await reminders.get_shown(),
+        )
+        await refresh_status()
+
     async def ask(_: ft.Event[ft.Button]) -> None:
         granted = await reminders.request_permission()
         log("permission", granted=granted)
@@ -183,6 +204,8 @@ async def main(page: ft.Page) -> None:
         await schedule_many(int(parts[1]), int(parts[2]))
     elif parts == ["move"]:
         await move()
+    elif parts[:1] == ["keep-shown"] and len(parts) >= 2:
+        await keep_shown(int(parts[1]), exact=parts[2:3] == ["exact"])
     await refresh_status()
 
 

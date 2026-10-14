@@ -120,8 +120,15 @@ class S6RemindersService extends FletService {
                   "payload": p.payload,
                 })
             .toList();
+      case "get_shown":
+        final shown = await _plugin.getActiveNotifications();
+        return shown.map((n) => n.id).toList();
       case "cancel_all":
         await _plugin.cancelAll();
+        return null;
+      case "cancel_all_pending":
+        // D-222's re-plan: the ones already shown stay in the shade.
+        await _plugin.cancelAllPendingNotifications();
         return null;
       default:
         throw Exception("Unknown S6Reminders method: $name");
