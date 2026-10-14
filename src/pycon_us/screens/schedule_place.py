@@ -6,10 +6,17 @@ Flutter works out from its own layout. Only at moments when the change is laid o
 the user is not scrolling:
 
 - the filter sheet closes after a change: the sheet is modal, so the list could not
-  move, and every chip's change was laid out under it;
+  move. Its chips' changes are usually laid out and reported under it, but a close
+  that comes before the last change's reports uses stale heights, so the next report
+  of today's items puts the place back again, by key;
 - after another change, "Show all" or "Clear filters", at the next height report of
   today's items, which Flutter sends after the frame that laid the change out. Any
   scroll of the list, a jump to now and the re-tap cancel it.
+
+A newer scroll (the user's drag, a jump to now, the re-tap) also stops a put-back on
+its way between its two jumps (``TodayPlace.turn``). When Flet drops every scroll end
+of a keyed put-back (``scroll_interval``, F70), where it went is unknown: today's offset
+is dropped, and without one today comes back by key (``comes_back_by_key()``).
 
 A change made while another day shows waits for today to show again. The place is read
 only where the user's own scroll ends, never where the app's jumps end. No timers: a
@@ -80,6 +87,11 @@ class TodayPlace:
         user: The user has scrolled the list since the app last did: only then does
             a scroll's end say where the reader is.
         ends: How many scroll ends the list has reported.
+        turn: Counts what moves the list: each put-back, the user's drag (a non-idle
+            ``USER`` event), the app's own scrolls and a day switch. A put-back
+            stops between its jumps when the turn is no longer its own.
+        again: The turn of the sheet's close's put-back: while it is still the turn,
+            the next height report puts the place back again, by key.
     """
 
     memory: ViewMemory
@@ -93,12 +105,19 @@ class TodayPlace:
     moving: bool = False
     user: bool = False
     ends: int = 0
+    turn: int = 0
+    again: int = -1
 
     @report_errors
     async def measured(self, key: str, height: float) -> None:
-        """An item reported its height: a pending put-back runs while today shows."""
+        """An item reported its height: a pending put-back runs while today shows.
+
+        So does a repeat of the sheet's close's put-back, which may have read heights
+        from before the change's layout: Flet sends a size after the frame that laid
+        it out, which can come after the close (D-250).
+        """
         self.heights[key] = height
-        if self.memory.schedule_pending and self.shown:
+        if self.shown and (self.memory.schedule_pending or self.again == self.turn):
             await self.put_back()
 
     def scrolled(self, day: date, e: ft.OnScrollEvent) -> None:
@@ -126,10 +145,12 @@ class TodayPlace:
         self.moving = True
         if e.event_type == ft.ScrollType.USER:
             self.user = True
+            self.turn += 1  # the user's drag: a put-back on its way stops
 
     def scrolls_itself(self, to: Place | None) -> None:
         """The app is about to scroll today's list: to now (``to``) or to its top."""
         self.user = False
+        self.turn += 1
         self.memory.schedule_pending = False
         self.memory.schedule_place = to
 
@@ -139,9 +160,21 @@ class TodayPlace:
 
     def shows(self, day: date) -> None:
         """A day switch settled on ``day``; today's page is a new list on the device."""
+        self.turn += 1
         self.shown = day == self.day
         if self.shown:
             self.user = False
+
+    def comes_back_by_key(self) -> bool:
+        """Whether today, showing again, is put back by key rather than by offset.
+
+        A change while today was hidden drops its offset (``arm()``), and so does a
+        keyed put-back whose scroll ends Flet all dropped; any scroll end of today's
+        list records one again.
+        """
+        return self.day is not None and (
+            self.memory.schedule_pending or self.day not in self.memory.schedule_offsets
+        )
 
     def sheet_opened(self) -> None:
         """The filter sheet opened: its close says whether the filter changed."""
@@ -182,9 +215,9 @@ class TodayPlace:
         """Put the place at the top: a keyed jump, then the distance into the slot.
 
         A frame between the two jumps shows the slot's time for that frame (D-250).
-        So when every height is known to be current (``measured``: the sheet has
-        closed, after the chips' changes were laid out and reported under it), a
-        place inside the slot is one offset jump instead. Not when today's page has
+        So when the sheet has closed (``measured``), where the heights are usually
+        current, a place inside the slot is one offset jump instead: a first try,
+        which the next report repeats by key (``again``). Not when today's page has
         just slid in: its reports may still be on their way then.
         """
         self.memory.schedule_pending = False
@@ -195,24 +228,35 @@ class TodayPlace:
         key, into = target
         top = top_of(self.items, self.heights, key) if measured and into else None
         self.user = False
-        ends = self.ends
+        self.turn += 1
+        turn, ends, day = self.turn, self.ends, self.day
+        if measured:  # the next report repeats it, unless something moves the list
+            self.again = turn
         try:
             if top is not None:
                 await list_view.scroll_to(offset=top + into, duration=0)
             else:
                 await list_view.scroll_to(scroll_key=ft.ScrollKey(key), duration=0)
-            if top is None and into:
-                keyed = self.ends
+            keyed = self.ends
+            if top is None and into and self.turn == turn:
                 await list_view.scroll_to(delta=into, duration=0)
-                # Flet drops an end within scroll_interval of the last (F70): the
-                # delta's never comes after the keyed jump's, which sent its offset.
-                if keyed > ends and self.ends == keyed:
-                    self.memory.schedule_offsets[self.day] += into
         except RuntimeError as error:
             if LEFT_THE_PAGE not in str(error):
                 raise
             logger.info("Put back %s: the list left the page", key)
             return
+        if self.turn != turn:  # a newer scroll owns the list and its offset
+            logger.info("Put back %s: a newer scroll took over", key)
+            return
+        # Flet drops an end within scroll_interval of the last of its type (F70), so
+        # the offset a day switch puts back may not be where the put-back went.
+        if self.ends != ends:
+            if top is None and into and self.ends == keyed:  # the delta's end dropped
+                self.memory.schedule_offsets[day] += into
+        elif top is not None:
+            self.memory.schedule_offsets[day] = top + into
+        else:  # where the keyed jump went is Flutter's: today comes back by key
+            self.memory.schedule_offsets.pop(day, None)
         logger.info("Put the place back: %s, %.0f dp in", key, into)
 
 

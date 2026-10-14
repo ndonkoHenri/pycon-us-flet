@@ -30,6 +30,8 @@ class ViewMemory:
             the Schedule opens on today during the conference (SCHED-01).
         schedule_offsets: Each day list's scroll offset when its last scroll ended,
             in logical pixels: the Schedule puts it back when the list shows again.
+            Today's is dropped when a filter change leaves it unknown; today then
+            comes back by its place (D-250).
         schedule_place: The item at the top of today's list where the user's last
             scroll of it ended, or where a jump to now put it; a filter change puts it
             back at the top (D-250).

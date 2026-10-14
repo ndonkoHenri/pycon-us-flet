@@ -213,6 +213,8 @@ def Schedule() -> ft.View:
         set_rest(True)
         if jumps:
             await jump_to_now(asked=False)
+        elif shown == current and today_place.comes_back_by_key():
+            await today_place.put_back()
         else:
             await _restore(_ref(refs, shown), memory.schedule_offsets.get(shown))
 
@@ -242,7 +244,7 @@ def Schedule() -> ft.View:
         set_picked(day)
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
-        elif day == current and memory.schedule_pending:  # filtered meanwhile
+        elif day == current and today_place.comes_back_by_key():  # D-250
             await today_place.put_back()
         else:
             await _restore(_ref(refs, day), memory.schedule_offsets.get(day))

@@ -90,6 +90,8 @@ class Shown(sessions.Shown):
     """The time labels of the slot bodies that ran, in order."""
     leave: Callable[[], None] = lambda: None
     """Replace the Schedule with another screen, as a bottom-tab switch does (D-142)."""
+    come_back: Callable[[], None] = lambda: None
+    """Mount a new Schedule again after ``leave``, as a return to its tab does."""
     moves: bool = True
     """Whether a keyed scroll ends with a scroll end; False: the list is already there."""
     late: bool = False
@@ -308,6 +310,7 @@ async def shown(
         _, set_renders = ft.use_state(0)
         result = sessions.current(Shown)
         result.leave = lambda: set_here(False)
+        result.come_back = lambda: set_here(True)
         result.rerender = lambda: set_renders(lambda n: n + 1)
         return screen.Schedule() if here else Elsewhere()
 

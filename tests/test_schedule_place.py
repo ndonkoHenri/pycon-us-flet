@@ -7,10 +7,12 @@ a device: it lays each item out at ``ROW_DP`` a row (and the 1 dp divider) or
 does on that layout, and an offset or a delta as ``jumpTo``, and reports the scroll's
 start, update and end before it answers, as Flutter does. The delta after a keyed jump
 reports nothing: Flet drops an end within ``scroll_interval`` of the last (F70). The
-tests send the height reports and the user's scrolls themselves. How it looks on a
+tests send the height reports and the user's scrolls themselves, and can hold the reply
+to a keyed scroll (``Device.hold``). How it looks on a
 device, the one-frame flicker between the two jumps included, is a device check.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -49,10 +51,12 @@ AI, talks and charlas leaves."""
 
 @dataclass
 class Device:
-    """Today's list on the stand-in device: its offset, and scrolls it will not report."""
+    """Today's list on the stand-in device: its offset, the scrolls it will not report,
+    and an event the next keyed scroll's reply waits for, once it has moved."""
 
     pixels: float = 0.0
     silent: int = 0
+    hold: asyncio.Event | None = None
 
 
 @pytest.fixture(autouse=True)
@@ -85,13 +89,17 @@ def device(
             on_device.pixels += kwargs["delta"]
             return
         if to == on_device.pixels:  # ensureVisible and jumpTo send nothing then
-            return
-        on_device.pixels = to
-        if on_device.silent:
+            pass
+        elif on_device.silent:
+            on_device.pixels = to
             on_device.silent -= 1
-            return
-        for kind in ("start", "update", "end"):
-            await session.dispatch_event(self._i, "scroll", _event(kind, to))
+        else:
+            on_device.pixels = to
+            for kind in ("start", "update", "end"):
+                await session.dispatch_event(self._i, "scroll", _event(kind, to))
+        if "scroll_key" in kwargs and on_device.hold is not None:
+            hold, on_device.hold = on_device.hold, None
+            await hold.wait()
 
     monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
     return on_device
@@ -262,6 +270,43 @@ async def test_a_change_that_only_removes_slots_is_put_back_without_a_report(
     assert _asks(schedule) == [("offset", _top(schedule, TWO_PM) + 150.0)]
 
 
+async def test_a_close_before_the_reports_is_put_back_again_at_them(
+    shown: Callable[..., Awaitable[Shown]], device: Device, memory: ViewMemory
+) -> None:
+    """ "Show N sessions" tapped before the device reported Summit's change: the offset
+    jump read the old heights. Flet sends a size after the frame that laid it out, so
+    the reports that follow put the place back again, by key (D-250)."""
+    schedule = await into_two_pm(shown, device, 150.0)
+    await hide(schedule, "summit", reports=False)
+    assert _asks(schedule) == [("offset", _top(schedule, TWO_PM) + 250.0)]  # stale
+    await lay_out(schedule)
+    assert _asks(schedule)[1:] == [("key", TWO_PM), ("delta", 150.0)]  # once
+    assert device.pixels == _keyed_top(schedule, TWO_PM) + 150.0
+    assert memory.schedule_offsets[FRIDAY] == device.pixels
+
+
+async def test_a_scroll_after_the_close_stops_its_repeat(
+    shown: Callable[..., Awaitable[Shown]], device: Device
+) -> None:
+    schedule = await into_two_pm(shown, device, 150.0)
+    await hide(schedule, "summit", reports=False)
+    await user_scroll(schedule, device, 0.0)
+    await lay_out(schedule)
+    assert len(_asks(schedule)) == 1
+
+
+async def test_a_closes_put_back_whose_end_was_dropped_keeps_its_offset(
+    shown: Callable[..., Awaitable[Shown]], device: Device, memory: ViewMemory
+) -> None:
+    """Flet drops the jump's end (``scroll_interval``, F70): the offset a day switch
+    puts back is still where the list is, not where the user's scroll ended."""
+    schedule = await into_two_pm(shown, device, 150.0)
+    device.silent = 1
+    await hide(schedule, "summit")
+    assert _asks(schedule) == [("offset", _top(schedule, TWO_PM) + 150.0)]
+    assert memory.schedule_offsets[FRIDAY] == device.pixels
+
+
 async def test_the_dismissal_after_the_button_puts_back_nothing_more(
     shown: Callable[..., Awaitable[Shown]], device: Device
 ) -> None:
@@ -311,6 +356,93 @@ async def test_show_all_keeps_an_unchanged_slot_as_far_in(
     assert _asks(schedule) == [("key", TWO_45), ("delta", 150.0)]
     assert device.pixels == _keyed_top(schedule, TWO_45) + 150.0
     assert memory.schedule_offsets[FRIDAY] == device.pixels
+
+
+async def test_a_put_back_whose_ends_were_dropped_comes_back_by_key(
+    shown: Callable[..., Awaitable[Shown]], device: Device, memory: ViewMemory
+) -> None:
+    """Flet drops the keyed jump's end too: where it went is Flutter's, so today's
+    offset, laid out for the old filter, is dropped and today comes back by key."""
+    schedule = await shown()
+    await lay_out(schedule)
+    await user_scroll(schedule, device, _top(schedule, TWO_45) + 150.0)
+    await show_all(schedule)
+    device.silent = 1
+    await lay_out(schedule, first=1)
+    assert FRIDAY not in memory.schedule_offsets
+    pixels = device.pixels
+    await schedule.change_day(SATURDAY)
+    schedule.forget()
+    device.pixels = 0.0  # a page that shows again is a new list, at its top
+    await schedule.change_day(FRIDAY)
+    assert _asks(schedule) == [("key", TWO_45), ("delta", 150.0)]
+    assert device.pixels == pixels
+
+
+async def test_a_put_back_whose_ends_were_dropped_comes_back_by_key_on_a_new_mount(
+    shown: Callable[..., Awaitable[Shown]], device: Device
+) -> None:
+    schedule = await shown()
+    await lay_out(schedule)
+    await user_scroll(schedule, device, _top(schedule, TWO_45) + 150.0)
+    await show_all(schedule)
+    device.silent = 1
+    await lay_out(schedule, first=1)
+    pixels = device.pixels
+    schedule.leave()
+    await schedule.settle()
+    schedule.forget()
+    device.pixels = 0.0  # a new list, at its top
+    schedule.come_back()
+    await schedule.until(lambda: schedule.find(ft.Tabs) and _asks(schedule))
+    assert _asks(schedule) == [("key", TWO_45), ("delta", 150.0)]
+    assert device.pixels == pixels
+
+
+async def _held_show_all(
+    shown: Callable[..., Awaitable[Shown]], device: Device
+) -> tuple[Shown, asyncio.Event, asyncio.Task[None]]:
+    """ "Show all" scrolled 150 dp into 2:45 PM, its keyed jump's reply held."""
+    schedule = await shown()
+    await lay_out(schedule)
+    await user_scroll(schedule, device, _top(schedule, TWO_45) + 150.0)
+    schedule.forget()
+    await show_all(schedule)
+    device.hold = hold = asyncio.Event()
+    reports = asyncio.create_task(lay_out(schedule, first=1))
+    await schedule.until(lambda: device.hold is None)
+    assert _asks(schedule) == [("key", TWO_45)]
+    return schedule, hold, reports
+
+
+async def test_now_stops_a_put_back_on_its_way(
+    shown: Callable[..., Awaitable[Shown]],
+    device: Device,
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Now, tapped between the keyed jump and its reply: no delta after Now's jump."""
+    schedule, hold, reports = await _held_show_all(shown, device)
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.0)
+    await schedule.press_now()
+    await schedule.until(lambda: schedule.jumps)
+    hold.set()
+    await reports
+    assert _asks(schedule) == [("key", TWO_45), ("key", TWO_PM)]
+    assert memory.schedule_offsets[FRIDAY] == device.pixels
+
+
+async def test_a_drag_stops_a_put_back_on_its_way(
+    shown: Callable[..., Awaitable[Shown]], device: Device
+) -> None:
+    schedule, hold, reports = await _held_show_all(shown, device)
+    friday = schedule.list_of(FRIDAY)
+    await schedule.event(friday, "scroll", _event("start", device.pixels))
+    user = _event("user", device.pixels, direction="forward")
+    await schedule.event(friday, "scroll", user)
+    hold.set()
+    await reports
+    assert _asks(schedule) == [("key", TWO_45)]
 
 
 async def test_show_all_while_the_list_moves_puts_nothing_back(
