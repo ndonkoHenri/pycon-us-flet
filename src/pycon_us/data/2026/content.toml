@@ -1,6 +1,6 @@
 # PyCon US 2026: content the app shows (D-45). Loaded by pycon_us.config.load_year().
 # For now it holds what feed processing and the Map need, the copy and links of the
-# Open spaces and Lightning talks pages (D-205), and the keynotes (D-214); Wi-Fi, safety
+# Open spaces and Lightning talks pages (D-205), and the keynotes (D-217); Wi-Fi, safety
 # contacts and the rest arrive with their screens.
 
 # The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
@@ -64,7 +64,7 @@ answer = "Everyone is nervous, even the speakers who look calm. The audience at 
 doubt = "“My idea isn't good enough”"
 answer = "It's better than you think. There are hardly any bad ideas for a lightning talk."
 
-# The keynotes and panels (SESS-08, SPKR-04, D-214): one entry per session, keyed by the
+# The keynotes and panels (SESS-08, SPKR-04, D-217): one entry per session, keyed by the
 # feed's session id, which the tests check against the bundled snapshot. The feed names
 # a keynote by its speaker and links its description to the site, so the talk's title,
 # what it is about and the people on stage are here. Said in our own words from

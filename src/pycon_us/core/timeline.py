@@ -215,7 +215,7 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
 def keynote_sessions(
     data: ConferenceData, track: str, ids: Collection[str]
 ) -> tuple[Session, ...]:
-    """Return the Keynotes page's sessions, in the order they happen (SPKR-04, D-214).
+    """Return the Keynotes page's sessions, in the order they happen (SPKR-04, D-217).
 
     Every session of the keynotes' track, and every session the year's keynote data
     names: the panels are plenaries in the feed. A keynote the year data has nothing

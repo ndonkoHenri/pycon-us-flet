@@ -46,7 +46,7 @@ LIGHTNING = "175"
 """Lightning talks: shown in the Arena, streamed to four rooms (D-124)."""
 
 KEYNOTE = "176"
-"""A keynote: no public page in the feed; its people are year data (D-214)."""
+"""A keynote: no public page in the feed; its people are year data (D-217)."""
 
 WELCOME = "151"
 """The Friday welcome, a plenary: no speakers in the feed, no keynote data."""

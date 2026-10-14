@@ -5,7 +5,7 @@ name and role, the talk's own title, and the bios cut at four lines with "Read m
 a panel's shows the feed's name of it over its own title, the abstract cut the same way,
 and its people as a wrapping row of 64 dp photos with their names. Under a divider, a
 time-and-room tile opens the session, beside its star. A keynote the year data has
-nothing for yet (``content.toml``, D-214) still gets a card: its name and the tile.
+nothing for yet (``content.toml``, D-217) still gets a card: its name and the tile.
 A module of its own, as the Sprints page's card is (D-202), so the page stays short.
 """
 

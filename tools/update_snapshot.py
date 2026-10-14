@@ -7,7 +7,7 @@ Run it before a build for testers (``docs/development.md`` §8.3)::
 It fetches the public feed of ``config.YEAR`` from the year's ``feed_url`` and checks it with
 ``feed.process``, the app's own parser. A feed that does not parse, that has a record the
 parser skips, whose days fall outside the conference dates, or that lacks a session the
-year's keynote data names, or has it on a track no keynote has (D-214), is refused, and nothing changes: the same bar as the
+year's keynote data names, or has it on a track no keynote has (D-217), is refused, and nothing changes: the same bar as the
 tests of the committed snapshot (D-135). Otherwise it writes the
 bytes unchanged to ``data/<year>/conference.json``, records the time in ``conference.toml``'s
 ``snapshot_captured_at``, and prints how the counts changed.

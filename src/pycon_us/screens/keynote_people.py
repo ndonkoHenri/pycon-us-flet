@@ -2,7 +2,7 @@
 
 The feed names a keynote by its speaker and links its description to the site, so a
 keynote's or panel's detail adds what the year data says (``content.toml``'s
-``[[keynotes]]``, D-214): under Speakers, each person's photo, name and role, then their
+``[[keynotes]]``, D-217): under Speakers, each person's photo, name and role, then their
 bio; under About, the talk's own title over its abstract, which replaces the feed's
 link-only description. ``person_head()``, a person's photo beside their name and role,
 is the Keynotes page's too (``screens.keynote_card``). A module of its own, so session

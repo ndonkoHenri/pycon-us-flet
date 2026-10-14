@@ -6,7 +6,7 @@ list. Each row is a track of the year's registry (``conference.toml``, D-45): a 
 the track's badge colours holding its icon, so the hub is also the key to the badges'
 colours; its plural name; its legend line; its badge as the schedule shows it, "New
 track" when it is new this year; and how many sessions it has, counted as its page lists
-them (posters one by one, SCHED-22; the Keynotes page's panels too, D-214). A tap pushes
+them (posters one by one, SCHED-22; the Keynotes page's panels too, D-217). A tap pushes
 ``/more/tracks/<slug>``: the track's page (``screens/track.py``), or, for the keynotes,
 the lightning talks and the open spaces, the page of their own that More opens too,
 which the route table puts at that slug under the hub (``config.HUB_PAGES``, D-207), so
@@ -79,7 +79,7 @@ def track_count(
 ) -> int:
     """Return how many sessions track ``key``'s page lists (SCHED-22).
 
-    The keynotes' page lists the panels the year data names too (D-214).
+    The keynotes' page lists the panels the year data names too (D-217).
 
     Args:
         data: The processed feed.

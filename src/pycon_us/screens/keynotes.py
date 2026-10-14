@@ -5,7 +5,7 @@ returns to the hub (D-207); More keeps its own entry.
 
 One card per session, in the order they happen (SPKR-04, ux.md §5.11): each keynote of
 the feed, and each panel the year data names, with the people and words from
-``content.toml`` (D-214) and a time-and-room tile with the star
+``content.toml`` (D-217) and a time-and-room tile with the star
 (``screens.keynote_card``). The feed has no keynote speaker in its directory, so these
 cards are where the app says who is on stage. Without data the sessions load and fail
 as the Schedule's do (ux.md §4.1).

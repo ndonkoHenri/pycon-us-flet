@@ -1,4 +1,4 @@
-"""Tests for the keynotes' year data and its checks (``year_keynotes.py``; #104, D-214).
+"""Tests for the keynotes' year data and its checks (``year_keynotes.py``; #104, D-217).
 
 SESS-08, SPKR-04: the keynotes and panels are ``content.toml`` entries keyed by the
 feed's session id, and the loader refuses one the year's snapshot lacks. The other
@@ -40,7 +40,7 @@ def edit(path: Path, old: str, new: str) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_years_keynotes_name_sessions_of_its_snapshot(year: int) -> None:
-    """D-214: the year data and the feed it ships with are checked together."""
+    """D-217: the year data and the feed it ships with are checked together."""
     load_year(year, check_sessions=True)
 
 
@@ -65,7 +65,7 @@ def test_2026_has_its_four_keynotes_and_two_panels() -> None:
 
 
 def test_2026_keynote_people_have_a_role_and_a_small_photo() -> None:
-    """The site's 165 px copies: its originals weigh up to 5.7 MB (D-214)."""
+    """The site's 165 px copies: its originals weigh up to 5.7 MB (D-217)."""
     for keynote in load_year(2026).content.keynotes:
         for person in keynote.speakers:
             assert person.role
@@ -214,7 +214,7 @@ def test_a_keynote_needs_someone_on_stage(data_dir: Path) -> None:
 
 
 def test_the_session_check_takes_any_feed() -> None:
-    """The snapshot tool checks a new feed with it before writing (D-214)."""
+    """The snapshot tool checks a new feed with it before writing (D-217)."""
     sessions = processed(2026).sessions
     keynote = Keynote("153", "keynote", ())
     check_keynote_sessions((keynote,), sessions, {"Keynote"}, "x.toml")

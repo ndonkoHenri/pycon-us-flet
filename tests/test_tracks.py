@@ -295,7 +295,7 @@ async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> N
 
 
 async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> None:
-    """D-199's rule, D-214: the Keynotes page lists the four keynotes and the two
+    """D-199's rule, D-217: the Keynotes page lists the four keynotes and the two
     panels, which the feed calls plenaries; the row opens it under the hub (D-207)."""
     shown = await show(hub_screen.Tracks)
     node = shown.node("tracks.track.keynotes")

@@ -214,7 +214,7 @@ def speaker_avatar(
     Decorative for screen readers: the row or the heading beside it says the name.
 
     Args:
-        speaker: The directory speaker, or a keynote's person (D-214).
+        speaker: The directory speaker, or a keynote's person (D-217).
         radius: The circle's radius in dp: a row's 24, or the speaker page's 48.
         initials_style: The initials' type, for a larger circle; None keeps the
             avatar's own (``TITLE_MEDIUM``), which suits 48 dp.

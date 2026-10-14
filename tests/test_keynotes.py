@@ -1,6 +1,6 @@
 """Tests for the Keynotes page and its cards (``screens/keynotes.py``, ``keynote_card.py``).
 
-SPKR-04, #104, D-214. The page runs in a real Flet session over the recorded feeds
+SPKR-04, #104, D-217. The page runs in a real Flet session over the recorded feeds
 (``tests/programme.py``). How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
@@ -100,7 +100,7 @@ def test_a_keynote_without_year_data_is_listed_too() -> None:
 
 
 def test_the_hubs_keynotes_row_counts_what_the_page_lists() -> None:
-    """D-199's rule: a hub row's count is its page's; the panels are on it (D-214)."""
+    """D-199's rule: a hub row's count is its page's; the panels are on it (D-217)."""
     assert track_count(DATA, "Keynote", IDS) == 6
     assert track_count(DATA, "Keynote") == 4
     assert track_count(DATA, "Talk", IDS) == track_count(DATA, "Talk")

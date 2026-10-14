@@ -142,7 +142,7 @@ def check_snapshot_sessions(year: YearData, tracks: Collection[str], file: str) 
     """Refuse a keynote whose session the year's bundled snapshot lacks or is no keynote.
 
     The snapshot is the feed the app ships with, so the year data and it are checked
-    together: a test loads every year this way (D-214).
+    together: a test loads every year this way (D-217).
 
     Args:
         year: The year's data, with its keynotes and its snapshot.

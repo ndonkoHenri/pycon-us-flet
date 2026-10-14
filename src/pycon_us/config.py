@@ -100,7 +100,7 @@ Here, with the registry, the loader stays free of Flet.
 KEYNOTE_TRACKS = ("Keynote", "Plenary")
 """The tracks a ``[[keynotes]]`` entry's session can be of: the keynotes' own
 (``HUB_PAGES["keynotes"]``), and the plenaries', since the feed files the panels there.
-The loader and the snapshot tool refuse an entry on any other track (D-214)."""
+The loader and the snapshot tool refuse an entry on any other track (D-217)."""
 
 
 @dataclass(frozen=True)
@@ -198,7 +198,7 @@ class Content:
     """The year's content from ``content.toml`` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
-    Lightning talks pages (D-205), and the keynotes' people and abstracts (D-214).
+    Lightning talks pages (D-205), and the keynotes' people and abstracts (D-217).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -303,7 +303,7 @@ def load_year(
         year: The conference year; its files are in ``data_dir/<year>/``.
         data_dir: The folder that holds the year folders.
         check_sessions: Also refuse a keynote whose session the year's bundled
-            snapshot lacks, or has on a track not in ``KEYNOTE_TRACKS`` (D-214). The tests and tools ask; the app does not, since
+            snapshot lacks, or has on a track not in ``KEYNOTE_TRACKS`` (D-217). The tests and tools ask; the app does not, since
             parsing the snapshot at every start would cost what D-38 saves, and a
             keynote a newer feed drops just shows no card.
 

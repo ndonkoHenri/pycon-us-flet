@@ -188,7 +188,7 @@ def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
 def test_a_feed_without_a_keynote_s_session_is_refused_and_nothing_changes(
     data_dir: Path,
 ) -> None:
-    """D-214: the keynotes' year data must fit the snapshot the app ships with."""
+    """D-217: the keynotes' year data must fit the snapshot the app ships with."""
 
     def drop_lin_qiao(doc: dict[str, Any]) -> None:
         doc["schedule"] = [s for s in doc["schedule"] if s["conf_key"] != 153]
