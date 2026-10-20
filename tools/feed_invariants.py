@@ -7,7 +7,8 @@ the same code (testing-and-quality.md §3.3). They return problems instead of as
 the weekly check can report every broken invariant, not only the first.
 
 The stable-ids invariant compares two outlines of the model: ``tools/feed_outline.py``'s
-``outline()``, the reviewed snapshot's view of it.
+``outline()``, the reviewed snapshot's view of it. The sponsor and job-listing invariants
+live in ``tools/sponsor_invariants.py``; ``INVARIANTS`` lists them with the others.
 """
 
 import json
@@ -24,9 +25,14 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.names import plain_text
 from pycon_us.core.rules import COLLAPSED_KINDS
-from pycon_us.core.slugs import room_sort_key, slugify_room, sponsor_slug
+from pycon_us.core.slugs import room_sort_key, slugify_room
 from pycon_us.core.timefmt import local_date
 from tools.feed_outline import clock, outline
+from tools.sponsor_invariants import (
+    job_listings_name_a_sponsor,
+    sponsor_levels_are_sorted_and_not_empty,
+    sponsor_slugs_are_unique,
+)
 
 ID_FORMS = re.compile(
     r"\d+"  # a slot's conf_key, or an open space's conf_key + 9000
@@ -331,65 +337,6 @@ def rooms_and_sessions_agree(feed: ProcessedFeed) -> list[str]:
             if room is None or session.id not in room.session_ids:
                 problems.append(f"{session.id}'s room {name!r} does not list it")
     return problems
-
-
-def sponsor_slugs_are_unique(feed: ProcessedFeed) -> list[str]:
-    """SPON-02: each sponsor's slug is its name's, and no two sponsors share one.
-
-    Sponsors have no id, so a shared slug would route both to the first (D-261).
-    """
-    problems = []
-    slugs: Counter[str] = Counter()
-    for level in feed.data.sponsor_levels:
-        for sponsor in level.sponsors:
-            slugs[sponsor.slug] += 1
-            if sponsor.slug != sponsor_slug(sponsor.name):
-                problems.append(
-                    f"sponsor {sponsor.name!r} has the slug {sponsor.slug!r}"
-                )
-    for slug, count in slugs.items():
-        if count > 1:
-            problems.append(f"{count} sponsors share the slug {slug!r}")
-    return problems
-
-
-def sponsor_levels_are_sorted_and_not_empty(feed: ProcessedFeed) -> list[str]:
-    """DATA-22: the levels run by their order, each named once, with its own sponsors.
-
-    A level's order is its first sponsor's (D-261), so its other sponsors must share it.
-    """
-    levels = feed.data.sponsor_levels
-    problems = []
-    orders = [level.order for level in levels]
-    if orders != sorted(orders):
-        problems.append("the sponsor levels are not sorted by their order")
-    names = Counter(level.name for level in levels)
-    if twice := sorted(name for name, count in names.items() if count > 1):
-        problems.append(f"sponsor levels listed twice: {', '.join(twice)}")
-    for level in levels:
-        if not level.sponsors:
-            problems.append(f"sponsor level {level.name!r} has no sponsor")
-        if strays := [s.name for s in level.sponsors if s.level != level.name]:
-            problems.append(f"sponsor level {level.name!r} lists {', '.join(strays)}")
-        if others := sorted({s.level_order for s in level.sponsors} - {level.order}):
-            problems.append(
-                f"sponsor level {level.name!r} also has orders {', '.join(map(str, others))}"
-            )
-    return problems
-
-
-def job_listings_name_a_sponsor(feed: ProcessedFeed) -> list[str]:
-    """SPON-05: every job listing names a sponsor exactly, as ``jobs.listings_of`` finds it.
-
-    A listing carries its sponsor's name, not a slug (D-278), so a name the sponsors do
-    not have would leave its roles on no sponsor's page.
-    """
-    names = {s.name for level in feed.data.sponsor_levels for s in level.sponsors}
-    return [
-        f"job listing {job.id} names no sponsor: {job.sponsor_name!r}"
-        for job in feed.data.job_listings
-        if job.sponsor_name not in names
-    ]
 
 
 INVARIANTS: tuple[Callable[[ProcessedFeed], list[str]], ...] = (
