@@ -15,7 +15,7 @@ def sponsor_by_slug(data: ConferenceData, slug: str) -> Sponsor | None:
     """Return the sponsor whose slug is ``slug``, or None when no sponsor has it.
 
     Two sponsors with one slug would be a feed problem that the weekly check reports
-    (``tools/feed_invariants.py``); the first in level order wins, as Ionic's first match
+    (``tools/sponsor_invariants.py``); the first in level order wins, as Ionic's first match
     did. A scan of about a hundred sponsors needs no index.
 
     Args:
