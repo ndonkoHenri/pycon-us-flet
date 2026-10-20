@@ -31,6 +31,7 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, now_next
 from pycon_us.core.models import ConferenceData
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import now as screen
 from pycon_us.screens.now_header import (
@@ -406,10 +407,12 @@ async def render(
             conference: Conference | None = None,
             saved: tuple[str, ...] = (),
             ticks: Ticks | None = None,
+            memory: ViewMemory | None = None,
         ) -> Shown:
             """Render Now at ``now``, with ``saved`` in My schedule.
 
             With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
+            ``memory`` is the process's view memory, when a test keeps one.
             """
             held = [now]
             ticker = ticks or Ticks()
@@ -437,11 +440,21 @@ async def render(
                     monkeypatch=monkeypatch,
                     view_path="/now",
                     saved=saved,
+                    memory=memory,
                     kind=partial(Shown, clock=held, ticks=ticker),
                 )
             )
 
         yield render
+
+
+def next_cards(shown: Shown) -> list[ft.Card]:
+    """The next-session cards on screen: the filled ones, not the sponsor spotlight."""
+    return [
+        c
+        for c in shown.all()
+        if isinstance(c, ft.Card) and c.variant == ft.CardVariant.FILLED
+    ]
 
 
 def header(shown: Shown) -> str:
@@ -651,7 +664,7 @@ async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
 ) -> None:
     """The card holds the saved session due next, with its star, status and room."""
     shown = await render(may(16, 9), saved=(TALK,))  # it starts in 1 h 30 min
-    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
+    (card,) = next_cards(shown)
     assert shown.listed("now.next.session.") == [TALK]
     assert not shown.has("now.next_session")  # the tile's: nothing to explain
     assert any(
@@ -672,7 +685,7 @@ async def test_the_card_s_status_is_a_stop_of_its_own(
 ) -> None:
     """Row, status, star and "Show room": four stops (ux.md §5.1)."""
     shown = await render(may(16, 9), saved=(TALK,))
-    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
+    (card,) = next_cards(shown)
     (status,) = [
         c
         for c in _walk(card)
@@ -744,7 +757,7 @@ async def test_when_only_your_session_is_on_the_card_says_so(
     assert shown.listed("now.next.session.") == [KEYNOTE]
     assert "Happening now" not in shown.headings()
     assert "Nothing in session right now" not in shown.texts()
-    (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
+    (card,) = next_cards(shown)
     assert "Happening now" in _texts(card)  # the card's status says it
 
 
