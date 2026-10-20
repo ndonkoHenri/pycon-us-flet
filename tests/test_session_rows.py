@@ -21,7 +21,7 @@ import pytest
 
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
-from pycon_us.ui.badges import (
+from pycon_us.ui.favorite import (
     ADD_LABEL,
     FAVORITE_LABEL,
     NOT_SAVED,

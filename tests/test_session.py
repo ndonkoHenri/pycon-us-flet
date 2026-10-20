@@ -23,7 +23,7 @@ from pycon_us.core.models import ConferenceData
 from pycon_us.prefs import Prefs
 from pycon_us.screens import session as screen
 from pycon_us.services import Services
-from pycon_us.ui.badges import REMOVED, UNDO
+from pycon_us.ui.favorite import REMOVED, UNDO
 from tests.feeds import processed
 from tests.session_detail import (
     BREAK,
