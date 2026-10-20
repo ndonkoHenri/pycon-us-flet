@@ -31,7 +31,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import selection_click, use_favorite_toggle
+from pycon_us.ui.favorite import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
