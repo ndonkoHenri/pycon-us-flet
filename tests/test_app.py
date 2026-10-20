@@ -738,6 +738,8 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     monkeypatch.setattr(ft, "use_effect", lambda setup, *_, **__: setups.append(setup))
     monkeypatch.setattr(app, "LayoutCtx", layout_ctx)
     monkeypatch.setattr(app, "apply_theme", lambda *_: None)
+    # The reminder Banner has its own tests; here it would read stand-in stores.
+    monkeypatch.setattr(app, "use_reminder_banner", lambda *_, **__: None)
     monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
