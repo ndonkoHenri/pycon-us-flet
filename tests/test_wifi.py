@@ -136,6 +136,8 @@ async def test_copy_password_copies_the_password_and_says_so_once(show: Show) ->
     page = await show()
     button = control_of(page.node("wifi.copy_password"), ft.FilledButton)
     assert button.content == "Copy password"  # it says what it copies
+    assert button.style is not None  # room above and below a label at large text
+    assert button.style.padding == screen.BUTTON_PADDING
     await page.click(button)
     assert clipboard(page).value == WIFI.password
     assert snack_texts(page) == ["Password copied"]

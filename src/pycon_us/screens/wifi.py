@@ -47,6 +47,11 @@ VALUE_STYLE = ft.TextStyle(
 """A value's font, as the feed's code spans have it (``theme.MARKDOWN_STYLE``): in a
 monospace font ``l``, ``1`` and ``I``, or ``O`` and ``0``, never look alike."""
 
+BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
+""""Copy password"'s padding: M3's for a button with an icon, plus room above and below,
+as the Lightning talks sign-up has it: at the largest text the label otherwise touches
+the pill's edges, and 10 dp keeps the one-line button 40 dp tall."""
+
 
 @ft.component
 def Wifi() -> ft.View:
@@ -86,7 +91,10 @@ def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
         ft.Icons.CONTENT_COPY_OUTLINED, tooltip=COPY_NETWORK, on_click=copy_network
     )
     button = ft.FilledButton(
-        COPY_PASSWORD, icon=ft.Icons.CONTENT_COPY_OUTLINED, on_click=copy_password
+        COPY_PASSWORD,
+        icon=ft.Icons.CONTENT_COPY_OUTLINED,
+        on_click=copy_password,
+        style=ft.ButtonStyle(padding=BUTTON_PADDING),
     )
     return [
         # 12 dp from the edge puts Copy's 24 dp icon where a row's trailing icon sits.
