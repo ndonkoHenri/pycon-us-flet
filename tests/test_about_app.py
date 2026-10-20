@@ -192,7 +192,7 @@ async def tap_version(render: Callable[[], dict[str, Any]], times: int) -> None:
 def test_the_page_says_which_build_this_is(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """The page lists the app's version, Python's and Flet's, in that order."""
+    """The page lists the app's version, Python's and Flet's, then its licences."""
     scaffold = render()
     assert scaffold["title"] == "About this app"
     rows = tiles(scaffold)
@@ -200,6 +200,7 @@ def test_the_page_says_which_build_this_is(
         ("Version", pycon_us.__version__),
         ("Python", platform.python_version()),
         ("Flet", "source build"),  # while the source pin lasts (development.md §2.2)
+        ("Licences", None),
     ]
 
 
@@ -244,7 +245,32 @@ def test_the_version_row_carries_its_identifier_for_ui_flows(
     """The Version row's merged node carries the ``about_app.version`` id."""
     rows = [c for c in body_of(render()) if isinstance(c, ft.MergeSemantics)]
     identifiers = [cast(ft.Semantics, row.content).identifier for row in rows]
-    assert identifiers == ["about_app.version", "about_app.flet"]
+    assert identifiers == ["about_app.version", "about_app.licences", "about_app.flet"]
+
+
+def test_licences_opens_its_page_under_about_this_app(
+    render: Callable[[], dict[str, Any]], page: FakePage
+) -> None:
+    """The Licences row opens ``/more/app/licences``, so Back returns here (D-296)."""
+    tile = tiles(render())["Licences"]
+    cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == ["/more/app/licences"]
+
+
+async def test_licences_comes_after_the_developer_row(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    """Unlocked, Developer options stays right under the build's rows, where the taps were."""
+    await tap_version(render, 7)
+    controls = body_of(render())
+    kinds = [
+        "developer" if isinstance(c, ft.Semantics) and c.live_region else c
+        for c in controls
+    ]
+    developer = kinds.index("developer")
+    licences = controls[developer + 1]
+    assert isinstance(licences, ft.MergeSemantics)
+    assert cast(ft.Semantics, licences.content).identifier == "about_app.licences"
 
 
 def developer_row(scaffold: dict[str, Any]) -> ft.ListTile | None:

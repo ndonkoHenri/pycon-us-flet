@@ -7,7 +7,8 @@ repository is public, its source code (D-88, D-292); **Help us fix it**: Report 
 problem, which shares the app's log and diagnostics, and once the repository is public
 opens a new issue beside a Share log row (INFO-04, D-297). Seven taps on the version row
 unlock the Developer screen in a packaged build, and a Developer options row appears
-under the build's rows; it stays unlocked (D-187). P2 adds licences (#442).
+under the build's rows; it stays unlocked (D-187). **Licences** under them opens what
+each build ships and under whose licence (D-296).
 """
 
 import platform
@@ -19,6 +20,7 @@ from flet.utils import is_embedded
 from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL, __version__
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import DEV_UNLOCKED, use_prefs
+from pycon_us.screens import licences
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.state import use_conference
@@ -70,6 +72,14 @@ def AboutApp() -> ft.View:
     ]
     if prefs.developer:
         rows.append(developer_row(unsaved))
+    rows.append(
+        LinkTile(
+            licences.TITLE,
+            licences.LOCATION,
+            icon=ft.Icons.DESCRIPTION_OUTLINED,
+            identifier="about_app.licences",
+        )
+    )
     rows.extend(links(SOURCE_URL))
     rows.append(HelpUsFixIt())
     return AppScaffold(title="About this app", body=ft.ListView(rows, expand=True))
