@@ -221,3 +221,15 @@ def test_main_writes_nothing_for_an_unknown_session(
     assert main(["999999", "--in", "5m", "--out", str(out)], now=NOW) == 1
     assert "Nothing written" in capsys.readouterr().err
     assert not out.exists()
+
+
+def test_main_takes_a_negative_duration_as_a_value(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--in -10m --move -5m`` are read as values, not options: 13:52, moved to 13:47."""
+    args = [TALK, "--in", "-10m", "--move", "-5m", "--out", str(tmp_path)]
+
+    assert main(args, now=NOW) == 0
+    printed = capsys.readouterr().out
+    assert "starts at 2026-10-20 13:52-07:00" in printed
+    assert "with it at 2026-10-20 13:47-07:00" in printed
