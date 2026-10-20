@@ -22,6 +22,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.ui import rows
+from pycon_us.ui.brands import brand_icon
 from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
 from tests.fakes import (
     FakePage,
@@ -164,6 +165,16 @@ def test_a_link_tile_without_an_icon_or_subtitle_has_neither(page: FakePage) -> 
     tile = tile_of(LinkTile("Ana Lima", "/more/speakers/speaker/17"))
     assert tile.leading is None
     assert tile.subtitle is None
+
+
+@pytest.mark.parametrize("target", ["/more/speakers", PROFILE])
+def test_a_control_given_as_the_icon_leads_the_row_as_it_is(
+    page: FakePage, target: str
+) -> None:
+    """A brand's mark, given as a control, is the row's leading, unwrapped (D-264)."""
+    mark = brand_icon("mastodon")
+    tile = tile_of(LinkTile("Mastodon", target, icon=mark, app=target == PROFILE))
+    assert tile.leading is mark
 
 
 def test_a_link_tile_shows_its_subtitle(page: FakePage) -> None:

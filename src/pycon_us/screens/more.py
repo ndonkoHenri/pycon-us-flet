@@ -5,9 +5,9 @@ whose pages are stubs until P1, and **You**: Settings (P2, THEME-01), which took
 the Appearance rows that stood in for it here (D-169, D-286), then About this app and
 Developer, which is always there when not embedded and, in a packaged build, once
 unlocked in About this app (D-73, D-187). **Expo & sponsors** came with the Sponsors
-page (#395) and **At the venue** with Wi-Fi (D-280) and Help & safety (D-281); their
-other rows and About join with their P2 pages; the profile row and Staff tools, first
-in the list, with P3's mock account (D-16, D-51).
+page (#395), **At the venue** with Wi-Fi (D-280) and Help & safety (D-281), and
+**About** with About the PSF (D-283); their other rows join with their P2 pages; the
+profile row and Staff tools, first in the list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
 """
 
@@ -56,6 +56,9 @@ AT_THE_VENUE = (
 )
 """The At the venue section, in the list's order (ux.md §2.2; icons §3.7)."""
 
+ABOUT = (MoreEntry("About the PSF", "/more/psf", ft.Icons.VOLUNTEER_ACTIVISM_OUTLINED),)
+"""The About section, in the list's order (ux.md §2.2; icons §3.7)."""
+
 SETTINGS = MoreEntry("Settings", "/more/settings", ft.Icons.SETTINGS_OUTLINED)
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
 DEVELOPER = MoreEntry(
@@ -66,6 +69,7 @@ MORE_PAGES = (
     *PROGRAMME,
     *EXPO_AND_SPONSORS,
     *AT_THE_VENUE,
+    *ABOUT,
     SETTINGS,
     ABOUT_APP,
     DEVELOPER,
@@ -93,6 +97,8 @@ def More() -> ft.View:
                 *(link(entry) for entry in EXPO_AND_SPONSORS),
                 SectionHeader("At the venue"),
                 *(link(entry) for entry in AT_THE_VENUE),
+                SectionHeader("About"),
+                *(link(entry) for entry in ABOUT),
                 SectionHeader("You"),
                 *(link(entry) for entry in you),
             ],

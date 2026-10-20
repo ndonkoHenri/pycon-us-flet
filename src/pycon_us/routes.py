@@ -26,6 +26,7 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.open_spaces import OpenSpaces
 from pycon_us.screens.plan import PlanViewer
+from pycon_us.screens.psf import AboutPsf
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
 from pycon_us.screens.search import Search
@@ -196,6 +197,7 @@ ROUTES = [
         pushed("developer", Developer),
         pushed("wifi", Wifi),
         pushed("help", Help),
+        pushed("psf", AboutPsf),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
