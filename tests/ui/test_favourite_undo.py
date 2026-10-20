@@ -23,6 +23,7 @@ from tests.ui.targets import day_rows, recorded, row_id, saveable, star_id
 
 
 async def test_favourite_with_undo(flet_app: ftt.FletTestApp, feed_url: str) -> None:
+    """A starred session is in My schedule; unstarred there, Undo brings it back."""
     t = remote(flet_app)
     await fresh_start(t, now=before_conference(), feed_url=feed_url)
     session = saveable(day_rows(recorded(), 0))[0]

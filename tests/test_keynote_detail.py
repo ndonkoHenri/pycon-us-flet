@@ -39,7 +39,7 @@ COUNCIL = "183"
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(session_id): the detail of that session."""
+    """Yield a function that renders the detail of the session with a given id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 
@@ -62,6 +62,7 @@ def about(detail: Detail) -> str:
 
 
 async def test_a_keynote_shows_its_speaker_with_role_and_bio(render: Render) -> None:
+    """A keynote shows its speaker's name, role, photo and whole bio, from year data."""
     keynote = keynote_of(KEYNOTES, LIN_QIAO)
     assert keynote is not None
     detail = await render(LIN_QIAO)
@@ -99,6 +100,7 @@ async def test_the_abstract_replaces_the_feeds_link_under_the_talks_title(
 async def test_a_talk_without_a_title_of_its_own_shows_its_abstract(
     render: Render,
 ) -> None:
+    """A keynote without a title of its own shows no title, but its abstract."""
     keynote = keynote_of(KEYNOTES, AMANDA)
     assert keynote is not None and not keynote.title
     detail = await render(AMANDA)
@@ -128,6 +130,7 @@ async def test_a_keynote_with_nothing_to_say_about_it_has_no_about_heading(
 
 
 async def test_a_joint_keynote_lists_both_speakers_in_order(render: Render) -> None:
+    """A joint keynote lists both its speakers in order, the second with a bio too."""
     detail = await render(TOGETHER)
     assert [person(detail, n)[0] for n in range(2)] == [
         "Rachell Calhoun",
@@ -139,6 +142,7 @@ async def test_a_joint_keynote_lists_both_speakers_in_order(render: Render) -> N
 async def test_a_panel_lists_its_panelists_and_leaves_out_missing_bios(
     render: Render,
 ) -> None:
+    """A panel lists its five people under "Panelists", with no empty bio."""
     keynote = keynote_of(KEYNOTES, COUNCIL)
     assert keynote is not None
     detail = await render(COUNCIL)
@@ -152,6 +156,7 @@ async def test_a_panel_lists_its_panelists_and_leaves_out_missing_bios(
 async def test_a_session_without_keynote_data_keeps_the_feeds_speakers_and_text(
     render: Render,
 ) -> None:
+    """A talk with no keynote data shows its feed text, no keynote people or title."""
     detail = await render(TALK)
     assert detail.nodes("session.person.0") == []
     assert detail.nodes("session.keynote_title") == []

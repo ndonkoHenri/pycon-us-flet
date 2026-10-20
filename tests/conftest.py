@@ -26,6 +26,7 @@ settings.load_profile("dev")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add ``--snapshot-update``, which rewrites snapshots instead of comparing."""
     parser.addoption(
         "--snapshot-update",
         action="store_true",

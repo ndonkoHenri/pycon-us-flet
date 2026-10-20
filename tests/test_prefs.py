@@ -28,15 +28,18 @@ from tests.fakes import MemoryPrefs
 
 @pytest.fixture
 def shared() -> MemoryPrefs:
+    """An empty in-memory SharedPreferences."""
     return MemoryPrefs()
 
 
 @pytest.fixture
 def store(shared: MemoryPrefs, tmp_path: Path) -> Storage:
+    """The 2026 storage over ``shared`` and a temporary directory."""
     return Storage(prefs=shared, directory=tmp_path, year=2026)
 
 
 async def loaded(store: Storage) -> Prefs:
+    """A new ``Prefs`` loaded from ``store``."""
     prefs = Prefs()
     await prefs.load(store)
     return prefs
@@ -46,6 +49,7 @@ async def loaded(store: Storage) -> Prefs:
 
 
 async def test_a_first_launch_reads_every_default(store: Storage) -> None:
+    """On a first launch, every preference reads its default; Open Space is hidden."""
     prefs = await loaded(store)
     assert prefs.theme == "system"
     assert prefs.high_contrast == "system"
@@ -56,6 +60,7 @@ async def test_a_first_launch_reads_every_default(store: Storage) -> None:
 
 
 async def test_load_reads_what_was_stored(store: Storage, shared: MemoryPrefs) -> None:
+    """Loading reads back every stored preference, the JSON ones decoded."""
     shared.values.update(
         {
             "pycon.theme": "dark",
@@ -76,6 +81,7 @@ async def test_load_reads_what_was_stored(store: Storage, shared: MemoryPrefs) -
 async def test_a_stored_empty_track_list_hides_nothing(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A stored empty list of hidden tracks hides nothing, not the default track."""
     shared.values["pycon.excluded_tracks"] = []
     assert (await loaded(store)).excluded_tracks == ()
 
@@ -91,6 +97,10 @@ async def test_an_unknown_setting_value_reads_as_the_default_and_is_logged(
     shared: MemoryPrefs,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """An unknown appearance or contrast value loads as "system", its key logged.
+
+    The value itself is never logged (D-120).
+    """
     shared.values[key] = "sepia"
     with caplog.at_level(logging.WARNING):
         prefs = await loaded(store)
@@ -102,16 +112,19 @@ async def test_an_unknown_setting_value_reads_as_the_default_and_is_logged(
 async def test_unreadable_preferences_read_as_their_defaults(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """When SharedPreferences fails to read, every preference loads as its default."""
     shared.error = TimeoutError()
     prefs = await loaded(store)
     assert (prefs.theme, prefs.excluded_tracks) == ("system", ("Open Space",))
 
 
 async def test_load_leaves_the_boot_gate_to_its_caller(store: Storage) -> None:
+    """Loading leaves ``loaded`` False: its caller opens the boot gate."""
     assert (await loaded(store)).loaded is False
 
 
 def test_the_first_value_of_each_setting_is_its_storage_default() -> None:
+    """The appearance and contrast choices start with "system", their stored default."""
     assert APPEARANCES == ("system", "light", "dark")
     assert APPEARANCES[0] == storage.THEME.default
     assert HIGH_CONTRAST_SETTINGS == ("system", "on", "off")
@@ -124,6 +137,10 @@ def test_the_first_value_of_each_setting_is_its_storage_default() -> None:
 async def test_saved_settings_are_shown_and_survive_a_relaunch(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """Saved settings apply at once and load again after a relaunch.
+
+    The hidden tracks are stored as a list, for Flutter (F12).
+    """
     prefs = await loaded(store)
     saved = await prefs.save(
         store,
@@ -153,6 +170,7 @@ async def test_saved_settings_are_shown_and_survive_a_relaunch(
 async def test_settings_left_out_are_neither_written_nor_changed(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A save writes and changes only the settings it is given."""
     prefs = await loaded(store)
     await prefs.save(store, theme="light")
     assert set(shared.values) == {"pycon.theme"}
@@ -162,6 +180,7 @@ async def test_settings_left_out_are_neither_written_nor_changed(
 async def test_a_change_that_cannot_be_saved_is_kept_for_the_session(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A change whose write fails returns False, but holds until the app relaunches."""
     prefs = await loaded(store)
     shared.fail_writes = True
     assert await prefs.save(store, theme="dark", onboarded=True) is False
@@ -174,6 +193,7 @@ async def test_a_change_that_cannot_be_saved_is_kept_for_the_session(
 async def test_a_shared_preferences_error_on_save_is_reported_as_not_saved(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A SharedPreferences error on save returns False; the change holds in memory."""
     prefs = await loaded(store)
     shared.error = RuntimeError("client error")
     assert await prefs.save(store, theme="light") is False
@@ -183,6 +203,7 @@ async def test_a_shared_preferences_error_on_save_is_reported_as_not_saved(
 async def test_one_failed_write_still_writes_the_others(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """One failed write makes the save return False; the others are still written."""
     prefs = await loaded(store)
 
     async def fail_theme_only(key: str, value: object) -> bool:
@@ -202,6 +223,7 @@ async def test_one_failed_write_still_writes_the_others(
 async def test_save_rejects_an_unknown_setting_value_and_changes_nothing(
     change: dict[str, str], store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A save with an unknown appearance or contrast raises and changes nothing."""
     prefs = await loaded(store)
     with pytest.raises(ValueError, match="must be one of"):
         await prefs.save(store, onboarded=True, **change)  # type: ignore[arg-type]
@@ -212,6 +234,7 @@ async def test_save_rejects_an_unknown_setting_value_and_changes_nothing(
 async def test_a_save_notifies_subscribers_of_each_changed_field(
     store: Storage,
 ) -> None:
+    """A save notifies subscribers once per changed field, in order."""
     prefs = await loaded(store)
     changes: list[str | None] = []
 
@@ -239,6 +262,7 @@ async def test_a_save_notifies_subscribers_of_each_changed_field(
 def test_dark_follows_the_os_only_under_system(
     theme: str, os_dark: bool, dark: bool
 ) -> None:
+    """Dark mode follows the OS only when the appearance is "system"."""
     assert Prefs(theme=theme, os_dark=os_dark).dark is dark  # type: ignore[arg-type]
 
 
@@ -254,6 +278,7 @@ def test_dark_follows_the_os_only_under_system(
 def test_high_contrast_follows_the_os_flag_only_under_system(
     setting: str, os_flag: bool, on: bool
 ) -> None:
+    """High contrast follows the OS flag only when its setting is "system"."""
     prefs = Prefs(high_contrast=setting, os_high_contrast=os_flag)  # type: ignore[arg-type]
     assert prefs.high_contrast_on is on
 
@@ -262,12 +287,14 @@ def test_high_contrast_follows_the_os_flag_only_under_system(
 def test_an_animation_lasts_its_duration_unless_the_os_asks_for_less_motion(
     reduce_motion: bool, ms: int
 ) -> None:
+    """An animation lasts its duration, or 0 ms when the OS asks for reduced motion."""
     assert Prefs(reduce_motion=reduce_motion).motion_ms(400) == ms  # D-34
 
 
 async def test_reduced_motion_is_never_stored(
     store: Storage, shared: MemoryPrefs
 ) -> None:
+    """A save never writes reduced motion, so a relaunch reads it as off."""
     prefs = await loaded(store)
     prefs.reduce_motion = True  # what read_accessibility() writes
     await prefs.save(store, theme="dark")
@@ -280,6 +307,7 @@ async def test_reduced_motion_is_never_stored(
 
 
 def test_developer_options_are_read_from_dev(monkeypatch: pytest.MonkeyPatch) -> None:
+    """In a packaged build, Developer, the fake clock and the feed come from ``dev``."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
     prefs = Prefs()
     assert (prefs.developer, prefs.fake_now, prefs.feed_url) == (False, None, None)
@@ -296,6 +324,7 @@ def test_developer_options_are_read_from_dev(monkeypatch: pytest.MonkeyPatch) ->
 def test_developer_is_always_available_when_not_embedded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Outside a packaged build, Developer is always on, though never unlocked."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)  # the companion app
     prefs = Prefs()
     assert prefs.developer is True
@@ -312,6 +341,7 @@ def test_developer_is_always_available_when_not_embedded(
     ],
 )
 def test_unusable_developer_values_read_as_their_defaults(dev: dict[str, Any]) -> None:
+    """Naive, unreadable or mistyped Developer values read as their defaults."""
     prefs = Prefs(dev=dict(dev))
     assert prefs.fake_now is None
     assert prefs.feed_url is None
@@ -319,6 +349,7 @@ def test_unusable_developer_values_read_as_their_defaults(dev: dict[str, Any]) -
 
 
 def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
+    """The dev options helper sets or removes the clock and feed, keeping the rest."""
     start = datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
     feed = "http://127.0.0.1:8000/conference-2026.json"
     dev = with_dev_options({"unlocked": True}, fake_now=start, feed_url=feed)
@@ -331,6 +362,7 @@ def test_dev_options_set_and_remove_only_the_clock_and_the_feed() -> None:
     ["http://127.0.0.1:8000/conference-2026.json", "https://example.test/feed.json"],
 )
 def test_http_and_https_feed_urls_are_taken(url: str) -> None:
+    """An http or https feed URL is taken, without its surrounding spaces."""
     assert parse_feed_url(f" {url} ") == url
 
 
@@ -338,15 +370,21 @@ def test_http_and_https_feed_urls_are_taken(url: str) -> None:
     "text", ["us.pycon.org/feed.json", "ftp://example.test/f", "https://", "file:///x"]
 )
 def test_other_feed_urls_are_refused(text: str) -> None:
+    """A feed URL without an http or https scheme and a host is refused."""
     with pytest.raises(ValueError, match="http:// or https://"):
         parse_feed_url(text)
 
 
 def test_an_empty_feed_url_is_the_year_s() -> None:
+    """An empty feed URL parses as None: the year's own feed."""
     assert parse_feed_url("") is None
 
 
 def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> None:
+    """A reset returns every setting to its default and keeps the device's facts.
+
+    The boot gate stays open too.
+    """
     prefs = Prefs(
         theme="dark",
         high_contrast="on",

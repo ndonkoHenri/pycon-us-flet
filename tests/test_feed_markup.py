@@ -23,11 +23,13 @@ TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 
 
 def site_url(year: int) -> str:
+    """The site URL that ``year``'s relative links resolve against."""
     return settings(year).site_url
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_session_descriptions_are_markdown_beside_the_raw_html(year: int) -> None:
+    """Every session but open spaces keeps its HTML description beside its Markdown."""
     data = processed(year)
     sessions = [s for s in data.sessions.values() if s.kind != "open-space"]
     assert any(TAG.search(s.description) for s in sessions)
@@ -48,6 +50,7 @@ def test_open_space_descriptions_pass_through_as_markdown(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_speaker_bios_are_markdown(year: int) -> None:
+    """Every speaker's bio is converted to Markdown beside the raw HTML."""
     speakers = processed(year).speakers.values()
     assert any(TAG.search(s.bio) for s in speakers)
     for speaker in speakers:
@@ -56,6 +59,7 @@ def test_speaker_bios_are_markdown(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_poster_descriptions_are_markdown(year: int) -> None:
+    """Every poster's description, and its detail session's, is also in Markdown."""
     data = processed(year)
     assert data.posters  # 2025's are nested in its poster slot (D-121)
     for poster in data.posters:
@@ -66,6 +70,7 @@ def test_poster_descriptions_are_markdown(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_sprint_and_job_descriptions_are_markdown(year: int) -> None:
+    """Every sprint and job listing is kept, its description converted to Markdown."""
     data = processed(year)
     assert len(data.sprints) == len(document(year).get("sprints", []))
     assert len(data.job_listings) == len(document(year).get("job-listings", []))
@@ -82,6 +87,7 @@ def test_plain_text_sprint_descriptions_keep_their_paragraphs() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_content_blocks_are_kept_raw_and_as_markdown(year: int) -> None:
+    """The conference's content blocks are kept as HTML and converted to Markdown."""
     data = processed(year)
     content = document(year)["conference"]["content"]
     assert dict(data.content) == content
@@ -91,6 +97,7 @@ def test_content_blocks_are_kept_raw_and_as_markdown(year: int) -> None:
 
 
 def test_content_block_links_are_markdown_links() -> None:
+    """The About the PSF block's HTML links become a Markdown list of links."""
     about_psf = processed(2026).content_md["about-psf"]
     assert "- [PSF home page](https://www.python.org/psf-landing/)" in about_psf
 
@@ -128,11 +135,14 @@ def test_open_space_search_text_keeps_link_text_without_destinations() -> None:
 
 
 def test_open_space_search_text_keeps_underscores_in_identifiers() -> None:
+    """An open space's search text keeps an identifier's underscores."""
     session = processed(2025).sessions["9099"]
     assert "ic_ocr_cataloger" in session.search_text
 
 
 def test_search_text_ignores_accents_and_case() -> None:
+    """A session's search text drops accents, case, apostrophes and tags (D-180)."""
+
     def accent(doc: dict[str, Any]) -> None:
         slot = next(s for s in doc["schedule"] if s["kind"] == "talk")
         slot.update(name="Cristián's TALK", description="<p>Über <b>Python</b></p>")
@@ -156,6 +166,7 @@ def test_the_rules_read_the_raw_description() -> None:
 
 
 def test_each_distinct_value_converts_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each distinct HTML value is converted once, even when two records share it."""
     converted: list[str] = []
 
     def counting(value: str, site_url: str) -> str:
@@ -191,6 +202,8 @@ def test_conversion_time_counts_in_the_processing_log(
 
 
 def test_a_content_block_that_is_not_text_is_skipped() -> None:
+    """A content block that is not a string is skipped and reported; others stay."""
+
     def spoil(doc: dict[str, Any]) -> None:
         doc["conference"]["content"]["wifi"] = ["not", "text"]
 
@@ -203,6 +216,7 @@ def test_a_content_block_that_is_not_text_is_skipped() -> None:
 
 
 def test_a_feed_without_content_has_none() -> None:
+    """A feed without a ``conference`` object has no content and skips nothing."""
     data = process(changed(2026, lambda doc: doc.pop("conference")), settings(2026))
     assert data.content == {} and data.content_md == {}
     assert data.skipped == ()
@@ -221,5 +235,6 @@ def test_a_feed_without_content_has_none() -> None:
 def test_conference_content_of_the_wrong_type_raises_feed_error(
     change: Any, problem: str
 ) -> None:
+    """A ``conference`` or ``content`` that is not an object raises ``FeedError``."""
     with pytest.raises(FeedError, match=problem):
         process(changed(2026, change), settings(2026))
