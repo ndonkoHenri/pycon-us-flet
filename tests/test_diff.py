@@ -152,16 +152,15 @@ def test_a_poster_moved_within_the_posters_row_is_not_reported() -> None:
     assert changes(2026, edit) == []
 
 
-def test_an_earlier_posters_row_reports_its_poster_details_not_itself() -> None:
-    """The row's id holds its start and is skipped; its posters keep theirs and moved."""
+def test_an_earlier_posters_row_and_its_posters_are_not_reported() -> None:
+    """A Posters row moved earlier gives no change: its id is new, its posters are skipped."""
     edit = retime(62, "2026-05-17T09:00:00-07:00", "2026-05-17T09:05:00-07:00")
-    found = changes(2026, edit)
-    assert len(found) == len(recorded_model(2026).posters) == 25
-    assert {c.kind for c in found} == {ChangeKind.TIME}
-    assert all(c.id.startswith("poster-detail-") for c in found)
-    assert {(c.old and c.old.start, c.new and c.new.start) for c in found} == {
-        (pacific(17, 9, 30), pacific(17, 9))
-    }
+    _, new = pair(2026, edit)
+    posters = [
+        s for s in process(new, settings(2026)).sessions.values() if s.kind == "poster"
+    ]
+    assert {s.start for s in posters if not s.in_timeline} == {pacific(17, 9)}
+    assert changes(2026, edit) == []
 
 
 def test_the_job_fair_keeps_its_shown_start_on_both_sides() -> None:
@@ -193,8 +192,8 @@ def test_several_changes_to_one_session_come_as_time_room_title() -> None:
     ]
 
 
-def test_changes_come_by_new_start_or_a_removals_old_start_then_id() -> None:
-    """Additions, moves and removals interleave by start; one start goes by id."""
+def test_changes_come_by_new_start_or_a_removals_old_start() -> None:
+    """Additions, moves and removals interleave by start (a removal's is its old one)."""
     found = changes(
         2026,
         remove(TALK),
@@ -207,6 +206,21 @@ def test_changes_come_by_new_start_or_a_removals_old_start_then_id() -> None:
         ("90", ChangeKind.TIME),
         ("142", ChangeKind.REMOVED),
         ("51", ChangeKind.ROOM),
+    ]
+
+
+def test_same_start_same_kind_changes_go_by_id_as_text() -> None:
+    """Two room moves at one start come by id as text, "1142" before "90", not feed order."""
+    found = changes(2026, move(90, "Room 101B"), move(1142, "Room 101C"))
+    assert [c.id for c in found] == ["1142", "90"]
+
+
+def test_at_one_start_id_comes_before_kind() -> None:
+    """At one start, 142's room change comes before 51's removal: id, then kind."""
+    found = changes(2026, remove(51), move(TALK, "Room 101B"))
+    assert [(c.id, c.kind) for c in found] == [
+        ("142", ChangeKind.ROOM),
+        ("51", ChangeKind.REMOVED),
     ]
 
 

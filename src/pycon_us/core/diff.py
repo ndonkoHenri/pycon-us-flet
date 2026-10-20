@@ -6,10 +6,11 @@ changed. It reads only what each side's model holds, so it is pure, and both sid
 always parsed by the current code from raw bytes (the cache keeps them, D-47): a change of
 the parser can never show up as a change of the schedule.
 
-Collapsed break and poster rows (``rules.COLLAPSED_KINDS``) are left out: their ids hold
-their start (``<kind>-<room>-<start>``, D-123), so a moved break would read as one removed
-and one added. Poster details keep their ids when their Posters row moves, so they are
-compared like any other session.
+Sessions of the collapsed kinds (``rules.COLLAPSED_KINDS``) are left out. A collapsed
+break or poster row's id holds its start (``<kind>-<room>-<start>``, D-123), so a moved
+break would read as one removed and one added. Poster details copy their Posters row's
+time and place and have no row of their own (DATA-07), so a moved Posters row would read
+as all of them changed at once, and a missing one as all of them removed.
 """
 
 from collections.abc import Iterator
@@ -113,10 +114,11 @@ def diff(old: ConferenceData, new: ConferenceData) -> list[Change]:
 
     Sessions are matched by id. A session only in ``new`` is added, one only in ``old``
     removed; one in both gives a change for each of its time (shown start or end),
-    location and title that differ. Collapsed break and poster rows are left out (see
+    location and title that differ. Breaks, Posters rows and posters are left out (see
     the module's docstring). The changes are ordered by the session's new start (the old
     one for a removal), then id, then kind (``ChangeKind``'s order), so the same two feeds
-    always give the same list. The same feed on both sides gives an empty list.
+    always give the same list. Ids compare as text, not numbers: "1142" comes before
+    "142", and "142" before "51". The same feed on both sides gives an empty list.
 
     Args:
         old: The feed the user saw.
@@ -143,13 +145,8 @@ def _compared(data: ConferenceData) -> dict[str, Session]:
     return {
         key: session
         for key, session in data.sessions.items()
-        if not _is_collapsed(session)
+        if session.kind not in COLLAPSED_KINDS
     }
-
-
-def _is_collapsed(session: Session) -> bool:
-    # Only collapsed rows of these kinds are in the timeline; poster details are not.
-    return session.kind in COLLAPSED_KINDS and session.in_timeline
 
 
 def _changes(key: str, old: Listing, new: Listing) -> Iterator[Change]:
