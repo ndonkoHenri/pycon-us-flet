@@ -1,10 +1,10 @@
 # Roadmap
 
-**Status:** plan of record, 2026-10-11. It is the phase breakdown into epics and issues, and replaces v1's backlog, which stays in git history with the other v1 docs (D-96). Binding inputs: [`PLAN.md`](../PLAN.md) (phases and exit criteria in §7, spikes in §8) and [`decisions.md`](decisions.md) (D-ids). Scope per feature id: [`feature-matrix.md`](feature-matrix.md).
+**Status:** plan of record, 2026-10-11; P2 broken down 2026-10-20. It is the phase breakdown into epics and issues, and replaces v1's backlog, which stays in git history with the other v1 docs (D-96). Binding inputs: [`PLAN.md`](../PLAN.md) (phases and exit criteria in §7, spikes in §8) and [`decisions.md`](decisions.md) (D-ids). Scope per feature id: [`feature-matrix.md`](feature-matrix.md).
 
 This file turns the plan into work:
-- **P0 and P1** are broken down into PR-sized issues.
-- **P2 to P4** are epics with their scope. We break each one down when its phase starts.
+- **P0, P1 and P2** are broken down into PR-sized issues.
+- **P3 and P4** are epics with their scope. We break each one down when its phase starts.
 
 `issues.json` seeded GitHub once from the same content (section 10). Once seeded, **GitHub issues are the live task list**. This file keeps the phases, exit criteria, epics and the reasons behind the breakdown. It is edited by hand, only when a phase starts or when scope changes through a `needs-decision` issue.
 
@@ -18,7 +18,7 @@ Phases are milestones (D-89). Soft markers are orientation, never deadlines (D-0
 |---|---|---|---|
 | **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on an Android emulator and the iPhone | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
 | **P1 Attendee core** | Good enough to demo, and to use for a whole simulated conference day | demo slice end of Nov; exit mid-Dec 2026 | 7 epics, 36 issues, spike S6, 2 upstream issues |
-| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 1 upstream issue |
+| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 103 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
 | **P3 Accounts & staff tools** | The private-API features against the local mock, with the scanner as the showcase | Mar 2027 | 8 epics |
 | **P4 Showcase** | Polish, publish, present | ready in Apr 2027 | 5 epics |
 
@@ -26,13 +26,13 @@ Upstream Flet work runs in parallel with the phases (section 8).
 
 ## 2. How to read it
 
-**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues (S7..S9 open with the epics that need them) and `UP-…` upstream work. The seeder writes each key into its issue body, so the roadmap and GitHub stay traceable.
+**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order, and `P2-103` (#464), added later by D-254; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
 
-**Issue blocks.** Each block gives the labels, dependencies ("after") and feature ids, a one-paragraph description and the acceptance criteria. The GitHub issue adds the D-ids, implementation notes, the docs to read and the definition of done (D-93), which for UI work includes Android and iOS screenshots in light and dark.
+**Issue blocks.** For P0 and P1, each block gives the labels, dependencies ("after") and feature ids, a one-paragraph description and the acceptance criteria. P2's blocks give the issue number, labels, dependencies and feature ids; the description and criteria are in the issue. The GitHub issue adds the D-ids, implementation notes, the docs to read and the definition of done (D-93), which for UI work includes Android and iOS screenshots in light and dark.
 
 **Labels (D-90).** Each item has at least one type label, exactly one area label, and optionally a status label. Upstream epics carry both `epic` and `upstream`. Spikes are `test` issues titled `Spike: …`, and their verdicts go to `docs/spikes/NN-<slug>.md` (D-91).
 
-**Epics** are parent issues, and their issues are sub-issues. A few issues have no epic: status, phase exits, decisions and single upstream items. A spike can be a sub-issue of an upstream epic in a later milestone: S6 runs in P1 under UP-E3 (P2).
+**Epics** are parent issues, and their issues are sub-issues. A few issues have no epic: status, phase exits, decisions, single upstream items and the stand-alone spike S9 (`P2-03`). A spike can be a sub-issue of an upstream epic in a later milestone: S6 runs in P1 under UP-E3 (P2).
 
 **Dependencies are hard.** Start an issue only when its dependencies are merged; for a spike, that means its verdict is merged.
 
@@ -801,7 +801,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 **Goal.** Everything an attendee needs at the venue, offline, plus reminders.
 
 **Exit criteria** (PLAN §7):
-1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason.
+1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason. Without E3 at the exit, the E3-only rows move to `later` and their issues to P4 (D-256).
 2. **Venue data offline.** In airplane mode, these work from bundled year data, and the loader test is green:
    - floor plans with room pins;
    - the expo map and list;
@@ -810,7 +810,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
    - With E3 pinned: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, the tap opens the session, and the reminder moves with the session.
    - Without E3, the interim says so.
    - A denied permission never blocks a task.
-4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
+4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. **Device checklist.** The D-79 checklist passes, including high contrast, tablets and screen readers on three new flows.
 6. **Unaided use.** Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
@@ -818,11 +818,17 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 - S7 (real floor plans with about 60 hotspots in `InteractiveViewer` on a low-RAM phone: a small-RAM Android AVD and the iPhone until a real one is borrowed, D-102) opens P2-E1.
 - S8 (a minimal `mobile_scanner` extension in release builds) opens UP-E1 on the upstream track, so that E1 can land before P3.
 - S9 (`flet test linux` in CI) may run from P2 on; a green result is proposed as a separate workflow through `needs-decision` (D-78).
+- `P2-04` (no S-number): does a shared `.ics` file reach the phone's calendar? Its verdict goes to `docs/spikes/10-ics-share.md`, and it gates `P2-65` and `P2-66`.
 
 **At the start of P2:**
-- split each epic into sub-issues like P0 and P1;
-- open the status issue;
-- move anything that slips to `later` through `needs-decision`.
+- each epic was split into sub-issues (2026-10-20), listed under it below;
+- the status issue is #347;
+- anything that slips moves to `later` through `needs-decision`; `P2-07` sets the rule for the rows that only E3 can deliver.
+
+**Order.**
+1. **The first wave**, which needs nothing else: the spikes (`P2-01`, `P2-04`; S8 (`P2-02`) and S9 (`P2-03`) any time), the decisions (`P2-05`, `P2-06`, `P2-07`), the upstream write-ups (`P2-08`..`P2-11`) and the foundations (`P2-13`..`P2-27` and `P2-81`). Do the device-heavy spikes one at a time.
+2. **The features**, each when its "after" list is merged.
+3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, `P2-103`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
 
 ### P2-E1 · Epic: map, floor plans and location cards
 
@@ -830,11 +836,93 @@ epic, area:rooms-maps · DATA-32, DATA-33, MAP-01, MAP-02, MAP-03, MAP-05, MAP-0
 
 Map sub-tabs (Rooms, Floor plans, Expo, Job fair) with state in `ViewMemory` (D-18); floor plans and room pins from `map.toml`; a floor viewer with zoom buttons as well as pinch; `LocationCard` on room and session detail and info pages; Places search; sprint-only rooms; the 3D tour as a link. Spike S7 goes first.
 
+#### P2-01 (S7) · Spike: do real floor plans with about 60 hotspots work in InteractiveViewer on a low-RAM phone? (#361)
+
+test, area:rooms-maps · ROOM-05, MAP-02, DATA-32, EXPO-01
+
+#### P2-12 · Add map.toml with the floor plans and room and venue pins, and its loader (#372)
+
+feature, area:rooms-maps · after P2-01 · DATA-32, MAP-07
+
+#### P2-28 · Build the floor viewer with zoom buttons and an anchored pin (#388)
+
+feature, area:rooms-maps · after P2-01, P2-12 · ROOM-05, MAP-05, INFO-13
+
+#### P2-29 · Add LocationCard and show it on room detail (#389)
+
+feature, area:rooms-maps · after P2-12, P2-28 · DATA-33, MAP-06, ROOM-04
+
+#### P2-30 · Show the room's LocationCard on session detail (#390)
+
+feature, area:rooms-maps · after P2-29 · DATA-33
+
+#### P2-31 · Add the Map's Floor plans tab and the 3D venue tour link (#391)
+
+feature, area:rooms-maps · after P2-12, P2-28 · MAP-01, MAP-02, MAP-03
+
+#### P2-32 · Group the Rooms list by floor and add the sprint-only rooms (#392)
+
+feature, area:rooms-maps · after P2-12 · MAP-08, ROOM-01, DATA-16
+
+#### P2-33 · Add the Places search scope for rooms and venue spots (#393)
+
+feature, area:rooms-maps · after P2-12, P2-28 · MAP-07, NEW-02
+
+#### P2-93 · Check the map journeys offline, with screen readers and on a low-RAM AVD (#453)
+
+test, area:quality · after P2-28, P2-29, P2-30, P2-31, P2-32, P2-33, #348 · ROOM-05, DATA-33, MAP-01, MAP-07
+
 ### P2-E2 · Epic: expo hall and job fair
 
 epic, area:rooms-maps · after P2-E1 · EXPO-01, EXPO-02, EXPO-03, EXPO-04, EXPO-05, MAP-04, SPON-10
 
 The expo map with booth hit areas, an equal list view for screen readers, a booth card, `?booth=N` selection (no camera move until U3), honest "not on the map yet", and the job fair plan with tables.
+
+#### P2-05 · Propose the booth card for shared booths and the job fair pane's layout (#365)
+
+design, needs-decision, area:rooms-maps · EXPO-02, EXPO-03, MAP-04, SPON-10
+
+#### P2-41 · Add the expo plan and booth table to map.toml and match booths to sponsors (#401)
+
+feature, area:rooms-maps · after P2-01, P2-12, P2-13 · EXPO-02, DATA-32
+
+#### P2-42 · Draw the expo hall with booth hit areas, a selected booth and its Map tab (#402)
+
+feature, area:rooms-maps · after P2-41, P2-28, P2-31 · EXPO-01, MAP-01
+
+#### P2-43 · Show a booth card for the selected booth (#403)
+
+feature, area:rooms-maps · after P2-42, P2-05, P2-13, P2-34, P2-36 · EXPO-03
+
+#### P2-44 · Add the expo List view with a Map | List switch (#404)
+
+feature, area:rooms-maps · after P2-43 · EXPO-01, EXPO-04
+
+#### P2-45 · Open the expo at a booth with ?booth=N, and add Expo hall to More (#405)
+
+feature, area:rooms-maps · after P2-44, P2-35 · EXPO-05
+
+#### P2-46 · Find booths through global search (#406)
+
+feature, area:rooms-maps · after P2-45, P2-33, P2-37 · EXPO-04
+
+#### P2-47 · Build the job fair pane: the plan and who is at each table (#407)
+
+feature, area:rooms-maps · after P2-05, P2-28, P2-31, P2-29, P2-34 · MAP-04, SPON-10, MAP-01, DATA-32
+
+#### P2-48 · Place the job fair card on Job Fair sessions and Job listings (#408)
+
+feature, area:rooms-maps · after P2-47, P2-30, P2-39 · SESS-10, SPON-10, SPON-06
+
+#### P2-103 · Mark the job fair tables on the plan so a row can show its table (#464)
+
+feature, area:rooms-maps · after P2-47 · MAP-04, SPON-03
+
+Added by D-254 (#365): a rectangle per printed table on the cropped plan, opened from each pane row and from sponsor detail's job fair table.
+
+#### P2-94 · Check the expo and job fair on devices: offline, screen readers, large text and Maestro flows (#454)
+
+test, area:rooms-maps · after P2-46, P2-48, P2-36, #348 · EXPO-01, EXPO-03, EXPO-04, EXPO-05, MAP-04
 
 ### P2-E3 · Epic: sponsors and job listings
 
@@ -842,11 +930,111 @@ epic, area:sponsors · DATA-22, SHELL-08, SPON-01, SPON-02, SPON-03, SPON-04, SP
 
 Tiered Sponsors, sponsor detail with labelled actions, open roles from real anchors, job listings, the Now sponsor spotlight and credits from year data. No rotating strip (D-37).
 
+#### P2-13 · Decode the feed's sponsors by level, with Ionic's sponsor slugs (#373)
+
+feature, area:sponsors · DATA-22, SPON-02
+
+#### P2-14 · Share the white logo tile between the Sprints cards and sponsors (#374)
+
+refactor, area:sponsors · EVT-05, SPON-01
+
+#### P2-34 · Parse job listings into linked roles and match them to sponsors (#394)
+
+feature, area:sponsors · after P2-13 · SPON-09, DATA-24
+
+#### P2-35 · Build the tiered Sponsors list under More › Expo & sponsors (#395)
+
+feature, area:sponsors · after P2-13, P2-14 · SPON-01, DATA-22
+
+#### P2-36 · Build sponsor detail with About and Open roles (#396)
+
+feature, area:sponsors · after P2-13, P2-34, P2-14, P2-35 · SPON-03, SPON-05, SPON-09
+
+#### P2-37 · Add a Sponsors scope to search (#397)
+
+feature, area:sponsors · after P2-13, P2-14, P2-36, P2-33 · NEW-02, DATA-22
+
+#### P2-38 · Add the sponsor spotlight card to Now (#398)
+
+feature, area:sponsors · after P2-13, P2-14, P2-36 · SHELL-08, SPON-11
+
+#### P2-39 · Build Job listings with sponsor cards and linked roles (#399)
+
+feature, area:sponsors · after P2-34, P2-14, P2-36 · SPON-06, SPON-08
+
+#### P2-40 · Filter Job listings with an all-words search (#400)
+
+feature, area:sponsors · after P2-39 · SPON-07
+
+#### P2-49 · Add Find booth and Job fair table actions to sponsor detail (#409)
+
+feature, area:sponsors · after P2-36, P2-45, P2-47 · SPON-04
+
+#### P2-95 · Check sponsors and job listings offline, with screen readers and Maestro flows (#455)
+
+test, area:quality · after P2-40, P2-38, P2-37, #348 · SPON-01, SPON-03, SPON-06, SPON-07, SHELL-08
+
 ### P2-E4 · Epic: info pages and venue
 
 epic, area:info · INFO-02, INFO-05, INFO-06, INFO-07, INFO-08, INFO-09, INFO-10, INFO-11, DATA-23, MAP-09, MAP-10, MAP-11
 
 About PyCon US, About the PSF, Help & safety (with the Code of Conduct and "Report a concern" first), Wi-Fi with Copy, Social, and Venue & hours with "Open now" and directions, all from `content.toml`.
+
+#### P2-15 · Add the info pages' year-data module, page body and copy_text() (#375)
+
+feature, area:info · INFO-05, DATA-23
+
+#### P2-16 · Bundle brand logos as theme-tinted SVGs with a contrast test (#376)
+
+feature, area:theme · THEME-12
+
+#### P2-50 · Build the Wi-Fi page with Copy, from year data (#410)
+
+feature, area:info · after P2-15 · INFO-08, INFO-05, DATA-23
+
+#### P2-51 · Build Help & safety with Report a concern first (#411)
+
+feature, area:info · after P2-15 · INFO-07, INFO-11, INFO-05, DATA-23
+
+#### P2-52 · Add venue hours to year data with an open-now rule (#412)
+
+feature, area:info · after P2-15 · MAP-09, DATA-23
+
+#### P2-53 · Build Venue & hours with Open now, Directions and Copy address (#413)
+
+feature, area:info · after P2-52 · MAP-09, MAP-11, INFO-05
+
+#### P2-54 · Build About PyCon US with its brand band and links (#414)
+
+feature, area:info · after P2-51, P2-53 · INFO-02, INFO-05, DATA-23
+
+#### P2-55 · Build About the PSF with its links and Donate (#415)
+
+feature, area:info · after P2-15, P2-16 · INFO-06, INFO-05, DATA-23
+
+#### P2-56 · Build Social media with hashtags that copy (#416)
+
+feature, area:info · after P2-15, P2-16 · INFO-10, DATA-23
+
+#### P2-57 · Credit the Wi-Fi and Quiet room sponsors from year data (#417)
+
+feature, area:info · after P2-50, P2-51, P2-53, P2-13, P2-36 · INFO-09, MAP-10
+
+#### P2-58 · Add location cards to Help & safety and Venue & hours (#418)
+
+feature, area:info · after P2-51, P2-53, P2-12, P2-28, P2-29 · INFO-11, INFO-12, MAP-09
+
+#### P2-59 · Add quick info buttons to Now: Wi-Fi, Help & safety, Venue & hours (#419)
+
+feature, area:info · after P2-50, P2-51, P2-53 · INFO-08, INFO-07, MAP-09
+
+#### P2-84 · Add Report a problem with the app to Help & safety (#444)
+
+feature, area:info · after P2-51, P2-83 · INFO-11
+
+#### P2-96 · Check the venue pages offline, with screen readers and Maestro flows (#456)
+
+test, area:info · after P2-50, P2-51, P2-53, #348 · INFO-07, INFO-08, MAP-09, INFO-05, DATA-23
 
 ### P2-E5 · Epic: Welcome, Settings and high-contrast themes
 
@@ -854,17 +1042,173 @@ epic, area:theme · SHELL-02, STORE-07, STORE-08, THEME-01, THEME-04, THEME-05, 
 
 One Welcome screen with honest attribution; Settings with Appearance and a High contrast switch; two hand-authored high-contrast schemes at 7:1 for text, with outlined badges.
 
+#### P2-17 · Add the high-contrast light and dark colour schemes with a 7:1 text test (#377)
+
+feature, area:theme · THEME-04, THEME-05
+
+#### P2-60 · Outline badges and cards in high contrast through a Tokens flag (#420)
+
+feature, area:theme · after P2-17, P2-19 · THEME-06, THEME-08
+
+#### P2-61 · Build Settings with Appearance and the High contrast switch (#421)
+
+feature, area:theme · after P2-17 · THEME-01, STORE-08
+
+#### P2-62 · Add Settings' Data section: schedule age, Refresh now and the time-zone note (#422)
+
+feature, area:data · after P2-61 · DATA-03, DATA-31, DATA-12
+
+#### P2-63 · Show Welcome on first run, with honest attribution (#423)
+
+feature, area:shell · after P2-25 · SHELL-02, STORE-07, SHELL-03
+
+#### P2-64 · Add Show welcome again to Developer options (#424)
+
+feature, area:shell · after P2-63 · SHELL-02, DEV-01
+
+#### P2-97 · Check every screen in high contrast and restore the boundaries fills drew (#457)
+
+test, area:theme · after P2-60, P2-61 · THEME-04, THEME-05, THEME-06
+
 ### P2-E6 · Epic: reminders and calendar
 
 epic, area:notifications · after S6 · NOTIF-01, NOTIF-03, NOTIF-05, NOTIF-06, NOTIF-07, NOTIF-10, NEW-05, STORE-10, DEV-06, NATIVE-06, SESS-04, SESS-05
 
 Pure `plan()` and `apply()` for local reminders (saved sessions and conference moments), reminder settings, permission in context, the honest interim until E3 is pinned, and `.ics` for a session or the whole of My schedule.
 
-### P2-E7 · Epic: schedule change log (#312)
+#### P2-04 · Spike: does a shared .ics file reach the phone's calendar on Android and iOS? (#364)
+
+test, area:notifications · SESS-04, SESS-05
+
+#### P2-07 · Decide the E3-only rows' disposition if E3 isn't pinned by the P2 exit (#367)
+
+design, needs-decision, area:notifications · NOTIF-06, NOTIF-07, NOTIF-10, DEV-06, NATIVE-06
+
+#### P2-20 · Add core/ics.py: calendar files for a session or a whole agenda (#380)
+
+feature, area:notifications · SESS-05
+
+#### P2-21 · Add conference moments to the year data, with keynotes derived from the feed (#381)
+
+feature, area:notifications · NOTIF-05
+
+#### P2-22 · Add the reminder settings record (#382)
+
+feature, area:notifications · STORE-10, NOTIF-03
+
+#### P2-23 · Add a tool that shifts the feed so reminders can be checked in real time (#383)
+
+test, area:notifications · NEW-05, NOTIF-05
+
+#### P2-65 · Add Add to calendar to session detail (#425)
+
+feature, area:notifications · after P2-04, P2-20 · SESS-04, SESS-05
+
+#### P2-66 · Export My schedule to a calendar file (#426)
+
+feature, area:notifications · after P2-04, P2-20 · SESS-05
+
+#### P2-67 · Add the pure reminder plan, capped at the next 60 (#427)
+
+feature, area:notifications · after P2-21, P2-22 · NOTIF-05, NEW-05
+
+#### P2-68 · Show an in-app Banner before a saved session starts (#428)
+
+feature, area:notifications · after P2-67 · NEW-05
+
+#### P2-69 · Add the Reminders section to Settings, with the honest interim (#429)
+
+feature, area:notifications · after P2-61 · NOTIF-01
+
+#### P2-86 · Add the notifications extension and the permission handler to the build (#446)
+
+chore, area:build · after P2-85 · NATIVE-06
+
+#### P2-87 · Schedule reminders with E3 at start, on resume and on every change (#447)
+
+feature, area:notifications · after P2-86, P2-67, P2-23, P2-71 · NOTIF-05, NEW-05
+
+#### P2-88 · Ask for notification permission in context, after a one-sentence primer (#448)
+
+feature, area:notifications · after P2-87, P2-22 · NOTIF-06, NOTIF-07
+
+#### P2-89 · Make Settings › Reminders live, with permission cards and My schedule's entry (#449)
+
+feature, area:notifications · after P2-88, P2-69, P2-87, P2-66 · NOTIF-01, STORE-10, NOTIF-10
+
+#### P2-90 · Open the session from a reminder tap, cold start included (#450)
+
+feature, area:notifications · after P2-87, P2-68, P2-79 · NEW-05, NEW-07
+
+#### P2-91 · Add the Developer test reminder with its outcome inline (#451)
+
+feature, area:quality · after P2-87, P2-88 · DEV-06
+
+#### P2-98 · Check the reminders interim and calendar exports on devices (#458)
+
+test, area:notifications · after P2-65, P2-66, P2-68, P2-69 · NEW-05, NOTIF-01, SESS-04, SESS-05
+
+#### P2-99 · Check E3 reminders on devices for the P2 exit (#459)
+
+test, blocked, area:notifications · after P2-87, P2-89, P2-90, P2-91, P2-23, P2-98 · NEW-05, NOTIF-05, NOTIF-06, NOTIF-07, NOTIF-10, DEV-06
+
+### P2-E7 · Epic: schedule change log (`PyCon/pycon-us-mobile#312`)
 
 epic, area:schedule · NEW-04
 
-A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and `/schedule/changes` with saved sessions first.
+A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and Schedule changes (the drill pair `changes/<year>`, pushed on the View that opens it, D-255) with saved sessions first.
+
+#### P2-06 · Decide the change log's route, Back target and when it speaks up (#366)
+
+design, needs-decision, area:schedule · NEW-04
+
+#### P2-18 · Add the pure schedule diff with feed-pair tests (#378)
+
+feature, area:data · NEW-04
+
+#### P2-19 · Split ui/badges.py under D-66's 400 lines (#379)
+
+refactor, area:schedule · SCHED-03, THEME-08
+
+#### P2-70 · Keep change batches per year in changes-<year>.json (#430)
+
+feature, area:data · after P2-06, P2-18 · NEW-04, DEV-05
+
+#### P2-71 · Record a change batch when a refresh publishes a new feed (#431)
+
+feature, area:data · after P2-06, P2-18, P2-70 · NEW-04, DATA-02
+
+#### P2-72 · Spell out each change as an old-to-new line and a spoken sentence (#432)
+
+feature, area:schedule · after P2-18, P2-70 · NEW-04
+
+#### P2-73 · Show a Changed badge on session rows for 24 hours (#433)
+
+feature, area:schedule · after P2-06, P2-19, P2-71, P2-72, P2-60 · NEW-04, SCHED-03, THEME-08
+
+#### P2-74 · Say what changed on session detail (#434)
+
+feature, area:schedule · after P2-71, P2-72, P2-73 · NEW-04, SESS-01
+
+#### P2-75 · Build the Schedule changes screen with My schedule's changes first (#435)
+
+feature, area:schedule · after P2-06, P2-71, P2-72 · NEW-04
+
+#### P2-76 · Mark schedule changes as seen: the unseen dot and Mark all as seen (#436)
+
+feature, area:schedule · after P2-70, P2-71, P2-75 · NEW-04
+
+#### P2-77 · Announce a schedule update with a Review SnackBar, and add Schedule changes to the Schedule's overflow (#437)
+
+feature, area:schedule · after P2-06, P2-71, P2-72, P2-75 · NEW-04
+
+#### P2-78 · Add Schedule changes entry points to Now and Settings › Data (#438)
+
+feature, area:schedule · after P2-75, P2-76, P2-62 · NEW-04, SCHED-25
+
+#### P2-100 · Check the change log end to end on devices from a served feed pair (#460)
+
+test, area:quality · after P2-73, P2-74, P2-77, P2-78, #348 · NEW-04
 
 ### P2-E8 · Epic: deep links
 
@@ -872,11 +1216,59 @@ epic, area:shell · after P1-34 · NEW-07
 
 `<scheme>://<host>/<route path>` links, with scheme and host set in both per-platform `deep_linking` tables; links and reminder taps land with a back stack.
 
+#### P2-24 · Register a placeholder link scheme and host for Android and iOS builds (#384)
+
+feature, area:build · NEW-07
+
+#### P2-25 · Give an unknown link a View whose Back goes to Now (#385)
+
+feature, area:shell · NEW-07, SHELL-04, SHELL-16
+
+#### P2-79 · Land deep links on their target with the root below, cold and warm (#439)
+
+feature, area:shell · after P2-24, P2-25 · NEW-07, SHELL-04, SHELL-03
+
 ### P2-E9 · Epic: tablet layout and About this app
 
 epic, area:shell · SHELL-14, INFO-03, INFO-04
 
 `NavigationRail` from 600 dp; the full About this app (versions, feed age, licences, "Not an official PSF app"); Share log with plain diagnostics.
+
+#### P2-11 · Upstream: Flutter's licence page from Flet (U51) (#371)
+
+upstream, area:shell · INFO-03
+
+#### P2-26 · Build the plain diagnostics text for bug reports (#386)
+
+feature, area:shell · INFO-04
+
+#### P2-27 · Swap the bottom bar for a NavigationRail on tab roots from 600 dp (#387)
+
+feature, area:shell · SHELL-14
+
+#### P2-80 · Cap content at 720 dp for reading and 840 dp for lists, centred (#440)
+
+feature, area:shell · after P2-27 · SHELL-14
+
+#### P2-81 · Show the schedule data's age and source, and project links, on About this app (#441)
+
+feature, area:shell · INFO-03
+
+#### P2-82 · Add a Licences page under About this app (#442)
+
+feature, area:shell · after P2-81 · INFO-03
+
+#### P2-83 · Add Share log and Report a problem to About this app (#443)
+
+feature, area:shell · after P2-81, P2-26 · INFO-04
+
+#### P2-92 · Show the build number on About this app from page.get_app_info() (#452)
+
+feature, blocked, area:shell · after P2-26, UP-U4 · INFO-03
+
+#### P2-101 · Check tablets, landscape and About this app on devices, with Maestro flows (#461)
+
+test, area:quality · after P2-27, P2-80, P2-82, P2-83, #348 · SHELL-14, INFO-03, INFO-04
 
 ### UP-E3 · Epic (upstream): scheduled local notifications (E3)
 
@@ -884,17 +1276,37 @@ epic, upstream, area:notifications
 
 Scheduling in the official flet-dev/flet#6948 notifications extension, sized by S6. The app ships the D-60 interim until a pin bump brings E3 in.
 
+#### P2-85 · Bump the Flet pin to a commit with E3 scheduling and U7 desugaring (#445)
+
+chore, blocked, area:build · after #294, #293
+
 ### UP-SMALL · Epic (upstream): small core gaps (U16, U17, U10, U2, U3, U9, U18)
 
 epic, upstream, area:quality
 
 `PageMediaData.text_scale_factor`, an accessibility-features change event, `AppBar.bottom`, sticky headers, an absolute `InteractiveViewer` transform, `use_route_search`, and U18 (per-level modal pops, D-19). None blocks a phase exit.
 
+#### P2-08 · Upstream: an absolute InteractiveViewer transform, set_transform and zoom_to_rect (U3) (#368)
+
+upstream, area:rooms-maps · EXPO-05
+
+#### P2-09 · Upstream: a use_route_search() hook for the route's query string (U9) (#369)
+
+upstream, area:shell · ROOM-03, SPON-04, EXPO-05
+
+#### P2-10 · Upstream: Back from a view pushed over a modal route pops one step (U18) (#370)
+
+upstream, area:shell · NEW-02
+
 ### UP-E1 · Epic (upstream): barcode-scanner extension (E1)
 
 epic, upstream, area:staff
 
 Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev, taken upstream by the owner (D-212), using `material_ui`. The staff tools never depend on it.
+
+#### P2-02 (S8) · Spike: does a minimal mobile_scanner extension decode reliably in release builds? (#362)
+
+test, area:staff · LEAD-01, LEAD-02
 
 ### Other issues in this milestone
 
@@ -905,6 +1317,28 @@ upstream, area:build
 Write up `page.get_app_info()` (version, build number, package name) for Flet, for the owner to take upstream (D-212); the app uses `__version__` until a pin bump brings it in.
 
 - The flet-dev PR is merged or its status recorded; an app issue exists for the swap.
+
+#### P2-03 (S9) · Spike: can the UI flows run in CI with flet test linux? (#363)
+
+test, area:quality
+
+#### P2-102 · P2 exit: venue offline, reminders, change log, device checklist and unaided use (#462)
+
+test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-100, P2-79, P2-101, #121, P1-34
+
+#### Status and carried issues
+
+- **Status:** #347, updated weekly.
+- **Carried from P1** (no roadmap key, except the decisions, which are `P1-34`, `P1-35` and `P1-36` in §4; #347 tracks them):
+  - the Schedule keeps its place on a filter change: #333, with the draft PR #346 and upstream #345 (U50);
+  - design: #331, #305, #277, #222, #215;
+  - features: #242 (decide and build open-space row thumbnails);
+  - accessibility: #332, #302, #309;
+  - tests and tools: #348 (Maestro flows, which the check issues `P2-93`..`P2-96`, `P2-100` and `P2-101` wait for), #312, #257, #339;
+  - bugs: #337, #342, #343, #344; docs: #359;
+  - the iPhone session #121, with VoiceOver checks #261 and #320;
+  - decisions: #15 (`P1-34`, O-4, app identity; its placeholders ship in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1).
+- **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
 
 ## 6. P3 Accounts & staff tools
 
@@ -1041,8 +1475,8 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 ## 9. Checks
 
 This catalogue and `issues.json` were generated once from one data file and checked:
-- every P0 and P1 feature id of the matrix is covered by a concrete issue;
-- every P2–P4 id belongs to an epic;
+- every P0, P1 and P2 feature id of the matrix is covered by a concrete issue (P2's were written by hand and checked against the matrix on 2026-10-20);
+- every P3–P4 id belongs to an epic;
 - every label is in the D-90 set;
 - every dependency exists, and dependencies come before the issues that use them.
 
