@@ -65,10 +65,12 @@ INDEX = search_index(DATA)
 def test_the_scope_comes_from_the_opener_then_the_memory(
     requested: str | None, remembered: str, scope: str
 ) -> None:
+    """A known requested scope wins; with none, the memory's; else All."""
     assert screen.scope_of(requested, remembered) == scope
 
 
 def test_the_summary_names_only_the_types_found_in_words() -> None:
+    """The summary counts each type found, in words, and skips the others."""
     sessions = search(INDEX, "a", "all")
     assert search_results.summary(sessions) == (
         f"{sessions.session_count} sessions, {len(sessions.speakers)} speakers, "
@@ -106,8 +108,11 @@ ROUTES = [
 
 @dataclass
 class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on the app's Views, and what the
-    search screen asked for."""
+    """The harness's ``Shown`` (``tests/sessions.py``) on the app's Views.
+
+    It also records what the search screen asked for: its searches, the focus and its
+    sleeps.
+    """
 
     searches: list[tuple[str, str]] = field(default_factory=list)
     """Each ``search(index, query, scope)`` the screen ran, as (query, scope)."""
@@ -118,10 +123,12 @@ class Shown(sessions.Shown):
 
     @property
     def page(self) -> ft.Page:
+        """The session's page."""
         return cast(ft.Page, self.session.page)
 
     @property
     def haptics(self) -> MemoryHaptics:
+        """The ``MemoryHaptics`` of the session's services."""
         return cast(MemoryHaptics, self.services.haptics)
 
     def live(self) -> list[ft.BaseControl]:
@@ -129,14 +136,17 @@ class Shown(sessions.Shown):
         return [c for c in self.session.index.values() if c.page is not None]
 
     def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
+        """The controls of ``kind`` on the page now."""
         return [c for c in self.live() if isinstance(c, kind)]
 
     def node(self, identifier: str) -> ft.Semantics:
+        """The one semantics node on the page with ``identifier``."""
         found = [c for c in self.find(ft.Semantics) if c.identifier == identifier]
         assert len(found) == 1, identifier
         return found[0]
 
     def has(self, identifier: str) -> bool:
+        """Whether a semantics node on the page has ``identifier``."""
         return any(c.identifier == identifier for c in self.find(ft.Semantics))
 
     @property
@@ -156,6 +166,7 @@ class Shown(sessions.Shown):
 
     @property
     def field(self) -> ft.TextField:
+        """The screen's one ``TextField``."""
         (text_field,) = self.find(ft.TextField)
         return text_field
 
@@ -202,6 +213,7 @@ class Shown(sessions.Shown):
         await self.event(text_field, "change")
 
     def chip(self, scope: str) -> ft.Chip:
+        """The scope chip for ``scope``."""
         return cast(ft.Chip, self.node(f"search.scope.{scope}").content)
 
 
@@ -226,7 +238,7 @@ type Render = Callable[[Conference], Awaitable[Shown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(conference): the app's Views at the Schedule stand-in."""
+    """Provide ``show(conference)``: the app's Views at the Schedule stand-in."""
 
     def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
         sessions.current(Shown).searches.append((query, scope))
@@ -305,6 +317,7 @@ def _all_text(control: object) -> str:
 
 
 async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) -> None:
+    """The field opens empty and focused, with no autocorrect or suggestions."""
     text_field = opened.field
     assert text_field.autofocus  # the keyboard is up as search opens (ux.md §4.3)
     assert text_field.keyboard_type == ft.KeyboardType.WEB_SEARCH
@@ -314,6 +327,7 @@ async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) ->
 
 
 async def test_the_field_is_named_by_its_hint_then_by_its_label(opened: Shown) -> None:
+    """The empty field is named by its hint, then by ``LABEL`` once typed in."""
     assert opened.field.hint_text == screen.HINTS["sessions"]
     assert opened.node("search.field").label is None  # the hint names it
     await opened.type("typing")
@@ -324,6 +338,7 @@ async def test_the_field_is_named_by_its_hint_then_by_its_label(opened: Shown) -
 async def test_the_clear_button_empties_the_field_and_focuses_it(
     opened: Shown,
 ) -> None:
+    """Clear empties the field and memory, shows idle at once and refocuses."""
     await opened.type("typing")
     await opened.pause()
     (clear,) = [b for b in opened.find(ft.IconButton) if b.tooltip == screen.CLEAR]
@@ -372,6 +387,7 @@ async def test_a_key_a_clear_drops_is_never_remembered_for_a_rebuilt_view(
 async def test_typing_searches_once_the_typing_pauses_not_per_keystroke(
     opened: Shown,
 ) -> None:
+    """Keystrokes each restart the debounce; one search runs at the pause."""
     asked = len(opened.sleeps.asked)
     for text in ("t", "ty", "typ", "typi", "typing"):
         await opened.type(text)
@@ -391,6 +407,7 @@ async def test_typing_searches_once_the_typing_pauses_not_per_keystroke(
 
 
 async def test_the_keyboard_s_action_key_searches_at_once(opened: Shown) -> None:
+    """The keyboard's submit searches at once, without the debounce."""
     await opened.type("typing")
     await opened.event(opened.field, "submit", "typing")
     assert opened.searches == [("typing", "sessions")]
@@ -413,6 +430,7 @@ async def test_a_keystroke_before_the_pause_re_renders_no_result_row(
 
 
 async def test_the_opener_s_scope_is_selected_with_its_check(opened: Shown) -> None:
+    """The four scope chips show a check, and the opener's alone is selected."""
     chips = {scope: opened.chip(scope) for scope in screen.SCOPE_LABELS}
     assert [chip.label for chip in chips.values()] == [
         "All",
@@ -427,6 +445,7 @@ async def test_the_opener_s_scope_is_selected_with_its_check(opened: Shown) -> N
 async def test_switching_scope_keeps_the_query_and_searches_at_once(
     opened: Shown,
 ) -> None:
+    """A scope chip tap searches the query at once and remembers the scope."""
     await opened.type("grand")
     await opened.pause()
     opened.searches.clear()
@@ -461,6 +480,7 @@ async def test_a_tap_on_the_selected_chip_keeps_its_scope_and_searches_nothing(
 
 
 async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
+    """The field's hint names what the selected scope searches."""
     assert opened.field.hint_text == "Search sessions"  # the Schedule's scope
     await opened.event(opened.chip("all"), "click")
     assert opened.field.hint_text == "Search sessions, speakers, rooms"
@@ -469,6 +489,7 @@ async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
 
 
 async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
+    """``/search?scope=sponsors`` opens with All selected."""
     conference = Conference(data=DATA, source="bundled", version=1)
     shown = await render(conference)
     await shown.go("/search?scope=sponsors")  # a P2 scope, or a typo
@@ -481,6 +502,7 @@ async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
 async def test_results_are_grouped_by_type_then_day_under_headings(
     opened: Shown,
 ) -> None:
+    """All lists each type under a heading, and sessions under day headings."""
     await opened.event(opened.chip("all"), "click")
     await opened.type("a")
     await opened.pause()
@@ -532,6 +554,7 @@ async def test_a_type_heading_looks_a_step_above_a_day_heading(opened: Shown) ->
 
 
 async def test_what_was_found_is_said_in_a_polite_live_region(opened: Shown) -> None:
+    """The count is a live region, absent before a search and on a miss."""
     assert not opened.has("search.count")  # nothing searched yet
     await opened.type("grand")
     await opened.pause()
@@ -544,6 +567,7 @@ async def test_what_was_found_is_said_in_a_polite_live_region(opened: Shown) -> 
 
 
 async def test_a_result_opens_its_detail_on_top_of_search(opened: Shown) -> None:
+    """A result tap pushes its detail View above Search."""
     await opened.type("typing")
     await opened.pause()
     first = session_ids("typing", "sessions")[0]
@@ -555,6 +579,7 @@ async def test_a_result_opens_its_detail_on_top_of_search(opened: Shown) -> None
 async def test_back_from_a_result_returns_to_the_results_with_the_query(
     opened: Shown,
 ) -> None:
+    """Back from a result shows the same query and results, searching nothing."""
     await opened.type("typing")
     await opened.pause()
     before = opened.results
@@ -572,6 +597,7 @@ async def test_back_from_a_result_returns_to_the_results_with_the_query(
 async def test_each_opening_starts_a_new_search_and_back_leaves_for_the_opener(
     opened: Shown,
 ) -> None:
+    """Back from Search returns to the opener, and Search reopens empty."""
     await opened.type("typing")
     assert opened.memory.search_query == "typing"
     await opened.go(parent_of("/search", opened.memory.search_base))
@@ -601,6 +627,7 @@ async def test_a_view_rebuilt_below_a_result_gets_the_query_and_scope_back(
 async def test_a_star_in_the_results_saves_the_session_and_re_renders_one_row(
     opened: Shown,
 ) -> None:
+    """A star tap in the results saves the session and re-renders only its row."""
     await opened.type("typing")
     await opened.pause()
     first = session_ids("typing", "sessions")[0]
@@ -615,6 +642,7 @@ async def test_a_star_in_the_results_saves_the_session_and_re_renders_one_row(
 
 
 async def test_before_a_word_the_screen_says_what_search_covers(opened: Shown) -> None:
+    """Before a word (spaces are none), a live idle state says what search covers."""
     idle = opened.node("search.idle")
     assert idle.live_region
     assert screen.COVERS in _all_text(idle)
@@ -627,6 +655,7 @@ async def test_before_a_word_the_screen_says_what_search_covers(opened: Shown) -
 async def test_a_miss_says_search_covers_all_days_and_ignores_filters(
     opened: Shown,
 ) -> None:
+    """A miss in All quotes the query, says what search covers, and has no button."""
     await opened.event(opened.chip("all"), "click")
     await opened.type("pydanitc")
     await opened.pause()
@@ -640,6 +669,7 @@ async def test_a_miss_says_search_covers_all_days_and_ignores_filters(
 async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
     opened: Shown,
 ) -> None:
+    """A miss in one scope offers "Show all results", which switches to All."""
     await opened.event(opened.chip("rooms"), "click")
     await opened.type("typing")  # sessions, no room
     await opened.pause()
@@ -655,6 +685,7 @@ async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
 
 
 async def test_without_data_the_skeleton_then_try_again(render: Render) -> None:
+    """Without data Search shows its status strip, then no-data once a fetch fails."""
     conference = Conference()
     shown = await render(conference)
     await shown.go("/search?scope=all")
@@ -684,6 +715,7 @@ def _listed_sessions(shown: Shown) -> list[str]:
 
 
 def _listed_speakers(shown: Shown) -> list[str]:
+    """The keys of the speaker rows the list shows, in order."""
     return [
         r.split(".", 2)[2] for r in shown.results if r.startswith("search.speaker.")
     ]
@@ -702,6 +734,7 @@ async def _show_whole(shown: Shown, kind: str) -> None:
 
 
 def _keys(ids: list[str]) -> list[str]:
+    """The semantics keys of ``ids``."""
     return [semantics_key(i) for i in ids]
 
 
@@ -742,6 +775,7 @@ async def test_a_broad_query_renders_each_type_s_first_rows_and_the_full_count(
 async def test_show_all_renders_the_rest_of_its_type_and_each_new_row_once(
     opened: Shown,
 ) -> None:
+    """Show all lists the rest of its type only, building each new row once."""
     await opened.event(opened.chip("all"), "click")
     await opened.type("a")
     await opened.pause()
@@ -770,6 +804,7 @@ async def test_show_all_renders_the_rest_of_its_type_and_each_new_row_once(
 async def test_a_keystroke_keeps_what_was_shown_and_a_new_search_cuts_again(
     opened: Shown,
 ) -> None:
+    """The same words keep a whole list whole; any new search cuts it again."""
     await opened.event(opened.chip("all"), "click")
     await opened.type("a")
     await opened.pause()

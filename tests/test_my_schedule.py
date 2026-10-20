@@ -76,6 +76,7 @@ NBSP = "\N{NO-BREAK SPACE}"
 
 
 def name(session_id: str) -> str:
+    """The name of session ``session_id`` in the 2026 feed."""
     return processed(2026).sessions[session_id].name
 
 
@@ -92,6 +93,7 @@ class Shown(sessions.Shown):
 
     @property
     def prefs_service(self) -> MemoryPrefs:
+        """The ``MemoryPrefs`` behind the session's storage."""
         return cast(MemoryPrefs, self.storage.prefs)
 
     @property
@@ -104,6 +106,7 @@ class Shown(sessions.Shown):
         self.minutes[-1](len(self.minutes))
 
     def phrase(self, session_id: str) -> str:
+        """The spoken phrase of the row of ``session_id``: its node's label."""
         return str(self.node(f"my_schedule.session.{session_id}").label)
 
     def shown(self) -> list[str]:
@@ -128,8 +131,11 @@ class Shown(sessions.Shown):
         ]
 
     def fold(self, identifier: str) -> ft.ExpansionTile:
-        # Around the tile, not on its title, which it split from the tile's button
-        # on Android (D-214).
+        """The ``ExpansionTile`` of the fold ``identifier``.
+
+        The identifier is on a node around the tile, not on its title, which it split
+        from the tile's button on Android (D-214).
+        """
         tile = self.node(f"my_schedule.{identifier}").content
         assert isinstance(tile, ft.ExpansionTile)
         return tile
@@ -144,15 +150,18 @@ class Shown(sessions.Shown):
         ]
 
     def root(self) -> ft.ListView:
+        """The screen's one ``ListView``."""
         (found,) = self.find(ft.ListView)
         return found
 
     async def tap_star(self, session_id: str) -> None:
+        """Click the star of the row of ``session_id``."""
         star = self.node(f"my_schedule.favorite.{session_id}").content
         assert isinstance(star, ft.IconButton)
         await self.click(star)
 
     async def toggle_fold(self, identifier: str, expanded: bool) -> None:
+        """Open or close the fold ``identifier`` with a change event."""
         await self.event(self.fold(identifier), "change", expanded)
 
 
@@ -197,6 +206,7 @@ class Setup:
 
 @pytest.fixture
 def setup() -> Setup:
+    """The default ``Setup``, which a test's own fixtures change."""
     return Setup()
 
 
@@ -204,6 +214,11 @@ def setup() -> Setup:
 async def shown(
     setup: Setup, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Shown]:
+    """Show My schedule in a Flet session as ``setup`` says.
+
+    The day sections' slots, the status strips and the minute hook's setters are
+    recorded on the ``Shown``, and the skeleton is a placeholder.
+    """
     if setup.data:
         conference = Conference(data=processed(2026), source="bundled", version=1)
     else:
@@ -254,6 +269,7 @@ async def shown(
 
 @pytest.fixture
 def before(setup: Setup) -> None:
+    """Set the time before the conference, when nothing has ended."""
     setup.now = BEFORE
 
 
@@ -261,6 +277,7 @@ def before(setup: Setup) -> None:
 async def test_saved_sessions_show_by_day_and_slot_in_schedule_order(
     shown: Shown,
 ) -> None:
+    """Every saved session shows under its day header, in the Schedule's order."""
     assert shown.headers() == [
         "Wednesday, May 13",
         "Thursday, May 14",
@@ -284,6 +301,7 @@ async def test_saved_sessions_show_by_day_and_slot_in_schedule_order(
 
 @pytest.mark.usefixtures("before")
 async def test_each_start_is_one_slot_with_its_gutter(shown: Shown) -> None:
+    """Saved sessions with one start share one slot and its time gutter."""
     gutters = [
         str(c.label)
         for c in _walk(shown.root())
@@ -295,6 +313,7 @@ async def test_each_start_is_one_slot_with_its_gutter(shown: Shown) -> None:
 
 @pytest.mark.usefixtures("before")
 async def test_every_saved_row_has_a_filled_star(shown: Shown) -> None:
+    """A saved row's star is toggled on."""
     star = shown.node(f"my_schedule.favorite.{TALK}")
     assert star.toggled is True
 
@@ -327,6 +346,7 @@ async def test_both_rows_of_a_clash_say_so_in_words_and_with_an_icon(
 
 @pytest.mark.usefixtures("before")
 async def test_a_session_inside_a_long_one_names_its_clash(shown: Shown) -> None:
+    """A tutorial names both workshops inside it, and a workshop the tutorial."""
     assert shown.phrase(NOTEBOOKS).endswith(
         f"Overlaps with “{name(CHEESE_SHOP)}” and “{name(INFERENCE)}”."
     )
@@ -335,6 +355,7 @@ async def test_a_session_inside_a_long_one_names_its_clash(shown: Shown) -> None
 
 @pytest.mark.usefixtures("before")
 async def test_a_row_without_a_clash_says_nothing_of_one(shown: Shown) -> None:
+    """Rows without a clash say nothing of one: only five rows have the line."""
     for session_id in (RAG, WELCOME, KEYNOTE, TALK):
         assert "Overlaps" not in shown.phrase(session_id)
     lines = [text for text in shown.texts() if text.startswith("Overlaps")]
@@ -359,6 +380,7 @@ async def test_more_clashes_are_counted_on_a_line_the_cut_never_hides(
 
 
 def test_the_phrase_names_three_clashes_in_a_list() -> None:
+    """The spoken phrase lists three clashes as “A”, “B” and “C”."""
     view = rows.session_views(processed(2026), (TALK,), ZONE, use_24h=False)[0]
     assert spoken_phrase([], view, overlaps=("A", "B", "C")).endswith(
         "Overlaps with “A”, “B” and “C”."
@@ -366,8 +388,11 @@ def test_the_phrase_names_three_clashes_in_a_list() -> None:
 
 
 async def test_a_clash_that_has_ended_is_not_shown(shown: Shown) -> None:
-    """Thursday 10:45: the 9:30 workshop is over, so the tutorial names only 11:30's,
-    and folded rows carry no clash line: neither can change a plan any more."""
+    """An ended clash is not named, and folded rows carry no clash line.
+
+    Thursday 10:45: the 9:30 workshop is over, so the tutorial names only 11:30's;
+    neither can change a plan any more.
+    """
     assert shown.phrase(NOTEBOOKS).endswith(f"Overlaps with “{name(INFERENCE)}”.")
     assert f"and 1{NBSP}more" not in shown.texts()
     for folded in (MCP, DECORATORS, CHEESE_SHOP):
@@ -397,6 +422,7 @@ async def test_earlier_days_and_today_s_ended_sessions_fold_away(
 
 @pytest.fixture
 def reduced(setup: Setup) -> None:
+    """Turn reduced motion on before the screen renders."""
     setup.reduce_motion = True
 
 
@@ -436,6 +462,7 @@ async def test_the_next_day_s_earlier_today_starts_collapsed(shown: Shown) -> No
 async def test_the_minute_tick_folds_a_session_once_it_has_ended(
     shown: Shown,
 ) -> None:
+    """At the tick after 12:30, Thursday's ended sessions fold into Earlier today."""
     clock.set_test_now(datetime(2026, 5, 14, 12, 30, tzinfo=ZONE))  # both end now
     shown.tick()
     await shown.settle()
@@ -446,6 +473,7 @@ async def test_the_minute_tick_folds_a_session_once_it_has_ended(
 
 @pytest.fixture
 def last_evening(setup: Setup) -> None:
+    """Set the time to Sunday evening, when every saved session has ended."""
     setup.now = LAST_EVENING
 
 
@@ -453,6 +481,7 @@ def last_evening(setup: Setup) -> None:
 async def test_when_everything_has_ended_it_says_so_and_offers_today(
     shown: Shown,
 ) -> None:
+    """With every session ended, a heading says so and a button opens Now."""
     shown.node("my_schedule.all_over")
     assert "All your saved sessions are over" in shown.texts()
     # A level, or it is no heading for TalkBack or VoiceOver (F40).
@@ -474,6 +503,7 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
 
 @pytest.fixture
 def after(setup: Setup) -> None:
+    """Set the time after the conference."""
     setup.now = AFTER
 
 
@@ -528,6 +558,7 @@ async def test_unstarring_removes_the_row_at_once_and_undo_brings_it_back(
 async def test_removing_one_side_of_a_clash_clears_the_other_s_line(
     shown: Shown,
 ) -> None:
+    """Unstarring one side of a clash drops the overlap from the other's phrase."""
     await shown.tap_star(DECORATORS)
     assert "Overlaps" not in shown.phrase(MCP)
 
@@ -556,6 +587,7 @@ async def test_a_removal_re_renders_only_its_own_day(shown: Shown) -> None:
 async def test_a_clash_removed_re_renders_only_the_row_whose_line_changed(
     shown: Shown,
 ) -> None:
+    """Unstarring one side of a clash re-renders only the other side's row."""
     shown.rows.clear()
     await shown.tap_star(DECORATORS)
     assert shown.rows == [MCP]
@@ -566,6 +598,7 @@ async def test_a_clash_removed_re_renders_only_the_row_whose_line_changed(
 
 @pytest.fixture
 def nothing_saved(setup: Setup) -> None:
+    """Save no session."""
     setup.saved = ()
 
 
@@ -583,6 +616,7 @@ async def test_nothing_saved_says_how_and_opens_the_schedule(shown: Shown) -> No
 
 @pytest.fixture
 def dropped(setup: Setup) -> None:
+    """Save only an id the feed does not list."""
     setup.saved = ("no-such-session",)
 
 
@@ -590,8 +624,11 @@ def dropped(setup: Setup) -> None:
 async def test_saved_sessions_the_feed_dropped_are_not_nothing_saved(
     shown: Shown,
 ) -> None:
-    """D-172 keeps ids the feed no longer lists: saying "Nothing saved yet" would be
-    untrue."""
+    """Saved ids the feed dropped get their own state, not "Nothing saved yet".
+
+    D-172 keeps ids the feed no longer lists: saying "Nothing saved yet" would be
+    untrue.
+    """
     shown.node("my_schedule.dropped")
     assert "None of your saved sessions is in the schedule" in shown.texts()
     assert "Nothing saved yet" not in shown.texts()
@@ -601,6 +638,7 @@ async def test_saved_sessions_the_feed_dropped_are_not_nothing_saved(
 
 @pytest.fixture
 def unread(setup: Setup) -> None:
+    """Give the screen favorites that were never read."""
     setup.loaded = False
 
 
@@ -615,6 +653,7 @@ async def test_a_failed_read_is_not_an_empty_list(shown: Shown) -> None:
 
 @pytest.fixture
 def no_data(setup: Setup) -> None:
+    """Start without conference data or a fetch problem."""
     setup.data = False
 
 
@@ -622,15 +661,18 @@ def no_data(setup: Setup) -> None:
 async def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
     shown: Shown,
 ) -> None:
+    """Without data, before a fetch has failed, the screen shows the skeleton."""
     assert "skeleton" in shown.texts()
 
 
 @pytest.fixture
 def failed_fetch(setup: Setup) -> None:
+    """Start without conference data, after a fetch failed offline."""
     setup.data, setup.problem = False, "offline"
 
 
 @pytest.mark.usefixtures("failed_fetch")
 async def test_without_data_a_failed_fetch_offers_try_again(shown: Shown) -> None:
+    """Without data, a failed fetch shows the "Can't load the schedule" state."""
     shown.node("my_schedule.no_data")
     assert "Can't load the schedule" in shown.texts()

@@ -34,6 +34,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
+    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -46,6 +47,7 @@ def test_every_years_keynotes_name_sessions_of_its_snapshot(year: int) -> None:
 
 
 def test_2026_has_its_four_keynotes_and_two_panels() -> None:
+    """2026 has four keynotes and two panels, covering the feed's keynotes."""
     keynotes = load_year(2026).content.keynotes
     assert [(k.session_id, k.kind) for k in keynotes] == [
         ("153", "keynote"),
@@ -104,6 +106,7 @@ def test_no_keynote_text_is_left_in_code() -> None:
 
 
 def test_the_loader_refuses_a_session_id_the_snapshot_lacks(data_dir: Path) -> None:
+    """A keynote's session id the snapshot lacks is refused, naming the entry."""
     edit(data_dir / "2026" / "content.toml", 'session_id = "153"', 'session_id = "999"')
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir, check_sessions=True)
@@ -114,8 +117,11 @@ def test_the_loader_refuses_a_session_id_the_snapshot_lacks(data_dir: Path) -> N
 
 
 def test_the_loader_refuses_a_session_id_of_another_track(data_dir: Path) -> None:
-    """A typo that lands on a talk would put it on the Keynotes page, its speakers
-    replaced by the year data's people on its detail."""
+    """A keynote's session id on the Talk track is refused, naming the track.
+
+    A typo that lands on a talk would put it on the Keynotes page, its speakers replaced
+    by the year data's people on its detail.
+    """
     edit(data_dir / "2026" / "content.toml", 'session_id = "153"', 'session_id = "142"')
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir, check_sessions=True)
@@ -126,12 +132,16 @@ def test_the_loader_refuses_a_session_id_of_another_track(data_dir: Path) -> Non
 
 
 def test_the_keynote_tracks_include_the_hubs_keynotes_page() -> None:
+    """The Tracks hub's Keynotes page is one of the keynote tracks."""
     assert HUB_PAGES["keynotes"] in KEYNOTE_TRACKS
 
 
 def test_the_app_loads_without_reading_the_snapshot(data_dir: Path) -> None:
-    """D-38: the app never parses the snapshot to start; a keynote a newer feed
-    drops just has no card."""
+    """Without the session check, the year loads with no snapshot and an unknown id.
+
+    D-38: the app never parses the snapshot to start; a keynote a newer feed drops just
+    has no card.
+    """
     edit(data_dir / "2026" / "content.toml", 'session_id = "153"', 'session_id = "999"')
     (data_dir / "2026" / "conference.json").unlink()
     assert load_year(2026, data_dir).content.keynotes[0].session_id == "999"
@@ -140,6 +150,7 @@ def test_the_app_loads_without_reading_the_snapshot(data_dir: Path) -> None:
 def test_keynotes_without_a_snapshot_to_check_them_are_refused(
     data_dir: Path,
 ) -> None:
+    """The session check refuses keynotes when the year has no snapshot."""
     (data_dir / "2026" / "conference.json").unlink()
     with pytest.raises(YearDataError, match=r"^2026/conference\.json: file not found$"):
         load_year(2026, data_dir, check_sessions=True)
@@ -195,6 +206,7 @@ def test_keynotes_without_a_snapshot_to_check_them_are_refused(
 def test_a_broken_keynote_names_its_entry_and_the_problem(
     data_dir: Path, old: str, new: str, message: str
 ) -> None:
+    """A broken keynote entry is refused with its path and the problem."""
     edit(data_dir / "2026" / "content.toml", old, new)
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)
@@ -202,6 +214,7 @@ def test_a_broken_keynote_names_its_entry_and_the_problem(
 
 
 def test_a_keynote_needs_someone_on_stage(data_dir: Path) -> None:
+    """A keynote with an empty speakers list is refused."""
     file = data_dir / "2026" / "content.toml"
     text = file.read_text(encoding="utf-8")
     head = text.split("[[keynotes]]")[0]

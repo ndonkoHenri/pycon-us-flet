@@ -49,6 +49,11 @@ UPDATING = "Updating the schedule…"
 async def test_start_offline_shows_schedule(
     flet_app: ftt.FletTestApp, silent_feed: SilentFeed
 ) -> None:
+    """With a feed that never answers, the Schedule keeps its rows and says Offline.
+
+    Developer's Refresh now gets no answer; the strip's Refresh asks the feed again and
+    says it is updating until the feed hangs up, then Offline again, and the rows stay.
+    """
     t = remote(flet_app)
     await fresh_start(t, now=before_conference())
 

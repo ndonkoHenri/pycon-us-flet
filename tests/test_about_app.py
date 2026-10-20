@@ -38,6 +38,7 @@ from tests.fakes import (
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """Yield a ``FakePage`` bound as the page Flet's handlers see."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -45,6 +46,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
+    """The 2026 ``Services`` over in-memory prefs and device services."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -59,6 +61,7 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
+    """Fresh ``Prefs`` as in a packaged build: Developer locked, error details off."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
     monkeypatch.setattr(errors, "_details", False)
     return Prefs()
@@ -104,6 +107,7 @@ def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
 
 
 async def tap_version(render: Callable[[], dict[str, Any]], times: int) -> None:
+    """Tap the Version row ``times`` times, rendering the page before each."""
     for _ in range(times):
         await cast(Any, tiles(render())["Version"].on_click)()
 
@@ -111,6 +115,7 @@ async def tap_version(render: Callable[[], dict[str, Any]], times: int) -> None:
 def test_the_page_says_which_build_this_is(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """The page lists the app's version, Python's and Flet's, in that order."""
     scaffold = render()
     assert scaffold["title"] == "About this app"
     rows = tiles(scaffold)
@@ -124,6 +129,7 @@ def test_the_page_says_which_build_this_is(
 def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """A level-2 heading names the app, over lines saying it is not the PSF's."""
     body = render()["body"]
     assert isinstance(body, ft.ListView)
     header = body.controls[0]
@@ -145,6 +151,7 @@ def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
 def test_the_version_row_carries_its_identifier_for_ui_flows(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """The Version row's merged node carries the ``about_app.version`` id."""
     body = render()["body"]
     assert isinstance(body, ft.ListView)
     [row] = [c for c in body.controls if isinstance(c, ft.MergeSemantics)]
@@ -171,6 +178,7 @@ def developer_row(scaffold: dict[str, Any]) -> ft.ListTile | None:
 async def test_six_taps_unlock_nothing(
     render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
 ) -> None:
+    """Six taps on Version leave Developer locked and unlisted, with no dialog."""
     await tap_version(render, UNLOCK_TAPS - 1)
     assert not prefs.developer
     assert developer_row(render()) is None
@@ -180,6 +188,7 @@ async def test_six_taps_unlock_nothing(
 async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
     render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage, svc: Services
 ) -> None:
+    """The seventh tap stores the unlock and adds a Developer row that opens it."""
     assert UNLOCK_TAPS == 7
     await tap_version(render, 7)
     assert prefs.developer
@@ -198,6 +207,7 @@ async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
 async def test_the_unlock_keeps_the_other_developer_options(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
+    """The unlock adds ``unlocked`` to the stored options and keeps the rest."""
     prefs.dev = {"feed_url": "http://127.0.0.1:8000/conference-2026.json"}
     await tap_version(render, 7)
     assert prefs.dev == {
@@ -209,6 +219,7 @@ async def test_the_unlock_keeps_the_other_developer_options(
 async def test_taps_once_it_is_on_change_nothing(
     render: Callable[[], dict[str, Any]], svc: Services
 ) -> None:
+    """Taps after the unlock write nothing more to the prefs."""
     await tap_version(render, 7)
     writes = dict(cast(MemoryPrefs, svc.storage.prefs).values)
     await tap_version(render, 14)
@@ -220,6 +231,7 @@ async def test_when_not_embedded_developer_is_listed_without_taps(
     prefs: Prefs,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """In the companion app Developer is listed at once, and taps store nothing."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)  # the companion app
     assert developer_row(render()) is not None
     await tap_version(render, 7)
@@ -230,6 +242,7 @@ async def test_when_not_embedded_developer_is_listed_without_taps(
 async def test_an_unlock_that_cannot_be_saved_holds_for_the_session_and_says_so(
     render: Callable[[], dict[str, Any]], prefs: Prefs, svc: Services
 ) -> None:
+    """An unlock that can't be stored holds in memory, and its row says so."""
     cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
     await tap_version(render, 7)
     assert prefs.developer  # D-120: kept in memory
