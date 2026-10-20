@@ -44,6 +44,7 @@ from flet.pubsub.pubsub_hub import PubSubHub
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.layout import Layout, LayoutCtx
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx
@@ -181,7 +182,8 @@ def provide(
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
 
-    The light tokens' provider comes last, right around ``body``.
+    The layout is a phone's (``Layout()``: under 600 dp, the bottom bar), and the
+    light tokens' provider comes last, right around ``body``.
     """
     return ServicesCtx(
         svc,
@@ -189,7 +191,10 @@ def provide(
             conference,
             lambda: PrefsCtx(
                 prefs,
-                lambda: FavoritesCtx(favorites, lambda: TokensCtx(LIGHT_TOKENS, body)),
+                lambda: FavoritesCtx(
+                    favorites,
+                    lambda: LayoutCtx(Layout(), lambda: TokensCtx(LIGHT_TOKENS, body)),
+                ),
             ),
         ),
     )

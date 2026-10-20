@@ -54,6 +54,7 @@ ft.NavigationBar(
 - Identical for every user; never changes with sign-in or role (SHELL-05). Never `adaptive=True`. The M3 indicator pill replaces Ionic's magenta label (4.18:1).
 - Each destination's label is its accessible name; its node also carries the identifier `app.nav.<tab>` (`app.nav.now` … `app.nav.my_schedule`, decisions §M) for UI tests (D-166), and each root's app-bar title carries `<tab>.title` (`now.title` … `more.title`, D-170).
 - The bar shows on tab roots only (D-144, #149); pushed Views show the back arrow and no bar. S4 found that a bar on pushed Views slid across with the page on iOS and doubled during Android transitions and predictive Back.
+- From 600 dp wide the roots show a `NavigationRail` with the same destinations instead (§8, D-277). Its destinations carry no `app.nav.<tab>` identifier until Flet can give them one (#163, F95): UI flows find them by name ("Map, Tab 4 of 5").
 - The My schedule star is the favourite star, so tab and action read as one idea. Speakers live in More and search.
 
 ### 2.2 More (D-15)
@@ -668,7 +669,8 @@ These exist only when a mock API base URL is set (D-51); the app never calls pri
 
 ## 8. Tablets and landscape (D-09, SHELL-14, NATIVE-02)
 
-- **≥ 600 dp** (`page.width`, re-checked in `page.on_resize`): root Views swap the bar for `ft.NavigationRail(destinations=..., selected_index=..., label_type=ft.NavigationRailLabelType.ALL, group_alignment=-1)` with the same destinations (P2).
+- **≥ 600 dp** (`page.width`, then `page.on_resize`, through the `Layout` store, D-277): root Views swap the bar for `ft.NavigationRail(destinations=..., selected_index=..., label_type=ft.NavigationRailLabelType.ALL, group_alignment=-1, min_width=80, scrollable=True)` with the same destinations, beside the body inside the `SafeArea` (D-12). A phone in landscape (about 870 to 915 dp) gets it too; pushed Views show neither. A rotation or a resize swaps the two without rebuilding the body, so its scroll, day and tabs stay (D-18). Re-tapping the active destination scrolls the root to the top, and Back works as with the bar (§2.4).
+- The rail is 80 dp wide at the default text size and widens with its labels at large text (about 160 dp at Android's 200 %, where "My schedule" stays on one line). It scrolls when its destinations are taller than the space beside the body: on a phone in landscape that is already so at the default size (five destinations need about 330 dp, the body has about 295), so More shows its icon at the bottom edge and comes in with a scroll; every destination stays reachable, TalkBack included (D-277).
 - Reading screens max 720 dp and lists max 840 dp, centred on `surface`; floor plans use the full width.
 - Phone landscape is allowed and reflows; side insets come from `page.media.padding`.
 - *(could, later)* list-detail two-pane at ≥ 840 dp for Schedule and Speakers: it doubles the state paths, so it waits for need.

@@ -439,7 +439,7 @@ async def test_favourite_with_undo(flet_app: ftt.FletTestApp, feed_url: str) -> 
     )
 ```
 
-Shell controls (the navigation bar, app-wide chrome) use `app.<element>[.<key>]`, such as `app.nav.schedule` (decisions §M).
+Shell controls (the navigation bar, app-wide chrome) use `app.<element>[.<key>]`, such as `app.nav.schedule` (decisions §M). The flows run on phones in portrait, where the bar shows; from 600 dp the rail replaces it, and its destinations have no identifier yet (#163, D-277): a flow there finds one by its name, "Map, Tab 4 of 5" (Maestro: `tapOn: "Map.*Tab 4 of 5"`).
 
 ### 5.4 The flows
 
