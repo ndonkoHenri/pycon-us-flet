@@ -186,7 +186,7 @@ def test_the_last_slot_of_a_day_runs_to_its_end_and_tomorrow_is_up_next() -> Non
 def test_between_days_nothing_is_happening_and_the_next_day_is_up_next(
     day: int, hour: int, minute: int, phase: Phase
 ) -> None:
-    """Between days nothing is on, and the next day's 8:00 AM slot is next.
+    """Between days nothing is on, and May 17's 8:00 AM slot is next.
 
     The phase is AFTER_DAY until midnight, then BEFORE_DAY (ux.md §5.1: "That's a wrap
     for today" until midnight, then "First up today").
@@ -380,7 +380,7 @@ def test_the_next_session_ignores_unsaved_and_unknown_ids() -> None:
 
 
 def test_a_saved_poster_can_be_the_next_session() -> None:
-    """A saved poster can be the next session."""
+    """A saved poster is the next session at 9:00 AM on May 17, before its 9:30 start."""
     saved = frozenset({"poster-detail-60"})
     assert next_id(processed(2026), saved, may(2026, 17, 9)) == "poster-detail-60"
 
@@ -450,7 +450,7 @@ def test_my_schedule_holds_the_schedule_s_slots_and_the_model_s_sessions() -> No
 
 
 def test_nothing_saved_is_an_empty_agenda() -> None:
-    """With nothing saved, My schedule is an empty ``Agenda``."""
+    """With nothing saved, My schedule has no days and no overlaps: ``Agenda((), {})``."""
     assert my_schedule(processed(2026), frozenset()) == Agenda((), {})
 
 
@@ -732,7 +732,7 @@ def test_the_elapsed_share_counts_whole_percents_rounded_down() -> None:
 
 
 def test_a_share_that_floats_would_round_badly_counts_exactly() -> None:
-    """8 min 42 s of a 30-minute talk is exactly 29 %; floats would round it to 28."""
+    """8 min 42 s of a 30-minute talk is exactly 29 %; floats would round it down to 28."""
     talk = processed(2026).sessions["142"]
     # 8.7 of 30 minutes is exactly 29 %; 0.29 * 100 in floats is 28.999….
     at = may(2026, 16, 10, 38) + timedelta(seconds=42)
