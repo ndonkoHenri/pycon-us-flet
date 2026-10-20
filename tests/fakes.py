@@ -263,6 +263,7 @@ class FakePage:
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
+        self.on_media_change: Any = None
         self.on_resize: Any = None
         self.dialogs: list[ft.DialogControl] = []
         self.platform = ft.PagePlatform.IOS
