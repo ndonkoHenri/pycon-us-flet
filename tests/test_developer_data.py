@@ -23,6 +23,7 @@ from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
@@ -715,11 +716,11 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
 ) -> None:
     """Confirming the reset leaves storage and every store as after a fresh install.
 
-    The session has been used: settings, favourites of two years, the Developer options,
-    a cache, a fake clock, a feed URL and remembered places. Only another app's key is
-    left; the device facts stay and Developer locks again. Then, as at a start, a quiet
-    refresh of the year's feed runs, the app goes to Welcome, as a first start does
-    (D-287), and says "App reset".
+    The session has been used: settings (reminders too), favourites of two years, the
+    Developer options, a cache, a fake clock, a feed URL and remembered places. Only
+    another app's key is left; the device facts stay and Developer locks again. Then, as
+    at a start, a quiet refresh of the year's feed runs, the app goes to Welcome, as a
+    first start does (D-287), and says "App reset".
     """
     stored.update(
         {
@@ -733,7 +734,13 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
         }
     )
     await svc.storage.write_feed(recorded(2026))
-    await prefs.save(svc.storage, theme="dark", onboarded=True, excluded_tracks=())
+    await prefs.save(
+        svc.storage,
+        theme="dark",
+        onboarded=True,
+        excluded_tracks=(),
+        reminders=ReminderSettings(session_lead=10, keynote=False, primer="accepted"),
+    )
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
@@ -758,6 +765,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
         ("Open Space",),
         {},
     )
+    assert prefs.reminders == ReminderSettings()  # off, the primer unasked (D-275)
     assert prefs.developer is False  # a packaged build: locked again
     assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
     assert favorites.ids == frozenset()

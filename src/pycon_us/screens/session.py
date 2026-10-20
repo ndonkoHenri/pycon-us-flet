@@ -1,11 +1,15 @@
 """Session detail (``…/session/<id>``): time and place first (SESS-01..03; ux.md §5.5).
 
-The app bar holds the star (D-30), Share (NEW-06) and, when the session has a public
-page, an overflow with "Open on us.pycon.org": Add to calendar joins it in P2, so no
-dead item waits there, and a session without a page has no overflow at all (D-60). An
-open space's page is its entry on the site's open-spaces page, which its detail shows
-as a link in the page instead (SESS-11, D-206). The page's heading is the title under
-the badges, so the app bar's title stays empty. Then the "When and where" card
+The app bar holds the star (D-30), Share (NEW-06) and an overflow
+(``screens.session_extras.SessionMenu``) with "Open on us.pycon.org" when the session
+has a public page, and Add to calendar on every session that can be saved (SESS-04,
+D-272); a break or a notice has neither, so it has no overflow (D-60), and an unknown or
+removed session gets no Add to calendar (D-186). An open space's page is its entry on
+the site's open-spaces page, which its detail shows as a link in the page instead
+(SESS-11, D-206).
+
+The page's heading is the title under the badges, so the app bar's title stays empty.
+Then the "When and where" card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
@@ -36,9 +40,9 @@ from pycon_us.screens.session_extras import (
     IMAGE_FADE_MS,
     OPEN_SPACE,
     Posters,
+    SessionMenu,
     ShareButton,
     open_space_extras,
-    site_title,
 )
 from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
@@ -47,8 +51,7 @@ from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
-from pycon_us.ui.links import feed_markdown, open_link
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
@@ -124,13 +127,10 @@ def SessionDetail(session_id: str) -> ft.View:
     async def star() -> None:
         await on_toggle(session.id)
 
-    @report_errors
-    async def open_site() -> None:
-        await open_link(svc, session.url)
-
     # The star, Share, then the overflow (ux.md §5.5).
     actions: list[ft.Control] = []
-    if not is_notice(session, info):  # breaks and notices have no star (D-31)
+    savable = not is_notice(session, info)  # breaks and notices have no star (D-31)
+    if savable:
         actions.append(
             FavoriteButton(
                 session.id in favorites.ids,
@@ -141,8 +141,10 @@ def SessionDetail(session_id: str) -> ft.View:
         )
     actions.append(ShareButton(session))
     open_space = session.kind == OPEN_SPACE
-    if session.url and not open_space:  # an open space's link is in the page (D-206)
-        actions.append(_overflow(session.url, open_site))
+    site = bool(session.url) and not open_space  # an open space's is in the page
+    calendar = savable and current is not None  # not once a newer feed dropped it
+    if site or calendar:
+        actions.append(SessionMenu(session, site=site, calendar=calendar))
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
         controls.append(_removed_note())
@@ -186,22 +188,6 @@ def SessionDetail(session_id: str) -> ft.View:
         padding=ft.Padding.only(top=8, bottom=24),
     )
     return AppScaffold(title="", body=body, actions=actions)
-
-
-def _overflow(url: str, on_open: ft.ControlEventHandler) -> ft.Control:
-    """The app bar's overflow: "Open on us.pycon.org", the host named from the URL.
-
-    It leaves the app: a link, read "Opens in browser" after its words (ux.md §4.7);
-    its label wraps at 200 % text (``menu_item()``, F47, D-233).
-    """
-    item = menu_item(
-        ft.Icons.OPEN_IN_NEW,
-        site_title(url),
-        on_open,
-        identifier=f"{SCREEN}.open_site",
-        link=True,
-    )
-    return overflow_menu(f"{SCREEN}.overflow", [item])
 
 
 def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Control:

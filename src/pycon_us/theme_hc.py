@@ -22,6 +22,10 @@ The rules the values follow, beyond §3.2's table:
 - The fixed roles, which Material keeps the same in light and dark, are one neutral
   pair under ink in both schemes; no screen uses them.
 
+With one surface, high contrast draws structure with lines (THEME-06, D-285): the token
+colours below (``theme.py`` builds HC's ``Tokens`` from them and outlines every badge)
+and ``hc_card_theme()``, which trades the cards' shadows and fills for a border.
+
 Module of its own because ``theme.py`` is near D-66's 400 lines (decisions §M).
 """
 
@@ -50,6 +54,18 @@ _FIXED = "#E9E7E1"
 
 _FIXED_DIM = "#D6D3CB"
 """Every ``*_fixed_dim`` role in both schemes (11.3:1 under ink)."""
+
+HC_LIGHT_LIVE = "#0F5A26"
+"""HC light's ``live`` and ``success`` token: 8.0:1 on the cream (ux.md §3.3)."""
+
+HC_LIGHT_WARNING = "#7A4A00"
+"""HC light's ``warning`` token: 7.2:1 on the cream."""
+
+HC_DARK_LIVE = "#30D158"
+"""HC dark's ``live`` and ``success`` token: 9.5:1 on the night."""
+
+HC_DARK_WARNING = _HC_YELLOW
+"""HC dark's ``warning`` token, its primary yellow: 13.6:1 on the night."""
 
 HC_LIGHT = ft.ColorScheme(
     primary=_HC_PURPLE,
@@ -150,3 +166,23 @@ HC_DARK = ft.ColorScheme(
     surface_container_highest=_HC_NIGHT,
 )
 """The high-contrast dark scheme: every role (THEME-05, ux.md §3.2)."""
+
+
+def hc_card_theme(*, dark: bool) -> ft.CardTheme:
+    """Return a high-contrast scheme's card theme: no shadow, a 1 dp border (THEME-06).
+
+    Every card variant lies flat on the one surface and is told apart by its outline;
+    the 12 dp corners are Material 3's for every variant. The border names the scheme's
+    ``outline`` as a hex: Flet resolves a role in a component theme against the seeded
+    scheme, before the overrides apply, where it is a mid grey (U64, #483).
+
+    Args:
+        dark: The high-contrast dark scheme's cards instead of the light one's.
+    """
+    outline = _HC_PAPER if dark else _HC_INK  # each scheme's outline
+    return ft.CardTheme(
+        elevation=0,
+        shape=ft.RoundedRectangleBorder(
+            radius=12, side=ft.BorderSide(width=1, color=outline)
+        ),
+    )

@@ -22,19 +22,19 @@ was not copied) and the error's class only: a ``mailto:`` target holds an addres
 the platform's error text repeats the target (D-72).
 
 A link in a feed text (a description, a bio) is what its author wrote, so
-``feed_link()`` first says which web address it stands for, if any (D-197): only
-``http``, ``https`` and ``mailto`` links open, a site-relative path joins the year's
-site, and a web address written without its scheme (2026's ``[pytest](pytest.org)``)
-gets ``https://``.
+``open_feed_link()`` first asks ``core/links.py``'s ``feed_link()`` which web address it
+stands for, if any (D-197, D-278): only ``http``, ``https`` and ``mailto`` links open, a
+site-relative path joins the year's site, and a web address written without its scheme
+(2026's ``[pytest](pytest.org)``) gets ``https://``.
 """
 
 import logging
-import re
 from enum import Enum
-from urllib.parse import unquote, urljoin, urlsplit
+from urllib.parse import unquote, urlsplit
 
 import flet as ft
 
+from pycon_us.core.links import feed_link
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
@@ -93,12 +93,6 @@ COULD_NOT_OPEN = "Couldn't open the link"
 
 _WEB_SCHEMES = ("http", "https")
 _APP_SCHEMES = (*_WEB_SCHEMES, "geo")
-
-FEED_LINK_SCHEMES = (*_WEB_SCHEMES, "mailto")
-"""The schemes a link in a feed text may have to open (D-197)."""
-
-_HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}", re.IGNORECASE)
-"""A host name with a dot and a top-level domain of letters: ``pytest.org``."""
 
 
 def link_kind(target: str, *, app: bool = False) -> LinkKind:
@@ -198,46 +192,6 @@ def external(identifier: str, button: ft.Control) -> ft.Control:
             content=button,
         )
     )
-
-
-def feed_link(href: str | None, site_url: str) -> str | None:
-    """Return the address a link in a feed text opens, or None when it opens nothing.
-
-    Descriptions converted from the feed's HTML have absolute links already (D-114);
-    open-space descriptions are Markdown with their links as their authors wrote them
-    (D-140), so this decides what each form means (D-197):
-
-    - ``http``, ``https`` and ``mailto`` links are themselves; any other scheme
-      (``javascript:``, ``file:``, ``tel:``) opens nothing.
-    - A path from the site's root (``/2026/sponsors/``), or from a host without a
-      scheme (``//host/…``), joins the year's site URL, as it would on the site.
-    - A web address written without its scheme, its first segment a host name
-      (``pytest.org``, ``docs.pytest.org/en/stable/``), gets ``https://``, as a
-      browser's address bar would: joined to the site URL it would be a page of the
-      site that does not exist.
-    - Anything else (``#top``, ``../slides``, ``notes``) depends on the page the text
-      was written on, which the app does not know, so it opens nothing.
-
-    Args:
-        href: The link's destination, as ``Markdown``'s ``on_tap_link`` gives it.
-        site_url: The year's site, ending in ``/`` (``ConferenceInfo.site_url``).
-
-    Returns:
-        A ``http``, ``https`` or ``mailto`` URL, or None.
-    """
-    target = (href or "").strip()
-    if not target:
-        return None
-    try:
-        if target.startswith("/"):
-            return urljoin(site_url, target)
-        scheme = urlsplit(target).scheme.lower()
-    except ValueError:  # an address urlsplit cannot read, e.g. "http://[" or "//["
-        return None
-    if scheme:
-        return target if scheme in FEED_LINK_SCHEMES else None
-    host = re.split(r"[/?#]", target, maxsplit=1)[0]
-    return f"https://{target}" if _HOST.fullmatch(host) else None
 
 
 async def open_feed_link(svc: Services, href: str | None) -> None:

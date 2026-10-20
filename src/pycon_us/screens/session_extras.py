@@ -1,8 +1,11 @@
-"""Session detail's extras (ux.md §5.5): Share, posters, an open space's image and link.
+"""Session detail's extras (ux.md §5.5): Share, the overflow, posters, an open space's.
 
 - **Share** (NEW-06) sends the session's title, when and where in conference time with
   its zone, and its public page when it has one (``row_views.share_text()``), through
   the platform's share sheet (``ui.share``).
+- **The overflow** ("More options"): "Open on us.pycon.org", the session's public page,
+  and Add to calendar (SESS-04), which hands the session's ``.ics`` to the calendar
+  (``services.calendar``, D-272).
 - **Posters** (SESS-09): the Posters row of the Schedule stands for the poster session,
   so its detail lists the posters (``timeline.posters()``) as the session rows every
   list uses, with their stars; each pushes its poster's detail on top of this one, so
@@ -18,14 +21,19 @@ from urllib.parse import urlsplit
 
 import flet as ft
 
+from pycon_us import clock
+from pycon_us.core.ics import calendar_file, file_slug
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import share_text
 from pycon_us.core.slugs import slugify_room
 from pycon_us.services import use_services
+from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens
 from pycon_us.ui.favorite import ToggleFavorite
+from pycon_us.ui.links import open_link
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
@@ -37,6 +45,9 @@ SCREEN = "session"
 
 SHARE_TOOLTIP = "Share session"
 """The Share button's tooltip, which is also its name (D-27)."""
+
+ADD_TO_CALENDAR = "Add to calendar"
+"""The overflow's calendar item (SESS-04), the same words on both platforms (D-272)."""
 
 OPEN_SPACE = "open-space"
 """The kind of an open space's session (DATA-05): it has an image and a site entry."""
@@ -96,6 +107,63 @@ def ShareButton(session: Session) -> ft.Control:
             disabled=sharing,
         ),
     )
+
+
+@ft.component
+def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
+    """The app bar's overflow ("More options"): the public page, then Add to calendar.
+
+    "Open on us.pycon.org" leaves the app: a link, read "Opens in browser" after its
+    words (ux.md §4.7). Add to calendar is disabled while the calendar's sheet or
+    the save dialog is up, so a second tap does not serve or save the file twice;
+    in place, so the item keeps its node (D-182). Each label wraps at 200 % text
+    (``menu_item()``, F47, D-233). The caller shows the menu only with an item in it.
+
+    Args:
+        session: The session the page shows.
+        site: Whether to offer the session's public page (``Session.url``).
+        calendar: Whether to offer Add to calendar: a session the schedule still has
+            and that can be saved (D-186, D-31).
+    """
+    svc = use_services()
+    adding, set_adding = ft.use_state(False)
+
+    @report_errors
+    async def open_site() -> None:
+        await open_link(svc, session.url)
+
+    @report_errors
+    async def add() -> None:
+        year = svc.year.conference.year
+        data = calendar_file([session], year=year, now=clock.now())
+        set_adding(True)
+        try:
+            await add_to_calendar(svc, file_slug(session.name), data)
+        finally:
+            set_adding(False)
+
+    items: list[ft.PopupMenuItem] = []
+    if site:
+        items.append(
+            menu_item(
+                ft.Icons.OPEN_IN_NEW,
+                site_title(session.url),
+                open_site,
+                identifier=f"{SCREEN}.open_site",
+                link=True,
+            )
+        )
+    if calendar:
+        items.append(
+            menu_item(
+                ft.Icons.EVENT_AVAILABLE_OUTLINED,
+                ADD_TO_CALENDAR,
+                add,
+                identifier=f"{SCREEN}.add_to_calendar",
+                disabled=adding,
+            )
+        )
+    return overflow_menu(f"{SCREEN}.overflow", items)
 
 
 @ft.component
