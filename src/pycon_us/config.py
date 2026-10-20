@@ -28,6 +28,7 @@ from pycon_us.year_info import (
     HelpInfo,
     PsfInfo,
     SafetyContact,
+    SocialInfo,
     WifiInfo,
     check_info,
 )
@@ -180,6 +181,8 @@ class Content:
             whose page shows the feed's block (D-281).
         psf: About the PSF's mission, Donate and links (INFO-06, D-283); None for a
             year without them, whose page shows the feed's block.
+        social: The Social page's hashtags and links (INFO-10, D-284); None for a
+            year without them, whose page shows the feed's block.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -194,6 +197,7 @@ class Content:
     safety_contacts: tuple[SafetyContact, ...] = ()
     help: HelpInfo | None = None
     psf: PsfInfo | None = None
+    social: SocialInfo | None = None
 
 
 @dataclass(frozen=True, eq=False)

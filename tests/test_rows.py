@@ -160,6 +160,13 @@ def test_a_link_tile_is_one_merged_list_tile_with_a_trailing_chevron(
     assert tile.leading.icon == ft.Icons.PEOPLE_OUTLINE
 
 
+def test_a_link_tile_takes_a_control_as_its_leading_mark(page: FakePage) -> None:
+    """A control given as the icon (a brand's mark, D-264) leads the row as it is."""
+    mark = ft.Image(src=b"<svg/>", width=24, height=24)
+    tile = tile_of(LinkTile("Mastodon", PROFILE, icon=mark, app=True))
+    assert tile.leading is mark
+
+
 def test_a_link_tile_without_an_icon_or_subtitle_has_neither(page: FakePage) -> None:
     """A link tile given no icon or subtitle has no leading icon and no subtitle."""
     tile = tile_of(LinkTile("Ana Lima", "/more/speakers/speaker/17"))

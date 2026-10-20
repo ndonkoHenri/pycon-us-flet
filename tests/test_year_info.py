@@ -1,10 +1,10 @@
 """Tests for the info pages' year data (D-263): ``year_info``, as ``config`` runs it.
 
 Every year's load runs the info pages' checks on the content it built, so a page's
-rules fail the load as soon as its table lands; the Wi-Fi table's rules (D-280) were the
-first, then About the PSF's ``[psf]`` (D-283). Help & safety's tables (D-281) are checked
-here through the loader, from a copy of the 2026 data with one entry changed, so each
-refusal is the error a broken ``content.toml`` would give.
+rules fail the load as soon as its table lands; then each page's table and its rules:
+Wi-Fi's (D-280), About the PSF's ``[psf]`` (D-283) and Social's (D-284). Help & safety's
+tables (D-281) are checked here through the loader, from a copy of the 2026 data with
+one entry changed, so each refusal is the error a broken ``content.toml`` would give.
 """
 
 import shutil
@@ -22,11 +22,15 @@ from pycon_us.config import Content, YearDataError, load_year
 from pycon_us.ui.brands import BRANDS
 from pycon_us.year_info import (
     PSF_SECTIONS,
+    SOCIAL_SECTIONS,
     PsfInfo,
     PsfLink,
     SafetyContact,
+    SocialInfo,
+    SocialLink,
     WifiInfo,
     check_info,
+    check_social,
 )
 from pycon_us.year_schema import build
 from tests.feeds import processed
@@ -567,3 +571,122 @@ def test_a_link_without_brand_icon_or_app_is_a_plain_web_link() -> None:
     raw = {"section": "follow", "label": "Blog", "url": "https://pyfound.blogspot.com/"}
     link = build(PsfLink, raw, FILE, "psf.links[0]")
     assert (link.brand, link.icon, link.app) == (None, None, False)
+
+
+# ------------------------------------------------------------------ Social (D-284)
+
+SOCIAL = load_year(2026).content.social
+
+
+def social(**changes: object) -> SocialInfo:
+    """2026's ``[social]`` with ``changes`` applied to the table itself."""
+    assert SOCIAL is not None
+    return replace(SOCIAL, **changes)  # pyright: ignore[reportArgumentType]
+
+
+def with_link(**changes: object) -> SocialInfo:
+    """2026's ``[social]`` with ``changes`` applied to its first link."""
+    assert SOCIAL is not None
+    first = replace(SOCIAL.links[0], **changes)  # pyright: ignore[reportArgumentType]
+    return replace(SOCIAL, links=(first, *SOCIAL.links[1:]))
+
+
+def test_2026_has_the_hashtags_and_the_links_of_every_section() -> None:
+    """2026's table passes the checks, with both hashtags and links in each section."""
+    assert SOCIAL is not None
+    check_social(SOCIAL, "2026/content.toml")
+    assert SOCIAL.hashtags == ("#PyConUS", "#PyConUS2026")
+    assert {link.section for link in SOCIAL.links} == set(SOCIAL_SECTIONS)
+
+
+def test_2026_s_linkedin_link_is_the_feed_s_without_its_stray_bracket() -> None:
+    """The feed's ``linkedin.com/company/thepsf]`` is fixed in the data (INFO-10)."""
+    assert SOCIAL is not None
+    urls = [link.url for link in SOCIAL.links]
+    assert "https://www.linkedin.com/company/thepsf/" in urls
+    assert not any("]" in url for url in urls)
+
+
+def test_2025_has_no_social_table() -> None:
+    """2025 has no ``[social]``: its page falls back to the feed's block."""
+    assert load_year(2025).content.social is None
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_every_brand_names_a_bundled_mark(year: int) -> None:
+    """Each link's brand is a key of ``BRANDS``, so its row draws a mark (D-264).
+
+    The loader stays free of Flet, so this test, not the loader, holds it, as
+    ``test_config.py`` holds the track icons.
+    """
+    table = load_year(year).content.social
+    for link in table.links if table is not None else ():
+        assert not link.brand or link.brand in BRANDS, link.key
+
+
+def test_a_link_s_key_is_its_section_and_its_label_in_snake_case() -> None:
+    """A link's identifier key: ``pycon_mastodon``, ``blogs_pycon_us_blog``."""
+    link = SocialLink("blogs", "PyCon US blog", "pycon.blogspot.com", "https://x.org/")
+    assert link.key == "blogs_pycon_us_blog"
+    assert with_link().links[0].key == "pycon_mastodon"
+
+
+@pytest.mark.parametrize(
+    ("table", "message"),
+    [
+        (
+            with_link(url="http://fosstodon.org/@pycon"),
+            r"social.links\[0\].url: expected an https:// URL",
+        ),
+        (
+            with_link(url="mailto:a@b.org"),
+            r"social.links\[0\].url: expected an https:// URL",
+        ),
+        (
+            with_link(section="python"),
+            r"social.links\[0\].section: 'python' is not one of",
+        ),
+        (with_link(label=" "), r"social.links\[0\].label: is empty"),
+        (with_link(handle=""), r"social.links\[0\].handle: is empty"),
+        (with_link(brand="Mastodon"), r"social.links\[0\].brand: 'Mastodon'"),
+        (
+            social(hashtags=("PyConUS",)),
+            r"social.hashtags\[0\]: 'PyConUS' is not a hashtag",
+        ),
+        (
+            social(hashtags=("#PyCon US",)),
+            r"social.hashtags\[0\]: '#PyCon US' is not a hashtag",
+        ),
+        (
+            social(hashtags=("#PyConUS", "#pyconus")),
+            r"social.hashtags\[1\]: duplicate hashtag '#pyconus'",
+        ),
+        (social(hashtags=(), links=()), r"social: is empty"),
+    ],
+)
+def test_a_broken_social_rule_names_the_file_and_the_key(
+    table: SocialInfo, message: str
+) -> None:
+    """Each ``[social]`` rule fails with the file and the key of what breaks it."""
+    with pytest.raises(YearDataError, match=rf"^2026/content.toml: {message}"):
+        check_social(table, "2026/content.toml")
+
+
+def test_two_links_with_one_identifier_are_refused() -> None:
+    """Two rows of a section with one label would share ``social.link.<key>``."""
+    assert SOCIAL is not None
+    table = replace(SOCIAL, links=(*SOCIAL.links, SOCIAL.links[0]))
+    with pytest.raises(YearDataError, match=r"label: 'Mastodon' is already in 'pycon'"):
+        check_social(table, "2026/content.toml")
+
+
+def test_the_load_refuses_a_broken_social_table(tmp_path: Path) -> None:
+    """A ``[social]`` with an unknown section fails ``load_year()`` itself."""
+    for name in ("conference.toml", "content.toml"):
+        (tmp_path / "2026").mkdir(exist_ok=True)
+        text = (config.DATA_DIR / "2026" / name).read_text()
+        if name == "content.toml":
+            text = text.replace('section = "blogs"', 'section = "podcasts"', 1)
+        (tmp_path / "2026" / name).write_text(text)
+    with pytest.raises(YearDataError, match=r"section: 'podcasts' is not one of"):
+        load_year(2026, tmp_path)
