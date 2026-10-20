@@ -31,7 +31,11 @@ def test_no_session_is_lost(year: int) -> None:
 
 
 def test_ids_are_unique_stable_strings_in_ionics_forms(year: int) -> None:
-    """Session ids are unique strings equal to their keys, in Ionic's forms (D-42)."""
+    """Session ids equal their keys, in Ionic's four forms, and are stable (D-42).
+
+    Each id is a string equal to its key, so no two sessions share one, and processing
+    the same bytes again gives the same outline.
+    """
     feed = recorded_feed(year)
     assert feed_invariants.ids_are_unique_stable_strings_in_ionics_forms(feed) == []
 
@@ -49,13 +53,21 @@ def test_times_are_aware_in_the_years_zone_and_ordered(year: int) -> None:
 
 
 def test_every_group_has_a_start_and_ordered_rows(year: int) -> None:
-    """Each day's groups run by start, and their rows by location then name."""
+    """Each day's groups run by distinct starts, and every row starts with its group.
+
+    Within a group, the rows are ordered by location, then name (D-31).
+    """
     feed = recorded_feed(year)
     assert feed_invariants.every_group_has_a_start_and_ordered_rows(feed) == []
 
 
 def test_no_dropped_category_survives(year: int) -> None:
-    """No record of a dropped category, such as a free open space, is a session."""
+    """No record of a dropped category is a session of its own.
+
+    Free or duplicate open spaces, placeholders, the Posters plenary, blanks, and the
+    poster and break slots all stay out; posters fold into one Posters row a poster
+    day, and a feed with breaks keeps its break rows.
+    """
     assert feed_invariants.no_dropped_category_survives(recorded_feed(year)) == []
 
 

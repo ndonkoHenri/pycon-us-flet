@@ -649,7 +649,10 @@ async def test_read_accessibility_counts_either_motion_flag(
 def test_services_are_built_for_the_active_year_in_the_data_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``Services.create`` uses the active year, the data directory and the memory."""
+    """``Services.create`` uses the active year, the data directory and the memory.
+
+    The new services start open, and ``close()`` closes them.
+    """
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path))
     memory = ViewMemory()
     svc = Services.create(memory)
