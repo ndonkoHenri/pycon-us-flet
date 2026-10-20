@@ -1,6 +1,7 @@
 # PyCon US 2025: content the app shows (D-45). Loaded by pycon_us.config.load_year().
-# This year is kept for its recorded feed (tests/fixtures/feeds/), so it holds only what
-# feed processing needs. No display-time override is known for 2025.
+# This year is kept for its recorded feed (tests/fixtures/feeds/), so it holds what feed
+# processing needs, and the keynotes and conference moments, so the moments are derived
+# and tested in a second year and zone (D-274). No display-time override is known for 2025.
 
 display_time_overrides = []
 
@@ -9,3 +10,149 @@ hall_prefix = ""
 
 # 2025's lightning talks list their one room, Hall B (D-124).
 lightning_talks_location = ""
+
+# The keynotes and panels (D-217), with their people only: their names and roles, in our
+# own words, from https://us.pycon.org/2025/about/keynote-speakers/ (checked 2026-10-20).
+# The 2025 feed files every keynote as a plenary, so these entries are what makes them
+# keynotes, for the Keynotes page and their moments. 2025 bundles no snapshot: the tests
+# check these ids against the recorded feed.
+[[keynotes]]
+session_id = "49"
+kind = "keynote"
+
+[[keynotes.speakers]]
+name = "Cory Doctorow"
+role = "Science fiction author, activist and journalist"
+
+[[keynotes]]
+session_id = "100"
+kind = "panel"
+title = "The Work Still Matters: Inclusion, Access, and Community in 2025"
+
+[[keynotes.speakers]]
+name = "Alla Barbalat"
+role = "Developer advocate"
+
+[[keynotes.speakers]]
+name = "Cristián Maureira-Fredes"
+role = "Team lead, Qt for Python"
+
+[[keynotes.speakers]]
+name = "Jay Miller"
+role = "Developer manager, Aiven"
+
+[[keynotes.speakers]]
+name = "Keanya Phelps"
+role = "Project manager, Caktus"
+
+[[keynotes.speakers]]
+name = "Naomi Ceder"
+role = "Fellow, Python Software Foundation"
+
+[[keynotes]]
+session_id = "101"
+kind = "keynote"
+
+[[keynotes.speakers]]
+name = "Lynn Root"
+role = "Staff engineer, Spotify"
+
+[[keynotes]]
+session_id = "151"
+kind = "keynote"
+
+[[keynotes.speakers]]
+name = "Geoff Hing"
+role = "Data reporter, The Marshall Project"
+
+[[keynotes.speakers]]
+name = "Tom Meagher"
+role = "Senior editor, The Marshall Project"
+
+[[keynotes.speakers]]
+name = "Jackie Kazil"
+role = "Moderator"
+
+[[keynotes]]
+session_id = "168"
+kind = "keynote"
+
+[[keynotes.speakers]]
+name = "Kari L. Jordan"
+role = "Executive director, The Carpentries"
+
+[[keynotes]]
+session_id = "169"
+kind = "panel"
+
+[[keynotes.speakers]]
+name = "Barry Warsaw"
+role = "Python Steering Council"
+
+[[keynotes.speakers]]
+name = "Donghee Na"
+role = "Python Steering Council"
+
+[[keynotes.speakers]]
+name = "Emily Morehouse"
+role = "Python Steering Council"
+
+[[keynotes.speakers]]
+name = "Pablo Galindo Salgado"
+role = "Python Steering Council"
+
+[[keynotes.speakers]]
+name = "Gregory P. Smith"
+role = "Python Steering Council"
+
+# The conference moments written by hand (NOTIF-05, D-274), as 2026's (whose file explains
+# them), in Eastern time: the 2025 pages say the same about sign-ups.
+[[event_reminders]]
+id = 8000
+category = "open_space"
+at = 2025-05-15T17:00:00-04:00
+title = "Open space sign-ups for Friday"
+body = "Host an hour on any topic: each day's open spaces take sign-ups from the day before."
+route = "/more/open-spaces"
+source = "https://us.pycon.org/2025/events/open-spaces/"
+checked = 2026-10-20
+
+[[event_reminders]]
+id = 8001
+category = "lightning"
+at = 2025-05-16T10:00:00-04:00
+title = "Lightning talk sign-ups"
+body = "Give a five-minute talk: sign up before lunch, when speakers are picked and told by email."
+route = "/more/lightning-talks"
+source = "https://us.pycon.org/2025/events/lightning-talks/"
+checked = 2026-10-20
+
+[[event_reminders]]
+id = 8002
+category = "open_space"
+at = 2025-05-16T17:00:00-04:00
+title = "Open space sign-ups for Saturday"
+body = "Host an hour on any topic: each day's open spaces take sign-ups from the day before."
+route = "/more/open-spaces"
+source = "https://us.pycon.org/2025/events/open-spaces/"
+checked = 2026-10-20
+
+[[event_reminders]]
+id = 8003
+category = "lightning"
+at = 2025-05-17T10:00:00-04:00
+title = "Last lightning talk sign-ups"
+body = "Today's lunchtime picks fill the last lightning talks: sign up before then."
+route = "/more/lightning-talks"
+source = "https://us.pycon.org/2025/events/lightning-talks/"
+checked = 2026-10-20
+
+[[event_reminders]]
+id = 8004
+category = "open_space"
+at = 2025-05-17T17:00:00-04:00
+title = "Open space sign-ups for Sunday"
+body = "Host an hour on any topic: each day's open spaces take sign-ups from the day before."
+route = "/more/open-spaces"
+source = "https://us.pycon.org/2025/events/open-spaces/"
+checked = 2026-10-20

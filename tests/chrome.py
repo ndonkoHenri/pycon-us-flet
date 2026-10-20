@@ -6,8 +6,8 @@
 - ``AppScaffold``'s ``hooks`` and lookups, for ``test_scaffold.py`` (the app bar, Back
   and the body), ``test_shown.py`` (``Shown`` and the content line) and
   ``test_navigation.py`` (the bottom bar on a View): the hooks ``AppScaffold`` calls
-  (``ft.use_view_path``, ``ft.use_effect`` and the store hooks) are answered by
-  ``Hooks``, and a fake page is bound as Flet binds a session's page.
+  (``ft.use_view_path``, ``ft.use_effect``, the store hooks and ``use_tokens``) are
+  answered by ``Hooks``, and a fake page is bound as Flet binds a session's page.
 
 A test module takes the fixtures by assigning them to its own names, which is where
 pytest looks a fixture up: ``year, svc, page, conference, hooks = (chrome.year,
@@ -90,6 +90,7 @@ def hooks(
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
+    monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
     # The probe reads Prefs; its own tests are in test_time_gutter.py.
