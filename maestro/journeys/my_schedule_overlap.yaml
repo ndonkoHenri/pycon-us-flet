@@ -25,13 +25,19 @@ onFlowComplete:
     visible:
       id: schedule.favorite.30
     timeout: 15000
-- tapOn:
-    id: schedule.favorite.30
-- extendedWaitUntil:
-    visible:
-      id: schedule.favorite.30
-      checked: true
-    timeout: 15000
+# The Schedule jumps to the now slot as it opens (D-18), and a tap on a moving list
+# only stops it: let the jump end, and tap again if the star did not turn on.
+- waitForAnimationToEnd
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: schedule.favorite.30
+      - extendedWaitUntil:
+          visible:
+            id: schedule.favorite.30
+            checked: true
+          timeout: 10000
 
 - tapOn:
     id: app.nav.my_schedule
