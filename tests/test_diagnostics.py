@@ -22,7 +22,6 @@ import pycon_us
 from pycon_us import capabilities, clock
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
-from pycon_us.memory import ViewMemory
 from pycon_us.prefs import DEV_FAKE_NOW, DEV_FEED_URL, Prefs
 from pycon_us.services import diagnostics
 from pycon_us.services.diagnostics import Facts, diagnostics_text, gather_facts
@@ -197,6 +196,23 @@ def test_times_are_iso_8601_in_conference_time_with_their_offset() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("offset", "line"),
+    [
+        (timedelta(hours=-7), "UTC-07:00"),
+        (timedelta(0), "UTC+00:00"),
+        (timedelta(hours=5, minutes=30), "UTC+05:30"),
+    ],
+)
+def test_the_device_offset_is_iso_8601_with_an_ascii_sign(
+    offset: timedelta, line: str
+) -> None:
+    """West of UTC is "-", never the typographic minus, so "-07:00" finds it in a report."""
+    text = diagnostics_text(dataclasses.replace(FACTS, device_offset=offset))
+    assert fields(text)["Device offset"] == line
+    assert "\u2212" not in text
+
+
 def test_a_companion_run_says_it_is_not_embedded() -> None:
     """``flet run`` and the companion app are not embedded, and the text says so (F14)."""
     assert text_of(embedded=False)["Run"] == diagnostics.NOT_EMBEDDED
@@ -249,6 +265,37 @@ def test_an_unread_saved_list_is_not_counted_as_empty() -> None:
     )
 
 
+def test_facts_has_exactly_the_reviewed_fields() -> None:
+    """``Facts`` holds only the reviewed fields, none of them personal (D-72, D-271).
+
+    Adding a field means first deciding it carries nothing personal (no query, title,
+    id, URL or name), then listing it here. The search query has no field by design.
+    """
+    assert [field.name for field in dataclasses.fields(Facts)] == [
+        "app_version",
+        "python",
+        "flet",
+        "platform",
+        "device",
+        "os",
+        "embedded",
+        "year",
+        "source",
+        "feed_digest",
+        "fetched_at",
+        "zone",
+        "device_offset",
+        "fake_clock_from",
+        "now",
+        "written_at",
+        "custom_feed_url",
+        "reduced_motion",
+        "width",
+        "capabilities",
+        "saved_sessions",
+    ]
+
+
 def test_values_cannot_add_a_line_or_carry_an_address_or_a_url() -> None:
     """A value with a line break, an email or a URL and its query stays one clean line."""
     text = diagnostics_text(
@@ -296,8 +343,21 @@ async def test_gathering_reads_the_build_and_the_year(
     assert lines["Flet"] == pycon_us.FLET_VERSION
     assert lines["Year"] == "2026"
     assert lines["Conference zone"] == PACIFIC
-    names = [name for name, on in capabilities.ALL if on]
-    assert lines["Capabilities"] == (", ".join(names) or "none")
+    # Under pytest nothing is embedded, so no capability is on (D-63).
+    assert lines["Capabilities"] == "none"
+
+
+async def test_gathering_lists_only_the_capabilities_that_are_on(
+    monkeypatch: pytest.MonkeyPatch, storage: Storage, year: YearData
+) -> None:
+    """``gather_facts()`` names the capabilities that are on, in order, and skips the rest."""
+    monkeypatch.setattr(
+        capabilities,
+        "ALL",
+        (("Secure storage", False), ("Reminders", True), ("Badge scanner", True)),
+    )
+    lines = fields(await gathered(year, await bundled(storage, year)))
+    assert lines["Capabilities"] == "Reminders, Badge scanner"
 
 
 async def test_bundled_data_names_the_snapshot_and_its_capture(
@@ -376,13 +436,14 @@ async def test_gathering_reads_the_developer_options(
     assert lines["Custom feed URL"] == custom
 
 
-async def test_the_text_never_holds_the_url_ids_titles_a_query_or_an_email(
+async def test_the_text_never_holds_the_url_ids_titles_or_an_email(
     storage: Storage, year: YearData
 ) -> None:
     """Even with all of them in the stores, the gathered text names none (D-72).
 
-    The feed URL (with a token and a query) is in effect, sessions are saved, search
-    remembers a query, and the device's model quotes an email address.
+    The feed URL (with a token and a query) is in effect, sessions are saved, and the
+    device's maker quotes an email address. A search query is left out by construction:
+    ``gather_facts()`` never reads ``ViewMemory``, and the field-set test pins that.
     """
     conference = await bundled(storage, year)
     data = conference.data
@@ -390,7 +451,6 @@ async def test_the_text_never_holds_the_url_ids_titles_a_query_or_an_email(
     # Three-digit ids, so that one cannot match a version's digit by chance.
     saved = [ident for ident in sorted(data.sessions) if len(ident) == 3][:3]
     titles = [data.sessions[ident].name for ident in saved]
-    memory = ViewMemory(search_query="jane doe")
     page = FakePage()
     page.platform = ft.PagePlatform.ANDROID
     page.device = android_device(35, manufacturer=ADDRESS, model="Pixel", release="15")
@@ -405,7 +465,7 @@ async def test_the_text_never_holds_the_url_ids_titles_a_query_or_an_email(
     assert lines["Saved sessions"] == "3"
     assert lines["Custom feed URL"] == "yes"
     forbidden = [FEED_URL, "staging.example.org", "s3cret", "token", ADDRESS]
-    forbidden += [memory.search_query, "jane", *titles]
+    forbidden += titles
     for value in forbidden:
         assert value not in text
     for ident in saved:

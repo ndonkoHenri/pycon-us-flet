@@ -25,7 +25,7 @@ from flet.utils import is_embedded
 
 from pycon_us import FLET_VERSION, __version__, capabilities, clock
 from pycon_us.config import ConferenceInfo
-from pycon_us.core.timefmt import ago_label, utc_offset_label
+from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites
 from pycon_us.feed_refresh import Source
 from pycon_us.prefs import Prefs
@@ -35,10 +35,10 @@ from pycon_us.state import Conference
 
 logger = logging.getLogger(__name__)
 
-URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://\S*")
+_URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://\S*")
 """A URL with a scheme, query included, as a value could quote one."""
 
-REDACTED_URL = "<url>"
+_REDACTED_URL = "<url>"
 """What the text writes in a URL's place."""
 
 NOT_EMBEDDED = "not embedded (companion app or desktop)"
@@ -47,14 +47,14 @@ NOT_EMBEDDED = "not embedded (companion app or desktop)"
 MAX_VALUE = 80
 """The longest value the text writes, in characters; a longer one is cut with "…"."""
 
-FEED_DIGITS = 12
+_FEED_DIGITS = 12
 """How many hex digits of the feed's SHA-256 name it: enough to tell feeds apart."""
 
-MEDIUM_FROM = 600
+_MEDIUM_FROM = 600
 """Material 3's medium window size class starts here, in dp, as D-09's rail does; under it
 is compact."""
 
-EXPANDED_FROM = 840
+_EXPANDED_FROM = 840
 """Material 3's expanded class starts here (D-09's list width)."""
 
 
@@ -116,7 +116,8 @@ class Facts:
 def diagnostics_text(facts: Facts) -> str:
     """Return the diagnostics text: one ``Name: value`` line per fact, 18 lines.
 
-    Times are ISO 8601 in the conference's zone, with their offset. Every value is
+    Times are ISO 8601 in the conference's zone, with their offset, and the device's
+    offset has an ASCII sign too ("UTC-07:00"). Every value is
     kept on one line and cut at ``MAX_VALUE`` characters, and its email addresses and
     URLs are written ``<email>`` and ``<url>``, so a value the app does not control
     (a device's model) cannot add a line or carry an address.
@@ -147,19 +148,19 @@ def diagnostics_text(facts: Facts) -> str:
         ("OS", facts.os or facts.platform),
         ("Run", "packaged app" if facts.embedded else NOT_EMBEDDED),
         ("Year", str(facts.year)),
-        ("Schedule", schedule(facts.source, facts.feed_digest)),
+        ("Schedule", _schedule_line(facts.source, facts.feed_digest)),
         ("Schedule fetched", fetched),
         ("Conference zone", facts.zone),
-        ("Device offset", utc_offset_label(facts.device_offset)),
+        ("Device offset", _offset_line(facts.device_offset)),
         ("Fake clock", fake_clock),
         ("Written", moment(facts.written_at)),
         ("Custom feed URL", "yes" if facts.custom_feed_url else "no"),
         ("Reduced motion", "on" if facts.reduced_motion else "off"),
-        ("Width", width(facts.width)),
+        ("Width", _width_line(facts.width)),
         ("Capabilities", ", ".join(facts.capabilities) or "none"),
-        ("Saved sessions", saved(facts.saved_sessions)),
+        ("Saved sessions", _saved_line(facts.saved_sessions)),
     )
-    return "\n".join(f"{name}: {clean(value)}" for name, value in lines)
+    return "\n".join(f"{name}: {_clean(value)}" for name, value in lines)
 
 
 async def gather_facts(
@@ -183,7 +184,7 @@ async def gather_facts(
         prefs: The Developer options in effect and the OS's motion setting.
         favorites: The saved sessions, counted.
     """
-    device, os_name = await device_facts(page)
+    device, os_name = await _device_facts(page)
     written_at = datetime.now(UTC)
     return Facts(
         app_version=__version__,
@@ -210,7 +211,7 @@ async def gather_facts(
     )
 
 
-async def device_facts(page: ft.Page) -> tuple[str | None, str | None]:
+async def _device_facts(page: ft.Page) -> tuple[str | None, str | None]:
     """Return the device's make and model, and its OS, as the platform reports them.
 
     Only what names the kind of device: never its user-given name (an iPhone's is
@@ -244,19 +245,34 @@ async def device_facts(page: ft.Page) -> tuple[str | None, str | None]:
     return None, None
 
 
-def schedule(source: Source, digest: bytes | None) -> str:
+def _schedule_line(source: Source, digest: bytes | None) -> str:
     """Return the schedule's line: where it came from and which feed it is.
 
     Args:
         source: ``Conference.source``.
-        digest: ``Conference.digest``; its first ``FEED_DIGITS`` hex digits name it.
+        digest: ``Conference.digest``; its first ``_FEED_DIGITS`` hex digits name it.
     """
     if source == "none" or digest is None:
         return "none yet"
-    return f"{source}, feed {digest.hex()[:FEED_DIGITS]}"
+    return f"{source}, feed {digest.hex()[:_FEED_DIGITS]}"
 
 
-def width(dp: float | None) -> str:
+def _offset_line(offset: timedelta) -> str:
+    """Return the device's UTC offset in ISO 8601 with an ASCII sign, e.g. "UTC-07:00".
+
+    Not ``timefmt.utc_offset_label()``, whose typographic minus suits the Developer
+    screen but not text pasted into an issue: a search for "-07:00" or "UTC-" must
+    find it, as it finds the other lines' ``isoformat()`` offsets. Zero is "UTC+00:00".
+
+    Args:
+        offset: ``Facts.device_offset``.
+    """
+    sign = "-" if offset < timedelta(0) else "+"
+    minutes = abs(int(offset.total_seconds())) // 60
+    return f"UTC{sign}{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _width_line(dp: float | None) -> str:
     """Return the width line: the page's width and its Material window size class.
 
     Args:
@@ -264,16 +280,16 @@ def width(dp: float | None) -> str:
     """
     if dp is None:
         return "unknown"
-    if dp < MEDIUM_FROM:
+    if dp < _MEDIUM_FROM:
         size = "compact"
-    elif dp < EXPANDED_FROM:
+    elif dp < _EXPANDED_FROM:
         size = "medium"
     else:
         size = "expanded"
     return f"{dp:.0f} dp, {size}"
 
 
-def saved(count: int | None) -> str:
+def _saved_line(count: int | None) -> str:
     """Return the saved sessions' line: how many, or that the list could not be read.
 
     Args:
@@ -282,14 +298,14 @@ def saved(count: int | None) -> str:
     return "unknown (the saved list could not be read)" if count is None else str(count)
 
 
-def clean(value: str) -> str:
+def _clean(value: str) -> str:
     """Return ``value`` on one line, cut at ``MAX_VALUE``, without emails or URLs.
 
     Args:
         value: A fact's value as written.
     """
     value = " ".join(value.split())
-    value = EMAIL.sub(REDACTED_EMAIL, URL.sub(REDACTED_URL, value))
+    value = EMAIL.sub(REDACTED_EMAIL, _URL.sub(_REDACTED_URL, value))
     if len(value) > MAX_VALUE:
         value = value[: MAX_VALUE - 1] + "…"
     return value
