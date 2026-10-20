@@ -48,6 +48,7 @@ CACHED_FEED = renamed("Renamed in the cache")
 
 @pytest.fixture(autouse=True)
 def frozen_clock() -> Iterator[None]:
+    """Freeze ``clock.now()`` at ``NOW`` for the test, then return to real time."""
     clock.set_test_now(NOW)
     yield
     clock.set_test_now(None)
@@ -55,11 +56,13 @@ def frozen_clock() -> Iterator[None]:
 
 @pytest.fixture(scope="module")
 def year() -> YearData:
+    """The 2026 year data, loaded once for the module."""
     return load_year(2026)
 
 
 @pytest.fixture
 def storage(tmp_path: Path) -> Storage:
+    """A 2026 ``Storage`` in ``tmp_path``, over in-memory SharedPreferences."""
     return Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
 
 
@@ -89,6 +92,7 @@ class HeldFeed:
     """
 
     def __init__(self, error: Exception | None = None) -> None:
+        """Hold every request until ``release()``; raise ``error`` then, if given."""
         self.error = error
         self.requests = 0
         self.arrived = asyncio.Event()
@@ -96,9 +100,11 @@ class HeldFeed:
         self.transport = httpx.MockTransport(self._handle)
 
     def release(self) -> None:
+        """Let the held requests, and any later one, answer."""
         self._released.set()
 
     async def _handle(self, request: httpx.Request) -> httpx.Response:
+        """Count the request, wait for the release, then answer or raise."""
         self.requests += 1
         self.arrived.set()
         await self._released.wait()
@@ -108,11 +114,13 @@ class HeldFeed:
 
 
 def title(data: ConferenceData | None) -> str:
+    """Return talk 142's name in ``data``, which must be loaded."""
     assert data is not None
     return data.sessions[TALK].name
 
 
 async def loaded(storage: Storage, year: YearData) -> Conference:
+    """Return a new ``Conference`` after its ``load_local()``."""
     conference = Conference()
     await conference.load_local(storage, year)
     return conference
@@ -124,6 +132,7 @@ async def loaded(storage: Storage, year: YearData) -> Conference:
 async def test_without_a_cache_the_bundled_snapshot_is_published(
     storage: Storage, year: YearData
 ) -> None:
+    """Without a cache, the snapshot is published as version 1, never copied to it."""
     conference = await loaded(storage, year)
 
     snapshot = year.read_snapshot()
@@ -140,6 +149,7 @@ async def test_without_a_cache_the_bundled_snapshot_is_published(
 async def test_the_feed_cache_wins_over_the_snapshot(
     storage: Storage, year: YearData
 ) -> None:
+    """The cache is published over a newer snapshot, dated by its file's time in UTC."""
     assert await storage.write_feed(CACHED_FEED)
     saved_at = datetime(
         2026, 10, 1, 8, 0, tzinfo=UTC
@@ -160,6 +170,7 @@ async def test_the_feed_cache_wins_over_the_snapshot(
 async def test_a_corrupt_cache_is_deleted_and_the_snapshot_published(
     storage: Storage, year: YearData, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A cache that isn't JSON is deleted with a warning, and the snapshot published."""
     assert await storage.write_feed(b'{"schedule": "truncated')
 
     with caplog.at_level(logging.WARNING):
@@ -176,6 +187,7 @@ async def test_a_corrupt_cache_is_deleted_and_the_snapshot_published(
 async def test_a_cache_with_the_wrong_structure_is_deleted_too(
     storage: Storage, year: YearData
 ) -> None:
+    """A cache that parses but has no readable slot is deleted too, for the snapshot."""
     assert await storage.write_feed(b'{"schedule": []}')  # no readable slot
 
     conference = await loaded(storage, year)
@@ -190,6 +202,7 @@ async def test_a_cache_with_the_wrong_structure_is_deleted_too(
 async def test_a_refresh_caches_the_feed_and_publishes_it(
     storage: Storage, year: YearData
 ) -> None:
+    """A refresh publishes the network feed as version 2 and caches its raw bytes."""
     conference = await loaded(storage, year)
     bundled = conference.data
 
@@ -208,6 +221,7 @@ async def test_a_refresh_caches_the_feed_and_publishes_it(
 async def test_the_next_start_publishes_what_the_refresh_cached(
     storage: Storage, year: YearData
 ) -> None:
+    """The next start publishes, from the cache, the feed the last refresh fetched."""
     first_run = await loaded(storage, year)
     await first_run.refresh(storage, year, transport=serving(NETWORK_FEED))
 
@@ -220,6 +234,7 @@ async def test_the_next_start_publishes_what_the_refresh_cached(
 async def test_two_concurrent_refreshes_make_one_request(
     storage: Storage, year: YearData
 ) -> None:
+    """Concurrent refreshes share one task: one request and one publish."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
 
@@ -244,6 +259,7 @@ async def test_two_concurrent_refreshes_make_one_request(
 async def test_a_refresh_after_the_last_one_ended_makes_a_new_request(
     storage: Storage, year: YearData
 ) -> None:
+    """A later refresh makes a new request; the same feed is not published again."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
     feed.release()
@@ -258,6 +274,7 @@ async def test_a_refresh_after_the_last_one_ended_makes_a_new_request(
 async def test_refreshing_is_set_while_the_request_is_in_flight(
     storage: Storage, year: YearData
 ) -> None:
+    """``refreshing`` is True while the request is in flight, and False after it."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
 
@@ -273,6 +290,7 @@ async def test_refreshing_is_set_while_the_request_is_in_flight(
 async def test_cancelling_one_caller_leaves_the_shared_refresh_running(
     storage: Storage, year: YearData
 ) -> None:
+    """Cancelling one caller of a shared refresh leaves it running for the other."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
 
@@ -315,6 +333,7 @@ async def test_a_failed_refresh_keeps_the_data_and_the_cache_and_says_why(
     transport: Callable[[], httpx.MockTransport],
     status: Status,
 ) -> None:
+    """A failed refresh keeps the data and the cache; its problem gives the status."""
     assert await storage.write_feed(CACHED_FEED)
     conference = await loaded(storage, year)
     before = (conference.data, conference.source, conference.fetched_at)
@@ -332,6 +351,7 @@ async def test_a_failed_refresh_keeps_the_data_and_the_cache_and_says_why(
 async def test_a_good_refresh_clears_the_last_problem(
     storage: Storage, year: YearData
 ) -> None:
+    """A good refresh after a failed one clears the problem: the status is ``fresh``."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -347,6 +367,7 @@ async def test_a_good_refresh_clears_the_last_problem(
 async def test_a_feed_that_cannot_be_cached_is_still_published(
     tmp_path: Path, year: YearData
 ) -> None:
+    """A feed whose cache write fails is still published for the session."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path / "gone", year=2026)
     conference = await loaded(storage, year)
 
@@ -361,6 +382,7 @@ async def test_a_feed_that_cannot_be_cached_is_still_published(
 async def test_a_publish_notifies_subscribers_and_the_task_does_not(
     storage: Storage, year: YearData
 ) -> None:
+    """Loading and refreshing notify subscribers of their fields, never of ``_task``."""
     conference = Conference()
     assert isinstance(conference, ft.Observable)
     changes: list[str | None] = []
@@ -467,6 +489,7 @@ async def test_the_same_feed_makes_stale_data_fresh(
 async def test_the_same_feed_clears_the_last_problem(
     storage: Storage, year: YearData
 ) -> None:
+    """The same feed after an offline failure clears the problem; no new version."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -498,6 +521,7 @@ async def test_the_same_feed_dates_the_cache_for_the_next_start(
 async def test_a_refresh_that_ends_after_its_session_closed_writes_nothing(
     storage: Storage, year: YearData
 ) -> None:
+    """A refresh that ends after its session closed changes neither store nor cache."""
     conference = await loaded(storage, year)
     closed = asyncio.Event()
     feed = HeldFeed()
@@ -526,6 +550,7 @@ async def test_a_refresh_that_ends_after_its_session_closed_writes_nothing(
 async def test_a_refresh_that_fails_after_its_session_closed_writes_nothing(
     storage: Storage, year: YearData
 ) -> None:
+    """A refresh that fails after its session closed sets no problem."""
     conference = await loaded(storage, year)
     closed = asyncio.Event()
     closed.set()
@@ -538,6 +563,7 @@ async def test_a_refresh_that_fails_after_its_session_closed_writes_nothing(
 async def test_an_open_session_refreshes_as_before(
     storage: Storage, year: YearData
 ) -> None:
+    """With ``closed`` given but not set, a refresh publishes and caches as usual."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=serving(NETWORK_FEED), closed=asyncio.Event()
@@ -553,6 +579,8 @@ async def test_an_unexpected_refresh_error_is_logged_at_once(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A bug in a refresh nobody awaits is logged as it ends; nothing is published."""
+
     async def broken(
         url: str, *, transport: httpx.AsyncBaseTransport | None = None
     ) -> bytes:
@@ -576,6 +604,8 @@ async def test_an_unexpected_refresh_error_is_logged_at_once(
 async def test_an_unexpected_refresh_error_reaches_refresh_callers(
     storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A bug in a refresh raises to the caller that awaits ``refresh()``."""
+
     async def broken(
         url: str, *, transport: httpx.AsyncBaseTransport | None = None
     ) -> bytes:
@@ -612,6 +642,7 @@ def at(day: str, hour: int) -> datetime:
 def test_data_goes_stale_after_6_hours_on_conference_days_and_24_otherwise(
     machine_tz: str, year: YearData, now: datetime, age: timedelta, status: Status
 ) -> None:
+    """Data goes stale after 6 hours on the conference's days and after 24 on others."""
     clock.set_test_now(now)
     conference = Conference(fetched_at=now - age)
 
@@ -620,6 +651,7 @@ def test_data_goes_stale_after_6_hours_on_conference_days_and_24_otherwise(
 
 
 def test_an_age_from_a_clock_set_back_is_zero(year: YearData) -> None:
+    """A fetch time after now, as from a clock set back, gives age 0 and ``fresh``."""
     conference = Conference(fetched_at=NOW + timedelta(hours=1))
 
     assert conference.age() == timedelta(0)
@@ -627,6 +659,7 @@ def test_an_age_from_a_clock_set_back_is_zero(year: YearData) -> None:
 
 
 def test_without_data_the_status_is_stale(year: YearData) -> None:
+    """With no fetch time, the age is None and the status ``stale``."""
     conference = Conference()
 
     assert conference.age() is None
@@ -636,6 +669,7 @@ def test_without_data_the_status_is_stale(year: YearData) -> None:
 async def test_a_refresh_the_user_asked_for_outranks_the_last_problem(
     storage: Storage, year: YearData
 ) -> None:
+    """While a refresh the user asked for runs, the status is ``refreshing``."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -660,6 +694,7 @@ async def test_a_refresh_the_user_asked_for_outranks_the_last_problem(
 async def test_an_automatic_refresh_is_due_until_one_has_started(
     storage: Storage, year: YearData
 ) -> None:
+    """An automatic refresh is due until ``start_refresh_if_due()`` starts one."""
     conference = await loaded(storage, year)
     assert conference.refresh_due()
 
@@ -685,6 +720,7 @@ async def test_an_automatic_refresh_is_due_until_one_has_started(
 async def test_the_next_one_is_due_15_minutes_after_the_last_began(
     storage: Storage, year: YearData, later: timedelta, due: bool
 ) -> None:
+    """A refresh is due 15 minutes after the last began, or once the clock goes back."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
 
@@ -696,6 +732,7 @@ async def test_the_next_one_is_due_15_minutes_after_the_last_began(
 async def test_a_failed_refresh_also_waits_15_minutes_before_the_next_try(
     storage: Storage, year: YearData
 ) -> None:
+    """After a failed refresh, the next automatic try waits 15 minutes too."""
     conference = await loaded(storage, year)
     offline = failing(httpx.ConnectError("offline"))
     await conference.refresh(storage, year, transport=offline)
@@ -714,6 +751,7 @@ async def test_a_failed_refresh_also_waits_15_minutes_before_the_next_try(
 async def test_a_refresh_on_demand_restarts_the_interval(
     storage: Storage, year: YearData
 ) -> None:
+    """A Refresh on demand restarts the 15 minutes: 6 minutes later, none is due."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
     clock.set_test_now(NOW + timedelta(minutes=14))
@@ -727,6 +765,7 @@ async def test_a_refresh_on_demand_restarts_the_interval(
 async def test_no_automatic_refresh_is_due_while_one_is_in_flight(
     storage: Storage, year: YearData
 ) -> None:
+    """No automatic refresh is due while one is in flight, however long it hangs."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
     started = conference.start_refresh(storage, year, transport=feed.transport)
@@ -750,6 +789,7 @@ async def test_an_automatic_refresh_that_fails_keeps_the_data_and_the_cache(
     transport: Callable[[], httpx.MockTransport],
     status: Status,
 ) -> None:
+    """A failed automatic refresh keeps the data and the cache; the status says why."""
     assert await storage.write_feed(CACHED_FEED)
     conference = await loaded(storage, year)
     before = (conference.data, conference.source, conference.fetched_at)
@@ -775,6 +815,7 @@ class StatusLog:
     """
 
     def __init__(self, conference: Conference, year: YearData) -> None:
+        """Subscribe to ``conference``; its status is read against ``year``'s dates."""
         self.conference = conference
         self.info = year.conference
         self.seen: list[tuple[Status, bool]] = []
@@ -782,6 +823,7 @@ class StatusLog:
         conference.subscribe(self)
 
     def __call__(self, _sender: object, _name: str | None) -> None:
+        """Record the status and the ``refreshing`` flag at a notification."""
         self.seen.append(
             (self.conference.status(self.info), self.conference.refreshing)
         )
@@ -790,6 +832,7 @@ class StatusLog:
 async def test_an_automatic_refresh_over_fresh_data_keeps_the_status_fresh(
     storage: Storage, year: YearData
 ) -> None:
+    """Over fresh data, an automatic refresh shows the bar; the status stays fresh."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
     clock.set_test_now(NOW + REFRESH_EVERY)  # due, and the data is still fresh
@@ -811,6 +854,7 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_status_fresh(
 async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
+    """Over stale data, an automatic refresh says ``stale`` until it ends."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
     clock.set_test_now(NOW + timedelta(hours=25))  # not a conference day: over 24 h
@@ -831,6 +875,7 @@ async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_
 
 
 async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) -> None:
+    """The refresh at start, over a stale snapshot, says ``stale`` while it runs."""
     conference = await loaded(storage, year)
     clock.set_test_now(NOW + timedelta(days=3))  # the bundled snapshot is stale
     feed = HeldFeed()
@@ -849,6 +894,7 @@ async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) 
 async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
+    """A refresh the user asked for says ``refreshing`` as it starts, then ``fresh``."""
     conference = await loaded(storage, year)
     clock.set_test_now(NOW + timedelta(days=3))
     log = StatusLog(conference, year)
@@ -869,6 +915,7 @@ async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
 async def test_an_automatic_refresh_that_fails_offline_again_changes_no_status(
     storage: Storage, year: YearData
 ) -> None:
+    """An automatic refresh that fails offline again notifies only the bar's flag."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -892,6 +939,7 @@ async def test_an_automatic_refresh_that_fails_offline_again_changes_no_status(
 async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
     storage: Storage, year: YearData
 ) -> None:
+    """A Refresh tap joins a quiet refresh's request, saying ``refreshing`` at once."""
     conference = await loaded(storage, year)
     clock.set_test_now(NOW + timedelta(days=3))
     feed = HeldFeed()
@@ -917,6 +965,7 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
 async def test_after_a_refresh_the_user_asked_for_the_next_automatic_one_is_quiet(
     storage: Storage, year: YearData
 ) -> None:
+    """After a Refresh fails offline, the next automatic one says ``offline`` too."""
     conference = await loaded(storage, year)
     offline = failing(httpx.ConnectError("offline"))
     await conference.refresh(storage, year, transport=offline)  # Refresh, offline
@@ -957,6 +1006,7 @@ def recording(urls: list[str]) -> httpx.MockTransport:
 async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
     storage: Storage, year: YearData
 ) -> None:
+    """A Developer feed URL serves the next refresh; clearing it restores the year's."""
     conference = await loaded(storage, year)
     urls: list[str] = []
     await conference.set_feed_url(DEV_FEED, storage)
@@ -971,7 +1021,10 @@ async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
 async def test_leaving_a_feed_url_for_the_year_s_deletes_the_cache_it_may_have_filled(
     storage: Storage, year: YearData
 ) -> None:
-    # An offline start would publish that feed as the schedule (D-187, D-244).
+    """Only going back from a feed URL to the year's feed deletes the cache.
+
+    An offline start would publish that feed as the schedule (D-187, D-244).
+    """
     conference = await loaded(storage, year)
     await storage.write_feed(NETWORK_FEED)
     await conference.set_feed_url(None, storage)
@@ -988,7 +1041,10 @@ async def test_leaving_a_feed_url_for_the_year_s_deletes_the_cache_it_may_have_f
 async def test_a_refresh_from_a_feed_url_left_while_it_runs_writes_nothing(
     storage: Storage, year: YearData, then: str | None
 ) -> None:
-    # D-187's race: the test feed came back in the cache after Reset (D-244).
+    """A refresh from a feed URL left while it runs neither caches nor publishes.
+
+    D-187's race: the test feed came back in the cache after Reset (D-244).
+    """
     conference = await loaded(storage, year)
     await conference.set_feed_url(DEV_FEED, storage)
     held = HeldFeed()
@@ -1006,6 +1062,7 @@ async def test_a_refresh_from_a_feed_url_left_while_it_runs_writes_nothing(
 async def test_a_refresh_whose_feed_url_is_left_during_its_cache_write_publishes_nothing(
     storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A feed URL left as the cache write lands: the file goes, nothing is published."""
     conference = await loaded(storage, year)
     await conference.set_feed_url(DEV_FEED, storage)
     write = Storage.write_feed
@@ -1024,8 +1081,11 @@ async def test_a_refresh_whose_feed_url_is_left_during_its_cache_write_publishes
 async def test_a_feed_url_left_before_the_write_takes_its_turn_keeps_no_cache(
     storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # The write's worker is queued for the writers' lock when the URL is left: the
-    # deletion asked for after it must not take the lock first (D-244).
+    """A feed URL left while the cache write waits for its lock leaves no cache.
+
+    The write's worker is queued for the writers' lock when the URL is left: the
+    deletion asked for after it must not take the lock first (D-244).
+    """
     conference = await loaded(storage, year)
     await conference.set_feed_url(DEV_FEED, storage)
     held = QueuedWrite(monkeypatch)
@@ -1045,7 +1105,10 @@ async def test_a_feed_url_left_before_the_write_takes_its_turn_keeps_no_cache(
 async def test_reset_during_a_queued_cache_write_keeps_no_cache(
     storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Reset cancels the refresh, but not its worker thread, which writes on (D-120).
+    """Reset during a queued cache write cancels the refresh and leaves no cache.
+
+    Reset cancels the refresh, but not its worker thread, which writes on (D-120).
+    """
     conference = await loaded(storage, year)
     await conference.set_feed_url(DEV_FEED, storage)
     held = QueuedWrite(monkeypatch)
@@ -1068,6 +1131,7 @@ async def test_reset_during_a_queued_cache_write_keeps_no_cache(
 async def test_reset_shows_the_bundled_snapshot_from_the_year_s_feed(
     storage: Storage, year: YearData
 ) -> None:
+    """Reset deletes the cache, drops the feed URL and publishes the snapshot as new."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
     await conference.set_feed_url(DEV_FEED, storage)
@@ -1084,6 +1148,7 @@ async def test_reset_shows_the_bundled_snapshot_from_the_year_s_feed(
 async def test_reset_cancels_a_running_refresh_before_it_writes(
     storage: Storage, year: YearData
 ) -> None:
+    """Reset cancels a running refresh, which then neither caches nor publishes."""
     conference = await loaded(storage, year)
     held = HeldFeed()
     running = conference.start_refresh(storage, year, transport=held.transport)

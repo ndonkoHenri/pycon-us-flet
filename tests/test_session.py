@@ -66,7 +66,7 @@ OPEN_SPACE = "9086"
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(session_id): the detail of that session at ``VIEW``."""
+    """Provide an async function that renders a session's detail at ``VIEW`` by id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 
@@ -75,6 +75,7 @@ async def render(
 
 
 async def test_the_title_is_the_page_s_selectable_heading(render: Render) -> None:
+    """The title is a selectable level-1 headline in the body; the app bar has none."""
     detail = await render(TALK)
     title = detail.node("session.title")
     assert (title.header, title.heading_level) == (True, 1)
@@ -88,6 +89,7 @@ async def test_the_title_is_the_page_s_selectable_heading(render: Render) -> Non
 
 
 async def test_the_badges_come_before_the_title(render: Render) -> None:
+    """A tutorial's badges wrap in a row above its title, in one group with it."""
     detail = await render(TUTORIAL)
     header = detail.node("session.title").parent
     assert isinstance(header, ft.Column)
@@ -133,6 +135,7 @@ async def test_the_sections_are_level_2_under_the_title(render: Render) -> None:
 async def test_the_time_tile_says_where_the_session_stands(
     render: Render, now: str, label: str, spoken: str
 ) -> None:
+    """The When tile shows the countdown, "Happening now" or "Ended", spoken in full."""
     clock.set_test_now(at(now))
     detail = await render(TALK)
     status = [
@@ -145,6 +148,7 @@ async def test_the_time_tile_says_where_the_session_stands(
 
 
 async def test_the_day_before_there_is_no_countdown(render: Render) -> None:
+    """The day before: the date, then the range read with "to", and no countdown."""
     clock.set_test_now(at("2026-05-15 18:00"))
     detail = await render(TALK)
     lines = detail.text("session.when")
@@ -243,6 +247,7 @@ async def test_a_device_in_another_zone_gets_the_pacific_time_note(
 async def test_the_room_tile_pushes_the_room_with_the_session_highlighted(
     render: Render,
 ) -> None:
+    """The room tile pushes room detail highlighting the session; one room, no fold."""
     detail = await render(TALK)
     room = detail.node("session.room")
     assert words(room) == ["Grand Ballroom A"]
@@ -253,6 +258,10 @@ async def test_the_room_tile_pushes_the_room_with_the_session_highlighted(
 
 
 async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
+    """A streamed session shows its main room and folds the four others.
+
+    The first folded room is a link to its room detail, highlighting the session.
+    """
     detail = await render(LIGHTNING)
     assert words(detail.node("session.room")) == ["Pacific Ballroom - Arena"]
     folded = detail.node("session.other_rooms").content
@@ -284,6 +293,10 @@ async def test_the_folded_rooms_stay_open_once_opened(render: Render) -> None:
 async def test_a_break_in_many_rooms_lists_them_without_one_place(
     render: Render,
 ) -> None:
+    """A break has no main room: "In 5 rooms" folds them.
+
+    The first folded room's link quotes the break's id.
+    """
     detail = await render(BREAK)
     assert detail.nodes("session.room") == []
     folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
@@ -301,6 +314,7 @@ async def test_a_break_in_many_rooms_lists_them_without_one_place(
 async def test_reduced_motion_opens_the_rooms_without_animation(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """With reduced motion, the folded rooms open with a 0 ms animation."""
     monkeypatch.setattr(Prefs, "motion_ms", lambda self, ms: 0)
     detail = await render(LIGHTNING)
     folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
@@ -311,6 +325,7 @@ async def test_reduced_motion_opens_the_rooms_without_animation(
 
 
 def speaker_rows(detail: Detail) -> list[ft.Semantics]:
+    """Return the detail's speaker rows, the nodes named ``session.speaker.<id>``."""
     return [
         node
         for node in detail.session.index.values()
@@ -320,6 +335,7 @@ def speaker_rows(detail: Detail) -> list[ft.Semantics]:
 
 
 async def test_a_speaker_s_row_pushes_their_page_one_level_up(render: Render) -> None:
+    """A speaker's row reads their initials and name, and pushes their page."""
     detail = await render(TALK)
     (row,) = speaker_rows(detail)
     assert row.identifier == "session.speaker.150"
@@ -332,6 +348,7 @@ async def test_a_speaker_s_row_pushes_their_page_one_level_up(render: Render) ->
 async def test_the_speakers_come_in_the_feed_s_order_with_their_photos(
     render: Render,
 ) -> None:
+    """The speakers come in the feed's order, with their photos or else initials."""
     detail = await render(PANEL)
     session = processed(2026).sessions[PANEL]
     rows = speaker_rows(detail)
@@ -397,6 +414,7 @@ async def test_names_with_no_speaker_each_get_an_identifier_in_the_authors_order
 async def test_a_session_without_speakers_has_no_speakers_section(
     render: Render,
 ) -> None:
+    """A session without speakers has no speaker rows and no Speakers heading."""
     detail = await render(WELCOME)
     assert speaker_rows(detail) == []
     assert all(text != "Speakers" for text, _ in headings(detail))
@@ -406,6 +424,7 @@ async def test_a_session_without_speakers_has_no_speakers_section(
 
 
 def markdown(detail: Detail) -> ft.Markdown:
+    """Return the one ``Markdown`` control in the detail's description."""
     (found,) = [
         n
         for n in descendants(detail.node("session.description"))
@@ -431,6 +450,7 @@ async def test_the_description_follows_the_speakers_under_its_own_heading(
 async def test_a_link_in_a_description_opens_in_the_in_app_browser(
     render: Render,
 ) -> None:
+    """A description's link opens in the in-app browser, with ``https://`` added."""
     detail = await render(OPEN_SPACE)
     text = markdown(detail)
     assert "[pytest](pytest.org)" in text.value
@@ -443,6 +463,7 @@ async def test_a_link_in_a_description_opens_in_the_in_app_browser(
 
 
 async def test_a_session_without_a_description_has_no_about(render: Render) -> None:
+    """A session without a description has no description and no About heading."""
     detail = await render(BREAK)
     assert detail.nodes("session.description") == []
     assert all(text != "About" for text, _ in headings(detail))
@@ -454,6 +475,7 @@ async def test_a_session_without_a_description_has_no_about(render: Render) -> N
 async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
     render: Render,
 ) -> None:
+    """A tutorial's card says to register separately; its link opens registration."""
     detail = await render(TUTORIAL)
     assert detail.text("session.registration") == [
         screen.REGISTRATION_TITLE,
@@ -468,6 +490,7 @@ async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
 
 
 async def test_a_talk_needs_no_registration_card(render: Render) -> None:
+    """A talk has no registration card."""
     detail = await render(TALK)
     assert detail.nodes("session.registration") == []
 
@@ -476,6 +499,7 @@ async def test_a_talk_needs_no_registration_card(render: Render) -> None:
 
 
 async def test_the_star_saves_and_undo_brings_it_back(render: Render) -> None:
+    """The star saves the session; a second tap removes it, and Undo saves it again."""
     detail = await render(TALK)
     star = cast(ft.IconButton, detail.node("session.favorite").content)
     await detail.click(star)
@@ -493,6 +517,7 @@ async def test_the_star_saves_and_undo_brings_it_back(render: Render) -> None:
 
 
 async def test_the_overflow_opens_the_public_page(render: Render) -> None:
+    """The overflow's one item is a link that opens the session's public page."""
     detail = await render(TALK)
     menu = cast(ft.PopupMenuButton, detail.node("session.overflow").content)
     assert menu.tooltip == "More options"
@@ -531,6 +556,7 @@ async def test_a_session_without_a_public_page_has_no_overflow(render: Render) -
 async def test_an_unknown_id_names_the_session_and_offers_the_schedule(
     render: Render,
 ) -> None:
+    """An unknown id says the session isn't in the schedule and offers the Schedule."""
     detail = await render("no-such-session")
     assert detail.text("session.not_found") == [screen.NOT_FOUND]
     button = next(
@@ -556,6 +582,7 @@ async def test_another_unknown_id_in_place_is_not_found_not_the_last_session(
 async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
     render: Render,
 ) -> None:
+    """A session a refresh drops keeps its content and star under an announced note."""
     detail = await render(TALK)
     assert detail.nodes("session.removed") == []
     data = cast(ConferenceData, detail.conference.data)

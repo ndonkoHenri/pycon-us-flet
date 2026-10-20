@@ -23,6 +23,7 @@ def pacific(day: int, hour: int, minute: int) -> datetime:
 
 
 def test_day_bucket_changes_at_conference_midnight() -> None:
+    """An instant's day changes at midnight in conference time, not in UTC."""
     last_second = datetime(2026, 5, 16, 6, 59, 59, tzinfo=UTC)  # 23:59:59 PDT
     assert timefmt.local_date(last_second, PACIFIC) == date(2026, 5, 15)
     assert timefmt.local_date(last_second + timedelta(seconds=1), PACIFIC) == date(
@@ -31,6 +32,7 @@ def test_day_bucket_changes_at_conference_midnight() -> None:
 
 
 def test_today_is_the_conference_date_not_the_device_date() -> None:
+    """``today()`` is the date in Long Beach while Kiritimati is already a day ahead."""
     now = datetime(2026, 5, 15, 10, 0, tzinfo=UTC)  # 3:00 AM Friday in Long Beach
     assert now.astimezone(KIRITIMATI).date() == date(2026, 5, 16)
     assert timefmt.today(now, PACIFIC) == date(2026, 5, 15)
@@ -50,12 +52,14 @@ def test_today_is_the_conference_date_not_the_device_date() -> None:
 def test_time_label_in_12_and_24_hour_form(
     hour: int, minute: int, twelve: str, twenty_four: str
 ) -> None:
+    """A time reads "9:25 AM" in 12-hour form and "09:25" in 24-hour form."""
     moment = pacific(15, hour, minute)
     assert timefmt.time_label(moment, PACIFIC, use_24h=False) == twelve
     assert timefmt.time_label(moment, PACIFIC, use_24h=True) == twenty_four
 
 
 def test_time_label_converts_any_aware_instant_to_conference_time() -> None:
+    """An instant reads in conference time, whichever zone it carries."""
     moment = datetime(2026, 5, 15, 16, 25, tzinfo=UTC)
     assert timefmt.time_label(moment, PACIFIC, use_24h=False) == "9:25 AM"
     assert (
@@ -65,6 +69,7 @@ def test_time_label_converts_any_aware_instant_to_conference_time() -> None:
 
 
 def test_spring_forward_skips_the_missing_hour() -> None:
+    """A minute after 1:59 AM on spring-forward night is 3:00 AM, on the same day."""
     before = datetime(2026, 3, 8, 9, 59, tzinfo=UTC)  # 1:59 AM PST
     after = before + timedelta(minutes=1)  # 3:00 AM PDT
     assert timefmt.time_label(before, PACIFIC, use_24h=False) == "1:59 AM"
@@ -73,6 +78,7 @@ def test_spring_forward_skips_the_missing_hour() -> None:
 
 
 def test_fall_back_shows_the_repeated_hour_twice() -> None:
+    """Both 1:30 AMs of fall-back night read "01:30", the second still on Nov 1."""
     first = datetime(2026, 11, 1, 8, 30, tzinfo=UTC)  # 1:30 AM PDT
     second = first + timedelta(hours=1)  # 1:30 AM PST
     assert timefmt.time_label(first, PACIFIC, use_24h=True) == "01:30"
@@ -92,6 +98,7 @@ def test_fall_back_shows_the_repeated_hour_twice() -> None:
 def test_time_range_label(
     start: tuple[int, int], end: tuple[int, int], twelve: str, twenty_four: str
 ) -> None:
+    """A range says AM or PM once when both ends share it; equal ends are one time."""
     first, last = pacific(15, *start), pacific(15, *end)
     assert timefmt.time_range_label(first, last, PACIFIC, use_24h=False) == twelve
     assert timefmt.time_range_label(first, last, PACIFIC, use_24h=True) == twenty_four
@@ -107,10 +114,13 @@ def test_time_range_label(
     ],
 )
 def test_a_time_on_screen_can_break_only_after_its_dash(label: str, shown: str) -> None:
-    """D-229: Unicode lets a line break after an en dash and at a space, nowhere else
-    in a time. No-break spaces keep "AM" with its digits; nothing joins the dash, as a
+    """On screen, a time's spaces are no-break spaces and its en dash is left alone.
+
+    D-229: Unicode lets a line break after an en dash and at a space, nowhere else in
+    a time. No-break spaces keep "AM" with its digits; nothing joins the dash, as a
     range wider than its line would then break inside a time ("9:00 AM–12" / ":30 PM",
-    D-186) rather than after it."""
+    D-186) rather than after it.
+    """
     assert timefmt.on_screen(label) == shown
     assert "\N{WORD JOINER}" not in timefmt.on_screen(
         label
@@ -118,6 +128,7 @@ def test_a_time_on_screen_can_break_only_after_its_dash(label: str, shown: str) 
 
 
 def test_time_range_across_midnight_names_both_meridiems() -> None:
+    """A range from 10 PM to 1 AM the next day names both: "10:00 PM–1:00 AM"."""
     first, last = pacific(15, 22, 0), pacific(16, 1, 0)
     assert (
         timefmt.time_range_label(first, last, PACIFIC, use_24h=False)
@@ -126,6 +137,7 @@ def test_time_range_across_midnight_names_both_meridiems() -> None:
 
 
 def test_day_labels_use_fixed_english_names() -> None:
+    """A day's label is "Fri, May 15" and its heading "Friday, May 15", in English."""
     assert timefmt.day_label(date(2026, 5, 15)) == "Fri, May 15"
     assert timefmt.day_heading(date(2026, 5, 15)) == "Friday, May 15"
     assert timefmt.day_heading(date(2026, 9, 1)) == "Tuesday, September 1"
@@ -138,11 +150,13 @@ def test_a_day_tab_is_one_short_line_and_its_weekday_is_spelt_out() -> None:
 
 
 def test_a_weekday_is_named_in_full() -> None:
+    """``weekday_name()`` spells the weekday out: "Friday", "Monday"."""
     assert timefmt.weekday_name(date(2026, 5, 15)) == "Friday"
     assert timefmt.weekday_name(date(2026, 5, 18)) == "Monday"
 
 
 def test_a_span_of_days_names_its_month_once_when_it_can() -> None:
+    """Days read "May 13–19" in a month, "May 30–June 2" across two, "May 13" alone."""
     assert timefmt.date_range_label(date(2026, 5, 13), date(2026, 5, 19)) == "May 13–19"
     assert (
         timefmt.date_range_label(date(2027, 5, 30), date(2027, 6, 2)) == "May 30–June 2"
@@ -162,6 +176,7 @@ def test_a_day_range_names_its_weekdays() -> None:
 
 
 def test_zone_note_only_when_the_device_offset_differs() -> None:
+    """The zone note shows only when the device's offset is not the conference's."""
     now = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     in_long_beach = now.astimezone(PACIFIC).utcoffset()
     in_kiritimati = now.astimezone(KIRITIMATI).utcoffset()
@@ -173,18 +188,21 @@ def test_zone_note_only_when_the_device_offset_differs() -> None:
 
 
 def test_zone_note_names_standard_time_in_winter() -> None:
+    """In December the zone note names standard time: "Times are Pacific Time (PST)"."""
     now = datetime(2026, 12, 1, 17, 0, tzinfo=UTC)
     note = timefmt.zone_note(now, PACIFIC, "Pacific Time", timedelta(hours=-7))
     assert note == "Times are Pacific Time (PST)"
 
 
 def test_zone_note_follows_the_machine_zone(machine_tz: str) -> None:
+    """With the machine's own offset, the note shows unless it is on Pacific Time."""
     now = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     note = timefmt.zone_note(now, PACIFIC, "Pacific Time", now.astimezone().utcoffset())
     assert (note is None) == (machine_tz == "America/Los_Angeles")
 
 
 def test_an_hour_apart_in_the_fall_back_fold_is_a_range() -> None:
+    """The two 1:30 AMs of fall-back night, equal as wall times, make a range."""
     first = datetime(2026, 11, 1, 1, 30, tzinfo=PACIFIC)  # 1:30 AM PDT
     second = first.replace(fold=1)  # 1:30 AM PST, an hour later
     assert first == second  # same tzinfo: Python compares wall times
@@ -194,6 +212,7 @@ def test_an_hour_apart_in_the_fall_back_fold_is_a_range() -> None:
 
 
 def test_the_same_instant_in_two_zones_is_one_time() -> None:
+    """A range whose ends are one instant in two zones reads as one time."""
     folded = datetime(2026, 11, 1, 1, 30, fold=1, tzinfo=PACIFIC)  # 1:30 AM PST
     label = timefmt.time_range_label(
         folded, folded.astimezone(UTC), PACIFIC, use_24h=False
@@ -219,6 +238,7 @@ AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
     ],
 )
 def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
+    """The functions that take a zone raise ``ValueError`` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
         call()
 
@@ -239,23 +259,29 @@ def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
 def test_ago_label_says_whole_units_rounded_down_in_words(
     elapsed: timedelta, label: str
 ) -> None:
+    """An age is "just now" under a minute, then whole units rounded down, in words."""
     now = pacific(15, 10, 0)
     assert timefmt.ago_label(now - elapsed, now) == label
 
 
 def test_ago_label_compares_instants_not_wall_times() -> None:
+    """Two hours ago is "2 hours ago" though its zone's wall clock is a day ahead."""
     now = pacific(15, 10, 0)
     then = (now - timedelta(hours=2)).astimezone(KIRITIMATI)  # a day ahead on the wall
     assert timefmt.ago_label(then, now) == "2 hours ago"
 
 
 def test_ago_label_says_just_now_for_a_time_after_now() -> None:
-    # A Developer fake clock set before the data's fetch time (D-145: age never < 0).
+    """A time after now is "just now": an age is never below zero (D-145).
+
+    A Developer fake clock set before the data's fetch time does this.
+    """
     now = pacific(15, 10, 0)
     assert timefmt.ago_label(now + timedelta(hours=3), now) == "just now"
 
 
 def test_ago_label_refuses_naive_datetimes() -> None:
+    """``ago_label()`` raises ``ValueError`` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
         timefmt.ago_label(NAIVE, pacific(15, 10, 0))
 
@@ -267,6 +293,7 @@ def test_ago_label_refuses_naive_datetimes() -> None:
 def test_utc_offsets_read_as_people_write_them(
     hours: int, minutes: int, text: str
 ) -> None:
+    """An offset reads "UTC−07:00" or "UTC+05:30", with a real minus, and "UTC" at 0."""
     sign = -1 if hours < 0 else 1
     offset = timedelta(hours=hours) + sign * timedelta(minutes=minutes)
     assert timefmt.utc_offset_label(offset) == text
@@ -308,18 +335,26 @@ TALK_START, TALK_END = pacific(16, 10, 30), pacific(16, 11, 0)
 def test_on_its_day_a_session_counts_down_to_its_start(
     now: datetime, label: str, spoken: str
 ) -> None:
+    """On its day, a session counts down to its start in minutes rounded up.
+
+    The label abbreviates ("Starts in 2 h 5 min"); the spoken form says the words.
+    """
     status = timefmt.time_status(TALK_START, TALK_END, now, PACIFIC)
     assert status is not None and not status.happening
     assert (status.label, status.spoken) == (label, spoken)
 
 
 def test_the_day_before_there_is_no_countdown() -> None:
+    """A minute before midnight on the eve of a session's day, there is no countdown."""
     eve = pacific(15, 23, 59)
     assert timefmt.time_status(TALK_START, TALK_END, eve, PACIFIC) is None
 
 
 def test_the_countdown_s_day_is_the_conference_s_not_the_device_s() -> None:
-    # 2 PM in Kiritimati is 4 PM the day before in Long Beach: no countdown yet.
+    """The countdown waits for the session's day in conference time.
+
+    2 PM in Kiritimati is 4 PM the day before in Long Beach: no countdown yet.
+    """
     now = datetime(2026, 5, 16, 14, 0, tzinfo=KIRITIMATI)
     assert timefmt.local_date(now, PACIFIC) == date(2026, 5, 15)
     assert timefmt.time_status(TALK_START, TALK_END, now, PACIFIC) is None
@@ -337,6 +372,7 @@ def test_the_countdown_s_day_is_the_conference_s_not_the_device_s() -> None:
 def test_a_session_is_on_from_its_start_until_its_end(
     now: datetime, expected: timefmt.TimeStatus
 ) -> None:
+    """A session is "Happening now" from its start, and "Ended" from its end on."""
     status = timefmt.time_status(TALK_START, TALK_END, now, PACIFIC)
     assert status == expected
     assert status is not None and status.happening is (

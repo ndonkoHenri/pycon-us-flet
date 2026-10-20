@@ -17,10 +17,12 @@ from pycon_us.core.slugs import room_sort_key, slugify_room
     ],
 )
 def test_slugify_room_matches_ionic(name: str, slug: str) -> None:
+    """A slug is Ionic's: lower-case, each run of other characters a ``-``, trimmed."""
     assert slugify_room(name) == slug
 
 
 def test_rooms_sort_naturally_ignoring_case_and_accents() -> None:
+    """Room names sort with numbers by value, ignoring case and accents."""
     names = [
         "Room 1000",
         "room 102A",
