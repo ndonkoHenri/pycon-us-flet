@@ -35,7 +35,6 @@ from pycon_us.screens.developer_data import (
     NOT_SHARED,
     RESET_INCOMPLETE,
     DataActions,
-    refreshed,
     reset_app,
 )
 from pycon_us.screens.developer_ui import (
@@ -48,6 +47,7 @@ from pycon_us.services import Services, api, changes_file, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui.actions import KEPT, refreshed
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -394,7 +394,7 @@ async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(
     """
     await tap(render, "developer.refresh_now")
     assert outcome(render()) == (
-        "No answer from the feed: the app keeps the schedule it has."
+        "Couldn't refresh: no answer from the feed. The app keeps the schedule it has."
     )
     assert conference.source == "bundled"  # kept
 
@@ -862,6 +862,6 @@ def test_refresh_now_says_how_the_refresh_ended() -> None:
     assert refreshed(None) == ("Schedule updated from the feed.", True)
     assert refreshed("offline")[1] is False
     assert refreshed("server") == (
-        "The feed's answer couldn't be used: the app keeps the schedule it has.",
+        f"Couldn't refresh: the feed's answer couldn't be used. {KEPT}",
         False,
     )
