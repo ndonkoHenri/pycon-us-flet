@@ -16,10 +16,9 @@ LOGO = "https://example.com/arcade.png"
 
 
 def plate(tile: ft.Control) -> ft.Container:
-    """Return the white container under the tile's semantics wrapper."""
-    assert isinstance(tile, ft.Semantics)
-    assert isinstance(tile.content, ft.Container)
-    return tile.content
+    """Return the tile as the white container it is, with nothing around it."""
+    assert isinstance(tile, ft.Container)
+    return tile
 
 
 def test_without_a_url_the_tile_shows_the_initials_and_no_image() -> None:
@@ -50,12 +49,20 @@ def test_a_logo_fits_the_tile_with_the_initials_for_when_it_cannot_load() -> Non
     assert fallback.color == INK
 
 
-def test_the_tile_and_everything_on_it_are_left_out_of_semantics() -> None:
-    """Decorative: the name beside it is said, so neither the logo nor initials are."""
+def test_the_logo_and_the_initials_are_left_out_of_semantics() -> None:
+    """Decorative: the name beside the tile is said, so neither the logo nor initials are.
+
+    Each part leaves itself out, and no ``Semantics`` wraps the tile: one with
+    ``exclude_semantics`` was still an empty, focusable node on Android (F81).
+    """
+    image = only(logo_tile("Arcade", LOGO, size=56), ft.Image)
+    assert image.exclude_from_semantics is True
+    assert isinstance(image.error_content, ft.CircleAvatar)
+    assert only(image.error_content, ft.Text).semantics_label == ""
     for url in (None, LOGO):
         tile = logo_tile("Arcade", url, size=56)
-        assert isinstance(tile, ft.Semantics)
-        assert tile.exclude_semantics is True
+        assert [n for n in descendants(tile) if isinstance(n, ft.Semantics)] == []
+    assert only(logo_tile("Arcade", None, size=56), ft.Text).semantics_label == ""
 
 
 def test_the_tile_is_white_with_a_hairline_edge_in_both_schemes() -> None:

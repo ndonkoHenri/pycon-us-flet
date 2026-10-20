@@ -31,7 +31,7 @@ def logo_tile(
     when there is no logo and when it cannot load (offline, a broken URL), in the brand
     indigo; a ``CircleAvatar`` holds them because it does not scale its text, so they
     fit the tile at any text size. The tile is decorative for screen readers: the name
-    is always said beside it, so nothing under it is a node.
+    is always said beside it, so neither the logo nor the initials is a node.
 
     Args:
         name: Whose logo it is: a project's or a sponsor's name, for the initials.
@@ -40,25 +40,31 @@ def logo_tile(
         width: A wider plate's width in dp, as sponsor detail's 240 × 96 (ux.md §6.5);
             the initials keep to the height.
     """
+    # Decorative: the name is always said beside the tile, so nothing on it is a node.
+    # Each part leaves itself out; a Semantics(exclude_semantics=True) around the tile
+    # would still be an empty, focusable node, as Flet's Semantics always sets an
+    # enabled state (F42, F81; U34).
     monogram = ft.CircleAvatar(
-        content=ft.Text(initials(name), weight=ft.FontWeight.W_500),
+        content=ft.Text(initials(name), weight=ft.FontWeight.W_500, semantics_label=""),
         bgcolor=ft.Colors.TRANSPARENT,
         color=INK,
         radius=size / 2 - INSET,
     )
     content: ft.Control = monogram
     if logo_url:
-        content = ft.Image(src=logo_url, fit=ft.BoxFit.CONTAIN, error_content=monogram)
-    return ft.Semantics(
-        exclude_semantics=True,
-        content=ft.Container(
-            content,
-            width=size if width is None else width,
-            height=size,
-            padding=INSET,
-            bgcolor=ft.Colors.WHITE,
-            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            border_radius=CORNER,
-            alignment=ft.Alignment.CENTER,
-        ),
+        content = ft.Image(
+            src=logo_url,
+            fit=ft.BoxFit.CONTAIN,
+            error_content=monogram,
+            exclude_from_semantics=True,
+        )
+    return ft.Container(
+        content,
+        width=size if width is None else width,
+        height=size,
+        padding=INSET,
+        bgcolor=ft.Colors.WHITE,
+        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border_radius=CORNER,
+        alignment=ft.Alignment.CENTER,
     )
