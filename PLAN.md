@@ -164,7 +164,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | iOS adaptations Flet cannot pin; weights in `page.fonts` | Accepted residuals (D-10); Roboto through the pubspec (D-26) | **U19** `Theme.platform`; **U20** multi-weight `page.fonts` | later |
 | HTML, native calendar | HTML→Markdown; `.ics` share | **E5**, **E4** | later |
 
-FCM push (E2) is not needed by the app; it is a low-priority Flet contribution. The owner's open flet-dev/flet#6953 (deep-link config fallback) is not required, because we configure both per-platform tables (D-21).
+FCM push (E2) is not needed by the app; it is a low-priority Flet contribution. The deep-link config fallback (`flet-dev/flet#6953`) is in the pin, so one common `[tool.flet.deep_linking]` table serves Android and iOS (D-269).
 
 ## 7. Phases
 

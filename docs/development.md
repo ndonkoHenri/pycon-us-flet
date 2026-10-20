@@ -67,7 +67,7 @@
 | `flet build ipa` and signing | No profile configured: `--no-codesign` and only an `.xcarchive`. A profile configured but not installed: flet-cli stops within seconds, before Xcode. Installed: a signed `.ipa` (§8.2). | `CLI/commands/build.py:184-193, 287-379` |
 | What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`. | `CLI/commands/build_base.py:2598-2641` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
-| Deep links on mobile | Read only from `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]`. Each needs both `scheme` and `host`. | `CLI/commands/build_base.py:1422-1427, 2970-2982`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; F16 |
+| Deep links on mobile | Each key (`scheme`, `host`) from `[tool.flet.<android\|ios>.deep_linking]`, else from the common `[tool.flet.deep_linking]` (`flet-dev/flet#6953`, in the pin since `68a4b326c`). The template registers a link only when both resolve: on Android an intent filter for the scheme and host, on iOS a `CFBundleURLTypes` entry for the scheme alone (the host is its `CFBundleURLName`). The host never reaches Python: Flet keeps only the link's path, query and fragment for `page.route`. | `CLI/commands/build_base.py:1422-1427, 2960-2982`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; `TPL/ios/Runner/Info.plist:53-69`; D-269 |
 | Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1144-1153, 1263-1266` |
 | Logs | Android: logcat tag `flet.python`. iOS: unified log, sender `dart_bridge`. Both also write `console.log`. | `DOCS/publish/android.md` and `DOCS/publish/ios.md`, "Reading your app's output" |
 | flet-build-action | Runs `uv run flet --version --json`, then `flet build <target> --yes --verbose --output …`, then archives. It never signs or uploads. `build-android.yml` runs `flet build` directly instead (§7.4). | `ACTION/action.yml`; `ACTION/scripts/flet_action.py:112-232` |
@@ -270,6 +270,7 @@ S5 then built every target from this setup, and P0-04 (#52) built `apk --arch ar
 | `tool.flet.ios.info` | `CLI/commands/build_base.py:1205-1213` | Merged into `Info.plist` |
 | `tool.flet.flutter.pubspec.dependencies` | `CLI/commands/build_base.py:1986-2004` | Merged into `build/flutter/pubspec.yaml`, so relative paths resolve from `build/flutter/`; adds `roboto_fonts` (D-105) |
 | `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1466-1501` | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
+| `tool.flet.deep_linking` | `CLI/commands/build_base.py:1422-1427, 2960-2982` (`get_deep_linking_setting`) | `pyconus://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
 | `tool.flet.dev_packages` | `CLI/commands/build_base.py:2614-2638` | Rewrites `flet` to `flet @ file:///…/.flet-src/…` for the bundle; relative paths resolve from the project root |
 
 Not set, because the default is what we want:
@@ -280,7 +281,7 @@ Not set, because the default is what we want:
 | `company`, `copyright` | Used only by the desktop templates (`TPL/macos/…/AppInfo.xcconfig`, `TPL/windows/…/Runner.rc`). |
 | `min_sdk_version`, `target_sdk_version` | Flutter's defaults, 24 and 36, are what we want (D-106). |
 | `[tool.flet.android.signing]`, `build_number` | Signing comes from `FLET_ANDROID_SIGNING_*` environment variables (§8.1), and the build number from `--build-number` (§4). |
-| `[tool.flet.deep_linking]` (the global table) | Ignored for Android and iOS (F16). The per-platform tables arrive in P2 (§3.4). |
+| `[tool.flet.android.deep_linking]`, `[tool.flet.ios.deep_linking]` | The common `[tool.flet.deep_linking]` serves both platforms (D-269); a platform table only if one platform ever needs another value. |
 | `NSAppTransportSecurity` | The template already allows arbitrary loads (`TPL/ios/Runner/Info.plist:48-52`). |
 | `[tool.flet.template]` | We never fork the template (D-97). `[tool.flet.flutter.pubspec]` is used only for the Roboto fonts (§3.4). |
 
@@ -302,7 +303,7 @@ Each row lands in the PR that ships the feature, never earlier. A Flet extension
 
 | Phase | Feature | Addition | Exists in flet-cli today? |
 |---|---|---|---|
-| P2 | Deep links (NEW-07, D-21) | `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]`, each with `scheme = "<from O-4>"` and `host = "app"`. Links look like `<scheme>://app/schedule/session/42`. Both tables are needed: flet-dev/flet#6953 is not required, but it does no harm (F16). | Yes |
+| P2 | Deep links (NEW-07, D-21) | **Done in P2-24 (#384), now in `pyproject.toml`:** one common `[tool.flet.deep_linking]` table with the placeholders `scheme = "pyconus"` and `host = "app"` (D-269), which O-4 (#15) swaps. Links look like `pyconus://app/schedule/session/42`. `tests/test_deep_linking.py` runs flet-cli's resolver for Android and iOS. | Yes (`flet-dev/flet#6953`, in the pin) |
 | P2 | Runtime permissions (D-75) | `"flet-permission-handler"` | Yes (monorepo package) |
 | P2 | Reminders (E3, D-58..D-61) | The notifications extension from flet-dev/flet#6948 (its package name is set upstream), plus `[tool.flet.android.permission] "android.permission.POST_NOTIFICATIONS" = true`, plus core library desugaring in the same Flet pin (U7: `[tool.flet.android] core_library_desugaring = true`, or the template default if the Flet team enables it unconditionally). `flutter_local_notifications` needs desugaring even without scheduling, so an APK with the extension does not build without U7 ([`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §5.10). Do not add `SCHEDULE_EXACT_ALARM` unless S6 shows exact alarms are worth it; reminders are inexact by default (D-59). iOS needs no plist key; permission is requested through the plugin (F17). Boot receivers come from the extension's Android module, or from a `[tool.flet.android.receiver]` table (U7 scope) if S6 picks that fallback. | The permission key: yes. Desugaring: no (U7). The extension: no (E3). |
 | P3 | Mock credentials (D-49) | `"flet-secure-storage"` | Yes (monorepo package) |
@@ -447,6 +448,7 @@ Notes:
 | Android Python log | `adb logcat -s flet.python` (`-d` dumps the buffer, `-c` clears it) |
 | iOS simulator Python log | `xcrun simctl spawn booted log stream --style compact --predicate 'sender == "dart_bridge"'` |
 | Open a route directly (a packaged build) | Android: `adb shell am start -n <package>/.MainActivity --es route /schedule/session/42` (what `flet debug --route` passes); iOS simulator: `xcrun simctl launch <udid> <bundle id> --route=/schedule/session/42`. `simctl openurl` with a custom scheme waits for a tap on the system's "Open" prompt (F31) |
+| Open a deep link (a packaged build, D-269) | Android: `adb -s <serial> shell am start -W -a android.intent.action.VIEW -d 'pyconus://app/now'` (no `-n`: the intent filter picks the app, and `-W` waits for the launch; `Activity: io.github.ndonkohenri.pyconus/.MainActivity` says it matched, and on a busy host `Status` may read `timeout` while the app still opens). `adb shell pm query-activities -a android.intent.action.VIEW -d <link>` lists what would answer a link without opening it. iOS simulator: `xcrun simctl openurl <udid> 'pyconus://app/now'`; the first link on a simulator stops at the system's "Open in …?" prompt, which simctl cannot answer (F31) and a Maestro `tapOn: "Open"` does; later links, even after a reinstall, open the app directly. The link's path becomes `page.route` (`/now`); iOS checks only the scheme, and the host never reaches `page.route` (D-269). |
 | iPhone Python log | Console.app › the device › filter on the app process |
 | A tester's log | Developer screen › Share log, which sends `console.log` (D-72) |
 

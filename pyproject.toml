@@ -35,6 +35,10 @@ bundle_id = "io.github.ndonkohenri.pyconus"   # placeholder until O-4, both plat
 [tool.flet.app]
 path = "src"                          # entry point src/main.py
 
+[tool.flet.deep_linking]              # pyconus://app/<route path> on both platforms (D-269)
+scheme = "pyconus"                    # placeholder until O-4 (#15); lowercase, never http(s) or file
+host = "app"                          # placeholder until O-4; iOS registers only the scheme
+
 [tool.flet.splash]                    # SHELL-01: the same purple as BootView, so no flash
 color = "#680579"
 dark_color = "#680579"
