@@ -66,17 +66,23 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def page(svc: Services) -> Iterator[FakePage]:
-    # After the services: a Flet service built while a page is bound registers with it.
+    """A fake page, bound as Flet binds a session's page, until the test ends.
+
+    It is built after the services: a Flet service built while a page is bound registers
+    with it.
+    """
     fake = FakePage()
     with bound(fake):
         yield fake
 
 
 def launcher(svc: Services) -> MemoryLauncher:
+    """The services' in-memory launcher."""
     return cast(MemoryLauncher, svc.launcher)
 
 
 def clipboard(svc: Services) -> MemoryClipboard:
+    """The services' in-memory clipboard."""
     return cast(MemoryClipboard, svc.clipboard)
 
 
@@ -113,6 +119,10 @@ def said(page: FakePage) -> list[str]:
 def test_the_link_rule_tells_pages_web_pages_apps_and_contacts_apart(
     target: str, app: bool, kind: LinkKind
 ) -> None:
+    """The link rule tells app pages, web pages, other apps, phones and emails apart.
+
+    A scheme's case does not matter, and a map always opens in its app.
+    """
     assert link_kind(target, app=app) is kind
 
 
@@ -129,10 +139,12 @@ def test_the_link_rule_tells_pages_web_pages_apps_and_contacts_apart(
 def test_each_external_kind_opens_in_its_launch_mode(
     kind: LinkKind, mode: ft.LaunchMode
 ) -> None:
+    """Web pages open in the in-app browser; app, phone and email links externally."""
     assert links.LAUNCH_MODES[kind] is mode
 
 
 def test_a_page_has_no_launch_mode_since_it_is_pushed() -> None:
+    """An app page has no launch mode: it is pushed, not launched."""
     assert LinkKind.PAGE not in links.LAUNCH_MODES
 
 
@@ -147,13 +159,18 @@ def test_a_page_has_no_launch_mode_since_it_is_pushed() -> None:
     ],
 )
 def test_a_target_the_app_does_not_open_is_refused(target: str) -> None:
+    """The link rule refuses a javascript, file, sms, relative or empty target."""
     with pytest.raises(ValueError, match="not a link the app opens"):
         link_kind(target)
 
 
 @pytest.mark.parametrize("target", ["/more/speakers", HOTLINE, EMAIL])
 def test_only_a_web_address_can_be_marked_as_another_app_s(target: str) -> None:
-    # The flag never does nothing silently: a page, a phone or an email has one way.
+    """Marking a page, a phone or an email as another app's raises ValueError.
+
+    The flag never does nothing silently: a page, a phone or an email has one way to
+    open.
+    """
     with pytest.raises(ValueError, match="only a web address opens in another app"):
         link_kind(target, app=True)
 
@@ -167,6 +184,7 @@ def test_only_a_web_address_can_be_marked_as_another_app_s(target: str) -> None:
     ],
 )
 def test_copy_takes_the_number_or_the_address_alone(target: str, copied: str) -> None:
+    """Copy takes the decoded phone number, or the email address without its query."""
     assert contact_of(target) == copied
 
 
@@ -176,6 +194,7 @@ def test_copy_takes_the_number_or_the_address_alone(target: str, copied: str) ->
 async def test_open_link_pushes_a_page_as_a_markdown_link_would(
     page: FakePage, svc: Services
 ) -> None:
+    """Opening an app page pushes its route and launches nothing."""
     await open_link(svc, "/more/sprints")
     assert page.navigated == ["/more/sprints"]
     assert launcher(svc).launched == []
@@ -184,6 +203,7 @@ async def test_open_link_pushes_a_page_as_a_markdown_link_would(
 async def test_open_link_launches_a_web_page_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:
+    """Opening a web page launches it in the in-app browser view."""
     await open_link(svc, WEB)
     assert launcher(svc).launched == [(WEB, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
 
@@ -191,7 +211,11 @@ async def test_open_link_launches_a_web_page_in_the_in_app_browser(
 async def test_a_link_the_platform_cannot_open_says_so_and_logs_no_address(
     page: FakePage, svc: Services, caplog: pytest.LogCaptureFixture
 ) -> None:
-    # What Android's url_launcher reports, through Flet, when no app takes the intent.
+    """A link no app opens says so, and logs the error's class but not the address.
+
+    The error is what Android's url_launcher reports, through Flet, when no app takes
+    the intent: it carries the address.
+    """
     launcher(svc).error = RuntimeError(
         f"PlatformException(ACTIVITY_NOT_FOUND, No Activity found to handle intent "
         f"{{ {EMAIL} }}, null, null)"
@@ -230,6 +254,11 @@ SITE = "https://us.pycon.org/2026/"
     ],
 )
 def test_a_feed_link_opens_the_address_its_author_meant(href: str, opens: str) -> None:
+    """A feed link opens the web or mail address its author meant.
+
+    An absolute link opens as written, without its edge spaces; a site-relative one is
+    joined to the year's site, and a web address without its scheme gets https.
+    """
     assert feed_link(href, SITE) == opens
 
 
@@ -252,6 +281,11 @@ def test_a_feed_link_opens_the_address_its_author_meant(href: str, opens: str) -
     ],
 )
 def test_a_feed_link_that_names_no_web_address_opens_nothing(href: str | None) -> None:
+    """A feed link that names no web or mail address opens nothing.
+
+    That is a missing or blank destination, one relative to a page, a bare word,
+    another scheme, or an address urlsplit cannot read.
+    """
     assert feed_link(href, SITE) is None
 
 
@@ -263,6 +297,7 @@ def test_the_scheme_less_open_space_link_is_not_joined_to_the_site() -> None:
 async def test_a_feed_link_opens_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:
+    """A scheme-less feed link launches as https in the in-app browser, never pushed."""
     await open_feed_link(svc, "pytest.org")
     assert launcher(svc).launched == [
         ("https://pytest.org", ft.LaunchMode.IN_APP_BROWSER_VIEW)
@@ -284,6 +319,7 @@ async def test_a_site_relative_feed_link_is_a_web_page_not_an_app_page(
 async def test_a_mailto_in_a_feed_text_hands_off_to_the_mail_app(
     page: FakePage, svc: Services
 ) -> None:
+    """A mailto feed link launches in the external mail app."""
     await open_feed_link(svc, f"mailto:{ADDRESS}")
     assert launcher(svc).launched == [
         (f"mailto:{ADDRESS}", ft.LaunchMode.EXTERNAL_APPLICATION)
@@ -293,6 +329,7 @@ async def test_a_mailto_in_a_feed_text_hands_off_to_the_mail_app(
 async def test_a_feed_link_that_opens_nothing_says_so_and_logs_no_link(
     page: FakePage, svc: Services, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A feed link that opens nothing says so and logs the tap, never the link."""
     with caplog.at_level(logging.WARNING):
         await open_feed_link(svc, "javascript:steal('secret')")
     assert launcher(svc).launched == []
@@ -304,6 +341,11 @@ async def test_a_feed_link_that_opens_nothing_says_so_and_logs_no_link(
 def test_a_feed_text_is_selectable_github_markdown_with_the_app_s_sheet(
     page: FakePage, svc: Services
 ) -> None:
+    """A feed text is selectable GitHub Markdown with the app's style sheet.
+
+    It sits under its identifier and never follows a link itself: every tap goes through
+    the link rule.
+    """
     node = feed_markdown("See [pytest](pytest.org).", svc, identifier="x.description")
     assert isinstance(node, ft.Semantics) and node.identifier == "x.description"
     text = next(c for c in _below(node) if isinstance(c, ft.Markdown))
@@ -317,6 +359,7 @@ def test_a_feed_text_is_selectable_github_markdown_with_the_app_s_sheet(
 async def test_a_tap_on_a_link_in_a_feed_text_opens_it(
     page: FakePage, svc: Services
 ) -> None:
+    """A tapped link in a feed text opens by the link rule, in the in-app browser."""
     node = feed_markdown("See [pytest](pytest.org).", svc)
     text = next(c for c in _below(node) if isinstance(c, ft.Markdown))
     handler = text.on_tap_link
@@ -349,6 +392,7 @@ def _below(control: ft.Control) -> Iterator[ft.Control]:
 async def test_a_copy_puts_the_contact_on_the_clipboard_and_says_so(
     page: FakePage, svc: Services, target: str, copied: str, message: str
 ) -> None:
+    """A copy puts the number or the address on the clipboard and says which it was."""
     await copy_contact(svc, target)
     assert clipboard(svc).value == copied
     assert said(page) == [message]
@@ -360,6 +404,10 @@ async def test_a_copy_puts_the_contact_on_the_clipboard_and_says_so(
 async def test_android_13_and_later_confirm_a_copy_themselves(
     page: FakePage, svc: Services, sdk: int, messages: list[str]
 ) -> None:
+    """On Android 13 and later the system confirms a copy, so the app says nothing.
+
+    On Android 12 and earlier the app still says it was copied.
+    """
     page.platform = ft.PagePlatform.ANDROID
     page.device = android_device(sdk)
     await copy_contact(svc, EMAIL)
@@ -370,6 +418,7 @@ async def test_android_13_and_later_confirm_a_copy_themselves(
 async def test_a_copy_is_confirmed_when_the_android_version_cannot_be_read(
     page: FakePage, svc: Services
 ) -> None:
+    """On Android, a copy is confirmed when the device's SDK version cannot be read."""
     page.platform = ft.PagePlatform.ANDROID
     page.device_error = TimeoutError()
     await copy_contact(svc, EMAIL)
@@ -390,6 +439,7 @@ async def test_a_copy_that_fails_says_what_was_not_copied_and_logs_no_address(
     target: str,
     message: str,
 ) -> None:
+    """A failed copy says what was not copied and logs its kind, never the contact."""
     page.platform = ft.PagePlatform.ANDROID  # a failure is said on every platform
     page.device = android_device(34)
     # What Flet raises when the Flutter side does not answer: the call's arguments.
@@ -406,6 +456,7 @@ async def test_a_copy_that_fails_says_what_was_not_copied_and_logs_no_address(
 
 
 async def test_only_phone_and_email_links_copy(page: FakePage, svc: Services) -> None:
+    """Copying a web address raises ValueError: only phones and emails copy."""
     with pytest.raises(ValueError, match="only phone and email"):
         await copy_contact(svc, WEB)
 

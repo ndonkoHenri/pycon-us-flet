@@ -51,8 +51,11 @@ ROW = "speakers.speaker."
 
 
 def with_speakers(names: list[str], *, sessions: dict[str, list[str]] | None = None):
-    """The 2026 feed with only these speakers (ids "0", "1", …) and, if given, only
-    these sessions: copies of one 2026 session, linked to the speakers named by id."""
+    """The 2026 feed with only these speakers, whose ids are "0", "1", and so on.
+
+    If ``sessions`` is given, only these sessions too: copies of one 2026 session,
+    linked to the speakers named by id.
+    """
     base = processed(2026)
     template = next(iter(base.sessions.values()))
     speakers = {str(n): Speaker(str(n), name, "", "") for n, name in enumerate(names)}
@@ -63,6 +66,7 @@ def with_speakers(names: list[str], *, sessions: dict[str, list[str]] | None = N
 
 
 def names(entries: tuple[SpeakerEntry, ...]) -> list[str]:
+    """The speakers' names, in the entries' order."""
     return [entry.speaker.name for entry in entries]
 
 
@@ -86,10 +90,16 @@ def names(entries: tuple[SpeakerEntry, ...]) -> list[str]:
 def test_a_speaker_is_listed_under_the_folded_first_character(
     name: str, letter: str
 ) -> None:
+    """A speaker's letter is the first character of the name, folded.
+
+    Case and accents fold away, Ł folds to L, a letter without a Latin base is its own,
+    and an empty name has ``NO_LETTER``.
+    """
     assert letter_of(name) == letter
 
 
 def test_letters_follow_the_lists_order_with_non_latin_letters_after_z() -> None:
+    """Letter groups follow the list's order, with non-Latin letters after Z."""
     data = with_speakers(
         ["Zoë Ng", "Élodie Durand", "Жанна Петрова", "Eve Park", "张伟", "Łukasz Langa"]
     )
@@ -138,6 +148,7 @@ def test_pseudo_speakers_are_not_listed(year: int) -> None:
 
 
 def test_the_first_session_is_the_earliest_and_the_rest_are_counted() -> None:
+    """A speaker's first session is the earliest, and ``more`` counts the others."""
     data = processed(2026)
     template = next(iter(data.sessions.values()))
     day = timedelta(days=1)
@@ -176,12 +187,17 @@ def test_the_first_session_is_the_earliest_and_the_rest_are_counted() -> None:
 
 
 def test_a_speaker_without_a_session_has_no_first_session() -> None:
+    """A speaker without a session has no first session and nothing more."""
     (entry,) = directory(with_speakers(["Ana Lima"], sessions={"1": []}))
     assert (entry.first_session, entry.more) == (None, 0)
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_more_counts_every_other_session_of_the_speaker(year: int) -> None:
+    """In each recorded feed, ``more`` counts a speaker's sessions after the first.
+
+    The first is the earliest by day, then by schedule order.
+    """
     data = processed(year)
     own: dict[str, list[Any]] = {}
     for session in data.sessions.values():
@@ -198,6 +214,7 @@ def test_more_counts_every_other_session_of_the_speaker(year: int) -> None:
 
 
 def test_lukasz_langas_first_2025_session_is_the_thursday_talk() -> None:
+    """Łukasz Langa's first 2025 session is the WebGL talk, with one more after it."""
     (entry,) = [e for e in directory(processed(2025)) if e.speaker.id == "27"]
     assert entry.first_session is not None
     assert entry.first_session.name.startswith("Discover 3D graphics with WebGL")
@@ -236,6 +253,7 @@ def test_a_speaker_s_poster_is_one_of_their_sessions() -> None:
 
 
 def test_an_unknown_speaker_has_no_sessions() -> None:
+    """An id no speaker has gets no sessions."""
     assert speaker_sessions(processed(2026), "nobody") == ()
 
 
@@ -254,6 +272,7 @@ def test_an_unknown_speaker_has_no_sessions() -> None:
 def test_a_bio_says_something_when_its_text_has_a_letter_or_digit(
     bio: str, says: bool
 ) -> None:
+    """A bio counts when its text has a letter or a digit, so a lone dash is none."""
     assert has_bio(Speaker("1", "Ana Lima", "", bio)) is says
 
 
@@ -267,6 +286,7 @@ def test_the_panel_s_dashes_are_no_bio() -> None:
 
 
 def filtered(data: ConferenceData, query: str) -> list[str]:
+    """The names the filter keeps from the feed's directory for ``query``."""
     return names(filter_directory(directory(data), search_index(data), query))
 
 
@@ -291,6 +311,11 @@ FILTER_CASES = ["Cristián Maureira-Fredes", "Łukasz Langa", "Mike Müller", "A
 def test_the_filter_finds_names_by_every_word_folded(
     query: str, found: list[str]
 ) -> None:
+    """The filter keeps, in list order, the names holding every folded query word.
+
+    A word matches anywhere in a name, in any order; a query with no word to match, such
+    as a lone apostrophe or a zero-width space, keeps the whole list.
+    """
     assert filtered(with_speakers(FILTER_CASES), query) == found
 
 
@@ -298,6 +323,7 @@ def test_the_filter_finds_names_by_every_word_folded(
 def test_a_filter_without_a_word_keeps_the_whole_list_as_the_same_object(
     query: str,
 ) -> None:
+    """A query without a word returns the very same entries, unfiltered."""
     data = with_speakers(FILTER_CASES)
     entries = directory(data)
     assert filter_directory(entries, search_index(data), query) is entries
@@ -327,6 +353,7 @@ def test_the_filter_never_matches_a_session_title() -> None:
 def test_initials_are_the_first_and_last_words_first_letters(
     name: str, expected: str
 ) -> None:
+    """Initials are the first letters of the first and last words with a letter."""
     assert initials(name) == expected
 
 
@@ -334,6 +361,7 @@ def test_initials_are_the_first_and_last_words_first_letters(
 
 
 def entry_of(more: int, *, session: bool = True) -> SpeakerEntry:
+    """An entry for Ana Lima with ``more`` other sessions, and a first one or none."""
     talk = next(iter(processed(2026).sessions.values()))
     return SpeakerEntry(
         speaker=Speaker("1", "Ana Lima", "", ""),
@@ -354,6 +382,7 @@ def test_a_speaker_row_reads_as_one_phrase() -> None:
 
 
 def test_more_keeps_its_number_and_word_together() -> None:
+    """The "+1 more" label joins its number and word with a no-break space."""
     assert more_label(1) == "+1\N{NO-BREAK SPACE}more"
 
 
@@ -372,6 +401,7 @@ class Shown(sessions.Shown):
 
     @property
     def text_field(self) -> ft.TextField:
+        """The screen's one filter field."""
         (text_field,) = self.find(ft.TextField)
         return text_field
 
@@ -411,7 +441,10 @@ type Render = Callable[[Conference], Awaitable[Shown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(conference): the Speakers screen over it; each closes at the end."""
+    """Return a function that shows the Speakers screen over a given ``Conference``.
+
+    Each screen it shows closes when the test ends.
+    """
     header = screen.SectionHeader
 
     def counted_phrase(entry: SpeakerEntry) -> str:
@@ -447,6 +480,7 @@ async def render(
 
 @pytest.fixture
 async def shown(render: Render) -> Shown:
+    """The Speakers screen over the recorded 2026 feed."""
     return await render(Conference(data=processed(2026), source="bundled", version=1))
 
 
@@ -454,6 +488,7 @@ ALL = directory(processed(2026))
 
 
 async def test_the_list_shows_every_speaker_once_without_paging(shown: Shown) -> None:
+    """The list shows every speaker once, each row and letter section rendered once."""
     assert shown.listed == [entry.speaker.id for entry in ALL]
     assert sorted(shown.rows) == sorted(entry.speaker.id for entry in ALL)
     assert shown.sections == [group.letter for group in letter_groups(ALL)]
@@ -478,6 +513,10 @@ async def test_a_keystroke_re_renders_no_row_that_stays(shown: Shown) -> None:
 async def test_a_filter_that_finds_nothing_offers_to_clear_it(
     shown: Shown, focused: list[ft.TextField]
 ) -> None:
+    """A filter that finds nothing says so in a live region and offers to clear it.
+
+    Clearing lists every speaker again and gives the field the focus.
+    """
     await shown.type("zzz")
     assert shown.listed == []
     state = shown.node("speakers.no_match")
@@ -495,6 +534,11 @@ async def test_a_filter_that_finds_nothing_offers_to_clear_it(
 async def test_the_fields_clear_button_shows_only_with_text(
     shown: Shown, focused: list[ft.TextField]
 ) -> None:
+    """The field's clear button shows only with text, over the field and not in it.
+
+    A tap clears the text, hides the button and gives the field the focus.
+    """
+
     def clear_buttons() -> list[ft.IconButton]:
         return [b for b in shown.find(ft.IconButton) if b.parent is not None]
 
@@ -513,6 +557,7 @@ async def test_the_fields_clear_button_shows_only_with_text(
 
 
 async def test_the_filter_field_is_named_and_identified(shown: Shown) -> None:
+    """The filter field is identified, named by its hint or, with text, by its label."""
     node = shown.node("speakers.filter")
     assert node.content is shown.text_field
     assert shown.text_field.hint_text == screen.FILTER_HINT
@@ -527,6 +572,7 @@ async def test_the_filter_field_is_named_and_identified(shown: Shown) -> None:
 
 
 async def test_the_filter_field_never_fixes_names(shown: Shown) -> None:
+    """The filter field has autocorrect and suggestions off, so names stay as typed."""
     assert shown.text_field.autocorrect is False
     assert shown.text_field.enable_suggestions is False  # Android's own switch
 
@@ -541,6 +587,12 @@ async def test_the_filter_field_has_no_line_even_when_focused(shown: Shown) -> N
 
 
 async def test_a_filter_says_how_many_it_found_in_a_live_region(shown: Shown) -> None:
+    """A filter counts the speakers it found, in words, in a live region.
+
+    Without a filter there is no count, and a miss leaves the announcing to the no-match
+    state.
+    """
+
     def counted() -> list[ft.Semantics]:
         return [
             s
@@ -581,8 +633,11 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 
 
 async def test_each_letter_is_a_heading_node_of_its_own(shown: Shown) -> None:
-    """D-33: headings let screen readers jump letter by letter; a node of its own
-    keeps the heading's focus on the letter, not on its whole section."""
+    """Each letter is a heading inside a container node of its own, one per group.
+
+    D-33: headings let screen readers jump letter by letter; a node of its own keeps
+    the heading's focus on the letter, not on its whole section.
+    """
     headings = [s for s in shown.find(ft.Semantics) if s.header]
     assert len(headings) == len(letter_groups(ALL))
     for heading in headings:
@@ -591,6 +646,7 @@ async def test_each_letter_is_a_heading_node_of_its_own(shown: Shown) -> None:
 
 
 async def test_a_row_is_one_button_read_as_its_phrase(shown: Shown) -> None:
+    """A speaker row is one merged button node that reads its phrase alone."""
     (mike,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
     node = shown.node(f"speakers.speaker.{mike.speaker.id}")
     assert node.label == speaker_phrase(mike)
@@ -602,6 +658,7 @@ async def test_a_row_is_one_button_read_as_its_phrase(shown: Shown) -> None:
 
 
 async def test_a_row_shows_the_photo_over_the_initials(shown: Shown) -> None:
+    """Each row's avatar shows the speaker's initials under their photo, if any."""
     by_id = {e.speaker.id: e for e in ALL}
     avatars = [a for a in shown.find(ft.CircleAvatar) if a.parent is not None]
     assert len(avatars) == len(ALL)
@@ -622,6 +679,10 @@ async def test_a_row_shows_the_photo_over_the_initials(shown: Shown) -> None:
 
 
 async def test_a_row_with_more_sessions_says_so_after_the_first(shown: Shown) -> None:
+    """A row with more sessions puts "+1 more" on a line of its own, below its title.
+
+    The title stops at two lines, so it never cuts the count.
+    """
     (entry,) = [e for e in ALL if e.speaker.name == "Catherine Nelson"]
     assert entry.first_session is not None and entry.more == 1
     node = shown.node(f"speakers.speaker.{entry.speaker.id}")
@@ -640,6 +701,7 @@ async def test_a_row_with_more_sessions_says_so_after_the_first(shown: Shown) ->
 
 
 async def test_a_tap_pushes_the_speakers_detail(shown: Shown) -> None:
+    """A tap on a row pushes that speaker's detail, one drill level down."""
     went = shown.went  # what page.navigate was asked for
     entry = ALL[0]
     node = shown.node(f"{ROW}{entry.speaker.id}")
@@ -649,6 +711,7 @@ async def test_a_tap_pushes_the_speakers_detail(shown: Shown) -> None:
 
 
 def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
+    """Whether ``ancestor`` is ``control`` or one of its parents."""
     node: ft.BaseControl | None = control
     while node is not None:
         if node is ancestor:
@@ -670,6 +733,7 @@ async def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
 async def test_after_a_failed_first_fetch_it_offers_to_try_again(
     render: Render,
 ) -> None:
+    """After a failed first fetch, a live no-data state offers Try again."""
     failed = await render(Conference(problem="offline"))
     state = failed.node("speakers.no_data")
     assert state.live_region

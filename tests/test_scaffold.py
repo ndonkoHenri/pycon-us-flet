@@ -40,6 +40,7 @@ year, svc, page, conference, hooks = (
 def test_the_title_is_left_aligned_and_is_the_page_s_level_1_heading(
     hooks: Hooks, page: FakePage
 ) -> None:
+    """The bar's title is a left-aligned level-1 heading, in a Material-only bar."""
     bar = app_bar(view_at(hooks, page, "/schedule/session/42"))
     title = bar.title
     assert isinstance(title, ft.Semantics)
@@ -62,6 +63,7 @@ def test_an_empty_title_is_no_heading(hooks: Hooks, page: FakePage) -> None:
 def test_a_pushed_view_has_the_material_back_arrow_to_its_parent(
     hooks: Hooks, page: FakePage
 ) -> None:
+    """A pushed view's bar leads with Material's Back arrow, to the parent route."""
     view = view_at(hooks, page, "/schedule/session/42/speaker/17")
     arrow = back_arrow(view)
     assert arrow.icon == ft.Icons.ARROW_BACK
@@ -76,6 +78,7 @@ def test_a_pushed_view_has_the_material_back_arrow_to_its_parent(
 def test_the_back_arrow_on_search_returns_to_its_opener(
     hooks: Hooks, page: FakePage, svc: Services
 ) -> None:
+    """Search's Back arrow returns to the route that opened it, query included."""
     svc.memory.search_base = "/map?highlight=7"
     arrow = back_arrow(view_at(hooks, page, "/search"))
     click(arrow)
@@ -86,6 +89,11 @@ def test_the_back_arrow_on_search_returns_to_its_opener(
 async def test_back_on_a_root_other_than_now_goes_to_now(
     hooks: Hooks, page: FakePage, root: str
 ) -> None:
+    """Back on a root tab other than Now goes to Now instead of closing the app.
+
+    The root has no arrow and cannot pop by itself: it declines the pop it is asked
+    about.
+    """
     view = view_at(hooks, page, root)
     assert app_bar(view).leading is None
     assert view.route == "/"  # roots share one View key (D-142)
@@ -132,6 +140,7 @@ async def test_back_on_a_pushed_view_is_left_to_flutters_navigator(
 
 
 def test_back_on_now_is_left_to_the_system(hooks: Hooks, page: FakePage) -> None:
+    """Now has no Back arrow and no pop handler, so its Back is the system's."""
     view = view_at(hooks, page, "/now")
     assert app_bar(view).leading is None
     assert view.route == "/"
@@ -142,6 +151,7 @@ def test_back_on_now_is_left_to_the_system(hooks: Hooks, page: FakePage) -> None
 def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
     hooks: Hooks, page: FakePage
 ) -> None:
+    """The body fills a Material safe area, unpadded; the actions sit in the bar."""
     action = ft.IconButton(ft.Icons.SEARCH, tooltip="Search")
     view = view_at(hooks, page, "/now", actions=[action])
     assert app_bar(view).actions == [action]
@@ -167,6 +177,7 @@ def test_the_gutter_probe_sits_under_the_body_taking_no_space(
 def test_only_the_top_view_records_where_a_new_session_returns(
     hooks: Hooks, page: FakePage, svc: Services
 ) -> None:
+    """Only the top view records where a new session returns, with the query."""
     page.route = "/schedule/session/42?highlight=1"
     view_at(hooks, page, "/schedule", below=True)
     assert svc.memory.last_location == ""
@@ -179,6 +190,7 @@ def test_only_the_top_view_records_where_a_new_session_returns(
 def test_search_records_its_opener_with_the_query_then_opens(
     page: FakePage,
 ) -> None:
+    """The Search button records its opener's route, then opens search in its scope."""
     memory = ViewMemory()
     page.route = "/map?highlight=7"
     button = merged_button(search_button(memory, "rooms"))
@@ -192,6 +204,7 @@ def test_search_records_its_opener_with_the_query_then_opens(
 
 
 def test_a_section_header_is_a_level_2_heading_in_the_title_small_style() -> None:
+    """A section header is a level-2 heading over its text, in the TITLE_SMALL style."""
     header = SectionHeader("Days")
     assert isinstance(header, ft.Semantics)
     # A section under the page's title; without a level no screen reader stops (F40).

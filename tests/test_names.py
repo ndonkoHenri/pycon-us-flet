@@ -6,6 +6,11 @@ from pycon_us.core.names import Title, clean_title, plain_text, trailing_room
 
 
 def test_names_become_plain_text() -> None:
+    """A name becomes plain text: its link unwrapped and its entities decoded.
+
+    Brackets that are no link and a "<3" stay as they are, decoded tags stay text, and
+    trailing spaces go.
+    """
     assert (
         plain_text("[Posters (Hall AB)](/2026/schedule/posters/list/)")
         == "Posters (Hall AB)"
@@ -27,7 +32,11 @@ def test_code_spans_in_a_name_lose_their_backticks() -> None:
 
 
 def test_a_code_span_loses_one_space_of_padding_each_side() -> None:
-    """marked 4 (Ionic's markdownToTxt) strips one space each end when both ends have one."""
+    """A code span loses one space each side, only when both of its ends have one.
+
+    So does marked 4, which Ionic's markdownToTxt uses; a span of spaces alone keeps
+    them all.
+    """
     assert plain_text("a ` b ` c") == "a b c"
     assert plain_text("Quote `` `a` `` here") == "Quote `a` here"
     assert plain_text("Pad ` b` only one end") == "Pad  b only one end"
@@ -41,6 +50,7 @@ def test_tags_in_a_name_are_stripped_keeping_their_text() -> None:
 
 
 def test_trailing_room_is_split_off() -> None:
+    """A room in parentheses at a name's end is split off; one mid-name stays."""
     assert trailing_room("Lunch (Hall AB) ") == ("Lunch", "Hall AB")
     assert trailing_room("Talk (with friends) and more") == (
         "Talk (with friends) and more",
@@ -99,4 +109,12 @@ def test_trailing_room_is_split_off() -> None:
     ],
 )
 def test_clean_title_takes_a_name_apart(name: str, kind: str, expected: Title) -> None:
+    """A feed name splits into a name, a room, and registration and Spanish flags.
+
+    Its link markup goes, and so do a ", pre-registration required" and an "En Español"
+    suffix. A plenary-like name (plenary, keynote, lightning talks, event) loses a
+    trailing room and its own kind as a prefix, so a plenary keeps "Keynote - "; a
+    tutorial keeps its parenthesis. The kind and the name say whether it needs
+    registration and whether it is in Spanish.
+    """
     assert clean_title(name, kind) == expected

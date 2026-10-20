@@ -34,7 +34,7 @@ from tests.session_detail import (
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(session_id): the detail of that session at ``VIEW``."""
+    """Return a function that renders a session's detail at ``VIEW``, given its id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 
@@ -79,6 +79,7 @@ def identifier(control: ft.Control) -> str | None:
 
 
 def share_button(detail: Detail) -> ft.IconButton:
+    """The Share button in the session's app bar."""
     return cast(ft.IconButton, detail.node("session.share").content)
 
 
@@ -103,6 +104,10 @@ async def test_more_options_is_one_node_with_its_identifier(render: Render) -> N
 async def test_share_sends_the_title_when_and_where_and_the_public_page(
     render: Render,
 ) -> None:
+    """Share sends three lines: the title, when and where, and the public page.
+
+    The title is the share's subject too.
+    """
     detail = await render(TALK)
     await detail.click(share_button(detail))
     ((text, options),) = detail.share.texts
@@ -126,6 +131,7 @@ async def test_a_break_shares_its_time_without_a_url(render: Render) -> None:
 
 
 async def test_a_share_sheet_that_fails_to_open_says_so(render: Render) -> None:
+    """A share sheet that fails to open says so, and Share stays enabled for a retry."""
     detail = await render(TALK)
     detail.share.error = RuntimeError("share_text failed")
     await detail.click(share_button(detail))
@@ -154,6 +160,7 @@ async def test_share_is_disabled_while_the_sheet_is_up(render: Render) -> None:
 
 
 def poster_rows(detail: Detail) -> list[ft.Semantics]:
+    """The poster rows in the detail, found by their identifiers' prefix."""
     return [
         node
         for node in detail.session.index.values()
@@ -163,6 +170,10 @@ def poster_rows(detail: Detail) -> list[ft.Semantics]:
 
 
 async def test_the_posters_row_lists_its_posters_under_a_count(render: Render) -> None:
+    """The Posters detail lists its 25 posters under a level-2 heading with the count.
+
+    A poster's row reads its title and its speakers only.
+    """
     detail = await render(POSTERS)
     assert ("Posters (25)", 2) in headings(detail)
     rows = poster_rows(detail)
@@ -193,6 +204,7 @@ async def test_a_poster_pushes_its_detail_and_back_returns_to_the_posters(
 
 
 async def test_a_poster_s_star_saves_that_poster(render: Render) -> None:
+    """A poster's own star in the Posters detail saves that poster."""
     detail = await render(POSTERS)
     star = cast(ft.IconButton, detail.node(f"session.favorite.{FIRST_POSTER}").content)
     await detail.click(star)
@@ -200,6 +212,7 @@ async def test_a_poster_s_star_saves_that_poster(render: Render) -> None:
 
 
 async def test_other_sessions_list_no_posters(render: Render) -> None:
+    """A detail other than the Posters row's, here a poster's, lists no posters."""
     detail = await render(FIRST_POSTER)
     assert poster_rows(detail) == []
     assert "Posters (25)" not in [text for text, _ in headings(detail)]
@@ -209,6 +222,7 @@ async def test_other_sessions_list_no_posters(render: Render) -> None:
 
 
 def images(detail: Detail) -> list[ft.Image]:
+    """Every image in the detail: the open space's image and its blurred copy."""
     return [c for c in detail.session.index.values() if isinstance(c, ft.Image)]
 
 
@@ -219,6 +233,7 @@ def image(detail: Detail) -> ft.Image:
 
 
 def backdrop(detail: Detail) -> ft.Image:
+    """The image's blurred copy behind it, which screen readers skip."""
     (found,) = (c for c in images(detail) if c.exclude_from_semantics)
     return found
 
@@ -226,6 +241,7 @@ def backdrop(detail: Detail) -> ft.Image:
 async def test_an_open_space_shows_its_image_named_for_screen_readers(
     render: Render,
 ) -> None:
+    """An open space shows its image, named for screen readers after its title."""
     detail = await render(SPACE_WITH_IMAGE)
     shown = image(detail)
     assert shown.src == (
@@ -238,6 +254,7 @@ async def test_an_open_space_shows_its_image_named_for_screen_readers(
 
 
 async def test_an_image_that_does_not_load_says_so_in_its_frame(render: Render) -> None:
+    """An image that does not load shows the image error message in its place."""
     detail = await render(SPACE_WITH_IMAGE)
     fallback = image(detail).error_content
     assert fallback is not None
@@ -285,6 +302,7 @@ async def test_the_frame_around_the_image_is_its_own_blurred_copy(
 
 
 async def test_the_image_fades_in_once_loaded(render: Render) -> None:
+    """The image fades in once loaded, but its blurred copy behind it does not."""
     detail = await render(SPACE_WITH_IMAGE)
     animation = cast(ft.Animation, image(detail).fade_in_animation)
     assert animation.duration == extras.IMAGE_FADE_MS
@@ -296,12 +314,14 @@ async def test_the_image_fades_in_once_loaded(render: Render) -> None:
 async def test_under_reduced_motion_the_image_appears_at_once(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Under reduced motion, the image's fade-in takes no time."""
     monkeypatch.setattr(Prefs, "motion_ms", lambda self, ms: 0)
     detail = await render(SPACE_WITH_IMAGE)
     assert cast(ft.Animation, image(detail).fade_in_animation).duration == 0
 
 
 async def test_an_open_space_without_an_image_has_no_frame(render: Render) -> None:
+    """An open space without an image shows no image, but still links its site entry."""
     detail = await render(SPACE_WITHOUT_IMAGE)
     assert not [c for c in detail.session.index.values() if isinstance(c, ft.Image)]
     assert detail.nodes("session.site")
@@ -332,6 +352,7 @@ async def test_an_open_space_links_its_entry_on_the_site_in_the_page(
 async def test_a_talk_has_no_image_and_no_site_link_in_the_page(
     render: Render,
 ) -> None:
+    """A talk shows neither an image nor a link to the site."""
     detail = await render(TALK)
     assert detail.nodes("session.site") == []
     assert detail.nodes("session.image") == []
