@@ -100,6 +100,16 @@ class Agenda:
     # A dict is not hashable; leaving it out of the hash keeps ``Agenda`` hashable.
     overlaps: Mapping[Session, tuple[Session, ...]] = field(hash=False)
 
+    @property
+    def sessions(self) -> tuple[Session, ...]:
+        """Every saved session the agenda holds, in agenda order: what an export takes."""
+        return tuple(
+            session
+            for day in self.days
+            for slot in day.slots
+            for session in slot.sessions
+        )
+
 
 @dataclass(frozen=True)
 class FoldedAgenda:
