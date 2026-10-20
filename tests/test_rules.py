@@ -28,6 +28,7 @@ EASTERN = ZoneInfo("America/New_York")
 
 
 def pacific(day: int, hour: int, minute: int = 0) -> datetime:
+    """May ``day``, 2026, at ``hour``:``minute``, Pacific time."""
     return datetime(2026, 5, day, hour, minute, tzinfo=PACIFIC)
 
 
@@ -74,6 +75,8 @@ def test_posters_plenary_is_dropped_as_a_copy_of_the_posters_row() -> None:
 
 
 def test_blank_slots_are_dropped() -> None:
+    """A slot of kind ``blank``, or named ``Slot``, is dropped as blank."""
+
     def blank(doc: dict[str, Any]) -> None:
         doc["schedule"][4]["kind"] = "blank"  # 196, "Registration Desk Opens"
         doc["schedule"][5]["name"] = "Slot"  # 198
@@ -106,6 +109,8 @@ def test_open_spaces_become_sessions_with_offset_ids() -> None:
 
 
 def test_open_space_image_is_made_absolute() -> None:
+    """A relative open-space image URL is made absolute on us.pycon.org."""
+
     def relative(doc: dict[str, Any]) -> None:
         doc["open-spaces"][0]["image_url"] = "/2026/media/open_spaces_images/x.png"
 
@@ -338,6 +343,7 @@ def test_a_session_id_already_taken_is_skipped() -> None:
 
 
 def test_dropped_slots_are_counted_in_the_log(caplog: pytest.LogCaptureFixture) -> None:
+    """Processing logs how many slots it dropped, counted by reason."""
     with caplog.at_level(logging.INFO, logger="pycon_us.core.feed"):
         processed(2026)
     message, _ = caplog.messages  # then "Feed processed in N ms: ..."

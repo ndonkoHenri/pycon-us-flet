@@ -51,16 +51,19 @@ def check(
 
 
 def ok(body: bytes) -> httpx.Response:
+    """A 200 response carrying ``body``."""
     return httpx.Response(200, content=body)
 
 
 def first_talk(doc: dict[str, Any]) -> dict[str, Any]:
+    """The first slot of kind ``talk`` in a feed document."""
     return next(slot for slot in doc["schedule"] if slot["kind"] == "talk")
 
 
 def test_the_recorded_feed_passes_and_a_missing_next_year_is_not_yet(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """The recorded feed passes, and a 404 for next year reads as not published yet."""
     status, out = check(capsys, ok(recorded(2026)))
 
     assert status == 0
@@ -73,6 +76,8 @@ def test_the_recorded_feed_passes_and_a_missing_next_year_is_not_yet(
 def test_a_feed_that_breaks_an_invariant_fails_and_names_it(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """A talk moved off the conference days fails the check, naming the invariant."""
+
     def move_a_talk_out_of_the_conference(doc: dict[str, Any]) -> None:
         talk = first_talk(doc)
         talk["start"], talk["end"] = (
@@ -93,6 +98,7 @@ def test_a_feed_that_breaks_an_invariant_fails_and_names_it(
 def test_a_record_the_parser_skips_fails_the_check(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """A talk without a name is skipped, which fails ``no session is lost``."""
     status, out = check(
         capsys, ok(changed(2026, lambda doc: first_talk(doc).pop("name")))
     )
@@ -103,6 +109,7 @@ def test_a_record_the_parser_skips_fails_the_check(
 
 
 def test_a_feed_that_does_not_parse_fails(capsys: pytest.CaptureFixture[str]) -> None:
+    """An HTML page served as the feed fails the check as one that won't parse."""
     status, out = check(capsys, ok(b"<html>Maintenance</html>"))
 
     assert status == 1
@@ -119,6 +126,7 @@ def test_a_feed_that_does_not_parse_fails(capsys: pytest.CaptureFixture[str]) ->
 def test_a_feed_that_cannot_be_fetched_is_reported_not_raised(
     capsys: pytest.CaptureFixture[str], answer: Answer, reported: str
 ) -> None:
+    """A 404 or a connection error fails the check with a report, not a raise."""
     status, out = check(capsys, answer)
 
     assert status == 1
@@ -140,6 +148,7 @@ def test_a_feed_that_cannot_be_fetched_is_reported_not_raised(
 def test_next_years_feed_is_reported_without_failing_the_check(
     capsys: pytest.CaptureFixture[str], answer: Answer, reported: str
 ) -> None:
+    """Whatever next year's URL answers is reported, and the check passes."""
     status, out = check(capsys, ok(recorded(2026)), next_year=answer)
 
     assert status == 0
@@ -149,6 +158,7 @@ def test_next_years_feed_is_reported_without_failing_the_check(
 def test_next_year_redirected_to_this_years_feed_is_not_published(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Next year's URL redirecting to this year's feed is not published yet."""
     moved = httpx.Response(302, headers={"location": FEED_2026})
 
     status, out = check(capsys, ok(recorded(2026)), next_year=moved)
@@ -164,6 +174,8 @@ def test_next_year_redirected_to_this_years_feed_is_not_published(
 def test_keys_the_recorded_feeds_lack_are_printed_not_failed(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """New keys, top level or in a slot, are printed as ignored and pass."""
+
     def grow(doc: dict[str, Any]) -> None:
         first_talk(doc)["captions_url"] = "https://example.org/captions"
         doc["badges"] = []
@@ -176,6 +188,7 @@ def test_keys_the_recorded_feeds_lack_are_printed_not_failed(
 
 
 def test_new_keys_compares_sections_and_their_records() -> None:
+    """``new_keys`` lists the keys no recorded feed has, top level and per section."""
     grown = document(2026)
     first_talk(grown)["captions_url"] = "https://example.org/captions"
     grown["badges"] = []
@@ -188,6 +201,7 @@ def test_new_keys_compares_sections_and_their_records() -> None:
 
 
 def test_each_year_given_is_checked(capsys: pytest.CaptureFixture[str]) -> None:
+    """Each year named is checked, 2027 failing without year data, and not probed."""
     status = main(["2026", "2027"], transport=serving({FEED_2026: ok(recorded(2026))}))
     out = capsys.readouterr().out
 
@@ -232,6 +246,7 @@ def with_first_day(data: ConferenceData, **changes: Any) -> ConferenceData:
 
 
 def without_sessions(data: ConferenceData, ids: set[str]) -> ConferenceData:
+    """``data`` without the sessions whose ids are in ``ids``."""
     return replace(
         data, sessions={k: s for k, s in data.sessions.items() if k not in ids}
     )
@@ -257,6 +272,7 @@ def reversed_9am_rows(data: ConferenceData) -> ConferenceData:
 
 
 def reversed_room(data: ConferenceData, slug: str) -> ConferenceData:
+    """``data`` with the sessions of room ``slug`` in reverse order."""
     room = data.rooms[slug]
     room = replace(room, session_ids=tuple(reversed(room.session_ids)))
     return replace(data, rooms={**data.rooms, slug: room})

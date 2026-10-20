@@ -32,6 +32,7 @@ def test_2026_days_run_from_tutorials_to_the_last_sprint_day() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_schedule_day_is_one_of_the_days(year: int) -> None:
+    """The days run first to last day, sorted, and hold every schedule day."""
     conference = load_year(year).conference
     result = days(processed(year), conference.first_day, conference.last_day)
     assert {day.date for day in processed(year).days} <= set(result)
@@ -40,6 +41,8 @@ def test_every_schedule_day_is_one_of_the_days(year: int) -> None:
 
 
 def test_a_session_outside_the_conference_dates_widens_the_days() -> None:
+    """A session two days early adds its day, and the day between, to the days."""
+
     def early(doc: dict[str, Any]) -> None:
         doc["schedule"][5].update(
             start="2026-05-11T09:00:00-07:00", end="2026-05-11T10:00:00-07:00"

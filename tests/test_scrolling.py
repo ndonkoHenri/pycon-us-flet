@@ -39,6 +39,7 @@ class List:
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     async def scroll_to(self, **kwargs: Any) -> None:
+        """Record the call, then raise ``error`` or end a scroll as set."""
         self.calls.append(kwargs)
         if self.error is not None and len(self.calls) >= self.fails:
             raise self.error
@@ -60,6 +61,7 @@ def ref_to(target: object) -> ft.Ref[ft.ListView]:
 
 
 async def test_a_jump_that_ends_a_scroll_lands_on_the_first_try() -> None:
+    """A first ask that ends a scroll lands, with the key and duration passed."""
     ended = asyncio.Event()
     target = List(ended)
     assert await jump_to_key(ref_to(target), KEY, duration=0, ended=ended) == "landed"
@@ -116,6 +118,7 @@ async def test_a_list_that_left_the_page_ends_the_jump_quietly(
 
 
 async def test_any_other_error_is_not_swallowed() -> None:
+    """An error other than a timeout or a left list propagates."""
     ended = asyncio.Event()
     target = List(ended, error=RuntimeError("Calling scroll_to of inexistent control"))
     with pytest.raises(RuntimeError, match="inexistent"):
@@ -123,13 +126,17 @@ async def test_any_other_error_is_not_swallowed() -> None:
 
 
 async def test_a_list_that_was_never_built_is_not_scrolled() -> None:
+    """A ref with no list fails the jump without asking for a scroll."""
     jump = await jump_to_key(ref_to(None), KEY, duration=0, ended=asyncio.Event())
     assert jump == "failed"
 
 
 def test_an_anchor_carries_the_key_above_its_content_and_holds_nothing() -> None:
-    """D-242: Flet mounts a control with a ScrollKey again at each build (F62), so the
-    key goes on an empty 0 dp box above the item, never on a box around its rows."""
+    """An anchored item is an empty 0 dp keyed box above the content, stretched.
+
+    D-242: Flet mounts a control with a ScrollKey again at each build (F62), so the key
+    goes on an empty 0 dp box above the item, never on a box around its rows.
+    """
     row = ft.Text("A row")
     item = anchored(KEY, row)
     assert isinstance(item, ft.Column) and item.spacing == 0

@@ -89,6 +89,7 @@ def shown_count(conference: Conference, excluded: tuple[str, ...]) -> int:
 
 
 def test_the_chips_follow_the_registry_groups_and_order() -> None:
+    """The chips are grouped, and ordered, as the track registry says."""
     tracks = {"Break", "Talk", "Open Space", "Tutorial", "Keynote", "Informational"}
     groups = filter_groups(INFO, tracks)
     assert [(g.label, g.tracks) for g in groups] == [
@@ -107,12 +108,16 @@ def test_a_track_the_registry_lacks_gets_a_chip_after_its_groups_known_ones() ->
 
 
 def test_every_registry_group_has_a_heading() -> None:
+    """Every registry track falls in one of the sheet's groups."""
     every = {t.key for t in INFO.tracks}
     assert sum(len(g.tracks) for g in filter_groups(INFO, every)) == len(every)
 
 
 def test_the_summary_lists_up_to_three_tracks_as_labels() -> None:
-    # A list, not a sentence: "Hidden: Talk, Open space" read as one talk.
+    """The summary lists up to three hidden tracks, then counts the rest.
+
+    A list, not a sentence: "Hidden: Talk, Open space" read as one talk.
+    """
     assert summary_text(INFO, ()) is None
     assert summary_text(INFO, ("Open Space",)) == "Hidden: Open space"
     assert summary_text(INFO, ("Talk", "Open Space")) == "Hidden: Talk, Open space"
@@ -127,6 +132,7 @@ def test_the_summary_lists_up_to_three_tracks_as_labels() -> None:
 
 
 def test_hidden_tracks_are_the_ones_the_feed_has_in_the_sheets_order() -> None:
+    """Hidden tracks are the excluded ones the feed has, in the sheet's order."""
     tracks = {"Talk", "Open Space", "Break"}
     assert hidden_tracks(INFO, tracks, ("Open Space", "Charla", "Talk")) == (
         "Talk",
@@ -136,6 +142,7 @@ def test_hidden_tracks_are_the_ones_the_feed_has_in_the_sheets_order() -> None:
 
 
 def test_the_count_says_session_or_sessions() -> None:
+    """The Show label says "session" for one session and "sessions" otherwise."""
     assert count_label(0) == "Show 0 sessions"
     assert count_label(1) == "Show 1 session"
     assert count_label(87) == "Show 87 sessions"
@@ -153,11 +160,13 @@ def chip_parts(label: Any) -> tuple[ft.Icon | None, ft.Text]:
 
 
 def test_a_chip_name_wraps_beside_its_check_at_large_text() -> None:
-    # #330: a string label stays on one faded line, so "Lightning talks" was cut at
-    # iOS's largest text. The name is a Text that may wrap, loose in its row so the
-    # chip stays as narrow as the name; the label, not the chip, draws the check and
-    # the side padding, so Flutter measures the name at the width it lays it out in
-    # (F69).
+    """A chip's name is a Text that may wrap, beside the check when shown.
+
+    #330: a string label stays on one faded line, so "Lightning talks" was cut at iOS's
+    largest text. The name is a Text that may wrap, loose in its row so the chip stays
+    as narrow as the name; the label, not the chip, draws the check and the side
+    padding, so Flutter measures the name at the width it lays it out in (F69).
+    """
     for shown in (True, False):
         label = chip_label("Lightning talks", shown)
         check, name = chip_parts(label)
@@ -188,6 +197,7 @@ def test_the_dot_shows_only_when_the_filter_differs_from_the_default() -> None:
 
 
 def summary(schedule: Shown) -> str | None:
+    """The filter summary's text, or None when the Schedule shows none."""
     found = find(
         schedule.session,
         ft.Semantics,
@@ -197,6 +207,7 @@ def summary(schedule: Shown) -> str | None:
 
 
 def filter_button(schedule: Shown) -> ft.IconButton:
+    """The app bar's filter ``IconButton``."""
     (node,) = find(
         schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.filter"
     )
@@ -205,6 +216,7 @@ def filter_button(schedule: Shown) -> ft.IconButton:
 
 
 def sheet(schedule: Shown) -> ft.BottomSheet | None:
+    """The open filter sheet, or None; there is never more than one."""
     dialogs = schedule.session.page._dialogs.controls  # pyright: ignore[reportPrivateUsage]
     found = [d for d in dialogs if isinstance(d, ft.BottomSheet) and d.open]
     assert len(found) <= 1
@@ -228,24 +240,28 @@ def in_sheet(schedule: Shown, identifier: str) -> Any:
 
 
 def chip(schedule: Shown, key: str) -> ft.Chip:
+    """The sheet's chip for the track ``key``."""
     found = in_sheet(schedule, f"schedule.filter.{key}")
     assert isinstance(found, ft.Chip)
     return found
 
 
 def reset_button(schedule: Shown) -> ft.TextButton:
+    """The sheet's Reset button."""
     found = in_sheet(schedule, "schedule.filter.reset")
     assert isinstance(found, ft.TextButton)
     return found
 
 
 def show_button(schedule: Shown) -> ft.FilledButton:
+    """The sheet's Show button."""
     current = sheet(schedule)
     assert current is not None
     return next(c for c in _descendants(current) if isinstance(c, ft.FilledButton))
 
 
 def button_label(schedule: Shown) -> str:
+    """The text of the sheet's Show button."""
     content = show_button(schedule).content
     assert isinstance(content, ft.Text)
     return str(content.value)
@@ -261,11 +277,13 @@ def _descendants(control: Any) -> list[Any]:
 
 
 async def click(schedule: Shown, control: ft.BaseControl) -> None:
+    """Dispatch a click on ``control``, then let the session settle."""
     await schedule.session.dispatch_event(control._i, "click", None)
     await settle()
 
 
 async def open_sheet(schedule: Shown) -> ft.BottomSheet:
+    """Tap the filter button and return the sheet it opens."""
     await click(schedule, filter_button(schedule))
     current = sheet(schedule)
     assert current is not None
@@ -301,9 +319,12 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
 async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
     shown: Show,
 ) -> None:
-    """#283: Material shrinks a text button's side padding as text grows (12 dp to
-    4), so at large text a "Show all" on a run of its own started right of the
-    words. Pinned, and the words inset as much, the two share their left edge."""
+    """Show all's side padding equals the words' inset; the wrap adds no spacing.
+
+    #283: Material shrinks a text button's side padding as text grows (12 dp to 4), so
+    at large text a "Show all" on a run of its own started right of the words. Pinned,
+    and the words inset as much, the two share their left edge.
+    """
     schedule = await shown()
     (words,) = find(
         schedule.session,
@@ -330,6 +351,7 @@ async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
 async def test_show_all_restores_every_track_and_stores_an_explicit_empty_list(
     shown: Show,
 ) -> None:
+    """Show all stores [], so no track hides, and marks the filter changed."""
     schedule = await shown()
     schedule.scrolls.clear()
     (show_all,) = find(
@@ -374,6 +396,7 @@ async def test_a_stored_filter_reads_back_absent_as_the_default_and_empty_as_non
 async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     shown: Show, conference: Conference
 ) -> None:
+    """The sheet has a chip per feed track; a tap applies, stores and recounts."""
     schedule = await shown()
     current = await open_sheet(schedule)
     assert current.show_drag_handle and current.scrollable and current.use_safe_area
@@ -429,6 +452,7 @@ async def test_the_sheet_appears_without_its_slide_under_reduced_motion(
 async def test_reset_returns_to_the_default(
     shown: Show,
 ) -> None:
+    """Reset restores and stores the default filter, and the sheet stays open."""
     schedule = await shown(excluded_tracks=("Talk", "Tutorial"))
     current = await open_sheet(schedule)
     (reset,) = [
@@ -448,6 +472,7 @@ async def test_reset_returns_to_the_default(
 async def test_reset_is_disabled_while_the_filter_is_the_default(
     shown: Show,
 ) -> None:
+    """Reset, button and node, is disabled only while the filter is the default."""
     schedule = await shown()
     await open_sheet(schedule)
     assert reset_button(schedule).disabled  # a tap would do nothing
@@ -464,6 +489,7 @@ async def test_reset_is_disabled_while_the_filter_is_the_default(
 async def test_the_filter_survives_a_relaunch(
     shown: Show,
 ) -> None:
+    """A chip change is read back by fresh ``Prefs``, as after a relaunch."""
     schedule = await shown()
     await open_sheet(schedule)
     await tap_chip(schedule, "tutorial")
@@ -515,6 +541,7 @@ async def test_a_failed_write_keeps_the_change_and_says_so(
 async def test_with_every_chip_off_the_button_is_disabled_and_says_why(
     shown: Show, conference: Conference
 ) -> None:
+    """With every chip off the flat Show button is disabled, and the sheet says why."""
     schedule = await shown(excluded_tracks=tuple(feed_tracks(conference)))
     current = await open_sheet(schedule)
     button = show_button(schedule)
@@ -531,6 +558,7 @@ async def test_with_every_chip_off_the_button_is_disabled_and_says_why(
 async def test_show_n_sessions_closes_the_sheet_and_keeps_the_filter(
     shown: Show,
 ) -> None:
+    """The Show button closes the sheet and keeps the change."""
     schedule = await shown()
     await open_sheet(schedule)
     await tap_chip(schedule, "talk")
@@ -557,6 +585,7 @@ async def test_a_swipe_that_dismisses_the_sheet_keeps_the_filter(
 async def test_what_do_these_mean_opens_the_tracks_hub(
     shown: Show,
 ) -> None:
+    """The "What do these mean?" link closes the sheet and opens the Tracks hub."""
     schedule = await shown()
     await open_sheet(schedule)
     link = in_sheet(schedule, "schedule.filter.tracks")
