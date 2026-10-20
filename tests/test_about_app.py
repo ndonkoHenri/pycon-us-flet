@@ -339,11 +339,17 @@ async def test_flet_opens_in_the_in_app_browser_and_reads_as_a_link(
     ]
 
 
+def test_the_source_url_is_unset_until_the_repository_is_public() -> None:
+    """``SOURCE_URL`` ships as None until P4 makes the repository public (D-88, D-292)."""
+    assert pycon_us.SOURCE_URL is None
+
+
 def test_no_source_code_row_while_the_repository_is_private(
     render: Callable[[], dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With ``SOURCE_URL`` unset (the repo is private), Links lists Flet alone."""
-    assert pycon_us.SOURCE_URL is None  # until P4 makes the repository public (D-88)
+    """With ``SOURCE_URL`` None, Links lists Flet alone: no row links to a private repository."""
+    monkeypatch.setattr(about_app, "SOURCE_URL", None)
     assert list(link_rows(render())) == ["about_app.flet"]
 
 
