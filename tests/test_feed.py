@@ -26,6 +26,7 @@ KEPT = 5  # the index of a 2026 slot that becomes a session ("Registration Desk 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_recorded_feeds_have_no_unreadable_record(year: int) -> None:
+    """Each recorded feed processes without a skipped record."""
     assert processed(year).skipped == ()
 
 
@@ -46,13 +47,17 @@ def test_the_bundled_snapshot_processes_cleanly() -> None:
 
 
 def test_2026_has_five_schedule_days() -> None:
+    """The 2026 feed's schedule days are the five days from May 13 to 17."""
     assert [day.date for day in processed(2026).days] == [
         date(2026, 5, d) for d in range(13, 18)
     ]
 
 
 def test_2025_times_stay_in_eastern_time() -> None:
-    # "Registration / Information Desks Open"
+    """A 2025 session starts at 7:00 AM in the New York zone itself, on May 14.
+
+    The session is "Registration / Information Desks Open".
+    """
     session = processed(2025).sessions["1745"]
     eastern = ZoneInfo("America/New_York")
     assert session.start == datetime(2025, 5, 14, 7, 0, tzinfo=eastern)
@@ -61,7 +66,11 @@ def test_2025_times_stay_in_eastern_time() -> None:
 
 
 def test_a_late_evening_session_stays_on_its_local_day() -> None:
-    # 23:30 Pacific on Friday is already Saturday in UTC and in Kiritimati.
+    """A session at 11:30 PM on Friday stays on Friday, in the day's last group.
+
+    23:30 Pacific on Friday is already Saturday in UTC and in Kiritimati.
+    """
+
     def late(doc: dict[str, Any]) -> None:
         doc["schedule"][KEPT].update(
             start="2026-05-15T23:30:00-07:00", end="2026-05-15T23:45:00-07:00"
@@ -75,6 +84,7 @@ def test_a_late_evening_session_stays_on_its_local_day() -> None:
 
 
 def test_slot_fields_are_decoded() -> None:
+    """A talk slot's name, kind, track, room, description and URL reach its session."""
     slot = next(s for s in document(2026)["schedule"] if s["kind"] == "talk")
     session = processed(2026).sessions[str(slot["conf_key"])]
     assert (session.name, session.kind, session.track, session.location) == (
@@ -91,8 +101,11 @@ def test_slot_fields_are_decoded() -> None:
 def test_speakers_are_registered_once_by_id_from_sessions_and_posters(
     year: int,
 ) -> None:
-    # No dropped slot carries speakers, so every speaker record of the feed is registered,
-    # but for the pseudo-speaker "Hosted by …" (DATA-15).
+    """The feed's speakers are registered by id; sessions and posters name only them.
+
+    No dropped slot carries speakers, so every speaker record of the feed is registered,
+    but for the pseudo-speaker "Hosted by …" (DATA-15).
+    """
     doc = document(year)
     slots = doc["schedule"]
     records = [s for slot in slots for s in slot.get("speakers") or []]
@@ -146,6 +159,10 @@ def test_a_nested_poster_with_a_posters_id_is_skipped() -> None:
 
 
 def test_posters_sprints_and_job_listings_pass_through() -> None:
+    """2026's 25 posters, 24 sprints and 13 job listings keep the feed's fields.
+
+    Two sprint projects have no logo, kept as None.
+    """
     doc = document(2026)
     data = processed(2026)
     assert (len(data.posters), len(data.sprints), len(data.job_listings)) == (
@@ -184,11 +201,14 @@ def test_posters_sprints_and_job_listings_pass_through() -> None:
 
 
 def test_feed_without_optional_sections_decodes_them_empty() -> None:
+    """2025's feed, without sprints or job listings, decodes both as empty."""
     data = processed(2025)  # its posters are nested in a slot instead (test_rules.py)
     assert (data.sprints, data.job_listings) == ((), ())
 
 
 def test_unknown_fields_are_ignored() -> None:
+    """Unknown fields at the top and in records skip nothing and drop no session."""
+
     def add_fields(doc: dict[str, Any]) -> None:
         doc["something-new"] = {"a": 1}
         doc["schedule"][0]["subtitle"] = "new in 2027"
@@ -200,6 +220,7 @@ def test_unknown_fields_are_ignored() -> None:
 
 
 def first_talk(doc: dict[str, Any]) -> dict[str, Any]:
+    """Return the first talk slot of a feed document."""
     return next(slot for slot in doc["schedule"] if slot["kind"] == "talk")
 
 
@@ -277,6 +298,7 @@ def test_a_lone_surrogate_in_a_content_block_becomes_a_replacement_character() -
 
 
 def break_start(doc: dict[str, Any]) -> None:
+    """Delete the kept slot's start in a feed document."""
     del doc["schedule"][KEPT]["start"]
 
 
@@ -323,6 +345,7 @@ def test_bad_slot_is_skipped_and_logged(
     problem: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A malformed slot alone is skipped, its index and problem logged as a warning."""
     bad = str(document(2026)["schedule"][KEPT]["conf_key"])
     with caplog.at_level(logging.WARNING, logger="pycon_us.core.feed"):
         data = process(changed(2026, change), settings(2026))
@@ -347,6 +370,8 @@ def test_bad_slot_is_skipped_and_logged(
 def test_duplicate_id_keeps_the_first(
     section: str, index: int, key: str, field: str, count: int
 ) -> None:
+    """A record that repeats an id is skipped, in any section; the first is kept."""
+
     def duplicate(doc: dict[str, Any]) -> None:
         first = doc[section][index]
         doc[section].append(dict(first, **{key: str(first[key]), field: "Impostor"}))
@@ -367,6 +392,7 @@ def test_duplicate_id_keeps_the_first(
 
 
 def test_time_out_of_range_is_skipped() -> None:
+    """A start in year 1, which has no Pacific time, skips its slot as out of range."""
     raw = changed(
         2026,
         lambda doc: doc["schedule"][KEPT].update(start="0001-01-01T00:00:00+00:00"),
@@ -379,6 +405,12 @@ def test_time_out_of_range_is_skipped() -> None:
 
 
 def test_bad_records_in_other_sections_are_skipped() -> None:
+    """Bad posters, open spaces, sprints and job listings are skipped one by one.
+
+    A start of 0 or an end of False is bad too, not "not scheduled"; the reasons come in
+    section order and the other records are kept.
+    """
+
     def spoil(doc: dict[str, Any]) -> None:
         doc["posters"][0]["title"] = 7
         doc["sprints"][1] = None
@@ -421,11 +453,13 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
     ],
 )
 def test_unusable_feed_raises_feed_error(raw: bytes, problem: str) -> None:
+    """A body that is no JSON object with a readable slot raises ``FeedError``."""
     with pytest.raises(FeedError, match=problem):
         process(raw, settings(2026))
 
 
 def test_optional_section_of_the_wrong_type_raises_feed_error() -> None:
+    """A ``sprints`` section that is not a list raises ``FeedError``."""
     raw = changed(2026, lambda doc: doc.update(sprints={"oops": 1}))
     with pytest.raises(FeedError, match="'sprints' is not a list"):
         process(raw, settings(2026))

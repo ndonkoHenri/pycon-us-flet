@@ -44,11 +44,13 @@ CARD = "sprints.project."
 
 
 def named(name: str) -> Sprint:
+    """Return the 2026 project named ``name``."""
     (found,) = [sprint for sprint in ALL if sprint.name == name]
     return found
 
 
 def names(listed: tuple[Sprint, ...]) -> list[str]:
+    """Return the names of ``listed``, in order."""
     return [sprint.name for sprint in listed]
 
 
@@ -106,6 +108,7 @@ def test_the_filter_needs_every_word_in_any_order() -> None:
 
 
 def test_the_filter_matches_the_submitter_and_ignores_case_and_accents() -> None:
+    """The filter matches a submitter's name, whatever its case and accents."""
     assert names(filter_projects(ALL, "antonia")) == ["ScanAPI"]  # Maria Antônia
     assert names(filter_projects(ALL, "ANTÔNIA")) == ["ScanAPI"]
     assert "Djangonaut Space" in names(filter_projects(ALL, "tim"))
@@ -133,6 +136,10 @@ def test_a_short_one_paragraph_description_shows_whole() -> None:
 
 
 def test_a_long_description_or_one_with_links_or_paragraphs_is_cut() -> None:
+    """A description over the preview's length, with a link or in two paragraphs is cut.
+
+    Five of the 2026 projects are not cut.
+    """
     short = named("PursuedPyBear")
     assert cut_short(replace(short, description_text="x" * (PREVIEW_CHARS + 1)))
     assert cut_short(replace(short, description_md="See [docs](https://ppb.dev/)."))
@@ -157,6 +164,7 @@ class Shown(sessions.Shown):
 
     @property
     def launched(self) -> list[str]:
+        """The URLs the screen launched, in order."""
         return [url for url, _ in self.launcher.launched]
 
     async def type(self, text: str) -> None:
@@ -168,7 +176,11 @@ class Shown(sessions.Shown):
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
-    """Return show(screen, conference=..., year=...): that screen over the feed."""
+    """Return a function that renders a screen, Sprints by default, over the feed.
+
+    It takes the screen, then a ``conference`` (the recorded 2026 one by default) and a
+    ``year`` (2026's).
+    """
     counted = sprint_card.cut_short
 
     def cut(sprint: Sprint) -> bool:
@@ -217,10 +229,12 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 
 
 def year_with(**changes: Any) -> YearData:
+    """Return 2026's year data with ``changes`` to its conference facts."""
     return replace(YEAR, conference=replace(INFO, **changes))
 
 
 def with_sprints(*sprints: Sprint) -> Conference:
+    """Return the 2026 feed's ``Conference`` with ``sprints`` alone."""
     return Conference(data=replace(DATA, sprints=sprints), source="bundled", version=1)
 
 
@@ -232,6 +246,7 @@ def text_of(control: object) -> str:
 
 
 def card_of(shown: Shown, sprint: Sprint) -> ft.Card:
+    """Return the ``Card`` that holds ``sprint``'s name heading."""
     heading: ft.BaseControl | None = shown.node(f"{CARD}{sprint.id}")
     while heading is not None and not isinstance(heading, ft.Card):
         heading = heading.parent
@@ -240,6 +255,7 @@ def card_of(shown: Shown, sprint: Sprint) -> ft.Card:
 
 
 def under(control: ft.BaseControl, root: ft.BaseControl) -> bool:
+    """Whether ``control`` is ``root`` or mounted under it."""
     node: ft.BaseControl | None = control
     while node is not None:
         if node is root:
@@ -249,6 +265,10 @@ def under(control: ft.BaseControl, root: ft.BaseControl) -> bool:
 
 
 async def test_every_project_has_a_card_in_the_pages_order(show: Any) -> None:
+    """Each project has a card in the page's order, named by a level-3 heading.
+
+    The cards sit under one level-2 heading, "Projects".
+    """
     shown = await show()
     assert shown.listed == [sprint.id for sprint in ALL]
     assert sorted(shown.cards) == sorted(sprint.id for sprint in ALL)
@@ -261,6 +281,7 @@ async def test_every_project_has_a_card_in_the_pages_order(show: Any) -> None:
 async def test_the_page_says_when_the_sprints_are_from_the_year_data(
     show: Any,
 ) -> None:
+    """The dates line spans the sprint days, or names one, and is gone without any."""
     shown = await show()
     dates = shown.node("sprints.dates")
     assert dates.label == "Sprints: Monday, May 18 to Tuesday, May 19"
@@ -283,6 +304,7 @@ async def test_a_keystroke_re_renders_no_card_that_stays(show: Any) -> None:
 
 
 async def test_a_filter_says_how_many_it_found_in_a_live_region(show: Any) -> None:
+    """A filter's matches are counted in a live region; no filter or a miss has none."""
     shown = await show()
     assert shown.nodes("sprints.count") == []  # no filter: nothing to count
     await shown.type("django")
@@ -297,6 +319,10 @@ async def test_a_filter_says_how_many_it_found_in_a_live_region(show: Any) -> No
 async def test_a_filter_that_finds_nothing_offers_to_clear_it(
     show: Any, focused: list[ft.TextField]
 ) -> None:
+    """A filter that finds nothing says so, and its button clears it.
+
+    The field is emptied and takes the focus, and all 24 projects come back.
+    """
     shown = await show()
     await shown.type("zzz")
     assert shown.listed == []
@@ -317,6 +343,7 @@ async def test_a_filter_that_finds_nothing_offers_to_clear_it(
 async def test_a_card_shows_the_logo_on_a_white_tile_over_the_initials(
     show: Any,
 ) -> None:
+    """A card's logo fits a white tile, with the initials when it cannot load."""
     shown = await show()
     arcade = card_of(shown, named("Arcade"))
     # Not one node: TalkBack read "by Darren" and the text before the name heading.
@@ -345,6 +372,7 @@ async def test_a_project_without_a_logo_shows_its_initials(show: Any) -> None:
 async def test_a_card_says_who_signed_the_project_up_when_the_feed_does(
     show: Any,
 ) -> None:
+    """A card says "by" its submitter, and a project without one has no such line."""
     arcade = named("Arcade")
     anonymous = replace(named("Pallets"), submitter="")
     shown = await show(conference=with_sprints(arcade, anonymous))
@@ -379,6 +407,10 @@ async def test_a_url_that_names_no_web_page_leaves_no_project_page(show: Any) ->
 
 
 async def test_more_shows_the_whole_description_with_its_links(show: Any) -> None:
+    """A cut description's "More" shows it whole, as Markdown with its links.
+
+    "Less" folds it back, and the toggle says which state it is in.
+    """
     beeware = named("BeeWare")
     shown = await show(conference=with_sprints(beeware))
     card = card_of(shown, beeware)
@@ -406,6 +438,7 @@ async def test_more_shows_the_whole_description_with_its_links(show: Any) -> Non
 
 
 async def test_a_short_description_has_no_more(show: Any) -> None:
+    """A short description shows whole, with no line limit and no "More"."""
     short = named("PursuedPyBear")
     shown = await show(conference=with_sprints(short))
     (text,) = [t for t in shown.find(ft.Text) if t.value == short.description_text]
@@ -436,6 +469,7 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
 
 
 async def test_a_year_without_the_pages_has_no_menu(show: Any) -> None:
+    """With neither sprint page there is no menu; with the form alone, it has that."""
     shown = await show(year=year_with(sprints_url="", sprint_submit_url=""))
     assert shown.find(ft.PopupMenuButton) == []
     only_form = await show(year=year_with(sprints_url=""))
@@ -444,6 +478,10 @@ async def test_a_year_without_the_pages_has_no_menu(show: Any) -> None:
 
 
 async def test_no_projects_yet_offers_the_form_and_no_filter(show: Any) -> None:
+    """With no projects there is no filter, and a button opens the project form.
+
+    The sprint days still show; a year without the form has no button.
+    """
     shown = await show(conference=with_sprints())
     assert shown.node("sprints.none").live_region
     assert shown.find(ft.TextField) == []  # nothing to filter
@@ -524,6 +562,7 @@ async def test_the_sprints_row_keeps_its_community_heading(show: Any) -> None:
 
 
 async def test_a_year_without_sprints_has_no_sprints_row(show: Any) -> None:
+    """Without projects or sprint days, the Tracks hub has no Sprints row."""
     data: ConferenceData = replace(DATA, sprints=())
     shown = await show(
         hub_screen.Tracks,
@@ -534,6 +573,7 @@ async def test_a_year_without_sprints_has_no_sprints_row(show: Any) -> None:
 
 
 def test_the_sprints_row_says_what_it_knows() -> None:
+    """The Sprints row gives its days and project count, either alone, or nothing."""
     assert hub_screen.sprints_marks(INFO, 24) == (
         "May 18–19 · 24 projects",
         "May 18 to 19, 24 projects",

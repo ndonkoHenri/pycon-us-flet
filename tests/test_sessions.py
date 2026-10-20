@@ -77,6 +77,7 @@ async def open_screen(
 
 
 async def tap_star(shown: Shown, session_id: str) -> None:
+    """Tap the star on ``session_id``'s row of ``shown``."""
     star = shown.node(f"test.favorite.{session_id}").content
     assert isinstance(star, ft.IconButton)
     await shown.click(star)
@@ -85,6 +86,7 @@ async def tap_star(shown: Shown, session_id: str) -> None:
 async def test_each_open_screen_counts_only_its_own_row_bodies(
     open_screen: Open,
 ) -> None:
+    """A star tap on one of two open screens records a row body on that screen alone."""
     first = await open_screen("first")
     second = await open_screen("second")
     assert sorted(first.rows) == sorted(LIST)
@@ -103,6 +105,7 @@ async def test_each_open_screen_counts_only_its_own_row_bodies(
 async def test_each_open_screen_has_its_own_titles_and_view_path(
     open_screen: Open,
 ) -> None:
+    """Two open screens keep their own titles and View paths through a star tap."""
     first = await open_screen("first")
     second = await open_screen("second")
     assert first.titles == ["first at /first, 0 saved"]
