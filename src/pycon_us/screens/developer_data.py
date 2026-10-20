@@ -22,7 +22,6 @@ from flet.utils import is_embedded
 
 from pycon_us import clock
 from pycon_us.favorites import Favorites, use_favorites
-from pycon_us.feed_refresh import Problem
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
@@ -30,7 +29,7 @@ from pycon_us.services import Services, changes_file, use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line
+from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line, refreshed
 from pycon_us.ui.share import report_subtitle, share_console_log
 from pycon_us.ui.status_strip import schedule_line, use_minute
 
@@ -236,19 +235,3 @@ async def reset_app(
     complete = cleared and deleted and log_deleted
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete
-
-
-def refreshed(problem: Problem | None) -> Outcome:
-    """Return what Refresh now says once its refresh has ended (D-146).
-
-    Args:
-        problem: ``Conference.problem`` after it: None when it published the feed.
-    """
-    if problem is None:
-        return ("Schedule updated from the feed.", True)
-    if problem == "offline":
-        return ("No answer from the feed: the app keeps the schedule it has.", False)
-    return (
-        "The feed's answer couldn't be used: the app keeps the schedule it has.",
-        False,
-    )

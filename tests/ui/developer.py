@@ -15,7 +15,7 @@ from flet.testing.remote_tester import RemoteTester
 
 from pycon_us.config import load_year
 from pycon_us.screens.about_app import UNLOCK_TAPS
-from pycon_us.screens.developer_data import refreshed
+from pycon_us.ui.actions import refreshed
 from tests.ui.helpers import (
     enter_text_id,
     open_tab,

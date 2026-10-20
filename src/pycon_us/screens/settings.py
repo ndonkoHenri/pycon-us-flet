@@ -1,12 +1,14 @@
-"""Settings (``/more/settings``): Appearance and its High contrast switch (THEME-01).
+"""Settings (``/more/settings``): Appearance, High contrast and Data (THEME-01, P2-62).
 
 Two Material controls instead of Ionic's four-mode Cupertino sheet, both following the
 OS until the user chooses otherwise (D-23, ux.md §6.9): the System, Light and Dark
 radio rows, which More held until this page existed (D-169), and a High contrast
 switch, which shows the OS flag until it is switched against it (D-286). A choice
 applies at once and is saved with ``Prefs.save()``; one that cannot be saved still
-applies for the session, and a SnackBar says so (D-120). Reminders (#27) and Data
-(P2-62) join the page with their issues. More pushes it, so Back returns there (D-17).
+applies for the session, and a SnackBar says so (D-120). Then Data, the schedule's
+source and age with Refresh now, and the zone the times are in (``settings_data.py``).
+Reminders (#27) join the page with their issue. More pushes it, so Back returns there
+(D-17).
 """
 
 from typing import cast
@@ -14,6 +16,7 @@ from typing import cast
 import flet as ft
 
 from pycon_us.prefs import Appearance, use_prefs
+from pycon_us.screens.settings_data import DataSection
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.favorite import NOT_SAVED
@@ -36,12 +39,12 @@ FOLLOWS_DEVICE = "Follows your device setting"
 RADIO_WIDTH = 48
 """A ``Radio``'s width with its padded 48 dp tap target, the leading slot of
 Appearance's rows. The switch row's icon gets a slot this wide, since a bare 24 dp
-icon would start its title 24 dp left of theirs (#503's review)."""
+icon would start its title 24 dp left of theirs (#503's review). Data's icons get it too."""
 
 
 @ft.component
 def Settings() -> ft.View:
-    """The Settings page: Appearance's three rows and the High contrast switch."""
+    """The Settings page: Appearance's three rows, the High contrast switch and Data."""
     page = ft.context.page
     svc = use_services()
     prefs = use_prefs()
@@ -67,6 +70,7 @@ def Settings() -> ft.View:
                     follows_device=prefs.high_contrast == "system",
                     on_change=switch_high_contrast,
                 ),
+                DataSection(RADIO_WIDTH),
             ],
             expand=True,
         ),
