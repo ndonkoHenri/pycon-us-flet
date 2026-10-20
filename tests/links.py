@@ -116,7 +116,12 @@ async def open_at(
     ``page.navigate`` becomes what Flutter does next: the route changes and the page
     hears of it (``Shown.go()``). ``memory`` passes a ``ViewMemory`` that an earlier
     session of the process left (D-143, F29).
+
+    The status strip's automatic refresh (D-40) never starts: Now and Schedule would
+    fetch the real feed, which tests never do (#539); the strip's refreshes are
+    ``test_status_strip_ticks.py``'s.
     """
+    monkeypatch.setattr(Conference, "start_refresh_if_due", lambda *_, **__: None)
     async with AsyncExitStack() as stack:
 
         async def open_(location: str, **kwargs: Any) -> Shown:
