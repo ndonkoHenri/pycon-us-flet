@@ -1,6 +1,7 @@
 """Tests for the themes, tokens, badges and Markdown style sheet.
 
-D-22..D-26, D-33, D-113, D-116.
+D-22..D-26, D-33, D-113, D-116. The high-contrast schemes have
+tests/test_high_contrast.py.
 """
 
 import ast
@@ -312,17 +313,6 @@ def test_dark_overlay_style_has_light_icons() -> None:
         system_navigation_bar_icon_brightness=ft.Brightness.LIGHT,
         status_bar_brightness=ft.Brightness.DARK,
         enforce_system_navigation_bar_contrast=False,
-    )
-
-
-@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
-def test_high_contrast_uses_the_standard_scheme_until_p2(dark: bool) -> None:
-    """High contrast builds the standard theme and tokens, until P2."""
-    assert theme.build_theme(dark=dark, high_contrast=True) == theme.build_theme(
-        dark=dark, high_contrast=False
-    )
-    assert theme.build_tokens(dark=dark, high_contrast=True) == theme.build_tokens(
-        dark=dark, high_contrast=False
     )
 
 
