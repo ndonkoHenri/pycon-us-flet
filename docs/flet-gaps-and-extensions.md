@@ -698,7 +698,7 @@ class GroupedListView(ft.LayoutControl):
 #                            animation_duration: Optional[ft.DurationValue] = None) -> None: ...
 ```
 
-`set_transform` is the inverse of `get_transform()`: the content's scale, and its top-left corner at `offset` in the viewer, in logical pixels. `zoom_to_rect` fits a rectangle of the content (in its laid-out coordinates) in the viewport less `padding`, centred. Both clamp the scale to `[min_scale, max_scale]` and the covering scale, and the translation to the boundary. **Upgrade:** the expo map calls `zoom_to_rect(booth_rect, animation_duration=prefs.motion_ms(...))`, which jumps under reduced motion (D-173), and a pane restores its remembered view with `set_transform()`.
+`set_transform` is the inverse of `get_transform()` (the same matrix, so a round trip is exact): the content's scale and, with no `alignment` set (the default), its top-left corner at `offset` in the viewer, in logical pixels. `alignment` makes Flutter's `Transform` apply the matrix about that point (Flutter `interactive_viewer.dart:1061`, `:1076`); these offsets and `zoom_to_rect`'s centring ignore it, as the existing clamps and Flutter's gestures do. `zoom_to_rect` fits a rectangle of the content (in its laid-out coordinates) in the viewport less `padding`, centred at the scale it ends at. Both clamp the scale to `[min_scale, max_scale]` and the covering scale, and the translation to the boundary. **Upgrade:** the expo map calls `zoom_to_rect(booth_rect, animation_duration=prefs.motion_ms(...))`, which jumps under reduced motion (D-173), and a pane restores its remembered view with `set_transform()`.
 
 ### 5.8 U9: `ft.use_route_search()` (later; XS)
 
