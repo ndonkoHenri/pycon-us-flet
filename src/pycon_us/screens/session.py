@@ -6,8 +6,10 @@ has a public page, and Add to calendar on every session that can be saved (SESS-
 D-272); a break or a notice has neither, so it has no overflow (D-60), and an unknown or
 removed session gets no Add to calendar (D-186). An open space's page is its entry on
 the site's open-spaces page, which its detail shows as a link in the page instead
-(SESS-11, D-206). The page's heading is the title under
-the badges, so the app bar's title stays empty. Then the "When and where" card
+(SESS-11, D-206).
+
+The page's heading is the title under the badges, so the app bar's title stays empty.
+Then the "When and where" card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
