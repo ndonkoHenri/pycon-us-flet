@@ -1,9 +1,9 @@
 """Tests for the link rule (INFO-14, ux.md §4.7): ``ui.links``.
 
 What a target is and how it opens, Copy for phone numbers, addresses and any other
-text (``copy_text()``, D-263), and how a failure is said and logged. The helpers run with a fake page bound as Flet binds a
-session's page and the in-memory launcher and clipboard (``tests/fakes.py``); the rows
-that use them are tested in ``test_rows.py``.
+text (``copy_text()``, D-263), and how a failure is said and logged. The helpers run
+with a fake page bound as Flet binds a session's page and the in-memory launcher and
+clipboard (``tests/fakes.py``); the rows that use them are tested in ``test_rows.py``.
 """
 
 import logging

@@ -7,8 +7,9 @@ registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces 
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
 (D-217), the info pages in ``year_info`` (D-263). The dataclasses are the schema: an
 unknown or missing key, a wrong type or a broken rule fails at load time with a
-``YearDataError`` that names the file, the key and the problem. Years, dates, names and URLs live in the data files, never in code; rolling
-over is a new ``data/<year>/`` folder and a new ``YEAR``.
+``YearDataError`` that names the file, the key and the problem. Years, dates, names and
+URLs live in the data files, never in code; rolling over is a new ``data/<year>/`` folder
+and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).

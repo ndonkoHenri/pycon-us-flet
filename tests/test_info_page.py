@@ -112,7 +112,7 @@ def test_the_feed_block_is_the_feed_s_markdown_in_the_gutter(
     feed_block: Callable[[ConferenceData | None, str], ft.Control],
     feed_2026: ConferenceData,
 ) -> None:
-    """The fallback is the feed's block as the app's selectable Markdown, 16 dp in."""
+    """The fallback is the feed's block as the app's selectable, linked Markdown, 16 dp in."""
     node = feed_block(feed_2026, "wifi")
     assert isinstance(node, ft.Semantics) and node.identifier == "wifi.feed"
     inset = node.content
@@ -123,6 +123,7 @@ def test_the_feed_block_is_the_feed_s_markdown_in_the_gutter(
     assert text.value == feed_2026.content_md["wifi"]
     assert "PyConUS26" in text.value  # the network the 2026 feed names
     assert text.selectable and text.md_style_sheet is MARKDOWN_STYLE  # D-116
+    assert text.on_tap_link is not None  # links open by D-197's rule (feed_markdown())
 
 
 @pytest.mark.parametrize("blank", ["", "  \n"])
