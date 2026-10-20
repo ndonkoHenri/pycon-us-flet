@@ -27,6 +27,7 @@ INTERVAL = 0.01
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
+    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -43,15 +44,18 @@ class Ticks:
     """Counts the calls of ``run_every``'s action, and says when a count is reached."""
 
     def __init__(self) -> None:
+        """Start at no call, with no count awaited."""
         self.count = 0
         self._reached: dict[int, asyncio.Event] = {}
 
     def __call__(self) -> None:
+        """Count one call, and wake whoever waits for this count."""
         self.count += 1
         if (event := self._reached.get(self.count)) is not None:
             event.set()
 
     async def reach(self, count: int) -> None:
+        """Wait until the action has been called ``count`` times."""
         if self.count >= count:
             return
         event = self._reached.setdefault(count, asyncio.Event())
@@ -60,17 +64,20 @@ class Ticks:
 
 
 async def stopped(task: asyncio.Task[None]) -> None:
+    """Cancel ``task`` and wait until it has ended cancelled."""
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
 
 
 def test_a_session_starts_in_the_foreground(svc: Services) -> None:
+    """New services start in the foreground and not closed."""
     assert svc.foreground.is_set()
     assert not svc.closed.is_set()
 
 
 async def test_it_calls_at_once_then_after_each_interval(svc: Services) -> None:
+    """The action runs once at the start, then again after each interval."""
     ticks = Ticks()
     task = asyncio.create_task(svc.run_every(INTERVAL, ticks))
     await asyncio.sleep(0)
@@ -80,6 +87,7 @@ async def test_it_calls_at_once_then_after_each_interval(svc: Services) -> None:
 
 
 async def test_cancelling_its_task_stops_the_calls(svc: Services) -> None:
+    """Once its task is cancelled, the action is not called again."""
     ticks = Ticks()
     task = asyncio.create_task(svc.run_every(INTERVAL, ticks))
     await ticks.reach(2)
@@ -92,6 +100,7 @@ async def test_cancelling_its_task_stops_the_calls(svc: Services) -> None:
 async def test_in_the_background_it_waits_and_catches_up_on_resume(
     svc: Services,
 ) -> None:
+    """In the background the action waits, and on resume it runs at once."""
     ticks = Ticks()
     task = asyncio.create_task(svc.run_every(INTERVAL, ticks))
     await ticks.reach(1)
@@ -107,6 +116,7 @@ async def test_in_the_background_it_waits_and_catches_up_on_resume(
 
 
 async def test_it_returns_when_the_session_closes(svc: Services) -> None:
+    """Closing the session ends the loop at once, without waiting out the interval."""
     ticks = Ticks()
     task = asyncio.create_task(svc.run_every(60, ticks))
     await ticks.reach(1)
@@ -118,6 +128,7 @@ async def test_it_returns_when_the_session_closes(svc: Services) -> None:
 async def test_a_session_closed_in_the_background_ends_its_waiting_loop(
     svc: Services,
 ) -> None:
+    """Closing a session paused in the background ends its loop with no call made."""
     ticks = Ticks()
     svc.foreground.clear()
     task = asyncio.create_task(svc.run_every(INTERVAL, ticks))

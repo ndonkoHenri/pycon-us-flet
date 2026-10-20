@@ -89,11 +89,12 @@ class Room(sessions.Shown):
 
     @property
     def tabs(self) -> ft.Tabs:
+        """The screen's one ``Tabs``, the day tabs."""
         (found,) = self.find(ft.Tabs)
         return found
 
     def anchor(self) -> ft.Container:
-        """The highlighted row's ``ScrollKey``: an empty anchor at the top of its box."""
+        """The highlighted row's ``ScrollKey``: an empty anchor atop its box."""
         (found,) = [
             c for c in self.find(ft.Container) if isinstance(c.key, ft.ScrollKey)
         ]
@@ -124,7 +125,7 @@ class Room(sessions.Shown):
         await self.settle()
 
     async def fade(self) -> None:
-        """End the highlight's wait, as its time passing would, and see the row unlit."""
+        """End the highlight's wait, as its time passing would; see the row unlit."""
         await self.sleeps.release()
         await self.until(lambda: self.lit_box().bgcolor == room_days.UNLIT)
 
@@ -146,7 +147,12 @@ type Render = Callable[..., Awaitable[Room]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return render(route, ...): ``RoomDetail`` for ``ROOM`` opened at ``route``."""
+    """Yield a function that opens ``RoomDetail`` at a route and returns its ``Room``.
+
+    The room is ``ROOM`` unless ``slug`` names another; the clock, reduced motion, the
+    view memory and the feed can be set too. The screen's sleeps are held and its
+    scrolls recorded.
+    """
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the room module's name only
 
@@ -215,6 +221,7 @@ def highlighted(session_id: str) -> str:
 
 
 def phrase_of(room: Room, session_id: str) -> str:
+    """Return the spoken phrase of the session's row in the room."""
     return str(room.node(f"room.session.{session_id}").label)
 
 
@@ -222,6 +229,7 @@ def phrase_of(room: Room, session_id: str) -> str:
 
 
 def test_the_highlight_names_one_of_the_room_s_sessions() -> None:
+    """The highlight is the query's id only when it names one of the room's sessions."""
     data = processed(2026)
     room = data.rooms[ROOM]
     assert screen.highlight_of({"highlight": TACHYON}, room) == TACHYON
@@ -233,7 +241,10 @@ def test_the_highlight_names_one_of_the_room_s_sessions() -> None:
 
 
 def test_the_highlight_compares_ids_as_strings() -> None:
-    """Ionic compared a number with a string, so its highlight never showed (ROOM-03)."""
+    """The highlight matches the session's id as a string: "31" does, "031" does not.
+
+    Ionic compared a number with a string, so its highlight never showed (ROOM-03).
+    """
     room = processed(2026).rooms[ROOM]
     query = query_of(highlighted(TACHYON))
     assert query == {"highlight": "31"}
@@ -242,7 +253,10 @@ def test_the_highlight_compares_ids_as_strings() -> None:
 
 
 def test_a_quoted_synthetic_id_reaches_the_room_whole() -> None:
-    """A break's id holds spaces and colons (D-42); the tile quotes it, the query unquotes."""
+    """A break's quoted id, spaces and colons included, highlights that break.
+
+    A break's id holds spaces and colons (D-42); the tile quotes it, the query unquotes.
+    """
     data = processed(2026)
     coffee = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
     query = query_of(f"/map/room/expo-hall-ab?highlight={quote(coffee, safe='')}")
@@ -261,6 +275,7 @@ def test_a_quoted_synthetic_id_reaches_the_room_whole() -> None:
 def test_the_room_opens_on_the_row_s_day_else_today_else_its_first_day(
     highlighted_day: date | None, current: date, expected: date
 ) -> None:
+    """The room opens on the highlighted row's day, else today, else its first day."""
     days = [date(2026, 5, 15), date(2026, 5, 16), date(2026, 5, 17)]
     assert screen.opening_day(days, highlighted_day, current) == expected
 
@@ -268,6 +283,10 @@ def test_the_room_opens_on_the_row_s_day_else_today_else_its_first_day(
 async def test_opened_from_a_session_the_room_shows_its_day_and_scrolls_to_it_once(
     render: Render,
 ) -> None:
+    """Opened with a highlight, the room shows the row's day and scrolls to it once.
+
+    The scroll takes 400 ms, and the view memory records the highlight for the View.
+    """
     room = await render(highlighted(TACHYON))
     assert room.tabs.selected_index == 1  # Friday, Saturday, Sunday
     assert room.scrolls == [Scroll("session-31", 400)]
@@ -275,7 +294,10 @@ async def test_opened_from_a_session_the_room_shows_its_day_and_scrolls_to_it_on
 
 
 async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> None:
-    """``scroll_to`` reaches only a built item (F32): that list is built in full (D-154)."""
+    """Only the highlighted day's list is built in full and listens to its scroll.
+
+    ``scroll_to`` reaches only a built item (F32): that list is built in full (D-154).
+    """
     room = await render(highlighted(TACHYON))
     lists = room.day_lists()
     assert [lst.cache_extent for lst in lists] == [
@@ -287,6 +309,10 @@ async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> 
 
 
 async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
+    """The row is lit at once, stays lit while its wait runs, then fades.
+
+    The box animates over 250 ms, and the wait, ``HIGHLIGHT_S``, is asked for once.
+    """
     room = await render(highlighted(TACHYON))
     box = room.lit_box()
     anchor = room.anchor()
@@ -333,6 +359,7 @@ def _inside(node: ft.Control, ancestor: ft.Control) -> bool:
 
 
 async def test_a_row_that_shares_its_slot_is_lit_alone(render: Render) -> None:
+    """Of two rows in one slot, only the highlighted one is inside the lit box."""
     first, other = SHARED_SLOT
     room = await render(
         highlighted(first),  # the fixture's View path; the slug is what counts
@@ -348,6 +375,7 @@ async def test_a_row_that_shares_its_slot_is_lit_alone(render: Render) -> None:
 async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes(
     render: Render,
 ) -> None:
+    """Under reduced motion the scroll jumps (0 ms), and the lit box is not animated."""
     room = await render(highlighted(TACHYON), reduce_motion=True)
     assert room.scrolls == [Scroll("session-31", 0)]
     assert room.lit_box().bgcolor == room_days.HIGHLIGHT
@@ -358,7 +386,10 @@ async def test_under_reduced_motion_the_scroll_jumps_and_the_highlight_just_goes
 
 
 async def test_a_re_render_does_not_scroll_again(render: Render) -> None:
-    """A star tap, a refresh, Back from a detail: the effect ran once (D-18)."""
+    """A re-render after a star tap scrolls no more: the room scrolled once.
+
+    A star tap, a refresh, Back from a detail: the effect ran once (D-18).
+    """
     room = await render(highlighted(TACHYON))
     await room.favorites.toggle(room.storage, HUMANS)
     await room.wait(0.1)
@@ -368,9 +399,10 @@ async def test_a_re_render_does_not_scroll_again(render: Render) -> None:
 async def test_a_view_rebuilt_in_a_new_session_does_not_scroll_or_light_up(
     render: Render,
 ) -> None:
-    """D-143: a replaced session's View never unmounts (F30); its successor finds it.
+    """A View rebuilt in a new session opens on the row's day, without scroll or light.
 
-    It still opens on the session's day, Sunday, where the user came for it.
+    D-143: a replaced session's View never unmounts (F30); its successor finds it. It
+    still opens on the session's day, Sunday, where the user came for it.
     """
     first = await render(highlighted(SUNDAY_TALK))
     again = await render(highlighted(SUNDAY_TALK), memory=first.memory)
@@ -385,6 +417,7 @@ async def test_a_view_rebuilt_in_a_new_session_does_not_scroll_or_light_up(
 async def test_after_leaving_the_room_the_next_room_tile_highlights_again(
     render: Render,
 ) -> None:
+    """Back forgets the highlight, so the room opened again scrolls to the row again."""
     room = await render(highlighted(TACHYON))
     await room.fade()
     await room.show(False)  # Back pops the room: it forgets its highlight
@@ -397,6 +430,7 @@ async def test_after_leaving_the_room_the_next_room_tile_highlights_again(
 async def test_without_a_highlight_nothing_scrolls_and_today_shows(
     render: Render,
 ) -> None:
+    """Without a highlight, today shows; nothing scrolls, lights or is built in full."""
     room = await render(VIEW)
     assert room.scrolls == []
     assert room.tabs.selected_index == 1  # the clock says Saturday
@@ -412,6 +446,7 @@ async def test_without_a_highlight_nothing_scrolls_and_today_shows(
 async def test_a_highlight_of_another_room_s_session_is_ignored(
     render: Render,
 ) -> None:
+    """A highlight of another room's session neither scrolls nor is remembered."""
     room = await render(highlighted("191"))  # a tutorial in Room 102C
     assert room.scrolls == []
     assert room.memory.room_highlights == {}
@@ -419,7 +454,11 @@ async def test_a_highlight_of_another_room_s_session_is_ignored(
 
 @pytest.mark.parametrize("dark", [False, True])
 def test_the_lit_row_s_text_keeps_its_contrast(dark: bool) -> None:
-    """Dark ``primary_container`` put the supporting text at 3.7:1 (D-194)."""
+    """On the lit fill both text colours keep 4.5:1, and the fill shows on the surface.
+
+    In light and in dark: dark ``primary_container`` put the supporting text at 3.7:1
+    (D-194).
+    """
     scheme = DARK_SCHEME if dark else LIGHT_SCHEME
     fill = _blend(str(scheme.primary), str(scheme.surface), room_days.HIGHLIGHT_OPACITY)
     for text in (scheme.on_surface, scheme.on_surface_variant):
@@ -428,6 +467,7 @@ def test_the_lit_row_s_text_keeps_its_contrast(dark: bool) -> None:
 
 
 def _blend(color: str, under: str, opacity: float) -> str:
+    """Return ``color`` at ``opacity`` over ``under``, as ``#RRGGBB``."""
     channels = [
         round(
             opacity * int(color[i : i + 2], 16)
@@ -444,6 +484,7 @@ def _blend(color: str, under: str, opacity: float) -> str:
 async def test_one_tab_per_day_the_room_has_sessions_today_marked(
     render: Render,
 ) -> None:
+    """The room has one tab per day it has sessions, and today's says "today"."""
     room = await render(VIEW)
     labels = [str(room.node(f"room.day_tab.{i}").content) for i in range(3)]
     assert len(room.nodes("room.day_tab.3")) == 0
@@ -482,11 +523,13 @@ async def test_the_room_s_rows_leave_out_its_name(render: Render) -> None:
 
 
 async def test_a_row_given_elsewhere_keeps_its_place(render: Render) -> None:
+    """A row for a session given in another room still names that room."""
     room = await render(VIEW)
     assert "Pacific Ballroom - Arena" in phrase_of(room, LIGHTNING)
 
 
 async def test_a_row_pushes_its_session_on_top_of_the_room(render: Render) -> None:
+    """Tapping a row pushes its session's detail on top of the room's View."""
     room = await render(VIEW)
     tap = room.node(f"room.session.{HUMANS}")
     box = next(c for c in room.session.index.values() if _holds(c, tap))
@@ -496,6 +539,7 @@ async def test_a_row_pushes_its_session_on_top_of_the_room(render: Render) -> No
 
 
 def _holds(control: Any, node: ft.Semantics) -> bool:
+    """Whether ``control`` is the tappable ``Container`` right around ``node``."""
     return (
         isinstance(control, ft.Container)
         and control.on_click is not None
@@ -509,6 +553,11 @@ def _holds(control: Any, node: ft.Semantics) -> bool:
 async def test_now_in_this_room_names_the_session_on_and_opens_it(
     render: Render,
 ) -> None:
+    """Now in this room names the session on, with its time, and a tap opens it.
+
+    The title wraps at three lines, and the section's heading is level 3, in the day
+    beside its slots (D-211).
+    """
     room = await render(VIEW, now=SATURDAY_MORNING)
     now = room.node("room.now")
     tile = cast(ft.ListTile, now.content)
@@ -528,7 +577,10 @@ async def test_now_in_this_room_names_the_session_on_and_opens_it(
 
 
 async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
-    """Else the day's first slot reads as the section's second item (D-194)."""
+    """Now in this room ends with a divider, inside today's list.
+
+    Else the day's first slot reads as the section's second item (D-194).
+    """
     room = await render(VIEW, now=SATURDAY_MORNING)
     today = room.day_lists()[1]
     # The outermost column between the tile and today's list: NowInRoom's own.
@@ -545,7 +597,11 @@ async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
 async def test_now_in_this_room_says_where_a_streamed_session_is_given(
     render: Render,
 ) -> None:
-    """Time and place are two texts in a wrapping row, as a row's meta (D-184)."""
+    """For a streamed session, Now in this room says the room it is given in.
+
+    Time and place are two texts in a wrapping row, as a row's meta (D-184), spoken as
+    one phrase.
+    """
     room = await render(VIEW, now=datetime(2026, 5, 16, 8, 30, tzinfo=PACIFIC))
     tile = cast(ft.ListTile, room.node("room.now").content)
     subtitle = cast(ft.Control, tile.subtitle)
@@ -563,6 +619,7 @@ async def test_now_in_this_room_says_where_a_streamed_session_is_given(
 async def test_with_several_on_the_latest_is_named_and_the_rest_counted(
     render: Render,
 ) -> None:
+    """With two sessions on, Now in this room names the latest and counts the other."""
     room = await render(
         "/map/room/room-102c",
         slug="room-102c",
@@ -577,7 +634,10 @@ async def test_with_several_on_the_latest_is_named_and_the_rest_counted(
 
 
 async def test_now_in_this_room_heads_today_s_list_only(render: Render) -> None:
-    """It scrolls away with today's slots, so at large text they keep the screen."""
+    """Now in this room heads today's list only, whichever day shows.
+
+    It scrolls away with today's slots, so at large text they keep the screen.
+    """
     room = await render(highlighted(SUNDAY_TALK))  # Sunday shows; today is Saturday
     heads = [lst.controls[0] for lst in room.day_lists()]
     assert [isinstance(head, ft.Component) for head in heads] == [False, True, False]
@@ -587,7 +647,10 @@ async def test_now_in_this_room_heads_today_s_list_only(render: Render) -> None:
 async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The Developer fake clock moves it, with no touch (D-175, D-187)."""
+    """On the minute tick, Now in this room goes when a talk ends, then names the next.
+
+    The Developer fake clock moves it, with no touch (D-175, D-187).
+    """
     monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     room = await render(VIEW, now=SATURDAY_MORNING)
     assert len(room.nodes("room.now")) == 1
@@ -602,7 +665,10 @@ async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
 async def test_the_minute_tick_re_renders_only_now_in_this_room(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A leaf component on ``use_minute()``: the day lists are not built again (D-194)."""
+    """A minute tick re-renders Now in this room without building the day lists again.
+
+    It is a leaf component on ``use_minute()`` (D-194).
+    """
     monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     built: list[int] = []
     original = room_days.day_list
@@ -631,6 +697,7 @@ async def test_the_minute_tick_re_renders_only_now_in_this_room(
 async def test_with_nothing_on_there_is_no_now_section(
     render: Render, now: datetime
 ) -> None:
+    """Between talks, before the conference and off season, there is no Now section."""
     room = await render(VIEW, now=now)
     assert room.nodes("room.now") == []
     assert not any(
@@ -645,6 +712,7 @@ async def test_with_nothing_on_there_is_no_now_section(
 async def test_an_unknown_room_names_the_thing_and_offers_the_rooms(
     render: Render,
 ) -> None:
+    """An unknown room shows Not found, and its All rooms button opens the Map."""
     room = await render("/map/room/bogus", slug="bogus")
     assert room.titles[-1] == "Not found"
     state = room.node("room.not_found")

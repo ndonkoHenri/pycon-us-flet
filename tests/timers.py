@@ -21,15 +21,17 @@ class HeldSleeps:
     """
 
     def __init__(self) -> None:
+        """Start with no sleep asked for and none held."""
         self.asked: list[float] = []
         """The delay of each sleep the module started, in order."""
         self._held: list[asyncio.Event] = []
 
     def __getattr__(self, name: str) -> Any:
+        """Return ``asyncio``'s own attribute for anything but ``sleep``."""
         return getattr(asyncio, name)
 
     async def sleep(self, delay: float) -> None:
-        """Record ``delay``, then wait until ``release()``; a cancel ends it as usual."""
+        """Record ``delay``, then wait for ``release()``; a cancel ends it as usual."""
         self.asked.append(delay)
         released = asyncio.Event()
         self._held.append(released)

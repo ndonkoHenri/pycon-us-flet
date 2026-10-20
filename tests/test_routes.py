@@ -64,6 +64,7 @@ def drill_params(location: str) -> list[tuple[str, str]]:
 
 
 def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
+    """A chain of drills stacks one View per level, each with its own kind and id."""
     assert view_levels("/schedule/session/42/speaker/17/session/99") == [
         ("Schedule", "/schedule", {}),
         ("Drill", "/schedule/session/42", {"kind": "session", "ident": "42"}),
@@ -120,6 +121,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
 def test_every_route_shape_stacks_its_screens(
     location: str, screens: list[str]
 ) -> None:
+    """Each route shape stacks the screens it names, from the tab root up."""
     assert [name for name, _, _ in view_levels(location)] == screens
 
 
@@ -150,6 +152,7 @@ def test_every_route_shape_stacks_its_screens(
 def test_each_drill_level_reads_its_own_pair(
     location: str, levels: list[tuple[str, str]]
 ) -> None:
+    """Each drill level reads its own kind and unquoted id, whatever came before."""
     assert drill_params(location) == levels
 
 
@@ -160,10 +163,12 @@ def test_each_drill_level_reads_its_own_pair(
 def test_an_unknown_location_matches_nothing_so_the_router_shows_not_found(
     location: str,
 ) -> None:
+    """An unknown location matches no route, so the Router shows Not found."""
     assert _match_routes(ROUTES, location) is None
 
 
 def test_the_drill_takes_every_kind_and_nothing_else() -> None:
+    """The drill's path accepts exactly the drill kinds, each matched in order."""
     assert DRILL.path == ":kind(session|speaker|room|sponsor|plan)/:ident"
     assert [kind for kind, _ in drill_params(f"/now/{'/1/'.join(DRILL_KINDS)}/1")] == [
         *DRILL_KINDS
@@ -196,6 +201,7 @@ def drill_screen(monkeypatch: pytest.MonkeyPatch, kind: str) -> object:
 def test_each_drill_kind_opens_its_own_screen_with_the_unquoted_id(
     monkeypatch: pytest.MonkeyPatch, kind: str
 ) -> None:
+    """Each drill kind opens its own screen, given the id unquoted."""
     name, argument = DRILL_SCREENS[kind]
     assert drill_screen(monkeypatch, kind) == (name, {argument: "a/b"})
 
@@ -203,11 +209,16 @@ def test_each_drill_kind_opens_its_own_screen_with_the_unquoted_id(
 def test_a_drill_kind_without_a_screen_is_an_error_not_another_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A drill kind with no screen raises ``ValueError`` naming it."""
     with pytest.raises(ValueError, match="'poster'"):
         drill_screen(monkeypatch, "poster")
 
 
 def page_paths(routes: list, prefix: str = "") -> set[str]:
+    """Return the path of every page under ``routes``, joined to ``prefix``.
+
+    Index routes and the drill are skipped; a path may still hold a parameter.
+    """
     paths: set[str] = set()
     for route in routes:
         if route is DRILL or route.index:
@@ -218,6 +229,7 @@ def page_paths(routes: list, prefix: str = "") -> set[str]:
 
 
 def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None:
+    """``PAGES`` is every route without a parameter, and holds every tab root."""
     assert {path for path in page_paths(ROUTES) if ":" not in path} == PAGES
     assert set(TAB_ROOTS) <= PAGES
 
@@ -253,10 +265,12 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
     ],
 )
 def test_back_goes_one_step_up(location: str, parent: str) -> None:
+    """Back goes one step up: one drill level, a page, or a tab root to Start."""
     assert parent_of(location) == parent
 
 
 def test_back_from_search_results_walks_back_through_search_to_its_opener() -> None:
+    """Back from a search result walks back through Search to its opener, query kept."""
     base = "/map/room/hall-a?highlight=42"  # the opener, its query kept (D-19)
     result = "/search/speaker/17/session/42"
     assert parent_of(result, base) == "/search/speaker/17"
@@ -269,6 +283,7 @@ def test_back_from_search_results_walks_back_through_search_to_its_opener() -> N
 
 
 def test_drill_href_quotes_the_whole_id_into_one_segment() -> None:
+    """``drill_href`` quotes the whole id, slashes included, into one path segment."""
     assert drill_href("/now", "session", "poster detail+1") == (
         "/now/session/poster%20detail%2B1"
     )
@@ -289,6 +304,7 @@ VIEW_PATHS = st.sampled_from(
 def test_any_id_round_trips_through_its_link_and_back(
     view_path: str, kind: str, ident: str
 ) -> None:
+    """Any id reads back whole from its link, whose parent is the View it came from."""
     location = drill_href(view_path, kind, ident)
     assert drill_params(location)[-1] == (kind, ident)
     assert parent_of(location) == view_path
@@ -309,6 +325,7 @@ def test_any_id_round_trips_through_its_link_and_back(
     ],
 )
 def test_query_of_reads_the_view_options(location: str, options: dict) -> None:
+    """``query_of`` reads a location's options, unquoted, the last of a repeated key."""
     assert query_of(location) == options
 
 
@@ -327,6 +344,7 @@ def test_query_of_reads_the_view_options(location: str, options: dict) -> None:
     ],
 )
 def test_only_the_last_view_a_location_builds_is_the_top_one(location: str) -> None:
+    """Of the Views a location stacks, only the last is the top one."""
     path = location.split("?")[0].rstrip("/") or "/"
     paths = [view_path for _, view_path, _ in view_levels(path)]
     assert [is_top_view(location, view_path) for view_path in paths] == [
@@ -337,8 +355,11 @@ def test_only_the_last_view_a_location_builds_is_the_top_one(location: str) -> N
 
 @pytest.mark.parametrize("below", ["/map", "/schedule/session/42", "/"])
 def test_under_the_global_search_only_search_is_the_top_view(below: str) -> None:
-    # The Router renders the Views below a global modal at the opener's location, or
-    # at "/" (Start) when /search is entered directly; neither is the top View.
+    """Under the global Search, only Search is the top View.
+
+    The Router renders the Views below a global modal at the opener's location, or at
+    "/" (Start) when /search is entered directly; neither is the top View.
+    """
     assert not is_top_view("/search?scope=rooms", below)
     assert is_top_view("/search?scope=rooms", "/search")
 
@@ -360,4 +381,8 @@ def test_under_the_global_search_only_search_is_the_top_view(below: str) -> None
 def test_the_start_route_returns_a_new_session_to_where_the_user_was(
     last_location: str, target: str
 ) -> None:
+    """A new session starts where the user was, or on Now when there is no location.
+
+    A location under Search, a modal, goes to the page Search was opened from.
+    """
     assert start_target(last_location, "/schedule/session/42") == target

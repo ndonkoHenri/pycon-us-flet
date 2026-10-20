@@ -82,7 +82,7 @@ def pack(payload: object) -> None:
 
 
 def connection() -> Connection:
-    """Return a connection to no client; it encodes each message when ``ENCODE`` is on."""
+    """Return a connection to no client, encoding each message when ``ENCODE`` is on."""
     conn = Connection()
     conn.pubsubhub = PubSubHub()
 
@@ -179,7 +179,10 @@ def provide(
     favorites: Favorites,
     body: Callable[[], ft.Control],
 ) -> ft.Control:
-    """Return ``body`` under the store providers, in ``App``'s order, light tokens last."""
+    """Return ``body`` under the store providers, in ``App``'s order.
+
+    The light tokens' provider comes last, right around ``body``.
+    """
     return ServicesCtx(
         svc,
         lambda: ConferenceCtx(
@@ -215,17 +218,21 @@ class Shown:
 
     @property
     def launcher(self) -> MemoryLauncher:
+        """The in-memory launcher that records each URL the screen opened."""
         return cast(MemoryLauncher, self.services.launcher)
 
     @property
     def memory(self) -> ViewMemory:
+        """The view memory the screen was given."""
         return self.services.memory
 
     @property
     def storage(self) -> Storage:
+        """The storage the screen was given, writing under the test's ``tmp_path``."""
         return self.services.storage
 
     def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
+        """Return the screen's mounted controls of a type, in no set order."""
         return find(self.session, kind)
 
     def nodes(self, key: str) -> list[ft.Semantics]:
@@ -250,18 +257,22 @@ class Shown:
         return found[0]
 
     def texts(self) -> list[str]:
+        """Return the value of every mounted ``Text``, in no set order."""
         return [str(t.value) for t in self.find(ft.Text)]
 
     @property
     def snack_bars(self) -> list[ft.SnackBar]:
+        """The ``SnackBar``s in the page's dialog list, open or closed."""
         return [
             d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
         ]
 
     async def settle(self) -> None:
+        """Let handlers, store writes, effects and re-renders run to the end."""
         await settle()
 
     async def click(self, control: ft.BaseControl) -> None:
+        """Dispatch a click to ``control`` as the client would; let it run out."""
         await self.event(control, "click", None)
 
     async def event(self, control: ft.BaseControl, name: str, data: Any = None) -> None:
@@ -307,8 +318,11 @@ def _scaffold(
     on_retap: Callable[[], object] | None = None,
     fab: ft.FloatingActionButton | None = None,
 ) -> ft.Control:
-    """``AppScaffold``'s stand-in: the actions in a row, as an app bar holds them, the
-    body, and the floating button under it."""
+    """Stand in for ``AppScaffold``: the actions in a row, the body, the button under.
+
+    The row holds the actions as an app bar does; the title and the re-tap action are
+    recorded in the ``Shown`` of the screen that rendered it.
+    """
     if shown := _shown_now():
         shown.titles.append(title)
         shown.retaps.append(on_retap)
@@ -325,9 +339,11 @@ class _RowCounter:
     """
 
     def __init__(self, phrase: Callable[..., str]) -> None:
+        """Wrap the row phrase function ``phrase``, which it still calls."""
         self.phrase = phrase
 
     def __call__(self, *args: Any, **kwargs: Any) -> str:
+        """Record the row's session id in its screen's ``rows``, then say the phrase."""
         if shown := _shown_now():
             shown.rows.append(cast(SessionView, args[-1]).session.id)
         return self.phrase(*args, **kwargs)
