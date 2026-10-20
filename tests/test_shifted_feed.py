@@ -7,6 +7,7 @@ Every test shifts the bundled 2026 snapshot, the feed the tool reads, at a fixed
 
 import argparse
 import json
+import shlex
 from datetime import UTC, datetime, timedelta
 from functools import cache
 from pathlib import Path
@@ -71,6 +72,19 @@ def problems(raw: bytes, shifted: YearData) -> dict[str, list[str]]:
     return {i.__name__: found for i in INVARIANTS if (found := i(feed))}
 
 
+def command(printed: str, program: str) -> list[str]:
+    """The arguments of the printed command line that runs ``program``, as a shell splits them."""
+    line = next(
+        line for line in printed.splitlines() if line.strip().startswith(program + " ")
+    )
+    return shlex.split(line)
+
+
+def utc(moment: datetime) -> datetime:
+    """``moment`` in UTC, so instants compare as instants even in a repeated hour."""
+    return moment.astimezone(UTC)
+
+
 def without_times(document: dict[str, Any], conf_key: int) -> dict[str, Any]:
     """``document`` with slot ``conf_key``'s ``start`` and ``end`` removed, in place."""
     slot = next(s for s in document["schedule"] if s["conf_key"] == conf_key)
@@ -111,6 +125,46 @@ def test_a_shift_across_the_end_of_summer_time_keeps_the_wall_clock_times() -> N
     assert offsets == {timedelta(hours=-7), timedelta(hours=-8)}
     assert feed.start == datetime(2026, 10, 31, 23, 55, tzinfo=ZONE)
     assert problems(feed.shifted, shifted_year(year(), feed.delta)) == {}
+
+
+@pytest.mark.parametrize(
+    ("now", "offset"),
+    [
+        (datetime(2026, 11, 1, 8, 20, tzinfo=UTC), timedelta(hours=-7)),
+        (datetime(2026, 11, 1, 9, 20, tzinfo=UTC), timedelta(hours=-8)),
+    ],
+    ids=["first 1:25, PDT", "second 1:25, PST"],
+)
+@pytest.mark.parametrize(
+    "move", [None, timedelta(minutes=-15)], ids=["not moved", "moved -15m"]
+)
+def test_a_session_in_the_repeated_hour_starts_at_the_asked_instant(
+    now: datetime, offset: timedelta, move: timedelta | None
+) -> None:
+    """Either 1:25 of the night PDT ends is the asked instant, moved or not, for 30 min.
+
+    Instants are compared in UTC: Python never finds a time in a repeated hour equal to
+    one in another zone (PEP 495), and subtracts two in one zone by their wall clocks.
+    """
+    feed = shift_feed(snapshot(), year(), TALK, now=now, lead=FIVE, move=move)
+
+    session = process(feed.shifted, year().feed_settings).sessions[TALK]
+    assert utc(session.start) == utc(feed.start) == now + FIVE
+    assert feed.start.utcoffset() == offset
+    assert utc(session.end) - utc(session.start) == timedelta(minutes=30)
+    if move is not None:
+        assert feed.moved is not None and feed.moved_start is not None
+        moved = process(feed.moved, year().feed_settings).sessions[TALK]
+        assert utc(moved.start) == utc(feed.moved_start) == now + FIVE + move
+        assert utc(moved.end) - utc(moved.start) == timedelta(minutes=30)
+
+
+def test_a_time_moved_into_the_skipped_hour_is_refused() -> None:
+    """A 10:00 talk the delta moves to 02:30 on the night PDT starts does not exist: refused."""
+    now = datetime(2027, 3, 14, 9, 55, tzinfo=UTC)  # 142 at 03:00 PDT, 10:00 at 02:30
+
+    with pytest.raises(ShiftError, match="does not exist in America/Los_Angeles"):
+        shift_feed(snapshot(), year(), TALK, now=now, lead=FIVE)
 
 
 def test_a_negative_lead_puts_the_session_on_now() -> None:
@@ -207,9 +261,29 @@ def test_main_writes_both_files_and_prints_the_urls_and_the_server(
     printed = capsys.readouterr().out
     assert f"http://10.0.2.2:8765/{SHIFTED_FILE}" in printed
     assert f"http://127.0.0.1:8765/{SHIFTED_FILE}" in printed
-    assert f"http.server 8765 --bind 127.0.0.1 --directory {out}" in printed
-    assert f"cp {out / MOVED_FILE} {out / SHIFTED_FILE}" in printed
+    assert command(printed, "uv")[-2:] == ["--directory", str(out)]
+    assert command(printed, "cp") == [
+        "cp",
+        str(out / MOVED_FILE),
+        str(out / SHIFTED_FILE),
+    ]
     assert "2026-10-20 14:07-07:00" in printed
+
+
+def test_the_printed_commands_quote_a_folder_with_spaces(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """With an ``--out`` that has spaces, the server and copy commands still parse right."""
+    out = tmp_path / "path with spaces"
+
+    assert main([TALK, "--in", "5m", "--move", "15m", "--out", str(out)], now=NOW) == 0
+    printed = capsys.readouterr().out
+    assert command(printed, "uv")[-2:] == ["--directory", str(out)]
+    assert command(printed, "cp") == [
+        "cp",
+        str(out / MOVED_FILE),
+        str(out / SHIFTED_FILE),
+    ]
 
 
 def test_main_writes_nothing_for_an_unknown_session(

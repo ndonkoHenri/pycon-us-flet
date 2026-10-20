@@ -12,9 +12,11 @@ URL (testing-and-quality.md §9.1)::
 Every slot's and open space's ``start`` and ``end`` move by one delta of wall-clock time
 in the conference zone, so 9:00 stays on the hour and each offset is the one of its new
 date (D-43); ids are unchanged, so saved sessions stay saved. The chosen session starts
-at the current minute plus ``--in``. With ``--move``, a second file is the shifted feed
-with only that session's times moved by that much more: served under the same URL, it
-is a schedule change the app diffs (D-255).
+at the current minute plus ``--in``, as an instant: on the night summer time ends, it is
+the right one of the repeated hour's two. A time that the delta moves into the hour
+skipped when summer time starts does not exist, so the tool refuses that ``--in``. With
+``--move``, a second file is the shifted feed with only that session's times moved by
+that much more: served under the same URL, it is a schedule change the app diffs (D-255).
 
 Before writing, it runs every invariant of ``tools/feed_invariants.py`` on each file,
 against the year's dates shifted by the same delta, and refuses a feed that breaks one.
@@ -27,6 +29,7 @@ import argparse
 import copy
 import json
 import re
+import shlex
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
@@ -126,8 +129,8 @@ def shift_feed(
         The shifted feed, and the moved one when asked.
 
     Raises:
-        ShiftError: The id names no session that has times, or a written feed breaks
-            an invariant.
+        ShiftError: The id names no session that has times, a time lands in the hour
+            skipped when summer time starts, or a written feed breaks an invariant.
     """
     zone = year.conference.zone
     session = process(raw, year.feed_settings).sessions.get(session_id)
@@ -138,18 +141,18 @@ def shift_feed(
             f"{session_id!r} is not a session of the feed with its own times: "
             "use a slot's id or an open space's (its conf_key plus 9000)"
         )
-    minute = now.replace(second=0, microsecond=0).astimezone(UTC)
-    target = (minute + lead).astimezone(zone)
+    target = now.replace(second=0, microsecond=0).astimezone(UTC) + lead
+    original = dict(record)  # its times before the shift: _pin keeps its length
     delta = _wall(target, zone) - _wall(datetime.fromisoformat(record["start"]), zone)
     shift_times(document, delta, zone)
+    _pin(record, original, target, zone)
     shifted = _checked(document, shifted_year(year, delta), SHIFTED_FILE)
     moved = moved_start = None
     if move is not None:
         moved_document = copy.deepcopy(document)
         moved_record = _record(moved_document, session_id)
         assert moved_record is not None  # the same feed, shifted
-        for key in ("start", "end"):
-            moved_record[key] = _shifted(moved_record[key], move, zone)
+        _pin(moved_record, original, target + move, zone)
         moved_year = shifted_year(year, delta, delta + move)
         moved = _checked(moved_document, moved_year, MOVED_FILE)
         moved_start = datetime.fromisoformat(moved_record["start"])
@@ -169,6 +172,9 @@ def shift_times(document: dict[str, Any], delta: timedelta, zone: ZoneInfo) -> N
     The delta is wall-clock time in ``zone``: a 9:00 start stays on the hour across a
     daylight-saving change, and its offset becomes the one of its new date. A time that
     is missing or empty (an open space not scheduled yet) stays so.
+
+    Raises:
+        ShiftError: A time lands in the hour skipped when summer time starts.
     """
     for section in ("schedule", "open-spaces"):
         for record in document.get(section) or []:
@@ -278,7 +284,7 @@ def report(feed: ShiftedFeed, session_id: str, out: Path, port: int) -> list[str
         lines.append(f"Wrote {out / MOVED_FILE}: the same, with it at {moved_at}.")
     lines += [
         "Serve the folder, and keep it running:",
-        f"  uv run python -m http.server {port} --bind 127.0.0.1 --directory {out}",
+        f"  uv run python -m http.server {port} --bind 127.0.0.1 --directory {_quoted(out)}",
         "In Developer options, clear the fake clock, set the feed URL, Apply, Refresh now:",
         f"  Android emulator: http://{EMULATOR_HOST}:{port}/{SHIFTED_FILE}",
         f"  iOS simulator:    http://{SIMULATOR_HOST}:{port}/{SHIFTED_FILE}",
@@ -287,7 +293,7 @@ def report(feed: ShiftedFeed, session_id: str, out: Path, port: int) -> list[str
         lines += [
             "To move the session, serve the moved feed at the same URL (D-255), then",
             "Refresh now:",
-            f"  cp {out / MOVED_FILE} {out / SHIFTED_FILE}",
+            f"  cp {_quoted(out / MOVED_FILE)} {_quoted(out / SHIFTED_FILE)}",
         ]
     return lines
 
@@ -322,18 +328,52 @@ def _checked(document: dict[str, Any], year: YearData, name: str) -> bytes:
     return raw
 
 
+def _pin(
+    record: dict[str, Any], original: dict[str, Any], start: datetime, zone: ZoneInfo
+) -> None:
+    """Make ``record`` start at the instant ``start`` and last as long as ``original``.
+
+    Wall-clock arithmetic cannot tell the two 1:25s of the night summer time ends apart,
+    so the chosen session's times are set from instants instead, written in ``zone``.
+
+    Raises:
+        ShiftError: The written start is not ``start`` (a guard: it never should be).
+    """
+    begin = datetime.fromisoformat(original["start"])
+    record["start"] = start.astimezone(zone).isoformat()
+    if original.get("end"):
+        length = datetime.fromisoformat(original["end"]) - begin
+        record["end"] = (start + length).astimezone(zone).isoformat()
+    if datetime.fromisoformat(record["start"]) != start:
+        raise ShiftError(f"the session would start at {record['start']}, not {start}")
+
+
 def _shifted(text: str, delta: timedelta, zone: ZoneInfo) -> str:
-    """Return an ISO 8601 time moved by ``delta`` of wall-clock time in ``zone``."""
-    return (
-        (_wall(datetime.fromisoformat(text), zone) + delta)
-        .replace(tzinfo=zone)
-        .isoformat()
-    )
+    """Return an ISO 8601 time moved by ``delta`` of wall-clock time in ``zone``.
+
+    A time in the repeated hour of the night summer time ends is its first occurrence.
+
+    Raises:
+        ShiftError: The moved wall-clock time does not exist in ``zone``: it is in the
+            hour skipped when summer time starts.
+    """
+    wall = _wall(datetime.fromisoformat(text), zone) + delta
+    if _wall(wall.replace(tzinfo=zone).astimezone(UTC), zone) != wall:
+        raise ShiftError(
+            f"{text} would move to {wall:%Y-%m-%d %H:%M}, which does not exist in "
+            f"{zone.key} (summer time starts): choose another --in"
+        )
+    return wall.replace(tzinfo=zone).isoformat()
 
 
 def _wall(moment: datetime, zone: ZoneInfo) -> datetime:
     """Return ``moment``'s naive wall-clock time in ``zone``."""
     return moment.astimezone(zone).replace(tzinfo=None)
+
+
+def _quoted(path: Path) -> str:
+    """Return ``path`` quoted for a POSIX shell, so a printed command can be pasted."""
+    return shlex.quote(str(path))
 
 
 def _moved(day: date, at: time, delta: timedelta) -> date:
