@@ -283,6 +283,26 @@ def test_high_contrast_follows_the_os_flag_only_under_system(
     assert prefs.high_contrast_on is on
 
 
+@pytest.mark.parametrize(
+    ("switch", "os_flag", "setting"),
+    [
+        (False, False, "system"),
+        (True, True, "system"),
+        (True, False, "on"),
+        (False, True, "off"),
+    ],
+)
+def test_the_high_contrast_switch_follows_the_os_again_when_set_to_its_flag(
+    switch: bool, os_flag: bool, setting: str
+) -> None:
+    """A switch to the OS flag stores "system", one against it "on" or "off" (D-286)."""
+    for stored in HIGH_CONTRAST_SETTINGS:  # whatever the setting was before
+        prefs = Prefs(high_contrast=stored, os_high_contrast=os_flag)
+        assert prefs.high_contrast_setting(switch) == setting
+        prefs.high_contrast = prefs.high_contrast_setting(switch)
+        assert prefs.high_contrast_on is switch  # the switch shows what it was set to
+
+
 @pytest.mark.parametrize(("reduce_motion", "ms"), [(False, 400), (True, 0)])
 def test_an_animation_lasts_its_duration_unless_the_os_asks_for_less_motion(
     reduce_motion: bool, ms: int

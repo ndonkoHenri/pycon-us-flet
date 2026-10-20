@@ -30,6 +30,7 @@ PAGES = frozenset(
         "/more/open-spaces",
         "/more/lightning-talks",
         "/more/sprints",
+        "/more/settings",
         "/more/app",
         "/more/developer",
     }

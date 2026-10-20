@@ -105,6 +105,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
             "/more/tracks/open-spaces/session/42",
             ["More", "Tracks", "OpenSpaces", "Drill"],
         ),
+        ("/more/settings", ["More", "Settings"]),
         ("/more/app", ["More", "AboutApp"]),
         ("/more/developer", ["More", "Developer"]),
         ("/search", ["Search"]),

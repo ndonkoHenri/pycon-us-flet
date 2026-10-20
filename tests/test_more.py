@@ -9,7 +9,6 @@ devices (the PR).
 import inspect
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
@@ -131,7 +130,7 @@ def outline(rows: list[ft.Control]) -> list[str]:
 def test_the_list_has_programme_then_you_under_section_headers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """The list is Programme's six pages, then You: Appearance, About and Developer."""
+    """The list is Programme's six pages, then You: Settings, About and Developer."""
     assert outline(rows_of(render())) == [
         "# Programme",
         "Speakers",
@@ -141,7 +140,7 @@ def test_the_list_has_programme_then_you_under_section_headers(
         "Lightning talks",
         "Sprints",
         "# You",
-        "more.appearance",
+        "Settings",
         "About this app",
         "Developer options",
     ]  # About this app says "Not an official PSF app." now (D-36)
@@ -209,6 +208,7 @@ def test_identifiers_name_the_page_in_snake_case() -> None:
         "more.open_spaces",
         "more.lightning_talks",
         "more.sprints",
+        "more.settings",
         "more.app",
         "more.developer",
     ]
@@ -226,107 +226,6 @@ def test_more_keeps_the_search_and_the_re_tap_scroll_to_top(
     search = action.content
     assert isinstance(search, ft.IconButton)
     assert search.tooltip == "Search"
-
-
-def appearance_column(scaffold: dict[str, Any]) -> ft.Column:
-    """The Appearance group's column: its label, then its ``RadioGroup``."""
-    [group] = [
-        row
-        for row in rows_of(scaffold)
-        if isinstance(row, ft.Semantics) and row.identifier == "more.appearance"
-    ]
-    column = group.content
-    assert isinstance(column, ft.Column)
-    return column
-
-
-def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
-    """Return the Appearance group's ``RadioGroup``, under its label."""
-    choice = appearance_column(scaffold).controls[-1]
-    assert isinstance(choice, ft.RadioGroup)
-    return choice
-
-
-def options_of(choice: ft.RadioGroup) -> list[tuple[str | None, str, ft.ListTile]]:
-    """Each option row as (identifier, its radio's value, its tile)."""
-    column = choice.content
-    assert isinstance(column, ft.Column)
-    options = []
-    for row in column.controls:
-        assert isinstance(row, ft.MergeSemantics)  # one node per option
-        assert isinstance(row.content, ft.Semantics)
-        tile = row.content.content
-        assert isinstance(tile, ft.ListTile) and isinstance(tile.leading, ft.Radio)
-        options.append((row.content.identifier, str(tile.leading.value), tile))
-    return options
-
-
-async def choose(choice: ft.RadioGroup, value: str) -> None:
-    """Pick an option as Flutter reports it: the value first, then ``on_change``."""
-    choice.value = value
-    await cast(Any, choice.on_change)(SimpleNamespace(control=choice))
-
-
-def test_appearance_shows_the_stored_choice(
-    render: Callable[[], dict[str, Any]], prefs: Prefs
-) -> None:
-    """The Appearance choice shows the stored theme."""
-    prefs.theme = "dark"
-    choice = appearance_of(render())
-    assert choice.value == "dark"  # controlled (D-157)
-
-
-def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
-    render: Callable[[], dict[str, Any]],
-) -> None:
-    """Appearance offers System, Light and Dark as tiles whose whole row selects."""
-    options = options_of(appearance_of(render()))
-    assert [(ident, value, tile.title) for ident, value, tile in options] == [
-        ("more.appearance.system", "system", "System"),
-        ("more.appearance.light", "light", "Light"),
-        ("more.appearance.dark", "dark", "Dark"),
-    ]
-    assert all(tile.toggle_inputs for _, _, tile in options)
-
-
-def test_the_appearance_label_is_a_heading_for_screen_readers(
-    render: Callable[[], dict[str, Any]],
-) -> None:
-    """The Appearance label is one level-3 heading node: a tile with no tap."""
-    merged = appearance_column(render()).controls[0]
-    # One node: the tile's own node is the heading, not an unlabelled one around it.
-    assert isinstance(merged, ft.MergeSemantics)
-    label = merged.content
-    assert isinstance(label, ft.Semantics) and label.header  # D-33
-    assert label.heading_level == 3  # a group inside "You" (D-211)
-    assert isinstance(label.content, ft.ListTile)
-    assert label.content.title == "Appearance"
-    assert label.content.on_click is None  # a label, not a link
-
-
-async def test_choosing_an_appearance_saves_it(
-    render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
-) -> None:
-    """Choosing Light saves it in Prefs, with no message."""
-    await choose(appearance_of(render()), "light")
-    assert prefs.theme == "light"
-    assert page.dialogs == []
-
-
-async def test_an_appearance_that_cannot_be_saved_says_so(
-    render: Callable[[], dict[str, Any]],
-    prefs: Prefs,
-    page: FakePage,
-    svc: Services,
-) -> None:
-    """A choice that cannot be saved still applies, and a SnackBar says so."""
-    cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
-    await choose(appearance_of(render()), "dark")
-    assert prefs.theme == "dark"  # applied for this session (D-120)
-    [snack] = page.dialogs
-    assert isinstance(snack, ft.SnackBar)
-    assert isinstance(snack.content, ft.Text)
-    assert snack.content.value == "Couldn't save your change"
 
 
 def test_lightning_talks_appear_once_and_open_their_own_page(
