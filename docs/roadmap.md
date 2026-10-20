@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** plan of record, 2026-10-11. It is the phase breakdown into epics and issues, and replaces v1's backlog, which stays in git history with the other v1 docs (D-96). Binding inputs: [`PLAN.md`](../PLAN.md) (phases and exit criteria in §7, spikes in §8) and [`decisions.md`](decisions.md) (D-ids). Scope per feature id: [`feature-matrix.md`](feature-matrix.md).
+**Status:** plan of record, 2026-10-11; P2 broken down 2026-10-20. It is the phase breakdown into epics and issues, and replaces v1's backlog, which stays in git history with the other v1 docs (D-96). Binding inputs: [`PLAN.md`](../PLAN.md) (phases and exit criteria in §7, spikes in §8) and [`decisions.md`](decisions.md) (D-ids). Scope per feature id: [`feature-matrix.md`](feature-matrix.md).
 
 This file turns the plan into work:
 - **P0, P1 and P2** are broken down into PR-sized issues.
@@ -18,7 +18,7 @@ Phases are milestones (D-89). Soft markers are orientation, never deadlines (D-0
 |---|---|---|---|
 | **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on an Android emulator and the iPhone | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
 | **P1 Attendee core** | Good enough to demo, and to use for a whole simulated conference day | demo slice end of Nov; exit mid-Dec 2026 | 7 epics, 36 issues, spike S6, 2 upstream issues |
-| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 102 issues (spikes S7–S9 among them), 1 earlier upstream issue, a status issue |
+| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 102 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
 | **P3 Accounts & staff tools** | The private-API features against the local mock, with the scanner as the showcase | Mar 2027 | 8 epics |
 | **P4 Showcase** | Polish, publish, present | ready in Apr 2027 | 5 epics |
 
@@ -26,13 +26,13 @@ Upstream Flet work runs in parallel with the phases (section 8).
 
 ## 2. How to read it
 
-**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order; its spikes S7..S9 are `P2-01`..`P2-03`. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
+**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
 
 **Issue blocks.** For P0 and P1, each block gives the labels, dependencies ("after") and feature ids, a one-paragraph description and the acceptance criteria. P2's blocks give the issue number, labels, dependencies and feature ids; the description and criteria are in the issue. The GitHub issue adds the D-ids, implementation notes, the docs to read and the definition of done (D-93), which for UI work includes Android and iOS screenshots in light and dark.
 
 **Labels (D-90).** Each item has at least one type label, exactly one area label, and optionally a status label. Upstream epics carry both `epic` and `upstream`. Spikes are `test` issues titled `Spike: …`, and their verdicts go to `docs/spikes/NN-<slug>.md` (D-91).
 
-**Epics** are parent issues, and their issues are sub-issues. A few issues have no epic: status, phase exits, decisions and single upstream items. A spike can be a sub-issue of an upstream epic in a later milestone: S6 runs in P1 under UP-E3 (P2).
+**Epics** are parent issues, and their issues are sub-issues. A few issues have no epic: status, phase exits, decisions, single upstream items and the stand-alone spike S9 (`P2-03`). A spike can be a sub-issue of an upstream epic in a later milestone: S6 runs in P1 under UP-E3 (P2).
 
 **Dependencies are hard.** Start an issue only when its dependencies are merged; for a spike, that means its verdict is merged.
 
@@ -818,6 +818,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 - S7 (real floor plans with about 60 hotspots in `InteractiveViewer` on a low-RAM phone: a small-RAM Android AVD and the iPhone until a real one is borrowed, D-102) opens P2-E1.
 - S8 (a minimal `mobile_scanner` extension in release builds) opens UP-E1 on the upstream track, so that E1 can land before P3.
 - S9 (`flet test linux` in CI) may run from P2 on; a green result is proposed as a separate workflow through `needs-decision` (D-78).
+- `P2-04` (no S-number): does a shared `.ics` file reach the phone's calendar? Its verdict goes to `docs/spikes/10-ics-share.md`, and it gates `P2-65` and `P2-66`.
 
 **At the start of P2:**
 - each epic was split into sub-issues (2026-10-20), listed under it below;
@@ -825,9 +826,9 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 - anything that slips moves to `later` through `needs-decision`; `P2-07` sets the rule for the rows that only E3 can deliver.
 
 **Order.**
-1. **The first wave**, which needs nothing else: the spikes (`P2-01`, `P2-04`; S8 and S9 any time), the decisions (`P2-05`, `P2-06`, `P2-07`), the upstream write-ups (`P2-08`..`P2-11`) and the foundations (`P2-13`..`P2-20`, `P2-24`..`P2-26`). Do the device-heavy spikes one at a time.
+1. **The first wave**, which needs nothing else: the spikes (`P2-01`, `P2-04`; S8 (`P2-02`) and S9 (`P2-03`) any time), the decisions (`P2-05`, `P2-06`, `P2-07`), the upstream write-ups (`P2-08`..`P2-11`) and the foundations (`P2-13`..`P2-27` and `P2-81`). Do the device-heavy spikes one at a time.
 2. **The features**, each when its "after" list is merged.
-3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics.
+3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
 
 ### P2-E1 · Epic: map, floor plans and location cards
 
@@ -1149,7 +1150,7 @@ test, blocked, area:notifications · after P2-87, P2-89, P2-90, P2-91, P2-23, P2
 
 epic, area:schedule · NEW-04
 
-A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and `/schedule/changes` with saved sessions first.
+A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and `/schedule/changes` with saved sessions first. (The heading's #312 is the original app's feature request, `PyCon/pycon-us-mobile#312`, not this repo's #312.)
 
 #### P2-06 · Decide the change log's route, Back target and when it speaks up (#366)
 
@@ -1257,7 +1258,7 @@ feature, area:shell · after P2-81, P2-26 · INFO-04
 
 #### P2-92 · Show the build number on About this app from page.get_app_info() (#452)
 
-feature, blocked, area:shell · after P2-26, #31 · INFO-03
+feature, blocked, area:shell · after P2-26, UP-U4 · INFO-03
 
 #### P2-101 · Check tablets, landscape and About this app on devices, with Maestro flows (#461)
 
@@ -1317,20 +1318,21 @@ test, area:quality
 
 #### P2-102 · P2 exit: venue offline, reminders, change log, device checklist and unaided use (#462)
 
-test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-100, P2-79, P2-101, #121, #15
+test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-100, P2-79, P2-101, #121, P1-34
 
 #### Status and carried issues
 
 - **Status:** #347, updated weekly.
-- **Carried from P1** (no roadmap key; #347 tracks them):
+- **Carried from P1** (no roadmap key, except the decisions, which are `P1-34`, `P1-35` and `P1-36` in §4; #347 tracks them):
   - the Schedule keeps its place on a filter change: #333, with the draft PR #346 and upstream #345 (U50);
-  - design: #331, #305, #277, #242, #222, #215;
+  - design: #331, #305, #277, #222, #215;
+  - features: #242 (decide and build open-space row thumbnails);
   - accessibility: #332, #302, #309;
-  - tests and tools: #348 (Maestro flows, which the check issues wait for), #350, #312, #257, #339;
+  - tests and tools: #348 (Maestro flows, which the check issues `P2-93`..`P2-96`, `P2-100` and `P2-101` wait for), #312, #257, #339;
   - bugs: #337, #342, #343, #344; docs: #359;
   - the iPhone session #121, with VoiceOver checks #261 and #320;
-  - decisions: #15 (O-4, app identity; its placeholders ship in `P2-24`), #17 (O-6), #18 (O-1).
-- **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #182 (U27), #183 (U17), #185 (U28), #187, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #322 (U41).
+  - decisions: #15 (`P1-34`, O-4, app identity; its placeholders ship in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1).
+- **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
 
 ## 6. P3 Accounts & staff tools
 
@@ -1467,8 +1469,8 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 ## 9. Checks
 
 This catalogue and `issues.json` were generated once from one data file and checked:
-- every P0 and P1 feature id of the matrix is covered by a concrete issue;
-- every P2–P4 id belongs to an epic;
+- every P0, P1 and P2 feature id of the matrix is covered by a concrete issue (P2's were written by hand and checked against the matrix on 2026-10-20);
+- every P3–P4 id belongs to an epic;
 - every label is in the D-90 set;
 - every dependency exists, and dependencies come before the issues that use them.
 
