@@ -15,7 +15,7 @@ from pycon_us.app import apply_theme
 from pycon_us.prefs import Prefs
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 from tests.fakes import FakePage
-from tests.test_theme import FLET_THEME_DART, contrast_ratio, hex_role
+from tests.test_theme import FLET_THEME_DART, NEUTRAL_RAMP, contrast_ratio, hex_role
 
 AAA_TEXT = 7.0
 """High contrast's text minimum (D-23, D-33)."""
@@ -64,6 +64,17 @@ TEXT_ON_SURFACES = [
     "error",
 ]
 """Roles drawn as text straight on a surface: body text, links, text buttons, errors."""
+
+
+SCHEME_FIELDS = {
+    "color_scheme": None,
+    "system_overlay_style": None,
+    "scaffold_bgcolor": None,
+    "canvas_color": None,
+    "card_bgcolor": None,
+    "divider_color": None,
+}
+"""The theme fields that come from the scheme; the rest is the same in every scheme."""
 
 
 def hc_scheme(dark: bool) -> ft.ColorScheme:
@@ -210,7 +221,10 @@ def test_the_inverse_roles_swap_the_schemes() -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_only_the_scheme_and_the_navigation_bar_change(dark: bool) -> None:
-    """Font, seed, transitions, tiles and bar icons are the standard theme's (D-151)."""
+    """Font, seed, transitions, tiles and bar icons are the standard theme's (D-151).
+
+    Only the scheme, the colours named from it and the navigation bar's colour differ.
+    """
     standard = theme.build_theme(dark=dark, high_contrast=False)
     high = theme.build_theme(dark=dark, high_contrast=True)
     assert standard.system_overlay_style is not None
@@ -220,9 +234,42 @@ def test_only_the_scheme_and_the_navigation_bar_change(dark: bool) -> None:
     ) == dataclasses.replace(
         standard.system_overlay_style, system_navigation_bar_color=None
     )
-    assert dataclasses.replace(
-        high, color_scheme=None, system_overlay_style=None
-    ) == dataclasses.replace(standard, color_scheme=None, system_overlay_style=None)
+    assert dataclasses.replace(high, **SCHEME_FIELDS) == dataclasses.replace(
+        standard, **SCHEME_FIELDS
+    )
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+@pytest.mark.parametrize("high_contrast", [False, True], ids=["standard", "hc"])
+def test_the_page_canvas_card_and_divider_follow_the_scheme(
+    dark: bool, high_contrast: bool
+) -> None:
+    """The colours ThemeData derives from the scheme are named from the one shown.
+
+    Flet derives them from the seeded scheme, before the overrides apply (U64): in HC
+    the page stayed white under cream bars on the Android emulator.
+    """
+    built = theme.build_theme(dark=dark, high_contrast=high_contrast)
+    assert built.color_scheme is not None
+    surface = built.color_scheme.surface
+    assert (built.scaffold_bgcolor, built.canvas_color, built.card_bgcolor) == (
+        surface,
+        surface,
+        surface,
+    )
+    assert built.divider_color == built.color_scheme.outline
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_the_seeded_text_colour_still_reads_at_7_to_1(dark: bool) -> None:
+    """The text theme's colour, which Flet takes from the seeded scheme, reads at 7:1.
+
+    Flutter's ``Typography.material2021`` colours the text theme with the seeded,
+    neutralised ``onSurface`` (U64), not HC's; it must still read on HC's surface.
+    """
+    seeded_text = NEUTRAL_RAMP[dark]["onSurface"]
+    ratio = contrast_ratio(seeded_text, hex_role(hc_scheme(dark), "surface"))
+    assert ratio >= AAA_TEXT, round(ratio, 2)
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

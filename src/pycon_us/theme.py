@@ -119,6 +119,12 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         color_scheme_seed=SEED,
         surfaces=ft.ThemeSurfaces.NEUTRAL,
         color_scheme=scheme,
+        # Flet builds ThemeData, which derives these, from the seeded scheme, before
+        # the overrides apply; unnamed, HC's page stayed white under cream bars (U64).
+        scaffold_bgcolor=scheme.surface,
+        canvas_color=scheme.surface,
+        card_bgcolor=scheme.surface,
+        divider_color=scheme.outline,
         font_family=FONT_FAMILY,
         appbar_theme=ft.AppBarTheme(center_title=False),  # iOS would centre it (D-10)
         page_transitions=ft.PageTransitionsTheme(
