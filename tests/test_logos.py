@@ -7,7 +7,7 @@ How it looks is checked on devices (the PR), and the Sprints cards that use it i
 
 import flet as ft
 
-from pycon_us.ui.logos import CORNER, INK, INSET, logo_tile
+from pycon_us.ui.logos import CORNER, EDGE, INK, INSET, logo_tile
 from tests.test_theme import contrast_ratio
 from tests.trees import descendants, only
 
@@ -69,26 +69,30 @@ def test_the_tile_is_white_with_a_hairline_edge_in_both_schemes() -> None:
     """Logos are drawn for white: the tile names white and a role edge, no scheme."""
     container = plate(logo_tile("Arcade", LOGO, size=56))
     assert container.bgcolor == ft.Colors.WHITE
-    assert container.border == ft.Border.all(1, ft.Colors.OUTLINE_VARIANT)
+    assert container.border == ft.Border.all(EDGE, ft.Colors.OUTLINE_VARIANT)
     assert container.border_radius == CORNER
     assert container.padding == INSET
     assert container.alignment == ft.Alignment.CENTER
 
 
 def test_a_square_tile_takes_its_size_and_the_initials_fill_its_inset() -> None:
-    """At 56 dp, the Sprints card's tile, the initials' circle is 44 dp across."""
+    """At 56 dp, the Sprints card's tile, the initials' circle is 42 dp across.
+
+    That is the content box inside the 6 dp inset and the 1 dp edge, which Flutter's
+    ``Container`` adds to its padding.
+    """
     tile = logo_tile("Arcade", None, size=56)
     container = plate(tile)
     assert (container.width, container.height) == (56, 56)
-    assert only(tile, ft.CircleAvatar).radius == 56 / 2 - INSET
+    assert only(tile, ft.CircleAvatar).radius == 56 / 2 - INSET - EDGE == 21
 
 
 def test_a_wide_plate_keeps_the_initials_to_its_height() -> None:
-    """Sponsor detail's 240 × 96 plate (ux.md §6.5): the circle fits the height."""
+    """Sponsor detail's 240 × 96 plate (ux.md §6.5): the circle, 82 dp, fits the height."""
     tile = logo_tile("Bloomberg", None, size=96, width=240)
     container = plate(tile)
     assert (container.width, container.height) == (240, 96)
-    assert only(tile, ft.CircleAvatar).radius == 96 / 2 - INSET
+    assert only(tile, ft.CircleAvatar).radius == 96 / 2 - INSET - EDGE == 41
 
 
 def test_the_initials_ink_reads_on_white_at_aaa() -> None:

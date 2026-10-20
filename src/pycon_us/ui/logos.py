@@ -18,6 +18,9 @@ INK = SEED
 INSET = 6
 """The white margin between the tile's edge and its logo or initials, in dp."""
 
+EDGE = 1
+"""The width of the tile's hairline ``outline_variant`` edge, in dp."""
+
 CORNER = 12
 """The tile's corner radius, in dp."""
 
@@ -48,7 +51,9 @@ def logo_tile(
         content=ft.Text(initials(name), weight=ft.FontWeight.W_500, semantics_label=""),
         bgcolor=ft.Colors.TRANSPARENT,
         color=INK,
-        radius=size / 2 - INSET,
+        # Flutter's Container adds its border to its padding, so the circle has the
+        # content box inside the inset and the edge: 42 dp across on a 56 dp tile.
+        radius=size / 2 - INSET - EDGE,
     )
     content: ft.Control = monogram
     if logo_url:
@@ -64,7 +69,7 @@ def logo_tile(
         height=size,
         padding=INSET,
         bgcolor=ft.Colors.WHITE,
-        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border=ft.Border.all(EDGE, ft.Colors.OUTLINE_VARIANT),
         border_radius=CORNER,
         alignment=ft.Alignment.CENTER,
     )
