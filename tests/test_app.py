@@ -12,6 +12,7 @@ import logging
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import flet as ft
@@ -28,6 +29,7 @@ from pycon_us.app import (
 )
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
+from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api, errors
@@ -707,6 +709,42 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     if open_:  # the providers end in the Router
         assert isinstance(shown, ft.Component)
         assert shown.fn.__name__ == "Router"
+
+
+def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
+    fake_page: FakePage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``App`` gives the Router a ``Layout`` seeded from ``page.width`` that follows resizes.
+
+    D-277: a first screen opened in landscape shows the rail, and a rotation flips it.
+    """
+    fake_page.width = 900.0
+    prefs = Prefs(loaded=True, time_measured=True)
+    setups: list[Callable[[], object]] = []
+    provided: list[Layout] = []
+
+    def layout_ctx(value: Layout, body: Callable[[], object]) -> object:
+        """Record the ``Layout`` handed to the provider, then render its body."""
+        provided.append(value)
+        return body()
+
+    monkeypatch.setattr(ft, "use_memo", lambda fn, *_, **__: fn())
+    monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
+    monkeypatch.setattr(ft, "use_effect", lambda setup, *_, **__: setups.append(setup))
+    monkeypatch.setattr(app, "LayoutCtx", layout_ctx)
+    monkeypatch.setattr(app, "apply_theme", lambda *_: None)
+    monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
+    with Renderer().with_context(), bound(fake_page):
+        shown = inspect.unwrap(app.App)(ViewMemory())
+        assert isinstance(shown, ft.Component) and shown.fn.__name__ == "Router"
+        (layout,) = provided  # LayoutCtx is in the chain to the Router
+        assert layout.wide is True  # seeded before any effect runs
+        for setup in setups:
+            if not inspect.iscoroutinefunction(setup):
+                setup()
+        assert fake_page.on_resize is not None
+        fake_page.on_resize(SimpleNamespace(width=375.0))
+        assert layout.wide is False
 
 
 async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(
