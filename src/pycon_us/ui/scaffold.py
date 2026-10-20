@@ -52,10 +52,10 @@ def AppScaffold(
     On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
     high contrast, where the bar is the page's own colour (THEME-06); pushed Views get
     the back arrow instead (D-10). Back on a root other than Now goes to Now, and Back
-    on Now is left to the system, which leaves the app (D-17, D-142). Back on a pushed View closes a
-    dialog, a picker, a sheet or a menu open over it, and only then pops the View
-    (D-208). An unknown location's View (``unknown``) is a one-View stack like a root
-    but with the back arrow, and Back there goes to Now too (D-270).
+    on Now is left to the system, which leaves the app (D-17, D-142). Back on a pushed
+    View closes a dialog, a picker, a sheet or a menu open over it, and only then pops
+    the View (D-208). An unknown location's View (``unknown``) is a one-View stack like
+    a root but with the back arrow, and Back there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the

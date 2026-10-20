@@ -6,7 +6,8 @@ badges into its ``Tokens`` from what is here: ``tonal()`` over the palette in li
 dark, and outlines ``HC_BADGE_BORDER`` wide in high contrast (THEME-06, D-285).
 ``ui/badges.py`` draws them.
 
-Module of its own since high contrast's tokens took ``theme.py`` past D-66's 400 lines.
+Module of its own so that high contrast's tokens leave ``theme.py`` near D-66's 400
+lines.
 """
 
 from dataclasses import dataclass
