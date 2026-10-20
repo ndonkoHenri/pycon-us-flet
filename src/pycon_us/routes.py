@@ -32,6 +32,7 @@ from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
+from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
@@ -186,6 +187,7 @@ ROUTES = [
         pushed("open-spaces", OpenSpaces),
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),
+        pushed("sponsors", Sponsors),
         pushed("app", AboutApp),
         pushed("developer", Developer),
     ),
