@@ -54,6 +54,7 @@ from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from pycon_us.ui import session_rows
 from tests.fakes import (
     MemoryClipboard,
+    MemoryFilePicker,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
@@ -169,6 +170,7 @@ def memory_services(
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
         share=MemoryShare(),
+        file_picker=MemoryFilePicker(),
     )
 
 
