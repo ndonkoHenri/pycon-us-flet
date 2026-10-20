@@ -828,7 +828,11 @@ async def test_a_resume_recomputes_at_once(
 async def test_the_strip_refreshes_the_feed_while_now_shows(
     render: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Now's status strip refreshes the feed on its own while Now shows (D-175)."""
+    """Now builds its status strip with ``auto_refresh`` on, so it refreshes the feed.
+
+    That flag is what makes the strip refresh every 15 min while Now shows (D-175);
+    the refresh itself is pinned in test_status_strip_ticks.py.
+    """
     strips: list[bool] = []
 
     def strip(*, auto_refresh: bool = False) -> ft.Control:

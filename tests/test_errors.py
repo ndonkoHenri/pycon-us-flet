@@ -288,10 +288,11 @@ builder, not a handler, so review checks that module's wrapping instead.
 
 @pytest.mark.parametrize("path", NETTED, ids=lambda p: p.name)
 def test_every_handler_and_effect_a_screen_defines_is_wrapped(path: Path) -> None:
-    """Every function nested in a netted module is decorated with ``report_errors``.
+    """Every function nested in another, in a netted module, has ``report_errors``.
 
     Screens, the route table and main() define functions only to hand them to Flet as
     handlers or effects, so one without the net would end the session when it raises.
+    Top-level functions are not checked.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"))
     unwrapped = [

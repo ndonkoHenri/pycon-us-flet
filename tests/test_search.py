@@ -144,7 +144,7 @@ def test_the_query_is_folded_like_the_index() -> None:
 
 
 def test_curly_quotes_and_dashes_in_a_query_match_straight_ones() -> None:
-    """Curly quotes and dashes in a query match the straight ones in the text.
+    """Curly and straight quotes and dashes match each other, in the query or the text.
 
     iOS's smart punctuation turns ' into ’ and -- into —; the feeds mix both.
     """

@@ -32,7 +32,7 @@ class SteppedTime(datetime):
 
     @classmethod
     def now(cls, tz=None) -> datetime:  # same signature as datetime.now
-        """The stepped time, in whatever zone is asked for."""
+        """The stepped time, in UTC, whatever zone is asked for."""
         return cls.current
 
 
