@@ -2,11 +2,11 @@
 
 ``AppScaffold`` builds each screen's View (architecture §5.5): a surface ``AppBar`` with
 the screen's title, left-aligned and always visible (D-10, D-28), the Material back arrow
-on pushed Views, the bottom bar (``ui.navigation``) and the Back rules on tab roots
-(D-13, D-17, D-142, D-144), and the body in a ``SafeArea`` (D-12, D-113). The status- and
-navigation-bar style comes from the theme (``theme.overlay_style()``, D-151): Flet's
-``AppBar`` applies it, so a screen never sets one. The tablet rail with the 720/840 dp
-content widths joins in P2 (#30).
+on pushed Views, the bottom bar or, from 600 dp, the rail (``ui.navigation``) and the
+Back rules on tab roots (D-13, D-17, D-142, D-144, D-277), and the body in a
+``SafeArea`` (D-12, D-113). The status- and navigation-bar style comes from the theme
+(``theme.overlay_style()``, D-151): Flet's ``AppBar`` applies it, so a screen never sets
+one. The 720/840 dp content widths join in P2-80 (#440).
 
 ``SectionHeader`` is the heading of a group of rows. The status strip and the minute
 tick are ``ui.status_strip`` (D-200).
@@ -18,6 +18,7 @@ import logging
 import flet as ft
 
 from pycon_us.feed_refresh import Source
+from pycon_us.layout import use_layout
 from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.services import use_services
@@ -25,7 +26,13 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.navigation import TABS, Retap, navigation_bar
+from pycon_us.ui.navigation import (
+    TABS,
+    Retap,
+    Select,
+    navigation_bar,
+    navigation_rail,
+)
 from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe
 
@@ -50,12 +57,15 @@ def AppScaffold(
     slot's time fits beside its rows (D-216).
 
     On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
-    high contrast, where the bar is the page's own colour (THEME-06); pushed Views get
-    the back arrow instead (D-10). Back on a root other than Now goes to Now, and Back
-    on Now is left to the system, which leaves the app (D-17, D-142). Back on a pushed
-    View closes a dialog, a picker, a sheet or a menu open over it, and only then pops
-    the View (D-208). An unknown location's View (``unknown``) is a one-View stack like
-    a root but with the back arrow, and Back there goes to Now too (D-270).
+    high contrast, where the bar is the page's own colour (THEME-06), or from 600 dp the
+    rail beside the body (D-277); pushed Views get the back arrow instead (D-10). A
+    root's body is in the same place in both, so a rotation or a resize swaps the bar
+    and the rail without rebuilding it: its scroll, day and tabs stay (D-18). Back on a
+    root other than Now goes to Now, and Back on Now is left to the system, which leaves
+    the app (D-17, D-142). Back on a pushed View closes a dialog, a picker, a sheet or a
+    menu open over it, and only then pops the View (D-208). An unknown location's View
+    (``unknown``) is a one-View stack like a root but with the back arrow, and Back
+    there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -67,9 +77,9 @@ def AppScaffold(
             home indicator and the navigation bar in either orientation.
         actions: The app bar's actions, e.g. ``search_button()``; each icon-only one
             has a tooltip, its accessible name (D-27).
-        on_retap: A tab root's action when its active tab is tapped again, usually
-            the one ``ui.navigation.use_scroll_to_top()`` returns; ignored on pushed
-            Views, which have no bar.
+        on_retap: A tab root's action when its active tab is tapped again, on the
+            bar or the rail, usually the one ``ui.navigation.use_scroll_to_top()``
+            returns; ignored on pushed Views, which have neither.
         fab: The screen's floating action button, if any: the Schedule's "Now"
             (ux.md §5.2). The body leaves room for it at its end.
         unknown: The View of a location no route has (``routes.NotFound``): its
@@ -82,6 +92,7 @@ def AppScaffold(
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
+    wide = use_layout().wide  # the rail rather than the bar (D-277)
     tokens = use_tokens()
     is_root = view_path in TAB_ROOTS
     # One-View stacks whose Back goes to Now: the other roots, and an unknown
@@ -109,9 +120,10 @@ def AppScaffold(
         await e.control.confirm_pop(True)
 
     @report_errors
-    async def switch_tab(e: ft.Event[ft.NavigationBar]) -> None:
-        # Flutter reports the active destination too, so a re-tap lands here (S4).
-        root = TAB_ROOTS[e.control.selected_index]
+    async def switch_tab(index: int) -> None:
+        # The bar and the rail report the active destination too, so a re-tap lands
+        # here (S4, F95).
+        root = TAB_ROOTS[index]
         if root != view_path:
             page.navigate(root)  # roots share one View key: a swap, not a push (D-142)
         elif on_retap is not None:
@@ -159,8 +171,11 @@ def AppScaffold(
             leading=None if is_root else back_arrow,
             actions=actions or [],
         ),
-        # On roots only: on pushed Views the bar moved with the page (D-144).
-        navigation_bar=navigation_bar(view_path, switch_tab) if is_root else None,
+        # On roots only: on pushed Views the bar moved with the page (D-144). From
+        # 600 dp the rail beside the body takes its place (D-277).
+        navigation_bar=(
+            navigation_bar(view_path, switch_tab) if is_root and not wide else None
+        ),
         floating_action_button=fab,
         can_pop=not back_to_now,
         on_confirm_pop=on_confirm_pop,
@@ -168,10 +183,42 @@ def AppScaffold(
         # between them the body keeps all of it (D-216).
         spacing=0,
         controls=[
-            ft.SafeArea(expand=True, content=Shown(body)),
+            ft.SafeArea(
+                expand=True,
+                content=beside_rail(view_path, switch_tab, wide, Shown(body))
+                if is_root
+                else Shown(body),
+            ),
             GutterProbe(),
-            *([bar_divider()] if is_root and tokens.high_contrast else []),
+            # The line sits on the bar, which the rail replaces from 600 dp (D-277).
+            *([bar_divider()] if is_root and tokens.high_contrast and not wide else []),
         ],
+    )
+
+
+def beside_rail(
+    root: str, on_select: Select, wide: bool, shown: ft.Control
+) -> ft.Control:
+    """Return a tab root's body beside its rail, which shows only when ``wide``.
+
+    The rail stays in the tree, hidden, under 600 dp: the body keeps its place, so
+    crossing 600 dp rebuilds neither it nor the screen's components and Flutter's
+    state under it, such as a list's scroll (D-18, D-277). Under 600 dp the hidden
+    rail is no widget at all (Flet's Dart side leaves out a control that is not
+    ``visible``), and the body fills the row as it filled the ``SafeArea``: the phone
+    layout is the same, pixel for pixel. The row stretches its children to its height:
+    the rail needs a bounded one, and the body had the ``SafeArea``'s.
+
+    Args:
+        root: The tab root, one of ``TAB_ROOTS``.
+        on_select: The rail's tap handler, the bar's too.
+        wide: Whether the window is 600 dp wide or wider (``Layout.wide``).
+        shown: The screen's body in its ``Shown``; it has ``expand=True``.
+    """
+    return ft.Row(
+        [navigation_rail(root, on_select, visible=wide), shown],
+        spacing=0,
+        vertical_alignment=ft.CrossAxisAlignment.STRETCH,
     )
 
 

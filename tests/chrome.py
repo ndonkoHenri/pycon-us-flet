@@ -27,6 +27,7 @@ import flet as ft
 import pytest
 
 from pycon_us.config import YearData, load_year
+from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
@@ -90,6 +91,8 @@ def hooks(
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
+    # A phone unless a test sets hooks.wide (D-277).
+    monkeypatch.setattr(scaffold, "use_layout", lambda: Layout(wide=hooks.wide))
     monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
@@ -104,11 +107,27 @@ def Probe() -> ft.Control:
 
 
 def body_of(view: ft.View) -> ft.Control:
-    """The body the screen gave, in the SafeArea above the gutter probe."""
+    """The body the screen gave, in the SafeArea above the gutter probe.
+
+    On a tab root it sits beside the rail, in the SafeArea's row (D-277).
+    """
     safe, _ = view.controls
     assert isinstance(safe, ft.SafeArea)
     assert safe.content is not None
+    if isinstance(safe.content, ft.Row):
+        _, body = safe.content.controls
+        return body
     return safe.content
+
+
+def rail_of(view: ft.View) -> ft.NavigationRail:
+    """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
+    safe, _ = view.controls
+    assert isinstance(safe, ft.SafeArea)
+    assert isinstance(safe.content, ft.Row)
+    rail, _ = safe.content.controls
+    assert isinstance(rail, ft.NavigationRail)
+    return rail
 
 
 def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.View:

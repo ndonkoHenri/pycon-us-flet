@@ -1,11 +1,11 @@
-"""The bottom bar of the tab roots, and what a re-tap of the active tab does.
+"""The tab roots' bottom bar and rail, and what a re-tap of the active tab does.
 
 ``AppScaffold`` puts ``navigation_bar()`` on tab roots only (D-144): on pushed Views the
 bar moved with the page on iOS and doubled on Android (S4), so they show the back arrow
-instead. Its five destinations are fixed and the same for every user (D-13). Tapping
-another destination shows that root; tapping the active one runs the root's re-tap
-action, which ``use_scroll_to_top()`` provides for a root's list. P2's tablet rail (#30)
-joins here, with the same destinations.
+instead. From 600 dp wide the roots show ``navigation_rail()`` beside the body instead
+(D-09, D-277), with the same destinations. They are fixed and the same for every user
+(D-13). Tapping another destination shows that root; tapping the active one runs the
+root's re-tap action, which ``use_scroll_to_top()`` provides for a root's list.
 """
 
 from collections.abc import Awaitable, Callable
@@ -66,13 +66,19 @@ Outlined when unselected, filled when selected (D-27); More has no filled form.
 RETAP_SCROLL_MS = 300
 """How long a re-tap's scroll to the top takes: an M3 medium duration (D-34)."""
 
+RAIL_WIDTH = 80
+"""The rail's width in dp at the default text size, M3's; at large text it widens with
+its labels, which Flutter does not clamp as it does the bar's (F95, D-277)."""
+
 type Retap = Callable[[], Awaitable[None]]
 """What a root does when its active tab is tapped again: scroll to the top (D-144)."""
 
+type Select = Callable[[int], Awaitable[None]]
+"""What a tap on a destination does, given its index in ``TABS``: the bar and the rail
+report the active destination too (S4, F95), so this is also a re-tap."""
 
-def navigation_bar(
-    root: str, on_change: Callable[[ft.Event[ft.NavigationBar]], Awaitable[None]]
-) -> ft.NavigationBar:
+
+def navigation_bar(root: str, on_select: Select) -> ft.NavigationBar:
     """Return the bottom bar of a tab root, with that root's destination selected.
 
     Material, never adaptive, labels always shown (D-10, D-13). A destination has no
@@ -82,8 +88,13 @@ def navigation_bar(
 
     Args:
         root: The tab root the bar sits on, one of ``TAB_ROOTS``.
-        on_change: Called with the tapped destination selected, the active one too.
+        on_select: Called with the tapped destination's index, the active one's too.
     """
+
+    @report_errors
+    async def changed(e: ft.Event[ft.NavigationBar]) -> None:
+        await on_select(e.control.selected_index)
+
     return ft.NavigationBar(
         selected_index=TAB_ROOTS.index(root),
         label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
@@ -95,7 +106,54 @@ def navigation_bar(
             )
             for tab in TABS
         ],
-        on_change=on_change,
+        on_change=changed,
+    )
+
+
+def navigation_rail(
+    root: str, on_select: Select, *, visible: bool
+) -> ft.NavigationRail:
+    """Return the rail of a tab root, with that root's destination selected (D-277).
+
+    The bar's destinations and labels, as M3 lays a rail out: every label shown, the
+    destinations at the top, ``RAIL_WIDTH`` wide. A ``NavigationRail`` has no adaptive
+    form (D-10). It scrolls when the destinations are taller than the space beside
+    the body, as on a phone in landscape, so each one stays reachable.
+
+    Its icons carry no ``app.nav.<tab>`` identifier, unlike the bar's (F95): an
+    identifier makes its ``Semantics`` a node of its own, which only the bar's
+    ``MergeSemantics`` folds into the destination, and Flet's ``Semantics`` always
+    states ``enabled`` (U34), so in the rail that node is a second, empty TalkBack
+    stop in each destination. UI flows find a rail destination by its name,
+    "Schedule, Tab 2 of 5", until Flet gives the destination an identifier (#163).
+
+    Args:
+        root: The tab root the rail sits on, one of ``TAB_ROOTS``.
+        on_select: Called with the tapped destination's index, the active one's too.
+        visible: Whether it shows: from ``WIDE_DP`` (``Layout.wide``). A hidden rail
+            keeps its place in the View's tree, so the body beside it is never
+            rebuilt when the window crosses ``WIDE_DP`` (D-18).
+    """
+
+    @report_errors
+    async def changed(e: ft.Event[ft.NavigationRail]) -> None:
+        if e.control.selected_index is not None:  # Flutter sets it before the event
+            await on_select(e.control.selected_index)
+
+    return ft.NavigationRail(
+        selected_index=TAB_ROOTS.index(root),
+        label_type=ft.NavigationRailLabelType.ALL,
+        group_alignment=-1,
+        min_width=RAIL_WIDTH,
+        scrollable=True,
+        destinations=[
+            ft.NavigationRailDestination(
+                label=tab.label, icon=tab.icon, selected_icon=tab.selected_icon
+            )
+            for tab in TABS
+        ],
+        on_change=changed,
+        visible=visible,
     )
 
 
