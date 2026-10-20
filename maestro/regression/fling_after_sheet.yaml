@@ -56,8 +56,9 @@ onFlowComplete:
 # "Show N sessions" is tapped by its place, not its identifier: Maestro taps a control
 # by its identifier only after reading the screen, then waits for the screen to change,
 # about 1 s on the emulator. A swipe that starts and ends on one point is a tap with no
-# such waits, so the fling follows it sooner (about 0.9 s on the emulator, Maestro's
-# own time between two commands).
+# such waits, so the fling follows it sooner: 0.77 to 1.02 s on the emulator, Maestro's
+# own time between two commands. That is later than row D's 0.33 to 0.6 s, where #346
+# lost its flings, so this flow guards the fling at Maestro's pace (maestro/README.md).
 - repeat:
     times: ${TRIALS || 10}
     commands:

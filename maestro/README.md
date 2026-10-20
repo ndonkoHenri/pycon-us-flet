@@ -146,22 +146,38 @@ was short or none. On Android the launcher logs every touch, so the time from th
   `accessible_navigation` once anything reads its accessibility tree. The app then keeps
   the Schedule's Now button on the now slot and keeps SnackBars until they are used, as
   it does for TalkBack. Check those behaviours on iOS only.
-- About 0.9 s passes between two Maestro commands on the emulator (0.8 s on the
+- About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
-  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach.
+  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach (see the run
+  times below).
 - Each flow that runs `start_offline.yaml` turns the network back on in its
   `onFlowComplete` (`subflows/online.yaml`).
 
 ## Run times (#348)
 
 Release APK on `flet_probe_api34` (Android 14) and an `ios-simulator` build on an
-iPhone 17 simulator (iOS 26.5), Flet pin `15854a0ac`, on a host busy with other agents'
-builds and emulators. Each journey takes 1 to 1.5 minutes, most of it the fresh start in
-Developer options.
+iPhone 17 simulator (iOS 26.5), Flet pin `15854a0ac`, on 2026-10-20, on a host shared
+with other agents' builds and emulators. Each journey takes 1 to 1.5 minutes on a quiet
+host, most of it the fresh start in Developer options; the runs while the host's load
+average was in the hundreds took up to 3 minutes a journey.
 
-| Run | Android | iOS |
+| Run (the flows as merged) | Android | iOS |
 |---|---|---|
-| Journeys, first full run | 6 of 6 passed, 7 min 59 s | |
-| Journeys, second full run | | |
-| `regression`, `TRIALS=20`, `main` | | |
-| `regression`, `TRIALS=20`, #346 (`7ccd74f`) | | |
+| Journeys, run 1 | 6 of 6 passed, 14 min 4 s (load ~100) | 6 of 6 passed, 8 min 13 s |
+| Journeys, run 2 | 6 of 6 passed, 9 min 10 s | 6 of 6 passed, 7 min 29 s |
+| `regression`, `main`'s build (`1a2c2b5`) | `TRIALS=20`: 20 moved, 10 min 23 s; tap to fling 773-914 ms (median 870) | `TRIALS=10`: 10 moved, 5 min 5 s; tap command 0.77 s |
+| `regression`, #346's build (`7ccd74f`) | `TRIALS=20`: 20 moved, 10 min 44 s; tap to fling 807-1,019 ms (median 858) | not run |
+
+Earlier versions of the flows failed twice on iOS while the host's load average was 400
+to 700: Developer's feed URL lost two characters as it was typed (F63), and the overlap
+flow's star tap landed while the Schedule was still jumping to now. Both are handled now
+(a field is typed until it holds the whole value; the star waits for the jump, then is
+tapped again if it stayed off). At that load the regression flow also lost a fling on
+`main`, with 1.3 to 3.5 s between the tap and the fling: a busy host stretches the
+sheet's exit past the fling. Compare builds only on a quiet host, one right after the
+other.
+
+#346's row D failed with 0.33 to 0.6 s between the tap and the fling. Both builds ran
+every fling in full at about 0.85 s, the soonest Maestro gets there, so this flow does
+not reach that window: it guards the fling at Maestro's pace, and the faster window
+stays with an `adb` script (`input tap`, then `input swipe`).
