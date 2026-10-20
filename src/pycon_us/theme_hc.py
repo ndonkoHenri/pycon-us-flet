@@ -24,8 +24,7 @@ The rules the values follow, beyond §3.2's table:
 
 With one surface, high contrast draws structure with lines (THEME-06, D-285): the token
 colours below (``theme.py`` builds HC's ``Tokens`` from them and outlines every badge)
-and ``hc_card_theme()``, which trades the cards' shadows and fills
-for a border.
+and ``hc_card_theme()``, which trades the cards' shadows and fills for a border.
 
 Module of its own because ``theme.py`` is near D-66's 400 lines (decisions §M).
 """

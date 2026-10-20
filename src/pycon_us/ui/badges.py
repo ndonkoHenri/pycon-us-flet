@@ -2,11 +2,11 @@
 
 A badge is a text pill: a tonal fill per track in light and dark, or an outline for
 "Registration required" (D-25; ux.md §3.4); in high contrast every badge is outlined,
-1.5 dp wide (THEME-06). Badges always carry text, so colour is never
-the only signal (D-33), and every name comes from ``ConferenceInfo.track_name()``
-(DATA-28). The colours are the current scheme's ``Tokens`` (D-24); the builders take
-them as an argument, so a memoised row (D-153) that receives the tokens as a prop
-(D-150) still draws the scheme on screen.
+1.5 dp wide (THEME-06). Badges always carry text, so colour is never the only signal
+(D-33), and every name comes from ``ConferenceInfo.track_name()`` (DATA-28). The
+colours are the current scheme's ``Tokens`` (D-24); the builders take them as an
+argument, so a memoised row (D-153) that receives the tokens as a prop (D-150) still
+draws the scheme on screen.
 
 The star beside them, and the SnackBars of a favourites edit, are ``ui/favorite.py``'s
 (D-267).
