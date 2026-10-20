@@ -45,13 +45,8 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import (
-    FavoriteButton,
-    TrackBadge,
-    badge_row,
-    badge_specs,
-    use_favorite_toggle,
-)
+from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
+from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
 from pycon_us.ui.links import feed_markdown, open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.rows import LinkTile, SpeakerTile
