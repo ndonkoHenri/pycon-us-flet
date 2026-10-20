@@ -4,9 +4,9 @@
 each tab root, More page and ``/search`` ends with ``DRILL``, a recursive child that
 pushes one View per ``<kind>/<id>`` pair, so ``/schedule/session/42/speaker/17`` is
 three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on,
-to ``/welcome`` on a first start (D-287); an unknown location is ``NotFound``, through ``UNKNOWN``, the table's last route
-(D-270). Back itself is ``main.py``'s ``page.on_view_pop`` with
-``locations.parent_of()`` (D-19).
+to ``/welcome`` on a first start (D-287); an unknown location is ``NotFound``,
+through ``UNKNOWN``, the table's last route (D-270). Back itself is ``main.py``'s
+``page.on_view_pop`` with ``locations.parent_of()`` (D-19).
 """
 
 from collections.abc import Callable
@@ -73,7 +73,8 @@ def Drill() -> ft.View:
 def Start() -> ft.View:
     """``/``: send the session to Welcome, to Now, or back to where the user was.
 
-    Welcome until Get started (D-287), then where the user was (D-143). A new session in the same process (F26, F29) finds ``ViewMemory.last_location``
+    Welcome until Get started (D-287), then where the user was (D-143). A new
+    session in the same process (F26, F29) finds ``ViewMemory.last_location``
     and rebuilds that stack; a deep link or ``--route`` start never comes here, except
     one straight to ``/search``: with no opener to remember, the Router builds the
     modal over ``/``, so ``Start`` mounts below it and must stay put, not replace the
