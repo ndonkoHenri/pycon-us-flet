@@ -199,6 +199,33 @@ class MemoryShare(ft.Share):
         return ft.ShareResult(status=self.status, raw="")
 
 
+class MemoryFilePicker(ft.FilePicker):
+    """FilePicker whose save dialog records the file instead of reaching the platform."""
+
+    def init(self) -> None:
+        """Start with nothing saved, a save that succeeds, no error and no gate."""
+        self.saved: list[tuple[str | None, bytes | None]] = []
+        # What the dialog answers: an opaque document path, or None for a cancel.
+        self.answer: str | None = "/document/12"
+        self.error: Exception | None = None
+        # When given, the dialog stays up until the test sets the event.
+        self.gate: asyncio.Event | None = None
+
+    async def save_file(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, **options: Any
+    ) -> str | None:
+        """Record the file's name and bytes, then answer ``answer`` once any gate is set.
+
+        ``error``, when given, is raised before anything is recorded.
+        """
+        if self.error is not None:
+            raise self.error
+        self.saved.append((options.get("file_name"), options.get("src_bytes")))
+        if self.gate is not None:
+            await self.gate.wait()
+        return self.answer
+
+
 class MemoryPaths(ft.StoragePaths):
     """StoragePaths whose console log is a path the test chooses."""
 
