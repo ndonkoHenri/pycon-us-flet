@@ -87,5 +87,6 @@ class SilentFeed:
         self._server.server_close()
 
     def _took(self) -> None:
+        """Count one request the feed took, under the lock."""
         with self._lock:
             self._requests += 1

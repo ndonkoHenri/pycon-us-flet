@@ -54,7 +54,8 @@ that date motivates us but never justifies cutting corners.
 - Docs live next to the code they describe and change in the **same PR** as the behaviour.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
-  has a docstring (Google style); comments explain **why**, not what.
+  has a docstring (Google style); comments explain **why**, not what. Tests too: every test function's docstring says
+  the behaviour it pins, and fixtures and test helpers have docstrings (D-253; `ruff` checks `tests/`).
 
 ## Working with Flet
 
