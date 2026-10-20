@@ -186,7 +186,11 @@ def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
 def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
     data_dir: Path, body: bytes, status: int, problem: str
 ) -> None:
-    """A feed that fails to fetch or parse cleanly is refused and writes nothing."""
+    """A bad feed is refused, and nothing is written.
+
+    It fails to fetch, does not parse, makes the parser skip a record, or has days
+    outside the conference's.
+    """
     before = files(data_dir)
     with pytest.raises(SnapshotError) as error:
         update_snapshot(2026, data_dir, transport=serving(body, status), now=NOW)

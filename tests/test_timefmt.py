@@ -238,7 +238,7 @@ AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
     ],
 )
 def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
-    """Each time function raises ``ValueError`` for a naive datetime."""
+    """The functions that take a zone raise ``ValueError`` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
         call()
 

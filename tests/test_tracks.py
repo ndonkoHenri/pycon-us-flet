@@ -215,11 +215,12 @@ async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> 
 async def test_every_track_row_pushes_its_slug_under_the_hub(
     show: Show, slug: str
 ) -> None:
-    """Every row pushes ``/more/tracks/<slug>``, whose parent is the hub.
+    """A track row pushes ``/more/tracks/<slug>``, whose parent is the hub.
 
-    ux.md §5.10, D-207: one rule for every row; the route table opens the keynotes',
-    lightning talks' and open spaces' own pages at their slugs, and Back from any of
-    them returns to the hub (D-17).
+    ux.md §5.10, D-207: one rule for every row, checked on the talks row and the three
+    tracks with pages of their own; the route table opens the keynotes', lightning
+    talks' and open spaces' pages at their slugs, and Back from any of them returns to
+    the hub (D-17).
     """
     shown = await show(hub_screen.Tracks)
     await shown.click(cast(ft.Control, shown.node(f"tracks.track.{slug}").parent))

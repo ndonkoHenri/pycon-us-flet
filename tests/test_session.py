@@ -258,7 +258,10 @@ async def test_the_room_tile_pushes_the_room_with_the_session_highlighted(
 
 
 async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
-    """A streamed session shows its main room and folds the four others, each a link."""
+    """A streamed session shows its main room and folds the four others.
+
+    The first folded room is a link to its room detail, highlighting the session.
+    """
     detail = await render(LIGHTNING)
     assert words(detail.node("session.room")) == ["Pacific Ballroom - Arena"]
     folded = detail.node("session.other_rooms").content
@@ -290,7 +293,10 @@ async def test_the_folded_rooms_stay_open_once_opened(render: Render) -> None:
 async def test_a_break_in_many_rooms_lists_them_without_one_place(
     render: Render,
 ) -> None:
-    """A break has no main room: "In 5 rooms" folds them, its id quoted in each link."""
+    """A break has no main room: "In 5 rooms" folds them.
+
+    The first folded room's link quotes the break's id.
+    """
     detail = await render(BREAK)
     assert detail.nodes("session.room") == []
     folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
