@@ -37,6 +37,7 @@ from tests.fakes import (
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """A ``FakePage`` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -44,6 +45,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
+    """The session's services over in-memory fakes and a 2026 ``Storage``."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -58,6 +60,7 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def prefs() -> Prefs:
+    """Prefs at their defaults, as on a first launch."""
     return Prefs()
 
 
@@ -87,6 +90,7 @@ def render(
 
 
 def rows_of(scaffold: dict[str, Any]) -> list[ft.Control]:
+    """Return the rows of the scaffold's ``ListView`` body."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     return list(body.controls)
@@ -127,6 +131,7 @@ def outline(rows: list[ft.Control]) -> list[str]:
 def test_the_list_has_programme_then_you_under_section_headers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """The list is Programme's six pages, then You: Appearance, About and Developer."""
     assert outline(rows_of(render())) == [
         "# Programme",
         "Speakers",
@@ -147,6 +152,7 @@ def test_developer_is_hidden_in_packaged_builds_until_unlocked(
     render: Callable[[], dict[str, Any]],
     prefs: Prefs,
 ) -> None:
+    """A packaged build lists Developer options only once Developer is unlocked."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)
     titles = outline(rows_of(render()))
     assert "About this app" in titles
@@ -158,6 +164,7 @@ def test_developer_is_hidden_in_packaged_builds_until_unlocked(
 def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(
     render: Callable[[], dict[str, Any]], page: FakePage
 ) -> None:
+    """Tapping every row goes to each More page in turn, all in the route table."""
     for row in rows_of(render()):
         if (tile := tile_of(row)) is not None:
             cast(Callable[[], None], tile.on_click)()
@@ -169,6 +176,7 @@ def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(
 def test_a_tap_pushes_the_row_s_page_and_back_returns_to_more(
     render: Callable[[], dict[str, Any]], page: FakePage, entry: MoreEntry
 ) -> None:
+    """A row's tap goes to its page, whose parent is More, so Back returns there."""
     tiles = {str(t.title): t for row in rows_of(render()) if (t := tile_of(row))}
     tile = tiles[entry.title]
     assert tile.on_click is not None
@@ -180,6 +188,7 @@ def test_a_tap_pushes_the_row_s_page_and_back_returns_to_more(
 def test_each_row_has_its_icon_and_a_more_identifier(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """Each page row is a merged node with its entry's identifier and icon."""
     rows = [row for row in rows_of(render()) if tile_of(row) is not None]
     by_id = {}
     for row in rows:
@@ -192,6 +201,7 @@ def test_each_row_has_its_icon_and_a_more_identifier(
 
 
 def test_identifiers_name_the_page_in_snake_case() -> None:
+    """Each entry's identifier is ``more.`` and its page's name in snake case."""
     assert [entry.identifier for entry in MORE_PAGES] == [
         "more.speakers",
         "more.tracks",
@@ -207,6 +217,7 @@ def test_identifiers_name_the_page_in_snake_case() -> None:
 def test_more_keeps_the_search_and_the_re_tap_scroll_to_top(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """More is titled More, scrolls to top on a re-tap, and its one action is Search."""
     scaffold = render()
     assert scaffold["title"] == "More"
     assert scaffold["on_retap"] is retap  # D-144, D-166
@@ -230,6 +241,7 @@ def appearance_column(scaffold: dict[str, Any]) -> ft.Column:
 
 
 def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
+    """Return the Appearance group's ``RadioGroup``, under its label."""
     choice = appearance_column(scaffold).controls[-1]
     assert isinstance(choice, ft.RadioGroup)
     return choice
@@ -258,6 +270,7 @@ async def choose(choice: ft.RadioGroup, value: str) -> None:
 def test_appearance_shows_the_stored_choice(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
+    """The Appearance choice shows the stored theme."""
     prefs.theme = "dark"
     choice = appearance_of(render())
     assert choice.value == "dark"  # controlled (D-157)
@@ -266,6 +279,7 @@ def test_appearance_shows_the_stored_choice(
 def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """Appearance offers System, Light and Dark as tiles whose whole row selects."""
     options = options_of(appearance_of(render()))
     assert [(ident, value, tile.title) for ident, value, tile in options] == [
         ("more.appearance.system", "system", "System"),
@@ -278,6 +292,7 @@ def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
 def test_the_appearance_label_is_a_heading_for_screen_readers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """The Appearance label is one level-3 heading node: a tile with no tap."""
     merged = appearance_column(render()).controls[0]
     # One node: the tile's own node is the heading, not an unlabelled one around it.
     assert isinstance(merged, ft.MergeSemantics)
@@ -292,6 +307,7 @@ def test_the_appearance_label_is_a_heading_for_screen_readers(
 async def test_choosing_an_appearance_saves_it(
     render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
 ) -> None:
+    """Choosing Light saves it in Prefs, with no message."""
     await choose(appearance_of(render()), "light")
     assert prefs.theme == "light"
     assert page.dialogs == []
@@ -303,6 +319,7 @@ async def test_an_appearance_that_cannot_be_saved_says_so(
     page: FakePage,
     svc: Services,
 ) -> None:
+    """A choice that cannot be saved still applies, and a SnackBar says so."""
     cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
     await choose(appearance_of(render()), "dark")
     assert prefs.theme == "dark"  # applied for this session (D-120)
@@ -315,8 +332,11 @@ async def test_an_appearance_that_cannot_be_saved_says_so(
 def test_lightning_talks_appear_once_and_open_their_own_page(
     render: Callable[[], dict[str, Any]], page: FakePage
 ) -> None:
-    """EVT-03, SHELL-10: Ionic listed them twice, under Presentations and Events, with
-    two targets; here one row opens the one page, and so does the Tracks hub's row."""
+    """Lightning talks is one row of More, and it opens their one page.
+
+    EVT-03, SHELL-10: Ionic listed them twice, under Presentations and Events, with two
+    targets; here one row opens the one page, and so does the Tracks hub's row.
+    """
     tiles = [t for row in rows_of(render()) if (t := tile_of(row))]
     lightning = [t for t in tiles if "lightning" in str(t.title).casefold()]
     assert [str(t.title) for t in lightning] == ["Lightning talks"]

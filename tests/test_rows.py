@@ -55,7 +55,10 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
-    # The external row's component body runs inline: there is no renderer here.
+    """A ``FakePage`` bound, with the external row's body inline over ``svc``.
+
+    The external row's component body runs inline: there is no renderer here.
+    """
     monkeypatch.setattr(
         rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
     )
@@ -66,10 +69,12 @@ def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
 
 
 def launcher(svc: Services) -> MemoryLauncher:
+    """Return the services' ``MemoryLauncher``."""
     return cast(MemoryLauncher, svc.launcher)
 
 
 def clipboard(svc: Services) -> MemoryClipboard:
+    """Return the services' ``MemoryClipboard``."""
     return cast(MemoryClipboard, svc.clipboard)
 
 
@@ -114,6 +119,7 @@ def node_of(row: ft.Control) -> ft.Semantics | None:
 
 
 def copy_button_of(row: ft.Control) -> ft.IconButton:
+    """Return the Copy ``IconButton`` beside a phone or email row's link."""
     assert isinstance(row, ft.Row)
     holder = row.controls[1]
     assert isinstance(holder, ft.Container)
@@ -127,11 +133,13 @@ def copy_button_of(row: ft.Control) -> ft.IconButton:
 
 
 def tap(tile: ft.ListTile) -> None:
+    """Call a tile's ``on_click``, as a tap does."""
     assert tile.on_click is not None
     cast(Callable[[], None], tile.on_click)()
 
 
 async def tap_async(control: ft.ListTile | ft.IconButton) -> None:
+    """Await a tile's or a button's ``on_click``, as a tap does."""
     assert control.on_click is not None
     await cast(Callable[[], Awaitable[None]], control.on_click)()
 
@@ -142,6 +150,7 @@ async def tap_async(control: ft.ListTile | ft.IconButton) -> None:
 def test_a_link_tile_is_one_merged_list_tile_with_a_trailing_chevron(
     page: FakePage,
 ) -> None:
+    """A link tile is a merged ``ListTile`` with its title, its icon and a chevron."""
     tile = tile_of(LinkTile("Speakers", "/more/speakers", icon=ft.Icons.PEOPLE_OUTLINE))
     assert tile.title == "Speakers"
     assert isinstance(tile.trailing, ft.Icon)
@@ -151,12 +160,14 @@ def test_a_link_tile_is_one_merged_list_tile_with_a_trailing_chevron(
 
 
 def test_a_link_tile_without_an_icon_or_subtitle_has_neither(page: FakePage) -> None:
+    """A link tile given no icon or subtitle has no leading icon and no subtitle."""
     tile = tile_of(LinkTile("Ana Lima", "/more/speakers/speaker/17"))
     assert tile.leading is None
     assert tile.subtitle is None
 
 
 def test_a_link_tile_shows_its_subtitle(page: FakePage) -> None:
+    """A link tile shows the subtitle it is given."""
     tile = tile_of(LinkTile("Ana Lima", "/x", subtitle="Typing deep dive"))
     assert tile.subtitle == "Typing deep dive"
 
@@ -164,6 +175,7 @@ def test_a_link_tile_shows_its_subtitle(page: FakePage) -> None:
 def test_a_row_without_a_subtitle_centres_its_icons_by_the_title_height(
     page: FakePage,
 ) -> None:
+    """A row with no subtitle aligns its icons by the title's height, in M3's 56 dp."""
     tile = tile_of(LinkTile("Keynotes", "/more/keynotes", icon=ft.Icons.MIC))
     assert tile.title_alignment == ft.ListTileTitleAlignment.TITLE_HEIGHT
     assert tile.min_vertical_padding is None  # M3's 56 dp row
@@ -187,6 +199,7 @@ def test_a_row_with_a_subtitle_tops_its_icons_level_with_the_title(
 def test_the_copy_button_sits_level_with_the_leading_icon(
     page: FakePage, subtitle: str | None, top: int
 ) -> None:
+    """Copy is padded 4 dp down, or 2 dp with a subtitle, level with the icon."""
     row = LinkTile("Call the hotline", HOTLINE, subtitle=subtitle)
     assert isinstance(row, ft.Row)
     holder = row.controls[1]
@@ -196,11 +209,13 @@ def test_the_copy_button_sits_level_with_the_leading_icon(
 
 
 def test_a_tap_on_a_link_tile_pushes_its_location(page: FakePage) -> None:
+    """A tap on a link tile navigates to its location."""
     tap(tile_of(LinkTile("Keynotes", "/more/keynotes")))
     assert page.navigated == ["/more/keynotes"]
 
 
 def test_a_link_tile_s_identifier_tags_the_merged_node(page: FakePage) -> None:
+    """A link tile's identifier tags its merged node, which adds no label or link."""
     row = LinkTile("Sprints", "/more/sprints", identifier="more.sprints")
     node = node_of(row)
     assert node is not None
@@ -212,10 +227,13 @@ def test_a_link_tile_s_identifier_tags_the_merged_node(page: FakePage) -> None:
 def test_a_link_tile_without_an_identifier_adds_no_semantics_node(
     page: FakePage,
 ) -> None:
+    """A link tile with no identifier has no ``Semantics`` inside its merge."""
     assert node_of(LinkTile("Sprints", "/more/sprints")) is None
 
 
 def test_a_tap_that_fails_is_reported_not_raised(page: FakePage) -> None:
+    """A tap whose navigation raises shows one message instead of raising."""
+
     def broken(location: str) -> None:
         raise RuntimeError("no route")
 
@@ -235,6 +253,7 @@ def test_a_tap_that_fails_is_reported_not_raised(page: FakePage) -> None:
 def test_an_external_row_is_a_link_whose_icon_says_where_it_opens(
     page: FakePage, target: str, app: bool, heard: str
 ) -> None:
+    """An external row is a link whose open-in-new icon says where it opens."""
     row = LinkTile("PyCon US website", target, app=app, identifier="about.website")
     node = node_of(row)
     assert node is not None
@@ -250,12 +269,14 @@ def test_an_external_row_is_a_link_whose_icon_says_where_it_opens(
 async def test_a_web_row_opens_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:
+    """A web row opens its URL in the in-app browser, without a navigation."""
     await tap_async(tile_of(LinkTile("PyCon US website", WEB)))
     assert launcher(svc).launched == [(WEB, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
     assert page.navigated == []
 
 
 async def test_a_profile_row_opens_in_its_app(page: FakePage, svc: Services) -> None:
+    """A profile row with ``app=True`` opens its URL in the external app."""
     await tap_async(tile_of(LinkTile("PyCon on Mastodon", PROFILE, app=True)))
     assert launcher(svc).launched == [(PROFILE, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
@@ -263,6 +284,7 @@ async def test_a_profile_row_opens_in_its_app(page: FakePage, svc: Services) -> 
 async def test_a_row_the_platform_cannot_open_says_so(
     page: FakePage, svc: Services
 ) -> None:
+    """A row whose launch fails says it couldn't open the link."""
     launcher(svc).error = RuntimeError("no app")
     await tap_async(tile_of(LinkTile("Email the CoC team", EMAIL)))
     assert said(page) == ["Couldn't open the link"]
@@ -283,6 +305,7 @@ async def test_a_phone_or_email_row_offers_copy_beside_it(
     copied: str,
     message: str,
 ) -> None:
+    """A phone or email row's Copy copies the number or address and says so."""
     row = LinkTile("Call the hotline", target, identifier="help.coc")
     button = copy_button_of(row)
     assert button.tooltip == tooltip  # its accessible name (D-27)
@@ -295,6 +318,7 @@ async def test_a_phone_or_email_row_offers_copy_beside_it(
 async def test_a_phone_row_hands_the_number_to_the_phone_app(
     page: FakePage, svc: Services
 ) -> None:
+    """A phone row opens its ``tel:`` URL in the external app."""
     await tap_async(tile_of(LinkTile("Call the hotline", HOTLINE)))
     assert launcher(svc).launched == [(HOTLINE, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
@@ -302,6 +326,7 @@ async def test_a_phone_row_hands_the_number_to_the_phone_app(
 def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
     page: FakePage,
 ) -> None:
+    """Copy is outside the link's merge, a merged node of its own with an identifier."""
     row = LinkTile("Call the hotline", HOTLINE, identifier="help.coc")
     assert isinstance(row, ft.Row)
     merged = row.controls[0]
@@ -317,6 +342,7 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
 
 
 async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
+    """A copy that fails says it couldn't copy the phone number."""
     clipboard(svc).error = TimeoutError()
     await tap_async(copy_button_of(LinkTile("Call the hotline", HOTLINE)))
     assert said(page) == ["Couldn't copy the phone number"]
@@ -329,6 +355,7 @@ NO_PHOTO = Speaker(id="18", name="Bo Chen", photo_url="", bio="")
 
 
 def test_a_speaker_avatar_shows_the_photo_over_the_initials() -> None:
+    """A speaker's avatar is a 48 dp circle with the photo over the initials."""
     avatar = speaker_avatar(ANA)
     assert avatar.foreground_image_src == ANA.photo_url
     assert isinstance(avatar.content, ft.Text) and avatar.content.value == "AL"
@@ -340,12 +367,14 @@ def test_a_speaker_avatar_shows_the_photo_over_the_initials() -> None:
 
 
 def test_a_speaker_without_a_photo_shows_the_initials_alone() -> None:
+    """A speaker without a photo gets the initials alone and no image request."""
     avatar = speaker_avatar(NO_PHOTO)
     assert avatar.foreground_image_src is None  # no request for an empty URL
     assert isinstance(avatar.content, ft.Text) and avatar.content.value == "BC"
 
 
 def test_a_speaker_tile_is_one_button_named_by_the_speaker(page: FakePage) -> None:
+    """A speaker tile is one merged button read as the name, its avatar left out."""
     row = SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17")
     tile = tile_of(row)
     assert tile.title == "Ana Lima"
@@ -368,5 +397,6 @@ def test_stacked_speaker_tiles_keep_material_s_space_around_the_avatar(
 
 
 def test_a_tap_on_a_speaker_tile_pushes_the_speaker(page: FakePage) -> None:
+    """A tap on a speaker tile navigates to the speaker's location."""
     tap(tile_of(SpeakerTile(ANA, "/x/speaker/17", identifier="session.speaker.17")))
     assert page.navigated == ["/x/speaker/17"]

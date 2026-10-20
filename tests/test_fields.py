@@ -39,6 +39,8 @@ class Probe:
     filtered: list[str] = field(default_factory=list)
 
     def root(self) -> ft.Control:
+        """Return the probe: the field, then a Show all and a Clear all button."""
+
         @ft.component
         def Filter() -> ft.Control:
             self.renders += 1
@@ -95,13 +97,16 @@ class Shown:
 
     @property
     def text_field(self) -> ft.TextField:
+        """The probe's one ``TextField``, from the session's current tree."""
         (text_field,) = find(self.session, ft.TextField)
         return text_field
 
     def clear_buttons(self) -> list[ft.IconButton]:
+        """Return the page's Clear icon buttons, found by their tooltip."""
         return find(self.session, ft.IconButton, lambda b: b.tooltip == CLEAR)
 
     def text_button(self, text: str) -> ft.TextButton:
+        """Return the one ``TextButton`` whose content is ``text``."""
         (button,) = find(self.session, ft.TextButton, lambda b: b.content == text)
         return button
 
@@ -134,6 +139,7 @@ class Shown:
         await settle()
 
     async def click(self, control: ft.Control) -> None:
+        """Click ``control`` as Flutter reports it, then let the session settle."""
         await self.session.dispatch_event(control._i, "click", None)
         await settle()
 
@@ -165,6 +171,7 @@ def focused(
 
 @pytest.fixture
 async def shown(focused: list[ft.TextField]) -> AsyncIterator[Shown]:
+    """The probe on a recording page, with the first render's sends dropped."""
     probe = Probe()
     session, sent = recording()
     async with rendering(probe.root, session):
@@ -207,6 +214,7 @@ async def test_a_burst_of_keys_leaves_the_field_and_the_filter_in_step(
 
 
 async def test_clear_sends_the_empty_text_once(shown: Shown) -> None:
+    """A Clear sends the empty text once; then a key sends nothing and filters by it."""
     await shown.type("py")
     (clear,) = shown.clear_buttons()
     await shown.click(clear)
@@ -295,6 +303,7 @@ async def test_clear_empties_the_field_and_puts_the_focus_back_in_it(
 async def test_focus_moves_the_focus_to_the_field_and_keeps_the_text(
     shown: Shown,
 ) -> None:
+    """Show all, which only moves the focus, focuses the field and keeps its text."""
     await shown.type("py")
     await shown.click(shown.text_button("Show all"))
     assert shown.text_field.value == "py"
