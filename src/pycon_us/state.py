@@ -14,22 +14,20 @@ import flet as ft
 import httpx
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog, Published
 from pycon_us.config import ConferenceInfo, YearData
 from pycon_us.core import feed
 from pycon_us.core.models import ConferenceData
-from pycon_us.core.timefmt import today
 from pycon_us.feed_refresh import (
-    REFRESH_EVERY,
-    STALE_ON_CONFERENCE_DAYS,
-    STALE_OTHERWISE,
     Problem,
     Source,
     Status,
+    due,
     feed_digest,
     fetch,
     log_unexpected,
+    stale,
 )
-from pycon_us.services import changes_file
 from pycon_us.services.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -43,10 +41,10 @@ class Conference:
     """This year's processed feed, where it came from and how fresh it is (D-38, D-39).
 
     ``load_local`` publishes the best local copy before the first frame; ``start_refresh``
-    or ``refresh`` then replaces it from the network. A published ``ConferenceData`` is
-    frozen and never mutated: a refresh publishes a new one, so screens memoise on
-    ``version``. A refresh that brings the very bytes already published publishes
-    nothing: only its freshness changes (D-224).
+    or ``refresh`` then replaces it from the network, and hands the old and new feeds to
+    the ``ChangeLog`` (D-255). A published ``ConferenceData`` is frozen and never
+    mutated, so screens memoise on ``version``. A refresh that brings the very bytes
+    already published publishes nothing: only its freshness changes (D-224).
 
     A refresh is automatic (``start_refresh``, ``start_refresh_if_due``) or asked for by
     the user (``refresh``). An automatic one is quiet: ``status()`` keeps saying what it
@@ -81,6 +79,9 @@ class Conference:
     # The SHA-256 of the raw feed `data` was processed from: a refresh whose bytes have
     # it brings nothing new to publish (D-224).
     _digest: bytes | None = field(default=None, repr=False)
+    # The feed URL `data` counts as, and where a new feed is handed for the diff (D-255).
+    _shown_url: str = field(default="", repr=False)
+    _change_log: ChangeLog = field(default_factory=ChangeLog, repr=False)
 
     async def set_feed_url(self, url: str | None, storage: Storage) -> None:
         """Refresh from ``url`` from the next refresh on; None returns to the year's feed.
@@ -102,7 +103,7 @@ class Conference:
         )
         if self.data is not None:
             await storage.delete_feed("the feed URL changed")
-            await changes_file.delete_batches(storage, "the feed URL changed")
+            await self._change_log.delete(storage, "the feed URL changed")
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the feed cache, or the bundled snapshot when there is no usable cache.
@@ -126,7 +127,8 @@ class Conference:
                 await storage.delete_feed(f"it does not parse: {error}")
             else:
                 saved_at = datetime.fromtimestamp(cached.saved_at, UTC)
-                self._publish(data, feed_digest(cached.raw), "cache", saved_at)
+                url = self._url(year)
+                self._publish(data, feed_digest(cached.raw), "cache", saved_at, url)
                 return
         self._publish_snapshot(year)
 
@@ -134,12 +136,11 @@ class Conference:
         """Return to what a fresh install shows: the bundled snapshot, from the year's feed.
 
         Reset app (DEV-05, D-198). A running refresh is cancelled, and waited for, so it
-        cannot cache or publish after the reset; the feed URL returns to the year's; the
-        cache is deleted; the snapshot is published, so every screen shows it at once.
-        The caller starts the next refresh, as ``bootstrap()`` does. A caller awaiting
-        ``refresh()`` ends with ``CancelledError`` too (the shield passes the inner
-        cancel on), so a Refresh tapped before the reset says nothing about a refresh
-        that never ended.
+        cannot cache, publish or record after the reset; the feed URL returns to the
+        year's; the cache is deleted; the change log is reset in memory (D-255); the
+        snapshot is published. The caller starts the next refresh, as ``bootstrap()``
+        does. A caller awaiting ``refresh()`` ends with ``CancelledError`` too (the
+        shield passes the inner cancel on).
 
         Args:
             storage: Where the feed cache lives.
@@ -159,6 +160,7 @@ class Conference:
         self.refreshing = False
         await self.set_feed_url(None, storage)
         deleted = await storage.delete_feed("Reset app")
+        self._change_log.reset()
         self._publish_snapshot(year)
         return deleted
 
@@ -198,20 +200,12 @@ class Conference:
         return self._task
 
     def refresh_due(self) -> bool:
-        """Return whether an automatic refresh is due (D-40).
+        """Return whether an automatic refresh is due (D-40): ``feed_refresh.due()``.
 
-        Due when no refresh has started in this session, or the last one started
-        ``REFRESH_EVERY`` or more ago by ``clock.now()``, whatever its outcome: counted
-        from the last attempt, not the data's age, so a phone offline retries every
-        15 min, not on every check. A clock set back before the last start (the fake
-        clock) makes it due too. Never while one runs: that one is the attempt.
+        Never while one runs: that one is the attempt.
         """
-        if self._task is not None and not self._task.done():
-            return False
-        if self._started_at is None:
-            return True
-        since = clock.now() - self._started_at
-        return not timedelta(0) <= since < REFRESH_EVERY
+        running = self._task is not None and not self._task.done()
+        return not running and due(self._started_at)
 
     def start_refresh_if_due(
         self,
@@ -224,14 +218,8 @@ class Conference:
         """Start a background refresh when ``refresh_due()``; the automatic triggers' call.
 
         The app calls it on resume, and the status strip of Now and Schedule every
-        minute while it shows (D-40). Like ``start_refresh``, it never raises for an
-        expected failure and never clears what is published.
-
-        Args:
-            storage: Where the feed cache lives.
-            year: The year's data: the feed URL and feed settings.
-            transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
-            closed: Set when the store's session is replaced; see ``start_refresh``.
+        minute while it shows (D-40). It takes ``start_refresh``'s arguments and, like
+        it, never raises for an expected failure and never clears what is published.
 
         Returns:
             The refresh it started, or None when none was due.
@@ -254,13 +242,8 @@ class Conference:
         Concurrent calls share one request. The user's refresh is not quiet:
         ``status()`` says ``refreshing`` until it ends, and joining an automatic refresh
         that is running makes that one the user's at once (D-181). Cancelling one caller
-        does not cancel the shared refresh, which others may be waiting for.
-
-        Args:
-            storage: Where the feed cache lives.
-            year: The year's data: the feed URL and feed settings.
-            transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
-            closed: Set when the store's session is replaced; see ``start_refresh``.
+        does not cancel the shared refresh, which others may be waiting for. It takes
+        ``start_refresh``'s arguments.
         """
         task = self.start_refresh(storage, year, transport=transport, closed=closed)
         if not self._asked:
@@ -288,10 +271,9 @@ class Conference:
 
         In order: ``refreshing`` while a refresh the user asked for runs (``refresh()``);
         ``offline`` or ``problem`` when the last refresh failed with no answer or a bad
-        one; ``stale`` when the data is older than 6 h on a conference day (``first_day``
-        to ``last_day`` in conference time) or 24 h on another day, or when there is no
-        data yet; otherwise ``fresh``. An automatic refresh changes none of it until it
-        ends, so the strip's live region changes only with an outcome (D-181).
+        one; ``stale`` by ``feed_refresh.stale()``; otherwise ``fresh``. An automatic
+        refresh changes none of it until it ends, so the strip's live region changes
+        only with an outcome (D-181).
 
         Args:
             info: The year's facts: its dates and time zone.
@@ -302,13 +284,7 @@ class Conference:
             return "offline"
         if self.problem == "server":
             return "problem"
-        age = self.age()
-        if age is None:
-            return "stale"
-        day = today(clock.now(), info.zone)
-        conference_day = info.first_day <= day <= info.last_day
-        limit = STALE_ON_CONFERENCE_DAYS if conference_day else STALE_OTHERWISE
-        return "stale" if age > limit else "fresh"
+        return "stale" if stale(self.age(), info) else "fresh"
 
     async def _refresh(
         self,
@@ -334,8 +310,11 @@ class Conference:
                 why = "its feed URL was left"
             else:
                 return False
-            logger.info("Feed refresh ended after %s; nothing written", why)
+            logger.info("Feed refresh ended after %s; nothing more written", why)
             return True
+
+        def current() -> bool:
+            return not discarded()
 
         self.refreshing = True
         try:
@@ -354,8 +333,12 @@ class Conference:
                 return
             if data is None:
                 self._confirm()
-            else:
-                self._publish(data, digest, "network", clock.now())
+                return
+            before = Published(self.data, self.source, self._shown_url)
+            self._publish(data, digest, "network", clock.now(), url)
+            after = Published(data, "network", url)
+            # It checks discarded() again just before it writes the log (D-255).
+            await self._change_log.record(storage, before, after, current)
         finally:
             self._asked = False  # private: the next refresh starts quiet (D-181)
             # A closed session's store must not be written at all (F30).
@@ -369,11 +352,18 @@ class Conference:
     def _publish_snapshot(self, year: YearData) -> None:
         snapshot = year.read_snapshot()
         data = feed.process(snapshot.raw, year.feed_settings)
-        self._publish(data, feed_digest(snapshot.raw), "bundled", snapshot.captured_at)
+        captured_at, url = snapshot.captured_at, year.conference.feed_url
+        self._publish(data, feed_digest(snapshot.raw), "bundled", captured_at, url)
 
     def _publish(
-        self, data: ConferenceData, digest: bytes, source: Source, fetched_at: datetime
+        self,
+        data: ConferenceData,
+        digest: bytes,
+        source: Source,
+        fetched_at: datetime,
+        url: str,
     ) -> None:
+        self._shown_url = url
         self.data = data  # a new frozen eq=False object: always notifies (F5)
         self._digest = digest
         self.source = source
@@ -384,10 +374,8 @@ class Conference:
     def _confirm(self) -> None:
         """Record a good refresh that brought the published feed again (D-224).
 
-        ``data`` and ``version`` stay, so no memo keyed on the version re-renders
-        (D-153). Only the freshness that the strip and the Developer screen read
-        changes: the age, the source (the network, even for the snapshot's bytes) and
-        the last problem.
+        ``data`` and ``version`` stay (D-153); only the freshness changes: the age, the
+        source (the network, even for the snapshot's bytes) and the last problem.
         """
         logger.info("Feed refresh: the same feed as shown; nothing new to publish")
         self.source = "network"

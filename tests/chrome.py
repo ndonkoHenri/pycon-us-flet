@@ -33,6 +33,7 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.ui import scaffold, widths
+from pycon_us.ui.navigation import navigation_rail
 from pycon_us.ui.scaffold import AppScaffold, Shown
 from tests.fakes import (
     FakePage,
@@ -98,6 +99,15 @@ def hooks(
     monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
+    # ``Rail`` renders inline, before it has measured itself (D-309); its own
+    # test is in test_navigation.py.
+    monkeypatch.setattr(
+        scaffold,
+        "Rail",
+        lambda root, on_select, visible: navigation_rail(
+            root, on_select, visible=visible
+        ),
+    )
     # The probe reads Prefs; its own tests are in test_time_gutter.py.
     monkeypatch.setattr(scaffold, "GutterProbe", Probe)
     # Its effect wraps the Router's handler; its own tests are in test_modals.py.
@@ -124,14 +134,26 @@ def body_of(view: ft.View) -> ft.Control:
     return safe.content
 
 
-def rail_of(view: ft.View) -> ft.NavigationRail:
-    """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
+def rail_stack_of(view: ft.View) -> ft.Stack:
+    """The rail and its fade of a tab root's View, beside its body (D-277, D-309)."""
     safe, _ = view.controls
     assert isinstance(safe, ft.SafeArea)
     assert isinstance(safe.content, ft.Row)
-    rail, _ = safe.content.controls
+    stack, _ = safe.content.controls
+    assert isinstance(stack, ft.Stack)
+    return stack
+
+
+def inner_rail(stack: ft.Stack) -> ft.NavigationRail:
+    """The ``NavigationRail`` under the fade of ``navigation_rail()``'s stack (D-309)."""
+    rail, _ = stack.controls
     assert isinstance(rail, ft.NavigationRail)
     return rail
+
+
+def rail_of(view: ft.View) -> ft.NavigationRail:
+    """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
+    return inner_rail(rail_stack_of(view))
 
 
 def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.View:

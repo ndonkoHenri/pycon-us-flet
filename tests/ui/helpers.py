@@ -262,6 +262,33 @@ async def tap_first_text(t: RemoteTester, texts: Sequence[str]) -> None:
     await tap(t, await wait_for(t, find, f"any of the texts {list(texts)!r}"))
 
 
+async def start_app(t: RemoteTester) -> None:
+    """Wait for the app's first screen and go on past Welcome to Now (D-287).
+
+    A test build is a fresh install, so a plain start opens Welcome, whose Get
+    started replaces it with Now. A start that opens on Now, Welcome already done,
+    goes on at once. Get started is tapped until Now shows: its tap saves the
+    setting first, and a tap during Welcome's arrival can be lost.
+
+    Args:
+        t: The tester, at the launch.
+    """
+
+    async def first_screen() -> Finder:
+        welcome = await t.find_by_semantics_identifier("welcome.start")
+        if welcome.count:
+            return welcome
+        return await t.find_by_semantics_identifier("now.title")
+
+    await wait_for(t, first_screen, "Welcome or Now", timeout=START_TIMEOUT)
+    await tap_until(
+        t,
+        lambda: t.find_by_semantics_identifier("welcome.start"),
+        lambda: t.find_by_semantics_identifier("now.title"),
+        "Get started",
+    )
+
+
 async def tap_back_arrow(t: RemoteTester) -> None:
     """Tap the app bar's back arrow, the Material one on both platforms (D-10).
 
