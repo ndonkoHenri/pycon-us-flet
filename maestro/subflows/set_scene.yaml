@@ -1,0 +1,69 @@
+# Set the fake clock and the feed URL in Developer options, then refresh from that
+# feed and return to Now: the steps of tests/ui/developer.py's fresh_start() (D-223).
+#
+# env:
+#   NOW       the fake clock's start, conference time, "YYYY-MM-DD HH:MM"
+#   FEED_URL  the feed the app refreshes from from now on
+#   OUTCOME   what the second Refresh now must say, the app's own words (a regex)
+#
+# The first Refresh now only lets the launch's own refresh end: a Refresh now joins a
+# running refresh, which keeps the URL it started with (D-223, D-244). Developer is then
+# opened afresh, so the second Refresh now's words are its own.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow: open_developer.yaml
+- tapOn:
+    id: developer.refresh_now
+# The outcome line is under the Data rows, below the fold on a phone.
+- scrollUntilVisible:
+    element:
+      id: developer.data_outcome
+    direction: DOWN
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: developer.fake_clock
+    direction: UP
+- tapOn:
+    id: developer.fake_clock
+- eraseText: 40
+- inputText: ${NOW}
+- tapOn:
+    id: developer.feed_url
+- eraseText: 120
+- inputText: ${FEED_URL}
+# The keyboard's Done: the field lets go of the focus and the keyboard closes. On
+# Android a Back would only close the keyboard, and Gboard's bar comes back while the
+# field keeps the focus.
+- pressKey: Enter
+- tapOn:
+    id: developer.apply
+- extendedWaitUntil:
+    visible:
+      text: "Applied: a fake clock in Pacific Time and your feed URL\\."
+    timeout: 15000
+# Leave and reopen, so Refresh now's outcome line starts empty.
+- runFlow: back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- runFlow: open_developer.yaml
+- tapOn:
+    id: developer.refresh_now
+- scrollUntilVisible:
+    element:
+      text: ${OUTCOME}
+    direction: DOWN
+    timeout: 60000
+- runFlow: back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- tapOn:
+    id: app.nav.now
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000

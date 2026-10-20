@@ -40,6 +40,7 @@
 | Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
+| Run the Maestro device journeys on a packaged build | `maestro --device emulator-5570 test --include-tags=journeys maestro` (or `--device <udid>`) | §5.9 |
 | Set up a second worktree of this repo | Clone the main checkout's `.flet-src` into it (`cp -cR`, never a link), then `uv sync --locked` | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
 | Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
@@ -573,6 +574,29 @@ Checked on 2026-10-12 (#176), from a fresh clone of the cache: `flet build ios-s
 Checked on 2026-10-14 (#208). The race, in scratch copies of the `flet` package (never in a shared checkout): four `pip wheel` runs at once in one folder, five rounds, failed 12 of 20 times with `[Errno 17]`, `[Errno 2]` and `[Errno 66]` under `build/bdist.macosx-11.0-arm64/wheel/`; four runs at once in four clones failed 0 of 20. A planted `build/bdist.*/wheel/flet-0.1.0.dist-info` failed a lone build with `[Errno 17]` until `build/` was deleted, and a file planted in `build/lib/flet/` came out in the wheel. The fix: two worktrees, each set up with the lines above, started `flet build ios-simulator` in the same second. Their three wheel builds each (one per Python platform) ran in step, second for second, each from its own clone; both builds passed (8 and 10 minutes on a busy host), both bundle checks printed nothing, and no log named the main checkout's `.flet-src`. A second round, `flet build ios-simulator` in one and `flet build apk --arch arm64-v8a` in the other, again overlapped their wheel builds: the APK passed and its `app.zip` check printed nothing; the iOS build packaged its Python and then stopped in Xcode with "No Xcode build settings have been found", the Xcode step on a busy host, not the wheel (as on #197); run again, it passed in 4½ minutes and its check printed nothing.
 
 The upstream fix for the pub cache, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When the pin brings it, the pub cache half of this subsection and D-176 go. The Flet clone goes with the source pin (§2.2): with 1.1.0 on PyPI, builds install `flet` from a published wheel and build nothing from `.flet-src`.
+
+### 5.9 Device flows: Maestro (D-252)
+
+The flows in [`maestro/`](../maestro/README.md) drive the packaged app with the free,
+local [Maestro](https://maestro.dev) CLI, on an emulator and a simulator of your own. The
+README there has the whole setup, the build and install lines, every command and how to
+write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md) §5.5.
+
+- **Install:** Maestro 2.11.0 from its own tap, `brew install mobile-dev-inc/tap/maestro`
+  (plain `brew install maestro` is another product). The formula brings Homebrew's
+  `openjdk`; Maestro needs Java 17 or later, so with its `curl` installer install a JDK
+  yourself. `export MAESTRO_CLI_NO_ANALYTICS=1` keeps the CLI from sending usage data.
+  Never `maestro login`, `maestro cloud` or a paid plan.
+- **Build and install** as §5.8 says, with the worktree's own pub cache: a release APK
+  (`flet build apk --arch arm64-v8a`, then `adb install -r`) and an `ios-simulator` build
+  (then `xcrun simctl install <udid> build/ios-simulator/pycon-us.app`).
+- **Run:** `maestro --device <id> test --include-tags=journeys maestro` (or `smoke`, or
+  `regression`, or one flow's file). Each flow starts the app afresh, so a run replaces
+  the app's data on that device: never use the owner's `emulator-5554` or a shared
+  simulator.
+- No `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
+  (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
+  `--debug-output build/maestro/<name>` names a folder.
 
 ---
 

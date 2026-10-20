@@ -1,0 +1,50 @@
+# P1 exit criterion 1: My schedule shows overlaps (D-191).
+#
+# Save the panel (session 123, 1:45 to 2:30 PM) on Now, and The Bakery (session 30,
+# 2:00 to 2:30 PM) on the Schedule, which opens on the 2:00 PM slot at 14:10. My
+# schedule lists both, each row saying which saved session it overlaps.
+appId: io.github.ndonkohenri.pyconus
+name: My schedule shows two saved sessions that overlap
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: now.favorite.123
+- extendedWaitUntil:
+    visible:
+      id: now.next.session.123
+    timeout: 15000
+
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.30
+    timeout: 15000
+- tapOn:
+    id: schedule.favorite.30
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.30
+      checked: true
+    timeout: 15000
+
+- tapOn:
+    id: app.nav.my_schedule
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.title
+    timeout: 15000
+# Each row's phrase ends with the overlap, as its line shows it (D-191).
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.123
+      text: ".*Overlaps with “The Bakery: How PEP810 sped up my bread operations business”\\."
+    timeout: 15000
+- assertVisible:
+    id: my_schedule.session.30
+    text: ".*Overlaps with “Panel: Fostering better collaboration between the scientific Python community and core Python development”\\."
