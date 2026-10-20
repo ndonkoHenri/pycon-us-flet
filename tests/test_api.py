@@ -12,6 +12,7 @@ URL = "https://us.pycon.org/2026/schedule/conference.json"
 
 
 async def test_the_feed_is_returned_byte_for_byte() -> None:
+    """The feed's bytes come back unchanged, from one GET of the feed URL."""
     body = '{"schedule": [], "note": "café"}'.encode()
     seen: list[httpx.Request] = []
 
@@ -24,6 +25,7 @@ async def test_the_feed_is_returned_byte_for_byte() -> None:
 
 
 async def test_the_request_waits_ten_seconds_at_most() -> None:
+    """The request's connect, read, write and pool timeouts are all 10 seconds."""
     timeouts = []
 
     def handle(request: httpx.Request) -> httpx.Response:
@@ -36,6 +38,8 @@ async def test_the_request_waits_ten_seconds_at_most() -> None:
 
 
 async def test_a_redirect_is_followed() -> None:
+    """A 301 to another path is followed, and that path's body is returned."""
+
     def handle(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/moved.json"):
             return httpx.Response(200, content=b"{}")
@@ -56,6 +60,8 @@ async def test_a_redirect_is_followed() -> None:
     ids=lambda error: type(error).__name__,
 )
 async def test_no_answer_is_a_network_error(error: httpx.TransportError) -> None:
+    """A transport error raises ``NetworkError`` naming the error's type."""
+
     def handle(request: httpx.Request) -> httpx.Response:
         raise error
 
@@ -65,6 +71,8 @@ async def test_no_answer_is_a_network_error(error: httpx.TransportError) -> None
 
 @pytest.mark.parametrize("status", [404, 500, 503])
 async def test_an_error_status_is_an_api_error_with_its_status(status: int) -> None:
+    """A 404, 500 or 503 raises ``ApiError`` with that status, first in its message."""
+
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status, content=b"<html>down</html>")
 
@@ -75,6 +83,8 @@ async def test_an_error_status_is_an_api_error_with_its_status(status: int) -> N
 
 
 async def test_a_redirect_loop_is_an_api_error_without_a_status() -> None:
+    """A redirect loop raises ``ApiError`` for ``TooManyRedirects``, with no status."""
+
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(302, headers={"Location": URL})
 

@@ -34,7 +34,7 @@ from tests.sessions import Shown, showing
 YEAR = load_year(2026)
 
 TALK = "142"
-"""A talk with one speaker: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
+"""One speaker's talk: "Python for Humans - …", 10:30-11:00 AM, Grand Ballroom A."""
 
 CHARLA = "76"
 """A charla: badges "Charla" and "En Español"."""
@@ -81,10 +81,12 @@ class Rendered(Shown):
 
     @property
     def prefs_service(self) -> MemoryPrefs:
+        """The in-memory prefs store the session's storage writes to."""
         return cast(MemoryPrefs, self.services.storage.prefs)
 
     @property
     def haptics(self) -> MemoryHaptics:
+        """The in-memory haptics service that records each buzz the rows ask for."""
         return cast(MemoryHaptics, self.services.haptics)
 
     @property
@@ -93,6 +95,7 @@ class Rendered(Shown):
         return self.rows
 
     def star(self, session_id: str) -> ft.IconButton:
+        """The session row's star button, found by its semantics key."""
         button = self.node(f"test.favorite.{session_id}").content
         assert isinstance(button, ft.IconButton)
         return button
@@ -102,9 +105,11 @@ class Rendered(Shown):
         return self.star(session_id).icon == ft.Icons.STAR
 
     def notice(self, session_id: str) -> ft.Semantics:
+        """The semantics node of the session's notice row."""
         return self.node(f"test.notice.{semantics_key(session_id)}")
 
     async def tap_star(self, session_id: str) -> None:
+        """Click the session's star, as a tap would."""
         await self.click(self.star(session_id))
 
 

@@ -50,11 +50,13 @@ BEFORE = datetime(2026, 5, 12, 12, tzinfo=PACIFIC)
 
 @pytest.fixture(scope="module")
 def data() -> ConferenceData:
+    """Return the recorded 2026 feed, processed once for the module."""
     return processed(2026)
 
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """Yield a fake page bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -62,6 +64,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
+    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -78,9 +81,11 @@ class FakeConference(SimpleNamespace):
     """The parts of ``Conference`` the Map reads, and its refresh, recorded."""
 
     def __init__(self, data: ConferenceData | None, problem: str | None = None):
+        """Hold ``data`` and ``problem``, not refreshing, with no refresh counted."""
         super().__init__(data=data, problem=problem, refreshing=False, refreshes=0)
 
     async def refresh(self, *args: object, **kwargs: object) -> None:
+        """Count a refresh, as the Try again button asks for one."""
         self.refreshes += 1
 
 
@@ -121,12 +126,14 @@ def render(
 
 
 def rows_of(scaffold: dict[str, Any]) -> list[ft.Control]:
+    """Return the rows of the ``ListView`` the screen gave ``AppScaffold``."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     return list(body.controls)
 
 
 def headers(rows: list[ft.Control]) -> list[str]:
+    """Return the text of each heading row, in order."""
     return [
         texts(row)[0] for row in rows if isinstance(row, ft.Semantics) and row.header
     ]
@@ -144,11 +151,13 @@ def tiles(rows: list[ft.Control]) -> dict[str, ft.ListTile]:
 
 
 def subtitle_lines(tile: ft.ListTile) -> list[str]:
+    """Return the texts of a room row's subtitle, in order."""
     assert isinstance(tile.subtitle, ft.Control)
     return texts(tile.subtitle)
 
 
 def empty_state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
+    """Return the one ``Semantics`` node with ``identifier`` under ``rows``."""
     (state,) = [
         node
         for row in rows
@@ -159,6 +168,7 @@ def empty_state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
 
 
 def button_of(rows: list[ft.Control]) -> ft.FilledTonalButton:
+    """Return the one ``FilledTonalButton`` under ``rows``."""
     (button,) = [
         node
         for row in rows
@@ -174,6 +184,11 @@ def button_of(rows: list[ft.Control]) -> ft.FilledTonalButton:
 def test_rooms_come_first_then_the_other_locations_under_their_headings(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
+    """Rooms come first, then the other locations under a heading of their own.
+
+    Every room in the feed has a row, and the second heading sits right above the first
+    other location.
+    """
     rows = rows_of(render(FakeConference(data)))
     assert headers(rows) == ["Rooms", "Other locations"]
     keys = list(tiles(rows))
@@ -198,6 +213,7 @@ def test_rooms_come_first_then_the_other_locations_under_their_headings(
 def test_each_row_names_its_room_and_counts_its_sessions(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
+    """A room row shows the room's name, its session count and a place icon."""
     rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
     tile = rows["map.room.room-103abc"]
     assert tile.title == "Room 103ABC"
@@ -210,6 +226,7 @@ def test_each_row_names_its_room_and_counts_its_sessions(
 def test_a_tap_pushes_the_room_s_detail_on_the_map(
     render: Callable[..., dict[str, Any]], data: ConferenceData, page: FakePage
 ) -> None:
+    """Tapping a room row navigates to that room's detail under ``/map``."""
     tile = tiles(rows_of(render(FakeConference(data))))[
         "map.room.pacific-ballroom-arena"
     ]
@@ -222,6 +239,7 @@ def test_a_tap_pushes_the_room_s_detail_on_the_map(
 def test_while_a_session_is_on_its_room_says_now_in_the_live_colour(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
+    """While a session is on, its room's row adds a Now line in the live colour."""
     tile = tiles(rows_of(render(FakeConference(data))))["map.room.room-103abc"]
     count, now = subtitle_lines(tile)
     assert count == "26 sessions"  # the count keeps its place under the name
@@ -235,6 +253,7 @@ def test_while_a_session_is_on_its_room_says_now_in_the_live_colour(
 def test_before_the_conference_no_room_says_now(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
+    """Before the conference, no room row has a Now line."""
     rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
     assert all(
         not any(line.startswith("Now:") for line in subtitle_lines(t))
@@ -245,7 +264,10 @@ def test_before_the_conference_no_room_says_now(
 def test_the_now_lines_follow_the_clock(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
-    """The fake clock (D-73) and each minute's re-render (D-175) move the lines."""
+    """The Now line moves with the clock, from 11:10 to the 11:50 talk.
+
+    The fake clock (D-73) and each minute's re-render (D-175) move the lines.
+    """
     at_11_10 = tiles(rows_of(render(FakeConference(data))))["map.room.room-103abc"]
     later = datetime(2026, 5, 15, 11, 50, tzinfo=PACIFIC)
     at_11_50 = tiles(rows_of(render(FakeConference(data), now=later)))[
@@ -258,6 +280,7 @@ def test_the_now_lines_follow_the_clock(
 def test_the_screen_ticks_with_the_minute(
     render: Callable[..., dict[str, Any]], data: ConferenceData, minutes: list[int]
 ) -> None:
+    """The screen asks for the minute on each render, with data or without."""
     render(FakeConference(data))
     render(FakeConference(None))  # every branch: hooks are unconditional (D-70)
     assert len(minutes) == 2
@@ -278,12 +301,16 @@ def test_the_screen_ticks_with_the_minute(
 def test_the_now_lines_name_one_session_and_count_the_others(
     names: tuple[str, ...], expected: list[str]
 ) -> None:
+    """The Now lines name the first session on and count the others."""
     entry = SimpleNamespace(on_now=tuple(SimpleNamespace(name=n) for n in names))
     assert now_lines(cast(Any, entry)) == expected
 
 
 def test_a_long_title_s_ellipsis_never_hides_the_other_sessions(page: FakePage) -> None:
-    """The cut is the title's alone: "and 1 more" is a line of its own (ux.md §5.8)."""
+    """A long title is cut at three lines, while the count and "and 1 more" never are.
+
+    The cut is the title's alone: "and 1 more" is a line of its own (ux.md §5.8).
+    """
     long = "Getting Started with Celery: Building Your First Background Task System"
     entry = SimpleNamespace(
         room=SimpleNamespace(
@@ -310,6 +337,11 @@ def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
     page: FakePage,
     svc: Services,
 ) -> None:
+    """The Map's only action opens Search scoped to rooms; a re-tap scrolls to the top.
+
+    The search button merges with its tooltip into one node (D-234), and the search
+    remembers ``/map`` as the page it came from.
+    """
     scaffold = render(FakeConference(data))
     assert scaffold["title"] == "Map"
     assert scaffold["on_retap"] is retap
@@ -327,7 +359,10 @@ def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
 def test_the_map_has_no_control_for_the_p2_panes(
     render: Callable[..., dict[str, Any]], data: ConferenceData, page: FakePage
 ) -> None:
-    """Floor plans, the expo and the job fair are P2 (MAP-01): no dead controls."""
+    """Every row of the Map opens a room, and there are no tabs for the P2 panes.
+
+    Floor plans, the expo and the job fair are P2 (MAP-01): no dead controls.
+    """
     rows = rows_of(render(FakeConference(data)))
     for tile in tiles(rows).values():
         cast(Callable[[], None], tile.on_click)()
@@ -344,6 +379,7 @@ def test_the_map_has_no_control_for_the_p2_panes(
 def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
     render: Callable[..., dict[str, Any]],
 ) -> None:
+    """Without data, the status strip and the rooms' skeleton are all that shows."""
     rows = rows_of(render(FakeConference(None)))
     assert rows[0] is STRIP  # it says "No schedule yet", then "Updating the schedule…"
     assert texts(rows[1]) == ["Loading rooms"]  # the skeleton's spoken label
@@ -360,6 +396,7 @@ def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
 async def test_after_a_failed_first_fetch_the_rooms_can_be_tried_again(
     render: Callable[..., dict[str, Any]], problem: str, body: str
 ) -> None:
+    """After a failed first fetch, the problem is explained and Try again refreshes."""
     conference = FakeConference(None, problem=problem)
     rows = rows_of(render(conference))
     assert texts(empty_state(rows, "map.no_data")) == ["Can't load the rooms", body]
@@ -373,6 +410,7 @@ async def test_after_a_failed_first_fetch_the_rooms_can_be_tried_again(
 def test_a_retry_keeps_the_state_with_its_button_disabled(
     render: Callable[..., dict[str, Any]],
 ) -> None:
+    """While a retry runs, the empty state stays and its button is disabled."""
     conference = FakeConference(None, problem="offline")
     conference.refreshing = True
     rows = rows_of(render(conference))
@@ -383,6 +421,7 @@ def test_a_retry_keeps_the_state_with_its_button_disabled(
 def test_a_schedule_without_rooms_says_so_and_offers_the_schedule(
     render: Callable[..., dict[str, Any]], page: FakePage
 ) -> None:
+    """A schedule with no rooms says so, and its button opens the Schedule."""
     empty = ConferenceData(
         sessions={},
         speakers={},

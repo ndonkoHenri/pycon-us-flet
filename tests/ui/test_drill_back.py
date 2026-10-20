@@ -37,7 +37,7 @@ TOP_ROWS = 3
 
 @cache
 def drill() -> tuple[int, Session, Speaker, Session]:
-    """Return the day tab, the first session, its speaker and the speaker's next session.
+    """Return the day tab, the first session, its speaker and that speaker's next one.
 
     The first day, in order, with a session among its first ``TOP_ROWS`` sessions whose
     speaker is in the directory and has another session, listed after it on their page
@@ -61,6 +61,12 @@ def drill() -> tuple[int, Session, Speaker, Session]:
 
 
 async def test_drill_back_one_step(flet_app: ftt.FletTestApp, feed_url: str) -> None:
+    """Session › speaker › session pushes one View each, and each Back pops one.
+
+    The back arrow returns to the speaker, the first session and the Schedule on that
+    day, each known by its title; on Android the Back key on the Schedule root then goes
+    to Now (D-142).
+    """
     t = remote(flet_app)
     await fresh_start(t, now=before_conference(), feed_url=feed_url)
     day, first, speaker, second = drill()
