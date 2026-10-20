@@ -35,7 +35,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
-| 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
+| 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05; D-18's remembered map zoom | Select and highlight the booth without moving the camera; a remembered zoom put back with `reset()`, `zoom()` and `pan()` if S7 keeps it | `set_transform()` / `zoom_to_rect()` | later | S | proposed; the analysis, a repro and a draft diff in [#368](https://github.com/ndonkoHenri/pycon-us-flet/issues/368) |
 | 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
 | 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed |
 | later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
@@ -116,6 +116,7 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | A control with an `ft.ScrollKey` gets a new `GlobalKey` at each build (`DART/controls/control_widget.dart:34-38`), so Flutter mounts it and everything under it again whenever an ancestor rebuilds, with new semantics nodes: a row under a keyed box lost the screen reader's focus after Back from a pushed View (U42, F62, D-242, #303, #321) | `ui.scrolling.anchored()` puts every `ScrollKey` on an empty 0 dp anchor above its item, so only the anchor is mounted again (D-242) | Keep one `GlobalKey` per control for its `ControlWidget`'s lifetime (a `State` that owns it), and make a new one only when the scroll key's value changes |
 | Flet applies a button's `tooltip` around the whole button (`_tooltip()` in `DART/controls/base_controls.dart`), outside the button's own semantics node, where Flutter's `IconButton(tooltip:)` puts it inside: the tooltip is a node of its own and the button under it is unnamed, read "Button" by TalkBack; the same for `FloatingActionButton`, `Button` and `PopupMenuButton` (U37, F55, D-234, #274, #317) | Every button whose tooltip is said is merged with it: `merged()` (`ui/semantics.py`) or, with an identifier, `named()`; the Schedule's "Now" button, which a View takes bare, keeps its tooltip out of the semantics and says it in its label's `semantics_label`; `tests/test_tooltips.py` scans for a button left out (D-234) | In each button control, apply the tooltip inside a `MergeSemantics` of the button (as Flutter's buttons do) and skip it in `LayoutControl`; the analysis and a draft diff in #317 |
 | A controlled `TextField` has no guard against an echo: a keystroke's re-render that runs after the next keystroke's report sends the older text, and Flutter puts it in the field; nothing tells an echo apart from a change the program made (U43, F63, D-243, #319) | `use_field_query()` builds the field from what Flutter last reported, through one `Ref` kept for the screen's life, so typing sends nothing; only the initial text and a Clear are sent. Keys reported between a Clear's tap and Flutter's answer to the focus request that follows the Clear's render are dropped, and the empty text is sent again (D-243). Still open: a key typed in the one frame before Flutter applies the empty text | An edit count that Flutter sends with each report and Python returns with each `value`, so Flutter drops an older edit's echo (`DART/controls/textfield.dart`, `FLET/messaging/session.py`) |
+| `InteractiveViewer.zoom()` scales about the content's top-left corner, not the viewport's centre as a pinch does, and never re-clamps the translation, so a zoom-out after a pan can leave the viewport blank; `pan()` moves in content units, though its docstring says logical pixels (`DART/controls/interactive_viewer.dart:150-169`, `:370-422`; U56, F76, #472) | The zoom buttons pan back to the centre after each `zoom()`: `get_transform()`, then `pan()` by the difference in content units, which `pan()` clamps (#388; S7, #361, checks the frame in between) | Translate after the scale so the viewport centre's scene point stays put, through the clamping `_matrixTranslate()`, as Flutter's pinch and wheel do; fix `pan()`'s docstring. The analysis, a repro and a draft diff in #472 |
 
 ---
 
@@ -684,20 +685,20 @@ class GroupedListView(ft.LayoutControl):
 
 ### 5.7 U3: absolute `InteractiveViewer` transform (later; S)
 
-- **Serves:** EXPO-05 (zoom to booth).
-- **Interim:** the booth is selected and highlighted and its card shown, without moving the camera.
-- **Today:** `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped (`FLET/controls/core/interactive_viewer.py:230`, `:246`). Only `reset(animation_duration)` animates (`:195`). `save_state`/`restore_state` store one matrix.
-- **Change:** set the `TransformationController` value directly, animating with a `Matrix4Tween` when a duration is given, as `reset` does.
+- **Serves:** EXPO-05 (zoom to booth) and D-18's remembered map zoom (MAP-01, MAP-04).
+- **Interim:** the booth is selected and highlighted and its card shown, without moving the camera. A remembered zoom can be put back with `reset()`, `zoom(s)` and `pan(t / s)` once the viewer is laid out; S7 (#361) decides whether a pane keeps it.
+- **Today** (at `15854a0ac`): `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped (`FLET/controls/core/interactive_viewer.py:314`, `:330`; `DART/controls/interactive_viewer.dart:150-169`). `get_transform()` (`:360`) reads the transform but nothing sets one. Only `reset(animation_duration)` animates (`:279`; a `Matrix4Tween`, `DART/controls/interactive_viewer.dart:170-185`). `save_state`/`restore_state` store one matrix on the Dart side. `zoom()` scales about the content's top-left corner and `pan()` moves in content units (U56, F76).
+- **Change:** set the `TransformationController` value directly, clamped as gestures are, animating with a `Matrix4Tween` when a duration is given, as `reset` does. The analysis, a repro on both platforms, a draft diff and its widget tests are in [#368](https://github.com/ndonkoHenri/pycon-us-flet/issues/368).
 
 ```python
 # Proposed on ft.InteractiveViewer:
-#     async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue,
+#     async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue = (0, 0),
 #                             animation_duration: Optional[ft.DurationValue] = None) -> None: ...
 #     async def zoom_to_rect(self, rect: ft.Rect, padding: ft.Number = 0,
 #                            animation_duration: Optional[ft.DurationValue] = None) -> None: ...
 ```
 
-`zoom_to_rect` fits a content-space rectangle in the viewport, clamped to `[min_scale, max_scale]`. **Upgrade:** the floor plan calls `zoom_to_rect(booth_rect, animation_duration=...)`, with `None` under reduced motion.
+`set_transform` is the inverse of `get_transform()`: the content's scale, and its top-left corner at `offset` in the viewer, in logical pixels. `zoom_to_rect` fits a rectangle of the content (in its laid-out coordinates) in the viewport less `padding`, centred. Both clamp the scale to `[min_scale, max_scale]` and the covering scale, and the translation to the boundary. **Upgrade:** the expo map calls `zoom_to_rect(booth_rect, animation_duration=prefs.motion_ms(...))`, which jumps under reduced motion (D-173), and a pane restores its remembered view with `set_transform()`.
 
 ### 5.8 U9: `ft.use_route_search()` (later; XS)
 
