@@ -17,7 +17,7 @@ from pycon_us.config import load_year
 from pycon_us.screens import psf as screen
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
-from pycon_us.year_info import PsfInfo, PsfLink
+from pycon_us.year_links import PsfInfo, PsfLink
 from tests.feeds import processed
 from tests.sessions import Shown, showing
 

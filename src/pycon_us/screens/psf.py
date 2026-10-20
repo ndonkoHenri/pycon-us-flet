@@ -28,7 +28,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.states import EmptyState
-from pycon_us.year_info import PSF_SECTIONS, PsfInfo, PsfLink
+from pycon_us.year_links import PSF_SECTIONS, PsfInfo, PsfLink
 
 SCREEN = "psf"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -44,7 +44,7 @@ SECTIONS = {
     "python_resources": "Python resources",
     "follow": "Follow the PSF",
 }
-"""Each section's heading, by its key in the year data (``year_info.PSF_SECTIONS``)."""
+"""Each section's heading, by its key in the year data (``year_links.PSF_SECTIONS``)."""
 
 NO_PSF = "Nothing about the PSF yet"
 NO_PSF_BODY = "It shows here as soon as the conference publishes it."
