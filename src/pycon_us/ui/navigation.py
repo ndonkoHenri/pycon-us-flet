@@ -218,8 +218,8 @@ def navigation_rail(
 def rail_fade() -> ft.Container:
     """Return the fade over the rail's bottom edge: the sign that the rail scrolls.
 
-    On a phone in landscape the destinations need about 330 dp and the rail has about
-    295, so More is cut at the bottom edge; fading that edge into the rail's colour is
+    On an Android phone in landscape the destinations need 328 dp and the rail has
+    about 303, so More is cut at the bottom edge; fading that edge into the rail's colour is
     the usual sign of more below (D-309). It goes from clear to ``surface``, the
     rail's own Material colour, so it matches in every theme, high contrast included.
     It takes no taps and has no semantics, so a tap or TalkBack reaches the
