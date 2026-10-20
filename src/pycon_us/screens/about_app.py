@@ -1,31 +1,39 @@
-"""About this app (``/more/app``): what the app is and which build this is (INFO-03).
+"""About this app (``/more/app``): what the app is, its data and its build (INFO-03).
 
-The minimal P1 page (D-73): the app's name and what it is, "Not an official PSF app."
-(D-36), then the build's version, Python and Flet. Seven taps on the version row unlock
-the Developer screen in a packaged build, and a Developer options row appears under the
-build's rows; it stays unlocked (D-187). P2 completes the page (#30): the feed's age,
-links, licences and "Share log".
+The app's name and what it is, "Not an official PSF app." (D-36); **Conference data**:
+the conference and where the schedule on screen came from, with its age (D-292); **This
+build**: the version, Python and Flet (D-187); **Links**: Flet's website and, once the
+repository is public, its source code (D-88, D-292). Seven taps on the version row
+unlock the Developer screen in a packaged build, and a Developer options row appears
+under the build's rows; it stays unlocked (D-187). P2 adds licences (#442) and Share
+log (#443).
 """
 
 import platform
+from urllib.parse import urlsplit
 
 import flet as ft
 
-from pycon_us import APP_NAME, FLET_VERSION, __version__
+from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL, __version__
 from pycon_us.prefs import DEV_UNLOCKED, use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, show_details
+from pycon_us.state import use_conference
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
+from pycon_us.ui.status_strip import schedule_line, use_minute
 
 UNLOCK_TAPS = 7
 """Taps on the version row that unlock Developer, as on Android's build number (D-73)."""
 
+FLET_URL = "https://flet.dev"
+"""Flet's website, which the Links section opens in the in-app browser (INFO-14)."""
+
 
 @ft.component
 def AboutApp() -> ft.View:
-    """The About this app page: the app, its build, and the Developer unlock."""
+    """The About this app page: the app, its data, its build, its links; the unlock."""
     svc = use_services()
     prefs = use_prefs()
     taps = ft.use_ref(0)  # a ref: counting re-renders nothing
@@ -45,6 +53,7 @@ def AboutApp() -> ft.View:
     info = svc.year.conference
     rows: list[ft.Control] = [
         header(info.name),
+        ConferenceData(),
         SectionHeader("This build"),
         named(
             "about_app.version",
@@ -55,7 +64,69 @@ def AboutApp() -> ft.View:
     ]
     if prefs.developer:
         rows.append(developer_row(unsaved))
+    rows.extend(links(SOURCE_URL))
     return AppScaffold(title="About this app", body=ft.ListView(rows, expand=True))
+
+
+@ft.component
+def ConferenceData() -> ft.Control:
+    """The Conference data section: the conference, and the schedule's source and age.
+
+    A component of its own, so that the store's changes and the minute's tick
+    re-render these rows and not the page: a refresh that ends while the page is open
+    says "From the feed, updated just now", and the age then counts up (D-292).
+    """
+    svc = use_services()
+    conference = use_conference()
+    use_minute()  # the age keeps up while the page is open, and moves with a fake clock
+    line = schedule_line(conference.source, conference.fetched_at)
+    return ft.Column(
+        [
+            SectionHeader("Conference data"),
+            ft.ListTile(title="Conference", subtitle=svc.year.conference.name),
+            named("about_app.schedule", ft.ListTile(title="Schedule", subtitle=line)),
+        ],
+        spacing=0,
+    )
+
+
+def links(source_url: str | None) -> list[ft.Control]:
+    """Return the Links section: Flet's website, then the source code once it is public.
+
+    External rows by the link rule (INFO-14): each opens in the in-app browser and
+    reads as a link, "Opens in browser" (D-182).
+
+    Args:
+        source_url: ``SOURCE_URL``: None while the repository is private, which hides
+            its row (D-88).
+    """
+    rows: list[ft.Control] = [
+        SectionHeader("Links"),
+        LinkTile(
+            "Flet website",
+            FLET_URL,
+            icon=ft.Icons.LANGUAGE,
+            subtitle=shown_url(FLET_URL),
+            identifier="about_app.flet",
+        ),
+    ]
+    if source_url is not None:
+        rows.append(
+            LinkTile(
+                "Source code",
+                source_url,
+                icon=ft.Icons.CODE,
+                subtitle=shown_url(source_url),
+                identifier="about_app.source",
+            )
+        )
+    return rows
+
+
+def shown_url(url: str) -> str:
+    """Return ``url`` as a row shows it, without scheme or final slash: "flet.dev"."""
+    parts = urlsplit(url)
+    return f"{parts.netloc}{parts.path}".rstrip("/")
 
 
 def developer_row(unsaved: bool) -> ft.Control:
