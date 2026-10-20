@@ -815,6 +815,17 @@ network = "PyCon2026"
 password = "illustrative"
 sponsor = "example-sponsor"         # sponsor_slug() of the credited sponsor (INFO-09)
 
+[psf]                               # optional: About the PSF (INFO-06; D-283)
+mission = "The mission of the Python Software Foundation is to promote, ..."
+donate_url = "https://www.python.org/psf/donations/"   # https only, like every link below
+
+[[psf.links]]                       # the page's rows, in order within their section
+section = "follow"                  # get_involved | python_resources | follow
+label = "Mastodon"                  # unique on the page: the row's identifier, psf.link.mastodon
+url = "https://fosstodon.org/@ThePSF"
+brand = "mastodon"                  # optional: a ui/brands.py mark; or icon = "LANGUAGE" (an ft.Icons name), not both
+app = true                          # optional: a profile opens in its own app (INFO-14)
+
 [[safety_contacts]]
 label = "Code of Conduct hotline"
 kind = "tel"                        # tel | mailto | https
