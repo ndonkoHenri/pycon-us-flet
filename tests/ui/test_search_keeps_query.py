@@ -58,6 +58,7 @@ def accent_query() -> tuple[str, Session, Speaker]:
 async def test_search_finds_and_keeps_query(
     flet_app: ftt.FletTestApp, feed_url: str
 ) -> None:
+    """An unaccented query finds the session and the speaker; Back keeps the query."""
     t = remote(flet_app)
     await fresh_start(t, now=before_conference(), feed_url=feed_url)
     query, session, speaker = accent_query()

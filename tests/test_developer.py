@@ -53,6 +53,7 @@ def real_time() -> Iterator[None]:
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """A ``FakePage`` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -60,6 +61,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
+    """The session's services over in-memory fakes and a 2026 ``Storage``."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -74,12 +76,14 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
+    """Prefs of a packaged build with Developer unlocked and nothing else set."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
     return Prefs(dev={"unlocked": True})
 
 
 @pytest.fixture
 def conference() -> Conference:
+    """An empty ``Conference`` store."""
     return Conference()
 
 
@@ -87,10 +91,15 @@ class States:
     """``ft.use_state`` for one component: the values, kept in call order."""
 
     def __init__(self) -> None:
+        """Start with no values, at the first call's index."""
         self.values: list[Any] = []
         self.index = 0
 
     def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
+        """Return the value at this call's index, made from ``initial`` the first time.
+
+        The setter writes that value in place; ``render`` resets the index first.
+        """
         if self.index == len(self.values):
             self.values.append(initial() if callable(initial) else initial)
         index = self.index
@@ -176,6 +185,7 @@ def clock_picker_button(text_field: ft.TextField) -> ft.IconButton:
 
 
 def field(scaffold: dict[str, Any], identifier: str) -> ft.TextField:
+    """Return the ``TextField`` under ``identifier`` in a rendered scaffold."""
     control = by_identifier(scaffold)[identifier]
     assert isinstance(control, ft.TextField)
     return control
@@ -193,6 +203,7 @@ async def type_into(
 
 
 async def press(render: Callable[[], dict[str, Any]], identifier: str) -> None:
+    """Render, then click the button under ``identifier`` and await its handler."""
     button = by_identifier(render())[identifier]
     assert isinstance(button, ft.FilledButton | ft.OutlinedButton)
     await cast(Any, button.on_click)()
@@ -239,6 +250,7 @@ def outcome_icon(row: ft.Row) -> ft.Icon:
 def test_the_controls_carry_the_identifiers_ui_flows_use(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """Developer options carries exactly the identifiers the UI flows use."""
     scaffold = render()
     assert set(by_identifier(scaffold)) == {
         "developer.fake_clock",
@@ -253,9 +265,12 @@ def test_the_controls_carry_the_identifiers_ui_flows_use(
 def test_the_buttons_and_the_url_field_are_one_node_with_their_identifier(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    # A bare Semantics(identifier) around a control dumped as an empty, focusable
-    # View beside the button on Android (#236); merged, the control's own node
-    # carries it (D-190).
+    """Reset, Apply, the URL field and the clock picker each merge their identifier.
+
+    A bare Semantics(identifier) around a control dumped as an empty, focusable View
+    beside the button on Android (#236); merged, the control's own node carries it
+    (D-190).
+    """
     assert merged_identifiers(render()) == {
         "developer.reset",
         "developer.apply",
@@ -271,8 +286,11 @@ def test_the_buttons_and_the_url_field_are_one_node_with_their_identifier(
 def test_the_clock_field_keeps_its_picker_a_button_of_its_own(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    # A merge takes in every descendant: around the clock field it would make the
-    # picker part of the field's node (D-189), so that identifier stays bare (U34).
+    """The clock field's identifier stays unmerged, so its picker is its own node.
+
+    A merge takes in every descendant: around the clock field it would make the picker
+    part of the field's node (D-189), so that identifier stays bare (U34).
+    """
     scaffold = render()
     assert "developer.fake_clock" not in merged_identifiers(scaffold)
     assert clock_picker_button(field(scaffold, "developer.fake_clock"))
@@ -281,6 +299,7 @@ def test_the_clock_field_keeps_its_picker_a_button_of_its_own(
 def test_a_warning_tone_chip_marks_the_screen(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """A text-only Developer chip in the warning colour, with no tap, tops the list."""
     scaffold = render()
     assert "actions" not in scaffold  # at 200 % text it pushed the title out
     top = cast(ft.ListView, scaffold["body"]).controls[0]
@@ -297,6 +316,7 @@ def test_a_warning_tone_chip_marks_the_screen(
 def test_the_fields_show_what_is_in_effect(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
+    """The fields show the stored fake clock in Pacific Time and the stored feed URL."""
     prefs.dev = {
         "unlocked": True,
         "fake_now": "2026-05-15T16:00:00+00:00",
@@ -319,6 +339,7 @@ def helper(text_field: ft.TextField) -> ft.Text:
 def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """The clock's helper gives its format, and both fields wrap up to three lines."""
     scaffold = render()
     clock_field = field(scaffold, "developer.fake_clock")
     assert helper(clock_field).value == (
@@ -336,8 +357,11 @@ def test_the_fields_say_the_clock_s_format_and_wrap_at_large_text(
 def test_the_helpers_are_shown_in_full_at_the_largest_text(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    # A string helper is cut at helper_max_lines, and null is one line: at three, the
-    # largest text cut the clock's at "Empty for r…", the way back to real time (#280).
+    """Both fields' helpers are Texts with no line limit and no ellipsis.
+
+    A string helper is cut at helper_max_lines, and null is one line: at three, the
+    largest text cut the clock's at "Empty for r…", the way back to real time (#280).
+    """
     scaffold = render()
     for identifier in ("developer.fake_clock", "developer.feed_url"):
         text_field = field(scaffold, identifier)
@@ -350,8 +374,11 @@ def test_the_helpers_are_shown_in_full_at_the_largest_text(
 def test_reset_and_apply_keep_their_padding_at_large_text(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    # Flutter shrinks a button's side padding as the text grows: at the largest text
-    # the labels touched the rounded ends (#280), as the Schedule sheet's Show did.
+    """Reset and Apply pin a 24 dp side padding, and Apply lies flat.
+
+    Flutter shrinks a button's side padding as the text grows: at the largest text the
+    labels touched the rounded ends (#280), as the Schedule sheet's Show did.
+    """
     nodes = by_identifier(render())
     for identifier in ("developer.reset", "developer.apply"):
         button = nodes[identifier]
@@ -366,8 +393,11 @@ def test_reset_and_apply_keep_their_padding_at_large_text(
 def test_the_url_field_keeps_apply_in_sight_above_the_keyboard(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    # Focused, the field scrolls its helper and the Reset and Apply row under it into
-    # sight, so a URL can be typed and applied without closing the keyboard (#108).
+    """The URL field's scroll padding keeps Apply in sight; the clock's stays 20 dp.
+
+    Focused, the field scrolls its helper and the Reset and Apply row under it into
+    sight, so a URL can be typed and applied without closing the keyboard (#108).
+    """
     scaffold = render()
     url_padding = field(scaffold, "developer.feed_url").scroll_padding
     assert url_padding == ft.Padding.only(
@@ -385,6 +415,11 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
     svc: Services,
     page: FakePage,
 ) -> None:
+    """Apply runs the fake clock and sets the feed URL, stores both and says so.
+
+    The line under the buttons, not a SnackBar, says it with a success icon, and the
+    next edit hides it.
+    """
     await type_into(render, "developer.fake_clock", "2026-05-15 09:00")
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
@@ -407,8 +442,11 @@ async def test_apply_starts_the_fake_clock_and_the_feed_url_and_keeps_them(
 async def test_the_clock_is_set_before_the_save_re_renders_the_screens(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
-    # App subscribes to Prefs, so the save re-renders the tree (D-150); every screen
-    # that renders then must already read the new time (D-187).
+    """Apply sets the fake clock before the save tells Prefs' subscribers.
+
+    App subscribes to Prefs, so the save re-renders the tree (D-150); every screen that
+    renders then must already read the new time (D-187).
+    """
     seen: list[datetime] = []
 
     def listener(_sender: object, name: str | None) -> None:
@@ -428,6 +466,7 @@ async def test_apply_with_the_same_start_keeps_the_clock_running(
     prefs: Prefs,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Apply with the stored clock start unchanged does not set the clock back."""
     prefs.dev = {"unlocked": True, "fake_now": "2026-05-15T09:00:00-07:00"}
     started: list[datetime | None] = []
     monkeypatch.setattr(clock, "start_fake_clock", started.append)
@@ -442,6 +481,7 @@ async def test_a_clock_or_url_that_does_not_parse_is_shown_and_nothing_applies(
     conference: Conference,
     page: FakePage,
 ) -> None:
+    """Values that don't parse get field errors and apply nothing; typing clears one."""
     await type_into(render, "developer.fake_clock", "next Friday")
     await type_into(render, "developer.feed_url", "us.pycon.org/feed.json")
     await press(render, "developer.apply")
@@ -465,6 +505,7 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
     conference: Conference,
     page: FakePage,
 ) -> None:
+    """Reset restores real time and the year's feed, empties the fields and says so."""
     await type_into(render, "developer.fake_clock", "2026-05-15 09:00")
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
@@ -481,7 +522,10 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
 async def test_apply_and_reset_drop_the_cache_when_they_leave_a_feed_url(
     render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
-    # The rule is the store's (Conference.set_feed_url, D-244); Apply and Reset use it.
+    """Apply or Reset away from a feed URL deletes the cached feed; using one keeps it.
+
+    The rule is the store's (Conference.set_feed_url, D-244); Apply and Reset use it.
+    """
     await svc.storage.write_feed(b"{}")
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
@@ -499,6 +543,7 @@ async def test_apply_and_reset_drop_the_cache_when_they_leave_a_feed_url(
 async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
     render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
+    """A failed save still applies the clock and says so, with a warning icon."""
     cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
     await type_into(render, "developer.fake_clock", "2026-05-15 09:00")
     await press(render, "developer.apply")
@@ -515,6 +560,7 @@ async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(
 async def test_the_pickers_fill_the_clock_field_in_conference_time(
     render: Callable[[], dict[str, Any]], page: FakePage, machine_tz: str
 ) -> None:
+    """The day and time pickers fill the clock field in Pacific Time."""
     await press(render, "developer.apply")
     assert outcome(render) is not None
     button = clock_picker_button(field(render(), "developer.fake_clock"))
@@ -543,6 +589,7 @@ async def test_the_pickers_fill_the_clock_field_in_conference_time(
 def test_before_the_unlock_a_packaged_build_shows_how_to_unlock(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
+    """Before the unlock, a packaged build's screen has no option to change."""
     prefs.dev = {}
     scaffold = render()
     assert by_identifier(scaffold) == {}  # no options to change
@@ -551,6 +598,7 @@ def test_before_the_unlock_a_packaged_build_shows_how_to_unlock(
 def test_the_capability_flags_are_shown_read_only(
     render: Callable[[], dict[str, Any]],
 ) -> None:
+    """Each capability flag is a tile saying whether this build has it, with no tap."""
     body = render()["body"]
     assert isinstance(body, ft.ListView)
     rows = [
@@ -577,5 +625,6 @@ def test_the_capability_flags_are_shown_read_only(
 
 
 def test_the_time_zone_row_names_the_conference_zone_and_the_device_offset() -> None:
+    """The time zone line names Pacific Time, its IANA key and the device's offset."""
     line = zone_line("Pacific Time", "America/Los_Angeles", datetime.now(UTC))
     assert line.startswith("Pacific Time (America/Los_Angeles). This device: UTC")

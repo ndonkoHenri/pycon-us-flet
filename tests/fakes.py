@@ -28,6 +28,7 @@ class MemoryPrefs(ft.SharedPreferences):
     """
 
     def init(self) -> None:
+        """Start empty, with writes and removes that succeed and no error."""
         self.values: dict[str, Any] = {}
         self.fail_writes = False
         self.fail_removes = False  # `remove` answers False, as a failed commit does
@@ -39,6 +40,11 @@ class MemoryPrefs(ft.SharedPreferences):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Answer ``get``, ``set``, ``get_keys`` and ``remove`` from ``values``.
+
+        A set answers False while ``fail_writes`` is set, a remove while
+        ``fail_removes`` is; ``error``, when given, is raised by every call.
+        """
         assert arguments is not None
         if self.error is not None:
             raise self.error
@@ -66,6 +72,7 @@ class MemorySemantics(ft.SemanticsService):
     """
 
     def init(self) -> None:
+        """Start with every feature off, no error and nothing read or announced."""
         self.features: dict[str, bool] = dict.fromkeys(
             (
                 "accessible_navigation",
@@ -89,6 +96,10 @@ class MemorySemantics(ft.SemanticsService):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Record an announcement, or answer the features and count the read.
+
+        ``error``, when given, is raised by a read, after it is counted.
+        """
         if method_name == "announce_message":
             self.announced.append((arguments or {})["message"])
             return None
@@ -104,6 +115,7 @@ class MemoryHaptics(ft.HapticFeedback):
     """HapticFeedback that records the effects asked for instead of reaching a device."""
 
     def init(self) -> None:
+        """Start with no effect recorded and no error."""
         self.effects: list[str] = []
         self.error: Exception | None = None
 
@@ -113,6 +125,7 @@ class MemoryHaptics(ft.HapticFeedback):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Record the effect's method name, or raise ``error`` when given."""
         if self.error is not None:
             raise self.error
         self.effects.append(method_name)
@@ -122,12 +135,14 @@ class MemoryLauncher(ft.UrlLauncher):
     """UrlLauncher that records what it was asked to open instead of opening it."""
 
     def init(self) -> None:
+        """Start with nothing launched and no error."""
         self.launched: list[tuple[str, ft.LaunchMode]] = []
         self.error: Exception | None = None
 
     async def launch_url(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, url: str, *, mode: ft.LaunchMode = ft.LaunchMode.PLATFORM_DEFAULT
     ) -> None:
+        """Record the URL and its mode, or raise ``error`` when given."""
         if self.error is not None:
             raise self.error
         self.launched.append((url, mode))
@@ -137,10 +152,12 @@ class MemoryClipboard(ft.Clipboard):
     """Clipboard that keeps what was copied instead of reaching the platform."""
 
     def init(self) -> None:
+        """Start with nothing copied and no error."""
         self.value: str | None = None
         self.error: Exception | None = None
 
     async def set(self, value: str) -> None:
+        """Keep ``value`` as what was copied, or raise ``error`` when given."""
         if self.error is not None:
             raise self.error
         self.value = value
@@ -150,6 +167,7 @@ class MemoryShare(ft.Share):
     """Share that records the files and texts it was asked to share instead of a sheet."""
 
     def init(self) -> None:
+        """Start with nothing shared, a successful status, no error and no gate."""
         self.shared: list[list[ft.ShareFile]] = []
         self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
@@ -160,6 +178,10 @@ class MemoryShare(ft.Share):
     async def share_text(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, text: str, **options: Any
     ) -> ft.ShareResult:
+        """Record the text and its options, then answer ``status`` once any gate is set.
+
+        ``error``, when given, is raised before anything is recorded.
+        """
         if self.error is not None:
             raise self.error
         self.texts.append((text, options))
@@ -170,6 +192,7 @@ class MemoryShare(ft.Share):
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any
     ) -> ft.ShareResult:
+        """Record the files and answer ``status``, or raise ``error`` when given."""
         if self.error is not None:
             raise self.error
         self.shared.append(files)
@@ -180,10 +203,12 @@ class MemoryPaths(ft.StoragePaths):
     """StoragePaths whose console log is a path the test chooses."""
 
     def init(self) -> None:
+        """Start with an empty console log path and no error."""
         self.console_log = ""
         self.error: Exception | None = None
 
     async def get_console_log_filename(self) -> str:
+        """Return ``console_log``, or raise ``error`` when given."""
         if self.error is not None:
             raise self.error
         return self.console_log
@@ -196,6 +221,7 @@ class FakePage:
     """
 
     def __init__(self, brightness: ft.Brightness = ft.Brightness.LIGHT) -> None:
+        """Start at ``/`` on iOS in ``brightness``, with nothing navigated or shown."""
         self.route = "/"
         self.width: float | None = None
         self.height: float | None = None
@@ -221,6 +247,7 @@ class FakePage:
         return self.device
 
     def show_dialog(self, dialog: ft.DialogControl) -> None:
+        """Record ``dialog`` in ``dialogs`` instead of showing it."""
         self.dialogs.append(dialog)
 
     def navigate(self, location: str) -> None:
@@ -272,6 +299,7 @@ class Hooks:
         dependencies: Any = None,
         cleanup: Callable[[], Any] | None = None,
     ) -> None:
+        """Record the effect's setup, dependencies and cleanup without running them."""
         self.effects.append((setup, dependencies))
         self.cleanups.append(cleanup)
 
@@ -296,6 +324,10 @@ class QueuedWrite:
     """
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Patch ``storage.write_atomic`` to hold each write until ``release()``.
+
+        Each wait gives up after 5 s, so a test that never releases cannot hang.
+        """
         self._queued = threading.Event()
         self._go = threading.Event()
         write = storage.write_atomic

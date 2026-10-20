@@ -21,17 +21,20 @@ from tests.trees import only, texts
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """A ``FakePage`` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
 
 
 def tap(button: ft.FilledTonalButton) -> None:
+    """Call a button's ``on_click``, as a tap does."""
     assert button.on_click is not None
     cast(Callable[[], None], button.on_click)()
 
 
 def test_an_unknown_location_says_where_it_was_and_offers_now(page: FakePage) -> None:
+    """An unknown location's page names it, and Go to Now navigates to ``/now``."""
     page.route = "/welcome"
     area = routes.NotFound.__wrapped__()  # type: ignore[attr-defined]
     assert isinstance(area, ft.SafeArea)

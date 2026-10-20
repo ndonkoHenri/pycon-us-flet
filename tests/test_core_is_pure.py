@@ -41,6 +41,7 @@ def imported_modules(path: Path) -> set[str]:
 
 
 def test_core_never_imports_flet_statically() -> None:
+    """No core module imports ``flet`` or a ``flet_*`` package, even in a function."""
     offenders = {
         str(path.relative_to(CORE)): sorted(
             name for name in imported_modules(path) if is_flet(name)
@@ -51,6 +52,7 @@ def test_core_never_imports_flet_statically() -> None:
 
 
 def test_importing_core_loads_no_flet_module() -> None:
+    """Importing every core module in a fresh interpreter loads no Flet module."""
     modules = ["pycon_us.core"] + [
         "pycon_us.core." + ".".join(path.relative_to(CORE).with_suffix("").parts)
         for path in sorted(CORE.rglob("*.py"))
@@ -71,6 +73,7 @@ def test_importing_core_loads_no_flet_module() -> None:
 
 
 def test_static_scan_sees_both_import_forms(tmp_path: Path) -> None:
+    """The scan sees ``import flet`` and ``from flet_map import Map``, not ``json``."""
     module = tmp_path / "sample.py"
     module.write_text(
         "import flet as ft\nfrom flet_map import Map\nimport json\n", encoding="utf-8"
@@ -83,6 +86,7 @@ def test_static_scan_sees_both_import_forms(tmp_path: Path) -> None:
 
 
 def test_static_scan_sees_a_submodule_imported_from_its_package(tmp_path: Path) -> None:
+    """The scan sees the submodule in ``from pycon_us.core import html_md``."""
     module = tmp_path / "sample.py"
     module.write_text("from pycon_us.core import html_md\n", encoding="utf-8")
     assert "pycon_us.core.html_md" in imported_modules(module)

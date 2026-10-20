@@ -41,7 +41,11 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(slug, saved=..., conference=...): a track page over the feed."""
+    """Return a function that shows a track page over the feed.
+
+    It takes the track's slug, the sessions ``saved`` before the page opened, and a
+    ``conference`` (the recorded feed by default).
+    """
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -71,6 +75,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def prefs(page: Shown) -> MemoryPrefs:
+    """Return the page's ``MemoryPrefs``, where the favourites are written."""
     return cast(MemoryPrefs, page.services.storage.prefs)
 
 
@@ -80,6 +85,7 @@ def stored(page: Shown) -> list[str] | None:
 
 
 def effects(page: Shown) -> list[str]:
+    """Return the haptic effects the page asked for, in order."""
     return cast(MemoryHaptics, page.services.haptics).effects
 
 
@@ -91,16 +97,19 @@ def said(page: Shown) -> list[tuple[str, str | None]]:
 
 
 def label_of(action: str | ft.SnackBarAction | None) -> str | None:
+    """Return a SnackBar action's label, or the action as given when it is not one."""
     return action.label if isinstance(action, ft.SnackBarAction) else action
 
 
 async def add_all(page: Shown) -> None:
+    """Tap the overflow menu's one item, Add all to My schedule."""
     (item,) = page.find(ft.PopupMenuItem)
     assert menu_text(item).value == screen.ADD_ALL
     await page.click(item)
 
 
 async def undo(page: Shown) -> None:
+    """Tap Undo on the last SnackBar, then let the session settle."""
     action = cast(ft.SnackBarAction, page.snack_bars[-1].action)
     assert action.label == UNDO
     await cast(Callable[[], Any], action.on_click)()
@@ -164,6 +173,7 @@ async def test_undo_closes_the_added_snack_bar(show: Show) -> None:
 
 
 async def test_one_new_session_is_said_in_the_singular(show: Show) -> None:
+    """One new session is said as "Added 1 session", and Undo takes only it back."""
     page = await show("charlas", saved=tuple(CHARLAS[1:]))
     await add_all(page)
     assert said(page) == [("Added 1 session", UNDO)]
@@ -174,6 +184,7 @@ async def test_one_new_session_is_said_in_the_singular(show: Show) -> None:
 async def test_a_track_saved_already_says_so_without_undo_or_a_write(
     show: Show,
 ) -> None:
+    """A track saved already says so, with no Undo, no write and no haptic."""
     page = await show("charlas", saved=tuple(CHARLAS))
     prefs(page).values[FAVORITES] = ["untouched"]  # any write would replace it
     effects(page).clear()
@@ -198,6 +209,7 @@ async def test_a_failed_write_says_so_and_keeps_undo(show: Show) -> None:
 async def test_an_undo_that_cannot_be_saved_says_so_without_another_undo(
     show: Show,
 ) -> None:
+    """An Undo whose write fails takes the add back and says so, with no Undo."""
     page = await show("charlas")
     await add_all(page)
     prefs(page).fail_writes = True
@@ -213,6 +225,7 @@ async def test_an_undo_that_cannot_be_saved_says_so_without_another_undo(
 async def test_a_track_page_offers_it_in_the_app_bars_overflow(
     show: Show, slug: str
 ) -> None:
+    """A track page's More options menu holds the item, with its identifiers."""
     page = await show(slug)
     (menu,) = page.find(ft.PopupMenuButton)
     assert menu.icon == ft.Icons.MORE_VERT and menu.tooltip == "More options"
@@ -253,8 +266,11 @@ async def test_it_is_not_offered_without_sessions_to_add(show: Show) -> None:
 async def test_the_open_spaces_page_does_not_offer_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """ux.md §5.10: the open spaces' slug is this page's route (D-205), never a
-    track page's, and the page has no overflow."""
+    """The open spaces page, under the Tracks hub, has no overflow and no add.
+
+    ux.md §5.10: the open spaces' slug is this page's route (D-205), never a track
+    page's, and the page has no overflow.
+    """
     conference = Conference(data=DATA, source="bundled", version=1)
     async with showing(
         open_spaces.OpenSpaces,
@@ -283,4 +299,5 @@ async def test_the_open_spaces_page_does_not_offer_it(
     ],
 )
 def test_the_message_counts_what_the_add_saved(change: Change, message: str) -> None:
+    """The message counts the new sessions, or says none was new, or none was saved."""
     assert added_feedback(change) == message

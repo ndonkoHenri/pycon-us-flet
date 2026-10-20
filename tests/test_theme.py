@@ -1,5 +1,7 @@
-"""Tests for the themes, tokens, badges and Markdown style sheet (D-22..D-26, D-33, D-113,
-D-116)."""
+"""Tests for the themes, tokens, badges and Markdown style sheet.
+
+D-22..D-26, D-33, D-113, D-116.
+"""
 
 import ast
 import dataclasses
@@ -88,6 +90,7 @@ def luminance(hex_color: str) -> float:
 
 
 def contrast_ratio(a: str, b: str) -> float:
+    """Return the WCAG 2.x contrast ratio of two #RRGGBB colours."""
     lighter, darker = sorted((luminance(a), luminance(b)), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
 
@@ -114,12 +117,14 @@ def color_distance(a: str, b: str) -> float:
 
 
 def scheme(dark: bool) -> ft.ColorScheme:
+    """Return the light or dark theme's colour scheme, without high contrast."""
     color_scheme = theme.build_theme(dark=dark, high_contrast=False).color_scheme
     assert color_scheme is not None
     return color_scheme
 
 
 def hex_role(color_scheme: ft.ColorScheme, role: str) -> str:
+    """Return a scheme role's colour, checked to be a #RRGGBB string."""
     value = getattr(color_scheme, role)
     assert isinstance(value, str) and value.startswith("#") and len(value) == 7, (
         role,
@@ -140,6 +145,7 @@ def hex_role(color_scheme: ft.ColorScheme, role: str) -> str:
 def test_contrast_ratio_matches_known_values(
     background: str, foreground: str, ratio: float
 ) -> None:
+    """The contrast helper gives the known WCAG ratios, to 0.01."""
     assert contrast_ratio(background, foreground) == pytest.approx(ratio, abs=0.01)
 
 
@@ -153,11 +159,13 @@ def test_contrast_ratio_matches_known_values(
     ],
 )
 def test_color_distance_matches_known_values(a: str, b: str, distance: float) -> None:
+    """The CIE76 helper gives known distances, to 0.1."""
     assert color_distance(a, b) == pytest.approx(distance, abs=0.1)
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_every_declared_text_pair_reads_at_aa(dark: bool) -> None:
+    """Each declared background role has its text partner, and the two read at AA."""
     color_scheme = scheme(dark)
     for background, foreground in PAIRS:
         bg, fg = getattr(color_scheme, background), getattr(color_scheme, foreground)
@@ -173,6 +181,7 @@ def test_every_declared_text_pair_reads_at_aa(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_brand_roles_are_all_declared(dark: bool) -> None:
+    """The six brand roles, the surface and their text partners are all declared."""
     color_scheme = scheme(dark)
     for background, foreground in PAIRS[:6] + PAIRS[8:10]:
         assert getattr(color_scheme, background) is not None, background
@@ -181,7 +190,11 @@ def test_brand_roles_are_all_declared(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_surface_roles_match_flets_neutral_ramp(dark: bool) -> None:
-    # The scheme repeats the ramp's text roles so the pairs above check what Flutter shows.
+    """The scheme's surface and its text roles are Flet's neutral ramp.
+
+    The scheme repeats the ramp's text roles so the pairs above check what Flutter
+    shows.
+    """
     color_scheme, ramp = scheme(dark), NEUTRAL_RAMP[dark]
     assert hex_role(color_scheme, "surface") == ramp["surface"]
     assert hex_role(color_scheme, "on_surface") == ramp["onSurface"]
@@ -192,8 +205,11 @@ def test_surface_roles_match_flets_neutral_ramp(dark: bool) -> None:
     not FLET_THEME_DART.exists(), reason="CI checks out only .flet-src/sdk/python"
 )
 def test_neutral_ramp_mirrors_the_pinned_flet_source() -> None:
-    # Runs wherever the full pin is checked out, so a Flet bump that changes the ramp
-    # fails here instead of leaving the contrast tests green on stale colours.
+    """The mirrored neutral ramp is the one in the pinned Flet source.
+
+    Runs wherever the full pin is checked out, so a Flet bump that changes the ramp
+    fails here instead of leaving the contrast tests green on stale colours.
+    """
     source = FLET_THEME_DART.read_text(encoding="utf-8")
     body = source[source.index("ColorScheme neutralizeSurfaces(") :]
     dark_branch, light_branch = body.split("return scheme.copyWith(")[1:3]
@@ -207,6 +223,7 @@ def test_neutral_ramp_mirrors_the_pinned_flet_source() -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_text_colours_read_at_aa_on_every_neutral_surface(dark: bool) -> None:
+    """Body text, links and the text tokens read at AA on every neutral surface."""
     color_scheme = scheme(dark)
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     texts = {
@@ -223,7 +240,10 @@ def test_text_colours_read_at_aa_on_every_neutral_surface(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_brand_overrides_follow_the_palette(dark: bool) -> None:
-    # D-22: indigo, purple and the 7:1 magenta in light; tuned light tones in dark.
+    """Primary, secondary and tertiary are the palette's indigo, purple and magenta.
+
+    D-22: indigo, purple and the 7:1 magenta in light; tuned light tones in dark.
+    """
     expected = (
         ("#BFC1FF", "#F4AEFF", "#FFACEB") if dark else ("#3B3EA9", "#680579", "#A1009A")
     )
@@ -237,6 +257,7 @@ def test_brand_overrides_follow_the_palette(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_theme_is_seeded_with_neutral_surfaces_and_bundled_roboto(dark: bool) -> None:
+    """The theme is seeded with the indigo, on neutral surfaces, in bundled Roboto."""
     built = theme.build_theme(dark=dark, high_contrast=False)
     assert built.color_scheme_seed == "#3B3EA9"
     assert built.surfaces == ft.ThemeSurfaces.NEUTRAL
@@ -245,6 +266,7 @@ def test_theme_is_seeded_with_neutral_surfaces_and_bundled_roboto(dark: bool) ->
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_ios_defaults_are_pinned_to_material(dark: bool) -> None:
+    """The app bar's title starts left; Android uses predictive back, iOS Cupertino."""
     built = theme.build_theme(dark=dark, high_contrast=False)
     assert built.appbar_theme is not None
     assert built.appbar_theme.center_title is False  # D-10
@@ -255,8 +277,11 @@ def test_ios_defaults_are_pinned_to_material(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_a_tall_tiles_icons_sit_by_its_titles_first_line(dark: bool) -> None:
-    """D-188, D-205: also a fold's header, which has no alignment of its own, so a
-    wrapped "Think you can't do one?" lines its icons up with the link row under it."""
+    """The theme's list tiles align their icons with their title's first line.
+
+    D-188, D-205: also a fold's header, which has no alignment of its own, so a wrapped
+    "Think you can't do one?" lines its icons up with the link row under it.
+    """
     built = theme.build_theme(dark=dark, high_contrast=False)
     assert built.list_tile_theme is not None
     assert built.list_tile_theme.title_alignment == (
@@ -265,6 +290,7 @@ def test_a_tall_tiles_icons_sit_by_its_titles_first_line(dark: bool) -> None:
 
 
 def test_light_overlay_style_has_dark_icons() -> None:
+    """The light theme's system bars have dark icons over a transparent status bar."""
     style = theme.build_theme(dark=False, high_contrast=False).system_overlay_style
     assert style == ft.SystemOverlayStyle(
         status_bar_color=ft.Colors.TRANSPARENT,
@@ -277,6 +303,7 @@ def test_light_overlay_style_has_dark_icons() -> None:
 
 
 def test_dark_overlay_style_has_light_icons() -> None:
+    """The dark theme's system bars have light icons over a transparent status bar."""
     style = theme.build_theme(dark=True, high_contrast=False).system_overlay_style
     assert style == ft.SystemOverlayStyle(
         status_bar_color=ft.Colors.TRANSPARENT,
@@ -290,6 +317,7 @@ def test_dark_overlay_style_has_light_icons() -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_high_contrast_uses_the_standard_scheme_until_p2(dark: bool) -> None:
+    """High contrast builds the standard theme and tokens, until P2."""
     assert theme.build_theme(dark=dark, high_contrast=True) == theme.build_theme(
         dark=dark, high_contrast=False
     )
@@ -300,6 +328,7 @@ def test_high_contrast_uses_the_standard_scheme_until_p2(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_favorite_token_is_the_tertiary_role(dark: bool) -> None:
+    """The favourite token is the tertiary role, and success is the live colour."""
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     assert tokens.favorite == scheme(dark).tertiary  # ux.md §3.3
     assert tokens.success == tokens.live
@@ -324,15 +353,21 @@ def badges(tokens: theme.Tokens) -> dict[str, theme.BadgeColors]:
 
 
 def test_every_token_is_a_checked_text_colour_or_badge() -> None:
-    # A new token must join one of the contrast tests, not slip past both.
+    """Every token is a text colour or a badge, so a contrast test checks it.
+
+    A new token must join one of the contrast tests, not slip past both.
+    """
     names = {field.name for field in dataclasses.fields(theme.Tokens)}
     assert names == {*TEXT_TOKENS, *BADGE_TOKENS}
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_every_badge_reads_at_aa(dark: bool) -> None:
-    # D-25: a tonal badge's label on its fill; an outlined badge's label sits on the
-    # surface itself, so on every surface of the neutral ramp. WCAG 2.x formula.
+    """Every badge's label reads at AA on its fill, or on every surface if outlined.
+
+    D-25: a tonal badge's label on its fill; an outlined badge's label sits on the
+    surface itself, so on every surface of the neutral ramp. WCAG 2.x formula.
+    """
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     for name, colors in badges(tokens).items():
         backgrounds = [colors.fill] if colors.fill else NEUTRAL_SURFACES[dark]
@@ -343,9 +378,12 @@ def test_every_badge_reads_at_aa(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_every_badge_fill_differs_from_every_other(dark: bool) -> None:
-    # The label carries the meaning (D-33), but two tracks of near-equal colour would
-    # look like one, and En Español beside a track like part of it (#181's review). So
-    # any two fills, the grey of breaks included, differ by a CIE76 distance of 10.
+    """Any two badge fills differ by a CIE76 distance of at least 10.
+
+    The label carries the meaning (D-33), but two tracks of near-equal colour would look
+    like one, and En Español beside a track like part of it (#181's review). So any two
+    fills, the grey of breaks included, differ by 10.
+    """
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     fills = {
         colors.fill: name for name, colors in badges(tokens).items() if colors.fill
@@ -358,8 +396,11 @@ def test_every_badge_fill_differs_from_every_other(dark: bool) -> None:
 @pytest.mark.parametrize("year", YEARS)
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_every_track_of_every_year_has_its_own_badge(dark: bool, year: int) -> None:
-    # Palette keys must equal the registry's keys exactly, spaces and capitals included
-    # (THEME-08), or a track would fall back to the grey.
+    """Every track key in every year's registry has a badge of its own.
+
+    Palette keys must equal the registry's keys exactly, spaces and capitals included
+    (THEME-08), or a track would fall back to the grey.
+    """
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     keys = {track.key for track in config.load_year(year).conference.tracks}
     assert keys - tokens.tracks.keys() == set()
@@ -367,7 +408,10 @@ def test_every_track_of_every_year_has_its_own_badge(dark: bool, year: int) -> N
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_notices_summits_events_and_breaks_get_colours(dark: bool) -> None:
-    # Ionic left them grey with no entry (SCHED-20); breaks and notices share the grey.
+    """Notices and breaks share the grey; summits and events get two other colours.
+
+    Ionic left them all grey, with no entry (SCHED-20).
+    """
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     grey = tokens.unknown_track
     assert tokens.track_badge("Informational") == tokens.track_badge("Break") == grey
@@ -378,13 +422,17 @@ def test_notices_summits_events_and_breaks_get_colours(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_an_unknown_track_gets_the_neutral_badge(dark: bool) -> None:
+    """An unknown track gets the neutral badge, which has a fill."""
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     assert tokens.track_badge("Workshop") == tokens.unknown_track
     assert tokens.unknown_track.fill is not None
 
 
 def test_en_espanol_is_the_tonal_pair_inverted_in_dark() -> None:
-    # D-25: #FFD7F3 / #5E0058 (10.1:1), instead of Ionic's #DD04D2 (4.18:1).
+    """En Español is #5E0058 on #FFD7F3 (10.06:1) in light, the pair inverted in dark.
+
+    D-25: instead of Ionic's #DD04D2 (4.18:1).
+    """
     light, dark = theme.LIGHT_TOKENS.spanish, theme.DARK_TOKENS.spanish
     assert light == theme.BadgeColors(text="#5E0058", fill="#FFD7F3")
     assert dark == theme.BadgeColors(text="#FFD7F3", fill="#5E0058")
@@ -394,6 +442,7 @@ def test_en_espanol_is_the_tonal_pair_inverted_in_dark() -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
+    """The registration badge is outlined, its text in the error role."""
     registration = theme.build_tokens(dark=dark, high_contrast=False).registration
     assert registration == theme.BadgeColors(text=hex_role(scheme(dark), "error"))
     assert registration.fill is None  # outlined
@@ -401,8 +450,11 @@ def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
-    # D-199: a status mark beside a track's badge, not one more tonal fill, which in
-    # light sat 6.8 from the En Español pink and in dark outshone every track.
+    """The new-track badge is outlined, its text in the primary role.
+
+    D-199: a status mark beside a track's badge, not one more tonal fill, which in light
+    sat 6.8 from the En Español pink and in dark outshone every track.
+    """
     new_track = theme.build_tokens(dark=dark, high_contrast=False).new_track
     assert new_track == theme.BadgeColors(text=hex_role(scheme(dark), "primary"))
     assert new_track.fill is None  # outlined
@@ -410,14 +462,18 @@ def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_error_roles_are_the_seeds_own(dark: bool) -> None:
-    # Declared so the contrast test sees what Flutter's fromSeed draws (Material's error
-    # palette, hue 25); the rendered colour was checked on screen (#80).
+    """The error roles are declared as the colours Flutter's seeded scheme draws.
+
+    Declared so the contrast test sees what Flutter's fromSeed draws (Material's error
+    palette, hue 25); the rendered colour was checked on screen (#80).
+    """
     expected = ("#FFB4AB", "#690005") if dark else ("#BA1A1A", "#FFFFFF")
     color_scheme = scheme(dark)
     assert (color_scheme.error, color_scheme.on_error) == expected
 
 
 def test_tokens_are_frozen() -> None:
+    """Tokens and their palette are read-only, and tokens hash and compare by value."""
     with pytest.raises(dataclasses.FrozenInstanceError):
         theme.LIGHT_TOKENS.live = "#000000"  # type: ignore[misc]
     with pytest.raises(TypeError):  # the palette too
@@ -430,12 +486,17 @@ def test_tokens_are_frozen() -> None:
 
 
 def test_tokens_context_defaults_to_the_light_tokens() -> None:
+    """The tokens context defaults to the light tokens."""
     assert theme.TokensCtx.default_value is theme.LIGHT_TOKENS
 
 
 def test_every_markdown_text_style_names_a_checked_colour() -> None:
-    # F28: a style given in the sheet replaces the theme's, so one without a colour is
-    # black on the dark surface. The colours are roles whose contrast is tested above.
+    """Every style the sheet gives names a colour: primary for links, else on-surface.
+
+    The sheet gives at least the link, paragraph, h1 and code styles. F28: a style
+    given in the sheet replaces the theme's, so one without a colour is black on the
+    dark surface. The colours are roles whose contrast is tested above.
+    """
     styles = {
         field.name: getattr(theme.MARKDOWN_STYLE, field.name)
         for field in dataclasses.fields(ft.MarkdownStyleSheet)
@@ -454,8 +515,11 @@ def test_every_markdown_text_style_names_a_checked_colour() -> None:
 
 
 def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> None:
-    # D-152: Markdown text does not inherit the theme's font (iOS showed SF Pro), and an
-    # unnamed decoration colour drew near-black lines on the dark surface.
+    """Every style the sheet gives names its font, and a decoration takes its colour.
+
+    D-152: Markdown text does not inherit the theme's font (iOS showed SF Pro), and an
+    unnamed decoration colour drew near-black lines on the dark surface.
+    """
     sheet = theme.MARKDOWN_STYLE
     for field in dataclasses.fields(ft.MarkdownStyleSheet):
         style = getattr(sheet, field.name)
@@ -471,6 +535,7 @@ def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> Non
 
 
 def test_markdown_links_are_underlined_and_headings_stay_below_the_section() -> None:
+    """Links are underlined, and headings are 18 then 16, below the section's title."""
     sheet = theme.MARKDOWN_STYLE
     assert sheet.a_text_style is not None
     assert (
@@ -501,7 +566,10 @@ def adaptive_true_calls(source: str) -> list[int]:
 
 
 def test_nothing_sets_adaptive() -> None:
-    # D-10: Material only, identical on both platforms.
+    """No call in ``src`` passes ``adaptive=True``.
+
+    D-10: Material only, identical on both platforms.
+    """
     offenders = {
         str(path.relative_to(SRC)): lines
         for path in sorted(SRC.rglob("*.py"))
@@ -511,6 +579,7 @@ def test_nothing_sets_adaptive() -> None:
 
 
 def test_adaptive_scan_finds_the_keyword() -> None:
+    """The scan finds a call passing ``adaptive=True``, not one passing False."""
     assert adaptive_true_calls(
         "ft.Switch(adaptive=True)\nft.Switch(adaptive=False)\n"
     ) == [1]
@@ -543,8 +612,11 @@ def resolved(role: object, dark: bool) -> str:
 def test_markdown_text_reads_at_aa_on_every_background_the_sheet_draws(
     dark: bool,
 ) -> None:
-    """SESS-06: a description's text, links and code on the page, on a code span and
-    in a block quote, in both schemes."""
+    """Every Markdown text colour reads at AA on the page, code spans and quotes.
+
+    SESS-06: a description's text, links and code on the page, on a code span and in a
+    block quote, in both schemes.
+    """
     sheet = theme.MARKDOWN_STYLE
     assert sheet.code_text_style is not None and sheet.blockquote_decoration is not None
     texts = {

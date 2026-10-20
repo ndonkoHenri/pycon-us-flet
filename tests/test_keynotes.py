@@ -43,7 +43,7 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(...): the Keynotes page over a feed."""
+    """Return a function that shows the Keynotes page over a feed."""
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -108,6 +108,7 @@ def test_the_hubs_keynotes_row_counts_what_the_page_lists() -> None:
 
 
 async def test_one_card_per_session_with_its_people(show: Show) -> None:
+    """A card per session in time order, headed by its people or a panel's title."""
     page = await show()
     assert card_ids(page) == ["153", "164", "165", "176", "182", "183"]
     assert page.titles[-1] == "Keynotes"
@@ -133,9 +134,12 @@ async def test_one_card_per_session_with_its_people(show: Show) -> None:
 
 
 async def test_a_talks_title_is_in_one_type_on_every_card(show: Show) -> None:
-    """#281: a panel's title in TITLE_LARGE broke inside "Community" at iOS's largest
-    text; a talk's title, a keynote's or a panel's, is TALK_TITLE, and only people's
-    names, whose words are short, are TITLE_LARGE."""
+    """Every card's talk title is TALK_TITLE; only people's names are TITLE_LARGE.
+
+    #281: a panel's title in TITLE_LARGE broke inside "Community" at iOS's largest text;
+    a talk's title, a keynote's or a panel's, is TALK_TITLE, and only people's names,
+    whose words are short, are TITLE_LARGE.
+    """
     page = await show()
     titles = {str(k.title) for k in KEYNOTES if k.title}  # the year data's own
     styles = {
@@ -165,6 +169,10 @@ async def test_the_photos_are_decorative_with_the_initials_under_them(
 
 
 async def test_a_panel_shows_its_people_as_a_row_of_photos(show: Show) -> None:
+    """Each panel's people wrap as a row of names, in the year data's order.
+
+    The last panel's (the Steering Council's) are 64 dp photos, each person one stop.
+    """
     page = await show()
     council = keynote_of(KEYNOTES, "183")
     assert council is not None
@@ -196,6 +204,11 @@ async def test_a_panel_shows_its_people_as_a_row_of_photos(show: Show) -> None:
 
 
 def test_a_keynotes_card_cuts_its_bios_and_a_panels_its_abstract() -> None:
+    """A keynote's card cuts its speakers' bios, and a panel's card its abstract.
+
+    Every card of the year data is cut; a short line is shown whole, and a line break
+    always cuts.
+    """
     lin = keynote_of(KEYNOTES, "153")
     together = keynote_of(KEYNOTES, "182")
     panel = keynote_of(KEYNOTES, "164")
@@ -258,6 +271,7 @@ async def test_read_more_shows_the_whole_bio_and_show_less_cuts_it_again(
 
 
 async def test_the_tile_says_when_and_where_and_opens_the_session(show: Show) -> None:
+    """The tile shows the day, the time range and the room, and opens the session."""
     page = await show()
     tile = page.node("keynotes.session.153")
     # The range keeps its period with a no-break space, so it never breaks in two.
