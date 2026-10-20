@@ -1,10 +1,11 @@
 """Tests for the info pages' year data (D-263): ``year_info``, as ``config`` runs it.
 
-Every year's load runs the info pages' checks on the content it built, so a page's
-rules fail the load as soon as its table lands; then each page's table and its rules:
-Wi-Fi's (D-280), About the PSF's ``[psf]`` (D-283) and Social's (D-284). Help & safety's
-tables (D-281) are checked here through the loader, from a copy of the 2026 data with
-one entry changed, so each refusal is the error a broken ``content.toml`` would give.
+Every year's load runs the info pages' checks on the content and conference it built, so
+a page's rules fail the load as soon as its table lands; then each page's table and its
+rules: Wi-Fi's (D-280), About the PSF's ``[psf]`` (D-283) and Social's (D-284). Help &
+safety's tables (D-281) are checked here through the loader, from a copy of the 2026
+data with one entry changed, so each refusal is the error a broken ``content.toml``
+would give. The venue hours' own rules are ``tests/test_year_hours.py``.
 """
 
 import shutil
@@ -18,7 +19,7 @@ import flet as ft
 import pytest
 
 from pycon_us import config
-from pycon_us.config import Content, YearDataError, load_year
+from pycon_us.config import ConferenceInfo, Content, YearDataError, load_year
 from pycon_us.ui.brands import BRANDS
 from pycon_us.year_info import (
     PSF_SECTIONS,
@@ -53,23 +54,23 @@ YEARS = sorted(
 def test_every_year_s_load_checks_its_info_pages(
     monkeypatch: pytest.MonkeyPatch, year: int
 ) -> None:
-    """Each year's load passes its built content and file name to ``check_info()``."""
-    calls: list[tuple[Content, str]] = []
+    """Each year's load passes its built content, conference and file to ``check_info()``."""
+    calls: list[tuple[Content, ConferenceInfo, str]] = []
 
-    def spy(content: Content, file: str) -> None:
+    def spy(content: Content, conference: ConferenceInfo, file: str) -> None:
         """Record the call, then check as the loader would."""
-        calls.append((content, file))
-        check_info(content, file)
+        calls.append((content, conference, file))
+        check_info(content, conference, file)
 
     monkeypatch.setattr(config, "check_info", spy)
     data = load_year(year)
-    assert calls == [(data.content, f"{year}/content.toml")]
+    assert calls == [(data.content, data.conference, f"{year}/content.toml")]
 
 
 def test_a_broken_info_rule_fails_the_load(monkeypatch: pytest.MonkeyPatch) -> None:
     """A ``YearDataError`` from the info pages' checks is the load's error, unchanged."""
 
-    def broken(content: Content, file: str) -> None:
+    def broken(content: Content, conference: ConferenceInfo, file: str) -> None:
         """Refuse the content, as a page's rule would."""
         raise YearDataError(f"{file}: wifi.password: is empty")
 
@@ -220,8 +221,9 @@ def copy_forward(tmp_path: Path, checked: date | None = None) -> Path:
     conference.write_text(text, encoding="utf-8")
     content = folder / "content.toml"
     text = content.read_text(encoding="utf-8")
-    # The hand-written moments must fall in their year (D-274), so they move with it.
-    text = text.replace("at = 2026-05-", "at = 2027-05-")
+    # The hand-written moments (D-274) and the venue hours (D-282) must fall in their
+    # year, so they move with it.
+    text = text.replace("2026-05-", "2027-05-")
     if checked is not None:
         text = text.replace("checked = 2026-10-20", f"checked = {checked.isoformat()}")
     content.write_text(text, encoding="utf-8")
@@ -385,7 +387,7 @@ def test_a_blank_wifi_value_is_refused_naming_the_file_and_key(
     with pytest.raises(
         YearDataError, match=rf"^2026/content.toml: wifi.{key}: is empty$"
     ):
-        check_info(content, "2026/content.toml")
+        check_info(content, load_year(2026).conference, "2026/content.toml")
 
 
 def test_a_blank_wifi_value_in_the_file_fails_the_load(tmp_path: Path) -> None:
@@ -514,7 +516,7 @@ def test_a_link_that_breaks_a_rule_fails_the_check(
 ) -> None:
     """A link that is not https, has an unknown section or repeats a row key is refused."""
     with pytest.raises(YearDataError, match=rf"^{FILE}: {message}"):
-        check_info(psf_with(**fields), FILE)
+        check_info(psf_with(**fields), load_year(2026).conference, FILE)
 
 
 @pytest.mark.parametrize(
@@ -534,7 +536,7 @@ def test_a_blank_mission_or_an_http_donate_link_fails_the_check(
     assert PSF is not None
     content = Content(psf=replace(PSF, **fields))
     with pytest.raises(YearDataError, match=rf"^{FILE}: {message}"):
-        check_info(content, FILE)
+        check_info(content, load_year(2026).conference, FILE)
 
 
 def test_a_broken_psf_table_fails_the_year_s_load(
