@@ -161,6 +161,9 @@ def report_card(
                     ),
                 ],
                 spacing=16,  # the text lines up with the rows' titles below
+                # Beside the first line when the heading wraps at large text, as the
+                # rows' icons are, not beside the middle of the block.
+                vertical_alignment=ft.CrossAxisAlignment.START,
             ),
             padding=ft.Padding.only(left=16, top=16, right=16, bottom=4),
         ),
