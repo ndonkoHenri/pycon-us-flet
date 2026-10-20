@@ -19,6 +19,7 @@ from tests.trees import descendants, only, texts
 
 
 def never() -> None:
+    """A handler that fails the test if anything calls it."""
     raise AssertionError("not tapped in this test")
 
 
@@ -26,6 +27,7 @@ def never() -> None:
 
 
 def test_an_empty_state_says_why_and_names_its_way_out_as_one_button() -> None:
+    """An empty state shows its sentence and one button that calls its handler."""
     taps: list[str] = []
     state = EmptyState(
         "This session isn't in the current schedule",
@@ -42,6 +44,7 @@ def test_an_empty_state_says_why_and_names_its_way_out_as_one_button() -> None:
 
 
 def test_an_empty_state_s_icon_is_large_and_decorative() -> None:
+    """The empty state's icon is 48 dp and has no label for screen readers."""
     state = EmptyState("No rooms yet", icon=ft.Icons.PLACE_OUTLINED)
     icon = only(state, ft.Icon)
     assert icon.icon == ft.Icons.PLACE_OUTLINED
@@ -50,6 +53,7 @@ def test_an_empty_state_s_icon_is_large_and_decorative() -> None:
 
 
 def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
+    """Title and body are one live region; the title is a level-2 heading node."""
     state = EmptyState(
         "Can't load the schedule",
         icon=ft.Icons.CLOUD_OFF_OUTLINED,
@@ -80,6 +84,7 @@ def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
 
 
 def test_a_disabled_way_out_stays_in_place() -> None:
+    """A disabled way out is still shown, as a disabled button."""
     state = EmptyState(
         "Can't load the schedule",
         icon=ft.Icons.CLOUD_OFF_OUTLINED,
@@ -91,6 +96,7 @@ def test_a_disabled_way_out_stays_in_place() -> None:
 
 
 def test_the_way_out_is_outside_the_live_region_so_it_is_its_own_stop() -> None:
+    """The button is outside the live region, a screen-reader stop of its own."""
     state = EmptyState(
         "Page not found",
         icon=ft.Icons.LINK_OFF_OUTLINED,
@@ -106,6 +112,7 @@ def test_the_way_out_is_outside_the_live_region_so_it_is_its_own_stop() -> None:
 
 
 def test_an_empty_state_whose_sentence_names_the_way_out_has_no_button() -> None:
+    """With no action, as when the sentence names the way out, there is no button."""
     state = EmptyState(
         'No results for "pydanitc"',
         icon=ft.Icons.SEARCH_OFF,
@@ -118,6 +125,7 @@ def test_an_empty_state_whose_sentence_names_the_way_out_has_no_button() -> None
 def test_an_action_needs_both_its_label_and_its_handler(
     action: str | None, on_action: Callable[[], None] | None
 ) -> None:
+    """An action label without a handler, or the reverse, raises ``ValueError``."""
     with pytest.raises(ValueError, match="both a label and a handler"):
         EmptyState(
             "Can't load the schedule",
@@ -128,6 +136,7 @@ def test_an_action_needs_both_its_label_and_its_handler(
 
 
 def test_an_empty_state_has_no_fixed_height_so_it_reflows_at_200_percent() -> None:
+    """No control of an empty state sets a height, so it reflows at 200 % text."""
     state = EmptyState(
         "Can't load the schedule",
         icon=ft.Icons.CLOUD_OFF_OUTLINED,
@@ -142,6 +151,7 @@ def test_an_empty_state_has_no_fixed_height_so_it_reflows_at_200_percent() -> No
 
 
 def skeleton(monkeypatch: pytest.MonkeyPatch, *, reduce_motion: bool) -> ft.Semantics:
+    """Build ``SkeletonList`` outside a renderer, with ``reduce_motion`` set."""
     monkeypatch.setattr(states, "use_prefs", lambda: Prefs(reduce_motion=reduce_motion))
     result = inspect.unwrap(SkeletonList)()
     assert isinstance(result, ft.Semantics)
@@ -149,11 +159,13 @@ def skeleton(monkeypatch: pytest.MonkeyPatch, *, reduce_motion: bool) -> ft.Sema
 
 
 def placeholder_rows(node: ft.Control) -> list[ft.Control]:
+    """The placeholder rows: the controls of the first Column in ``node``."""
     column = next(n for n in descendants(node) if isinstance(n, ft.Column))
     return list(column.controls)
 
 
 def test_the_skeleton_shimmers_over_five_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The skeleton shimmers over five placeholder rows, every 1.5 s."""
     result = skeleton(monkeypatch, reduce_motion=False)
     shimmer = only(result, ft.Shimmer)
     assert shimmer.period == 1500
@@ -163,12 +175,14 @@ def test_the_skeleton_shimmers_over_five_rows(monkeypatch: pytest.MonkeyPatch) -
 def test_under_reduced_motion_the_skeleton_stays_still(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Under reduced motion the skeleton keeps its rows but has no shimmer."""
     result = skeleton(monkeypatch, reduce_motion=True)
     assert not any(isinstance(n, ft.Shimmer) for n in descendants(result))  # D-173
     assert len(placeholder_rows(result)) == SKELETON_ROWS
 
 
 def test_screen_readers_hear_one_loading_node(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The skeleton is one node, "Loading schedule", whose rows say nothing."""
     result = skeleton(monkeypatch, reduce_motion=False)
     assert result.label == "Loading schedule"
     assert result.container

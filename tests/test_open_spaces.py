@@ -38,7 +38,7 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(...): the Open spaces page over a feed, at a time."""
+    """Return a function that renders the Open spaces page over a feed, at a time."""
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -71,6 +71,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def tabs(page: Shown) -> ft.Tabs:
+    """The page's one ``Tabs`` control."""
     (found,) = page.find(ft.Tabs)
     return found
 
@@ -91,6 +92,7 @@ def tab_labels(page: Shown) -> list[tuple[str, str]]:
 
 
 def open_spaces(year: int = 2026) -> list[str]:
+    """The ids of the year's open spaces, in the track page's order."""
     return [
         s.id for d in track_sessions(processed(year), "Open Space") for s in d.sessions
     ]
@@ -106,8 +108,10 @@ def open_spaces(year: int = 2026) -> list[str]:
 async def test_day_tabs_come_from_the_data(
     show: Show, year: int, labels: list[str]
 ) -> None:
-    """EVT-01: a tab per day with open spaces, named by its date. Ionic called every
-    day after Saturday "Sunday"."""
+    """EVT-01: a tab per day with open spaces, named by its date.
+
+    Ionic called every day after Saturday "Sunday".
+    """
     page = await show(year=year)
     days = [d.day for d in track_sessions(processed(year), "Open Space")]
     assert tab_labels(page) == [
@@ -117,17 +121,20 @@ async def test_day_tabs_come_from_the_data(
 
 
 async def test_it_opens_on_today_marked_as_today(show: Show) -> None:
+    """During the conference the page opens on today's tab, said to be today."""
     page = await show(now=SATURDAY)
     assert tabs(page).selected_index == 1
     assert tab_labels(page)[1] == ("Sat 16", "Saturday, May 16, today")
 
 
 async def test_outside_the_conference_it_opens_on_the_first_day(show: Show) -> None:
+    """Outside the conference the page opens on the first day's tab."""
     page = await show(now=OCTOBER)
     assert tabs(page).selected_index == 0
 
 
 async def test_a_picked_day_stays_picked_across_a_render(show: Show) -> None:
+    """A day picked in the tabs stays picked when a star tap re-renders the page."""
     page = await show(now=SATURDAY)
     page.session.apply_patch(tabs(page)._i, {"selected_index": 2})  # as Flutter does
     await page.event(tabs(page), "change", 2)
@@ -167,6 +174,7 @@ async def test_rows_leave_out_the_open_space_badge(show: Show) -> None:
 
 
 async def test_a_row_pushes_its_session(show: Show) -> None:
+    """A row tap pushes its session under the Open spaces path."""
     page = await show()
     first = open_spaces()[0]
     node = page.node(f"open_spaces.session.{semantics_key(first)}")
@@ -177,8 +185,11 @@ async def test_a_row_pushes_its_session(show: Show) -> None:
 async def test_a_star_tap_re_renders_one_day_and_one_row(
     show: Show, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """D-153: each day is memoised and given only its own saved ids; it fails with
-    ``ft.memo`` taken off ``_DayList`` or ``SessionRow``."""
+    """A star tap re-renders one day body and one row (D-153).
+
+    Each day is memoised and given only its own saved ids; the test fails with
+    ``ft.memo`` taken off ``_DayList`` or ``SessionRow``.
+    """
     days: list[date] = []
     slots = screen.by_slot
 
@@ -199,6 +210,7 @@ async def test_a_star_tap_re_renders_one_day_and_one_row(
 
 
 async def test_each_day_starts_with_the_years_intro(show: Show) -> None:
+    """Each of the three day lists starts with the year's open spaces intro."""
     page = await show()
     intro = YEAR.content.open_spaces
     assert intro is not None
@@ -286,6 +298,7 @@ async def test_without_data_it_loads_then_offers_to_try_again(show: Show) -> Non
 
 
 def test_the_opening_day_is_today_with_open_spaces_else_the_first() -> None:
+    """``opening_day`` is today when today has open spaces, else the first day."""
     days = [date(2026, 5, 15), date(2026, 5, 16), date(2026, 5, 17)]
     assert screen.opening_day(days, date(2026, 5, 16)) == date(2026, 5, 16)
     assert screen.opening_day(days, date(2026, 5, 14)) == date(2026, 5, 15)

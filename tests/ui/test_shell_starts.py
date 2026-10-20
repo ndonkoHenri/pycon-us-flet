@@ -53,6 +53,7 @@ def first_speakers() -> list[str]:
 
 
 async def test_shell_starts(flet_app: ftt.FletTestApp) -> None:
+    """The app starts on Now, each tab shows its root, and Back pops one step."""
     t = remote(flet_app)
 
     # A cold start lands on Now with the bottom bar and its five tabs (D-13, D-14).

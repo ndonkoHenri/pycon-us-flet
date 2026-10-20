@@ -50,16 +50,19 @@ type Fetch = Callable[..., Awaitable[bytes]]
 
 @pytest.fixture(scope="module")
 def year() -> YearData:
+    """The 2026 year data, loaded once for the module."""
     return load_year(2026)
 
 
 @pytest.fixture
 def shared() -> MemoryPrefs:
+    """An empty in-memory SharedPreferences under the storage service."""
     return MemoryPrefs()
 
 
 @pytest.fixture
 def semantics() -> MemorySemantics:
+    """An in-memory SemanticsService whose accessibility flags a test sets."""
     return MemorySemantics()
 
 
@@ -67,6 +70,7 @@ def semantics() -> MemorySemantics:
 def svc(
     year: YearData, shared: MemoryPrefs, semantics: MemorySemantics, tmp_path: Path
 ) -> Services:
+    """Services for 2026 over the in-memory fakes, with files in ``tmp_path``."""
     storage = Storage(prefs=shared, directory=tmp_path, year=2026)
     return Services(
         year=year,
@@ -81,8 +85,8 @@ def svc(
 
 @pytest.fixture
 def fake_page() -> FakePage:
+    """A fake page as ``main.prepare_first_page`` leaves it: theme crossfade off."""
     page = FakePage()
-    # As main.prepare_first_page leaves it, before main() runs.
     page.theme_animation_style = NO_THEME_ANIMATION
     return page
 
@@ -91,11 +95,13 @@ class Network:
     """Stands in for ``api.fetch_feed``: held until released, then answers or fails."""
 
     def __init__(self) -> None:
+        """Hold every fetch, with the recorded 2026 feed as the answer."""
         self.answer: bytes | Exception = recorded(2026)
         self.released = asyncio.Event()
         self.urls: list[str] = []
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
+        """Record ``url``, wait for the release, then answer or raise."""
         self.urls.append(url)
         await self.released.wait()
         if isinstance(self.answer, Exception):
@@ -105,6 +111,7 @@ class Network:
 
 @pytest.fixture
 def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
+    """Put a held ``Network`` in place of ``api.fetch_feed``; release it after."""
     network = Network()
     monkeypatch.setattr(api, "fetch_feed", network.fetch_feed)
     yield network
@@ -112,12 +119,14 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
 
 
 async def started(fake_page: FakePage, svc: Services) -> tuple[Conference, Prefs]:
+    """Run ``bootstrap()`` on new stores and return its Conference and Prefs."""
     conference, prefs = Conference(), Prefs()
     await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
     return conference, prefs
 
 
 async def finish_refresh(conference: Conference, network: Network) -> None:
+    """Release the network and wait for the Conference's refresh to end."""
     network.released.set()
     assert conference._task is not None
     await conference._task
@@ -129,6 +138,7 @@ async def finish_refresh(conference: Conference, network: Network) -> None:
 async def test_the_gate_opens_on_the_bundled_feed_without_waiting_for_the_network(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """The gate opens on the bundled feed while a quiet refresh runs behind it."""
     conference, prefs = await started(fake_page, svc)
     # The network has not answered, yet the first screen has data (D-38).
     assert prefs.loaded
@@ -143,6 +153,7 @@ async def test_the_gate_opens_on_the_bundled_feed_without_waiting_for_the_networ
 async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
 ) -> None:
+    """The stored theme is set, with no crossfade, before the gate opens on data."""
     shared.values["pycon.theme"] = "dark"
     conference, prefs = Conference(), Prefs()
     seen_at_open: list[object] = []
@@ -167,6 +178,7 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
 async def test_the_os_brightness_and_accessibility_flags_are_read_at_start(
     svc: Services, semantics: MemorySemantics, network: Network
 ) -> None:
+    """The start reads the OS's dark mode, high contrast and reduced motion."""
     semantics.features.update(high_contrast=True, disable_animations=True)
     _, prefs = await started(FakePage(ft.Brightness.DARK), svc)
     assert (prefs.os_dark, prefs.os_high_contrast, prefs.reduce_motion) == (
@@ -180,6 +192,7 @@ async def test_the_os_brightness_and_accessibility_flags_are_read_at_start(
 async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
 ) -> None:
+    """The year's stored favourites are in the store when the gate opens (D-48)."""
     shared.values["pycon.2026.favorites"] = ["42", "poster-detail-7"]
     favorites, prefs = Favorites(), Prefs()
     ids_at_open: list[frozenset[str]] = []
@@ -210,6 +223,7 @@ async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
     real_time: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A stored fake time, error details and feed URL apply before the gate opens."""
     monkeypatch.setattr(errors, "_details", False)
     shared.values["pycon.dev"] = json.dumps(
         {
@@ -230,6 +244,7 @@ async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
 async def test_without_developer_options_the_app_runs_on_real_time_and_its_feed(
     fake_page: FakePage, svc: Services, network: Network, real_time: None
 ) -> None:
+    """With no developer options, the clock is real and the year's feed is fetched."""
     clock.start_fake_clock(datetime(2030, 1, 1, tzinfo=UTC))  # left by a session before
     await started(fake_page, svc)
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
@@ -245,6 +260,7 @@ async def test_under_reduced_motion_theme_changes_still_crossfade(
     network: Network,
     flag: str,
 ) -> None:
+    """Under either reduced-motion flag, theme changes still crossfade (D-173)."""
     semantics.features[flag] = True  # iOS Reduce Motion, Android's Remove animations
     _, prefs = await started(fake_page, svc)
     assert prefs.reduce_motion
@@ -256,6 +272,7 @@ async def test_under_reduced_motion_theme_changes_still_crossfade(
 async def test_the_cache_is_shown_before_the_snapshot(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """A cached feed is what the start shows, ahead of the bundled snapshot."""
     await svc.storage.write_feed(recorded(2026))
     conference, _ = await started(fake_page, svc)
     assert conference.source == "cache"
@@ -264,6 +281,7 @@ async def test_the_cache_is_shown_before_the_snapshot(
 async def test_an_offline_start_keeps_the_snapshot_and_says_offline(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """A start whose refresh finds no network keeps the snapshot and says offline."""
     network.answer = api.NetworkError("no route to host")
     conference, _ = await started(fake_page, svc)
     await finish_refresh(conference, network)
@@ -274,6 +292,7 @@ async def test_an_offline_start_keeps_the_snapshot_and_says_offline(
 async def test_an_online_start_replaces_the_snapshot_with_the_network_feed(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """A changed network feed replaces the snapshot as version 2 and is cached."""
     network.answer = changed(2026, lambda feed: feed["schedule"].pop())
     conference, _ = await started(fake_page, svc)
     await finish_refresh(conference, network)
@@ -285,7 +304,10 @@ async def test_an_online_start_replaces_the_snapshot_with_the_network_feed(
 async def test_an_online_start_that_finds_the_snapshot_s_feed_keeps_its_version(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """D-224: the same bytes publish nothing, so no screen re-renders its lists."""
+    """A network feed equal to the snapshot is cached but keeps version 1.
+
+    D-224: the same bytes publish nothing, so no screen re-renders its lists.
+    """
     network.answer = svc.year.read_snapshot().raw
     conference, _ = await started(fake_page, svc)
     await finish_refresh(conference, network)
@@ -301,6 +323,8 @@ async def test_an_unexpected_start_error_is_logged_and_the_gate_still_opens(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A bug while the start loads is logged, and the gate opens with no data."""
+
     async def broken(*_: object) -> None:
         raise RuntimeError("a bug")
 
@@ -320,6 +344,12 @@ async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
     network: Network,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A start that fails before the favourites load leaves the stored ones as they are.
+
+    The gate opens, but the favourites stay unloaded, so a star tap reports that it
+    could not save and the stored list is unchanged.
+    """
+
     async def broken(*_: object) -> None:
         raise RuntimeError("a bug")
 
@@ -341,6 +371,7 @@ async def test_unreadable_accessibility_flags_keep_their_defaults(
     network: Network,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Unreadable accessibility flags are logged and stay off."""
     semantics.error = TimeoutError()
     with caplog.at_level(logging.WARNING):
         _, prefs = await started(fake_page, svc)
@@ -355,6 +386,7 @@ async def test_unreadable_accessibility_flags_keep_their_defaults(
 async def test_a_brightness_change_writes_the_store(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """A platform brightness change event sets ``Prefs.os_dark`` from the page."""
     _, prefs = await started(fake_page, svc)
     page = cast(ft.Page, fake_page)
     fake_page.platform_brightness = ft.Brightness.DARK
@@ -368,6 +400,7 @@ async def test_a_brightness_change_writes_the_store(
 async def test_a_resume_reads_the_accessibility_flags_again(
     fake_page: FakePage, svc: Services, semantics: MemorySemantics, network: Network
 ) -> None:
+    """A resume, not a hide, reads the accessibility flags again."""
     _, prefs = await started(fake_page, svc)
     page = cast(ft.Page, fake_page)
 
@@ -391,7 +424,10 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
     semantics: MemorySemantics,
     network: Network,
 ) -> None:
-    """D-184: an Undo SnackBar then stays until it is used."""
+    """A resume sees a screen reader and announcements turned on in the background.
+
+    D-184: an Undo SnackBar then stays until it is used.
+    """
     conference, prefs = await started(fake_page, svc)
     assert not prefs.screen_reader and not prefs.announcements
     semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver
@@ -407,6 +443,7 @@ async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
     network: Network,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A failed read on resume keeps the last flags and the theme crossfade."""
     semantics.features.update(high_contrast=True, reduce_motion=True)
     conference, prefs = await started(fake_page, svc)
     semantics.error = TimeoutError()  # the Flutter side does not answer
@@ -422,6 +459,7 @@ async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
 async def test_a_change_of_reduced_motion_is_logged_once(
     semantics: MemorySemantics, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Reduced motion turning on is logged once, not again on an unchanged read."""
     prefs = Prefs()
     semantics.features["disable_animations"] = True
     with caplog.at_level(logging.INFO, logger="pycon_us.app"):
@@ -433,6 +471,7 @@ async def test_a_change_of_reduced_motion_is_logged_once(
 def lifecycle(
     fake_page: FakePage, state: ft.AppLifecycleState
 ) -> ft.AppLifecycleStateChangeEvent:
+    """Build the lifecycle event Flet sends ``fake_page`` for ``state``."""
     return ft.AppLifecycleStateChangeEvent(
         name="app_lifecycle_state_change", control=cast(ft.Page, fake_page), state=state
     )
@@ -440,6 +479,7 @@ def lifecycle(
 
 @pytest.fixture
 def frozen_clock() -> Iterator[datetime]:
+    """Freeze the app's clock at ``STARTED_AT``, and unfreeze it after."""
     clock.set_test_now(STARTED_AT)
     yield STARTED_AT
     clock.set_test_now(None)
@@ -451,6 +491,7 @@ STARTED_AT = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """Going to the background clears ``svc.foreground``; only a resume sets it."""
     await started(fake_page, svc)
     handler = fake_page.on_app_lifecycle_state_change
     for state in ("inactive", "hide", "pause"):  # going to the background (D-147)
@@ -466,6 +507,7 @@ async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
 async def test_a_resume_refreshes_once_the_last_refresh_began_15_minutes_ago(
     fake_page: FakePage, svc: Services, network: Network, frozen_clock: datetime
 ) -> None:
+    """A resume refreshes only once 15 minutes have passed since the last refresh."""
     conference, _ = await started(fake_page, svc)
     at_start = conference._task
     await finish_refresh(conference, network)
@@ -485,6 +527,7 @@ async def test_a_resume_refreshes_once_the_last_refresh_began_15_minutes_ago(
 async def test_an_offline_resume_keeps_the_data_and_says_offline(
     fake_page: FakePage, svc: Services, network: Network, frozen_clock: datetime
 ) -> None:
+    """A resume whose refresh finds no network keeps the data and says offline."""
     conference, _ = await started(fake_page, svc)
     await finish_refresh(conference, network)
     shown = conference.data
@@ -508,6 +551,7 @@ async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising
     network: Network,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A bug in the lifecycle handler is logged and shown in a SnackBar, not raised."""
     await started(fake_page, svc)
     page = cast(ft.Page, fake_page)
     semantics.error = ValueError("not a service error")  # a bug, not SERVICE_ERRORS
@@ -529,6 +573,7 @@ async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising
 async def test_closing_the_page_stops_the_session_s_refresh(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
+    """Closing the page sets ``svc.closed``, so its refresh writes nothing (F30)."""
     conference, _ = await started(fake_page, svc)
     assert fake_page.on_close == svc.close
     fake_page.on_close()  # a new session replaced this one (D-147)
@@ -544,6 +589,7 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A session closed mid-start stops quietly: no gate, refresh or error log."""
     reading, release = asyncio.Event(), asyncio.Event()
 
     async def held_read(*_: object) -> None:
@@ -583,6 +629,7 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
 def test_the_theme_mode_follows_the_appearance_setting(
     theme: str, mode: ft.ThemeMode, fake_page: FakePage
 ) -> None:
+    """Each Appearance setting gives its theme mode, over two distinct schemes."""
     apply_theme(cast(ft.Page, fake_page), Prefs(theme=theme))  # type: ignore[arg-type]
     assert fake_page.theme_mode == mode
     assert fake_page.theme is not None and fake_page.dark_theme is not None
@@ -592,6 +639,7 @@ def test_the_theme_mode_follows_the_appearance_setting(
 async def test_read_accessibility_counts_either_motion_flag(
     semantics: MemorySemantics,
 ) -> None:
+    """The ``reduce_motion`` flag alone, which iOS reports, turns reduced motion on."""
     prefs = Prefs()
     semantics.features["reduce_motion"] = True  # iOS reports this one (F13)
     await read_accessibility(semantics, prefs)
@@ -601,6 +649,10 @@ async def test_read_accessibility_counts_either_motion_flag(
 def test_services_are_built_for_the_active_year_in_the_data_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """``Services.create`` uses the active year, the data directory and the memory.
+
+    The new services start open, and ``close()`` closes them.
+    """
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path))
     memory = ViewMemory()
     svc = Services.create(memory)
@@ -628,7 +680,10 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     fake_page: FakePage,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """D-216: the first screen comes only once the slots' layout is known."""
+    """The boot view stays until the settings load and the slots' layout is measured.
+
+    D-216: the first screen comes only once the slots' layout is known.
+    """
     prefs = Prefs(loaded=loaded, time_measured=measured)
     monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
     monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
@@ -650,7 +705,10 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
 async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """D-216: a Schedule opened with the gutter and switched later lost its jump."""
+    """The boot view holds the layout probe and stops waiting for it after a delay.
+
+    D-216: a Schedule opened with the gutter and switched later lost its jump.
+    """
     prefs, setups = Prefs(), []
     monkeypatch.setattr(app, "use_prefs", lambda: prefs)
     monkeypatch.setattr(ft, "use_state", lambda initial: (initial, lambda _: None))

@@ -33,7 +33,7 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(...): the Lightning talks page over a feed."""
+    """Return a function that renders the Lightning talks page over a year's feed."""
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -59,6 +59,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def talks(year: int = 2026) -> list[str]:
+    """The ids of the year's lightning talks, in the track page's order."""
     data = processed(year)
     return [s.id for d in track_sessions(data, "Lightning-talks") for s in d.sessions]
 
@@ -151,6 +152,7 @@ async def test_think_you_cant_do_one_starts_folded_and_opens(show: Show) -> None
 
 
 async def test_each_doubt_reads_as_one_node_with_its_answer(show: Show) -> None:
+    """Each doubt under the fold is one node: the doubt, then its answer."""
     assert COPY is not None
     page = await show()
     (fold,) = page.find(ft.ExpansionTile)
@@ -162,6 +164,7 @@ async def test_each_doubt_reads_as_one_node_with_its_answer(show: Show) -> None:
 
 
 async def test_more_about_lightning_talks_opens_the_sites_page(show: Show) -> None:
+    """The us.pycon.org row is a link opening the site's page in the in-app browser."""
     assert COPY is not None
     page = await show()
     assert page.node("lightning_talks.more_info").link
@@ -206,6 +209,7 @@ async def test_rows_leave_out_the_lightning_talks_badge(show: Show) -> None:
 
 
 async def test_a_row_pushes_its_session_and_a_star_saves_it(show: Show) -> None:
+    """A row pushes its session; its star saves it, re-rendering that row alone."""
     page = await show()
     first = talks()[0]
     node = page.node(f"lightning_talks.session.{semantics_key(first)}")
@@ -236,6 +240,7 @@ async def test_without_data_the_copy_stays_and_the_talks_load(show: Show) -> Non
 
 
 async def test_a_feed_without_lightning_talks_says_so(show: Show) -> None:
+    """A feed with no lightning talks shows the empty state's live region, no rows."""
     sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Lightning-talks"}
     data = replace(DATA, sessions=sessions)
     page = await show(conference=Conference(data=data, version=1))
