@@ -15,7 +15,7 @@ import re
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -193,7 +193,7 @@ def times_are_aware_in_the_years_zone_and_ordered(feed: ProcessedFeed) -> list[s
         moments = (session.start, session.display_start, session.end)
         if any(moment.tzinfo != feed.zone for moment in moments):
             problems.append(f"{session.id} has a time outside the conference zone")
-        if session.end < session.start:
+        if session.end.astimezone(UTC) < session.start.astimezone(UTC):  # #513
             problems.append(f"{session.id} ends before it starts")
     return problems
 

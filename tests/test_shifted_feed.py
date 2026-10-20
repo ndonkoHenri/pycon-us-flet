@@ -136,7 +136,10 @@ def test_a_shift_across_the_end_of_summer_time_keeps_the_wall_clock_times() -> N
     ids=["first 1:25, PDT", "second 1:25, PST"],
 )
 @pytest.mark.parametrize(
-    "move", [None, timedelta(minutes=-15)], ids=["not moved", "moved -15m"]
+    "move",
+    [None, timedelta(minutes=-15), timedelta(minutes=15)],
+    # From the first 1:25, +15m moves the talk to 1:40 PDT-1:10 PST, across the change (#513).
+    ids=["not moved", "moved -15m", "moved +15m"],
 )
 def test_a_session_in_the_repeated_hour_starts_at_the_asked_instant(
     now: datetime, offset: timedelta, move: timedelta | None
