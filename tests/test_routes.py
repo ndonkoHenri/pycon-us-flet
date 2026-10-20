@@ -7,6 +7,8 @@ screens themselves are checked on devices (the PR).
 """
 
 import inspect
+from collections.abc import Callable
+from types import SimpleNamespace
 from urllib.parse import unquote
 
 import flet as ft
@@ -20,13 +22,18 @@ from pycon_us.locations import (
     DRILL_KINDS,
     PAGES,
     TAB_ROOTS,
+    WELCOME,
     drill_href,
     is_top_view,
     parent_of,
     query_of,
     start_target,
 )
+from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
 from pycon_us.routes import DRILL, ROUTES, UNKNOWN
+from pycon_us.theme import BOOT_COLOR
+from tests.fakes import FakePage, bound
 
 type Level = tuple[str, str, dict[str, str]]
 
@@ -85,6 +92,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
     ("location", "screens"),
     [
         ("/", ["Start"]),
+        ("/welcome", ["Welcome"]),
         ("/now", ["Now"]),
         ("/schedule", ["Schedule"]),
         ("/my-schedule", ["MySchedule"]),
@@ -166,7 +174,7 @@ def test_each_drill_level_reads_its_own_pair(
         "/more/staff/lead",
         "/more/tracks/python/x",
         "/search/nope",
-        "/welcome",
+        "/welcome/session/42",  # Welcome has no drill: nothing opens over it
         "/schedule/x",
     ],
 )
@@ -191,7 +199,7 @@ def known_locations() -> list[str]:
         *sorted(PAGES),
         *(
             drill_href(drill_href(page, kind, "a/b ç"), "session", "42")
-            for page in sorted(PAGES)
+            for page in sorted(PAGES - {WELCOME})  # the one page without a drill
             for kind in DRILL_KINDS
         ),
         "/more/tracks/python",  # the slug route
@@ -424,4 +432,43 @@ def test_the_start_route_returns_a_new_session_to_where_the_user_was(
 
     A location under Search, a modal, goes to the page Search was opened from.
     """
-    assert start_target(last_location, "/schedule/session/42") == target
+    assert start_target(last_location, "/schedule/session/42", onboarded=True) == target
+
+
+@pytest.mark.parametrize(
+    "last_location",
+    ["", "/now", "/now/session/42", "/search?scope=rooms", "/more/developer"],
+)
+def test_a_plain_start_opens_welcome_until_it_is_done(last_location: str) -> None:
+    """Before Get started, every plain start opens Welcome, wherever the user was (D-287).
+
+    A link's target, opened without Welcome, is remembered all the same: Welcome
+    waits for the next plain start, and Reset app, which forgets onboarded, lands
+    on it from any page.
+    """
+    assert (
+        start_target(last_location, "/schedule/session/42", onboarded=False) == WELCOME
+    )
+
+
+@pytest.mark.parametrize(
+    ("onboarded", "target"), [(False, "/welcome"), (True, "/now/session/42")]
+)
+def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
+    monkeypatch: pytest.MonkeyPatch, onboarded: bool, target: str
+) -> None:
+    """``Start`` reads ``Prefs.onboarded``: Welcome first, then where the user was."""
+    memory = ViewMemory(last_location="/now/session/42")
+    effects: list[Callable[[], None]] = []
+    monkeypatch.setattr(routes, "use_services", lambda: SimpleNamespace(memory=memory))
+    monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=onboarded))
+    monkeypatch.setattr(
+        ft, "use_effect", lambda setup, deps=None: effects.append(setup)
+    )
+    page = FakePage()
+    with bound(page):
+        view = inspect.unwrap(routes.Start)()
+        assert view.route == "/" and view.bgcolor == BOOT_COLOR
+        (go,) = effects
+        go()
+    assert page.navigated == [target]

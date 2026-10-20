@@ -718,11 +718,13 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     The session has been used: settings, favourites of two years, the Developer options,
     a cache, a fake clock, a feed URL and remembered places. Only another app's key is
     left; the device facts stay and Developer locks again. Then, as at a start, a quiet
-    refresh of the year's feed runs, the app goes to Now and says "App reset".
+    refresh of the year's feed runs, the app goes to Welcome, as a first start does
+    (D-287), and says "App reset".
     """
     stored.update(
         {
             "pycon.theme": "dark",
+            "pycon.onboarded": True,
             "pycon.excluded_tracks": [],
             "pycon.2026.favorites": ["1", "2", "3"],
             "pycon.2025.favorites": ["9"],
@@ -731,7 +733,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
         }
     )
     await svc.storage.write_feed(recorded(2026))
-    await prefs.save(svc.storage, theme="dark", excluded_tracks=())
+    await prefs.save(svc.storage, theme="dark", onboarded=True, excluded_tracks=())
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
@@ -750,8 +752,9 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # In memory, without a restart.
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
     assert errors._details is False
-    assert (prefs.theme, prefs.excluded_tracks, prefs.dev) == (
+    assert (prefs.theme, prefs.onboarded, prefs.excluded_tracks, prefs.dev) == (
         "system",
+        False,
         ("Open Space",),
         {},
     )
@@ -764,7 +767,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # Then, as at a start: a quiet refresh of the year's feed, and the index route.
     await asyncio.sleep(0)
     assert offline == [svc.year.conference.feed_url]
-    assert page.navigated == ["/now"]
+    assert page.navigated == ["/welcome"]
     assert said(page) == ["App reset"]
 
 
@@ -778,7 +781,7 @@ async def test_a_reset_that_cannot_delete_everything_says_so(
 ) -> None:
     """A reset that cannot delete everything still resets the session and says so.
 
-    It goes to Now, as a full reset does (D-120).
+    It goes to Welcome, as a full reset does (D-120, D-287).
     """
     stored["pycon.2026.favorites"] = ["1"]
     cast(MemoryPrefs, svc.storage.prefs).fail_removes = True
@@ -786,7 +789,7 @@ async def test_a_reset_that_cannot_delete_everything_says_so(
     render()
     await press(rendered.dialog, "developer.reset_app.confirm")
     assert favorites.ids == frozenset()  # the session is reset all the same (D-120)
-    assert page.navigated == ["/now"]
+    assert page.navigated == ["/welcome"]
     assert said(page) == [RESET_INCOMPLETE]
 
 

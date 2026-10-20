@@ -133,10 +133,15 @@ def DataActions() -> ft.Control:
     async def reset() -> None:
         set_asking(None)
         complete = await reset_app(svc, conference, prefs, favorites)
-        # Where a fresh start goes (D-143): Now, and Welcome from P2 (DEV-05). Not
-        # "/" itself: on the iOS simulator that left the app on this View, locked.
+        # Where a fresh start goes (D-143): Welcome, since the reset cleared
+        # onboarded (DEV-05, D-287). Not "/" itself: on the iOS simulator that left
+        # the app on this View, locked.
         memory = svc.memory
-        page.navigate(start_target(memory.last_location, memory.search_base))
+        page.navigate(
+            start_target(
+                memory.last_location, memory.search_base, onboarded=prefs.onboarded
+            )
+        )
         page.show_dialog(
             ft.SnackBar(
                 ft.Text("App reset" if complete else RESET_INCOMPLETE),
