@@ -43,7 +43,7 @@ def LinkTile(
     title: str | ft.Text,
     target: str,
     *,
-    icon: ft.IconData | None = None,
+    icon: ft.IconData | ft.Control | None = None,
     subtitle: str | ft.Control | None = None,
     identifier: str | None = None,
     app: bool = False,
@@ -68,7 +68,9 @@ def LinkTile(
         target: Where a tap goes: a page (``/more/speakers``), for a detail
             ``drill_href(view_path, ...)`` so Back returns to this row's View, or a URL
             (``link_kind()``).
-        icon: A leading icon, outlined (D-27); none for rows of names.
+        icon: A leading icon, outlined (D-27); none for rows of names. A control
+            stands as it is: a brand's mark beside a link to it (``brand_icon()``,
+            D-264).
         subtitle: A second line, if any: for a phone or email row, the number or the
             address. A control for lines of their own (the Map's "Now:" line), read
             with the title as one phrase.
@@ -111,7 +113,7 @@ def _ExternalLinkTile(
     target: str,
     kind: LinkKind,
     *,
-    icon: ft.IconData | None,
+    icon: ft.IconData | ft.Control | None,
     subtitle: str | ft.Control | None,
     identifier: str | None,
     copy_identifier: str | None = None,
@@ -171,7 +173,7 @@ def _ExternalLinkTile(
 
 def _tile(
     title: str | ft.Text,
-    icon: ft.IconData | None,
+    icon: ft.IconData | ft.Control | None,
     subtitle: str | ft.Control | None,
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
@@ -194,7 +196,7 @@ def _tile(
     else:
         alignment, padding = ft.ListTileTitleAlignment.TOP, SUBTITLED_TOP
     return ft.ListTile(
-        leading=ft.Icon(icon) if icon is not None else None,
+        leading=ft.Icon(icon) if isinstance(icon, ft.IconData) else icon,
         title=title,
         subtitle=subtitle,
         trailing=trailing,

@@ -1,23 +1,33 @@
 """Tests for the info pages' year data (D-263): ``year_info``, as ``config`` runs it.
 
 Every year's load runs the info pages' checks on the content it built, so a page's
-rules fail the load as soon as its table lands; the Wi-Fi table's rules (D-280) are the
-first. Help & safety's tables (D-281) are checked here through the loader, from a copy
-of the 2026 data with one entry changed, so each refusal is the error a broken
-``content.toml`` would give.
+rules fail the load as soon as its table lands; the Wi-Fi table's rules (D-280) were the
+first, then About the PSF's ``[psf]`` (D-283). Help & safety's tables (D-281) are checked
+here through the loader, from a copy of the 2026 data with one entry changed, so each
+refusal is the error a broken ``content.toml`` would give.
 """
 
 import shutil
 import tomllib
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+import flet as ft
 import pytest
 
 from pycon_us import config
 from pycon_us.config import Content, YearDataError, load_year
-from pycon_us.year_info import SafetyContact, WifiInfo, check_info
+from pycon_us.ui.brands import BRANDS
+from pycon_us.year_info import (
+    PSF_SECTIONS,
+    PsfInfo,
+    PsfLink,
+    SafetyContact,
+    WifiInfo,
+    check_info,
+)
 from pycon_us.year_schema import build
 from tests.feeds import processed
 
@@ -389,3 +399,171 @@ def test_a_wifi_table_needs_both_values() -> None:
     """The schema refuses a ``[wifi]`` without its password, naming the key."""
     with pytest.raises(YearDataError, match=r"^2026/content.toml: wifi.password: "):
         build(Content, {"wifi": {"network": "PyConUS26"}}, "2026/content.toml")
+
+
+# ------------------------------------------------------------------ About the PSF
+
+FILE = "2026/content.toml"
+PSF = load_year(2026).content.psf
+
+
+def psf_with(**fields: Any) -> Content:
+    """2026's content with its first link's ``fields`` changed."""
+    assert PSF is not None
+    first = replace(PSF.links[0], **fields)
+    return Content(psf=replace(PSF, links=(first, *PSF.links[1:])))
+
+
+def test_2026_has_the_mission_donate_and_links_in_every_section() -> None:
+    """2026's ``[psf]`` has the mission, the donate page and links in all three sections."""
+    assert PSF is not None
+    assert PSF.mission.startswith("The mission of the Python Software Foundation")
+    assert PSF.donate_url == "https://www.python.org/psf/donations/"
+    assert {link.section for link in PSF.links} == set(PSF_SECTIONS)
+
+
+def test_2025_has_no_psf_table() -> None:
+    """2025 has no ``[psf]``, so its page shows the feed's block (D-263)."""
+    assert load_year(2025).content.psf is None
+
+
+def test_2026_links_to_donate_once_and_to_the_blog_over_https() -> None:
+    """Donate is only the button (Ionic linked it twice), and the feed's http blog is https."""
+    assert PSF is not None
+    urls = [link.url for link in PSF.links]
+    assert PSF.donate_url not in urls
+    assert "https://pyfound.blogspot.com/" in urls
+    assert all(url.startswith("https://") for url in urls)
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_psf_brands_are_bundled_marks_and_icons_are_material_icons(year: int) -> None:
+    """Each year's PSF links have a brand or an icon: a bundled mark, or one Flet knows.
+
+    The loader imports no Flet, so this is where a misspelt name in any bundled
+    year's ``[psf]`` fails, before the page would fail to draw its row.
+    """
+    psf = load_year(year).content.psf
+    if psf is None:
+        pytest.skip(f"{year} has no [psf]")
+    for link in psf.links:
+        assert (link.brand is None) != (link.icon is None), link.label
+        if link.brand is not None:
+            assert link.brand in BRANDS, link.label
+        if link.icon is not None:
+            assert hasattr(ft.Icons, link.icon), link.label
+
+
+def test_2026_opens_only_the_social_profiles_in_their_apps() -> None:
+    """Mastodon, X and LinkedIn open in their apps, and every other link in the browser."""
+    assert PSF is not None
+    assert [link.label for link in PSF.links if link.app] == [
+        "Mastodon",
+        "X",
+        "LinkedIn",
+    ]
+
+
+HTTPS = "expected an https:// URL with a host$"
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"url": "http://pyfound.blogspot.com/"}, rf"psf\.links\[0\]\.url: {HTTPS}"),
+        ({"url": "https://"}, rf"psf\.links\[0\]\.url: {HTTPS}"),
+        ({"url": "mailto:psf@python.org"}, rf"psf\.links\[0\]\.url: {HTTPS}"),
+        (
+            {"section": "news"},
+            r"psf\.links\[0\]\.section: unknown section 'news', expected get_involved",
+        ),
+        ({"label": " "}, r"psf\.links\[0\]\.label: is empty$"),
+        # Reported at the second use: X's own row, further down.
+        (
+            {"label": "X"},
+            r"psf\.links\[\d+\]\.label: 'X' gives the same identifier as 'X'$",
+        ),
+        # Another label with X's key, psf.link.x: one identifier for two rows.
+        (
+            {"label": "x"},
+            r"psf\.links\[\d+\]\.label: 'X' gives the same identifier as 'x'$",
+        ),
+        (
+            {"label": "python-org"},
+            (
+                r"psf\.links\[\d+\]\.label: 'python\.org' gives the same identifier "
+                r"as 'python-org'$"
+            ),
+        ),
+        (
+            {"label": "!!!"},
+            r"psf\.links\[0\]\.label: '!!!' has no letter or digit for its key$",
+        ),
+        (
+            {"brand": "python", "icon": "LANGUAGE"},
+            r"psf\.links\[0\]: give a brand or an icon, not both$",
+        ),
+    ],
+)
+def test_a_link_that_breaks_a_rule_fails_the_check(
+    fields: dict[str, Any], message: str
+) -> None:
+    """A link that is not https, has an unknown section or repeats a row key is refused."""
+    with pytest.raises(YearDataError, match=rf"^{FILE}: {message}"):
+        check_info(psf_with(**fields), FILE)
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"mission": " \n"}, r"psf\.mission: is empty$"),
+        (
+            {"donate_url": "http://www.python.org/psf/donations/"},
+            rf"psf\.donate_url: {HTTPS}",
+        ),
+    ],
+)
+def test_a_blank_mission_or_an_http_donate_link_fails_the_check(
+    fields: dict[str, Any], message: str
+) -> None:
+    """The mission must say something, and Donate must go to an https page."""
+    assert PSF is not None
+    content = Content(psf=replace(PSF, **fields))
+    with pytest.raises(YearDataError, match=rf"^{FILE}: {message}"):
+        check_info(content, FILE)
+
+
+def test_a_broken_psf_table_fails_the_year_s_load(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The rules run on the load itself: a bad link fails ``load_year()`` (D-263)."""
+    broken = psf_with(section="news")
+    original = config.build
+
+    def build_broken(cls: type, raw: object, file: str, key: str = "") -> object:
+        """Build as the loader does, but hand back the broken content for ``Content``."""
+        return broken if cls is Content else original(cls, raw, file, key)
+
+    monkeypatch.setattr(config, "build", build_broken)
+    with pytest.raises(YearDataError, match=rf"^{FILE}: psf\.links\[0\]\.section: "):
+        load_year(2026)
+
+
+def test_a_link_with_an_unknown_key_fails_the_schema() -> None:
+    """A link takes only its six keys: a misspelt one fails the load."""
+    raw = {
+        "mission": "To promote Python.",
+        "donate_url": "https://www.python.org/psf/donations/",
+        "links": [
+            {"section": "follow", "label": "Blog", "url": "https://a.org/", "ap": 1}
+        ],
+    }
+    with pytest.raises(YearDataError, match=rf"^{FILE}: psf\.links\[0\]\.ap: unknown"):
+        build(PsfInfo, raw, FILE, "psf")
+
+
+def test_a_link_without_brand_icon_or_app_is_a_plain_web_link() -> None:
+    """``brand``, ``icon`` and ``app`` are optional: a link may give none of them."""
+    raw = {"section": "follow", "label": "Blog", "url": "https://pyfound.blogspot.com/"}
+    link = build(PsfLink, raw, FILE, "psf.links[0]")
+    assert (link.brand, link.icon, link.app) == (None, None, False)
