@@ -120,14 +120,14 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
 **When 1.1.0 is on PyPI** (one PR):
 - Set `flet==1.1.0`, the dev tools `==1.1.0` and the extensions `==1.1.0`.
 - Delete `[tool.uv.sources]`, `[tool.flet.dev_packages]`, `.flet-ref`, the Flet checkout steps in the workflows (§7), and this subsection.
-- About this app's Flet row shows `flet.version.flet_version` instead of `FLET_VERSION` ("source build").
+- About this app's Flet row and the diagnostics text show `flet.version.flet_version` instead of `FLET_VERSION` ("source build").
 - After that, flet-cli downloads the release template and the Dart package is the published one.
 
 **Known quirks of a source pin:**
 - `.flet-src/sdk/python` is a uv workspace, so `uv.lock` also records Flet's own dev group (every extension package under `sdk/python/packages`) as editable paths. Nothing extra is installed, but `uv sync --locked` needs all those directories: a checkout must include the whole `sdk/python` tree (CI's sparse checkout of `sdk/python` does).
 - With `[tool.flet.dev_packages]` set, `flet build` never reuses installed site-packages and passes `--no-cache-dir`, so every build reinstalls the bundled packages (`CLI/commands/build_base.py:2614-2638`). Slower, but expected while the pin lasts.
 - `flet --version` prints the nearest git tag, for example `1.0.4`. In CI's shallow clone it prints `0.1.0`.
-- Packaged apps report `flet.version.flet_version == "0.1.0"`, because a mobile build skips the git lookup (`flet/version.py:86-103`). About this app (INFO-03) says "source build" instead (`FLET_VERSION` in `screens/about_app.py`).
+- Packaged apps report `flet.version.flet_version == "0.1.0"`, because a mobile build skips the git lookup (`flet/version.py:86-103`). About this app (INFO-03) and the diagnostics text (INFO-04) say "source build" instead (`FLET_VERSION` in `pycon_us/__init__.py`, D-271).
 - None of this affects the build (S5, #125).
 
 ---

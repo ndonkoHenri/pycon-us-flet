@@ -35,14 +35,6 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 
-CAPABILITIES = (
-    ("Secure storage", capabilities.SECURE_STORAGE),
-    ("Permissions", capabilities.PERMISSIONS),
-    ("Reminders", capabilities.REMINDERS),
-    ("Badge scanner", capabilities.SCANNER),
-)
-"""The capability flags the screen shows, fixed at import as they are (D-63)."""
-
 APPLY_IN_SIGHT = 304
 """How far below its text the feed URL field keeps in sight when it takes the focus,
 in dp: its helper line, the Reset and Apply row under it and the outcome line that
@@ -242,7 +234,7 @@ def Developer() -> ft.View:
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     )
                 ),
-                *(capability_row(name, on) for name, on in CAPABILITIES),
+                *(capability_row(name, on) for name, on in capabilities.ALL),
             ],
             expand=True,
         ),

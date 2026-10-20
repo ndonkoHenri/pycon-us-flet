@@ -11,7 +11,7 @@ import platform
 
 import flet as ft
 
-from pycon_us import APP_NAME, __version__
+from pycon_us import APP_NAME, FLET_VERSION, __version__
 from pycon_us.prefs import DEV_UNLOCKED, use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, show_details
@@ -21,11 +21,6 @@ from pycon_us.ui.semantics import named
 
 UNLOCK_TAPS = 7
 """Taps on the version row that unlock Developer, as on Android's build number (D-73)."""
-
-FLET_VERSION = "source build"
-"""What the Flet row says while the app builds from the pinned source checkout (D-81): a
-packaged app reports ``0.1.0`` then, the host the nearest tag (development.md §2.2). The
-PR that pins ``flet==1.1.0`` shows ``flet.version.flet_version`` instead."""
 
 
 @ft.component

@@ -266,18 +266,73 @@ def bound(page: FakePage) -> Iterator[ft.Page]:
         _context_page.reset(token)
 
 
-def android_device(sdk: int) -> ft.AndroidDeviceInfo:
-    """An Android device on API level ``sdk``; every other field is blank."""
-    blank: dict[object, object] = {str: "", int: 0, bool: False}
-    fields = {
-        field.name: blank.get(field.type, [])
-        for field in dataclasses.fields(ft.AndroidDeviceInfo)
-        if field.name != "version"
-    }
+def android_device(
+    sdk: int,
+    *,
+    manufacturer: str = "",
+    model: str = "",
+    release: str = "",
+    physical: bool = False,
+) -> ft.AndroidDeviceInfo:
+    """An Android device on API level ``sdk``, with the make, model and release given.
+
+    Every other field is blank.
+    """
     version = ft.AndroidBuildVersion(
-        code_name="REL", incremental="", release="", sdk=sdk
+        code_name="REL", incremental="", release=release, sdk=sdk
     )
-    return ft.AndroidDeviceInfo(**fields, version=version)  # pyright: ignore[reportArgumentType]
+    return ft.AndroidDeviceInfo(
+        **blank_fields(
+            ft.AndroidDeviceInfo,
+            "version",
+            "manufacturer",
+            "model",
+            "is_physical_device",
+        ),
+        version=version,
+        manufacturer=manufacturer,
+        model=model,
+        is_physical_device=physical,
+    )  # pyright: ignore[reportArgumentType]
+
+
+def ios_device(
+    model_name: str, system_version: str, *, physical: bool = False
+) -> ft.IosDeviceInfo:
+    """An iOS device of ``model_name`` on ``system_version``; every other field is blank."""
+    utsname = ft.IosUtsname(
+        machine="", node_name="", release="", sys_name="", version=""
+    )
+    return ft.IosDeviceInfo(
+        **blank_fields(
+            ft.IosDeviceInfo,
+            "utsname",
+            "model_name",
+            "system_name",
+            "system_version",
+            "is_physical_device",
+        ),
+        utsname=utsname,
+        model_name=model_name,
+        system_name="iOS",
+        system_version=system_version,
+        is_physical_device=physical,
+    )  # pyright: ignore[reportArgumentType]
+
+
+def blank_fields(cls: type, *given: str) -> dict[str, object]:
+    """Return a blank value for each field of ``cls`` with a default-less str, int, bool or list.
+
+    The fields named in ``given``, and those with a default, are left out.
+    """
+    blank: dict[object, object] = {str: "", int: 0, bool: False}
+    return {
+        field.name: blank.get(field.type, [])
+        for field in dataclasses.fields(cls)
+        if field.name not in given
+        and field.default is dataclasses.MISSING
+        and field.default_factory is dataclasses.MISSING
+    }
 
 
 @dataclasses.dataclass

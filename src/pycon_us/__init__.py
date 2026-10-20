@@ -8,3 +8,9 @@ __version__ = "0.1.0"
 
 APP_NAME = "Conf Companion"
 """The display name: a neutral placeholder until O-4 (D-36), equal to ``[tool.flet] product``."""
+
+FLET_VERSION = "source build"
+"""The Flet version About this app and the diagnostics text name while the app builds from
+the pinned source checkout (D-81): a packaged app reports ``0.1.0`` then, the host the
+nearest tag (development.md §2.2). The PR that pins ``flet==1.1.0`` uses
+``flet.version.flet_version`` instead (D-271)."""
