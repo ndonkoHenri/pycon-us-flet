@@ -1,0 +1,55 @@
+# S8 reproducer (docs/spikes/08-scanner.md): camera barcode scanning through a
+# throwaway extension (s8_scanner/) over mobile_scanner 7.4.2. It uses the
+# repo's .flet-src checkout through relative paths, so build it from this
+# folder with a pub cache of its own (development.md §5.8):
+#
+#   uv sync
+#   mkdir -p build && { test -d build/pub-cache || cp -cR ~/.pub-cache build/pub-cache; }
+#   PUB_CACHE=$PWD/build/pub-cache uv run flet build apk --arch arm64-v8a --build-number 1
+#   PUB_CACHE=$PWD/build/pub-cache uv run flet build ios-simulator --build-number 1
+#
+# Nothing here is part of the app; src/ of the repo is untouched.
+
+[project]
+name = "s8-scanner"
+version = "0.0.1"
+description = "S8 spike: camera barcode scanning in release builds."
+requires-python = ">=3.14,<3.15"
+dependencies = ["flet", "flet-s8-scanner"]
+
+[dependency-groups]
+dev = [
+    "flet-cli",
+    "flet-web",
+    "flet-desktop",
+    "flet-platform-assets",
+]
+
+[tool.flet]
+product = "S8 Scanner"
+bundle_id = "io.github.ndonkohenri.pyconus.s8"   # throwaway id, never uploaded
+# Emits android.permission.CAMERA and NSCameraUsageDescription (CLI/build_base.py).
+permissions = ["camera"]
+
+[tool.flet.app]
+path = "src"
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false
+NSCameraUsageDescription = "S8 Scanner uses the camera to read badge QR codes."
+
+# The same pin as the app (D-81): a source checkout in the repo root's .flet-src.
+[tool.uv.sources]
+flet = { path = "../../../.flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = "../../../.flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = "../../../.flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = "../../../.flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = "../../../.flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+flet-s8-scanner = { path = "s8_scanner", editable = true }
+
+[tool.flet.dev_packages]
+flet = "../../../.flet-src/sdk/python/packages/flet"
+flet-s8-scanner = "s8_scanner"

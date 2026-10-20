@@ -24,6 +24,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
 from pycon_us.ui.modals import use_modals_close_on_route_change
 from pycon_us.ui.navigation import TABS, Retap, navigation_bar
 from pycon_us.ui.semantics import merged
@@ -51,12 +52,13 @@ def AppScaffold(
     warm deep link's included, close the open dialogs and sheets first
     (``ui.modals``, D-291).
 
-    On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
-    instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
-    to the system, which leaves the app (D-17, D-142). Back on a pushed View closes a
-    dialog, a picker, a sheet or a menu open over it, and only then pops the View
-    (D-208). An unknown location's View (``unknown``) is a one-View stack like a root
-    but with the back arrow, and Back there goes to Now too (D-270).
+    On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
+    high contrast, where the bar is the page's own colour (THEME-06); pushed Views get
+    the back arrow instead (D-10). Back on a root other than Now goes to Now, and Back
+    on Now is left to the system, which leaves the app (D-17, D-142). Back on a pushed
+    View closes a dialog, a picker, a sheet or a menu open over it, and only then pops
+    the View (D-208). An unknown location's View (``unknown``) is a one-View stack like
+    a root but with the back arrow, and Back there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -83,6 +85,7 @@ def AppScaffold(
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
+    tokens = use_tokens()
     is_root = view_path in TAB_ROOTS
     # One-View stacks whose Back goes to Now: the other roots, and an unknown
     # location, which a cold link can open alone (D-142, D-270).
@@ -168,8 +171,24 @@ def AppScaffold(
         # Under the body, 0 dp high: the probe takes no space, and with no spacing
         # between them the body keeps all of it (D-216).
         spacing=0,
-        controls=[ft.SafeArea(expand=True, content=Shown(body)), GutterProbe()],
+        controls=[
+            ft.SafeArea(expand=True, content=Shown(body)),
+            GutterProbe(),
+            *([bar_divider()] if is_root and tokens.high_contrast else []),
+        ],
     )
+
+
+def bar_divider() -> ft.Control:
+    """Return the 1 dp line that separates the bottom bar from the page in HC (THEME-06).
+
+    High contrast has one surface, so the ``NavigationBar`` is the page's colour; a
+    line in ``outline`` draws the edge that a tint draws elsewhere. Material's
+    ``NavigationBar`` has no border of its own (Flet's ``border`` is the Cupertino
+    bar's), so the line closes the View's body, right above the bar: the ``Scaffold``
+    gives the body no bottom inset when it has a bar.
+    """
+    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE)
 
 
 @ft.component

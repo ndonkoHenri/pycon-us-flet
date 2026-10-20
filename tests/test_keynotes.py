@@ -335,8 +335,10 @@ async def test_a_keynote_without_year_data_shows_its_name_and_tile(show: Show) -
 
 
 async def test_a_year_without_keynotes_says_none_are_announced(show: Show) -> None:
-    """2025's feed has no keynote track and its year data no keynotes."""
-    page = await show(year=2025)
+    """2025's feed has no keynote track: without its keynote entries, nothing shows."""
+    year = load_year(2025)
+    without = replace(year, content=replace(year.content, keynotes=()))
+    page = await show(year=2025, year_data=without)
     assert page.nodes("keynotes.session.") == []
     assert "No keynotes announced yet" in texts(page.node("keynotes.empty"))
 
