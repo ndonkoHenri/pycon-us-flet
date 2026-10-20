@@ -137,7 +137,7 @@ def test_report_shows_each_count_before_and_after(data_dir: Path) -> None:
 def test_report_says_when_the_previous_snapshot_no_longer_parses(
     data_dir: Path,
 ) -> None:
-    """A previous snapshot that no longer parses is said, and its counts read "-"."""
+    """The report notes an old snapshot that no longer parses; its counts read "-"."""
     (data_dir / "2026" / "conference.json").write_bytes(b"[]")
     report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert "; the previous snapshot no longer parses" in report.splitlines()[1]

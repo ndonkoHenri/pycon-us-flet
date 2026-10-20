@@ -91,7 +91,7 @@ def test_the_time_goes_above_the_rows_when_the_gutter_takes_over_a_fifth(
 
 
 def test_a_gutter_of_exactly_a_fifth_stays_beside_the_rows() -> None:
-    """The share is a fifth: at exactly 20 % the gutter stays, just over it it goes."""
+    """At exactly a fifth of the width the gutter stays; just over, the time goes up."""
     assert MAX_GUTTER_SHARE == 0.2
     assert time_above(80.0, 400.0) is False
     assert time_above(80.5, 400.0) is True
