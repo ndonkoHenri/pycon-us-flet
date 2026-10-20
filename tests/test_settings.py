@@ -20,7 +20,7 @@ from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import settings
-from pycon_us.screens.settings import FOLLOWS_DEVICE, Settings
+from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from tests.fakes import (
@@ -228,9 +228,13 @@ def test_the_high_contrast_row_is_one_switch_row_named_for_flows(
     assert node.identifier == "settings.high_contrast"
     assert tile.title == "High contrast"
     assert tile.toggle_inputs  # a tap anywhere on the row toggles the switch
-    assert isinstance(tile.leading, ft.Icon)
-    assert tile.leading.icon == ft.Icons.CONTRAST_OUTLINED
-    assert tile.leading.semantics_label is None  # decorative: the title names it
+    slot = tile.leading
+    assert isinstance(slot, ft.Container)
+    assert slot.width == RADIO_WIDTH  # its title starts where Appearance's titles do
+    assert slot.alignment == ft.Alignment.CENTER  # the icon sits under the radios
+    assert isinstance(slot.content, ft.Icon)
+    assert slot.content.icon == ft.Icons.CONTRAST_OUTLINED
+    assert slot.content.semantics_label is None  # decorative: the title names it
     assert isinstance(tile.trailing, ft.Switch)
 
 

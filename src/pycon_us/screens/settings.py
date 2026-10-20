@@ -33,6 +33,11 @@ HIGH_CONTRAST = "High contrast"
 FOLLOWS_DEVICE = "Follows your device setting"
 """The switch row's subtitle while it follows the OS flag (``system``, D-286)."""
 
+RADIO_WIDTH = 48
+"""A ``Radio``'s width with its padded 48 dp tap target, the leading slot of
+Appearance's rows. The switch row's icon gets a slot this wide, since a bare 24 dp
+icon would start its title 24 dp left of theirs (#503's review)."""
+
 
 @ft.component
 def Settings() -> ft.View:
@@ -122,8 +127,8 @@ def high_contrast(
     """Return the High contrast row: a switch the whole row toggles (D-23, D-286).
 
     One node with its identifier, read as "High contrast", the subtitle if any, and
-    the switch's state. Its icon lines its title up with Appearance's options, after
-    their radios, and is decorative.
+    the switch's state. Its decorative icon is centred in a slot as wide as a radio,
+    so it sits under Appearance's radios and its title starts where theirs do.
 
     Args:
         on: Whether high contrast applies (``Prefs.high_contrast_on``): under System,
@@ -134,7 +139,11 @@ def high_contrast(
     return named(
         "settings.high_contrast",
         ft.ListTile(
-            leading=ft.Icon(ft.Icons.CONTRAST_OUTLINED),
+            leading=ft.Container(
+                ft.Icon(ft.Icons.CONTRAST_OUTLINED),
+                width=RADIO_WIDTH,
+                alignment=ft.Alignment.CENTER,
+            ),
             title=HIGH_CONTRAST,
             subtitle=FOLLOWS_DEVICE if follows_device else None,
             trailing=ft.Switch(value=on, on_change=on_change),
