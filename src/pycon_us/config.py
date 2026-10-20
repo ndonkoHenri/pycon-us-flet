@@ -21,6 +21,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
 from pycon_us.year_info import check_info
@@ -143,7 +144,8 @@ class Content:
     """The year's content from ``content.toml`` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
-    Lightning talks pages (D-205), and the keynotes' people and abstracts (D-217).
+    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), and the
+    info pages' tables (D-263).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -160,6 +162,8 @@ class Content:
         lightning_talks: The Lightning talks page's copy and links; None for a year
             that has none, whose page shows its sessions alone.
         keynotes: The keynotes and panels, one entry per session (SESS-08, SPKR-04).
+        venue_hours: When each venue service is open, for Venue & hours (MAP-09,
+            D-282); empty for a year without them, whose page shows the feed's block.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -169,6 +173,7 @@ class Content:
     open_spaces: OpenSpacesInfo | None = None
     lightning_talks: LightningTalksInfo | None = None
     keynotes: tuple[Keynote, ...] = ()
+    venue_hours: tuple[ServiceHours, ...] = ()
 
 
 @dataclass(frozen=True, eq=False)
@@ -270,7 +275,7 @@ def load_year(
     content = build(
         Content, read_table(folder / "content.toml", content_file), content_file
     )
-    _check_content(content, content_file)
+    _check_content(content, conference, content_file)
     data = YearData(conference, content, folder)
     if check_sessions:
         check_snapshot_sessions(data, KEYNOTE_TRACKS, content_file)
@@ -313,10 +318,10 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
     check_tracks(conference.tracks, file)
 
 
-def _check_content(content: Content, file: str) -> None:
+def _check_content(content: Content, conference: ConferenceInfo, file: str) -> None:
     check_pages(content.open_spaces, content.lightning_talks, file)
     check_keynotes(content.keynotes, file)
-    check_info(content, file)
+    check_info(content, conference, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)
