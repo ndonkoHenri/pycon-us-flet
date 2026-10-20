@@ -5,7 +5,8 @@ whose pages are stubs until P1, and **You**: the Appearance control, which stand
 Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
 then About this app and Developer, which is always there when not embedded and, in a
 packaged build, once unlocked in About this app (D-73, D-187). **Expo & sponsors**
-came with the Sponsors page (#395) and **At the venue** with Wi-Fi (D-280); their other
+came with the Sponsors page (#395) and **At the venue** with Wi-Fi (D-280) and Help &
+safety (D-281); their other
 rows and About join with their P2 pages; the profile row and Staff tools, first in the
 list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
@@ -52,7 +53,10 @@ EXPO_AND_SPONSORS = (
 )
 """The Expo & sponsors section; Expo hall and Job listings join it with their pages."""
 
-AT_THE_VENUE = (MoreEntry("Wi-Fi", "/more/wifi", ft.Icons.WIFI),)
+AT_THE_VENUE = (
+    MoreEntry("Wi-Fi", "/more/wifi", ft.Icons.WIFI),
+    MoreEntry("Help & safety", "/more/help", ft.Icons.SUPPORT_OUTLINED),
+)
 """The At the venue section, in the list's order (ux.md §2.2; icons §3.7)."""
 
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
