@@ -95,6 +95,18 @@ def test_a_wide_plate_keeps_the_initials_to_its_height() -> None:
     assert only(tile, ft.CircleAvatar).radius == 96 / 2 - INSET - EDGE == 41
 
 
+def test_a_filling_plate_takes_its_parents_width_and_keeps_its_height() -> None:
+    """The Sponsors cards' plates (D-279): no width, centred, so as wide as the card.
+
+    Its height stays fixed, so a logo that loads or fails moves nothing.
+    """
+    tile = logo_tile("Bloomberg", None, size=72, fill=True)
+    container = plate(tile)
+    assert (container.width, container.height) == (None, 72)
+    assert container.alignment == ft.Alignment.CENTER
+    assert only(tile, ft.CircleAvatar).radius == 72 / 2 - INSET - EDGE
+
+
 def test_the_initials_ink_reads_on_white_at_aaa() -> None:
     """The brand indigo on the white tile: 8.6:1, over AAA's 7:1 in every scheme."""
     assert contrast_ratio(str(INK), "#FFFFFF") >= 8.5
