@@ -1,12 +1,14 @@
 """Check the spike's calendar file on the host before it goes to a device.
 
-Run from this folder: ``uv run python check_ics.py``. It checks what a calendar
-needs from the file and prints ``ok``; it is not a full RFC 5545 validator.
+Run from any folder, e.g. ``uv run python check_ics.py`` here: it needs only the
+standard library and ``src/``. It checks what a calendar needs from the file and
+prints ``ok``; it is not a full RFC 5545 validator.
 """
 
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "src")
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from ics_sample import ICS_BYTES  # the app's own folder, as in the build
 

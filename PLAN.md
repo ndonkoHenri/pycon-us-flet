@@ -148,7 +148,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 
 | Gap | Interim (ships now) | Upstream piece | Priority |
 |---|---|---|---|
-| Scheduled local notifications | Now's "Your next session", an in-app Banner, `.ics` alarms; the settings say "not in this build" | **E3**: scheduling in the official flet-dev/flet#6948 extension (+ U7, which #6948 itself needs, and Android receivers) | 1 (spike S6 during P1; app in P2) |
+| Scheduled local notifications | Now's "Your next session", an in-app Banner, `.ics` (alarm on iOS only, D-272); the settings say "not in this build" | **E3**: scheduling in the official flet-dev/flet#6948 extension (+ U7, which #6948 itself needs, and Android receivers) | 1 (spike S6 during P1; app in P2) |
 | Pull-to-refresh | Status-strip Refresh + automatic refresh | **U1** `RefreshIndicator` | 2 (P1) |
 | Handler exceptions crash the session | `@report_errors` decorator | **U15** non-fatal mode + Python error hook | 3 (P1–P2) |
 | Barcode scanning | Manual + USB/Bluetooth HID entry | **E1** extension over `mobile_scanner` | 4 (spike S8; before P3) |

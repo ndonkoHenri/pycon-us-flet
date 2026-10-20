@@ -8,7 +8,7 @@ from the app to the phone's calendar:
 2. **Share file (path)**: the same file written to the temporary directory first
    and shared with ``ShareFile.from_path``.
 3. **Save to a folder**: ``FilePicker.save_file(src_bytes=...)``, the platform's
-   save dialog (Android's Downloads, iOS's Files).
+   save dialog, where the user picks the folder.
 4. **Open file URL**: the file written to the documents directory and opened
    with ``UrlLauncher.launch_url("file://...")``.
 5. **Open data URL**: ``UrlLauncher.launch_url("data:text/calendar;base64,...")``.
