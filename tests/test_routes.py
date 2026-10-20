@@ -26,7 +26,7 @@ from pycon_us.locations import (
     query_of,
     start_target,
 )
-from pycon_us.routes import DRILL, ROUTES
+from pycon_us.routes import DRILL, ROUTES, UNKNOWN
 
 type Level = tuple[str, str, dict[str, str]]
 
@@ -158,13 +158,52 @@ def test_each_drill_level_reads_its_own_pair(
 
 @pytest.mark.parametrize(
     "location",
-    ["/now/bogus/1", "/now/session", "/more/staff/lead", "/welcome", "/schedule/x"],
+    [
+        "/nope",
+        "/now/bogus/1",
+        "/now/session",
+        "/now/session/42/nope",
+        "/more/staff/lead",
+        "/more/tracks/python/x",
+        "/search/nope",
+        "/welcome",
+        "/schedule/x",
+    ],
 )
-def test_an_unknown_location_matches_nothing_so_the_router_shows_not_found(
-    location: str,
-) -> None:
-    """An unknown location matches no route, so the Router shows Not found."""
-    assert _match_routes(ROUTES, location) is None
+def test_an_unknown_location_is_one_not_found_view(location: str) -> None:
+    """A location no page or drill matches is the catch-all's one View (D-270).
+
+    Nothing below it: Back on it goes to Now, never out of the app.
+    """
+    assert view_levels(location) == [("NotFound", location, {"unknown": location[1:]})]
+
+
+def test_the_catch_all_is_the_table_s_last_route() -> None:
+    """The catch-all comes last: the Router tries routes in order, and it takes any."""
+    assert ROUTES[-1] is UNKNOWN
+    assert UNKNOWN.component is routes.NotFound
+    assert UNKNOWN not in ROUTES[:-1]
+
+
+def known_locations() -> list[str]:
+    """Every page, and a drill of each kind on every page, quoted ids included."""
+    return [
+        *sorted(PAGES),
+        *(
+            drill_href(drill_href(page, kind, "a/b ç"), "session", "42")
+            for page in sorted(PAGES)
+            for kind in DRILL_KINDS
+        ),
+        "/more/tracks/python",  # the slug route
+        "/more/tracks/python/room/hall-a",
+    ]
+
+
+@pytest.mark.parametrize("location", known_locations())
+def test_the_catch_all_matches_no_page_and_no_drill(location: str) -> None:
+    """Every page and every drill still opens its own screens, never ``NotFound``."""
+    screens = [name for name, _, _ in view_levels(location)]
+    assert "NotFound" not in screens
 
 
 def test_the_drill_takes_every_kind_and_nothing_else() -> None:

@@ -882,5 +882,164 @@
   "45: Diego Caceres Solis",
   "40: Shir Havron",
   "47: Bruce Eckel"
+ ],
+ "sponsors": [
+  {
+   "Visionary (0)": [
+    "nvidia | NVIDIA | banner",
+    "anthropic-pbc | Anthropic, PBC | banner",
+    "bloomberg | Bloomberg | booth 613 | table T2 | banner",
+    "google | Google | table T1 | banner",
+    "meta | Meta | booth 413 | banner",
+    "fastly | Fastly | banner",
+    "hudson-river-trading | Hudson River Trading | booth 127 | banner"
+   ]
+  },
+  {
+   "Sustainability (1)": [
+    "microsoft | Microsoft | booth 213 | banner"
+   ]
+  },
+  {
+   "Maintaining (2)": [
+    "anaconda-inc | Anaconda, Inc | booth 313 | banner",
+    "capital-one | Capital One | booth 113 | table T5 | banner",
+    "vercel | Vercel | booth 513 | banner",
+    "red-hat | Red Hat | booth 434 | table T7 | banner",
+    "serpapi | SerpApi | booth 427 | table T20 | banner",
+    "aws | AWS | booth 119 | banner"
+   ]
+  },
+  {
+   "Contributing (3)": [
+    "cubist-systematic-strategies | Cubist Systematic Strategies | booth 116",
+    "jetbrains | JetBrains | booth 421",
+    "openedg-python-institute | OpenEDG Python Institute | booth 234",
+    "snowflake | Snowflake | booth 639"
+   ]
+  },
+  {
+   "Supporting (4)": [
+    "alphasense | AlphaSense | booth 638 | table T6",
+    "chainguard | Chainguard | booth 531 | table T7",
+    "codspeed | CodSpeed | booth 621 | table T14",
+    "hex | Hex | booth 630",
+    "indeed | Indeed",
+    "jane-street | Jane Street | booth 112",
+    "kraken-tech | Kraken Tech | booth 226 | table T11",
+    "manychat | Manychat",
+    "netflix | Netflix",
+    "posit-pbc | Posit, PBC | booth 539 | table T10",
+    "pydantic | Pydantic | booth 335",
+    "qube-research--technologies | Qube Research & Technologies | booth 720",
+    "sentry | Sentry | booth 122 | table T3",
+    "cloudflare | Cloudflare | booth 126",
+    "codeflash | Codeflash | booth 713",
+    "malwarebytes | Malwarebytes"
+   ]
+  },
+  {
+   "Partner (5)": [
+    "analog-devices-inc | Analog Devices, Inc. | booth 243",
+    "apify | Apify | booth 334",
+    "astral | Astral | booth 336",
+    "clickhouse | ClickHouse | booth 635",
+    "elastic | Elastic | booth 235",
+    "jinjaapp | Jinja.App | booth 238",
+    "reversinglabs | ReversingLabs | booth 627",
+    "tower-research-capital | Tower Research Capital | booth 237 | table T9",
+    "marimo | marimo | booth 342 | table T10",
+    "pretix | pretix",
+    "zyte | Zyte | booth 344",
+    "old-mission | Old Mission | booth 240 | table T4",
+    "minimus | Minimus | booth 236",
+    "motional | Motional",
+    "temporal | Temporal | booth 629",
+    "auth0 | Auth0 | booth 631",
+    "reflex | Reflex | booth 633 | table T15",
+    "reuven-lerner--python-training | Reuven Lerner — Python training | booth 245 | table T8",
+    "cesiumastro | CesiumAstro | booth 709"
+   ]
+  },
+  {
+   "Participating (6)": [
+    "commonwealth-bank-of-australia | Commonwealth Bank of Australia",
+    "everlaw | Everlaw",
+    "lablup-inc | Lablup Inc.",
+    "quansight | Quansight",
+    "six-feet-up | Six Feet Up",
+    "trail-of-bits | Trail of Bits",
+    "weiss-asset-management | Weiss Asset Management",
+    "thrivent | Thrivent",
+    "lincoln-loop-llc | Lincoln Loop LLC",
+    "back-market | Back Market",
+    "akasa | AKASA",
+    "python-engineer-development-association | Python Engineer Development Association"
+   ]
+  },
+  {
+   "Associate (7)": [
+    "coursiv | Coursiv",
+    "entrouvert | Entr'ouvert",
+    "isotoma-limited | Isotoma Limited",
+    "manulife-financial | Manulife Financial",
+    "oddbird | OddBird",
+    "privacy-solutions | Privacy Solutions",
+    "the-letterheads-limited-trading-as-klim-type-foundry | The Letterheads Limited trading as Klim Type Foundry",
+    "weehooey-inc | Weehooey Inc.",
+    "zentralbibliothek-zrich | Zentralbibliothek Zürich",
+    "appsignal | AppSignal"
+   ]
+  },
+  {
+   "Standalone Only (8)": [
+    "sentinelone | SentinelOne"
+   ]
+  },
+  {
+   "AV Partner (9)": [
+    "altitudec | Altitude/C"
+   ]
+  },
+  {
+   "Media (10)": [
+    "lwnnet | LWN.net",
+    "devitjobs | DevITjobs"
+   ]
+  },
+  {
+   "Startup Row (11)": [
+    "arcjet | Arcjet | booth 137",
+    "capiscio | CapiscIO | booth 136",
+    "chonkie | Chonkie | booth 140",
+    "tetrix | Tetrix | booth 141 | table T12",
+    "timecopilot | TimeCopilot | booth 135",
+    "pixeltable | Pixeltable | booth 134",
+    "subimage | SubImage | booth 138",
+    "skyvern | Skyvern",
+    "phemeral | Phemeral | booth 139"
+   ]
+  },
+  {
+   "Community (12)": [
+    "codeday | CodeDay | booth 730",
+    "pycon-africa | PyCon Africa | booth 727 | table T16",
+    "socal-python | SoCal Python | booth 726",
+    "django-software-foundation | Django Software Foundation | booth 734",
+    "black-python-devs | Black Python Devs | booth 732 | table T11",
+    "data-con-la | Data Con LA | booth 728",
+    "djangonaut-space | Djangonaut Space | booth 734",
+    "inland-empire-python-users-group | Inland Empire Python Users Group | booth 726",
+    "pycon-senegambia | PyCon Senegambia | booth 727",
+    "pyladies | PyLadies | booth 731",
+    "scale | SCaLE | booth 728",
+    "python-mozambique-community | Python Mozambique Community | booth 727",
+    "pybeach | PyBeach | booth 726",
+    "europython-society | EuroPython Society | booth 733",
+    "san-diego-python | San Diego Python | booth 726",
+    "python-asia-organization | Python Asia Organization | booth 729",
+    "python-en-espaol | Python en Español | booth 735"
+   ]
+  }
  ]
 }

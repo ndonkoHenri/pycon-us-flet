@@ -1,7 +1,5 @@
 # PyCon US app on Flet
 
-[![CI](https://github.com/ndonkoHenri/pycon-us-flet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ndonkoHenri/pycon-us-flet/actions/workflows/ci.yml)
-
 A rebuild of the [PyCon US mobile app](https://github.com/PyCon/pycon-us-mobile) in Python with
 [Flet](https://flet.dev), for **Android and iOS**. It is a community showcase: it shows the Flet and Python
 communities what a polished Python mobile app looks like. It is not an official PSF app.
