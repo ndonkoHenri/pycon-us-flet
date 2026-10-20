@@ -1,0 +1,21 @@
+PyCon US conference companion, built with Python and Flet
+Copyright 2026 The pycon-us-flet contributors
+
+This product is a rebuild of the PyCon US mobile app
+(https://github.com/PyCon/pycon-us-mobile), which is licensed under the
+Apache License, Version 2.0. The original app is our functional reference;
+its data semantics, texts and research notes informed this project.
+
+The app bundles the Roboto font (Regular, Medium and Bold, version 2.138,
+https://github.com/googlefonts/roboto), Copyright 2011 Google Inc., licensed
+under the Apache License, Version 2.0. Its files and license are in
+flutter_packages/roboto_fonts/.
+
+The brand marks in src/assets/icons/brands/ (Python, PyPI, Mastodon, Bluesky,
+X, LinkedIn, YouTube and Discord) are the unmodified SVGs of Simple Icons,
+version 13.21.0 (https://github.com/simple-icons/simple-icons), dedicated to
+the public domain under CC0 1.0 Universal. The marks themselves are trademarks
+of their owners; the app shows each one only beside a link to that brand.
+
+This is not an official Python Software Foundation app. "PyCon" and "Python"
+are trademarks of the Python Software Foundation.
