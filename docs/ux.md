@@ -567,7 +567,7 @@ Always available when not embedded; in packaged builds after the unlock (before 
 A pushed full-screen View with an `AppBar` (back arrow, plan title, overflow "Reset view") over a `Stack`:
 1. `InteractiveViewer(min_scale=1, max_scale=natural_width / displayed_width, boundary_margin=...)` around `Stack[Image(fit=BoxFit.CONTAIN, semantics_label="Concourse level floor plan, Room 104C marked"), pin]`. The pin is placed from percentages once `on_size_change` reports the size. Flet's defaults (max 2.5, min 0.8) are overridden.
 2. A label `Card` outside the zoom layer, bottom-left in `SafeArea`: "Room 104C · Concourse level · Talk track", readable at any zoom.
-3. Zoom buttons bottom-right (`ZOOM_IN`, `ZOOM_OUT`, `CENTER_FOCUS_STRONG`), async handlers calling `await viewer.zoom(1.5)`, `zoom(1 / 1.5)`, `reset(animation_duration=250)`: the single-pointer alternative to pinch (WCAG 2.5.1).
+3. Zoom buttons bottom-right (`ZOOM_IN`, `ZOOM_OUT`, `CENTER_FOCUS_STRONG`), async handlers calling `await viewer.zoom(1.5)`, `zoom(1 / 1.5)`, `reset(animation_duration=250)`: the single-pointer alternative to pinch (WCAG 2.5.1). At the pin `zoom()` scales about the plan's top-left corner, so until U56 (#472) each button pans back to the centre after its zoom (F76).
 
 Pinch, pan, and double-tap (`GestureDetector(on_double_tap=...)`) for 2× or reset. The pin pulses twice, then stays still. Plans are re-encoded to ≤ 2048 px (S7 checks memory and tap accuracy).
 
