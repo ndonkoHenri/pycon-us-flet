@@ -18,6 +18,7 @@ from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.help import Help
+from pycon_us.screens.jobs import Jobs
 from pycon_us.screens.keynotes import Keynotes
 from pycon_us.screens.licences import LicencePage, Licences
 from pycon_us.screens.lightning_talks import LightningTalks
@@ -203,6 +204,7 @@ ROUTES = [
         ),
         pushed("developer", Developer),
         pushed("wifi", Wifi),
+        pushed("jobs", Jobs),
         pushed("help", Help),
         pushed("psf", AboutPsf),
         pushed("social", Social),

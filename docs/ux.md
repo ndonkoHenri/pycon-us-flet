@@ -613,7 +613,7 @@ The rows follow the feed, which a refresh can update during the conference, whil
 
 ### 6.6 Job listings · `/more/jobs` (SPON-06..08)
 
-A job-fair `LocationCard` (pushes `plan/job-fair`); an inline search (250 ms, all words over company, role titles and plain text, never raw HTML); one `Card` per sponsor with a header row (logo, name, level chip, chevron to the sponsor) and role `LinkTile`s, "Show all 15 roles" past 5. No match: "No roles match "rust"" + "Clear search". Empty feed: "No job listings yet."
+A job-fair `LocationCard` (pushes `plan/job-fair`; #408); an inline search (250 ms, all words over company, role titles and plain text, never raw HTML; #400); under the status strip, one outlined `Card` per listing in feed order (#399): a header row (the 48 dp `logo_tile()`, the name in `TITLE_MEDIUM`, the level as sponsor detail says it, "Visionary sponsor", rather than a chip, and `CHEVRON_RIGHT`), one node read "Bloomberg, Visionary sponsor", a level-2 heading and a button that pushes `…/sponsor/<slug>` (`jobs.listing.<id>`; no button nor chevron for a sponsor the feed's levels lack); the first 5 role `LinkTile`s with `WORK_OUTLINE` (`jobs.role.<id>.<n>`), then "Show all 15 roles", which shows the rest in place and becomes "Show fewer roles" (`jobs.all_roles.<id>`, said collapsed or expanded); a long-form listing's text cut at 4 lines with "More", which shows its Markdown (D-202, `jobs.more.<id>`); a placeholder's "No roles listed". No match: "No roles match "rust"" + "Clear search". Empty feed: "No job listings yet" (`jobs.empty`). Without data, the skeleton, then the no-data state (§4.1). The refresh is the status strip's until U1's `RefreshIndicator` (#20).
 
 ### 6.7 Info pages (INFO-01..14, MAP-09..11)
 

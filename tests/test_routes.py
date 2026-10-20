@@ -107,6 +107,8 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ),
         ("/more/sponsors", ["More", "Sponsors"]),
         ("/more/sponsors/sponsor/bloomberg", ["More", "Sponsors", "Drill"]),
+        ("/more/jobs", ["More", "Jobs"]),
+        ("/more/jobs/sponsor/bloomberg", ["More", "Jobs", "Drill"]),
         ("/more/settings", ["More", "Settings"]),
         ("/more/app", ["More", "AboutApp"]),
         ("/more/app/licences", ["More", "AboutApp", "Licences"]),
@@ -304,6 +306,8 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/lightning-talks", "/more"),
         ("/more/sponsors/sponsor/bloomberg", "/more/sponsors"),  # to the list (D-17)
         ("/more/sponsors", "/more"),
+        ("/more/jobs/sponsor/bloomberg", "/more/jobs"),  # Back to the list (#399)
+        ("/more/jobs", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
         ("/more/app/licences/flet", "/more/app/licences"),  # a text, to the list
         ("/more/app/licences", "/more/app"),  # the list, to About this app (D-296)

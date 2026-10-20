@@ -5,7 +5,8 @@ name as people read it (folded, as D-46 sorts speakers), once per feed version.
 ``filter_projects()`` keeps the projects that hold every word of a filter in their
 ``search_text``: the folded name, submitter and description text that feed processing
 built, never markup (EVT-06, D-46, D-140). ``cut_short()`` says whether a card shows its
-description cut at four lines with "More" (EVT-05).
+description cut at four lines with "More" (EVT-05), by ``needs_more()``, which the Job
+listings' long-form listings share.
 """
 
 from pycon_us.core.models import ConferenceData, Sprint
@@ -61,17 +62,25 @@ def filter_projects(listed: tuple[Sprint, ...], query: str) -> tuple[Sprint, ...
 def cut_short(sprint: Sprint) -> bool:
     """Whether a card cuts the description at four lines and offers "More" (EVT-05).
 
-    True for a description longer than ``PREVIEW_CHARS``, and for one whose Markdown
-    has a line break (paragraphs, a list) or a link, which the flat preview cannot
-    show: "More" shows the Markdown, links included. Converted text escapes a literal
-    ``](`` (D-115), so in the Markdown it only ever opens a link.
+    ``needs_more()`` on the project's description.
 
     Args:
         sprint: The project.
     """
-    markdown = sprint.description_md
-    return (
-        len(sprint.description_text) > PREVIEW_CHARS
-        or "\n" in markdown
-        or "](" in markdown
-    )
+    return needs_more(sprint.description_text, sprint.description_md)
+
+
+def needs_more(text: str, markdown: str) -> bool:
+    """Whether a feed text is cut at four lines with "More" that shows its Markdown.
+
+    True for a text longer than ``PREVIEW_CHARS``, and for one whose Markdown has a
+    line break (paragraphs, a list) or a link, which the flat preview cannot show:
+    "More" shows the Markdown, links included. Converted text escapes a literal
+    ``](`` (D-115), so in the Markdown it only ever opens a link. The Sprints cards
+    and the Job listings' long-form listings use it (D-202).
+
+    Args:
+        text: The text the preview shows (``html_md.to_text``).
+        markdown: The same text as Markdown.
+    """
+    return len(text) > PREVIEW_CHARS or "\n" in markdown or "](" in markdown
