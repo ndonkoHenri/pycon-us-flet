@@ -1,17 +1,19 @@
 r"""Calendar files: one session, or a whole agenda, as iCalendar bytes (D-62, D-268; SESS-05).
 
-``calendar_file()`` is all of it: session detail's Add to calendar passes one session, My
-schedule's export every saved one (P2-65, P2-66), and either shares the bytes as a
-``text/calendar`` file. RFC 5545 asks for CRLF line ends, text escaped (``\``, ``;``,
-``,`` and newlines), and lines folded at 75 octets; a fold here never splits a UTF-8
-character. Times are UTC, so a calendar anywhere shows the right instant, and each event
-carries an alarm, which the original app's file had none of.
+``calendar_file()`` builds the file: session detail's Add to calendar passes one session,
+My schedule's export every saved one (P2-65, P2-66), and either hands the bytes to the
+calendar (``services.calendar``, D-272) under a name from ``file_slug()``. RFC 5545 asks
+for CRLF line ends, text escaped (``\``, ``;``, ``,`` and newlines), and lines folded at
+75 octets; a fold here never splits a UTF-8 character. Times are UTC, so a calendar
+anywhere shows the right instant, and each event carries an alarm, which the original
+app's file had none of.
 
 Like the rest of ``core``, it is pure: the time the file is made (``now``, D-43) is an
 argument, and nothing here imports Flet (D-68).
 """
 
 import re
+import unicodedata
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
@@ -26,6 +28,10 @@ ALARM = timedelta(minutes=10)
 LINE_OCTETS = 75
 """The longest a line may be, in octets, without its CRLF (RFC 5545 §3.1)."""
 
+FILE_SLUG_CHARS = 40
+"""The longest a calendar file's name may be without ``.ics``: a SnackBar says it."""
+
+_NOT_SLUG = re.compile(r"[^a-z0-9]+")
 _NEWLINE = re.compile(r"\r\n|\r|\n")
 _CONTROL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")
 """The control characters a TEXT value may not hold (RFC 5545 §3.3.11); a tab may stay."""
@@ -85,6 +91,27 @@ def calendar_file(
         lines += _event(session, year=year, now=now, alarm=alarm)
     lines.append("END:VCALENDAR")
     return "".join(_fold(line) + "\r\n" for line in lines).encode()
+
+
+def file_slug(name: str, *, fallback: str = "session") -> str:
+    """Return a calendar file's name without ``.ics``, from what it holds: its title.
+
+    Lower-case ASCII words joined by ``-``, accents dropped (``Café`` is ``cafe``), cut
+    after a whole word at ``FILE_SLUG_CHARS``, so the Files app and Android's
+    SnackBar show a name a person recognises:
+    ``python-for-humans-designing-python-code``
+    (D-272). A name with no such word (all in another script) gives ``fallback``.
+
+    Args:
+        name: The session's name, or what an export holds.
+        fallback: The slug when ``name`` gives none.
+    """
+    folded = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = _NOT_SLUG.sub("-", folded.lower()).strip("-")
+    if len(slug) > FILE_SLUG_CHARS:
+        cut = slug[: FILE_SLUG_CHARS + 1]
+        slug = cut.rsplit("-", 1)[0] if "-" in cut else slug[:FILE_SLUG_CHARS]
+    return slug or fallback
 
 
 def _event(

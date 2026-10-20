@@ -454,6 +454,20 @@ def test_nothing_saved_is_an_empty_agenda() -> None:
     assert my_schedule(processed(2026), frozenset()) == Agenda((), {})
 
 
+def test_an_agenda_s_sessions_are_its_rows_in_agenda_order() -> None:
+    """``Agenda.sessions`` lists every saved session in the feed, day by day and slot by slot.
+
+    It is what My schedule's export holds (#426): the model's own sessions, an id the
+    feed dropped left out, and nothing at all with nothing saved.
+    """
+    data = processed(2026)
+    saved = frozenset({"188", "19", "2", "153", "9106", "no-such-id"})
+    sessions = my_schedule(data, saved).sessions
+    assert [s.id for s in sessions] == ["2", "19", "188", "153", "9106"]
+    assert all(session is data.sessions[session.id] for session in sessions)
+    assert my_schedule(data, frozenset()).sessions == ()
+
+
 def test_two_saved_sessions_at_the_same_time_overlap_each_other() -> None:
     """Two saved tutorials at one time overlap each other; a later one neither."""
     agenda = my_schedule(processed(2026), frozenset({"2", "19", "188"}))

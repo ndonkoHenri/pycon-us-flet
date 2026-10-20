@@ -68,7 +68,7 @@ def test_the_recorded_feed_passes_and_a_missing_next_year_is_not_yet(
     status, out = check(capsys, ok(recorded(2026)))
 
     assert status == 0
-    assert "12 of 12 invariants hold" in out
+    assert "13 of 13 invariants hold" in out
     assert "no key the recorded feeds lack" in out
     assert f"2027: not published yet (HTTP 404 at {FEED_2027})" in out
     assert out.endswith("Feed check passed\n")
@@ -92,7 +92,7 @@ def test_a_feed_that_breaks_an_invariant_fails_and_names_it(
     assert status == 1
     assert "FAILED: every session is on one conference day" in out
     assert "424242 is on 2026-06-01, outside the conference" in out
-    assert "11 of 12 invariants hold" in out
+    assert "12 of 13 invariants hold" in out
     assert out.endswith("Feed check FAILED for 2026\n")
 
 
@@ -420,6 +420,17 @@ BREAKS: list[tuple[Callable[[ConferenceData], ConferenceData], Invariant, str]] 
         with_mixed_top_level,
         feed_invariants.sponsor_levels_are_sorted_and_not_empty,
         "sponsor level 'Visionary' also has orders 1",
+    ),
+    (
+        lambda d: replace(
+            d,
+            job_listings=(
+                replace(d.job_listings[0], sponsor_name="Bloomberg L.P."),
+                *d.job_listings[1:],
+            ),
+        ),
+        feed_invariants.job_listings_name_a_sponsor,
+        "job listing 6 names no sponsor: 'Bloomberg L.P.'",
     ),
 ]
 """Ways to break the 2026 model, the invariant each breaks, and a problem it reports."""

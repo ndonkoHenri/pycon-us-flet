@@ -1,4 +1,4 @@
-"""Tests for the link rule (INFO-14, ux.md §4.7): ``ui.links``.
+"""Tests for the link rule (INFO-14, ux.md §4.7): ``ui.links`` and ``core.links``.
 
 What a target is and how it opens, Copy for phone numbers, addresses and any other
 text (``copy_text()``, D-263), and how a failure is said and logged. The helpers run
@@ -15,6 +15,7 @@ import flet as ft
 import pytest
 
 from pycon_us.config import load_year
+from pycon_us.core.links import feed_link
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
@@ -27,7 +28,6 @@ from pycon_us.ui.links import (
     copy_contact,
     copy_text,
     external,
-    feed_link,
     feed_markdown,
     link_kind,
     open_feed_link,

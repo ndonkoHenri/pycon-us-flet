@@ -25,6 +25,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
 from pycon_us.ui.navigation import (
     TABS,
     Retap,
@@ -55,15 +56,16 @@ def AppScaffold(
     line (D-165), and puts ``GutterProbe`` under it, which tells the lists whether a
     slot's time fits beside its rows (D-216).
 
-    On a tab root the View gets the bottom bar (D-144), or from 600 dp the rail beside
-    the body (D-277); pushed Views get the back arrow instead (D-10). A root's body is
-    in the same place in both, so a rotation or a resize swaps the bar and the rail
-    without rebuilding it: its scroll, day and tabs stay (D-18). Back on a root other
-    than Now goes to Now, and Back on Now is left to the system, which leaves the app
-    (D-17, D-142). Back on a pushed View closes a
-    dialog, a picker, a sheet or a menu open over it, and only then pops the View
-    (D-208). An unknown location's View (``unknown``) is a one-View stack like a root
-    but with the back arrow, and Back there goes to Now too (D-270).
+    On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
+    high contrast, where the bar is the page's own colour (THEME-06), or from 600 dp the
+    rail beside the body (D-277); pushed Views get the back arrow instead (D-10). A
+    root's body is in the same place in both, so a rotation or a resize swaps the bar
+    and the rail without rebuilding it: its scroll, day and tabs stay (D-18). Back on a
+    root other than Now goes to Now, and Back on Now is left to the system, which leaves
+    the app (D-17, D-142). Back on a pushed View closes a dialog, a picker, a sheet or a
+    menu open over it, and only then pops the View (D-208). An unknown location's View
+    (``unknown``) is a one-View stack like a root but with the back arrow, and Back
+    there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -91,6 +93,7 @@ def AppScaffold(
     view_path = ft.use_view_path()
     svc = use_services()
     wide = use_layout().wide  # the rail rather than the bar (D-277)
+    tokens = use_tokens()
     is_root = view_path in TAB_ROOTS
     # One-View stacks whose Back goes to Now: the other roots, and an unknown
     # location, which a cold link can open alone (D-142, D-270).
@@ -187,6 +190,8 @@ def AppScaffold(
                 else Shown(body),
             ),
             GutterProbe(),
+            # The line sits on the bar, which the rail replaces from 600 dp (D-277).
+            *([bar_divider()] if is_root and tokens.high_contrast and not wide else []),
         ],
     )
 
@@ -215,6 +220,18 @@ def beside_rail(
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.STRETCH,
     )
+
+
+def bar_divider() -> ft.Control:
+    """Return the 1 dp line that separates the bottom bar from the page in HC (THEME-06).
+
+    High contrast has one surface, so the ``NavigationBar`` is the page's colour; a
+    line in ``outline`` draws the edge that a tint draws elsewhere. Material's
+    ``NavigationBar`` has no border of its own (Flet's ``border`` is the Cupertino
+    bar's), so the line closes the View's body, right above the bar: the ``Scaffold``
+    gives the body no bottom inset when it has a bar.
+    """
+    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE)
 
 
 @ft.component

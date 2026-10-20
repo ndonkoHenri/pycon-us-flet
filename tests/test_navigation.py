@@ -15,6 +15,7 @@ import pytest
 
 from pycon_us.locations import TAB_ROOTS
 from pycon_us.prefs import Prefs
+from pycon_us.theme import HC_DARK_TOKENS, HC_LIGHT_TOKENS, Tokens
 from pycon_us.ui import navigation
 from pycon_us.ui.navigation import (
     RAIL_WIDTH,
@@ -241,6 +242,42 @@ def test_every_tab_root_shows_the_bar_with_its_own_tab_selected(
     """Each tab root's View has the bar with that root's tab selected."""
     bar = bar_of(view_at(hooks, page, root))
     assert TABS[bar.selected_index].root == root
+
+
+@pytest.mark.parametrize(
+    "tokens", [HC_LIGHT_TOKENS, HC_DARK_TOKENS], ids=["light", "dark"]
+)
+@pytest.mark.parametrize("root", TAB_ROOTS)
+def test_in_high_contrast_a_1_dp_line_separates_the_bar_from_the_page(
+    hooks: Hooks, page: FakePage, root: str, tokens: Tokens
+) -> None:
+    """In HC a root's body ends in a 1 dp outline line, right above the bar (THEME-06).
+
+    HC has one surface, so the bar is the page's colour; the line draws its edge.
+    """
+    hooks.tokens = tokens
+    view = view_at(hooks, page, root)
+    assert view.navigation_bar is not None
+    line = view.controls[-1]
+    assert isinstance(line, ft.Divider)
+    assert (line.height, line.thickness, line.color) == (1, 1, ft.Colors.OUTLINE)
+
+
+def test_outside_high_contrast_nothing_separates_the_bar(
+    hooks: Hooks, page: FakePage
+) -> None:
+    """Outside HC no line sits above a root's bar: its tint is its edge."""
+    view = view_at(hooks, page, "/schedule")
+    assert not any(isinstance(control, ft.Divider) for control in view.controls)
+
+
+def test_a_pushed_view_in_high_contrast_has_no_bar_line(
+    hooks: Hooks, page: FakePage
+) -> None:
+    """A pushed View has no bar, so no line above one, in HC too."""
+    hooks.tokens = HC_LIGHT_TOKENS
+    view = view_at(hooks, page, "/schedule/session/42")
+    assert not any(isinstance(control, ft.Divider) for control in view.controls)
 
 
 @pytest.mark.parametrize("tab", TABS)

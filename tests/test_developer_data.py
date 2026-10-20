@@ -20,9 +20,11 @@ import pytest
 from pycon_us import clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
+from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
@@ -35,7 +37,6 @@ from pycon_us.screens.developer_data import (
     DataActions,
     refreshed,
     reset_app,
-    schedule_line,
 )
 from pycon_us.screens.developer_ui import (
     NBSP,
@@ -43,7 +44,7 @@ from pycon_us.screens.developer_ui import (
     reset_losses,
     snapshot_day,
 )
-from pycon_us.services import Services, api, errors
+from pycon_us.services import Services, api, changes_file, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
@@ -661,7 +662,7 @@ async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
 
 
 def test_reset_lists_exactly_what_is_lost() -> None:
-    """Reset lists the settings, saved sessions, cache and Developer options it loses.
+    """Reset lists the settings, saved sessions, cache, change log and Developer options.
 
     With nothing saved it says none, and outside a packaged build Developer does not
     lock again (D-73).
@@ -670,11 +671,12 @@ def test_reset_lists_exactly_what_is_lost() -> None:
         "Your settings: Appearance and the schedule's filters",
         "Your saved sessions in My schedule: 3",
         "The cached schedule: the app shows the bundled one until it refreshes",
+        "Schedule changes: what recent refreshes changed",
         "Developer options: the fake clock and the feed URL, and Developer locks again",
     )
     losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
     assert losses[1] == "Your saved sessions in My schedule: none"
-    assert losses[3] == "Developer options: the fake clock and the feed URL"
+    assert losses[4] == "Developer options: the fake clock and the feed URL"
 
 
 async def test_reset_app_asks_first_and_its_dialog_lists_the_losses(
@@ -715,10 +717,11 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
 ) -> None:
     """Confirming the reset leaves storage and every store as after a fresh install.
 
-    The session has been used: settings, favourites of two years, the Developer options,
-    a cache, a fake clock, a feed URL and remembered places. Only another app's key is
-    left; the device facts stay and Developer locks again. Then, as at a start, a quiet
-    refresh of the year's feed runs, the app goes to Now and says "App reset".
+    The session has been used: settings (reminders too), favourites of two years, the
+    Developer options, a cache, a change log, a fake clock, a feed URL and remembered
+    places. Only another app's key is left; the device facts stay and Developer locks
+    again. Then, as at a start, a quiet refresh of the year's feed runs, the app goes to
+    Now and says "App reset".
     """
     stored.update(
         {
@@ -730,12 +733,19 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
             "flutter.not_ours": "kept",
         }
     )
-    await svc.storage.write_feed(recorded(2026))
-    await prefs.save(svc.storage, theme="dark", excluded_tracks=())
+    await prefs.save(
+        svc.storage,
+        theme="dark",
+        excluded_tracks=(),
+        reminders=ReminderSettings(session_lead=10, keynote=False, primer="accepted"),
+    )
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
     await conference.set_feed_url(DEV_FEED, svc.storage)
+    # After the URL change, which deletes both files once the feed has loaded (D-255).
+    await svc.storage.write_feed(recorded(2026))
+    await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
     svc.memory.last_location = "/more/developer"
     svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
     svc.memory.jumped_on = date(2026, 5, 15)
@@ -747,6 +757,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # On the device: nothing of the app's is left.
     assert stored == {"flutter.not_ours": "kept"}
     assert not svc.storage.feed_path.exists()
+    assert not changes_file.changes_path(svc.storage).exists()
     # In memory, without a restart.
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
     assert errors._details is False
@@ -755,6 +766,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
         ("Open Space",),
         {},
     )
+    assert prefs.reminders == ReminderSettings()  # off, the primer unasked (D-275)
     assert prefs.developer is False  # a packaged build: locked again
     assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
     assert favorites.ids == frozenset()
@@ -766,6 +778,22 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     assert offline == [svc.year.conference.feed_url]
     assert page.navigated == ["/now"]
     assert said(page) == ["App reset"]
+
+
+async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+) -> None:
+    """Reset app deletes the change log when no feed URL was set (D-255).
+
+    ``Conference.reset()`` deletes the log only through a feed URL change, so here only
+    ``reset_app()``'s own deletion can remove it.
+    """
+    await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
+    assert await reset_app(svc, conference, prefs, favorites) is True
+    assert not changes_file.changes_path(svc.storage).exists()
 
 
 async def test_a_reset_that_cannot_delete_everything_says_so(
@@ -837,16 +865,3 @@ def test_refresh_now_says_how_the_refresh_ended() -> None:
         "The feed's answer couldn't be used: the app keeps the schedule it has.",
         False,
     )
-
-
-def test_the_schedule_line_names_the_source_and_its_age() -> None:
-    """The schedule line names the source and its age, or says there is none yet."""
-    now = datetime(2026, 5, 15, 12, tzinfo=UTC)
-    three_hours = now - timedelta(hours=3)
-    assert schedule_line("cache", three_hours, now) == (
-        "From the cache, updated 3 hours ago"
-    )
-    assert (
-        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
-    )
-    assert schedule_line("none", None, now) == "No schedule yet"
