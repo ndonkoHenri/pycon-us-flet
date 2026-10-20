@@ -163,8 +163,8 @@ average was in the hundreds took up to 3 minutes a journey.
 
 | Run (the flows as merged) | Android | iOS |
 |---|---|---|
-| Journeys, run 1 | 6 of 6 passed, 14 min 4 s (load ~100) | 6 of 6 passed, 8 min 13 s |
-| Journeys, run 2 | 6 of 6 passed, 9 min 10 s | 6 of 6 passed, 7 min 29 s |
+| Journeys, run 1 | 6 of 6 passed, 9 min 10 s | 6 of 6 passed, 8 min 13 s |
+| Journeys, run 2 | 6 of 6 passed, 7 min 55 s | 6 of 6 passed, 7 min 29 s |
 | `regression`, `main`'s build (`1a2c2b5`) | `TRIALS=20`: 20 moved, 10 min 23 s; tap to fling 773-914 ms (median 870) | `TRIALS=10`: 10 moved, 5 min 5 s; tap command 0.77 s |
 | `regression`, #346's build (`7ccd74f`) | `TRIALS=20`: 20 moved, 10 min 44 s; tap to fling 807-1,019 ms (median 858) | not run |
 
