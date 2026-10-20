@@ -99,7 +99,7 @@ def schedule_line(
 
     Returns:
         E.g. "From the feed, updated 3 hours ago", or "Bundled with the app, updated
-        160 days ago" (the age of the snapshot's capture); "No schedule yet" without
+        8 days ago" (the age of the snapshot's capture); "No schedule yet" without
         data.
     """
     if source == "none" or fetched_at is None:
