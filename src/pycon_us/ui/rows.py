@@ -43,10 +43,11 @@ def LinkTile(
     title: str | ft.Text,
     target: str,
     *,
-    icon: ft.IconData | None = None,
+    icon: ft.IconData | ft.Control | None = None,
     subtitle: str | ft.Control | None = None,
     identifier: str | None = None,
     app: bool = False,
+    copy_identifier: str | None = None,
 ) -> ft.Control:
     """Return a row that opens ``target`` by the link rule: a page or a link.
 
@@ -67,13 +68,17 @@ def LinkTile(
         target: Where a tap goes: a page (``/more/speakers``), for a detail
             ``drill_href(view_path, ...)`` so Back returns to this row's View, or a URL
             (``link_kind()``).
-        icon: A leading icon, outlined (D-27); none for rows of names.
+        icon: A leading icon, outlined (D-27); none for rows of names. A control
+            stands as it is: a brand's mark beside a link to it (``brand_icon()``,
+            D-264).
         subtitle: A second line, if any: for a phone or email row, the number or the
             address. A control for lines of their own (the Map's "Now:" line), read
             with the title as one phrase.
         identifier: The row's semantics identifier for UI tests, e.g.
             ``more.speakers`` (decisions §M); a Copy button gets ``<identifier>.copy``.
         app: A web address opens in the app that handles it: a social profile, a map.
+        copy_identifier: The Copy button's identifier, where the screen names it
+            otherwise than ``<identifier>.copy`` (Help & safety's ``help.copy.<kind>``).
 
     Raises:
         ValueError: ``target`` is not a link the app opens (``link_kind()``).
@@ -81,7 +86,13 @@ def LinkTile(
     kind = link_kind(target, app=app)
     if kind is not LinkKind.PAGE:
         return _ExternalLinkTile(
-            title, target, kind, icon=icon, subtitle=subtitle, identifier=identifier
+            title,
+            target,
+            kind,
+            icon=icon,
+            subtitle=subtitle,
+            identifier=identifier,
+            copy_identifier=copy_identifier,
         )
     page = ft.context.page
 
@@ -102,9 +113,10 @@ def _ExternalLinkTile(
     target: str,
     kind: LinkKind,
     *,
-    icon: ft.IconData | None,
+    icon: ft.IconData | ft.Control | None,
     subtitle: str | ft.Control | None,
     identifier: str | None,
+    copy_identifier: str | None = None,
 ) -> ft.Control:
     """The external form of ``LinkTile``: a link that leaves the app, maybe with Copy."""
     svc = use_services()
@@ -135,9 +147,11 @@ def _ExternalLinkTile(
         ft.Icons.CONTENT_COPY_OUTLINED, tooltip=tooltip, on_click=copy
     )
     # One node either way, named by the tooltip (D-190, F55, D-234).
+    if copy_identifier is None and identifier is not None:
+        copy_identifier = f"{identifier}.copy"
     copy_button = (
-        named(f"{identifier}.copy", button)
-        if identifier is not None
+        named(copy_identifier, button)
+        if copy_identifier is not None
         else merged(button)
     )
     return ft.Row(
@@ -159,7 +173,7 @@ def _ExternalLinkTile(
 
 def _tile(
     title: str | ft.Text,
-    icon: ft.IconData | None,
+    icon: ft.IconData | ft.Control | None,
     subtitle: str | ft.Control | None,
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
@@ -182,7 +196,7 @@ def _tile(
     else:
         alignment, padding = ft.ListTileTitleAlignment.TOP, SUBTITLED_TOP
     return ft.ListTile(
-        leading=ft.Icon(icon) if icon is not None else None,
+        leading=ft.Icon(icon) if isinstance(icon, ft.IconData) else icon,
         title=title,
         subtitle=subtitle,
         trailing=trailing,

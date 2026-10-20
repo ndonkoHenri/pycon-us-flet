@@ -263,6 +263,7 @@ class FakePage:
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
+        self.on_resize: Any = None
         self.dialogs: list[ft.DialogControl] = []
         self.platform = ft.PagePlatform.IOS
         self.device: ft.DeviceInfo | None = None
@@ -375,6 +376,8 @@ class Hooks:
     )
     cleanups: list[Callable[[], Any] | None] = dataclasses.field(default_factory=list)
     state: Any = None
+    wide: bool = False
+    """The window class ``AppScaffold`` sees: True from 600 dp, the rail (D-277)."""
     renders: int = 0
     """How many re-renders a state setter asked for: only for a changed value."""
 

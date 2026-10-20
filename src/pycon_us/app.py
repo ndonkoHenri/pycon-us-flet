@@ -14,6 +14,7 @@ import flet as ft
 from pycon_us import clock
 from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.layout import Layout, LayoutCtx, follow_width, is_wide
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES
@@ -46,7 +47,8 @@ def App(memory: ViewMemory):
     """Build services and stores once, wait for the settings and the feed, then route.
 
     ``App`` subscribes to ``Prefs`` only (``use_state``), so it re-renders when a setting
-    or a device fact changes, never on a feed refresh.
+    or a device fact changes, never on a feed refresh. It provides ``Layout`` without
+    reading it: a rotation that crosses 600 dp re-renders the screens, not ``App``.
 
     Args:
         memory: The process's one ``ViewMemory`` (D-143).
@@ -59,6 +61,9 @@ def App(memory: ViewMemory):
     # favourites (D-255).
     change_log = ft.use_memo(lambda: ChangeLog(_favorites=favorites), [])
     conference = ft.use_memo(lambda: Conference(_change_log=change_log), [])
+    # The window's class from its first width, so the first screen has the right
+    # navigation (D-277); follow_width() keeps it in step.
+    layout = ft.use_memo(lambda: Layout(wide=is_wide(page.width)), [])
     prefs, _ = ft.use_state(Prefs)
 
     @report_errors
@@ -69,7 +74,12 @@ def App(memory: ViewMemory):
     def follow_theme() -> None:
         apply_theme(page, prefs)
 
+    @report_errors
+    def follow_window() -> None:
+        follow_width(page, layout)
+
     ft.use_effect(start, [])
+    ft.use_effect(follow_window, [])
     ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
@@ -91,7 +101,10 @@ def App(memory: ViewMemory):
                 prefs,
                 lambda: FavoritesCtx(
                     favorites,
-                    lambda: ChangeLogCtx(change_log, lambda: TokensCtx(tokens, router)),
+                    lambda: ChangeLogCtx(
+                        change_log,
+                        lambda: LayoutCtx(layout, lambda: TokensCtx(tokens, router)),
+                    ),
                 ),
             ),
         ),

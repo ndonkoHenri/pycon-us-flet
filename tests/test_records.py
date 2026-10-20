@@ -3,14 +3,16 @@
 The decoding of whole feeds, with named edge cases, is tested in ``test_feed.py``. These
 properties call the decoders directly, without the ``machine_tz`` fixture: hypothesis
 cannot rerun a function-scoped fixture per example, and the decoders take the zone as an
-argument.
+argument. The end of summer time is checked here too, on the decoders' own (#513).
 """
 
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import fields, is_dataclass
+from datetime import UTC, timedelta
 from zoneinfo import ZoneInfo
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -107,3 +109,56 @@ def test_no_decoded_string_holds_a_surrogate(text: str, key: int | str) -> None:
     strings = list(strings_in(decoded))
     assert expected(text) in strings  # pairs are joined, the rest of the text kept
     assert not any(SURROGATE.search(string) for string in strings)
+
+
+# ------------------------------------------------- the end of summer time (#513)
+
+# 1:40 PDT (08:40Z) to 1:10 PST (09:10Z) on 2026-11-01: half an hour, across the change.
+ACROSS_THE_CHANGE = ("2026-11-01T01:40:00-07:00", "2026-11-01T01:10:00-08:00")
+# 1:40 PDT (08:40Z) to 1:10 PDT (08:10Z): it really ends first.
+BACKWARDS = ("2026-11-01T01:40:00-07:00", "2026-11-01T01:10:00-07:00")
+
+
+def timed_slot(start: str, end: str) -> dict[str, object]:
+    """Return a minimal ``schedule`` record that runs from ``start`` to ``end``."""
+    return {
+        "conf_key": 142,
+        "name": "Talk",
+        "kind": "talk",
+        "room": "Room 1",
+        "start": start,
+        "end": end,
+    }
+
+
+def timed_open_space(start: str, end: str) -> dict[str, object]:
+    """Return a minimal ``open-spaces`` record that runs from ``start`` to ``end``."""
+    return {"conf_key": 1, "title": "Open space", "start": start, "end": end}
+
+
+DECODERS = [(records.slot, timed_slot), (records.open_space, timed_open_space)]
+
+
+@pytest.mark.parametrize(("decode", "make"), DECODERS)
+def test_a_session_across_the_end_of_summer_time_is_kept(
+    decode: Callable[[object, ZoneInfo], records.Slot | records.OpenSpace],
+    make: Callable[[str, str], dict[str, object]],
+) -> None:
+    """A session that ends 30 minutes after it starts is kept across the change.
+
+    Its wall clocks read 1:40 to 1:10, which a wall-clock check would refuse.
+    """
+    decoded = decode(make(*ACROSS_THE_CHANGE), ZONE)
+    assert decoded.start is not None and decoded.end is not None
+    length = decoded.end.astimezone(UTC) - decoded.start.astimezone(UTC)
+    assert length == timedelta(minutes=30)
+
+
+@pytest.mark.parametrize(("decode", "make"), DECODERS)
+def test_a_session_that_really_ends_first_is_still_refused(
+    decode: Callable[[object, ZoneInfo], records.Slot | records.OpenSpace],
+    make: Callable[[str, str], dict[str, object]],
+) -> None:
+    """A session whose end instant is before its start is refused, on that night too."""
+    with pytest.raises(ValueError, match="before it starts"):
+        decode(make(*BACKWARDS), ZONE)
