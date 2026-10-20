@@ -1,14 +1,15 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below, through ``year_schema``, then checks their rules. Three
+frozen dataclasses below, through ``year_schema``, then checks their rules. Four
 concerns have modules of their own, each with its tables and their checks: the track
 registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
-(D-217). The dataclasses are the schema: an unknown or missing key, a wrong type or a
-broken rule fails at load time with a ``YearDataError`` that names the file, the key and
-the problem. Years, dates, names and URLs live in the data files, never in code; rolling
-over is a new ``data/<year>/`` folder and a new ``YEAR``.
+(D-217), the info pages in ``year_info`` (D-263). The dataclasses are the schema: an
+unknown or missing key, a wrong type or a broken rule fails at load time with a
+``YearDataError`` that names the file, the key and the problem. Years, dates, names and
+URLs live in the data files, never in code; rolling over is a new ``data/<year>/`` folder
+and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).
@@ -22,6 +23,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
+from pycon_us.year_info import check_info
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_pages import (
     LightningTalksInfo,
@@ -314,6 +316,7 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
 def _check_content(content: Content, file: str) -> None:
     check_pages(content.open_spaces, content.lightning_talks, file)
     check_keynotes(content.keynotes, file)
+    check_info(content, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)

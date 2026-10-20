@@ -29,8 +29,8 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.day_groups import DayGroup
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader

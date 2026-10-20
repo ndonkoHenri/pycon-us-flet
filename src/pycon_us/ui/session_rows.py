@@ -28,13 +28,8 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import (
-    FavoriteButton,
-    ToggleFavorite,
-    TrackBadge,
-    badge_row,
-    badge_specs,
-)
+from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
+from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite
 from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
 from pycon_us.ui.semantics import semantics_key
 

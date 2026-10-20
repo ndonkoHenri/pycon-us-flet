@@ -1,19 +1,29 @@
-"""Decode the feed's JSON records into frozen records (D-42; DATA-01, DATA-24, DATA-26).
+"""Decode the feed's JSON records into frozen records (D-42; DATA-01, DATA-22, DATA-24, DATA-26).
 
 Each decoder takes one JSON value and returns its record, or raises ``TypeError`` or
 ``ValueError`` naming the field and the problem; ``feed.process()`` then skips that record.
 Ids become strings and times aware datetimes in the conference zone, and a lone surrogate
 in a string becomes U+FFFD (#150). Unknown fields are ignored. ``Slot`` and ``OpenSpace``
 are the feed as it is, before Ionic's rules (``core/rules.py``) make sessions of them.
+Sponsors have no id for ``feed.process()`` to check, so ``sponsor_levels()`` decodes the
+whole section and skips its own bad records.
 """
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from pycon_us.core.models import JobListing, Poster, Speaker, Sprint
+from pycon_us.core.models import (
+    JobListing,
+    Poster,
+    Speaker,
+    Sponsor,
+    SponsorLevel,
+    Sprint,
+)
+from pycon_us.core.slugs import sponsor_slug
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +216,84 @@ def job_listing(item: object) -> JobListing:
     )
 
 
+def sponsor_levels(
+    document: Mapping[str, object], skip: Callable[[str, object], None]
+) -> list[SponsorLevel]:
+    """Decode ``conference.sponsors``, an object of sponsor lists keyed by level (DATA-22).
+
+    A feed without the section has no levels. A section that is not an object, a level
+    that is not a list and a sponsor that cannot be read are each passed to ``skip``, and
+    the rest is kept; a level left without sponsors is not listed. The levels come in
+    feed order: ``feed.process()`` sorts them.
+
+    Args:
+        document: The whole feed; ``feed.process()`` has checked that its
+            ``conference``, when present, is an object.
+        skip: Called with where and why for each record that cannot be read.
+
+    Returns:
+        The levels with at least one sponsor, in feed order.
+    """
+    conference = document.get("conference")
+    sponsors = conference.get("sponsors") if isinstance(conference, dict) else None
+    if sponsors is None:
+        return []
+    if not isinstance(sponsors, dict):
+        skip("conference.sponsors", f"should be an object, got {sponsors!r}")
+        return []
+    levels: list[SponsorLevel] = []
+    for key, items in sponsors.items():
+        level = without_surrogates(key)
+        where = f"conference.sponsors[{level!r}]"
+        if not isinstance(items, list):
+            skip(where, f"should be a list, got {items!r}")
+            continue
+        decoded: list[Sponsor] = []
+        for index, item in enumerate(items):
+            try:
+                decoded.append(sponsor(item, level))
+            except (TypeError, ValueError) as error:
+                skip(f"{where}[{index}]", error)
+        if decoded:  # Ionic sorted a level by its first sponsor's level_order
+            levels.append(SponsorLevel(level, decoded[0].level_order, tuple(decoded)))
+    return levels
+
+
+def sponsor(item: object, level: str) -> Sponsor:
+    """Decode one sponsor of the level ``level``.
+
+    Its ``description`` is plain text: its line breaks are kept, each one line feed (the
+    feed writes some as CR LF). An empty booth or table reads as None, as Ionic showed
+    no pill for one.
+    """
+    record = _object(item)
+    name = _text(record, "name")
+    slug = sponsor_slug(name)
+    if not slug.strip("-"):  # a blank name, or one of spaces and marks, slugs to dashes
+        raise ValueError(f"'name' has no letter or digit to make a slug of: {name!r}")
+    level_order = record.get("level_order")
+    if type(level_order) is not int:
+        raise TypeError(f"'level_order' should be an integer, got {level_order!r}")
+    mobile_banner = record.get("mobile_banner")  # missing or null: no spotlight
+    if not isinstance(mobile_banner, bool | None):
+        raise TypeError(
+            f"'mobile_banner' should be true or false, got {mobile_banner!r}"
+        )
+    description = _text(record, "description", optional=True)
+    return Sponsor(
+        name=name,
+        slug=slug,
+        level=level,
+        level_order=level_order,
+        logo_url=_text(record, "logo_url", optional=True),
+        description=description.replace("\r\n", "\n").replace("\r", "\n"),
+        booth=_place(record, "booth_number"),
+        job_fair_table=_place(record, "job_fair_table_number"),
+        mobile_banner=bool(mobile_banner),
+        external_url=_text(record, "external_url", optional=True) or None,
+    )
+
+
 def without_surrogates(value: str) -> str:
     r"""Return ``value`` with each lone surrogate replaced by U+FFFD; the rest is kept.
 
@@ -240,6 +328,20 @@ def _text(record: Mapping[str, object], key: str, *, optional: bool = False) -> 
     if not isinstance(value, str):
         raise TypeError(f"{key!r} should be a string, got {value!r}")
     return without_surrogates(value)
+
+
+def _place(record: Mapping[str, object], key: str) -> str | None:
+    """Return a booth or table as text, or None when it is missing, null or blank.
+
+    The feed writes them as strings; a number reads as its digits, as Ionic's
+    ``String(booth_number)`` read it.
+    """
+    value = record.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | str):
+        raise TypeError(f"{key!r} should be a string, got {value!r}")
+    return without_surrogates(str(value)).strip() or None
 
 
 def _id(record: Mapping[str, object], key: str) -> str:

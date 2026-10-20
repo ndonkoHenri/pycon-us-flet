@@ -8,7 +8,7 @@ saves it again, and its row returns.
 
 import flet.testing as ftt
 
-from pycon_us.ui.badges import REMOVED
+from pycon_us.ui.favorite import REMOVED
 from tests.ui.developer import before_conference, fresh_start
 from tests.ui.helpers import (
     open_tab,

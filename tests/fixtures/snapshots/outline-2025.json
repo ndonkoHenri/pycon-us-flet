@@ -897,5 +897,152 @@
   "130: Peter Sobot",
   "97: Amethyst Reese 🌸",
   "50: Sev Leonard"
+ ],
+ "sponsors": [
+  {
+   "Visionary (0)": [
+    "google | Google | banner",
+    "nvidia | NVIDIA | banner",
+    "meta | Meta | booth 501 | table T3 | banner",
+    "bloomberg | Bloomberg | booth 315 | table T2 | banner",
+    "fastly | Fastly | booth 509 | banner"
+   ]
+  },
+  {
+   "Sustainability (1)": [
+    "microsoft | Microsoft | booth 301 | banner"
+   ]
+  },
+  {
+   "Maintaining (2)": [
+    "snowflake | Snowflake | booth 309 | banner",
+    "mongodb | MongoDB | booth 407 | banner",
+    "aws | AWS | booth 401 | table T1 | banner",
+    "qube-research--technologies | Qube Research & Technologies | booth 412 | table T5 | banner",
+    "red-hat | Red Hat | banner",
+    "american-express | American Express | banner",
+    "capital-one | Capital One | booth 212 | table T4 | banner"
+   ]
+  },
+  {
+   "Contributing (3)": [
+    "anaconda-inc | Anaconda, Inc | booth 601",
+    "jetbrains | JetBrains | booth 421",
+    "indeed | Indeed",
+    "cubist-systematic-strategies | Cubist Systematic Strategies | booth 330",
+    "openedg-python-institute | OpenEDG Python Institute | booth 216",
+    "western-governors-university-wgu | Western Governors University (WGU) | booth 605"
+   ]
+  },
+  {
+   "Supporting (4)": [
+    "ansys | Ansys | table T7",
+    "autokitteh | AutoKitteh | booth 526",
+    "gel | Gel | booth 326",
+    "sentry | Sentry | booth 608",
+    "jane-street | Jane Street | booth 100",
+    "old-mission | Old Mission | booth 534 | table T6",
+    "pydanticai | PydanticAI | booth 427",
+    "salesforce-heroku | Salesforce Heroku | booth 221",
+    "algorand | Algorand | booth 611"
+   ]
+  },
+  {
+   "Partner (5)": [
+    "codspeed | CodSpeed | booth 519",
+    "datadog | Datadog | booth 532",
+    "anvil | Anvil | booth 517 | table T11",
+    "redis | Redis | booth 220",
+    "codeflash | Codeflash | booth 629 | table T17",
+    "reuven-lerner--python-training | Reuven Lerner — Python training | booth 231 | table T9",
+    "coiled | Coiled | booth 233",
+    "dagster-labs | Dagster Labs | booth 521",
+    "temporal | Temporal | booth 435 | table T24",
+    "chainguard | Chainguard | booth 235 | table T10",
+    "posit-pbc | Posit, PBC | booth 523",
+    "alphasense | AlphaSense | booth 218 | table T9",
+    "kensho | Kensho | booth 222 | table T12",
+    "duolingo | Duolingo | booth 334 | table T8",
+    "reversinglabs | ReversingLabs | booth 525",
+    "analog-devices-inc | Analog Devices, Inc.",
+    "motional | Motional",
+    "hudson-river-trading | Hudson River Trading | booth 433"
+   ]
+  },
+  {
+   "Participating (6)": [
+    "parafin | Parafin | booth 332 | table T16",
+    "commonwealth-bank-of-australia | Commonwealth Bank of Australia",
+    "astral | Astral",
+    "litestar | Litestar",
+    "python-engineer-development-association | Python Engineer Development Association",
+    "six-feet-up | Six Feet Up",
+    "hackers-guild-pgh | Hackers Guild PGH",
+    "no-starch-press | No Starch Press",
+    "packt | Packt",
+    "netflix | Netflix"
+   ]
+  },
+  {
+   "Associate (7)": [
+    "feedzai | Feedzai",
+    "beproud | BeProud",
+    "quansight | Quansight"
+   ]
+  },
+  {
+   "Standalone Only (8)": [
+    "povera-loads--logic | Povera Loads & Logic | table T15",
+    "fern | Fern",
+    "research-affiliates-llc | Research Affiliates LLC | table T14"
+   ]
+  },
+  {
+   "AV Partner (10)": [
+    "altitudec | Altitude/C | banner"
+   ]
+  },
+  {
+   "Media (12)": [
+    "cultrepo | Cult.Repo",
+    "devitjobs | DevITjobs",
+    "the-new-stack | The New Stack",
+    "linux-magazine | Linux Magazine",
+    "technically | Technical.ly",
+    "open-source-jobhub | Open Source JobHub",
+    "lwnnet | LWN.net"
+   ]
+  },
+  {
+   "PyCon US Startup Row (13)": [
+    "diffstudio-labs-llc | DiffStudio Labs LLC | booth 123",
+    "fabiai | Fabi.ai | booth 121 | table T22",
+    "griptape | Griptape | booth 117",
+    "all-hands-ai | All Hands AI | booth 116",
+    "mljar | MLJAR | booth 118",
+    "gooeyai | Gooey.AI | booth 122",
+    "ragas | Ragas | booth 119",
+    "agentopsai | AgentOpsAI | booth 120"
+   ]
+  },
+  {
+   "Community (14)": [
+    "pybeach | PyBeach | table T19",
+    "python-software-foundation | Python Software Foundation | booth 201",
+    "electronic-frontier-foundation | Electronic Frontier Foundation",
+    "postgresql | PostgreSQL",
+    "europython-society | EuroPython Society | booth 623 | table T21",
+    "python-asia-organization | Python Asia Organization | booth 625 | table T23",
+    "codeday | CodeDay | booth 620",
+    "black-python-devs | Black Python Devs | booth 616 | table T18",
+    "code--supply | Code & Supply | booth 619",
+    "pydata-pittsburgh | PyData Pittsburgh | booth 621 | table T20",
+    "pyladies | PyLadies | booth 624",
+    "django-software-foundation | Django Software Foundation | booth 618",
+    "the-carpentries | The Carpentries | booth 622",
+    "python-en-espaol | Python en Español | booth 617",
+    "numfocus | NumFOCUS | booth 101"
+   ]
+  }
  ]
 }
