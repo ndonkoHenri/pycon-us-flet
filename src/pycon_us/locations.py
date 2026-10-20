@@ -33,6 +33,7 @@ PAGES = frozenset(
         "/more/sponsors",
         "/more/app",
         "/more/developer",
+        "/more/wifi",
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).
