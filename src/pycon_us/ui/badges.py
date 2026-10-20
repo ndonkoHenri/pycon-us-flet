@@ -1,11 +1,12 @@
 """A session's badges (decisions §M): the pills that say its track and its flags.
 
 A badge is a text pill: a tonal fill per track in light and dark, or an outline for
-"Registration required" (D-25; ux.md §3.4). Badges always carry text, so colour is never
-the only signal (D-33), and every name comes from ``ConferenceInfo.track_name()``
-(DATA-28). The colours are the current scheme's ``Tokens`` (D-24); the builders take
-them as an argument, so a memoised row (D-153) that receives the tokens as a prop
-(D-150) still draws the scheme on screen.
+"Registration required" (D-25; ux.md §3.4); in high contrast every badge is outlined,
+1.5 dp wide (THEME-06). Badges always carry text, so colour is never the only signal
+(D-33), and every name comes from ``ConferenceInfo.track_name()`` (DATA-28). The
+colours are the current scheme's ``Tokens`` (D-24); the builders take them as an
+argument, so a memoised row (D-153) that receives the tokens as a prop (D-150) still
+draws the scheme on screen.
 
 The star beside them, and the SnackBars of a favourites edit, are ``ui/favorite.py``'s
 (D-267).
@@ -15,7 +16,8 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.models import Session
-from pycon_us.theme import BadgeColors, Tokens
+from pycon_us.theme import Tokens
+from pycon_us.theme_badges import BadgeColors
 
 SPANISH = "En Español"
 """The label of a session given in Spanish (DATA-10)."""
@@ -47,9 +49,10 @@ def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
             text_align=ft.TextAlign.CENTER,  # for a label that wraps at large text
         ),
         bgcolor=colors.fill,
-        # Every badge has a 1 dp border, its fill's colour on a tonal one, so an
-        # outlined badge is exactly as large as the tonal ones beside it.
-        border=ft.Border.all(1, colors.fill or colors.text),
+        # Every badge has a border, its fill's colour on a tonal one, so an outlined
+        # badge is exactly as large as the tonal ones beside it: 1 dp, or 1.5 dp for
+        # every badge in high contrast (THEME-06).
+        border=ft.Border.all(colors.border_width, colors.fill or colors.text),
         border_radius=8,
         padding=ft.Padding.symmetric(horizontal=8, vertical=2),
     )

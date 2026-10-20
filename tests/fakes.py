@@ -19,6 +19,7 @@ import pytest
 from flet.controls.context import _context_page
 
 from pycon_us.services import storage
+from pycon_us.theme import LIGHT_TOKENS, Tokens
 
 
 class MemoryPrefs(ft.SharedPreferences):
@@ -340,6 +341,8 @@ class Hooks:
     """The hooks the builders call, answered by the test instead of a renderer."""
 
     view_path: str = "/now"
+    tokens: Tokens = LIGHT_TOKENS
+    """What ``use_tokens()`` returns: the scheme on screen (D-150)."""
     effects: list[tuple[Callable[[], Any], list[Any] | None]] = dataclasses.field(
         default_factory=list
     )

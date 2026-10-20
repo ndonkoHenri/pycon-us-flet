@@ -1,6 +1,8 @@
-"""Tests for the high-contrast colour schemes and how the app picks them.
+"""Tests for the high-contrast colour schemes, their tokens and how the app picks them.
 
-D-23, D-151, D-265; THEME-04, THEME-05; ux.md §3.2; testing-and-quality.md §7.1.
+D-23, D-151, D-265, D-285; THEME-04..06, THEME-08; ux.md §3.2..§3.4;
+testing-and-quality.md §7.1. The line above the bottom bar is tested with the bar, in
+``test_navigation.py``.
 """
 
 import dataclasses
@@ -13,9 +15,18 @@ import pytest
 from pycon_us import theme
 from pycon_us.app import apply_theme
 from pycon_us.prefs import Prefs
+from pycon_us.theme_badges import HC_BADGE_BORDER, BadgeColors
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
+from pycon_us.ui.badges import TrackBadge
 from tests.fakes import FakePage
-from tests.test_theme import FLET_THEME_DART, NEUTRAL_RAMP, contrast_ratio, hex_role
+from tests.test_theme import (
+    FLET_THEME_DART,
+    NEUTRAL_RAMP,
+    TEXT_TOKENS,
+    badges,
+    contrast_ratio,
+    hex_role,
+)
 
 AAA_TEXT = 7.0
 """High contrast's text minimum (D-23, D-33)."""
@@ -73,8 +84,12 @@ SCHEME_FIELDS = {
     "canvas_color": None,
     "card_bgcolor": None,
     "divider_color": None,
+    "card_theme": None,
 }
-"""The theme fields that come from the scheme; the rest is the same in every scheme."""
+"""The theme fields that come from the scheme; the rest is the same in every scheme.
+
+HC's card theme is one of them: its cards are flat and bordered (THEME-06).
+"""
 
 
 def hc_scheme(dark: bool) -> ft.ColorScheme:
@@ -293,12 +308,113 @@ def test_the_navigation_bar_takes_the_hc_navigation_bar_fill(dark: bool) -> None
     assert re.fullmatch(r"#[0-9A-F]{6}", str(color))
 
 
+@pytest.mark.parametrize(
+    ("dark", "live", "warning"),
+    [(False, "#0F5A26", "#7A4A00"), (True, "#30D158", "#FFD60A")],
+    ids=["light", "dark"],
+)
+def test_the_hc_tokens_follow_the_ux_table(dark: bool, live: str, warning: str) -> None:
+    """HC's text tokens are ux.md §3.3's: success is live, the star is the ink."""
+    tokens = theme.build_tokens(dark=dark, high_contrast=True)
+    assert (tokens.live, tokens.warning, tokens.success) == (live, warning, live)
+    assert tokens.favorite == hc_scheme(dark).on_surface
+
+
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
-def test_tokens_stay_the_standard_ones_until_p2_60(dark: bool) -> None:
-    """High contrast keeps the standard tokens; P2-60 (#420) gives it its own."""
-    assert theme.build_tokens(dark=dark, high_contrast=True) == theme.build_tokens(
-        dark=dark, high_contrast=False
-    )
+def test_only_the_hc_tokens_carry_the_high_contrast_flag(dark: bool) -> None:
+    """The flag is on in HC's tokens and off in the standard ones (D-285)."""
+    assert theme.build_tokens(dark=dark, high_contrast=True).high_contrast is True
+    assert theme.build_tokens(dark=dark, high_contrast=False).high_contrast is False
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_the_hc_text_tokens_read_at_7_to_1_on_every_surface(dark: bool) -> None:
+    """Live, warning, success and the star read at 7:1 on every HC surface."""
+    tokens = theme.build_tokens(dark=dark, high_contrast=True)
+    color_scheme = hc_scheme(dark)
+    for surface in SURFACES:
+        background = hex_role(color_scheme, surface)
+        for name in TEXT_TOKENS:
+            ratio = contrast_ratio(getattr(tokens, name), background)
+            assert ratio >= AAA_TEXT, (surface, name, round(ratio, 2))
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_hc_badge_is_outlined_1_5_dp(dark: bool) -> None:
+    """Every HC badge has no fill and a 1.5 dp outline (ux.md §3.4, THEME-06).
+
+    Tracks, the unknown track's grey and En Español in ``on_surface``; Registration
+    required keeps ``error`` and New track ``primary``.
+    """
+    tokens = theme.build_tokens(dark=dark, high_contrast=True)
+    s = hc_scheme(dark)
+    for name, colors in badges(tokens).items():
+        assert (colors.fill, colors.border_width) == (None, HC_BADGE_BORDER), name
+    ink = BadgeColors(text=str(s.on_surface), border_width=HC_BADGE_BORDER)
+    assert set(tokens.tracks.values()) == {ink}
+    assert (tokens.unknown_track, tokens.spanish) == (ink, ink)
+    assert tokens.registration.text == s.error
+    assert tokens.new_track.text == s.primary
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_every_hc_badge_label_reads_at_7_to_1_on_every_surface(dark: bool) -> None:
+    """An outlined label sits on the surface itself: 7:1 on every HC surface role."""
+    tokens = theme.build_tokens(dark=dark, high_contrast=True)
+    color_scheme = hc_scheme(dark)
+    for surface in SURFACES:
+        background = hex_role(color_scheme, surface)
+        for name, colors in badges(tokens).items():
+            ratio = contrast_ratio(colors.text, background)
+            assert ratio >= AAA_TEXT, (surface, name, round(ratio, 2))
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_hc_has_a_badge_for_every_track_the_palette_knows(dark: bool) -> None:
+    """HC outlines the same track keys the tonal palette colours, no more, no fewer."""
+    hc = theme.build_tokens(dark=dark, high_contrast=True)
+    standard = theme.build_tokens(dark=dark, high_contrast=False)
+    assert hc.tracks.keys() == standard.tracks.keys()
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_outside_hc_every_badge_keeps_its_1_dp_border(dark: bool) -> None:
+    """The standard schemes' badges are unchanged: a 1 dp border on every one."""
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    for name, colors in badges(tokens).items():
+        assert colors.border_width == 1, name
+
+
+def test_an_hc_badge_is_drawn_with_a_1_5_dp_border_and_no_fill() -> None:
+    """``TrackBadge`` draws an HC badge as its label in a 1.5 dp outline, unfilled."""
+    colors = theme.HC_LIGHT_TOKENS.track_badge("Talk")
+    badge = TrackBadge("Talk", colors)
+    assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
+    assert badge.bgcolor is None
+    assert badge.border == ft.Border.all(1.5, "#1A1D24")
+    assert badge.content.color == "#1A1D24"
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_hc_cards_are_flat_with_a_1_dp_outline(dark: bool) -> None:
+    """HC cards have no shadow and a 1 dp border in ``outline``, named as a hex.
+
+    In a component theme a role resolves against the seeded scheme (U64), where
+    ``outline`` is a mid grey, so the colour is the HC scheme's own value.
+    """
+    cards = theme.build_theme(dark=dark, high_contrast=True).card_theme
+    assert cards is not None and cards.elevation == 0
+    shape = cards.shape
+    assert isinstance(shape, ft.RoundedRectangleBorder) and shape.radius == 12
+    assert shape.side is not None
+    assert (shape.side.width, shape.side.color) == (1, hc_scheme(dark).outline)
+    assert re.fullmatch(r"#[0-9A-F]{6}", str(shape.side.color))
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_standard_cards_keep_material_s_defaults(dark: bool) -> None:
+    """Outside HC the theme sets no card theme: cards keep their fills and shadows."""
+    assert theme.build_theme(dark=dark, high_contrast=False).card_theme is None
 
 
 @pytest.mark.parametrize(
