@@ -44,6 +44,7 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import SessionRow, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.time_gutter import TimeSlot
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "open_spaces"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -62,6 +63,7 @@ def OpenSpaces() -> ft.View:
     """The Open spaces page: a tab per day, each day's open spaces in time slots."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     prefs = use_prefs()
@@ -100,11 +102,14 @@ def OpenSpaces() -> ft.View:
                 )
             ],
             expand=True,
+            padding=sides(margin),
         )
         return AppScaffold(title=TITLE, actions=actions, body=body)
     if not days:
         url = copy.propose_url if copy else None
-        return AppScaffold(title=TITLE, actions=actions, body=none_yet(url, svc))
+        return AppScaffold(
+            title=TITLE, actions=actions, body=none_yet(url, svc, margin)
+        )
 
     dates = [day for day, _ in days]
     current = today(clock.now(), info.zone)
@@ -141,13 +146,16 @@ def OpenSpaces() -> ft.View:
         expand=True,
         content=ft.Column(
             [
-                ft.TabBar(
-                    [
-                        day_tab(i, day, is_today=day == current, screen=SCREEN)
-                        for i, day in enumerate(dates)
-                    ],
-                    scrollable=True,  # three days fit no phone at large text
-                    tab_alignment=ft.TabAlignment.START,
+                capped(
+                    ft.TabBar(
+                        [
+                            day_tab(i, day, is_today=day == current, screen=SCREEN)
+                            for i, day in enumerate(dates)
+                        ],
+                        scrollable=True,  # three days fit no phone at large text
+                        tab_alignment=ft.TabAlignment.START,
+                    ),
+                    margin,
                 ),
                 ft.TabBarView(pages, expand=True),
             ],
@@ -211,7 +219,7 @@ def propose_button(url: str, svc: Services) -> ft.Control:
     )
 
 
-def none_yet(url: str | None, svc: Services) -> ft.Control:
+def none_yet(url: str | None, svc: Services, margin: float) -> ft.Control:
     """Return the page of a feed without open spaces: why, and "Propose one".
 
     Open spaces are proposed during the conference, so before it the feed has none:
@@ -221,6 +229,7 @@ def none_yet(url: str | None, svc: Services) -> ft.Control:
         url: The year's sign-up, or None for a year without one: no button then, and
             the sentence says the app shows them on its own (D-175).
         svc: The session's services, for the launcher.
+        margin: The screen's side margin (``ui.widths.use_margin()``).
     """
     on_action = None
     if url is not None:
@@ -244,6 +253,7 @@ def none_yet(url: str | None, svc: Services) -> ft.Control:
             )
         ],
         expand=True,
+        padding=sides(margin),
     )
 
 
@@ -304,8 +314,13 @@ def _DayList(
     intro: str,
     omit: frozenset[str],
 ) -> ft.Control:
-    """The body of ``DayList``; it runs only when its props change (F34)."""
+    """The body of ``DayList``; it runs only when its props change (F34).
+
+    It also follows the screen's side margin (``use_margin()``, D-305), which changes
+    only with the window.
+    """
     zone = use_services().year.conference.zone
+    margin = use_margin(LIST)
     items: list[ft.Control] = []
     if intro:
         items.append(
@@ -337,5 +352,5 @@ def _DayList(
         items,
         key=f"day-{day.isoformat()}",
         expand=True,
-        padding=ft.Padding.only(bottom=8),
+        padding=sides(margin, bottom=8),
     )

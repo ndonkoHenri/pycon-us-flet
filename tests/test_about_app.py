@@ -49,6 +49,7 @@ from tests.fakes import (
     MemorySemantics,
     MemoryShare,
     bound,
+    phone_margin,
 )
 from tests.feeds import recorded
 
@@ -130,6 +131,7 @@ def render(
     monkeypatch.setattr(about_app, "use_services", lambda: svc)
     monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
     monkeypatch.setattr(about_app, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(about_app, "use_margin", phone_margin)
     monkeypatch.setattr(about_app, "ConferenceData", lambda: CONFERENCE_DATA)
     monkeypatch.setattr(about_app, "HelpUsFixIt", lambda: HELP_US_FIX_IT)
     monkeypatch.setattr(

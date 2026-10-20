@@ -29,6 +29,7 @@ from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.rows import LinkTile, SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "search"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -112,6 +113,7 @@ def ResultList(
         state: What shows instead of results (the hint, a miss, no data), or None.
     """
     view_path = ft.use_view_path()
+    margin = use_margin(LIST)  # its width class (D-305)
     # The types the user asked to see whole, and the results they asked it of: other
     # results start cut again (D-218). Equal results are the same search, so a
     # keystroke that changes nothing keeps what was opened.
@@ -140,7 +142,7 @@ def ResultList(
         set_asked((results, whole | {e.control.data}))  # the row's type
 
     if state is not None:
-        return ft.ListView([state], expand=True)
+        return ft.ListView([state], expand=True, padding=sides(margin))
     titled = sum(map(bool, (results.sessions, results.speakers, results.rooms))) > 1
     day_level = 3 if titled else 2
     sections: list[tuple[str, list[ft.Control]]] = []
@@ -177,7 +179,7 @@ def ResultList(
                 items.append(ft.Divider(height=1))
             items.append(type_heading(name))
         items.extend(rows)
-    return ft.ListView(items, expand=True)
+    return ft.ListView(items, expand=True, padding=sides(margin))
 
 
 def type_heading(name: str) -> ft.Control:

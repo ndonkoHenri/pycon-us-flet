@@ -265,6 +265,7 @@ class FakePage:
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
+        self.on_media_change: Any = None
         self.on_resize: Any = None
         self.dialogs: list[ft.DialogControl] = []
         self.platform = ft.PagePlatform.IOS
@@ -436,3 +437,8 @@ class QueuedWrite:
     def release(self) -> None:
         """Let the held worker take the lock and write."""
         self._go.set()
+
+
+def phone_margin(cap: float) -> float:
+    """``use_margin()``'s stand-in: a phone's, no side margin at any width class (D-305)."""
+    return 0.0

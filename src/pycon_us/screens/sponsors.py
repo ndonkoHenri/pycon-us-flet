@@ -36,6 +36,7 @@ from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "sponsors"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -107,6 +108,7 @@ def booth_line(sponsor: Sponsor) -> str | None:
 def Sponsors() -> ft.View:
     """The Sponsors page: the strip, then the intro and a section per level."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     data = conference.data
 
@@ -149,7 +151,7 @@ def Sponsors() -> ft.View:
             items.extend(level_section(level, tier_of(position)))
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24)),
+        body=ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
     )
 
 

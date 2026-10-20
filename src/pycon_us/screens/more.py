@@ -21,6 +21,7 @@ from pycon_us.services import use_services
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 
 class MoreEntry(NamedTuple):
@@ -86,6 +87,7 @@ MORE_PAGES = (
 def More() -> ft.View:
     """The More root: its sections, the search, and a re-tap that scrolls to the top."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     svc = use_services()
     prefs = use_prefs()
     you = [SETTINGS, ABOUT_APP]
@@ -109,6 +111,7 @@ def More() -> ft.View:
             ],
             expand=True,
             ref=list_ref,
+            padding=sides(margin),
         ),
         on_retap=scroll_to_top,
     )

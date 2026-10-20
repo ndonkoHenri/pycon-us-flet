@@ -32,6 +32,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 
 DATA_SECTION = ft.Text("Data section")
@@ -78,6 +79,7 @@ def render(
     monkeypatch.setattr(settings, "use_services", lambda: svc)
     monkeypatch.setattr(settings, "use_prefs", lambda: prefs)
     monkeypatch.setattr(settings, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(settings, "use_margin", phone_margin)
     monkeypatch.setattr(settings, "DataSection", lambda slot: DATA_SECTION)
 
     def render() -> dict[str, Any]:

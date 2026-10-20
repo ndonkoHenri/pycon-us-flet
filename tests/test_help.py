@@ -23,7 +23,7 @@ from pycon_us.screens import help as help_screen
 from pycon_us.screens.help import Help, contact_line, help_blocks
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.ui import rows
+from pycon_us.ui import info_page, rows
 from pycon_us.ui.info_page import FeedBlock
 from pycon_us.year_info import SafetyContact
 from tests.fakes import (
@@ -34,6 +34,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 
 HOTLINE = SafetyContact(
@@ -78,6 +79,7 @@ def render(
 ) -> Callable[[Services], dict[str, Any]]:
     """Render ``Help`` once over the given services and return its scaffold's kwargs."""
     monkeypatch.setattr(help_screen, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(info_page, "use_margin", phone_margin)
 
     def render(svc: Services) -> dict[str, Any]:
         """``Help``'s body, its services answered with ``svc``."""

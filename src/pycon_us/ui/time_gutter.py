@@ -14,7 +14,7 @@ from collections.abc import Sequence
 import flet as ft
 
 from pycon_us.core.timefmt import on_screen
-from pycon_us.layout import is_wide
+from pycon_us.layout import LIST_DP, is_wide
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.navigation import RAIL_WIDTH
@@ -51,14 +51,16 @@ def slot_width(view_width: float) -> float:
     """Return the width a slot has in a View ``view_width`` dp wide (D-216, D-277).
 
     The View's own width, less the rail's from 600 dp, where tab roots show it beside
-    the body. Pushed Views have no rail, so there a slot has ``RAIL_WIDTH`` more than
-    this: one answer for every View errs towards the time above. The rail widens at
-    large text, so this is the most a slot beside it can have.
+    the body, and at most ``LIST_DP``: every list with slots is capped at a list's
+    width (D-305). Pushed Views have no rail, so there a slot has ``RAIL_WIDTH`` more
+    than this: one answer for every View errs towards the time above. The rail widens
+    at large text, so this is the most a slot beside it can have.
 
     Args:
         view_width: The View's width in dp, as ``GutterProbe`` measured it.
     """
-    return view_width - RAIL_WIDTH if is_wide(view_width) else view_width
+    beside_rail = view_width - RAIL_WIDTH if is_wide(view_width) else view_width
+    return min(beside_rail, LIST_DP)
 
 
 def TimeGutter(label: str) -> ft.Control:
@@ -165,7 +167,8 @@ def GutterProbe() -> ft.Control:
     stack's layout (F51).
 
     It measures the View's width, beside the body's ``SafeArea``, not inside it, and
-    from 600 dp takes the rail's width off it (``slot_width()``, D-277). Only in
+    from 600 dp takes the rail's width off it and caps it at a list's 840 dp
+    (``slot_width()``, D-277, D-305). Only in
     landscape on a phone with a notch or a cutout do the SafeArea's side insets make
     a slot narrower than that, by up to about 15 %, and there even the largest gutter
     stays under a fifth of the narrower width (D-216), so the answer is the same.

@@ -14,7 +14,7 @@ import flet as ft
 from pycon_us import clock
 from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.favorites import Favorites, FavoritesCtx
-from pycon_us.layout import Layout, LayoutCtx, follow_width, is_wide
+from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES
@@ -64,9 +64,9 @@ def App(memory: ViewMemory):
     # favourites (D-255).
     change_log = ft.use_memo(lambda: ChangeLog(_favorites=favorites), [])
     conference = ft.use_memo(lambda: Conference(_change_log=change_log), [])
-    # The window's class from its first width, so the first screen has the right
-    # navigation (D-277); follow_width() keeps it in step.
-    layout = ft.use_memo(lambda: Layout(wide=is_wide(page.width)), [])
+    # The window's class and room from its first width, so the first screen has the
+    # right navigation and content width (D-277, D-305); follow_width() keeps it in step.
+    layout = ft.use_memo(lambda: layout_for(page), [])
     prefs, _ = ft.use_state(Prefs)
 
     @report_errors

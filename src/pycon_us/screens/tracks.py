@@ -40,6 +40,7 @@ from pycon_us.theme_badges import BadgeColors
 from pycon_us.ui.badges import NEW_TRACK, TrackBadge
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import HUB_PAGES, Track
 
 SCREEN = "tracks"
@@ -167,6 +168,7 @@ def sprints_marks(info: ConferenceInfo, projects: int) -> tuple[str, str]:
 def Tracks() -> ft.View:
     """The Tracks hub: the year's tracks by group, each pushing its page."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     tokens = use_tokens()
     info = svc.year.conference
@@ -218,7 +220,8 @@ def Tracks() -> ft.View:
                 items.append(_heading(GROUP_TITLES["community"]))
             items.append(sprints_row(info, len(data.sprints), tokens))
     return AppScaffold(
-        title="Tracks & session types", body=ft.ListView(items, expand=True)
+        title="Tracks & session types",
+        body=ft.ListView(items, expand=True, padding=sides(margin)),
     )
 
 

@@ -35,6 +35,7 @@ from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "speakers"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -53,6 +54,7 @@ CLEAR_FILTER = "Clear filter"
 def Speakers() -> ft.View:
     """The Speakers page: a filter field over the directory, by letter."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     field = use_field_query()
     tokens = use_tokens()
@@ -118,25 +120,28 @@ def Speakers() -> ft.View:
                 # The count goes after the field, in a column of their own: put
                 # between the field and the list, it would move the list to another
                 # place in the body, and Flet would rebuild it and every row (D-153).
-                ft.Column(
-                    [
-                        SearchField(
-                            value=field.value,
-                            on_change=field.changed,
-                            on_clear=field.clear,
-                            ref=field.ref,
-                            hint=FILTER_HINT,
-                            label=FILTER_HINT,
-                            clear_tooltip=CLEAR_FILTER,
-                            identifier=f"{SCREEN}.filter",
-                            high_contrast=tokens.high_contrast,
-                        ),
-                        *([count] if count else []),
-                    ],
-                    spacing=0,
-                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                capped(
+                    ft.Column(
+                        [
+                            SearchField(
+                                value=field.value,
+                                on_change=field.changed,
+                                on_clear=field.clear,
+                                ref=field.ref,
+                                hint=FILTER_HINT,
+                                label=FILTER_HINT,
+                                clear_tooltip=CLEAR_FILTER,
+                                identifier=f"{SCREEN}.filter",
+                                high_contrast=tokens.high_contrast,
+                            ),
+                            *([count] if count else []),
+                        ],
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
                 ),
-                ft.ListView(rows, expand=True),
+                ft.ListView(rows, expand=True, padding=sides(margin)),
             ],
             spacing=0,
             expand=True,

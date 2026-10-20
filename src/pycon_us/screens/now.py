@@ -76,6 +76,7 @@ from pycon_us.ui.session_rows import (
 )
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -88,6 +89,7 @@ NOTHING_ON = "Nothing in session right now"
 def Now() -> ft.View:
     """The Now root: where the conference stands, and what to do next."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
@@ -171,7 +173,7 @@ def Now() -> ft.View:
         title="Now",
         actions=[search_button(svc.memory, "all")],
         body=ft.ListView(
-            rows, expand=True, ref=list_ref, padding=ft.Padding.only(bottom=16)
+            rows, expand=True, ref=list_ref, padding=sides(margin, bottom=16)
         ),
         on_retap=scroll_to_top,
     )

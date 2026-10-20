@@ -24,6 +24,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -33,6 +34,7 @@ SCREEN = "map"
 def Map() -> ft.View:
     """The Map root: the rooms, then the other locations, each row opening its room."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
@@ -83,7 +85,7 @@ def Map() -> ft.View:
     return AppScaffold(
         title="Map",
         actions=[search_button(svc.memory, "rooms")],
-        body=ft.ListView(rows, expand=True, ref=list_ref),
+        body=ft.ListView(rows, expand=True, ref=list_ref, padding=sides(margin)),
         on_retap=scroll_to_top,
     )
 

@@ -6,7 +6,8 @@ on pushed Views, the bottom bar or, from 600 dp, the rail (``ui.navigation``) an
 Back rules on tab roots (D-13, D-17, D-142, D-144, D-277), and the body in a
 ``SafeArea`` (D-12, D-113). The status- and navigation-bar style comes from the theme
 (``theme.overlay_style()``, D-151): Flet's ``AppBar`` applies it, so a screen never sets
-one. The 720/840 dp content widths join in P2-80 (#440).
+one. The 720/840 dp content widths are each screen's own, ``ui.widths.use_margin()``
+(D-305): the screen builds its list before it calls ``AppScaffold``.
 
 ``SectionHeader`` is the heading of a group of rows. The status strip and the minute
 tick are ``ui.status_strip`` (D-200).

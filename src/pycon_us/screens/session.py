@@ -58,6 +58,7 @@ from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
+from pycon_us.ui.widths import READING, sides, use_margin
 from pycon_us.year_keynotes import keynote_of
 
 SCREEN = "session"
@@ -89,6 +90,7 @@ def SessionDetail(session_id: str) -> ft.View:
     """
     page = ft.context.page
     view_path = ft.use_view_path()
+    margin = use_margin(READING)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
@@ -121,6 +123,7 @@ def SessionDetail(session_id: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
 
@@ -190,7 +193,7 @@ def SessionDetail(session_id: str) -> ft.View:
         controls,
         expand=True,
         spacing=SECTION_GAP,
-        padding=ft.Padding.only(top=8, bottom=24),
+        padding=sides(margin, top=8, bottom=24),
     )
     return AppScaffold(title="", body=body, actions=actions)
 
