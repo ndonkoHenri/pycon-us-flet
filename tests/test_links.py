@@ -404,7 +404,10 @@ async def test_a_copy_puts_the_contact_on_the_clipboard_and_says_so(
 async def test_android_13_and_later_confirm_a_copy_themselves(
     page: FakePage, svc: Services, sdk: int, messages: list[str]
 ) -> None:
-    """On Android 13 and later the system confirms a copy, so the app says nothing."""
+    """On Android 13 and later the system confirms a copy, so the app says nothing.
+
+    On Android 12 and earlier the app still says it was copied.
+    """
     page.platform = ft.PagePlatform.ANDROID
     page.device = android_device(sdk)
     await copy_contact(svc, EMAIL)

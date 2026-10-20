@@ -111,8 +111,10 @@ def test_trailing_room_is_split_off() -> None:
 def test_clean_title_takes_a_name_apart(name: str, kind: str, expected: Title) -> None:
     """A feed name splits into a name, a room, and registration and Spanish flags.
 
-    Its link markup goes; a keynote or lightning talks name loses its kind prefix, and
-    only such names lose a trailing room. The kind and the name say whether it needs
+    Its link markup goes, and so do a ", pre-registration required" and an "En Español"
+    suffix. A plenary-like name (plenary, keynote, lightning talks, event) loses a
+    trailing room and its own kind as a prefix, so a plenary keeps "Keynote - "; a
+    tutorial keeps its parenthesis. The kind and the name say whether it needs
     registration and whether it is in Spanish.
     """
     assert clean_title(name, kind) == expected
