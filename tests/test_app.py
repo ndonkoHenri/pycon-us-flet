@@ -695,8 +695,13 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
     monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
     monkeypatch.setattr(ft, "use_effect", lambda *_, **__: None)
+    banners: list[bool] = []
+    monkeypatch.setattr(
+        app, "use_reminder_banner", lambda *_, ready: banners.append(ready)
+    )
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
+    assert banners == [open_]  # the slot is there before the gate, shown after it
     booting = (
         isinstance(shown, list)
         and len(shown) == 1

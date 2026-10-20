@@ -27,6 +27,7 @@ from pycon_us.theme import (
     build_theme,
     build_tokens,
 )
+from pycon_us.ui.reminder_banner import use_reminder_banner
 from pycon_us.ui.time_gutter import GutterProbe
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,8 @@ def App(memory: ViewMemory):
     """Build services and stores once, wait for the settings and the feed, then route.
 
     ``App`` subscribes to ``Prefs`` only (``use_state``), so it re-renders when a setting
-    or a device fact changes, never on a feed refresh.
+    or a device fact changes, never on a feed refresh; and when the reminder Banner
+    changes, at most once a minute while a saved session is about to start.
 
     Args:
         memory: The process's one ``ViewMemory`` (D-143).
@@ -67,10 +69,13 @@ def App(memory: ViewMemory):
 
     ft.use_effect(start, [])
     ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
+    ready = prefs.loaded and prefs.time_measured
+    # The app's one reminder Banner slot (D-60, architecture §14.2), before the gate.
+    use_reminder_banner(svc, conference, favorites, ready=ready)
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
     # under the Schedule's first jump (D-216).
-    if not (prefs.loaded and prefs.time_measured):
+    if not ready:
         # Under Prefs' provider for GutterProbe, which measures while the app boots.
         return PrefsCtx(prefs, lambda: [BootView()])
 

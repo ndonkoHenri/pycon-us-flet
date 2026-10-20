@@ -1303,7 +1303,7 @@ def plan(data: ConferenceData, favorites: Iterable[str], settings: ReminderSetti
 
 ### 14.2 Interim while the app is open
 
-`App` owns one `ft.use_dialog` slot for an in-app reminder `Banner` ("Open", "Dismiss"), set by a foreground-only 60 s loop from `plan()`. The actions clear that state, so the Banner closes by re-render, never by `page.pop_dialog()` (which could close a newer dialog).
+`App` owns one `ft.use_dialog` slot for an in-app reminder `Banner` ("Dismiss", "Open") through `ui/reminder_banner.py`'s `use_reminder_banner()`, called before the boot gate and shown once it opens (#428). Its state is `services/reminders.py`'s pure `due_session(data, favorites, now, dismissed)`: the soonest saved session still in the feed whose shown start is within `BANNER_LEAD` (10 min) and not yet reached, with its minutes rounded up ("Typing deep dive starts in 9 min · Room 103ABC"). It is asked again by a foreground-only 60 s loop (`svc.run_every`, D-175), and at once when `Favorites` or `Conference` notify in the foreground (`Observable.subscribe`, held by the loop's task), so an unsaved or removed session goes without waiting for the tick; an equal answer sets no state, so `App` re-renders at most once a minute while a Banner shows. Open navigates to `/my-schedule/session/<id>`, which the Router builds over My schedule, so Back returns there; Dismiss and Open remember the id until the app restarts, and the Banner closes by re-render, never by `page.pop_dialog()` (which could close a newer dialog). Flutter's `ScaffoldMessenger` sits above the Views, so navigating keeps it (F118).
 
 ### 14.3 Permissions (D-61) and calendar (D-62, D-272)
 

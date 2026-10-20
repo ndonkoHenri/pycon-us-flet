@@ -2,14 +2,18 @@
 
 ``plan()`` turns the feed, My schedule, the reminder settings and the conference
 moments into the reminders to schedule, soonest first and at most ``MAX_PENDING``. It is
-pure: the in-app Banner reads it now, and E3's ``apply()`` will schedule it, cancelling
-only what is pending, at every start and resume and whenever its inputs change (D-222).
-``apply()`` comes with E3, when it can run (D-66).
+pure: E3's ``apply()`` will schedule it, cancelling only what is pending, at every start
+and resume and whenever its inputs change (D-222). ``apply()`` comes with E3, when it
+can run (D-66).
+
+``due_session()`` is the in-app Banner's question, as pure: which saved session starts
+within ``BANNER_LEAD`` minutes, while the app is open (D-60's interim; ux.md §6.9).
 """
 
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
+from math import ceil
 from zlib import crc32
 
 from pycon_us.core.models import ConferenceData, Session
@@ -25,6 +29,9 @@ that, so the app never hands it more (D-222)."""
 SYNTHETIC_BASE = 1_000_000
 """Where the ids of sessions without a numeric id start: 1,000,000 + crc32 % 1,000,000,
 clear of the conference keys, the open spaces (9000 + key) and the moments (D-59)."""
+
+BANNER_LEAD = timedelta(minutes=10)
+"""How long before a saved session's shown start the in-app Banner appears (D-60)."""
 
 SESSION_VIEW = "/my-schedule"
 """The View a session reminder opens its session on: it is there because it is saved."""
@@ -48,6 +55,76 @@ class Reminder:
     title: str
     body: str
     route: str
+
+
+@dataclass(frozen=True)
+class DueSession:
+    """A saved session the in-app Banner announces (``due_session()``).
+
+    Compared by value, so a tick that finds the same session at the same minute
+    changes no state and renders nothing.
+
+    Attributes:
+        id: The session's id (D-42).
+        name: The session's name.
+        minutes: Whole minutes until its shown start, rounded up: 1 to 10.
+        location: Where it is (``display_location``); empty when the feed says nowhere.
+        route: What Open lands on: the session over My schedule.
+    """
+
+    id: str
+    name: str
+    minutes: int
+    location: str
+    route: str
+
+    @property
+    def text(self) -> str:
+        """The Banner's words: "Typing deep dive starts in 9 min · Room 103ABC"."""
+        text = f"{self.name} starts in {self.minutes} min"
+        return f"{text} · {self.location}" if self.location else text
+
+
+def due_session(
+    data: ConferenceData,
+    favorites: Iterable[str],
+    now: datetime,
+    dismissed: Iterable[str] = (),
+) -> DueSession | None:
+    """Return the saved session starting within ``BANNER_LEAD``, if any (D-60).
+
+    A session counts from ``BANNER_LEAD`` before the start the app shows until that
+    start: an unsaved session, one no longer in the feed, one that has started and one
+    the user dismissed or opened from the Banner never do. Of several, the soonest
+    wins, then the lowest id, so the same inputs always give the same answer.
+
+    Args:
+        data: The processed feed.
+        favorites: The saved session ids (My schedule).
+        now: The current time (``clock.now()``); aware.
+        dismissed: The ids the Banner was dismissed or opened for, this app session.
+
+    Returns:
+        The session to announce, with its minutes to go, or None.
+    """
+    skipped = set(dismissed)
+    due = [
+        session
+        for session_id in favorites
+        if session_id not in skipped
+        and (session := data.sessions.get(session_id)) is not None
+        and session.display_start - BANNER_LEAD <= now < session.display_start
+    ]
+    if not due:
+        return None
+    session = min(due, key=lambda s: (s.display_start, s.id))
+    return DueSession(
+        id=session.id,
+        name=session.name,
+        minutes=ceil((session.display_start - now) / timedelta(minutes=1)),
+        location=session.display_location,
+        route=drill_href(SESSION_VIEW, "session", session.id),
+    )
 
 
 def reminder_id(session_id: str) -> int:
