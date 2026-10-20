@@ -3,18 +3,19 @@
 ``DataActions`` is the section's rows (DEV-04, DEV-05, STORE-13; D-198): **Refresh now**,
 a refresh the user asked for (D-181), with what the schedule on screen is; **Clear cached
 feed**, after which the next start shows the bundled snapshot; **Share log**, the
-packaged app's ``console.log`` on the share sheet (D-72); and **Reset app**, which deletes
+packaged app's ``console.log`` and the diagnostics on the share sheet (``ui/share.py``'s
+``share_console_log()``, D-72, D-297); and **Reset app**, which deletes
 what the app keeps and resets every store in memory, so the app is as after a fresh
 install without a restart. The two that delete are confirmed first by an
 ``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
 rows (D-29, D-210). This module is what the actions do and say; how the screen draws
-them (the rows, the outcome line, the confirmations) is ``developer_ui.py``'s. Apart from
+them is ``ui/actions.py``'s (the rows, the outcome line) and ``developer_ui.py``'s (the
+confirmations). Apart from
 ``developer.py`` so that the screen stays under about 400 lines (D-66), as the pickers
 are in ``developer_clock.py``.
 """
 
 import logging
-from pathlib import Path
 
 import flet as ft
 from flet.utils import is_embedded
@@ -24,23 +25,13 @@ from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.feed_refresh import Problem
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
-from pycon_us.screens.developer_ui import (
-    NO_OUTCOME,
-    Asking,
-    Outcome,
-    action_row,
-    confirmation,
-    none_open,
-    outcome_line,
-    snapshot_day,
-)
+from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors, show_details
-from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.share import NOT_SHARED as SHEET_NOT_OPENED
-from pycon_us.ui.share import centre
+from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line
+from pycon_us.ui.share import report_subtitle, share_console_log
 from pycon_us.ui.status_strip import schedule_line, use_minute
 
 logger = logging.getLogger(__name__)
@@ -53,15 +44,6 @@ CLEARED: Outcome = (
     True,
 )
 NOT_CLEARED: Outcome = ("Couldn't delete the cached schedule.", False)
-NO_LOG: Outcome = ("There's no log to share yet.", False)
-LOG_NOT_FOUND: Outcome = ("Couldn't find the log.", False)
-NOT_SHARED: Outcome = (
-    f"{SHEET_NOT_OPENED}.",
-    False,
-)  # as session detail's Share says it
-LOG_SHARED: Outcome = ("Log shared.", True)
-LOG_OFFERED: Outcome = ("Log handed to the share sheet.", True)
-"""When the platform cannot say how the sheet ended (``UNAVAILABLE``): true either way."""
 
 RESET_INCOMPLETE = (
     "App reset, but some saved data couldn't be deleted: it returns when you reopen "
@@ -89,6 +71,7 @@ def DataActions() -> ft.Control:
     asking, set_asking = ft.use_state(none_open)  # the open confirmation
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
     sharing, set_sharing = ft.use_state(False)  # the share sheet is up
+    packaged = is_embedded()  # where the log is a file here, and Developer can lock
 
     @report_errors
     async def refresh_now() -> None:
@@ -116,7 +99,15 @@ def DataActions() -> ft.Control:
         set_outcome(NO_OUTCOME)
         set_sharing(True)
         try:
-            set_outcome(await share_console_log(svc, origin=centre(page)))
+            set_outcome(
+                await share_console_log(
+                    svc,
+                    packaged=packaged,
+                    conference=conference,
+                    prefs=prefs,
+                    favorites=favorites,
+                )
+            )
         finally:
             set_sharing(False)
 
@@ -135,7 +126,6 @@ def DataActions() -> ft.Control:
             )
         )
 
-    packaged = is_embedded()  # where the log is a file here, and Developer can lock
     ft.use_dialog(
         confirmation(
             asking,
@@ -178,11 +168,9 @@ def DataActions() -> ft.Control:
                 "developer.share_log",
                 ft.Icons.SHARE_OUTLINED,
                 "Share log",
-                "Sends console.log, for a bug report"
-                if packaged
-                else "Not a packaged build: the log is in the terminal that runs it",
+                report_subtitle(packaged),
                 share_log,
-                disabled=sharing or not packaged,
+                disabled=sharing,
             ),
             action_row(
                 "developer.reset_app",
@@ -238,59 +226,6 @@ async def reset_app(
     complete = cleared and deleted
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete
-
-
-async def share_console_log(
-    svc: Services, *, origin: ft.Offset | None = None
-) -> Outcome:
-    """Open the share sheet with the packaged app's ``console.log`` (D-72).
-
-    The log holds no secrets or email addresses: the app never logs them, and the
-    handler redacts any address a line quotes (D-196).
-
-    Args:
-        svc: The session's services: the storage paths and the share sheet.
-        origin: Where the sheet points from on a tablet (D-62); a phone ignores it.
-
-    Returns:
-        What to say: that it was shared, that there is no log or that it failed;
-        nothing (``NO_OUTCOME``) when the sheet was dismissed; that the sheet had the
-        log when the platform cannot say which (``UNAVAILABLE``, share_plus on some
-        Android share targets).
-    """
-    try:
-        path = await svc.paths.get_console_log_filename()
-    except SERVICE_ERRORS as error:
-        logger.warning("Could not find the log: %s", type(error).__name__)
-        return LOG_NOT_FOUND
-    if not has_text(Path(path)):
-        return NO_LOG
-    try:
-        result = await svc.share.share_files(
-            [ft.ShareFile.from_path(path)],
-            title="Share the app log",
-            subject="App log",
-            share_position_origin=origin,
-        )
-    except SERVICE_ERRORS as error:
-        # The class only: an invoke error's text repeats the call's arguments (D-72).
-        logger.warning("Could not share the log: %s", type(error).__name__)
-        return NOT_SHARED
-    match result.status:
-        case ft.ShareResultStatus.SUCCESS:
-            return LOG_SHARED
-        case ft.ShareResultStatus.DISMISSED:
-            return NO_OUTCOME
-        case _:
-            return LOG_OFFERED
-
-
-def has_text(path: Path) -> bool:
-    """Return whether ``path`` is a file with something in it; unreadable counts as no."""
-    try:
-        return path.is_file() and path.stat().st_size > 0
-    except OSError:
-        return False
 
 
 def refreshed(problem: Problem | None) -> Outcome:

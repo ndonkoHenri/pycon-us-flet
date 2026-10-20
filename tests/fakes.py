@@ -170,6 +170,7 @@ class MemoryShare(ft.Share):
     def init(self) -> None:
         """Start with nothing shared, a successful status, no error and no gate."""
         self.shared: list[list[ft.ShareFile]] = []
+        self.file_options: list[dict[str, Any]] = []  # each share_files' options
         self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
         self.error: Exception | None = None
@@ -193,10 +194,11 @@ class MemoryShare(ft.Share):
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any
     ) -> ft.ShareResult:
-        """Record the files and answer ``status``, or raise ``error`` when given."""
+        """Record the files and their options and answer ``status``, or raise ``error``."""
         if self.error is not None:
             raise self.error
         self.shared.append(files)
+        self.file_options.append(options)
         return ft.ShareResult(status=self.status, raw="")
 
 

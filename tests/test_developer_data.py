@@ -8,7 +8,6 @@ device are checked on devices (the PR).
 
 import asyncio
 import inspect
-import logging
 from collections.abc import Callable, Iterator
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -27,11 +26,6 @@ from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
-    LOG_NOT_FOUND,
-    LOG_OFFERED,
-    LOG_SHARED,
-    NO_LOG,
-    NOT_SHARED,
     RESET_INCOMPLETE,
     DataActions,
     refreshed,
@@ -47,6 +41,7 @@ from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -559,102 +554,47 @@ def test_the_bundled_schedule_s_day_never_wraps_in_its_middle(svc: Services) -> 
 
 
 # ------------------------------------------------------------------ Share log
+# What the share sends and says in every case is test_share_report.py's.
 
 
-def test_share_log_is_off_outside_a_packaged_build_and_says_why(
-    render: Callable[[], ft.Column], packaged: Callable[[bool], None]
-) -> None:
-    """Outside a packaged build, Share log is disabled and says where the log is."""
-    packaged(False)
-    tile = row(render(), "developer.share_log")
-    assert tile.disabled is True
-    assert subtitle(render(), "developer.share_log") == (
-        "Not a packaged build: the log is in the terminal that runs it"
-    )
-
-
-async def test_share_log_shares_the_console_log_file(
+async def test_share_log_shares_the_console_log_with_the_diagnostics(
     render: Callable[[], ft.Column], svc: Services, tmp_path: Path
 ) -> None:
-    """Share log shares the console log file alone, then says it was shared."""
+    """In a packaged build, Share log says so and shares console.log with the diagnostics.
+
+    The diagnostics are the file's text, and the row says beforehand what a tap sends.
+    """
     log = tmp_path / "console.log"
     log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
     cast(MemoryPaths, svc.paths).console_log = str(log)
+    assert subtitle(render(), "developer.share_log") == WITH_LOG
     await tap(render, "developer.share_log")
-    [files] = cast(MemoryShare, svc.share).shared
+    share = cast(MemoryShare, svc.share)
+    [files] = share.shared
     assert [file.path for file in files] == [str(log)]
+    assert share.file_options[0]["text"].startswith("App: ")
     assert outcome(render()) == LOG_SHARED[0]
-
-
-@pytest.mark.parametrize(
-    ("status", "says"),
-    [
-        (ft.ShareResultStatus.DISMISSED, None),
-        # Some Android targets report neither: the sheet had the log either way.
-        (ft.ShareResultStatus.UNAVAILABLE, LOG_OFFERED[0]),
-    ],
-)
-async def test_a_dismissed_share_sheet_says_nothing(
-    render: Callable[[], ft.Column],
-    svc: Services,
-    tmp_path: Path,
-    status: ft.ShareResultStatus,
-    says: str | None,
-) -> None:
-    """A dismissed share says nothing; an unavailable status says the log was offered.
-
-    Either way, Share log stays usable.
-    """
-    log = tmp_path / "console.log"
-    log.write_text("a line\n")
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    cast(MemoryShare, svc.share).status = status
-    await tap(render, "developer.share_log")
-    assert outcome(render()) == says
     assert row(render(), "developer.share_log").disabled is False  # usable again
 
 
-@pytest.mark.parametrize("content", [None, ""])
-async def test_without_a_log_there_is_nothing_to_share(
+async def test_outside_a_packaged_build_share_log_sends_the_diagnostics_alone(
     render: Callable[[], ft.Column],
     svc: Services,
-    tmp_path: Path,
-    content: str | None,
+    packaged: Callable[[bool], None],
 ) -> None:
-    """A missing or empty log file shares nothing and says there is no log."""
-    log = tmp_path / "console.log"
-    if content is not None:
-        log.write_text(content)
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    await tap(render, "developer.share_log")
-    assert cast(MemoryShare, svc.share).shared == []
-    assert outcome(render()) == NO_LOG[0]
+    """Outside a packaged build, Share log stays on and shares the diagnostics alone.
 
-
-async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
-    render: Callable[[], ft.Column],
-    svc: Services,
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """A failed share says so and logs only the error's class, never the log's path.
-
-    A log whose file name cannot be read says the log was not found.
+    Its second line says beforehand why no log goes; the diagnostics go as a text.
     """
-    log = tmp_path / "console.log"
-    log.write_text("a line\n")
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    # Flet's invoke error repeats the call's arguments, the path included (D-72).
-    cast(MemoryShare, svc.share).error = RuntimeError(f"share_files({log}) failed")
-    with caplog.at_level(logging.WARNING):
-        await tap(render, "developer.share_log")
-    assert outcome(render()) == NOT_SHARED[0]
-    assert [r.getMessage() for r in caplog.records] == [
-        "Could not share the log: RuntimeError"
-    ]
-    cast(MemoryPaths, svc.paths).error = TimeoutError("get_console_log_filename")
+    packaged(False)
+    assert row(render(), "developer.share_log").disabled is False
+    assert subtitle(render(), "developer.share_log") == WITHOUT_LOG
     await tap(render, "developer.share_log")
-    assert outcome(render()) == LOG_NOT_FOUND[0]
+    share = cast(MemoryShare, svc.share)
+    assert share.shared == []
+    [(text, _)] = share.texts
+    assert text.startswith("App: ")
+    assert outcome(render()) == DIAGNOSTICS_SHARED[0]
 
 
 # ------------------------------------------------------------------ Reset app
