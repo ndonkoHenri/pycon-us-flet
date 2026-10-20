@@ -11,11 +11,12 @@ page stays under D-66's 400 lines.
 
 import flet as ft
 
+from pycon_us.core.links import feed_link
 from pycon_us.core.models import Sprint
 from pycon_us.core.sprints import cut_short
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.links import OPENS_IN, LinkKind, feed_link, feed_markdown, open_link
+from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.semantics import named, semantics_key
 

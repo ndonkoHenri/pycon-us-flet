@@ -16,6 +16,8 @@ import pytest
 from pycon_us.core import html_md
 from pycon_us.core.feed import FeedError, process
 from pycon_us.core.html_md import to_markdown, to_text
+from pycon_us.core.jobs import is_placeholder
+from pycon_us.core.models import JobListing
 from pycon_us.core.queries import fold
 from tests.feeds import YEARS, changed, document, processed, settings
 
@@ -70,12 +72,19 @@ def test_poster_descriptions_are_markdown(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_sprint_and_job_descriptions_are_markdown(year: int) -> None:
-    """Every sprint and job listing is kept, its description converted to Markdown."""
+    """Every sprint and job listing is kept, its description converted to Markdown.
+
+    A job listing that is a placeholder, such as OpenEDG's ``N/A``, has none (D-278).
+    """
     data = processed(year)
     assert len(data.sprints) == len(document(year).get("sprints", []))
     assert len(data.job_listings) == len(document(year).get("job-listings", []))
     for item in (*data.sprints, *data.job_listings):
-        assert item.description_md == to_markdown(item.description, site_url(year))
+        said = not (
+            isinstance(item, JobListing) and is_placeholder(to_text(item.description))
+        )
+        expected = to_markdown(item.description, site_url(year)) if said else ""
+        assert item.description_md == expected
 
 
 def test_plain_text_sprint_descriptions_keep_their_paragraphs() -> None:
