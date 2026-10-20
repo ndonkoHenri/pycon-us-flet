@@ -3,7 +3,9 @@
 Device flows for the packaged app (`io.github.ndonkohenri.pyconus`), run with the free,
 local [Maestro](https://maestro.dev) CLI on an Android emulator and an iOS simulator,
 from one set of YAML files (D-252, #348). They check P1's exit journeys (PLAN §7,
-criteria 1 and 2) and repeat regression trials such as #346's row D. Where Maestro fits
+criteria 1 and 2) and repeat regression trials such as #346's fling after the filter
+sheet; row D's faster window has an `adb` driver, `tools/fling_after_sheet.py`
+([below](#row-d-through-adb)). Where Maestro fits
 next to the `flet test` flows in `tests/ui/` is in
 [`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §5.5.
 
@@ -17,7 +19,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `config.yaml` | The workspace: `maestro test maestro` runs `journeys/*` and `regression/*` |
 | `journeys/` | P1's exit journeys, tagged `journeys` (two also `smoke`) |
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
-| `subflows/` | Steps the flows share through `runFlow`; never run on their own |
+| `subflows/` | Steps the flows share through `runFlow`; never run on their own, except `fling_setup.yaml`, which `tools/fling_after_sheet.py` runs |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
 
 | Flow | Tags | What it checks |
@@ -28,7 +30,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
-| `regression/fling_after_sheet.yaml` | regression | #346's row D: Open space shown through the sheet, then a fling right after "Show N sessions", `TRIALS` times (at most about 40); each trial is "moved" (to the control fling's slot), "short", "none" or "invalid" |
+| `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
 airplane mode on Android, then Developer options set as `tests/ui/developer.py` does
@@ -77,8 +79,8 @@ ANDROID_AVD_HOME=<folder> avdmanager create avd -n flet_probe_api34 \
 ANDROID_AVD_HOME=<folder> ~/Library/Android/sdk/emulator/emulator -avd flet_probe_api34 -read-only ...
 ```
 
-Animations stay on: Maestro waits for them (`waitForAnimationToEnd`), and #346's row D
-needs the sheet's exit animation. When you are done, kill the emulator
+Animations stay on: Maestro waits for them (`waitForAnimationToEnd`), and #346's fling
+after the sheet needs the sheet's exit animation. When you are done, kill the emulator
 (`adb -s emulator-5570 emu kill`) and delete the simulator
 (`xcrun simctl delete <udid>`).
 
@@ -122,13 +124,44 @@ step's screenshot and the view hierarchy are in the debug output, under
 `~/.maestro/tests/<date>/` unless `--debug-output` names a folder (keep it under
 `build/`, which git ignores).
 
-**Comparing two builds** (#346's row D): install `main`'s APK, run the regression flow,
-install the PR's APK, run it again with the same `TRIALS`, and compare the two summaries
-(`flings after the sheet, N moved, N short, N none, N invalid, of N`). The flow fails
-unless every trial moved and every tap reached the button. It starts the fake clock at
-14:01, so the now slot stays 2:00 PM for about 40 trials. On Android the launcher logs every touch, so the time from the tap on
-"Show N sessions" to the fling is `adb -s emulator-5570 logcat -d | grep TaplEvents`: the
-`ACTION_UP` at (540, 2232), then the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms).
+**Comparing two builds** (the fling after the sheet, at Maestro's pace): install `main`'s
+APK, run the regression flow, install the PR's APK, run it again with the same `TRIALS`,
+and compare the two summaries (`flings after the sheet, N moved, N short, N none, N
+invalid, of N`). First the flow runs three control flings with no sheet just before them
+and keeps the first four rows each one stopped on; it fails at once unless they are near
+each other (of any two, one's top row is among the other's rows: no more than three rows
+apart). A trial "moved" only when it is near a control in the same way, from its own
+first four rows: a full fling varies by a row or two, and the 3:00 PM slot, where it
+ends, is about 20 rows deep with Open space shown, so a fling cut short by many rows can
+still end in that slot. The flow
+fails unless every trial moved and every tap reached the button. It starts the fake
+clock at 14:01, so the now slot stays 2:00 PM for about 35 trials. On Android the
+launcher logs every touch, so the time from the tap on "Show N sessions" to the fling is
+`adb -s emulator-5570 logcat -d | grep TaplEvents`: the `ACTION_UP` at (540, 2232), then
+the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms).
+
+### Row D through adb
+
+#346's row D lost flings 0.33 to 0.6 s after the tap, sooner than Maestro can follow
+one command with another. `tools/fling_after_sheet.py` reaches that window on an Android
+emulator: it sends the tap and the fling in one `adb shell` command (`input tap`, then
+`input swipe` after `--gap` seconds), reads the time between them from the launcher's
+`TaplEvents` log, and judges each trial by the flow's rules (three controls, then
+"moved" only within three rows of one). It runs `subflows/fling_setup.yaml` with the local
+Maestro CLI first (a fresh, offline start at Friday 14:01, on the Schedule), reads the
+screen with `uiautomator dump`, and turns airplane mode off at the end.
+
+```bash
+uv run python -m tools.fling_after_sheet --serial emulator-5570 --trials 20
+```
+
+The default `--gap 0.5` puts the fling about 0.5 s after the tap (`input` adds about
+30 ms), inside row D's window. Much sooner, the sheet is still leaving and the fling does
+not scroll on any build: #346 saw that at 0.2 to 0.3 s, and on a busy host it lasts
+longer. Each trial prints its kind and its measured gap; the summary
+gives the counts and the gaps' range and median, and the exit status is 1 unless every
+trial moved and every tap reached the button. Compare builds as with the flow: the same
+`--trials` on each, one right after the other, on a quiet host.
 
 ## Writing a flow
 
@@ -150,8 +183,8 @@ unless every trial moved and every tap reached the button. It starts the fake cl
   the button there; no flow checks a SnackBar's timeout yet).
 - About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
-  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach (see the run
-  times below).
+  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach: that window is
+  the `adb` driver's ([Row D through adb](#row-d-through-adb)).
 - Each flow that runs `start_offline.yaml` turns the network back on in its
   `onFlowComplete` (`subflows/online.yaml`).
 
