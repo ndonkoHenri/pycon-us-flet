@@ -19,6 +19,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.ui.favorite import NOT_SAVED
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
     "system": "System",
@@ -44,6 +45,7 @@ def Settings() -> ft.View:
     """The Settings page: Appearance's three rows and the High contrast switch."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     prefs = use_prefs()
 
     @report_errors
@@ -69,6 +71,7 @@ def Settings() -> ft.View:
                 ),
             ],
             expand=True,
+            padding=sides(margin),
         ),
     )
 

@@ -31,6 +31,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 
 
@@ -74,6 +75,7 @@ def render(
     monkeypatch.setattr(settings, "use_services", lambda: svc)
     monkeypatch.setattr(settings, "use_prefs", lambda: prefs)
     monkeypatch.setattr(settings, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(settings, "use_margin", phone_margin)
 
     def render() -> dict[str, Any]:
         return cast(dict[str, Any], inspect.unwrap(Settings)())

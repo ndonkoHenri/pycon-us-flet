@@ -42,6 +42,7 @@ from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import Track
 
 SCREEN = "track"
@@ -72,6 +73,7 @@ def TrackDetail(slug: str) -> ft.View:
     """
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
@@ -115,6 +117,7 @@ def TrackDetail(slug: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
     items: list[ft.Control] = [intro(track, tokens, spanish=SPANISH in shared)]
@@ -165,7 +168,11 @@ def TrackDetail(slug: str) -> ft.View:
 
         actions.append(_menu(add))
     # The heading below names the page, so the app bar's title stays empty (D-186).
-    return AppScaffold(title="", body=ft.ListView(items, expand=True), actions=actions)
+    return AppScaffold(
+        title="",
+        body=ft.ListView(items, expand=True, padding=sides(margin)),
+        actions=actions,
+    )
 
 
 def offers_add_all(track: Track) -> bool:

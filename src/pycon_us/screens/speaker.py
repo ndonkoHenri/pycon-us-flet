@@ -36,6 +36,7 @@ from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.widths import READING, sides, use_margin
 
 SCREEN = "speaker"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -59,6 +60,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     """
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(READING)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
@@ -93,7 +95,10 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         )
         # No name to show in the page yet: the bar names it, the page's level-1
         # heading, as "Not found" does below (D-211).
-        return AppScaffold(title="Speaker", body=ft.ListView([no_data], expand=True))
+        return AppScaffold(
+            title="Speaker",
+            body=ft.ListView([no_data], expand=True, padding=sides(margin)),
+        )
     if speaker is None:
         return AppScaffold(
             title="Not found",
@@ -108,6 +113,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
     items: list[ft.Control] = [intro(speaker)]
@@ -137,7 +143,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     if has_bio(speaker):  # not the feed's lone "-" for a bio nobody wrote
         items.append(SectionHeader("About", level=2))
         items.append(feed_markdown(speaker.bio_md, svc, identifier=f"{SCREEN}.bio"))
-    body = ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24))
+    body = ft.ListView(items, expand=True, padding=sides(margin, bottom=24))
     # The heading below names the page, so the app bar's title stays empty (D-186).
     return AppScaffold(title="", body=body)
 

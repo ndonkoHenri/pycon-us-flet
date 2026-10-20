@@ -45,6 +45,7 @@ from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NoDataState
+from pycon_us.ui.widths import READING, sides, use_margin
 
 SCREEN = "sponsor"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -70,6 +71,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
         sponsor_slug: The sponsor's slug, unquoted.
     """
     svc = use_services()
+    margin = use_margin(READING)  # its width class (D-305)
     conference = use_conference()
     data = conference.data
 
@@ -85,7 +87,10 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
             identifier=f"{SCREEN}.no_data",
         )
         # No name to show yet: the bar names the page, its level-1 heading (D-211).
-        return AppScaffold(title="Sponsor", body=ft.ListView([no_data], expand=True))
+        return AppScaffold(
+            title="Sponsor",
+            body=ft.ListView([no_data], expand=True, padding=sides(margin)),
+        )
     sponsor = sponsor_by_slug(data, sponsor_slug)
     if sponsor is None:
         return AppScaffold(
@@ -101,6 +106,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
     items: list[ft.Control] = [intro(sponsor, svc)]
@@ -108,7 +114,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
         items.append(SectionHeader("About", level=2))
         items.append(about(sponsor.description))
     items.extend(open_roles(data, sponsor, svc))
-    body = ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24))
+    body = ft.ListView(items, expand=True, padding=sides(margin, bottom=24))
     # The heading in the intro names the page, so the app bar's title stays empty.
     return AppScaffold(title="", body=body)
 

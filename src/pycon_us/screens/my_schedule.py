@@ -43,6 +43,7 @@ from pycon_us.ui.session_rows import SessionRow, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.time_gutter import TimeSlot
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "my_schedule"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -68,6 +69,7 @@ UNAVAILABLE_BODY = (
 def MySchedule() -> ft.View:
     """The My schedule root: the status strip, then the agenda or the state it is in."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     svc = use_services()
     conference = use_conference()
@@ -218,7 +220,7 @@ def MySchedule() -> ft.View:
             [StatusStrip(), *content],
             expand=True,
             ref=list_ref,
-            padding=ft.Padding.only(bottom=16),
+            padding=sides(margin, bottom=16),
         ),
         on_retap=scroll_to_top,
     )

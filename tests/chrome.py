@@ -32,7 +32,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from pycon_us.ui import scaffold
+from pycon_us.ui import scaffold, widths
 from pycon_us.ui.scaffold import AppScaffold, Shown
 from tests.fakes import (
     FakePage,
@@ -93,6 +93,8 @@ def hooks(
     monkeypatch.setattr(scaffold, "use_conference", lambda: conference)
     # A phone unless a test sets hooks.wide (D-277).
     monkeypatch.setattr(scaffold, "use_layout", lambda: Layout(wide=hooks.wide))
+    # The screens' margins read the same layout: a phone's has no room (D-305).
+    monkeypatch.setattr(widths, "use_layout", lambda: Layout(wide=hooks.wide))
     monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))

@@ -12,6 +12,7 @@ import flet as ft
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 
 def stub_body(controls: list[ft.Control]) -> ft.ListView:
@@ -28,9 +29,10 @@ def stub_body(controls: list[ft.Control]) -> ft.ListView:
     """
     view_path = ft.use_view_path()
     params = ft.use_route_params()
+    margin = use_margin(LIST)  # its width class (D-305)
     shown = ", ".join(f"{key}={value}" for key, value in params.items())
     route_line = note(f"{view_path}  {shown}".rstrip(), small=True)
-    return ft.ListView([route_line, *controls], expand=True)
+    return ft.ListView([route_line, *controls], expand=True, padding=sides(margin))
 
 
 def note(text: str, *, small: bool = False) -> ft.Control:

@@ -434,3 +434,8 @@ class QueuedWrite:
     def release(self) -> None:
         """Let the held worker take the lock and write."""
         self._go.set()
+
+
+def phone_margin(cap: float) -> float:
+    """``use_margin()``'s stand-in: a phone's, no side margin at any width class (D-305)."""
+    return 0.0

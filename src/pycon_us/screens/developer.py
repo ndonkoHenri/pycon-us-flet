@@ -34,6 +34,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
+from pycon_us.ui.widths import READING, sides, use_margin
 
 APPLY_IN_SIGHT = 304
 """How far below its text the feed URL field keeps in sight when it takes the focus,
@@ -51,6 +52,7 @@ def Developer() -> ft.View:
     """The Developer screen: the fake clock, the feed URL and the build's capabilities."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(READING)  # its width class (D-305)
     prefs = use_prefs()
     conference = use_conference()
     tokens = use_tokens()
@@ -126,7 +128,7 @@ def Developer() -> ft.View:
 
     chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
-        return AppScaffold(title="Developer options", body=locked())
+        return AppScaffold(title="Developer options", body=locked(margin))
     now = clock.now()
     return AppScaffold(
         title="Developer options",
@@ -237,12 +239,17 @@ def Developer() -> ft.View:
                 *(capability_row(name, on) for name, on in capabilities.ALL),
             ],
             expand=True,
+            padding=sides(margin),
         ),
     )
 
 
-def locked() -> ft.Control:
-    """Return the body shown before the unlock: how to unlock, and the way there."""
+def locked(margin: float) -> ft.Control:
+    """Return the body shown before the unlock: how to unlock, and the way there.
+
+    Args:
+        margin: The screen's side margin (``ui.widths.use_margin()``).
+    """
     return ft.ListView(
         [
             padded(
@@ -255,6 +262,7 @@ def locked() -> ft.Control:
             LinkTile("About this app", "/more/app", icon=ft.Icons.INFO_OUTLINE),
         ],
         expand=True,
+        padding=sides(margin),
     )
 
 

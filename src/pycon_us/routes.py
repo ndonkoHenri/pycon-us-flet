@@ -46,6 +46,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 
 @ft.component
@@ -114,6 +115,7 @@ def NotFound() -> ft.View:
     nothing to the person who tapped it.
     """
     page = ft.context.page
+    margin = use_margin(LIST)  # its width class (D-305)
 
     @report_errors
     def go_to_now() -> None:
@@ -134,6 +136,7 @@ def NotFound() -> ft.View:
                 )
             ],
             expand=True,
+            padding=sides(margin),
         ),
     )
 

@@ -71,6 +71,7 @@ from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ def Schedule() -> ft.View:
     """The Schedule root: day tabs, the status strip and one slot list per day."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     memory = svc.memory
     conference = use_conference()
     favorites = use_favorites()
@@ -273,6 +275,7 @@ def Schedule() -> ft.View:
                     ),
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
 
@@ -310,27 +313,35 @@ def Schedule() -> ft.View:
         expand=True,
         content=ft.Column(
             [
-                ft.TabBar(
-                    [
-                        day_tab(index, day, is_today=day == current)
-                        for index, day in enumerate(all_days)
-                    ],
-                    # One-line labels in a scrollable bar: seven days fit no phone,
-                    # and the bar's fixed height clips a second line at 200 % (S2).
-                    scrollable=True,
-                    tab_alignment=ft.TabAlignment.START,
+                # The fixed chrome keeps to the list's width (D-305).
+                capped(
+                    ft.TabBar(
+                        [
+                            day_tab(index, day, is_today=day == current)
+                            for index, day in enumerate(all_days)
+                        ],
+                        # One-line labels in a scrollable bar: seven days fit no
+                        # phone, and the bar's fixed height clips a second line at
+                        # 200 % (S2).
+                        scrollable=True,
+                        tab_alignment=ft.TabAlignment.START,
+                    ),
+                    margin,
                 ),
-                track_filter.summary,
-                StatusStrip(auto_refresh=True),
+                capped(track_filter.summary, margin),
+                capped(StatusStrip(auto_refresh=True), margin),
                 # The device's offset now: the packaged app's Python reads the
                 # device's zone (F60), and the minute tick follows a DST change.
-                zone_note_line(
-                    zone_note(
-                        now,
-                        info.zone,
-                        info.time_zone_name,
-                        now.astimezone().utcoffset(),
-                    )
+                capped(
+                    zone_note_line(
+                        zone_note(
+                            now,
+                            info.zone,
+                            info.time_zone_name,
+                            now.astimezone().utcoffset(),
+                        )
+                    ),
+                    margin,
                 ),
                 ft.Stack(
                     [landing_note(said), ft.TabBarView(pages)],
@@ -353,7 +364,7 @@ def Schedule() -> ft.View:
         actions=[search_button(memory, "sessions"), track_filter.button],
         body=tabs,
         on_retap=scroll_to_top,
-        fab=now_button(on_today=shown == current, on_click=now_pressed)
+        fab=now_button(on_today=shown == current, on_click=now_pressed, margin=margin)
         if today_slots and not at_now
         else None,
     )

@@ -40,6 +40,7 @@ from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 FILTER_HINT = "Filter projects"
 """The filter field's hint, and its name for screen readers, which stays with text in it."""
@@ -61,6 +62,7 @@ INTRO = (
 def Sprints() -> ft.View:
     """The Sprints page: when they are, then a filter field over the project cards."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     info = svc.year.conference
     field = use_field_query()
@@ -152,12 +154,15 @@ def Sprints() -> ft.View:
             [
                 # The field and its count in a column of their own, so the list keeps
                 # its place in the body as they come and go (D-189, D-153).
-                ft.Column(
-                    pinned,
-                    spacing=0,
-                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                capped(
+                    ft.Column(
+                        pinned,
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
                 ),
-                ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24)),
+                ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
             ],
             spacing=0,
             expand=True,

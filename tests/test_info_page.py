@@ -24,6 +24,7 @@ from pycon_us.theme import MARKDOWN_STYLE
 from pycon_us.ui import info_page
 from pycon_us.ui.info_page import GUTTER, FeedBlock, InfoBody
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.widths import READING
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -32,6 +33,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 from tests.feeds import processed
 
@@ -88,8 +90,11 @@ def feed_block(
     return render
 
 
-def test_a_page_with_year_data_lists_its_blocks_and_no_feed_block() -> None:
+def test_a_page_with_year_data_lists_its_blocks_and_no_feed_block(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A page's blocks are the body's items, in order, with no feed block among them."""
+    monkeypatch.setattr(info_page, "use_margin", phone_margin)
     blocks = [ft.Text("Network"), ft.Text("Password")]
     body = InfoBody(blocks, block="wifi", screen="wifi", empty=EMPTY)
     assert isinstance(body, ft.ListView)
@@ -97,8 +102,31 @@ def test_a_page_with_year_data_lists_its_blocks_and_no_feed_block() -> None:
     assert body.controls == blocks
 
 
-def test_a_page_without_year_data_hands_its_body_to_the_feed_block() -> None:
+def test_an_info_page_is_capped_at_the_reading_width(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The body asks for the reading class and puts its margin on the list's sides.
+
+    D-305: in the list's own padding, so the page scrolls from its margins too.
+    """
+    asked: list[float] = []
+
+    def margin(cap: float) -> float:
+        """Record the width class asked for; a tablet's margin for it."""
+        asked.append(cap)
+        return 283.0
+
+    monkeypatch.setattr(info_page, "use_margin", margin)
+    body = InfoBody([ft.Text("Network")], block="wifi", screen="wifi", empty=EMPTY)
+    assert asked == [READING]
+    assert body.padding == ft.Padding.only(left=283, top=8, right=283, bottom=GUTTER)
+
+
+def test_a_page_without_year_data_hands_its_body_to_the_feed_block(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Without blocks, the body's one item is ``FeedBlock`` for the page's feed block."""
+    monkeypatch.setattr(info_page, "use_margin", phone_margin)
     with Renderer().with_context():  # what calling a component needs, as in a render
         body = InfoBody([], block="wifi", screen="wifi", empty=EMPTY)
     (item,) = body.controls

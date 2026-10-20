@@ -36,6 +36,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 from tests.feeds import processed
 from tests.trees import descendants, texts
@@ -112,6 +113,7 @@ def render(
     monkeypatch.setattr(map_screen, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(map_screen, "use_minute", lambda: minutes.append(0) or 0)
     monkeypatch.setattr(map_screen, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(map_screen, "use_margin", phone_margin)
     # Stand-ins for the components, which need a renderer; their own tests check them.
     monkeypatch.setattr(map_screen, "StatusStrip", lambda: STRIP)
     monkeypatch.setattr(map_screen, "SkeletonList", lambda label: ft.Text(label))

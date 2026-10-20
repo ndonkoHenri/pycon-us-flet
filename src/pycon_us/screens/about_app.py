@@ -23,6 +23,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import schedule_line, use_minute
+from pycon_us.ui.widths import READING, sides, use_margin
 
 UNLOCK_TAPS = 7
 """Taps on the version row that unlock Developer, as on Android's build number (D-73)."""
@@ -35,6 +36,7 @@ FLET_URL = "https://flet.dev"
 def AboutApp() -> ft.View:
     """The About this app page: the app, its data, its build, its links; the unlock."""
     svc = use_services()
+    margin = use_margin(READING)  # its width class (D-305)
     prefs = use_prefs()
     taps = ft.use_ref(0)  # a ref: counting re-renders nothing
     unsaved, set_unsaved = ft.use_state(False)
@@ -65,7 +67,10 @@ def AboutApp() -> ft.View:
     if prefs.developer:
         rows.append(developer_row(unsaved))
     rows.extend(links(SOURCE_URL))
-    return AppScaffold(title="About this app", body=ft.ListView(rows, expand=True))
+    return AppScaffold(
+        title="About this app",
+        body=ft.ListView(rows, expand=True, padding=sides(margin)),
+    )
 
 
 @ft.component

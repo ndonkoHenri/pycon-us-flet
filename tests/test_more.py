@@ -31,6 +31,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 
 
@@ -79,6 +80,7 @@ def render(
     monkeypatch.setattr(more, "use_services", lambda: svc)
     monkeypatch.setattr(more, "use_prefs", lambda: prefs)
     monkeypatch.setattr(more, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(more, "use_margin", phone_margin)
     # The companion app's list, wherever pytest runs (FLET_PLATFORM may be set, F14)
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", True)
 

@@ -10,8 +10,8 @@ skeleton and no loader, where Ionic held each page behind "Fetching latest…" f
 
 Each block of a page sits ``GUTTER`` from the screen's sides: texts and cards in a
 ``GUTTER`` padding, rows (a ``ListTile``) through their own content padding, so a row's
-ripple still runs edge to edge (M3 lists). The reading width (720 dp, D-09) comes from
-the shared width class once #440 lands, never from a cap of the page's own.
+ripple still runs edge to edge (M3 lists). The reading width (720 dp, D-09) is the
+shared width class's (``ui.widths.READING``, D-305), never a cap of the page's own.
 """
 
 from collections.abc import Sequence
@@ -21,6 +21,7 @@ import flet as ft
 from pycon_us.services import use_services
 from pycon_us.state import use_conference
 from pycon_us.ui.links import feed_markdown
+from pycon_us.ui.widths import READING, sides, use_margin
 
 GUTTER = 16
 """How far a page's texts and cards sit from the screen's sides, in dp (ux.md §3.6)."""
@@ -35,10 +36,11 @@ def InfoBody(
 ) -> ft.ListView:
     """Return an info page's body: its blocks, else the feed's block, else its empty state.
 
-    One ``ListView`` that scrolls the whole page. A plain builder: it calls no hooks, so
-    a page whose year data gives its blocks reads nothing of the feed and is not
-    re-rendered by a refresh; only the fallback, ``FeedBlock``, reads ``Conference``
-    (D-165's rule for screens that do not show the feed).
+    One ``ListView`` that scrolls the whole page, at the reading width (720 dp,
+    D-305). A plain builder whose one hook is ``use_margin()``, so the page calls it
+    once per render; a page whose year data gives its blocks reads nothing of the
+    feed and is not re-rendered by a refresh; only the fallback, ``FeedBlock``, reads
+    ``Conference`` (D-165's rule for screens that do not show the feed).
 
     Args:
         blocks: The page's content from its year data, in reading order, each in the
@@ -51,10 +53,9 @@ def InfoBody(
         empty: What the page shows when neither has anything: its ``EmptyState``,
             which names the way out (ux.md §4.6).
     """
+    margin = use_margin(READING)
     items = list(blocks) or [FeedBlock(block, screen=screen, empty=empty)]
-    return ft.ListView(
-        items, expand=True, padding=ft.Padding.only(top=8, bottom=GUTTER)
-    )
+    return ft.ListView(items, expand=True, padding=sides(margin, top=8, bottom=GUTTER))
 
 
 @ft.component

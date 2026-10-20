@@ -100,7 +100,15 @@ def test_a_gutter_of_exactly_a_fifth_stays_beside_the_rows() -> None:
 
 @pytest.mark.parametrize(
     ("view_width", "slot"),
-    [(0.0, 0.0), (402.0, 402.0), (599.0, 599.0), (600.0, 520.0), (874.0, 794.0)],
+    [
+        (0.0, 0.0),
+        (402.0, 402.0),
+        (599.0, 599.0),
+        (600.0, 520.0),
+        (874.0, 794.0),
+        (920.0, 840.0),  # the rail leaves exactly a list's width
+        (1366.0, 840.0),  # a tablet: the list is capped (D-305)
+    ],
 )
 def test_from_600_dp_a_slot_is_the_rail_narrower_than_its_view(
     view_width: float, slot: float
@@ -116,6 +124,16 @@ def test_beside_the_rail_a_gutter_that_fit_the_view_goes_above() -> None:
     """
     assert time_above(137.0, 700.0) is False
     assert time_above(137.0, slot_width(700.0)) is True
+
+
+def test_on_a_tablet_the_gutter_is_measured_against_the_capped_list() -> None:
+    """A gutter that fits a 1,366 dp View but not the 840 dp list goes above.
+
+    170 dp is under a fifth of the 1,286 dp beside the rail and over a fifth of the
+    840 dp a capped list leaves its slots (D-305).
+    """
+    assert time_above(170.0, 1366.0 - 80.0) is False
+    assert time_above(170.0, slot_width(1366.0)) is True
 
 
 def test_an_unmeasured_width_keeps_the_gutter() -> None:
