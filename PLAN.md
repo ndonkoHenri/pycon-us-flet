@@ -229,13 +229,13 @@ In parallel upstream: U1, U15 and spike S6.
 - **Also:** the schedule change log (#312), deep links, the tablet rail, the high-contrast schemes and About this app.
 
 **Exit criteria:**
-1. Every P2 row of the matrix is done, or was explicitly re-dispositioned with a reason.
+1. Every P2 row of the matrix is done, or was explicitly re-dispositioned with a reason. If E3 isn't pinned when the exit starts, the rows only E3 can deliver move to `later`, and their issues move to P4 (D-256).
 2. In airplane mode, floor plans with room pins, the expo map and list, Wi-Fi, Help & safety and venue hours work from bundled year data, and the loader test is green.
 3. Reminders:
    - With E3 pinned, a saved session's reminder fires with the app killed on the iPhone and on an Android emulator, and after a reboot of the emulator (D-102). Tapping it opens the session, and the reminder moves when the session moves.
-   - Without E3, the interim says so honestly.
+   - Without E3, the interim says so honestly, and the E3 work moves to P4 (D-256).
    - A denied permission never blocks a task.
-4. The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
+4. The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. The device checklist passes (D-79), including high contrast, the tablet layout and TalkBack and VoiceOver on three new flows.
 6. Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 

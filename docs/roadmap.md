@@ -801,7 +801,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 **Goal.** Everything an attendee needs at the venue, offline, plus reminders.
 
 **Exit criteria** (PLAN §7):
-1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason.
+1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason. Without E3 at the exit, the E3-only rows move to `later` and their issues to P4 (D-256).
 2. **Venue data offline.** In airplane mode, these work from bundled year data, and the loader test is green:
    - floor plans with room pins;
    - the expo map and list;
@@ -810,7 +810,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
    - With E3 pinned: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, the tap opens the session, and the reminder moves with the session.
    - Without E3, the interim says so.
    - A denied permission never blocks a task.
-4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
+4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. **Device checklist.** The D-79 checklist passes, including high contrast, tablets and screen readers on three new flows.
 6. **Unaided use.** Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 

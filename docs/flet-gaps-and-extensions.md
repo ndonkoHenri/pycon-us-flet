@@ -26,7 +26,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 | # | Id | Gap | Feature ids | Interim (ships now) | Upstream piece | App needs it | Effort | Status |
 |---|---|---|---|---|---|---|---|---|
-| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
+| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)); without it at the P2 exit, P4 (D-256) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
 | 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
 | 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
 | 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
@@ -224,6 +224,7 @@ flet-cli run from a source checkout already uses the local build template and ov
 | Ownership | The Flet team owns v1; U adds scheduling on top, with no fork or competing package (D-97, D-99). The old `ndonkoHenri/notifications` branch (`awesome_notifications`) is not a base. |
 | Effort | M for scheduling (Dart service, Python API, an Android library module and a Swift plugin class, tests). U7 belongs to v1. S6 is done. |
 | Gate | `capabilities.REMINDERS`. The dependency is added only once the pinned Flet contains the scheduling PR, in the dependency PR just before adoption, so a v1-only package never turns the capability on. |
+| Not pinned by the P2 exit | D-256: the rows with no interim (NOTIF-06, NOTIF-07, NOTIF-10, DEV-06 and NATIVE-06) move to `later`, and the open E3 issues (#445..#451, #459) move to P4 Showcase. They stay open and `blocked`, and P2 closes on the interim above. |
 
 **Python API added by the scheduling PR** (proposed; v1 members omitted):
 
