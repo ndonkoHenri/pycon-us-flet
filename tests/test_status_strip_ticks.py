@@ -33,11 +33,13 @@ class Clock:
     now: datetime
 
     def move(self, delta: timedelta) -> None:
+        """Move the clock on by ``delta``."""
         self.now += delta
 
 
 @pytest.fixture
 def moving_clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
+    """A ``Clock`` at 12:00:30 PM Pacific on May 11, 2026, which ``clock.now`` reads."""
     fake = Clock(datetime(2026, 5, 11, 12, 0, 30, tzinfo=PACIFIC))
     monkeypatch.setattr(clock, "now", lambda: fake.now)
     return fake
@@ -49,13 +51,17 @@ class Loops:
 
     started: list[tuple[float, Callable[[], object]]] = field(default_factory=list)
 
-    # A bound method set on the class is not bound again: no `self` of Services.
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
+        """Record the loop's period and action instead of running it.
+
+        A bound method set on the class is not bound again: no ``self`` of Services.
+        """
         self.started.append((seconds, action))
 
 
 @pytest.fixture
 def loops(monkeypatch: pytest.MonkeyPatch) -> Loops:
+    """A ``Loops`` in place of ``Services.run_every``."""
     fake = Loops()
     monkeypatch.setattr(Services, "run_every", fake.run_every)
     return fake
@@ -74,6 +80,7 @@ async def mounted_strip(
 
 
 def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) -> None:
+    """The strip's effect depends on ``auto_refresh``; ``stop_ticks`` cleans it up."""
     render_strip(auto_refresh=True)
     (_, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
     assert dependencies == [True]
@@ -85,6 +92,7 @@ def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) ->
 async def test_a_tick_re_renders_the_strip_only_when_the_minute_changed(
     hooks: Hooks, page: FakePage, loops: Loops, moving_clock: Clock
 ) -> None:
+    """A tick in the render's minute re-renders nothing; a minute later, one does."""
     tick = await mounted_strip(hooks, loops)
     tick()  # at mount: the same minute as the render
     assert hooks.renders == 0
@@ -100,6 +108,7 @@ async def test_a_tick_shows_the_strip_once_the_data_turns_stale(
     loops: Loops,
     moving_clock: Clock,
 ) -> None:
+    """A tick that ages the feed past a day re-renders the strip, now shown as stale."""
     conference.fetched_at = moving_clock.now - timedelta(
         hours=23, minutes=59, seconds=30
     )
@@ -141,6 +150,7 @@ async def test_on_now_and_schedule_a_tick_starts_a_refresh_when_one_is_due(
     moving_clock: Clock,
     network: Network,
 ) -> None:
+    """With ``auto_refresh``, a tick refreshes at once, then only 15 minutes on."""
     tick = await mounted_strip(hooks, loops, auto_refresh=True)
     tick()  # nothing has started in this session yet
     first = conference._task
@@ -168,6 +178,7 @@ async def test_elsewhere_a_tick_never_refreshes(
     loops: Loops,
     moving_clock: Clock,
 ) -> None:
+    """Without ``auto_refresh``, ticks over two hours start no refresh."""
     tick = await mounted_strip(hooks, loops)  # My schedule's strip
     tick()
     moving_clock.move(timedelta(hours=2))

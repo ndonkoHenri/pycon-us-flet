@@ -27,6 +27,7 @@ DAY = 2
 async def test_switch_days_keeps_selection(
     flet_app: ftt.FletTestApp, feed_url: str
 ) -> None:
+    """The third tab shows its day's rows in place of the first's; Back keeps it."""
     t = remote(flet_app)
     await fresh_start(t, now=before_conference(), feed_url=feed_url)
     first_day = row_id("schedule", day_rows(recorded(), 0)[0])

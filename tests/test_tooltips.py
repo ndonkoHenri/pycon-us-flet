@@ -47,8 +47,11 @@ def test_the_now_button_says_what_it_does_from_inside() -> None:
 
 
 def says_its_tooltip(call: ast.Call) -> bool:
-    """Whether ``call`` passes a tooltip that screen readers get: not ``None``, and not
-    a ``Tooltip(..., exclude_from_semantics=True)``."""
+    """Whether ``call`` passes a tooltip that screen readers get.
+
+    That is a tooltip that is not ``None``, and not a
+    ``Tooltip(..., exclude_from_semantics=True)``.
+    """
     tooltip = next((k.value for k in call.keywords if k.arg == "tooltip"), None)
     if tooltip is None or (isinstance(tooltip, ast.Constant) and tooltip.value is None):
         return False
@@ -142,7 +145,10 @@ def unmerged_tooltips(sources: dict[str, str]) -> list[str]:
 
 
 def screen(*lines: str) -> dict[str, str]:
-    """Return one module, ``m``: ``def screen(control):`` with ``lines`` as its body."""
+    """Return one module, ``m``, with one function whose body is ``lines``.
+
+    The function is ``def screen(control):``.
+    """
     return {"m": "def screen(control):\n" + "".join(f"    {x}\n" for x in lines)}
 
 
@@ -204,8 +210,11 @@ def test_the_scan_keeps_a_merged_or_unsaid_tooltip(lines: list[str]) -> None:
 
 
 def test_the_scan_follows_a_returned_button_to_its_callers() -> None:
-    """A builder that returns the button (the fake clock's picker) is checked where
-    it is called: each call must merge it, or the button is unnamed there."""
+    """A returned button is flagged unless every call of its builder merges it.
+
+    A builder that returns the button (the fake clock's picker) is checked where it is
+    called: each call must merge it, or the button is unnamed there.
+    """
     builder = f"def picker():\n    return {BACK}\n"
     both = builder + 'def a():\n    return named("x", picker())\n'
     assert unmerged_tooltips({"m": both}) == []
@@ -221,8 +230,11 @@ def app_sources() -> dict[str, str]:
 
 
 def test_the_scan_finds_the_app_s_buttons_with_tooltips() -> None:
-    """A scan that matched nothing would pass whatever the code says: the app has
-    a dozen buttons with a said tooltip (Back, Search, Share, Clear, the menus)."""
+    """The scan finds at least eight buttons with a said tooltip in the app's modules.
+
+    A scan that matched nothing would pass whatever the code says: the app has a dozen
+    buttons with a said tooltip (Back, Search, Share, Clear, the menus).
+    """
     modules = Modules(app_sources())
     said = [
         node

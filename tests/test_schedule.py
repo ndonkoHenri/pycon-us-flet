@@ -79,8 +79,10 @@ TALK = "142"
 
 @dataclass
 class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on the Schedule: its scrolls,
-    jumps and minute ticks."""
+    """The harness's ``Shown`` on the Schedule: its scrolls, jumps and minute ticks.
+
+    It is ``tests/sessions.py``'s, with what the Schedule's stand-ins record.
+    """
 
     scrolls: list[tuple[ft.ListView, dict[str, Any]]] = field(default_factory=list)
     """Each ``ListView.scroll_to`` asked: the list and its arguments."""
@@ -133,8 +135,10 @@ class Shown(sessions.Shown):
         await self.settle()
 
     def jumped(self) -> list[str]:
-        """The targets of the jumps that ended, in order: one per jump, however many
-        times it asked for its scroll."""
+        """The targets of the jumps that ended, in order.
+
+        One per jump, however many times it asked for its scroll.
+        """
         return [key for key, _ in self.jumps]
 
     def forget(self) -> None:
@@ -152,16 +156,19 @@ class Shown(sessions.Shown):
 
     @property
     def tabs(self) -> ft.Tabs:
+        """The screen's one ``Tabs``."""
         (tabs,) = self.find(ft.Tabs)
         return tabs
 
     def list_of(self, day: date) -> ft.ListView:
+        """The one mounted ``ListView`` of ``day``."""
         found = [c for c in self.find(ft.ListView) if c.key == f"day-{day.isoformat()}"]
         assert len(found) == 1, day
         return found[0]
 
     @property
     def fab(self) -> ft.FloatingActionButton | None:
+        """The "Now" or "Today" button, or None while it is hidden."""
         found = self.find(ft.FloatingActionButton)
         return found[0] if found else None
 
@@ -180,16 +187,19 @@ class Shown(sessions.Shown):
         await self.scroll_end(day, 0.0)
 
     async def press_now(self) -> None:
+        """Tap the "Now" or "Today" button, which must be showing."""
         assert self.fab is not None
         await self.click(self.fab)
 
     async def tap_star(self, session_id: str) -> None:
+        """Tap the star on ``session_id``'s row."""
         star = self.node(f"schedule.favorite.{session_id}").content
         assert star is not None
         await self.click(star)
 
 
 def _scroll_end(pixels: float) -> dict[str, object]:
+    """A scroll end event's data at ``pixels``, as Flutter sends it."""
     return {
         "event_type": "end",
         "pixels": pixels,
@@ -222,11 +232,13 @@ def now() -> list[datetime | None]:
 
 @pytest.fixture
 def memory() -> ViewMemory:
+    """A fresh ``ViewMemory``, which a test may fill before the render."""
     return ViewMemory()
 
 
 @pytest.fixture
 def conference() -> Conference:
+    """The recorded 2026 feed as the bundled ``Conference``."""
     return Conference(data=processed(2026), source="bundled", version=1)
 
 
@@ -322,15 +334,16 @@ async def shown(
                 wait: bool = True,
                 **settings: Any,
             ) -> Shown:
-                """Render the Schedule with these ``Prefs``; ``moves``, ``late`` and
-                ``hold`` as in ``Shown``.
+                """Render the Schedule with these ``Prefs`` settings.
+
+                ``moves``, ``late`` and ``hold`` are as in ``Shown``.
 
                 With ``wait`` it returns once no jump is on its way, so the next step
-                never meets one (#237). The first display's jump, when there is one,
-                has ended by then: ``settle()`` has already started it, since the
-                effect's chain up to the jump is pure asyncio here (``MemoryPrefs``
-                answers inline), with no timer or thread hop. A test that expects that
-                jump also checks ``jumps`` right after.
+                never meets one (#237). The first display's jump, when there is one, has
+                ended by then: ``settle()`` has already started it, since the effect's
+                chain up to the jump is pure asyncio here (``MemoryPrefs`` answers
+                inline), with no timer or thread hop. A test that expects that jump also
+                checks ``jumps`` right after.
                 """
                 clock.set_test_now(now[0])
                 result = await stack.enter_async_context(
@@ -391,6 +404,7 @@ async def test_every_conference_day_is_a_one_line_tab_read_in_full(
 async def test_today_is_selected_during_the_conference(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
+    """During the conference, the Schedule opens on today's tab."""
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
 
@@ -398,6 +412,7 @@ async def test_today_is_selected_during_the_conference(
 async def test_the_first_day_is_selected_outside_the_conference(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
+    """Before the conference, the first day is selected and no tab says "today"."""
     now[0] = BEFORE
     schedule = await shown()
     assert schedule.tabs.selected_index == 0
@@ -449,30 +464,35 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
 async def test_a_remembered_day_wins_over_today(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """A day remembered in ``ViewMemory`` is selected over today."""
     memory.schedule_day = SATURDAY
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(SATURDAY)
 
 
 def _tab_text(schedule: Shown, index: int) -> str:
+    """The visible text of day tab ``index``."""
     node = schedule.node(f"schedule.day_tab.{index}")
     (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
     return str(text.value)
 
 
 def _spoken(schedule: Shown, index: int) -> str:
+    """What a screen reader says for day tab ``index``."""
     node = schedule.node(f"schedule.day_tab.{index}")
     (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
     return str(text.semantics_label)
 
 
 def _has_dot(schedule: Shown, node: ft.Semantics) -> bool:
+    """Whether the tab ``node`` holds today's mark, a dot."""
     return bool(find(schedule.session, ft.Container, lambda c: inside(c, node)))
 
 
 async def test_a_day_change_is_remembered_and_its_echo_changes_nothing(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """A day change is kept in ``ViewMemory``; its echo re-renders no slot or row."""
     schedule = await shown()
     await schedule.change_day(SATURDAY)
     assert memory.schedule_day == SATURDAY
@@ -615,6 +635,7 @@ async def test_only_today_s_list_builds_every_slot(
 async def test_outside_the_conference_no_list_is_built_in_full(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
+    """Before the conference, every day list stays lazy."""
     now[0] = BEFORE
     schedule = await shown()
     assert {schedule.list_of(day).cache_extent for day in DAYS} == {None}
@@ -636,6 +657,7 @@ async def test_a_star_tap_re_renders_one_slot_and_one_row(
 async def test_a_sprint_day_says_so_and_links_to_the_sprints(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
+    """Monday's list says it is a sprint day, and its button opens the Sprints page."""
     schedule = await shown()
     state = schedule.node("schedule.sprint_day.2026-05-18")
     assert texts(state)[0] == "Monday is a sprint day"
@@ -681,6 +703,7 @@ async def test_a_day_the_filter_empties_offers_to_clear_the_filters(
 async def test_a_scroll_end_is_remembered_and_put_back_when_the_day_shows_again(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """A day's scroll end is remembered and put back at once when the day returns."""
     schedule = await shown()
     await schedule.scroll_end(FRIDAY, 1234.0)
     assert memory.schedule_offsets[FRIDAY] == 1234.0
@@ -710,8 +733,11 @@ async def test_a_return_to_the_tab_restores_the_day_and_its_offset(
 async def test_the_first_display_of_today_jumps_to_the_current_slot_once(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """One jump, through D-156's second render. A late scroll end makes the jump ask
-    again (D-155): a loaded host may see two asks, both to the same place (#237)."""
+    """Today's first display jumps once to the current slot; a later one never does.
+
+    One jump, through D-156's second render. A late scroll end makes the jump ask again
+    (D-155): a loaded host may see two asks, both to the same place (#237).
+    """
     schedule = await shown()
     place = now_place(timeline(processed(2026), FRIDAY, ("Open Space",)), DURING)
     assert place.target == TEN_30
@@ -726,6 +752,7 @@ async def test_the_first_display_of_today_jumps_to_the_current_slot_once(
 async def test_under_reduced_motion_the_jump_is_instant(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
+    """Under reduced motion, the first display's jump goes to now with instant asks."""
     schedule = await shown(reduce_motion=True)
     assert schedule.jumped() == [TEN_30]
     _assert_asks(schedule, FRIDAY, TEN_30, 0)  # D-34: each ask instant
@@ -734,9 +761,12 @@ async def test_under_reduced_motion_the_jump_is_instant(
 async def test_a_late_scroll_end_makes_the_jump_ask_again_and_it_is_still_one_jump(
     shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """#237's "expected 1, got 2": on a loaded host the first ask's scroll end came
-    after the jump's wait, so the jump asked again (D-155). Two asks to one place, one
-    jump: the first display's effect runs once, and today's jump is done."""
+    """A late scroll end makes two asks to one place, yet one landed jump.
+
+    #237's "expected 1, got 2": on a loaded host the first ask's scroll end came after
+    the jump's wait, so the jump asked again (D-155). Two asks to one place, one jump:
+    the first display's effect runs once, and today's jump is done.
+    """
     schedule = await shown(late=True, reduce_motion=True)
     assert schedule.keyed() == [TEN_30, TEN_30]
     assert schedule.jumps == [(TEN_30, "landed")]
@@ -747,6 +777,7 @@ async def test_a_late_scroll_end_makes_the_jump_ask_again_and_it_is_still_one_ju
 async def test_outside_the_conference_nothing_jumps_and_there_is_no_now_button(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
+    """Before the conference, the Schedule scrolls nowhere and has no "Now" button."""
     now[0] = BEFORE
     schedule = await shown()
     assert schedule.scrolls == []
@@ -756,6 +787,7 @@ async def test_outside_the_conference_nothing_jumps_and_there_is_no_now_button(
 async def test_on_a_sprint_day_there_is_no_now_button(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
+    """On a sprint day, today's tab is selected, with no scroll and no "Now" button."""
     now[0] = datetime(2026, 5, 18, 11, 0, tzinfo=PACIFIC)
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(MONDAY)
@@ -766,6 +798,7 @@ async def test_on_a_sprint_day_there_is_no_now_button(
 async def test_now_on_today_jumps_again(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
+    """Scrolled away from now, "Now" shows, and a tap jumps to the current slot."""
     schedule = await shown()
     assert schedule.fab is None  # the jump put the slot on screen
     await schedule.scroll_away()
@@ -843,8 +876,11 @@ async def test_a_now_tap_still_waiting_stops_quietly_when_the_user_leaves_the_ta
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A tap's jump runs in its handler, which no unmount cancels: it stops at the
-    first ask that finds the list off the page, and no error reaches the next screen."""
+    """A waiting "Now" jump stops at its next ask once the user left, with no error.
+
+    A tap's jump runs in its handler, which no unmount cancels: it stops at the first
+    ask that finds the list off the page, and no error reaches the next screen.
+    """
     monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
     schedule = await shown(reduce_motion=True)
     await schedule.scroll_away()  # the button shows again
@@ -868,8 +904,11 @@ async def test_a_now_tap_still_waiting_stops_quietly_when_the_user_leaves_the_ta
 async def test_a_now_tap_on_a_list_already_in_place_is_still_said(
     shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No scroll, so no scroll end: today's list builds every slot (D-154), so a list
-    that never moves is on the slot already, and the user still hears where."""
+    """A "Now" tap on a list that never moves uses every try, then says where it is.
+
+    No scroll, so no scroll end: today's list builds every slot (D-154), so a list that
+    never moves is on the slot already, and the user still hears where.
+    """
     monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
     schedule = await shown(screen_reader=True, announcements=True, reduce_motion=True)
     await schedule.scroll_away()
@@ -894,6 +933,7 @@ async def test_a_now_tap_tells_a_screen_reader_where_it_landed(
 async def test_today_from_another_day_tells_a_screen_reader_once_it_landed(
     shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """From another day, "Today" announces the landing only once the switch settled."""
     memory.schedule_day, memory.jumped_on = SATURDAY, FRIDAY
     schedule = await shown(screen_reader=True, announcements=True)
     await schedule.press_now()
@@ -927,8 +967,11 @@ def _note(schedule: Shown) -> str:
 async def test_the_landing_note_is_a_polite_live_region_with_nothing_to_stop_on(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
-    """D-241: empty, the node has no label, action or state, so TalkBack's linear
-    navigation passes it by; a container, so its label is its own node's."""
+    """The landing note is an empty live-region container with no action or focus.
+
+    D-241: empty, the node has no label, action or state, so TalkBack's linear
+    navigation passes it by; a container, so its label is its own node's.
+    """
     schedule = await shown(screen_reader=True)
     note = schedule.node("schedule.landing")
     assert note.live_region and note.container
@@ -950,6 +993,7 @@ async def test_without_announcements_a_now_tap_tells_talkback_through_the_note(
 async def test_today_from_another_day_fills_the_note_once_it_landed(
     shown: Callable[..., Awaitable[Shown]], memory: ViewMemory
 ) -> None:
+    """From another day, "Today" fills the landing note only once the switch settled."""
     memory.schedule_day, memory.jumped_on = SATURDAY, FRIDAY
     schedule = await shown(screen_reader=True)
     await schedule.press_now()
@@ -962,8 +1006,11 @@ async def test_today_from_another_day_fills_the_note_once_it_landed(
 async def test_a_second_tap_on_the_same_slot_empties_the_note_first(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
-    """Flutter sends a live region's change only when its label changes (D-241), so
-    the same words again pass through empty while the jump is on its way."""
+    """A second tap empties the note while its jump runs, then says the same slot.
+
+    Flutter sends a live region's change only when its label changes (D-241), so the
+    same words again pass through empty while the jump is on its way.
+    """
     schedule = await shown(screen_reader=True)
     await schedule.press_now()
     assert _note(schedule) == "Friday, May 15, 10:30 AM"
@@ -995,8 +1042,11 @@ async def test_the_note_empties_once_talkback_has_read_it(
 async def test_the_note_stays_empty_without_talkback(
     shown: Callable[..., Awaitable[Shown]], settings: dict[str, bool]
 ) -> None:
-    """Nothing extra without a screen reader; VoiceOver hears the announcement, since
-    a live region would move its focus off the button (F13)."""
+    """Without TalkBack, a "Now" tap jumps and leaves the landing note empty.
+
+    Nothing extra without a screen reader; VoiceOver hears the announcement, since a
+    live region would move its focus off the button (F13).
+    """
     schedule = await shown(**settings)
     await schedule.scroll_away()
     await schedule.press_now()
@@ -1007,6 +1057,7 @@ async def test_the_note_stays_empty_without_talkback(
 
 
 def friday_at(hour: int, minute: int = 0) -> datetime:
+    """Friday, May 15 2026 at ``hour``:``minute``, Pacific Time."""
     return datetime(2026, 5, 15, hour, minute, tzinfo=PACIFIC)
 
 
@@ -1086,6 +1137,7 @@ async def test_a_filter_change_never_jumps(
 async def test_a_minute_never_jumps_not_even_when_a_slot_starts(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
+    """Minute ticks never scroll the list, not even the one at which a slot starts."""
     schedule = await shown()
     schedule.scrolls.clear()
     await schedule.at(friday_at(10, 41))
@@ -1096,8 +1148,11 @@ async def test_a_minute_never_jumps_not_even_when_a_slot_starts(
 async def test_each_new_today_jumps_once_by_itself(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """D-204: a process that lives across days jumps on each conference day's first
-    display, as after a fake-clock change; never twice the same day."""
+    """A new conference day's first display jumps, and a second one that day does not.
+
+    D-204: a process that lives across days jumps on each conference day's first
+    display, as after a fake-clock change; never twice the same day.
+    """
     memory.jumped_on = THURSDAY
     schedule = await shown()
     assert schedule.jumped() == [TEN_30]
@@ -1108,8 +1163,11 @@ async def test_each_new_today_jumps_once_by_itself(
 async def test_midnight_moves_today_s_dot_and_button_never_the_day_shown(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime | None]
 ) -> None:
-    """D-204: the day picked at the first display stays; the new today waits for the
-    user, and jumps on its first display."""
+    """At midnight the shown day stays, while the dot and full list move to the new day.
+
+    D-204: the day picked at the first display stays; the new today waits for the user,
+    and jumps on its first display.
+    """
     now[0] = friday_at(23, 58)
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
@@ -1151,8 +1209,11 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A list already in place sends no scroll end, so the jump answers only after its
-    tries: the button must not show for those seconds and then vanish (D-204)."""
+    """The button stays hidden while the first jump tries a list already in place.
+
+    A list already in place sends no scroll end, so the jump answers only after its
+    tries: the button must not show for those seconds and then vanish (D-204).
+    """
     monkeypatch.setattr(scrolling, "LANDING_S", 0.02)
     asked = asyncio.Event()  # the first ask is held: the jump stays on its way (#270)
     with caplog.at_level(logging.INFO):
@@ -1173,8 +1234,11 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
 async def test_a_screen_reader_keeps_the_button_so_a_tap_never_drops_its_focus(
     shown: Callable[..., Awaitable[Shown]],
 ) -> None:
-    """ux.md §5.2 item 5: a control that hides under the focus sends the reader
-    elsewhere, over the announcement of where the list went."""
+    """With a screen reader, the button shows after the jump and stays after a tap.
+
+    ux.md §5.2 item 5: a control that hides under the focus sends the reader elsewhere,
+    over the announcement of where the list went.
+    """
     schedule = await shown(screen_reader=True, announcements=True)
     assert schedule.fab is not None  # after the first display's jump too
     await schedule.press_now()
@@ -1185,8 +1249,11 @@ async def test_a_screen_reader_keeps_the_button_so_a_tap_never_drops_its_focus(
 async def test_a_tap_after_a_slot_started_since_the_tick_goes_there_and_hides(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
-    """The tap reads the clock, and so does the render its landing causes: the line
-    moves with the jump and the button hides at once, not at the next tick."""
+    """A tap after a slot started, before the tick, jumps there and hides the button.
+
+    The tap reads the clock, and so does the render its landing causes: the line moves
+    with the jump and the button hides at once, not at the next tick.
+    """
     schedule = await shown()
     await schedule.scroll_away()
     clock.set_test_now(friday_at(11, 0))  # the 11:00 AM slot starts before the tick
@@ -1229,9 +1296,12 @@ async def test_a_refresh_or_a_filter_change_brings_the_button_back(
 async def test_a_refresh_that_brings_the_same_feed_re_renders_nothing(
     shown: Callable[[], Awaitable[Shown]], conference: Conference, tmp_path: Path
 ) -> None:
-    """#290, D-224: the start refresh over the cache re-rendered every slot, remounting
+    """A refresh with the same feed re-renders no slot or row and keeps "Now" hidden.
+
+    #290, D-224: the start refresh over the cache re-rendered every slot, remounting
     each ``ScrollKey`` box, and brought "Now" back over the now line; a changed feed
-    still brings it back (D-204)."""
+    still brings it back (D-204).
+    """
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     await conference.load_local(storage, YEAR)  # the snapshot, as a first start
     schedule = await shown()
@@ -1267,6 +1337,7 @@ def _rename(document: dict[str, Any]) -> None:
 async def test_another_day_always_offers_today(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
+    """On a day other than today, the button shows and says "Today"."""
     schedule = await shown()
     assert schedule.fab is None
     await schedule.change_day(SATURDAY)
@@ -1279,6 +1350,7 @@ async def test_another_day_always_offers_today(
 
 
 def _now_line(schedule: Shown) -> ft.Semantics:
+    """The now line's ``Semantics`` node."""
     return schedule.node("schedule.now_line")
 
 
@@ -1321,8 +1393,11 @@ async def test_today_s_now_line_sits_after_the_last_slot_that_started(
 async def test_a_minute_re_renders_the_line_alone_and_a_slot_start_moves_it(
     shown: Callable[[], Awaitable[Shown]],
 ) -> None:
-    """D-153: no row re-renders; a move re-renders only the two slots whose divider
-    the line takes or gives back."""
+    """A minute re-renders the now line alone; a slot start moves it below that slot.
+
+    D-153: no row re-renders; a move re-renders only the two slots whose divider the
+    line takes or gives back.
+    """
     schedule = await shown()
     schedule.rows.clear()
     schedule.slots.clear()
@@ -1339,8 +1414,11 @@ async def test_a_minute_re_renders_the_line_alone_and_a_slot_start_moves_it(
 async def test_between_slots_the_jump_lands_on_the_now_line(
     shown: Callable[..., Awaitable[Shown]], now: list[datetime | None]
 ) -> None:
-    """D-204: at 2:35 PM nothing is on; the line sits above 2:45 PM's slot, and a
-    screen reader hears the time, as the line itself says it."""
+    """Between slots, the jump lands on the now line and a tap announces the time.
+
+    D-204: at 2:35 PM nothing is on; the line sits above 2:45 PM's slot, and a screen
+    reader hears the time, as the line itself says it.
+    """
     now[0] = friday_at(14, 35)
     schedule = await shown(screen_reader=True, announcements=True)
     assert schedule.jumped() == [NOW_KEY]
@@ -1383,6 +1461,7 @@ async def test_the_strip_refreshes_every_15_minutes_with_or_without_data(
 async def test_without_data_the_skeleton_shows_until_the_first_fetch_ends(
     shown: Callable[[], Awaitable[Shown]], conference: Conference
 ) -> None:
+    """Without data, the Schedule shows the loading skeleton and no day tabs."""
     conference.data, conference.source = None, "none"
     schedule = await shown()
     assert find(schedule.session, ft.Semantics, lambda c: c.label == "Loading schedule")
@@ -1431,6 +1510,7 @@ async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     problem: Problem,
     body: str,
 ) -> None:
+    """A failed first fetch says why, and "Try again" starts a refresh."""
     refreshes: list[str] = []
 
     async def refresh(*_: Any, **__: Any) -> None:

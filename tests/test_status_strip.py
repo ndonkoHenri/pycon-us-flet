@@ -60,11 +60,13 @@ FETCHED = datetime(2026, 5, 12, 10, 42, tzinfo=PACIFIC)  # a Tuesday
 def test_the_strip_says_why_the_data_is_not_fresh(
     status: Status, fetched_at: datetime | None, line: str | None
 ) -> None:
+    """Each status gives its line, with or without a fetch time; fresh gives none."""
     now = FETCHED + timedelta(hours=9, minutes=5)
     assert strip_line(status, fetched_at, now, PACIFIC, use_24h=False) == line
 
 
 def test_the_strip_writes_times_in_conference_time_and_the_device_format() -> None:
+    """A UTC fetch time is written in conference time, in the 24-hour format."""
     fetched_utc = FETCHED.astimezone(ZoneInfo("UTC"))
     line = strip_line("offline", fetched_utc, FETCHED, PACIFIC, use_24h=True)
     assert line == "Offline · schedule from Tue, May 12, 10:42"
@@ -98,10 +100,12 @@ class StripRenders:
     strips: list[ft.Semantics] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        """Subscribe to the conference store."""
         assert isinstance(self.conference, ft.Observable)
         self.conference.subscribe(self)
 
     def __call__(self, _sender: object, _name: str | None) -> None:
+        """Render the strip again for the store's change."""
         self.strips.append(render_strip())
 
 
@@ -116,6 +120,7 @@ def fake_now(monkeypatch: pytest.MonkeyPatch) -> datetime:
 def test_the_strip_is_hidden_while_the_data_is_fresh(
     hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
 ) -> None:
+    """With data fetched an hour ago, the strip is hidden."""
     conference.fetched_at = fake_now - timedelta(hours=1)
     strip = render_strip()
     assert strip.visible is False
@@ -124,6 +129,7 @@ def test_the_strip_is_hidden_while_the_data_is_fresh(
 def test_a_stale_strip_is_a_live_region_with_refresh(
     hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
 ) -> None:
+    """A day-old feed shows the strip as a live region, with Refresh enabled, no bar."""
     conference.fetched_at = fake_now - timedelta(hours=25)
     strip = render_strip()
     text, button, progress = strip_parts(strip)
@@ -143,6 +149,10 @@ async def test_while_a_refresh_the_user_asked_for_runs_it_says_so_and_disables_r
     fake_now: datetime,
     network: Network,
 ) -> None:
+    """During the user's refresh, the strip says it is updating, and disables Refresh.
+
+    Its icon turns neutral and the indeterminate bar shows.
+    """
     conference.fetched_at = fake_now - timedelta(hours=25)
     tap = press(strip_parts(render_strip())[1])  # Refresh
     await network.arrived.wait()
@@ -167,6 +177,7 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_strip_hidden(
     fake_now: datetime,
     network: Network,
 ) -> None:
+    """An automatic refresh over hour-old data runs with the strip still hidden."""
     conference.fetched_at = fake_now - timedelta(hours=1)
     conference.start_refresh_if_due(svc.storage, svc.year)
     await network.arrived.wait()
@@ -178,9 +189,12 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_strip_hidden(
 def test_a_wrapped_line_keeps_its_icon_beside_its_first_line(
     hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
 ) -> None:
-    # At 200 % text the line wraps; the icon tops it and is one line tall at any text
-    # size, so it sits beside the first line, not above it or by the block's middle
-    # (#195). A 16 dp icon that did not scale topped a line three times its height.
+    """The strip's 16 dp icon scales with the text and sits by the line's first line.
+
+    At 200 % text the line wraps; the icon tops it and is one line tall at any text
+    size, so it sits beside the first line, not above it or by the block's middle
+    (#195). A 16 dp icon that did not scale topped a line three times its height.
+    """
     conference.fetched_at = fake_now - timedelta(hours=25)
     strip = render_strip()
     _, line_row = strip_rows(strip)
@@ -195,9 +209,12 @@ def test_a_wrapped_line_keeps_its_icon_beside_its_first_line(
 def test_a_line_too_long_for_the_buttons_side_moves_the_button_under_it(
     hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
 ) -> None:
-    # One run while the line fits beside Refresh (the line centred against the 48 dp
-    # button, the button at the end); at large text the button takes a run of its own,
-    # so the line keeps the strip's width instead of a column a word wide (#195).
+    """The strip's row wraps, so Refresh moves under a line too long to share its run.
+
+    One run while the line fits beside Refresh (the line centred against the 48 dp
+    button, the button at the end); at large text the button takes a run of its own, so
+    the line keeps the strip's width instead of a column a word wide (#195).
+    """
     conference.fetched_at = fake_now - timedelta(hours=25)
     strip = render_strip()
     row, line_row = strip_rows(strip)
@@ -237,6 +254,7 @@ async def test_an_automatic_refresh_over_an_offline_strip_shows_only_the_bar(
     fake_now: datetime,
     network: Network,
 ) -> None:
+    """An automatic refresh over an offline strip only shows, then hides, the bar."""
     conference.fetched_at = datetime(2026, 5, 11, 10, 42, tzinfo=PACIFIC)
     conference.problem = "offline"  # the last refresh got no answer
     network.error = api.NetworkError("ConnectError: still offline")
@@ -274,6 +292,7 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
     fake_now: datetime,
     network: Network,
 ) -> None:
+    """Refresh joins a quiet refresh, says so at once, and sends no second request."""
     conference.fetched_at = fake_now - timedelta(hours=25)
     quiet = conference.start_refresh_if_due(svc.storage, svc.year)
     assert quiet is not None

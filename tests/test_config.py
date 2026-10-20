@@ -22,6 +22,7 @@ YEARS = sorted(
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_year_loads(year: int) -> None:
+    """Each bundled year loads with its year, its feed URL and some tracks."""
     data = load_year(year)
     assert data.conference.year == year
     assert (
@@ -42,6 +43,7 @@ def test_the_year_loader_loads_no_flet_module() -> None:
 
 
 def test_the_active_year_is_2026_in_pacific_time() -> None:
+    """The active year is 2026 in Pacific Time, May 13 to 19 with talks to May 17."""
     conference = load_year().conference
     assert config.YEAR == 2026
     assert conference.zone == ZoneInfo("America/Los_Angeles")
@@ -54,7 +56,10 @@ def test_the_active_year_is_2026_in_pacific_time() -> None:
 
 
 def test_the_registration_dashboard_is_year_data_and_optional() -> None:
-    # SESS-01's registration guidance links it; 2025 has none, and none is needed.
+    """2026 names its registration dashboard, and 2025 loads with none.
+
+    SESS-01's registration guidance links it; 2025 has none, and none is needed.
+    """
     assert (
         load_year(2026).conference.registration_url
         == "https://us.pycon.org/2026/accounts/dashboard/"
@@ -63,7 +68,10 @@ def test_the_registration_dashboard_is_year_data_and_optional() -> None:
 
 
 def test_the_sprint_pages_are_year_data_and_optional() -> None:
-    # EVT-08: the Sprints page's menu; 2025's feed has no sprint projects.
+    """2026 names its sprint info and project form pages, and 2025 loads with neither.
+
+    EVT-08: they are the Sprints page's menu; 2025's feed has no sprint projects.
+    """
     conference = load_year(2026).conference
     assert conference.sprints_url == "https://us.pycon.org/2026/events/dev-sprints/"
     assert (
@@ -83,12 +91,17 @@ def test_the_sprints_follow_the_last_talk_day() -> None:
 
 
 def test_2025_is_in_eastern_time() -> None:
+    """2025's conference is in the New York zone, named Eastern Time."""
     conference = load_year(2025).conference
     assert conference.zone == ZoneInfo("America/New_York")
     assert conference.time_zone_name == "Eastern Time"
 
 
 def test_job_fair_override_matches_only_the_whole_name() -> None:
+    """The Job Fair's -30 minute override matches its whole name only.
+
+    Case and spacing don't count, but a longer name that starts with it is no match.
+    """
     (override,) = load_year(2026).content.display_time_overrides
     assert override.minutes == -30
     assert override.pattern.fullmatch("Job Fair & Community Showcase")
@@ -107,16 +120,19 @@ def test_job_fair_override_matches_only_the_whole_name() -> None:
     ],
 )
 def test_track_name_formats(fmt: TrackFormat, expected: str) -> None:
+    """``track_name`` gives the AI track's short, plural and long names."""
     assert load_year(2026).conference.track_name("Ai", fmt) == expected
 
 
 def test_security_keeps_its_track_title() -> None:
+    """Security's short name is its key and its plural is its track's title."""
     conference = load_year(2026).conference
     assert conference.track_name("Security") == "Security"
     assert conference.track_name("Security", "plural") == "Trailblazing Python Security"
 
 
 def test_2026_registry_names_every_processed_track() -> None:
+    """2026's track registry holds exactly the fifteen tracks of its processed feed."""
     keys = {track.key for track in load_year(2026).conference.tracks}
     assert keys == {
         "Talk",
@@ -138,11 +154,13 @@ def test_2026_registry_names_every_processed_track() -> None:
 
 
 def test_track_name_defaults_to_short() -> None:
+    """``track_name`` without a format gives the short name, "Lightning talks"."""
     assert load_year(2026).conference.track_name("Lightning-talks") == "Lightning talks"
 
 
 @pytest.mark.parametrize("fmt", ["short", "plural", "long"])
 def test_unknown_track_falls_back_to_its_humanised_key(fmt: TrackFormat) -> None:
+    """A track the registry lacks is named by its humanised key, in a known group."""
     conference = load_year(2026).conference
     assert conference.track_name("Hallway-track", fmt) == "Hallway track"
     assert conference.track("Hallway-track").group in TRACK_GROUPS
@@ -150,14 +168,18 @@ def test_unknown_track_falls_back_to_its_humanised_key(fmt: TrackFormat) -> None
 
 @pytest.mark.parametrize("year", YEARS)
 def test_track_icons_are_material_icon_names(year: int) -> None:
+    """Every track's icon names one of Flet's Material icons."""
     for track in load_year(year).conference.tracks:
         assert hasattr(ft.Icons, track.icon), track.key
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_track_has_an_icon_of_its_own(year: int) -> None:
-    """The hub shows the icons side by side as the key to the tracks (D-199): two
-    rows told apart by their circle's colour alone would break D-33."""
+    """No two tracks of a year share an icon.
+
+    The hub shows the icons side by side as the key to the tracks (D-199): two rows told
+    apart by their circle's colour alone would break D-33.
+    """
     icons = [track.icon for track in load_year(year).conference.tracks]
     assert len(icons) == len(set(icons)), sorted(icons)
 
@@ -186,12 +208,17 @@ def test_track_pages_have_clean_explicit_slugs() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_track_has_a_slug_and_a_legend_line(year: int) -> None:
+    """Every track has a slug of its own in its year, and a legend that is not blank."""
     tracks = load_year(year).conference.tracks
     assert len({t.slug for t in tracks}) == len(tracks)
     assert all(t.legend.strip() for t in tracks)
 
 
 def test_a_slug_finds_its_track_and_an_unknown_one_none() -> None:
+    """The slug "charlas" finds the Charla track; Ionic's or unknown slugs find none.
+
+    A slug is matched as written: "Charlas" and the empty slug find no track either.
+    """
     conference = load_year(2026).conference
     track = conference.track_for_slug("charlas")
     assert track is not None and track.key == "Charla"
@@ -200,6 +227,7 @@ def test_a_slug_finds_its_track_and_an_unknown_one_none() -> None:
 
 
 def test_a_track_the_registry_lacks_has_no_page() -> None:
+    """A track the registry lacks has an empty slug, which finds no track."""
     conference = load_year(2026).conference
     assert conference.track("Hallway-track").slug == ""
     assert conference.track_for_slug("") is None
@@ -218,6 +246,7 @@ def test_ai_and_security_are_the_new_tracks_of_2026() -> None:
 def test_a_year_bundles_a_snapshot_exactly_when_it_records_its_capture_time(
     year: int,
 ) -> None:
+    """A year has a snapshot file exactly when it records ``snapshot_captured_at``."""
     data = load_year(year)
     has_file = (data.folder / config.SNAPSHOT_FILE).is_file()
     assert has_file == (data.conference.snapshot_captured_at is not None)
@@ -234,6 +263,7 @@ def test_the_active_year_bundles_its_snapshot() -> None:
 
 
 def test_a_year_without_a_snapshot_says_so() -> None:
+    """Reading 2025's snapshot raises a ``YearDataError`` that names the missing key."""
     with pytest.raises(
         YearDataError,
         match=r"^2025/conference\.toml: snapshot_captured_at: missing key; "
@@ -250,6 +280,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
+    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -539,6 +570,7 @@ def edit(path: Path, old: str, new: str) -> None:
 def test_malformed_file_names_file_key_and_problem(
     data_dir: Path, file: str, old: str, new: str, message: str
 ) -> None:
+    """A malformed year file raises an error naming its file, key and problem."""
     edit(data_dir / "2026" / file, old, new)
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)
@@ -556,6 +588,7 @@ def test_lightning_talks_need_a_doubt_to_fold(data_dir: Path) -> None:
 
 
 def test_array_items_must_be_tables(data_dir: Path) -> None:
+    """An array item that is a string, not a table, raises an error naming its index."""
     (data_dir / "2026" / "content.toml").write_text(
         'display_time_overrides = ["Job Fair"]\n', encoding="utf-8"
     )
@@ -567,6 +600,7 @@ def test_array_items_must_be_tables(data_dir: Path) -> None:
 
 
 def test_a_pages_copy_must_be_a_table(data_dir: Path) -> None:
+    """A page's copy that is not a table raises an error naming it and its value."""
     (data_dir / "2026" / "content.toml").write_text(
         "open_spaces = 1\n", encoding="utf-8"
     )
@@ -576,6 +610,7 @@ def test_a_pages_copy_must_be_a_table(data_dir: Path) -> None:
 
 
 def test_content_without_overrides_has_none(data_dir: Path) -> None:
+    """A ``content.toml`` with nothing set has no overrides and no other locations."""
     (data_dir / "2026" / "content.toml").write_text("# nothing yet\n", encoding="utf-8")
     content = load_year(2026, data_dir).content
     assert content.display_time_overrides == ()
@@ -616,17 +651,20 @@ def test_a_year_may_leave_out_the_pages_copy() -> None:
 
 
 def test_missing_file_is_named(data_dir: Path) -> None:
+    """A missing ``content.toml`` raises an error naming that file."""
     (data_dir / "2026" / "content.toml").unlink()
     with pytest.raises(YearDataError, match=r"^2026/content\.toml: file not found$"):
         load_year(2026, data_dir)
 
 
 def test_missing_snapshot_file_is_named(data_dir: Path) -> None:
+    """A missing ``conference.json`` is named when the snapshot is read."""
     (data_dir / "2026" / "conference.json").unlink()
     with pytest.raises(YearDataError, match=r"^2026/conference\.json: file not found$"):
         load_year(2026, data_dir).read_snapshot()
 
 
 def test_missing_year_is_named(data_dir: Path) -> None:
+    """A year without a folder raises an error naming its ``conference.toml``."""
     with pytest.raises(YearDataError, match=r"^2031/conference\.toml: file not found$"):
         load_year(2031, data_dir)

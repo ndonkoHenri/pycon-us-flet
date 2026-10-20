@@ -48,13 +48,16 @@ class Detail(Shown):
 
     @property
     def pushed(self) -> list[str]:
+        """The View paths the detail asked ``page.navigate`` for, in order."""
         return self.went
 
     @property
     def share(self) -> MemoryShare:
+        """The share service the detail was given, which records each share."""
         return cast(MemoryShare, self.services.share)
 
     def text(self, identifier: str) -> list[str]:
+        """The visible text under the node ``identifier``, in reading order."""
         return words(self.node(identifier))
 
     async def show(self, session_id: str | None) -> None:
