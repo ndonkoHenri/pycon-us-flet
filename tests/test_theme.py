@@ -266,7 +266,7 @@ def test_theme_is_seeded_with_neutral_surfaces_and_bundled_roboto(dark: bool) ->
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_ios_defaults_are_pinned_to_material(dark: bool) -> None:
-    """The app bar's title starts left, and each platform's transition is pinned."""
+    """The app bar's title starts left; Android uses predictive back, iOS Cupertino."""
     built = theme.build_theme(dark=dark, high_contrast=False)
     assert built.appbar_theme is not None
     assert built.appbar_theme.center_title is False  # D-10
@@ -491,10 +491,11 @@ def test_tokens_context_defaults_to_the_light_tokens() -> None:
 
 
 def test_every_markdown_text_style_names_a_checked_colour() -> None:
-    """Every Markdown text style names a colour: primary for links, else on-surface.
+    """Every style the sheet gives names a colour: primary for links, else on-surface.
 
-    F28: a style given in the sheet replaces the theme's, so one without a colour is
-    black on the dark surface. The colours are roles whose contrast is tested above.
+    The sheet gives at least the link, paragraph, h1 and code styles. F28: a style
+    given in the sheet replaces the theme's, so one without a colour is black on the
+    dark surface. The colours are roles whose contrast is tested above.
     """
     styles = {
         field.name: getattr(theme.MARKDOWN_STYLE, field.name)
@@ -514,7 +515,7 @@ def test_every_markdown_text_style_names_a_checked_colour() -> None:
 
 
 def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> None:
-    """Every Markdown text style names its font, and a decoration takes its colour.
+    """Every style the sheet gives names its font, and a decoration takes its colour.
 
     D-152: Markdown text does not inherit the theme's font (iOS showed SF Pro), and an
     unnamed decoration colour drew near-black lines on the dark surface.

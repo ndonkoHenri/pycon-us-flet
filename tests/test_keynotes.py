@@ -169,7 +169,10 @@ async def test_the_photos_are_decorative_with_the_initials_under_them(
 
 
 async def test_a_panel_shows_its_people_as_a_row_of_photos(show: Show) -> None:
-    """Each panel's people wrap as a row of 64 dp photos, each person one stop."""
+    """Each panel's people wrap as a row of names, in the year data's order.
+
+    The last panel's (the Steering Council's) are 64 dp photos, each person one stop.
+    """
     page = await show()
     council = keynote_of(KEYNOTES, "183")
     assert council is not None
