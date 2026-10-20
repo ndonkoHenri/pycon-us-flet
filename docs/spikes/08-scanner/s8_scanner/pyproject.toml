@@ -1,0 +1,15 @@
+# S8 throwaway extension (docs/spikes/08-scanner.md). Never published.
+[project]
+name = "flet-s8-scanner"
+version = "0.0.1"
+description = "S8 spike: a barcode-scanner control for Flet over mobile_scanner."
+requires-python = ">=3.14"
+dependencies = ["flet"]
+
+# A Dart-only package: mobile_scanner brings its own Android and iOS modules.
+[tool.setuptools.package-data]
+"flutter.flet_s8_scanner" = ["pubspec.yaml", "lib/**"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

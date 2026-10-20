@@ -105,6 +105,8 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
             "/more/tracks/open-spaces/session/42",
             ["More", "Tracks", "OpenSpaces", "Drill"],
         ),
+        ("/more/sponsors", ["More", "Sponsors"]),
+        ("/more/sponsors/sponsor/bloomberg", ["More", "Sponsors", "Drill"]),
         ("/more/app", ["More", "AboutApp"]),
         ("/more/developer", ["More", "Developer"]),
         ("/more/social", ["More", "Social"]),
@@ -296,6 +298,8 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/tracks/sprints/session/42", "/more/tracks/sprints"),
         ("/more/sprints", "/more"),  # from More, to it
         ("/more/lightning-talks", "/more"),
+        ("/more/sponsors/sponsor/bloomberg", "/more/sponsors"),  # to the list (D-17)
+        ("/more/sponsors", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
         ("/map/room/hall-a/plan/expo", "/map/room/hall-a"),
         ("/now/session/poster%20detail%2B1", "/now"),

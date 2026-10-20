@@ -8,9 +8,10 @@ rules. A module of its own, as the Open spaces and Lightning talks pages' is
 (``year_pages``, D-205), so ``config.py`` stays under D-66's ~400 lines while the six
 pages' tables arrive.
 
-Each page's issue adds its table, with its rules, to this module: so far Social's
-(``SocialInfo``, D-284). Until a page has its table, or for a year that has none, the
-page shows the feed's own block for it (``ui.info_page``).
+Each page's issue adds its table, with its rules, to this module: so far Wi-Fi's
+(``WifiInfo``, D-280) and Social's (``SocialInfo``, D-284). Until a page has its table,
+or for a year that has none, the page shows the feed's own block for it
+(``ui.info_page``).
 """
 
 import re
@@ -22,6 +23,19 @@ from pycon_us.year_schema import YearDataError
 
 if TYPE_CHECKING:  # config imports this module; the type alone goes the other way
     from pycon_us.config import Content
+
+
+@dataclass(frozen=True)
+class WifiInfo:
+    """The conference network the Wi-Fi page shows and copies (INFO-08, D-280).
+
+    Attributes:
+        network: The network's name (its SSID), exactly as a phone lists it.
+        password: Its password, exactly as it is typed.
+    """
+
+    network: str
+    password: str
 
 
 def check_info(content: Content, file: str) -> None:
@@ -38,6 +52,10 @@ def check_info(content: Content, file: str) -> None:
     Raises:
         YearDataError: A rule is broken; the message names the file and the key.
     """
+    if (wifi := content.wifi) is not None:
+        # A blank value would show nothing to read, and copy nothing to paste.
+        check_text(wifi.network, file, "wifi.network")
+        check_text(wifi.password, file, "wifi.password")
     check_social(content.social, file)
 
 

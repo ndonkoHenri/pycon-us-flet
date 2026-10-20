@@ -14,6 +14,7 @@ import pytest
 from pycon_us import theme
 from pycon_us.config import ConferenceInfo, load_year
 from pycon_us.core.models import ConferenceData, Session
+from pycon_us.theme_badges import BadgeColors
 from pycon_us.ui.badges import (
     REGISTRATION,
     SPANISH,
@@ -61,7 +62,7 @@ def labels(session: Session, info: ConferenceInfo, dark: bool = False) -> list[s
 
 def test_a_tonal_badge_is_its_label_on_its_fill() -> None:
     """A tonal badge is its label in its text colour on its fill, with a fill border."""
-    colors = theme.BadgeColors(text="#014271", fill="#C7DBFE")
+    colors = BadgeColors(text="#014271", fill="#C7DBFE")
     badge = TrackBadge("Talk", colors)
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     assert badge.content.value == "Talk"
@@ -73,7 +74,7 @@ def test_a_tonal_badge_is_its_label_on_its_fill() -> None:
 
 def test_an_outlined_badge_has_no_fill_and_a_border_in_its_text_colour() -> None:
     """An outlined badge has no fill; its border and its label take its text colour."""
-    badge = TrackBadge(REGISTRATION, theme.BadgeColors(text="#BA1A1A"))
+    badge = TrackBadge(REGISTRATION, BadgeColors(text="#BA1A1A"))
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     assert badge.bgcolor is None
     assert badge.border == ft.Border.all(1, "#BA1A1A")
