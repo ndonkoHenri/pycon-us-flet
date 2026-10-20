@@ -213,9 +213,9 @@ async def reset_app(
     year's favourites, the Developer options and their unlock), the feed cache and the
     change log (D-255). In memory, without a restart: real time and no error details,
     as Developer's own Reset sets them before the stores change (D-187); the bundled
-    snapshot, from the year's feed, with a running refresh cancelled; the settings, the
-    saved sessions and the view memory at their defaults. Then a refresh starts, as at a
-    start (D-181: quiet).
+    snapshot, from the year's feed, with a running refresh cancelled and an empty change
+    log (``Conference.reset()``, D-301); the settings, the saved sessions and the view
+    memory at their defaults. Then a refresh starts, as at a start (D-181: quiet).
 
     Args:
         svc: The session's services.

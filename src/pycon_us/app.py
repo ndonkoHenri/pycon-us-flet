@@ -12,6 +12,7 @@ import logging
 import flet as ft
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
@@ -53,13 +54,16 @@ def App(memory: ViewMemory):
     page = ft.context.page
     # An explicit empty list: without one, use_memo recomputes on every render (D-69).
     svc = ft.use_memo(lambda: Services.create(memory), [])
-    conference = ft.use_memo(Conference, [])
     favorites = ft.use_memo(Favorites, [])
+    # A refresh hands each new feed to the log, whose snapshot diff reads the
+    # favourites (D-255).
+    change_log = ft.use_memo(lambda: ChangeLog(_favorites=favorites), [])
+    conference = ft.use_memo(lambda: Conference(_change_log=change_log), [])
     prefs, _ = ft.use_state(Prefs)
 
     @report_errors
     async def start() -> None:
-        await bootstrap(page, svc, conference, prefs, favorites)
+        await bootstrap(page, svc, conference, prefs, favorites, change_log)
 
     @report_errors
     def follow_theme() -> None:
@@ -85,7 +89,10 @@ def App(memory: ViewMemory):
             conference,
             lambda: PrefsCtx(
                 prefs,
-                lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)),
+                lambda: FavoritesCtx(
+                    favorites,
+                    lambda: ChangeLogCtx(change_log, lambda: TokensCtx(tokens, router)),
+                ),
             ),
         ),
     )
@@ -141,6 +148,7 @@ async def bootstrap(
     conference: Conference,
     prefs: Prefs,
     favorites: Favorites,
+    change_log: ChangeLog,
 ) -> None:
     """Start in the order that avoids flashes and never waits on the network (DATA-35).
 
@@ -150,7 +158,8 @@ async def bootstrap(
        the theme animation off, so the theme lands at once. The Developer options
        take effect with the settings: the fake clock runs from its stored start, the
        feed URL serves the refreshes, and an unlock shows error details (D-187).
-    2. The year's favourites (D-48), so no star fills in after the first screen.
+    2. The year's favourites (D-48), so no star fills in after the first screen, and
+       the year's change log, before any refresh records in it (D-255).
     3. The feed cache, else the bundled snapshot (D-38, D-145).
     4. ``prefs.loaded`` ends the start. The boot gate opens once ``BootView``'s probe
        has also measured the time's place (``prefs.time_measured``), or after
@@ -171,6 +180,7 @@ async def bootstrap(
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
         favorites: The session's ``Favorites`` store.
+        change_log: The session's ``ChangeLog`` store.
     """
     # First, so a session replaced while the start awaits gets `closed` too (D-147).
     page.on_close = svc.close
@@ -181,6 +191,7 @@ async def bootstrap(
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
         await favorites.load(svc.storage)
+        await change_log.load(svc.storage, svc.year.conference.zone)
         await conference.load_local(svc.storage, svc.year)
     except Exception:  # its own net, not report_errors: the gate opens anyway (D-161)
         if not svc.closed.is_set():  # a closed session's store write fails (F30)
