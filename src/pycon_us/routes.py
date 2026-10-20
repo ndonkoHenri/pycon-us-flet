@@ -18,6 +18,7 @@ from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, start_target
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.help import Help
 from pycon_us.screens.keynotes import Keynotes
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
@@ -26,10 +27,13 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.open_spaces import OpenSpaces
 from pycon_us.screens.plan import PlanViewer
+from pycon_us.screens.psf import AboutPsf
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
 from pycon_us.screens.search import Search
 from pycon_us.screens.session import SessionDetail
+from pycon_us.screens.settings import Settings
+from pycon_us.screens.social import Social
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
@@ -200,9 +204,13 @@ ROUTES = [
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),
         pushed("sponsors", Sponsors),
+        pushed("settings", Settings),
         pushed("app", AboutApp),
         pushed("developer", Developer),
         pushed("wifi", Wifi),
+        pushed("help", Help),
+        pushed("psf", AboutPsf),
+        pushed("social", Social),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
