@@ -19,6 +19,7 @@ from pycon_us.ui.time_gutter import (
     TimeGutter,
     TimeSlot,
     slot_layout,
+    slot_width,
     time_above,
 )
 from tests.sessions import find, rendering, settle
@@ -95,6 +96,26 @@ def test_a_gutter_of_exactly_a_fifth_stays_beside_the_rows() -> None:
     assert MAX_GUTTER_SHARE == 0.2
     assert time_above(80.0, 400.0) is False
     assert time_above(80.5, 400.0) is True
+
+
+@pytest.mark.parametrize(
+    ("view_width", "slot"),
+    [(0.0, 0.0), (402.0, 402.0), (599.0, 599.0), (600.0, 520.0), (874.0, 794.0)],
+)
+def test_from_600_dp_a_slot_is_the_rail_narrower_than_its_view(
+    view_width: float, slot: float
+) -> None:
+    """From 600 dp the rail's 80 dp beside a root's body leave a slot less width."""
+    assert slot_width(view_width) == slot
+
+
+def test_beside_the_rail_a_gutter_that_fit_the_view_goes_above() -> None:
+    """A gutter that fits a 700 dp View but not the slot beside the rail goes above.
+
+    137 dp is under a fifth of 700 dp and over a fifth of the 620 dp left (D-277).
+    """
+    assert time_above(137.0, 700.0) is False
+    assert time_above(137.0, slot_width(700.0)) is True
 
 
 def test_an_unmeasured_width_keeps_the_gutter() -> None:

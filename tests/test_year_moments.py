@@ -220,8 +220,8 @@ def test_the_hand_moments_are_in_the_apps_voice(year: int) -> None:
             ),
         ),
         (
-            "checked = 2026-10-20\n",
-            "",
+            'open-spaces/"\nchecked = 2026-10-20\n',
+            'open-spaces/"\n',
             "2026/content.toml: event_reminders[0].checked: missing key",
         ),
         (
