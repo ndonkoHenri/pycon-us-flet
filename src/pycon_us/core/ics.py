@@ -79,7 +79,7 @@ def calendar_file(
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        f"PRODID:-//{APP_NAME}//EN",
+        f"PRODID:-//{_text(APP_NAME)}//EN",  # a TEXT value, escaped like the rest
     ]
     for session in events:
         lines += _event(session, year=year, now=now, alarm=alarm)

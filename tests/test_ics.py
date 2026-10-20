@@ -12,7 +12,8 @@ import pytest
 
 from pycon_us import APP_NAME
 from pycon_us.core.ics import ALARM, LINE_OCTETS, calendar_file
-from pycon_us.core.models import ConferenceData
+from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.timeline import schedule_order
 from tests.feeds import YEARS, processed
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -25,6 +26,9 @@ COLLAPSED = (
     "-2026-05-16T10:05:00-07:00"
 )
 """A collapsed break's synthetic id in the 2026 feed: spaces, commas and colons."""
+
+ODD_NAME = "Foo; Bar, 2027"
+"""An app name O-4 could pick that a TEXT value must escape: a semicolon and a comma."""
 
 
 def lines(data: bytes) -> list[str]:
@@ -85,6 +89,12 @@ def test_prodid_names_the_app_and_no_psf_mark() -> None:
     data = one(processed(2026), "142")
     assert values(data, "PRODID") == [f"-//{APP_NAME}//EN"]
     assert "PyCon" not in values(data, "PRODID")[0]
+
+
+def test_prodid_escapes_the_app_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``PRODID`` is TEXT: a semicolon or comma in the app's name is escaped."""
+    monkeypatch.setattr("pycon_us.core.ics.APP_NAME", ODD_NAME)
+    assert lines(one(processed(2026), "142"))[2] == "PRODID:-//Foo\\; Bar\\, 2027//EN"
 
 
 @pytest.mark.parametrize("year", YEARS)
@@ -259,3 +269,78 @@ def test_bad_arguments_are_refused() -> None:
         calendar_file(
             [session], year=2026, now=NOW.astimezone(UTC), alarm=timedelta(minutes=-1)
         )
+
+
+def shown(session: Session) -> tuple[object, ...]:
+    """Return what a calendar should read back for ``session``.
+
+    Its name, place, description, start and end, each ``None`` when the file leaves the
+    property out: no place for a generic break, no end for a notice.
+    """
+    details = "\n".join(d for d in (", ".join(session.speaker_names), session.url) if d)
+    return (
+        session.name,
+        session.display_location or None,
+        details or None,
+        session.display_start,
+        session.end if session.end > session.display_start else None,
+    )
+
+
+def agenda(year: int, monkeypatch: pytest.MonkeyPatch) -> tuple[bytes, list[tuple]]:
+    """Return a year's whole-agenda file under ``ODD_NAME`` and what each event holds."""
+    monkeypatch.setattr("pycon_us.core.ics.APP_NAME", ODD_NAME)
+    sessions = sorted(processed(year).sessions.values(), key=schedule_order)
+    return calendar_file(sessions, year=year, now=NOW), [shown(s) for s in sessions]
+
+
+# The two parser tests below are D-268's independent check. The parsers are not
+# dependencies, so CI skips them; run them with
+#   uv run --with icalendar==7.3.0 --with ical==14.3.0 pytest tests/test_ics.py
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_icalendar_reads_every_session_back(
+    year: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``icalendar`` parses a whole agenda: each event and alarm reads back unchanged."""
+    icalendar = pytest.importorskip("icalendar")
+    file, expected = agenda(year, monkeypatch)
+    calendar = icalendar.Calendar.from_ical(file)
+    events = calendar.walk("VEVENT")
+    assert str(calendar["PRODID"]) == f"-//{ODD_NAME}//EN"
+    assert [e.errors for e in events if e.errors] == []
+
+    def text(event, name: str) -> str | None:
+        """Return the event's ``name`` property as a string, ``None`` when absent."""
+        return str(event[name]) if name in event else None
+
+    read = [
+        (
+            text(e, "SUMMARY"),
+            text(e, "LOCATION"),
+            text(e, "DESCRIPTION"),
+            e.decoded("DTSTART"),
+            e.decoded("DTEND") if "DTEND" in e else None,
+        )
+        for e in events
+    ]
+    assert read == expected
+    assert [len(e.walk("VALARM")) for e in events] == [1] * len(expected)
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_ical_reads_every_session_back(
+    year: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The stricter ``ical`` parses a whole agenda: each event reads back unchanged."""
+    stream = pytest.importorskip("ical.calendar_stream")
+    file, expected = agenda(year, monkeypatch)
+    calendar = stream.IcsCalendarStream.calendar_from_ics(file.decode())
+    assert calendar.prodid == f"-//{ODD_NAME}//EN"
+    read = [
+        (e.summary, e.location, e.description, e.dtstart, e.dtend)
+        for e in calendar.events
+    ]
+    assert read == expected
+    assert [len(e.alarm) for e in calendar.events] == [1] * len(expected)
