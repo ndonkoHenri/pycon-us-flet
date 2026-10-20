@@ -23,7 +23,7 @@ from pycon_us.services import Services, api
 from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
-from pycon_us.ui.status_strip import strip_line
+from pycon_us.ui.status_strip import schedule_line, strip_line
 from tests import chrome, strip
 from tests.fakes import FakePage, Hooks
 from tests.strip import PACIFIC, Network, render_strip, strip_parts
@@ -70,6 +70,27 @@ def test_the_strip_writes_times_in_conference_time_and_the_device_format() -> No
     fetched_utc = FETCHED.astimezone(ZoneInfo("UTC"))
     line = strip_line("offline", fetched_utc, FETCHED, PACIFIC, use_24h=True)
     assert line == "Offline · schedule from Tue, May 12, 10:42"
+
+
+def test_the_schedule_line_names_the_source_and_its_age() -> None:
+    """The schedule line names the source and its age, or says there is none yet."""
+    now = FETCHED + timedelta(hours=3)
+    assert schedule_line("cache", FETCHED, now) == "From the cache, updated 3 hours ago"
+    assert schedule_line("network", FETCHED, now) == (
+        "From the feed, updated 3 hours ago"
+    )
+    assert (
+        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
+    )
+    assert schedule_line("none", None, now) == "No schedule yet"
+
+
+def test_the_schedule_line_counts_the_age_to_the_clock_the_app_reads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without a ``now`` the age runs to ``clock.now()``, which a fake clock moves."""
+    monkeypatch.setattr(clock, "now", lambda: FETCHED + timedelta(days=2))
+    assert schedule_line("network", FETCHED) == "From the feed, updated 2 days ago"
 
 
 def strip_rows(strip: ft.Semantics) -> tuple[ft.Row, ft.Row]:

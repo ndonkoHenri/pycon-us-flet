@@ -24,6 +24,7 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
@@ -36,7 +37,6 @@ from pycon_us.screens.developer_data import (
     DataActions,
     refreshed,
     reset_app,
-    schedule_line,
 )
 from pycon_us.screens.developer_ui import (
     NBSP,
@@ -717,11 +717,11 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
 ) -> None:
     """Confirming the reset leaves storage and every store as after a fresh install.
 
-    The session has been used: settings, favourites of two years, the Developer options,
-    a cache, a change log, a fake clock, a feed URL and remembered places. Only another
-    app's key is left; the device facts stay and Developer locks again. Then, as at a
-    start, a quiet refresh of the year's feed runs, the app goes to Now and says "App
-    reset".
+    The session has been used: settings (reminders too), favourites of two years, the
+    Developer options, a cache, a change log, a fake clock, a feed URL and remembered
+    places. Only another app's key is left; the device facts stay and Developer locks
+    again. Then, as at a start, a quiet refresh of the year's feed runs, the app goes to
+    Now and says "App reset".
     """
     stored.update(
         {
@@ -733,7 +733,12 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
             "flutter.not_ours": "kept",
         }
     )
-    await prefs.save(svc.storage, theme="dark", excluded_tracks=())
+    await prefs.save(
+        svc.storage,
+        theme="dark",
+        excluded_tracks=(),
+        reminders=ReminderSettings(session_lead=10, keynote=False, primer="accepted"),
+    )
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
@@ -761,6 +766,7 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
         ("Open Space",),
         {},
     )
+    assert prefs.reminders == ReminderSettings()  # off, the primer unasked (D-275)
     assert prefs.developer is False  # a packaged build: locked again
     assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
     assert favorites.ids == frozenset()
@@ -859,16 +865,3 @@ def test_refresh_now_says_how_the_refresh_ended() -> None:
         "The feed's answer couldn't be used: the app keeps the schedule it has.",
         False,
     )
-
-
-def test_the_schedule_line_names_the_source_and_its_age() -> None:
-    """The schedule line names the source and its age, or says there is none yet."""
-    now = datetime(2026, 5, 15, 12, tzinfo=UTC)
-    three_hours = now - timedelta(hours=3)
-    assert schedule_line("cache", three_hours, now) == (
-        "From the cache, updated 3 hours ago"
-    )
-    assert (
-        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
-    )
-    assert schedule_line("none", None, now) == "No schedule yet"

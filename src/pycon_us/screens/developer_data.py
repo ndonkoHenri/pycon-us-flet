@@ -14,16 +14,14 @@ are in ``developer_clock.py``.
 """
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import clock
-from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites, use_favorites
-from pycon_us.feed_refresh import Problem, Source
+from pycon_us.feed_refresh import Problem
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import (
@@ -43,16 +41,9 @@ from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.share import NOT_SHARED as SHEET_NOT_OPENED
 from pycon_us.ui.share import centre
-from pycon_us.ui.status_strip import use_minute
+from pycon_us.ui.status_strip import schedule_line, use_minute
 
 logger = logging.getLogger(__name__)
-
-SOURCES: dict[Source, str] = {
-    "bundled": "Bundled with the app",
-    "cache": "From the cache",
-    "network": "From the feed",
-}
-"""Where the schedule on screen came from, as Refresh now's second line says it."""
 
 CLEARED: Outcome = (
     (
@@ -321,18 +312,3 @@ def refreshed(problem: Problem | None) -> Outcome:
         "The feed's answer couldn't be used: the app keeps the schedule it has.",
         False,
     )
-
-
-def schedule_line(
-    source: Source, fetched_at: datetime | None, now: datetime | None = None
-) -> str:
-    """Return Refresh now's second line: where the schedule on screen came from, its age.
-
-    Args:
-        source: ``Conference.source``.
-        fetched_at: ``Conference.fetched_at``; None before anything is published.
-        now: The time to count the age to; ``clock.now()`` when None.
-    """
-    if source == "none" or fetched_at is None:
-        return "No schedule yet"
-    return f"{SOURCES[source]}, updated {ago_label(fetched_at, now or clock.now())}"

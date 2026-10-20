@@ -104,6 +104,11 @@ def test_sponsor_levels_are_sorted_and_not_empty(year: int) -> None:
     assert feed_invariants.sponsor_levels_are_sorted_and_not_empty(feed) == []
 
 
+def test_job_listings_name_a_sponsor(year: int) -> None:
+    """Every job listing names a sponsor exactly; 2025 has no listing (SPON-05)."""
+    assert feed_invariants.job_listings_name_a_sponsor(recorded_feed(year)) == []
+
+
 def test_every_invariant_has_a_test_here(year: int) -> None:
     """The weekly check runs ``INVARIANTS``; each of them must also guard the fixtures."""
     tests = {
