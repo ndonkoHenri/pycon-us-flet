@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from pycon_us import config
-from pycon_us.config import YearDataError, load_year
+from pycon_us.config import Content, YearDataError, load_year
 from pycon_us.core.timeline import track_sessions
 from pycon_us.year_keynotes import Keynote, check_keynote_sessions, keynote_of
 from pycon_us.year_tracks import HUB_PAGES, KEYNOTE_TRACKS
@@ -41,9 +41,19 @@ def edit(path: Path, old: str, new: str) -> None:
 
 
 @pytest.mark.parametrize("year", YEARS)
-def test_every_years_keynotes_name_sessions_of_its_snapshot(year: int) -> None:
-    """D-217: the year data and the feed it ships with are checked together."""
-    load_year(year, check_sessions=True)
+def test_every_years_keynotes_name_sessions_of_its_feed(year: int) -> None:
+    """D-217: the year data and the feed it ships with are checked together.
+
+    A year that bundles no snapshot (2025, kept for tests) is checked against its
+    recorded feed instead (D-274).
+    """
+    data = load_year(year)
+    if data.conference.snapshot_captured_at is None:
+        sessions = processed(year).sessions
+        file = f"{year}/content.toml"
+        check_keynote_sessions(data.content.keynotes, sessions, KEYNOTE_TRACKS, file)
+    else:
+        load_year(year, check_sessions=True)
 
 
 def test_2026_has_its_four_keynotes_and_two_panels() -> None:
@@ -85,10 +95,25 @@ def test_the_copy_is_in_the_apps_voice() -> None:
 
 
 def test_a_year_may_have_no_keynotes() -> None:
-    """2025 keeps only what its recorded feed needs; any session has no entry."""
-    content = load_year(2025).content
+    """Keynotes are optional year data; without them no session has an entry."""
+    content = Content()
     assert content.keynotes == ()
     assert keynote_of(content.keynotes, "49") is None
+
+
+def test_2025_names_its_plenary_keynotes_and_panels() -> None:
+    """2025's feed files its keynotes as plenaries: the year data says which (D-274)."""
+    keynotes = load_year(2025).content.keynotes
+    assert [(k.session_id, k.kind) for k in keynotes] == [
+        ("49", "keynote"),
+        ("100", "panel"),
+        ("101", "keynote"),
+        ("151", "keynote"),
+        ("168", "keynote"),
+        ("169", "panel"),
+    ]
+    tracks = {processed(2025).sessions[k.session_id].track for k in keynotes}
+    assert tracks == {"Plenary"}
 
 
 def test_no_keynote_text_is_left_in_code() -> None:
