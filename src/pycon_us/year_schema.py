@@ -12,7 +12,7 @@ import dataclasses
 import tomllib
 import types
 import typing
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -25,6 +25,7 @@ _TYPE_NAMES = {
     bool: "true or false",
     date: "a date",
     datetime: "a date and time",
+    time: "a time",
 }
 
 
