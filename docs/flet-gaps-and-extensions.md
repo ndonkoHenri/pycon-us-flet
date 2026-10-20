@@ -36,7 +36,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
 | 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
-| 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
+| 6 | **U9** | Query-string hook | NEW-02, ROOM-03, ROOM-05, MAP-05, SPON-04, EXPO-05 | `use_query()` parses `page.route`, once, for the top View only (D-164) | `ft.use_route_search()` | later | XS | proposed; [#369](https://github.com/ndonkoHenri/pycon-us-flet/issues/369) |
 | 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed; [#370](https://github.com/ndonkoHenri/pycon-us-flet/issues/370) |
 | later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
 | low | **E2** | FCM push | none: the app has no push (D-58) | n/a | `firebase_messaging` 16.7.0 (+ U5) | never, in this app | L | a Flet contribution only |
@@ -701,13 +701,17 @@ class GroupedListView(ft.LayoutControl):
 
 `zoom_to_rect` fits a content-space rectangle in the viewport, clamped to `[min_scale, max_scale]`. **Upgrade:** the floor plan calls `zoom_to_rect(booth_rect, animation_duration=...)`, with `None` under reduced motion.
 
-### 5.8 U9: `ft.use_route_search()` (later; XS)
+### 5.8 U9: `ft.use_route_search()` (later; XS; [#369](https://github.com/ndonkoHenri/pycon-us-flet/issues/369))
 
-- **Serves:** ROOM-03 (`?highlight=`), SPON-04 and EXPO-05 (`?booth=`).
+- **Serves:** NEW-02 (`?scope=`), ROOM-03 (`?highlight=`), ROOM-05 and MAP-05 (`?pin=`), SPON-04 and EXPO-05 (`?booth=`).
 - **Interim:** `use_query()` in `locations.py` (D-164) parses the query from `page.route` once, when its View mounts, and only for the top View (`is_top_view(page.route, ft.use_view_path())`; `use_route_location()` is the opener's location for the Views under a global modal).
-- **Today:** `LocationInfo.search` is populated without the leading `?` (`FLET/components/router.py:112-123`, `:725`) but not exposed by a hook.
-- **Change:** `def use_route_search() -> str`, next to `use_route_location()` (`router.py:357`), exported as `ft.use_route_search`.
-- **Upgrade:** `use_query()` becomes `dict(parse_qsl(ft.use_route_search()))`. Its callers do not change.
+- **Today:** the Router parses the query into `LocationInfo.search`, without the leading `?` (`FLET/components/router.py:111-123`, `:723-726`, `:808`). It hands the query to every View through its location context (`:887-898`); the Views under a global modal get their opener's (`:842-850`). No hook returns it: `use_route_location()` returns the pathname only (`:357-370`). `page.query` (`FLET/controls/query_string.py:72-83`) is no substitute, for three reasons: it parses `page.route`, which under a modal is the modal's location; it is not a hook; and it drops blank values.
+- **Change:** `def use_route_search() -> str`, next to `use_route_location()`. It returns the same location's `search` (`""` outside a Router) and is exported as `ft.use_route_search`. #369 holds the draft diff, a repro and the open questions.
+- **Upgrade:** `use_query()` takes the query from `ft.use_route_search()` instead of `page.route`. It keeps its two rules:
+  - only the top View reads it, because every View of a stack sees the same value;
+  - it reads it once, when the View mounts.
+
+  It also keeps blank values (`parse_qsl(..., keep_blank_values=True)`). Its callers do not change.
 
 ### 5.9 U6: Android `<queries>` (only with E4; S)
 
