@@ -16,6 +16,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.sponsors import sponsor_by_slug
 from tests.feeds import changed, document, recorded, recorded_feed
 from tools import feed_invariants
 from tools.check_feed import main, new_keys
@@ -67,7 +68,7 @@ def test_the_recorded_feed_passes_and_a_missing_next_year_is_not_yet(
     status, out = check(capsys, ok(recorded(2026)))
 
     assert status == 0
-    assert "10 of 10 invariants hold" in out
+    assert "12 of 12 invariants hold" in out
     assert "no key the recorded feeds lack" in out
     assert f"2027: not published yet (HTTP 404 at {FEED_2027})" in out
     assert out.endswith("Feed check passed\n")
@@ -91,7 +92,7 @@ def test_a_feed_that_breaks_an_invariant_fails_and_names_it(
     assert status == 1
     assert "FAILED: every session is on one conference day" in out
     assert "424242 is on 2026-06-01, outside the conference" in out
-    assert "9 of 10 invariants hold" in out
+    assert "11 of 12 invariants hold" in out
     assert out.endswith("Feed check FAILED for 2026\n")
 
 
@@ -289,6 +290,22 @@ def in_utc(data: ConferenceData) -> ConferenceData:
     )
 
 
+def with_bloomberg_twice(data: ConferenceData) -> ConferenceData:
+    """``data`` with a second Bloomberg, as ``BLOOMBERG``, at the end of the last level."""
+    bloomberg = sponsor_by_slug(data, "bloomberg")
+    assert bloomberg is not None
+    *levels, last = data.sponsor_levels
+    twin = replace(bloomberg, name="BLOOMBERG", level=last.name)
+    last = replace(last, sponsors=(*last.sponsors, twin))
+    return replace(data, sponsor_levels=(*levels, last))
+
+
+def with_empty_top_level(data: ConferenceData) -> ConferenceData:
+    """``data`` with its top sponsor level, Visionary, emptied."""
+    top, *rest = data.sponsor_levels
+    return replace(data, sponsor_levels=(replace(top, sponsors=()), *rest))
+
+
 type Invariant = Callable[[ProcessedFeed], list[str]]
 
 BREAKS: list[tuple[Callable[[ConferenceData], ConferenceData], Invariant, str]] = [
@@ -375,6 +392,21 @@ BREAKS: list[tuple[Callable[[ConferenceData], ConferenceData], Invariant, str]] 
         lambda d: reversed_room(d, "elsewhere"),
         feed_invariants.rooms_and_sessions_agree,
         "room elsewhere's sessions are not by start, then name",
+    ),
+    (
+        with_bloomberg_twice,
+        feed_invariants.sponsor_slugs_are_unique,
+        "2 sponsors share the slug 'bloomberg'",
+    ),
+    (
+        lambda d: replace(d, sponsor_levels=tuple(reversed(d.sponsor_levels))),
+        feed_invariants.sponsor_levels_are_sorted_and_not_empty,
+        "the sponsor levels are not sorted by their order",
+    ),
+    (
+        with_empty_top_level,
+        feed_invariants.sponsor_levels_are_sorted_and_not_empty,
+        "sponsor level 'Visionary' has no sponsor",
     ),
 ]
 """Ways to break the 2026 model, the invariant each breaks, and a problem it reports."""
