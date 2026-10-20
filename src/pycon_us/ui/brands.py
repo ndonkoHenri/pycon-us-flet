@@ -46,7 +46,7 @@ BRANDS: Mapping[str, str] = MappingProxyType(
         "youtube": "#FF0000",
         "discord": "#5865F2",
         # X's mark is black, which vanishes on the dark surface: it follows the text
-        # colour in every scheme, as X's own guidelines allow a one-colour mark.
+        # colour in every scheme instead.
         "x": ft.Colors.ON_SURFACE,
     }
 )
