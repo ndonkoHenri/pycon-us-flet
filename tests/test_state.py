@@ -21,7 +21,7 @@ from pycon_us import clock
 from pycon_us.config import YearData, load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
-from pycon_us.feed_refresh import REFRESH_EVERY, Status
+from pycon_us.feed_refresh import REFRESH_EVERY, Status, feed_digest
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
@@ -144,6 +144,17 @@ async def test_without_a_cache_the_bundled_snapshot_is_published(
     assert conference.version == 1
     assert conference.problem is None
     assert not storage.feed_path.exists()  # the snapshot is never copied to the cache
+
+
+async def test_the_digest_names_the_published_feed(
+    storage: Storage, year: YearData
+) -> None:
+    """``digest`` is None before a publish, then the SHA-256 of the published bytes (D-271)."""
+    assert Conference().digest is None
+    conference = await loaded(storage, year)
+    assert conference.digest == feed_digest(year.read_snapshot().raw)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    assert conference.digest == feed_digest(NETWORK_FEED)
 
 
 async def test_the_feed_cache_wins_over_the_snapshot(

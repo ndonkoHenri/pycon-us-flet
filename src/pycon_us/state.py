@@ -276,6 +276,11 @@ class Conference:
             return None
         return max(clock.now() - self.fetched_at, timedelta(0))
 
+    @property
+    def digest(self) -> bytes | None:
+        """The SHA-256 of the published feed's bytes, which names it (D-224, D-271)."""
+        return self._digest
+
     def status(self, info: ConferenceInfo) -> Status:
         """Return what the status strip says about the data (D-32, D-146).
 

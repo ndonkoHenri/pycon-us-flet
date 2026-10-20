@@ -38,3 +38,12 @@ flet-dev/flet#6948 names its package."""
 SCANNER = available("flet_barcode_scanner")
 """The camera badge scanner, E1 (P3, D-65); otherwise manual and HID entry. The module
 name is a placeholder until the extension is published."""
+
+ALL = (
+    ("Secure storage", SECURE_STORAGE),
+    ("Permissions", PERMISSIONS),
+    ("Reminders", REMINDERS),
+    ("Badge scanner", SCANNER),
+)
+"""Every capability with its display name: the Developer screen's rows and the
+diagnostics text's list (D-271)."""
