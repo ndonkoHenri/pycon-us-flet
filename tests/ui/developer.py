@@ -17,9 +17,9 @@ from pycon_us.config import load_year
 from pycon_us.screens.about_app import UNLOCK_TAPS
 from pycon_us.screens.developer_data import refreshed
 from tests.ui.helpers import (
-    START_TIMEOUT,
     enter_text_id,
     open_tab,
+    start_app,
     tap,
     tap_back_arrow,
     tap_id,
@@ -158,7 +158,7 @@ async def fresh_start(
         feed_url: A feed for the app to refresh from now, e.g. the ``feed_url``
             fixture's recorded feed; None keeps the year's.
     """
-    await wait_for_id(t, "now.title", timeout=START_TIMEOUT)
+    await start_app(t)
     await open_developer(t)
     await refresh_now(t)  # any outcome: the launch's refresh has ended
     await apply_options(t, now=now, feed_url=feed_url)

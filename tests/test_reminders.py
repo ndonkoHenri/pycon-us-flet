@@ -15,9 +15,12 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services.reminders import (
+    BANNER_LEAD,
     MAX_PENDING,
     SYNTHETIC_BASE,
+    DueSession,
     Reminder,
+    due_session,
     plan,
     reminder_id,
 )
@@ -240,3 +243,100 @@ def test_no_session_id_collides_with_a_moment_or_the_test_reminder(year: int) ->
     ids = [reminder_id(session_id) for session_id in processed(year).sessions]
     assert len(set(ids)) == len(ids)
     assert not [i for i in ids if 8000 <= i <= 8099 or i == 8999]
+
+
+# ------------------------------------------------------------------ the in-app Banner
+
+TALK_START = datetime(2026, 5, 16, 10, 30, tzinfo=ZONE)
+"""When ``TALK`` starts, as the app shows it."""
+
+SAME_TIME = "51"
+"""Another 2026 talk at ``TALK``'s time, in Grand Ballroom B."""
+
+
+def test_a_saved_session_is_due_from_ten_minutes_before_its_start(
+    data: ConferenceData,
+) -> None:
+    """At the lead, the Banner names the session, its minutes, room and route."""
+    due = due_session(data, [TALK], TALK_START - BANNER_LEAD)
+    assert due == DueSession(
+        id=TALK,
+        name=data.sessions[TALK].name,
+        minutes=10,
+        location="Grand Ballroom A",
+        route=f"/my-schedule/session/{TALK}",
+    )
+    assert due is not None
+    assert due.text == (
+        f"{data.sessions[TALK].name} starts in 10 min · Grand Ballroom A"
+    )
+
+
+@pytest.mark.parametrize(
+    ("before", "minutes"),
+    [
+        (timedelta(minutes=9), 9),
+        (timedelta(minutes=8, seconds=59), 9),
+        (timedelta(minutes=1), 1),
+        (timedelta(seconds=1), 1),
+    ],
+)
+def test_the_minutes_count_down_rounded_up(
+    data: ConferenceData, before: timedelta, minutes: int
+) -> None:
+    """The minutes are whole, rounded up, so the Banner never says 0 min."""
+    due = due_session(data, [TALK], TALK_START - before)
+    assert due is not None
+    assert due.minutes == minutes
+
+
+@pytest.mark.parametrize(
+    "before",
+    [BANNER_LEAD + timedelta(seconds=1), timedelta(0), -timedelta(minutes=5)],
+)
+def test_nothing_is_due_before_the_lead_nor_once_the_session_started(
+    data: ConferenceData, before: timedelta
+) -> None:
+    """Earlier than the lead, at the start and after it, there is no Banner."""
+    assert due_session(data, [TALK], TALK_START - before) is None
+
+
+def test_an_unsaved_session_is_never_due(data: ConferenceData) -> None:
+    """A session that is not in My schedule gets no Banner, whatever the time."""
+    assert due_session(data, [], TALK_START - timedelta(minutes=5)) is None
+
+
+def test_a_session_no_longer_in_the_feed_is_never_due() -> None:
+    """A saved session the feed removed gets no Banner."""
+    gone = process(changed(2026, remove(142)), settings(2026))
+    assert due_session(gone, [TALK], TALK_START - timedelta(minutes=5)) is None
+
+
+def test_a_dismissed_session_is_not_due_and_the_next_one_shows(
+    data: ConferenceData,
+) -> None:
+    """A dismissed session stays away, and another saved one at that time shows."""
+    now = TALK_START - timedelta(minutes=5)
+    saved = [TALK, SAME_TIME]
+    first = due_session(data, saved, now)
+    assert first is not None
+    assert first.id == TALK  # equal starts: the lower id, "142" < "51" as text
+    second = due_session(data, saved, now, dismissed={TALK})
+    assert second is not None
+    assert second.id == SAME_TIME
+    assert due_session(data, saved, now, dismissed={TALK, SAME_TIME}) is None
+
+
+def test_the_soonest_saved_session_wins(data: ConferenceData) -> None:
+    """Of two due sessions, the one that starts first is announced."""
+    edit = retime(142, "2026-05-16T10:25:00-07:00", "2026-05-16T11:00:00-07:00")
+    earlier = process(changed(2026, edit), settings(2026))
+    due = due_session(earlier, [SAME_TIME, TALK], TALK_START - timedelta(minutes=8))
+    assert due is not None
+    assert (due.id, due.minutes) == (TALK, 3)
+
+
+def test_a_session_with_no_place_says_only_its_start(data: ConferenceData) -> None:
+    """Without a shown location the words end at the minutes."""
+    due = DueSession(id="1", name="Lunch", minutes=4, location="", route="/x")
+    assert due.text == "Lunch starts in 4 min"

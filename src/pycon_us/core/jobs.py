@@ -15,7 +15,8 @@ them as links, where Ionic linked a role only when its URL was the anchor's text
 
 A placeholder such as ``N/A`` (OpenEDG) is no roles and no description
 (``is_placeholder``). ``feed.process()`` reads each listing once (``read_listing``), and
-the screens find a sponsor's listings by its exact name (``listings_of``).
+the screens find a sponsor's listings by its exact name (``listings_of``), and a
+listing's sponsor the same way (``sponsor_of``).
 """
 
 import re
@@ -112,7 +113,7 @@ def read_listing(
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:
     """Return the sponsor's job listings: those naming it exactly, in feed order (SPON-05).
 
-    Listings carry the sponsor's name, not its slug, and ``tools/feed_invariants.py``
+    Listings carry the sponsor's name, not its slug, and ``tools/sponsor_invariants.py``
     checks that every listing names a sponsor. Thirteen listings need no index.
 
     Args:
@@ -120,6 +121,26 @@ def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...
         sponsor: The sponsor.
     """
     return tuple(j for j in data.job_listings if j.sponsor_name == sponsor.name)
+
+
+def sponsor_of(data: ConferenceData, listing: JobListing) -> Sponsor | None:
+    """Return the sponsor a listing names exactly, or None when no sponsor has its name.
+
+    The Job listings' card header links to it (SPON-06); without one it links nowhere.
+
+    Args:
+        data: The processed feed.
+        listing: The listing.
+    """
+    return next(
+        (
+            sponsor
+            for level in data.sponsor_levels
+            for sponsor in level.sponsors
+            if sponsor.name == listing.sponsor_name
+        ),
+        None,
+    )
 
 
 @dataclass

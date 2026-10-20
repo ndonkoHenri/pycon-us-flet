@@ -29,10 +29,10 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.modals import use_modals_close_on_route_change
 from pycon_us.ui.navigation import (
     TABS,
+    Rail,
     Retap,
     Select,
     navigation_bar,
-    navigation_rail,
 )
 from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe
@@ -225,7 +225,7 @@ def beside_rail(
         shown: The screen's body in its ``Shown``; it has ``expand=True``.
     """
     return ft.Row(
-        [navigation_rail(root, on_select, visible=wide), shown],
+        [Rail(root, on_select, wide), shown],
         spacing=0,
         vertical_alignment=ft.CrossAxisAlignment.STRETCH,
     )

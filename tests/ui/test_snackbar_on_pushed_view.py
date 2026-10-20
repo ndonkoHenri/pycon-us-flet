@@ -20,10 +20,10 @@ from pycon_us.core.timeline import timeline
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from tests.ui.helpers import (
-    START_TIMEOUT,
     STEP,
     remote,
     screenshot,
+    start_app,
     tap_back_arrow,
     tap_id,
     tap_text,
@@ -73,7 +73,7 @@ async def test_snackbar_from_session_detail_shows_on_session_detail(
     returns to the Schedule.
     """
     t = remote(flet_app)
-    await wait_for_id(t, "now.title", timeout=START_TIMEOUT)
+    await start_app(t)
 
     # Schedule › a session: a pushed View, with the back arrow and no bar (D-144).
     await tap_id(t, "app.nav.schedule")

@@ -3,10 +3,10 @@
 ``ROUTES`` follows decisions §M and architecture §5.2 in the shape S4 confirmed (D-141):
 each tab root, More page and ``/search`` ends with ``DRILL``, a recursive child that
 pushes one View per ``<kind>/<id>`` pair, so ``/schedule/session/42/speaker/17`` is
-three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on;
-an unknown location is ``NotFound``, through ``UNKNOWN``, the table's last route
-(D-270). Back itself is ``main.py``'s ``page.on_view_pop`` with
-``locations.parent_of()`` (D-19).
+three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on,
+to ``/welcome`` on a first start (D-287); an unknown location is ``NotFound``,
+through ``UNKNOWN``, the table's last route (D-270). Back itself is ``main.py``'s
+``page.on_view_pop`` with ``locations.parent_of()`` (D-19).
 """
 
 from collections.abc import Callable
@@ -14,11 +14,14 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
+from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, start_target
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.help import Help
+from pycon_us.screens.jobs import Jobs
 from pycon_us.screens.keynotes import Keynotes
+from pycon_us.screens.licences import LicencePage, Licences
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
@@ -40,6 +43,7 @@ from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
+from pycon_us.screens.welcome import Welcome
 from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -74,9 +78,10 @@ def Drill() -> ft.View:
 
 @ft.component
 def Start() -> ft.View:
-    """``/``: send the session to Now, or back to where the user was (D-143).
+    """``/``: send the session to Welcome, to Now, or back to where the user was.
 
-    A new session in the same process (F26, F29) finds ``ViewMemory.last_location``
+    Welcome until Get started (D-287), then where the user was (D-143). A new
+    session in the same process (F26, F29) finds ``ViewMemory.last_location``
     and rebuilds that stack; a deep link or ``--route`` start never comes here, except
     one straight to ``/search``: with no opener to remember, the Router builds the
     modal over ``/``, so ``Start`` mounts below it and must stay put, not replace the
@@ -86,11 +91,18 @@ def Start() -> ft.View:
     """
     page = ft.context.page
     memory = use_services().memory
+    prefs = use_prefs()
 
     @report_errors
     def go() -> None:
         if is_top_view(page.route, "/"):
-            page.navigate(start_target(memory.last_location, memory.search_base))
+            page.navigate(
+                start_target(
+                    memory.last_location,
+                    memory.search_base,
+                    onboarded=prefs.onboarded,
+                )
+            )
 
     ft.use_effect(go, [])
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
@@ -167,6 +179,7 @@ def pushed(
 
 ROUTES = [
     ft.Route(index=True, component=Start),
+    ft.Route(path=WELCOME[1:], component=Welcome),  # no drill: nothing opens over it
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),
     pushed("now", Now),
     pushed("schedule", Schedule),
@@ -194,9 +207,15 @@ ROUTES = [
         pushed("sprints", Sprints),
         pushed("sponsors", Sponsors),
         pushed("settings", Settings),
-        pushed("app", AboutApp),
+        pushed(
+            "app",
+            AboutApp,
+            # Under About this app, so Back returns there (D-207's pattern, D-296).
+            pushed("licences", Licences, pushed(":licence", LicencePage)),
+        ),
         pushed("developer", Developer),
         pushed("wifi", Wifi),
+        pushed("jobs", Jobs),
         pushed("help", Help),
         pushed("psf", AboutPsf),
         pushed("social", Social),

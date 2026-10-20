@@ -23,7 +23,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
-from pycon_us.year_info import SOCIAL_SECTIONS, SocialInfo, SocialLink
+from pycon_us.year_links import SOCIAL_SECTIONS, SocialInfo, SocialLink
 
 SCREEN = "social"
 """The page's name in its semantics identifiers (decisions §M)."""
