@@ -68,9 +68,9 @@ def LinkTile(
         target: Where a tap goes: a page (``/more/speakers``), for a detail
             ``drill_href(view_path, ...)`` so Back returns to this row's View, or a URL
             (``link_kind()``).
-        icon: A leading icon, outlined (D-27); none for rows of names. A control in
-            its place for a 24 dp mark that is no Material icon: a brand's
-            (``brands.brand_icon()``, D-264).
+        icon: A leading icon, outlined (D-27); none for rows of names. A control
+            stands as it is: a brand's mark beside a link to it (``brand_icon()``,
+            D-264).
         subtitle: A second line, if any: for a phone or email row, the number or the
             address. A control for lines of their own (the Map's "Now:" line), read
             with the title as one phrase.

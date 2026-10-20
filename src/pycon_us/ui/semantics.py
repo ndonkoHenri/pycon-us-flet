@@ -5,12 +5,15 @@ D-33). D-190 settled how to attach one to a button or a row: merged, so that the
 identifier and the control are one node (D-198), which says whether the control is
 disabled (D-214). ``merged()`` makes a button with a tooltip one node named by the
 tooltip, where it needs no identifier (F55, D-234). ``semantics_key()`` turns an id
-into the identifier's key (decisions §M; D-200).
+into the identifier's key (decisions §M; D-200): it is ``core.slugs``', which has no
+Flet, so the year-data loader can use it too (D-283), and is re-exported here.
 """
 
-import re
-
 import flet as ft
+
+from pycon_us.core.slugs import semantics_key
+
+__all__ = ["merged", "named", "semantics_key"]
 
 
 def named(identifier: str, control: ft.Control) -> ft.Control:
@@ -55,20 +58,3 @@ def merged(button: ft.Control) -> ft.MergeSemantics:
         button: A button whose ``tooltip`` is its name, e.g. the app bar's Back arrow.
     """
     return ft.MergeSemantics(content=button)
-
-
-_NOT_KEY = re.compile(r"[^a-z0-9]+")
-
-
-def semantics_key(session_id: str) -> str:
-    """Return a session id as the key of a semantics identifier (decisions §M).
-
-    A synthetic break id holds spaces and colons (``break-Expo Hall AB-2026-05-15T08:
-    00:00-07:00``, D-42), which a UI-test selector would have to match literally; the
-    key is lower case, each run of other characters a ``-``:
-    ``break-expo-hall-ab-2026-05-15t08-00-00-07-00``. Numeric ids stay as they are.
-
-    Args:
-        session_id: The session's id, unchanged everywhere else.
-    """
-    return _NOT_KEY.sub("-", session_id.lower()).strip("-")

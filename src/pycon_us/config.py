@@ -26,6 +26,7 @@ from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
 from pycon_us.year_info import (
     HelpInfo,
+    PsfInfo,
     SafetyContact,
     SocialInfo,
     WifiInfo,
@@ -178,6 +179,8 @@ class Content:
             source (INFO-07, D-45, D-281); empty for a year without them.
         help: Help & safety's other lines and links; None for a year without them,
             whose page shows the feed's block (D-281).
+        psf: About the PSF's mission, Donate and links (INFO-06, D-283); None for a
+            year without them, whose page shows the feed's block.
         social: The Social page's hashtags and links (INFO-10, D-284); None for a
             year without them, whose page shows the feed's block.
     """
@@ -193,6 +196,7 @@ class Content:
     event_reminders: tuple[EventReminder, ...] = ()
     safety_contacts: tuple[SafetyContact, ...] = ()
     help: HelpInfo | None = None
+    psf: PsfInfo | None = None
     social: SocialInfo | None = None
 
 
