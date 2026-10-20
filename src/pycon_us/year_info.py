@@ -16,6 +16,7 @@ shows the feed's own block for it (``ui.info_page``).
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pycon_us.core.slugs import semantics_key
 from pycon_us.year_pages import check_https, check_text
 from pycon_us.year_schema import YearDataError
 
@@ -84,11 +85,15 @@ class PsfInfo:
 
 
 def check_psf(psf: PsfInfo, file: str) -> None:
-    """Check ``[psf]``: no blank text, ``https://`` only, known sections, one of each label.
+    """Check ``[psf]``: no blank text, ``https://`` only, known sections, one row per key.
 
-    A brand or an icon names something the page draws, so a test checks those names
-    against ``ui.brands`` and ``ft.Icons``, as the tracks' icons are (the loader
-    imports nothing from Flet).
+    A row's identifier is ``psf.link.<semantics_key(label)>`` (D-33), so two labels
+    that give one key ("PSF blog", "PSF Blog") are refused, as is a label with no
+    letter or digit, whose key is empty. A brand or an icon names something the page
+    draws, so ``tests/test_year_info.py``'s
+    ``test_psf_brands_are_bundled_marks_and_icons_are_material_icons`` checks every
+    bundled year's names against ``ui.brands`` and ``ft.Icons``, as the tracks' icons
+    are (the loader imports nothing from Flet).
 
     Args:
         psf: The ``[psf]`` table.
@@ -99,7 +104,7 @@ def check_psf(psf: PsfInfo, file: str) -> None:
     """
     check_text(psf.mission, file, "psf.mission")
     check_https(psf.donate_url, file, "psf.donate_url")
-    labels: set[str] = set()
+    labels: dict[str, str] = {}  # each row key, with the label that gave it
     for index, link in enumerate(psf.links):
         key = f"psf.links[{index}]"
         if link.section not in PSF_SECTIONS:
@@ -108,10 +113,18 @@ def check_psf(psf: PsfInfo, file: str) -> None:
                 "get_involved, python_resources or follow"
             )
         check_text(link.label, file, f"{key}.label")
-        # The label is the row's identifier, which must name one row (D-33).
-        if link.label in labels:
-            raise YearDataError(f"{file}: {key}.label: {link.label!r} is used twice")
-        labels.add(link.label)
+        # The label gives the row's identifier, which must name one row (D-33).
+        row_key = semantics_key(link.label)
+        if not row_key:
+            raise YearDataError(
+                f"{file}: {key}.label: {link.label!r} has no letter or digit for its key"
+            )
+        if row_key in labels:
+            raise YearDataError(
+                f"{file}: {key}.label: {link.label!r} gives the same identifier as "
+                f"{labels[row_key]!r}"
+            )
+        labels[row_key] = link.label
         check_https(link.url, file, f"{key}.url")
         if link.brand is not None and link.icon is not None:
             raise YearDataError(f"{file}: {key}: give a brand or an icon, not both")

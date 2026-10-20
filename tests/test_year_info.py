@@ -85,10 +85,17 @@ def test_2026_links_to_donate_once_and_to_the_blog_over_https() -> None:
     assert all(url.startswith("https://") for url in urls)
 
 
-def test_2026_brands_are_bundled_marks_and_icons_are_material_icons() -> None:
-    """Each link has a brand or an icon: a bundled mark, or an icon Flet knows."""
-    assert PSF is not None
-    for link in PSF.links:
+@pytest.mark.parametrize("year", YEARS)
+def test_psf_brands_are_bundled_marks_and_icons_are_material_icons(year: int) -> None:
+    """Each year's PSF links have a brand or an icon: a bundled mark, or one Flet knows.
+
+    The loader imports no Flet, so this is where a misspelt name in any bundled
+    year's ``[psf]`` fails, before the page would fail to draw its row.
+    """
+    psf = load_year(year).content.psf
+    if psf is None:
+        pytest.skip(f"{year} has no [psf]")
+    for link in psf.links:
         assert (link.brand is None) != (link.icon is None), link.label
         if link.brand is not None:
             assert link.brand in BRANDS, link.label
@@ -121,7 +128,26 @@ HTTPS = "expected an https:// URL with a host$"
         ),
         ({"label": " "}, r"psf\.links\[0\]\.label: is empty$"),
         # Reported at the second use: X's own row, further down.
-        ({"label": "X"}, r"psf\.links\[\d+\]\.label: 'X' is used twice$"),
+        (
+            {"label": "X"},
+            r"psf\.links\[\d+\]\.label: 'X' gives the same identifier as 'X'$",
+        ),
+        # Another label with X's key, psf.link.x: one identifier for two rows.
+        (
+            {"label": "x"},
+            r"psf\.links\[\d+\]\.label: 'X' gives the same identifier as 'x'$",
+        ),
+        (
+            {"label": "python-org"},
+            (
+                r"psf\.links\[\d+\]\.label: 'python\.org' gives the same identifier "
+                r"as 'python-org'$"
+            ),
+        ),
+        (
+            {"label": "!!!"},
+            r"psf\.links\[0\]\.label: '!!!' has no letter or digit for its key$",
+        ),
         (
             {"brand": "python", "icon": "LANGUAGE"},
             r"psf\.links\[0\]: give a brand or an icon, not both$",
@@ -131,7 +157,7 @@ HTTPS = "expected an https:// URL with a host$"
 def test_a_link_that_breaks_a_rule_fails_the_check(
     fields: dict[str, Any], message: str
 ) -> None:
-    """A link that is not https, has an unknown section or repeats a label is refused."""
+    """A link that is not https, has an unknown section or repeats a row key is refused."""
     with pytest.raises(YearDataError, match=rf"^{FILE}: {message}"):
         check_info(psf_with(**fields), FILE)
 
