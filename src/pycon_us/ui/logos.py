@@ -3,7 +3,7 @@
 Logos are drawn for a white page: a dark mark on a transparent ground vanishes on the
 dark surface. So a logo sits on a white tile in both schemes, with a hairline
 ``outline_variant`` edge, wherever the app shows one: a sprint project's card (EVT-05,
-D-202) and, from P2, the Sponsors list and detail, Job listings and Now's sponsor
+D-202) and, from P2, the Sponsors list (D-279) and detail, Job listings and Now's sponsor
 spotlight (ux.md §5.1, §6.5, §6.6). One builder, so the tile is drawn one way (D-262).
 """
 
@@ -26,7 +26,12 @@ CORNER = 12
 
 
 def logo_tile(
-    name: str, logo_url: str | None, *, size: float, width: float | None = None
+    name: str,
+    logo_url: str | None,
+    *,
+    size: float,
+    width: float | None = None,
+    fill: bool = False,
 ) -> ft.Control:
     """Return the logo of ``name`` on a white tile, or its initials when there is none.
 
@@ -42,6 +47,8 @@ def logo_tile(
         size: The tile's height in dp, and its width unless ``width`` is given.
         width: A wider plate's width in dp, as sponsor detail's 240 × 96 (ux.md §6.5);
             the initials keep to the height.
+        fill: The plate takes the width its parent gives it instead, as the Sponsors
+            list's cards do (D-279); the initials keep to the height.
     """
     # Decorative: the name is always said beside the tile, so nothing on it is a node.
     # Each part leaves itself out; a Semantics(exclude_semantics=True) around the tile
@@ -65,7 +72,8 @@ def logo_tile(
         )
     return ft.Container(
         content,
-        width=size if width is None else width,
+        # Without a width, the centring alignment makes the plate as wide as it may be.
+        width=None if fill else size if width is None else width,
         height=size,
         padding=INSET,
         bgcolor=ft.Colors.WHITE,
