@@ -42,6 +42,7 @@ async def test_the_content_line_is_logged_once_per_feed_version(
     conference: Conference,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Two screens on version 1, then a refresh to 2, log one line for each version."""
     caplog.set_level(logging.INFO, logger=scaffold.__name__)
     conference.source, conference.version = "bundled", 1
     view_at(hooks, page, "/now")
@@ -63,6 +64,7 @@ class SlowPrefs(MemoryPrefs):
     """SharedPreferences whose replies wait until the test releases them."""
 
     def init(self) -> None:
+        """Set up the store as ``MemoryPrefs`` does, with the event that releases it."""
         super().init()
         self.release = asyncio.Event()
 
@@ -72,12 +74,14 @@ class SlowPrefs(MemoryPrefs):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
+        """Answer as ``MemoryPrefs`` does, once the test sets ``release``."""
         await self.release.wait()
         return await super()._invoke_method(method_name, arguments, timeout)
 
 
 @pytest.fixture
 def slow_prefs() -> SlowPrefs:
+    """A ``SlowPrefs`` whose replies wait for the test."""
     return SlowPrefs()  # before ``page``: a service registers with a bound page
 
 
@@ -91,6 +95,7 @@ async def test_a_newer_version_does_not_cancel_the_line_of_the_one_shown_before(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    """A version's line is still logged when a newer version cancels its effect."""
     caplog.set_level(logging.INFO, logger=scaffold.__name__)
     storage = Storage(prefs=slow_prefs, directory=tmp_path, year=2026)
     slow_svc = replace(svc, storage=storage)
@@ -116,6 +121,7 @@ async def test_a_newer_version_does_not_cancel_the_line_of_the_one_shown_before(
 def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
     hooks: Hooks, page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """``AppScaffold`` puts its body in ``Shown`` and never reads ``Conference``."""
     monkeypatch.setattr(scaffold, "Shown", Shown)  # the real component
     reads: list[str] = []
     monkeypatch.setattr(scaffold, "use_conference", lambda: reads.append("read"))
@@ -133,6 +139,7 @@ def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
 
 
 def test_shown_hands_back_the_same_body(hooks: Hooks, conference: Conference) -> None:
+    """``Shown`` returns its body as is, with one effect that depends on the version."""
     body = ft.Text("body")
     assert inspect.unwrap(Shown)(body) is body
     assert [deps for _, deps in hooks.effects] == [[conference.version]]

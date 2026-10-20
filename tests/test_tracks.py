@@ -39,6 +39,7 @@ DATA = processed(2026)
 
 
 def track(slug: str):
+    """Return the 2026 track at ``slug``, which must exist."""
     found = INFO.track_for_slug(slug)
     assert found is not None, slug
     return found
@@ -71,6 +72,7 @@ def test_the_hub_groups_the_session_types_and_leaves_out_breaks_and_notices() ->
 
 @pytest.mark.parametrize("year", YEARS)
 def test_each_count_is_what_the_tracks_page_lists(year: int) -> None:
+    """Every year, each row's count is the number of sessions its page lists, not 0."""
     data = processed(year)
     info = load_year(year).conference
     for _, entries in hub_groups(info, data):
@@ -91,6 +93,7 @@ def test_posters_are_counted_one_by_one_and_open_spaces_whatever_the_filter() ->
 
 
 def test_a_track_without_sessions_is_left_out_and_so_is_an_empty_group() -> None:
+    """A track without sessions has no row, and a group left empty has no section."""
     sessions = {
         k: s
         for k, s in DATA.sessions.items()
@@ -109,6 +112,7 @@ def test_a_row_reads_as_one_phrase_with_its_badge_and_count() -> None:
 
 
 def test_a_new_track_says_so_after_its_badge() -> None:
+    """A new track's row reads "New track" after its badge and before its count."""
     assert hub_phrase(HubEntry(track("ai"), 1)) == (
         "Future of AI with Python. A dedicated track on AI: machine learning, LLMs and "
         "more. AI, New track, 1 session."
@@ -142,7 +146,10 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(screen, conference=...): that screen rendered over the feed."""
+    """Provide an async function that renders a screen in a real Flet session.
+
+    It takes the screen and an optional ``Conference`` (the 2026 feed by default).
+    """
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -166,10 +173,12 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def page_of(slug: str) -> Callable[[], ft.Control]:
+    """Return a screen function that builds the track page at ``slug``."""
     return lambda: track_screen.TrackDetail(slug)
 
 
 async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> None:
+    """The hub has a button row per track, read as one phrase, that pushes its page."""
     shown = await show(hub_screen.Tracks)
     slugs = [
         str(n.identifier).removeprefix("tracks.track.")
@@ -186,8 +195,11 @@ async def test_the_hub_has_a_row_per_track_that_pushes_its_page(show: Show) -> N
 
 
 async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> None:
-    """D-199's rule, D-217: the Keynotes page lists the four keynotes and the two
-    panels, which the feed calls plenaries; the row opens it under the hub (D-207)."""
+    """The Keynotes row counts six sessions and opens the Keynotes page.
+
+    D-199's rule, D-217: the Keynotes page lists the four keynotes and the two panels,
+    which the feed calls plenaries; the row opens it under the hub (D-207).
+    """
     shown = await show(hub_screen.Tracks)
     node = shown.node("tracks.track.keynotes")
     assert node.label == (
@@ -203,9 +215,12 @@ async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> 
 async def test_every_track_row_pushes_its_slug_under_the_hub(
     show: Show, slug: str
 ) -> None:
-    """ux.md §5.10, D-207: one rule for every row; the route table opens the
-    keynotes', lightning talks' and open spaces' own pages at their slugs, and Back
-    from any of them returns to the hub (D-17)."""
+    """Every row pushes ``/more/tracks/<slug>``, whose parent is the hub.
+
+    ux.md §5.10, D-207: one rule for every row; the route table opens the keynotes',
+    lightning talks' and open spaces' own pages at their slugs, and Back from any of
+    them returns to the hub (D-17).
+    """
     shown = await show(hub_screen.Tracks)
     await shown.click(cast(ft.Control, shown.node(f"tracks.track.{slug}").parent))
     assert shown.went == [f"/more/tracks/{slug}"]
@@ -232,6 +247,7 @@ async def test_the_sections_are_headings_of_their_own(show: Show) -> None:
 
 
 async def test_only_the_new_tracks_carry_the_new_badge(show: Show) -> None:
+    """Only the two new tracks, AI and Security, show and read "New track"."""
     shown = await show(hub_screen.Tracks)
     assert shown.texts().count("New track") == 2
     assert "AI, New track" in str(shown.node("tracks.track.ai").label)
@@ -249,6 +265,7 @@ async def test_the_hub_without_data_loads_then_offers_to_try_again(show: Show) -
 
 
 async def test_a_feed_without_sessions_says_none_are_announced(show: Show) -> None:
+    """A feed without sessions shows the hub's "none" live region and no rows."""
     data = replace(DATA, sessions={})
     shown = await show(hub_screen.Tracks, Conference(data=data, version=1))
     assert shown.node("tracks.none").live_region
@@ -276,6 +293,7 @@ async def test_open_spaces_show_on_their_page_whatever_the_filter(show: Show) ->
 
 
 async def test_sessions_are_under_a_level_2_heading_per_day(show: Show) -> None:
+    """A track page lists its sessions under a level-2 heading per day, in order."""
     shown = await show(page_of("charlas"))
     days = track_sessions(DATA, "Charla")
     headings = [
@@ -289,6 +307,7 @@ async def test_sessions_are_under_a_level_2_heading_per_day(show: Show) -> None:
 async def test_the_intro_shows_the_badge_the_new_mark_and_the_legend(
     show: Show,
 ) -> None:
+    """The intro shows the badge and the legend, and "New track" only for a new one."""
     ai = await show(page_of("ai"))
     assert {"AI", "New track", track("ai").legend} <= set(ai.texts())
     talks = await show(page_of("talks"))
@@ -341,6 +360,7 @@ async def test_an_unknown_slug_shows_not_found_with_the_way_to_all_tracks(
 
 
 async def test_a_track_without_sessions_in_the_feed_says_so(show: Show) -> None:
+    """A track page whose track has no sessions in the feed shows its empty state."""
     sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Charla"}
     data = replace(DATA, sessions=sessions)
     shown = await show(page_of("charlas"), Conference(data=data, version=1))
@@ -349,6 +369,7 @@ async def test_a_track_without_sessions_in_the_feed_says_so(show: Show) -> None:
 
 
 async def test_a_track_page_without_data_offers_to_try_again(show: Show) -> None:
+    """Without data, a track page shows its no-data state, and still its intro."""
     shown = await show(page_of("charlas"), Conference(problem="server"))
     assert shown.node("track.no_data").live_region
     assert "Charla" in shown.texts()  # the intro needs no feed
@@ -380,6 +401,7 @@ async def test_a_star_tap_re_renders_one_day_and_one_row(
 
 
 async def test_a_row_pushes_the_session_one_level_down(show: Show) -> None:
+    """A session row pushes the session under the track page's route."""
     shown = await show(page_of("charlas"))
     first = track_sessions(DATA, "Charla")[0].sessions[0]
     node = shown.node(f"track.session.{semantics_key(first.id)}")

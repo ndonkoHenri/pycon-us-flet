@@ -50,6 +50,7 @@ def changed(change: Callable[[dict[str, Any]], object]) -> bytes:
 
 
 def files(data_dir: Path) -> tuple[bytes, bytes]:
+    """Return the bytes of 2026's ``conference.json`` and ``conference.toml``."""
     folder = data_dir / "2026"
     return (
         (folder / "conference.json").read_bytes(),
@@ -60,6 +61,7 @@ def files(data_dir: Path) -> tuple[bytes, bytes]:
 def test_update_bundles_the_feed_bytes_unchanged_with_the_capture_time(
     data_dir: Path,
 ) -> None:
+    """The feed is bundled byte for byte with its capture time, leaving no temp file."""
     feed = changed(lambda doc: doc["schedule"].pop())
     update_snapshot(2026, data_dir, transport=serving(feed), now=NOW)
 
@@ -73,6 +75,7 @@ def test_update_bundles_the_feed_bytes_unchanged_with_the_capture_time(
 def test_update_changes_only_the_capture_line_of_conference_toml(
     data_dir: Path,
 ) -> None:
+    """Of ``conference.toml``, only the ``snapshot_captured_at`` line changes."""
     toml = data_dir / "2026" / "conference.toml"
     before = toml.read_text(encoding="utf-8").splitlines()
     update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
@@ -89,6 +92,7 @@ def test_update_changes_only_the_capture_line_of_conference_toml(
 
 
 def test_a_new_year_folder_gets_its_first_snapshot(data_dir: Path) -> None:
+    """A year without a snapshot gets one, and the report calls it the first."""
     folder = data_dir / "2026"
     (folder / "conference.json").unlink()
     toml = folder / "conference.toml"
@@ -107,6 +111,8 @@ def test_a_new_year_folder_gets_its_first_snapshot(data_dir: Path) -> None:
 
 
 def test_report_shows_each_count_before_and_after(data_dir: Path) -> None:
+    """The report gives the source, the time, then each count before and after."""
+
     def drop_a_slot_and_a_sprint(doc: dict[str, Any]) -> None:
         doc["schedule"].pop()
         doc["sprints"].pop()
@@ -131,6 +137,7 @@ def test_report_shows_each_count_before_and_after(data_dir: Path) -> None:
 def test_report_says_when_the_previous_snapshot_no_longer_parses(
     data_dir: Path,
 ) -> None:
+    """A previous snapshot that no longer parses is said, and its counts read "-"."""
     (data_dir / "2026" / "conference.json").write_bytes(b"[]")
     report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert "; the previous snapshot no longer parses" in report.splitlines()[1]
@@ -138,6 +145,7 @@ def test_report_says_when_the_previous_snapshot_no_longer_parses(
 
 
 def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
+    """A feed equal to the bundled one is reported as its size, "unchanged"."""
     report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert f"{len(RECORDED):,} bytes, unchanged" in report
 
@@ -178,6 +186,7 @@ def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
 def test_a_feed_that_does_not_parse_cleanly_is_refused_and_nothing_changes(
     data_dir: Path, body: bytes, status: int, problem: str
 ) -> None:
+    """A feed that fails to fetch or parse cleanly is refused and writes nothing."""
     before = files(data_dir)
     with pytest.raises(SnapshotError) as error:
         update_snapshot(2026, data_dir, transport=serving(body, status), now=NOW)
@@ -208,7 +217,11 @@ def test_a_feed_without_a_keynote_s_session_is_refused_and_nothing_changes(
 def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
     data_dir: Path,
 ) -> None:
-    # Valid TOML, but not the bare key the tool rewrites: it must not write a duplicate.
+    """A quoted ``snapshot_captured_at`` key is refused, and nothing is written.
+
+    It is valid TOML, but not the bare key the tool rewrites: it must not write a
+    duplicate.
+    """
     toml = data_dir / "2026" / "conference.toml"
     text = toml.read_text(encoding="utf-8")
     toml.write_text(
@@ -224,6 +237,7 @@ def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
 def test_a_capture_line_inside_a_multiline_string_is_not_rewritten(
     data_dir: Path,
 ) -> None:
+    """A capture line inside a multi-line string is refused, not rewritten."""
     toml = data_dir / "2026" / "conference.toml"
     text = toml.read_text(encoding="utf-8")
     toml.write_text(
@@ -240,6 +254,8 @@ def test_a_capture_line_inside_a_multiline_string_is_not_rewritten(
 
 
 def test_a_network_failure_is_refused_and_nothing_changes(data_dir: Path) -> None:
+    """A connection error is refused as "could not fetch", and nothing is written."""
+
     def fail(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)
 

@@ -35,9 +35,12 @@ def tile_of(item: ft.PopupMenuItem) -> ft.ListTile:
 
 
 def test_an_items_label_is_a_tile_title_that_wraps_beside_its_icon() -> None:
-    """F47: ``PopupMenuItem.icon`` sits in a ``Row`` whose text cannot wrap, so the
-    item has no ``icon``: its label is a tile's title, which wraps, with the icon as
-    ``leading``, beside the first line by the theme's ``TITLE_HEIGHT`` (D-188)."""
+    """An item's label is a tile's title that wraps, with its icon as ``leading``.
+
+    F47: ``PopupMenuItem.icon`` sits in a ``Row`` whose text cannot wrap, so the item
+    has no ``icon``; the icon sits beside the title's first line by the theme's
+    ``TITLE_HEIGHT`` (D-188).
+    """
     item = menu_item(ft.Icons.PLAYLIST_ADD, LABEL, go, identifier="track.add_all")
     assert item.icon is None
     tile = tile_of(item)
@@ -81,6 +84,7 @@ def test_a_link_item_is_a_link_read_opens_in_browser_after_its_words() -> None:
 
 
 def test_an_item_that_stays_in_the_app_is_no_link() -> None:
+    """Without ``link``, the title is a plain ``Text`` with no "Opens in browser"."""
     item = menu_item(ft.Icons.PLAYLIST_ADD, LABEL, go, identifier="track.add_all")
     title = tile_of(item).title
     assert isinstance(title, ft.Text)  # no link Semantics around it
