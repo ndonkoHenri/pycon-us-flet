@@ -9,12 +9,12 @@ rules. A module of its own, as the Open spaces and Lightning talks pages' is
 pages' tables arrive.
 
 So far Wi-Fi has its table, ``[wifi]`` (``WifiInfo``, D-280), Help & safety its two,
-About the PSF its ``[psf]`` (``PsfInfo``, D-283), and Venue & hours its
-``[[venue_hours]]`` (D-282), whose dataclasses are ``core.hours``' since the open-now
-rule reads them, as feed processing reads ``core.rules``' display-time overrides. The
-other pages' issues add theirs, with their rules, to this module. Until a page has its
-table, or for a year that has none, the page shows the feed's own block for it
-(``ui.info_page``).
+About the PSF its ``[psf]`` (``PsfInfo``, D-283), Social its ``[social]``
+(``SocialInfo``, D-284), and Venue & hours its ``[[venue_hours]]`` (D-282), whose
+dataclasses are ``core.hours``' since the open-now rule reads them, as feed processing
+reads ``core.rules``' display-time overrides. The other pages' issues add theirs, with
+their rules, to this module. Until a page has its table, or for a year that has none,
+the page shows the feed's own block for it (``ui.info_page``).
 
 Help & safety (D-281): ``[[safety_contacts]]`` (``SafetyContact``), the ways to report
 a concern, each with the public page that shows it and the day someone checked it
@@ -141,6 +141,7 @@ def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
         check_help(content.help, file)
     if content.psf is not None:
         check_psf(content.psf, file)
+    check_social(content.social, file)
     check_venue_hours(content.venue_hours, conference, file)
 
 
@@ -293,6 +294,107 @@ def check_psf(psf: PsfInfo, file: str) -> None:
         check_https(link.url, file, f"{key}.url")
         if link.brand is not None and link.icon is not None:
             raise YearDataError(f"{file}: {key}: give a brand or an icon, not both")
+
+
+SOCIAL_SECTIONS = {
+    "pycon": "PyCon US",
+    "psf": "Python Software Foundation",
+    "blogs": "Blogs",
+}
+"""The Social page's sections of links, by ``section`` key, in the page's order, with
+their headings (INFO-10, D-284). A profile (``pycon``, ``psf``) opens in its app, a
+blog in the in-app browser (ux.md §4.7)."""
+
+_HASHTAG = re.compile(r"#\w+")
+"""A hashtag as the networks read one: ``#`` then letters, digits or ``_``."""
+
+_BRAND = re.compile(r"[a-z]+")
+"""A brand mark's key, the name of its SVG (``ui.brands.BRANDS``, D-264)."""
+
+
+@dataclass(frozen=True)
+class SocialLink:
+    """A profile or a blog on the Social page (INFO-10, D-284).
+
+    Attributes:
+        section: Which section lists it, a key of ``SOCIAL_SECTIONS``.
+        label: The row's title, the network or the blog: "Mastodon", "PSF blog".
+        handle: The row's second line, where it is: "@pycon@fosstodon.org",
+            "pyfound.blogspot.com".
+        url: Where a tap goes, ``https://`` only.
+        brand: The key of its brand mark in ``ui.brands.BRANDS`` ("mastodon"); empty
+            for a blog without one, whose row shows a feed icon. The loader stays
+            free of Flet, so a test checks it names a mark (as for the track icons).
+    """
+
+    section: str
+    label: str
+    handle: str
+    url: str
+    brand: str = ""
+
+    @property
+    def key(self) -> str:
+        """The link's key in its identifier, ``social.link.<key>``: ``pycon_mastodon``."""
+        words = re.findall(r"[a-z0-9]+", self.label.lower())
+        return "_".join((self.section, *words))
+
+
+@dataclass(frozen=True)
+class SocialInfo:
+    """What the Social page shows: the hashtags to copy, then the links (INFO-10).
+
+    Attributes:
+        hashtags: The conference's hashtags, with their ``#``, in the page's order.
+        links: The profiles and blogs, each in its section, in the page's order
+            within it.
+    """
+
+    hashtags: tuple[str, ...]
+    links: tuple[SocialLink, ...]
+
+
+def check_social(social: SocialInfo | None, file: str) -> None:
+    """Check the ``[social]`` table: real hashtags, known sections, ``https://`` links.
+
+    Args:
+        social: The table, or None when the year has none.
+        file: The data file it comes from, for the messages.
+
+    Raises:
+        YearDataError: A rule is broken; the message names the file and the key.
+    """
+    if social is None:
+        return
+    if not social.hashtags and not social.links:  # a page of nothing
+        raise YearDataError(f"{file}: social: is empty")
+    for index, hashtag in enumerate(social.hashtags):
+        if not _HASHTAG.fullmatch(hashtag):
+            raise YearDataError(
+                f"{file}: social.hashtags[{index}]: {hashtag!r} is not a hashtag"
+            )
+        if hashtag.lower() in (seen.lower() for seen in social.hashtags[:index]):
+            raise YearDataError(
+                f"{file}: social.hashtags[{index}]: duplicate hashtag {hashtag!r}"
+            )
+    keys: set[str] = set()
+    for index, link in enumerate(social.links):
+        key = f"social.links[{index}]"
+        if link.section not in SOCIAL_SECTIONS:
+            raise YearDataError(
+                f"{file}: {key}.section: {link.section!r} is not one of "
+                f"{tuple(SOCIAL_SECTIONS)}"
+            )
+        check_text(link.label, file, f"{key}.label")
+        check_text(link.handle, file, f"{key}.handle")
+        check_https(link.url, file, f"{key}.url")
+        if link.brand and not _BRAND.fullmatch(link.brand):
+            raise YearDataError(f"{file}: {key}.brand: {link.brand!r} is not a key")
+        if link.key in keys:  # two rows would share an identifier
+            raise YearDataError(
+                f"{file}: {key}.label: {link.label!r} is already in {link.section!r}"
+            )
+        keys.add(link.key)
 
 
 def check_venue_hours(

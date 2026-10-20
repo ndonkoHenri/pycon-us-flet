@@ -2,7 +2,8 @@
 # For now it holds what feed processing and the Map need, the copy and links of the
 # Open spaces and Lightning talks pages (D-205), the keynotes (D-217), the Wi-Fi (D-280),
 # the conference moments written by hand (D-274), Help & safety (D-281), the venue hours
-# (D-282) and About the PSF (D-283); the rest arrive with their screens.
+# (D-282), About the PSF (D-283) and Social media (D-284); the rest arrive with their
+# screens.
 
 # The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
 # names ("Lunch (Hall AB)") and "Expo Hall AB" elsewhere, so a room named "Hall ..." gets
@@ -470,3 +471,98 @@ label = "LinkedIn"
 url = "https://www.linkedin.com/company/thepsf/"
 brand = "linkedin"
 app = true
+
+# The Social page (INFO-10, D-284): the hashtags, copied with a tap, then where to follow
+# PyCon US and the PSF, and their blogs. section: "pycon" or "psf" (a profile: it opens
+# in its app) or "blogs" (in the in-app browser); brand: a mark of ui/brands.py, or
+# none for a blog without one. Checked 2026-10-20 against the public pages: the
+# feed's own social-media block and the site's footer (us.pycon.org/2026/), the
+# Mastodon and Bluesky profiles through their public lookups (fosstodon.org,
+# public.api.bsky.app), the others by their pages answering. #PyConUS is the feed's
+# and @pycon's usual tag; @pycon used #PyConUS2026 for the 2026 conference too. The
+# feed's LinkedIn link ends in a stray "]" (linkedin.com/company/thepsf]); the PSF's
+# page is the one without it, listed with the PSF since the profile is theirs.
+[social]
+hashtags = ["#PyConUS", "#PyConUS2026"]
+
+[[social.links]]
+section = "pycon"
+label = "Mastodon"
+handle = "@pycon@fosstodon.org"
+url = "https://fosstodon.org/@pycon"
+brand = "mastodon"
+
+[[social.links]]
+section = "pycon"
+label = "Bluesky"
+handle = "@pycon.us"
+url = "https://bsky.app/profile/pycon.us"
+brand = "bluesky"
+
+[[social.links]]
+section = "pycon"
+label = "X"
+handle = "@pycon"
+url = "https://x.com/pycon"
+brand = "x"
+
+[[social.links]]
+section = "pycon"
+label = "YouTube"
+handle = "@PyConUS"
+url = "https://www.youtube.com/@PyConUS"
+brand = "youtube"
+
+[[social.links]]
+section = "psf"
+label = "Mastodon"
+handle = "@ThePSF@fosstodon.org"
+url = "https://fosstodon.org/@ThePSF"
+brand = "mastodon"
+
+[[social.links]]
+section = "psf"
+label = "Bluesky"
+handle = "@python.org"
+url = "https://bsky.app/profile/python.org"
+brand = "bluesky"
+
+[[social.links]]
+section = "psf"
+label = "X"
+handle = "@ThePSF"
+url = "https://x.com/ThePSF"
+brand = "x"
+
+[[social.links]]
+section = "psf"
+label = "LinkedIn"
+handle = "Python Software Foundation"
+url = "https://www.linkedin.com/company/thepsf/"
+brand = "linkedin"
+
+[[social.links]]
+section = "blogs"
+label = "PyCon US blog"
+handle = "pycon.blogspot.com"
+url = "https://pycon.blogspot.com/"
+
+[[social.links]]
+section = "blogs"
+label = "PSF blog"
+handle = "pyfound.blogspot.com"
+url = "https://pyfound.blogspot.com/"
+
+[[social.links]]
+section = "blogs"
+label = "Python Insider"
+handle = "blog.python.org"
+url = "https://blog.python.org/"
+brand = "python"
+
+[[social.links]]
+section = "blogs"
+label = "PyPI blog"
+handle = "blog.pypi.org"
+url = "https://blog.pypi.org/"
+brand = "pypi"
