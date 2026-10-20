@@ -188,17 +188,40 @@ class Sprint:
     search_text: str = ""
 
 
+@dataclass(frozen=True)
+class Role:
+    """One open role of a job listing, with the page to apply on (SPON-09, D-278).
+
+    A small value, so equal roles compare equal.
+
+    Attributes:
+        title: What the role is called: its anchor's text, or the text before its bare
+            URL, else the URL's last segment (``jobs.parse_roles``).
+        url: Its page: an absolute ``http`` or ``https`` URL.
+    """
+
+    title: str
+    url: str
+
+
 @dataclass(frozen=True, eq=False)
 class JobListing:
     """A sponsor's job listing (DATA-24).
 
     Attributes:
         id: The feed's id, as a string.
-        sponsor_name: The sponsor.
+        sponsor_name: The sponsor, by the exact name of a ``Sponsor`` (``jobs.listings_of``).
         sponsor_logo_url: The sponsor's logo.
         sponsor_level: The sponsorship level, e.g. ``Visionary``.
-        description: The feed's HTML list of roles; SPON-09 reads its links.
-        description_md: ``description`` as Markdown (D-130).
+        description: The feed's HTML: a list of roles, or a long-form description.
+        description_md: ``description`` as Markdown (D-130); empty for a placeholder such
+            as ``N/A`` (``jobs.is_placeholder``), so a listing without roles shows it
+            only when it says something.
+        roles: Its roles, in the order the listing gives them (``jobs.parse_roles``);
+            none for a long-form listing, whose Markdown shows instead (D-278).
+        search_text: What the job listings' search matches (SPON-07, D-46): the
+            sponsor's name, the role titles and the description's text, folded; never
+            markup or a link's destination.
     """
 
     id: str
@@ -207,6 +230,8 @@ class JobListing:
     sponsor_level: str
     description: str
     description_md: str = ""
+    roles: tuple[Role, ...] = ()
+    search_text: str = ""
 
 
 @dataclass(frozen=True, eq=False)

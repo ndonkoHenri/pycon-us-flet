@@ -17,6 +17,14 @@ is no one's domain. Once a build leaves our devices it never changes again: a ne
 makes every event a user exports again a second copy in their calendar.
 """
 
+SOURCE_URL: str | None = None
+"""The app's source repository, or None while it is private (D-88, D-292).
+
+About this app shows a Source code row only when it is set: a link to a private
+repository would open a 404 for everyone outside the team. The PR that makes the
+repository public (P4) sets it to the repository's ``https`` address.
+"""
+
 FLET_VERSION = "source build"
 """The Flet version About this app and the diagnostics text name while the app builds from
 the pinned source checkout (D-81): a packaged app reports ``0.1.0`` then, the host the

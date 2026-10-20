@@ -8,13 +8,15 @@ rules. A module of its own, as the Open spaces and Lightning talks pages' is
 (``year_pages``, D-205), so ``config.py`` stays under D-66's ~400 lines while the six
 pages' tables arrive.
 
-So far Venue & hours has its table, ``[[venue_hours]]`` (D-282), whose dataclasses are
-``core.hours``' since the open-now rule reads them, as feed processing reads
-``core.rules``' display-time overrides. The other pages' issues add theirs, with their
-rules, to this module. Until a page has its table, or for a year that has none, the page
-shows the feed's own block for it (``ui.info_page``).
+So far Wi-Fi has its table, ``[wifi]`` (``WifiInfo``, D-280), and Venue & hours its
+``[[venue_hours]]`` (D-282), whose dataclasses are ``core.hours``' since the open-now rule
+reads them, as feed processing reads ``core.rules``' display-time overrides. The other
+pages' issues add theirs, with their rules, to this module. Until a page has its table,
+or for a year that has none, the page shows the feed's own block for it
+(``ui.info_page``).
 """
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from pycon_us.core.hours import ServiceHours
@@ -23,6 +25,19 @@ from pycon_us.year_schema import YearDataError
 
 if TYPE_CHECKING:  # config imports this module; the types alone go the other way
     from pycon_us.config import ConferenceInfo, Content
+
+
+@dataclass(frozen=True)
+class WifiInfo:
+    """The conference network the Wi-Fi page shows and copies (INFO-08, D-280).
+
+    Attributes:
+        network: The network's name (its SSID), exactly as a phone lists it.
+        password: Its password, exactly as it is typed.
+    """
+
+    network: str
+    password: str
 
 
 def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
@@ -40,6 +55,10 @@ def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
     Raises:
         YearDataError: A table breaks one of its rules.
     """
+    if (wifi := content.wifi) is not None:
+        # A blank value would show nothing to read, and copy nothing to paste.
+        check_text(wifi.network, file, "wifi.network")
+        check_text(wifi.password, file, "wifi.password")
     check_venue_hours(content.venue_hours, conference, file)
 
 
