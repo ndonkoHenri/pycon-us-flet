@@ -2,9 +2,9 @@
 
 It holds the six app-wide keys of the storage table (decisions §M), checks the two
 settings with fixed values (Appearance, High contrast) on load and on save, reads the
-reminder settings as their record (D-275), and keeps
-what the user chose in memory when a write fails (D-120). ``App`` reads it before the
-first screen (the boot gate), so neither the theme nor the filters flash.
+reminder settings as their record (D-275), and keeps what the user chose in memory when
+a write fails (D-120). ``App`` reads it before the first screen (the boot gate), so
+neither the theme nor the filters flash.
 """
 
 import logging
