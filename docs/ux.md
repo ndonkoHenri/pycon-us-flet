@@ -113,7 +113,7 @@ Query parameters carry only view options (`?scope=`, `?pin=`, `?highlight=`, `?b
 
 ### 2.6 Deep links (P2, NEW-07, D-21) and launch (SHELL-01, SHELL-03)
 
-- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. An unknown id opens its detail's not-found state ("This session isn't in the current schedule") pushed on the root, so Back lands there (D-186). An unknown path opens "Page not found" alone, whose Back goes to Now (D-270). Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
+- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. An unknown id opens its detail's not-found state ("This session isn't in the current schedule") pushed on the root, so Back lands there (D-186). An unknown path opens "This page isn't in the app" alone, whose Back goes to Now (D-270). Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
 - **Launch:** native splash `#680579` with the app icon (O-4), never the PyCon logo (D-36); Flet's boot screen, shown while Python starts, in the same purple (`[tool.flet.boot_screen.flet]`); a boot View (same purple) until `Prefs.loaded` and the cached or bundled feed are read, so theme and filters never flash; a `ProgressRing` only after 1 s. First run goes to `/welcome` (P2), otherwise Now; in P3 lead-retrieval accounts may open on the Lead scanner (D-16). Never a permission prompt at launch (D-61).
 
 ---
@@ -378,7 +378,7 @@ Haptics (`ft.HapticFeedback`, coroutines): `selection_click()` for star added, c
 | Room not found | `WRONG_LOCATION_OUTLINED` | "This room isn't in the current schedule" | "All rooms" (the Map) |
 | Track not found (an unknown slug, D-199) | `LABEL_OFF_OUTLINED` | "This track isn't in the current schedule" | "All tracks" |
 | No rooms (the Map, D-188) | `MEETING_ROOM_OUTLINED` | "No rooms yet" / "Rooms appear here once the schedule lists them." | "Open schedule" |
-| Page not found (`NotFound`, the table's catch-all, under "Not found" and its back arrow, D-270) | `LINK_OFF_OUTLINED` | "Page not found" / "This link doesn't open anything in this app." (never the path) | "Go to Now" |
+| Page not found (`NotFound`, the table's catch-all, under "Not found" and its back arrow, D-270) | `LINK_OFF_OUTLINED` | "This page isn't in the app" / "The link may be old or mistyped." (never the path) | "Go to Now" |
 | Next year not published | (its screen) | "The {year} schedule isn't out yet" | "Visit us.pycon.org" |
 | Sponsor not found (P2) | (its screen) | "We couldn't find this sponsor" | "All sponsors" |
 

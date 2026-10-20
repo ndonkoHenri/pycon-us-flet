@@ -52,10 +52,7 @@ def test_an_unknown_location_says_so_without_naming_it_and_offers_now(
     """The page says what happened, never echoes the path, and Go to Now goes to Now."""
     view = not_found_at(hooks, page, "/welcome/secret-path")
     body = body_of(view)
-    assert texts(body) == [
-        "Page not found",
-        "This link doesn't open anything in this app.",
-    ]
+    assert texts(body) == [routes.NOT_FOUND, routes.NOT_FOUND_BODY]
     shown = texts(view) + texts(app_bar(view))
     assert shown and not any("secret-path" in text for text in shown)
     button = only(body, ft.FilledTonalButton)
@@ -74,7 +71,7 @@ def test_the_state_is_a_live_heading_under_the_page_s_title(
     assert isinstance(title.content, ft.Text) and title.content.value == "Not found"
     nodes = [n for n in descendants(body_of(view)) if isinstance(n, ft.Semantics)]
     assert [(n.heading_level, texts(n)) for n in nodes if n.header] == [
-        (2, ["Page not found"])
+        (2, [routes.NOT_FOUND])
     ]
     live = [n for n in nodes if n.identifier == "app.not_found"]
     assert len(live) == 1 and live[0].live_region is True

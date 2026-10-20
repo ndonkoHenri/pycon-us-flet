@@ -90,11 +90,11 @@ def Start() -> ft.View:
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
 
 
-NOT_FOUND = "Page not found"
+NOT_FOUND = "This page isn't in the app"
 """The unknown location's empty state (ux.md §4.6)."""
 
-NOT_FOUND_BODY = "This link doesn't open anything in this app."
-"""What the state says under its title: why, without the path (D-270)."""
+NOT_FOUND_BODY = "The link may be old or mistyped."
+"""What the state says under its title: a likely why, without the path (D-270)."""
 
 
 @ft.component
