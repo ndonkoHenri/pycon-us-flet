@@ -227,8 +227,8 @@ ON_PURPOSE = {
     # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
     # dump shows it. Every overflow item is built there.
     ("menus.py", "menu_item", "identifier"): (
-        "session.open_site, session.add_to_calendar, sprints.info, sprints.submit,"
-        " track.add_all"
+        "session.open_site, session.add_to_calendar, my_schedule.export,"
+        " sprints.info, sprints.submit, track.add_all"
     ),
 }
 """The bare identifiers left so on purpose, and the identifiers they give at run time.

@@ -71,6 +71,7 @@ def reset_losses(saved: int, *, packaged: bool) -> tuple[str, ...]:
         "Your settings: Appearance and the schedule's filters",
         f"Your saved sessions in My schedule: {saved or 'none'}",
         "The cached schedule: the app shows the bundled one until it refreshes",
+        "Schedule changes: what recent refreshes changed",
         developer,
     )
 
@@ -79,6 +80,7 @@ LOSS_ICONS = (
     ft.Icons.SETTINGS_OUTLINED,
     ft.Icons.STAR_BORDER,
     ft.Icons.EVENT_NOTE_OUTLINED,
+    ft.Icons.HISTORY,
     ft.Icons.DEVELOPER_MODE_OUTLINED,
 )
 """A decorative icon for each of ``reset_losses()``' lines, in order."""

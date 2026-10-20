@@ -15,7 +15,7 @@ NOTIF-05). Two kinds, with two id ranges (D-59, D-274):
 
 8999 is the Developer test reminder's (DEV-06), outside both ranges. A module of its own,
 as ``year_keynotes`` is, so ``config.py`` grows by little (D-66). It imports no Flet: the
-plan that turns these into scheduled notifications comes with the reminders (P2-67).
+plan that turns these into reminders is ``services.reminders.plan()`` (P2-67).
 """
 
 from collections.abc import Iterable
@@ -66,6 +66,8 @@ class EventReminder:
         source: The public page a hand-authored moment was said from; empty for a
             derived one, whose source is the feed.
         checked: When ``source`` was last checked; None for a derived moment.
+        session_id: The session a keynote moment is about, so the plan gives a saved
+            keynote one reminder, not two; empty for a hand-authored moment.
     """
 
     id: int
@@ -76,6 +78,7 @@ class EventReminder:
     route: str
     source: str = ""
     checked: date | None = None
+    session_id: str = ""
 
 
 def check_moments(
@@ -163,6 +166,7 @@ def keynote_moments(
                 title=f"{kind} at {start}",
                 body=f"{session.name}{place}",
                 route=f"/schedule/session/{quote(session.id, safe='')}",
+                session_id=session.id,
             )
         )
     return tuple(moments)

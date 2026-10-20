@@ -112,7 +112,7 @@ def read_listing(
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:
     """Return the sponsor's job listings: those naming it exactly, in feed order (SPON-05).
 
-    Listings carry the sponsor's name, not its slug, and ``tools/feed_invariants.py``
+    Listings carry the sponsor's name, not its slug, and ``tools/sponsor_invariants.py``
     checks that every listing names a sponsor. Thirteen listings need no index.
 
     Args:

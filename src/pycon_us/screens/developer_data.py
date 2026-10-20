@@ -26,7 +26,7 @@ from pycon_us.feed_refresh import Problem
 from pycon_us.locations import start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
-from pycon_us.services import Services, use_services
+from pycon_us.services import Services, changes_file, use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
@@ -198,11 +198,12 @@ async def reset_app(
     """Delete what the app keeps and reset every store, as after a fresh install.
 
     DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
-    year's favourites, the Developer options and their unlock) and the feed cache. In
-    memory, without a restart: real time and no error details, as Developer's own Reset
-    sets them before the stores change (D-187); the bundled snapshot, from the year's
-    feed, with a running refresh cancelled; the settings, the saved sessions and the
-    view memory at their defaults. Then a refresh starts, as at a start (D-181: quiet).
+    year's favourites, the Developer options and their unlock), the feed cache and the
+    change log (D-255). In memory, without a restart: real time and no error details,
+    as Developer's own Reset sets them before the stores change (D-187); the bundled
+    snapshot, from the year's feed, with a running refresh cancelled; the settings, the
+    saved sessions and the view memory at their defaults. Then a refresh starts, as at a
+    start (D-181: quiet).
 
     Args:
         svc: The session's services.
@@ -219,11 +220,15 @@ async def reset_app(
     show_details(False)
     cleared = await svc.storage.clear_prefs()
     deleted = await conference.reset(svc.storage, svc.year)
+    # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
+    # Its own deletion: the reset deletes the log only when a feed URL was set
+    # (set_feed_url returns early otherwise), and this result goes into `complete`.
+    log_deleted = await changes_file.delete_batches(svc.storage, "Reset app")
     prefs.reset()
     favorites.reset()
     svc.memory.reset()
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
-    complete = cleared and deleted
+    complete = cleared and deleted and log_deleted
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete
 

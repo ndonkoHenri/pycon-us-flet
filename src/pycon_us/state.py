@@ -29,6 +29,7 @@ from pycon_us.feed_refresh import (
     fetch,
     log_unexpected,
 )
+from pycon_us.services import changes_file
 from pycon_us.services.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -84,23 +85,24 @@ class Conference:
     async def set_feed_url(self, url: str | None, storage: Storage) -> None:
         """Refresh from ``url`` from the next refresh on; None returns to the year's feed.
 
-        The Developer feed URL (D-73, D-187), with no restart. Leaving one for the year's
-        feed deletes the cache, which may hold its feed: an offline start would publish
-        that as the schedule. A refresh from a URL left writes nothing (D-244).
+        The Developer feed URL (D-73, D-187), with no restart. Once the feed has loaded
+        (not at the start), a change deletes the cache and the change log, the old URL's,
+        which would mix two feeds (D-255). A refresh from a URL left writes nothing.
 
         Args:
             url: An ``http://`` or ``https://`` feed URL, or None.
-            storage: Where the feed cache lives.
+            storage: Where the feed cache and the change log live.
         """
         if url == self._feed_url:
             return
         # Changed before the deletion, so a refresh from the URL left sees it (D-244).
-        was, self._feed_url = self._feed_url, url
+        self._feed_url = url
         logger.info(
             "Feed refreshes use %s", "a Developer feed URL" if url else "the year's"
         )
-        if was is not None and url is None:
-            await storage.delete_feed("the Developer feed URL is off")
+        if self.data is not None:
+            await storage.delete_feed("the feed URL changed")
+            await changes_file.delete_batches(storage, "the feed URL changed")
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the feed cache, or the bundled snapshot when there is no usable cache.

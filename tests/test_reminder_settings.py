@@ -133,3 +133,15 @@ def test_building_a_record_outside_its_choices_raises(change: dict[str, Any]) ->
 def test_the_stored_form_names_every_field() -> None:
     """The stored object has one key per field, so a new field is stored too."""
     assert set(DEFAULTS.to_stored()) == {field.name for field in fields(DEFAULTS)}
+
+
+def test_wants_reads_each_moment_category_and_refuses_others() -> None:
+    """``wants()`` answers for the three moment categories; anything else is an error."""
+    settings = ReminderSettings(lightning=True, open_space=False, keynote=True)
+    assert [settings.wants(c) for c in ("lightning", "open_space", "keynote")] == [
+        True,
+        False,
+        True,
+    ]
+    with pytest.raises(KeyError):
+        settings.wants("push")
