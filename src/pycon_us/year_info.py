@@ -50,8 +50,10 @@ def check_venue_hours(
 
     Each service has a name no other entry has (compared without case), no blank text,
     and, without hours of its own, a note that says why. Each opening is on a day of the
-    conference (``first_day`` to ``last_day``), opens before it closes, and does not
-    overlap the service's other openings that day (one may close when the next opens).
+    conference (``first_day`` to ``last_day``), opens and closes on a whole minute
+    (``07:30:00``, since the labels and the open-now rule work to the minute), opens
+    before it closes, and does not overlap the service's other openings that day (one
+    may close when the next opens).
 
     Args:
         hours: The ``[[venue_hours]]`` entries; empty for a year without them.
@@ -87,6 +89,13 @@ def check_venue_hours(
                     f"{file}: {where}.date: {opening.date} is not a day of the "
                     f"conference ({first} to {last})"
                 )
+            for field in ("opens", "closes"):
+                moment = getattr(opening, field)
+                if moment.second or moment.microsecond:
+                    raise YearDataError(
+                        f"{file}: {where}.{field}: {moment} has seconds; "
+                        "hours are whole minutes"
+                    )
             if opening.closes <= opening.opens:
                 raise YearDataError(
                     f"{file}: {where}.closes: {opening.closes} is not after "

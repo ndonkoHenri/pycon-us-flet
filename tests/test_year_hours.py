@@ -1,8 +1,9 @@
 """Tests for the venue hours' year data and its rules (``year_info.py``; #412, D-282).
 
 2026's ``[[venue_hours]]`` are transcribed from the bundled feed's ``venues-hours`` block,
-so a test reads that block and compares; 2025 has no table. The loader refuses an
-overlap, reversed times and a day outside the conference, naming file, entry and field.
+so a test reads that block and compares, section by section and line by line; 2025 has
+no table. The loader refuses an overlap, reversed times, a time with seconds and a day
+outside the conference, naming file, entry and field.
 """
 
 import html
@@ -28,6 +29,33 @@ FEED_SERVICES = {
     "Information Desk Hours & Location:": "Information desk",
     "Swag Pickup Hours & Location": "Swag pickup",
     "Attendee Quiet Room": "Quiet room",
+}
+# The feed's headings for the services without hours, and the names the app uses.
+FEED_NOTED = {
+    "Lost & Found (Room 203AB)": "Lost & found",
+    "Luggage Check": "Luggage check",
+}
+# Each service's feed lines besides its location and hours, and the year data's note
+# that says the same: a change on either side asks for the other to follow.
+FEED_NOTES = {
+    "Swag pickup": (
+        ("Extra t-shirts available Sunday, May 17 11am - 1pm",),
+        "Extra T-shirts on Sunday, May 17, from 11 AM to 1 PM.",
+    ),
+    "Lost & found": (
+        (
+            "Available at Information Desk during open hours",
+            "Items moved to Staff Office daily",
+        ),
+        (
+            "Ask at the information desk while it is open. Items move to the staff "
+            "office each day."
+        ),
+    ),
+    "Luggage check": (
+        ("We will not have luggage check available this year",),
+        "There is no luggage check this year.",
+    ),
 }
 _HOURS_LINE = re.compile(r"^\w+, May (\d+): (\S+) - (\S+)$")
 _CLOCK = re.compile(r"^(\d{1,2})(?::(\d\d))?(am|pm)$")
@@ -55,48 +83,61 @@ def clock(text: str) -> time:
     return time(hour % 12 + (12 if meridiem == "pm" else 0), minute)
 
 
-def feed_hours() -> dict[str, tuple[str, tuple[Opening, ...]]]:
-    """The snapshot's ``venues-hours`` block: each service's location and openings."""
+def feed_sections() -> dict[str, str]:
+    """The snapshot's ``venues-hours`` block: each ``<h3>`` heading and the HTML under it."""
     raw = load_year(2026).read_snapshot().raw.decode()
     block = html.unescape(json.loads(raw)["conference"]["content"]["venues-hours"])
-    found: dict[str, tuple[str, tuple[Opening, ...]]] = {}
-    for section in block.split("<h3>")[1:]:
-        heading, body = section.split("</h3>", 1)
-        if heading not in FEED_SERVICES:
-            continue
-        location = re.search(r"<p>(.*?)</p>", body)
-        assert location, heading
-        openings = []
-        for item in re.findall(r"<li>(.*?)</li>", body):
-            line = _HOURS_LINE.match(item)
-            assert line, item
+    return dict(section.split("</h3>", 1) for section in block.split("<h3>")[1:])
+
+
+def feed_service(
+    body: str, *, located: bool
+) -> tuple[str, tuple[Opening, ...], tuple[str, ...]]:
+    """A feed section's location (its first line when ``located``), openings and other lines."""
+    lines = re.findall(r"<(?:p|li)>(.*?)</(?:p|li)>", body)
+    location = lines.pop(0) if located else ""
+    openings, others = [], []
+    for text in lines:
+        if line := _HOURS_LINE.match(text):
             openings.append(
                 Opening(date(2026, 5, int(line[1])), clock(line[2]), clock(line[3]))
             )
-        found[FEED_SERVICES[heading]] = (location[1], tuple(openings))
-    return found
+        else:
+            others.append(text)
+    return location, tuple(openings), tuple(others)
 
 
-def test_2026_matches_the_feed_s_venue_hours_block() -> None:
-    """Each service the feed gives hours has the same location and openings in 2026's data."""
-    hours = {item.service: item for item in load_year(2026).content.venue_hours}
-    feed = feed_hours()
-    assert set(feed) == set(FEED_SERVICES.values())
-    for service, (location, openings) in feed.items():
-        assert (hours[service].location, hours[service].open) == (location, openings)
-
-
-def test_2026_lists_six_services_with_lost_and_found_and_no_luggage_check() -> None:
-    """2026 has the feed's six services; the two without hours carry a note instead."""
+def test_2026_has_the_feed_s_services_in_its_order() -> None:
+    """Every feed section is a known service, in 2026's order: a new or renamed one fails."""
+    sections = feed_sections()
+    names = FEED_SERVICES | FEED_NOTED
+    assert set(sections) == set(names), "a feed section changed: update the year data"
     hours = load_year(2026).content.venue_hours
-    assert [item.service for item in hours] == [
-        "Registration",
-        "Information desk",
-        "Swag pickup",
-        "Quiet room",
-        "Lost & found",
-        "Luggage check",
-    ]
+    assert [item.service for item in hours] == [names[heading] for heading in sections]
+
+
+def test_2026_matches_the_feed_s_hours_locations_and_lines() -> None:
+    """Each service has the feed's location and openings, and its note the feed's lines."""
+    hours = {item.service: item for item in load_year(2026).content.venue_hours}
+    for heading, body in feed_sections().items():
+        service = (FEED_SERVICES | FEED_NOTED)[heading]
+        timed = heading in FEED_SERVICES
+        location, openings, others = feed_service(body, located=timed)
+        lines, note = FEED_NOTES.get(service, ((), ""))
+        assert (others, hours[service].note) == (lines, note), service
+        if timed:
+            assert openings, service
+            assert (hours[service].location, hours[service].open) == (
+                location,
+                openings,
+            )
+        else:
+            assert openings == () == hours[service].open, service
+
+
+def test_2026_s_lost_and_found_and_luggage_check_carry_a_note() -> None:
+    """The two services without hours: Lost & found in its room, no luggage check at all."""
+    hours = load_year(2026).content.venue_hours
     without = {item.service: item for item in hours if not item.open}
     assert without["Lost & found"].location == "Room 203AB"
     assert "information desk" in without["Lost & found"].note
@@ -153,6 +194,17 @@ def opening(day: int, opens: int, closes: int) -> Opening:
             "venue_hours[0].open[0].closes: 09:00:00 is not after opens (09:00:00)",
         ),
         (
+            (service(Opening(date(2026, 5, 14), time(7, 30, 30), time(18))),),
+            "venue_hours[0].open[0].opens: 07:30:30 has seconds; hours are whole minutes",
+        ),
+        (
+            (service(Opening(date(2026, 5, 14), time(9), time(17, 59, 59, 500000))),),
+            (
+                "venue_hours[0].open[0].closes: 17:59:59.500000 has seconds; "
+                "hours are whole minutes"
+            ),
+        ),
+        (
             (service(opening(12, 9, 17)),),
             (
                 "venue_hours[0].open[0].date: 2026-05-12 is not a day of the conference "
@@ -185,7 +237,7 @@ def opening(day: int, opens: int, closes: int) -> Opening:
 def test_the_rules_refuse_a_broken_entry_naming_entry_and_field(
     hours: tuple[ServiceHours, ...], message: str
 ) -> None:
-    """Overlaps, reversed times, days outside the conference, twins and blanks are refused."""
+    """Overlaps, reversed times, seconds, days off the conference, twins, blanks: refused."""
     with pytest.raises(YearDataError) as error:
         check_venue_hours(hours, CONFERENCE, FILE)
     assert str(error.value) == f"{FILE}: {message}"
@@ -227,6 +279,11 @@ def test_the_rules_accept_touching_openings_and_the_conference_s_edges() -> None
                 "venue_hours[0].open[1].date: 2026-06-14 is not a day of the conference "
                 "(2026-05-13 to 2026-05-19)"
             ),
+        ),
+        (
+            "{ date = 2026-05-14, opens = 07:30:00, closes = 18:00:00 }",
+            "{ date = 2026-05-14, opens = 07:30:00, closes = 17:59:30 }",
+            "venue_hours[0].open[1].closes: 17:59:30 has seconds; hours are whole minutes",
         ),
         (
             "{ date = 2026-05-14, opens = 07:30:00, closes = 18:00:00 }",
