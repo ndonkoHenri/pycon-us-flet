@@ -597,7 +597,7 @@ At each phase exit, with packaged builds on an Android emulator and an iOS simul
 9. Background for more than 15 minutes, then resume: refresh happens, accessibility flags are re-read.
 10. Landscape, and a tablet emulator (rail from P2).
 11. The companion app (`flet run --android` / `--ios`) shows the interim for every capability (P0 exit 3).
-12. Reminders (P2): with E3 pinned, they fire with the app killed (on the iPhone and the emulator) and after a reboot of the emulator, and the tap opens the session with a back stack; without E3, the settings say "Reminders aren't available in this build" and Now, the Banner and `.ics` work (D-60). A denied permission never blocks a task.
+12. Reminders (P2): with E3 pinned, they fire with the app killed (on the iPhone and the emulator) and after a reboot of the emulator, and the tap opens the session with a back stack; without E3, the settings say "Reminders aren't available in this build" and Now, the Banner and `.ics` work (D-60), and the E3 checks (#459) move to P4 with the E3 work (D-256). A denied permission never blocks a task.
 13. Scans (P3): queue in airplane mode, survive kill and relaunch, sync once; sign-out with unsynced rows asks first.
 14. The shared log contains no secret, email or badge code (D-72).
 15. Deep links (P2): `adb shell am start -a android.intent.action.VIEW -d '<scheme>://app/schedule/session/<id>'` and `xcrun simctl openurl <udid> '<scheme>://app/...'`, cold and warm: the link lands on the session with its root below, so Back returns to the root; an unknown id lands on its detail's not-found state over the root, and Back returns to the root (D-21, D-186).

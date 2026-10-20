@@ -619,7 +619,7 @@ No bar; full-bleed `#680579` in both themes, in `SafeArea`: the app icon (O-4; d
 
 Toggle rows are `ListTile(toggle_inputs=True)`: the whole row is the target and reads as one control. Toggles re-plan reminders silently, without a SnackBar each.
 
-**Interim until E3 is in the pinned Flet** (D-60, always in the `flet run` companion app, D-63): the Reminders section says "Reminders aren't available in this build. Your next session appears on Now, and calendar exports include an alarm." and shows no switches. While the app is open, 10 min before a saved session, a `Banner` "Typing deep dive starts in 10 min · Room 103ABC" offers "Open" and "Dismiss".
+**Interim until E3 is in the pinned Flet** (D-60, always in the `flet run` companion app, D-63; if E3 isn't pinned by the P2 exit, P2 ships this and the live section waits in P4, D-256): the Reminders section says "Reminders aren't available in this build. Your next session appears on Now, and calendar exports include an alarm." and shows no switches. While the app is open, 10 min before a saved session, a `Banner` "Typing deep dive starts in 10 min · Room 103ABC" offers "Open" and "Dismiss".
 
 ---
 
