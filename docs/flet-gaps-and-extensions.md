@@ -37,7 +37,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
 | 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
 | 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
-| 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed |
+| 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed; [#370](https://github.com/ndonkoHenri/pycon-us-flet/issues/370) |
 | later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
 | low | **E2** | FCM push | none: the app has no push (D-58) | n/a | `firebase_messaging` 16.7.0 (+ U5) | never, in this app | L | a Flet contribution only |
 
@@ -738,11 +738,12 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 ### 5.12 U18: Back inside a modal sub-chain (later; XS)
 
 - **Serves:** NEW-02 (search, D-19): Back from a result pushed over the global modal `/search` must return to the results.
-- **Today:** while a modal route is anywhere in the matched chain, the stock pop handler navigates to the modal's base location, even for a pop from a view pushed over the modal (`FLET/components/router.py`, modal branch of the `on_view_pop` handler; F6). An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead.
+- **Today:** while a modal route is anywhere in the matched chain, the stock pop handler navigates to the modal's base location, even for a pop from a view pushed over the modal (`FLET/components/router.py:682-687` at `15854a0ac`, whose `current_modal_pop_to_ref` is set for the whole chain at `:782-794`; F6). An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead (`:677-680`).
 - **Interim:** `main()` sets `page.on_view_pop` to navigate to `parent_of(e.route, memory.search_base)` (architecture §5.3).
-- **Change:** pop to the previous view entry's resolved pathname unless the popped view is the modal itself; only then go to the modal's base.
+- **Change:** pop to the previous view entry's resolved pathname within the modal's own sub-chain (split at the modal, as the Views are, `:835`) unless the popped view is the modal itself; only then go to the modal's base. Global and local modals alike.
+- **Issue:** [#370](https://github.com/ndonkoHenri/pycon-us-flet/issues/370), with the analysis, a repro run on the iOS 26.5 simulator, a draft diff and the open questions (the base's query on close).
 - **Test:** `/search` → `/search/session/42` → Back lands on `/search`; Back again lands on the base.
-- **Upgrade:** after the pin bump, delete the app's `on_view_pop` handler. `parent_of()` stays for the back arrow (D-10).
+- **Upgrade:** after the pin bump, delete the app's `on_view_pop` handler, but only if the stock handler then matches every Back test: it drops the opener's query on closing `/search` (our `search_base` keeps it), and a Router that never saw the opener (a deep link straight to `/search`) closes it to `/`, where `Start` goes on to `start_target()` (D-143). If either differs in a way users see, the app keeps its handler. `parent_of()` stays for the back arrow (D-10).
 
 ---
 
