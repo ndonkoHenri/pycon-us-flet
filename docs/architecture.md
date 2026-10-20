@@ -200,7 +200,8 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
 | `/more/speakers`, `tracks`, `tracks/sprints`, `tracks/lightning-talks`, `tracks/open-spaces`, `tracks/keynotes` (the hub's pages of their own, More's pages again, listed before `:slug` so Back returns to the hub; `year_tracks.HUB_PAGES`, D-207, D-217, D-228), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
-| `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social`, `settings` | sponsors and info screens; Settings | child | P2 | SPON, MAP-09..11, INFO, THEME-01, NOTIF-01 |
+| `/more/settings` | Settings (`screens/settings.py`): Appearance and High contrast (#421, D-286); reminders and Data join it in P2 | child | P2 | THEME-01, STORE-08, NOTIF-01 |
+| `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social` | sponsors and info screens | child | P2 | SPON, MAP-09..11, INFO |
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
 | `<any of the above>/<kind>/<id>` | `Drill` → detail screen | recursive child | P1 | SESS-12, #279 |
 
