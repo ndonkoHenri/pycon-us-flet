@@ -90,7 +90,8 @@ def help_blocks(
 
     Args:
         contacts: The year's safety contacts; the card shows when there is one.
-        info: The year's ``[help]`` table, or None.
+        info: The year's ``[help]`` table, or None; the loader refuses one without a
+            contact, so the card always heads it.
     """
     blocks: list[ft.Control] = []
     if contacts:
@@ -136,7 +137,7 @@ def help_blocks(
 def report_card(
     contacts: tuple[SafetyContact, ...], in_person: str | None
 ) -> ft.Control:
-    """Return the Report a concern card: a heading, a row per contact, the staff line.
+    """Return the Report a concern card: a heading, a row per contact, the last line.
 
     An outlined card whose edge is ``error``, the colour M3 keeps for what is urgent;
     the heading and its icon say it too, so colour is never the only signal (D-33).
@@ -145,7 +146,8 @@ def report_card(
 
     Args:
         contacts: The year's safety contacts, in the order they are listed.
-        in_person: The line on reporting to a staff member, or None.
+        in_person: The line on danger (emergency services first) and on reporting to
+            a staff member, or None.
     """
     heading = ft.Semantics(
         header=True,

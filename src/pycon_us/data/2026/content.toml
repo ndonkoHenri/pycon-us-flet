@@ -32,8 +32,12 @@ checked = 2026-10-20
 
 # The page's other lines, said in our words from the same two pages and the 2026 feed's
 # venues-hours block (checked 2026-10-20). Keep the places in step with that block.
+# in_person: the danger sentence is from Procedures for Reporting Incidents ("contact the
+# appropriate crisis, non-emergency or police number"; a volunteer or staff member helps
+# find it), the help to reach hotel or venue security and the police from the Code of
+# Conduct page.
 [help]
-in_person = "Or tell any PyCon US staff member in person. Staff can also help you reach venue security or local services."
+in_person = "If someone is in danger, contact local emergency services first: any PyCon US staff member or volunteer can help you find the number. You can also tell any staff member in person, and staff can help you reach hotel or venue security or the police."
 info_desk = "In the Promenade Lobby, at the main entrance."
 lost_and_found = "Room 203AB. While the information desk is open, ask there: items move to the staff office at the end of each day."
 quiet_room = "VIP Room A & B, Thursday to Sunday, for anyone who needs a calm moment."

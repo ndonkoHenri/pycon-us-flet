@@ -823,7 +823,7 @@ source = "https://policies.python.org/us.pycon.org/code-of-conduct/Procedures-fo
 checked = 2026-10-20                # when it was last checked there (D-45)
 
 [help]                              # Help & safety's other lines and links (D-281)
-in_person = "Or tell any PyCon US staff member in person. …"
+in_person = "If someone is in danger, contact local emergency services first: …"   # then staff in person
 info_desk = "In the Promenade Lobby, at the main entrance."
 lost_and_found = "Room 203AB. …"
 quiet_room = "VIP Room A & B, Thursday to Sunday, …"

@@ -219,10 +219,14 @@ def test_the_card_is_outlined_in_error_and_reads_as_its_parts(
     assert card.semantic_container is False  # else one node holds them all (D-211)
 
 
-def test_2026_s_card_has_the_email_row_then_the_staff_line(
+def test_2026_s_card_has_the_email_row_then_the_danger_and_staff_line(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
-    """2026 lists the report email (no public hotline, D-45) and reporting in person."""
+    """2026 lists the report email (no public hotline, D-45), then the last line.
+
+    It says emergency services first when someone is in danger, then reporting in
+    person.
+    """
     _, row, line = card_items(blocks_of(render(svc))[0])
     node = link_node(row)
     assert node.identifier == "help.report.mailto" and node.link
@@ -232,6 +236,7 @@ def test_2026_s_card_has_the_email_row_then_the_staff_line(
     assert tile.subtitle == "pycon-us-report@python.org"
     assert copy_node(row).identifier == "help.copy.mailto"
     assert isinstance(line, ft.Container) and isinstance(line.content, ft.Text)
+    assert str(line.content.value).startswith("If someone is in danger, contact local")
     assert "staff member" in str(line.content.value)
 
 

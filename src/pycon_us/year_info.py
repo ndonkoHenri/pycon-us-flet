@@ -72,8 +72,8 @@ class HelpInfo:
     """Help & safety's lines and links beside the contacts (INFO-07, INFO-11).
 
     Attributes:
-        in_person: The card's last line, the way to report without the phone:
-            "Or find any PyCon US staff member: …".
+        in_person: The card's last line: in danger, local emergency services first,
+            with staff to help find the number; then reporting to any staff member.
         info_desk: Where the information desk is, in one line.
         lost_and_found: Where lost items go, in one line.
         quiet_room: Where the quiet room is, in one line.
@@ -107,6 +107,13 @@ def check_info(content: Content, file: str) -> None:
     """
     check_safety_contacts(content.safety_contacts, file)
     if content.help is not None:
+        # The page's first stop is the card, and in_person is on it: a [help] without
+        # a contact would leave the page with no way to report (D-281).
+        if not content.safety_contacts:
+            raise YearDataError(
+                f"{file}: help: needs at least one [[safety_contacts]] entry"
+                " (the Report a concern card)"
+            )
         check_help(content.help, file)
 
 

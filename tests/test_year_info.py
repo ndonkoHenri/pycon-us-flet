@@ -8,7 +8,7 @@ error a broken ``content.toml`` would give.
 
 import shutil
 import tomllib
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -127,6 +127,110 @@ def test_2026_has_the_help_lines_and_links() -> None:
     assert "staff" in info.in_person
 
 
+def test_2026_s_staff_line_says_emergency_services_first() -> None:
+    """In danger, the card points to emergency services before reporting (INFO-07).
+
+    From the Procedures page, which opens with it: call the appropriate crisis or
+    police number, and a volunteer or staff member helps find it; PyCon US is not
+    equipped to handle emergencies.
+    """
+    info = load_year(2026).content.help
+    assert info is not None
+    assert info.in_person.startswith("If someone is in danger")
+    assert "emergency services" in info.in_person
+
+
+def test_help_without_a_contact_is_refused(tmp_path: Path) -> None:
+    """``[help]`` needs a contact: the page's first stop is the card (D-281)."""
+    with pytest.raises(YearDataError, match=r"content\.toml: help: needs at least one"):
+        load_with(tmp_path, help_table=help_2026())
+
+
+def stale_contacts(year: int, data_dir: Path, today: date) -> list[str]:
+    """Return the year's contacts not re-checked for it, as D-45 asks, one line each.
+
+    A contact is stale when its check date is after ``today``, or not after both the
+    year before's last day and that year's check dates: a folder copied forward
+    without a fresh check keeps last year's date and fails. The rule lives in the
+    tests, not the loader, since the device has no reason to read last year's data.
+
+    Args:
+        year: The year whose contacts to look at.
+        data_dir: The folder that holds the year folders.
+        today: The day the check runs.
+    """
+    contacts = load_year(year, data_dir).content.safety_contacts
+    since = None
+    if (data_dir / str(year - 1)).is_dir():
+        before = load_year(year - 1, data_dir)
+        since = max(
+            [before.conference.last_day]
+            + [c.checked for c in before.content.safety_contacts]
+        )
+    problems = []
+    for contact in contacts:
+        if contact.checked > today:
+            problems.append(f"{contact.kind}: checked {contact.checked}, in the future")
+        elif since is not None and contact.checked <= since:
+            problems.append(
+                f"{contact.kind}: checked {contact.checked}, not after {since}"
+            )
+    return problems
+
+
+@pytest.mark.parametrize("year", YEARS)
+def test_every_year_s_safety_contacts_were_checked_for_it(year: int) -> None:
+    """Each bundled year's contacts were checked since the year before (D-45, D-281)."""
+    # UTC is ahead of every US zone, so a check made today anywhere there passes.
+    today = datetime.now(UTC).date()
+    assert stale_contacts(year, config.DATA_DIR, today) == []
+
+
+def copy_forward(tmp_path: Path, checked: date | None = None) -> Path:
+    """Copy 2026 to ``tmp_path`` as 2026 and as a 2027 with its dates a year on.
+
+    Args:
+        tmp_path: Where the year folders go.
+        checked: The 2027 contacts' check date; None keeps 2026's, as a rollover
+            that forgot the check would.
+    """
+    shutil.copytree(config.DATA_DIR / "2026", tmp_path / "2026")
+    folder = tmp_path / "2027"
+    shutil.copytree(config.DATA_DIR / "2026", folder)
+    conference = folder / "conference.toml"
+    text = conference.read_text(encoding="utf-8")
+    text = text.replace("year = 2026", "year = 2027").replace("2026-05-", "2027-05-")
+    conference.write_text(text, encoding="utf-8")
+    if checked is not None:
+        content = folder / "content.toml"
+        text = content.read_text(encoding="utf-8")
+        text = text.replace("checked = 2026-10-20", f"checked = {checked.isoformat()}")
+        content.write_text(text, encoding="utf-8")
+    return tmp_path
+
+
+def test_a_contact_copied_forward_unchecked_is_stale(tmp_path: Path) -> None:
+    """A 2027 that keeps 2026's check date was never re-checked, so the test fails."""
+    data_dir = copy_forward(tmp_path)
+    assert stale_contacts(2027, data_dir, date(2027, 1, 10)) == [
+        "mailto: checked 2026-10-20, not after 2026-10-20"
+    ]
+
+
+def test_a_contact_re_checked_after_the_year_before_is_fresh(tmp_path: Path) -> None:
+    """A check made any time after the previous PyCon and its check counts."""
+    data_dir = copy_forward(tmp_path, checked=date(2026, 12, 1))
+    assert stale_contacts(2027, data_dir, date(2027, 1, 10)) == []
+
+
+def test_a_check_date_in_the_future_is_stale(tmp_path: Path) -> None:
+    """A check date after today is a typo, not a check."""
+    data_dir = copy_forward(tmp_path, checked=date(2027, 2, 1))
+    assert stale_contacts(2027, data_dir, date(2027, 1, 10)) == [
+        "mailto: checked 2027-02-01, in the future"
+    ]
+
+
 def test_a_year_without_the_tables_has_none(tmp_path: Path) -> None:
     """Both tables are optional: the page then shows the feed's block (D-263)."""
     content = load_with(tmp_path).content
@@ -223,11 +327,17 @@ def test_a_blank_label_is_refused(tmp_path: Path) -> None:
 def test_a_blank_help_line_is_refused(tmp_path: Path, key: str) -> None:
     """Every line of ``[help]`` says something."""
     with pytest.raises(YearDataError, match=rf"help\.{key}: is empty"):
-        load_with(tmp_path, help_table={**help_2026(), key: ""})
+        load_with(
+            tmp_path, contacts=[EMAIL_CONTACT], help_table={**help_2026(), key: ""}
+        )
 
 
 @pytest.mark.parametrize("key", ["coc_url", "procedures_url"])
 def test_a_help_link_that_is_not_https_is_refused(tmp_path: Path, key: str) -> None:
     """The Code of Conduct's links are ``https://`` pages."""
     with pytest.raises(YearDataError, match=rf"help\.{key}: expected an https"):
-        load_with(tmp_path, help_table={**help_2026(), key: "http://a.org/"})
+        load_with(
+            tmp_path,
+            contacts=[EMAIL_CONTACT],
+            help_table={**help_2026(), key: "http://a.org/"},
+        )
