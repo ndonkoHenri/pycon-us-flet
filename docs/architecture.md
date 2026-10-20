@@ -459,12 +459,13 @@ class Conference:
     _feed_url: str | None = field(default=None, repr=False)   # the Developer feed URL (D-187)
 
     async def set_feed_url(self, url: str | None, storage: Storage) -> None:
-        """Refresh from `url` from the next refresh on; None is the year's feed (D-187, D-244)."""
+        """Refresh from `url` from the next refresh on; None is the year's feed (D-187, D-244, D-255)."""
         if url == self._feed_url:
             return
-        was, self._feed_url = self._feed_url, url   # first: a refresh from `was` sees the change
-        if was is not None and url is None:         # the cache may hold the test feed
-            await storage.delete_feed("the Developer feed URL is off")
+        self._feed_url = url                  # first: a refresh from the old URL sees the change
+        if self.data is not None:             # after the load, the cache and the log are the old URL's
+            # P2: one Storage deletion of both, after every queued write of either (D-255).
+            await storage.delete_feed("the feed URL changed")
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the persistent cache, or the bundled snapshot when there is no usable cache."""
@@ -522,7 +523,8 @@ class Conference:
             previous, previous_source = self.data, self.source
             self._publish(data, digest, "network", clock.now())
             # P2 (D-47, D-255): diffed only against a feed from the URL fetched; over the
-            # bundled snapshot only when sessions are saved, for them alone. #431 places it.
+            # bundled snapshot only for saved sessions, before `pycon.<year>.fetched` is set.
+            # The hand-off re-checks `discarded()` just before it writes the log (D-255).
             await self._record_changes(storage, previous, previous_source, url, data)
         finally:
             self._asked = False               # the next refresh starts quiet (D-181)
@@ -735,10 +737,10 @@ Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `ligh
 
 The rules (D-255):
 
-- **What is diffed:** only a refresh that publishes (D-224), and only against a feed from the feed URL it fetched from: the cache or an earlier network feed. The bundled snapshot counts as the year's feed URL's, and over it a refresh is diffed only when sessions are saved, the batch holding only their changes (never an addition). After a feed URL change the next refresh publishes without a diff. A refresh that writes nothing (a closed session, D-147; a URL left, D-244) records nothing.
-- **The feed URL rule:** any change of the feed URL once the feed has loaded deletes the cache and `changes-<year>.json` (amends D-244); the start restores the stored URL before `load_local()` and deletes nothing. So the cache is always the feed of the URL in effect, and the log never mixes two feeds. Reset app deletes the log too (D-198).
+- **What is diffed:** only a refresh that publishes (D-224), and only against a feed from the feed URL it fetched from: the cache or an earlier network feed. The bundled snapshot counts as the year's feed URL's, and over it a refresh is diffed only when sessions are saved, the batch holding only their changes (never an addition), and only until the install's first network publish for the year saves `pycon.<year>.fetched`; after it, a start that fell back to the snapshot (Clear cached feed, a cache that does not parse, a feed URL change) is not diffed, since the snapshot is not what the user last saw. After a feed URL change the next refresh publishes without a diff, in the session and after a relaunch. A refresh that writes nothing (a closed session, D-147; a URL left, D-244) records nothing.
+- **The feed URL rule:** any change of the feed URL once the feed has loaded deletes the cache and `changes-<year>.json` (amends D-244); the start restores the stored URL before `load_local()` and deletes nothing. So the cache is always the feed of the URL in effect, and the log never mixes two feeds: the log's writes are kept in `Storage._writes` with the feed's, the deletion waits for them all, and `_record_changes` checks `discarded()` again just before it writes (D-255, as D-244 orders the cache). Reset app deletes the log too (D-198).
 - **The route:** `changes` is a drill kind whose id is the year; every opener pushes it on its own View (`drill_href(view_path, "changes", str(YEAR))`), the SnackBar's Review on whatever View is on top, so Back returns to the opener (§5.2).
-- **Who hears:** one SnackBar per batch that changes something, saved sessions first ("2 saved sessions changed", else "Schedule updated · 3 changes"); a batch of additions only is recorded silently; Now's card only for unseen changes to saved sessions from the last 24 h; the Changed badge only for time, room and title changes, by detection time, for 24 h.
+- **Who hears:** one SnackBar per batch that changes something, saved sessions first ("2 saved sessions changed", else "Schedule updated · 3 changes"); a batch of additions only is recorded silently; Now's card only for unseen changes to saved sessions from the last 24 h (seen 2 s after the list shows them, or by Mark all as seen); showing the list closes the Review SnackBar, and Review on the list only closes it; the Changed badge only for time, room and title changes, by detection time, for 24 h.
 - **A removed session** is listed with its last title, time and room, kept in the batch, as no link (its id would open the not-found state, D-186), with its star.
 
 ---

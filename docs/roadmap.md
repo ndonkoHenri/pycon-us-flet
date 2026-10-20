@@ -1146,11 +1146,11 @@ test, area:notifications · after P2-65, P2-66, P2-68, P2-69 · NEW-05, NOTIF-01
 
 test, blocked, area:notifications · after P2-87, P2-89, P2-90, P2-91, P2-23, P2-98 · NEW-05, NOTIF-05, NOTIF-06, NOTIF-07, NOTIF-10, DEV-06
 
-### P2-E7 · Epic: schedule change log (#312)
+### P2-E7 · Epic: schedule change log (`PyCon/pycon-us-mobile#312`)
 
 epic, area:schedule · NEW-04
 
-A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and `/schedule/changes` with saved sessions first. (The heading's #312 is the original app's feature request, `PyCon/pycon-us-mobile#312`, not this repo's #312.)
+A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and Schedule changes (the drill pair `changes/<year>`, pushed on the View that opens it, D-255) with saved sessions first.
 
 #### P2-06 · Decide the change log's route, Back target and when it speaks up (#366)
 
