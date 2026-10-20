@@ -24,6 +24,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import use_conference
+from pycon_us.ui.modals import use_modals_close_on_route_change
 from pycon_us.ui.navigation import TABS, Retap, navigation_bar
 from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe
@@ -46,7 +47,9 @@ def AppScaffold(
     every branch (hooks are unconditional, D-70). It records the top View's route for
     the start route (D-143), places the body in ``Shown``, which logs D-112's content
     line (D-165), and puts ``GutterProbe`` under it, which tells the lists whether a
-    slot's time fits beside its rows (D-216).
+    slot's time fits beside its rows (D-216). It also makes every route change, a
+    warm deep link's included, close the open dialogs and sheets first
+    (``ui.modals``, D-291).
 
     On a tab root the View gets the bottom bar (D-144); pushed Views get the back arrow
     instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
@@ -86,6 +89,7 @@ def AppScaffold(
     back_to_now = (is_root and view_path != "/now") or unknown
     if is_top_view(page.route, view_path) and not unknown:
         svc.memory.last_location = page.route  # where a new session returns (D-143)
+    use_modals_close_on_route_change()  # a link never lands under a dialog (D-291)
 
     @report_errors
     def go_back() -> None:
@@ -219,7 +223,9 @@ def search_button(memory: ViewMemory, scope: str) -> ft.Control:
     """Return the app bar action that opens the global search with a preset scope (D-19).
 
     It records the opener's location, query included, so Back from search returns
-    there, and clears the last query, so each search starts empty (D-193).
+    there, and clears the last query, so each search starts empty (D-193). A deep
+    link to search has no button: ``screens.search.record_opening()`` records the
+    same from the last location as the Search View mounts (D-291).
 
     Args:
         memory: The process's ``ViewMemory``.

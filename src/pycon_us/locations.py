@@ -101,9 +101,18 @@ def start_target(last_location: str, search_base: str) -> str:
     """
     if not last_location:
         return "/now"
-    if urlparse(last_location).path.split("/")[1] == "search":
+    if in_search(last_location):
         return search_base
     return last_location
+
+
+def in_search(location: str) -> bool:
+    """Return whether a location is ``/search`` or a detail pushed on it (D-19).
+
+    Args:
+        location: A location, query allowed, e.g. ``/search/session/42``.
+    """
+    return urlparse(location).path.split("/")[1] == "search"
 
 
 def query_of(location: str) -> dict[str, str]:
