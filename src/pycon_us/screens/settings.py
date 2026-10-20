@@ -41,21 +41,15 @@ def Settings() -> ft.View:
     svc = use_services()
     prefs = use_prefs()
 
-    def say_if_unsaved(saved: bool) -> None:
-        if not saved:  # applied for this session all the same (D-120)
-            page.show_dialog(
-                ft.SnackBar(ft.Text(NOT_SAVED), behavior=ft.SnackBarBehavior.FLOATING)
-            )
-
     @report_errors
     async def choose_appearance(e: ft.Event[ft.RadioGroup]) -> None:
         theme = cast(Appearance, e.control.value)
-        say_if_unsaved(await prefs.save(svc.storage, theme=theme))
+        say_if_unsaved(page, await prefs.save(svc.storage, theme=theme))
 
     @report_errors
     async def switch_high_contrast(e: ft.Event[ft.Switch]) -> None:
         setting = prefs.high_contrast_setting(bool(e.control.value))
-        say_if_unsaved(await prefs.save(svc.storage, high_contrast=setting))
+        say_if_unsaved(page, await prefs.save(svc.storage, high_contrast=setting))
 
     return AppScaffold(
         title="Settings",
@@ -72,6 +66,21 @@ def Settings() -> ft.View:
             expand=True,
         ),
     )
+
+
+def say_if_unsaved(page: ft.Page, saved: bool) -> None:
+    """Show "Couldn't save your change" when a setting was applied but not saved (D-120).
+
+    The setting still applies for the session; the SnackBar says it ends on relaunch.
+
+    Args:
+        page: The session's page.
+        saved: What ``Prefs.save()`` returned.
+    """
+    if not saved:
+        page.show_dialog(
+            ft.SnackBar(ft.Text(NOT_SAVED), behavior=ft.SnackBarBehavior.FLOATING)
+        )
 
 
 def appearance(
