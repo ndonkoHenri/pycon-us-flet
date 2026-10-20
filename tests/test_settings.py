@@ -1,9 +1,10 @@
-"""Tests for Settings: Appearance and its High contrast switch (#421; THEME-01, D-286).
+"""Tests for Settings: Appearance, its High contrast switch, then Data (#421, #422).
 
 ``Settings`` runs outside a renderer, as ``More`` does in ``test_more.py``: its hooks and
 ``AppScaffold`` are replaced, and a fake page is bound as Flet binds a session's page.
 That the theme follows ``Prefs`` is ``test_app.py``'s; how the page looks and reads is
-checked on devices (the PR).
+checked on devices (the PR). The Data section is a component of its own, whose tests
+are ``test_settings_data.py``'s; here it is a stand-in.
 """
 
 import inspect
@@ -33,6 +34,9 @@ from tests.fakes import (
     bound,
     phone_margin,
 )
+
+DATA_SECTION = ft.Text("Data section")
+"""What ``DataSection`` renders as in the page's tests: its own tests are elsewhere."""
 
 
 @pytest.fixture
@@ -76,6 +80,7 @@ def render(
     monkeypatch.setattr(settings, "use_prefs", lambda: prefs)
     monkeypatch.setattr(settings, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(settings, "use_margin", phone_margin)
+    monkeypatch.setattr(settings, "DataSection", lambda slot: DATA_SECTION)
 
     def render() -> dict[str, Any]:
         return cast(dict[str, Any], inspect.unwrap(Settings)())
@@ -176,7 +181,9 @@ def test_the_page_is_titled_and_opens_with_appearance_as_a_section_heading(
     assert isinstance(heading.content, ft.Container)
     assert isinstance(heading.content.content, ft.Text)
     assert heading.content.content.value == "Appearance"
-    assert len(rows_of(scaffold)) == 3  # the heading, the radios, the switch row
+    # The heading, the radios, the switch row, then Data (ux.md §6.9).
+    assert len(rows_of(scaffold)) == 4
+    assert rows_of(scaffold)[3] is DATA_SECTION
 
 
 def test_appearance_offers_three_radio_rows_whose_whole_row_selects(

@@ -1,15 +1,19 @@
-"""Action rows and the line that says how an action ended (D-198, D-29, D-210).
+"""Action rows and the line that says how an action ended, said in place (D-198, D-29, D-210).
 
 ``action_row()`` is a two-line row that does something when tapped, a verb first and
-what it touches below; ``outcome_line()``, in ``padded()``, is the line under a group
-of them, or of buttons, that says what was done, in place, since a result the user
-waits for appears in place (D-29). The Developer screen's Data section and Apply use
-them, and About this app's Help us fix it section (#443); moved here from
-``screens/developer_ui.py`` so that one screen does not import another's drawing.
+what it touches below, as Developer's Data section (D-198) and Settings' Data section
+(P2-62) draw them; ``outcome_line()``, in ``padded()``, is the line under a group of
+them, or of buttons, that says what was done (an ``Outcome``), in place, since a result
+the user waits for appears in place (D-29); ``refreshed()`` is what Refresh now says
+once its refresh has ended, the same words on both pages (D-292). The Developer
+screen's Data section and Apply, Settings' Data section and About this app's Help us
+fix it section (#443) use them; moved here from ``screens/developer_ui.py`` so that
+one screen does not import another's drawing.
 """
 
 import flet as ft
 
+from pycon_us.feed_refresh import Problem
 from pycon_us.theme import Tokens
 from pycon_us.ui.semantics import named
 
@@ -30,6 +34,7 @@ def action_row(
     disabled: bool = False,
     color: ft.ColorValue | None = None,
     trailing: ft.Control | None = None,
+    slot: int | None = None,
 ) -> ft.Control:
     """Return one action: a two-line ``ListTile``, one node named by both lines.
 
@@ -48,11 +53,17 @@ def action_row(
         disabled: Whether the action is unavailable now.
         color: The icon's and the title's colour: ``ERROR`` for Reset app.
         trailing: A decorative control at the end: Refresh now's ring while it runs.
+        slot: The width the icon is centred in, so the title starts where a page's
+            other titles do: Settings' 48 dp, a radio's (``RADIO_WIDTH``); None for
+            the bare 24 dp icon.
     """
+    leading: ft.Control = ft.Icon(icon, color=None if disabled else color)
+    if slot is not None:
+        leading = ft.Container(leading, width=slot, alignment=ft.Alignment.CENTER)
     return named(
         identifier,
         ft.ListTile(
-            leading=ft.Icon(icon, color=None if disabled else color),
+            leading=leading,
             title=ft.Text(title, color=None if disabled else color),
             subtitle=ft.Text(
                 subtitle, color=ft.Colors.ON_SURFACE_VARIANT if disabled else None
@@ -73,17 +84,19 @@ def padded(control: ft.Control) -> ft.Container:
     )
 
 
-def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
+def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.Control:
     """Return the line under a group of buttons: an icon and what was done.
 
-    Laid out as the screen's ``ListTile``s are, the icon in a 24 dp slot and the words
-    16 dp after it, so they start in the tiles' text column (56 dp).
+    Laid out as the screen's ``ListTile``s are, the icon in a slot as wide as theirs
+    (24 dp, or ``action_row()``'s ``slot``) and the words 16 dp after it, so they
+    start in the tiles' text column.
 
     Args:
         text: What was done, or why not, e.g. "Back to real time and the year's feed."
         ok: Whether it went as asked: a check in ``success``, else a warning in
             ``warning``; the words carry the meaning (ux.md §9).
         tokens: The scheme's tokens.
+        slot: The icon's slot: the width of the leading icons above it.
     """
     return padded(
         ft.Row(
@@ -95,7 +108,7 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
                         color=tokens.success if ok else tokens.warning,
                         size=20,
                     ),
-                    width=24,
+                    width=slot,
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.Text(
@@ -109,3 +122,23 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens) -> ft.Control:
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
     )
+
+
+KEPT = "The app keeps the schedule it has."
+"""The second half of a failed refresh's line: a refresh never clears the cache (D-32)."""
+
+
+def refreshed(problem: Problem | None) -> Outcome:
+    """Return what Refresh now says once its refresh has ended (D-146).
+
+    A failed refresh says it couldn't refresh, why in a few words, and that the
+    schedule on screen stays.
+
+    Args:
+        problem: ``Conference.problem`` after it: None when it published the feed.
+    """
+    if problem is None:
+        return ("Schedule updated from the feed.", True)
+    if problem == "offline":
+        return (f"Couldn't refresh: no answer from the feed. {KEPT}", False)
+    return (f"Couldn't refresh: the feed's answer couldn't be used. {KEPT}", False)
