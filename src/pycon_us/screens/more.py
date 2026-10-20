@@ -5,8 +5,8 @@ whose pages are stubs until P1, and **You**: the Appearance control, which stand
 Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
 then About this app and Developer, which is always there when not embedded and, in a
 packaged build, once unlocked in About this app (D-73, D-187). Expo & sponsors, At the
-venue and About join with their P2 pages; the profile row and Staff tools, first in the
-list, with P3's mock account (D-16, D-51).
+venue and About join with their P2 pages (About with Social media, D-284); the profile
+row and Staff tools, first in the list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
 """
 
@@ -51,7 +51,10 @@ DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
 )
 
-MORE_PAGES = (*PROGRAMME, ABOUT_APP, DEVELOPER)
+ABOUT = (MoreEntry("Social media", "/more/social", ft.Icons.LANGUAGE),)
+"""The About section, in the list's order (ux.md §2.2; icons §3.7)."""
+
+MORE_PAGES = (*PROGRAMME, *ABOUT, ABOUT_APP, DEVELOPER)
 """Every page the list links to; later phases add theirs with their sections."""
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
@@ -88,6 +91,8 @@ def More() -> ft.View:
             [
                 SectionHeader("Programme"),
                 *(link(entry) for entry in PROGRAMME),
+                SectionHeader("About"),
+                *(link(entry) for entry in ABOUT),
                 SectionHeader("You"),
                 appearance(prefs.theme, choose_appearance),
                 *(link(entry) for entry in you),

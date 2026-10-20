@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import check_info
+from pycon_us.year_info import SocialInfo, check_info
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_pages import (
     LightningTalksInfo,
@@ -160,6 +160,8 @@ class Content:
         lightning_talks: The Lightning talks page's copy and links; None for a year
             that has none, whose page shows its sessions alone.
         keynotes: The keynotes and panels, one entry per session (SESS-08, SPKR-04).
+        social: The Social page's hashtags and links (INFO-10, D-284); None for a
+            year without them, whose page shows the feed's block.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -169,6 +171,7 @@ class Content:
     open_spaces: OpenSpacesInfo | None = None
     lightning_talks: LightningTalksInfo | None = None
     keynotes: tuple[Keynote, ...] = ()
+    social: SocialInfo | None = None
 
 
 @dataclass(frozen=True, eq=False)
