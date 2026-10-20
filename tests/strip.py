@@ -85,12 +85,17 @@ class Network:
     """
 
     def __init__(self) -> None:
+        """Start with no request, both events clear and no error to raise."""
         self.requests = 0
         self.arrived = asyncio.Event()
         self.released = asyncio.Event()
         self.error: Exception | None = None
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
+        """Count the request, then hold it until ``released`` is set.
+
+        Then raise ``error`` when one is set, or answer with an empty body.
+        """
         self.requests += 1
         self.arrived.set()
         await self.released.wait()

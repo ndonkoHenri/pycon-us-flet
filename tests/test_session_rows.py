@@ -61,6 +61,7 @@ async def rendered(
 async def test_each_row_renders_once_when_the_list_first_shows(
     rendered: Rendered,
 ) -> None:
+    """The list's first show renders each of its rows exactly once."""
     assert sorted(rendered.renders) == sorted(LIST)
 
 
@@ -82,6 +83,11 @@ async def test_a_star_tap_re_renders_exactly_one_row(rendered: Rendered) -> None
 async def test_the_handler_is_the_same_object_on_every_render(
     rendered: Rendered,
 ) -> None:
+    """Every row gets the same star handler object across renders and taps.
+
+    With ``use_callback(..., [])`` the handler never changes, so memoised rows stay
+    skipped.
+    """
     handlers: set[int] = set()
     original = rows._SessionRow
 
@@ -104,6 +110,7 @@ async def test_the_handler_is_the_same_object_on_every_render(
 async def test_adding_fills_the_star_with_a_click_and_no_snack_bar(
     rendered: Rendered,
 ) -> None:
+    """Adding a session saves it, gives a selection click and shows no SnackBar."""
     await rendered.tap_star(TALK)
     assert rendered.prefs_service.values["pycon.2026.favorites"] == [TALK]
     assert rendered.haptics.effects == ["selection_click"]
@@ -113,6 +120,10 @@ async def test_adding_fills_the_star_with_a_click_and_no_snack_bar(
 async def test_removing_says_so_and_undo_saves_the_session_again(
     rendered: Rendered,
 ) -> None:
+    """Removing shows a floating SnackBar whose Undo saves the session again.
+
+    Without a screen reader it goes after 4 s, and Undo shows no SnackBar of its own.
+    """
     await rendered.tap_star(TALK)
     await rendered.tap_star(TALK)
     (snack,) = rendered.snack_bars
@@ -144,6 +155,7 @@ async def test_with_a_screen_reader_the_undo_snack_bar_waits_to_be_used(
 async def test_an_add_that_was_not_saved_says_so_without_undo(
     rendered: Rendered,
 ) -> None:
+    """An add that fails to save fills the star, then says so without an Undo."""
     rendered.prefs_service.fail_writes = True
     await rendered.tap_star(TALK)
     assert rendered.filled(TALK)  # shown first, as the store does (D-172)
@@ -155,6 +167,7 @@ async def test_an_add_that_was_not_saved_says_so_without_undo(
 async def test_a_removal_that_was_not_saved_says_so_once_and_keeps_undo(
     rendered: Rendered,
 ) -> None:
+    """A removal that fails to save shows one SnackBar saying so, with Undo."""
     await rendered.tap_star(TALK)
     rendered.prefs_service.fail_writes = True
     await rendered.tap_star(TALK)
@@ -164,6 +177,7 @@ async def test_a_removal_that_was_not_saved_says_so_once_and_keeps_undo(
 
 
 async def test_a_failed_click_does_not_stop_the_star(rendered: Rendered) -> None:
+    """A haptic click that fails still saves the session and shows no SnackBar."""
     rendered.haptics.error = TimeoutError()
     await rendered.tap_star(TALK)
     assert rendered.favorites.ids == {TALK}
@@ -210,6 +224,7 @@ async def test_the_star_s_tooltip_says_what_a_tap_does(rendered: Rendered) -> No
 async def test_a_row_s_text_is_one_node_read_as_one_phrase(
     rendered: Rendered,
 ) -> None:
+    """A row's texts are one merged button node, read as one phrase with its tap."""
     node = rendered.node(f"test.session.{TALK}")
     assert node.label == (
         "Talk. Python for Humans - Designing Python Code Like a User Interface. "
@@ -225,6 +240,10 @@ async def test_a_row_s_text_is_one_node_read_as_one_phrase(
 async def test_a_row_shows_badges_title_meta_and_speakers(
     rendered: Rendered,
 ) -> None:
+    """A row stacks its badges, its title, its time and place, and its speakers.
+
+    The badges wrap, and the title is TITLE_MEDIUM over three lines at most.
+    """
     column = rendered.node(f"test.session.{CHARLA}").content
     assert isinstance(column, ft.Column)
     badges, title, meta, speakers = column.controls
@@ -271,6 +290,7 @@ async def test_no_row_part_has_a_fixed_height(rendered: Rendered) -> None:
 async def test_a_tap_on_a_row_pushes_its_session_on_this_view(
     rendered: Rendered, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A tap on a row pushes its session under this View's path."""
     pushed: list[str] = []
     monkeypatch.setattr(rendered.session.page, "navigate", pushed.append)
     tappable = rendered.node(f"test.session.{TALK}").parent
@@ -323,6 +343,7 @@ def test_the_elapsed_bar_shows_its_fill_and_its_end_on_every_surface(
 
 
 def test_breaks_and_announcements_are_notices_and_talks_are_not() -> None:
+    """Informational sessions and breaks are notices; talks and events are not."""
     sessions = processed(2026).sessions
     info = YEAR.conference
     assert is_notice(sessions[NOTICE], info)  # Informational
@@ -349,6 +370,7 @@ async def test_a_notice_is_its_own_node_and_has_no_star(rendered: Rendered) -> N
 async def test_a_notice_opens_only_when_it_has_something_to_read(
     rendered: Rendered,
 ) -> None:
+    """A notice with text to read is a tappable button, and one without is neither."""
     with_text = rendered.notice(NOTICE)
     without = rendered.notice(COFFEE)
     assert with_text.button and not without.button

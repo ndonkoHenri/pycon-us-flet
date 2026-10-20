@@ -67,6 +67,11 @@ def first_saveable() -> str:
 async def test_snackbar_from_session_detail_shows_on_session_detail(
     flet_app: ftt.FletTestApp,
 ) -> None:
+    """Unstarring on session detail shows its SnackBar there, and its Undo works.
+
+    Undo saves the session again, so the next tap shows the bar once more; Back then
+    returns to the Schedule.
+    """
     t = remote(flet_app)
     await wait_for_id(t, "now.title", timeout=START_TIMEOUT)
 

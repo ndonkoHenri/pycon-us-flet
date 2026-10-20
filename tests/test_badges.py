@@ -54,25 +54,30 @@ SPONSOR_PRESENTATION = "111"
 
 @pytest.fixture(scope="module")
 def data() -> ConferenceData:
+    """The recorded 2026 feed, processed once for the module."""
     return processed(2026)
 
 
 @pytest.fixture(scope="module")
 def info() -> ConferenceInfo:
+    """The 2026 conference's year data."""
     return load_year(2026).conference
 
 
 def label(badge: ft.Control) -> str:
+    """The text a badge shows, checking it is a container around a Text."""
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     return str(badge.content.value)
 
 
 def labels(session: Session, info: ConferenceInfo, dark: bool = False) -> list[str]:
+    """The labels of the badges a session shows, in the light or dark scheme."""
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     return [label(badge) for badge in session_badges(session, info, tokens)]
 
 
 def test_a_tonal_badge_is_its_label_on_its_fill() -> None:
+    """A tonal badge is its label in its text colour on its fill, with a fill border."""
     colors = theme.BadgeColors(text="#014271", fill="#C7DBFE")
     badge = TrackBadge("Talk", colors)
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
@@ -84,6 +89,7 @@ def test_a_tonal_badge_is_its_label_on_its_fill() -> None:
 
 
 def test_an_outlined_badge_has_no_fill_and_a_border_in_its_text_colour() -> None:
+    """An outlined badge has no fill; its border and its label take its text colour."""
     badge = TrackBadge(REGISTRATION, theme.BadgeColors(text="#BA1A1A"))
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     assert badge.bgcolor is None
@@ -92,7 +98,10 @@ def test_an_outlined_badge_has_no_fill_and_a_border_in_its_text_colour() -> None
 
 
 def test_a_badge_is_a_material_label_in_an_8_dp_pill() -> None:
-    # ux.md §3.6 and §3.9: LABEL_SMALL, 8 dp corners, 8 dp beside and 2 dp above the label.
+    """A badge is a LABEL_SMALL label in an 8 dp pill that grows and wraps with it.
+
+    ux.md §3.6 and §3.9: 8 dp corners, 8 dp beside and 2 dp above the label.
+    """
     badge = TrackBadge("Talk", theme.LIGHT_TOKENS.track_badge("Talk"))
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     assert badge.content.theme_style == ft.TextThemeStyle.LABEL_SMALL
@@ -103,6 +112,7 @@ def test_a_badge_is_a_material_label_in_an_8_dp_pill() -> None:
 
 
 def test_badges_wrap_onto_more_lines_with_gaps_on_the_grid() -> None:
+    """A badge row wraps, 8 dp apart within a line and 4 dp between lines."""
     row = badge_row([TrackBadge("Talk", theme.LIGHT_TOKENS.track_badge("Talk"))])
     assert row.wrap is True
     # ux.md §3.6: 8 dp within a group; 4 dp between wrapped lines.
@@ -110,6 +120,7 @@ def test_badges_wrap_onto_more_lines_with_gaps_on_the_grid() -> None:
 
 
 def test_a_talk_shows_its_track(data: ConferenceData, info: ConferenceInfo) -> None:
+    """A talk shows one badge: its track's name, Talk."""
     assert labels(data.sessions[TALK], info) == ["Talk"]
 
 
@@ -125,6 +136,7 @@ def test_a_talk_shows_its_track(data: ConferenceData, info: ConferenceInfo) -> N
 def test_track_names_come_from_track_name(
     data: ConferenceData, info: ConferenceInfo, session_id: str, expected: str
 ) -> None:
+    """A track badge says the name ``track_name()`` gives, such as AI, not the key."""
     session = data.sessions[session_id]
     assert labels(session, info)[0] == expected == info.track_name(session.track)
 
@@ -133,6 +145,7 @@ def test_track_names_come_from_track_name(
 def test_a_session_in_spanish_adds_en_espanol(
     data: ConferenceData, info: ConferenceInfo, session_id: str
 ) -> None:
+    """A session in Spanish shows its track's badge, then En Español."""
     session = data.sessions[session_id]
     assert labels(session, info) == [info.track_name(session.track), SPANISH]
 
@@ -141,6 +154,7 @@ def test_a_session_in_spanish_adds_en_espanol(
 def test_a_session_needing_registration_adds_registration_required(
     data: ConferenceData, info: ConferenceInfo, session_id: str
 ) -> None:
+    """A tutorial or a closed summit shows its track, then Registration required."""
     session = data.sessions[session_id]
     assert labels(session, info) == [info.track_name(session.track), REGISTRATION]
 
@@ -148,12 +162,14 @@ def test_a_session_needing_registration_adds_registration_required(
 def test_the_typing_summit_needs_no_registration(
     data: ConferenceData, info: ConferenceInfo
 ) -> None:
+    """The Typing summit, open to all, shows its track's badge alone (DATA-09)."""
     assert labels(data.sessions[TYPING_SUMMIT], info) == ["Summit"]
 
 
 def test_badges_take_the_scheme_they_are_given(
     data: ConferenceData, info: ConferenceInfo
 ) -> None:
+    """The track and Spanish badges take their fills from the tokens they are given."""
     session = data.sessions[CHARLA]
     for tokens in (theme.LIGHT_TOKENS, theme.DARK_TOKENS):
         track, spanish = session_badges(session, info, tokens)
@@ -165,6 +181,7 @@ def test_badges_take_the_scheme_they_are_given(
 def test_the_registration_badge_is_outlined(
     data: ConferenceData, info: ConferenceInfo
 ) -> None:
+    """The registration badge has no fill and a border in its text colour."""
     *_, registration = session_badges(data.sessions[TUTORIAL], info, theme.DARK_TOKENS)
     assert isinstance(registration, ft.Container)
     assert registration.bgcolor is None
@@ -174,11 +191,16 @@ def test_the_registration_badge_is_outlined(
 def test_a_session_without_a_track_shows_no_empty_pill(
     data: ConferenceData, info: ConferenceInfo
 ) -> None:
+    """A session without a track shows no track badge, not even an empty pill.
+
+    A tutorial without one still shows Registration required.
+    """
     assert labels(replace(data.sessions[TALK], track=""), info) == []
     assert labels(replace(data.sessions[TUTORIAL], track=""), info) == [REGISTRATION]
 
 
 async def test_selection_click_gives_the_click() -> None:
+    """The selection click plays one ``selection_click`` haptic effect."""
     haptics = MemoryHaptics()
     await selection_click(haptics)
     assert haptics.effects == ["selection_click"]
@@ -188,6 +210,7 @@ async def test_selection_click_gives_the_click() -> None:
 async def test_a_failed_click_is_logged_not_raised(
     error: Exception, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A haptic click that times out or fails logs a warning instead of raising."""
     haptics = MemoryHaptics()
     haptics.error = error
     with caplog.at_level(logging.WARNING, logger="pycon_us.ui.badges"):
@@ -243,6 +266,7 @@ async def test_saving_a_session_again_closes_its_removed_snack_bar(
 
 
 async def test_undo_closes_the_removed_snack_bar(rendered: Rendered) -> None:
+    """Undo saves the session again and closes its SnackBar, showing no new one."""
     snack = await removed(rendered, row_sessions.TALK)
     await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
     await rendered.settle()
@@ -286,6 +310,7 @@ async def test_an_edit_leaves_a_snack_bar_that_is_not_the_stars_alone(
 async def test_a_snack_bar_that_has_gone_is_not_closed_again(
     rendered: Rendered, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A star SnackBar that Flet already closed is not sent again by the next edit."""
     snack = await removed(rendered, row_sessions.TALK)
     snack.open = False  # as Flet reports a SnackBar that timed out or was swiped
     sent = updates(monkeypatch)

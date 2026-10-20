@@ -27,6 +27,7 @@ HAZARD = (
 
 
 def md(value: str) -> str:
+    """Convert ``value`` to Markdown, with the 2026 site as the base of its links."""
     return to_markdown(value, SITE)
 
 

@@ -47,7 +47,10 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return show(speaker_id, conference=...): that speaker's page over the feed."""
+    """Return a function that shows a speaker's page at ``VIEW_PATH``, given its id.
+
+    It takes an optional ``Conference`` too; the default holds the recorded 2026 feed.
+    """
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -70,6 +73,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def headings(shown: Shown) -> list[tuple[str, int | None]]:
+    """The page's headings as their text and level, in order."""
     return [(text_of(n), n.heading_level) for n in shown.find(ft.Semantics) if n.header]
 
 
@@ -86,6 +90,7 @@ async def test_the_name_is_the_page_s_heading_not_the_app_bar_s(show: Show) -> N
 
 
 async def test_the_photo_is_decorative_beside_the_name(show: Show) -> None:
+    """The speaker's photo is an avatar of the photo radius that screen readers skip."""
     shown = await show(CATHERINE)
     (avatar,) = shown.find(ft.CircleAvatar)
     assert avatar.radius == screen.PHOTO_RADIUS
@@ -107,6 +112,7 @@ async def test_sessions_come_by_day_before_the_bio_each_a_level_2_heading(
 
 
 async def test_each_session_is_a_row_with_its_star(show: Show) -> None:
+    """Each of the speaker's sessions is a row with its own star, in order."""
     shown = await show(CATHERINE)
     keys = [semantics_key(i) for i in ("106", "110")]
     assert [str(n.identifier) for n in shown.nodes("speaker.session.")] == [
@@ -129,6 +135,7 @@ async def test_rows_name_only_the_co_speakers_shown_and_said(show: Show) -> None
 
 
 async def test_a_speaker_alone_gets_rows_without_a_speakers_line(show: Show) -> None:
+    """A sole speaker's row has no "With" line; the name shows only as the heading."""
     shown = await show(JUSTIN)
     (row,) = shown.nodes("speaker.session.")
     assert str(row.label).endswith("10:30 to 11:00 AM, Grand Ballroom A.")
@@ -147,6 +154,7 @@ async def test_the_bio_is_the_feed_s_markdown_last(show: Show) -> None:
 
 
 async def test_a_speaker_without_a_bio_has_no_about_section(show: Show) -> None:
+    """A speaker with an empty bio has no About heading and no Markdown."""
     speakers = dict(DATA.speakers)
     speakers[JUSTIN] = replace(speakers[JUSTIN], bio="", bio_md="")
     data = replace(DATA, speakers=speakers)
@@ -233,6 +241,7 @@ async def test_without_data_the_page_loads_then_offers_to_try_again(
 
 
 async def test_a_row_pushes_its_session_one_level_down(show: Show) -> None:
+    """A tap on a session row pushes the session one level under the speaker's View."""
     shown = await show(CATHERINE)
     node = shown.node("speaker.session.106")
     await shown.click(cast(ft.Control, node.parent))
