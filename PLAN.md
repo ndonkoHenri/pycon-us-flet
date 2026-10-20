@@ -148,7 +148,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 
 | Gap | Interim (ships now) | Upstream piece | Priority |
 |---|---|---|---|
-| Scheduled local notifications | Now's "Your next session", an in-app Banner, `.ics` alarms; the settings say "not in this build" | **E3**: scheduling in the official flet-dev/flet#6948 extension (+ U7, which #6948 itself needs, and Android receivers) | 1 (spike S6 during P1; app in P2) |
+| Scheduled local notifications | Now's "Your next session", an in-app Banner, `.ics` (alarm on iOS only, D-272); the settings say "not in this build" | **E3**: scheduling in the official flet-dev/flet#6948 extension (+ U7, which #6948 itself needs, and Android receivers) | 1 (spike S6 during P1; app in P2) |
 | Pull-to-refresh | Status-strip Refresh + automatic refresh | **U1** `RefreshIndicator` | 2 (P1) |
 | Handler exceptions crash the session | `@report_errors` decorator | **U15** non-fatal mode + Python error hook | 3 (P1–P2) |
 | Barcode scanning | Manual + USB/Bluetooth HID entry | **E1** extension over `mobile_scanner` | 4 (spike S8; before P3) |
@@ -162,7 +162,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | A replaced session's effects keep running | `page.on_close` stops our loops (D-147) | **U24** closing a session unmounts it | later |
 | A plain brightness event; a frame of the default View before `main()` | Read `page.platform_brightness`; `before_main` paints the View (D-161) | **U25** a typed event; the boot screen kept until the first patch | later |
 | iOS adaptations Flet cannot pin; weights in `page.fonts` | Accepted residuals (D-10); Roboto through the pubspec (D-26) | **U19** `Theme.platform`; **U20** multi-weight `page.fonts` | later |
-| HTML, native calendar | HTML→Markdown; `.ics` share | **E5**, **E4** | later |
+| HTML, native calendar | HTML→Markdown; `.ics` through the in-app browser on iOS and a saved file on Android (D-272) | **E5**, **E4** | later |
 
 FCM push (E2) is not needed by the app; it is a low-priority Flet contribution. The deep-link config fallback (`flet-dev/flet#6953`) is in the pin, so one common `[tool.flet.deep_linking]` table serves Android and iOS (D-269).
 

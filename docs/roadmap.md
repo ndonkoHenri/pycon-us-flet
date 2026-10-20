@@ -1461,7 +1461,7 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|
-| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` alarms, honest settings (D-60) | P2-E6, after a pin bump |
+| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` (alarm on iOS only, D-272), honest settings (D-60) | P2-E6, after a pin bump |
 | 2 | U1 `RefreshIndicator` | UP-U1 | status-strip Refresh and auto-refresh (P1-04) | new issue after the bump |
 | 3 | U15 non-fatal handler errors | UP-U15 | `@report_errors` (P0-21) | delete the decorator |
 | 4 | E1 barcode scanner, after S8 | UP-E1 | manual and HID entry | P3-E3 |

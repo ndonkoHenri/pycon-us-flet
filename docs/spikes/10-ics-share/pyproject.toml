@@ -1,0 +1,51 @@
+# #364 reproducer (docs/spikes/10-ics-share.md): does a shared .ics file reach the
+# phone's calendar? One screen of buttons that hand a hand-written two-event file
+# (one event with a VALARM) to the OS in each way the pinned Flet allows.
+# It uses the repo's .flet-src checkout through relative paths, so build it from
+# this folder (with a pub cache of its own, D-176):
+#
+#   uv sync
+#   uv run python check_ics.py                          # host: the file is valid
+#   uv run flet build apk --arch arm64-v8a --build-number 1
+#   uv run flet build ios-simulator --build-number 1
+#
+# Nothing here is part of the app; src/ of the repo is untouched.
+
+[project]
+name = "ics-share-spike"
+version = "0.0.1"
+description = "#364 spike: a shared .ics file and the phone's calendar."
+requires-python = ">=3.14,<3.15"
+dependencies = ["flet"]
+
+[dependency-groups]
+dev = [
+    "flet-cli",
+    "flet-web",
+    "flet-desktop",
+    "flet-platform-assets",
+]
+
+[tool.flet]
+product = "ICS Spike"
+bundle_id = "io.github.ndonkohenri.pyconus.icsspike"   # throwaway id, never uploaded
+
+[tool.flet.app]
+path = "src"
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
+
+[tool.flet.ios.info]
+ITSAppUsesNonExemptEncryption = false
+
+# The same pin as the app (D-81): a source checkout in the repo root's .flet-src.
+[tool.uv.sources]
+flet = { path = "../../../.flet-src/sdk/python/packages/flet", editable = true }
+flet-cli = { path = "../../../.flet-src/sdk/python/packages/flet-cli", editable = true }
+flet-web = { path = "../../../.flet-src/sdk/python/packages/flet-web", editable = true }
+flet-desktop = { path = "../../../.flet-src/sdk/python/packages/flet-desktop", editable = true }
+flet-platform-assets = { path = "../../../.flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+
+[tool.flet.dev_packages]
+flet = "../../../.flet-src/sdk/python/packages/flet"

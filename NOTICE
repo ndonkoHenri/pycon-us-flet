@@ -11,5 +11,11 @@ https://github.com/googlefonts/roboto), Copyright 2011 Google Inc., licensed
 under the Apache License, Version 2.0. Its files and license are in
 flutter_packages/roboto_fonts/.
 
+The brand marks in src/assets/icons/brands/ (Python, PyPI, Mastodon, Bluesky,
+X, LinkedIn, YouTube and Discord) are the unmodified SVGs of Simple Icons,
+version 13.21.0 (https://github.com/simple-icons/simple-icons), dedicated to
+the public domain under CC0 1.0 Universal. The marks themselves are trademarks
+of their owners; the app shows each one only beside a link to that brand.
+
 This is not an official Python Software Foundation app. "PyCon" and "Python"
 are trademarks of the Python Software Foundation.
