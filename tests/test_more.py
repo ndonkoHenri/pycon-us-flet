@@ -131,7 +131,7 @@ def outline(rows: list[ft.Control]) -> list[str]:
 def test_the_list_has_programme_expo_venue_and_you_under_section_headers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """Programme's six pages, Sponsors, Wi-Fi, About, then You (ux.md §2.2's order)."""
+    """Programme's six pages, Sponsors, Wi-Fi, Help & safety, About, then You (§2.2)."""
     assert outline(rows_of(render())) == [
         "# Programme",
         "Speakers",
@@ -144,6 +144,7 @@ def test_the_list_has_programme_expo_venue_and_you_under_section_headers(
         "Sponsors",
         "# At the venue",
         "Wi-Fi",
+        "Help & safety",
         "# About",
         "Social media",
         "# You",
@@ -217,6 +218,7 @@ def test_identifiers_name_the_page_in_snake_case() -> None:
         "more.sprints",
         "more.sponsors",
         "more.wifi",
+        "more.help",
         "more.social",
         "more.app",
         "more.developer",

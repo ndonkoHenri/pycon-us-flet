@@ -34,6 +34,7 @@ PAGES = frozenset(
         "/more/app",
         "/more/developer",
         "/more/wifi",
+        "/more/help",
         "/more/social",
     }
 )

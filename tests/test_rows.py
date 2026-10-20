@@ -348,6 +348,23 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
     assert isinstance(node.content, ft.IconButton)
 
 
+def test_a_screen_can_name_the_copy_button_otherwise(page: FakePage) -> None:
+    """``copy_identifier`` names Copy where the screen's scheme differs (D-281)."""
+    row = LinkTile(
+        "Call the hotline",
+        HOTLINE,
+        identifier="help.report.tel",
+        copy_identifier="help.copy.tel",
+    )
+    holder = cast(ft.Row, row).controls[1]
+    assert isinstance(holder, ft.Container)
+    assert isinstance(holder.content, ft.MergeSemantics)
+    node = holder.content.content
+    assert isinstance(node, ft.Semantics) and node.identifier == "help.copy.tel"
+    link = node_of(row)
+    assert link is not None and link.identifier == "help.report.tel"
+
+
 async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
     """A copy that fails says it couldn't copy the phone number."""
     clipboard(svc).error = TimeoutError()

@@ -9,13 +9,18 @@ rules. A module of its own, as the Open spaces and Lightning talks pages' is
 pages' tables arrive.
 
 Each page's issue adds its table, with its rules, to this module: so far Wi-Fi's
-(``WifiInfo``, D-280) and Social's (``SocialInfo``, D-284). Until a page has its table,
-or for a year that has none, the page shows the feed's own block for it
+(``WifiInfo``, D-280), Help & safety's and Social's (``SocialInfo``, D-284). Until a page
+has its table, or for a year that has none, the page shows the feed's own block for it
 (``ui.info_page``).
+
+Help & safety (D-281): ``[[safety_contacts]]`` (``SafetyContact``), the ways to report
+a concern, each with the public page that shows it and the day someone checked it
+there, and ``[help]`` (``HelpInfo``), the page's other lines and links.
 """
 
 import re
 from dataclasses import dataclass
+from datetime import date
 from typing import TYPE_CHECKING
 
 from pycon_us.year_pages import check_https, check_text
@@ -23,6 +28,68 @@ from pycon_us.year_schema import YearDataError
 
 if TYPE_CHECKING:  # config imports this module; the type alone goes the other way
     from pycon_us.config import Content
+
+CONTACT_KINDS = ("tel", "mailto", "https")
+"""What a safety contact can be: a phone number, an email address or a web page."""
+
+E164 = re.compile(r"\+[1-9]\d{6,14}")
+"""A phone number in E.164: ``+``, a country code and the number, digits only."""
+
+EMAIL = re.compile(r"[^@\s:/?#]+@[^@\s:/?#]+\.[^@\s:/?#.]+")
+"""An email address: a local part, ``@``, and a host name with a dot."""
+
+
+@dataclass(frozen=True)
+class SafetyContact:
+    """A way to report a concern, on Help & safety's Report a concern card (INFO-07).
+
+    Safety-critical, so each one names the public page that shows it and the day
+    someone last checked it there (D-45): a number found only in Ionic's code stays out.
+
+    Attributes:
+        label: What a tap does, as the row's title: "Email the Code of Conduct team".
+        kind: ``tel``, ``mailto`` or ``https``; it names the row's identifier
+            (``help.report.<kind>``), so a year lists each kind once.
+        value: The number in E.164 (``+15625550100``), the address, or the ``https``
+            URL.
+        source: The public ``https`` page that shows the value.
+        checked: The day the value was last checked on ``source``.
+    """
+
+    label: str
+    kind: str
+    value: str
+    source: str
+    checked: date
+
+    @property
+    def target(self) -> str:
+        """The link a tap opens: ``tel:+1…``, ``mailto:…`` or the web page."""
+        return self.value if self.kind == "https" else f"{self.kind}:{self.value}"
+
+
+@dataclass(frozen=True)
+class HelpInfo:
+    """Help & safety's lines and links beside the contacts (INFO-07, INFO-11).
+
+    Attributes:
+        in_person: The card's last line: in danger, local emergency services first,
+            with staff to help find the number; then reporting to any staff member.
+        info_desk: Where the information desk is, in one line.
+        lost_and_found: Where lost items go, in one line.
+        quiet_room: Where the quiet room is, in one line.
+        coc_summary: The Code of Conduct in a few sentences, in our words.
+        coc_url: The full Code of Conduct, "Read the Code of Conduct".
+        procedures_url: How reports are handled, "How reports are handled".
+    """
+
+    in_person: str
+    info_desk: str
+    lost_and_found: str
+    quiet_room: str
+    coc_summary: str
+    coc_url: str
+    procedures_url: str
 
 
 @dataclass(frozen=True)
@@ -56,7 +123,80 @@ def check_info(content: Content, file: str) -> None:
         # A blank value would show nothing to read, and copy nothing to paste.
         check_text(wifi.network, file, "wifi.network")
         check_text(wifi.password, file, "wifi.password")
+    check_safety_contacts(content.safety_contacts, file)
+    if content.help is not None:
+        # The page's first stop is the card, and in_person is on it: a [help] without
+        # a contact would leave the page with no way to report (D-281).
+        if not content.safety_contacts:
+            raise YearDataError(
+                f"{file}: help: needs at least one [[safety_contacts]] entry"
+                " (the Report a concern card)"
+            )
+        check_help(content.help, file)
     check_social(content.social, file)
+
+
+def check_safety_contacts(contacts: tuple[SafetyContact, ...], file: str) -> None:
+    """Check the safety contacts: a label, a well-formed value, an https source.
+
+    ``build()`` already refuses a contact without ``source`` or ``checked``.
+
+    Args:
+        contacts: The ``[[safety_contacts]]`` entries.
+        file: The data file they come from, for the messages.
+
+    Raises:
+        YearDataError: A rule is broken, or two contacts share a kind.
+    """
+    seen: set[str] = set()
+    for index, contact in enumerate(contacts):
+        key = f"safety_contacts[{index}]"
+        check_text(contact.label, file, f"{key}.label")
+        if contact.kind not in CONTACT_KINDS:
+            raise YearDataError(
+                f"{file}: {key}.kind: {contact.kind!r} is not one of {CONTACT_KINDS}"
+            )
+        if contact.kind in seen:  # one row, one identifier per kind
+            raise YearDataError(f"{file}: {key}.kind: duplicate kind {contact.kind!r}")
+        seen.add(contact.kind)
+        check_contact_value(contact, file, f"{key}.value")
+        check_https(contact.source, file, f"{key}.source")
+
+
+def check_contact_value(contact: SafetyContact, file: str, key: str) -> None:
+    """Refuse a value its kind cannot open: a number not in E.164, a bad address.
+
+    Args:
+        contact: The contact whose value to check, by its kind.
+        file: The data file it comes from, for the message.
+        key: Its key in that file, for the message.
+
+    Raises:
+        YearDataError: The value is malformed for its kind.
+    """
+    if contact.kind == "https":
+        check_https(contact.value, file, key)
+    elif contact.kind == "tel" and not E164.fullmatch(contact.value):
+        raise YearDataError(f"{file}: {key}: expected an E.164 number (+15625550100)")
+    elif contact.kind == "mailto" and not EMAIL.fullmatch(contact.value):
+        raise YearDataError(f"{file}: {key}: expected an email address")
+
+
+def check_help(info: HelpInfo, file: str) -> None:
+    """Check ``[help]``: no blank line, ``https://`` links.
+
+    Args:
+        info: The ``[help]`` table.
+        file: The data file it comes from, for the messages.
+
+    Raises:
+        YearDataError: A rule is broken; the message names the file and the key.
+    """
+    for name in ("in_person", "info_desk", "lost_and_found", "quiet_room"):
+        check_text(getattr(info, name), file, f"help.{name}")
+    check_text(info.coc_summary, file, "help.coc_summary")
+    check_https(info.coc_url, file, "help.coc_url")
+    check_https(info.procedures_url, file, "help.procedures_url")
 
 
 SOCIAL_SECTIONS = {

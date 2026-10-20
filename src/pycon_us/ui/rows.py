@@ -47,6 +47,7 @@ def LinkTile(
     subtitle: str | ft.Control | None = None,
     identifier: str | None = None,
     app: bool = False,
+    copy_identifier: str | None = None,
 ) -> ft.Control:
     """Return a row that opens ``target`` by the link rule: a page or a link.
 
@@ -76,6 +77,8 @@ def LinkTile(
         identifier: The row's semantics identifier for UI tests, e.g.
             ``more.speakers`` (decisions §M); a Copy button gets ``<identifier>.copy``.
         app: A web address opens in the app that handles it: a social profile, a map.
+        copy_identifier: The Copy button's identifier, where the screen names it
+            otherwise than ``<identifier>.copy`` (Help & safety's ``help.copy.<kind>``).
 
     Raises:
         ValueError: ``target`` is not a link the app opens (``link_kind()``).
@@ -83,7 +86,13 @@ def LinkTile(
     kind = link_kind(target, app=app)
     if kind is not LinkKind.PAGE:
         return _ExternalLinkTile(
-            title, target, kind, icon=icon, subtitle=subtitle, identifier=identifier
+            title,
+            target,
+            kind,
+            icon=icon,
+            subtitle=subtitle,
+            identifier=identifier,
+            copy_identifier=copy_identifier,
         )
     page = ft.context.page
 
@@ -107,6 +116,7 @@ def _ExternalLinkTile(
     icon: ft.IconData | ft.Control | None,
     subtitle: str | ft.Control | None,
     identifier: str | None,
+    copy_identifier: str | None = None,
 ) -> ft.Control:
     """The external form of ``LinkTile``: a link that leaves the app, maybe with Copy."""
     svc = use_services()
@@ -137,9 +147,11 @@ def _ExternalLinkTile(
         ft.Icons.CONTENT_COPY_OUTLINED, tooltip=tooltip, on_click=copy
     )
     # One node either way, named by the tooltip (D-190, F55, D-234).
+    if copy_identifier is None and identifier is not None:
+        copy_identifier = f"{identifier}.copy"
     copy_button = (
-        named(f"{identifier}.copy", button)
-        if identifier is not None
+        named(copy_identifier, button)
+        if copy_identifier is not None
         else merged(button)
     )
     return ft.Row(

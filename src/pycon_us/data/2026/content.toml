@@ -1,8 +1,8 @@
 # PyCon US 2026: content the app shows (D-45). Loaded by pycon_us.config.load_year().
 # For now it holds what feed processing and the Map need, the copy and links of the
-# Open spaces and Lightning talks pages (D-205), the keynotes (D-217), the Wi-Fi (D-280)
-# and the conference moments written by hand (D-274); safety contacts and the rest arrive
-# with their screens.
+# Open spaces and Lightning talks pages (D-205), the keynotes (D-217), the Wi-Fi (D-280),
+# the conference moments written by hand (D-274) and Help & safety (D-281); the rest
+# arrive with their screens.
 
 # The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
 # names ("Lunch (Hall AB)") and "Expo Hall AB" elsewhere, so a room named "Hall ..." gets
@@ -17,6 +17,34 @@ lightning_talks_location = "Pacific Ballroom - Arena"
 # Map lists them last, under "Other locations" (ROOM-01, D-188). P2's map.toml gives
 # the rooms their floor-plan pins; these are the places without one (DATA-32).
 other_locations = ["Elsewhere", "Lobby", "Out Front of Hyatt Regency"]
+
+# Help & safety (INFO-07, INFO-11; D-281). Safety-critical: each contact is listed only
+# because the public page in its source shows it, and is checked there again every year
+# (D-45). The CoC hotline Ionic's app called is on no public page (checked 2026-10-20 on
+# both PSF pages below and in the feed's code-of-conduct block), so it is not here: the
+# email and the staff line ship alone. kind is tel (value in E.164, +15625550100),
+# mailto or https, at most one contact of each.
+[[safety_contacts]]
+label = "Email the Code of Conduct team"
+kind = "mailto"
+value = "pycon-us-report@python.org"
+source = "https://policies.python.org/us.pycon.org/code-of-conduct/Procedures-for-Reporting-Incidents/"
+checked = 2026-10-20
+
+# The page's other lines, said in our words from the same two pages and the 2026 feed's
+# venues-hours block (checked 2026-10-20). Keep the places in step with that block.
+# in_person: the danger sentence is from Procedures for Reporting Incidents ("contact the
+# appropriate crisis, non-emergency or police number"; a volunteer or staff member helps
+# find it), the help to reach hotel or venue security and the police from the Code of
+# Conduct page.
+[help]
+in_person = "If someone is in danger, contact local emergency services first: any PyCon US staff member or volunteer can help you find the number. You can also tell any staff member in person, and staff can help you reach hotel or venue security or the police."
+info_desk = "In the Promenade Lobby, at the main entrance."
+lost_and_found = "Room 203AB. While the information desk is open, ask there: items move to the staff office at the end of each day."
+quiet_room = "VIP Room A & B, Thursday to Sunday, for anyone who needs a calm moment."
+coc_summary = "PyCon US is for everyone. Be open, considerate and respectful, at the venue, at the events around it and online. Harassment, threats and unwelcome attention or contact are not allowed, and the Code of Conduct team may warn or remove anyone who breaks it. It applies to everyone: attendees, speakers, sponsors, volunteers and staff."
+coc_url = "https://policies.python.org/us.pycon.org/code-of-conduct/"
+procedures_url = "https://policies.python.org/us.pycon.org/code-of-conduct/Procedures-for-Reporting-Incidents/"
 
 # Shift the displayed start of a session without moving it in the timeline (DATA-11).
 # `match` is a regular expression matched case-insensitively against the whole cleaned
