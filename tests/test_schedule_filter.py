@@ -319,7 +319,7 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
 async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
     shown: Show,
 ) -> None:
-    """Show all's side padding is the summary words' inset, with no spacing.
+    """Show all's side padding equals the words' inset; the wrap adds no spacing.
 
     #283: Material shrinks a text button's side padding as text grows (12 dp to 4), so
     at large text a "Show all" on a run of its own started right of the words. Pinned,

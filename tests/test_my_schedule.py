@@ -390,8 +390,8 @@ def test_the_phrase_names_three_clashes_in_a_list() -> None:
 async def test_a_clash_that_has_ended_is_not_shown(shown: Shown) -> None:
     """An ended clash is not named, and folded rows carry no clash line.
 
-    Thursday 10:45: the 9:30 workshop is over, so the tutorial names only 11:30's;
-    neither can change a plan any more.
+    Thursday 10:45: the 9:30 workshop is over, so the tutorial names only 11:30's.
+    Neither an ended clash nor a folded row can change a plan any more.
     """
     assert shown.phrase(NOTEBOOKS).endswith(f"Overlaps with “{name(INFERENCE)}”.")
     assert f"and 1{NBSP}more" not in shown.texts()
@@ -462,7 +462,7 @@ async def test_the_next_day_s_earlier_today_starts_collapsed(shown: Shown) -> No
 async def test_the_minute_tick_folds_a_session_once_it_has_ended(
     shown: Shown,
 ) -> None:
-    """At the tick after 12:30, Thursday's ended sessions fold into Earlier today."""
+    """The tick at 12:30 folds the sessions that end then into Earlier today."""
     clock.set_test_now(datetime(2026, 5, 14, 12, 30, tzinfo=ZONE))  # both end now
     shown.tick()
     await shown.settle()
