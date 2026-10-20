@@ -3,23 +3,25 @@
 ``state.py``'s ``Conference`` runs refreshes and publishes what they bring; this module
 holds what needs none of the store's fields. The words for the outcome: where the data
 came from (``Source``), why the last refresh failed (``Problem``) and what the status
-strip says (``Status``). The timings: when data turns stale (D-32) and when the next
-automatic refresh is due (D-40). And one attempt at the network: ``fetch()``, the
-``feed_digest()`` that tells the published feed's bytes again (D-224), and
-``log_unexpected()`` for a refresh that ends in a bug (D-71).
+strip says (``Status``). The timings: when data turns stale (D-32, ``stale()``) and when
+the next automatic refresh is due (D-40, ``due()``). And one attempt at the network:
+``fetch()``, the ``feed_digest()`` that tells the published feed's bytes again (D-224),
+and ``log_unexpected()`` for a refresh that ends in a bug (D-71).
 """
 
 import asyncio
 import hashlib
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 import httpx
 
-from pycon_us.config import YearData
+from pycon_us import clock
+from pycon_us.config import ConferenceInfo, YearData
 from pycon_us.core import feed
 from pycon_us.core.models import ConferenceData
+from pycon_us.core.timefmt import today
 from pycon_us.services import api
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,40 @@ STALE_OTHERWISE = timedelta(hours=24)
 REFRESH_EVERY = timedelta(minutes=15)
 """How long after a refresh began the next automatic one is due: on resume, and on Now
 and Schedule while they show (D-40)."""
+
+
+def stale(age: timedelta | None, info: ConferenceInfo) -> bool:
+    """Return whether data of ``age`` is stale by ``clock.now()`` (D-32).
+
+    Stale when it is older than 6 h on a conference day (``first_day`` to ``last_day``
+    in conference time) or 24 h on another day, or when there is no data (None).
+
+    Args:
+        age: How old the data is, ``Conference.age()``.
+        info: The year's facts: its dates and time zone.
+    """
+    if age is None:
+        return True
+    day = today(clock.now(), info.zone)
+    conference_day = info.first_day <= day <= info.last_day
+    return age > (STALE_ON_CONFERENCE_DAYS if conference_day else STALE_OTHERWISE)
+
+
+def due(started_at: datetime | None) -> bool:
+    """Return whether an automatic refresh is due, by when the last one started (D-40).
+
+    Due when no refresh has started in this session (None), or the last one started
+    ``REFRESH_EVERY`` or more ago by ``clock.now()``, whatever its outcome: counted from
+    the last attempt, not the data's age, so a phone offline retries every 15 min, not
+    on every check. A clock set back before the last start (the fake clock) makes it
+    due too.
+
+    Args:
+        started_at: When the last refresh started, ``Conference._started_at``.
+    """
+    if started_at is None:
+        return True
+    return not timedelta(0) <= clock.now() - started_at < REFRESH_EVERY
 
 
 def feed_digest(raw: bytes) -> bytes:

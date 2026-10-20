@@ -1,12 +1,13 @@
-"""The Developer screen's drawing: its option fields and its confirmations.
+"""The Developer screen's drawing: its fields and its confirmations.
 
 ``option_field()`` is one option's text field, the fake clock's or the feed URL's, and
-``LABEL_PADDING`` the padding of Reset and Apply under them (``developer.py``);
-the Data section's rows and the line that says how an action ended are
-``ui/actions.py``'s, shared with Settings; and ``confirmation()``
-returns the ``AlertDialog`` the Data section shows before an action that deletes
-something, naming what is lost (D-29), or None while none is open. What the actions do
-is ``developer_data.py``'s; apart so that each module stays under about 400 lines (D-66).
+``LABEL_PADDING`` the padding of Reset and Apply under them (``developer.py``); and
+``confirmation()`` returns the ``AlertDialog`` the Data section shows before an action
+that deletes something, naming what is lost (D-29), or None while none is open. What the
+actions do is ``developer_data.py``'s; apart so that each module stays under about 400
+lines (D-66).
+The action rows and the outcome line are ``ui/actions.py``'s, which Settings' Data
+section (#422) and About this app (#443) share.
 """
 
 from collections.abc import Callable

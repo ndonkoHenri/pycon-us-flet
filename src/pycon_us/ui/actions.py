@@ -1,10 +1,14 @@
-"""Action rows and the line that says how an action ended, said in place (D-29, D-210).
+"""Action rows and the line that says how an action ended, said in place (D-198, D-29, D-210).
 
-``action_row()`` is a two-line action, a verb and what it touches, as Developer's Data
-section (D-198) and Settings' Data section (P2-62) draw them; ``outcome_line()``, in
-``padded()``, is the line under a group of buttons that says what was done (an
-``Outcome``); ``refreshed()`` is what Refresh now says once its refresh has ended, the
-same words on both pages (D-292).
+``action_row()`` is a two-line row that does something when tapped, a verb first and
+what it touches below, as Developer's Data section (D-198) and Settings' Data section
+(P2-62) draw them; ``outcome_line()``, in ``padded()``, is the line under a group of
+them, or of buttons, that says what was done (an ``Outcome``), in place, since a result
+the user waits for appears in place (D-29); ``refreshed()`` is what Refresh now says
+once its refresh has ended, the same words on both pages (D-292). The Developer
+screen's Data section and Apply, Settings' Data section and About this app's Help us
+fix it section (#443) use them; moved here from ``screens/developer_ui.py`` so that
+one screen does not import another's drawing.
 """
 
 import flet as ft

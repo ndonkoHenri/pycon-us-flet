@@ -16,12 +16,16 @@ from pycon_us.year_tracks import HUB_PAGES
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 """The five tab roots, in the bottom bar's order (D-13)."""
 
+WELCOME = "/welcome"
+"""The first-run page, a root without a bar and without the drill (SHELL-02, D-287)."""
+
 DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan")
 """The drill's segment pairs, ``<kind>/<id>``, one pushed View each (D-17, D-141)."""
 
 PAGES = frozenset(
     {
         *TAB_ROOTS,
+        WELCOME,
         "/search",
         "/more/speakers",
         "/more/tracks",
@@ -33,8 +37,10 @@ PAGES = frozenset(
         "/more/sponsors",
         "/more/settings",
         "/more/app",
+        "/more/app/licences",
         "/more/developer",
         "/more/wifi",
+        "/more/jobs",
         "/more/help",
         "/more/psf",
         "/more/social",
@@ -91,20 +97,26 @@ def parent_of(location: str, search_base: str = "/now") -> str:
     return "/" + "/".join(parent)
 
 
-def start_target(last_location: str, search_base: str) -> str:
-    """Return where the start route ``/`` sends a session (D-143).
+def start_target(last_location: str, search_base: str, *, onboarded: bool) -> str:
+    """Return where the start route ``/`` sends a session (D-143, D-287).
 
-    A new session in the same process returns to where the user was. A location under
-    ``/search`` cannot be rebuilt over its opener (a fresh Router puts a global modal
-    over ``/``), so it returns to the opener instead. P2 adds ``/welcome`` on first run.
+    Welcome comes first, until Get started (``Prefs.onboarded``). Only a plain start
+    reaches ``/``: a link or a ``--route`` start opens its own target, and Welcome
+    waits for the next plain start. Then a new session in the same process returns
+    to where the user was. A location under ``/search`` cannot be rebuilt over its
+    opener (a fresh Router puts a global modal over ``/``), so it returns to the
+    opener instead.
 
     Args:
         last_location: ``ViewMemory.last_location``; empty before any screen showed.
         search_base: ``ViewMemory.search_base``.
+        onboarded: Welcome was seen (``Prefs.onboarded``).
 
     Returns:
         The location to navigate to.
     """
+    if not onboarded:
+        return WELCOME
     if not last_location:
         return "/now"
     if in_search(last_location):

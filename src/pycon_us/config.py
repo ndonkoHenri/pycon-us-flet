@@ -5,12 +5,12 @@ frozen dataclasses below, through ``year_schema``, then checks their rules. Five
 concerns have modules of their own, each with its tables and their checks: the track
 registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
-(D-217), the info pages in ``year_info`` (D-263), the conference moments in
-``year_moments`` (D-274). The dataclasses are the schema: an
-unknown or missing key, a wrong type or a broken rule fails at load time with a
-``YearDataError`` that names the file, the key and the problem. Years, dates, names and
-URLs live in the data files, never in code; rolling over is a new ``data/<year>/`` folder
-and a new ``YEAR``.
+(D-217), the info pages in ``year_info`` (D-263; About the PSF's and Social's in
+``year_links``), the conference moments in ``year_moments`` (D-274). The dataclasses
+are the schema: an unknown or missing key, a wrong type or a broken rule fails at load
+time with a ``YearDataError`` that names the file, the key and the problem. Years,
+dates, names and URLs live in the data files, never in code; rolling over is a new
+``data/<year>/`` folder and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).
@@ -25,15 +25,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import (
-    HelpInfo,
-    PsfInfo,
-    SafetyContact,
-    SocialInfo,
-    WifiInfo,
-    check_info,
-)
+from pycon_us.year_info import HelpInfo, SafetyContact, WifiInfo, check_info
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
+from pycon_us.year_links import PsfInfo, SocialInfo
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
     LightningTalksInfo,
