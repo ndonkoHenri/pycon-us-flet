@@ -810,10 +810,10 @@ info_url = "https://us.pycon.org/2026/events/lightning-talks/"
 doubt = "“Everyone already knows that”"
 answer = "They don't, and those who think they do still learn from the way you explain it."
 
-[wifi]
+[wifi]                              # optional: the Wi-Fi page (INFO-08; D-280), no blank value
 network = "PyCon2026"
 password = "illustrative"
-sponsor = "example-sponsor"         # sponsor_slug() of the credited sponsor (INFO-09)
+sponsor = "example-sponsor"         # P2 (#417): sponsor_slug() of the credited sponsor (INFO-09)
 
 [[safety_contacts]]
 label = "Code of Conduct hotline"
@@ -885,7 +885,7 @@ A booth lists every sponsor whose `booth_number` is its number, so a shared boot
 
 ### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `year_info.py`)
 
-`tomllib` loads each file into frozen dataclasses (`Track`, `Wifi`, `SafetyContact`, `Keynote`, `EventReminder`, `Plan`, `Pin`, `Booth`, …) gathered in `YearData`. The loader is the schema:
+`tomllib` loads each file into frozen dataclasses (`Track`, `WifiInfo`, `SafetyContact`, `Keynote`, `EventReminder`, `Plan`, `Pin`, `Booth`, …) gathered in `YearData`. The loader is the schema:
 
 ```python
 # src/pycon_us/config.py (excerpt)
@@ -911,7 +911,7 @@ def checked(raw: dict, cls: type, where: str) -> dict:
     return raw
 ```
 
-As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins and sponsor slugs exist; keynote session ids exist in the year's bundled snapshot (`load_year(check_sessions=True)`, which the tests and `tools/update_snapshot.py` use and the app's start does not, D-217); safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205); the keynotes' (`Keynote`, `KeynoteSpeaker`, `check_keynotes()`, `check_keynote_sessions()`, `check_snapshot_sessions()`, `keynote_of()`) in `year_keynotes.py` (D-217); the track registry (`Track`, `TRACK_GROUPS`, `HUB_PAGES`, `KEYNOTE_TRACKS`) and its checks (`check_tracks()`, which `_check_conference()` calls last) in `year_tracks.py`, split from `config.py` at D-66's ~400 lines in #275 (D-228); the info pages' tables (Wi-Fi, Help & safety, Venue & hours, About, the PSF, Social), each a field of `Content` added with its page, and their checks, `check_info(content, file)`, which `_check_content()` calls, in `year_info.py` (D-263; no table yet). `config.py` keeps `load_year()`, the conference facts (`ConferenceInfo`, `Content`, `Snapshot`, `YearData`) and the conference and content rules.
+As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique reminder ids in 8000–8099 with aware times; pins 0–100 %, booths 0–1; referenced plans, pins and sponsor slugs exist; keynote session ids exist in the year's bundled snapshot (`load_year(check_sessions=True)`, which the tests and `tools/update_snapshot.py` use and the app's start does not, D-217); safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205); the keynotes' (`Keynote`, `KeynoteSpeaker`, `check_keynotes()`, `check_keynote_sessions()`, `check_snapshot_sessions()`, `keynote_of()`) in `year_keynotes.py` (D-217); the track registry (`Track`, `TRACK_GROUPS`, `HUB_PAGES`, `KEYNOTE_TRACKS`) and its checks (`check_tracks()`, which `_check_conference()` calls last) in `year_tracks.py`, split from `config.py` at D-66's ~400 lines in #275 (D-228); the info pages' tables (Wi-Fi, Help & safety, Venue & hours, About, the PSF, Social), each a field of `Content` added with its page, and their checks, `check_info(content, file)`, which `_check_content()` calls, in `year_info.py` (D-263; so far Wi-Fi's `WifiInfo`, whose `check_info()` rule refuses a blank network or password, D-280). `config.py` keeps `load_year()`, the conference facts (`ConferenceInfo`, `Content`, `Snapshot`, `YearData`) and the conference and content rules.
 
 ---
 

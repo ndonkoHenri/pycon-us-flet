@@ -6,7 +6,7 @@ Bundled, per-year conference data (D-45): one folder per year, e.g. `2026/`, hol
 - `content.toml`: texts and links for the info pages (today the display-time overrides, the venue's names for
   feed processing, the places that are not rooms, the Map's "Other locations", the Open spaces and Lightning
   talks pages' copy, and the keynotes and panels, keyed by the feed's session ids, D-217; the info pages'
-  tables join as each page lands, in `year_info.py`, D-263);
+  tables join as each page lands, in `year_info.py`, D-263: so far `[wifi]`, the network and password, D-280);
 - `map.toml`: floor plans, room pins and booths (P2);
 - `conference.json`: the feed snapshot used for an offline first launch (NEW-03, D-135), only for the
   active year.
