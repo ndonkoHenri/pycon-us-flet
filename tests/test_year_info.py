@@ -1,4 +1,4 @@
-"""Tests for the info pages' year data (D-263): ``year_info``, as ``config`` runs it.
+"""Tests for the info pages' year data (D-263): ``year_info`` and ``year_links``.
 
 Every year's load runs the info pages' checks on the content and conference it built, so
 a page's rules fail the load as soon as its table lands; then each page's table and its
@@ -21,16 +21,14 @@ import pytest
 from pycon_us import config
 from pycon_us.config import ConferenceInfo, Content, YearDataError, load_year
 from pycon_us.ui.brands import BRANDS
-from pycon_us.year_info import (
+from pycon_us.year_info import SafetyContact, WifiInfo, check_info
+from pycon_us.year_links import (
     PSF_SECTIONS,
     SOCIAL_SECTIONS,
     PsfInfo,
     PsfLink,
-    SafetyContact,
     SocialInfo,
     SocialLink,
-    WifiInfo,
-    check_info,
     check_social,
 )
 from pycon_us.year_schema import build
