@@ -8,6 +8,8 @@ D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 ``use_minute()`` is that tick as a hook, for any other view that depends on
 ``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` and
 ``stop_ticks()`` are the ticking effects' state and cleanup (D-200).
+``schedule_line()`` says where the schedule on screen came from and its age, for the
+pages that say it whether or not it is fresh (D-292).
 """
 
 from datetime import datetime, tzinfo
@@ -16,7 +18,7 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.core.timefmt import ago_label, day_label, local_date, time_label
-from pycon_us.feed_refresh import Status
+from pycon_us.feed_refresh import Source, Status
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -69,6 +71,40 @@ def strip_line(
     if status == "offline":  # no answer: a better network may help
         return f"Offline · {since}"
     return f"Couldn't update · {since}"  # an answer we could not use
+
+
+SOURCES: dict[Source, str] = {
+    "bundled": "Bundled with the app",
+    "cache": "From the cache",
+    "network": "From the feed",
+}
+"""Where the schedule on screen came from, in ``schedule_line()``'s words."""
+
+
+def schedule_line(
+    source: Source, fetched_at: datetime | None, now: datetime | None = None
+) -> str:
+    """Return where the schedule on screen came from and its age, in words.
+
+    Said the same wherever the app tells it (D-292): Developer's Refresh now (D-198)
+    and About this app's Schedule row. Unlike the strip's line it is said whether
+    the data is fresh or not; a caller shows it with ``use_minute()``, so its age
+    keeps up.
+
+    Args:
+        source: ``Conference.source``.
+        fetched_at: ``Conference.fetched_at``; None before anything is published.
+        now: The time to count the age to; ``clock.now()`` when None, so the
+            Developer fake clock moves it too.
+
+    Returns:
+        E.g. "From the feed, updated 3 hours ago", or "Bundled with the app, updated
+        160 days ago" (the age of the snapshot's capture); "No schedule yet" without
+        data.
+    """
+    if source == "none" or fetched_at is None:
+        return "No schedule yet"
+    return f"{SOURCES[source]}, updated {ago_label(fetched_at, now or clock.now())}"
 
 
 ICON_SIZE = 16
