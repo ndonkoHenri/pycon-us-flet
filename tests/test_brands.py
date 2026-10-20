@@ -84,9 +84,11 @@ def test_the_marks_sit_on_the_page_surface() -> None:
     assert ft.Colors.SURFACE in brands.BRAND_SURFACES
 
 
-@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
-def test_x_follows_the_text_colour_so_it_never_vanishes_in_dark(dark: bool) -> None:
-    """X's black mark is drawn in ``on_surface``, which the dark surface shows."""
+def test_x_follows_the_text_colour_so_it_never_vanishes_in_dark() -> None:
+    """X's mark is drawn in ``on_surface``: its brand black would vanish on the dark surface.
+
+    The general contrast test checks the ``on_surface`` tint in both schemes.
+    """
     assert brands.BRANDS["x"] == ft.Colors.ON_SURFACE
     assert contrast_ratio("#000000", resolved(ft.Colors.SURFACE, True)) < NON_TEXT
 
