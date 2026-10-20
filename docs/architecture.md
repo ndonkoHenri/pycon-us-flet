@@ -1268,7 +1268,7 @@ def plan(data: ConferenceData, favorites: Sequence[str], settings: ReminderSetti
 
 Permissions are asked in context after a one-sentence primer: notifications on the first favourite or the first reminder switch, the camera on the first staff scan, never at launch. After a denial, Settings shows a `Banner` with "Open settings" (`await svc.permissions.open_app_settings()`). Notification permission is requested through E3's `request_permission()` on both platforms; `flet-permission-handler` checks status, opens settings and handles the camera (D-61, F17).
 
-`core/ics.py` builds `.ics` bytes (UTC times, stable `UID`, escaping, 75-octet folding, a `VALARM` at the lead time) for one session or all of My schedule, shared with `await svc.share.share_files([ft.ShareFile.from_bytes(data, mime_type="text/calendar", name=f"{slug}.ics")], share_position_origin=...)` (a non-empty list; the origin, an `ft.Offset` at the tapped control, anchors the sheet on tablets, D-09, D-62). Native add-to-calendar *(not in Flet yet: E4)* comes later.
+`core/ics.py`'s `calendar_file(sessions, *, year, now, alarm=ALARM)` builds `.ics` bytes (UTC times from the start the app shows, a `UID` of `<year>-<id>@CALENDAR_DOMAIN` stable across refreshes, escaping, 75-octet folding between characters, a `VALARM` at the lead time, 10 min by default; D-268) for one session or all of My schedule, in the Schedule's order, shared with `await svc.share.share_files([ft.ShareFile.from_bytes(data, mime_type="text/calendar", name=f"{slug}.ics")], share_position_origin=...)` (a non-empty list; the origin, an `ft.Offset` at the tapped control, anchors the sheet on tablets, D-09, D-62). Native add-to-calendar *(not in Flet yet: E4)* comes later.
 
 ---
 
