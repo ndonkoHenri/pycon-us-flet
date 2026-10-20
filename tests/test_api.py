@@ -91,3 +91,17 @@ async def test_a_redirect_loop_is_an_api_error_without_a_status() -> None:
     with pytest.raises(ApiError, match="TooManyRedirects") as caught:
         await fetch_feed(URL, transport=httpx.MockTransport(handle))
     assert caught.value.status is None
+
+
+async def test_without_a_transport_the_tests_guard_refuses_the_connection(
+    no_network: list[str],
+) -> None:
+    """In tests, a fetch with httpx's own transport connects nowhere (#539).
+
+    ``conftest.py``'s guard raises ``ConnectError``, which the fetch reports as no
+    answer, and records the URL, for which the guard fails the test at teardown.
+    """
+    with pytest.raises(NetworkError, match="ConnectError"):
+        await fetch_feed(URL)
+    assert no_network == [URL]
+    no_network.clear()  # this test tried on purpose

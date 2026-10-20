@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
+import httpx
 import pytest
 from hypothesis import settings
 
@@ -32,6 +33,34 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         help="Rewrite snapshot files instead of comparing with them.",
     )
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
+    """Refuse every real HTTP connection, and fail the test that tried one (#539).
+
+    Tests never touch the network: a request reaches a server only through a test's
+    ``httpx.MockTransport``. httpx's own transports, which a client without one uses
+    (the app's feed refresh), raise ``ConnectError`` instead of connecting, so the code
+    under test takes its offline path, and the test then fails at teardown naming the
+    URLs, even when the code swallowed the error. Yields the refused URLs.
+    """
+    refused: list[str] = []
+
+    def refuse(_transport: object, request: httpx.Request) -> httpx.Response:
+        refused.append(str(request.url))
+        raise httpx.ConnectError("tests never open a real connection", request=request)
+
+    async def refuse_async(transport: object, request: httpx.Request) -> httpx.Response:
+        return refuse(transport, request)
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", refuse_async)
+    yield refused
+    if refused:
+        pytest.fail(
+            f"The test tried a real connection to {refused}; use a fake transport"
+        )
 
 
 @pytest.fixture(params=["America/Los_Angeles", "Pacific/Kiritimati"])
