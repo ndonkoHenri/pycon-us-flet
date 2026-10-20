@@ -76,11 +76,13 @@ JOB_FAIR = "178"
 
 
 def may(day: int, hour: int, minute: int = 0) -> datetime:
+    """That time on that day of May 2026, in Pacific Time."""
     return datetime(2026, 5, day, hour, minute, tzinfo=PACIFIC)
 
 
 @pytest.fixture(scope="module")
 def data() -> ConferenceData:
+    """The recorded 2026 feed, processed once for the module."""
     return processed(2026)
 
 
@@ -159,12 +161,18 @@ def copy_at(data: ConferenceData, now: datetime, **kwargs: Any) -> tuple[str, ..
 def test_the_header_says_where_the_conference_stands(
     data: ConferenceData, now: datetime, expected: tuple[str, ...], machine_tz: str
 ) -> None:
+    """The header's season, title and subtitle, from the countdown to the end."""
     assert copy_at(data, now) == expected
 
 
 def test_the_seasons_follow_the_phases_and_the_year_s_dates(
     data: ConferenceData,
 ) -> None:
+    """The season follows the phase and the year's conference and sprint dates.
+
+    The conference starts on its first morning and lasts until the last evening; the
+    sprints follow, then it is over.
+    """
     assert season(Phase.BEFORE, may(12, 12).date(), data, INFO) is Season.COUNTDOWN
     assert season(Phase.BEFORE, may(13, 7).date(), data, INFO) is Season.CONFERENCE
     for phase in (Phase.BEFORE_DAY, Phase.DAY, Phase.AFTER_DAY):
@@ -178,6 +186,7 @@ def test_the_seasons_follow_the_phases_and_the_year_s_dates(
 def test_the_first_start_follows_the_device_s_clock_format(
     data: ConferenceData,
 ) -> None:
+    """On a 24-hour device, the first start reads ``07:30``."""
     _, _, subtitle = copy_at(data, may(15, 6), use_24h=True)
     assert subtitle == "First up today at 07:30"
 
@@ -185,6 +194,7 @@ def test_the_first_start_follows_the_device_s_clock_format(
 def test_the_header_names_pacific_time_on_a_device_elsewhere(
     data: ConferenceData,
 ) -> None:
+    """On a device in another zone, the header notes that times are Pacific Time."""
     now = may(15, 11, 10)
     kiritimati = now.astimezone(ZoneInfo("Pacific/Kiritimati")).utcoffset()
     copy = header_copy(
@@ -211,12 +221,14 @@ def test_the_zone_note_shows_only_in_the_season_with_times(
 
 
 def test_a_screen_reader_hears_pauses_and_ranges_in_words() -> None:
+    """Spoken, a middle dot is a comma pause and a dash between dates is "to"."""
     assert spoken("Up next · 11:30 AM") == "Up next, 11:30 AM"
     assert spoken("Join a project · May 18–19") == "Join a project, May 18 to 19"
     assert spoken("Wed, May 13 – Sun, May 17") == "Wed, May 13 to Sun, May 17"
 
 
 def test_the_header_reads_as_one_phrase(data: ConferenceData) -> None:
+    """The header reads as one phrase: name, title and subtitle, each a sentence."""
     now = datetime(2026, 4, 20, 9, tzinfo=PACIFIC)
     copy = header_copy(
         now_next(data, now),
@@ -232,6 +244,8 @@ def test_the_header_reads_as_one_phrase(data: ConferenceData) -> None:
 
 
 def test_up_next_names_its_day_when_it_is_not_today(data: ConferenceData) -> None:
+    """Up next's time says "tomorrow", or the date, when it is not today."""
+
     def when(now: datetime) -> str:
         slot = now_next(data, now).up_next
         assert slot is not None
@@ -259,6 +273,7 @@ def test_gold_reads_on_the_header_s_indigo() -> None:
 def test_the_header_is_the_brand_indigo_in_both_schemes(
     dark: bool, fill: ft.Colors, ink: ft.Colors
 ) -> None:
+    """The header is the brand indigo with its ink in each scheme, its icon gold."""
     copy = HeaderCopy(Season.CONFERENCE, "Day 3 of 5 · Friday", "Long Beach")
     header = StatusHeader("PyCon US 2026", copy, dark=dark)
     assert isinstance(header, ft.Semantics)
@@ -281,6 +296,7 @@ class Ticks:
     actions: list[Callable[[], object]] = field(default_factory=list)
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
+        """Keep ``action`` for the test to run, instead of looping."""
         self.actions.append(action)
 
 
@@ -294,6 +310,7 @@ class Shown(sessions.Shown):
 
     @property
     def body(self) -> ft.ListView:
+        """The screen's one ``ListView``."""
         (body,) = self.find(ft.ListView)
         return body
 
@@ -302,6 +319,7 @@ class Shown(sessions.Shown):
         return list(_walk(self.body))
 
     def has(self, identifier: str) -> bool:
+        """Whether a ``Semantics`` with ``identifier`` is on screen."""
         return any(
             isinstance(c, ft.Semantics) and c.identifier == identifier
             for c in self.all()
@@ -339,6 +357,7 @@ class Shown(sessions.Shown):
 
 
 def _children(control: Any) -> list[Any]:
+    """The children of ``control``, a component's rendered body included."""
     if isinstance(control, Component):
         body = control._b
         return body if isinstance(body, list) else [body]
@@ -352,6 +371,7 @@ def _children(control: Any) -> list[Any]:
 
 
 def _walk(control: Any) -> Iterator[Any]:
+    """Yield ``control`` and every control under it, in reading order."""
     yield control
     for child in _children(control):
         if child is not None:
@@ -359,8 +379,10 @@ def _walk(control: Any) -> Iterator[Any]:
 
 
 def _texts(control: Any) -> list[str]:
-    """The texts under ``control`` in reading order, plain strings too: a ``ListTile``'s
-    title, a button's label."""
+    """The texts under ``control`` in reading order, plain strings too.
+
+    Plain strings are, for example, a ``ListTile``'s title or a button's label.
+    """
     found: list[str] = []
     for c in _walk(control):
         if isinstance(c, ft.Text):
@@ -423,12 +445,14 @@ async def render(
 
 
 def header(shown: Shown) -> str:
+    """The status header's spoken phrase."""
     return str(shown.node("now.header").label)
 
 
 async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
     render: Callable[..., Any],
 ) -> None:
+    """Weeks before, Now counts down, lists the key dates and links the Schedule."""
     shown = await render(datetime(2026, 4, 20, 9, tzinfo=PACIFIC))
     assert header(shown).startswith("PyCon US 2026. Starts in 23 days.")
     assert shown.headings() == ["Key dates"]
@@ -452,6 +476,7 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
 async def test_the_header_is_the_first_heading_under_the_page_s_title(
     render: Callable[..., Any],
 ) -> None:
+    """The header is the body's first control: a level-2 heading, read once."""
     shown = await render(may(15, 11, 10))
     node = shown.node("now.header")
     # Level 2: the bar's "Now" is the page's one level-1 heading (F40, D-211).
@@ -463,6 +488,7 @@ async def test_the_header_is_the_first_heading_under_the_page_s_title(
 async def test_on_a_conference_day_it_shows_what_is_on_then_what_is_next(
     render: Callable[..., Any],
 ) -> None:
+    """On a conference day, Now shows your next session, what is on, then Up next."""
     shown = await render(may(15, 11, 10))
     assert shown.headings() == [
         "Your next session",
@@ -477,6 +503,7 @@ async def test_on_a_conference_day_it_shows_what_is_on_then_what_is_next(
 async def test_up_next_s_heading_reads_its_dot_as_a_pause(
     render: Callable[..., Any],
 ) -> None:
+    """Up next's heading reads "Up next, 11:30 AM" to a screen reader."""
     shown = await render(may(15, 11, 10))
     (heading,) = [
         c
@@ -498,6 +525,7 @@ async def test_happening_now_ignores_the_schedule_s_filters(
 async def test_saved_sessions_come_first_in_happening_now(
     render: Callable[..., Any],
 ) -> None:
+    """Of two saved sessions on, one is the card's and the other leads Happening now."""
     shown = await render(may(15, 11, 10), saved=(OPEN_SPACE, "9072"))
     (mine,) = shown.listed("now.next.session.")  # one of the two, in the card
     (other,) = {OPEN_SPACE, "9072"} - {mine}
@@ -508,6 +536,7 @@ async def test_saved_sessions_come_first_in_happening_now(
 async def test_each_session_on_shows_and_says_how_much_has_passed(
     render: Callable[..., Any],
 ) -> None:
+    """Each session on has a bar and says the percent elapsed; Up next has neither."""
     shown = await render(may(15, 11, 10))
     talk = shown.node("now.session.4")  # 11:00-11:30: 10 of 30 minutes
     assert str(talk.label).endswith(" 33 percent elapsed.")
@@ -525,6 +554,7 @@ async def test_each_session_on_shows_and_says_how_much_has_passed(
 async def test_between_two_slots_it_says_nothing_is_on(
     render: Callable[..., Any],
 ) -> None:
+    """Between two slots, Happening now says "Nothing in session right now"."""
     shown = await render(may(15, 7, 45))  # registration opened at 7:30 (a notice)
     assert shown.headings() == [
         "Your next session",
@@ -537,6 +567,7 @@ async def test_between_two_slots_it_says_nothing_is_on(
 async def test_before_a_day_starts_it_shows_what_is_first_up(
     render: Callable[..., Any],
 ) -> None:
+    """Before a day starts, the header says when it does, and Up next lists it."""
     shown = await render(may(15, 6))
     assert "First up today at 7:30 AM" in header(shown)
     assert shown.headings() == ["Your next session", "Up next · 7:30 AM"]
@@ -545,6 +576,7 @@ async def test_before_a_day_starts_it_shows_what_is_first_up(
 async def test_after_a_day_it_wraps_up_and_points_at_tomorrow(
     render: Callable[..., Any],
 ) -> None:
+    """After a day ends, Now says it is a wrap, and Up next names tomorrow."""
     shown = await render(may(15, 21))
     assert "That's a wrap for today" in header(shown)
     assert shown.headings() == ["Your next session", "Up next · tomorrow at 7:00 AM"]
@@ -568,6 +600,7 @@ async def test_in_the_evening_saved_sessions_are_for_a_later_day(
 async def test_after_the_last_session_the_sprints_are_next(
     render: Callable[..., Any],
 ) -> None:
+    """After the last session and on sprint days, Now shows the sprints' tile alone."""
     for now in (may(17, 21), may(18, 10)):
         shown = await render(now)
         assert shown.headings() == []
@@ -581,8 +614,11 @@ async def test_after_the_last_session_the_sprints_are_next(
 async def test_in_the_last_slot_of_the_conference_the_schedule_is_still_linked(
     render: Callable[..., Any], data: ConferenceData
 ) -> None:
-    """Without Sunday's 8 PM notice, the 5:05 PM Closing is the last slot: no Up next,
-    but the day still runs, so the card's tile and the Schedule link stay."""
+    """In the conference's last slot, the card's tile and the Schedule link stay.
+
+    Without Sunday's 8 PM notice, the 5:05 PM Closing is the last slot: there is no Up
+    next, but the day still runs.
+    """
     sunday = data.days[-1]
     trimmed = replace(
         data, days=(*data.days[:-1], replace(sunday, groups=sunday.groups[:-1]))
@@ -600,6 +636,7 @@ async def test_in_the_last_slot_of_the_conference_the_schedule_is_still_linked(
 async def test_after_the_sprints_it_says_see_you_next_year(
     render: Callable[..., Any],
 ) -> None:
+    """After the sprints, Now says see you next year and links back to the schedule."""
     shown = await render(may(25, 10))
     assert header(shown).startswith("PyCon US 2026. See you next year.")
     assert not shown.has("now.sprints")
@@ -612,6 +649,7 @@ async def test_after_the_sprints_it_says_see_you_next_year(
 async def test_your_next_session_is_the_saved_one_due_with_its_star_and_room(
     render: Callable[..., Any],
 ) -> None:
+    """The card holds the saved session due next, with its star, status and room."""
     shown = await render(may(16, 9), saved=(TALK,))  # it starts in 1 h 30 min
     (card,) = [c for c in shown.all() if isinstance(c, ft.Card)]
     assert shown.listed("now.next.session.") == [TALK]
@@ -657,6 +695,7 @@ async def test_the_card_s_status_is_a_stop_of_its_own(
 async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
     render: Callable[..., Any],
 ) -> None:
+    """A saved session on is in the card, with its bar, and not in Happening now."""
     shown = await render(may(15, 11, 10), saved=(OPEN_SPACE,))
     assert shown.listed("now.next.session.") == [OPEN_SPACE]
     card = shown.node(f"now.next.session.{OPEN_SPACE}")
@@ -680,6 +719,7 @@ async def test_your_next_session_is_not_repeated_in_up_next(
 async def test_up_next_lists_the_rest_of_its_slot_but_your_session(
     render: Callable[..., Any],
 ) -> None:
+    """Up next lists the rest of its slot, without the saved session in the card."""
     shown = await render(may(15, 10, 50), saved=("4",))
     assert shown.listed("now.next.session.") == ["4"]
     assert "Up next · 11:00 AM" in shown.headings()
@@ -711,6 +751,7 @@ async def test_when_only_your_session_is_on_the_card_says_so(
 async def test_with_nothing_saved_it_says_how_to_save_a_session(
     render: Callable[..., Any],
 ) -> None:
+    """With nothing saved, the card's tile says how to save a session."""
     shown = await render(may(16, 9))
     tile = shown.node("now.next_session")
     assert _texts(tile)[:2] == [
@@ -722,6 +763,7 @@ async def test_with_nothing_saved_it_says_how_to_save_a_session(
 async def test_with_nothing_saved_soon_it_points_at_my_schedule(
     render: Callable[..., Any],
 ) -> None:
+    """With nothing saved for 3 hours, the tile says so and opens My schedule."""
     shown = await render(may(15, 9), saved=(TALK,))  # tomorrow
     tile = shown.node("now.next_session")
     assert _texts(tile)[0] == "Nothing saved for the next 3 hours"
@@ -748,6 +790,7 @@ async def test_a_row_pushes_its_session_over_now(
 async def test_a_minute_moves_the_bars_and_re_renders_only_their_rows(
     render: Callable[..., Any],
 ) -> None:
+    """A minute's tick moves the bars and re-renders only the rows on now (D-153)."""
     shown = await render(may(15, 11, 10))
     shown.rows.clear()
     await shown.at(may(15, 11, 11))
@@ -759,6 +802,7 @@ async def test_a_minute_moves_the_bars_and_re_renders_only_their_rows(
 async def test_the_minute_tick_turns_the_day_into_its_evening(
     render: Callable[..., Any],
 ) -> None:
+    """The minute tick turns the header from the day to its evening's wrap."""
     shown = await render(may(15, 19, 59))
     await shown.at(may(15, 21))
     assert "That's a wrap for today" in header(shown)
@@ -784,6 +828,7 @@ async def test_a_resume_recomputes_at_once(
 async def test_the_strip_refreshes_the_feed_while_now_shows(
     render: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Now's status strip refreshes the feed on its own while Now shows (D-175)."""
     strips: list[bool] = []
 
     def strip(*, auto_refresh: bool = False) -> ft.Control:
@@ -802,6 +847,7 @@ async def test_the_strip_refreshes_the_feed_while_now_shows(
 async def test_without_data_it_shows_the_skeleton_until_the_first_fetch_fails(
     render: Callable[..., Any],
 ) -> None:
+    """With no data, Now shows a skeleton while loading, then the fetch's error."""
     loading = await render(may(15, 11, 10), conference=Conference())
     assert any(
         isinstance(c, ft.Semantics) and c.label == "Loading schedule"

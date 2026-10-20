@@ -47,6 +47,7 @@ def embedded(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def snack_text(page: FakePage) -> str:
+    """The text of the one SnackBar shown, which floats."""
     (dialog,) = page.dialogs
     assert isinstance(dialog, ft.SnackBar)
     assert dialog.behavior == ft.SnackBarBehavior.FLOATING
@@ -55,10 +56,12 @@ def snack_text(page: FakePage) -> str:
 
 
 def fail(event: object) -> None:
+    """A handler that raises ``ValueError("bad value")``."""
     raise ValueError("bad value")
 
 
 async def fail_async(event: object) -> None:
+    """An async handler that raises ``ValueError("bad value")`` after a yield."""
     await asyncio.sleep(0)
     raise ValueError("bad value")
 
@@ -69,6 +72,10 @@ async def fail_async(event: object) -> None:
 def test_a_sync_handler_that_raises_is_logged_with_its_traceback_and_returns_none(
     page: FakePage, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A raising sync handler returns None and logs an error naming it, with traceback.
+
+    The traceback carries the exception's text.
+    """
     assert report_errors(fail)(object()) is None
 
     (record,) = [r for r in caplog.records if r.name == errors.__name__]
@@ -82,6 +89,10 @@ def test_a_sync_handler_that_raises_is_logged_with_its_traceback_and_returns_non
 async def test_an_async_handler_that_raises_is_logged_with_its_traceback_and_returns_none(
     page: FakePage, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A raising async handler returns None and logs an error naming it, with traceback.
+
+    The logged exception is the handler's ``ValueError``.
+    """
     assert await report_errors(fail_async)(object()) is None
 
     (record,) = [r for r in caplog.records if r.name == errors.__name__]
@@ -93,6 +104,7 @@ async def test_an_async_handler_that_raises_is_logged_with_its_traceback_and_ret
 def test_a_caught_error_tells_the_user_without_details_in_a_packaged_build(
     page: FakePage, embedded: None
 ) -> None:
+    """In a packaged build, a caught error shows "Something went wrong" alone."""
     report_errors(fail)(object())
     assert snack_text(page) == "Something went wrong"
 
@@ -100,6 +112,7 @@ def test_a_caught_error_tells_the_user_without_details_in_a_packaged_build(
 async def test_an_async_caught_error_tells_the_user_too(
     page: FakePage, embedded: None
 ) -> None:
+    """In a packaged build, a caught async error shows the same plain message."""
     await report_errors(fail_async)(object())
     assert snack_text(page) == MESSAGE
 
@@ -107,6 +120,7 @@ async def test_an_async_caught_error_tells_the_user_too(
 def test_a_caught_error_shows_the_exception_when_not_embedded(
     page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Outside a packaged build, the message adds the exception's type and text."""
     monkeypatch.setattr(errors, "is_embedded", lambda: False)
     report_errors(fail)(object())
     assert snack_text(page) == "Something went wrong: ValueError: bad value"
@@ -115,6 +129,7 @@ def test_a_caught_error_shows_the_exception_when_not_embedded(
 def test_a_packaged_build_shows_the_exception_once_developer_is_unlocked(
     page: FakePage, embedded: None
 ) -> None:
+    """In a packaged build, unlocking Developer adds the exception; locking drops it."""
     errors.show_details(True)  # bootstrap() and the unlock in About this app (D-187)
     report_errors(fail)(object())
     errors.show_details(False)  # #107's Reset app locks it again
@@ -129,6 +144,11 @@ def test_a_packaged_build_shows_the_exception_once_developer_is_unlocked(
 def test_a_handler_that_succeeds_returns_its_value_and_shows_nothing(
     page: FakePage, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A sync handler that succeeds gets its arguments and returns its value.
+
+    Nothing is shown or logged.
+    """
+
     def cleanup() -> None:
         pass
 
@@ -142,6 +162,8 @@ def test_a_handler_that_succeeds_returns_its_value_and_shows_nothing(
 
 
 async def test_an_async_handler_that_succeeds_returns_its_value(page: FakePage) -> None:
+    """An async handler that succeeds returns its value and shows nothing."""
+
     async def handler(a: int) -> int:
         return a + 1
 
@@ -152,6 +174,8 @@ async def test_an_async_handler_that_succeeds_returns_its_value(page: FakePage) 
 async def test_cancelled_error_is_re_raised_and_not_reported(
     page: FakePage, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A ``CancelledError`` from a handler is raised again, neither shown nor logged."""
+
     async def cancelled() -> None:
         raise asyncio.CancelledError
 
@@ -164,6 +188,7 @@ async def test_cancelled_error_is_re_raised_and_not_reported(
 async def test_cancelling_a_wrapped_effect_task_still_cancels_it(
     page: FakePage,
 ) -> None:
+    """Cancelling a wrapped effect's task, as Flet does, cancels it; nothing shows."""
     started = asyncio.Event()
 
     async def effect() -> None:
@@ -180,6 +205,8 @@ async def test_cancelling_a_wrapped_effect_task_still_cancels_it(
 
 
 def test_base_exceptions_other_than_exception_pass_through(page: FakePage) -> None:
+    """A ``KeyboardInterrupt`` passes through the net, and nothing is shown."""
+
     def interrupted() -> None:
         raise KeyboardInterrupt
 
@@ -189,6 +216,11 @@ def test_base_exceptions_other_than_exception_pass_through(page: FakePage) -> No
 
 
 def test_the_wrapper_keeps_what_flet_reads_to_call_a_handler() -> None:
+    """The wrapper keeps the handler's async-ness, parameter count, name and doc.
+
+    ``inspect.unwrap`` also finds the handler behind it.
+    """
+
     async def no_args() -> None:
         pass
 
@@ -209,6 +241,8 @@ def test_the_wrapper_keeps_what_flet_reads_to_call_a_handler() -> None:
 
 
 def test_generator_functions_are_refused_when_wrapped() -> None:
+    """Wrapping a generator or an async generator function raises ``TypeError``."""
+
     def generator():
         yield
 
@@ -224,7 +258,11 @@ def test_generator_functions_are_refused_when_wrapped() -> None:
 def test_an_error_with_no_page_to_show_it_on_is_still_logged(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    # No page in the context: ft.context.page raises, as in a replaced session (F30).
+    """An error with no page to show it on is logged, then the failure to show it.
+
+    No page is in the context: ``ft.context.page`` raises, as in a replaced session
+    (F30).
+    """
     assert report_errors(fail)(object()) is None
 
     messages = [r.getMessage() for r in caplog.records]
@@ -250,8 +288,11 @@ builder, not a handler, so review checks that module's wrapping instead.
 
 @pytest.mark.parametrize("path", NETTED, ids=lambda p: p.name)
 def test_every_handler_and_effect_a_screen_defines_is_wrapped(path: Path) -> None:
-    # Screens, the route table and main() define functions only to hand them to Flet as
-    # handlers or effects, so one without the net would end the session when it raises.
+    """Every function nested in a netted module is decorated with ``report_errors``.
+
+    Screens, the route table and main() define functions only to hand them to Flet as
+    handlers or effects, so one without the net would end the session when it raises.
+    """
     tree = ast.parse(path.read_text(encoding="utf-8"))
     unwrapped = [
         f"{outer.name}.{inner.name}"
@@ -272,6 +313,7 @@ def test_every_handler_and_effect_a_screen_defines_is_wrapped(path: Path) -> Non
 
 
 def ours(root: logging.Logger) -> list[logging.Handler]:
+    """The handlers on ``root`` that ``setup_logging()`` added."""
     return [h for h in root.handlers if h.get_name() == HANDLER_NAME]
 
 
@@ -304,6 +346,7 @@ def clean_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[logging.Logger]:
 def test_setup_logging_adds_one_stderr_handler_at_info(
     clean_logging: logging.Logger,
 ) -> None:
+    """Setting up logging twice adds one stderr handler and sets the root to INFO."""
     setup_logging()
     setup_logging()  # a second call adds no handler
 
@@ -316,6 +359,7 @@ def test_setup_logging_adds_one_stderr_handler_at_info(
 def test_a_second_setup_logging_call_keeps_the_levels_set_since(
     clean_logging: logging.Logger,
 ) -> None:
+    """A second setup keeps the levels set on the root and httpx since the first."""
     setup_logging()
     clean_logging.setLevel(logging.DEBUG)
     logging.getLogger("httpx").setLevel(logging.INFO)
@@ -329,6 +373,7 @@ def test_a_second_setup_logging_call_keeps_the_levels_set_since(
 def test_log_lines_carry_the_time_level_logger_and_message(
     clean_logging: logging.Logger,
 ) -> None:
+    """A log line reads ``HH:MM:SS.mmm LEVEL logger: message``."""
     setup_logging()
     (handler,) = ours(clean_logging)
     record = logging.LogRecord(
@@ -350,6 +395,7 @@ def test_flet_log_level_sets_the_level(
     value: str,
     level: int,
 ) -> None:
+    """The ``FLET_LOG_LEVEL`` variable sets the root's level; an unknown one is INFO."""
     monkeypatch.setenv("FLET_LOG_LEVEL", value)  # flet run -v / -vv
     setup_logging()
     assert clean_logging.level == level
@@ -358,6 +404,10 @@ def test_flet_log_level_sets_the_level(
 async def test_request_urls_with_personal_data_stay_out_of_the_log(
     clean_logging: logging.Logger, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Once set up, httpx logs no request URL, so its key, email and code stay out.
+
+    The quiet loggers are at WARNING.
+    """
     secret = "s3cr3t-key"
     email = "attendee@example.org"
     badge = "B4DGE-CODE"
@@ -385,9 +435,12 @@ async def test_request_urls_with_personal_data_stay_out_of_the_log(
 def test_an_email_address_never_reaches_the_shared_log(
     clean_logging: logging.Logger,
 ) -> None:
-    # A line can quote what the app does not control: a platform error that repeats a
-    # mailto: intent (D-182), or a skipped feed record. console.log, which Share log
-    # sends, holds what this handler writes (D-72, D-196).
+    """The handler writes each email address as ``<email>``, tracebacks included.
+
+    A line can quote what the app does not control: a platform error that repeats a
+    mailto: intent (D-182), or a skipped feed record. console.log, which Share log
+    sends, holds what this handler writes (D-72, D-196).
+    """
     setup_logging()
     (handler,) = ours(clean_logging)
     written = io.StringIO()
@@ -411,4 +464,5 @@ def test_an_email_address_never_reaches_the_shared_log(
     ["@ft.component", "flet@1.1.0", "https://fosstodon.org/@pycon", "user@localhost"],
 )
 def test_text_that_is_not_an_address_is_kept(text: str) -> None:
+    """Text with an ``@`` that is not an email address is kept as it is."""
     assert errors.EMAIL.sub(errors.REDACTED_EMAIL, text) == text

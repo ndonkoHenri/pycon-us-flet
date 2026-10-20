@@ -24,6 +24,7 @@ INFO = load_year(2026).conference
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
+    """A fake page, bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -58,6 +59,10 @@ def choose(picker: ft.DatePicker | ft.TimePicker, value: object) -> None:
 def test_the_pickers_open_on_the_field_s_moment_in_conference_time(
     page: FakePage, text: str, day: date, at: time
 ) -> None:
+    """The pickers open on the field's moment in Pacific Time, else the first morning.
+
+    The day picker spans 2025 to 2027; the time picker it opens shows the field's time.
+    """
     day_picker = open_pickers(page, text, [])
     assert day_picker.value == day
     assert day_picker.first_date == date(2025, 1, 1)
@@ -71,6 +76,10 @@ def test_the_pickers_open_on_the_field_s_moment_in_conference_time(
 def test_the_picked_day_and_time_are_handed_on_in_conference_time(
     page: FakePage, machine_tz: str
 ) -> None:
+    """In any machine zone, a picked day and time reach ``on_pick`` in Pacific Time.
+
+    The time picker's help text names Pacific Time too.
+    """
     picked: list[datetime] = []
     day_picker = open_pickers(page, "", picked)
     # Flutter reports the device's local midnight of the day, in UTC.
@@ -83,6 +92,7 @@ def test_the_picked_day_and_time_are_handed_on_in_conference_time(
 
 
 def test_a_dismissed_picker_picks_nothing(page: FakePage) -> None:
+    """Dismissing either picker picks nothing; a dismissed day opens no time picker."""
     picked: list[datetime] = []
     choose(open_pickers(page, "", picked), None)
     assert len(page.dialogs) == 1  # no time picker
@@ -94,6 +104,7 @@ def test_a_dismissed_picker_picks_nothing(page: FakePage) -> None:
 
 
 def test_a_picked_day_is_the_device_s_day(machine_tz: str) -> None:
+    """A pick reported as the device's midnight in UTC, or as a date, is that date."""
     local_midnight = datetime(2026, 5, 15).astimezone()
     assert picked_date(local_midnight.astimezone(UTC)) == date(2026, 5, 15)
     assert picked_date(date(2026, 5, 15)) == date(2026, 5, 15)

@@ -28,6 +28,7 @@ def document(year: int) -> dict[str, Any]:
 
 
 def settings(year: int) -> FeedSettings:
+    """The feed settings from ``year``'s year data."""
     return load_year(year).feed_settings
 
 

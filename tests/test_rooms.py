@@ -25,14 +25,17 @@ pytestmark = pytest.mark.usefixtures("machine_tz")  # D-43: two machine zones
 
 @pytest.fixture
 def data() -> ConferenceData:
-    return processed(2026)  # again in each machine zone
+    """The recorded 2026 feed, processed again in each machine zone."""
+    return processed(2026)
 
 
 def at(month: int, day: int, hour: int, minute: int = 0) -> datetime:
+    """That time in 2026, in Pacific Time."""
     return datetime(2026, month, day, hour, minute, tzinfo=PACIFIC)
 
 
 def entry(listing: RoomList, slug: str) -> RoomEntry:
+    """The one entry, room or other location, with that slug."""
     (found,) = [
         e for e in (*listing.rooms, *listing.other_locations) if e.room.slug == slug
     ]
@@ -40,12 +43,14 @@ def entry(listing: RoomList, slug: str) -> RoomEntry:
 
 
 def on_now(listing: RoomList, slug: str) -> list[str]:
+    """The names of the sessions on now in the place with that slug."""
     return [session.name for session in entry(listing, slug).on_now]
 
 
 def test_rooms_are_in_natural_order_and_every_room_is_listed_once(
     data: ConferenceData,
 ) -> None:
+    """Rooms are in natural order, numbers by value, and each place is listed once."""
     listing = room_list(data, at(5, 15, 11, 10), OTHERS)
     names = [e.room.name for e in listing.rooms]
     assert names == sorted(names, key=room_sort_key)
@@ -60,6 +65,7 @@ def test_rooms_are_in_natural_order_and_every_room_is_listed_once(
 def test_the_places_that_are_not_rooms_are_other_locations(
     data: ConferenceData,
 ) -> None:
+    """The year's other locations are listed apart from the rooms, by name."""
     listing = room_list(data, at(5, 15, 11, 10), OTHERS)
     assert [e.room.name for e in listing.other_locations] == [
         "Elsewhere",
@@ -72,6 +78,7 @@ def test_the_places_that_are_not_rooms_are_other_locations(
 def test_other_locations_match_by_slug_and_ignore_names_no_room_has(
     data: ConferenceData,
 ) -> None:
+    """Other locations match places by slug, and a name no place has is left out."""
     listing = room_list(
         data, at(5, 15, 11), ["LOBBY", "out front of hyatt-regency", "Moon"]
     )
@@ -82,6 +89,7 @@ def test_other_locations_match_by_slug_and_ignore_names_no_room_has(
 
 
 def test_without_other_locations_every_place_is_a_room(data: ConferenceData) -> None:
+    """Without other locations, every place in the feed is listed as a room."""
     listing = room_list(data, at(5, 15, 11), ())
     assert listing.other_locations == ()
     assert len(listing.rooms) == len(data.rooms)
@@ -90,6 +98,7 @@ def test_without_other_locations_every_place_is_a_room(data: ConferenceData) -> 
 def test_every_listed_other_location_is_a_place_in_the_recorded_feed(
     data: ConferenceData,
 ) -> None:
+    """Every other location in the 2026 year data is a place in the recorded feed."""
     listing = room_list(data, at(5, 15, 11), OTHERS)
     assert len(listing.other_locations) == len(OTHERS)
 
@@ -105,6 +114,7 @@ def test_every_listed_other_location_is_a_place_in_the_recorded_feed(
 def test_outside_the_conference_s_sessions_nothing_is_on(
     data: ConferenceData, now: datetime
 ) -> None:
+    """Before the tutorials, on sprint days and weeks after, nothing is on anywhere."""
     listing = room_list(data, now, OTHERS)
     assert all(not e.on_now for e in (*listing.rooms, *listing.other_locations))
 
@@ -112,6 +122,7 @@ def test_outside_the_conference_s_sessions_nothing_is_on(
 def test_a_session_is_on_in_its_room_from_its_start_until_its_end(
     data: ConferenceData,
 ) -> None:
+    """A session is on in its room from its start up to, not including, its end."""
     assert on_now(room_list(data, at(5, 15, 10, 59), OTHERS), "room-103abc") == [
         "Break"
     ]
@@ -124,12 +135,14 @@ def test_a_session_is_on_in_its_room_from_its_start_until_its_end(
 
 
 def test_a_session_in_several_rooms_is_on_in_each(data: ConferenceData) -> None:
+    """A session in several rooms, like the Lightning Talks, is on in each of them."""
     listing = room_list(data, at(5, 16, 8, 30), OTHERS)
     for slug in ("room-103abc", "room-104ab", "room-104c", "grand-ballroom-a"):
         assert on_now(listing, slug) == ["Lightning Talks"]
 
 
 def test_the_session_that_started_last_comes_first(data: ConferenceData) -> None:
+    """Of a room's sessions on, the one that started last comes first."""
     listing = room_list(data, at(5, 16, 16, 30), OTHERS)
     assert on_now(listing, "room-102c") == [
         "Organizing IRL meetups",  # 4:00 PM
@@ -138,6 +151,7 @@ def test_the_session_that_started_last_comes_first(data: ConferenceData) -> None
 
 
 def test_poster_details_stay_inside_their_posters_row(data: ConferenceData) -> None:
+    """Poster details are not listed apart from their Posters row in the hall."""
     listing = room_list(data, at(5, 17, 10, 30), OTHERS)
     hall = entry(listing, "expo-hall-ab").on_now
     assert "Posters" in [session.name for session in hall]
@@ -147,12 +161,14 @@ def test_poster_details_stay_inside_their_posters_row(data: ConferenceData) -> N
 
 
 def test_now_may_be_in_any_zone(data: ConferenceData) -> None:
+    """The same instant in Pacific Time or UTC finds the same sessions on."""
     pacific = room_list(data, at(5, 15, 11, 10), OTHERS)
     utc = room_list(data, at(5, 15, 11, 10).astimezone(ZoneInfo("UTC")), OTHERS)
     assert on_now(pacific, "room-103abc") == on_now(utc, "room-103abc")
 
 
 def test_a_naive_now_is_refused(data: ConferenceData) -> None:
+    """A naive ``now`` is refused with ``ValueError``."""
     with pytest.raises(ValueError, match="aware"):
         room_list(data, datetime(2026, 5, 15, 11), OTHERS)  # noqa: DTZ001
 
@@ -161,6 +177,7 @@ def test_a_naive_now_is_refused(data: ConferenceData) -> None:
     ("count", "line"), [(0, "0 sessions"), (1, "1 session"), (26, "26 sessions")]
 )
 def test_the_count_line_agrees_with_its_number(count: int, line: str) -> None:
+    """The count line says "session" for one and "sessions" otherwise, 0 included."""
     assert session_count(count) == line
 
 
@@ -200,14 +217,17 @@ def test_one_room_s_now_follows_the_session_s_start_and_end(
 def test_in_one_room_the_session_that_started_last_comes_first(
     data: ConferenceData,
 ) -> None:
+    """In one room's now, the session that started last comes first."""
     on = room_now(data, "room-102c", at(5, 16, 16, 30))
     assert [s.name for s in on] == ["Organizing IRL meetups", "Board Games Prt. 2"]
 
 
 def test_a_room_the_feed_lacks_has_nothing_on(data: ConferenceData) -> None:
+    """A room slug the feed lacks has nothing on."""
     assert room_now(data, "no-such-room", at(5, 15, 11, 10)) == ()
 
 
 def test_one_room_s_now_refuses_a_naive_now(data: ConferenceData) -> None:
+    """One room's now refuses a naive ``now`` with ``ValueError``."""
     with pytest.raises(ValueError, match="aware"):
         room_now(data, "room-103abc", datetime(2026, 5, 15, 11))  # noqa: DTZ001

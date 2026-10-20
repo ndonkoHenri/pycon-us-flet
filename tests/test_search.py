@@ -29,6 +29,7 @@ ZONE = ZoneInfo("America/Los_Angeles")
 
 
 def at(day: int, hour: int, minute: int = 0) -> datetime:
+    """That time on that day of May 2026, in Pacific Time."""
     return datetime(2026, 5, day, hour, minute, tzinfo=ZONE)
 
 
@@ -98,6 +99,7 @@ def _schedule_order(session: Session) -> tuple[object, ...]:
 
 
 def ids(results: SearchResults) -> list[str]:
+    """The ids of the sessions found, in the order shown."""
     return [session.id for day in results.sessions for session in day.sessions]
 
 
@@ -142,7 +144,10 @@ def test_the_query_is_folded_like_the_index() -> None:
 
 
 def test_curly_quotes_and_dashes_in_a_query_match_straight_ones() -> None:
-    """iOS's smart punctuation turns ' into ’ and -- into —; the feeds mix both."""
+    """Curly quotes and dashes in a query match the straight ones in the text.
+
+    iOS's smart punctuation turns ' into ’ and -- into —; the feeds mix both.
+    """
     index = search_index(
         model(
             [
@@ -159,6 +164,7 @@ def test_curly_quotes_and_dashes_in_a_query_match_straight_ones() -> None:
 
 @pytest.mark.parametrize("query", ["", " ", "\t\n", "\u00a0", "\u00ad", "\u200b"])
 def test_an_empty_or_blank_query_finds_nothing(query: str) -> None:
+    """A query that is empty, or only blank or invisible characters, finds nothing."""
     assert search(search_index(TYPING), query) == SearchResults()
 
 
@@ -238,6 +244,7 @@ def test_results_are_grouped_by_type() -> None:
 def test_the_scope_limits_the_types(
     scope: str, sessions: int, speakers: int, rooms: int
 ) -> None:
+    """A scope limits the results to its type; "all" finds every type."""
     data = model(
         [talk("1", "Hall talk", at(14, 10))], speakers=["Ann Hall"], rooms=["Hall A"]
     )
@@ -247,6 +254,7 @@ def test_the_scope_limits_the_types(
 
 
 def test_an_unknown_scope_is_an_error() -> None:
+    """An unknown scope raises ``ValueError`` naming it."""
     with pytest.raises(ValueError, match="sponsors"):
         search(search_index(TYPING), "python", "sponsors")
 
@@ -263,6 +271,7 @@ def test_results_are_frozen_values_equal_for_the_same_matches() -> None:
 
 
 def test_building_the_index_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    """Building the index logs its time and its session, speaker and room counts."""
     with caplog.at_level(logging.INFO, logger="pycon_us.core.search"):
         search_index(TYPING)
     [record] = caplog.records
@@ -347,8 +356,11 @@ def in_common_order[T](
 @pytest.mark.parametrize("year", YEARS)
 @pytest.mark.parametrize("query", ["e", "python"])
 def test_search_lists_a_day_as_the_schedule_queries_do(year: int, query: str) -> None:
-    """One session order (D-178): a day's matches come as its track pages list them,
-    and each slot's as the Schedule lists the slot."""
+    """Search orders a day's matches as the track pages and the Schedule do (D-178).
+
+    One session order: a day's matches come as its track pages list them, and each
+    slot's as the Schedule lists the slot.
+    """
     data = processed(year)
     results = search(search_index(data), query)
     found = {group.day: group.sessions for group in results.sessions}
@@ -370,6 +382,7 @@ def test_search_lists_a_day_as_the_schedule_queries_do(year: int, query: str) ->
 def test_an_unaccented_query_finds_a_real_speaker_and_their_sessions(
     year: int, query: str, speaker: str
 ) -> None:
+    """An unaccented name finds its speaker in a real feed, and all their sessions."""
     data = processed(year)
     results = search(search_index(data), query)
     [found] = results.speakers
@@ -391,10 +404,12 @@ def test_a_pseudo_speaker_is_found_through_its_sessions_only() -> None:
 
 
 def _ids(results: SearchResults) -> list[str]:
+    """The ids of the sessions in ``results``, in the order shown."""
     return [s.id for day in results.sessions for s in day.sessions]
 
 
 def test_the_first_rows_keep_the_order_and_cut_the_last_day_shown() -> None:
+    """The first rows keep the order, cut only the last day shown, and keep rooms."""
     found = search(search_index(processed(2026)), "p")
     assert found.session_count > 60 and len(found.speakers) > 20  # a broad query
     first = first_results(found, sessions=60, speakers=20)
@@ -410,6 +425,7 @@ def test_the_first_rows_keep_the_order_and_cut_the_last_day_shown() -> None:
 
 
 def test_a_cut_on_a_day_boundary_leaves_no_empty_day() -> None:
+    """A cut at the end of a day leaves no empty day after it and reuses that day."""
     found = search(search_index(processed(2026)), "p")
     first_day = len(found.sessions[0].sessions)
     first = first_results(found, sessions=first_day, speakers=None)
@@ -428,6 +444,7 @@ def test_results_within_the_limits_are_the_same_object() -> None:
 
 
 def test_each_type_is_cut_on_its_own() -> None:
+    """Sessions and speakers are cut on their own limits; None leaves a type whole."""
     broad = search(search_index(processed(2026)), "a")
     sessions_only = first_results(broad, sessions=5, speakers=None)
     assert _ids(sessions_only) == _ids(broad)[:5]
