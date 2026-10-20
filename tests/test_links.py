@@ -1,9 +1,9 @@
 """Tests for the link rule (INFO-14, ux.md §4.7): ``ui.links``.
 
-What a target is and how it opens, Copy for phone numbers and addresses, and how a
-failure is said and logged. The helpers run with a fake page bound as Flet binds a
-session's page and the in-memory launcher and clipboard (``tests/fakes.py``); the rows
-that use them are tested in ``test_rows.py``.
+What a target is and how it opens, Copy for phone numbers, addresses and any other
+text (``copy_text()``, D-263), and how a failure is said and logged. The helpers run
+with a fake page bound as Flet binds a session's page and the in-memory launcher and
+clipboard (``tests/fakes.py``); the rows that use them are tested in ``test_rows.py``.
 """
 
 import logging
@@ -25,6 +25,7 @@ from pycon_us.ui.links import (
     LinkKind,
     contact_of,
     copy_contact,
+    copy_text,
     external,
     feed_link,
     feed_markdown,
@@ -439,7 +440,7 @@ async def test_a_copy_that_fails_says_what_was_not_copied_and_logs_no_address(
     target: str,
     message: str,
 ) -> None:
-    """A failed copy says what was not copied and logs its kind, never the contact."""
+    """A failed copy says what was not copied and logs that, never the contact."""
     page.platform = ft.PagePlatform.ANDROID  # a failure is said on every platform
     page.device = android_device(34)
     # What Flet raises when the Flutter side does not answer: the call's arguments.
@@ -450,9 +451,61 @@ async def test_a_copy_that_fails_says_what_was_not_copied_and_logs_no_address(
         await copy_contact(svc, target)
     assert said(page) == [message]
     assert contact_of(target) not in caplog.text
-    assert [r.getMessage() for r in caplog.records] == [
-        f"Could not copy the {link_kind(target).value} link: TimeoutError"
-    ]
+    assert [r.getMessage() for r in caplog.records] == [f"{message}: TimeoutError"]
+
+
+PASSWORD = "pyconLB2026"
+COPIED = "Password copied"
+FAILED = "Couldn't copy the password"
+
+
+async def test_a_text_copy_puts_the_text_on_the_clipboard_and_says_so(
+    page: FakePage, svc: Services
+) -> None:
+    """``copy_text()`` copies the text as given and confirms it once, in its words."""
+    await copy_text(svc, PASSWORD, COPIED, FAILED)
+    assert clipboard(svc).value == PASSWORD
+    assert said(page) == [COPIED]
+
+
+@pytest.mark.parametrize(("sdk", "messages"), [(32, [COPIED]), (33, []), (36, [])])
+async def test_a_text_copy_leaves_the_confirmation_to_android_13_and_later(
+    page: FakePage, svc: Services, sdk: int, messages: list[str]
+) -> None:
+    """On Android 13 and later only the system's overlay confirms a copy (ux.md §4.7).
+
+    Android 12 and earlier get the app's SnackBar, as iOS does.
+    """
+    page.platform = ft.PagePlatform.ANDROID
+    page.device = android_device(sdk)
+    await copy_text(svc, PASSWORD, COPIED, FAILED)
+    assert clipboard(svc).value == PASSWORD
+    assert said(page) == messages
+
+
+@pytest.mark.parametrize(
+    ("platform", "sdk"), [(ft.PagePlatform.IOS, None), (ft.PagePlatform.ANDROID, 34)]
+)
+async def test_a_failed_text_copy_says_so_and_logs_no_value(
+    page: FakePage,
+    svc: Services,
+    caplog: pytest.LogCaptureFixture,
+    platform: ft.PagePlatform,
+    sdk: int | None,
+) -> None:
+    """A failed copy says so on every platform; the log names it, never the value."""
+    page.platform = platform
+    page.device = android_device(sdk) if sdk else None
+    # What Flet raises when the Flutter side does not answer: the call's arguments.
+    clipboard(svc).error = TimeoutError(
+        f"Timeout waiting for invokeMethod set({{'data': '{PASSWORD}'}}) call"
+    )
+    with caplog.at_level(logging.WARNING):
+        await copy_text(svc, PASSWORD, COPIED, FAILED)
+    assert clipboard(svc).value != PASSWORD
+    assert said(page) == [FAILED]  # never "copied", even where the system confirms
+    assert PASSWORD not in caplog.text  # D-72
+    assert [r.getMessage() for r in caplog.records] == [f"{FAILED}: TimeoutError"]
 
 
 async def test_only_phone_and_email_links_copy(page: FakePage, svc: Services) -> None:

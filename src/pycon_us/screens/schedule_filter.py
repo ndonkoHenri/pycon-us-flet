@@ -32,7 +32,7 @@ from pycon_us.screens.schedule_sheet import (
 )
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.badges import NOT_SAVED, SNACK_BAR_MS, selection_click
+from pycon_us.ui.favorite import NOT_SAVED, SNACK_BAR_MS, selection_click
 from pycon_us.ui.semantics import named
 
 SCREEN = "schedule"

@@ -15,9 +15,11 @@ the way that kind opens.
   button beside it (``copy_contact()``): a simulator, an iPad or a phone without a mail
   account has nothing to hand off to, and without U6 the app cannot ask first.
 
-A failure says so in a SnackBar and is logged with the link's kind and the error's
-class only: a ``mailto:`` target holds an address, and the platform's error text
-repeats the target (D-72).
+Every copy goes through ``copy_text()``, which confirms it once and says when it fails.
+
+A failure says so in a SnackBar and is logged with the link's kind (for a copy, what
+was not copied) and the error's class only: a ``mailto:`` target holds an address, and
+the platform's error text repeats the target (D-72).
 
 A link in a feed text (a description, a bio) is what its author wrote, so
 ``feed_link()`` first says which web address it stands for, if any (D-197): only
@@ -295,8 +297,7 @@ def feed_markdown(
 async def copy_contact(svc: Services, target: str) -> None:
     """Copy a ``tel:`` or ``mailto:`` link's number or address, and say so.
 
-    The confirmation is the app's SnackBar, except on Android 13 and later, whose own
-    overlay already confirms every copy; a failure is said on every platform.
+    ``copy_text()`` with the words for a phone number or an email address.
 
     Args:
         svc: The session's services, for the clipboard.
@@ -308,17 +309,36 @@ async def copy_contact(svc: Services, target: str) -> None:
     kind = link_kind(target)
     if kind not in COPIED:
         raise ValueError(f"only phone and email links copy: {target!r}")
+    await copy_text(svc, contact_of(target), COPIED[kind], COPY_FAILED[kind])
+
+
+async def copy_text(svc: Services, text: str, copied: str, failed: str) -> None:
+    """Put ``text`` on the clipboard, and say once whether it worked (D-263).
+
+    The one way the app copies: a contact (``copy_contact()``), and the info pages'
+    values, such as the Wi-Fi password. A copy is confirmed by the app's SnackBar,
+    except on Android 13 and later, whose own overlay already confirms every copy
+    (ux.md §4.7), so the user hears it once. A failure is said on every platform, since
+    nothing else would tell the user the clipboard holds something else. The log names
+    what was not copied and the error's class, never the value, which the error's text
+    repeats (D-72).
+
+    Args:
+        svc: The session's services, for the clipboard.
+        text: What to copy: a password, a number, an address.
+        copied: The confirmation, naming what was copied: "Password copied".
+        failed: What a failure says and logs, naming what was not copied, never the
+            value itself: "Couldn't copy the password".
+    """
     try:
-        await svc.clipboard.set(contact_of(target))
+        await svc.clipboard.set(text)
     except SERVICE_ERRORS as error:
-        # The kind and the class only: the error's text repeats the address (D-72).
-        logger.warning(
-            "Could not copy the %s link: %s", kind.value, type(error).__name__
-        )
-        _say(COPY_FAILED[kind])
+        # Our words and the class only: the error's text repeats the value (D-72).
+        logger.warning("%s: %s", failed, type(error).__name__)
+        _say(failed)
         return
     if not await _system_confirms_copies():
-        _say(COPIED[kind])
+        _say(copied)
 
 
 async def _system_confirms_copies() -> bool:

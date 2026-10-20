@@ -210,6 +210,53 @@ class JobListing:
 
 
 @dataclass(frozen=True, eq=False)
+class Sponsor:
+    """A sponsor of the conference (DATA-22, SPON-02).
+
+    Attributes:
+        name: The name, as the feed gives it.
+        slug: Ionic's slug of the name (``slugs.sponsor_slug``): sponsors have no id, so
+            their routes and cross-links use it.
+        level: The level it is listed under, e.g. ``Visionary``.
+        level_order: Its level's place, from the feed: 0 is the top level.
+        logo_url: The logo's URL; empty when there is none.
+        description: Plain text, not HTML (SPON-03), its line breaks kept as line feeds.
+        booth: Its Expo Hall booth, e.g. ``613``; None when it has none.
+        job_fair_table: Its Job Fair table, e.g. ``T2``; None when it has none.
+        mobile_banner: Whether it may appear in Now's sponsor spotlight (SHELL-08).
+        external_url: Its website; None when the feed gives none, as the live feed
+            never has so far.
+    """
+
+    name: str
+    slug: str
+    level: str
+    level_order: int
+    logo_url: str
+    description: str
+    booth: str | None
+    job_fair_table: str | None
+    mobile_banner: bool
+    external_url: str | None = None
+
+
+@dataclass(frozen=True, eq=False)
+class SponsorLevel:
+    """One sponsorship level and its sponsors (DATA-22).
+
+    Attributes:
+        name: The level, e.g. ``Visionary``: the feed's key.
+        order: Its place among the levels: its first sponsor's ``level_order``, as Ionic
+            sorted them.
+        sponsors: Its sponsors, in feed order; never empty.
+    """
+
+    name: str
+    order: int
+    sponsors: tuple[Sponsor, ...]
+
+
+@dataclass(frozen=True, eq=False)
 class ConferenceData:
     """One processed feed: everything the screens show about the schedule.
 
@@ -230,6 +277,8 @@ class ConferenceData:
         content: The feed's ``conference.content`` HTML blocks by key, e.g. ``about`` or
             ``venues-hours`` (MAP-09 reads its sections).
         content_md: ``content`` as Markdown, by the same keys (D-130).
+        sponsor_levels: The sponsorship levels by ``order``, ties in feed order, each
+            with its sponsors (DATA-22): sorted once here, not by each screen.
     """
 
     sessions: Mapping[str, Session]
@@ -243,3 +292,4 @@ class ConferenceData:
     skipped: tuple[str, ...]
     content: Mapping[str, str]
     content_md: Mapping[str, str] = field(default_factory=dict)
+    sponsor_levels: tuple[SponsorLevel, ...] = ()
