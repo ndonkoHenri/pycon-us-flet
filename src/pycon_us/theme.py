@@ -7,8 +7,9 @@ bar style of D-113. ``Tokens`` holds the colours Material 3 has no role for (D-2
 track badges' tonal pairs among them (D-25), and
 ``MARKDOWN_STYLE`` is the one style sheet every feed text uses (D-116).
 
-The high-contrast schemes arrive in P2 (THEME-04, THEME-05); until then the
-``high_contrast`` flag selects the standard ones.
+The high-contrast schemes live in ``theme_hc.py`` (THEME-04, THEME-05); the
+``high_contrast`` flag selects them. Their tokens and outlines come with P2-60 (#420):
+until then ``build_tokens()`` gives the standard ones.
 """
 
 from collections.abc import Mapping
@@ -16,6 +17,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 
 import flet as ft
+
+from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 
 SEED = "#3B3EA9"
 """PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
@@ -101,24 +104,28 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
 
     Args:
         dark: Build the dark scheme instead of the light one.
-        high_contrast: Build the high-contrast variant. Ignored until P2 (THEME-04,
-            THEME-05): the standard scheme is returned.
+        high_contrast: Build the high-contrast variant (THEME-04, THEME-05), which sets
+            every role by hand (``theme_hc.py``); the rest of the theme is the same.
 
     Returns:
         A Material 3 theme; nothing in it depends on the platform except the page
         transitions (D-11).
     """
+    if high_contrast:
+        scheme = HC_DARK if dark else HC_LIGHT
+    else:
+        scheme = DARK_SCHEME if dark else LIGHT_SCHEME
     return ft.Theme(
         color_scheme_seed=SEED,
         surfaces=ft.ThemeSurfaces.NEUTRAL,
-        color_scheme=DARK_SCHEME if dark else LIGHT_SCHEME,
+        color_scheme=scheme,
         font_family=FONT_FAMILY,
         appbar_theme=ft.AppBarTheme(center_title=False),  # iOS would centre it (D-10)
         page_transitions=ft.PageTransitionsTheme(
             android=ft.PageTransitionTheme.PREDICTIVE,  # Android 14+ predictive Back
             ios=ft.PageTransitionTheme.CUPERTINO,  # keeps the iOS edge swipe (D-11)
         ),
-        system_overlay_style=overlay_style(dark=dark),
+        system_overlay_style=overlay_style(dark=dark, high_contrast=high_contrast),
         # A tall tile's icons beside its title's first line, not the middle of the
         # block (D-188); fold headers (ExpansionTile) have no setting of their own.
         list_tile_theme=ft.ListTileTheme(
@@ -127,7 +134,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     )
 
 
-def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
+def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:
     """Return the status- and navigation-bar style for a light or dark scheme (D-113).
 
     The icons contrast with the scheme. Navigation-bar contrast is not enforced: the
@@ -137,17 +144,26 @@ def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
     transparent one would show the window background, which a live dark-mode switch
     leaves in the old mode (D-151). Android 15 and later ignore that colour.
 
+    Flet resolves a role in this style against the seeded, neutralised scheme, before
+    the overrides apply (``parseTheme`` in Flet's ``utils/theme.dart``). The standard
+    schemes keep that ramp's ``surface_container``, so the role is the bar's colour;
+    the high-contrast ones replace it, so they name their own (D-265).
+
     Args:
         dark: The scheme is dark.
+        high_contrast: The scheme is a high-contrast one.
 
     Returns:
         The style for ``Theme.system_overlay_style``.
     """
     icons = ft.Brightness.LIGHT if dark else ft.Brightness.DARK
+    if high_contrast:
+        navigation_bar = (HC_DARK if dark else HC_LIGHT).surface_container
+    else:  # the NavigationBar's default fill
+        navigation_bar = ft.Colors.SURFACE_CONTAINER
     return ft.SystemOverlayStyle(
         status_bar_color=ft.Colors.TRANSPARENT,
-        # A role resolves against the seeded scheme: the NavigationBar's default fill.
-        system_navigation_bar_color=ft.Colors.SURFACE_CONTAINER,
+        system_navigation_bar_color=navigation_bar,
         status_bar_icon_brightness=icons,  # Android
         system_navigation_bar_icon_brightness=icons,  # Android
         status_bar_brightness=(  # iOS: the bar's background, so the opposite of icons
@@ -292,8 +308,8 @@ def build_tokens(*, dark: bool, high_contrast: bool) -> Tokens:
 
     Args:
         dark: The dark scheme.
-        high_contrast: The high-contrast variant; ignored until P2, like in
-            ``build_theme``.
+        high_contrast: The high-contrast variant; ignored until P2-60 (#420), which
+            gives high contrast tokens of its own.
 
     Returns:
         The scheme's tokens.
