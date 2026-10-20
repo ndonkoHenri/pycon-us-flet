@@ -38,7 +38,7 @@ the SnackBar's 250 ms entrance: a tap on Undo while the bar slides in misses it 
 the iOS simulator the first try tapped a bar 5 dp tall)."""
 
 REMOVED = "Removed from My schedule"
-"""The removal's SnackBar (``ui.badges.REMOVED``), written out as a person reads it."""
+"""The removal's SnackBar (``ui.favorite.REMOVED``), written out as a person reads it."""
 
 
 @cache

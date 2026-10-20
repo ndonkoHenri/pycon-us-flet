@@ -16,7 +16,7 @@ from pycon_us.config import ConferenceInfo
 from pycon_us.core.row_views import SessionView, by_slot
 from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.time_gutter import TimeSlot

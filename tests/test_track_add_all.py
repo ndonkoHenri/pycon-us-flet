@@ -22,7 +22,7 @@ from pycon_us.favorites import Change
 from pycon_us.screens import open_spaces
 from pycon_us.screens import track as screen
 from pycon_us.state import Conference
-from pycon_us.ui.badges import ALREADY_SAVED, NOT_SAVED, UNDO, added_feedback
+from pycon_us.ui.favorite import ALREADY_SAVED, NOT_SAVED, UNDO, added_feedback
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
 from tests.sessions import Shown, menu_text, settle, showing, text_of

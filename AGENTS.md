@@ -120,7 +120,9 @@ that date motivates us but never justifies cutting corners.
   light and dark when relevant), reviews (second opinion and Copilot), a pre-merge checklist (definition of done,
   docs and decision updates) and follow-ups. `gh pr create --body` doesn't fill it in: use its sections.
 - Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
-- CI must be green.
+- **Checks run locally while the repo is private** (D-273): GitHub Actions run only by hand. The pre-push hook runs
+  `tools/check.sh --fast` on every push that changes more than Markdown; run the full `tools/check.sh` before you
+  mark a PR ready and list it in the PR; the merge gate (`tools/gate.sh`) runs before every merge (below).
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
   stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
@@ -148,9 +150,14 @@ that date motivates us but never justifies cutting corners.
 
 - **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
   don't wait for approval. Merge only when all of these hold:
-  1. **Checks pass on the PR's latest commit.** Once CI exists, every check must be green: missing, pending,
-     skipped or cancelled checks don't count (the required checks are the `ci.yml` jobs listed in
-     `docs/development.md`). Until CI exists (P0-02), run the checks that apply locally and list them in the PR.
+  1. **Checks pass on what will land.** The merge gate (`tools/gate.sh <pr>`, D-273) ran the full checks on the PR
+     merged onto the latest `main` and posted its result on the PR; if `main` moved since, or the PR got a new
+     push, run it again. Run it with `GATE_SIGNATURE='_Written by <agent name> (AI agent)._'`, so its comments are
+     signed (rule 6). To merge several PRs in a row, gate them together in merge order (`tools/gate.sh <pr> <pr>`);
+     after the merges, `main`'s tree must equal the tree it printed last, else run `tools/check.sh` on `main`. When
+     the repo is public, GitHub's `ci.yml` checks return: every check must be green on the PR's latest commit, and
+     missing, pending, skipped or cancelled checks don't count (the required checks are the `ci.yml` jobs listed
+     in `docs/development.md`).
   2. **The definition of done is met**, and you have re-read the whole final diff yourself.
   3. **A second opinion, when required.** It is required when the PR changes more than 400 lines (not counting
      lockfiles, fixtures, generated files or data snapshots), changes the architecture (module structure, state,
@@ -162,8 +169,9 @@ that date motivates us but never justifies cutting corners.
   4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
      acknowledged; every owner comment has a reply.
   5. **No unsettled `needs-decision` question** affects the PR.
-- **A Copilot review** (D-103). On every PR that changes code or configuration, request one right after opening
-  it: `gh pr edit <n> --add-reviewer @copilot`. It arrives in about 5 to 15 minutes as a review by
+- **A Copilot review** (D-103) is **paused while the repo is private** (D-273): it uses Actions minutes too, and its
+  quota is used up. When it returns, request one on every PR that changes code or configuration, right after
+  opening it: `gh pr edit <n> --add-reviewer @copilot`. It arrives in about 5 to 15 minutes as a review by
   `copilot-pull-request-reviewer[bot]`, with inline comments by `Copilot`. Handle its comments before merging, like
   any reviewer's: fix, or reply on the thread with the reason and evidence. If nothing has arrived after about 20
   minutes, or the review only says the Copilot quota is used up, say so in the PR and go on. It never replaces the
@@ -258,3 +266,6 @@ After the merge: the PR is squash-merged under D-100, and the issue is closed (b
 Follow [`docs/development.md`](docs/development.md) §5.1 to go from a fresh clone to the app on an emulator or
 simulator. The guide also covers the Flet pin and its bumps, hot reload with the companion client, builds, signing,
 the mock server and CI. The test strategy is [`docs/testing-and-quality.md`](docs/testing-and-quality.md).
+
+Once per clone, turn on the pre-push hook (D-273), which every worktree of the clone shares:
+`git config core.hooksPath .githooks`.

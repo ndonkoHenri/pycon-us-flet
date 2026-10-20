@@ -17,7 +17,7 @@ from pycon_us.core.timefmt import day_heading, on_screen
 from pycon_us.locations import drill_href
 from pycon_us.screens.keynote_people import person_head
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.badges import FavoriteButton, ToggleFavorite
+from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.semantics import named, semantics_key
 from pycon_us.year_keynotes import Keynote, KeynoteSpeaker

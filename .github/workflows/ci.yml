@@ -1,17 +1,18 @@
-# Lint, type-check and test on every PR and push to main (D-84, docs/development.md §7.2).
-# The job name is a required check for merging (D-100): rename it only together with §7.2.
+# Lint, type-check and test (D-84, docs/development.md §7.2). While the repo is private it runs only by hand
+# (`gh workflow run ci.yml --ref <branch>`): the local checks and the merge gate replace it (D-273). The PR that
+# makes the repo public brings back its triggers, every PR and every push to main, and with them the job name as
+# the required check for merging (D-100): rename it only together with §7.2.
 name: CI
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:        # manual runs only while the repo is private (D-273)
 
 permissions:
   contents: read
 
-# A new push to a PR cancels that PR's older run. Pushes to main get a group of their own
-# (the run id): a shared group would let a newer push replace a pending run on main.
+# Manual runs only (D-273): each run has a group of its own (the run id). With the PR and main triggers back, a new
+# push to a PR cancels that PR's older run, and pushes to main keep a group of their own (the run id): a shared
+# group would let a newer push replace a pending run on main.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
