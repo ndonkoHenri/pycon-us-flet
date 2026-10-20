@@ -4,8 +4,10 @@ A section shows once its pages exist, so no row is dead. In P0 that is **Program
 whose pages are stubs until P1, and **You**: the Appearance control, which stands in for
 Settings until P2 (THEME-01) and keeps exercising ``Prefs.save()`` and the theme (#72),
 then About this app and Developer, which is always there when not embedded and, in a
-packaged build, once unlocked in About this app (D-73, D-187). Expo & sponsors, At the
-venue and About join with their P2 pages; the profile row and Staff tools, first in the
+packaged build, once unlocked in About this app (D-73, D-187). **Expo & sponsors**
+came with the Sponsors page (#395) and **At the venue** with Wi-Fi (D-280) and Help &
+safety (D-281); their other
+rows and About join with their P2 pages; the profile row and Staff tools, first in the
 list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
 """
@@ -46,15 +48,23 @@ PROGRAMME = (
 )
 """The Programme section, in the list's order (ux.md §2.2; icons §3.7)."""
 
-AT_THE_VENUE = (MoreEntry("Help & safety", "/more/help", ft.Icons.SUPPORT_OUTLINED),)
-"""The At the venue section, in the list's order; Venue & hours and Wi-Fi join it."""
+EXPO_AND_SPONSORS = (
+    MoreEntry("Sponsors", "/more/sponsors", ft.Icons.STOREFRONT_OUTLINED),
+)
+"""The Expo & sponsors section; Expo hall and Job listings join it with their pages."""
+
+AT_THE_VENUE = (
+    MoreEntry("Wi-Fi", "/more/wifi", ft.Icons.WIFI),
+    MoreEntry("Help & safety", "/more/help", ft.Icons.SUPPORT_OUTLINED),
+)
+"""The At the venue section, in the list's order (ux.md §2.2; icons §3.7)."""
 
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
 DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
 )
 
-MORE_PAGES = (*PROGRAMME, *AT_THE_VENUE, ABOUT_APP, DEVELOPER)
+MORE_PAGES = (*PROGRAMME, *EXPO_AND_SPONSORS, *AT_THE_VENUE, ABOUT_APP, DEVELOPER)
 """Every page the list links to; later phases add theirs with their sections."""
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
@@ -91,6 +101,8 @@ def More() -> ft.View:
             [
                 SectionHeader("Programme"),
                 *(link(entry) for entry in PROGRAMME),
+                SectionHeader("Expo & sponsors"),
+                *(link(entry) for entry in EXPO_AND_SPONSORS),
                 SectionHeader("At the venue"),
                 *(link(entry) for entry in AT_THE_VENUE),
                 SectionHeader("You"),

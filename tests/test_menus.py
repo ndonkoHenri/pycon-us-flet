@@ -138,3 +138,17 @@ def test_no_menu_item_sets_an_icon_beside_its_content() -> None:
         if any(keyword.arg == "icon" for keyword in call.keywords)
     ]
     assert found == []
+
+
+def test_a_disabled_item_takes_no_tap_and_looks_disabled() -> None:
+    """The item and its tile are disabled together: the tile sets its own text colour."""
+    item = menu_item(
+        ft.Icons.EVENT_AVAILABLE_OUTLINED,
+        "Add to calendar",
+        go,
+        identifier="session.add_to_calendar",
+        disabled=True,
+    )
+    assert item.disabled and tile_of(item).disabled
+    enabled = menu_item(ft.Icons.PLAYLIST_ADD, LABEL, go, identifier="x.y")
+    assert not enabled.disabled and not tile_of(enabled).disabled

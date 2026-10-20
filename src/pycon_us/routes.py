@@ -33,9 +33,11 @@ from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
+from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
+from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
@@ -187,8 +189,10 @@ ROUTES = [
         pushed("open-spaces", OpenSpaces),
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),
+        pushed("sponsors", Sponsors),
         pushed("app", AboutApp),
         pushed("developer", Developer),
+        pushed("wifi", Wifi),
         pushed("help", Help),
     ),
     UNKNOWN,  # last: it matches anything (D-270)

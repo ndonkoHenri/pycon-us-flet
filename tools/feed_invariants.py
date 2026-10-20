@@ -378,6 +378,20 @@ def sponsor_levels_are_sorted_and_not_empty(feed: ProcessedFeed) -> list[str]:
     return problems
 
 
+def job_listings_name_a_sponsor(feed: ProcessedFeed) -> list[str]:
+    """SPON-05: every job listing names a sponsor exactly, as ``jobs.listings_of`` finds it.
+
+    A listing carries its sponsor's name, not a slug (D-278), so a name the sponsors do
+    not have would leave its roles on no sponsor's page.
+    """
+    names = {s.name for level in feed.data.sponsor_levels for s in level.sponsors}
+    return [
+        f"job listing {job.id} names no sponsor: {job.sponsor_name!r}"
+        for job in feed.data.job_listings
+        if job.sponsor_name not in names
+    ]
+
+
 INVARIANTS: tuple[Callable[[ProcessedFeed], list[str]], ...] = (
     no_session_is_lost,
     ids_are_unique_stable_strings_in_ionics_forms,
@@ -391,6 +405,7 @@ INVARIANTS: tuple[Callable[[ProcessedFeed], list[str]], ...] = (
     rooms_and_sessions_agree,
     sponsor_slugs_are_unique,
     sponsor_levels_are_sorted_and_not_empty,
+    job_listings_name_a_sponsor,
 )
 """Every invariant, in the order of testing-and-quality.md §3.3."""
 

@@ -45,6 +45,8 @@ class Services:
         share: The platform's share sheet: the Developer screen's Share log (D-72).
         paths: The platform's storage paths: where the packaged app's ``console.log``
             is (F14).
+        file_picker: The system's save dialog: Add to calendar's file on Android
+            (``services.calendar``, D-272).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
@@ -61,11 +63,12 @@ class Services:
     haptics: ft.HapticFeedback
     launcher: ft.UrlLauncher
     clipboard: ft.Clipboard
-    # Defaults, unlike the services above, since only the Developer screen uses them:
-    # the factories run inside `create()`, in the page's context, so they register
-    # with the page like the rest.
+    # Defaults, unlike the services above, since only a few screens use them: the
+    # factories run inside `create()`, in the page's context, so they register with
+    # the page like the rest.
     share: ft.Share = field(default_factory=ft.Share)
     paths: ft.StoragePaths = field(default_factory=ft.StoragePaths)
+    file_picker: ft.FilePicker = field(default_factory=ft.FilePicker)
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
     shown_versions: set[int] = field(default_factory=set)
