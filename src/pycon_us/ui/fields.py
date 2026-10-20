@@ -3,7 +3,8 @@
 One look and one behaviour for every field that narrows a list as the user types: the
 Speakers and Sprints filters (D-189, D-202) and the global search (D-193). A pill on
 ``surface_container_high`` without a line, focused or not, like Material's search bar
-(ux.md §3.6), pinned above its list so it is always in reach, with a Clear button once
+(ux.md §3.6); in high contrast, where that fill is the surface, a 1 dp ``outline`` ring
+instead (D-306). Pinned above its list so it is always in reach, with a Clear button once
 there is text. ``use_field_query()`` holds the field's text, its ``Ref`` and the Clear
 that puts the focus back in it, and keeps the field in step with what the screen
 filters by however fast the keys come (D-243); ``found_count()`` is the live line under
@@ -33,6 +34,7 @@ def SearchField(
     autofocus: bool = False,
     on_submit: ft.ControlEventHandler[ft.TextField] | None = None,
     keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT,
+    high_contrast: bool = False,
 ) -> ft.Control:
     """Return a pill-shaped search or filter field with its Clear button.
 
@@ -59,10 +61,17 @@ def SearchField(
         autofocus: Focus the field, and open the keyboard, when the View shows.
         on_submit: Called when the keyboard's action key is pressed.
         keyboard_type: The keyboard to show.
+        high_contrast: HC is on screen (``Tokens.high_contrast``): the pill's fill is
+            the surface there, so a 1 dp ``outline`` ring draws its edge (D-306).
     """
+    edge = (
+        ft.BorderSide(1, ft.Colors.OUTLINE)
+        if high_contrast
+        else ft.BorderSide(0, ft.Colors.TRANSPARENT)
+    )
     pill = ft.OutlineInputBorder(
         border_radius=28,  # full radius, as search fields have
-        side=ft.BorderSide(0, ft.Colors.TRANSPARENT),
+        side=edge,
     )
     text_field = ft.MergeSemantics(
         ft.Semantics(

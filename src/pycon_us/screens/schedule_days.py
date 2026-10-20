@@ -320,7 +320,7 @@ def _SlotItem(
     for session in slot.sessions:
         view = views[session.id]
         if is_notice(session, info):
-            rows.append(NoticeRow(view, screen=SCREEN))
+            rows.append(NoticeRow(view, tokens, screen=SCREEN))
         else:
             rows.append(
                 SessionRow(

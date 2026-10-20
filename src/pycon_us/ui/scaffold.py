@@ -188,6 +188,11 @@ def AppScaffold(
         # between them the body keeps all of it (D-216).
         spacing=0,
         controls=[
+            # In HC the bar keeps the page's colour when a list scrolls under it, its
+            # surface_container being surface: the line is its edge (D-306). Both
+            # lines keep their slots, hidden outside HC: a line added before the body
+            # would shift it, and Flet would remount it, scroll and all (D-18).
+            bar_divider(visible=tokens.high_contrast),
             ft.SafeArea(
                 expand=True,
                 content=beside_rail(view_path, switch_tab, wide, Shown(body))
@@ -196,7 +201,7 @@ def AppScaffold(
             ),
             GutterProbe(),
             # The line sits on the bar, which the rail replaces from 600 dp (D-277).
-            *([bar_divider()] if is_root and tokens.high_contrast and not wide else []),
+            bar_divider(visible=is_root and tokens.high_contrast and not wide),
         ],
     )
 
@@ -227,16 +232,25 @@ def beside_rail(
     )
 
 
-def bar_divider() -> ft.Control:
-    """Return the 1 dp line that separates the bottom bar from the page in HC (THEME-06).
+def bar_divider(visible: bool) -> ft.Control:
+    """Return the 1 dp line that separates a bar from the page in HC (THEME-06, D-306).
 
-    High contrast has one surface, so the ``NavigationBar`` is the page's colour; a
-    line in ``outline`` draws the edge that a tint draws elsewhere. Material's
-    ``NavigationBar`` has no border of its own (Flet's ``border`` is the Cupertino
-    bar's), so the line closes the View's body, right above the bar: the ``Scaffold``
-    gives the body no bottom inset when it has a bar.
+    High contrast has one surface, so the ``NavigationBar`` and the ``AppBar``, even
+    with a list scrolled under it, are the page's colour; a line in ``outline`` draws
+    the edge that a tint draws elsewhere. Neither Material bar has a border of its own
+    (Flet's ``NavigationBar.border`` is the Cupertino bar's, and an ``AppBar`` shape
+    would draw all four sides), so the line opens the View's body, right under the app
+    bar, and closes a tab root's, right above the bottom bar: the ``Scaffold`` gives
+    the body no inset under an app bar, nor above a bottom bar.
+
+    A hidden line is no widget at all (Flet's Dart side leaves it out), so outside HC
+    the layout is the same, pixel for pixel; it stays in the View's controls so that a
+    contrast change keeps the body in its place, and its state with it (D-18).
+
+    Args:
+        visible: Whether the line shows: in HC, where the bar needs an edge.
     """
-    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE)
+    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE, visible=visible)
 
 
 @ft.component

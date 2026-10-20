@@ -184,7 +184,7 @@ def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
     view = view_at(hooks, page, "/now", actions=[action])
     assert app_bar(view).actions == [action]
     assert view.padding == 0
-    safe, _ = view.controls
+    _, safe, _, _ = view.controls  # between the lines HC shows (D-306)
     assert isinstance(safe, ft.SafeArea)
     assert safe.expand is True
     assert isinstance(body_of(view), ft.Text)
@@ -196,7 +196,7 @@ def test_the_gutter_probe_sits_under_the_body_taking_no_space(
 ) -> None:
     """D-216: every screen measures the slots' layout, so it is known before a list."""
     view = view_at(hooks, page, "/now")
-    safe, probe = view.controls
+    _, safe, probe, _ = view.controls  # between the lines HC shows (D-306)
     assert isinstance(safe, ft.SafeArea) and safe.expand is True
     assert probe.key == "probe"
     assert view.spacing == 0  # the View's column puts no gap above the probe

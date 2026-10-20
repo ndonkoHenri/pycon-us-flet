@@ -282,6 +282,7 @@ def Search() -> ft.View:
                             autofocus=True,
                             on_submit=submitted,
                             keyboard_type=ft.KeyboardType.WEB_SEARCH,
+                            high_contrast=tokens.high_contrast,
                         ),
                         _scope_chips(scope, picked),
                         *([count] if count else []),

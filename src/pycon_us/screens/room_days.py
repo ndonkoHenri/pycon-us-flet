@@ -91,7 +91,7 @@ def day_list(
         for view in slot:
             session = view.session
             row = (
-                NoticeRow(view, screen=SCREEN)
+                NoticeRow(view, tokens, screen=SCREEN)
                 if is_notice(session, info)
                 else SessionRow(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN

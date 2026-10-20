@@ -49,6 +49,7 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.theme_hc import hc_border
 from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
@@ -150,7 +151,7 @@ def SessionDetail(session_id: str) -> ft.View:
         actions.append(SessionMenu(session, site=site, calendar=calendar))
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
-        controls.append(_removed_note())
+        controls.append(_removed_note(tokens.high_contrast))
     controls.append(_header(session, info, tokens))
     controls.append(
         WhenAndWhere(
@@ -182,7 +183,11 @@ def SessionDetail(session_id: str) -> ft.View:
         controls.append(Posters(session, found, favorites.ids, on_toggle, tokens))
     if open_space:  # its image and its entry on the site (SESS-11)
         controls.extend(
-            open_space_extras(session, fade_ms=prefs.motion_ms(IMAGE_FADE_MS))
+            open_space_extras(
+                session,
+                fade_ms=prefs.motion_ms(IMAGE_FADE_MS),
+                high_contrast=tokens.high_contrast,
+            )
         )
     body = ft.ListView(
         controls,
@@ -316,8 +321,11 @@ def _about(description: str, svc: Services) -> ft.Control:
     )
 
 
-def _removed_note() -> ft.Control:
-    """The inline note over a session a newer feed dropped (ux.md §4.1)."""
+def _removed_note(high_contrast: bool) -> ft.Control:
+    """The inline note over a session a newer feed dropped (ux.md §4.1).
+
+    Outlined in high contrast, where its tonal fill is 1.2:1 on the surface (D-306).
+    """
     on_container = ft.Colors.ON_TERTIARY_CONTAINER
     return ft.Semantics(
         identifier=f"{SCREEN}.removed",
@@ -348,6 +356,7 @@ def _removed_note() -> ft.Control:
                 vertical_alignment=ft.CrossAxisAlignment.START,
             ),
             bgcolor=ft.Colors.TERTIARY_CONTAINER,
+            border=hc_border(high_contrast),
             border_radius=12,
             padding=16,
             margin=ft.Margin.symmetric(horizontal=16),

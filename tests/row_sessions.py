@@ -61,7 +61,7 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
     info = use_services().year.conference
     return ft.Column(
         [
-            NoticeRow(view, screen="test")
+            NoticeRow(view, LIGHT_TOKENS, screen="test")
             if is_notice(view.session, info)
             else SessionRow(
                 view,

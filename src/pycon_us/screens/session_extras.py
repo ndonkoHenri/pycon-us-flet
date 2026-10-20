@@ -31,6 +31,7 @@ from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens
+from pycon_us.theme_hc import hc_border
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
@@ -219,16 +220,20 @@ def Posters(
     return ft.Column([header, *rows], spacing=0)
 
 
-def open_space_extras(session: Session, *, fade_ms: int) -> list[ft.Control]:
+def open_space_extras(
+    session: Session, *, fade_ms: int, high_contrast: bool = False
+) -> list[ft.Control]:
     """Return an open space's image and its site link (SESS-11), as the page's sections.
 
     Args:
         session: The open space.
         fade_ms: How long the image fades in once loaded (``prefs.motion_ms()``).
+        high_contrast: HC is on screen (``Tokens.high_contrast``): the image's frame
+            is outlined.
     """
     extras: list[ft.Control] = []
     if session.image_url:
-        extras.append(_image(session, fade_ms=fade_ms))
+        extras.append(_image(session, fade_ms=fade_ms, high_contrast=high_contrast))
     if session.url:  # its entry on the site's open-spaces page, by the link rule
         extras.append(
             LinkTile(
@@ -241,7 +246,7 @@ def open_space_extras(session: Session, *, fade_ms: int) -> list[ft.Control]:
     return extras
 
 
-def _image(session: Session, *, fade_ms: int) -> ft.Control:
+def _image(session: Session, *, fade_ms: int, high_contrast: bool) -> ft.Control:
     """The open space's image, scaled down to fit a 16:9 frame the content's width.
 
     A small image keeps its size, centred, rather than blur at the frame's. Around an
@@ -252,7 +257,9 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
     Flet sizes the placeholder with the image's own width and height (F44), which an
     image of unknown size does not have, so it could not fill the frame. When the
     image does not load, the frame says so (``error_content``). Its name for screen
-    readers is the session's: the feed has no description of the picture.
+    readers is the session's: the feed has no description of the picture. In high
+    contrast, where the fill is the surface, a 1 dp ``outline`` border draws the frame
+    (D-306).
     """
     fade = ft.Animation(fade_ms, ft.AnimationCurve.EASE_OUT)
     backdrop = ft.Image(
@@ -288,6 +295,7 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
         ft.Stack([backdrop, scrim, image], alignment=ft.Alignment.CENTER),
         aspect_ratio=IMAGE_RATIO,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+        border=hc_border(high_contrast),
         border_radius=12,  # a card's shape (ux.md §3.6)
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
     )

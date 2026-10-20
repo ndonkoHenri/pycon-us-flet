@@ -32,6 +32,7 @@ from pycon_us.screens.schedule_sheet import (
 )
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import NOT_SAVED, SNACK_BAR_MS, selection_click
 from pycon_us.ui.semantics import named
 
@@ -144,6 +145,7 @@ def use_track_filter(
     page = ft.context.page
     svc = use_services()
     prefs = use_prefs()
+    tokens = use_tokens()
     is_open, set_open = ft.use_state(False)
     lock = ft.use_memo(asyncio.Lock, [])
     excluded = prefs.excluded_tracks
@@ -191,6 +193,7 @@ def use_track_filter(
             on_close=close_sheet,
             on_tracks_page=what_they_mean,
             reduce_motion=prefs.reduce_motion,
+            high_contrast=tokens.high_contrast,
         )
         if is_open and tracks
         else None

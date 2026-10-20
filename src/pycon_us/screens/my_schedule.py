@@ -184,6 +184,7 @@ def MySchedule() -> ft.View:
                     on_change=set_earlier_days_open,
                     style=expand,
                     identifier=f"{SCREEN}.earlier_days",
+                    high_contrast=tokens.high_contrast,
                 )
             )
         ended = folded.earlier_today
@@ -204,6 +205,7 @@ def MySchedule() -> ft.View:
                     on_change=set_open,
                     style=expand,
                     identifier=f"{SCREEN}.earlier_today",
+                    high_contrast=tokens.high_contrast,
                 ),
             ]
             if ahead and ahead[0].day == ended.day:
@@ -318,13 +320,15 @@ def _fold(
     on_change: Callable[[bool], None],
     style: ft.AnimationStyle,
     identifier: str,
+    high_contrast: bool,
 ) -> ft.Control:
     """Return a ``FoldTile`` that folds what has ended away, collapsed until tapped.
 
     ``title`` is "Earlier days (6 sessions)". ``identifier`` goes around the tile, as
     session detail's other rooms' does: on the title, it split the title from the
-    tile's button, which Android then read as "Collapsed" alone (D-214). The rest is
-    ``FoldTile``'s.
+    tile's button, which Android then read as "Collapsed" alone (D-214). In high
+    contrast, where the open band's fill is the surface, lines above and below it
+    draw the band (D-306). The rest is ``FoldTile``'s.
     """
     fold = FoldTile(
         # Quieter than the day header above it: a fold of what is over (ux.md §5.6).
@@ -341,6 +345,7 @@ def _fold(
         # Open, a tonal fill sets what has ended apart from what is still to come
         # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on).
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+        lines=high_contrast,
     )
     # Not merged, which would take in the rows it holds: an empty node of its own,
     # the price of an identifier on a fold (F50).

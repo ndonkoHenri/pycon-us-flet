@@ -24,10 +24,13 @@ The rules the values follow, beyond §3.2's table:
 
 With one surface, high contrast draws structure with lines (THEME-06, D-285): the token
 colours below (``theme.py`` builds HC's ``Tokens`` from them and outlines every badge)
-and ``hc_card_theme()``, which trades the cards' shadows and fills for a border.
+and ``with_hc_components()``, whose component themes trade the cards' shadows and fills
+for a border, outline every chip and ring the bar's and the rail's selected pill (D-306).
 
 Module of its own because ``theme.py`` is near D-66's 400 lines (decisions §M).
 """
+
+import dataclasses
 
 import flet as ft
 
@@ -66,6 +69,12 @@ HC_DARK_LIVE = "#30D158"
 
 HC_DARK_WARNING = _HC_YELLOW
 """HC dark's ``warning`` token, its primary yellow: 13.6:1 on the night."""
+
+HC_INDICATOR_BORDER = 2
+"""The ring round the bar's and the rail's selected pill in high contrast, in dp (D-306).
+
+Thicker than a badge's 1.5 dp: it is the selected destination's only cue on More.
+"""
 
 HC_LIGHT = ft.ColorScheme(
     primary=_HC_PURPLE,
@@ -185,4 +194,44 @@ def hc_card_theme(*, dark: bool) -> ft.CardTheme:
         shape=ft.RoundedRectangleBorder(
             radius=12, side=ft.BorderSide(width=1, color=outline)
         ),
+    )
+
+
+def hc_border(high_contrast: bool) -> ft.Border | None:
+    """Return the 1 dp ``outline`` border a fill's edge becomes in high contrast (D-306).
+
+    For a container whose fill sets it apart from the page (a band, a note, a frame):
+    the fill is the surface in HC, so the border draws the edge; elsewhere, None.
+
+    Args:
+        high_contrast: HC is on screen (``Tokens.high_contrast``).
+    """
+    return ft.Border.all(1, ft.Colors.OUTLINE) if high_contrast else None
+
+
+def with_hc_components(theme: ft.Theme, *, dark: bool) -> ft.Theme:
+    """Return ``theme`` with the high-contrast component themes (THEME-06, D-306).
+
+    Where Material tells a part from the page by a fill, which HC's one surface hides,
+    a line in the scheme's ``outline`` does it: cards are ``hc_card_theme()``'s;
+    every chip has a 1 dp border, selected or not (Material's selected filter chip has
+    none, and its ``secondary_container`` fill is 1.2:1 on the surface); and the
+    ``NavigationBar``'s and the ``NavigationRail``'s selected pill is ringed in
+    ``HC_INDICATOR_BORDER``, a non-text cue at 7:1 or more on every tab, More included,
+    whose icon has no filled form. The colours are hexes, as in ``hc_card_theme()``.
+
+    Args:
+        theme: The theme ``theme.build_theme()`` built for a high-contrast scheme.
+        dark: The scheme is high contrast's dark one.
+    """
+    outline = _HC_PAPER if dark else _HC_INK  # each scheme's outline
+    ring = ft.StadiumBorder(
+        side=ft.BorderSide(width=HC_INDICATOR_BORDER, color=outline)
+    )
+    return dataclasses.replace(
+        theme,
+        card_theme=hc_card_theme(dark=dark),
+        chip_theme=ft.ChipTheme(border_side=ft.BorderSide(width=1, color=outline)),
+        navigation_bar_theme=ft.NavigationBarTheme(indicator_shape=ring),
+        navigation_rail_theme=ft.NavigationRailTheme(indicator_shape=ring),
     )
