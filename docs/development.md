@@ -229,9 +229,6 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DT
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D"]
-
 [tool.pyright]
 include = ["src", "tests", "tools"]
 typeCheckingMode = "standard"
