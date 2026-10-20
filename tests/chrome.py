@@ -122,14 +122,26 @@ def body_of(view: ft.View) -> ft.Control:
     return safe.content
 
 
-def rail_of(view: ft.View) -> ft.NavigationRail:
-    """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
+def rail_stack_of(view: ft.View) -> ft.Stack:
+    """The rail and its fade of a tab root's View, beside its body (D-277, D-309)."""
     safe, _ = view.controls
     assert isinstance(safe, ft.SafeArea)
     assert isinstance(safe.content, ft.Row)
-    rail, _ = safe.content.controls
+    stack, _ = safe.content.controls
+    assert isinstance(stack, ft.Stack)
+    return stack
+
+
+def inner_rail(stack: ft.Stack) -> ft.NavigationRail:
+    """The ``NavigationRail`` under the fade of ``navigation_rail()``'s stack (D-309)."""
+    rail, _ = stack.controls
     assert isinstance(rail, ft.NavigationRail)
     return rail
+
+
+def rail_of(view: ft.View) -> ft.NavigationRail:
+    """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
+    return inner_rail(rail_stack_of(view))
 
 
 def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.View:

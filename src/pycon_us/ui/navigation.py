@@ -70,6 +70,11 @@ RAIL_WIDTH = 80
 """The rail's width in dp at the default text size, M3's; at large text it widens with
 its labels, which Flutter does not clamp as it does the bar's (F95, D-277)."""
 
+RAIL_FADE = 24
+"""How tall the fade over the rail's bottom edge is, in dp, and the empty space under
+its last destination that keeps that one clear of the fade at the end of a scroll
+(D-309)."""
+
 type Retap = Callable[[], Awaitable[None]]
 """What a root does when its active tab is tapped again: scroll to the top (D-144)."""
 
@@ -110,15 +115,14 @@ def navigation_bar(root: str, on_select: Select) -> ft.NavigationBar:
     )
 
 
-def navigation_rail(
-    root: str, on_select: Select, *, visible: bool
-) -> ft.NavigationRail:
+def navigation_rail(root: str, on_select: Select, *, visible: bool) -> ft.Stack:
     """Return the rail of a tab root, with that root's destination selected (D-277).
 
     The bar's destinations and labels, as M3 lays a rail out: every label shown, the
     destinations at the top, ``RAIL_WIDTH`` wide. A ``NavigationRail`` has no adaptive
     form (D-10). It scrolls when the destinations are taller than the space beside
-    the body, as on a phone in landscape, so each one stays reachable.
+    the body, as on a phone in landscape, so each one stays reachable; a fade over its
+    bottom edge, ``rail_fade()``, is the sign that it does (D-309).
 
     Its icons carry no ``app.nav.<tab>`` identifier, unlike the bar's (F95): an
     identifier makes its ``Semantics`` a node of its own, which only the bar's
@@ -133,6 +137,9 @@ def navigation_rail(
         visible: Whether it shows: from ``WIDE_DP`` (``Layout.wide``). A hidden rail
             keeps its place in the View's tree, so the body beside it is never
             rebuilt when the window crosses ``WIDE_DP`` (D-18).
+
+    Returns:
+        A ``Stack`` of the ``NavigationRail`` and its fade.
     """
 
     @report_errors
@@ -140,7 +147,7 @@ def navigation_rail(
         if e.control.selected_index is not None:  # Flutter sets it before the event
             await on_select(e.control.selected_index)
 
-    return ft.NavigationRail(
+    rail = ft.NavigationRail(
         selected_index=TAB_ROOTS.index(root),
         label_type=ft.NavigationRailLabelType.ALL,
         group_alignment=-1,
@@ -152,8 +159,36 @@ def navigation_rail(
             )
             for tab in TABS
         ],
+        # Scrolls with the destinations: at the end of a scroll, More sits above
+        # the fade rather than under it.
+        trailing=ft.Container(height=RAIL_FADE),
         on_change=changed,
-        visible=visible,
+    )
+    return ft.Stack([rail, rail_fade()], visible=visible)
+
+
+def rail_fade() -> ft.Container:
+    """Return the fade over the rail's bottom edge: the sign that the rail scrolls.
+
+    On a phone in landscape the destinations need about 330 dp and the rail has about
+    295, so More is cut at the bottom edge; fading that edge into the rail's colour is
+    the usual sign of more below (D-309). It goes from clear to ``surface``, the
+    rail's own Material colour, so it matches in every theme, high contrast included;
+    where the destinations fit, as on a tablet, it lies over the rail's empty
+    background and does not show. It takes no taps and has no semantics, so a tap
+    or TalkBack reaches the destination under it.
+    """
+    return ft.Container(
+        left=0,
+        right=0,
+        bottom=0,
+        height=RAIL_FADE,
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment.TOP_CENTER,
+            end=ft.Alignment.BOTTOM_CENTER,
+            colors=[ft.Colors.with_opacity(0, ft.Colors.SURFACE), ft.Colors.SURFACE],
+        ),
+        ignore_interactions=True,
     )
 
 

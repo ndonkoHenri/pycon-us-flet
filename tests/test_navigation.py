@@ -18,6 +18,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.theme import HC_DARK_TOKENS, HC_LIGHT_TOKENS, Tokens
 from pycon_us.ui import navigation
 from pycon_us.ui.navigation import (
+    RAIL_FADE,
     RAIL_WIDTH,
     RETAP_SCROLL_MS,
     TABS,
@@ -27,7 +28,15 @@ from pycon_us.ui.navigation import (
     use_scroll_to_top,
 )
 from tests import chrome
-from tests.chrome import app_bar, back_arrow, body_of, rail_of, view_at
+from tests.chrome import (
+    app_bar,
+    back_arrow,
+    body_of,
+    inner_rail,
+    rail_of,
+    rail_stack_of,
+    view_at,
+)
 from tests.fakes import FakePage, Hooks
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
@@ -114,7 +123,7 @@ def test_the_rail_has_the_bar_s_labels_and_icons_and_no_identifier_node() -> Non
     An identifier ``Semantics`` there would be a second, empty TalkBack stop in each
     destination: flows find a rail destination by its name until Flet can tag it.
     """
-    rail = navigation_rail("/now", ignore, visible=True)
+    rail = inner_rail(navigation_rail("/now", ignore, visible=True))
     for tab, destination in zip(TABS, rail.destinations, strict=True):
         assert destination.label == tab.label  # the accessible name
         assert (destination.icon, destination.selected_icon) == (
@@ -131,7 +140,7 @@ def test_the_rail_shows_every_label_at_the_top_with_its_root_selected(
 
     It is M3's width and scrolls, so each destination stays reachable at large text.
     """
-    rail = navigation_rail(root, ignore, visible=True)
+    rail = inner_rail(navigation_rail(root, ignore, visible=True))
     assert rail.label_type == ft.NavigationRailLabelType.ALL
     assert rail.group_alignment == -1  # the destinations at the top (ux.md §8)
     assert rail.min_width == RAIL_WIDTH == 80
@@ -143,9 +152,33 @@ def test_the_rail_shows_every_label_at_the_top_with_its_root_selected(
 @pytest.mark.parametrize("visible", [True, False])
 def test_the_rail_shows_only_when_asked(visible: bool) -> None:
     """``visible`` decides whether the rail shows; hidden, it keeps its destinations."""
-    rail = navigation_rail("/map", ignore, visible=visible)
-    assert rail.visible is visible
-    assert len(rail.destinations) == len(TABS)
+    stack = navigation_rail("/map", ignore, visible=visible)
+    assert stack.visible is visible  # the rail and its fade show or hide together
+    assert len(inner_rail(stack).destinations) == len(TABS)
+
+
+def test_a_fade_over_the_rail_s_bottom_edge_shows_that_it_scrolls() -> None:
+    """A fade into the rail's colour covers its bottom edge, and ignores taps (D-309).
+
+    The empty space under the last destination is as tall, so at the end of a scroll
+    More sits clear of the fade.
+    """
+    stack = navigation_rail("/now", ignore, visible=True)
+    rail, fade = stack.controls
+    assert isinstance(fade, ft.Container)
+    assert (fade.left, fade.right, fade.bottom, fade.height) == (0, 0, 0, RAIL_FADE)
+    assert fade.top is None  # pinned to the bottom edge only
+    assert isinstance(fade.gradient, ft.LinearGradient)
+    assert fade.gradient.colors == [
+        ft.Colors.with_opacity(0, ft.Colors.SURFACE),
+        ft.Colors.SURFACE,  # the rail's own Material colour, in every theme
+    ]
+    assert fade.ignore_interactions is True  # a tap reaches the destination under it
+    assert fade.content is None  # nothing for a screen reader
+    assert isinstance(rail, ft.NavigationRail)
+    assert isinstance(rail.trailing, ft.Container)
+    assert rail.trailing.height == RAIL_FADE
+    assert rail.pin_trailing_to_bottom is False  # it scrolls with the destinations
 
 
 async def test_a_tap_on_the_bar_or_the_rail_hands_its_index_on() -> None:
@@ -158,7 +191,7 @@ async def test_a_tap_on_the_bar_or_the_rail_hands_its_index_on() -> None:
     bar = navigation_bar("/now", select)
     bar.selected_index = 3
     await cast(Any, bar.on_change)(SimpleNamespace(control=bar))
-    rail = navigation_rail("/now", select, visible=True)
+    rail = inner_rail(navigation_rail("/now", select, visible=True))
     rail.selected_index = 1
     await cast(Any, rail.on_change)(SimpleNamespace(control=rail))
     assert picked == [3, 1]
@@ -385,8 +418,8 @@ def test_from_600_dp_a_root_shows_the_rail_and_no_bar(
     hooks.wide = True
     view = view_at(hooks, page, root)
     assert view.navigation_bar is None
+    assert rail_stack_of(view).visible is True
     rail = rail_of(view)
-    assert rail.visible is True
     assert TABS[cast(int, rail.selected_index)].root == root
 
 
@@ -397,7 +430,7 @@ def test_under_600_dp_a_root_keeps_the_bar_and_hides_the_rail(
     """Under 600 dp each root shows the bar, and the rail beside the body is hidden."""
     view = view_at(hooks, page, root)
     bar_of(view)
-    assert rail_of(view).visible is False
+    assert rail_stack_of(view).visible is False
 
 
 @pytest.mark.parametrize("wide", [False, True])
@@ -415,7 +448,8 @@ def test_the_body_keeps_its_place_whichever_navigation_shows(
     assert isinstance(safe, ft.SafeArea)
     row = safe.content
     assert isinstance(row, ft.Row)
-    assert isinstance(row.controls[0], ft.NavigationRail)
+    assert isinstance(row.controls[0], ft.Stack)  # the rail under its fade (D-309)
+    inner_rail(row.controls[0])
     assert row.controls[1] is body_of(view)
     assert row.spacing == 0
     assert row.vertical_alignment == ft.CrossAxisAlignment.STRETCH
