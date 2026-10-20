@@ -90,6 +90,13 @@ def Start() -> ft.View:
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
 
 
+NOT_FOUND = "Page not found"
+"""The unknown location's empty state (ux.md §4.6)."""
+
+NOT_FOUND_BODY = "This link doesn't open anything in this app."
+"""What the state says under its title: why, without the path (D-270)."""
+
+
 @ft.component
 def NotFound() -> ft.View:
     """An unknown location, such as a link to a page the app doesn't have (D-270).
@@ -123,13 +130,6 @@ def NotFound() -> ft.View:
             expand=True,
         ),
     )
-
-
-NOT_FOUND = "Page not found"
-"""The unknown location's empty state (ux.md §4.6)."""
-
-NOT_FOUND_BODY = "This link doesn't open anything in this app."
-"""What the state says under its title: why, without the path (D-270)."""
 
 
 DRILL = ft.Route(
