@@ -1,7 +1,7 @@
 """Tests for About this app: its data, its build, the 7-tap unlock and its links.
 
-#88 (D-73, D-187) and #441 (D-292). ``AboutApp`` and ``ConferenceData`` run outside a
-renderer: their hooks and ``AppScaffold`` are replaced, an external link row's body runs
+#88 (D-73, D-187), #441 (D-292) and #443 (D-297). ``AboutApp``, ``ConferenceData`` and
+``HelpUsFixIt`` run outside a renderer: their hooks and ``AppScaffold`` are replaced, an external link row's body runs
 inline, and a fake page is bound as Flet binds a session's page. How the page looks and
 reads is checked on devices (the PRs).
 """
@@ -22,27 +22,41 @@ import pycon_us
 from pycon_us import clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
+from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import about_app
-from pycon_us.screens.about_app import UNLOCK_TAPS, AboutApp, ConferenceData, shown_url
+from pycon_us.screens.about_app import (
+    UNLOCK_TAPS,
+    AboutApp,
+    ConferenceData,
+    HelpUsFixIt,
+    shown_url,
+)
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
+from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import rows as rows_module
+from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
+    MemoryPaths,
     MemoryPrefs,
     MemorySemantics,
+    MemoryShare,
     bound,
 )
 from tests.feeds import recorded
 
 CONFERENCE_DATA = ft.Container()
 """What ``ConferenceData`` renders as in the page's tests: its own tests are below."""
+
+HELP_US_FIX_IT = ft.Container()
+"""What ``HelpUsFixIt`` renders as in the page's tests: its own tests are below."""
 
 
 @pytest.fixture(autouse=True)
@@ -83,6 +97,8 @@ def svc(tmp_path: Path) -> Services:
         haptics=MemoryHaptics(),
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
+        share=MemoryShare(),
+        paths=MemoryPaths(),
     )
 
 
@@ -115,6 +131,7 @@ def render(
     monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
     monkeypatch.setattr(about_app, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(about_app, "ConferenceData", lambda: CONFERENCE_DATA)
+    monkeypatch.setattr(about_app, "HelpUsFixIt", lambda: HELP_US_FIX_IT)
     monkeypatch.setattr(
         rows_module, "_ExternalLinkTile", inspect.unwrap(rows_module._ExternalLinkTile)
     )
@@ -187,13 +204,17 @@ def test_the_page_says_which_build_this_is(
     ]
 
 
-def test_the_page_s_sections_are_its_data_its_build_and_its_links(
+def test_the_page_s_sections_are_its_data_its_build_its_links_and_help(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """The opening, then Conference data, This build and Links, level-2 headings."""
+    """The opening, Conference data, This build, Links, then Help us fix it.
+
+    The page's own headings are level 2; Help us fix it's is its section's (below).
+    """
     controls = body_of(render())
     assert controls[1] is CONFERENCE_DATA  # right under the opening (D-292)
     assert headings(controls) == [("This build", 2), ("Links", 2)]
+    assert controls[-1] is HELP_US_FIX_IT  # after Links (D-297)
 
 
 def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
@@ -504,3 +525,192 @@ def test_the_section_ticks_with_the_minute_and_reads_the_store(
     )
     section()
     assert sorted(calls) == ["conference", "minute"]
+
+
+# ------------------------------------------------------------------ Help us fix it
+
+
+class States:
+    """``ft.use_state`` answered by call order, as Flet's renderer does, across renders."""
+
+    def __init__(self) -> None:
+        """Start with no state values."""
+        self.values: list[Any] = []
+        self.index = 0
+
+    def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
+        """Return the value at this call's place and its setter, made on first use."""
+        if self.index == len(self.values):
+            self.values.append(initial() if callable(initial) else initial)
+        index = self.index
+        self.index += 1
+        return self.values[index], lambda value: self.values.__setitem__(index, value)
+
+
+@pytest.fixture
+def help_section(
+    monkeypatch: pytest.MonkeyPatch,
+    svc: Services,
+    conference: Conference,
+    prefs: Prefs,
+    page: FakePage,
+    tmp_path: Path,
+) -> Callable[[], list[ft.Control]]:
+    """Render ``HelpUsFixIt`` in a packaged build with a one-line log: its controls."""
+    log = tmp_path / "console.log"
+    log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
+    cast(MemoryPaths, svc.paths).console_log = str(log)
+    states = States()
+    monkeypatch.setattr(ft, "use_state", states.use_state)
+    monkeypatch.setattr(about_app, "use_services", lambda: svc)
+    monkeypatch.setattr(about_app, "use_conference", lambda: conference)
+    monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(about_app, "use_favorites", lambda: Favorites(loaded=True))
+    monkeypatch.setattr(about_app, "use_tokens", lambda: LIGHT_TOKENS)
+    monkeypatch.setattr(about_app, "is_embedded", lambda: True)
+    monkeypatch.setattr(about_app, "SOURCE_URL", None)
+    monkeypatch.setattr(
+        rows_module, "_ExternalLinkTile", inspect.unwrap(rows_module._ExternalLinkTile)
+    )
+    monkeypatch.setattr(rows_module, "use_services", lambda: svc)
+
+    def render() -> list[ft.Control]:
+        states.index = 0
+        column = inspect.unwrap(HelpUsFixIt)()
+        assert isinstance(column, ft.Column)
+        return column.controls
+
+    return render
+
+
+def identified(controls: list[ft.Control]) -> dict[str, ft.Semantics]:
+    """The identified nodes among ``controls``, merged rows' included, by identifier."""
+    found = {}
+    for control in controls:
+        node = control.content if isinstance(control, ft.MergeSemantics) else control
+        if isinstance(node, ft.Semantics) and node.identifier:
+            found[node.identifier] = node
+    return found
+
+
+def help_tile(controls: list[ft.Control], identifier: str) -> ft.ListTile:
+    """The row under ``identifier``."""
+    tile = identified(controls)[identifier].content
+    assert isinstance(tile, ft.ListTile)
+    return tile
+
+
+def text_of(value: Any) -> str:
+    """The words of a tile's title or subtitle, a ``Text`` or a string."""
+    return str(value.value if isinstance(value, ft.Text) else value)
+
+
+def report_outcome(controls: list[ft.Control]) -> str | None:
+    """The words of the line under the rows, or None while it is hidden."""
+    line = identified(controls)["about_app.report_outcome"]
+    assert line.live_region is True  # a screen reader says it when it changes
+    if not line.visible:
+        return None
+    text = cast(ft.Row, cast(ft.Container, line.content).content).controls[1]
+    return text_of(text)
+
+
+async def tap_row(render: Callable[[], list[ft.Control]], identifier: str) -> None:
+    """Tap the row under ``identifier`` as Flutter would."""
+    await cast(Any, help_tile(render(), identifier).on_click)()
+
+
+def test_while_private_one_row_reports_a_problem_with_the_log(
+    help_section: Callable[[], list[ft.Control]],
+) -> None:
+    """While the repository is private, Help us fix it is one Report a problem row.
+
+    A level-2 heading over it; the row says beforehand that it sends the log and the
+    diagnostics; the outcome line under it is hidden until a share ends.
+    """
+    controls = help_section()
+    assert headings(controls) == [("Help us fix it", 2)]
+    assert list(identified(controls)) == [
+        "about_app.report_problem",
+        "about_app.report_outcome",
+    ]
+    tile = help_tile(controls, "about_app.report_problem")
+    assert text_of(tile.title) == "Report a problem"
+    assert text_of(tile.subtitle) == WITH_LOG
+    assert report_outcome(controls) is None
+
+
+async def test_report_a_problem_shares_the_log_and_says_so_in_place(
+    help_section: Callable[[], list[ft.Control]], svc: Services
+) -> None:
+    """A tap shares console.log with the diagnostics, then says so under the row."""
+    await tap_row(help_section, "about_app.report_problem")
+    [files] = cast(MemoryShare, svc.share).shared
+    assert len(files) == 1
+    assert report_outcome(help_section()) == LOG_SHARED[0]
+    assert help_tile(help_section(), "about_app.report_problem").disabled is False
+
+
+async def test_in_the_companion_app_the_row_says_it_sends_the_diagnostics_alone(
+    help_section: Callable[[], list[ft.Control]],
+    svc: Services,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Outside a packaged build the row says, before the tap, that no log goes."""
+    monkeypatch.setattr(about_app, "is_embedded", lambda: False)
+    tile = help_tile(help_section(), "about_app.report_problem")
+    assert text_of(tile.subtitle) == WITHOUT_LOG
+    await tap_row(help_section, "about_app.report_problem")
+    assert cast(MemoryShare, svc.share).shared == []
+    assert len(cast(MemoryShare, svc.share).texts) == 1
+    assert report_outcome(help_section()) == DIAGNOSTICS_SHARED[0]
+
+
+async def test_the_row_is_disabled_while_the_sheet_is_up(
+    help_section: Callable[[], list[ft.Control]],
+    svc: Services,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """While the sheet is up the row is disabled, so a second tap opens no second one."""
+    seen: list[bool | None] = []
+    share = cast(MemoryShare, svc.share)
+    share_files = share.share_files
+
+    async def record_then_share(files: list[ft.ShareFile], **options: Any) -> Any:
+        seen.append(help_tile(help_section(), "about_app.report_problem").disabled)
+        return await share_files(files, **options)
+
+    monkeypatch.setattr(share, "share_files", record_then_share)
+    await tap_row(help_section, "about_app.report_problem")
+    assert seen == [True]
+    assert help_tile(help_section(), "about_app.report_problem").disabled is False
+
+
+async def test_once_public_report_opens_a_new_issue_and_share_log_shares(
+    help_section: Callable[[], list[ft.Control]],
+    svc: Services,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With ``SOURCE_URL`` set, Report a problem links to a new issue, Share log shares.
+
+    The link opens in the in-app browser and reads as one (INFO-14, D-182).
+    """
+    monkeypatch.setattr(about_app, "SOURCE_URL", "https://example.org/conf/")
+    controls = help_section()
+    assert list(identified(controls)) == [
+        "about_app.report_problem",
+        "about_app.share_log",
+        "about_app.report_outcome",
+    ]
+    node = identified(controls)["about_app.report_problem"]
+    assert node.link
+    tile = node.content
+    assert isinstance(tile, ft.ListTile)
+    assert text_of(tile.subtitle) == "example.org/conf/issues/new"
+    await cast(Callable[[], Any], tile.on_click)()
+    assert cast(MemoryLauncher, svc.launcher).launched == [
+        ("https://example.org/conf/issues/new", ft.LaunchMode.IN_APP_BROWSER_VIEW)
+    ]
+    await tap_row(help_section, "about_app.share_log")
+    assert len(cast(MemoryShare, svc.share).shared) == 1
+    assert report_outcome(help_section()) == LOG_SHARED[0]
