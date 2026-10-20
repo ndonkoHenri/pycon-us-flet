@@ -231,8 +231,9 @@ that date motivates us but never justifies cutting corners.
    exactly what you ran and what you saw; never claim a check you didn't do.
 5. Don't guess silently on product or architecture questions: use `needs-decision` and the decision rules
    (D-101). Decide the reversible ones yourself and record them; wait only for the owner-only kinds.
-6. Sign your work: agents act through the owner's GitHub account, so end every PR description and issue comment
-   you write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work.
+6. Sign your work: agents act through the owner's GitHub account, so end every issue comment and PR comment you
+   write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work. Commit messages and PR
+   descriptions carry no attribution line (the owner's harness setting); the PR's signed comments say who did it.
 7. Never call private PSF endpoints, commit secrets or edit `excluded/`.
 8. **Act only in this repository** (D-212). Never create or edit issues, PRs, comments, reviews, reactions or
    anything else in any other repository, the `flet-dev` repositories included, and never ask another agent to;
