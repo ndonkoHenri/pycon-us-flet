@@ -180,7 +180,30 @@ def test_the_page_is_a_purple_root_without_a_bar(render: Callable[[], ft.View]) 
     view = render()
     assert (view.route, view.bgcolor, view.padding) == ("/", BOOT_COLOR, 0)
     assert view.appbar is None and view.navigation_bar is None
-    assert isinstance(view.controls[0], ft.SafeArea)
+    _, safe = view.controls
+    assert isinstance(safe, ft.SafeArea)
+    assert safe.avoid_intrusions_top is False  # the status bar's strip is above it
+
+
+def test_the_status_bar_s_icons_are_white_over_the_purple_in_every_scheme(
+    render: Callable[[], ft.View],
+) -> None:
+    """A toolbar-less purple ``AppBar`` under a white style, light and dark (U85).
+
+    The View's own style is the theme's, dark icons in a light scheme (F105); this
+    strip is the frontmost region at the status bar, so its style wins.
+    """
+    strip = render().controls[0]
+    assert isinstance(strip, ft.Container) and strip.theme is strip.dark_theme
+    assert strip.theme is not None
+    style = strip.theme.system_overlay_style
+    assert style is not None
+    assert style.status_bar_icon_brightness == ft.Brightness.LIGHT  # Android
+    assert style.status_bar_brightness == ft.Brightness.DARK  # iOS: white text
+    bar = strip.content
+    assert isinstance(bar, ft.AppBar)
+    assert (bar.toolbar_height, bar.bgcolor, bar.title) == (0, BOOT_COLOR, None)
+    assert bar.automatically_imply_leading is False  # no back arrow on a root
 
 
 def test_the_page_reads_in_order_with_the_title_as_its_level_1_heading(

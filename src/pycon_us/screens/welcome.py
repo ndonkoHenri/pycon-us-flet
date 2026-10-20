@@ -113,9 +113,12 @@ def Welcome() -> ft.View:
         bgcolor=BOOT_COLOR,
         padding=0,
         spacing=0,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
+            status_bar(),
             ft.SafeArea(
                 expand=True,
+                avoid_intrusions_top=False,  # status_bar() is under the status bar
                 content=ft.Column(
                     expand=True,
                     spacing=0,
@@ -125,8 +128,41 @@ def Welcome() -> ft.View:
                         start_button(get_started),
                     ],
                 ),
-            )
+            ),
         ],
+    )
+
+
+STATUS_BAR_STYLE = ft.SystemOverlayStyle(
+    status_bar_color=ft.Colors.TRANSPARENT,
+    status_bar_icon_brightness=ft.Brightness.LIGHT,  # Android: white icons
+    status_bar_brightness=ft.Brightness.DARK,  # iOS: the bar is dark, so white text
+)
+"""The status bar over the purple: white icons and text in every scheme."""
+
+
+def status_bar() -> ft.Control:
+    """Return the strip under the status bar that gives it white icons (U85 interim).
+
+    A View without an ``AppBar`` gives the status bar the theme's style (F105),
+    whose icons are dark in a light scheme: 1.9:1 on the purple. Flet has no style
+    of a View's own (U85, #509), so this is an ``AppBar`` with no toolbar, the status bar's
+    height, under a theme that holds only the white style, in light and dark alike.
+    Flutter takes the status bar's style from the frontmost region at its middle, so
+    this one wins over the View's. The navigation bar keeps the theme's (D-151).
+    Goes when U85 is in the pinned Flet.
+    """
+    theme = ft.Theme(system_overlay_style=STATUS_BAR_STYLE)
+    return ft.Container(
+        theme=theme,
+        dark_theme=theme,
+        content=ft.AppBar(
+            toolbar_height=0,
+            bgcolor=BOOT_COLOR,
+            elevation=0,
+            elevation_on_scroll=0,
+            automatically_imply_leading=False,
+        ),
     )
 
 
@@ -148,7 +184,7 @@ def body(copy: WelcomeCopy) -> list[ft.Control]:
         ft.Semantics(
             header=True,
             heading_level=1,
-            content=line(copy.title, ft.TextThemeStyle.HEADLINE_MEDIUM),
+            content=line(copy.title, ft.TextThemeStyle.HEADLINE_SMALL),
         ),
         gap(8),
         line(copy.place, ft.TextThemeStyle.TITLE_MEDIUM, said=spoken(copy.place)),
