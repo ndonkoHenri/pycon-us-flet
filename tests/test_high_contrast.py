@@ -247,7 +247,9 @@ def test_the_page_canvas_card_and_divider_follow_the_scheme(
     """The colours ThemeData derives from the scheme are named from the one shown.
 
     Flet derives them from the seeded scheme, before the overrides apply (U64): in HC
-    the page stayed white under cream bars on the Android emulator.
+    the page stayed white under cream bars on the Android emulator. HC names its
+    divider from ``outline``; the standard schemes set no ``outline``, so their
+    divider stays Flet's derived one, and naming one there would fail here.
     """
     built = theme.build_theme(dark=dark, high_contrast=high_contrast)
     assert built.color_scheme is not None
@@ -257,7 +259,11 @@ def test_the_page_canvas_card_and_divider_follow_the_scheme(
         surface,
         surface,
     )
-    assert built.divider_color == built.color_scheme.outline
+    if high_contrast:
+        assert built.color_scheme.outline is not None
+        assert built.divider_color == built.color_scheme.outline
+    else:
+        assert built.divider_color is None
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
