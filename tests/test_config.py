@@ -570,7 +570,10 @@ def edit(path: Path, old: str, new: str) -> None:
 def test_malformed_file_names_file_key_and_problem(
     data_dir: Path, file: str, old: str, new: str, message: str
 ) -> None:
-    """A malformed year file raises an error naming its file, key and problem."""
+    """A malformed year file's error names the file, the problem and any key.
+
+    A schema error names the key it broke; invalid TOML has no key to name.
+    """
     edit(data_dir / "2026" / file, old, new)
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)

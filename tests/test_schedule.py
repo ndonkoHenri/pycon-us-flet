@@ -1042,10 +1042,11 @@ async def test_the_note_empties_once_talkback_has_read_it(
 async def test_the_note_stays_empty_without_talkback(
     shown: Callable[..., Awaitable[Shown]], settings: dict[str, bool]
 ) -> None:
-    """Without TalkBack, a "Now" tap jumps and leaves the landing note empty.
+    """With no screen reader, or with announcements, "Now" leaves the note empty.
 
-    Nothing extra without a screen reader; VoiceOver hears the announcement, since a
-    live region would move its focus off the button (F13).
+    D-241: the landing note is TalkBack's path, for a screen reader where Flutter
+    reports no announcements (Android). Without a screen reader nothing is said, and
+    VoiceOver hears the landing through ``announce_message()`` instead.
     """
     schedule = await shown(**settings)
     await schedule.scroll_away()

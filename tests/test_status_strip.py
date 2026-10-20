@@ -254,7 +254,7 @@ async def test_an_automatic_refresh_over_an_offline_strip_shows_only_the_bar(
     fake_now: datetime,
     network: Network,
 ) -> None:
-    """An automatic refresh over an offline strip only shows, then hides, the bar."""
+    """An automatic refresh that fails offline again only shows, then hides, the bar."""
     conference.fetched_at = datetime(2026, 5, 11, 10, 42, tzinfo=PACIFIC)
     conference.problem = "offline"  # the last refresh got no answer
     network.error = api.NetworkError("ConnectError: still offline")
