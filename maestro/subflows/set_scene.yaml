@@ -24,14 +24,26 @@ appId: io.github.ndonkohenri.pyconus
     element:
       id: developer.fake_clock
     direction: UP
-- tapOn:
-    id: developer.fake_clock
-- eraseText: 40
-- inputText: ${NOW}
-- tapOn:
-    id: developer.feed_url
-- eraseText: 120
-- inputText: ${FEED_URL}
+# Each field is typed until it shows the whole value: on a busy host an older
+# keystroke's re-render can drop characters from a controlled field (F63, #307).
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: developer.fake_clock
+      - eraseText: 40
+      - inputText: ${NOW}
+      - assertVisible:
+          text: ${NOW}
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: developer.feed_url
+      - eraseText: 120
+      - inputText: ${FEED_URL}
+      - assertVisible:
+          text: ${FEED_URL}
 # The keyboard's Done: the field lets go of the focus and the keyboard closes. On
 # Android a Back would only close the keyboard, and Gboard's bar comes back while the
 # field keeps the focus.
