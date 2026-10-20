@@ -1,9 +1,10 @@
 """The ``Prefs`` store: the user's settings and the device facts they depend on (D-69).
 
 It holds the six app-wide keys of the storage table (decisions §M), checks the two
-settings with fixed values (Appearance, High contrast) on load and on save, and keeps
-what the user chose in memory when a write fails (D-120). ``App`` reads it before the
-first screen (the boot gate), so neither the theme nor the filters flash.
+settings with fixed values (Appearance, High contrast) on load and on save, reads the
+reminder settings as their record (D-275), and keeps what the user chose in memory when
+a write fails (D-120). ``App`` reads it before the first screen (the boot gate), so
+neither the theme nor the filters flash.
 """
 
 import logging
@@ -15,6 +16,7 @@ from urllib.parse import urlsplit
 import flet as ft
 from flet.utils import is_embedded
 
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services.storage import (
     DEV,
     EXCLUDED_TRACKS,
@@ -82,7 +84,7 @@ class Prefs:
         onboarded: Whether Welcome was seen (``pycon.onboarded``, P2).
         excluded_tracks: Track keys hidden from the Schedule (``pycon.excluded_tracks``;
             by default Open Space, D-20).
-        reminders: Reminder settings (``pycon.reminders``, P2).
+        reminders: The reminder settings (``pycon.reminders``, D-275).
         dev: Developer options (``pycon.dev``, D-73).
         os_dark: The OS is in dark mode; not persisted, kept current by ``App``.
         os_high_contrast: The OS asks for high contrast (iOS, Android 34+); not
@@ -109,7 +111,7 @@ class Prefs:
     high_contrast: HighContrast = "system"
     onboarded: bool = False
     excluded_tracks: tuple[str, ...] = tuple(EXCLUDED_TRACKS.default)
-    reminders: dict[str, Any] = field(default_factory=dict)
+    reminders: ReminderSettings = field(default_factory=ReminderSettings)
     dev: dict[str, Any] = field(default_factory=dict)
     os_dark: bool = False
     os_high_contrast: bool = False
@@ -209,7 +211,7 @@ class Prefs:
         )
         onboarded = await storage.get(ONBOARDED)
         excluded_tracks = tuple(await storage.get(EXCLUDED_TRACKS))
-        reminders = await storage.get(REMINDERS)
+        reminders = ReminderSettings.from_stored(await storage.get(REMINDERS))
         dev = await storage.get(DEV)
         # Assigned together, after the reads: one re-render, never a half-read state.
         self.theme = theme
@@ -239,7 +241,7 @@ class Prefs:
         high_contrast: HighContrast | None = None,
         onboarded: bool | None = None,
         excluded_tracks: tuple[str, ...] | None = None,
-        reminders: dict[str, Any] | None = None,
+        reminders: ReminderSettings | None = None,
         dev: dict[str, Any] | None = None,
     ) -> bool:
         """Persist the given settings, then show them; arguments left None are unchanged.
@@ -281,9 +283,7 @@ class Prefs:
         changes = {name: value for name, value in changes.items() if value is not None}
         saved = True
         for name, value in changes.items():
-            # SharedPreferences takes list[str], not tuples (F12).
-            stored = list(value) if isinstance(value, tuple) else value
-            saved = await storage.set(_PERSISTED[name], stored) and saved
+            saved = await storage.set(_PERSISTED[name], _stored(value)) and saved
         for name, value in changes.items():
             setattr(self, name, value)
         return saved
@@ -326,6 +326,15 @@ def parse_feed_url(text: str) -> str | None:
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise ValueError("Use an http:// or https:// address")
     return text
+
+
+def _stored(value: object) -> object:
+    """Return a setting as SharedPreferences takes it: a list, not a tuple (F12)."""
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, ReminderSettings):
+        return value.to_stored()  # a dict, which Storage writes as JSON
+    return value
 
 
 def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:

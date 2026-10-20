@@ -462,7 +462,7 @@ Off-season and in demos, the Developer screen (DEV-01, D-73; More › Developer,
 - a fake "now", stored in preferences and read by `clock.now()` (D-43): type it (`2026-05-15 09:00`, conference time) or pick it, then Apply. It runs forward from there, and every start of the app begins at it again until Reset (D-187);
 - the feed URL, used from the next refresh (the Schedule stub's Refresh, or the 15-min trigger), e.g. the `feed_url` fixture's server, or a closed port to test offline.
 
-Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now, Jump to now and reminders, until the 2027 feed exists (PLAN §7). Environment variables do not reach packaged apps, so there are no build flavours.
+Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now and Jump to now, until the 2027 feed exists (PLAN §7). The OS fires reminders at real instants, which the fake clock does not move: for them, serve a copy of the snapshot shifted so a session starts in a few minutes (`uv run python -m tools.shifted_feed <session id> --in 5m`, which prints the feed URL for the emulator and the simulator; testing-and-quality.md §9.1). Environment variables do not reach packaged apps, so there are no build flavours.
 
 ### 5.7 UI flows: `flet test` (D-78, D-171)
 

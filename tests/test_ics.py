@@ -11,7 +11,13 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from pycon_us import APP_NAME
-from pycon_us.core.ics import ALARM, LINE_OCTETS, calendar_file
+from pycon_us.core.ics import (
+    ALARM,
+    FILE_SLUG_CHARS,
+    LINE_OCTETS,
+    calendar_file,
+    file_slug,
+)
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.timeline import schedule_order
 from tests.feeds import YEARS, processed
@@ -344,3 +350,33 @@ def test_ical_reads_every_session_back(
     ]
     assert read == expected
     assert [len(e.alarm) for e in calendar.events] == [1] * len(expected)
+
+
+# ------------------------------------------------------------------ the file's name
+
+
+@pytest.mark.parametrize(
+    ("name", "slug"),
+    [
+        ("Lightning Talks", "lightning-talks"),
+        ("Café & Croissants: a 101", "cafe-croissants-a-101"),
+        (
+            "Python for Humans - Designing Python Code Like a User Interface",
+            "python-for-humans-designing-python-code",
+        ),
+        ("日本語のトーク", "session"),
+        ("", "session"),
+    ],
+)
+def test_a_file_s_name_is_its_title_s_first_words(name: str, slug: str) -> None:
+    """Lower-case ASCII words joined by ``-``, cut after a word; none gives the fallback."""
+    assert file_slug(name) == slug
+
+
+def test_a_file_s_name_is_never_longer_than_its_limit() -> None:
+    """A title of one long word is cut inside it; a cut never leaves a trailing ``-``."""
+    assert file_slug("a" * 50) == "a" * FILE_SLUG_CHARS
+    long_title = "talk " * 20
+    assert len(file_slug(long_title)) <= FILE_SLUG_CHARS
+    assert not file_slug(long_title).endswith("-")
+    assert file_slug("", fallback="my-schedule") == "my-schedule"

@@ -45,7 +45,7 @@ _EMPHASIS = {
     **dict.fromkeys(("em", "i"), "*"),
     **dict.fromkeys(("s", "del", "strike"), "~~"),
 }
-_DROPPED_TAGS = frozenset({"script", "style"})  # their text is not content
+DROPPED_TAGS = frozenset({"script", "style"})  # their text is not content
 _KNOWN_TAGS = _BLOCK_TAGS | {"a", "code", "br", *_EMPHASIS}
 _VOID_TAGS = frozenset({"br", "hr"})  # never have children or end tags
 
@@ -79,7 +79,7 @@ class _TreeBuilder(HTMLParser):
         self._dropping: str | None = None  # the script or style element being skipped
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in _DROPPED_TAGS:
+        if tag in DROPPED_TAGS:
             self._dropping = tag
         if tag not in _KNOWN_TAGS:
             return

@@ -30,9 +30,11 @@ PAGES = frozenset(
         "/more/open-spaces",
         "/more/lightning-talks",
         "/more/sprints",
+        "/more/sponsors",
         "/more/settings",
         "/more/app",
         "/more/developer",
+        "/more/wifi",
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).

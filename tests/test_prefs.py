@@ -4,6 +4,7 @@ SharedPreferences is the in-memory fake from ``tests/fakes.py``; Flet's own type
 ``SharedPreferences.set`` still runs.
 """
 
+import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,6 +22,7 @@ from pycon_us.prefs import (
     parse_feed_url,
     with_dev_options,
 )
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import storage
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
@@ -55,7 +57,7 @@ async def test_a_first_launch_reads_every_default(store: Storage) -> None:
     assert prefs.high_contrast == "system"
     assert prefs.onboarded is False
     assert prefs.excluded_tracks == ("Open Space",)  # hidden by default (D-20)
-    assert prefs.reminders == {}
+    assert prefs.reminders == ReminderSettings()  # session reminders off (D-275)
     assert prefs.dev == {}
 
 
@@ -67,14 +69,14 @@ async def test_load_reads_what_was_stored(store: Storage, shared: MemoryPrefs) -
             "pycon.high_contrast": "on",
             "pycon.onboarded": True,
             "pycon.excluded_tracks": ["Talk", "Tutorial"],
-            "pycon.reminders": '{"session_reminders": 10}',
+            "pycon.reminders": '{"session_lead": 10, "primer": "accepted"}',
             "pycon.dev": '{"feed_url": "http://127.0.0.1:8000/feed.json"}',
         }
     )
     prefs = await loaded(store)
     assert (prefs.theme, prefs.high_contrast, prefs.onboarded) == ("dark", "on", True)
     assert prefs.excluded_tracks == ("Talk", "Tutorial")
-    assert prefs.reminders == {"session_reminders": 10}
+    assert prefs.reminders == ReminderSettings(session_lead=10, primer="accepted")
     assert prefs.dev == {"feed_url": "http://127.0.0.1:8000/feed.json"}
 
 
@@ -84,6 +86,32 @@ async def test_a_stored_empty_track_list_hides_nothing(
     """A stored empty list of hidden tracks hides nothing, not the default track."""
     shared.values["pycon.excluded_tracks"] = []
     assert (await loaded(store)).excluded_tracks == ()
+
+
+async def test_reminder_settings_merge_over_their_defaults_on_load(
+    store: Storage, shared: MemoryPrefs, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A stored record with a bad and an unknown key loads its good keys over defaults.
+
+    The bad key reads as its default and both are logged by name (D-120, D-275).
+    """
+    shared.values["pycon.reminders"] = json.dumps(
+        {"session_lead": "ten", "open_space": False, "push": True}
+    )
+    with caplog.at_level(logging.WARNING):
+        prefs = await loaded(store)
+    assert prefs.reminders == ReminderSettings(open_space=False)
+    assert "session_lead" in caplog.text
+    assert "push" in caplog.text
+
+
+@pytest.mark.parametrize("stored", ["[10]", '"10"', "{not json"])
+async def test_a_reminder_record_that_is_no_object_reads_as_the_defaults(
+    stored: str, store: Storage, shared: MemoryPrefs
+) -> None:
+    """A stored reminder value that is not a JSON object loads as the defaults."""
+    shared.values["pycon.reminders"] = stored
+    assert (await loaded(store)).reminders == ReminderSettings()
 
 
 @pytest.mark.parametrize(
@@ -148,7 +176,7 @@ async def test_saved_settings_are_shown_and_survive_a_relaunch(
         high_contrast="off",
         onboarded=True,
         excluded_tracks=(),
-        reminders={"session_reminders": 5},
+        reminders=ReminderSettings(session_lead=5, keynote=False, primer="accepted"),
         dev={"fake_now": "2026-05-15T09:00:00-07:00"},
     )
     assert saved is True
@@ -163,7 +191,9 @@ async def test_saved_settings_are_shown_and_survive_a_relaunch(
     assert relaunched.high_contrast == "off"
     assert relaunched.onboarded is True
     assert relaunched.excluded_tracks == ()
-    assert relaunched.reminders == {"session_reminders": 5}
+    assert relaunched.reminders == ReminderSettings(
+        session_lead=5, keynote=False, primer="accepted"
+    )
     assert relaunched.dev == {"fake_now": "2026-05-15T09:00:00-07:00"}
 
 
@@ -198,6 +228,30 @@ async def test_a_shared_preferences_error_on_save_is_reported_as_not_saved(
     shared.error = RuntimeError("client error")
     assert await prefs.save(store, theme="light") is False
     assert prefs.theme == "light"
+
+
+async def test_reminder_settings_are_stored_as_one_json_object(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    """Saved reminder settings are written whole, as a JSON object of every field."""
+    prefs = await loaded(store)
+    settings = ReminderSettings(session_lead=15, primer="not_now")
+    assert await prefs.save(store, reminders=settings) is True
+    assert json.loads(shared.values["pycon.reminders"]) == settings.to_stored()
+    assert prefs.reminders == settings
+
+
+async def test_reminder_settings_that_cannot_be_saved_hold_for_the_session(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    """A reminder change whose write fails returns False and holds until a relaunch."""
+    prefs = await loaded(store)
+    shared.fail_writes = True
+    settings = ReminderSettings(session_lead=10, primer="accepted")
+    assert await prefs.save(store, reminders=settings) is False  # D-120
+    assert prefs.reminders == settings
+    shared.fail_writes = False
+    assert (await loaded(store)).reminders == ReminderSettings()
 
 
 async def test_one_failed_write_still_writes_the_others(
@@ -410,7 +464,7 @@ def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> No
         high_contrast="on",
         onboarded=True,
         excluded_tracks=(),
-        reminders={"minutes": 10},
+        reminders=ReminderSettings(session_lead=10, lightning=False, primer="accepted"),
         dev={"unlocked": True},
         os_dark=True,
         reduce_motion=True,
@@ -424,6 +478,6 @@ def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> No
         False,
     )
     assert prefs.excluded_tracks == ("Open Space",)  # the default filter (D-20)
-    assert (prefs.reminders, prefs.dev) == ({}, {})
+    assert (prefs.reminders, prefs.dev) == (ReminderSettings(), {})  # D-198
     assert prefs.os_dark and prefs.reduce_motion and prefs.screen_reader
     assert prefs.loaded is True

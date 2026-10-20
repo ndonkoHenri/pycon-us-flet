@@ -45,6 +45,7 @@ def menu_item(
     *,
     identifier: str,
     link: bool = False,
+    disabled: bool = False,
 ) -> ft.PopupMenuItem:
     """Return one item of an overflow menu: ``icon`` beside ``label``, which wraps.
 
@@ -67,6 +68,10 @@ def menu_item(
         link: Whether the item leaves the app for a web page: then it is a link,
             read "<label>, Opens in browser" (ux.md §4.7, D-186). Said after the
             label's words, not by the icon, which would be read first.
+        disabled: Whether the item is greyed out and takes no tap, e.g. while what
+            it started is still running. The item's node then reads as disabled;
+            the tile is disabled with it, since a tile sets its own text colour
+            and would otherwise look enabled.
     """
     title: ft.Control = ft.Text(label)
     if link:
@@ -81,7 +86,10 @@ def menu_item(
         title=title,
         horizontal_spacing=ICON_GAP,
         min_height=ITEM_HEIGHT,
+        disabled=disabled,
     )
     return ft.PopupMenuItem(
-        content=ft.Semantics(identifier=identifier, content=tile), on_click=on_click
+        content=ft.Semantics(identifier=identifier, content=tile),
+        on_click=on_click,
+        disabled=disabled,
     )
