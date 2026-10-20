@@ -30,6 +30,7 @@ from pycon_us.core.speakers import (
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
@@ -54,6 +55,7 @@ def Speakers() -> ft.View:
     svc = use_services()
     conference = use_conference()
     field = use_field_query()
+    tokens = use_tokens()
     query = field.value
     data = conference.data
     # Once per feed version: a keystroke re-renders this screen, never rebuilds these.
@@ -127,6 +129,7 @@ def Speakers() -> ft.View:
                             label=FILTER_HINT,
                             clear_tooltip=CLEAR_FILTER,
                             identifier=f"{SCREEN}.filter",
+                            high_contrast=tokens.high_contrast,
                         ),
                         *([count] if count else []),
                     ],

@@ -143,7 +143,9 @@ def Now() -> ft.View:
             device_offset=now.astimezone().utcoffset(),
         )
         rows = [
-            StatusHeader(info.name, copy, dark=prefs.dark),
+            StatusHeader(
+                info.name, copy, dark=prefs.dark, high_contrast=tokens.high_contrast
+            ),
             StatusStrip(auto_refresh=True),
             *_sections(
                 copy.season,
@@ -189,7 +191,7 @@ def _row(
     """One session's memoised row (D-184): a notice's, or a session's with its star."""
     view = by_id[session.id]
     if is_notice(session, info):  # breaks and notices: no star, no bar (D-31)
-        return NoticeRow(view, screen=screen)
+        return NoticeRow(view, tokens, screen=screen)
     return SessionRow(
         view, session.id in saved, on_toggle, tokens, screen=screen, elapsed=elapsed
     )

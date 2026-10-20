@@ -113,8 +113,7 @@ def body_of(view: ft.View) -> ft.Control:
 
     On a tab root it sits beside the rail, in the SafeArea's row (D-277).
     """
-    safe, _ = view.controls
-    assert isinstance(safe, ft.SafeArea)
+    safe = safe_area(view)
     assert safe.content is not None
     if isinstance(safe.content, ft.Row):
         _, body = safe.content.controls
@@ -122,10 +121,15 @@ def body_of(view: ft.View) -> ft.Control:
     return safe.content
 
 
+def safe_area(view: ft.View) -> ft.SafeArea:
+    """The View's one SafeArea, which holds the body; in HC a line comes before it."""
+    (safe,) = (c for c in view.controls if isinstance(c, ft.SafeArea))
+    return safe
+
+
 def rail_of(view: ft.View) -> ft.NavigationRail:
     """The rail of a tab root's View, shown or hidden, beside its body (D-277)."""
-    safe, _ = view.controls
-    assert isinstance(safe, ft.SafeArea)
+    safe = safe_area(view)
     assert isinstance(safe.content, ft.Row)
     rail, _ = safe.content.controls
     assert isinstance(rail, ft.NavigationRail)

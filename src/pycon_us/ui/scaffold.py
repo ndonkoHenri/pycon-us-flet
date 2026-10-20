@@ -187,6 +187,9 @@ def AppScaffold(
         # between them the body keeps all of it (D-216).
         spacing=0,
         controls=[
+            # In HC the bar keeps the page's colour when a list scrolls under it, its
+            # surface_container being surface: the line is its edge (D-306).
+            *([bar_divider()] if tokens.high_contrast else []),
             ft.SafeArea(
                 expand=True,
                 content=beside_rail(view_path, switch_tab, wide, Shown(body))
@@ -227,13 +230,15 @@ def beside_rail(
 
 
 def bar_divider() -> ft.Control:
-    """Return the 1 dp line that separates the bottom bar from the page in HC (THEME-06).
+    """Return the 1 dp line that separates a bar from the page in HC (THEME-06, D-306).
 
-    High contrast has one surface, so the ``NavigationBar`` is the page's colour; a
-    line in ``outline`` draws the edge that a tint draws elsewhere. Material's
-    ``NavigationBar`` has no border of its own (Flet's ``border`` is the Cupertino
-    bar's), so the line closes the View's body, right above the bar: the ``Scaffold``
-    gives the body no bottom inset when it has a bar.
+    High contrast has one surface, so the ``NavigationBar`` and the ``AppBar``, even
+    with a list scrolled under it, are the page's colour; a line in ``outline`` draws
+    the edge that a tint draws elsewhere. Neither Material bar has a border of its own
+    (Flet's ``NavigationBar.border`` is the Cupertino bar's, and an ``AppBar`` shape
+    would draw all four sides), so the line opens the View's body, right under the app
+    bar, and closes a tab root's, right above the bottom bar: the ``Scaffold`` gives
+    the body no inset under an app bar, nor above a bottom bar.
     """
     return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE)
 

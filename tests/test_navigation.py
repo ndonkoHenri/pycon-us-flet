@@ -274,10 +274,14 @@ def test_outside_high_contrast_nothing_separates_the_bar(
 def test_a_pushed_view_in_high_contrast_has_no_bar_line(
     hooks: Hooks, page: FakePage
 ) -> None:
-    """A pushed View has no bar, so no line above one, in HC too."""
+    """A pushed View has no bar, so no line above one, in HC too.
+
+    Its only line is the one under its app bar (``test_hc_boundaries.py``).
+    """
     hooks.tokens = HC_LIGHT_TOKENS
     view = view_at(hooks, page, "/schedule/session/42")
-    assert not any(isinstance(control, ft.Divider) for control in view.controls)
+    assert view.navigation_bar is None
+    assert not isinstance(view.controls[-1], ft.Divider)
 
 
 @pytest.mark.parametrize("tab", TABS)

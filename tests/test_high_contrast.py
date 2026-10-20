@@ -85,10 +85,14 @@ SCHEME_FIELDS = {
     "card_bgcolor": None,
     "divider_color": None,
     "card_theme": None,
+    "chip_theme": None,
+    "navigation_bar_theme": None,
+    "navigation_rail_theme": None,
 }
 """The theme fields that come from the scheme; the rest is the same in every scheme.
 
-HC's card theme is one of them: its cards are flat and bordered (THEME-06).
+HC's component themes are among them: its cards are flat and bordered (THEME-06), its
+chips outlined and its selected pill ringed (D-306, ``test_hc_boundaries.py``).
 """
 
 
