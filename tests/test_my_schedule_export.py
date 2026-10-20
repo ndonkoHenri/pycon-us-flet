@@ -194,6 +194,16 @@ async def test_a_session_removed_from_my_schedule_leaves_the_export(
     assert uids(exported(shown)) == [MCP, TALK]
 
 
+async def test_when_everything_has_ended_the_overflow_still_exports_it(
+    show: Show,
+) -> None:
+    """D-289: with every saved session over, the overflow still exports them."""
+    shown = await show(MCP)
+    shown.node("my_schedule.all_over")
+    await shown.click(export_item(shown))
+    assert uids(exported(shown)) == [MCP]
+
+
 async def test_the_export_is_disabled_while_the_dialog_is_up(show: Show) -> None:
     """A second tap cannot save the file twice; the item comes back afterwards."""
     shown = await show(MCP, TALK)
