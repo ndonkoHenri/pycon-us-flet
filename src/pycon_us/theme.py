@@ -33,7 +33,7 @@ from pycon_us.theme_hc import (
     HC_LIGHT,
     HC_LIGHT_LIVE,
     HC_LIGHT_WARNING,
-    hc_card_theme,
+    with_hc_components,
 )
 
 SEED = "#3B3EA9"
@@ -121,8 +121,9 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     Args:
         dark: Build the dark scheme instead of the light one.
         high_contrast: Build the high-contrast variant (THEME-04, THEME-05), which sets
-            every role by hand (``theme_hc.py``) and draws cards flat with a border
-            (THEME-06); the rest of the theme is the same.
+            every role by hand (``theme_hc.py``) and draws lines where fills drew
+            edges: cards, chips and the selected pill (THEME-06, D-306); the rest of
+            the theme is the same.
 
     Returns:
         A Material 3 theme; nothing in it depends on the platform except the page
@@ -132,7 +133,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         scheme = HC_DARK if dark else HC_LIGHT
     else:
         scheme = DARK_SCHEME if dark else LIGHT_SCHEME
-    return ft.Theme(
+    built = ft.Theme(
         color_scheme_seed=SEED,
         surfaces=ft.ThemeSurfaces.NEUTRAL,
         color_scheme=scheme,
@@ -154,8 +155,8 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         list_tile_theme=ft.ListTileTheme(
             title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT
         ),
-        card_theme=hc_card_theme(dark=dark) if high_contrast else None,  # THEME-06
     )
+    return with_hc_components(built, dark=dark) if high_contrast else built
 
 
 def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:

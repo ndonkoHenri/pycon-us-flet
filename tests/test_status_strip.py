@@ -21,7 +21,7 @@ from pycon_us import clock
 from pycon_us.feed_refresh import Status
 from pycon_us.services import Services, api
 from pycon_us.state import Conference
-from pycon_us.theme import DARK_TOKENS
+from pycon_us.theme import DARK_TOKENS, HC_DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import schedule_line, strip_line
 from tests import chrome, strip
@@ -335,3 +335,23 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
     await tap
     assert quiet.done()
     assert network.requests == 1  # one request for both (D-145)
+
+
+@pytest.mark.parametrize("high_contrast", [False, True], ids=["standard", "hc"])
+def test_in_high_contrast_lines_draw_the_strip_s_band(
+    hooks: Hooks,
+    page: FakePage,
+    monkeypatch: pytest.MonkeyPatch,
+    high_contrast: bool,
+) -> None:
+    """In HC, where its fill is the surface, 1 dp lines above and below draw the strip.
+
+    Outside HC its tonal fill is its edge, and it has no border (D-306).
+    """
+    tokens = HC_DARK_TOKENS if high_contrast else DARK_TOKENS
+    monkeypatch.setattr(status_strip, "use_tokens", lambda: tokens)
+    box = render_strip().content
+    assert isinstance(box, ft.Container)
+    line = ft.BorderSide(1, ft.Colors.OUTLINE)
+    expected = ft.Border.only(top=line, bottom=line) if high_contrast else None
+    assert box.border == expected

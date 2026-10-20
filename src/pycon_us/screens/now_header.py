@@ -206,21 +206,27 @@ def header_phrase(name: str, copy: HeaderCopy) -> str:
     )
 
 
-def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
+def StatusHeader(
+    name: str, copy: HeaderCopy, *, dark: bool, high_contrast: bool = False
+) -> ft.Control:
     """Return the status header: an indigo card that says where the conference stands.
 
     Brand colour at an identity moment (D-28): the indigo ``#3B3EA9`` in both schemes,
     as the light ``primary`` (white text, 8.6:1) and the dark ``primary_container``
     (``#E1E0FF``, 6.7:1); its icon is decorative, in gold. One heading node, the first
-    under the bar's "Now" (level 2, D-211), read as ``header_phrase()``.
+    under the bar's "Now" (level 2, D-211), read as ``header_phrase()``. In high
+    contrast the card is HC's ``primary`` (both containers equal it) and the icon takes
+    the text's colour: the gold was 1.03:1 on HC dark's yellow (D-306).
 
     Args:
         name: The conference's name, e.g. "PyCon US 2026".
         copy: What it says.
         dark: The dark scheme is on screen (``Prefs.dark``).
+        high_contrast: A high-contrast scheme is on screen (``Tokens.high_contrast``).
     """
     fill = ft.Colors.PRIMARY_CONTAINER if dark else ft.Colors.PRIMARY
     ink = ft.Colors.ON_PRIMARY_CONTAINER if dark else ft.Colors.ON_PRIMARY
+    icon_color = ink if high_contrast else GOLD
     # The icon shares the name's line, so the title and its line have the card's whole
     # width: beside them, at the largest text sizes, "Saturday" broke inside itself.
     top = ft.Row(
@@ -228,7 +234,7 @@ def StatusHeader(name: str, copy: HeaderCopy, *, dark: bool) -> ft.Control:
             ft.Text(
                 name, theme_style=ft.TextThemeStyle.TITLE_SMALL, color=ink, expand=True
             ),
-            ft.Icon(SEASON_ICONS[copy.season], size=ICON_SIZE, color=GOLD),
+            ft.Icon(SEASON_ICONS[copy.season], size=ICON_SIZE, color=icon_color),
         ],
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.START,

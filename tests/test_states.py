@@ -13,6 +13,7 @@ import flet as ft
 import pytest
 
 from pycon_us.prefs import Prefs
+from pycon_us.theme import HC_DARK_TOKENS, LIGHT_TOKENS, Tokens
 from pycon_us.ui import states
 from pycon_us.ui.states import SKELETON_ROWS, EmptyState, SkeletonList
 from tests.trees import descendants, only, texts
@@ -150,9 +151,15 @@ def test_an_empty_state_has_no_fixed_height_so_it_reflows_at_200_percent() -> No
 # ------------------------------------------------------------------ SkeletonList
 
 
-def skeleton(monkeypatch: pytest.MonkeyPatch, *, reduce_motion: bool) -> ft.Semantics:
+def skeleton(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    reduce_motion: bool,
+    tokens: Tokens = LIGHT_TOKENS,
+) -> ft.Semantics:
     """Build ``SkeletonList`` outside a renderer, with ``reduce_motion`` set."""
     monkeypatch.setattr(states, "use_prefs", lambda: Prefs(reduce_motion=reduce_motion))
+    monkeypatch.setattr(states, "use_tokens", lambda: tokens)
     result = inspect.unwrap(SkeletonList)()
     assert isinstance(result, ft.Semantics)
     return result
@@ -188,3 +195,42 @@ def test_screen_readers_hear_one_loading_node(monkeypatch: pytest.MonkeyPatch) -
     assert result.container
     assert result.exclude_semantics  # the placeholders say nothing
     assert texts(result) == []
+
+
+def placeholders(node: ft.Control) -> list[ft.Container]:
+    """The skeleton's placeholder shapes: every sized or expanding Container in it."""
+    return [
+        n
+        for n in descendants(node)
+        if isinstance(n, ft.Container) and n.height in (12, 16)
+    ]
+
+
+def test_in_high_contrast_the_shimmer_paints_unfilled_outlines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """In HC each placeholder is an unfilled 1 dp outline, painted in ``outline``.
+
+    The fill is the surface there; the shimmer paints whatever its rows paint, so a
+    fill would turn the whole block to ink (D-306).
+    """
+    result = skeleton(monkeypatch, reduce_motion=False, tokens=HC_DARK_TOKENS)
+    shimmer = only(result, ft.Shimmer)
+    assert shimmer.base_color == ft.Colors.OUTLINE
+    shapes = placeholders(result)
+    assert len(shapes) == 5 * SKELETON_ROWS
+    for shape in shapes:
+        assert shape.bgcolor is None
+        assert shape.border == ft.Border.all(1, ft.Colors.OUTLINE)
+
+
+def test_outside_high_contrast_the_placeholders_are_tonal_fills(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Outside HC the placeholders keep their tonal fill and have no border."""
+    result = skeleton(monkeypatch, reduce_motion=False)
+    shapes = placeholders(result)
+    assert len(shapes) == 5 * SKELETON_ROWS
+    for shape in shapes:
+        assert shape.bgcolor == ft.Colors.SURFACE_CONTAINER_HIGHEST
+        assert shape.border is None

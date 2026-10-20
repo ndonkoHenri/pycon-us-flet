@@ -107,6 +107,7 @@ def filter_sheet(
     on_close: Callable[[], None],
     on_tracks_page: Callable[[], None],
     reduce_motion: bool,
+    high_contrast: bool = False,
 ) -> ft.BottomSheet:
     """Return the filter sheet (ux.md §5.3): title and Reset, chips, the count button.
 
@@ -126,6 +127,9 @@ def filter_sheet(
         on_tracks_page: "What do these mean?".
         reduce_motion: The OS asks for less motion: the sheet appears without its
             slide (D-34, D-173).
+        high_contrast: HC is on screen: the sheet is the surface there, as the page
+            under its scrim nearly is, so a 1 dp ``outline`` border draws its edge
+            (D-306); the chips are outlined by the theme's chip theme.
     """
     default = ", ".join(info.track_name(key) for key in DEFAULT_HIDDEN)
     header = ft.Row(
@@ -269,6 +273,7 @@ def filter_sheet(
         show_drag_handle=True,
         scrollable=True,  # the screen's height, so the chips have room at 200 % text
         use_safe_area=True,
+        shape=_hc_sheet_shape() if high_contrast else None,
         on_dismiss=lambda _: on_close(),
         # Its slide is motion: none under reduced motion (D-34, D-173).
         animation_style=ft.AnimationStyle.no_animation() if reduce_motion else None,
@@ -304,6 +309,14 @@ def _chip(
             bgcolor=SHEET_COLOR,
             on_select=selected,
         ),
+    )
+
+
+def _hc_sheet_shape() -> ft.OutlinedBorder:
+    """The sheet's shape in HC: M3's 28 dp top corners, with a 1 dp ``outline`` edge."""
+    return ft.RoundedRectangleBorder(
+        radius=ft.BorderRadius.only(top_left=28, top_right=28),
+        side=ft.BorderSide(1, ft.Colors.OUTLINE),
     )
 
 

@@ -237,6 +237,8 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         visible=line is not None,
         content=ft.Container(
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+            # In HC the fill is the surface: lines above and below draw the band.
+            border=_band_lines() if tokens.high_contrast else None,
             content=ft.Column(
                 [
                     # 4 dp above and below: at 200 % text the line wraps, and it
@@ -254,6 +256,12 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
             ),
         ),
     )
+
+
+def _band_lines() -> ft.Border:
+    """The strip's edges in HC, where its fill is the surface: 1 dp lines (D-306)."""
+    line = ft.BorderSide(1, ft.Colors.OUTLINE)
+    return ft.Border.only(top=line, bottom=line)
 
 
 def zone_note_line(note: str | None) -> ft.Control:

@@ -35,6 +35,7 @@ from pycon_us.screens.sprint_card import SCREEN, ProjectCard
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
@@ -64,6 +65,7 @@ def Sprints() -> ft.View:
     conference = use_conference()
     info = svc.year.conference
     field = use_field_query()
+    tokens = use_tokens()
     query = field.value
     data = conference.data
     # Once per feed version: a keystroke re-renders this screen, never re-sorts.
@@ -118,6 +120,7 @@ def Sprints() -> ft.View:
                 label=FILTER_HINT,
                 clear_tooltip=CLEAR_FILTER,
                 identifier=f"{SCREEN}.filter",
+                high_contrast=tokens.high_contrast,
             )
         ]
         if found and found is not listed:  # a filter applies and finds some

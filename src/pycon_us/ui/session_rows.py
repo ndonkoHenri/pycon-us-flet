@@ -28,6 +28,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference
 from pycon_us.theme import Tokens
+from pycon_us.theme_hc import hc_border
 from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite
 from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
@@ -245,7 +246,7 @@ def _SessionRow(
     )
 
 
-def NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
+def NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
     """Return a break, meal or announcement (SCHED-04): a compact tile without a star.
 
     Memoised like ``SessionRow`` and keyed by the session id. Its icon is its
@@ -253,20 +254,23 @@ def NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
     opens the session's detail only when there is something to read there (a
     description); otherwise it is not a button. It is its own node for screen
     readers, read as ``notice_phrase()``, and a button when it opens: without its own
-    merge, a notice's text joined the slot's heading in TalkBack's tree (S2).
+    merge, a notice's text joined the slot's heading in TalkBack's tree (S2). Its
+    tile is a tonal fill, outlined in high contrast, where the fill is the surface
+    (D-306).
 
     Args:
         view: The notice's row view, the same object on every render.
+        tokens: The scheme's tokens (D-150): ``high_contrast`` outlines the tile.
         screen: The screen's name in its semantics identifier,
             ``<screen>.notice.<key>`` (``semantics_key()``).
     """
     # As in SessionRow: the key= is real, its type is not.
-    return _NoticeRow(view, screen=screen, key=view.session.id)  # pyright: ignore[reportCallIssue]
+    return _NoticeRow(view, tokens, screen=screen, key=view.session.id)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
 @ft.component
-def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
+def _NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
     """The body of ``NoticeRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference
@@ -305,6 +309,7 @@ def _NoticeRow(view: SessionView, *, screen: str) -> ft.Control:
         content=ft.Container(
             content,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
+            border=hc_border(tokens.high_contrast),
             border_radius=12,  # a card's shape (ux.md §3.6)
             # The title starts 12 dp down, on the gutter's and a SessionRow's line.
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
