@@ -482,7 +482,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `search_any_day` | journeys | Search finds a session, a speaker and a room on another day (criterion 1) |
 | `filter_persists` | journeys | A hidden track is said on the Schedule and survives a relaunch (criterion 1) |
 | `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
-| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` covers |
+| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
 Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday
@@ -497,9 +497,10 @@ simulator's network, so there the launch's refresh may publish the year's live f
 - About 0.85 s passes between two Maestro commands on the emulator, so the regression
   flow's fling comes 0.8 to 1.0 s after the tap. #346 saw its failures at 0.33 to 0.6 s;
   at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full. Row D's
-  window is guarded by `tools/fling_after_sheet.py` (Android): it sends the tap and the
+  window is reached by `tools/fling_after_sheet.py` (Android): it sends the tap and the
   fling in one `adb shell` command, measures the gap from the launcher's touch log, and
-  judges each fling by the flow's rules (`maestro/README.md` has its runs).
+  judges each fling by the flow's rules. Its first runs (`maestro/README.md`) have not
+  yet told #346's build from `main`: both lost flings only during load spikes.
 - The app bar's back arrow has no identifier: Android flows press the system Back, iOS
   flows tap the button named "Back".
 

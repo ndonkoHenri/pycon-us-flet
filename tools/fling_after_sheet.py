@@ -6,7 +6,7 @@ tapping "Show N sessions" (one Maestro command after another), and at that pace 
 the tap. This driver sends the tap and the fling in one ``adb shell`` command, ``input tap``
 then ``input swipe`` after ``--gap`` seconds (``GAP`` by default), so the fling lands
 inside that window, and measures the real time from the tap to the fling on the device
-(the launcher's ``TaplEvents`` log). It covers row D's window; the Maestro flow covers
+(the launcher's ``TaplEvents`` log). It reaches row D's window; the Maestro flow covers
 the same fling at Maestro's pace (``maestro/README.md``).
 
 From the repo root, with the app installed on your own emulator (``maestro/README.md``)::

@@ -214,5 +214,27 @@ other.
 
 #346's row D failed with 0.33 to 0.6 s between the tap and the fling. Both builds ran
 every fling in full at about 0.85 s, the soonest Maestro gets there, so this flow does
-not reach that window: it guards the fling at Maestro's pace, and the faster window
-stays with an `adb` script (`input tap`, then `input swipe`).
+not reach that window: it guards the fling at Maestro's pace only. The rows above were
+judged by the slot alone, the rule before #484's review; the flow now judges by rows.
+With rows, on #348's build (`f5785bb`) on Android: `TRIALS=5`, 5 moved, 4 min 52 s, at
+a load average under 3. An earlier run, at a load average of 370, counted one fling as
+short: it had stopped two rows past the rest, in the 12:30 PM slot.
+
+**Row D through `adb`** (`tools/fling_after_sheet.py`), on the same emulator later on
+2026-10-20, with the host's load average between 2 and 40 except where noted. The time
+is measured on the device, from the tap's `ACTION_UP` to the fling's `ACTION_DOWN`:
+
+| Build | `--gap 0.5`, 20 trials | `--gap 0.36`, 15 trials |
+|---|---|---|
+| `main` (`1a2c2b5`) | 18 moved, 1 short, 1 none; 512-666 ms (median 520) | 15 moved; 372-381 ms (median 374) |
+| #346's (`7ccd74f`) | 18 moved, 2 none; 520-742 ms (median 531) | 15 moved; 372-383 ms (median 378) |
+
+Every lost fling, on both builds, came with a slow injection (648 to 742 ms instead of
+about 525) during a spike of the host's load; at a steady gap every fling ran in full on
+both. A first #346 run stopped before its trials when one of its controls was cut short
+at a load average of 550. So on this host the driver reaches row D's window, but has
+not yet told #346's build from `main`: #346 lost 11 of 33 there in its own matrix. Run
+both builds again, on a quiet host and with more trials, before trusting either way.
+The flow and the driver read the same rest and controls on each build: `main` rests on
+12:30 PM and its flings end in 3:00 PM; #346's build keeps the 2:00 PM slot, and its
+flings end in 4:00 PM.
