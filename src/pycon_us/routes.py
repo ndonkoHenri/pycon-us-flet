@@ -32,6 +32,7 @@ from pycon_us.screens.schedule import Schedule
 from pycon_us.screens.search import Search
 from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.settings import Settings
+from pycon_us.screens.social import Social
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
@@ -198,6 +199,7 @@ ROUTES = [
         pushed("wifi", Wifi),
         pushed("help", Help),
         pushed("psf", AboutPsf),
+        pushed("social", Social),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
