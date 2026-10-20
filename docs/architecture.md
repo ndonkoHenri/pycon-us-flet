@@ -847,10 +847,25 @@ x = 41.5                            # percent of the image
 y = 62.0
 sprint = false
 
+[[plans]]
+id = "job-fair"
+title = "Job fair & community showcase"
+image = "maps/2026/job-fair.jpg"    # cropped to the floor, without the print's header (D-254)
+width = 1700
+height = 1500
+note = "The printed plan shows some tables with other sponsors. This list follows the conference's sponsor data."   # optional (D-254)
+
 [[booths]]
 number = "613"
 x = 0.412                           # ratios of the expo image; also y, w, h
+
+[[booths]]
+number = "407"
+label = "Python Software Foundation"   # only for a booth the feed gives no exhibitor (D-254)
+x = 0.621
 ```
+
+A booth lists every sponsor whose `booth_number` is its number, so a shared booth keeps all its exhibitors (2026: 726, 727, 728, 734); `label` names a booth without one, and a test over the bundled snapshot fails when a labelled booth also has an exhibitor (D-254). Job fair tables come from the feed (`job_fair_table_number`), not from `map.toml`; #464 adds their rectangles on the `job-fair` plan.
 
 ### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`)
 
