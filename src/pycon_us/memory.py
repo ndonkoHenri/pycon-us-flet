@@ -7,6 +7,7 @@ It is plain, not a store: writing it re-renders nothing, and it has no context o
 
 from dataclasses import dataclass, field, fields
 from datetime import date
+from random import Random
 
 
 @dataclass
@@ -40,6 +41,11 @@ class ViewMemory:
             location (D-143) finds its own and neither scrolls nor lights up again
             (D-18). The View removes its entry when it leaves, so the next room tile
             highlights again.
+        spotlight: The slug of the sponsor Now's spotlight thanks: picked once for
+            the process, so a relaunch after Back on Now (F29) shows the same one,
+            and picked again only when it leaves the feed (D-298).
+        rng: Where the spotlight's pick comes from; a test gives a seeded one. It is
+            left out of comparisons, as two ``Random``s are never equal.
     """
 
     last_location: str = ""
@@ -50,6 +56,8 @@ class ViewMemory:
     search_query: str = ""
     search_scope: str = "all"
     room_highlights: dict[str, str] = field(default_factory=dict)
+    spotlight: str = ""
+    rng: Random = field(default_factory=Random, compare=False)
 
     def reset(self) -> None:
         """Forget where the user was, as after a fresh install (Reset app, D-198).
