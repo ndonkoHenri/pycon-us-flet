@@ -18,6 +18,7 @@ from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.keynotes import Keynotes
+from pycon_us.screens.licences import LicencePage, Licences
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
@@ -189,7 +190,12 @@ ROUTES = [
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),
         pushed("sponsors", Sponsors),
-        pushed("app", AboutApp),
+        pushed(
+            "app",
+            AboutApp,
+            # Under About this app, so Back returns there (D-207's pattern, D-296).
+            pushed("licences", Licences, pushed(":licence", LicencePage)),
+        ),
         pushed("developer", Developer),
         pushed("wifi", Wifi),
     ),
