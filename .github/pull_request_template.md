@@ -54,6 +54,3 @@ Push the PNGs to the pr-assets branch (AGENTS.md, D-162) and embed them as
 ## Follow-ups
 
 <!-- Issues filed for work found along the way, or "None". -->
-
----
-_Written by <agent name> (AI agent)._ <!-- agents only; humans delete this line -->
