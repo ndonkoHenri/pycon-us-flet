@@ -35,7 +35,8 @@
 tests/
   __init__.py          # tests are a package, so flows can import tests.ui.helpers
   conftest.py          # hypothesis profile, --snapshot-update, machine_tz, snapshot fixtures
-  feeds.py, ionic.py   # helpers: the recorded feeds; Ionic's capture and its normaliser (§3.3)
+  feeds.py, ionic.py   # helpers: the recorded feeds and the change-log pairs built from them by named
+                       # edits (D-255); Ionic's capture and its normaliser (§3.3)
   fakes.py             # memory stand-ins for the Flet services and the page
   sessions.py          # the one harness for components and screens in a real Flet session (§3.1)
   session_detail.py    # session detail on sessions.py, for its two test modules
@@ -48,7 +49,6 @@ tests/
   test_<module>.py     # unit tests, one file per module under test (D-67, section M)
   fixtures/
     feeds/conference-2025.json, conference-2026.json   # recorded public feeds (+ README: date, URL)
-    feeds/pairs/<name>/{old,new}.json                  # change-log cases (#312)
     snapshots/outline-<year>.json                      # reviewed outline of our processed model
     ionic/<year>/*.json, ionic/signing.json            # captured once from Ionic's own code (D-77, D-52)
     mock/                                              # accounts per role, sponsors, products, attendees (D-50)
@@ -236,7 +236,7 @@ Deliberate differences live in one dict, `INTENDED_DIFFERENCES` (D-121 nested po
 | `timefmt.py` | 12/24 h from the flag; "Pacific Time" note when zones differ; DST; local day bucket; relative ages; a session's status at fixed instants (before, at the start, during, exactly at the end, after; a notice) | D-35, DATA-12, DATA-31, D-186 |
 | `slugs.py` | Room, track and sponsor slugs on real names (vectors cite their Ionic source line) | DATA-16, DATA-29 |
 | `html_md.py` (with `markdown_inline.py`, tested through `to_markdown()` and `to_text()`, plus two import scans that only `html_md.py` imports it and it imports no app module; D-201) | Every tag in the S3 census and each "could change meaning" case of `docs/spikes/03-html-markdown.md`, on its 22 feed samples and the synthetic hazard line; links made absolute, only `http(s)`/`mailto` linked; unknown tags unwrapped; plain-text paragraphs kept; escaping (LaTeX, GFM, block markers); boundaries (emphasis next to punctuation, link-edge whitespace, URLs with punctuation, queries and entities, URLs inside link text, an item holding only a nested list, multi-paragraph items, `br` in a heading, empty or space-edged code); an invariant over both fixtures: no character lost or added and no raw tag, `$` or LaTeX opener outside code; the search text has no markup and keeps word boundaries; hypothesis properties: plain text and random tag mixes keep every visible character (D-131's boundaries came from them). Expected sample Markdown is `tests/fixtures/html_md/samples.json`, equal to what S3 checked on the emulator | D-44, D-114, D-115, D-130, D-131, D-201, SESS-06 |
-| `diff.py` | Feed pairs: moved, retimed, renamed, added, removed; no diff on first install, and no false diff after a parser change (the cache keeps raw bytes) | D-47, NEW-04 |
+| `diff.py` | Feed pairs that `tests/feeds.py` builds from the recorded 2026 feed by named edits, never committed copies (D-255): moved, retimed, renamed, added, removed; no false diff after a parser change (the cache keeps raw bytes). Where it is recorded (#431): no diff over the bundled snapshot without saved sessions and only theirs with them, none over it once `pycon.<year>.fetched` is set (a start after Clear cached feed, a corrupt cache or a URL change), even with saved sessions, none against a feed from another feed URL, none for the same bytes; a URL left, or a session closed, between the publish and the log write, and a URL left while the log write is queued, leave no `changes-<year>.json` | D-47, D-255, NEW-04 |
 | `ics.py` | UTC times, stable UID, RFC 5545 escaping, 75-octet folding, `VALARM`; one session and a whole agenda | D-62, SESS-05 |
 | `badges.py` | Access code is segment 0; door and swag send the first validator, lead the last; CoC sends the code only | LEAD-03 |
 | `admission.py` | Inventory first, then online lookup; "Already checked in" on product overlap; unknown offline → "Entry not permitted" | DOOR-04 |
@@ -633,7 +633,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 |---|---|---|---|
 | **P0** | Feed rules, invariants, snapshot (2025, 2026); Ionic reference captured; two-zone fixture; capabilities, storage keys, version, `core` purity; light/dark contrast | The shell flow (`test_shell_starts`) passes with `flet test` on an emulator and a simulator (PLAN P0 exit 3) | Checklist 1, 2, 6, 7, 11 on an Android emulator and an iOS simulator, 1 and 2 also on the iPhone; S1–S5 verdicts in `docs/spikes/`; D-80 targets confirmed or revised (D-102) |
 | **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F6 on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
-| **P2** | + diff (#312), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + F7 | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
+| **P2** | + diff (`PyCon/pycon-us-mobile#312`), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + F7 | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
 | **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + F8 | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
 | **P4** | All green; goldens added | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
 
