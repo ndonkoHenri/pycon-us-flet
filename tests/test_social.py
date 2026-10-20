@@ -72,6 +72,15 @@ def chip(page: Shown, index: int) -> ft.Chip:
     return content
 
 
+def label_of(found: ft.Chip) -> tuple[ft.Icon, ft.Text]:
+    """A hashtag chip's label's icon and text, inside its padded row."""
+    holder = found.label
+    assert isinstance(holder, ft.Container) and isinstance(holder.content, ft.Row)
+    icon, text = holder.content.controls
+    assert isinstance(icon, ft.Icon) and isinstance(text, ft.Text)
+    return icon, text
+
+
 def tile(page: Shown, key: str) -> ft.ListTile:
     """The ``ListTile`` of the link row ``social.link.<key>``."""
     content = page.node(f"social.link.{key}").content
@@ -124,11 +133,22 @@ async def test_each_hashtag_is_a_chip_named_for_what_a_tap_does(show: Show) -> N
     assert SOCIAL is not None
     page = await show()
     for index, hashtag in enumerate(SOCIAL.hashtags):
-        label = chip(page, index).label
-        assert isinstance(label, ft.Text)
+        icon, label = label_of(chip(page, index))
         assert label.value == hashtag
         assert label.semantics_label == f"Copy hashtag {hashtag}"
+        assert icon.icon == ft.Icons.CONTENT_COPY_OUTLINED
+        assert icon.semantics_label is None  # decorative: the name says it
     assert not page.nodes(f"social.hashtag.{len(SOCIAL.hashtags)}")
+
+
+async def test_a_long_hashtag_wraps_instead_of_fading(show: Show) -> None:
+    """The label draws the icon and padding, so a hashtag wraps at large text (F69)."""
+    page = await show()
+    found = chip(page, 1)
+    _, label = label_of(found)
+    assert label.max_lines == 3 and label.expand_loose
+    assert found.label_padding == ft.Padding.all(0)
+    assert found.leading is None
 
 
 async def test_a_hashtag_tap_copies_it_and_says_so_once(show: Show) -> None:

@@ -161,10 +161,56 @@ def hashtag_chip(svc: Services, index: int, hashtag: str) -> ft.Control:
     return named(
         f"{SCREEN}.hashtag.{index}",
         ft.Chip(
-            label=ft.Text(hashtag, semantics_label=copy_label(hashtag)),
-            leading=ft.Icon(ft.Icons.CONTENT_COPY_OUTLINED),
+            label=chip_label(hashtag),
+            # The label draws the icon and the side padding (chip_label(), F69).
+            padding=ft.Padding.symmetric(vertical=8),
+            label_padding=ft.Padding.all(0),
             on_click=copy,
         ),
+    )
+
+
+def chip_label(hashtag: str) -> ft.Container:
+    """Return a hashtag chip's label: the copy icon, then the hashtag, which may wrap.
+
+    As the Schedule's filter chips do (D-249): Flutter's chip shows its label on one
+    line and fades the rest, and cuts a wrapped one it measured at its whole width
+    beside a leading icon (F69), so at the largest text "#PyConUS2026" lost its end.
+    The label holds the icon and the side padding instead, and is laid out at the
+    same width both times.
+
+    Args:
+        hashtag: The hashtag, with its ``#``.
+    """
+    return ft.Container(
+        ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.CONTENT_COPY_OUTLINED,
+                    size=18,  # M3's chip icon, growing with the text as Flutter's
+                    color=ft.Colors.PRIMARY,  # M3's assist chip icon
+                    apply_text_scaling=True,
+                ),
+                ft.Text(
+                    hashtag,
+                    semantics_label=copy_label(hashtag),
+                    # One word: at the largest text on the narrowest phone it may
+                    # break inside, never fade.
+                    max_lines=3,
+                    expand=True,
+                    expand_loose=True,
+                ),
+            ],
+            spacing=8,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        # M3's 8 dp chip padding plus its 8 dp label padding; the icon takes the
+        # label padding's place at the start.
+        padding=ft.Padding.only(left=8, right=16),
+        # Painted, so a tap anywhere on the label lands: the chip hit-tests only
+        # its label's centre (F69).
+        bgcolor=ft.Colors.TRANSPARENT,
     )
 
 
