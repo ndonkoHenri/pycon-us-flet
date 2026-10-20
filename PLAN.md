@@ -73,7 +73,7 @@ The full table, one row per feature with its approach, UX change, dependencies a
 **New features:**
 - **P0:** a bundled feed snapshot.
 - **P1:** My schedule (a personal agenda with overlap warnings and Undo); global search across all days; sharing a session.
-- **P2:** the schedule change log (#312); reminders before saved sessions; deep links.
+- **P2:** the schedule change log (`PyCon/pycon-us-mobile#312`); reminders before saved sessions; deep links.
 - **P3:** the local mock PyCon API server.
 - **P4:** "View source" on each screen, once the repo is public.
 
@@ -226,7 +226,7 @@ In parallel upstream: U1, U15 and spike S6.
 - **Info pages:** About PyCon US, About the PSF, Help & safety, Wi-Fi, Social, Venue & hours.
 - **Welcome and Settings:** appearance, high contrast and reminders.
 - **Reminders and calendar:** local reminders (E3 if pinned, otherwise the interim) and `.ics`.
-- **Also:** the schedule change log (#312), deep links, the tablet rail, the high-contrast schemes and About this app.
+- **Also:** the schedule change log (`PyCon/pycon-us-mobile#312`), deep links, the tablet rail, the high-contrast schemes and About this app.
 
 **Exit criteria:**
 1. Every P2 row of the matrix is done, or was explicitly re-dispositioned with a reason.

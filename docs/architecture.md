@@ -194,7 +194,6 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/` | `Start`: boot View, then the last location of this process (D-143), `/welcome`, `/now` or (P3) the staff start screen | index | P0 | SHELL-03 |
 | `/welcome` | `Welcome` | root, no bar | P2 | SHELL-02 |
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
-| `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
 | `/more/speakers`, `tracks`, `tracks/sprints`, `tracks/lightning-talks`, `tracks/open-spaces`, `tracks/keynotes` (the hub's pages of their own, More's pages again, listed before `:slug` so Back returns to the hub; `year_tracks.HUB_PAGES`, D-207, D-217, D-228), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
@@ -202,7 +201,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
 | `<any of the above>/<kind>/<id>` | `Drill` → detail screen | recursive child | P1 | SESS-12, #279 |
 
-**Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`).
+**Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`), `changes/<year>` (P2; Schedule changes, the year's change log, pushed on the View that opens it: Now's card, the Schedule's overflow, Settings › Data, or the "Schedule updated" SnackBar over any View, D-255).
 
 Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99` is five Views; Back pops one at a time and, the query being dropped, never re-applies the highlight. Query parameters carry view options only, read once at mount; anything that must survive Back lives in `ViewMemory` (§6.3).
 
@@ -225,7 +224,7 @@ ROUTES = [
     ft.Route(path="welcome", component=Welcome),
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),    # global modal (D-19)
     pushed("now", Now),
-    pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
+    pushed("schedule", Schedule),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
     pushed("more", More, pushed("speakers", Speakers),
@@ -254,6 +253,8 @@ def Drill():
             return SponsorDetail(sponsor_slug=ident)
         case "plan":
             return PlanViewer(plan_id=ident)
+        case "changes":                      # the year's change log (D-255)
+            return ScheduleChanges(year=ident)
         case kind:  # DRILL only matches DRILL_KINDS
             raise ValueError(f"no screen for the drill kind {kind!r}")
 ```
@@ -520,8 +521,9 @@ class Conference:
                 return
             previous, previous_source = self.data, self.source
             self._publish(data, digest, "network", clock.now())
-            if previous is not None and previous_source != "bundled":
-                await self._record_changes(storage, diff(previous, data))   # P2, D-47
+            # P2 (D-47, D-255): diffed only against a feed from the URL fetched; over the
+            # bundled snapshot only when sessions are saved, for them alone. #431 places it.
+            await self._record_changes(storage, previous, previous_source, url, data)
         finally:
             self._asked = False               # the next refresh starts quiet (D-181)
             self.refreshing = False
@@ -544,7 +546,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
 - A refresh that brings the published feed's bytes again (most of them: the feed changes a few times a day) publishes nothing: `data` and `version` stay, so no memo is rebuilt and no list re-renders or remounts, and the Schedule's "Now" button stays hidden; `_confirm()` updates `fetched_at`, `problem` and `source` only, and the bytes are still cached, so the next start's age is the refresh's (D-224). A changed feed publishes a new version, and the P2 diff runs only then.
-- `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
+- `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install) unless sessions are saved, and then only of theirs; none against a feed from another feed URL (D-255); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)
 
@@ -729,7 +731,15 @@ Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `ligh
 
 ### 7.9 Change log (`core/diff.py`; D-47, NEW-04, P2)
 
-`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are appended to `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). `Conference.changes` holds the last 24 h for the "Changed" chip; a batch shows "Schedule updated · Review" (SnackBar) and a Now card; `/schedule/changes` lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
+`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are appended to `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). `Conference.changes` holds the last 24 h for the "Changed" chip; a batch shows "Schedule updated · Review" (SnackBar) and a Now card; Schedule changes (the drill pair `changes/<year>`, D-255) lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
+
+The rules (D-255):
+
+- **What is diffed:** only a refresh that publishes (D-224), and only against a feed from the feed URL it fetched from: the cache or an earlier network feed. The bundled snapshot counts as the year's feed URL's, and over it a refresh is diffed only when sessions are saved, the batch holding only their changes (never an addition). After a feed URL change the next refresh publishes without a diff. A refresh that writes nothing (a closed session, D-147; a URL left, D-244) records nothing.
+- **The feed URL rule:** any change of the feed URL once the feed has loaded deletes the cache and `changes-<year>.json` (amends D-244); the start restores the stored URL before `load_local()` and deletes nothing. So the cache is always the feed of the URL in effect, and the log never mixes two feeds. Reset app deletes the log too (D-198).
+- **The route:** `changes` is a drill kind whose id is the year; every opener pushes it on its own View (`drill_href(view_path, "changes", str(YEAR))`), the SnackBar's Review on whatever View is on top, so Back returns to the opener (§5.2).
+- **Who hears:** one SnackBar per batch that changes something, saved sessions first ("2 saved sessions changed", else "Schedule updated · 3 changes"); a batch of additions only is recorded silently; Now's card only for unseen changes to saved sessions from the last 24 h; the Changed badge only for time, room and title changes, by detection time, for 24 h.
+- **A removed session** is listed with its last title, time and room, kept in the batch, as no link (its id would open the not-found state, D-186), with its star.
 
 ---
 
