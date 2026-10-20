@@ -13,6 +13,7 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.favorites import Favorites, FavoritesCtx
+from pycon_us.layout import Layout, LayoutCtx, follow_width, is_wide
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES
@@ -47,7 +48,9 @@ def App(memory: ViewMemory):
 
     ``App`` subscribes to ``Prefs`` only (``use_state``), so it re-renders when a setting
     or a device fact changes, never on a feed refresh; and when the reminder Banner
-    changes, at most once a minute while a saved session is about to start.
+    changes, at most once a minute while a saved session is about to start. It provides
+    ``Layout`` without reading it: a rotation that crosses 600 dp re-renders the
+    screens, not ``App``.
 
     Args:
         memory: The process's one ``ViewMemory`` (D-143).
@@ -57,6 +60,9 @@ def App(memory: ViewMemory):
     svc = ft.use_memo(lambda: Services.create(memory), [])
     conference = ft.use_memo(Conference, [])
     favorites = ft.use_memo(Favorites, [])
+    # The window's class from its first width, so the first screen has the right
+    # navigation (D-277); follow_width() keeps it in step.
+    layout = ft.use_memo(lambda: Layout(wide=is_wide(page.width)), [])
     prefs, _ = ft.use_state(Prefs)
 
     @report_errors
@@ -67,7 +73,12 @@ def App(memory: ViewMemory):
     def follow_theme() -> None:
         apply_theme(page, prefs)
 
+    @report_errors
+    def follow_window() -> None:
+        follow_width(page, layout)
+
     ft.use_effect(start, [])
+    ft.use_effect(follow_window, [])
     ft.use_effect(follow_theme, [prefs.theme, prefs.high_contrast_on])
     ready = prefs.loaded and prefs.time_measured
     # The app's one reminder Banner slot (D-60, architecture §14.2), before the gate.
@@ -90,7 +101,10 @@ def App(memory: ViewMemory):
             conference,
             lambda: PrefsCtx(
                 prefs,
-                lambda: FavoritesCtx(favorites, lambda: TokensCtx(tokens, router)),
+                lambda: FavoritesCtx(
+                    favorites,
+                    lambda: LayoutCtx(layout, lambda: TokensCtx(tokens, router)),
+                ),
             ),
         ),
     )

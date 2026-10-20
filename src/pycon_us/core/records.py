@@ -12,7 +12,7 @@ whole section and skips its own bad records.
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from pycon_us.core.models import (
@@ -113,8 +113,7 @@ def slot(item: object, zone: ZoneInfo) -> Slot:
     """Decode one record of ``schedule``."""
     record = _object(item)
     start, end = _moment(record, "start", zone), _moment(record, "end", zone)
-    if end < start:
-        raise ValueError(f"ends at {end.isoformat()}, before it starts")
+    _check_order(start, end)
     return Slot(
         id=_id(record, "conf_key"),
         name=_text(record, "name"),
@@ -137,8 +136,8 @@ def open_space(item: object, zone: ZoneInfo) -> OpenSpace:
         _schedule_time(record, "start", zone),
         _schedule_time(record, "end", zone),
     )
-    if start and end and end < start:
-        raise ValueError(f"ends at {end.isoformat()}, before it starts")
+    if start and end:
+        _check_order(start, end)
     conf_key = record.get("conf_key")
     if type(conf_key) is not int:
         raise TypeError(f"'conf_key' should be an integer, got {conf_key!r}")
@@ -377,6 +376,20 @@ def _schedule_time(
     if record.get(key) in (None, ""):
         return None
     return _moment(record, key, zone)
+
+
+def _check_order(start: datetime, end: datetime) -> None:
+    """Refuse a record whose ``end`` instant comes before its ``start`` (D-43, #513).
+
+    Compared in UTC: two datetimes in the same ``ZoneInfo`` compare by wall clock and
+    ignore ``fold`` (PEP 495), so a session from 1:40 PDT to 1:10 PST, across the end of
+    summer time, would otherwise read as ending before it starts.
+
+    Raises:
+        ValueError: ``end`` is before ``start``.
+    """
+    if end.astimezone(UTC) < start.astimezone(UTC):
+        raise ValueError(f"ends at {end.isoformat()}, before it starts")
 
 
 def _moment(record: Mapping[str, object], key: str, zone: ZoneInfo) -> datetime:

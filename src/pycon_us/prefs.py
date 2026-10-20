@@ -79,7 +79,8 @@ class Prefs:
         theme: The Appearance setting (``pycon.theme``).
         high_contrast: The High contrast setting (``pycon.high_contrast``);
             ``high_contrast_on`` resolves it, and the high-contrast schemes show
-            when it is true (``theme.build_theme``). Its switch is P2-61's.
+            when it is true (``theme.build_theme``). Settings' switch sets it
+            through ``high_contrast_setting()`` (D-286).
         onboarded: Whether Welcome was seen (``pycon.onboarded``, P2).
         excluded_tracks: Track keys hidden from the Schedule (``pycon.excluded_tracks``;
             by default Open Space, D-20).
@@ -132,6 +133,21 @@ class Prefs:
         if self.high_contrast == "system":
             return self.os_high_contrast
         return self.high_contrast == "on"
+
+    def high_contrast_setting(self, on: bool) -> HighContrast:
+        """Return the High contrast setting that a switch to ``on`` stores (D-286).
+
+        The switch shows ``high_contrast_on``. Switched to what the OS asks for, it
+        follows the OS again (``system``), so a later change of the OS flag applies;
+        switched against the OS, it holds (``on`` or ``off``). Where the OS reports no
+        flag (Android before 34), the flag reads as off, so off is ``system`` there.
+
+        Args:
+            on: The switch's new state.
+        """
+        if on == self.os_high_contrast:
+            return "system"
+        return "on" if on else "off"
 
     @property
     def developer_unlocked(self) -> bool:
