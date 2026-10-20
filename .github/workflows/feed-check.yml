@@ -1,12 +1,12 @@
-# Run our parser and the feed invariants on the live public feed every week (D-84, DEV-08;
-# docs/development.md §7.3). A failed scheduled run emails the owner: that is the alert.
+# Run our parser and the feed invariants on the live public feed (D-84, DEV-08; docs/development.md §7.3).
 # It also reports, without failing, whether next year's feed is published.
+# While the repo is private it runs only by hand (`gh workflow run feed-check.yml --ref main`), and the same check
+# runs locally with `uv run python -m tools.check_feed`: its weekly schedule is dropped (D-273). The PR that makes
+# the repo public brings back the schedule (Mondays 06:17 UTC), whose failed runs email the owner as the alert.
 name: Feed check
 
 on:
-  schedule:
-    - cron: "17 6 * * 1"    # Mondays 06:17 UTC
-  workflow_dispatch:
+  workflow_dispatch:        # manual runs only while the repo is private (D-273)
 
 permissions:
   contents: read

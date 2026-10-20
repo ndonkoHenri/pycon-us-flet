@@ -66,12 +66,12 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `memory.py` | `ViewMemory` (§6.3, D-231) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_tracks.py` the track registry with `HUB_PAGES`, the Tracks hub's pages of their own (D-207), and its checks, D-228; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205; `year_keynotes.py` the keynotes' entries and their checks, D-217); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `expo` (D-254), `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `row_lines.py` (the lines under a row's title: `meta()`, `secondary()`, `overlap_line()`, `elapsed_bar()` and its `TRACK`; D-227), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200; `TimeAbove`, `slot_layout()`, `time_above()` and `GutterProbe`, which `AppScaffold` puts under every body, 0 dp high, and `BootView` holds too; D-216), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `use_add_all()` (a track page's Add all, D-209), `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers and Sprints filters, D-193; `use_field_query()`, its text, `Ref` and refocusing Clear, and `found_count()`, the live count line; D-226), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203), `share.py` (the share sheet: `centre()`, where it points from on a tablet, and `share_text()`; D-206), `menus.py` (`overflow_menu()` and `menu_item()`, the app bar's overflow and its items, whose labels wrap at 200 % text; D-233) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202); `/more/open-spaces` and `/more/lightning-talks` are `open_spaces.py` and `lightning_talks.py` (D-205); `session_extras.py` holds session detail's Share, a Posters row's posters and an open space's image and site link (D-206); `/more/keynotes` is `keynotes.py`, its card `keynote_card.py`, and `keynote_people.py` holds a keynote's people for the card and session detail's keynote sections (D-217) | P0+ |
 | `data/<year>/`, `src/assets/` | year data (§8); `fonts/`, `icons/`, `maps/<year>/` | P0 |
-| `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py` | P0+ |
+| `tools/` | `mock_api/` (P3), `update_snapshot.py`, `check_feed.py`, `feed_invariants.py`, `capture_ionic_reference/`, `check_matrix.py`; the local checks `check.sh` and the merge gate `gate.sh` (D-273) | P0+ |
 
 ---
 
@@ -194,7 +194,6 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/` | `Start`: boot View, then the last location of this process (D-143), `/welcome`, `/now` or (P3) the staff start screen | index | P0 | SHELL-03 |
 | `/welcome` | `Welcome` | root, no bar | P2 | SHELL-02 |
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
-| `/schedule/changes` | `ScheduleChanges` | child | P2 | NEW-04 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
 | `/more/speakers`, `tracks`, `tracks/sprints`, `tracks/lightning-talks`, `tracks/open-spaces`, `tracks/keynotes` (the hub's pages of their own, More's pages again, listed before `:slug` so Back returns to the hub; `year_tracks.HUB_PAGES`, D-207, D-217, D-228), `tracks/<slug>`, `keynotes`, `open-spaces`, `lightning-talks`, `sprints` | programme screens (`tracks` doubles as the session-types legend) | child | P1 | SPKR, SCHED-21..24, EVT |
 | `/more/app`, `/more/developer` | About this app (minimal in P1, D-73; complete in P2), Developer | child | P1 | DEV-01, DEV-04, DEV-05 (P1); INFO-03 (P2) |
@@ -202,7 +201,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
 | `<any of the above>/<kind>/<id>` | `Drill` → detail screen | recursive child | P1 | SESS-12, #279 |
 
-**Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`).
+**Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`), `changes/<year>` (P2; Schedule changes, the year's change log, pushed on the View that opens it: Now's card, the Schedule's overflow, Settings › Data, or the "Schedule updated" SnackBar over any View, D-255).
 
 Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99` is five Views; Back pops one at a time and, the query being dropped, never re-applies the highlight. Query parameters carry view options only, read once at mount; anything that must survive Back lives in `ViewMemory` (§6.3).
 
@@ -225,7 +224,7 @@ ROUTES = [
     ft.Route(path="welcome", component=Welcome),
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),    # global modal (D-19)
     pushed("now", Now),
-    pushed("schedule", Schedule, pushed("changes", ScheduleChanges)),
+    pushed("schedule", Schedule),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
     pushed("more", More, pushed("speakers", Speakers),
@@ -254,6 +253,8 @@ def Drill():
             return SponsorDetail(sponsor_slug=ident)
         case "plan":
             return PlanViewer(plan_id=ident)
+        case "changes":                      # the year's change log (D-255)
+            return ScheduleChanges(year=ident)
         case kind:  # DRILL only matches DRILL_KINDS
             raise ValueError(f"no screen for the drill kind {kind!r}")
 ```
@@ -458,12 +459,13 @@ class Conference:
     _feed_url: str | None = field(default=None, repr=False)   # the Developer feed URL (D-187)
 
     async def set_feed_url(self, url: str | None, storage: Storage) -> None:
-        """Refresh from `url` from the next refresh on; None is the year's feed (D-187, D-244)."""
+        """Refresh from `url` from the next refresh on; None is the year's feed (D-187, D-244, D-255)."""
         if url == self._feed_url:
             return
-        was, self._feed_url = self._feed_url, url   # first: a refresh from `was` sees the change
-        if was is not None and url is None:         # the cache may hold the test feed
-            await storage.delete_feed("the Developer feed URL is off")
+        self._feed_url = url                  # first: a refresh from the old URL sees the change
+        if self.data is not None:             # after the load, the cache and the log are the old URL's
+            # P2: one Storage deletion of both, after every queued write of either (D-255).
+            await storage.delete_feed("the feed URL changed")
 
     async def load_local(self, storage: Storage, year: YearData) -> None:
         """Publish the persistent cache, or the bundled snapshot when there is no usable cache."""
@@ -520,8 +522,10 @@ class Conference:
                 return
             previous, previous_source = self.data, self.source
             self._publish(data, digest, "network", clock.now())
-            if previous is not None and previous_source != "bundled":
-                await self._record_changes(storage, diff(previous, data))   # P2, D-47
+            # P2 (D-47, D-255): diffed only against a feed from the URL fetched; over the
+            # bundled snapshot only for saved sessions, before `pycon.<year>.fetched` is set.
+            # The hand-off re-checks `discarded()` just before it writes the log (D-255).
+            await self._record_changes(storage, previous, previous_source, url, data)
         finally:
             self._asked = False               # the next refresh starts quiet (D-181)
             self.refreshing = False
@@ -544,7 +548,7 @@ def use_conference() -> Conference:       # raises RuntimeError without a provid
 - With `closed` set (the session was replaced, D-147), `_refresh` returns after the fetch, or after the cache write, without another write, and leaves `refreshing` as it is: every store write would reach the destroyed session (F30). Without `closed` (tests, tools) it never stops early.
 - A refresh that fails with an unexpected exception is logged by `start_refresh`'s done callback as soon as it ends (D-71), and `refresh()` callers also get the exception raised; asyncio's default handler, which logs through `logging`, covers anything else once its task is released (F37, D-163). Expected failures never raise.
 - A refresh that brings the published feed's bytes again (most of them: the feed changes a few times a day) publishes nothing: `data` and `version` stay, so no memo is rebuilt and no list re-renders or remounts, and the Schedule's "Now" button stays hidden; `_confirm()` updates `fetched_at`, `problem` and `source` only, and the bytes are still cached, so the next start's age is the refresh's (D-224). A changed feed publishes a new version, and the P2 diff runs only then.
-- `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install); parser changes cannot cause false diffs, since the cache keeps raw bytes.
+- `feed.process` is pure and runs on the loop (D-109: S1 measured 3-4 ms for `json.loads` plus a processing stand-in on the emulator). If the logged time exceeds 150 ms on the iPhone, revisit it per D-109; `asyncio.to_thread` does not shorten a GIL-bound stall. No diff against the bundled snapshot (first install) unless sessions are saved, and then only of theirs; none against a feed from another feed URL (D-255); parser changes cannot cause false diffs, since the cache keeps raw bytes.
 
 ### 6.3 `ViewMemory` (D-18)
 
@@ -631,7 +635,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 ### 7.5 Queries (`core/queries.py`, `timeline.py`, `agenda.py`, `search.py`)
 
-One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
+One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202); `expo.py` the expo's booths and the job fair's tables (D-254). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
 
 | Query | Rule | Features |
 |---|---|---|
@@ -729,7 +733,15 @@ Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `ligh
 
 ### 7.9 Change log (`core/diff.py`; D-47, NEW-04, P2)
 
-`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are appended to `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). `Conference.changes` holds the last 24 h for the "Changed" chip; a batch shows "Schedule updated · Review" (SnackBar) and a Now card; `/schedule/changes` lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
+`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are appended to `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). `Conference.changes` holds the last 24 h for the "Changed" chip; a batch shows "Schedule updated · Review" (SnackBar) and a Now card; Schedule changes (the drill pair `changes/<year>`, D-255) lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
+
+The rules (D-255):
+
+- **What is diffed:** only a refresh that publishes (D-224), and only against a feed from the feed URL it fetched from: the cache or an earlier network feed. The bundled snapshot counts as the year's feed URL's, and over it a refresh is diffed only when sessions are saved, the batch holding only their changes (never an addition), and only until the install's first network publish for the year saves `pycon.<year>.fetched`; after it, a start that fell back to the snapshot (Clear cached feed, a cache that does not parse, a feed URL change) is not diffed, since the snapshot is not what the user last saw. After a feed URL change the next refresh publishes without a diff, in the session and after a relaunch. A refresh that writes nothing (a closed session, D-147; a URL left, D-244) records nothing.
+- **The feed URL rule:** any change of the feed URL once the feed has loaded deletes the cache and `changes-<year>.json` (amends D-244); the start restores the stored URL before `load_local()` and deletes nothing. So the cache is always the feed of the URL in effect, and the log never mixes two feeds: the log's writes are kept in `Storage._writes` with the feed's, the deletion waits for them all, and `_record_changes` checks `discarded()` again just before it writes (D-255, as D-244 orders the cache). Reset app deletes the log too (D-198).
+- **The route:** `changes` is a drill kind whose id is the year; every opener pushes it on its own View (`drill_href(view_path, "changes", str(YEAR))`), the SnackBar's Review on whatever View is on top, so Back returns to the opener (§5.2).
+- **Who hears:** one SnackBar per batch that changes something, saved sessions first ("2 saved sessions changed", else "Schedule updated · 3 changes"); a batch of additions only is recorded silently; Now's card only for unseen changes to saved sessions from the last 24 h (seen 2 s after the list shows them, or by Mark all as seen); showing the list closes the Review SnackBar, and Review on the list only closes it; the Changed badge only for time, room and title changes, by detection time, for 24 h.
+- **A removed session** is listed with its last title, time and room, kept in the batch, as no link (its id would open the not-found state, D-186), with its star.
 
 ---
 
@@ -847,10 +859,25 @@ x = 41.5                            # percent of the image
 y = 62.0
 sprint = false
 
+[[plans]]
+id = "job-fair"
+title = "Job fair & community showcase"
+image = "maps/2026/job-fair.jpg"    # cropped to the floor, without the print's header (D-254)
+width = 1700
+height = 1500
+note = "The printed plan shows some tables with other sponsors. This list follows the conference's sponsor data."   # optional (D-254)
+
 [[booths]]
 number = "613"
 x = 0.412                           # ratios of the expo image; also y, w, h
+
+[[booths]]
+number = "407"
+label = "Python Software Foundation"   # only for a booth the feed gives no exhibitor (D-254)
+x = 0.621
 ```
+
+A booth lists every sponsor whose `booth_number` is its number, so a shared booth keeps all its exhibitors (2026: 726, 727, 728, 734); `label` names a booth without one, and a test over the bundled snapshot fails when a labelled booth also has an exhibitor (D-254). Job fair tables come from the feed (`job_fair_table_number`), not from `map.toml`; #464 adds their rectangles on the `job-fair` plan.
 
 ### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`)
 

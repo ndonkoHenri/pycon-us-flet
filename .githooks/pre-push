@@ -1,0 +1,56 @@
+#!/bin/sh
+# Git's pre-push hook (D-273): runs the fast local checks (`tools/check.sh --fast`, everything but pytest) before a
+# push, since GitHub Actions don't run on pushes while the repo is private. A push that changes only Markdown skips
+# them. Turn it on once per clone, for every worktree of it: `git config core.hooksPath .githooks`.
+# Skip it for one push with `git push --no-verify`.
+#
+# Git runs it from the worktree's root and writes one line per ref to its standard input:
+# <local ref> <local sha> <remote ref> <remote sha>
+set -eu
+
+changed=$(mktemp)
+trap 'rm -f "$changed"' EXIT
+
+head=$(git rev-parse -q --verify HEAD || true)
+code=0          # 1 once a pushed ref changes a file that isn't Markdown, or when we can't tell what it changes
+other_commit=0  # 1 when a ref pushes a commit other than HEAD
+
+while read -r _ local_sha _ remote_sha; do  # the refs' names don't matter here
+    case $local_sha in *[!0]*) ;; *) continue ;; esac  # a deletion (all zeros): nothing to check
+    [ "$local_sha" = "$head" ] || other_commit=1
+    case $remote_sha in
+        *[!0]*)  # an existing remote ref: what the push changes in it
+            if git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+                base=$remote_sha
+            else
+                base=""  # not fetched here, so we can't tell what changed: treat it as code
+            fi
+            ;;
+        *)  # a new remote ref: what it adds to main
+            base=$(git merge-base "$local_sha" origin/main 2>/dev/null || true)
+            ;;
+    esac
+    if [ -z "$base" ]; then
+        code=1
+        continue
+    fi
+    git diff --name-only "$base" "$local_sha" >> "$changed"
+done
+
+if [ "$code" = 0 ] && ! grep -qv '\.md$' "$changed"; then
+    echo "pre-push: nothing but Markdown changed; skipping the checks (D-273)"
+    exit 0
+fi
+
+# A branch from before D-273 has no checks to run.
+if [ ! -f tools/check.sh ]; then
+    exit 0
+fi
+
+if [ -n "$(git status --porcelain)" ] || [ "$other_commit" = 1 ]; then
+    echo "pre-push: warning: the checks see the working tree, which isn't exactly the pushed commit" \
+        "(uncommitted changes, or HEAD is not the commit being pushed)" >&2
+fi
+
+echo "pre-push: running tools/check.sh --fast (D-273; skip once with git push --no-verify)"
+exec tools/check.sh --fast < /dev/null

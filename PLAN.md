@@ -73,7 +73,7 @@ The full table, one row per feature with its approach, UX change, dependencies a
 **New features:**
 - **P0:** a bundled feed snapshot.
 - **P1:** My schedule (a personal agenda with overlap warnings and Undo); global search across all days; sharing a session.
-- **P2:** the schedule change log (#312); reminders before saved sessions; deep links.
+- **P2:** the schedule change log (`PyCon/pycon-us-mobile#312`); reminders before saved sessions; deep links.
 - **P3:** the local mock PyCon API server.
 - **P4:** "View source" on each screen, once the repo is public.
 
@@ -226,16 +226,16 @@ In parallel upstream: U1, U15 and spike S6.
 - **Info pages:** About PyCon US, About the PSF, Help & safety, Wi-Fi, Social, Venue & hours.
 - **Welcome and Settings:** appearance, high contrast and reminders.
 - **Reminders and calendar:** local reminders (E3 if pinned, otherwise the interim) and `.ics`.
-- **Also:** the schedule change log (#312), deep links, the tablet rail, the high-contrast schemes and About this app.
+- **Also:** the schedule change log (`PyCon/pycon-us-mobile#312`), deep links, the tablet rail, the high-contrast schemes and About this app.
 
 **Exit criteria:**
-1. Every P2 row of the matrix is done, or was explicitly re-dispositioned with a reason.
+1. Every P2 row of the matrix is done, or was explicitly re-dispositioned with a reason. If E3 isn't pinned when the exit starts, the rows only E3 can deliver move to `later`, and their issues move to P4 (D-256).
 2. In airplane mode, floor plans with room pins, the expo map and list, Wi-Fi, Help & safety and venue hours work from bundled year data, and the loader test is green.
 3. Reminders:
    - With E3 pinned, a saved session's reminder fires with the app killed on the iPhone and on an Android emulator, and after a reboot of the emulator (D-102). Tapping it opens the session, and the reminder moves when the session moves.
-   - Without E3, the interim says so honestly.
+   - Without E3, the interim says so honestly, and the E3 work moves to P4 (D-256).
    - A denied permission never blocks a task.
-4. The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
+4. The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. The device checklist passes (D-79), including high contrast, the tablet layout and TalkBack and VoiceOver on three new flows.
 6. Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
@@ -299,7 +299,7 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 | S6 | Can local reminders be reliable when the app isn't running? | A release build schedules a reminder 2 minutes ahead. Test with the app killed, the phone locked, a tap from cold start and more than 64 candidates on the iPhone; with the app killed, the screen locked, a reboot, exact alarms denied and a cold-start tap on an Android emulator (D-102). | During P1 (upstream track) | E3 scope; U7 and Android receivers |
 | S7 | Do real floor plans with ~60 hotspots work in `InteractiveViewer` on a low-RAM phone? | Plans re-encoded to ≤ 2048 px. Maximum zoom, tap accuracy, a memory profile, and booth select + highlight with the zoom buttons (reset, zoom in, zoom out). On an Android emulator with a small-RAM AVD (2 GB) and on the iPhone; the verdict notes that a real low-RAM phone waits for a borrowed device (D-102). | Start of P2 | Image sizes; hotspot approach |
 | S8 | Does a minimal `mobile_scanner` extension decode reliably in release builds? | One control with `on_detect` and a torch toggle; release builds for Android and iOS. On the iPhone: a printed QR in daylight and dim light, repeated detections, permission denied, background and resume. On an Android emulator: a QR image in the virtual scene camera, permission denied, background and resume (no torch or lighting conditions). The companion app falls back to manual entry. | Before P3 (upstream track) | Whether E1 goes ahead, and its API |
-| S9 | Can the UI flows run in CI with `flet test linux`? | `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window, run alongside the local flows. | P2 at the earliest | A separate workflow proposed through `needs-decision` once green for two weeks, never in `ci.yml` (D-78, D-84) |
+| S9 | Can the UI flows run in CI with `flet test linux`? | `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window, run alongside the local flows. | P2 at the earliest; it needs GitHub's Linux runners, so it waits until the repo is public (D-273) | A separate workflow proposed through `needs-decision` once green for two weeks, never in `ci.yml` (D-78, D-84) |
 
 ## 9. Quality bar
 
@@ -324,10 +324,10 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual for humans and agents, which is maintained separately. The work itself is broken down in [`docs/roadmap.md`](docs/roadmap.md); GitHub issues are the live task list. In brief (D-88..D-96):
 
 - **Issues first.** One private GitHub repo (public in P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
-- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. CI must be green. Agents squash-merge their own PRs under the merge conditions of D-100; the owner watches and can step in, but is never a blocker.
+- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass: locally while the repo is private, with the merge gate before every merge (D-273), and in CI once it is public. Agents squash-merge their own PRs under the merge conditions of D-100; the owner watches and can step in, but is never a blocker.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
 - **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the owner (D-101). Docs change in the same PR as the behaviour.
-- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103). **Upstream work** lives in flet-dev and is the owner's; agents act only in this repository and track it here by `upstream` issues (D-212).
+- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103; paused while the repo is private, D-273). **Upstream work** lives in flet-dev and is the owner's; agents act only in this repository and track it here by `upstream` issues (D-212).
 
 ## 11. Risks
 
