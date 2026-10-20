@@ -306,6 +306,14 @@ def with_empty_top_level(data: ConferenceData) -> ConferenceData:
     return replace(data, sponsor_levels=(replace(top, sponsors=()), *rest))
 
 
+def with_mixed_top_level(data: ConferenceData) -> ConferenceData:
+    """``data`` with the top level's last sponsor given the next level's order."""
+    top, *rest = data.sponsor_levels
+    *first, last = top.sponsors
+    odd = replace(last, level_order=top.order + 1)
+    return replace(data, sponsor_levels=(replace(top, sponsors=(*first, odd)), *rest))
+
+
 type Invariant = Callable[[ProcessedFeed], list[str]]
 
 BREAKS: list[tuple[Callable[[ConferenceData], ConferenceData], Invariant, str]] = [
@@ -407,6 +415,11 @@ BREAKS: list[tuple[Callable[[ConferenceData], ConferenceData], Invariant, str]] 
         with_empty_top_level,
         feed_invariants.sponsor_levels_are_sorted_and_not_empty,
         "sponsor level 'Visionary' has no sponsor",
+    ),
+    (
+        with_mixed_top_level,
+        feed_invariants.sponsor_levels_are_sorted_and_not_empty,
+        "sponsor level 'Visionary' also has orders 1",
     ),
 ]
 """Ways to break the 2026 model, the invariant each breaks, and a problem it reports."""

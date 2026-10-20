@@ -172,7 +172,7 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 9. Every speaker a session links is in the directory and named in it, and every directory speaker has a session; no pseudo-speaker is in the directory.
 10. One room per slug, naturally sorted, listing exactly the sessions that name it, by start, then name.
 11. Every sponsor's slug is `sponsor_slug()` of its name, and no two sponsors share one (SPON-02, D-261).
-12. The sponsor levels are sorted by their order, each named once and never empty, and each sponsor's `level` is its level's (DATA-22, D-261).
+12. The sponsor levels are sorted by their order, each named once and never empty, all of a level's sponsors share its order, and each sponsor's `level` is its level's (DATA-22, D-261).
 
 Processing is pure by construction: `process()` takes bytes and returns new frozen values.
 

@@ -186,6 +186,8 @@ def test_a_malformed_sponsor_is_skipped_and_named(
     [
         (lambda s: s.update(name=None), "'name' should be a string, got None"),
         (lambda s: s.update(name="日本"), "'name' has no letter or digit"),
+        (lambda s: s.update(name="  "), "'name' has no letter or digit"),
+        (lambda s: s.update(name=" & "), "'name' has no letter or digit"),
         (lambda s: s.update(mobile_banner="yes"), "'mobile_banner' should be true"),
         (lambda s: s.update(booth_number=["613"]), "'booth_number' should be a string"),
         (lambda s: s.update(description=7), "'description' should be a string"),

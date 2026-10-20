@@ -354,7 +354,10 @@ def sponsor_slugs_are_unique(feed: ProcessedFeed) -> list[str]:
 
 
 def sponsor_levels_are_sorted_and_not_empty(feed: ProcessedFeed) -> list[str]:
-    """DATA-22: the levels run by their order, each named once, with its own sponsors."""
+    """DATA-22: the levels run by their order, each named once, with its own sponsors.
+
+    A level's order is its first sponsor's (D-261), so its other sponsors must share it.
+    """
     levels = feed.data.sponsor_levels
     problems = []
     orders = [level.order for level in levels]
@@ -368,6 +371,10 @@ def sponsor_levels_are_sorted_and_not_empty(feed: ProcessedFeed) -> list[str]:
             problems.append(f"sponsor level {level.name!r} has no sponsor")
         if strays := [s.name for s in level.sponsors if s.level != level.name]:
             problems.append(f"sponsor level {level.name!r} lists {', '.join(strays)}")
+        if others := sorted({s.level_order for s in level.sponsors} - {level.order}):
+            problems.append(
+                f"sponsor level {level.name!r} also has orders {', '.join(map(str, others))}"
+            )
     return problems
 
 

@@ -268,7 +268,8 @@ def sponsor(item: object, level: str) -> Sponsor:
     """
     record = _object(item)
     name = _text(record, "name")
-    if not (slug := sponsor_slug(name)):
+    slug = sponsor_slug(name)
+    if not slug.strip("-"):  # a blank name, or one of spaces and marks, slugs to dashes
         raise ValueError(f"'name' has no letter or digit to make a slug of: {name!r}")
     level_order = record.get("level_order")
     if type(level_order) is not int:
