@@ -111,6 +111,15 @@ def favorites(year: int) -> Pref[list[str]]:
     return Pref(f"pycon.{year}.favorites", [])
 
 
+def fetched(year: int) -> Pref[bool]:
+    """Return the key that says a network feed of ``year`` was published (D-255).
+
+    Saved by the install's first network publish for the year: from then on a refresh
+    over the bundled snapshot is not diffed (``ChangeLog``). Reset app clears it.
+    """
+    return Pref(f"pycon.{year}.fetched", False)
+
+
 # ------------------------------------------------------------------ files
 
 
