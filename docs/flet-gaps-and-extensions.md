@@ -29,7 +29,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 | 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)); without it at the P2 exit, P4 (D-256) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
 | 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
 | 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
-| 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
+| 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2; API and Dart duties in D-293 | Before P3 (spike S8: [verdict](spikes/08-scanner.md)) | M | goes ahead (D-293); S8 ran the API through a throwaway extension; the write-up is [#520](https://github.com/ndonkoHenri/pycon-us-flet/issues/520) |
 | 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` alone: no build number (D-83, D-187) | `page.get_app_info()` | P2 | XS | proposed |
 | 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
 | 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
@@ -394,11 +394,11 @@ async def apply(plan: list[Reminder], *, exact: bool) -> None:
 | Interim (D-65) | Manual entry on the shared scan screen: a `TextField(on_submit=...)` taking the full `code:validator` payload, typed, pasted or sent by a USB/Bluetooth HID scanner, with focus kept. It **always** ships; the camera is added on top when E1 is bundled, and the companion app says "Camera scanning isn't available in this build". |
 | Upstream | A new extension. Proposed dist `flet-barcode-scanner` (free on PyPI), module `flet_barcode_scanner`, control `BarcodeScanner`. |
 | Dart package | `mobile_scanner` **7.4.2** (BSD-3; 2026-09-14; Dart `^3.7.0`, Flutter `>=3.29.0`; Android `minSdk 23`, CameraX and ML Kit; iOS pod 12.0, Apple Vision). |
-| Gate finding | `mobile_scanner` imports `package:flutter/material.dart` in `mobile_scanner.dart` and `mobile_scanner_preview.dart`. The default error and placeholder widgets use `Colors.black`, `Icons.error`, `Icon` and `Text`. The extension must pass its own `errorBuilder` and `placeholderBuilder` (built from `widgets.dart`), so no SDK-Material widget is ever built. The §3 gate test proves it. |
+| Gate finding | `mobile_scanner` imports `package:flutter/material.dart` in `mobile_scanner.dart` and `mobile_scanner_preview.dart`. The default error and placeholder widgets use `Colors.black`, `Icons.error`, `Icon` and `Text`. The extension passes its own `errorBuilder` and `placeholderBuilder` (built from `widgets.dart`), so no SDK-Material widget is ever built. S8 passed the §3 gate on Android and the iOS simulator: with those builders the plugin builds only `ValueListenableBuilder`, `LayoutBuilder`, `ClipRect`, `SizedBox`, `FittedBox`, `RotatedBox` and a `Texture` (`GestureDetector` only with `tapToFocus`, which E1 leaves off). |
 | Effort | M, plus S8 |
 | Gate | `capabilities.SCANNER` |
 
-**Python API** (proposed). It is declarative: torch and pause are properties, not imperative toggles, which fits components mode.
+**Python API** (settled by D-293; S8 ran it as `S8Scanner`). It is declarative: torch and pause are properties, not imperative toggles, which fits components mode.
 
 ```python
 from dataclasses import dataclass, field
@@ -421,6 +421,12 @@ class BarcodeDetectEvent(ft.Event["BarcodeScanner"]):
     format: Optional[BarcodeFormat] = None
 
 
+@dataclass
+class BarcodeErrorEvent(ft.Event["BarcodeScanner"]):
+    code: Optional[str] = None  # "permissionDenied", "unsupported", ...
+    message: Optional[str] = None
+
+
 @ft.control("BarcodeScanner")
 class BarcodeScanner(ft.LayoutControl):
     """A live camera preview that reports detected barcodes."""
@@ -429,18 +435,25 @@ class BarcodeScanner(ft.LayoutControl):
     paused: bool = False  # True stops analysis and releases the camera
     torch: bool = False
     on_detect: Optional[ft.EventHandler[BarcodeDetectEvent]] = None
-    on_error: Optional[ft.ControlEventHandler["BarcodeScanner"]] = None  # e.data is the message
+    on_error: Optional[ft.EventHandler[BarcodeErrorEvent]] = None  # code (MobileScannerErrorCode name), message
 
     async def analyze_image(self, path: str) -> list[str]:
-        """Decode the barcodes in an image file (lets device tests check decoding without pointing a camera at a badge)."""
+        """Decode the barcodes in an image file (lets device tests check decoding without pointing a camera at a badge).
+
+        mobile_scanner raises on the iOS simulator, so iOS checks run on a device.
+        """
         return await self._invoke_method("analyze_image", {"path": path})
 ```
 
-**Dart side.**
-- `MobileScannerController(formats:, detectionSpeed: DetectionSpeed.normal, autoStart: !paused)` is created in `initState`.
-- `didUpdateWidget` maps `paused` to `stop()`/`start()`, and calls `toggleTorch()` when `torch` differs from the controller's torch state.
-- `onDetect` calls `triggerEvent("detect", {"raw_value": ..., "format": ...})` for the first barcode in the capture.
-- `useAppLifecycleState` stays on, so the camera is released in the background.
+**Dart side** (D-293; S8's `docs/spikes/08-scanner/s8_scanner/` is a working sketch).
+- `MobileScannerController(formats:, detectionSpeed: DetectionSpeed.normal, autoStart: !paused, torchEnabled: torch)` is created in `initState` and passed to `MobileScanner`.
+- A controller passed in gets no lifecycle handling from the widget (`useAppLifecycleState` applies only to one it creates), so the state is a `WidgetsBindingObserver`: `stop()` on `inactive`, `start()` on `resumed` unless paused or without camera permission. S8: no camera client and no detection in the background, the first detection 2.1 s after the return.
+- `didUpdateWidget` maps `paused` to `stop()`/`start()` (stop releases the camera; S8 saw a disconnect per cycle over 50 cycles, with no PSS growth), and calls `toggleTorch()` when `torch` differs from the torch state and a torch exists.
+- `start()` and `stop()` are serialised: the wanted state is applied when the call in flight finishes, and a `MobileScannerException` goes to `on_error`. S8's unserialised sketch left `controllerInitializing` unhandled when a resume came during the first start.
+- A change of `MobileScannerState.error` triggers `error` with the code's `.name` and the message.
+- `onDetect` calls `triggerEvent("detect", {"raw_value": ..., "format": ...})` for each barcode in the capture; `DetectionSpeed.normal` repeats a held code about every 270 ms, so the app's per-code cooldown is what dedupes.
+- `placeholderBuilder` and `errorBuilder` return `SizedBox.expand(child: ColoredBox(...))`: a bare `ColoredBox` is zero wide in a `Column`.
+- Release builds silence `debugPrint` (F111): report through events, not logs.
 
 **App side** (`services/scanner.py`). The app owns cooldowns and feedback, not the extension:
 
@@ -475,15 +488,15 @@ The scan screen applies the 4 s per-code cooldown and pauses while a dialog or s
 | Platform | Entry | How (exists today) |
 |---|---|---|
 | both | Camera permission and usage string | `[tool.flet] permissions = ["camera"]` emits `NSCameraUsageDescription` and `android.permission.CAMERA` (`CLI/build_base.py:254`). Override the iOS string with staff-scanning wording in `[tool.flet.ios.info]`. |
-| both | Runtime prompt in context (D-61) | `ph = fph.PermissionHandler()`, then `await ph.request(fph.Permission.CAMERA)`. If the result is `PermissionStatus.PERMANENTLY_DENIED`, show "Camera access is off" with "Open settings" (`await ph.open_app_settings()`) and "Enter codes instead". |
+| both | Runtime prompt in context (D-61) | `ph = fph.PermissionHandler()`, then `await ph.request(fph.Permission.CAMERA)` before the preview mounts: `mobile_scanner` asks on its own at start otherwise. If the result is `PermissionStatus.PERMANENTLY_DENIED`, show "Camera access is off" with "Open settings" (`await ph.open_app_settings()`) and "Enter codes instead"; `on_error`'s `permissionDenied` cannot tell the two apart. After Settings, re-check on resume and set `paused=False`: nothing restarts the camera by itself (S8). |
 | both | Keep awake while scanning | `ft.Wakelock().enable()` / `disable()` (coroutines) |
-| Android | ML Kit model | Keep the bundled model (+3–10 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
+| Android | ML Kit model | Keep the bundled model (S8: +7.3 MB on the arm64 release APK, of which `libbarhopper_v3.so` 4.9 MB and the models 0.9 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
 | iOS | Minimum OS | Pod 12.0, below the template's 15.0, so U12 is not needed. |
 
-**Spike S8** (before P3, upstream track). Build the smallest extension (one control, `on_detect`, torch) as release builds for Android and iOS. On the iPhone, test a printed QR in daylight and dim light, repeated detections, permission denied, background and resume. On an Android emulator, test a QR image in the virtual scene camera, repeated detections, permission denied, background and resume (no torch or lighting conditions; D-102). Test the companion app's fallback to manual entry too. The verdict decides whether E1 goes ahead and settles its API.
+**Spike S8: done** ([verdict](spikes/08-scanner.md), 2026-10-20). A throwaway extension with this API decoded the badge QR from an Android 14 emulator's virtual scene camera in a release APK on every cold start, turn, resume and after 50 pause/resume cycles, released the camera in the background, and passed the §3 gate there and on the iOS 26.5 simulator (prompt, `permissionDenied`, and `unsupported`, since the simulator has no camera). E1 goes ahead (D-293). The printed QR in daylight and dim light, the torch and release timings wait for the iPhone (#121).
 
 **Tests.**
-- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload; pause and resume 50 times with no camera leak (no CameraX errors in logcat, on the emulator); the torch toggles (on the iPhone; Android's torch waits for a borrowed phone, D-102); a denied permission fires `on_error` and nothing crashes.
+- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload (Android and the iPhone; it raises on the iOS simulator); pause and resume 50 times with no camera leak (a camera disconnect per pause in `dumpsys media.camera`, no PSS growth, no unhandled exception, on the emulator); the torch toggles (on the iPhone; Android's torch waits for a borrowed phone, D-102); a denied permission fires `on_error` and nothing crashes.
 - **App:** the P3 exit criterion, a printed sheet of mock badges scanned on the iPhone (on Android, the badge images through an emulator's virtual scene camera), including two devices checking in the same attendee (PLAN §7).
 
 **Upgrade** (§2.4, plus):

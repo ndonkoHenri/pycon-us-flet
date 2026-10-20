@@ -38,6 +38,7 @@ from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.welcome import Welcome
+from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
@@ -201,6 +202,7 @@ ROUTES = [
         pushed("sponsors", Sponsors),
         pushed("app", AboutApp),
         pushed("developer", Developer),
+        pushed("wifi", Wifi),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

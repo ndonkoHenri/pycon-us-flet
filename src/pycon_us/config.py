@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import check_info
+from pycon_us.year_info import WifiInfo, check_info
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
@@ -145,8 +145,9 @@ class Content:
     """The year's content from ``content.toml`` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
-    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), and the
-    hand-authored conference moments (D-274).
+    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), the Wi-Fi
+    page's network and password (D-280), and the hand-authored conference moments
+    (D-274).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -163,6 +164,8 @@ class Content:
         lightning_talks: The Lightning talks page's copy and links; None for a year
             that has none, whose page shows its sessions alone.
         keynotes: The keynotes and panels, one entry per session (SESS-08, SPKR-04).
+        wifi: The Wi-Fi page's network and password (INFO-08, D-280); None for a year
+            without them, whose page shows the feed's block.
         event_reminders: The sign-up moments, written by hand (NOTIF-05); the
             keynotes' moments are derived from the feed (``year_moments``).
     """
@@ -174,6 +177,7 @@ class Content:
     open_spaces: OpenSpacesInfo | None = None
     lightning_talks: LightningTalksInfo | None = None
     keynotes: tuple[Keynote, ...] = ()
+    wifi: WifiInfo | None = None
     event_reminders: tuple[EventReminder, ...] = ()
 
 

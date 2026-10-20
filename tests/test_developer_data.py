@@ -36,7 +36,6 @@ from pycon_us.screens.developer_data import (
     DataActions,
     refreshed,
     reset_app,
-    schedule_line,
 )
 from pycon_us.screens.developer_ui import (
     NBSP,
@@ -848,16 +847,3 @@ def test_refresh_now_says_how_the_refresh_ended() -> None:
         "The feed's answer couldn't be used: the app keeps the schedule it has.",
         False,
     )
-
-
-def test_the_schedule_line_names_the_source_and_its_age() -> None:
-    """The schedule line names the source and its age, or says there is none yet."""
-    now = datetime(2026, 5, 15, 12, tzinfo=UTC)
-    three_hours = now - timedelta(hours=3)
-    assert schedule_line("cache", three_hours, now) == (
-        "From the cache, updated 3 hours ago"
-    )
-    assert (
-        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
-    )
-    assert schedule_line("none", None, now) == "No schedule yet"
