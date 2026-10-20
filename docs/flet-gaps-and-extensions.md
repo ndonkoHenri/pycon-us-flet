@@ -52,15 +52,11 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 ### 1.2 Deep links: no gap
 
-Deep links (NEW-07, D-21) use what exists: the per-platform tables `flet build` reads for Android and iOS (`CLI/build_base.py:1422-1437`) and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-55`) and Info.plist entry. The owner's open PR [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953) (fixes #6951) makes the common `[tool.flet.deep_linking]` table a per-key fallback on Android and iOS. We configure **both per-platform tables**, so links work with or without #6953 in the pinned Flet (F16); collapsing them later is optional.
+Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]` table, which `flet build` resolves per key for Android and iOS after any per-platform table (`get_deep_linking_setting()`, `CLI/commands/build_base.py:1422-1427, 2960-2982`; `flet-dev/flet#6953`, fixing `flet-dev/flet#6951`, merged into `flet-1.1.0` and in the pin since `68a4b326c`), and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-56`) and `CFBundleURLTypes` entry (`TPL/ios/Runner/Info.plist:53-69`). Both register nothing unless `scheme` and `host` both resolve; iOS registers the scheme alone, with the host as the entry's `CFBundleURLName`. We set **one common table** (D-269):
 
 ```toml
-# pyproject.toml (P2). The scheme follows the app identity (O-4); "pyconus" is a placeholder.
-[tool.flet.android.deep_linking]
-scheme = "pyconus"
-host = "app"
-
-[tool.flet.ios.deep_linking]
+# pyproject.toml (P2-24, #384). Placeholders until the app identity (O-4, #15).
+[tool.flet.deep_linking]
 scheme = "pyconus"
 host = "app"
 ```
@@ -770,7 +766,7 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 
 **GitHub:**
 - [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948): an open **issue**; no implementation PR found.
-- [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953): an open PR (branch `fix/deep-linking-fallback`, closes #6951) touching `build_base.py`, its tests and the changelog.
+- `flet-dev/flet#6953`: the deep-link config fallback (closes `flet-dev/flet#6951`), merged into `flet-1.1.0` on 2026-10-11 and in the pin (`68a4b326c`); D-269 relies on it.
 
 **Local SDK: exists** (beyond what PLAN's F-facts cover): `flet.utils.is_embedded`; `ft.Service`, `ft.LayoutControl`, `ft.control`, `ft.value`, `ft.Event` (fields `name`, `data`, `control`); `ft.PageMediaData` (six fields) and `page.on_media_change`; `ft.LocationInfo(pathname, search, hash)`; `flet_permission_handler.Permission.CAMERA`/`NOTIFICATION`/`SCHEDULE_EXACT_ALARM`; and the CLI keys `[tool.flet] permissions`, `dev_packages`, and `[tool.flet.android]` `permission`, `gradle_properties`, `proguard_rules`, `provider`.
 

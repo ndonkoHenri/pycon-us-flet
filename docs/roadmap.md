@@ -1206,9 +1206,9 @@ test, area:quality · after P2-73, P2-74, P2-77, P2-78, #348 · NEW-04
 
 ### P2-E8 · Epic: deep links
 
-epic, area:shell · after P1-34 · NEW-07
+epic, area:shell · NEW-07 · a placeholder scheme and host (`pyconus://app`, D-269) until P1-34 (#15) swaps them; not a blocker
 
-`<scheme>://<host>/<route path>` links, with scheme and host set in both per-platform `deep_linking` tables; links and reminder taps land with a back stack.
+`<scheme>://<host>/<route path>` links, with scheme and host set once in the common `[tool.flet.deep_linking]` table; links and reminder taps land with a back stack.
 
 #### P2-24 · Register a placeholder link scheme and host for Android and iOS builds (#384)
 
@@ -1464,7 +1464,7 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 
 **Not tracked here:**
 - **Later or low (D-98):** E4, E5, E2, U19 (pinning platform adaptations, D-10; interim: accepted residuals) and U20 (multi-weight `page.fonts`, D-26; interim: pubspec fonts); U6, U7, U12 and U13 only when a feature or spike needs them.
-- **flet-dev/flet#6953** is not required, because P2-E8 configures both per-platform deep-link tables (D-21).
+- **`flet-dev/flet#6953`** (the deep-link config fallback) is merged and in the pin, so P2-E8 sets one common `[tool.flet.deep_linking]` table (D-269).
 
 ## 9. Checks
 

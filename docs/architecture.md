@@ -417,7 +417,7 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
 
 ### 5.6 Deep links (D-21, NEW-07, P2)
 
-Both `[tool.flet.android.deep_linking]` and `[tool.flet.ios.deep_linking]` are configured, so links work with or without flet-dev/flet#6953 (F16). Each table sets both `scheme` and `host` (both named with the app identity, O-4); the build template registers nothing when either is missing. Link paths are internal routes: `<scheme>://<host>/schedule/session/42` arrives as `page.route == "/schedule/session/42"` and builds `[Schedule, Session]`, so Back never exits. Reminder taps use the same paths. "Share" uses the public `presentation_url` (`conference.toml`), never the scheme; synthetic ids share no URL.
+One common `[tool.flet.deep_linking]` table sets `scheme` and `host`, the placeholders `pyconus` and `app` until the app identity (O-4, #15); the pin resolves it for Android and iOS (`flet-dev/flet#6953`, D-269), and the build template registers nothing when either is missing. Android matches scheme and host; iOS registers the scheme alone. Link paths are internal routes: `<scheme>://<host>/schedule/session/42` arrives as `page.route == "/schedule/session/42"` and builds `[Schedule, Session]`, so Back never exits. Reminder taps use the same paths. "Share" uses the public `presentation_url` (`conference.toml`), never the scheme; synthetic ids share no URL.
 
 ---
 

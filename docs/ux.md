@@ -113,7 +113,7 @@ Query parameters carry only view options (`?scope=`, `?pin=`, `?highlight=`, `?b
 
 ### 2.6 Deep links (P2, NEW-07, D-21) and launch (SHELL-01, SHELL-03)
 
-- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and both per-platform deep-linking tables set `scheme` and `host` (D-21). A link opens its root with the target pushed, so Back never exits. An unknown id opens its detail's not-found state ("This session isn't in the current schedule") pushed on the root, so Back lands there (D-186). Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
+- A custom scheme and host named with the app identity (O-4); links have the form `<scheme>://<host>/<route path>`, e.g. `<scheme>://<host>/schedule/session/42`, and one common deep-linking table sets `scheme` and `host`, `pyconus://app` until O-4 (D-21, D-269). A link opens its root with the target pushed, so Back never exits. An unknown id opens its detail's not-found state ("This session isn't in the current schedule") pushed on the root, so Back lands there (D-186). Reminder taps use the same paths. Shared links use the public us.pycon.org page (NEW-06).
 - **Launch:** native splash `#680579` with the app icon (O-4), never the PyCon logo (D-36); Flet's boot screen, shown while Python starts, in the same purple (`[tool.flet.boot_screen.flet]`); a boot View (same purple) until `Prefs.loaded` and the cached or bundled feed are read, so theme and filters never flash; a `ProgressRing` only after 1 s. First run goes to `/welcome` (P2), otherwise Now; in P3 lead-retrieval accounts may open on the Lead scanner (D-16). Never a permission prompt at launch (D-61).
 
 ---
