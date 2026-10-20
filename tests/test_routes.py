@@ -111,6 +111,8 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/jobs/sponsor/bloomberg", ["More", "Jobs", "Drill"]),
         ("/more/settings", ["More", "Settings"]),
         ("/more/app", ["More", "AboutApp"]),
+        ("/more/app/licences", ["More", "AboutApp", "Licences"]),
+        ("/more/app/licences/flet", ["More", "AboutApp", "Licences", "LicencePage"]),
         ("/more/developer", ["More", "Developer"]),
         ("/more/social", ["More", "Social"]),
         ("/search", ["Search"]),
@@ -201,6 +203,7 @@ def known_locations() -> list[str]:
             for kind in DRILL_KINDS
         ),
         "/more/tracks/python",  # the slug route
+        "/more/app/licences/flet",  # the key route
         "/more/tracks/python/room/hall-a",
     ]
 
@@ -306,6 +309,8 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/jobs/sponsor/bloomberg", "/more/jobs"),  # Back to the list (#399)
         ("/more/jobs", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
+        ("/more/app/licences/flet", "/more/app/licences"),  # a text, to the list
+        ("/more/app/licences", "/more/app"),  # the list, to About this app (D-296)
         ("/map/room/hall-a/plan/expo", "/map/room/hall-a"),
         ("/now/session/poster%20detail%2B1", "/now"),
         ("/now/session/42?highlight=99", "/now"),  # the query is dropped

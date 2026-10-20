@@ -33,6 +33,7 @@ PAGES = frozenset(
         "/more/sponsors",
         "/more/settings",
         "/more/app",
+        "/more/app/licences",
         "/more/developer",
         "/more/wifi",
         "/more/jobs",
