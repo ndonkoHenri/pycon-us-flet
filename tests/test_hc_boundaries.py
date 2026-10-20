@@ -6,6 +6,7 @@ frames and circles) takes a line in ``outline`` there, and keeps its fill elsewh
 The status strip's lines are tested with the strip, the skeleton's with the skeleton.
 """
 
+from collections.abc import Callable
 from typing import cast
 
 import flet as ft
@@ -13,9 +14,11 @@ import pytest
 
 from pycon_us import theme
 from pycon_us.config import load_year
+from pycon_us.layout import Layout
 from pycon_us.screens.now_header import GOLD, HeaderCopy, Season, StatusHeader
 from pycon_us.screens.schedule_sheet import filter_sheet
 from pycon_us.screens.tracks import sprints_row, track_circle
+from pycon_us.services import Services
 from pycon_us.theme import (
     DARK_TOKENS,
     HC_DARK_TOKENS,
@@ -24,11 +27,14 @@ from pycon_us.theme import (
     Tokens,
 )
 from pycon_us.theme_hc import HC_INDICATOR_BORDER, hc_border
+from pycon_us.ui import scaffold
 from pycon_us.ui.fields import SearchField
 from pycon_us.ui.fold import FoldTile
+from pycon_us.ui.scaffold import AppScaffold
 from tests import chrome
 from tests.chrome import view_at
 from tests.fakes import FakePage, Hooks
+from tests.sessions import find, rendering, settle
 from tests.test_theme import contrast_ratio
 from tests.trees import descendants
 
@@ -132,7 +138,7 @@ def test_in_hc_a_line_separates_the_app_bar_from_the_page(
     """
     hooks.tokens = tokens
     line = view_at(hooks, page, location).controls[0]
-    assert isinstance(line, ft.Divider)
+    assert isinstance(line, ft.Divider) and line.visible is True
     assert (line.height, line.thickness, line.color) == (1, 1, ft.Colors.OUTLINE)
 
 
@@ -143,7 +149,63 @@ def test_outside_hc_nothing_separates_the_app_bar(
     """Outside HC the View opens with its body: the bar's scrolled-under tint is its edge."""
     hooks.tokens = tokens
     view = view_at(hooks, page, "/schedule/session/42")
-    assert isinstance(view.controls[0], ft.SafeArea)
+    line = view.controls[0]
+    assert isinstance(line, ft.Divider) and line.visible is False
+
+
+@pytest.mark.parametrize("location", ["/schedule", "/schedule/session/42"])
+async def test_a_contrast_change_keeps_the_body_mounted(
+    monkeypatch: pytest.MonkeyPatch, svc: Services, location: str
+) -> None:
+    """Turning HC on and off keeps the body's controls and components (D-18, D-306).
+
+    The lines keep their slots, hidden outside HC: one added before the body would
+    shift it, and Flet would replace it, a list's scroll with it, on resume.
+    """
+    mounts: list[str] = []
+    set_tokens: list[Callable[[Tokens], None]] = []
+    shown: dict[str, Tokens] = {}
+
+    @ft.component
+    def Body() -> ft.Control:
+        """A list that records each mount of its component."""
+
+        async def mounted() -> None:
+            mounts.append("mounted")
+
+        ft.use_effect(mounted, [])
+        return ft.ListView([ft.Text("row")], expand=True)
+
+    @ft.component
+    def Passthrough(body: ft.Control) -> ft.Control:
+        """``Shown`` without its content line."""
+        return body
+
+    @ft.component
+    def Root() -> ft.View:
+        """A screen whose tokens the test switches."""
+        tokens, set_ = ft.use_state(LIGHT_TOKENS)
+        set_tokens.append(set_)
+        shown["tokens"] = tokens
+        return AppScaffold(title="Schedule", body=Body())
+
+    monkeypatch.setattr(ft, "use_view_path", lambda: location)
+    monkeypatch.setattr(scaffold, "use_services", lambda: svc)
+    monkeypatch.setattr(scaffold, "use_layout", Layout)
+    monkeypatch.setattr(scaffold, "use_tokens", lambda: shown["tokens"])
+    monkeypatch.setattr(scaffold, "Shown", Passthrough)
+    monkeypatch.setattr(scaffold, "GutterProbe", chrome.Probe)
+    monkeypatch.setattr(scaffold, "use_modals_close_on_route_change", lambda: None)
+    async with rendering(Root, views=True) as session:
+        (first,) = find(session, ft.ListView)
+        for tokens in [HC_LIGHT_TOKENS, LIGHT_TOKENS]:
+            set_tokens[-1](tokens)
+            await settle()
+            lines = find(session, ft.Divider, lambda d: d.visible is not False)
+            on_root = location == "/schedule"  # its line above the bar too
+            assert len(lines) == ((2 if on_root else 1) if tokens.high_contrast else 0)
+            assert [c._i for c in find(session, ft.ListView)] == [first._i]
+    assert mounts == ["mounted"]
 
 
 # ------------------------------------------------------------------ the parts

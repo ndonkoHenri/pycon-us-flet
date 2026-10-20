@@ -122,7 +122,7 @@ def body_of(view: ft.View) -> ft.Control:
 
 
 def safe_area(view: ft.View) -> ft.SafeArea:
-    """The View's one SafeArea, which holds the body; in HC a line comes before it."""
+    """The View's one SafeArea, which holds the body, between the lines HC shows."""
     (safe,) = (c for c in view.controls if isinstance(c, ft.SafeArea))
     return safe
 

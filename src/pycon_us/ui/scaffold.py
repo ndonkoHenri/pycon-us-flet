@@ -188,8 +188,10 @@ def AppScaffold(
         spacing=0,
         controls=[
             # In HC the bar keeps the page's colour when a list scrolls under it, its
-            # surface_container being surface: the line is its edge (D-306).
-            *([bar_divider()] if tokens.high_contrast else []),
+            # surface_container being surface: the line is its edge (D-306). Both
+            # lines keep their slots, hidden outside HC: a line added before the body
+            # would shift it, and Flet would remount it, scroll and all (D-18).
+            bar_divider(visible=tokens.high_contrast),
             ft.SafeArea(
                 expand=True,
                 content=beside_rail(view_path, switch_tab, wide, Shown(body))
@@ -198,7 +200,7 @@ def AppScaffold(
             ),
             GutterProbe(),
             # The line sits on the bar, which the rail replaces from 600 dp (D-277).
-            *([bar_divider()] if is_root and tokens.high_contrast and not wide else []),
+            bar_divider(visible=is_root and tokens.high_contrast and not wide),
         ],
     )
 
@@ -229,7 +231,7 @@ def beside_rail(
     )
 
 
-def bar_divider() -> ft.Control:
+def bar_divider(visible: bool) -> ft.Control:
     """Return the 1 dp line that separates a bar from the page in HC (THEME-06, D-306).
 
     High contrast has one surface, so the ``NavigationBar`` and the ``AppBar``, even
@@ -239,8 +241,15 @@ def bar_divider() -> ft.Control:
     would draw all four sides), so the line opens the View's body, right under the app
     bar, and closes a tab root's, right above the bottom bar: the ``Scaffold`` gives
     the body no inset under an app bar, nor above a bottom bar.
+
+    A hidden line is no widget at all (Flet's Dart side leaves it out), so outside HC
+    the layout is the same, pixel for pixel; it stays in the View's controls so that a
+    contrast change keeps the body in its place, and its state with it (D-18).
+
+    Args:
+        visible: Whether the line shows: in HC, where the bar needs an edge.
     """
-    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE)
+    return ft.Divider(height=1, thickness=1, color=ft.Colors.OUTLINE, visible=visible)
 
 
 @ft.component

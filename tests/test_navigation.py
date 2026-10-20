@@ -27,7 +27,7 @@ from pycon_us.ui.navigation import (
     use_scroll_to_top,
 )
 from tests import chrome
-from tests.chrome import app_bar, back_arrow, body_of, rail_of, view_at
+from tests.chrome import app_bar, back_arrow, body_of, rail_of, safe_area, view_at
 from tests.fakes import FakePage, Hooks
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
@@ -259,7 +259,7 @@ def test_in_high_contrast_a_1_dp_line_separates_the_bar_from_the_page(
     view = view_at(hooks, page, root)
     assert view.navigation_bar is not None
     line = view.controls[-1]
-    assert isinstance(line, ft.Divider)
+    assert isinstance(line, ft.Divider) and line.visible is True
     assert (line.height, line.thickness, line.color) == (1, 1, ft.Colors.OUTLINE)
 
 
@@ -268,7 +268,8 @@ def test_outside_high_contrast_nothing_separates_the_bar(
 ) -> None:
     """Outside HC no line sits above a root's bar: its tint is its edge."""
     view = view_at(hooks, page, "/schedule")
-    assert not any(isinstance(control, ft.Divider) for control in view.controls)
+    line = view.controls[-1]
+    assert isinstance(line, ft.Divider) and line.visible is False
 
 
 def test_a_pushed_view_in_high_contrast_has_no_bar_line(
@@ -281,7 +282,8 @@ def test_a_pushed_view_in_high_contrast_has_no_bar_line(
     hooks.tokens = HC_LIGHT_TOKENS
     view = view_at(hooks, page, "/schedule/session/42")
     assert view.navigation_bar is None
-    assert not isinstance(view.controls[-1], ft.Divider)
+    line = view.controls[-1]
+    assert isinstance(line, ft.Divider) and line.visible is False
 
 
 @pytest.mark.parametrize("tab", TABS)
@@ -415,9 +417,7 @@ def test_the_body_keeps_its_place_whichever_navigation_shows(
     """
     hooks.wide = wide
     view = view_at(hooks, page, "/schedule")
-    safe, _ = view.controls
-    assert isinstance(safe, ft.SafeArea)
-    row = safe.content
+    row = safe_area(view).content
     assert isinstance(row, ft.Row)
     assert isinstance(row.controls[0], ft.NavigationRail)
     assert row.controls[1] is body_of(view)
@@ -436,9 +436,7 @@ def test_pushed_views_show_neither_the_bar_nor_the_rail_from_600_dp(
     view = view_at(hooks, page, location)
     assert view.navigation_bar is None
     back_arrow(view)
-    safe, _ = view.controls
-    assert isinstance(safe, ft.SafeArea)
-    assert not isinstance(safe.content, ft.Row)  # the body alone, as before
+    assert not isinstance(safe_area(view).content, ft.Row)  # the body alone, as before
 
 
 @pytest.mark.parametrize("wide", [False, True])
