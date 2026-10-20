@@ -17,6 +17,7 @@ import flet as ft
 from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.help import Help
 from pycon_us.screens.keynotes import Keynotes
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
@@ -188,6 +189,7 @@ ROUTES = [
         pushed("sprints", Sprints),
         pushed("app", AboutApp),
         pushed("developer", Developer),
+        pushed("help", Help),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

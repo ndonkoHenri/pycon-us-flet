@@ -46,12 +46,15 @@ PROGRAMME = (
 )
 """The Programme section, in the list's order (ux.md §2.2; icons §3.7)."""
 
+AT_THE_VENUE = (MoreEntry("Help & safety", "/more/help", ft.Icons.SUPPORT_OUTLINED),)
+"""The At the venue section, in the list's order; Venue & hours and Wi-Fi join it."""
+
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
 DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
 )
 
-MORE_PAGES = (*PROGRAMME, ABOUT_APP, DEVELOPER)
+MORE_PAGES = (*PROGRAMME, *AT_THE_VENUE, ABOUT_APP, DEVELOPER)
 """Every page the list links to; later phases add theirs with their sections."""
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
@@ -88,6 +91,8 @@ def More() -> ft.View:
             [
                 SectionHeader("Programme"),
                 *(link(entry) for entry in PROGRAMME),
+                SectionHeader("At the venue"),
+                *(link(entry) for entry in AT_THE_VENUE),
                 SectionHeader("You"),
                 appearance(prefs.theme, choose_appearance),
                 *(link(entry) for entry in you),
