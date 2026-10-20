@@ -1295,19 +1295,17 @@ class Reminder:
     route: str                           # opened on tap, e.g. "/my-schedule/session/42"
 
 
-def plan(data: ConferenceData, favorites: Sequence[str], settings: ReminderSettings,
-         events: Sequence[EventReminder], now: datetime) -> list[Reminder]:
+def plan(data: ConferenceData, favorites: Iterable[str], settings: ReminderSettings,
+         moments: Iterable[EventReminder], now: datetime, *, zone: tzinfo,
+         use_24h: bool) -> list[Reminder]:
     """Every future reminder the user asked for, soonest first, at most MAX_PENDING (pure)."""
-    reminders = []
-    for session in (data.sessions[i] for i in favorites if i in data.sessions):
-        at = session.start - timedelta(minutes=settings.session_lead)
-        if settings.session_lead and at > now:
-            route = f"/my-schedule/session/{quote(session.id, safe='')}"
-            reminders.append(Reminder(reminder_id(session.id), at, session.name, session.display_location, route))
-    # events: content.toml's sign-ups and year_moments.keynote_moments(data, ...) (D-274)
-    reminders += [Reminder(e.id, e.at, e.title, e.body, e.route) for e in events
-                  if settings.wants(e.category) and e.at > now]
-    return sorted(reminders, key=lambda r: r.at)[:MAX_PENDING]
+    # moments: content.toml's sign-ups and year_moments.keynote_moments(data, ...) (D-274)
+    wanted = [m for m in moments if settings.wants(m.category) and m.at > now]
+    # One per saved session still in the feed, session_lead min before its shown start,
+    # "Starts at 10:30 AM · Room 103ABC", route /my-schedule/session/<quoted id>.
+    saved = _session_reminders(data, favorites, settings, now, zone, use_24h=use_24h)
+    ...  # a saved keynote keeps the earlier of its reminder and its moment (the moment on a tie)
+    return sorted(reminders, key=lambda r: (r.at, r.id))[:MAX_PENDING]
 ```
 
 `apply(plan)` cancels every pending reminder (never the shown ones) and schedules the plan, exact on Android when the user allows it and inexact otherwise (D-221, D-222); it is idempotent and re-runs when favourites, settings or the feed change, and at every start and resume. Its scheduling calls *(not in Flet yet: E3, flet-dev/flet#6948 plus scheduling)* live only here; until E3 is pinned, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids (8000–8049 the hand-written sign-ups, 8050–8099 the keynotes' moments, derived from the feed at each plan so a moved keynote moves its moment, D-274). Each moment opens its own page: a sign-up its page (`/more/lightning-talks`), a keynote its session (`/schedule/session/<id>`). Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
