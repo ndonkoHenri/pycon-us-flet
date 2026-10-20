@@ -492,7 +492,7 @@ simulator's network, so there the launch's refresh may publish the year's live f
 **Caveats.**
 - On Android, any read of the accessibility tree makes Flutter report a screen reader
   (F72), so under Maestro the app takes its screen-reader paths: the Schedule keeps its
-  Now button (D-204), SnackBars stay until used (D-184). A flow checks those on iOS.
+  Now button (D-204), and by D-184 SnackBars stay until used. A flow checks those on iOS.
 - About 0.85 s passes between two Maestro commands on the emulator, so the regression
   flow's fling comes 0.8 to 1.0 s after the tap. #346 saw its failures at 0.33 to 0.6 s;
   at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full, so that

@@ -144,8 +144,8 @@ was short or none. On Android the launcher logs every touch, so the time from th
   a flow tells where a list rests.
 - **On Android, Maestro makes the app think a screen reader is on** (F72): Flutter reports
   `accessible_navigation` once anything reads its accessibility tree. The app then keeps
-  the Schedule's Now button on the now slot and keeps SnackBars until they are used, as
-  it does for TalkBack. Check those behaviours on iOS only.
+  the Schedule's Now button on the now slot, and by D-184 keeps SnackBars until they are
+  used, as it does for TalkBack. Check those behaviours on iOS only.
 - About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
   0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach (see the run
