@@ -98,6 +98,8 @@ def hooks(
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
     # The probe reads Prefs; its own tests are in test_time_gutter.py.
     monkeypatch.setattr(scaffold, "GutterProbe", Probe)
+    # Its effect wraps the Router's handler; its own tests are in test_modals.py.
+    monkeypatch.setattr(scaffold, "use_modals_close_on_route_change", lambda: None)
     return hooks
 
 
