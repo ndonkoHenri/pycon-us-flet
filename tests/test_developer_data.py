@@ -718,9 +718,10 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     """Confirming the reset leaves storage and every store as after a fresh install.
 
     The session has been used: settings, favourites of two years, the Developer options,
-    a cache, a change log, a fake clock, a feed URL and remembered places. Only another app's key is
-    left; the device facts stay and Developer locks again. Then, as at a start, a quiet
-    refresh of the year's feed runs, the app goes to Now and says "App reset".
+    a cache, a change log, a fake clock, a feed URL and remembered places. Only another
+    app's key is left; the device facts stay and Developer locks again. Then, as at a
+    start, a quiet refresh of the year's feed runs, the app goes to Now and says "App
+    reset".
     """
     stored.update(
         {
@@ -771,6 +772,22 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     assert offline == [svc.year.conference.feed_url]
     assert page.navigated == ["/now"]
     assert said(page) == ["App reset"]
+
+
+async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+) -> None:
+    """Reset app deletes the change log when no feed URL was set (D-255).
+
+    ``Conference.reset()`` deletes the log only through a feed URL change, so here only
+    ``reset_app()``'s own deletion can remove it.
+    """
+    await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
+    assert await reset_app(svc, conference, prefs, favorites) is True
+    assert not changes_file.changes_path(svc.storage).exists()
 
 
 async def test_a_reset_that_cannot_delete_everything_says_so(

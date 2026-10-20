@@ -138,8 +138,15 @@ def test_any_detection_time_and_seen_mark_round_trip(seen: bool, hours: int) -> 
 
 @pytest.mark.parametrize(
     "raw",
-    [b"", b"[{", b"\xff\xfe", b'{"detected_at": "x"}', b"null"],
-    ids=["empty", "truncated", "not UTF-8", "an object", "null"],
+    [
+        b"",
+        b"[{",
+        b"\xff\xfe",
+        b'{"detected_at": "x"}',
+        b"null",
+        b"[" * 100_000 + b"]" * 100_000,
+    ],
+    ids=["empty", "truncated", "not UTF-8", "an object", "null", "nested too deep"],
 )
 def test_a_file_that_is_not_a_json_list_gives_nothing_and_a_log(
     raw: bytes, caplog: pytest.LogCaptureFixture
@@ -174,6 +181,11 @@ BREAKS = {
     "no detection time": lambda e: e.pop("detected_at"),
     "a time without an offset": lambda e: e.update(detected_at="2026-05-16T10:00:00"),
     "a time that is no time": lambda e: e.update(detected_at="Saturday"),
+    # Too far out to be put in the conference's zone: OverflowError, back and forward.
+    "an out-of-range time": lambda e: e.update(detected_at="0001-01-01T00:00:00+05:00"),
+    "an out-of-range start": lambda e: removal(e)["old"].update(
+        start="9999-12-31T23:00:00-05:00"
+    ),
     "seen not a bool": lambda e: e.update(seen="no"),
     "changes not a list": lambda e: e.update(changes={}),
     "an unknown kind": lambda e: removal(e).update(kind="cancelled"),

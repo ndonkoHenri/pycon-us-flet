@@ -242,6 +242,8 @@ async def reset_app(
     cleared = await svc.storage.clear_prefs()
     deleted = await conference.reset(svc.storage, svc.year)
     # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
+    # Its own deletion: the reset deletes the log only when a feed URL was set
+    # (set_feed_url returns early otherwise), and this result goes into `complete`.
     log_deleted = await changes_file.delete_batches(svc.storage, "Reset app")
     prefs.reset()
     favorites.reset()

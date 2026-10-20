@@ -75,18 +75,21 @@ def decode_batches(raw: bytes, zone: tzinfo) -> list[Batch]:
     """Return the batches that the log file's bytes hold, in their order.
 
     What can be read is read: a batch that is not as ``encode_batches()`` writes it (a
-    field missing or of the wrong type, an unknown kind, a time without an offset) is
-    skipped and logged, and the others are kept. Bytes that are not a JSON list give no
-    batches (logged). Nothing raises: the log is a convenience, never a reason to stop.
+    field missing or of the wrong type, an unknown kind, a time without an offset or out
+    of range) is skipped and logged, and the others are kept. Bytes that are not a JSON
+    list, or nest too deep, give no batches (logged). Nothing raises: the log is a
+    convenience, never a reason to stop.
 
     Args:
         raw: The file's bytes.
         zone: The conference's time zone; every time is read back in it, so a row shows
             it as it showed before (D-43).
     """
+    # JSONDecodeError and UnicodeDecodeError are ValueErrors; too deep a nesting is a
+    # RecursionError.
     try:
         items = json.loads(raw)
-    except ValueError as error:  # JSONDecodeError and UnicodeDecodeError are both
+    except (ValueError, RecursionError) as error:
         logger.warning("The change log is not JSON; nothing read: %s", error)
         return []
     if not isinstance(items, list):
@@ -96,7 +99,7 @@ def decode_batches(raw: bytes, zone: tzinfo) -> list[Batch]:
     for index, item in enumerate(items):
         try:
             batches.append(_batch(item, zone))
-        except (KeyError, TypeError, ValueError) as error:
+        except (KeyError, TypeError, ValueError, OverflowError) as error:
             logger.warning(
                 "Skipped change batch %d of the log: %s: %s",
                 index,
@@ -141,7 +144,12 @@ def _encoded_listing(listing: Listing | None) -> dict[str, str] | None:
 
 
 def _batch(item: Any, zone: tzinfo) -> Batch:
-    """Return the batch ``item`` holds; raise KeyError, TypeError or ValueError if none."""
+    """Return the batch ``item`` holds, or raise if it holds none.
+
+    Raises:
+        KeyError, TypeError, ValueError: A field is missing, of the wrong type or value.
+        OverflowError: A time is too far out to be put in the conference's zone.
+    """
     if not isinstance(item, dict):
         raise TypeError("a batch is not an object")
     changes, seen = item["changes"], item["seen"]

@@ -191,7 +191,7 @@ async def test_a_corrupt_cache_is_deleted_and_the_snapshot_published(
     assert conference.source == "bundled"
     assert conference.data is not None
     assert not storage.feed_path.exists()
-    assert "Deleting feed-2026.json: it does not parse: not JSON" in (caplog.text)
+    assert "Deleting feed-2026.json: it does not parse: not JSON" in caplog.text
 
 
 async def test_a_cache_with_the_wrong_structure_is_deleted_too(
