@@ -31,6 +31,11 @@ from pycon_us.core.queries import fold
 
 _HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _BLOCKS = frozenset({"p", "li"})  # where a bare URL makes a role
+# Where a browser starts a new line: the text on either side is not one word, nor one URL.
+_BREAKS = frozenset(
+    {"br", "hr", "div", "ul", "ol", "dl", "dt", "dd", "blockquote", "pre", "table"}
+    | {"tr", "td", "th", "section", "article", "header", "footer", *_BLOCKS, *_HEADINGS}
+)
 _WEB_SCHEMES = frozenset({"http", "https"})  # a role opens a page; mailto: is no role
 
 # A bare URL as D-114 finds one: sentence punctuation after it is not part of it.
@@ -50,9 +55,11 @@ def parse_roles(html: str, site_url: str) -> tuple[Role, ...]:
     An anchor is a role, titled by its text, or by its URL's last segment when its text
     is empty or a URL. A list item or paragraph without an anchor that holds exactly one
     bare ``http(s)`` URL is a role, titled by the text before the URL, its separators
-    trimmed, else by the URL's last segment. A listing with a heading is long form and
-    has none. A link is what ``feed_link()`` makes of it (a site path joins the year's
-    site); only ``http`` and ``https`` links are roles.
+    trimmed, else by the URL's last segment. A line break or a block's edge separates
+    words and URLs, and ``script`` and ``style`` text is not read, as in ``html_md``. A
+    listing with a heading is long form and has none. A link is what ``feed_link()``
+    makes of it (a site path joins the year's site); only ``http`` and ``https`` links
+    are roles.
 
     Args:
         html: The listing's ``description_html``.
@@ -64,7 +71,7 @@ def parse_roles(html: str, site_url: str) -> tuple[Role, ...]:
     parser = _RoleParser(site_url)
     parser.feed(html)
     parser.close()
-    return () if parser.long_form else tuple(parser.roles)
+    return () if parser.long_form else parser.roles()
 
 
 def is_placeholder(text: str) -> bool:
@@ -120,16 +127,29 @@ class _Anchor:
     """An open ``<a>``: its ``href`` and the text read so far."""
 
     href: str | None
+    start: int  # where it starts in the listing's text
     text: list[str] = field(default_factory=list)
 
 
 @dataclass
 class _Block:
-    """An open ``<p>`` or ``<li>``: its own text, and whether it holds an anchor."""
+    """An open ``<p>`` or ``<li>``: its own text, and whether it holds an anchor.
+
+    Each piece of text keeps where it starts in the listing's text, so that a role found
+    when the block ends still sorts by where its URL was.
+    """
 
     tag: str
-    text: list[str] = field(default_factory=list)
+    pieces: list[tuple[int, str]] = field(default_factory=list)
     has_anchor: bool = False
+
+    def offset(self, index: int) -> int:
+        """Return where the block's text at ``index`` is in the listing's text."""
+        for start, piece in self.pieces:
+            if index < len(piece):
+                return start + index
+            index -= len(piece)
+        raise IndexError(index)
 
 
 class _RoleParser(HTMLParser):
@@ -139,38 +159,58 @@ class _RoleParser(HTMLParser):
         """Start with no role; links join ``site_url``."""
         super().__init__(convert_charrefs=True)
         self.site_url = site_url
-        self.roles: list[Role] = []
         self.long_form = False
+        # Each role with where it starts in the listing's text: an inner block ends,
+        # and adds its role, before the block around it, so roles sort by it.
+        self._found: list[tuple[int, Role]] = []
+        self._read = 0  # how much of the listing's text has been read
         self._blocks: list[_Block] = []  # the open blocks, innermost last
         self._anchor: _Anchor | None = None
+        self._dropping: str | None = None  # the script or style element being skipped
+
+    def roles(self) -> tuple[Role, ...]:
+        """Return the roles found, in the listing's order."""
+        return tuple(role for _, role in sorted(self._found, key=lambda f: f[0]))
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         """Note a heading, open a block, or open an anchor in every open block."""
+        if tag in html_md.DROPPED_TAGS:
+            self._dropping = tag
+            return
+        if tag in _BREAKS:
+            self.handle_data(" ")  # before a block opens, so it ends the text around it
         if tag in _HEADINGS:
             self.long_form = True
         elif tag in _BLOCKS:
             self._blocks.append(_Block(tag))
         elif tag == "a":
             self._end_anchor()  # anchors never nest: a new one ends the last
-            self._anchor = _Anchor(dict(attrs).get("href"))
+            self._anchor = _Anchor(dict(attrs).get("href"), self._read)
             for block in self._blocks:
                 block.has_anchor = True
 
     def handle_endtag(self, tag: str) -> None:
         """End the anchor, or the block and any block left open inside it."""
-        if tag == "a":
+        if tag == self._dropping:
+            self._dropping = None
+        elif tag == "a":
             self._end_anchor()
         elif tag in _BLOCKS and any(block.tag == tag for block in self._blocks):
             while (block := self._blocks.pop()).tag != tag:
                 self._end_block(block)
             self._end_block(block)
+        if tag in _BREAKS:
+            self.handle_data(" ")  # after a block closes, so it ends the text around it
 
     def handle_data(self, data: str) -> None:
         """Add text to the open anchor and to the innermost open block."""
+        if self._dropping is not None:
+            return
         if self._anchor is not None:
             self._anchor.text.append(data)
         if self._blocks:
-            self._blocks[-1].text.append(data)
+            self._blocks[-1].pieces.append((self._read, data))
+        self._read += len(data)
 
     def close(self) -> None:
         """End what the HTML left open, innermost first."""
@@ -187,13 +227,13 @@ class _RoleParser(HTMLParser):
         title = " ".join("".join(anchor.text).split())
         if not title or _URL.fullmatch(title):
             title = _url_title(url)
-        self.roles.append(Role(title, url))
+        self._found.append((anchor.start, Role(title, url)))
 
     def _end_block(self, block: _Block) -> None:
         """Make a block without an anchor a role when it holds one bare URL."""
         if block.has_anchor:
             return
-        text = "".join(block.text)
+        text = "".join(piece for _, piece in block.pieces)
         matches = list(_URL.finditer(text))
         if len(matches) != 1:
             return
@@ -201,7 +241,8 @@ class _RoleParser(HTMLParser):
         if url is None:
             return
         title = " ".join(text[: matches[0].start()].split()).strip(_SEPARATORS)
-        self.roles.append(Role(title or _url_title(url), url))
+        role = Role(title or _url_title(url), url)
+        self._found.append((block.offset(matches[0].start()), role))
 
     def _web_link(self, href: str | None) -> str | None:
         """Return the ``http(s)`` address ``href`` stands for, or None without a host."""

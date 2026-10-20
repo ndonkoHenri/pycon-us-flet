@@ -12,7 +12,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.html_md import to_text
-from pycon_us.core.jobs import is_placeholder, listings_of, parse_roles
+from pycon_us.core.jobs import is_placeholder, listings_of, parse_roles, read_listing
 from pycon_us.core.models import ConferenceData, JobListing, Role, Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from tests.feeds import processed
@@ -226,6 +226,87 @@ def test_other_bare_urls_make_no_role(html: str, roles: tuple[Role, ...]) -> Non
     no URL.
     """
     assert parse_roles(html, SITE) == roles
+
+
+@pytest.mark.parametrize(
+    ("html", "roles"),
+    [
+        ("<p>https://example.org/one<br>https://example.org/two</p>", ()),
+        (
+            "<p>Senior<br>Engineer | https://example.org/x</p>",
+            (Role("Senior Engineer", "https://example.org/x"),),
+        ),
+        (
+            '<li><a href="https://e.org/a">Senior<br/>Engineer</a></li>',
+            (Role("Senior Engineer", "https://e.org/a"),),
+        ),
+        (
+            "<li>Engineer https://example.org/1<ul><li>Designer</li></ul>Remote</li>",
+            (Role("Engineer", "https://example.org/1"),),
+        ),
+    ],
+)
+def test_a_line_break_separates_words_and_urls(
+    html: str, roles: tuple[Role, ...]
+) -> None:
+    """A ``br`` or a nested block's edge splits the text, as a browser shows it (D-278).
+
+    Two URLs a line apart are two URLs, so the block makes no role, a title split over
+    two lines keeps its space, and a nested list's text does not run into the URL before
+    it.
+    """
+    assert parse_roles(html, SITE) == roles
+
+
+@pytest.mark.parametrize("tag", ["script", "style"])
+def test_script_and_style_text_makes_no_role(tag: str) -> None:
+    """A URL inside ``script`` or ``style`` is not visible, so it is no role, as html_md drops it."""
+    html = f"<p>Engineer <{tag}>https://example.org/fake</{tag}></p>"
+
+    assert parse_roles(html, SITE) == ()
+
+
+def test_script_text_is_neither_a_title_nor_searched() -> None:
+    """Script text inside an anchor stays out of its title and of the listing's search text."""
+    html = (
+        '<p><a href="https://example.org/job">Engineer<script>nofollow</script></a></p>'
+    )
+
+    read = read_listing(replace(listing("Bloomberg"), description=html), SITE, str)
+
+    assert read.roles == (Role("Engineer", "https://example.org/job"),)
+    assert "nofollow" not in read.search_text
+
+
+@pytest.mark.parametrize(
+    ("html", "titles"),
+    [
+        (
+            (
+                "<ul><li>Engineer https://example.org/eng"
+                "<ul><li>Designer https://example.org/des</li></ul></li></ul>"
+            ),
+            ["Engineer", "Designer"],
+        ),
+        (
+            (
+                "<ul><li>Engineer<ul><li>Designer https://example.org/des</li></ul>"
+                "https://example.org/eng</li></ul>"
+            ),
+            ["Designer", "Engineer"],
+        ),
+        (
+            (
+                '<ul><li><a href="https://example.org/eng">Engineer</a>'
+                "<ul><li>Designer https://example.org/des</li></ul></li></ul>"
+            ),
+            ["Engineer", "Designer"],
+        ),
+    ],
+)
+def test_nested_roles_keep_the_listings_order(html: str, titles: list[str]) -> None:
+    """Roles come in the order their link appears, though an inner item ends first (D-278)."""
+    assert [role.title for role in parse_roles(html, SITE)] == titles
 
 
 def test_a_long_form_listing_has_no_roles() -> None:
