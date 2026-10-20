@@ -722,8 +722,13 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
     monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
     monkeypatch.setattr(ft, "use_effect", lambda *_, **__: None)
+    banners: list[bool] = []
+    monkeypatch.setattr(
+        app, "use_reminder_banner", lambda *_, ready: banners.append(ready)
+    )
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
+    assert banners == [open_]  # the slot is there before the gate, shown after it
     booting = (
         isinstance(shown, list)
         and len(shown) == 1
@@ -758,6 +763,8 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     monkeypatch.setattr(ft, "use_effect", lambda setup, *_, **__: setups.append(setup))
     monkeypatch.setattr(app, "LayoutCtx", layout_ctx)
     monkeypatch.setattr(app, "apply_theme", lambda *_: None)
+    # The reminder Banner has its own tests; here it would read stand-in stores.
+    monkeypatch.setattr(app, "use_reminder_banner", lambda *_, **__: None)
     monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
