@@ -35,15 +35,9 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import (
-    NEW_TRACK,
-    SPANISH,
-    TrackBadge,
-    badge_row,
-    use_add_all,
-    use_favorite_toggle,
-)
+from pycon_us.ui.badges import NEW_TRACK, SPANISH, TrackBadge, badge_row
 from pycon_us.ui.day_groups import DayGroup
+from pycon_us.ui.favorite import use_add_all, use_favorite_toggle
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views

@@ -18,7 +18,7 @@ Phases are milestones (D-89). Soft markers are orientation, never deadlines (D-0
 |---|---|---|---|
 | **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on an Android emulator and the iPhone | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
 | **P1 Attendee core** | Good enough to demo, and to use for a whole simulated conference day | demo slice end of Nov; exit mid-Dec 2026 | 7 epics, 36 issues, spike S6, 2 upstream issues |
-| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 102 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
+| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 103 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
 | **P3 Accounts & staff tools** | The private-API features against the local mock, with the scanner as the showcase | Mar 2027 | 8 epics |
 | **P4 Showcase** | Polish, publish, present | ready in Apr 2027 | 5 epics |
 
@@ -26,7 +26,7 @@ Upstream Flet work runs in parallel with the phases (section 8).
 
 ## 2. How to read it
 
-**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
+**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order, and `P2-103` (#464), added later by D-254; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
 
 **Issue blocks.** For P0 and P1, each block gives the labels, dependencies ("after") and feature ids, a one-paragraph description and the acceptance criteria. P2's blocks give the issue number, labels, dependencies and feature ids; the description and criteria are in the issue. The GitHub issue adds the D-ids, implementation notes, the docs to read and the definition of done (D-93), which for UI work includes Android and iOS screenshots in light and dark.
 
@@ -801,7 +801,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 **Goal.** Everything an attendee needs at the venue, offline, plus reminders.
 
 **Exit criteria** (PLAN §7):
-1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason.
+1. **Matrix.** Every P2 matrix row is done, or was re-dispositioned with a reason. Without E3 at the exit, the E3-only rows move to `later` and their issues to P4 (D-256).
 2. **Venue data offline.** In airplane mode, these work from bundled year data, and the loader test is green:
    - floor plans with room pins;
    - the expo map and list;
@@ -810,7 +810,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
    - With E3 pinned: a reminder fires with the app killed (the iPhone and an Android emulator) and after a reboot of the emulator, the tap opens the session, and the reminder moves with the session.
    - Without E3, the interim says so.
    - A denied permission never blocks a task.
-4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and reminder taps land with a back stack.
+4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. **Device checklist.** The D-79 checklist passes, including high contrast, tablets and screen readers on three new flows.
 6. **Unaided use.** Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
@@ -828,7 +828,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 **Order.**
 1. **The first wave**, which needs nothing else: the spikes (`P2-01`, `P2-04`; S8 (`P2-02`) and S9 (`P2-03`) any time), the decisions (`P2-05`, `P2-06`, `P2-07`), the upstream write-ups (`P2-08`..`P2-11`) and the foundations (`P2-13`..`P2-27` and `P2-81`). Do the device-heavy spikes one at a time.
 2. **The features**, each when its "after" list is merged.
-3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
+3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, `P2-103`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
 
 ### P2-E1 · Epic: map, floor plans and location cards
 
@@ -913,6 +913,12 @@ feature, area:rooms-maps · after P2-05, P2-28, P2-31, P2-29, P2-34 · MAP-04, S
 #### P2-48 · Place the job fair card on Job Fair sessions and Job listings (#408)
 
 feature, area:rooms-maps · after P2-47, P2-30, P2-39 · SESS-10, SPON-10, SPON-06
+
+#### P2-103 · Mark the job fair tables on the plan so a row can show its table (#464)
+
+feature, area:rooms-maps · after P2-47 · MAP-04, SPON-03
+
+Added by D-254 (#365): a rectangle per printed table on the cropped plan, opened from each pane row and from sponsor detail's job fair table.
 
 #### P2-94 · Check the expo and job fair on devices: offline, screen readers, large text and Maestro flows (#454)
 
@@ -1146,11 +1152,11 @@ test, area:notifications · after P2-65, P2-66, P2-68, P2-69 · NEW-05, NOTIF-01
 
 test, blocked, area:notifications · after P2-87, P2-89, P2-90, P2-91, P2-23, P2-98 · NEW-05, NOTIF-05, NOTIF-06, NOTIF-07, NOTIF-10, DEV-06
 
-### P2-E7 · Epic: schedule change log (#312)
+### P2-E7 · Epic: schedule change log (`PyCon/pycon-us-mobile#312`)
 
 epic, area:schedule · NEW-04
 
-A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and `/schedule/changes` with saved sessions first. (The heading's #312 is the original app's feature request, `PyCon/pycon-us-mobile#312`, not this repo's #312.)
+A pure `diff(old, new)` after each good refresh, stored per year; a "Changed" chip for 24 h, a Review SnackBar, a Now card, and Schedule changes (the drill pair `changes/<year>`, pushed on the View that opens it, D-255) with saved sessions first.
 
 #### P2-06 · Decide the change log's route, Back target and when it speaks up (#366)
 
