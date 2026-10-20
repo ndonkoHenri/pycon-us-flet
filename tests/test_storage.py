@@ -281,7 +281,7 @@ async def test_a_failed_write_keeps_the_previous_cache_and_is_reported(
     assert cached is not None
     assert cached.raw == b"good"
     assert sorted(path.name for path in tmp_path.iterdir()) == ["feed-2026.json"]
-    assert "Could not save the feed cache" in caplog.text
+    assert "Could not save feed-2026.json" in caplog.text
 
 
 async def test_a_corrupt_cache_is_deleted_and_reported(
