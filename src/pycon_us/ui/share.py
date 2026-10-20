@@ -48,7 +48,12 @@ REPORT_SUBJECT = f"{APP_NAME}: problem report"
 
 
 def centre(page: ft.Page) -> ft.Offset | None:
-    """Return the middle of the window, where the share sheet points from on a tablet."""
+    """Return the middle of the window, where the share sheet points from on a tablet.
+
+    At the pin an iPad still refuses it: Flet sends the point without a size, and
+    share_plus wants a rectangle that is not empty, so a share there fails and says so
+    (F115, U95).
+    """
     if not page.width or not page.height:
         return None
     return ft.Offset(page.width / 2, page.height / 2)

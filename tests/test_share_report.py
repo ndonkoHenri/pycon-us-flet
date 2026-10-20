@@ -13,6 +13,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
+from flet.controls.services import share as flet_share
 
 from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
@@ -30,6 +31,7 @@ from pycon_us.ui.share import (
     REPORT_NOT_SHARED,
     REPORT_OFFERED,
     REPORT_SUBJECT,
+    centre,
     share_console_log,
 )
 from tests.fakes import (
@@ -43,6 +45,9 @@ from tests.fakes import (
     MemoryShare,
     bound,
 )
+
+ANCHOR = ft.Offset(200, 400)
+"""Where the sheet points from on the 400 x 800 dp fake page: its centre (D-62)."""
 
 
 @pytest.fixture(autouse=True)
@@ -133,7 +138,7 @@ async def test_a_packaged_build_shares_the_log_with_the_diagnostics_as_its_text(
     assert options["text"].splitlines()[0].startswith("App: ")
     assert "Saved sessions: 0" in options["text"]
     assert options["subject"] == REPORT_SUBJECT
-    assert options["share_position_origin"] == ft.Offset(200, 400)
+    assert options["share_position_origin"] == ANCHOR
     assert share_of(svc).texts == []
 
 
@@ -150,7 +155,7 @@ async def test_the_companion_app_shares_the_diagnostics_alone(
     [(text, options)] = share_of(svc).texts
     assert text.startswith("App: ")
     assert options["subject"] == REPORT_SUBJECT
-    assert options["share_position_origin"] == ft.Offset(200, 400)
+    assert options["share_position_origin"] == ANCHOR
 
 
 @pytest.mark.parametrize("content", [None, ""])
@@ -249,3 +254,19 @@ async def test_a_logged_email_is_shared_as_a_placeholder(
     written = Path(shared.path).read_text(encoding="utf-8")
     assert "mailto:<email>" in written
     assert "ada@example.org" not in written
+
+
+def test_flet_still_sends_the_sheet_s_origin_without_a_size() -> None:
+    """At the pin Flet sends the origin as a point, which an iPad refuses (F115, U95).
+
+    A tripwire for the Flet bump that fixes it: when this fails, the origin carries a
+    size, sharing works on an iPad, and F115's interim (a share there says it failed)
+    can go.
+    """
+    args = flet_share._share_args(share_position_origin=ft.Offset(200, 400))
+    assert args["share_position_origin"] == {"x": 200, "y": 400}
+
+
+def test_no_anchor_before_flutter_reports_the_window_size() -> None:
+    """Without the page's size there is no centre: the sheet gets no origin."""
+    assert centre(cast(ft.Page, FakePage())) is None
