@@ -25,8 +25,8 @@ from pycon_us.core.speakers import SpeakerEntry
 from pycon_us.locations import drill_href
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
 from pycon_us.ui.day_groups import DayGroup
+from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.rows import LinkTile, SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
 

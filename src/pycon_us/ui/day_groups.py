@@ -16,7 +16,7 @@ from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import DaySessions
 from pycon_us.services import use_services
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 

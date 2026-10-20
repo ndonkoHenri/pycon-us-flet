@@ -27,7 +27,7 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.state import Conference
 from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
-from pycon_us.ui.badges import REMOVED, UNDO
+from pycon_us.ui.favorite import REMOVED, UNDO
 from tests import sessions
 from tests.fakes import MemoryPrefs
 from tests.feeds import processed

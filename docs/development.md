@@ -32,17 +32,18 @@
 | Run the real app shell on an emulator, simulator or phone | `uv run flet debug android -d emulator-5554` (or `ios -d <udid>`); `-d` is required | §5.3 |
 | Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in `.flet-src/client` | §5.2 |
 | List devices or emulators | `uv run flet devices`, `uv run flet emulators` | §5.5 |
-| Lint, type-check and test | `uv run ruff check && uv run ruff format --check && uv run pyright && uv run pytest` | §7.2 |
+| Lint, type-check and test | `tools/check.sh` (`ci.yml`'s steps; `--fast` skips pytest), or one step, e.g. `uv run pytest` | §7 |
+| Gate PRs before merging them (D-273) | `tools/gate.sh <pr> [<pr>...]`, the PRs in merge order | §7 |
 | Start the mock API (from P3) | `uv run python -m tools.mock_api.server --host 0.0.0.0` | §6 |
 | Build an APK for the emulator | `uv run flet build apk --arch arm64-v8a --build-number $(git rev-list --count HEAD)` (D-106) | §8.1 |
 | Build an AAB for Play | `uv run flet build aab --build-number $(git rev-list --count HEAD)` | §8.1 |
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
-| Get an APK from CI | `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow, or push a `v*` tag), then `gh run download <run-id>` | §7.4 |
+| Get a quick-look APK | Locally, the emulator APK above (§8.1); or a manual run, `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow), then `gh run download <run-id>`. While the repo is private a `v*` tag builds nothing (D-273) | §7.4 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
 | Set up a second worktree of this repo | Clone the main checkout's `.flet-src` into it (`cp -cR`, never a link), then `uv sync --locked` | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
-| Check the live public feed (what `feed-check.yml` runs weekly) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
+| Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---
 
@@ -361,6 +362,7 @@ gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
 git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src   # §2.2
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
 uv sync                                       # Python 3.14 and the dev tools
+git config core.hooksPath .githooks           # once per clone: the pre-push checks (§7, D-273)
 uv run pytest                                 # no device needed
 uv run flet devices                           # the ids for -d
 uv run flet debug android -d emulator-5554    # or: uv run flet debug ios -d <simulator udid> (§5.3)
@@ -612,7 +614,22 @@ The final options are documented in `tools/mock_api/README.md`. The planned inte
 
 ---
 
-## 7. GitHub Actions (D-84)
+## 7. Checks and GitHub Actions (D-84, D-273)
+
+**While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
+
+**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 5 s and the full one about 1.5 minutes. It runs at three points:
+- **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
+- **Before you mark a PR ready**, run the full `tools/check.sh` and list it in the PR.
+- **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main` with its own copy of `.flet-src` (D-219), merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
+  - A PR that doesn't merge cleanly stops it: merge `main` into that PR's branch first.
+  - When a check fails, it prints the end of the log, keeps the log and posts nothing.
+  - When the checks pass, it posts one comment on each PR: "Local checks passed (D-273): `main` <sha> + #<pr>@<sha> … → tree `<sha>`", the steps and pytest's summary line, then `$GATE_SIGNATURE` in a paragraph of its own when that is set (agents set their signature line, AGENTS.md rule 6). It prints the merged tree's sha last, the only line on its standard output.
+  - It warns when `.flet-src` is not at the merged tree's `.flet-ref`, since the checks then ran against another Flet.
+  - Exit status: 0 passed, 1 failed (or couldn't run), 2 usage.
+  - Its result holds for the PR's head and the `main` it names: after a new push to the PR, or once `main` has moved, run it again. Gate a batch together, in merge order, and squash-merge it in that order; `main`'s tree (`git rev-parse origin/main^{tree}` after a fetch) must then equal the printed tree, or else run `tools/check.sh` on `main`.
+
+No Linux machine runs the checks until P4 (the owner's call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule, `build-android.yml`'s tags), and with them §7.2's required checks.
 
 ### 7.1 Constraints of a private repo on GitHub Free
 
@@ -620,9 +637,9 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 
 | Constraint | Consequence for us |
 |---|---|
-| Included Actions minutes are limited, and macOS minutes count about 10× Linux | Everything runs on Linux. There is no iOS job (§7.5), and Android builds run only on demand or on tags. |
+| Included Actions minutes are limited (2,000 Linux minutes a month), and macOS minutes count about 10× Linux | Everything runs on Linux. There is no iOS job (§7.5). While the repo is private, every workflow runs only by hand and the checks run locally (§7, D-273). |
 | Artifact storage is small (hundreds of MB) | APK artifacts are kept for 14 days. |
-| Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, CI green, agents merge under D-100. Creating a ruleset returns HTTP 403 (checked 2026-10-11); AGENTS.md › Branches and commits has the ruleset to add once the repo is public. |
+| Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, the merge gate passed (D-273), agents merge under D-100. Creating a ruleset returns HTTP 403 (checked 2026-10-11); AGENTS.md › Branches and commits has the ruleset to add once the repo is public. |
 | Environments (and their secrets and required reviewers) are unavailable for private repos | We need none: CI holds no secrets (D-86). |
 
 Conventions in every workflow:
@@ -633,11 +650,11 @@ Conventions in every workflow:
 - `pull_request`, never `pull_request_target`.
 - `UV_LOCKED=1`, so every `uv` command fails if `uv.lock` is stale.
 
-### 7.2 `.github/workflows/ci.yml`: every PR and push to `main`
+### 7.2 `.github/workflows/ci.yml`: by hand while the repo is private
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) is the source of truth; this section says what it does and why.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) is the source of truth; this section says what it does and why. `tools/check.sh` runs the same steps locally (§7).
 
-**Required checks (D-100).** A PR may be merged only when every check below has passed on its latest commit. A missing, pending, skipped or cancelled required check is not green. Rename a job only together with this list.
+**Required checks (D-100).** While the repo is private, the required check is the merge gate's (§7, D-273): it ran the full checks on the PR merged onto the latest `main` and posted its result on the PR. When the repo is public, a PR may be merged only when every check below has passed on its latest commit. A missing, pending, skipped or cancelled required check is not green. Rename a job only together with this list.
 
 | Workflow | Job id | Check name (as GitHub shows it) |
 |---|---|---|
@@ -657,29 +674,29 @@ Conventions in every workflow:
 | Type-check | `uv run pyright` | D-74 |
 | Test | `uv run pytest --hypothesis-profile=ci` | D-76. Hypothesis's built-in `ci` profile (derandomised, no deadline, `too_slow` suppressed), extended in `tests/conftest.py` to 200 examples per property; named explicitly rather than left to the `CI` variable (testing-and-quality.md §3.1). |
 
-**Triggers and concurrency.** It runs on every `pull_request` and on every push to `main`. The concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
+**Triggers and concurrency.** While the repo is private it runs only by hand (`workflow_dispatch`, D-273): Actions › CI › Run workflow, or `gh workflow run ci.yml --ref <branch>`; each run has a concurrency group of its own (the run id). The PR that makes the repo public brings back its triggers, every `pull_request` and every push to `main`. Then the concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
 
-The target is under 2 minutes (D-84). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job: spike S9 tries `flet test linux`, and a green result becomes a separate workflow through a `needs-decision` issue (D-78).
+The target is under 2 minutes (D-84). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job: spike S9 tries `flet test linux`, and a green result becomes a separate workflow through a `needs-decision` issue (D-78). S9 needs GitHub's Linux runners, so it waits until the repo is public (D-273).
 
-### 7.3 `.github/workflows/feed-check.yml`: weekly
+### 7.3 `.github/workflows/feed-check.yml`: by hand while the repo is private
 
 [`.github/workflows/feed-check.yml`](../.github/workflows/feed-check.yml) is the source of truth; this section says what it does and why. It is not a required check (§7.2).
 
-**Run it:** it runs on Mondays at 06:17 UTC; by hand, Actions › Feed check › Run workflow, or `gh workflow run feed-check.yml --ref main`. Locally, `uv run python -m tools.check_feed` (add years, e.g. `2025 2026`, to check those instead). It runs as a module because it imports `tools.feed_invariants`.
+**Run it:** locally, `uv run python -m tools.check_feed` (add years, e.g. `2025 2026`, to check those instead). It runs as a module because it imports `tools.feed_invariants`. By hand on GitHub: Actions › Feed check › Run workflow, or `gh workflow run feed-check.yml --ref main`. While the repo is private there is no weekly run (D-273), so run it when the feed matters: before a snapshot PR (§8.3), and while next year's feed is expected. The PR that makes the repo public brings back its schedule, Mondays at 06:17 UTC.
 
 **One Linux job**, `Parse the public feed`, with a 10-minute timeout and `contents: read` only. Its steps are `ci.yml`'s up to `uv sync --locked` (the same checkouts, Flet pin, uv line and cache, §7.2), then `uv run python -m tools.check_feed`. A run takes well under a minute after setup: fetching and processing the 2026 feed takes about a second.
 
 - **What it checks.** `tools/check_feed.py` fetches the `feed_url` of `config.YEAR` and runs our parser (`feed.process`) and every invariant of `tools/feed_invariants.py` over it: the same functions `tests/test_feed_invariants.py` runs on the recorded feeds (D-77, testing-and-quality.md §3.3). It fails, exiting with 1, when the feed cannot be fetched (a 404 included), does not parse, has a record the parser skips, or breaks an invariant. The report lists the counts, each broken invariant with up to ten of its problems, and the keys the recorded feeds lack, which never fail: the parser ignores unknown keys.
 - **Next year.** It also says whether next year's feed answers, at this year's `feed_url` with the next year in its path (D-05's pattern): "not published yet (HTTP 404 …)", "redirects to … not published yet" (a redirect is never taken for the new feed), or "PUBLISHED … with N slots". That line never fails the run. When it appears, record the feed (`tests/fixtures/feeds/README.md`) and add `data/<year>/` (docs/roadmap.md, the 2027 rollover).
-- **Notification.** A failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot and no `issues: write`.
+- **Notification.** With the schedule back, a failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot and no `issues: write`.
 - **Concurrency.** One run at a time (group `feed-check`, `cancel-in-progress: false`): every run checks the same live feed, so a pending run may be replaced, but a running one is never cancelled.
 - **Why the Flet steps.** They are there only because `uv sync` needs `.flet-src` to exist; they disappear with the 1.1.0 pin. `ci.yml` and this workflow check out only `sdk/python` (sparse), which holds the five path sources, so the monorepo's Dart client and website do not eat the 2-minute budget (D-84). `build-android.yml` keeps the full checkout, because `flet build` needs the template, the Dart package and `.fvmrc`.
 
-### 7.4 `.github/workflows/build-android.yml`: on demand and on `v*` tags
+### 7.4 `.github/workflows/build-android.yml`: on demand
 
 [`.github/workflows/build-android.yml`](../.github/workflows/build-android.yml) is the source of truth; this section says what it does and why. It builds a debug-signed arm64 APK (D-84, D-86, D-106). It is not a required check (§7.2).
 
-**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main`. Pushing a `vX.Y.Z` tag runs it too (§8.3). A new run for the same branch or tag cancels the older one.
+**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main` (or `--ref vX.Y.Z` for a tag). While the repo is private, pushing a `vX.Y.Z` tag no longer runs it (D-273): build the quick-look APK locally instead (§8.1, the same `flet build apk --arch arm64-v8a` command), or run the workflow by hand. The PR that makes the repo public brings back the tag trigger (§8.3). A new run for the same branch or tag cancels the older one.
 
 **One Linux job**, `Debug-signed APK`, with a 45-minute timeout. Its steps, in order:
 
@@ -848,10 +865,10 @@ The Transporter app is the no-terminal alternative (`DOCS/publish/ios.md` "Uploa
 ### 8.3 A build for testers: the checklist
 
 There is no release train. The procedure:
-1. `main` is green, and the phase status issue lists what this build is for.
+1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. `build-android.yml` builds the quick-look APK.
+4. **Tag** `vX.Y.Z` on `main`. While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
 5. **Locally, at the same commit:**
    - check the pin (§2.2) and run `uv sync`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
