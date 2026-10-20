@@ -19,7 +19,7 @@ from pycon_us.favorites import use_favorites
 from pycon_us.services import use_services
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import LIGHT_TOKENS
-from pycon_us.ui.badges import use_favorite_toggle
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import (
     NoticeRow,
