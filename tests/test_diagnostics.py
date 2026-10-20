@@ -7,6 +7,7 @@ and Developer options set in ``Prefs``. Time comes from ``clock.set_test_now()``
 
 import dataclasses
 import logging
+import platform
 import re
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -291,7 +292,7 @@ async def test_gathering_reads_the_build_and_the_year(
     """The app, Python and Flet versions, the year, its zone and the capabilities."""
     lines = fields(await gathered(year, await bundled(storage, year)))
     assert lines["App"] == pycon_us.__version__
-    assert lines["Python"] == __import__("platform").python_version()
+    assert lines["Python"] == platform.python_version()
     assert lines["Flet"] == pycon_us.FLET_VERSION
     assert lines["Year"] == "2026"
     assert lines["Conference zone"] == PACIFIC
