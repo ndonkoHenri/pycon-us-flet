@@ -1,4 +1,6 @@
-"""Tests for the sponsors by level and ``sponsor_by_slug()`` (DATA-22, SPON-02, D-261).
+"""Tests for the sponsors by level, ``sponsor_by_slug()`` and the spotlight pick.
+
+DATA-22, SPON-02 and D-261 for the levels; SHELL-08 and D-298 for the spotlight.
 
 The feed's ``conference.sponsors`` is an object of sponsor lists keyed by level;
 ``feed.process()`` decodes it through ``records.sponsor_levels()`` and sorts the levels
@@ -7,13 +9,20 @@ once. The invariants over it are in ``test_feed_invariants.py``.
 
 import logging
 from collections.abc import Callable
+from dataclasses import replace
+from random import Random
 from typing import Any
 
 import pytest
 
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Sponsor
-from pycon_us.core.sponsors import sponsor_by_slug
+from pycon_us.core.sponsors import (
+    pick_spotlight,
+    sponsor_by_slug,
+    spotlight_candidates,
+    thanks,
+)
 from tests.feeds import YEARS, changed, document, processed, settings
 
 type Change = Callable[[dict[str, Any]], object]
@@ -287,3 +296,59 @@ def test_levels_with_one_order_keep_feed_order() -> None:
 
     names = [level.name for level in sponsors_from(tie).sponsor_levels]
     assert names[:3] == ["Visionary", "Media", "Sustainability"]
+
+
+# ------------------------------------------------------------------ the spotlight
+
+
+def test_spotlight_candidates_are_the_banner_sponsors_in_level_order() -> None:
+    """The candidates are the 14 ``mobile_banner`` sponsors of 2026, top level first."""
+    data = processed(2026)
+    candidates = spotlight_candidates(data)
+    assert [s for s in sponsors_of(data) if s.mobile_banner] == list(candidates)
+    assert len(candidates) == 14
+    assert candidates[0].slug == "nvidia"
+
+
+def test_the_pick_is_a_candidate_and_follows_the_seed() -> None:
+    """A seeded ``Random`` picks a candidate, the same one for the same seed."""
+    candidates = spotlight_candidates(processed(2026))
+    for seed in range(20):
+        first = pick_spotlight(candidates, "", Random(seed))
+        assert first in candidates
+        assert pick_spotlight(candidates, "", Random(seed)) is first
+
+
+def test_the_pick_keeps_the_current_sponsor_while_it_is_a_candidate() -> None:
+    """The slug picked before wins: nothing is drawn while it is still a candidate."""
+    candidates = spotlight_candidates(processed(2026))
+    rng = Random(1)
+    state = rng.getstate()
+    kept = pick_spotlight(candidates, "microsoft", rng)
+    assert kept is not None and kept.slug == "microsoft"
+    assert rng.getstate() == state  # no draw
+
+
+def test_the_pick_draws_again_when_the_sponsor_leaves() -> None:
+    """A slug that is no longer a candidate (dropped, or its banner off) is replaced."""
+    candidates = spotlight_candidates(processed(2026))
+    picked = pick_spotlight(candidates, "bloomberg-gone", Random(3))
+    assert picked in candidates
+
+
+def test_without_candidates_nothing_is_picked() -> None:
+    """No banner sponsor, no spotlight, whatever was picked before."""
+    assert pick_spotlight((), "nvidia", Random(0)) is None
+
+
+@pytest.mark.parametrize(
+    ("level", "expected"),
+    [
+        ("Visionary", "Thanks to NVIDIA, a Visionary sponsor"),
+        ("Associate", "Thanks to NVIDIA, an Associate sponsor"),
+    ],
+)
+def test_the_thanks_takes_an_before_a_vowel(level: str, expected: str) -> None:
+    """The article goes by the level's first letter: "an Associate sponsor"."""
+    nvidia = spotlight_candidates(processed(2026))[0]
+    assert thanks(replace(nvidia, level=level)) == expected
