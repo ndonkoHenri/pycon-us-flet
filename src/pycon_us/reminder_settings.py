@@ -99,6 +99,21 @@ class ReminderSettings:
             logger.warning("Preference %s: %s", REMINDERS.key, "; ".join(problems))
         return cls(**values)
 
+    def wants(self, category: str) -> bool:
+        """Return whether the conference moments of ``category`` are on.
+
+        Args:
+            category: One of ``year_moments.CATEGORIES``.
+
+        Raises:
+            KeyError: ``category`` is not one of them.
+        """
+        return {
+            "lightning": self.lightning,
+            "open_space": self.open_space,
+            "keynote": self.keynote,
+        }[category]
+
     def to_stored(self) -> dict[str, Any]:
         """Return the record as ``pycon.reminders`` keeps it: every field, by name."""
         return asdict(self)
