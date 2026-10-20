@@ -107,10 +107,12 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ),
         ("/more/sponsors", ["More", "Sponsors"]),
         ("/more/sponsors/sponsor/bloomberg", ["More", "Sponsors", "Drill"]),
+        ("/more/settings", ["More", "Settings"]),
         ("/more/app", ["More", "AboutApp"]),
         ("/more/app/licences", ["More", "AboutApp", "Licences"]),
         ("/more/app/licences/flet", ["More", "AboutApp", "Licences", "LicencePage"]),
         ("/more/developer", ["More", "Developer"]),
+        ("/more/social", ["More", "Social"]),
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (

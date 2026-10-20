@@ -22,9 +22,17 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import WifiInfo, check_info
+from pycon_us.year_info import (
+    HelpInfo,
+    PsfInfo,
+    SafetyContact,
+    SocialInfo,
+    WifiInfo,
+    check_info,
+)
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
@@ -145,9 +153,9 @@ class Content:
     """The year's content from ``content.toml`` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
-    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), the Wi-Fi
-    page's network and password (D-280), and the hand-authored conference moments
-    (D-274).
+    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), the info
+    pages' tables (D-263; the Wi-Fi page's network and password, D-280, and the venue
+    hours, D-282), and the hand-authored conference moments (D-274).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -168,6 +176,16 @@ class Content:
             without them, whose page shows the feed's block.
         event_reminders: The sign-up moments, written by hand (NOTIF-05); the
             keynotes' moments are derived from the feed (``year_moments``).
+        safety_contacts: Help & safety's ways to report a concern, each from a public
+            source (INFO-07, D-45, D-281); empty for a year without them.
+        help: Help & safety's other lines and links; None for a year without them,
+            whose page shows the feed's block (D-281).
+        psf: About the PSF's mission, Donate and links (INFO-06, D-283); None for a
+            year without them, whose page shows the feed's block.
+        social: The Social page's hashtags and links (INFO-10, D-284); None for a
+            year without them, whose page shows the feed's block.
+        venue_hours: When each venue service is open, for Venue & hours (MAP-09,
+            D-282); empty for a year without them, whose page shows the feed's block.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -179,6 +197,11 @@ class Content:
     keynotes: tuple[Keynote, ...] = ()
     wifi: WifiInfo | None = None
     event_reminders: tuple[EventReminder, ...] = ()
+    safety_contacts: tuple[SafetyContact, ...] = ()
+    help: HelpInfo | None = None
+    psf: PsfInfo | None = None
+    social: SocialInfo | None = None
+    venue_hours: tuple[ServiceHours, ...] = ()
 
 
 @dataclass(frozen=True, eq=False)
@@ -327,7 +350,7 @@ def _check_content(content: Content, conference: ConferenceInfo, file: str) -> N
     check_pages(content.open_spaces, content.lightning_talks, file)
     check_keynotes(content.keynotes, file)
     check_moments(content.event_reminders, conference.year, conference.zone, file)
-    check_info(content, file)
+    check_info(content, conference, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)

@@ -22,6 +22,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.ui import rows
+from pycon_us.ui.brands import brand_icon
 from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
 from tests.fakes import (
     FakePage,
@@ -159,11 +160,28 @@ def test_a_link_tile_is_one_merged_list_tile_with_a_trailing_chevron(
     assert tile.leading.icon == ft.Icons.PEOPLE_OUTLINE
 
 
+def test_a_link_tile_takes_a_control_as_its_leading_mark(page: FakePage) -> None:
+    """A control given as the icon (a brand's mark, D-264) leads the row as it is."""
+    mark = ft.Image(src=b"<svg/>", width=24, height=24)
+    tile = tile_of(LinkTile("Mastodon", PROFILE, icon=mark, app=True))
+    assert tile.leading is mark
+
+
 def test_a_link_tile_without_an_icon_or_subtitle_has_neither(page: FakePage) -> None:
     """A link tile given no icon or subtitle has no leading icon and no subtitle."""
     tile = tile_of(LinkTile("Ana Lima", "/more/speakers/speaker/17"))
     assert tile.leading is None
     assert tile.subtitle is None
+
+
+@pytest.mark.parametrize("target", ["/more/speakers", PROFILE])
+def test_a_control_given_as_the_icon_leads_the_row_as_it_is(
+    page: FakePage, target: str
+) -> None:
+    """A brand's mark, given as a control, is the row's leading, unwrapped (D-264)."""
+    mark = brand_icon("mastodon")
+    tile = tile_of(LinkTile("Mastodon", target, icon=mark, app=target == PROFILE))
+    assert tile.leading is mark
 
 
 def test_a_link_tile_shows_its_subtitle(page: FakePage) -> None:
@@ -339,6 +357,23 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
     node = holder.content.content
     assert isinstance(node, ft.Semantics) and node.identifier == "help.coc.copy"
     assert isinstance(node.content, ft.IconButton)
+
+
+def test_a_screen_can_name_the_copy_button_otherwise(page: FakePage) -> None:
+    """``copy_identifier`` names Copy where the screen's scheme differs (D-281)."""
+    row = LinkTile(
+        "Call the hotline",
+        HOTLINE,
+        identifier="help.report.tel",
+        copy_identifier="help.copy.tel",
+    )
+    holder = cast(ft.Row, row).controls[1]
+    assert isinstance(holder, ft.Container)
+    assert isinstance(holder.content, ft.MergeSemantics)
+    node = holder.content.content
+    assert isinstance(node, ft.Semantics) and node.identifier == "help.copy.tel"
+    link = node_of(row)
+    assert link is not None and link.identifier == "help.report.tel"
 
 
 async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
