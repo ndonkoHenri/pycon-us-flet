@@ -1,7 +1,7 @@
 # Testing and quality (v2)
 
 **Status:** plan of record, 2026-10-11. Replaces the v1 testing document (kept in git history, not binding).
-**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-93 (done), §M (names), §N (Flet facts).
+**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-273 (local checks while the repo is private), D-93 (done), §M (names), §N (Flet facts).
 **Flet ground truth:** the local monorepo at `9fbe52a61` (unreleased 1.1.0): `flet/testing/` (`FletTestApp`, `Tester`, `Finder`, `remote_tester.RemoteTester`), `flet/pytest_plugin.py` (fixture `flet_app`), `flet_cli/commands/test.py` (`flet test`), `packages/flet/integration_tests/README.md` and the integration-testing guide. Gaps Flet has today, with interims, are in §13.
 
 > Per D-96 this file is the test strategy (D-76..D-80). [`development.md`](development.md) is the developer guide (toolchain, dev loop, builds, CI) and links here.
@@ -18,7 +18,7 @@
 
 ## 1. Layers at a glance
 
-| Layer | Tool | When | In CI |
+| Layer | Tool | When | In the checks (§12) |
 |---|---|---|---|
 | Unit: `core/` and helpers (§3) | pytest, hypothesis | every PR | yes |
 | Feed: rules, invariants, snapshot, Ionic reference (§3.3) | pytest, recorded feeds | every PR | yes |
@@ -27,7 +27,7 @@
 | Goldens (§6) | `take_screenshot`, `assert_screenshot` | P4 only | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
-| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | weekly | yes (cron) |
+| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | by hand while the repo is private; weekly once it is public (D-273) | its tests; the check itself runs on its own |
 
 ## 2. Layout, configuration and commands
 
@@ -92,6 +92,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 
 | Task | Command |
 |---|---|
+| All the checks, as the merge gate runs them (D-273, §12) | `tools/check.sh` (`--fast`: all but pytest) |
 | Lint, format, types | `uv run ruff check && uv run ruff format --check && uv run pyright` |
 | Unit and mock tests (under 2 min, D-84) | `uv run pytest` |
 | Accept a reviewed snapshot change | `uv run pytest tests/test_feed_invariants.py --snapshot-update` |
@@ -110,10 +111,10 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 - **A docstring on every test** that says, in one sentence, the behaviour it pins; fixtures, helpers, test classes and methods have docstrings too, and `ruff`'s `D` rules check `tests/` (D-253).
 - **`core` takes `now` as an argument** (D-43), so tests pass fixed aware datetimes. Only `clock.now()` itself is tested with its override.
 - **No network, no Flet runtime.** `core/` tests import no Flet (D-68). Stores are plain `@ft.observable` dataclasses and run without a page; `Observable.subscribe(fn)` checks that a change notifies. `subscribe` holds listeners weakly (a `weakref.WeakSet`): in tests bind the listener to a local name (`def on_change(sender, field): ...`) and keep it alive for the test; never pass a lambda, which is collected at once and never called.
-- **Hypothesis** runs derandomised in CI (`--hypothesis-profile=ci`): hypothesis's built-in `ci` profile (no deadline, no example database, `too_slow` health check off, `@reproduce_failure` blob printed), which `tests/conftest.py` extends to 200 examples per property; `tests/test_hypothesis_profile.py` pins those values. CI names the profile on the command line instead of leaving it to the `CI` variable, which hypothesis also reads. Local runs use the `dev` profile, which `tests/conftest.py` loads: hypothesis's defaults (100 random examples) without the 200 ms deadline per example, which a Mac busy with builds and emulators overran in a correctness property (`test_html_md.py`, 268 ms); speed is measured on devices (§8), not by a property's deadline. `--hypothesis-profile=ci` overrides it, also to reproduce a CI failure.
+- **Hypothesis** runs derandomised in the full checks and CI (`--hypothesis-profile=ci`): hypothesis's built-in `ci` profile (no deadline, no example database, `too_slow` health check off, `@reproduce_failure` blob printed), which `tests/conftest.py` extends to 200 examples per property; `tests/test_hypothesis_profile.py` pins those values. `tools/check.sh` and CI name the profile on the command line instead of leaving it to the `CI` variable, which hypothesis also reads. Local runs use the `dev` profile, which `tests/conftest.py` loads: hypothesis's defaults (100 random examples) without the 200 ms deadline per example, which a Mac busy with builds and emulators overran in a correctness property (`test_html_md.py`, 268 ms); speed is measured on devices (§8), not by a property's deadline. `--hypothesis-profile=ci` overrides it, also to reproduce a CI failure.
 - **Components and screens in a real Flet session: one harness** (`tests/sessions.py`, #204, #253, #286). `rendering(root)` renders a component in a `Session` on a connection to no client, as Flet's own component tests do; `showing(screen, *modules, ...)` renders a screen over a feed under the store providers in `App`'s order (`provide()`), with the memory fakes' services (`memory_services()`), each module's `AppScaffold` replaced by a row of its actions over its body (its floating button under it, its re-tap action recorded), `page.navigate` recorded and each session or notice row body counted (D-153), and yields a `Shown` with the lookups (`node()`, `nodes()`: a key ending in a dot names a family of identifiers, any other key a whole one), the SnackBars and dispatched events. A test sets what the screen opens on: its `prefs`, `favorites` not loaded yet, ids `saved` in the storage, a view `memory` kept across sessions, the page's `route`; with `view_path=None` the screen is a real Router, rendered as the page's Views and answering its own View paths, as search's tests use it. Several screens may be open at once in a test: each records its own titles and row bodies and reads its own View path, the stand-ins routing each call by the session Flet binds to the context for its renders and events (`tests/test_sessions.py` opens two and taps a star in each). A screen test adds only what is its own, in a `Shown` subclass it passes as `kind` (a `functools.partial` of it for fields set before the first render) and that its own stand-ins find with `current()`: Now's held clock and minute ticks, the Schedule's recorded scrolls and jumps, My schedule's minute hook, the room's recorded scroll and held highlight, search's searches, focus asks and held debounce (`tests/timers.py`); the rows' list owner and stars (`tests/row_sessions.py`), session detail's in-place re-render (`tests/session_detail.py`). Every screen test in a Flet session uses it, so the module that names the Flet internals it uses is the only one a pin bump (D-81) that renames one breaks.
 - **A test module splits by subject at around 400 lines** (D-66, #264), as code does: `test_scaffold.py`, `test_shown.py` and `test_navigation.py` for `AppScaffold`, `test_status_strip.py` and `test_status_strip_ticks.py` for the strip. What the parts share goes into one narrow support module (`tests/chrome.py`, `tests/strip.py`), not into `conftest.py`, which keeps the fixtures any module may use: fixtures such as `hooks` differ under one name from family to family. A test module takes a support module's fixtures by assigning them to its own names, where pytest looks a fixture up (`year, svc, page, conference, hooks = (chrome.year, ...)`); importing them would work too, but ruff reads an imported fixture as unused and each test's parameter as its redefinition (F401, F811). A fixture finds the fixtures it takes by name in the same module: both `hooks` take `svc` (which takes `year`) and `conference`, so a module that assigns a `hooks` assigns those three too, or pytest stops with "fixture 'svc' not found".
-- **Fast.** The whole suite stays under 2 minutes on CI (D-84). A slow test is a design smell, not a reason for a marker.
+- **Fast.** The whole suite stays under 2 minutes in the full checks (D-84, §12). A slow test is a design smell, not a reason for a marker.
 - **Wait for what should happen, never for a time** (#237). An async test awaits an event, or polls a condition with a generous deadline (`Shown.until` in `test_schedule.py`, `Room.until` in `test_room.py`: 30 s, which a passing test never reaches), so a loaded host only makes it slower. A fixed `asyncio.sleep` is fine only where its length cannot change the outcome: a window for something that must not happen, or a stand-in's latency. The app's own timeouts that a stand-in answers (`scrolling.LANDING_S`, the Schedule's `SETTLE_S`) are set long in tests, and a test checks what the app did (which jumps ran, where they went), not how many times a call that retries asked. A state that lasts only for one of the app's waits (search's debounce, the room's highlight) is never checked against a short real timer, which a loaded host lets fire first (#270): the test holds the wait with `tests/timers.py`'s `HeldSleeps`, which stands in for that screen module's `asyncio`, checks the delay asked for and the state, then releases it; or, when only the end matters, sets the timeout short and checks the end alone. A stand-in that answers at once answers before the app starts its wait (`test_scrolling.py`'s scroll end), so a short timeout cannot race it.
 
 ### 3.2 Two machine time zones
@@ -605,7 +606,7 @@ At each phase exit, with packaged builds on an Android emulator and an iOS simul
 ## 10. Definition of done for a PR (D-93)
 
 Every PR:
-- [ ] Links its issue (`Closes #N`); CI is green.
+- [ ] Links its issue (`Closes #N`); the full local checks pass before it is marked ready, and the merge gate passes before it merges (D-273, §12; once the repo is public, CI is green).
 - [ ] New behaviour has tests; a fixed bug has a test that failed before the fix.
 - [ ] "How tested" lists the commands actually run, the devices or emulators used, and the Flet pin. Agents report only checks they ran.
 - [ ] Docs and `decisions.md` are updated in the same PR.
@@ -627,7 +628,7 @@ By kind of change:
 
 Testing gates per phase, from PLAN §7's exit criteria (the milestone description carries the full list). A new testing gate is added to PLAN §7 in the same PR.
 
-| Phase | Automated (CI green) | UI flows | Device, accessibility, performance |
+| Phase | Automated (the checks pass, §12) | UI flows | Device, accessibility, performance |
 |---|---|---|---|
 | **P0** | Feed rules, invariants, snapshot (2025, 2026); Ionic reference captured; two-zone fixture; capabilities, storage keys, version, `core` purity; light/dark contrast | The shell flow (`test_shell_starts`) passes with `flet test` on an emulator and a simulator (PLAN P0 exit 3) | Checklist 1, 2, 6, 7, 11 on an Android emulator and an iOS simulator, 1 and 2 also on the iPhone; S1–S5 verdicts in `docs/spikes/`; D-80 targets confirmed or revised (D-102) |
 | **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F6 on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
@@ -635,12 +636,13 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 | **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + F8 | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
 | **P4** | All green; goldens added | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
 
-## 12. CI wiring (D-84)
+## 12. Checks and CI wiring (D-84, D-273)
 
-- **`ci.yml`** (every PR and push to `main`, Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
-- **`feed-check.yml`** (weekly): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
-- **`build-android.yml`** (manual and `v*` tags): a debug-signed APK artifact. iOS builds and all device work stay local.
-- **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; `Spike: flet test linux in CI`, label `test`, P2 at the earliest) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).
+- **Local checks while the repo is private** (D-273; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR. Nothing runs them on Linux until P4. The three workflows below run only by hand (`gh workflow run <file> --ref <branch>`) until the PR that makes the repo public brings their triggers back.
+- **`ci.yml`** (by hand while the repo is private; every PR and push to `main` once it is public; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
+- **`feed-check.yml`** (by hand while the repo is private, with `uv run python -m tools.check_feed` locally; weekly once it is public): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
+- **`build-android.yml`** (manual; `v*` tags too once the repo is public): a debug-signed APK artifact; while the repo is private the quick-look APK is usually built locally. iOS builds and all device work stay local.
+- **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; #363, label `test`, P2 at the earliest; it needs GitHub's Linux runners, so it waits until the repo is public, D-273) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).
 
 ## 13. Flet testing gaps
 
