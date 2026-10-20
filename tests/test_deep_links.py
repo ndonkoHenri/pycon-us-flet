@@ -16,7 +16,7 @@ from urllib.parse import quote
 import flet as ft
 import pytest
 
-from pycon_us.locations import PAGES, TAB_ROOTS, parent_of
+from pycon_us.locations import PAGES, TAB_ROOTS, WELCOME, parent_of
 from pycon_us.memory import ViewMemory
 from tests import links
 from tests.links import DATA, EXIT, Open, Shown
@@ -77,10 +77,15 @@ async def test_every_page_opens_as_a_start_route_and_back_walks_it_down(
     """Every page, as a cold link's start route, is the top View over its parents.
 
     Back then pops one View per press to its root, the root goes to Now and Now
-    leaves the app.
+    leaves the app. Welcome, a root without the bar, is one View, and Back on it
+    leaves the app (D-287).
     """
     shown = await open_at(location)
     routes = shown.routes()
+    if location == WELCOME:
+        assert routes == ["/"]  # the roots' shared key (D-142, D-287)
+        assert await walked(shown) == [EXIT]
+        return
     if location in TAB_ROOTS:
         assert routes == ["/"]  # one root, the roots' shared key (D-142)
     else:
