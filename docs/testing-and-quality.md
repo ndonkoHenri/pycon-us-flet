@@ -477,7 +477,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | Flow | Tags | Criterion |
 |---|---|---|
 | `drill_back` | journeys, smoke | Now → session → speaker → session; each Back pops one step (criteria 1, 2; #279) |
-| `star_undo` | journeys, smoke | Star, unstar with Undo; Now shows your next session (criteria 1, 2) |
+| `star_undo` | journeys, smoke | Star, unstar with Undo; Now shows a saved session happening now as your next session (criteria 1, 2; part of F6) |
 | `my_schedule_overlap` | journeys | My schedule shows overlaps (criterion 1) |
 | `search_any_day` | journeys | Search finds a session, a speaker and a room on another day (criterion 1) |
 | `filter_persists` | journeys | A hidden track is said on the Schedule and survives a relaunch (criterion 1) |
@@ -492,7 +492,8 @@ simulator's network, so there the launch's refresh may publish the year's live f
 **Caveats.**
 - On Android, any read of the accessibility tree makes Flutter report a screen reader
   (F72), so under Maestro the app takes its screen-reader paths: the Schedule keeps its
-  Now button (D-204), and by D-184 SnackBars stay until used. A flow checks those on iOS.
+  Now button (D-204), and by D-184 SnackBars stay until used. `jump_to_now` checks the
+  button on iOS only; no flow checks a SnackBar's timeout.
 - About 0.85 s passes between two Maestro commands on the emulator, so the regression
   flow's fling comes 0.8 to 1.0 s after the tap. #346 saw its failures at 0.33 to 0.6 s;
   at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full, so that

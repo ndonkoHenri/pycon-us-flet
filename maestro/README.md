@@ -28,7 +28,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
-| `regression/fling_after_sheet.yaml` | regression | #346's row D: Open space shown through the sheet, then a fling right after "Show N sessions", `TRIALS` times; each trial is "moved", "short" or "none" |
+| `regression/fling_after_sheet.yaml` | regression | #346's row D: Open space shown through the sheet, then a fling right after "Show N sessions", `TRIALS` times (at most about 40); each trial is "moved" (to the control fling's slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
 airplane mode on Android, then Developer options set as `tests/ui/developer.py` does
@@ -124,8 +124,9 @@ step's screenshot and the view hierarchy are in the debug output, under
 
 **Comparing two builds** (#346's row D): install `main`'s APK, run the regression flow,
 install the PR's APK, run it again with the same `TRIALS`, and compare the two summaries
-(`flings after the sheet, N moved, N short, N none, of N`). The flow fails when any trial
-was short or none. On Android the launcher logs every touch, so the time from the tap on
+(`flings after the sheet, N moved, N short, N none, N invalid, of N`). The flow fails
+unless every trial moved and every tap reached the button. It starts the fake clock at
+14:01, so the now slot stays 2:00 PM for about 40 trials. On Android the launcher logs every touch, so the time from the tap on
 "Show N sessions" to the fling is `adb -s emulator-5570 logcat -d | grep TaplEvents`: the
 `ACTION_UP` at (540, 2232), then the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms).
 
@@ -145,7 +146,8 @@ was short or none. On Android the launcher logs every touch, so the time from th
 - **On Android, Maestro makes the app think a screen reader is on** (F72): Flutter reports
   `accessible_navigation` once anything reads its accessibility tree. The app then keeps
   the Schedule's Now button on the now slot, and by D-184 keeps SnackBars until they are
-  used, as it does for TalkBack. Check those behaviours on iOS only.
+  used, as it does for TalkBack. Check those behaviours on iOS only (`jump_to_now` checks
+  the button there; no flow checks a SnackBar's timeout yet).
 - About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
   0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach (see the run

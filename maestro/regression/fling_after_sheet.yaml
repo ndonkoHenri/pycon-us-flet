@@ -7,16 +7,19 @@
 # other, run it again (maestro/README.md).
 #
 # env:
-#   TRIALS  how many flings after the sheet; default 10
+#   TRIALS  how many flings after the sheet; default 10, at most about 40: the fake
+#           clock starts at Friday 14:01 and runs, and each trial takes about 30 s, so
+#           past 14:30 the now slot, where each trial starts, is no longer 2:00 PM
 #
-# Before the trials, the flow reads where "Show N sessions" leaves the list with no
-# fling (the rest), and where the same fling goes from there (the control). Each trial
-# then starts on the now slot (Friday 14:10, 2:00 PM), shows Open space through the
-# sheet, flings at once, and reads the top row once the list is still
-# (scripts/record_fling.js): "moved" when it left the rest's slot, as the control does;
-# "short" when it stayed in that slot on another row; "none" when the same row is on
-# top. The flow prints each trial (maestro/README.md says where) and fails when any was
-# short or none. A trial whose tap missed the button is not counted.
+# Before the trials, the flow reads the slot at the top (the now slot, 2:00 PM), where
+# "Show N sessions" leaves the list with no fling (the rest), and where the same fling
+# goes from there (the control). Each trial then starts on the now slot, shows Open
+# space through the sheet, flings at once, and reads the top row once the list is still
+# (scripts/record_fling.js): "moved" when it ended in the control's slot; "short" when
+# it ended elsewhere, on another row than the rest's; "none" when the rest's row is on
+# top; "invalid" when the trial did not start on the now slot. The flow prints each
+# trial (maestro/README.md says where) and fails unless every trial moved and every tap
+# reached the button.
 appId: io.github.ndonkohenri.pyconus
 name: A fling right after the filter sheet closes runs in full
 tags:
@@ -24,7 +27,10 @@ tags:
 onFlowComplete:
   - runFlow: ../subflows/online.yaml
 ---
-- runFlow: ../subflows/start_offline.yaml
+- runFlow:
+    file: ../subflows/start_offline.yaml
+    env:
+      NOW: 2026-05-15 14:01
 - tapOn:
     id: app.nav.schedule
 - extendedWaitUntil:
@@ -32,6 +38,12 @@ onFlowComplete:
       id: schedule.session.138
     timeout: 15000
 - waitForAnimationToEnd
+# The start: the now slot at the top.
+- runFlow: ../subflows/top_slot.yaml
+- evalScript: ${output.startSlot = output.topSlot}
+- assertTrue:
+    condition: ${output.startSlot == '2:00'}
+    label: The Schedule opens with the now slot, 2:00 PM, at the top
 
 # The rest: where "Show N sessions" leaves the list, with no fling.
 - runFlow: ../subflows/toggle_open_space.yaml
@@ -63,6 +75,8 @@ onFlowComplete:
     times: ${TRIALS || 10}
     commands:
       - runFlow: ../subflows/to_now.yaml
+      - runFlow: ../subflows/top_slot.yaml
+      - evalScript: ${output.trialStart = output.topSlot}
       - tapOn:
           id: schedule.filter
       - extendedWaitUntil:
@@ -111,7 +125,8 @@ onFlowComplete:
             - runFlow: ../subflows/top_slot.yaml
             - runScript: ../scripts/record_fling.js
       # The tap missed (a slow screen, or a phone whose sheet has its button elsewhere:
-      # change the point above). The trial is not counted; close the sheet.
+      # change the point above). The trial is not counted, and the flow fails at the
+      # end; close the sheet.
       - runFlow:
           when:
             visible:
@@ -129,8 +144,8 @@ onFlowComplete:
 
 - evalScript: ${console.log('flings after the sheet, ' + output.summary + '; taps that missed the button, ' + (output.missed || 0))}
 - assertTrue:
-    condition: ${output.trial > 0}
-    label: At least one trial was counted
+    condition: ${(output.missed || 0) == 0}
+    label: Every tap reached "Show N sessions"
 - assertTrue:
-    condition: ${output.lost == 0}
+    condition: ${output.trial > 0 && output.lost == 0}
     label: Every fling after the sheet ran in full
