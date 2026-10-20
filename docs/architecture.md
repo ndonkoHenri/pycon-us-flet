@@ -66,7 +66,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | `memory.py` | `ViewMemory` (§6.3, D-231) | P0 |
 | `prefs.py`, `favorites.py`, `account.py`, `staff.py` | one store each, with its context and `use_*()` hook (§6, D-160) | P0, P1, P3 |
 | `config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `theme.py`, `capabilities.py`, `clock.py` | year data (§8; `year_schema.py` its TOML-to-dataclass half, §8.2; `year_tracks.py` the track registry with `HUB_PAGES`, the Tracks hub's pages of their own (D-207), and its checks, D-228; `year_pages.py` the Open spaces and Lightning talks pages' tables and their checks, D-205; `year_keynotes.py` the keynotes' entries and their checks, D-217); theme (§15); capabilities (§13); `now()` (§7.6) | P0 |
-| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
+| `core/` | `feed`, `records`, `rules`, `names`, `models`, `timefmt`, `slugs`, `html_md` (with `markdown_inline`, D-201), `queries` (`days`; P0, the rest P1), `search`, `row_views` (with the rows' spoken phrases, D-200), `speakers`, `sprints` (P1, D-202); `expo` (D-254), `diff`, `ics` (P2); `signing`, `badges`, `admission`, `outbox` (P3) | P0+ |
 | `services/` | `Services` bundle, `storage`, `api` (feed fetch P0, signed client P3), `errors` (P0); `reminders` (P2); `sync`, `scanner` (P3) | P0+ |
 | `ui/` | grouped by role (decisions §M): `scaffold.py` (`AppScaffold`, `SectionHeader`, `search_button()`), `status_strip.py` (`StatusStrip`, `strip_line()` and the minute tick: `use_minute()`, `TICK_SECONDS`, `current_minute()`, `stop_ticks()`; D-200), `navigation.py` (`TABS`, `navigation_bar()`, `use_scroll_to_top()`; D-166), `rows.py` (`SpeakerRow`, `SpeakerTile`, `speaker_avatar()`, `LinkTile`, `LocationCard`), `session_rows.py` (`SessionRow`, `NoticeRow`, `use_session_views()`, `is_notice()`; D-184), `row_lines.py` (the lines under a row's title: `meta()`, `secondary()`, `overlap_line()`, `elapsed_bar()` and its `TRACK`; D-227), `time_gutter.py` (`TimeGutter`, `TimeSlot`; D-200; `TimeAbove`, `slot_layout()`, `time_above()` and `GutterProbe`, which `AppScaffold` puts under every body, 0 dp high, and `BootView` holds too; D-216), `links.py` (the link rule: `LinkKind`, `link_kind()`, `open_link()`, `copy_contact()`; D-182; and feed texts: `feed_link()`, `open_feed_link()`, `feed_markdown()`; D-197), `badges.py` (`FavoriteButton`, `TrackBadge`, `NEW_TRACK`, `use_favorite_toggle()`, `use_add_all()` (a track page's Add all, D-209), `selection_click()`), `states.py` (`EmptyState`, `SkeletonList`), `when_where.py` (session detail's `WhenAndWhere` card and `StatusLine`; D-186), `fold.py` (`FoldTile`, `expand_style()`, the controlled fold; D-191), `fields.py` (`SearchField`, the pill of search and the Speakers and Sprints filters, D-193; `use_field_query()`, its text, `Ref` and refocusing Clear, and `found_count()`, the live count line; D-226), `scrolling.py` (`jump_to_key()`, `FULL_LIST_EXTENT`, `JUMP_MS`, `SCROLL_EVENT_MS`; D-154, D-192), `semantics.py` (`named()`, an identifier merged into its control's node; D-190, D-198; `semantics_key()`, an id as an identifier's key; D-200), `day_groups.py` (`DayGroup`, a memoised day of session rows under its heading, for search, the track pages and speaker detail; D-199, D-203), `share.py` (the share sheet: `centre()`, where it points from on a tablet, and `share_text()`; D-206), `menus.py` (`overflow_menu()` and `menu_item()`, the app bar's overflow and its items, whose labels wrap at 200 % text; D-233) | P0+ |
 | `screens/` | one `@ft.component` per screen, named after its route (`now.py`, …, `staff_<tool>.py`); `developer_clock.py` holds the Developer screen's fake-clock pickers (D-187), `now_header.py` Now's status header and its words, `now_card.py` its next-session card (D-190), `search_results.py` search's result list (D-193), `schedule_days.py` the Schedule's day tabs, day lists, slots and "Now" button (D-192), `schedule_now.py` its now line, when a jump to now runs by itself, what the handlers tell it and what it left in view (D-204), `room_days.py` room detail's day lists and the lit row (D-194), `schedule_filter.py` the Schedule's track filter (`use_track_filter()`: the `TUNE` action, the summary and the edits) and `schedule_sheet.py` its filter sheet (`filter_sheet()`, `filter_groups()`; D-195); `/more/tracks` and `/more/tracks/<slug>` are `tracks.py` (the hub) and `track.py` (a track's page; D-199); `/more/sprints` is `sprints.py`, its project card `sprint_card.py` (D-202); `/more/open-spaces` and `/more/lightning-talks` are `open_spaces.py` and `lightning_talks.py` (D-205); `session_extras.py` holds session detail's Share, a Posters row's posters and an open space's image and site link (D-206); `/more/keynotes` is `keynotes.py`, its card `keynote_card.py`, and `keynote_people.py` holds a keynote's people for the card and session detail's keynote sections (D-217) | P0+ |
@@ -631,7 +631,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 ### 7.5 Queries (`core/queries.py`, `timeline.py`, `agenda.py`, `search.py`)
 
-One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
+One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202); `expo.py` the expo's booths and the job fair's tables (D-254). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
 
 | Query | Rule | Features |
 |---|---|---|
@@ -847,10 +847,25 @@ x = 41.5                            # percent of the image
 y = 62.0
 sprint = false
 
+[[plans]]
+id = "job-fair"
+title = "Job fair & community showcase"
+image = "maps/2026/job-fair.jpg"    # cropped to the floor, without the print's header (D-254)
+width = 1700
+height = 1500
+note = "The printed plan shows some tables with other sponsors. This list follows the conference's sponsor data."   # optional (D-254)
+
 [[booths]]
 number = "613"
 x = 0.412                           # ratios of the expo image; also y, w, h
+
+[[booths]]
+number = "407"
+label = "Python Software Foundation"   # only for a booth the feed gives no exhibitor (D-254)
+x = 0.621
 ```
+
+A booth lists every sponsor whose `booth_number` is its number, so a shared booth keeps all its exhibitors (2026: 726, 727, 728, 734); `label` names a booth without one, and a test over the bundled snapshot fails when a labelled booth also has an exhibitor (D-254). Job fair tables come from the feed (`job_fair_table_number`), not from `map.toml`; #464 adds their rectangles on the `job-fair` plan.
 
 ### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`)
 

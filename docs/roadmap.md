@@ -18,7 +18,7 @@ Phases are milestones (D-89). Soft markers are orientation, never deadlines (D-0
 |---|---|---|---|
 | **P0 Foundations** | A proven toolchain, a tested data core, and an app shell as a packaged build on an Android emulator and the iPhone | early Nov 2026 | 4 epics, 27 issues, spikes S1–S5, a status issue |
 | **P1 Attendee core** | Good enough to demo, and to use for a whole simulated conference day | demo slice end of Nov; exit mid-Dec 2026 | 7 epics, 36 issues, spike S6, 2 upstream issues |
-| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 102 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
+| **P2 Conference companion** | Everything an attendee needs at the venue, offline, plus reminders | Feb 2027 | 9 epics, 3 upstream epics, 103 issues (spikes S7–S9 and the `.ics` spike `P2-04` among them), 1 earlier upstream issue (`UP-U4`), a status issue |
 | **P3 Accounts & staff tools** | The private-API features against the local mock, with the scanner as the showcase | Mar 2027 | 8 epics |
 | **P4 Showcase** | Polish, publish, present | ready in Apr 2027 | 5 epics |
 
@@ -26,7 +26,7 @@ Upstream Flet work runs in parallel with the phases (section 8).
 
 ## 2. How to read it
 
-**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
+**Keys.** `P0-12` is an issue, `P1-E3` an epic, `S1`..`S6` spike issues and `UP-…` upstream work. P2's issues are `P2-01`..`P2-102` in dependency order, and `P2-103` (#464), added later by D-254; its spikes S7..S9 are `P2-01`..`P2-03`; `P2-04` (does a shared `.ics` file reach the calendar?) is a spike with no S-number. The seeder writes each key into its issue body (P2's were created by hand with the key in the body), so the roadmap and GitHub stay traceable.
 
 **Issue blocks.** For P0 and P1, each block gives the labels, dependencies ("after") and feature ids, a one-paragraph description and the acceptance criteria. P2's blocks give the issue number, labels, dependencies and feature ids; the description and criteria are in the issue. The GitHub issue adds the D-ids, implementation notes, the docs to read and the definition of done (D-93), which for UI work includes Android and iOS screenshots in light and dark.
 
@@ -828,7 +828,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
 **Order.**
 1. **The first wave**, which needs nothing else: the spikes (`P2-01`, `P2-04`; S8 (`P2-02`) and S9 (`P2-03`) any time), the decisions (`P2-05`, `P2-06`, `P2-07`), the upstream write-ups (`P2-08`..`P2-11`) and the foundations (`P2-13`..`P2-27` and `P2-81`). Do the device-heavy spikes one at a time.
 2. **The features**, each when its "after" list is merged.
-3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
+3. **Each epic's check issue**, then the exit (`P2-102`), which depends on the checks, not on the epics. E8 has none (`P2-79` is in the exit's list); `P2-99`, the E3 device check, is not in that list, because `P2-07` decides what happens to the E3-only rows. Some features are in no check's list (`P2-16`, `P2-49`, `P2-54`..`P2-59`, `P2-63`, `P2-64`, `P2-84`, `P2-103`, and `P2-92`, which waits for `UP-U4`): the exit's matrix criterion is what sweeps them in.
 
 ### P2-E1 · Epic: map, floor plans and location cards
 
@@ -913,6 +913,12 @@ feature, area:rooms-maps · after P2-05, P2-28, P2-31, P2-29, P2-34 · MAP-04, S
 #### P2-48 · Place the job fair card on Job Fair sessions and Job listings (#408)
 
 feature, area:rooms-maps · after P2-47, P2-30, P2-39 · SESS-10, SPON-10, SPON-06
+
+#### P2-103 · Mark the job fair tables on the plan so a row can show its table (#464)
+
+feature, area:rooms-maps · after P2-47 · MAP-04, SPON-03
+
+Added by D-254 (#365): a rectangle per printed table on the cropped plan, opened from each pane row and from sponsor detail's job fair table.
 
 #### P2-94 · Check the expo and job fair on devices: offline, screen readers, large text and Maestro flows (#454)
 
