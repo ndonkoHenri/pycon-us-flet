@@ -33,6 +33,7 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.ui import scaffold
+from pycon_us.ui.navigation import navigation_rail
 from pycon_us.ui.scaffold import AppScaffold, Shown
 from tests.fakes import (
     FakePage,
@@ -96,6 +97,15 @@ def hooks(
     monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
     # ``Shown``'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
+    # ``Rail`` renders inline, before it has measured itself (D-309); its own
+    # test is in test_navigation.py.
+    monkeypatch.setattr(
+        scaffold,
+        "Rail",
+        lambda root, on_select, visible: navigation_rail(
+            root, on_select, visible=visible
+        ),
+    )
     # The probe reads Prefs; its own tests are in test_time_gutter.py.
     monkeypatch.setattr(scaffold, "GutterProbe", Probe)
     # Its effect wraps the Router's handler; its own tests are in test_modals.py.

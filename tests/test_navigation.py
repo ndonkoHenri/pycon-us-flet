@@ -6,6 +6,7 @@ what a tap does, built outside a renderer with the fixtures of ``tests/chrome.py
 VoiceOver read are checked on devices (the PR).
 """
 
+import inspect
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, cast
@@ -19,9 +20,11 @@ from pycon_us.theme import HC_DARK_TOKENS, HC_LIGHT_TOKENS, Tokens
 from pycon_us.ui import navigation
 from pycon_us.ui.navigation import (
     RAIL_FADE,
+    RAIL_FIT_DP,
     RAIL_WIDTH,
     RETAP_SCROLL_MS,
     TABS,
+    Rail,
     Tab,
     navigation_bar,
     navigation_rail,
@@ -157,14 +160,15 @@ def test_the_rail_shows_only_when_asked(visible: bool) -> None:
     assert len(inner_rail(stack).destinations) == len(TABS)
 
 
-def test_a_fade_over_the_rail_s_bottom_edge_shows_that_it_scrolls() -> None:
-    """A fade into the rail's colour covers its bottom edge, and ignores taps (D-309).
+def test_a_short_rail_fades_its_bottom_edge_to_show_that_it_scrolls() -> None:
+    """A short rail's bottom edge fades into its colour, and ignores taps (D-309).
 
     The empty space under the last destination is as tall, so at the end of a scroll
     More sits clear of the fade.
     """
-    stack = navigation_rail("/now", ignore, visible=True)
+    stack = navigation_rail("/now", ignore, visible=True, short=True)
     rail, fade = stack.controls
+    assert fade.visible is True
     assert isinstance(fade, ft.Container)
     assert (fade.left, fade.right, fade.bottom, fade.height) == (0, 0, 0, RAIL_FADE)
     assert fade.top is None  # pinned to the bottom edge only
@@ -179,6 +183,39 @@ def test_a_fade_over_the_rail_s_bottom_edge_shows_that_it_scrolls() -> None:
     assert isinstance(rail.trailing, ft.Container)
     assert rail.trailing.height == RAIL_FADE
     assert rail.pin_trailing_to_bottom is False  # it scrolls with the destinations
+
+
+def test_a_rail_that_fits_has_no_fade_and_no_space_under_more() -> None:
+    """Where the destinations fit, the last label is not faded and nothing scrolls."""
+    stack = navigation_rail("/now", ignore, visible=True)
+    rail, fade = stack.controls
+    assert fade.visible is False
+    assert isinstance(rail, ft.NavigationRail)
+    assert rail.trailing is None
+
+
+@pytest.mark.parametrize(
+    ("height", "short"),
+    [(303, True), (RAIL_FIT_DP - 0.5, True), (RAIL_FIT_DP, False), (325, False)],
+)
+def test_the_rail_fades_only_when_shorter_than_its_destinations(
+    hooks: Hooks, monkeypatch: pytest.MonkeyPatch, height: float, short: bool
+) -> None:
+    """``Rail`` measures itself and fades under ``RAIL_FIT_DP``, 320 dp (D-309).
+
+    About 303 dp on an Android phone in landscape; an iPhone 17's (about 325 dp) or a
+    tablet's shows all five.
+    """
+    assert RAIL_FIT_DP == 320
+    monkeypatch.setattr(ft, "use_state", hooks.use_state)
+    render = inspect.unwrap(Rail)
+    stack = render("/now", ignore, True)
+    assert stack.controls[1].visible is False  # before the first measurement
+    stack.on_size_change(SimpleNamespace(width=80, height=height))
+    assert hooks.state is short
+    stack = render("/now", ignore, True)
+    assert stack.controls[1].visible is short
+    assert stack.visible is True
 
 
 async def test_a_tap_on_the_bar_or_the_rail_hands_its_index_on() -> None:
@@ -449,7 +486,6 @@ def test_the_body_keeps_its_place_whichever_navigation_shows(
     row = safe.content
     assert isinstance(row, ft.Row)
     assert isinstance(row.controls[0], ft.Stack)  # the rail under its fade (D-309)
-    inner_rail(row.controls[0])
     assert row.controls[1] is body_of(view)
     assert row.spacing == 0
     assert row.vertical_alignment == ft.CrossAxisAlignment.STRETCH
