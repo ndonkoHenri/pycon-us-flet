@@ -38,7 +38,7 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import ToggleFavorite, use_favorite_toggle
+from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import SessionRow, use_session_views

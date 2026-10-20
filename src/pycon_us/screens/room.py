@@ -41,7 +41,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key

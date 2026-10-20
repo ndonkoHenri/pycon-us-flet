@@ -33,6 +33,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
+from pycon_us.theme_hc import HC_DARK
 from pycon_us.ui.time_gutter import GutterProbe
 from tests.fakes import (
     FakePage,
@@ -178,15 +179,21 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
 async def test_the_os_brightness_and_accessibility_flags_are_read_at_start(
     svc: Services, semantics: MemorySemantics, network: Network
 ) -> None:
-    """The start reads the OS's dark mode, high contrast and reduced motion."""
+    """The start reads the OS's dark mode, high contrast and reduced motion.
+
+    The high-contrast schemes are on the page before the gate opens (D-161, D-23).
+    """
     semantics.features.update(high_contrast=True, disable_animations=True)
-    _, prefs = await started(FakePage(ft.Brightness.DARK), svc)
+    fake_page = FakePage(ft.Brightness.DARK)
+    _, prefs = await started(fake_page, svc)
     assert (prefs.os_dark, prefs.os_high_contrast, prefs.reduce_motion) == (
         True,
         True,
         True,
     )
     assert prefs.dark  # Appearance System follows the OS
+    assert fake_page.dark_theme is not None
+    assert fake_page.dark_theme.color_scheme == HC_DARK
 
 
 async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(

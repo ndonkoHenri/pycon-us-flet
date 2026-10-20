@@ -1,8 +1,8 @@
-"""Tests for room slugs and the room sort order (DATA-16, ROOM-06)."""
+"""Tests for room and sponsor slugs and the room sort order (DATA-16, ROOM-06, SPON-02)."""
 
 import pytest
 
-from pycon_us.core.slugs import room_sort_key, slugify_room
+from pycon_us.core.slugs import room_sort_key, slugify_room, sponsor_slug
 
 
 @pytest.mark.parametrize(
@@ -19,6 +19,28 @@ from pycon_us.core.slugs import room_sort_key, slugify_room
 def test_slugify_room_matches_ionic(name: str, slug: str) -> None:
     """A slug is Ionic's: lower-case, each run of other characters a ``-``, trimmed."""
     assert slugify_room(name) == slug
+
+
+@pytest.mark.parametrize(
+    ("name", "slug"),
+    [
+        ("Anaconda, Inc", "anaconda-inc"),
+        ("Qube Research & Technologies", "qube-research--technologies"),
+        ("Reuven Lerner — Python training", "reuven-lerner--python-training"),
+        ("Code & Supply", "code--supply"),
+        ("Python en Español", "python-en-espaol"),
+        ("Zentralbibliothek Zürich", "zentralbibliothek-zrich"),
+        ("  Two\tspaces  ", "-two-spaces-"),  # no trimming, as in Ionic
+        ("Line break﻿here", "line-break-here"),  # JavaScript's \s
+        ("Unit\x1fseparator\x85", "unitseparator"),  # not JavaScript's \s
+    ],
+)
+def test_sponsor_slug_matches_ionic(name: str, slug: str) -> None:
+    """A sponsor slug is Ionic's: whitespace runs to ``-``, then non-``[a-z0-9-]`` dropped.
+
+    Its double dashes, from a ``&`` or a dash between spaces, are Ionic's routes (SPON-02).
+    """
+    assert sponsor_slug(name) == slug
 
 
 def test_rooms_sort_naturally_ignoring_case_and_accents() -> None:

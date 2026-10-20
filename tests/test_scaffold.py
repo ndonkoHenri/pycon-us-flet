@@ -139,6 +139,34 @@ async def test_back_on_a_pushed_view_is_left_to_flutters_navigator(
     assert page.navigated == []
 
 
+@pytest.mark.parametrize("location", ["/nope", "/now/session/42/nope"])
+async def test_back_on_an_unknown_location_goes_to_now(
+    hooks: Hooks, page: FakePage, location: str
+) -> None:
+    """An unknown location's one-View stack declines Back and goes to Now (D-270).
+
+    After a cold link it is the only View, so a pop it let through would close the
+    app; its arrow goes to Now too, not one level up, and it takes the roots' shared
+    key, so Now replaces it without a transition (D-142).
+    """
+    view = view_at(hooks, page, location, unknown=True)
+    assert view.route == "/"
+    assert view.can_pop is False
+    assert view.navigation_bar is None  # not a tab root (D-144)
+
+    confirmed: list[bool] = []
+
+    async def confirm_pop(should_pop: bool) -> None:
+        confirmed.append(should_pop)
+
+    event = SimpleNamespace(control=SimpleNamespace(confirm_pop=confirm_pop))
+    await cast(Any, view.on_confirm_pop)(event)
+    assert (page.navigated, confirmed) == (["/now"], [False])
+
+    click(back_arrow(view))
+    assert page.navigated == ["/now", "/now"]
+
+
 def test_back_on_now_is_left_to_the_system(hooks: Hooks, page: FakePage) -> None:
     """Now has no Back arrow and no pop handler, so its Back is the system's."""
     view = view_at(hooks, page, "/now")
