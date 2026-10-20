@@ -26,48 +26,58 @@ pytestmark = [
 
 
 def test_no_session_is_lost(year: int) -> None:
+    """Every raw slot is a session or dropped by a named rule: nothing vanishes."""
     assert feed_invariants.no_session_is_lost(recorded_feed(year)) == []
 
 
 def test_ids_are_unique_stable_strings_in_ionics_forms(year: int) -> None:
+    """Session ids are unique strings equal to their keys, in Ionic's forms (D-42)."""
     feed = recorded_feed(year)
     assert feed_invariants.ids_are_unique_stable_strings_in_ionics_forms(feed) == []
 
 
 def test_every_session_is_on_one_conference_day(year: int) -> None:
+    """Each timeline session is listed once, under its conference-local date."""
     feed = recorded_feed(year)
     assert feed_invariants.every_session_is_on_one_conference_day(feed) == []
 
 
 def test_times_are_aware_in_the_years_zone_and_ordered(year: int) -> None:
+    """Every session time is in the year's zone, and none ends before it starts."""
     feed = recorded_feed(year)
     assert feed_invariants.times_are_aware_in_the_years_zone_and_ordered(feed) == []
 
 
 def test_every_group_has_a_start_and_ordered_rows(year: int) -> None:
+    """Each day's groups run by start, and their rows by location then name."""
     feed = recorded_feed(year)
     assert feed_invariants.every_group_has_a_start_and_ordered_rows(feed) == []
 
 
 def test_no_dropped_category_survives(year: int) -> None:
+    """No record of a dropped category, such as a free open space, is a session."""
     assert feed_invariants.no_dropped_category_survives(recorded_feed(year)) == []
 
 
 def test_one_lunch_row_per_day_with_lunch(year: int) -> None:
+    """The staggered lunch slots fold into one Lunch row on each day with lunch."""
     assert feed_invariants.one_lunch_row_per_day_with_lunch(recorded_feed(year)) == []
 
 
 def test_only_overridden_sessions_show_another_start(year: int) -> None:
+    """Only a session with a display-time override shows a start of its own."""
     feed = recorded_feed(year)
     assert feed_invariants.only_overridden_sessions_show_another_start(feed) == []
 
 
 def test_speakers_and_sessions_link_both_ways(year: int) -> None:
+    """Every linked speaker exists, has a session and is named in it."""
     feed = recorded_feed(year)
     assert feed_invariants.speakers_and_sessions_link_both_ways(feed) == []
 
 
 def test_rooms_and_sessions_agree(year: int) -> None:
+    """Rooms are one per slug, naturally sorted, each listing who names it."""
     assert feed_invariants.rooms_and_sessions_agree(recorded_feed(year)) == []
 
 
@@ -84,6 +94,9 @@ def test_every_invariant_has_a_test_here(year: int) -> None:
 def test_processed_model_matches_the_reviewed_snapshot(
     year: int, snapshot: Callable[[str, object], None]
 ) -> None:
-    """D-77: a deliberate change updates the snapshot and explains its diff."""
+    """The processed model's outline matches the year's reviewed snapshot.
+
+    D-77: a deliberate change updates the snapshot and explains its diff.
+    """
     zone = load_year(year).conference.zone
     snapshot(f"outline-{year}", outline(processed(year), zone))

@@ -37,6 +37,7 @@ pytestmark = pytest.mark.usefixtures("machine_tz")
 
 
 def schedule_days(year: int) -> tuple[date, ...]:
+    """The Schedule's days of ``year``: every conference date, in order."""
     conference = load_year(year).conference
     return days(processed(year), conference.first_day, conference.last_day)
 
@@ -85,8 +86,11 @@ def test_slots_run_by_start_and_rows_by_shown_start_then_room(year: int) -> None
 
 
 def test_a_row_shown_earlier_leads_its_slot_and_rows_without_a_place_follow() -> None:
-    """2026's Job Fair, shown at 9:30 in the 10:00 slot (DATA-11), comes first; then the
-    break and the notice, which have no place; then the rooms."""
+    """A slot lists the row shown earliest first, then the rows without a place.
+
+    2026's Job Fair, shown at 9:30 in the 10:00 slot (DATA-11), comes first; then the
+    break and the notice, which have no place; then the rooms.
+    """
     slot = slot_at(processed(2026), "2026-05-17T10:00:00-07:00")
     assert slot.sessions[0].name.startswith("Job Fair")
     assert [s.display_location for s in slot.sessions][:5] == [
@@ -115,6 +119,7 @@ def test_rooms_sort_naturally_and_ignore_case() -> None:
 
 
 def test_ties_on_start_and_room_break_by_name_then_id() -> None:
+    """Rows with the same start and room sort by name, then id, in any input order."""
     sessions = sessions_like(
         {"id": "b", "name": "Same"},
         {"id": "z", "name": "Another"},
@@ -138,6 +143,7 @@ def test_a_day_without_sessions_has_no_slots(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_excluding_every_track_leaves_every_day_empty(year: int) -> None:
+    """Excluding every track of the feed leaves every day without slots."""
     data = processed(year)
     every_track = {s.track for s in data.sessions.values()}
     for day in schedule_days(year):
@@ -170,6 +176,7 @@ def test_the_default_filter_hides_open_spaces_and_nothing_else() -> None:
 
 
 def test_one_string_is_not_a_filter() -> None:
+    """``timeline`` raises ``TypeError`` for a bare string as the filter."""
     with pytest.raises(TypeError):
         timeline(processed(2026), date(2026, 5, 15), "Open Space")
 
@@ -202,6 +209,7 @@ def test_a_filter_keeps_the_slots_it_does_not_touch(year: int) -> None:
 
 
 def test_a_filter_that_hides_nothing_that_day_returns_the_whole_day() -> None:
+    """A filter that hides nothing on a day gives that day's unfiltered slots."""
     data, tutorials_day = processed(2026), date(2026, 5, 13)
     assert timeline(data, tutorials_day, ["Open Space"]) is timeline(
         data, tutorials_day, ()
@@ -220,6 +228,7 @@ def test_a_new_feed_version_gets_its_own_results() -> None:
 
 
 def test_the_memo_does_not_keep_a_replaced_feed_alive() -> None:
+    """The timeline and track memos let a dropped feed be garbage-collected."""
     data = processed(2026)
     timeline(data, date(2026, 5, 15), ["Open Space"])
     track_sessions(data, "Talk")
@@ -293,6 +302,7 @@ def test_a_posters_row_lists_its_posters_as_the_posters_track_does(year: int) ->
 
 
 def test_only_a_posters_row_has_posters() -> None:
+    """A talk, a poster and an open space each list no posters."""
     data = processed(2026)
     for session_id in ("142", "poster-detail-60", "9119"):
         assert posters(data, data.sessions[session_id]) == ()
@@ -300,11 +310,13 @@ def test_only_a_posters_row_has_posters() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_before_posters_are_published_the_posters_row_lists_none(year: int) -> None:
+    """With no posters in the feed, the Posters row lists none."""
     data = process(changed(year, _without_posters), settings(year))
     assert posters(data, posters_row(data)) == ()
 
 
 def test_a_posters_row_s_posters_are_memoised_per_feed() -> None:
+    """A Posters row's posters are one object per feed, another for a new feed."""
     data = processed(2026)
     row = posters_row(data)
     assert posters(data, row) is posters(data, row)
@@ -323,10 +335,12 @@ def test_a_track_page_ignores_the_schedule_filter() -> None:
 
 
 def test_a_track_without_sessions_has_an_empty_page() -> None:
+    """A track with no sessions, here Sprint, has an empty page."""
     assert track_sessions(processed(2026), "Sprint") == ()
 
 
 def test_a_track_page_is_memoised_per_feed() -> None:
+    """A track page is one object per feed, another for a new feed."""
     data = processed(2026)
     assert track_sessions(data, "Talk") is track_sessions(data, "Talk")
     assert track_sessions(data, "Talk") is not track_sessions(processed(2026), "Talk")
@@ -399,10 +413,12 @@ FRIDAY = date(2026, 5, 15)
 
 
 def friday_at(hour: int, minute: int = 0) -> datetime:
+    """Friday, May 15, 2026 at ``hour``:``minute``, conference time."""
     return datetime(2026, 5, 15, hour, minute, tzinfo=PACIFIC)
 
 
 def friday_slots() -> tuple[Slot, ...]:
+    """Friday's 2026 slots under the default filter."""
     return timeline(processed(2026), FRIDAY, Prefs().excluded_tracks)
 
 
@@ -415,13 +431,17 @@ def test_the_jump_lands_on_the_slot_that_is_on() -> None:
 
 
 def test_a_slot_counts_from_its_first_minute() -> None:
+    """A slot is on from the minute it starts."""
     place = now_place(friday_slots(), friday_at(14))
     assert place.on == "slot-2026-05-15T14:00:00-07:00"
 
 
 def test_once_a_slot_is_over_the_jump_lands_on_the_line_above_the_next() -> None:
-    """At 2:35 the 2:00 PM slot is over; the line sits above 2:45 PM, and so the jump
-    shows the line and the slot that comes next together (D-204)."""
+    """Once a slot is over, nothing is on and the jump targets the line (D-204).
+
+    At 2:35 the 2:00 PM slot is over; the line sits above 2:45 PM, and so the jump
+    shows the line and the slot that comes next together.
+    """
     slots = friday_slots()
     place = now_place(slots, friday_at(14, 35))
     assert place.on is None and place.target == NOW_KEY
@@ -437,10 +457,12 @@ def test_a_long_session_earlier_does_not_hold_the_jump_back() -> None:
 
 
 def test_before_the_day_the_line_tops_the_list() -> None:
+    """Before the day's first slot the line is at the top and no slot is on."""
     assert now_place(friday_slots(), friday_at(6)) == NowPlace(0, None)
 
 
 def test_after_the_day_the_line_ends_the_list() -> None:
+    """After the day's last slot the line is at the end and no slot is on."""
     slots = friday_slots()
     assert now_place(slots, friday_at(23, 30)) == NowPlace(len(slots), None)
 
@@ -453,6 +475,7 @@ def test_a_slot_of_notices_alone_is_over_once_it_starts() -> None:
 
 
 def test_without_slots_the_line_is_all_there_is() -> None:
+    """With no slots, the line is the list's only item and nothing is on."""
     assert now_place((), friday_at(10)) == NowPlace(0, None)
 
 

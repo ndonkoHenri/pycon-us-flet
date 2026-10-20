@@ -44,10 +44,12 @@ HTML_FIELDS = (
 
 @cache
 def feed(year: int) -> dict[str, Any]:
+    """The recorded feed of ``year`` as JSON, read once."""
     return json.loads((FIXTURES / "feeds" / f"conference-{year}.json").read_text())
 
 
 def site_url(year: int) -> str:
+    """The year's conference site, which relative links resolve against."""
     return load_year(year).conference.site_url
 
 
@@ -74,16 +76,21 @@ def values_at(node: object, path: str) -> Iterator[str]:
 
 
 def html_fields(year: int) -> Iterator[str]:
+    """Yield every value of every HTML field of ``year``'s recorded feed."""
     for path in HTML_FIELDS:
         yield from values_at(feed(year), path)
 
 
 class _VisibleText(HTMLParser):
+    """An HTML parser that collects the text a reader sees."""
+
     def __init__(self) -> None:
+        """Start with no text, character references decoded."""
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
 
     def handle_data(self, data: str) -> None:
+        """Collect one run of text between tags."""
         self.parts.append(data)
 
 
@@ -117,6 +124,7 @@ def markdown_text(markdown: str) -> str:
 
 
 def outside_code(markdown: str) -> str:
+    """Return ``markdown`` with its code spans removed."""
     return re.sub(r"(`+).*?\1", "", markdown)
 
 

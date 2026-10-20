@@ -33,6 +33,7 @@ ZONE_2026 = load_year(2026).conference.zone
 
 
 def test_a_row_view_has_the_range_place_and_speakers_a_row_shows() -> None:
+    """A talk's view holds the time range, room and speakers its row shows."""
     view = session_view(processed(2026).sessions["142"], ZONE_2026, use_24h=False)
     assert view.when == "10:30–11:00 AM"
     assert view.place == "Grand Ballroom A"
@@ -40,16 +41,19 @@ def test_a_row_view_has_the_range_place_and_speakers_a_row_shows() -> None:
 
 
 def test_a_screen_reader_hears_to_in_place_of_the_range_s_dash() -> None:
+    """The spoken range says "to" where the shown range has its en dash."""
     view = session_view(processed(2026).sessions["142"], ZONE_2026, use_24h=False)
     assert view.spoken_when == "10:30 to 11:00 AM"
 
 
 def test_a_row_view_follows_the_device_s_24_hour_clock() -> None:
+    """On a 24-hour clock the shown and spoken ranges have no AM or PM."""
     view = session_view(processed(2026).sessions["142"], ZONE_2026, use_24h=True)
     assert (view.when, view.spoken_when) == ("10:30–11:00", "10:30 to 11:00")
 
 
 def test_a_notice_shows_one_time_and_a_generic_break_no_place() -> None:
+    """A notice shows its start alone; a break in no room shows no place."""
     sessions = processed(2026).sessions
     notice = session_view(sessions["196"], ZONE_2026, use_24h=False)
     assert notice.when == "7:30 AM"  # Registration Desk Opens: start equals end
@@ -93,6 +97,7 @@ def test_the_room_s_name_is_matched_by_slug() -> None:
 
 
 def test_every_other_list_keeps_the_place() -> None:
+    """Off its room's page, or on another room's, a row keeps its room."""
     talk = processed(2026).sessions["142"]
     assert session_view(talk, ZONE_2026, use_24h=False).place == "Grand Ballroom A"
     elsewhere = session_view(talk, ZONE_2026, use_24h=False, in_room="room-103abc")
@@ -100,6 +105,7 @@ def test_every_other_list_keeps_the_place() -> None:
 
 
 def test_a_room_s_row_views_all_leave_out_the_room() -> None:
+    """Every view built for a room's page leaves out the place."""
     data = processed(2026)
     room = data.rooms["expo-hall-ab"]
     views = session_views(
@@ -120,6 +126,7 @@ def test_on_a_speaker_s_page_a_row_names_only_the_co_speakers() -> None:
 
 
 def test_on_a_speaker_s_page_a_row_given_alone_names_no_one() -> None:
+    """On its speaker's page, a talk given alone names no one, shown or said."""
     talk = processed(2026).sessions["142"]  # Justin Lee's alone
     view = session_view(talk, ZONE_2026, use_24h=False, of_speaker="Justin Lee")
     assert view.speakers == ""
@@ -139,6 +146,7 @@ def test_a_speaker_s_row_says_its_co_speakers_as_it_shows_them() -> None:
 
 
 def test_every_other_list_names_every_speaker() -> None:
+    """Off a speaker's page, a row names every speaker."""
     talk = processed(2026).sessions["106"]
     assert session_view(talk, ZONE_2026, use_24h=False).speakers == (
         "Catherine Nelson, Robert Masson"
@@ -146,6 +154,7 @@ def test_every_other_list_names_every_speaker() -> None:
 
 
 def test_a_speaker_s_row_views_all_leave_out_the_speaker() -> None:
+    """Every view built for a speaker's page names only the co-speakers."""
     data = processed(2026)
     views = session_views(
         data,
@@ -158,6 +167,7 @@ def test_a_speaker_s_row_views_all_leave_out_the_speaker() -> None:
 
 
 def test_row_views_keep_the_list_s_order_and_skip_unknown_ids() -> None:
+    """``session_views`` keeps the given order and skips ids the feed lacks."""
     views = session_views(
         processed(2026), ["74", "gone", "142"], ZONE_2026, use_24h=False
     )
@@ -183,10 +193,12 @@ def test_views_group_by_their_conference_local_day_in_order() -> None:
 
 
 def room_names(rooms: tuple[Room, ...]) -> list[str]:
+    """The names of ``rooms``, in order."""
     return [room.name for room in rooms]
 
 
 def test_a_talk_has_one_room_and_nothing_to_fold() -> None:
+    """A talk's place is its one room, with no other rooms to fold."""
     data = processed(2026)
     where = places(data.sessions["142"], data.rooms)
     assert where.label == "Grand Ballroom A"
@@ -219,6 +231,7 @@ def test_the_place_shown_is_not_folded_again() -> None:
 
 
 def test_a_break_in_many_rooms_has_no_one_place() -> None:
+    """A break in five rooms has no one place, only "In 5 rooms"."""
     data = processed(2026)
     break_id = (
         "break-Room 103ABC, Room 104AB, Room 104C, Grand Ballroom A, "
@@ -230,12 +243,14 @@ def test_a_break_in_many_rooms_has_no_one_place() -> None:
 
 
 def test_a_notice_has_no_place() -> None:
+    """A notice has no place, no room and no other rooms."""
     data = processed(2026)
     where = places(data.sessions["196"], data.rooms)  # Registration Desk Opens
     assert (where.label, where.room, where.others) == ("", None, ())
 
 
 def test_a_place_the_feed_has_no_room_for_is_shown_but_opens_nothing() -> None:
+    """A place without a room in the feed opens nothing; its listed room is folded."""
     data = processed(2026)
     moved = replace(data.sessions["142"], display_location="Hallway track")
     where = places(moved, data.rooms)
@@ -244,6 +259,7 @@ def test_a_place_the_feed_has_no_room_for_is_shown_but_opens_nothing() -> None:
 
 
 def test_a_room_listed_twice_is_folded_once() -> None:
+    """A room a session lists twice is folded once."""
     data = processed(2026)
     twice = replace(data.sessions["219"], rooms=("Room 101A", "Room 101B", "Room 101B"))
     assert room_names(places(twice, data.rooms).others) == ["Room 101B"]
@@ -258,6 +274,7 @@ def names(found: tuple[Speaker | str, ...]) -> list[str]:
 
 
 def test_a_panel_lists_its_speakers_in_the_feed_s_order() -> None:
+    """A panel's people are its directory speakers, in the feed's order."""
     data = processed(2026)
     session = data.sessions["110"]  # Beyond the Hype: six speakers
     found = people(session, data.speakers)
@@ -276,6 +293,7 @@ def test_a_pseudo_speaker_is_text_not_a_speaker(year: int) -> None:
 
 
 def test_speakers_and_names_keep_the_authors_order_each_once() -> None:
+    """People keep the authors' order, each speaker and text once."""
     data = processed(2026)
     ana, bo = data.speakers["183"], data.speakers["184"]
     session = replace(
@@ -297,6 +315,7 @@ def test_a_speaker_linked_by_id_under_another_name_still_gets_a_row() -> None:
 
 
 def test_a_session_without_authors_has_no_one() -> None:
+    """A session without authors, here a keynote, has no people."""
     data = processed(2026)
     assert people(data.sessions["176"], data.speakers) == ()  # a keynote
 
@@ -322,6 +341,7 @@ def view_of(session_id: str) -> SessionView:
 
 
 def test_the_phrase_names_every_badge_and_skips_what_is_missing() -> None:
+    """The phrase says the badges, title, time, place and speakers, skipping blanks."""
     view = view_of(TUTORIAL)
     phrase = spoken_phrase(["Tutorial", "Registration required"], view)
     assert phrase == (
@@ -354,6 +374,7 @@ def test_a_row_that_is_on_says_how_much_has_passed_last() -> None:
 
 
 def test_a_title_that_ends_a_sentence_gets_no_second_full_stop() -> None:
+    """A title ending in a question mark gets no full stop after it."""
     view = view_of(TALK)
     asked = replace(
         view, session=replace(view.session, name="Is Python fast?"), place=""
@@ -403,6 +424,7 @@ def shared(session_id: str, *, use_24h: bool = False) -> list[str]:
 
 
 def test_a_talk_shares_its_title_when_and_where_and_its_public_page() -> None:
+    """A talk shares its title, its day, time and room, and its page's URL."""
     assert shared(TALK) == [
         "Python for Humans - Designing Python Code Like a User Interface",
         "PyCon US 2026 · Saturday, May 16, 10:30–11:00 AM PDT · Grand Ballroom A",
@@ -411,6 +433,7 @@ def test_a_talk_shares_its_title_when_and_where_and_its_public_page() -> None:
 
 
 def test_the_shared_time_follows_the_device_s_24_hour_clock() -> None:
+    """The shared time is on the 24-hour clock when the device's is."""
     assert shared(TALK, use_24h=True)[1] == (
         "PyCon US 2026 · Saturday, May 16, 10:30–11:00 PDT · Grand Ballroom A"
     )
@@ -445,6 +468,7 @@ def test_the_shared_page_is_the_feed_s_own_link_not_one_built_from_the_id() -> N
 
 
 def test_an_open_space_shares_its_entry_on_the_open_spaces_page() -> None:
+    """An open space shares the anchor of its entry on the site's open spaces page."""
     assert shared("9119")[2] == (
         "https://us.pycon.org/2026/schedule/open-spaces/#OpenSpace-119"
     )
@@ -458,6 +482,7 @@ def test_the_shared_time_starts_where_the_detail_s_does() -> None:
 
 
 def test_a_generic_break_and_a_notice_share_no_place() -> None:
+    """A break in no room and a notice share their day and time, no place."""
     assert shared("break--2026-05-17T10:00:00-07:00")[1] == (
         "PyCon US 2026 · Sunday, May 17, 10:00 AM–12:00 PM PDT"
     )
