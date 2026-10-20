@@ -4,8 +4,9 @@
 each tab root, More page and ``/search`` ends with ``DRILL``, a recursive child that
 pushes one View per ``<kind>/<id>`` pair, so ``/schedule/session/42/speaker/17`` is
 three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on;
-an unknown location is ``NotFound``. Back itself is ``main.py``'s ``page.on_view_pop``
-with ``locations.parent_of()`` (D-19).
+an unknown location is ``NotFound``, through ``UNKNOWN``, the table's last route
+(D-270). Back itself is ``main.py``'s ``page.on_view_pop`` with
+``locations.parent_of()`` (D-19).
 """
 
 from collections.abc import Callable
@@ -37,6 +38,7 @@ from pycon_us.screens.tracks import Tracks
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
+from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.states import EmptyState
 
 
@@ -88,11 +90,22 @@ def Start() -> ft.View:
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
 
 
-@ft.component
-def NotFound() -> ft.Control:
-    """An unknown location: what happened and a way to Now.
+NOT_FOUND = "This page isn't in the app"
+"""The unknown location's empty state (ux.md §4.6)."""
 
-    The Router wraps it in a View of its own (F6), so it brings its own safe area.
+NOT_FOUND_BODY = "The link may be old or mistyped."
+"""What the state says under its title: a likely why, without the path (D-270)."""
+
+
+@ft.component
+def NotFound() -> ft.View:
+    """An unknown location, such as a link to a page the app doesn't have (D-270).
+
+    Its own View, so it can do what the Router's ``not_found`` wrapper cannot
+    (``router.py:731-741``, F89): Back goes to Now, as on a root, rather than closing
+    the app after a cold link (``AppScaffold(unknown=True)``). Built like a detail's
+    not-found state (D-186), but never naming the location: a link's path means
+    nothing to the person who tapped it.
     """
     page = ft.context.page
 
@@ -100,14 +113,15 @@ def NotFound() -> ft.Control:
     def go_to_now() -> None:
         page.navigate("/now")
 
-    return ft.SafeArea(
-        expand=True,
-        content=ft.ListView(
+    return AppScaffold(
+        title="Not found",
+        unknown=True,
+        body=ft.ListView(
             [
                 EmptyState(
-                    "Page not found",
+                    NOT_FOUND,
                     icon=ft.Icons.LINK_OFF_OUTLINED,
-                    body=f"Nothing in the app is at {page.route}.",
+                    body=NOT_FOUND_BODY,
                     action="Go to Now",
                     on_action=go_to_now,
                     identifier="app.not_found",
@@ -122,6 +136,14 @@ DRILL = ft.Route(
     path=f":kind({'|'.join(DRILL_KINDS)})/:ident", recursive=True, component=Drill
 )
 """The drill: the last child of every page, so details open on top of any of them."""
+
+UNKNOWN = ft.Route(path=":unknown*", component=NotFound)
+"""The last route: every location no other route matches, at any depth (D-270, F89).
+
+A splat matches zero or more segments, and the Router tries routes in order, so
+only a location the table doesn't have gets here: ``/nope``, ``/now/nope``,
+``/now/session/42/nope``. Its View is the whole stack.
+"""
 
 
 def pushed(
@@ -167,6 +189,7 @@ ROUTES = [
         pushed("app", AboutApp),
         pushed("developer", Developer),
     ),
+    UNKNOWN,  # last: it matches anything (D-270)
 ]
 """Every route of P0 and P1's More pages; later phases add theirs (architecture §5.2).
 

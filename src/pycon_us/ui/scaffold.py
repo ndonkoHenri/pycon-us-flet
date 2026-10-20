@@ -38,6 +38,7 @@ def AppScaffold(
     actions: list[ft.Control] | None = None,
     on_retap: Retap | None = None,
     fab: ft.FloatingActionButton | None = None,
+    unknown: bool = False,
 ) -> ft.View:
     """Return a screen's View: the app bar, the bottom bar, the Back rules and the body.
 
@@ -51,7 +52,8 @@ def AppScaffold(
     instead (D-10). Back on a root other than Now goes to Now, and Back on Now is left
     to the system, which leaves the app (D-17, D-142). Back on a pushed View closes a
     dialog, a picker, a sheet or a menu open over it, and only then pops the View
-    (D-208).
+    (D-208). An unknown location's View (``unknown``) is a one-View stack like a root
+    but with the back arrow, and Back there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -68,6 +70,9 @@ def AppScaffold(
             Views, which have no bar.
         fab: The screen's floating action button, if any: the Schedule's "Now"
             (ux.md §5.2). The body leaves room for it at its end.
+        unknown: The View of a location no route has (``routes.NotFound``): its
+            arrow, the Back key and the predictive gesture go to Now, as a root's
+            Back does, and it is never where a new session returns (D-143, D-270).
 
     Returns:
         The View for this route level.
@@ -76,14 +81,19 @@ def AppScaffold(
     view_path = ft.use_view_path()
     svc = use_services()
     is_root = view_path in TAB_ROOTS
-    back_to_now = is_root and view_path != "/now"
-    if is_top_view(page.route, view_path):  # where a new session returns (D-143)
-        svc.memory.last_location = page.route
+    # One-View stacks whose Back goes to Now: the other roots, and an unknown
+    # location, which a cold link can open alone (D-142, D-270).
+    back_to_now = (is_root and view_path != "/now") or unknown
+    if is_top_view(page.route, view_path) and not unknown:
+        svc.memory.last_location = page.route  # where a new session returns (D-143)
 
     @report_errors
     def go_back() -> None:
-        # /search returns to its opener, any other View one level up (D-19).
-        page.navigate(parent_of(view_path, svc.memory.search_base))
+        # /search returns to its opener, any other View one level up (D-19); an
+        # unknown location has no level above it, so Now (D-270).
+        page.navigate(
+            "/now" if unknown else parent_of(view_path, svc.memory.search_base)
+        )
 
     @report_errors
     async def leave_for_now(e: ft.Event[ft.View]) -> None:
@@ -134,7 +144,9 @@ def AppScaffold(
         # this View itself, and the dialog with it (F46).
         on_confirm_pop = let_pop
     return ft.View(
-        route="/" if is_root else view_path,  # roots share a key: no transition (D-142)
+        # Roots share a key, and an unknown location takes it too, so Now replaces
+        # either without a transition (D-142, D-270).
+        route="/" if is_root or unknown else view_path,
         padding=0,
         appbar=ft.AppBar(
             title=title_control,

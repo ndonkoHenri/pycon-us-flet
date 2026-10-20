@@ -15,7 +15,7 @@ from pycon_us import clock
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
-from pycon_us.routes import ROUTES, NotFound
+from pycon_us.routes import ROUTES
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS, Storage
@@ -77,7 +77,7 @@ def App(memory: ViewMemory):
     tokens = build_tokens(dark=prefs.dark, high_contrast=prefs.high_contrast_on)
 
     def router():
-        return ft.Router(ROUTES, not_found=NotFound, manage_views=True)
+        return ft.Router(ROUTES, manage_views=True)  # ROUTES ends with its catch-all
 
     return ServicesCtx(
         svc,

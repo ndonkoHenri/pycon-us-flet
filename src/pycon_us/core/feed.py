@@ -3,8 +3,9 @@
 ``process()`` is the pipeline's one entry point. It decodes the JSON into frozen records
 (``core/records.py``), every id a string and every time an aware datetime in the conference
 zone; applies Ionic's processing rules (``core/rules.py``) to decide what becomes a
-session; buckets the timeline's sessions into conference-local days and time groups; and
-last converts the feed's HTML to Markdown and search text, once (D-130, D-140).
+session; buckets the timeline's sessions into conference-local days and time groups; sorts
+the sponsorship levels once (DATA-22); and last converts the feed's HTML to Markdown and
+search text, once (D-130, D-140).
 
 Failures are split in two. A feed whose structure is wrong raises ``FeedError``, so the
 caller keeps the data it has. A single bad record is skipped, recorded in
@@ -167,7 +168,13 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
                 skip,
             )
         ),
+        sponsor_levels=tuple(
+            sorted(
+                records.sponsor_levels(document, skip), key=lambda level: level.order
+            )
+        ),
         dropped={rule: tuple(ids) for rule, ids in dropped.items()},
+        # After the decoders above, which add to it as they run.
         skipped=tuple(skipped),
         content=content,
     )
