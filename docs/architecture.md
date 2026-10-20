@@ -432,7 +432,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 | Store | Fields | Methods | Phase |
 |---|---|---|---|
 | `Conference` | `data: ConferenceData \| None` (frozen, `eq=False`); `source: "none"\|"bundled"\|"cache"\|"network"`; `fetched_at: datetime \| None` (aware, D-145); `refreshing`; `problem: None\|"offline"\|"server"`; `version` (memo key; not incremented by a refresh that brings the same feed, D-224); `changes` (last 24 h, P2); `_task`; `_started_at` (D-175); `_asked` (D-181); `_feed_url` (D-187); `_digest`, the published feed's SHA-256 (D-224) | `load_local`, `start_refresh`, `refresh`, `age`, `status` (D-146); `refresh_due`, `start_refresh_if_due` (D-175); `async set_feed_url(url, storage)`, which deletes the cache when a feed URL is left for the year's (D-187, D-244); `async reset(storage, year) -> bool` (D-198) | P0 |
-| `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders`, `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`, `time_above` and `time_measured` (measured by `GutterProbe`; the boot gate waits for it, D-216); `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark`; `motion_ms(ms)`, 0 under reduced motion (D-173); the Developer options read from `dev`: `developer_unlocked`, `developer`, `fake_now`, `feed_url` (D-187); `reset()` (D-198) | P0 |
+| `Prefs` | persisted: `theme`, `high_contrast`, `excluded_tracks` (a tuple), `onboarded`, `reminders` (a frozen `ReminderSettings`: `session_lead`, `lightning`, `open_space`, `keynote`, `primer`; `reminder_settings.py`, D-275), `dev`; device, not persisted: `os_high_contrast`, `os_dark`, `reduce_motion`, `time_above` and `time_measured` (measured by `GutterProbe`; the boot gate waits for it, D-216); `loaded` | `load(storage)`, `save(storage, *, theme=..., high_contrast=..., ...) -> bool` (D-160); properties `high_contrast_on`, `dark`; `motion_ms(ms)`, 0 under reduced motion (D-173); the Developer options read from `dev`: `developer_unlocked`, `developer`, `fake_now`, `feed_url` (D-187); `reset()` (D-198) | P0 |
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo; `reset()`, without a write (D-198) | P1 |
 | `Account` | `restored`, `signed_in`, `signing_in`, `email`, `nickname`, `lead_retrieval`, `door_check`, `mask_violation`, `is_speaker`, `scanner_consent`, `favorites_dirty`, `error` | `restore`, `sign_in`, `sign_out`, `refresh_flags` | P3 |
 | `Staff` | `sponsor`; `pending`, `failed`, `synced`; `syncing`; `last_sync_at`; `last_error`; `revision`; memory-only PII: `inventory`, `coc_directory` | `select_sponsor`, `update_counts`, `clear` | P3 |
@@ -922,7 +922,7 @@ As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (wit
 | Theme, high contrast | SharedPreferences | `pycon.theme` (`system`/`light`/`dark`), `pycon.high_contrast` (`system`/`on`/`off`) | no |
 | Welcome seen | SharedPreferences | `pycon.onboarded` | no |
 | Excluded tracks | SharedPreferences | `pycon.excluded_tracks` (`list[str]` of track keys; absent → `["Open Space"]`, an explicit `[]` kept) | no |
-| Reminder settings, developer options | SharedPreferences | `pycon.reminders`, `pycon.dev` (JSON, merged over defaults) | no |
+| Reminder settings, developer options | SharedPreferences | `pycon.reminders` (a JSON object of every `ReminderSettings` field, merged over the defaults: a missing or badly typed key reads as its default, an unknown one is dropped, D-275), `pycon.dev` (JSON) | no |
 | Favourites | SharedPreferences | `pycon.<year>.favorites` (`list[str]`) | **no** (D-48) |
 | Account, staff sponsor, start screen, sync flag (P3) | SharedPreferences | `pycon.account`, `pycon.staff_sponsor` (JSON), `pycon.start_screen`, `pycon.<year>.favorites_dirty` | yes, except start screen |
 | API key and secret (P3) | `flet_secure_storage.SecureStorage` | `pycon.api_key`, `pycon.api_secret` | yes |
@@ -1287,8 +1287,8 @@ def plan(data: ConferenceData, favorites: Sequence[str], settings: ReminderSetti
     """Every future reminder the user asked for, soonest first, at most MAX_PENDING (pure)."""
     reminders = []
     for session in (data.sessions[i] for i in favorites if i in data.sessions):
-        at = session.start - timedelta(minutes=settings.lead_minutes)
-        if settings.lead_minutes and at > now:
+        at = session.start - timedelta(minutes=settings.session_lead)
+        if settings.session_lead and at > now:
             route = f"/my-schedule/session/{quote(session.id, safe='')}"
             reminders.append(Reminder(reminder_id(session.id), at, session.name, session.display_location, route))
     reminders += [Reminder(e.id, e.at, e.title, e.body, "/now") for e in events
