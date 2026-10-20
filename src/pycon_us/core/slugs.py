@@ -1,9 +1,13 @@
-"""Room and sponsor slugs, and the room sort order (DATA-16, ROOM-06, SPON-02).
+"""Slugs, semantics keys and the room sort order (DATA-16, ROOM-06, SPON-02).
 
 ``slugify_room`` and ``sponsor_slug`` are copied exactly from Ionic, because routes and
 links key on them: each is the only function that makes its kind of slug. They differ on
 purpose, as Ionic's did: a sponsor slug keeps a ``-`` for each space, so ``Code & Supply``
 is ``code--supply``.
+
+``semantics_key`` makes the key of a semantics identifier (decisions §M). It lives here,
+with no Flet, so the year-data loader can check that two labels give two identifiers
+(D-283); ``ui.semantics`` re-exports it for the screens.
 """
 
 import re
@@ -25,6 +29,20 @@ def slugify_room(name: str) -> str:
     ``Room 103ABC`` → ``room-103abc``; ``Pacific Ballroom - Arena`` → ``pacific-ballroom-arena``.
     """
     return _NOT_SLUG.sub("-", name.lower()).strip("-")
+
+
+def semantics_key(session_id: str) -> str:
+    """Return a session id as the key of a semantics identifier (decisions §M).
+
+    A synthetic break id holds spaces and colons (``break-Expo Hall AB-2026-05-15T08:
+    00:00-07:00``, D-42), which a UI-test selector would have to match literally; the
+    key is lower case, each run of other characters a ``-``:
+    ``break-expo-hall-ab-2026-05-15t08-00-00-07-00``. Numeric ids stay as they are.
+
+    Args:
+        session_id: The session's id, unchanged everywhere else.
+    """
+    return _NOT_SLUG.sub("-", session_id.lower()).strip("-")
 
 
 def sponsor_slug(name: str) -> str:

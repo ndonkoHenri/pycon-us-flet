@@ -25,7 +25,13 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import HelpInfo, SafetyContact, WifiInfo, check_info
+from pycon_us.year_info import (
+    HelpInfo,
+    PsfInfo,
+    SafetyContact,
+    WifiInfo,
+    check_info,
+)
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
@@ -173,6 +179,8 @@ class Content:
             source (INFO-07, D-45, D-281); empty for a year without them.
         help: Help & safety's other lines and links; None for a year without them,
             whose page shows the feed's block (D-281).
+        psf: About the PSF's mission, Donate and links (INFO-06, D-283); None for a
+            year without them, whose page shows the feed's block.
         venue_hours: When each venue service is open, for Venue & hours (MAP-09,
             D-282); empty for a year without them, whose page shows the feed's block.
     """
@@ -188,6 +196,7 @@ class Content:
     event_reminders: tuple[EventReminder, ...] = ()
     safety_contacts: tuple[SafetyContact, ...] = ()
     help: HelpInfo | None = None
+    psf: PsfInfo | None = None
     venue_hours: tuple[ServiceHours, ...] = ()
 
 
