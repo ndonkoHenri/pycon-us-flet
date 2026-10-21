@@ -491,15 +491,12 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
     """With every session ended, a heading says so and a button opens Now."""
     shown.node("my_schedule.all_over")
     assert "All your saved sessions are over" in shown.texts()
-    # A level, or it is no heading for TalkBack or VoiceOver (F40).
-    (title,) = [
-        c
-        for c in shown.controls
-        if isinstance(c, ft.Semantics)
-        and isinstance(c.content, ft.Text)
-        and c.content.value == extras.ALL_OVER
-    ]
-    assert (title.header, title.heading_level) == (True, 2)
+    # A level, or it is no heading for TalkBack or VoiceOver (F40); the heading
+    # first, as on screen (#592).
+    node = cast(ft.Semantics, shown.node("my_schedule.all_over"))
+    assert (node.header, node.heading_level) == (True, 2)
+    assert node.label == extras.ALL_OVER
+    assert node.exclude_semantics
     assert shown.shown() == []
     (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
     assert button.content == "See what's on today"
@@ -522,6 +519,10 @@ async def test_after_the_conference_it_offers_no_today(shown: Shown) -> None:
     """Nothing is on today any more, so no button promises it."""
     shown.node("my_schedule.all_over")
     assert "PyCon US 2026 is over. Your saved sessions stay here." in shown.texts()
+    node = cast(ft.Semantics, shown.node("my_schedule.all_over"))
+    assert node.label == (  # the heading, then the body (#592)
+        f"{extras.ALL_OVER}\nPyCon US 2026 is over. Your saved sessions stay here."
+    )
     assert shown.folded("earlier_days") == list(SAVED)
     assert shown.shown() == []
     assert not any(isinstance(c, ft.FilledTonalButton) for c in shown.controls)

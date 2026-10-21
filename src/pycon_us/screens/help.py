@@ -10,8 +10,11 @@ is what someone in trouble needs:
   Copy beside it (``copy_contact()``): ``tel:`` opens nothing on an iPad or a
   simulator. Then the year's line on reporting in person to any staff member.
 - **At the venue:** where the information desk, lost and found and the quiet room
-  are, a line each (P2-58 adds their location cards), and under the quiet room the
-  sponsor who provides it, which pushes its detail (``SponsorCreditTile``, D-337).
+  are, a line each, each followed by its ``LocationCard`` when ``[help]`` names its
+  pin (``spot_card()``, INFO-12), which pushes the floor viewer at it; under the
+  quiet room the sponsor who provides it, which pushes its detail
+  (``SponsorCreditTile``, D-337); then All maps, which opens the Map tab (its Floor
+  plans once #391 adds them).
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
 - **The app:** Report a problem with the app, last on the page whatever the year has.
@@ -37,6 +40,7 @@ from pycon_us.services import use_services
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import action_row
 from pycon_us.ui.info_page import GUTTER, InfoBody
+from pycon_us.ui.location_card import spot_card
 from pycon_us.ui.rows import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
@@ -48,6 +52,7 @@ from pycon_us.ui.share import (
 )
 from pycon_us.ui.states import EmptyState
 from pycon_us.year_info import HelpInfo, SafetyContact, SponsorCredit
+from pycon_us.year_map import MapData
 
 SCREEN = "help"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -57,6 +62,9 @@ TITLE = "Help & safety"
 
 REPORT = "Report a concern"
 """The card's heading."""
+
+ALL_MAPS = "All maps"
+"""The row after the places, to the Map tab, where every floor plan is."""
 
 REPORT_PROBLEM = "Report a problem with the app"
 """The last row's title: a problem with this app, not a safety concern."""
@@ -85,7 +93,10 @@ def Help() -> ft.View:
     svc = use_services()
     content = svc.year.content
     blocks = help_blocks(
-        content.safety_contacts, content.help, content.sponsor_credits.quiet_room
+        content.safety_contacts,
+        content.help,
+        content.sponsor_credits.quiet_room,
+        svc.year.map,
     )
     return AppScaffold(
         title=TITLE,
@@ -173,6 +184,7 @@ def help_blocks(
     contacts: tuple[SafetyContact, ...],
     info: HelpInfo | None,
     quiet_room_credit: SponsorCredit | None = None,
+    map_data: MapData | None = None,
 ) -> list[ft.Control]:
     """Return the page's blocks from its year data, in reading order; none without it.
 
@@ -182,7 +194,10 @@ def help_blocks(
             contact, so the card always heads it.
         quiet_room_credit: The quiet room's sponsor, credited under its line
             (D-337); None when the year names none.
+        map_data: The year's ``map.toml``, for the places' location cards and All
+            maps; None or a year without plans shows neither.
     """
+    map_data = map_data or MapData()
     blocks: list[ft.Control] = []
     if contacts:
         blocks.append(report_card(contacts, info.in_person if info else None))
@@ -190,11 +205,24 @@ def help_blocks(
         blocks += [
             SectionHeader("At the venue"),
             *(
-                place_row(title, getattr(info, key), icon, key)
+                control
                 for key, title, icon in PLACES
+                for control in place(title, icon, key, info, map_data)
             ),
             SponsorCreditTile(
                 quiet_room_credit, "Quiet room", f"{SCREEN}.quiet_room.sponsor"
+            ),
+            *(
+                [
+                    LinkTile(
+                        ALL_MAPS,
+                        "/map",
+                        icon=ft.Icons.MAP_OUTLINED,
+                        identifier=f"{SCREEN}.all_maps",
+                    )
+                ]
+                if map_data.plans
+                else []
             ),
             SectionHeader("Code of Conduct"),
             ft.Semantics(
@@ -325,6 +353,32 @@ def contact_line(contact: SafetyContact) -> str:
     if contact.kind == "tel" and (groups := _NANP.fullmatch(contact.value)):
         return "+1 {}-{}-{}".format(*groups.groups())
     return contact.value
+
+
+def place(
+    title: str, icon: ft.IconData, key: str, info: HelpInfo, map_data: MapData
+) -> list[ft.Control]:
+    """Return a place's row, then its ``LocationCard`` when it has a pin.
+
+    Args:
+        title: The place: "Information desk".
+        icon: Its row's leading icon.
+        key: Its ``HelpInfo`` field (``quiet_room``); its pin is ``<key>_pin``.
+        info: The year's ``[help]``.
+        map_data: The year's ``map.toml``.
+    """
+    controls = [place_row(title, getattr(info, key), icon, key)]
+    card = spot_card(
+        map_data, getattr(info, f"{key}_pin"), identifier=f"{SCREEN}.{key}.location"
+    )
+    if card is not None:
+        # Under its row, in the page's gutter, as room detail's card is.
+        controls.append(
+            ft.Container(
+                card, padding=ft.Padding.only(left=GUTTER, right=GUTTER, bottom=8)
+            )
+        )
+    return controls
 
 
 def place_row(title: str, line: str, icon: ft.IconData, key: str) -> ft.Control:

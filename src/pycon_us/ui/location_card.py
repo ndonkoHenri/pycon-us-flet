@@ -11,7 +11,8 @@ own card, which the job fair's uses (D-254): the thumbnail and the plan's title.
 a screen reader. Here the pin pulses twice when the card first shows, then stays still,
 and is still from the start under reduced motion (D-34, D-173); the card is one button
 node that says where it leads ("Show Room 104A on the Concourse level floor plan"), the
-thumbnail excluded. At large text (``Prefs.time_above``, D-216) the words go under the
+thumbnail excluded. Help & safety and Venue & hours show a venue spot's card by its pin
+key (``spot_card()``). At large text (``Prefs.time_above``, D-216) the words go under the
 thumbnail rather than squeeze beside it; nothing has a fixed height but the image.
 Apart from ``ui/rows.py`` so that it stays under about 400 lines (D-66).
 """
@@ -163,6 +164,24 @@ def room_card(
     if pin is None or plan is None:
         return None
     return LocationCard(plan, pin, identifier=identifier, seen=seen)
+
+
+def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
+    """Return the ``LocationCard`` of the pin ``key``, or None without one.
+
+    The loader refuses a key ``map.toml`` lacks, so None here is a place with no pin
+    (an empty key) or a year with no plans.
+
+    Args:
+        data: The year's ``map.toml``.
+        key: A venue spot's pin key (``info-desk``), as ``content.toml`` names it.
+        identifier: The card's, ``<screen>.<place>.location``.
+    """
+    pin = data.pin(key) if key else None
+    plan = data.plan(pin.plan) if pin else None
+    if pin is None or plan is None:
+        return None
+    return LocationCard(plan, pin, identifier=identifier)
 
 
 @ft.memo
