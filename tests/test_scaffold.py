@@ -221,11 +221,11 @@ def test_search_records_its_opener_with_the_query_then_opens(
     """The Search button records its opener's route, then opens search in its scope."""
     memory = ViewMemory()
     page.route = "/map?highlight=7"
-    button = merged_button(search_button(memory, "rooms"))
+    button = merged_button(search_button(memory, "places"))
     assert button.tooltip == "Search"  # its name, in its own node (D-234)
     click(button)
     assert memory.search_base == "/map?highlight=7"
-    assert page.navigated == ["/search?scope=rooms"]
+    assert page.navigated == ["/search?scope=places"]
 
 
 # ------------------------------------------------------------------ SectionHeader

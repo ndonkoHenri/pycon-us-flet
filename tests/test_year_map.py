@@ -116,7 +116,7 @@ def test_the_venue_spots_have_pins() -> None:
     data = load_year(2026).map
     for key, label, plan in [
         ("info-desk", "Information desk", "concourse"),
-        ("registration", "Registration", "concourse"),
+        ("registration-desk", "Registration", "concourse"),
         ("quiet-room", "Quiet room", "concourse"),
         ("lost-and-found", "Lost & found", "upper"),
         ("swag-pickup", "Swag pickup", "arena"),
@@ -126,12 +126,25 @@ def test_the_venue_spots_have_pins() -> None:
         assert (pin.label, pin.plan) == (label, plan)
 
 
+def test_the_venue_spots_are_the_pins_with_a_hyphen() -> None:
+    """Search's Places finds 2026's six venue spots and no room pin (D-351)."""
+    spots = load_year(2026).map.venue_spots()
+    assert [pin.key for pin in spots] == [
+        "info-desk",
+        "registration-desk",
+        "quiet-room",
+        "swag-pickup",
+        "lost-and-found",
+        "staff-office",
+    ]
+
+
 def test_venue_hours_name_their_pins() -> None:
     """Each 2026 venue service with a place shows it on a plan, by its pin key."""
     year = load_year(2026)
     pins = {item.service: item.pin for item in year.content.venue_hours}
     assert pins == {
-        "Registration": "registration",
+        "Registration": "registration-desk",
         "Information desk": "info-desk",
         "Swag pickup": "swag-pickup",
         "Quiet room": "quiet-room",

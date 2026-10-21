@@ -45,7 +45,7 @@ from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import use_favorite_toggle
-from pycon_us.ui.location_card import LocationCard
+from pycon_us.ui.location_card import room_card
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
@@ -285,11 +285,9 @@ def location(data: MapData, room_name: str, pulsed: set[str]) -> list[ft.Control
         pulsed: The View's pins already pulsed: each day's list builds the card, and
             its pin pulses on the first only.
     """
-    pin = data.room_pin(room_name)
-    plan = data.plan(pin.plan) if pin else None
-    if pin is None or plan is None:
+    card = room_card(data, room_name, identifier=f"{SCREEN}.location", seen=pulsed)
+    if card is None:
         return []
-    card = LocationCard(plan, pin, identifier=f"{SCREEN}.location", seen=pulsed)
     return [ft.Container(card, padding=ft.Padding.only(left=16, top=12, right=16))]
 
 

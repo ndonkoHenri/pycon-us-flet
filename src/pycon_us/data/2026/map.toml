@@ -102,7 +102,7 @@ x = 55.0
 y = 53.0
 
 [[pins]]
-key = "registration"
+key = "registration-desk"
 label = "Registration"
 sublabel = "Promenade Lobby (Main Entrance)"
 plan = "concourse"
