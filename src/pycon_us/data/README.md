@@ -11,7 +11,9 @@ Bundled, per-year conference data (D-45): one folder per year, e.g. `2026/`, hol
   tables join as each page lands, in `year_info.py`, D-263: so far `[wifi]`, the network and password, D-280,
   `[[venue_hours]]`, when each venue service is open, D-282, and, in `year_links.py`, `[psf]`, About the
   PSF's mission, Donate and links, D-283, and `[social]`, the hashtags and the profile and blog links, D-284);
-- `map.toml`: floor plans, room pins and booths (P2);
+- `map.toml`: the floor plans (images in `src/assets/maps/<year>/`, made by `tools/encode_plans.py`, D-312), the
+  3D tour's link and the room and venue pins, keyed by `normalize_room_key()` (DATA-32; `year_map.py`), and the
+  expo's booths (P2); optional: a year without it (2025) has no plans;
 - `conference.json`: the feed snapshot used for an offline first launch (NEW-03, D-135), only for the
   active year.
 
