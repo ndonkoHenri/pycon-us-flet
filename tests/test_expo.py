@@ -89,7 +89,9 @@ def test_shared_booths_keep_every_exhibitor_by_folded_name() -> None:
 
 def test_every_booth_comes_once_by_number_in_natural_order() -> None:
     """The expo has map.toml's 61 booths, each once, sorted as numbers would sort."""
-    numbers = [item.booth.number for item in expo_booths(processed(2026), BOOTHS).booths]
+    numbers = [
+        item.booth.number for item in expo_booths(processed(2026), BOOTHS).booths
+    ]
     assert len(numbers) == len(set(numbers)) == 61
     assert numbers == sorted(numbers, key=int)
 

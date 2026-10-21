@@ -252,8 +252,16 @@ def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
         ("x = 0.2365", "x = 1.2365", r"booths\[0\]\.x: 1.2365 is not between 0 and 1"),
         ("h = 0.0912", "h = -0.1", r"booths\[0\]\.h: -0.1 is not between 0 and 1"),
         ("w = 0.0473", "w = 0.0", r"booths\[0\]\.w: must be positive"),
-        ("x = 0.2365", "x = 0.9600", r"booths\[0\]\.w: x \+ w is 1.0073, past the plan"),
-        ("y = 0.6965", "y = 0.9500", r"booths\[0\]\.h: y \+ h is 1.0412, past the plan"),
+        (
+            "x = 0.2365",
+            "x = 0.9600",
+            r"booths\[0\]\.w: x \+ w is 1.0073, past the plan",
+        ),
+        (
+            "y = 0.6965",
+            "y = 0.9500",
+            r"booths\[0\]\.h: y \+ h is 1.0412, past the plan",
+        ),
         ('label = "Attendee lounge"', 'label = " "', r"booths\[\d+\]\.label: is empty"),
         ('id = "expo"', 'id = "hall"', r"2026/map.toml: booths: no plan 'expo' to put"),
     ],
