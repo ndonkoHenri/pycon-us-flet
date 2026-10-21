@@ -20,9 +20,11 @@ from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.screens import session as screen
 from pycon_us.state import Conference
+from pycon_us.ui import location_card
 from tests.fakes import MemoryShare
 from tests.feeds import processed
 from tests.sessions import Shown, showing
+from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -76,8 +78,10 @@ async def rendering(
     """Yield render(session_id): the detail of that session at ``VIEW``.
 
     Each test module's ``render`` fixture enters it with its own ``tmp_path`` and
-    ``monkeypatch``; leaving it closes every session it rendered.
+    ``monkeypatch``; leaving it closes every session it rendered. The location card's
+    pulse waits on its own ``HeldSleeps``, never released here.
     """
+    monkeypatch.setattr(location_card, "asyncio", HeldSleeps())
     try:
         async with AsyncExitStack() as stack:
 

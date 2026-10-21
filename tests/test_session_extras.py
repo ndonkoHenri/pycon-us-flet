@@ -22,6 +22,7 @@ from tests.session_detail import (
     BREAK,
     TALK,
     VIEW,
+    YEAR,
     Detail,
     Render,
     headings,
@@ -221,9 +222,17 @@ async def test_other_sessions_list_no_posters(render: Render) -> None:
 # ------------------------------------------------------------------ open spaces (SESS-11)
 
 
+PLAN_THUMBS = {plan.thumb for plan in YEAR.map.plans}
+"""The floor plans' thumbnails: a room's location card shows one (D-349)."""
+
+
 def images(detail: Detail) -> list[ft.Image]:
-    """Every image in the detail: the open space's image and its blurred copy."""
-    return [c for c in detail.session.index.values() if isinstance(c, ft.Image)]
+    """The open space's images in the detail: its image and its blurred copy."""
+    return [
+        c
+        for c in detail.session.index.values()
+        if isinstance(c, ft.Image) and c.src not in PLAN_THUMBS
+    ]
 
 
 def image(detail: Detail) -> ft.Image:
@@ -323,7 +332,7 @@ async def test_under_reduced_motion_the_image_appears_at_once(
 async def test_an_open_space_without_an_image_has_no_frame(render: Render) -> None:
     """An open space without an image shows no image, but still links its site entry."""
     detail = await render(SPACE_WITHOUT_IMAGE)
-    assert not [c for c in detail.session.index.values() if isinstance(c, ft.Image)]
+    assert not images(detail)
     assert detail.nodes("session.site")
 
 
