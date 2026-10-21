@@ -94,7 +94,7 @@ async def test_a_multi_room_session_keeps_its_tiles_and_has_no_card(
 
 
 async def test_a_room_without_a_pin_shows_no_card(render: Render) -> None:
-    """"Elsewhere" has a room tile and no pin: no card, and no gap."""
+    """A room without a pin ("Elsewhere") has its tile but no card, and no gap."""
     detail = await render(ELSEWHERE)
     assert detail.nodes("session.room")
     assert detail.nodes("session.location") == []
