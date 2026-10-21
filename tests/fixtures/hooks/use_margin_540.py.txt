@@ -1,0 +1,18 @@
+# #540's use_margin(), as commit 9131fc3f had it in src/pycon_us/ui/widths.py: its
+# ft.use_view_path() ran only from 600 dp, so a rotation across 600 dp froze the app
+# (#606, fixed by #612). The hook guard, tests/test_hook_order.py, must flag it (#613).
+
+def use_margin(cap: float) -> float:
+    """Return the screen's side margin for its width class, and follow the window.
+
+    A hook: the screen calls it once per render and hands the margin to its list and
+    its fixed chrome. On a tab root from 600 dp the rail's ``RAIL_WIDTH`` comes off
+    the room first (D-277); at large text the rail is wider, so the content there is
+    a little narrower than the cap, never wider.
+
+    Args:
+        cap: The screen's width class: ``READING``, ``LIST`` or ``FULL``.
+    """
+    layout = use_layout()
+    rail = RAIL_WIDTH if layout.wide and ft.use_view_path() in TAB_ROOTS else 0
+    return side_margin(layout.room, cap, rail=rail)
