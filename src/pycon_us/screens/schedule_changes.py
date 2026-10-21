@@ -33,6 +33,7 @@ from pycon_us.core.change_views import (
 from pycon_us.core.diff import ChangeKind
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
+from pycon_us.screens.changes_review import use_close_review
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -87,6 +88,7 @@ def ScheduleChanges(year: str) -> ft.View:
     # The saved set the sections are sorted by: taken once the favourites have loaded,
     # so a star tap never moves its item to the other section.
     opened_with = ft.use_memo(lambda: favorites.ids, [favorites.loaded])
+    use_close_review()  # its Review SnackBar points here: it goes (D-255)
     shown = ft.use_memo(
         lambda: sections(change_log.batches, opened_with, zone, now(), use_24h=use_24h),
         [change_log.batches, opened_with, use_24h],
