@@ -336,7 +336,9 @@ def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) 
 
     Flutter reports only a size that changed, so the empty head never reports again:
     the keeper keeps its 0, a scroll end below it records the slot, and the next
-    text-size change marks that place to be put back.
+    text-size change marks that place to be put back. A quiet refresh with another feed
+    version keeps the 0 too: the slots report again, the head does not, and the place
+    is still recorded and put back after the next resize.
     """
     keeper = PlaceKeeper(memory)
     keeper.lay_out("feed", {SATURDAY: (HEAD_KEY, "a", "b")})
@@ -351,4 +353,13 @@ def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) 
     place = memory.schedule_places[SATURDAY]
     assert (place.key, place.into) == ("b", 50.0)
     assert keeper.relaid(text=60.0)
+    assert keeper.pending(SATURDAY) == replace(place, stale=True)
+    keeper.lay_out("feed 2", {SATURDAY: (HEAD_KEY, "a", "b")})
+    keeper.measured(SATURDAY, "a", HEIGHT * 1.4)
+    keeper.measured(SATURDAY, "b", HEIGHT * 1.4)
+    end = SimpleNamespace(event_type=ft.ScrollType.END, pixels=HEIGHT * 1.4 + 30)
+    keeper.scrolled(SATURDAY, cast(ft.OnScrollEvent, end))
+    place = memory.schedule_places[SATURDAY]
+    assert (place.key, place.into, place.layout) == ("b", 30.0, "feed 2")
+    assert keeper.relaid(text=40.0)
     assert keeper.pending(SATURDAY) == replace(place, stale=True)
