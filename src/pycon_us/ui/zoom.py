@@ -188,14 +188,16 @@ class Zoom:
             factor: Over 1 zooms in, under 1 out; the viewer clamps the result.
             focus: The viewer's point that stays where it is.
         """
-        viewer = self.viewer.current
-        if viewer is None:  # not mounted yet: nothing to zoom
+        if self.viewer.current is None:  # not mounted yet: nothing to zoom
             return
         focus = focus or (self.box[0] / 2, self.box[1] / 2)
-        before = await read(viewer)
-        await viewer.zoom(factor)
-        dx, dy = refocus(before, await read(viewer), focus)
-        await viewer.pan(dx, dy)
+        # Each step takes the viewer from the Ref afresh: a render between them (the
+        # zoom's own on_transform_changed) reconciles it into a new object, and the
+        # old one, detached, raises on its next call.
+        before = await read(self.viewer.current)
+        await self.viewer.current.zoom(factor)
+        dx, dy = refocus(before, await read(self.viewer.current), focus)
+        await self.viewer.current.pan(dx, dy)
 
     async def reset(self) -> None:
         """Go back to the fitted plan: animated, or at once under reduced motion."""
@@ -242,10 +244,9 @@ def use_zoom(natural: Size) -> Zoom:
         # Flutter keeps the transform when max_scale drops (a rotation): zoom down to
         # the new maximum. Effects run after the new max_scale is sent, so the
         # viewer clamps to it (D-312).
-        current = viewer.current
-        if current is None:
+        if viewer.current is None:
             return
-        now = await read(current)
+        now = await read(viewer.current)
         if now.scale > zoom.max_scale:
             await zoom.zoom_by(zoom.max_scale / now.scale)
 

@@ -47,17 +47,23 @@ class FakeViewer:
     y: float = 0.0
     calls: list[tuple[str, Any]] = field(default_factory=list)
     """Each method called, with its argument, in order."""
+    after_zoom: Callable[[], Awaitable[None]] | None = None
+    """What Flutter does once a zoom lands, e.g. report the transform (a render)."""
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Put this fake's methods on ``ft.InteractiveViewer`` for the test."""
         fake = self
 
         async def zoom_(viewer: ft.InteractiveViewer, factor: float) -> None:
+            assert viewer.page  # a detached viewer raises, as on a device
             fake.calls.append(("zoom", factor))
             top = float(viewer.max_scale)
             fake.scale = min(top, max(1.0, fake.scale * factor))  # t stays (F76)
+            if fake.after_zoom is not None:
+                await fake.after_zoom()
 
         async def pan(viewer: ft.InteractiveViewer, dx: float, dy: float = 0) -> None:
+            assert viewer.page
             fake.calls.append(("pan", (dx, dy)))
             fake.x += fake.scale * dx  # the plan's units (F76)
             fake.y += fake.scale * dy
@@ -71,6 +77,7 @@ class FakeViewer:
         async def get_transform(
             viewer: ft.InteractiveViewer,
         ) -> ft.InteractiveViewerTransform:
+            assert viewer.page
             return ft.InteractiveViewerTransform(
                 scale=fake.scale,
                 translation_x=fake.x,
@@ -373,6 +380,18 @@ async def test_zoom_in_keeps_the_centre_of_the_viewer_in_place(render: Render) -
     await plan.click(plan.button("zoom_out"))
     assert plan.viewer.calls[2] == ("zoom", 1 / zoom.ZOOM_STEP)
     assert plan.viewer.scale == pytest.approx(1.0)
+
+
+async def test_a_render_mid_zoom_does_not_lose_the_viewer(render: Render) -> None:
+    """The zoom's own transform report re-renders the viewer; the pan still lands."""
+    plan = await render()
+    await plan.lay_out()
+    plan.viewer.after_zoom = plan.transformed
+    centre = (BOX[0] / 2, BOX[1] / 2)
+    before = plan.viewer.plan_point(centre)
+    await plan.click(plan.button("zoom_in"))
+    assert [name for name, _ in plan.viewer.calls] == ["zoom", "pan"]
+    assert plan.viewer.plan_point(centre) == pytest.approx(before)
 
 
 async def test_a_double_tap_zooms_in_on_the_tap_then_back_to_fit(
