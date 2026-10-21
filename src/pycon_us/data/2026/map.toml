@@ -2,10 +2,13 @@
 # Loaded by pycon_us.config.load_year() through pycon_us.year_map.
 #
 # Plans: the images are under src/assets/, made by tools/encode_plans.py from the Ionic
-# app's plans (2048 px, lossy WebP 80, and an 800-px thumbnail; D-312; credited in NOTICE,
-# D-87). width and height are the image's, as the script prints them. The campus plan's
-# PyCon wordmark and the venue's logo, and the expo plan's sun-and-palms mark, are painted
-# over (D-36). In the Map's order; "expo" is the plan the booths are on.
+# app's plans (at most 2048 px, lossy WebP 80, and an 800-px thumbnail; D-312; credited
+# in NOTICE, D-87). width and height are the image's, as the script prints them. The
+# campus plan's PyCon wordmark and the venue's logo, and the expo plan's sun-and-palms
+# mark, are painted over (D-36), and the job fair's print is cropped to the floor,
+# without its header and its logo (D-254). In the Map's order; "expo" is the plan the
+# booths are on, and "job-fair" the Map's Job fair pane's, whose note shows under its
+# card (D-254).
 #
 # Pins: one table for rooms and venue spots. A room's key is normalize_room_key() of its
 # feed name (core/slugs.py), so "Room 102A" and "102A" find the same pin; a venue spot's
@@ -77,6 +80,16 @@ image = "maps/2026/expo.webp"
 thumb = "maps/2026/expo-thumb.webp"
 width = 2048
 height = 1448
+
+[[plans]]
+id = "job-fair"
+title = "Job fair & community showcase"
+subtitle = "Sponsor tables, food and beverage area"
+image = "maps/2026/job-fair.webp"
+thumb = "maps/2026/job-fair-thumb.webp"
+width = 1700
+height = 1438
+note = "The printed plan shows some tables with other sponsors. This list follows the conference's sponsor data."
 
 # Venue spots (Ionic's VENUE_LOCATIONS), named as Help & safety and Venue & hours name them.
 
@@ -1001,3 +1014,150 @@ x = 0.9195
 y = 0.2814
 w = 0.0433
 h = 0.0456
+
+# Job fair tables (#464, D-254): a rectangle per printed table T1 to T20 on the cropped
+# job-fair plan, in ratios of it (x, y, w, h, 0-1), by number: the white square and its
+# record, measured once on maps/2026/job-fair.webp (1700 x 1438). number is the feed's
+# job_fair_table_number, as text. Who is at a table comes from the feed, never from here
+# (the print disagrees at T7, T8, T12 and T16); a feed table without a rectangle fails
+# tests/test_year_map.py.
+
+[[tables]]
+number = "T1"
+x = 0.0765
+y = 0.7218
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T2"
+x = 0.2665
+y = 0.7218
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T3"
+x = 0.5753
+y = 0.7211
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T4"
+x = 0.7653
+y = 0.7211
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T5"
+x = 0.0794
+y = 0.5508
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T6"
+x = 0.2694
+y = 0.5501
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T7"
+x = 0.5782
+y = 0.5494
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T8"
+x = 0.7682
+y = 0.5508
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T9"
+x = 0.0794
+y = 0.3783
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T10"
+x = 0.2694
+y = 0.3790
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T11"
+x = 0.5782
+y = 0.3783
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T12"
+x = 0.7682
+y = 0.3811
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T13"
+x = 0.0794
+y = 0.2072
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T14"
+x = 0.2694
+y = 0.2072
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T15"
+x = 0.5782
+y = 0.2065
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T16"
+x = 0.7682
+y = 0.2038
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T17"
+x = 0.0794
+y = 0.0355
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T18"
+x = 0.2694
+y = 0.0362
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T19"
+x = 0.5782
+y = 0.0355
+w = 0.1741
+h = 0.1439
+
+[[tables]]
+number = "T20"
+x = 0.7682
+y = 0.0341
+w = 0.1741
+h = 0.1439

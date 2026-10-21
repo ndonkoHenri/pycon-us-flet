@@ -46,6 +46,11 @@ class ViewMemory:
             (MAP-01).
         map_offsets: Each Map pane's scroll offset when its last scroll ended, by
             slug, in logical pixels: the Map puts it back when the pane shows again.
+        map_zooms: Each Map plan pane's last transform, by slug, as the viewer
+            reported it: scale, then the translation in logical pixels. The pane puts
+            it back when it shows again (D-312).
+        expo_booth: The number of the booth selected on the expo plan; empty for
+            none. The Expo pane and ``…/plan/expo`` share it (EXPO-01).
         room_highlights: The session each mounted room View has highlighted, by its
             View path (ROOM-03): a View rebuilt in a new session from the same
             location (D-143) finds its own and neither scrolls nor lights up again
@@ -55,6 +60,10 @@ class ViewMemory:
             ``?pin=`` seeds it, and a View rebuilt in a new session from the same
             location finds it and does not pulse the pin again (D-18, D-34). The
             View removes its entry when it leaves, so the next opening pulses.
+        plan_tables: The job fair table each mounted floor viewer has selected, by its
+            View path (#464): ``?table=`` seeds it and a tap changes it, so a View
+            rebuilt in a new session keeps the selection (D-18, D-143). The View
+            removes its entry when it leaves.
         spotlight: The slug of the sponsor Now's spotlight thanks: picked once for
             the process, so a relaunch after Back on Now (F29) shows the same one,
             and picked again only when it leaves the feed (D-298).
@@ -73,8 +82,11 @@ class ViewMemory:
     search_scope: str = "all"
     map_tab: str = "rooms"
     map_offsets: dict[str, float] = field(default_factory=dict)
+    map_zooms: dict[str, tuple[float, float, float]] = field(default_factory=dict)
+    expo_booth: str = ""
     room_highlights: dict[str, str] = field(default_factory=dict)
     plan_pins: dict[str, str] = field(default_factory=dict)
+    plan_tables: dict[str, str] = field(default_factory=dict)
     spotlight: str = ""
     rng: Random = field(default_factory=Random, compare=False)
 

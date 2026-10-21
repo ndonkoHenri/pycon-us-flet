@@ -6,6 +6,7 @@ test opens it. Batches are recorded by ``ChangeLog.record()`` from feed pairs bu
 ``tests/feeds.py``; the clock is held at 10:42 AM on Saturday, May 16 in Long Beach.
 """
 
+import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,7 +33,8 @@ from pycon_us.screens.changes_review import (
 )
 from pycon_us.services import use_services
 from pycon_us.state import Conference
-from pycon_us.ui.favorite import SNACK_BAR_MS
+from pycon_us.ui import snack_bars
+from pycon_us.ui.snack_bars import SNACK_BAR_MS
 from tests.feeds import Edit, add, changed, move, processed, recorded, rename, settings
 from tests.sessions import Shown, menu_text, showing, text_of
 
@@ -184,6 +186,19 @@ async def test_a_screen_reader_keeps_it_until_used(host: Shown) -> None:
     host.prefs.screen_reader = True
     await record(host, feed(), feed(move(OTHER, "Room 101B")))
     assert host.snack_bars[-1].persist
+
+
+async def test_it_closes_once_no_screen_reader_is_on(
+    host: Shown, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#343: TalkBack off in front closes it after its 4 s, as the Undo one (D-356)."""
+    monkeypatch.setattr(snack_bars, "SNACK_BAR_MS", 10)
+    host.prefs.screen_reader = True  # and the OS says none is on now
+    await record(host, feed(), feed(move(OTHER, "Room 101B")))
+    bar = host.snack_bars[-1]
+    assert bar.persist
+    await asyncio.sleep(0.05)
+    assert not bar.open and not host.prefs.screen_reader
 
 
 async def test_review_pushes_the_list_on_the_view_on_top(host: Shown) -> None:

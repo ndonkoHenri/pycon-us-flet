@@ -13,6 +13,7 @@ from PIL import Image
 
 from pycon_us import config
 from pycon_us.config import YearData, YearDataError, load_year
+from pycon_us.core.expo import job_fair_tables
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import normalize_room_key, slugify_room
@@ -61,9 +62,10 @@ def feed_room_strings(year: int) -> set[str]:
 
 
 def test_2026_has_the_floor_plans_in_the_maps_order() -> None:
-    """2026's plans are Ionic's five, in its order, then the expo's, with the 3D tour.
+    """2026's plans are Ionic's five, in its order, then the expo's and the job fair's.
 
-    MAP-02, MAP-03; the expo plan is the one the booths are on (EXPO-02).
+    MAP-02, MAP-03, with the 3D tour; the expo plan is the one the booths are on
+    (EXPO-02), and the job fair's carries the note its pane shows (MAP-04, D-254).
     """
     data = load_year(2026).map
     assert [plan.id for plan in data.plans] == [
@@ -73,7 +75,12 @@ def test_2026_has_the_floor_plans_in_the_maps_order() -> None:
         "arena",
         "seaside",
         "expo",
+        "job-fair",
     ]
+    job_fair = data.plan("job-fair")
+    assert job_fair is not None
+    assert job_fair.note.startswith("The printed plan shows some tables")
+    assert all(not plan.note for plan in data.plans if plan is not job_fair)
     assert data.tour_url == "https://map.concept3d.com/?id=1802"
     assert all(plan.title and plan.subtitle for plan in data.plans)
 
@@ -88,6 +95,9 @@ def test_a_year_without_a_map_file_has_no_plans_or_pins() -> None:
 def test_plans_are_webp_within_the_size_budget(plan: Plan) -> None:
     """Each plan is a WebP of at most 2048 px, its recorded size, and within S7's budget.
 
+    A plan larger than that is fitted to 2048 px; the job fair's, cropped to 1700 px
+    wide (D-254), keeps its size, as the script never scales up.
+
     Its thumbnail is the plan fitted to 800 px, with the plan's aspect ratio to the
     pixel's rounding, so a pin's percentages land on the same spot on both (MAP-06).
     """
@@ -95,7 +105,7 @@ def test_plans_are_webp_within_the_size_budget(plan: Plan) -> None:
     with Image.open(image_path) as image, Image.open(thumb_path) as thumb:
         assert (image.format, thumb.format) == ("WEBP", "WEBP")
         assert image.size == (plan.width, plan.height)
-        assert max(image.size) == 2048
+        assert max(image.size) == (1700 if plan.id == "job-fair" else 2048)
         assert max(thumb.size) == 800
         assert abs(thumb.width / thumb.height - image.width / image.height) < 0.005
     assert image_path.stat().st_size <= PLAN_BUDGET
@@ -157,6 +167,45 @@ def test_every_2026_feed_room_has_a_pin_or_is_another_location(source: str) -> N
     else:
         data = processed(2026)
     assert rooms_without_pins(data, year) == []
+
+
+def tables_off_the_plan(data: ConferenceData, year: YearData) -> list[str]:
+    """The feed's job fair tables that have no rectangle on the job fair plan."""
+    return sorted(
+        {entry.table for entry in job_fair_tables(data)}
+        - {table.number for table in year.map.tables}
+    )
+
+
+@pytest.mark.parametrize("source", ["snapshot", "recorded"])
+def test_every_2026_feed_table_has_a_rectangle(source: str) -> None:
+    """Every job fair table of 2026's feed is marked on the plan (#464).
+
+    A table without one opens the plan saying it isn't there yet; here it fails the
+    build, as a room without a pin does.
+    """
+    year = load_year(2026)
+    if source == "snapshot":
+        data = process(year.read_snapshot().raw, year.feed_settings)
+    else:
+        data = processed(2026)
+    assert job_fair_tables(data)
+    assert tables_off_the_plan(data, year) == []
+
+
+def test_the_printed_tables_are_t1_to_t20_without_overlaps() -> None:
+    """2026's plan prints T1 to T20, each a rectangle no other one overlaps."""
+    tables = load_year(2026).map.tables
+    assert [table.number for table in tables] == [f"T{n}" for n in range(1, 21)]
+    for index, one in enumerate(tables):
+        for other in tables[index + 1 :]:
+            apart = (
+                one.x + one.w <= other.x
+                or other.x + other.w <= one.x
+                or one.y + one.h <= other.y
+                or other.y + other.h <= one.y
+            )
+            assert apart, (one.number, other.number)
 
 
 def test_a_new_room_without_a_pin_is_named() -> None:
@@ -277,6 +326,14 @@ def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
         ),
         ('label = "Attendee lounge"', 'label = " "', r"booths\[\d+\]\.label: is empty"),
         ('id = "expo"', 'id = "hall"', r"2026/map.toml: booths: no plan 'expo' to put"),
+        ('note = "The printed', 'note = " " # "', r"plans\[6\]\.note: is empty"),
+        ('number = "T8"', 'number = "T7"', r"tables\[7\]\.number: 'T7' is listed"),
+        (
+            'number = "T1"\nx = 0.0765',
+            'number = "T1"\nx = 1.0765',
+            r"2026/map.toml: tables\[0\]\.x: 1.0765 is not between 0 and 1",
+        ),
+        ('id = "job-fair"', 'id = "jobs"', r"tables: no plan 'job-fair' to put them"),
     ],
 )
 def test_a_bad_map_entry_names_file_entry_and_field(

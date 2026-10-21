@@ -16,12 +16,12 @@ from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
+from pycon_us.prefs import Prefs, PrefsCtx, read_accessibility, use_prefs
 from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
-from pycon_us.services.storage import SERVICE_ERRORS, Storage
+from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import (
     BOOT_COLOR,
@@ -286,32 +286,6 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     svc.foreground.set()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
     await read_accessibility(svc.semantics, prefs)
-
-
-async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
-    """Copy the OS's accessibility flags into ``prefs`` (D-23, D-34, D-184).
-
-    High contrast, reduced motion, whether a screen reader is on and whether the
-    platform takes announcements. The platform reports a snapshot with no change
-    event (F13), so this runs at start and on resume. A failed read is logged and
-    keeps the previous values.
-
-    Args:
-        semantics: The session's ``SemanticsService``.
-        prefs: The store to update.
-    """
-    try:
-        features = await semantics.get_accessibility_features()
-    except SERVICE_ERRORS:
-        logger.warning("Could not read the accessibility features", exc_info=True)
-        return
-    reduce_motion = features.reduce_motion or features.disable_animations
-    if reduce_motion != prefs.reduce_motion:  # logged on change only: resumes are many
-        logger.info("Reduced motion is %s", "on" if reduce_motion else "off")
-    prefs.os_high_contrast = features.high_contrast
-    prefs.reduce_motion = reduce_motion
-    prefs.screen_reader = features.accessible_navigation
-    prefs.announcements = features.supports_announcements
 
 
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:

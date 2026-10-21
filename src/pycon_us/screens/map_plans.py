@@ -14,7 +14,7 @@ from pycon_us.locations import drill_href
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
 from pycon_us.ui.widths import sides
-from pycon_us.year_map import EXPO_PLAN, Plan
+from pycon_us.year_map import EXPO_PLAN, JOB_FAIR_PLAN, Plan
 
 SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -24,6 +24,18 @@ FLOOR_PLANS = "floor-plans"
 
 THUMB_RATIO = 16 / 10
 """The thumbnail's width to height: the plan is cropped to it, centred (MAP-02)."""
+
+
+def floor_plans(plans: Sequence[Plan]) -> tuple[Plan, ...]:
+    """Return the plans the Floor plans pane lists: all but the expo's and job fair's.
+
+    Those two are panes of their own (#402, #407; EXPO-02, MAP-04), as in Ionic, whose
+    Floor plans listed five.
+
+    Args:
+        plans: The year's plans (``MapData.plans``), in the Map's order.
+    """
+    return tuple(plan for plan in plans if plan.id not in {EXPO_PLAN, JOB_FAIR_PLAN})
 
 
 def plan_phrase(plan: Plan) -> str:
@@ -117,8 +129,7 @@ def plans_pane(
 ) -> ft.Control:
     """Return the Floor plans pane: a card per floor plan, in ``map.toml``'s order.
 
-    The expo plan is not one: the booths are the Expo pane's (#402, EXPO-02), as in
-    Ionic, whose Floor plans listed five.
+    The expo's and the job fair's plans are not among them (``floor_plans()``).
 
     Args:
         plans: The year's plans (``MapData.plans``).
@@ -128,7 +139,7 @@ def plans_pane(
         margin: The screen's side margin (``use_margin()``).
     """
     return ft.ListView(
-        [plan_card(plan, view_path) for plan in plans if plan.id != EXPO_PLAN],
+        [plan_card(plan, view_path) for plan in floor_plans(plans)],
         key=FLOOR_PLANS,  # its own, so Flutter never reuses another pane's list (F130)
         ref=list_ref,
         expand=True,
