@@ -113,8 +113,7 @@ def asked_pane(memory: ViewMemory, route: str, view_path: str) -> None:
 
 @ft.component
 def Map() -> ft.View:
-    """The Map root: a tab bar over the one pane picked: Rooms, Floor plans, Expo or
-    Job fair."""
+    """The Map root: a tab bar over the one pane picked, e.g. Rooms or the Expo."""
     list_ref, scroll_to_top = use_scroll_to_top()
     margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
