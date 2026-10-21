@@ -141,6 +141,7 @@ def zoom_at(scale: float) -> Zoom:
         box=BOXES["phone portrait"],
         scale=scale,
         reset_ms=250,
+        tapped_at=[],
         resized=lambda e: None,
         transformed=lambda e: None,
     )

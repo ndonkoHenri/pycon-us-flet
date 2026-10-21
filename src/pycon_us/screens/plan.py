@@ -250,21 +250,16 @@ def PlanViewer(plan_id: str) -> ft.View:
         )
     # The card bottom-left, the buttons bottom-right, side by side: at large text the
     # card wraps rather than slide under the buttons. Their row's empty space takes no
-    # taps, which reach the plan under it.
-    card = label_card(plan, pin) if pin is not None else ft.Container()
-    controls = ft.Container(
-        ft.Row(
-            [
-                ft.Container(card, expand=True, alignment=ft.Alignment.BOTTOM_LEFT),
-                zoom_buttons(zoom, SCREEN),
-            ],
-            spacing=16,
-            vertical_alignment=ft.CrossAxisAlignment.END,
-        ),
-        left=0,
-        right=0,
-        bottom=0,
-        padding=16,
+    # gestures, which reach the plan under it: no Container there, since Flet always
+    # decorates one and a decorated box takes every pointer inside it.
+    card = [label_card(plan, pin)] if pin is not None else []
+    controls = ft.Row(
+        [ft.Column(card, expand=True, tight=True), zoom_buttons(zoom, SCREEN)],
+        spacing=16,
+        vertical_alignment=ft.CrossAxisAlignment.END,
+        left=16,
+        right=16,
+        bottom=16,
     )
     menu = overflow_menu(
         f"{SCREEN}.overflow",

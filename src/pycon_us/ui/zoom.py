@@ -11,7 +11,9 @@ Every viewer has the zoom buttons, the single-pointer way to zoom (WCAG 2.5.1). 
 pin, ``zoom()`` scales about the plan's top-left corner, so each zoom pans back to keep
 its focus in place (``refocus()``, F76) until U56 (#472). A double tap (2x, or back to
 fit) is only for plans with nothing to tap: its detector delays every single tap
-(D-312). Every duration goes through ``prefs.motion_ms()`` (D-173).
+(D-312). A resize (a rotation) lowers the maximum zoom without clamping the viewer's
+transform, so ``use_zoom()`` zooms back down to it. Every duration goes through
+``prefs.motion_ms()`` (D-173).
 """
 
 from collections.abc import Awaitable, Callable
@@ -144,6 +146,8 @@ class Zoom:
         box: The viewer's size, ``(0, 0)`` before its first layout.
         scale: The viewer's last reported scale, 1 at fit.
         reset_ms: Reset view's duration: ``RESET_MS``, or 0 under reduced motion.
+        tapped_at: Where the last double tap went down, kept across renders (a pin's
+            pulse can render between its down and its up).
         resized: The viewer's ``on_size_change`` handler.
         transformed: The viewer's ``on_transform_changed`` handler.
     """
@@ -153,6 +157,7 @@ class Zoom:
     box: Size
     scale: float
     reset_ms: int
+    tapped_at: list[Size]
     resized: Callable[[ft.LayoutSizeChangeEvent], None]
     transformed: Callable[[ft.InteractiveViewerTransformEvent], None]
 
@@ -211,6 +216,7 @@ def use_zoom(natural: Size) -> Zoom:
     viewer = ft.use_memo(ft.Ref[ft.InteractiveViewer], [])
     box, set_box = ft.use_state((0.0, 0.0))
     scale, set_scale = ft.use_state(1.0)
+    tapped_at: list[Size] = ft.use_memo(list, [])
 
     @report_errors
     def resized(e: ft.LayoutSizeChangeEvent) -> None:
@@ -220,15 +226,31 @@ def use_zoom(natural: Size) -> Zoom:
     def transformed(e: ft.InteractiveViewerTransformEvent) -> None:
         set_scale(e.scale)
 
-    return Zoom(
+    zoom = Zoom(
         viewer=viewer,
         natural=natural,
         box=box,
         scale=scale,
         reset_ms=prefs.motion_ms(RESET_MS),
+        tapped_at=tapped_at,
         resized=resized,
         transformed=transformed,
     )
+
+    @report_errors
+    async def clamp() -> None:
+        # Flutter keeps the transform when max_scale drops (a rotation): zoom down to
+        # the new maximum. Effects run after the new max_scale is sent, so the
+        # viewer clamps to it (D-312).
+        current = viewer.current
+        if current is None:
+            return
+        now = await read(current)
+        if now.scale > zoom.max_scale:
+            await zoom.zoom_by(zoom.max_scale / now.scale)
+
+    ft.use_effect(clamp, [box])
+    return zoom
 
 
 def zoom_layer(
@@ -270,7 +292,7 @@ def zoom_layer(
         expand=True,
     )
     if double_tap:
-        tapped_at: list[Size] = []
+        tapped_at = zoom.tapped_at
 
         @report_errors
         def down(e: ft.TapEvent) -> None:

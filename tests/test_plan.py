@@ -394,6 +394,58 @@ async def test_a_double_tap_zooms_in_on_the_tap_then_back_to_fit(
     assert plan.viewer.scale == 1.0
 
 
+async def test_a_pulse_between_a_double_taps_down_and_up_keeps_the_tap(
+    render: Render,
+) -> None:
+    """The tapped point survives a render of the pin's pulse before the second up."""
+    plan = await render("?pin=104c")
+    await plan.lay_out()
+    (detector,) = plan.find(ft.GestureDetector)
+    tap = (100.0, 200.0)
+    before = plan.viewer.plan_point(tap)
+    await plan.event(detector, "double_tap_down", {"l": {"x": tap[0], "y": tap[1]}})
+    await plan.until_held()
+    await plan.sleeps.release()  # the ring goes out: a render, with new handlers
+    await plan.settle()
+    (detector,) = plan.find(ft.GestureDetector)
+    await plan.event(detector, "double_tap")
+    assert plan.viewer.scale == pytest.approx(zoom.DOUBLE_TAP_SCALE)
+    assert plan.viewer.plan_point(tap) == pytest.approx(before)
+
+
+async def test_a_rotation_brings_the_zoom_down_to_the_new_maximum(
+    render: Render,
+) -> None:
+    """At portrait's maximum, landscape's lower one clamps the zoom, centred (D-312)."""
+    plan = await render()
+    await plan.lay_out()
+    plan.viewer.scale = float(plan.zoom_layer.max_scale)
+    await plan.transformed()
+    landscape = (874.0, 330.0)
+    await plan.lay_out(landscape)
+    await plan.settle()
+    top = zoom.max_scale(2048, zoom.fitted(landscape, (2048, 1583))[0])
+    assert float(plan.zoom_layer.max_scale) == pytest.approx(top)
+    assert plan.viewer.scale == pytest.approx(top)
+    assert [name for name, _ in plan.viewer.calls] == ["zoom", "pan"]
+
+
+@pytest.mark.parametrize("query", ["?pin=104c", ""])
+async def test_the_card_and_buttons_take_no_gestures_beside_them(
+    render: Render, query: str
+) -> None:
+    """No ``Container`` (always decorated, so hit) around them over the plan."""
+    plan = await render(query)
+    await plan.lay_out()
+    (body,) = [s for s in plan.find(ft.Stack) if s.fit == ft.StackFit.EXPAND]
+    row = body.controls[1]
+    assert isinstance(row, ft.Row)
+    assert (row.left, row.right, row.bottom) == (16, 16, 16)
+    card = row.controls[0]
+    assert isinstance(card, ft.Column)
+    assert len(card.controls) == (1 if query else 0)
+
+
 @pytest.mark.parametrize(("reduce_motion", "ms"), [(False, 250), (True, None)])
 async def test_reset_view_animates_unless_motion_is_reduced(
     render: Render, reduce_motion: bool, ms: int | None
