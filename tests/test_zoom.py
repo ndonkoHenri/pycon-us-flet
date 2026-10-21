@@ -15,6 +15,7 @@ from pycon_us.ui.zoom import (
     Zoom,
     centred_on,
     fitted,
+    into_bounds,
     max_scale,
     refocus,
 )
@@ -131,6 +132,43 @@ def test_refocus_reads_a_clamped_zoom_back() -> None:
     before = Transform(5.0, -100.0, -100.0)
     after = Transform(5.0, -100.0, -100.0)  # already at the maximum: nothing changed
     assert refocus(before, after, (190.0, 300.0)) == pytest.approx((0.0, 0.0))
+
+
+def panned(now: Transform, delta: tuple[float, float]) -> Transform:
+    """The transform after ``pan(dx, dy)``: it moves ``scale`` logical pixels a unit (F76)."""
+    return Transform(
+        now.scale, now.x + now.scale * delta[0], now.y + now.scale * delta[1]
+    )
+
+
+def test_into_bounds_pulls_a_rotated_pan_back_to_the_content_edge() -> None:
+    """Zoomed 2x at the right edge in landscape, portrait shows the right edge, no blank."""
+    landscape, portrait = BOXES["phone landscape"], BOXES["phone portrait"]
+    at_right = Transform(2.0, landscape[0] * (1 - 2.0), -100.0)  # -874: the right edge
+    after = panned(at_right, into_bounds(at_right, portrait))
+    assert after.x == pytest.approx(portrait[0] * (1 - 2.0))  # -382: the right edge
+    assert after.y == pytest.approx(-100.0)  # in bounds on this axis: kept
+    # The viewport's right edge is the content's right edge, not past it.
+    assert (portrait[0] - after.x) / after.scale == pytest.approx(portrait[0])
+
+
+def test_into_bounds_pulls_back_a_translation_past_the_top_left() -> None:
+    """A positive translation (blank above or left of the content) goes back to 0."""
+    now = Transform(1.5, 40.0, 25.0)
+    assert panned(now, into_bounds(now, BOXES["tablet"])) == Transform(1.5, 0.0, 0.0)
+
+
+def test_into_bounds_leaves_a_pan_in_bounds_alone() -> None:
+    """A pan already inside the bounds is not moved: no jump on every resize."""
+    for box in BOXES.values():
+        assert into_bounds(Transform(3.0, -box[0], -box[1]), box) == (0.0, 0.0)
+
+
+def test_into_bounds_undoes_any_pan_at_fit() -> None:
+    """At 1x the only translation in bounds is none: the fitted plan, as Reset view."""
+    now = Transform(1.0, -300.0, -50.0)
+    after = panned(now, into_bounds(now, BOXES["phone portrait"]))
+    assert (after.x, after.y) == pytest.approx((0.0, 0.0))
 
 
 def zoom_at(scale: float) -> Zoom:

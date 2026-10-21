@@ -3,7 +3,7 @@
 ``test_status_strip.py`` (the line, the layout, the live region and the refreshes) and
 ``test_status_strip_ticks.py`` (the minute tick, ``use_minute()`` and the automatic
 refreshes) render the strip's body outside a renderer: the hooks it calls
-(``ft.use_effect``, ``ft.use_state`` and the store hooks) are answered by ``Hooks``.
+(``ft.use_effect``, ``ft.use_state``, ``ft.use_callback`` and the store hooks) are answered by ``Hooks``.
 The services, the page and the store are ``tests/chrome.py``'s; a module takes both
 modules' fixtures by assigning them to its own names, as that module's docstring says:
 ``chrome.year``, ``chrome.svc`` and ``chrome.conference`` too, which this ``hooks``
@@ -36,6 +36,7 @@ def hooks(
     hooks = Hooks()
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
     monkeypatch.setattr(ft, "use_state", hooks.use_state)
+    monkeypatch.setattr(ft, "use_callback", hooks.use_callback)
     monkeypatch.setattr(status_strip, "use_services", lambda: svc)
     monkeypatch.setattr(status_strip, "use_conference", lambda: conference)
     monkeypatch.setattr(status_strip, "use_tokens", lambda: DARK_TOKENS)
