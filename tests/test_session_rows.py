@@ -295,8 +295,8 @@ async def test_with_a_screen_reader_the_undo_snack_bar_waits_to_be_used(
     rendered.prefs.screen_reader = True
     await rendered.tap_star(TALK)
     await rendered.tap_star(TALK)
-    (snack,) = rendered.snack_bars
-    assert snack.persist is True
+    added, snack = rendered.snack_bars  # the add says "Added" to it first (D-355)
+    assert snack.persist is True and not added.persist
 
 
 async def test_an_add_that_was_not_saved_says_so_without_undo(
