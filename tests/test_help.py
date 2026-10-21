@@ -98,6 +98,15 @@ def render(
     """Render ``Help`` once over the given services and return its scaffold's kwargs."""
     monkeypatch.setattr(help_screen, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(help_screen, "ReportProblem", lambda: REPORT_PROBLEM_SECTION)
+    # The credit is a component of its own, tested in test_sponsor_credit.py: here a
+    # node that says where it stands and whose sponsor it names.
+    monkeypatch.setattr(
+        help_screen,
+        "SponsorCreditTile",
+        lambda credit, what, identifier: ft.Semantics(
+            identifier=identifier, label=f"{what}, {credit.slug if credit else ''}"
+        ),
+    )
     monkeypatch.setattr(info_page, "use_margin", phone_margin)
 
     def render(svc: Services) -> dict[str, Any]:
@@ -209,12 +218,26 @@ def test_the_card_comes_first_then_the_venue_then_the_code_of_conduct(
         "help.info_desk",
         "help.lost_and_found",
         "help.quiet_room",
+        "help.quiet_room.sponsor",
         "# Code of Conduct",
         "help.coc_summary",
         "help.coc",
         "help.procedures",
         "report_problem",
     ]
+
+
+def test_the_quiet_room_s_line_is_followed_by_its_sponsor_s_credit(
+    render: Callable[[Services], dict[str, Any]], svc: Services
+) -> None:
+    """D-337: the credit row under the quiet room names the year's sponsor."""
+    (credit,) = [
+        block
+        for block in blocks_of(render(svc))
+        if isinstance(block, ft.Semantics)
+        and block.identifier == "help.quiet_room.sponsor"
+    ]
+    assert credit.label == "Quiet room, google"
 
 
 def test_the_card_s_first_stop_is_its_level_2_heading(

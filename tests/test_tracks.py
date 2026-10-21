@@ -345,6 +345,15 @@ async def test_the_tracks_name_is_the_pages_heading_not_the_app_bars(
     assert shown.titles[-1] == ""
 
 
+async def test_at_large_text_the_tracks_name_steps_down(show: Show) -> None:
+    """D-328: where a slot's time leaves the gutter, the name takes a row title's type."""
+    shown = await show(page_of("security"))
+    shown.prefs.time_above = True  # what GutterProbe measures at that size
+    await shown.settle()
+    title = cast(ft.Text, shown.node("track.title").content)
+    assert title.theme_style == ft.TextThemeStyle.TITLE_MEDIUM
+
+
 @pytest.mark.parametrize("slug", ["ais", "lightning-talkss", "Charlas", "python"])
 async def test_an_unknown_slug_shows_not_found_with_the_way_to_all_tracks(
     show: Show, slug: str

@@ -29,6 +29,7 @@ from pycon_us.core.jobs import listings_of
 from pycon_us.core.links import feed_link
 from pycon_us.core.models import ConferenceData, Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
@@ -43,7 +44,7 @@ from pycon_us.ui.links import (
 )
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin
 
@@ -73,6 +74,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     svc = use_services()
     margin = use_margin(READING)  # its width class (D-305)
     conference = use_conference()
+    prefs = use_prefs()
     data = conference.data
 
     @report_errors
@@ -109,7 +111,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
                 padding=sides(margin),
             ),
         )
-    items: list[ft.Control] = [intro(sponsor, svc)]
+    items: list[ft.Control] = [intro(sponsor, svc, large_text=prefs.time_above)]
     if sponsor.description.strip():
         items.append(SectionHeader("About", level=2))
         items.append(about(sponsor.description))
@@ -135,29 +137,27 @@ def facts_line(sponsor: Sponsor) -> str | None:
     return " · ".join(facts) or None
 
 
-def intro(sponsor: Sponsor, svc: Services) -> ft.Control:
+def intro(sponsor: Sponsor, svc: Services, *, large_text: bool) -> ft.Control:
     """Return the page's intro: the logo, the name, the level, the facts, the website.
 
-    Centred. The name is the page's heading (level 1) in ``HEADLINE_SMALL``, selectable
-    to copy (D-26), where a long name wraps (D-186). The level and the facts are plain
+    Centred. The name is the page's heading (level 1), a ``PageTitle`` selectable to
+    copy (D-26), where a long name wraps (D-186). The level and the facts are plain
     lines, each a node of its own; the facts' middle dot is read as a comma.
 
     Args:
         sponsor: The sponsor.
         svc: The session's services, for the website's launch.
+        large_text: The text is large for the width (``Prefs.time_above``): the
+            name steps down (D-328).
     """
     lines: list[ft.Control] = [
         logo_tile(sponsor.name, sponsor.logo_url, size=PLATE_HEIGHT, width=PLATE_WIDTH),
-        ft.Semantics(
-            header=True,
-            heading_level=1,
+        PageTitle(
+            sponsor.name,
             identifier=f"{SCREEN}.title",
-            content=ft.Text(
-                sponsor.name,
-                theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-                text_align=ft.TextAlign.CENTER,
-                selectable=True,
-            ),
+            large_text=large_text,
+            centred=True,
+            selectable=True,
         ),
         _centred(f"{sponsor.level} sponsor", color=ft.Colors.ON_SURFACE_VARIANT),
     ]
