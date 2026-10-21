@@ -4,7 +4,8 @@ The tab bar is the body's first row (U10's interim) and the selected pane alone 
 under it, each pane with its own key, with no swipeable ``TabBarView``: its pages took
 a zoomed plan's horizontal pans (D-312, S7; U110). ``ViewMemory.map_tab`` keeps the
 pane and ``ViewMemory.map_offsets`` each pane's scroll, so another bottom tab and back
-finds both (D-18); ``/map?tab=floor-plans`` opens a pane, an unknown value Rooms. A
+finds both (D-18); ``/map?tab=floor-plans`` opens a pane, an unknown value Rooms, and
+a pick puts its own ``?tab=`` in the route, so a return or a new session finds it. A
 re-tap of the Map tab scrolls the pane shown (D-166). The overflow's "3D venue tour"
 opens ``map.toml``'s ``tour_url`` in the in-app browser (MAP-03, D-182). A year
 without plans shows the rooms alone, without a tab bar. The expo and job fair panes
@@ -134,6 +135,11 @@ def Map() -> ft.View:
     def changed(e: ft.Event[ft.Tabs]) -> None:
         memory.map_tab = slugs[e.control.selected_index]
         set_switches(lambda n: n + 1)
+        # The route follows the pick: a stale ``?tab=`` left in it would come back as
+        # Search's way back (``search_base``) or a new session's start
+        # (``last_location``) and undo the pick (D-18). Same View, no stack to grow:
+        # Back goes by ``parent_of()``, not by a history of routes (D-141).
+        page.navigate(tab_href(memory.map_tab))
 
     pane: ft.Control
     if tab == FLOOR_PLANS:

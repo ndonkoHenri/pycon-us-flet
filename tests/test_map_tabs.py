@@ -16,13 +16,14 @@ import flet as ft
 import pytest
 
 from pycon_us.config import YearData, load_year
+from pycon_us.locations import start_target
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import map as screen
 from pycon_us.screens import map_plans
 from pycon_us.state import Conference
 from pycon_us.year_map import MapData
-from tests import sessions
+from tests import links, sessions
 from tests.feeds import processed
 from tests.sessions import Shown, menu_text, text_of
 from tests.trees import descendants
@@ -80,6 +81,8 @@ class MapShown(Shown):
 
 
 type Render = Callable[..., Awaitable[MapShown]]
+
+open_at = links.open_at  # the fixture, under this module's name (tests/chrome.py)
 
 
 @pytest.fixture
@@ -193,6 +196,67 @@ async def test_a_picked_tab_stays_across_a_new_session(render: Render) -> None:
     again = await render(memory=memory)
     assert again.tabs.selected_index == 1
     assert again.pane.key == "floor-plans"
+
+
+async def pick_in_app(shown: links.Shown, index: int) -> None:
+    """Pick a Map tab in the app's Views as the user does, and let the route follow."""
+    (tabs,) = shown.find(ft.Tabs)
+    shown.session.apply_patch(tabs._i, {"selected_index": index})
+    await shown.session.dispatch_event(tabs._i, "change", index)
+    await shown.settle()
+
+
+def pane_shown(shown: links.Shown) -> str:
+    """The key of the one Map pane in the app's Views: its slug."""
+    slugs = {pane.slug for pane in screen.PANES}
+    (pane,) = [lv for lv in shown.find(ft.ListView) if lv.key in slugs]
+    return str(pane.key)
+
+
+async def test_a_pick_puts_its_own_tab_in_the_route(render: Render) -> None:
+    """A pick navigates to its pane's ``?tab=``: no stale query is left in the route."""
+    shown = await render("/map?tab=floor-plans")
+    await shown.pick(0)
+    await shown.pick(1)
+    assert shown.went == ["/map?tab=rooms", "/map?tab=floor-plans"]
+
+
+async def test_a_pick_over_a_tab_link_survives_search_and_back(
+    open_at: links.Open,
+) -> None:
+    """Rooms, picked on ``/map?tab=floor-plans``, is still shown after Search and Back.
+
+    Search's way back is the route it was opened from (``search_base``): with the old
+    query left in it, Back reopened Floor plans (D-18; Codex on #591).
+    """
+    memory = ViewMemory()
+    shown = await open_at("/map?tab=floor-plans", memory=memory)
+    assert pane_shown(shown) == "floor-plans"
+    await pick_in_app(shown, 0)
+    assert shown.page.route == "/map?tab=rooms"
+    assert pane_shown(shown) == "rooms"
+    (search,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Search"]
+    await shown.click(search)
+    await shown.settle()
+    assert shown.routes()[-1] == "/search"
+    assert await shown.back() == "/map?tab=rooms"
+    assert pane_shown(shown) == "rooms"
+    assert memory.map_tab == "rooms"
+
+
+async def test_a_pick_over_a_tab_link_survives_a_new_session(
+    open_at: links.Open,
+) -> None:
+    """A new session, which returns to the last location (D-143), keeps the pick."""
+    memory = ViewMemory()
+    shown = await open_at("/map?tab=floor-plans", memory=memory)
+    await pick_in_app(shown, 0)
+    assert memory.last_location == "/map?tab=rooms"
+    # Where Start sends the new session (``routes.Start``, checked in test_routes).
+    target = start_target(memory.last_location, memory.search_base, onboarded=True)
+    assert target == "/map?tab=rooms"
+    again = await open_at(target, memory=memory)
+    assert pane_shown(again) == "rooms"
 
 
 async def test_a_pane_s_scroll_is_remembered_and_put_back(render: Render) -> None:
