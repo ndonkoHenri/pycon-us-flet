@@ -3,8 +3,9 @@
 ``process()`` is the pipeline's one entry point. It decodes the JSON into frozen records
 (``core/records.py``), every id a string and every time an aware datetime in the conference
 zone; applies Ionic's processing rules (``core/rules.py``) to decide what becomes a
-session; buckets the timeline's sessions into conference-local days and time groups; and
-last converts the feed's HTML to Markdown and search text, once (D-130, D-140).
+session; buckets the timeline's sessions into conference-local days and time groups; sorts
+the sponsorship levels once (DATA-22); and last converts the feed's HTML to Markdown and
+search text, once (D-130, D-140), reading the job listings' roles as it goes (D-278).
 
 Failures are split in two. A feed whose structure is wrong raises ``FeedError``, so the
 caller keeps the data it has. A single bad record is skipped, recorded in
@@ -22,7 +23,7 @@ from dataclasses import replace
 from datetime import date, datetime
 from functools import cache
 
-from pycon_us.core import html_md, records, rules
+from pycon_us.core import html_md, jobs, records, rules
 from pycon_us.core.models import (
     ConferenceData,
     Day,
@@ -167,7 +168,13 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
                 skip,
             )
         ),
+        sponsor_levels=tuple(
+            sorted(
+                records.sponsor_levels(document, skip), key=lambda level: level.order
+            )
+        ),
         dropped={rule: tuple(ids) for rule, ids in dropped.items()},
+        # After the decoders above, which add to it as they run.
         skipped=tuple(skipped),
         content=content,
     )
@@ -203,7 +210,8 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
     detail's, and many fields are empty. Open spaces are Markdown already, so their
     descriptions pass through (D-115) and their search text comes from the Markdown.
     Sprint projects get their description's text and a search text too, for the
-    Sprints card's preview and its filter (EVT-05, EVT-06).
+    Sprints card's preview and its filter (EVT-05, EVT-06); job listings get their
+    roles and a search text (SPON-07, SPON-09, D-278).
     """
 
     @cache
@@ -244,8 +252,7 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
         ),
         sprints=tuple(project(sprint) for sprint in data.sprints),
         job_listings=tuple(
-            replace(j, description_md=markdown(j.description))
-            for j in data.job_listings
+            jobs.read_listing(j, site_url, markdown) for j in data.job_listings
         ),
         content_md={key: markdown(value) for key, value in data.content.items()},
     )

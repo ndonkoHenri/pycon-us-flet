@@ -1,11 +1,12 @@
-# Build a debug-signed arm64 APK on demand and for v* tags (D-84, D-86, D-106; docs/development.md §7.4).
+# Build a debug-signed arm64 APK on demand (D-84, D-86, D-106; docs/development.md §7.4).
 # It runs the documented `flet build apk` command directly, not flet-dev/flet-build-action (§7.4 says why).
+# While the repo is private, a v* tag no longer runs it (D-273): build the APK locally (§8.1), or run this
+# workflow by hand (`gh workflow run build-android.yml --ref <branch or tag>`). The PR that makes the repo
+# public brings back the tag trigger.
 name: Build Android
 
 on:
-  workflow_dispatch:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:        # manual runs only while the repo is private (D-273)
 
 permissions:
   contents: read

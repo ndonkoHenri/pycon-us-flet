@@ -1,22 +1,23 @@
-"""A project's card on the Sprints page (EVT-05): ``ProjectCard`` and ``logo_tile()``.
+"""A project's card on the Sprints page (EVT-05): ``ProjectCard``.
 
 A card holds one project of the development sprints: its logo on a white tile, or its
-initials; its name, a heading for screen readers, and "by <submitter>"; its description,
-cut at four lines with "More" when it is long (``core.sprints.cut_short()``), which shows
-the whole text as Markdown, its links opening by the feed-link rule (D-197); and
-"Project page", the project's site in the in-app browser. A module of its own, as Now's
-next-session card is (D-190), so the page stays under D-66's 400 lines.
+initials (``ui/logos.py``'s ``logo_tile()``, D-262); its name, a heading for screen
+readers, and "by <submitter>"; its description, cut at four lines with "More" when it
+is long (``core.sprints.cut_short()``), which shows the whole text as Markdown, its
+links opening by the feed-link rule (D-197); and "Project page", the project's site in
+the in-app browser. A module of its own, as Now's next-session card is (D-190), so the
+page stays under D-66's 400 lines.
 """
 
 import flet as ft
 
+from pycon_us.core.links import feed_link
 from pycon_us.core.models import Sprint
-from pycon_us.core.speakers import initials
 from pycon_us.core.sprints import cut_short
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.theme import SEED
-from pycon_us.ui.links import OPENS_IN, LinkKind, feed_link, feed_markdown, open_link
+from pycon_us.ui.links import OPENS_IN, LinkKind, feed_markdown, open_link
+from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.semantics import named, semantics_key
 
 SCREEN = "sprints"
@@ -24,9 +25,6 @@ SCREEN = "sprints"
 
 LOGO = 56
 """A project's logo tile, in dp: square, beside the name and the submitter's two lines."""
-
-LOGO_INK = SEED
-"""The initials' colour on the white logo tile in both schemes: 8.6:1 on white."""
 
 
 def ProjectCard(sprint: Sprint) -> ft.Control:
@@ -80,7 +78,10 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
             )
         )
     head = ft.Row(
-        [logo_tile(sprint), ft.Column(lines, spacing=2, expand=True)],
+        [
+            logo_tile(sprint.name, sprint.logo_url, size=LOGO),
+            ft.Column(lines, spacing=2, expand=True),
+        ],
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )
@@ -173,45 +174,4 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
         # which as a heading is a node of its own; each part reads in its order.
         semantic_container=False,
         margin=ft.Margin.symmetric(horizontal=16, vertical=6),
-    )
-
-
-def logo_tile(sprint: Sprint) -> ft.Control:
-    """Return a project's logo on a white tile, or its initials when there is none.
-
-    Logos are made for a white page, so the tile is white in both schemes (as the
-    sponsor spotlight's, ux.md §5.1) with a hairline edge. The initials stand in when
-    the feed has no logo and when it cannot load (offline, a broken URL), in the brand
-    indigo, 8.6:1 on white; a ``CircleAvatar`` holds them because it does not scale its
-    text, so they fit the tile at any text size. Decorative for screen readers: the
-    name follows.
-
-    Args:
-        sprint: The project.
-    """
-    monogram = ft.CircleAvatar(
-        content=ft.Text(initials(sprint.name), weight=ft.FontWeight.W_500),
-        bgcolor=ft.Colors.TRANSPARENT,
-        color=LOGO_INK,
-        radius=LOGO / 2 - 6,
-    )
-    content: ft.Control = monogram
-    if sprint.logo_url:
-        content = ft.Image(
-            src=sprint.logo_url,
-            fit=ft.BoxFit.CONTAIN,
-            error_content=monogram,
-        )
-    return ft.Semantics(
-        exclude_semantics=True,
-        content=ft.Container(
-            content,
-            width=LOGO,
-            height=LOGO,
-            padding=6,
-            bgcolor=ft.Colors.WHITE,
-            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            border_radius=12,
-            alignment=ft.Alignment.CENTER,
-        ),
     )

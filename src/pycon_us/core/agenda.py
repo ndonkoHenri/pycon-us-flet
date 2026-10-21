@@ -12,7 +12,7 @@ by id.
 from collections.abc import Callable, Mapping
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, tzinfo
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from enum import StrEnum
 from itertools import groupby
 from operator import attrgetter
@@ -99,6 +99,16 @@ class Agenda:
     days: tuple[AgendaDay, ...]
     # A dict is not hashable; leaving it out of the hash keeps ``Agenda`` hashable.
     overlaps: Mapping[Session, tuple[Session, ...]] = field(hash=False)
+
+    @property
+    def sessions(self) -> tuple[Session, ...]:
+        """Every saved session the agenda holds, in agenda order: what an export takes."""
+        return tuple(
+            session
+            for day in self.days
+            for slot in day.slots
+            for session in slot.sessions
+        )
 
 
 @dataclass(frozen=True)
@@ -206,7 +216,11 @@ def elapsed_percent(session: Session, now: datetime) -> int:
         ValueError: ``now`` is naive.
     """
     _require_aware(now)
-    start, end = session.display_start, session.end
+    # In UTC: datetimes sharing a ZoneInfo compare and subtract by wall clock, ignoring
+    # ``fold``, which is wrong for a session across the end of summer time (#513).
+    now, start, end = (
+        moment.astimezone(UTC) for moment in (now, session.display_start, session.end)
+    )
     if now >= end:
         return 100
     if now <= start:

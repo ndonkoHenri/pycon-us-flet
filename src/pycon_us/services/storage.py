@@ -6,7 +6,8 @@ Two places, one job each:
   prefixed ``pycon.``, with its type and default. SharedPreferences takes only ``str``,
   ``int``, ``float``, ``bool`` and ``list[str]`` (F12), so dict values are JSON strings.
 * **Files in the durable data directory** (``FLET_APP_STORAGE_DATA``) for the raw feed
-  cache, ``feed-<year>.json``, replaced atomically: readers see the old file or the new.
+  cache, ``feed-<year>.json``, and the change log, ``changes-<year>.json``
+  (``changes_file.py``), replaced atomically: readers see the old file or the new.
 
 Storage failures are expected (D-71): logged and returned, never raised, because the
 data in memory stays correct for the session and the next write tries again (D-120).
@@ -108,6 +109,15 @@ def favorites(year: int) -> Pref[list[str]]:
         The ``pycon.<year>.favorites`` key, a ``list[str]`` that defaults to empty.
     """
     return Pref(f"pycon.{year}.favorites", [])
+
+
+def fetched(year: int) -> Pref[bool]:
+    """Return the key that says a network feed of ``year`` was published (D-255).
+
+    Saved by the install's first network publish for the year: from then on a refresh
+    over the bundled snapshot is not diffed (``ChangeLog``). Reset app clears it.
+    """
+    return Pref(f"pycon.{year}.fetched", False)
 
 
 # ------------------------------------------------------------------ files
@@ -216,7 +226,7 @@ class Storage:
     prefs: ft.SharedPreferences
     directory: Path
     year: int
-    # The feed writes not landed yet, even those whose caller was cancelled (D-244).
+    # The file writes not landed yet, even those whose caller was cancelled (D-244).
     _writes: set[asyncio.Task[bool]] = field(default_factory=set, init=False)
 
     async def get[T](self, pref: Pref[T]) -> T:
@@ -301,57 +311,69 @@ class Storage:
         return await asyncio.to_thread(_read_feed_file, self.feed_path)
 
     async def write_feed(self, raw: bytes) -> bool:
-        """Replace the feed cache atomically (D-39).
+        """``write_file`` the feed cache (D-39), only with bytes that parsed.
 
-        Call it only after ``raw`` parsed successfully, so the cache always holds
-        the last good feed. Nothing deletes the cache first, so a failed refresh
-        keeps it.
+        So the cache always holds the last good feed; nothing deletes it first, so a
+        failed refresh keeps it.
+        """
+        return await self.write_file(self.feed_path, raw)
+
+    async def write_file(self, path: Path, data: bytes) -> bool:
+        """Replace a data directory file atomically: the feed cache or the change log.
+
+        The write is a task of its own, kept in ``_writes`` until it lands: a cancelled
+        caller leaves it to land, as its thread does, and ``delete_file`` waits for it.
 
         Args:
-            raw: The feed bytes exactly as downloaded.
+            path: The file, in ``directory``.
+            data: Its new content.
 
         Returns:
-            Whether the cache was replaced; a failure is logged and the previous
-            cache stays.
+            Whether the file was replaced; a failure is logged and the previous file
+            stays (D-120).
         """
-        # Its own task, so a cancelled caller leaves it to land, as its thread does.
-        write = asyncio.create_task(self._write_feed(raw))
+        write = asyncio.create_task(self._write(path, data))
         self._writes.add(write)
         write.add_done_callback(self._writes.discard)
         return await asyncio.shield(write)
 
-    async def _write_feed(self, raw: bytes) -> bool:
+    async def _write(self, path: Path, data: bytes) -> bool:
         try:
-            await asyncio.to_thread(write_atomic, self.feed_path, raw)
+            await asyncio.to_thread(write_atomic, path, data)
         except OSError:
-            logger.warning(
-                "Could not save the feed cache %s", self.feed_path.name, exc_info=True
-            )
+            logger.warning("Could not save %s", path.name, exc_info=True)
             return False
         return True
 
     async def delete_feed(self, reason: str) -> bool:
-        """Delete the feed cache and log why, e.g. because it no longer parses.
+        """``delete_file`` the feed cache; the next start then uses the snapshot (D-39).
 
-        The one way the cache goes: a cache that no longer parses, the Developer feed
-        URL turned off (D-187), and the Developer screen's Clear cached feed and Reset
-        app (D-198). Without it the next start uses the bundled snapshot (D-39). Every
-        ``write_feed`` asked for before it lands first, a cancelled caller's too: the
-        threads' lock gives turns, not order, so it could bring the file back (D-244).
+        The one way the cache goes: a cache that no longer parses, a feed URL change
+        after the load (D-255), and Clear cached feed and Reset app (D-198).
+        """
+        return await self.delete_file(self.feed_path, reason)
+
+    async def delete_file(self, path: Path, reason: str) -> bool:
+        """Delete a data directory file, and log why, after every write asked before it.
+
+        Every ``write_file`` asked for before it lands first, of either file and a
+        cancelled caller's too: the threads' lock gives turns, not order, so a write
+        could bring the file back (D-244), or a log write mix two feeds (D-255).
 
         Args:
-            reason: Why, for the log, e.g. "it does not parse: <error>".
+            path: The file, in ``directory``.
+            reason: Why, for the log, e.g. "Reset app".
 
         Returns:
-            Whether the cache is gone (or there was none); a failure is logged.
+            Whether the file is gone (or there was none); a failure is logged.
         """
-        logger.warning("Deleting the cached feed %s: %s", self.feed_path.name, reason)
+        logger.warning("Deleting %s: %s", path.name, reason)
         if self._writes:
             await asyncio.wait(set(self._writes))
         try:
-            await asyncio.to_thread(_unlink, self.feed_path)
+            await asyncio.to_thread(_unlink, path)
         except OSError:
-            logger.warning("Could not delete %s", self.feed_path.name, exc_info=True)
+            logger.warning("Could not delete %s", path.name, exc_info=True)
             return False
         return True
 

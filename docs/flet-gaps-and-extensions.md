@@ -26,19 +26,20 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 | # | Id | Gap | Feature ids | Interim (ships now) | Upstream piece | App needs it | Effort | Status |
 |---|---|---|---|---|---|---|---|---|
-| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
+| 1 | **E3** | Scheduled local notifications | NOTIF-01, NOTIF-05, NOTIF-06, NOTIF-10, DEV-06, STORE-10, NATIVE-06, NEW-05 | Now's "Your next session", an in-app `Banner` while the app is open, `.ics` with `VALARM`; Settings says "Reminders aren't available in this build" (D-60) | Scheduling added to the official extension from [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948) (`flutter_local_notifications` 22.3.1), plus U7; the receivers, the icon and the iOS delegate ship in the extension (D-220) | P2 (spike S6 during P1: [verdict](spikes/06-reminders.md)); without it at the P2 exit, P4 (D-256) | M | `flet-dev/flet#6948` is an open issue (v1 scope, no scheduling); no PR yet; S6 ran the scope through a throwaway extension (D-220) |
 | 2 | **U1** | Pull-to-refresh | DATA-03, SCHED-13, EVT-07, SPON-08 | Status strip with Refresh, plus automatic refresh (D-32, D-40) | `ft.RefreshIndicator` | P1 | S | proposed |
 | 3 | **U15** | A handler exception crashes the session | (cross-cutting) | `@report_errors` decorator (D-71) | An opt-in non-fatal mode with a Python error hook | P1–P2 | S | proposed |
-| 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2 | Before P3 (spike S8) | M | proposed |
+| 4 | **E1** | Barcode scanning | LEAD-01, LEAD-02, DOOR-04, SHIRT-02, MASK-04, NATIVE-06 | Manual entry plus USB/Bluetooth HID scanners, which always work (D-65) | New extension over `mobile_scanner` 7.4.2; API and Dart duties in D-293 | Before P3 (spike S8: [verdict](spikes/08-scanner.md)) | M | goes ahead (D-293); S8 ran the API through a throwaway extension; the write-up is [#520](https://github.com/ndonkoHenri/pycon-us-flet/issues/520) |
 | 5 | **U4** | App version at runtime | INFO-03 | `pycon_us.__version__` alone: no build number (D-83, D-187) | `page.get_app_info()` | P2 | XS | proposed |
 | 6 | **U16** | OS text-scale factor | THEME-11 | Fluid layouts, no fixed heights (D-26) | `PageMediaData.text_scale_factor` | P2 | XS | proposed (one PR with U17) |
 | 6 | **U17** | Accessibility-setting changes | THEME-09, high contrast (D-23) | Re-read `get_accessibility_features()` on start and resume (D-34); on Android a change made in the background applies at the following resume (D-183) | Accessibility fields in `PageMediaData`, delivered by the existing `on_media_change` | P1: #178's late Android resume (D-183) | XS | proposed (one PR with U16); #183 |
 | 6 | **U10** | `AppBar.bottom` | SCHED-01, SCHED-27 | Day tabs as the first body row | `AppBar.bottom` | later | S | proposed |
 | 6 | **U2** | Sticky headers / slivers | SCHED-02, SCHED-27 | Time gutter layout (D-31) | A grouped list with pinned headers | later | M | proposed |
-| 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05 | Select and highlight the booth without moving the camera | `set_transform()` / `zoom_to_rect()` | later | S | proposed |
-| 6 | **U9** | Query-string hook | ROOM-03, SPON-04, EXPO-05 | `use_query()` parses `page.route` | `ft.use_route_search()` | later | XS | proposed |
-| 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed |
-| later | **E4** | Native add-to-calendar | SESS-04 | `.ics` through `Share.share_files` (SESS-05, D-62) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
+| 6 | **U3** | Absolute `InteractiveViewer` transform | EXPO-05; D-18's remembered map zoom | Select and highlight the booth without moving the camera; a remembered zoom put back with `reset()`, `zoom()` and `pan()` if S7 keeps it | `set_transform()` / `zoom_to_rect()` | later | S | proposed; the analysis, a repro and a draft diff in [#368](https://github.com/ndonkoHenri/pycon-us-flet/issues/368) |
+| 6 | **U9** | Query-string hook | NEW-02, ROOM-03, ROOM-05, MAP-05, SPON-04, EXPO-05 | `use_query()` parses `page.route`, once, for the top View only (D-164) | `ft.use_route_search()` | later | XS | proposed; [#369](https://github.com/ndonkoHenri/pycon-us-flet/issues/369) |
+| 6 | **U18** | Back inside a modal sub-chain | NEW-02 (search, D-19) | Our own `page.on_view_pop`, set before `page.render_views(App)`, navigates to `parent_of(e.route)` (D-19) | The Router pops to the previous view entry unless the popped view is the modal itself (§5.12) | later | XS | proposed; [#370](https://github.com/ndonkoHenri/pycon-us-flet/issues/370) |
+| 6 | **U95** | Share sheet origin with a size | NEW-06, INFO-04 (D-206, D-297) | None that opens the sheet: on an iPad a share fails and says "Couldn't open the share sheet" (F115) | `share_position_origin` that carries a size, or a non-empty default size on the Dart side | P2 (tablets) | XS | proposed; [#525](https://github.com/ndonkoHenri/pycon-us-flet/issues/525) |
+| later | **E4** | Native add-to-calendar | SESS-04 | `.ics` from `core/ics.py` (SESS-05, D-62): on iOS served on `127.0.0.1` and opened in the in-app browser, whose calendar sheet adds it; on Android saved with the system save dialog, to open from Files; never the share sheet, which reaches no calendar (D-272, [P2-04](spikes/10-ics-share.md)) | Extension over `add_2_calendar` 3.1.1 (+ U6) | later | S | proposed |
 | low | **E2** | FCM push | none: the app has no push (D-58) | n/a | `firebase_messaging` 16.7.0 (+ U5) | never, in this app | L | a Flet contribution only |
 
 **Conditional CLI and template items.** We do these only when a feature or a spike needs them (D-98).
@@ -52,20 +53,16 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 ### 1.2 Deep links: no gap
 
-Deep links (NEW-07, D-21) use what exists: the per-platform tables `flet build` reads for Android and iOS (`CLI/build_base.py:1422-1437`) and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-55`) and Info.plist entry. The owner's open PR [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953) (fixes #6951) makes the common `[tool.flet.deep_linking]` table a per-key fallback on Android and iOS. We configure **both per-platform tables**, so links work with or without #6953 in the pinned Flet (F16); collapsing them later is optional.
+Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]` table, which `flet build` resolves per key for Android and iOS after any per-platform table (`get_deep_linking_setting()`, `CLI/commands/build_base.py:1422-1427, 2960-2982`; `flet-dev/flet#6953`, fixing `flet-dev/flet#6951`, merged into `flet-1.1.0` and in the pin since `68a4b326c`), and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-56`) and `CFBundleURLTypes` entry (`TPL/ios/Runner/Info.plist:53-69`). Both register nothing unless `scheme` and `host` both resolve; iOS registers the scheme alone, with the host as the entry's `CFBundleURLName`. We set **one common table** (D-269):
 
 ```toml
-# pyproject.toml (P2). The scheme follows the app identity (O-4); "pyconus" is a placeholder.
-[tool.flet.android.deep_linking]
-scheme = "pyconus"
-host = "app"
-
-[tool.flet.ios.deep_linking]
+# pyproject.toml (P2-24, #384). Placeholders until the app identity (O-4, #15).
+[tool.flet.deep_linking]
 scheme = "pyconus"
 host = "app"
 ```
 
-Reminder taps (E3) reuse the same paths, so a notification and a link both land on "root with the target pushed" (D-21).
+Reminder taps (E3) reuse the same paths, so a notification and a link both land on "root with the target pushed" (D-21). Landing itself needs nothing new; what was open when a warm link comes is U89 (#516): the app closes dialogs and sheets first (D-291).
 
 ### 1.3 Cut or noted
 
@@ -86,6 +83,8 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 |---|---|---|
 | `Theme.platform` (U19, D-98) | Pin the iOS-adaptive defaults by hand: bundled font, `center_title=False`, Material back arrow (D-10) | `Theme.platform` |
 | Contrast level / scheme variant | Hand-authored high-contrast overrides (D-23) | `Theme.contrast_level`, `color_scheme_variant` |
+| `Theme.color_scheme` overrides reach `ThemeData.colorScheme` but nothing derived from it: `parseTheme` builds `ThemeData` from the seeded scheme and applies the overrides with `copyWith`, and parses `system_overlay_style` and the sub-themes against the seeded scheme, so the page stayed white under HC's cream bars (U64, D-265, #483) | `build_theme()` names `scaffold_bgcolor`, `canvas_color`, `card_bgcolor` and `divider_color` from the scheme, and HC's overlay names its navigation-bar hex | Build `ThemeData` from the final scheme (`DART/utils/theme.dart`, `parseTheme`) |
+| A View without an `AppBar` takes the theme's status-bar style, and neither `View` nor `AppBar` has a `system_overlay_style` of its own, so a brand-coloured screen in a light scheme gets dark status-bar icons, 1.9:1 on Welcome's purple (U85, F105, D-287, [#509](https://github.com/ndonkoHenri/pycon-us-flet/issues/509)) | Welcome's `status_bar()`: a toolbar-less `AppBar` under a `Container` whose theme holds only a white style, the frontmost region at the status bar's middle | `View.system_overlay_style` (and `AppBar`'s) |
 | `TextStyle.font_features` | Roboto, whose digits are tabular (D-26) | `font_features` |
 | Bottom-sheet detents, non-modal sheet | Fixed-height `BottomSheet`; a positioned `Card` for the booth card | Detents / persistent sheet |
 | Secure screen (`FLAG_SECURE`, iOS snapshot blur) for staff PII | Clear result panels when the app goes to the background (P3) | A `page` flag |
@@ -101,6 +100,8 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | `TextField` has no `text_input_action`, so the keyboard's action key is always Done (Android ✓, read "Done" by TalkBack) and a search field cannot show Search (U30, D-193, #221) | `SearchField` searches at once on `on_submit` whatever the key reads; `KeyboardType.WEB_SEARCH` changes only the layout | `TextField.text_input_action` (Flutter `TextInputAction`) and its parser in `DART/utils/form_field.dart`: [flet-dev/flet#6962](https://github.com/flet-dev/flet/issues/6962). Then `SearchField` passes `SEARCH` when it has an `on_submit` |
 | No Flet scrollable can be as tall as its content in a bounded space: a scrolling `Column` is at least as tall as the room it is given (the `_InnerConstraintsEnforcer` of #6450, `DART/controls/scrollable_control.dart`), and a `ListView` shrink-wraps only when its height is unbounded (`DART/controls/list_view.dart`), so a `BottomSheet(scrollable=True)` whose content scrolls takes the screen's height (U32, D-195, #238) | The Schedule's filter sheet takes the screen's height, its title on top and its button pinned at the bottom, the chips scrolling between them (D-195) | A `shrink_wrap` on `ListView` and a scrolling `Column` that does not enforce the parent's height as its minimum (or an option for it) |
 | Flet takes a system pop (the Android Back, and VoiceOver's escape on iOS, both `popRoute`) before Flutter's Navigator and pops a top View that can pop and has no `on_confirm_pop` by itself, so one Back closes a dialog, picker, sheet or menu open over the View **and** pops the View (U33, F46, D-208, #235, #259) | Every pushed View declares an `on_confirm_pop` that confirms (`AppScaffold`'s `let_pop`): with a handler, Flet leaves Back to `Navigator.maybePop()`, which closes the topmost route first (D-208) | Return `null` from `_handleSystemPopRoute()` while the Navigator's top route is not a page (`DART/controls/page.dart`); the analysis and a minimal repro in #259, and [flet-dev/flet#6964](https://github.com/flet-dev/flet/issues/6964) |
+| A route change leaves the dialogs, sheets, pickers and menus open over the old top View open over the new one; a dialog or sheet drawn again in the new View has lost its route, so a close after the change closes nothing; pickers only open; a popup menu has no close; no public list of a page's dialogs (U89, F109, D-291, #516) | `ui/modals.py` closes the open dialogs and sheets in `page._dialogs` before the Router sees the change and waits for their dismissal; SnackBars and Banners stay; pickers and menus stay for Back (D-291) | Pop the Navigator's pageless routes when a new route comes (`_routeChanged()` in `DART/controls/page.dart`), or keep each dialog's route on its control, give the pickers a close branch and `PopupMenuButton` a `close()`, and a public `page.dialogs`; the analysis, a repro and a draft in #516 |
+| Flet's `Semantics` has no `names_route`, so only an `AppBar` title can name a route (Android only), and a detail page whose level-1 heading is in the body has none; at the pin TalkBack said no route name for a titled bar either, on a push or a link (U108, F128, D-310, #538) | The page reads as Flutter builds it: focus on Back, then the bar's actions, then the heading, one Headings-navigation gesture away (ux.md §9) | `Semantics.names_route` passed as Flutter's `namesRoute` (`DART/controls/semantics.dart`, `FLET/controls/core/semantics.py`), and why a named route is not said in a Flet app; then each detail heading sets it |
 | Multi-weight families in `page.fonts` (one static file per family, no weights) (U20, D-98) | Declare the Roboto 400/500/700 family through `[tool.flet.flutter.pubspec]` (F18), verified in S5 (D-26) | `page.fonts` accepting a family with weighted files; schedule it only if S5 shows the pubspec route fails |
 | A cleanup returned by a sync `use_effect` setup is replaced by `None` at the component's next render, so it never runs, and an async setup's task is not cancelled on unmount without a `cleanup=` (U27, F39, #182) | Pass `cleanup=` instead of returning it; the status strip's no-op `stop_ticks` (D-175) | Keep the returned cleanup apart from the `cleanup=` argument (`FLET/components/hooks/use_effect.py`, `FLET/messaging/session.py`); [flet-dev/flet#6963](https://github.com/flet-dev/flet/issues/6963) |
 | An `async def` `use_effect` cleanup is cancelled before it starts on a dependency change (F2) | Sync cleanups only (D-70 rule 3) | In the setup branch, cancel only the previous setup task, so async cleanups run |
@@ -109,13 +110,18 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | `flet_app` docstring (`flet/pytest_plugin.py:132`) says the bound page is the tester session, but in device mode `flet_app.page` raises `RuntimeError` | Flows use `flet_app.tester` only ([`testing-and-quality.md`](testing-and-quality.md) §5.1) | Fix the docstring |
 | `NavigationBarDestination` has no identifier; and the `Semantics.identifier` docstring (`flet/controls/core/semantics.py:42-43`) says it forces its own node, which the Dart control does not do (#163) | Each destination's icon is an unlabelled `Semantics(identifier=...)` that Flutter merges into the destination's node (D-166); pin bumps re-check it ([`development.md`](development.md) §2.2) | An `identifier` on the destination (and the rail's); align the docstring with the Dart |
 | Flet's `Semantics` has no `link_url`, and Flutter's text spans carry none, so TalkBack calls every link a button: link rows (`Semantics(link=True)`) and Markdown links alike (U31, F41, D-197, #230) | Each link is its own named, operable node; rows say "Opens in browser" (D-182) | `Semantics.link_url` (Flutter's `SemanticsProperties.linkUrl`) for rows; for Markdown links, a URL on Flutter's text-span semantics (a Flutter change) |
-| Flet's `Semantics` always sets Flutter's `enabled` (`DART/controls/semantics.dart:23`), so in a `MergeSemantics` around a disabled control the merged node reads as enabled, and a bare identifier around a `TextField` is an empty node of its own (U34, F42, F50, D-214, #273) | `named()` gives its `Semantics` the control's `disabled`; identifiers on buttons and fields are merged; the fake clock field, whose picker a merge would swallow, keeps a bare identifier (D-214) | `enabled: control.disabled ? false : null`, so a `Semantics` claims an enabled state only when it is disabled |
+| Flet's `Semantics` always sets Flutter's `enabled` (`DART/controls/semantics.dart:23`), so in a `MergeSemantics` around a disabled control the merged node reads as enabled, and a bare identifier around a `TextField` is an empty node of its own (U34, F42, F50, D-214, #273) | `named()` gives its `Semantics` the control's `disabled`; identifiers on buttons and fields are merged; the fake clock field, whose picker a merge would swallow, keeps a bare identifier (D-214); a decoration leaves itself out (`Image(exclude_from_semantics=True)`, `Text(semantics_label="")`) rather than sit in a `Semantics(exclude_semantics=True)`, which is an empty, focusable node (F81, D-262) | `enabled: control.disabled ? false : null`, so a `Semantics` claims an enabled state only when it is disabled |
 | `RemoteTester`, the device tester of `flet test`, cannot drag (so a UI flow cannot scroll) and cannot press the keyboard's action key (so it cannot close the keyboard that `enter_text` opens): the host `Tester` has `drag` and `drag_from` and `flet_integration_test`'s `FlutterTester` implements both, but `RemoteWidgetTester._handleCommand` routes neither (`packages/flet_integration_test/lib/src/remote_widget_tester.dart:114-165`), `RemoteTester` has no method to send them, and no command reaches Flutter's `TestTextInput.receiveAction` (U35, F21, D-223, #288) | Flows tap rows near the top of a list and reach the rest through day tabs, search's scopes and search; the iOS flows run on an iPhone 17 Pro Max simulator, whose More root shows About this app; the Android AVD keeps its on-screen keyboard down; Developer's feed URL field keeps Apply in sight above the keyboard (D-223) | Route `drag` and `drag_from` in the device protocol; add `scroll_until_visible(finder, ...)` over Flutter's `WidgetTester.scrollUntilVisible`, so a flow names the row it wants rather than a pixel; add `receive_action(action)` over `TestTextInput.receiveAction` |
 | A `PopupMenuItem` with an `icon` and a text `content` lays them out as `Row([icon, SizedBox(width: 8), content])` with no `Flexible` (`DART/utils/popup_menu.dart:31-36`), inside a menu at most 280 dp wide, so at large text the label runs off the menu's edge instead of wrapping (U36, F47, D-233, #260, #308) | Every overflow item is `ui/menus.py`'s `menu_item()`: no `icon=`, a `ListTile` (the icon as `leading`, the label as the wrapping `title`) as the item's content (D-233) | `Flexible(child: itemContent)` in that `Row`; the analysis, a repro and a draft diff in #308 |
 | Flet's `Semantics` has no `accessibility_focus_block_type` (Flutter's `accessibilityFocusBlockType`, `semantics.dart:127` at the pin's Flutter), so a live region that holds words is a stop in TalkBack's linear navigation (U41, D-241, F61, #322) | The Schedule's landing note empties 5 s after it spoke (`SAID_S`, D-241) | Pass `accessibilityFocusBlockType` through `SemanticsControl` (`DART/controls/semantics.dart`) with a Python enum field |
 | A control with an `ft.ScrollKey` gets a new `GlobalKey` at each build (`DART/controls/control_widget.dart:34-38`), so Flutter mounts it and everything under it again whenever an ancestor rebuilds, with new semantics nodes: a row under a keyed box lost the screen reader's focus after Back from a pushed View (U42, F62, D-242, #303, #321) | `ui.scrolling.anchored()` puts every `ScrollKey` on an empty 0 dp anchor above its item, so only the anchor is mounted again (D-242) | Keep one `GlobalKey` per control for its `ControlWidget`'s lifetime (a `State` that owns it), and make a new one only when the scroll key's value changes |
 | Flet applies a button's `tooltip` around the whole button (`_tooltip()` in `DART/controls/base_controls.dart`), outside the button's own semantics node, where Flutter's `IconButton(tooltip:)` puts it inside: the tooltip is a node of its own and the button under it is unnamed, read "Button" by TalkBack; the same for `FloatingActionButton`, `Button` and `PopupMenuButton` (U37, F55, D-234, #274, #317) | Every button whose tooltip is said is merged with it: `merged()` (`ui/semantics.py`) or, with an identifier, `named()`; the Schedule's "Now" button, which a View takes bare, keeps its tooltip out of the semantics and says it in its label's `semantics_label`; `tests/test_tooltips.py` scans for a button left out (D-234) | In each button control, apply the tooltip inside a `MergeSemantics` of the button (as Flutter's buttons do) and skip it in `LayoutControl`; the analysis and a draft diff in #317 |
 | A controlled `TextField` has no guard against an echo: a keystroke's re-render that runs after the next keystroke's report sends the older text, and Flutter puts it in the field; nothing tells an echo apart from a change the program made (U43, F63, D-243, #319) | `use_field_query()` builds the field from what Flutter last reported, through one `Ref` kept for the screen's life, so typing sends nothing; only the initial text and a Clear are sent. Keys reported between a Clear's tap and Flutter's answer to the focus request that follows the Clear's render are dropped, and the empty text is sent again (D-243). Still open: a key typed in the one frame before Flutter applies the empty text | An edit count that Flutter sends with each report and Python returns with each `value`, so Flutter drops an older edit's echo (`DART/controls/textfield.dart`, `FLET/messaging/session.py`) |
+| Flet exposes neither Flutter's `LicenseRegistry` nor `showLicensePage` (nothing in `DART` or `FLET` at the pin), so an app cannot show the notices Flutter bundles from every Dart package, plugin and the engine (`NOTICES.Z`: 1,646 entries over 205 names in our iOS build); that registry has nothing of the Python side (CPython, the app's Python packages) either (U51, INFO-03, #371) | About this app's Licences page lists the app and its direct components, each opening its full text offline (#442) | `await page.show_license_page(application_name=..., application_version=..., application_legalese=..., licenses=[...])`, a case beside `get_device_info` in `DART/controls/page.dart` that calls `material_ui`'s `showLicensePage` with Flet's Navigator; the optional `licenses` are Python-side entries served by one `LicenseRegistry.addLicense` collector; the analysis, a repro and a draft diff in #371 |
+| `InteractiveViewer.zoom()` scales about the content's top-left corner, not the viewport's centre as a pinch does, and never re-clamps the translation, so a zoom-out after a pan can leave the viewport blank; `pan()` moves in content units, though its docstring says logical pixels (`DART/controls/interactive_viewer.dart:150-169`, `:370-422`; U56, F76, #472) | The zoom buttons pan back to the centre after each `zoom()`: `get_transform()`, then `pan()` by the difference in content units, which `pan()` clamps (#388; S7, #361, checks the frame in between) | Translate after the scale so the viewport centre's scene point stays put, through the clamping `_matrixTranslate()`, as Flutter's pinch and wheel do; fix `pan()`'s docstring. The analysis, a repro and a draft diff in #472 |
+| `ft.Image` with an SVG asset file ignores `exclude_from_semantics`: `buildImage()` calls `getSvgPictureFromFile()`, which takes no such parameter (`DART/utils/images.dart:197`, `DART/utils/images_io.dart:36-52`), so flutter_svg wraps the picture in `Semantics(image: true)`, whose flag merges into the enclosing node: a link row with a brand mark read as an `ImageView`, not a button (U63, F83, D-264, #475) | `ui/brands.py`'s `brand_icon()` sends the bundled SVG's bytes, whose branch passes `excludeFromSemantics` (D-264) | Pass `excludeFromSemantics` through `getSvgPictureFromFile()` (and its web stub); the analysis, a repro and a draft diff in #475 |
+| A Flet app cannot open a file it made in the app that handles its type: `UrlLauncher.launch_url` of a `file://` URL raises `FileUriExposedException` on Android (url_launcher sends `ACTION_VIEW` with the URI and no grant) and opens nothing on iOS, a `data:` URL opens nothing, and `Share.share_files` sends `ACTION_SEND`, which Google Calendar does not take, so no Flet call reaches Calendar's `.ics` import (U71, F91, D-272, #364, #487) | Android saves the file with `FilePicker.save_file` and says to open it from Files; iOS reaches its calendar sheet through a loopback server and the in-app browser (D-272) | An `open_file(ShareFile)` (on `Share`, which already writes bytes to a file): on Android `ACTION_VIEW` with `setDataAndType()` on a `FileProvider` URI (share_plus's `ShareFileProvider`, `${applicationId}.flutter.share_provider`, already in every app) and `FLAG_GRANT_READ_URI_PERMISSION`; on iOS `UIDocumentInteractionController`; the analysis in #487 |
+| `UrlLauncher.launch_url` never says whether anything opened: url_launcher's `launchUrl()` returns `false` when no app takes the link (url_launcher_ios's `.failure`), and Flet's `openWebBrowser()` awaits it and drops the result (`DART/utils/launch_url.dart:29-48`, `DART/services/url_launcher.dart:28-35`), so a `tel:` or `mailto:` tap on an iOS simulator or an iPad opens nothing and raises nothing (U79, D-182, D-281, #498) | Copy beside every phone and email row (`copy_contact()`, D-182); "Couldn't open the link" only when the launch raises | Return the `bool` from `openWebBrowser()` and from Python's `launch_url()`; the analysis in #498 |
 
 ---
 
@@ -224,6 +230,7 @@ flet-cli run from a source checkout already uses the local build template and ov
 | Ownership | The Flet team owns v1; U adds scheduling on top, with no fork or competing package (D-97, D-99). The old `ndonkoHenri/notifications` branch (`awesome_notifications`) is not a base. |
 | Effort | M for scheduling (Dart service, Python API, an Android library module and a Swift plugin class, tests). U7 belongs to v1. S6 is done. |
 | Gate | `capabilities.REMINDERS`. The dependency is added only once the pinned Flet contains the scheduling PR, in the dependency PR just before adoption, so a v1-only package never turns the capability on. |
+| Not pinned by the P2 exit | D-256: the rows with no interim (NOTIF-06, NOTIF-07, NOTIF-10, DEV-06 and NATIVE-06) move to `later`, and the open E3 issues (#445..#451, #459) move to P4 Showcase. They stay open and `blocked`, and P2 closes on the interim above. |
 
 **Python API added by the scheduling PR** (proposed; v1 members omitted):
 
@@ -287,7 +294,7 @@ class LocalNotifications(ft.Service):
 
 **Semantics.**
 - **Time.** A one-shot reminder needs only an instant: Dart parses the ISO string and schedules `tz.TZDateTime.from(instant, tz.UTC)`, with no device time-zone lookup. DST is resolved in Python, where `at` is built in the conference zone (D-43). Repeating schedules, which would need an IANA zone, are out of scope.
-- **Ids** are deterministic 32-bit ints. A session reminder uses the numeric session id (schedule 1–1147, open spaces 9025–9177), or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids (`reminder_id()`, architecture §14.1). Event reminders use 8000–8099. The test reminder (DEV-06) uses 8999, as Ionic did. A unit test checks a year's plan for collisions. Because `apply()` cancels every pending reminder, a re-plan can remove a pending test reminder; that is acceptable for a developer tool.
+- **Ids** are deterministic 32-bit ints. A session reminder uses the numeric session id (schedule 1–1147, open spaces 9025–9177), or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids (`reminder_id()`, architecture §14.1). Event reminders use 8000–8099 (8000–8049 written by hand, 8050–8099 derived from the keynotes, D-274). The test reminder (DEV-06) uses 8999, as Ionic did. A unit test checks a year's plan for collisions. Because `apply()` cancels every pending reminder, a re-plan can remove a pending test reminder; that is acceptable for a developer tool.
 - **Taps.** `on_notification_tap` (v1) and `get_launch_details()` (v1, for cold start) deliver `payload`. The app puts the deep-link path there (`/my-schedule/session/<id>`) and navigates as for a link (D-21). On iOS both need the notification delegate (Platform setup, F53).
 - **Exact when allowed** (D-221, amends D-59's inexact default). Android 14 gives an inexact alarm a window of 75 % of the time left and delivers it anywhere in it, at its end when nothing else wakes the device (S6: +90 s on 2 min, +180 s on 4 min, +80 s on 10 min, +370 s on 30 min). Outside forced Doze, exact alarms fired within seconds (+0.3 s to +5.4 s over three runs); in forced deep Doze an exact one came +59.3 s late (inexact: +90.1 s), so exact is sooner, not guaranteed on time. Android 14 denies exact alarms to new installs, so the app declares `SCHEDULE_EXACT_ALARM`, asks in context through `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` (exists), and falls back to inexact with honest copy.
 - **Limit.** iOS keeps 64 pending requests and, on the simulator, dropped the **soonest** six of 70 (the first added), so `plan()` returns at most the next 60, soonest first (D-222). Android kept all 70.
@@ -391,11 +398,11 @@ async def apply(plan: list[Reminder], *, exact: bool) -> None:
 | Interim (D-65) | Manual entry on the shared scan screen: a `TextField(on_submit=...)` taking the full `code:validator` payload, typed, pasted or sent by a USB/Bluetooth HID scanner, with focus kept. It **always** ships; the camera is added on top when E1 is bundled, and the companion app says "Camera scanning isn't available in this build". |
 | Upstream | A new extension. Proposed dist `flet-barcode-scanner` (free on PyPI), module `flet_barcode_scanner`, control `BarcodeScanner`. |
 | Dart package | `mobile_scanner` **7.4.2** (BSD-3; 2026-09-14; Dart `^3.7.0`, Flutter `>=3.29.0`; Android `minSdk 23`, CameraX and ML Kit; iOS pod 12.0, Apple Vision). |
-| Gate finding | `mobile_scanner` imports `package:flutter/material.dart` in `mobile_scanner.dart` and `mobile_scanner_preview.dart`. The default error and placeholder widgets use `Colors.black`, `Icons.error`, `Icon` and `Text`. The extension must pass its own `errorBuilder` and `placeholderBuilder` (built from `widgets.dart`), so no SDK-Material widget is ever built. The §3 gate test proves it. |
+| Gate finding | `mobile_scanner` imports `package:flutter/material.dart` in `mobile_scanner.dart` and `mobile_scanner_preview.dart`. The default error and placeholder widgets use `Colors.black`, `Icons.error`, `Icon` and `Text`. The extension passes its own `errorBuilder` and `placeholderBuilder` (built from `widgets.dart`), so no SDK-Material widget is ever built. S8 passed the §3 gate on Android and the iOS simulator: with those builders the plugin builds only `ValueListenableBuilder`, `LayoutBuilder`, `ClipRect`, `SizedBox`, `FittedBox`, `RotatedBox` and a `Texture` (`GestureDetector` only with `tapToFocus`, which E1 leaves off). |
 | Effort | M, plus S8 |
 | Gate | `capabilities.SCANNER` |
 
-**Python API** (proposed). It is declarative: torch and pause are properties, not imperative toggles, which fits components mode.
+**Python API** (settled by D-293; S8 ran it as `S8Scanner`). It is declarative: torch and pause are properties, not imperative toggles, which fits components mode.
 
 ```python
 from dataclasses import dataclass, field
@@ -418,6 +425,12 @@ class BarcodeDetectEvent(ft.Event["BarcodeScanner"]):
     format: Optional[BarcodeFormat] = None
 
 
+@dataclass
+class BarcodeErrorEvent(ft.Event["BarcodeScanner"]):
+    code: Optional[str] = None  # "permissionDenied", "unsupported", ...
+    message: Optional[str] = None
+
+
 @ft.control("BarcodeScanner")
 class BarcodeScanner(ft.LayoutControl):
     """A live camera preview that reports detected barcodes."""
@@ -426,18 +439,25 @@ class BarcodeScanner(ft.LayoutControl):
     paused: bool = False  # True stops analysis and releases the camera
     torch: bool = False
     on_detect: Optional[ft.EventHandler[BarcodeDetectEvent]] = None
-    on_error: Optional[ft.ControlEventHandler["BarcodeScanner"]] = None  # e.data is the message
+    on_error: Optional[ft.EventHandler[BarcodeErrorEvent]] = None  # code (MobileScannerErrorCode name), message
 
     async def analyze_image(self, path: str) -> list[str]:
-        """Decode the barcodes in an image file (lets device tests check decoding without pointing a camera at a badge)."""
+        """Decode the barcodes in an image file (lets device tests check decoding without pointing a camera at a badge).
+
+        mobile_scanner raises on the iOS simulator, so iOS checks run on a device.
+        """
         return await self._invoke_method("analyze_image", {"path": path})
 ```
 
-**Dart side.**
-- `MobileScannerController(formats:, detectionSpeed: DetectionSpeed.normal, autoStart: !paused)` is created in `initState`.
-- `didUpdateWidget` maps `paused` to `stop()`/`start()`, and calls `toggleTorch()` when `torch` differs from the controller's torch state.
-- `onDetect` calls `triggerEvent("detect", {"raw_value": ..., "format": ...})` for the first barcode in the capture.
-- `useAppLifecycleState` stays on, so the camera is released in the background.
+**Dart side** (D-293; S8's `docs/spikes/08-scanner/s8_scanner/` is a working sketch).
+- `MobileScannerController(formats:, detectionSpeed: DetectionSpeed.normal, autoStart: !paused, torchEnabled: torch)` is created in `initState` and passed to `MobileScanner`.
+- A controller passed in gets no lifecycle handling from the widget (`useAppLifecycleState` applies only to one it creates), so the state is a `WidgetsBindingObserver`: `stop()` on `inactive`, `start()` on `resumed` unless paused or without camera permission. S8: no camera client and no detection in the background, the first detection 2.1 s after the return.
+- `didUpdateWidget` maps `paused` to `stop()`/`start()` (stop releases the camera; S8 saw a disconnect per cycle over 50 cycles, with no PSS growth), and calls `toggleTorch()` when `torch` differs from the torch state and a torch exists.
+- `start()` and `stop()` are serialised: the wanted state is applied when the call in flight finishes, and a `MobileScannerException` goes to `on_error`. S8's unserialised sketch left `controllerInitializing` unhandled when a resume came during the first start.
+- A change of `MobileScannerState.error` triggers `error` with the code's `.name` and the message.
+- `onDetect` calls `triggerEvent("detect", {"raw_value": ..., "format": ...})` for each barcode in the capture; `DetectionSpeed.normal` repeats a held code about every 270 ms, so the app's per-code cooldown is what dedupes.
+- `placeholderBuilder` and `errorBuilder` return `SizedBox.expand(child: ColoredBox(...))`: a bare `ColoredBox` is zero wide in a `Column`.
+- Release builds silence `debugPrint` (F111): report through events, not logs.
 
 **App side** (`services/scanner.py`). The app owns cooldowns and feedback, not the extension:
 
@@ -472,15 +492,15 @@ The scan screen applies the 4 s per-code cooldown and pauses while a dialog or s
 | Platform | Entry | How (exists today) |
 |---|---|---|
 | both | Camera permission and usage string | `[tool.flet] permissions = ["camera"]` emits `NSCameraUsageDescription` and `android.permission.CAMERA` (`CLI/build_base.py:254`). Override the iOS string with staff-scanning wording in `[tool.flet.ios.info]`. |
-| both | Runtime prompt in context (D-61) | `ph = fph.PermissionHandler()`, then `await ph.request(fph.Permission.CAMERA)`. If the result is `PermissionStatus.PERMANENTLY_DENIED`, show "Camera access is off" with "Open settings" (`await ph.open_app_settings()`) and "Enter codes instead". |
+| both | Runtime prompt in context (D-61) | `ph = fph.PermissionHandler()`, then `await ph.request(fph.Permission.CAMERA)` before the preview mounts: `mobile_scanner` asks on its own at start otherwise. If the result is `PermissionStatus.PERMANENTLY_DENIED`, show "Camera access is off" with "Open settings" (`await ph.open_app_settings()`) and "Enter codes instead"; `on_error`'s `permissionDenied` cannot tell the two apart. After Settings, re-check on resume and set `paused=False`: nothing restarts the camera by itself (S8). |
 | both | Keep awake while scanning | `ft.Wakelock().enable()` / `disable()` (coroutines) |
-| Android | ML Kit model | Keep the bundled model (+3–10 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
+| Android | ML Kit model | Keep the bundled model (S8: +7.3 MB on the arm64 release APK, of which `libbarhopper_v3.so` 4.9 MB and the models 0.9 MB), so scanning works offline on first use. The unbundled variant (`[tool.flet.android.gradle_properties] "dev.steenbakker.mobile_scanner.useUnbundled" = "true"`, exists) downloads the model through Play Services, which is not wanted on conference Wi-Fi. |
 | iOS | Minimum OS | Pod 12.0, below the template's 15.0, so U12 is not needed. |
 
-**Spike S8** (before P3, upstream track). Build the smallest extension (one control, `on_detect`, torch) as release builds for Android and iOS. On the iPhone, test a printed QR in daylight and dim light, repeated detections, permission denied, background and resume. On an Android emulator, test a QR image in the virtual scene camera, repeated detections, permission denied, background and resume (no torch or lighting conditions; D-102). Test the companion app's fallback to manual entry too. The verdict decides whether E1 goes ahead and settles its API.
+**Spike S8: done** ([verdict](spikes/08-scanner.md), 2026-10-20). A throwaway extension with this API decoded the badge QR from an Android 14 emulator's virtual scene camera in a release APK on every cold start, turn, resume and after 50 pause/resume cycles, released the camera in the background, and passed the §3 gate there and on the iOS 26.5 simulator (prompt, `permissionDenied`, and `unsupported`, since the simulator has no camera). E1 goes ahead (D-293). The printed QR in daylight and dim light, the torch and release timings wait for the iPhone (#121).
 
 **Tests.**
-- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload; pause and resume 50 times with no camera leak (no CameraX errors in logcat, on the emulator); the torch toggles (on the iPhone; Android's torch waits for a borrowed phone, D-102); a denied permission fires `on_error` and nothing crashes.
+- **Extension:** the gate test (§3); `analyze_image` on bundled PNGs of mock badges returns the exact payload (Android and the iPhone; it raises on the iOS simulator); pause and resume 50 times with no camera leak (a camera disconnect per pause in `dumpsys media.camera`, no PSS growth, no unhandled exception, on the emulator); the torch toggles (on the iPhone; Android's torch waits for a borrowed phone, D-102); a denied permission fires `on_error` and nothing crashes.
 - **App:** the P3 exit criterion, a printed sheet of mock badges scanned on the iPhone (on Android, the badge images through an emulator's virtual scene camera), including two devices checking in the same attendee (PLAN §7).
 
 **Upgrade** (§2.4, plus):
@@ -492,7 +512,7 @@ The scan screen applies the 4 s per-code cooldown and pauses while a dialog or s
 | Field | Value |
 |---|---|
 | Serves | SESS-04 |
-| Interim | `.ics` through `await ft.Share().share_files([ft.ShareFile.from_bytes(ics, mime_type="text/calendar", name=f"{slug}.ics")])`, for one session or all of My schedule (SESS-05, D-62). It stays as "Share as file" after the upgrade. |
+| Interim | `.ics` from `core/ics.py` for one session or all of My schedule (SESS-05, D-62), handed to the calendar by D-272: on iOS a loopback server and `launch_url(..., mode=IN_APP_BROWSER_VIEW)`, whose calendar sheet adds the events with their alarm; on Android a file saved with `FilePicker.save_file`, opened from Files (Google Calendar's import drops the alarm), until U71 opens it in one tap. The share sheet reaches no calendar on either platform ([P2-04](spikes/10-ics-share.md)). |
 | Dart package | `add_2_calendar` **3.1.1** (MIT; 2026-06-15; Dart `^3.11.0`, Flutter `>=3.41.0`; iOS pod 11.0). It opens the OS calendar editor pre-filled, with no silent writes. |
 | Setup | • Android 11+: a `<queries>` intent for `INSERT` on `vnd.android.cursor.item/event`, which needs **U6**.<br>• iOS: `NSCalendarsUsageDescription`, `NSCalendarsWriteOnlyAccessUsageDescription` (iOS 17+) and `NSContactsUsageDescription` (the package README warns of a crash without it), set in `[tool.flet.ios.info]`. |
 | Effort / gate | S plus U6 / `capabilities.CALENDAR` |
@@ -507,9 +527,9 @@ class AddToCalendar(ft.Service):
         """Open the OS calendar editor; False if the user cancelled or no calendar app exists."""
 ```
 
-**Upgrade** (§2.4, plus): the pinned Flet must contain U6; add the `<queries>` intent (§5.9) and the iOS usage strings to `[tool.flet.ios.info]`. Session detail's "Add to calendar" calls `add_event`, and the `.ics` action stays as "Share as file".
+**Upgrade** (§2.4, plus): the pinned Flet must contain U6; add the `<queries>` intent (§5.9) and the iOS usage strings to `[tool.flet.ios.info]`. Session detail's "Add to calendar" calls `add_event`; My schedule's export keeps D-272's `.ics` route, which adds a whole agenda at once.
 
-**Tests:** the editor opens pre-filled on an Android emulator and an iOS simulator; a cancelled editor returns False; with no calendar app it returns False and the app offers "Share as file".
+**Tests:** the editor opens pre-filled on an Android emulator and an iOS simulator; a cancelled editor returns False; with no calendar app it returns False and the app falls back to D-272's `.ics` route.
 
 ### 4.4 E5: HTML rendering (cut by D-117 after S3; kept as a record)
 
@@ -684,28 +704,32 @@ class GroupedListView(ft.LayoutControl):
 
 ### 5.7 U3: absolute `InteractiveViewer` transform (later; S)
 
-- **Serves:** EXPO-05 (zoom to booth).
-- **Interim:** the booth is selected and highlighted and its card shown, without moving the camera.
-- **Today:** `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped (`FLET/controls/core/interactive_viewer.py:230`, `:246`). Only `reset(animation_duration)` animates (`:195`). `save_state`/`restore_state` store one matrix.
-- **Change:** set the `TransformationController` value directly, animating with a `Matrix4Tween` when a duration is given, as `reset` does.
+- **Serves:** EXPO-05 (zoom to booth) and D-18's remembered map zoom (MAP-01, MAP-04).
+- **Interim:** the booth is selected and highlighted and its card shown, without moving the camera. A remembered zoom can be put back with `reset()`, `zoom(s)` and `pan(t / s)` once the viewer is laid out; S7 (#361) decides whether a pane keeps it.
+- **Today** (at `15854a0ac`): `zoom(factor)` and `pan(dx, dy, dz)` are relative, instant and clamped (`FLET/controls/core/interactive_viewer.py:314`, `:330`; `DART/controls/interactive_viewer.dart:150-169`). `get_transform()` (`:360`) reads the transform but nothing sets one. Only `reset(animation_duration)` animates (`:279`; a `Matrix4Tween`, `DART/controls/interactive_viewer.dart:170-185`). `save_state`/`restore_state` store one matrix on the Dart side. `zoom()` scales about the content's top-left corner and `pan()` moves in content units (U56, F76).
+- **Change:** set the `TransformationController` value directly, clamped as gestures are, animating with a `Matrix4Tween` when a duration is given, as `reset` does. The analysis, a repro on both platforms, a draft diff and its widget tests are in [#368](https://github.com/ndonkoHenri/pycon-us-flet/issues/368).
 
 ```python
 # Proposed on ft.InteractiveViewer:
-#     async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue,
+#     async def set_transform(self, scale: ft.Number, offset: ft.OffsetValue = (0, 0),
 #                             animation_duration: Optional[ft.DurationValue] = None) -> None: ...
 #     async def zoom_to_rect(self, rect: ft.Rect, padding: ft.Number = 0,
 #                            animation_duration: Optional[ft.DurationValue] = None) -> None: ...
 ```
 
-`zoom_to_rect` fits a content-space rectangle in the viewport, clamped to `[min_scale, max_scale]`. **Upgrade:** the floor plan calls `zoom_to_rect(booth_rect, animation_duration=...)`, with `None` under reduced motion.
+`set_transform` is the inverse of `get_transform()` (the same matrix, so a round trip is exact): the content's scale and, with no `alignment` set (the default), its top-left corner at `offset` in the viewer, in logical pixels. `alignment` makes Flutter's `Transform` apply the matrix about that point (Flutter `interactive_viewer.dart:1061`, `:1076`); these offsets and `zoom_to_rect`'s centring ignore it, as the existing clamps and Flutter's gestures do. `zoom_to_rect` fits a rectangle of the content (in its laid-out coordinates) in the viewport less `padding`, centred at the scale it ends at. Both clamp the scale to `[min_scale, max_scale]` and the covering scale, and the translation to the boundary. **Upgrade:** the expo map calls `zoom_to_rect(booth_rect, animation_duration=prefs.motion_ms(...))`, which jumps under reduced motion (D-173), and a pane restores its remembered view with `set_transform()`.
 
-### 5.8 U9: `ft.use_route_search()` (later; XS)
+### 5.8 U9: `ft.use_route_search()` (later; XS; [#369](https://github.com/ndonkoHenri/pycon-us-flet/issues/369))
 
-- **Serves:** ROOM-03 (`?highlight=`), SPON-04 and EXPO-05 (`?booth=`).
+- **Serves:** NEW-02 (`?scope=`), ROOM-03 (`?highlight=`), ROOM-05 and MAP-05 (`?pin=`), SPON-04 and EXPO-05 (`?booth=`).
 - **Interim:** `use_query()` in `locations.py` (D-164) parses the query from `page.route` once, when its View mounts, and only for the top View (`is_top_view(page.route, ft.use_view_path())`; `use_route_location()` is the opener's location for the Views under a global modal).
-- **Today:** `LocationInfo.search` is populated without the leading `?` (`FLET/components/router.py:112-123`, `:725`) but not exposed by a hook.
-- **Change:** `def use_route_search() -> str`, next to `use_route_location()` (`router.py:357`), exported as `ft.use_route_search`.
-- **Upgrade:** `use_query()` becomes `dict(parse_qsl(ft.use_route_search()))`. Its callers do not change.
+- **Today:** the Router parses the query into `LocationInfo.search`, without the leading `?` (`FLET/components/router.py:111-123`, `:723-726`, `:808`). It hands the query to every View through its location context (`:887-898`); the Views under a global modal get their opener's (`:842-850`). No hook returns it: `use_route_location()` returns the pathname only (`:357-370`). `page.query` (`FLET/controls/query_string.py:72-83`) is no substitute, for three reasons: it parses `page.route`, which under a modal is the modal's location; it is not a hook; and it drops blank values.
+- **Change:** `def use_route_search() -> str`, next to `use_route_location()`. It returns the same location's `search` (`""` outside a Router) and is exported as `ft.use_route_search`. #369 holds the draft diff, a repro and the open questions.
+- **Upgrade:** `use_query()` takes the query from `ft.use_route_search()` instead of `page.route`. It keeps its two rules:
+  - only the top View reads it, because every View of a stack sees the same value;
+  - it reads it once, when the View mounts.
+
+  It also keeps blank values (`parse_qsl(..., keep_blank_values=True)`). Its callers do not change.
 
 ### 5.9 U6: Android `<queries>` (only with E4; S)
 
@@ -737,11 +761,12 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 ### 5.12 U18: Back inside a modal sub-chain (later; XS)
 
 - **Serves:** NEW-02 (search, D-19): Back from a result pushed over the global modal `/search` must return to the results.
-- **Today:** while a modal route is anywhere in the matched chain, the stock pop handler navigates to the modal's base location, even for a pop from a view pushed over the modal (`FLET/components/router.py`, modal branch of the `on_view_pop` handler; F6). An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead.
+- **Today:** while a modal route is anywhere in the matched chain, the stock pop handler navigates to the modal's base location, even for a pop from a view pushed over the modal (`FLET/components/router.py:682-687` at `15854a0ac`, whose `current_modal_pop_to_ref` is set for the whole chain at `:782-794`; F6). An app's own `page.on_view_pop`, set before the Router mounts, receives every pop instead (`:677-680`).
 - **Interim:** `main()` sets `page.on_view_pop` to navigate to `parent_of(e.route, memory.search_base)` (architecture §5.3).
-- **Change:** pop to the previous view entry's resolved pathname unless the popped view is the modal itself; only then go to the modal's base.
+- **Change:** pop to the previous view entry's resolved pathname within the modal's own sub-chain (split at the modal, as the Views are, `:835`) unless the popped view is the modal itself; only then go to the modal's base. Global and local modals alike.
+- **Issue:** [#370](https://github.com/ndonkoHenri/pycon-us-flet/issues/370), with the analysis, a repro run on the iOS 26.5 simulator, a draft diff and the open questions (the base's query on close).
 - **Test:** `/search` → `/search/session/42` → Back lands on `/search`; Back again lands on the base.
-- **Upgrade:** after the pin bump, delete the app's `on_view_pop` handler. `parent_of()` stays for the back arrow (D-10).
+- **Upgrade:** after the pin bump, delete the app's `on_view_pop` handler, but only if the stock handler then matches every Back test: it drops the opener's query on closing `/search` (our `search_base` keeps it), and a Router that never saw the opener (a deep link straight to `/search`) closes it to `/`, where `Start` goes on to `start_target()` (D-143). If either differs in a way users see, the app keeps its handler. `parent_of()` stays for the back arrow (D-10).
 
 ---
 
@@ -770,7 +795,7 @@ data = { mimeType = "vnd.android.cursor.item/event" }
 
 **GitHub:**
 - [flet-dev/flet#6948](https://github.com/flet-dev/flet/issues/6948): an open **issue**; no implementation PR found.
-- [flet-dev/flet#6953](https://github.com/flet-dev/flet/pull/6953): an open PR (branch `fix/deep-linking-fallback`, closes #6951) touching `build_base.py`, its tests and the changelog.
+- `flet-dev/flet#6953`: the deep-link config fallback (closes `flet-dev/flet#6951`), merged into `flet-1.1.0` on 2026-10-11 and in the pin (`68a4b326c`); D-269 relies on it.
 
 **Local SDK: exists** (beyond what PLAN's F-facts cover): `flet.utils.is_embedded`; `ft.Service`, `ft.LayoutControl`, `ft.control`, `ft.value`, `ft.Event` (fields `name`, `data`, `control`); `ft.PageMediaData` (six fields) and `page.on_media_change`; `ft.LocationInfo(pathname, search, hash)`; `flet_permission_handler.Permission.CAMERA`/`NOTIFICATION`/`SCHEDULE_EXACT_ALARM`; and the CLI keys `[tool.flet] permissions`, `dev_packages`, and `[tool.flet.android]` `permission`, `gradle_properties`, `proguard_rules`, `provider`.
 

@@ -23,11 +23,12 @@ from pycon_us.core.row_views import spoken_phrase
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.screens import my_schedule as screen
+from pycon_us.screens import my_schedule_extras as extras
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.state import Conference
 from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
-from pycon_us.ui.badges import REMOVED, UNDO
+from pycon_us.ui.favorite import REMOVED, UNDO
 from tests import sessions
 from tests.fakes import MemoryPrefs
 from tests.feeds import processed
@@ -490,7 +491,7 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
         for c in shown.controls
         if isinstance(c, ft.Semantics)
         and isinstance(c.content, ft.Text)
-        and c.content.value == screen.ALL_OVER
+        and c.content.value == extras.ALL_OVER
     ]
     assert (title.header, title.heading_level) == (True, 2)
     assert shown.shown() == []

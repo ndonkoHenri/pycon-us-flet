@@ -15,24 +15,26 @@ the way that kind opens.
   button beside it (``copy_contact()``): a simulator, an iPad or a phone without a mail
   account has nothing to hand off to, and without U6 the app cannot ask first.
 
-A failure says so in a SnackBar and is logged with the link's kind and the error's
-class only: a ``mailto:`` target holds an address, and the platform's error text
-repeats the target (D-72).
+Every copy goes through ``copy_text()``, which confirms it once and says when it fails.
+
+A failure says so in a SnackBar and is logged with the link's kind (for a copy, what
+was not copied) and the error's class only: a ``mailto:`` target holds an address, and
+the platform's error text repeats the target (D-72).
 
 A link in a feed text (a description, a bio) is what its author wrote, so
-``feed_link()`` first says which web address it stands for, if any (D-197): only
-``http``, ``https`` and ``mailto`` links open, a site-relative path joins the year's
-site, and a web address written without its scheme (2026's ``[pytest](pytest.org)``)
-gets ``https://``.
+``open_feed_link()`` first asks ``core/links.py``'s ``feed_link()`` which web address it
+stands for, if any (D-197, D-278): only ``http``, ``https`` and ``mailto`` links open, a
+site-relative path joins the year's site, and a web address written without its scheme
+(2026's ``[pytest](pytest.org)``) gets ``https://``.
 """
 
 import logging
-import re
 from enum import Enum
-from urllib.parse import unquote, urljoin, urlsplit
+from urllib.parse import unquote, urlsplit
 
 import flet as ft
 
+from pycon_us.core.links import feed_link
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
@@ -91,12 +93,6 @@ COULD_NOT_OPEN = "Couldn't open the link"
 
 _WEB_SCHEMES = ("http", "https")
 _APP_SCHEMES = (*_WEB_SCHEMES, "geo")
-
-FEED_LINK_SCHEMES = (*_WEB_SCHEMES, "mailto")
-"""The schemes a link in a feed text may have to open (D-197)."""
-
-_HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}", re.IGNORECASE)
-"""A host name with a dot and a top-level domain of letters: ``pytest.org``."""
 
 
 def link_kind(target: str, *, app: bool = False) -> LinkKind:
@@ -198,46 +194,6 @@ def external(identifier: str, button: ft.Control) -> ft.Control:
     )
 
 
-def feed_link(href: str | None, site_url: str) -> str | None:
-    """Return the address a link in a feed text opens, or None when it opens nothing.
-
-    Descriptions converted from the feed's HTML have absolute links already (D-114);
-    open-space descriptions are Markdown with their links as their authors wrote them
-    (D-140), so this decides what each form means (D-197):
-
-    - ``http``, ``https`` and ``mailto`` links are themselves; any other scheme
-      (``javascript:``, ``file:``, ``tel:``) opens nothing.
-    - A path from the site's root (``/2026/sponsors/``), or from a host without a
-      scheme (``//host/…``), joins the year's site URL, as it would on the site.
-    - A web address written without its scheme, its first segment a host name
-      (``pytest.org``, ``docs.pytest.org/en/stable/``), gets ``https://``, as a
-      browser's address bar would: joined to the site URL it would be a page of the
-      site that does not exist.
-    - Anything else (``#top``, ``../slides``, ``notes``) depends on the page the text
-      was written on, which the app does not know, so it opens nothing.
-
-    Args:
-        href: The link's destination, as ``Markdown``'s ``on_tap_link`` gives it.
-        site_url: The year's site, ending in ``/`` (``ConferenceInfo.site_url``).
-
-    Returns:
-        A ``http``, ``https`` or ``mailto`` URL, or None.
-    """
-    target = (href or "").strip()
-    if not target:
-        return None
-    try:
-        if target.startswith("/"):
-            return urljoin(site_url, target)
-        scheme = urlsplit(target).scheme.lower()
-    except ValueError:  # an address urlsplit cannot read, e.g. "http://[" or "//["
-        return None
-    if scheme:
-        return target if scheme in FEED_LINK_SCHEMES else None
-    host = re.split(r"[/?#]", target, maxsplit=1)[0]
-    return f"https://{target}" if _HOST.fullmatch(host) else None
-
-
 async def open_feed_link(svc: Services, href: str | None) -> None:
     """Open a link tapped in a feed text, by ``feed_link()`` and the link rule.
 
@@ -295,8 +251,7 @@ def feed_markdown(
 async def copy_contact(svc: Services, target: str) -> None:
     """Copy a ``tel:`` or ``mailto:`` link's number or address, and say so.
 
-    The confirmation is the app's SnackBar, except on Android 13 and later, whose own
-    overlay already confirms every copy; a failure is said on every platform.
+    ``copy_text()`` with the words for a phone number or an email address.
 
     Args:
         svc: The session's services, for the clipboard.
@@ -308,17 +263,36 @@ async def copy_contact(svc: Services, target: str) -> None:
     kind = link_kind(target)
     if kind not in COPIED:
         raise ValueError(f"only phone and email links copy: {target!r}")
+    await copy_text(svc, contact_of(target), COPIED[kind], COPY_FAILED[kind])
+
+
+async def copy_text(svc: Services, text: str, copied: str, failed: str) -> None:
+    """Put ``text`` on the clipboard, and say once whether it worked (D-263).
+
+    The one way the app copies: a contact (``copy_contact()``), and the info pages'
+    values, such as the Wi-Fi password. A copy is confirmed by the app's SnackBar,
+    except on Android 13 and later, whose own overlay already confirms every copy
+    (ux.md §4.7), so the user hears it once. A failure is said on every platform, since
+    nothing else would tell the user the clipboard holds something else. The log names
+    what was not copied and the error's class, never the value, which the error's text
+    repeats (D-72).
+
+    Args:
+        svc: The session's services, for the clipboard.
+        text: What to copy: a password, a number, an address.
+        copied: The confirmation, naming what was copied: "Password copied".
+        failed: What a failure says and logs, naming what was not copied, never the
+            value itself: "Couldn't copy the password".
+    """
     try:
-        await svc.clipboard.set(contact_of(target))
+        await svc.clipboard.set(text)
     except SERVICE_ERRORS as error:
-        # The kind and the class only: the error's text repeats the address (D-72).
-        logger.warning(
-            "Could not copy the %s link: %s", kind.value, type(error).__name__
-        )
-        _say(COPY_FAILED[kind])
+        # Our words and the class only: the error's text repeats the value (D-72).
+        logger.warning("%s: %s", failed, type(error).__name__)
+        _say(failed)
         return
     if not await _system_confirms_copies():
-        _say(COPIED[kind])
+        _say(copied)
 
 
 async def _system_confirms_copies() -> bool:

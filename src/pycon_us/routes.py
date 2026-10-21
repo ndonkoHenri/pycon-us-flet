@@ -3,9 +3,10 @@
 ``ROUTES`` follows decisions §M and architecture §5.2 in the shape S4 confirmed (D-141):
 each tab root, More page and ``/search`` ends with ``DRILL``, a recursive child that
 pushes one View per ``<kind>/<id>`` pair, so ``/schedule/session/42/speaker/17`` is
-three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on;
-an unknown location is ``NotFound``. Back itself is ``main.py``'s ``page.on_view_pop``
-with ``locations.parent_of()`` (D-19).
+three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on,
+to ``/welcome`` on a first start (D-287); an unknown location is ``NotFound``,
+through ``UNKNOWN``, the table's last route (D-270). Back itself is ``main.py``'s
+``page.on_view_pop`` with ``locations.parent_of()`` (D-19).
 """
 
 from collections.abc import Callable
@@ -13,10 +14,14 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.locations import DRILL_KINDS, is_top_view, start_target
+from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, start_target
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.help import Help
+from pycon_us.screens.jobs import Jobs
 from pycon_us.screens.keynotes import Keynotes
+from pycon_us.screens.licences import LicencePage, Licences
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
 from pycon_us.screens.more import More
@@ -24,20 +29,28 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.open_spaces import OpenSpaces
 from pycon_us.screens.plan import PlanViewer
+from pycon_us.screens.psf import AboutPsf
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
 from pycon_us.screens.search import Search
 from pycon_us.screens.session import SessionDetail
+from pycon_us.screens.settings import Settings
+from pycon_us.screens.social import Social
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
+from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
+from pycon_us.screens.welcome import Welcome
+from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import BOOT_COLOR
+from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 
 @ft.component
@@ -66,9 +79,10 @@ def Drill() -> ft.View:
 
 @ft.component
 def Start() -> ft.View:
-    """``/``: send the session to Now, or back to where the user was (D-143).
+    """``/``: send the session to Welcome, to Now, or back to where the user was.
 
-    A new session in the same process (F26, F29) finds ``ViewMemory.last_location``
+    Welcome until Get started (D-287), then where the user was (D-143). A new
+    session in the same process (F26, F29) finds ``ViewMemory.last_location``
     and rebuilds that stack; a deep link or ``--route`` start never comes here, except
     one straight to ``/search``: with no opener to remember, the Router builds the
     modal over ``/``, so ``Start`` mounts below it and must stay put, not replace the
@@ -78,42 +92,63 @@ def Start() -> ft.View:
     """
     page = ft.context.page
     memory = use_services().memory
+    prefs = use_prefs()
 
     @report_errors
     def go() -> None:
         if is_top_view(page.route, "/"):
-            page.navigate(start_target(memory.last_location, memory.search_base))
+            page.navigate(
+                start_target(
+                    memory.last_location,
+                    memory.search_base,
+                    onboarded=prefs.onboarded,
+                )
+            )
 
     ft.use_effect(go, [])
     return ft.View(route="/", bgcolor=BOOT_COLOR, padding=0)
 
 
-@ft.component
-def NotFound() -> ft.Control:
-    """An unknown location: what happened and a way to Now.
+NOT_FOUND = "This page isn't in the app"
+"""The unknown location's empty state (ux.md §4.6)."""
 
-    The Router wraps it in a View of its own (F6), so it brings its own safe area.
+NOT_FOUND_BODY = "The link may be old or mistyped."
+"""What the state says under its title: a likely why, without the path (D-270)."""
+
+
+@ft.component
+def NotFound() -> ft.View:
+    """An unknown location, such as a link to a page the app doesn't have (D-270).
+
+    Its own View, so it can do what the Router's ``not_found`` wrapper cannot
+    (``router.py:731-741``, F89): Back goes to Now, as on a root, rather than closing
+    the app after a cold link (``AppScaffold(unknown=True)``). Built like a detail's
+    not-found state (D-186), but never naming the location: a link's path means
+    nothing to the person who tapped it.
     """
     page = ft.context.page
+    margin = use_margin(LIST)  # its width class (D-305)
 
     @report_errors
     def go_to_now() -> None:
         page.navigate("/now")
 
-    return ft.SafeArea(
-        expand=True,
-        content=ft.ListView(
+    return AppScaffold(
+        title="Not found",
+        unknown=True,
+        body=ft.ListView(
             [
                 EmptyState(
-                    "Page not found",
+                    NOT_FOUND,
                     icon=ft.Icons.LINK_OFF_OUTLINED,
-                    body=f"Nothing in the app is at {page.route}.",
+                    body=NOT_FOUND_BODY,
                     action="Go to Now",
                     on_action=go_to_now,
                     identifier="app.not_found",
                 )
             ],
             expand=True,
+            padding=sides(margin),
         ),
     )
 
@@ -122,6 +157,14 @@ DRILL = ft.Route(
     path=f":kind({'|'.join(DRILL_KINDS)})/:ident", recursive=True, component=Drill
 )
 """The drill: the last child of every page, so details open on top of any of them."""
+
+UNKNOWN = ft.Route(path=":unknown*", component=NotFound)
+"""The last route: every location no other route matches, at any depth (D-270, F89).
+
+A splat matches zero or more segments, and the Router tries routes in order, so
+only a location the table doesn't have gets here: ``/nope``, ``/now/nope``,
+``/now/session/42/nope``. Its View is the whole stack.
+"""
 
 
 def pushed(
@@ -139,6 +182,7 @@ def pushed(
 
 ROUTES = [
     ft.Route(index=True, component=Start),
+    ft.Route(path=WELCOME[1:], component=Welcome),  # no drill: nothing opens over it
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),
     pushed("now", Now),
     pushed("schedule", Schedule),
@@ -164,9 +208,22 @@ ROUTES = [
         pushed("open-spaces", OpenSpaces),
         pushed("lightning-talks", LightningTalks),
         pushed("sprints", Sprints),
-        pushed("app", AboutApp),
+        pushed("sponsors", Sponsors),
+        pushed("settings", Settings),
+        pushed(
+            "app",
+            AboutApp,
+            # Under About this app, so Back returns there (D-207's pattern, D-296).
+            pushed("licences", Licences, pushed(":licence", LicencePage)),
+        ),
         pushed("developer", Developer),
+        pushed("wifi", Wifi),
+        pushed("jobs", Jobs),
+        pushed("help", Help),
+        pushed("psf", AboutPsf),
+        pushed("social", Social),
     ),
+    UNKNOWN,  # last: it matches anything (D-270)
 ]
 """Every route of P0 and P1's More pages; later phases add theirs (architecture §5.2).
 

@@ -20,10 +20,11 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_keynotes import keynote_of
 
 TRACK = "Keynote"
@@ -39,6 +40,7 @@ def Keynotes() -> ft.View:
     """The Keynotes page: a card per keynote and panel, in the order they happen."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
@@ -100,5 +102,5 @@ def Keynotes() -> ft.View:
         ]
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(items, expand=True, padding=ft.Padding.only(top=8, bottom=16)),
+        body=ft.ListView(items, expand=True, padding=sides(margin, top=8, bottom=16)),
     )

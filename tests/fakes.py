@@ -19,6 +19,7 @@ import pytest
 from flet.controls.context import _context_page
 
 from pycon_us.services import storage
+from pycon_us.theme import LIGHT_TOKENS, Tokens
 
 
 class MemoryPrefs(ft.SharedPreferences):
@@ -169,6 +170,7 @@ class MemoryShare(ft.Share):
     def init(self) -> None:
         """Start with nothing shared, a successful status, no error and no gate."""
         self.shared: list[list[ft.ShareFile]] = []
+        self.file_options: list[dict[str, Any]] = []  # each share_files' options
         self.texts: list[tuple[str, dict[str, Any]]] = []
         self.status = ft.ShareResultStatus.SUCCESS
         self.error: Exception | None = None
@@ -192,11 +194,39 @@ class MemoryShare(ft.Share):
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any
     ) -> ft.ShareResult:
-        """Record the files and answer ``status``, or raise ``error`` when given."""
+        """Record the files and their options and answer ``status``, or raise ``error``."""
         if self.error is not None:
             raise self.error
         self.shared.append(files)
+        self.file_options.append(options)
         return ft.ShareResult(status=self.status, raw="")
+
+
+class MemoryFilePicker(ft.FilePicker):
+    """FilePicker whose save dialog records the file instead of reaching the platform."""
+
+    def init(self) -> None:
+        """Start with nothing saved, a save that succeeds, no error and no gate."""
+        self.saved: list[tuple[str | None, bytes | None]] = []
+        # What the dialog answers: an opaque document path, or None for a cancel.
+        self.answer: str | None = "/document/12"
+        self.error: Exception | None = None
+        # When given, the dialog stays up until the test sets the event.
+        self.gate: asyncio.Event | None = None
+
+    async def save_file(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, **options: Any
+    ) -> str | None:
+        """Record the file's name and bytes, then answer ``answer`` once any gate is set.
+
+        ``error``, when given, is raised before anything is recorded.
+        """
+        if self.error is not None:
+            raise self.error
+        self.saved.append((options.get("file_name"), options.get("src_bytes")))
+        if self.gate is not None:
+            await self.gate.wait()
+        return self.answer
 
 
 class MemoryPaths(ft.StoragePaths):
@@ -235,6 +265,8 @@ class FakePage:
         self.on_platform_brightness_change: Any = None
         self.on_app_lifecycle_state_change: Any = None
         self.on_close: Any = None
+        self.on_media_change: Any = None
+        self.on_resize: Any = None
         self.dialogs: list[ft.DialogControl] = []
         self.platform = ft.PagePlatform.IOS
         self.device: ft.DeviceInfo | None = None
@@ -266,18 +298,73 @@ def bound(page: FakePage) -> Iterator[ft.Page]:
         _context_page.reset(token)
 
 
-def android_device(sdk: int) -> ft.AndroidDeviceInfo:
-    """An Android device on API level ``sdk``; every other field is blank."""
-    blank: dict[object, object] = {str: "", int: 0, bool: False}
-    fields = {
-        field.name: blank.get(field.type, [])
-        for field in dataclasses.fields(ft.AndroidDeviceInfo)
-        if field.name != "version"
-    }
+def android_device(
+    sdk: int,
+    *,
+    manufacturer: str = "",
+    model: str = "",
+    release: str = "",
+    physical: bool = False,
+) -> ft.AndroidDeviceInfo:
+    """An Android device on API level ``sdk``, with the make, model and release given.
+
+    Every other field is blank.
+    """
     version = ft.AndroidBuildVersion(
-        code_name="REL", incremental="", release="", sdk=sdk
+        code_name="REL", incremental="", release=release, sdk=sdk
     )
-    return ft.AndroidDeviceInfo(**fields, version=version)  # pyright: ignore[reportArgumentType]
+    return ft.AndroidDeviceInfo(
+        **blank_fields(
+            ft.AndroidDeviceInfo,
+            "version",
+            "manufacturer",
+            "model",
+            "is_physical_device",
+        ),
+        version=version,
+        manufacturer=manufacturer,
+        model=model,
+        is_physical_device=physical,
+    )  # pyright: ignore[reportArgumentType]
+
+
+def ios_device(
+    model_name: str, system_version: str, *, physical: bool = False
+) -> ft.IosDeviceInfo:
+    """An iOS device of ``model_name`` on ``system_version``; every other field is blank."""
+    utsname = ft.IosUtsname(
+        machine="", node_name="", release="", sys_name="", version=""
+    )
+    return ft.IosDeviceInfo(
+        **blank_fields(
+            ft.IosDeviceInfo,
+            "utsname",
+            "model_name",
+            "system_name",
+            "system_version",
+            "is_physical_device",
+        ),
+        utsname=utsname,
+        model_name=model_name,
+        system_name="iOS",
+        system_version=system_version,
+        is_physical_device=physical,
+    )  # pyright: ignore[reportArgumentType]
+
+
+def blank_fields(cls: type, *given: str) -> dict[str, object]:
+    """Return a blank value for each field of ``cls`` with a default-less str, int, bool or list.
+
+    The fields named in ``given``, and those with a default, are left out.
+    """
+    blank: dict[object, object] = {str: "", int: 0, bool: False}
+    return {
+        field.name: blank.get(field.type, [])
+        for field in dataclasses.fields(cls)
+        if field.name not in given
+        and field.default is dataclasses.MISSING
+        and field.default_factory is dataclasses.MISSING
+    }
 
 
 @dataclasses.dataclass
@@ -285,11 +372,15 @@ class Hooks:
     """The hooks the builders call, answered by the test instead of a renderer."""
 
     view_path: str = "/now"
+    tokens: Tokens = LIGHT_TOKENS
+    """What ``use_tokens()`` returns: the scheme on screen (D-150)."""
     effects: list[tuple[Callable[[], Any], list[Any] | None]] = dataclasses.field(
         default_factory=list
     )
     cleanups: list[Callable[[], Any] | None] = dataclasses.field(default_factory=list)
     state: Any = None
+    wide: bool = False
+    """The window class ``AppScaffold`` sees: True from 600 dp, the rail (D-277)."""
     renders: int = 0
     """How many re-renders a state setter asked for: only for a changed value."""
 
@@ -346,3 +437,8 @@ class QueuedWrite:
     def release(self) -> None:
         """Let the held worker take the lock and write."""
         self._go.set()
+
+
+def phone_margin(cap: float) -> float:
+    """``use_margin()``'s stand-in: a phone's, no side margin at any width class (D-305)."""
+    return 0.0

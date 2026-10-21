@@ -24,14 +24,14 @@ import flet as ft
 from pycon_us.core.search import SCOPES, SearchResults, search, search_index
 from pycon_us.core.speakers import directory
 from pycon_us.favorites import use_favorites
-from pycon_us.locations import use_query
+from pycon_us.locations import in_search, is_top_view, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.screens.search_results import SCREEN, ResultList, summary
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import selection_click, use_favorite_toggle
+from pycon_us.ui.favorite import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
@@ -105,6 +105,29 @@ def _start_scope(requested: str | None, memory: ViewMemory) -> str:
     return memory.search_scope
 
 
+def record_opening(location: str, memory: ViewMemory) -> None:
+    """Record a new opening of search in ``memory``, however it was opened (D-291).
+
+    Called once, as a Search View mounts. When the last location the user saw is not
+    under ``/search``, this is a new opening: Back from search goes there
+    (``search_base``), and a Search View that is the top one starts empty. The Search
+    button records the same before it navigates (``search_button()``); a deep link
+    to ``/search`` has no button, and without this its Back went to whichever page
+    last opened search. A View that mounts below a result keeps the remembered query
+    (D-193), and a cold start (nothing seen yet) keeps the defaults.
+
+    Args:
+        location: ``page.route``, the location the View mounts at.
+        memory: The process's ``ViewMemory``.
+    """
+    seen = memory.last_location
+    if not seen or in_search(seen):
+        return
+    memory.search_base = seen
+    if is_top_view(location, "/search"):
+        memory.search_query = ""
+
+
 @ft.component
 def Search() -> ft.View:
     """The global search: the field, the scope chips and the grouped results."""
@@ -117,6 +140,7 @@ def Search() -> ft.View:
     options = use_query()
     page = ft.context.page
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
+    ft.use_state(lambda: record_opening(page.route, memory))  # once, before the query
     # Decided once, as the View mounts; the handlers record every later change.
     scope, set_scope = ft.use_state(lambda: _start_scope(options.get("scope"), memory))
     field = use_field_query(memory.search_query)  # the field, every keystroke
@@ -258,6 +282,7 @@ def Search() -> ft.View:
                             autofocus=True,
                             on_submit=submitted,
                             keyboard_type=ft.KeyboardType.WEB_SEARCH,
+                            high_contrast=tokens.high_contrast,
                         ),
                         _scope_chips(scope, picked),
                         *([count] if count else []),

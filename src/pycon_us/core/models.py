@@ -188,17 +188,40 @@ class Sprint:
     search_text: str = ""
 
 
+@dataclass(frozen=True)
+class Role:
+    """One open role of a job listing, with the page to apply on (SPON-09, D-278).
+
+    A small value, so equal roles compare equal.
+
+    Attributes:
+        title: What the role is called: its anchor's text, or the text before its bare
+            URL, else the URL's last segment (``jobs.parse_roles``).
+        url: Its page: an absolute ``http`` or ``https`` URL.
+    """
+
+    title: str
+    url: str
+
+
 @dataclass(frozen=True, eq=False)
 class JobListing:
     """A sponsor's job listing (DATA-24).
 
     Attributes:
         id: The feed's id, as a string.
-        sponsor_name: The sponsor.
+        sponsor_name: The sponsor, by the exact name of a ``Sponsor`` (``jobs.listings_of``).
         sponsor_logo_url: The sponsor's logo.
         sponsor_level: The sponsorship level, e.g. ``Visionary``.
-        description: The feed's HTML list of roles; SPON-09 reads its links.
-        description_md: ``description`` as Markdown (D-130).
+        description: The feed's HTML: a list of roles, or a long-form description.
+        description_md: ``description`` as Markdown (D-130); empty for a placeholder such
+            as ``N/A`` (``jobs.is_placeholder``), so a listing without roles shows it
+            only when it says something.
+        roles: Its roles, in the order the listing gives them (``jobs.parse_roles``);
+            none for a long-form listing, whose Markdown shows instead (D-278).
+        search_text: What the job listings' search matches (SPON-07, D-46): the
+            sponsor's name, the role titles and the description's text, folded; never
+            markup or a link's destination.
     """
 
     id: str
@@ -207,6 +230,55 @@ class JobListing:
     sponsor_level: str
     description: str
     description_md: str = ""
+    roles: tuple[Role, ...] = ()
+    search_text: str = ""
+
+
+@dataclass(frozen=True, eq=False)
+class Sponsor:
+    """A sponsor of the conference (DATA-22, SPON-02).
+
+    Attributes:
+        name: The name, as the feed gives it.
+        slug: Ionic's slug of the name (``slugs.sponsor_slug``): sponsors have no id, so
+            their routes and cross-links use it.
+        level: The level it is listed under, e.g. ``Visionary``.
+        level_order: Its level's place, from the feed: 0 is the top level.
+        logo_url: The logo's URL; empty when there is none.
+        description: Plain text, not HTML (SPON-03), its line breaks kept as line feeds.
+        booth: Its Expo Hall booth, e.g. ``613``; None when it has none.
+        job_fair_table: Its Job Fair table, e.g. ``T2``; None when it has none.
+        mobile_banner: Whether it may appear in Now's sponsor spotlight (SHELL-08).
+        external_url: Its website; None when the feed gives none, as the live feed
+            never has so far.
+    """
+
+    name: str
+    slug: str
+    level: str
+    level_order: int
+    logo_url: str
+    description: str
+    booth: str | None
+    job_fair_table: str | None
+    mobile_banner: bool
+    external_url: str | None = None
+
+
+@dataclass(frozen=True, eq=False)
+class SponsorLevel:
+    """One sponsorship level and its sponsors (DATA-22).
+
+    Attributes:
+        name: The level, e.g. ``Visionary``: the feed's key.
+        order: Its place among the levels: its first sponsor's ``level_order``, as Ionic
+            sorted them.
+        sponsors: Its sponsors, in feed order; never empty.
+    """
+
+    name: str
+    order: int
+    sponsors: tuple[Sponsor, ...]
 
 
 @dataclass(frozen=True, eq=False)
@@ -230,6 +302,8 @@ class ConferenceData:
         content: The feed's ``conference.content`` HTML blocks by key, e.g. ``about`` or
             ``venues-hours`` (MAP-09 reads its sections).
         content_md: ``content`` as Markdown, by the same keys (D-130).
+        sponsor_levels: The sponsorship levels by ``order``, ties in feed order, each
+            with its sponsors (DATA-22): sorted once here, not by each screen.
     """
 
     sessions: Mapping[str, Session]
@@ -243,3 +317,4 @@ class ConferenceData:
     skipped: tuple[str, ...]
     content: Mapping[str, str]
     content_md: Mapping[str, str] = field(default_factory=dict)
+    sponsor_levels: tuple[SponsorLevel, ...] = ()

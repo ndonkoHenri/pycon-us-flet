@@ -16,6 +16,8 @@ import flet as ft
 
 from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import use_prefs
+from pycon_us.theme import use_tokens
+from pycon_us.theme_hc import hc_border
 from pycon_us.ui.links import OPENS_IN, LinkKind, external
 
 ICON_SIZE = 48
@@ -188,21 +190,27 @@ def SkeletonList(label: str = "Loading schedule") -> ft.Control:
     them; under reduced motion (``prefs.motion_ms()``, D-173) the rows stay still. The
     shimmer is not ambient motion (D-34): like a progress indicator, it shows work
     running and goes when the data arrives. Screen readers hear one node, ``label``.
+    In high contrast, where that fill is the surface, each placeholder is an unfilled
+    1 dp ``outline`` shape instead, and the shimmer paints those lines (D-306).
 
     Args:
         label: What is loading, read by screen readers.
     """
     prefs = use_prefs()
+    hc = use_tokens().high_contrast
     period = prefs.motion_ms(SHIMMER_MS)
     rows: ft.Control = ft.Column(
-        [_placeholder_row() for _ in range(SKELETON_ROWS)], spacing=0
+        [_placeholder_row(hc) for _ in range(SKELETON_ROWS)], spacing=0
     )
     if period:
+        # The shimmer paints what the rows paint in its own colours: in HC, the lines.
+        base, highlight = (
+            (ft.Colors.OUTLINE, ft.Colors.SURFACE)
+            if hc
+            else (ft.Colors.SURFACE_CONTAINER_HIGHEST, ft.Colors.SURFACE_CONTAINER_LOW)
+        )
         rows = ft.Shimmer(
-            rows,
-            base_color=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-            highlight_color=ft.Colors.SURFACE_CONTAINER_LOW,
-            period=period,
+            rows, base_color=base, highlight_color=highlight, period=period
         )
     return ft.Semantics(
         label=label,
@@ -212,18 +220,21 @@ def SkeletonList(label: str = "Loading schedule") -> ft.Control:
     )
 
 
-def _placeholder_row() -> ft.Control:
-    """One row in a session row's shape: a time on the left, three lines beside it."""
+def _placeholder_row(hc: bool) -> ft.Control:
+    """One row in a session row's shape: a time on the left, three lines beside it.
+
+    ``hc``: high contrast, whose placeholders are outlined (``hc_border()``).
+    """
     return ft.Container(
         ft.Row(
             [
-                _block(40, 16),  # the time
+                _block(40, 16, hc),  # the time
                 ft.Column(
                     [
-                        _block(56, 16),  # a track badge
-                        _line(16, 1, 0),  # the title, on two lines
-                        _line(16, 3, 2),
-                        _line(12, 2, 3),  # time and room
+                        _block(56, 16, hc),  # a track badge
+                        _line(16, 1, 0, hc),  # the title, on two lines
+                        _line(16, 3, 2, hc),
+                        _line(12, 2, 3, hc),  # time and room
                     ],
                     spacing=8,
                     expand=True,
@@ -236,23 +247,33 @@ def _placeholder_row() -> ft.Control:
     )
 
 
-def _block(width: int, height: int) -> ft.Container:
-    """A placeholder of a fixed size, rounded like a badge."""
+def _block(width: int, height: int, hc: bool) -> ft.Container:
+    """A placeholder of a fixed size, rounded like a badge; outlined in HC."""
     return ft.Container(
         width=width,
         height=height,
         border_radius=8,
-        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+        bgcolor=_fill(hc),
+        border=hc_border(hc),
     )
 
 
-def _line(height: int, filled: int, empty: int) -> ft.Row:
-    """A placeholder line over ``filled`` parts of the width, then ``empty`` parts."""
+def _fill(hc: bool) -> ft.ColorValue | None:
+    """A placeholder's fill: none in HC, where the shimmer would paint it all in ink."""
+    return None if hc else ft.Colors.SURFACE_CONTAINER_HIGHEST
+
+
+def _line(height: int, filled: int, empty: int, hc: bool) -> ft.Row:
+    """A placeholder line over ``filled`` parts of the width, then ``empty`` parts.
+
+    Outlined in HC, as ``_block()`` is.
+    """
     bar = ft.Container(
         height=height,
         expand=filled,
         border_radius=4,
-        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+        bgcolor=_fill(hc),
+        border=hc_border(hc),
     )
     gap = [ft.Container(expand=empty)] if empty else []
     return ft.Row([bar, *gap], spacing=0)

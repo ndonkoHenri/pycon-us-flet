@@ -1,4 +1,4 @@
-"""The shell starts on Now, every tab shows its root, and Back pops one step (P0-27).
+"""The shell starts on Welcome, then Now; every tab shows its root; Back pops one step.
 
 The shell smoke flow of testing-and-quality.md §5.4 (SHELL-03, SHELL-05, NEW-03; D-13,
 D-14, D-17, D-141, D-144). It asserts no offline state: the feed URL can be set only
@@ -20,6 +20,7 @@ from tests.ui.helpers import (
     press_system_back,
     remote,
     screenshot,
+    start_app,
     tap_back_arrow,
     tap_first_text,
     tap_id,
@@ -56,8 +57,13 @@ async def test_shell_starts(flet_app: ftt.FletTestApp) -> None:
     """The app starts on Now, each tab shows its root, and Back pops one step."""
     t = remote(flet_app)
 
-    # A cold start lands on Now with the bottom bar and its five tabs (D-13, D-14).
-    await wait_for_id(t, "now.title", timeout=START_TIMEOUT)
+    # A fresh install opens Welcome, without the bar (D-287); Get started goes on.
+    await wait_for_id(t, "welcome.start", timeout=START_TIMEOUT)
+    assert (await t.find_by_semantics_identifier("app.nav.now")).count == 0
+    await screenshot("00-welcome")
+    await start_app(t)
+
+    # Get started lands on Now with the bottom bar and its five tabs (D-13, D-14).
     for nav, _ in TABS:
         assert (await t.find_by_semantics_identifier(nav)).count == 1, nav
     await screenshot("01-now")

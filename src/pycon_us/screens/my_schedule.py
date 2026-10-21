@@ -8,6 +8,8 @@ words (D-33), while the clash can still change a plan. What has ended folds away
 into a tile under today's header (``agenda.fold_ended()``), re-folded every minute
 while the screen shows (D-40). A star tap removes the session at once, with Undo (ux.md
 §4.4). The Schedule's filters never apply (D-20): a saved open space always shows.
+With something saved, the app bar's overflow exports it all to the calendar, and the
+list is headed by a notice once all of it has ended (``screens.my_schedule_extras``).
 
 The list memoises its whole path (D-153): day sections given values that stay equal
 while nothing in the day changes, rows keyed by session id given views built once per
@@ -28,11 +30,12 @@ from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading, time_label, today
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.my_schedule_extras import CONFERENCE_OVER, ScheduleMenu, all_over
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import ToggleFavorite, use_favorite_toggle
+from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
@@ -40,6 +43,7 @@ from pycon_us.ui.session_rows import SessionRow, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.time_gutter import TimeSlot
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "my_schedule"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -60,15 +64,12 @@ UNAVAILABLE_BODY = (
     "Close and reopen the app to see them."
 )
 
-ALL_OVER = "All your saved sessions are over"
-SEE_TODAY = "See what's on today"
-CONFERENCE_OVER = "{name} is over. Your saved sessions stay here."
-
 
 @ft.component
 def MySchedule() -> ft.View:
     """The My schedule root: the status strip, then the agenda or the state it is in."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     svc = use_services()
     conference = use_conference()
@@ -108,6 +109,7 @@ def MySchedule() -> ft.View:
         page.navigate("/now")
 
     content: list[ft.Control]
+    actions: list[ft.Control] = []
     if not favorites.loaded:  # the read failed: not the same as nothing saved (D-172)
         content = [
             EmptyState(
@@ -160,12 +162,15 @@ def MySchedule() -> ft.View:
         expand = expand_style(prefs)
         now = clock.now()
         folded = fold_ended(agenda, now, info.zone)
+        # Only with something to export, ended sessions included (D-289); Export to
+        # calendar is the overflow's one item until Reminder settings (P2-89).
+        actions = [ScheduleMenu(agenda.sessions)]
         content = []
         if not folded.ahead:
             if today(now, info.zone) <= data.days[-1].date:  # Now has a day to show
-                content.append(_all_over(see_today))
+                content.append(all_over(see_today))
             else:
-                content.append(_all_over(body=CONFERENCE_OVER.format(name=info.name)))
+                content.append(all_over(body=CONFERENCE_OVER.format(name=info.name)))
         if folded.earlier_days:
             inside: list[ft.Control] = []
             for earlier in folded.earlier_days:
@@ -179,6 +184,7 @@ def MySchedule() -> ft.View:
                     on_change=set_earlier_days_open,
                     style=expand,
                     identifier=f"{SCREEN}.earlier_days",
+                    high_contrast=tokens.high_contrast,
                 )
             )
         ended = folded.earlier_today
@@ -199,6 +205,7 @@ def MySchedule() -> ft.View:
                     on_change=set_open,
                     style=expand,
                     identifier=f"{SCREEN}.earlier_today",
+                    high_contrast=tokens.high_contrast,
                 ),
             ]
             if ahead and ahead[0].day == ended.day:
@@ -210,69 +217,14 @@ def MySchedule() -> ft.View:
             ]
     return AppScaffold(
         title="My schedule",
+        actions=actions,
         body=ft.ListView(
             [StatusStrip(), *content],
             expand=True,
             ref=list_ref,
-            padding=ft.Padding.only(bottom=16),
+            padding=sides(margin, bottom=16),
         ),
         on_retap=scroll_to_top,
-    )
-
-
-def _all_over(
-    on_see_today: Callable[[], None] | None = None, *, body: str | None = None
-) -> ft.Control:
-    """Return the notice that heads the list when every saved session has ended.
-
-    Compact and start-aligned, its text on the fold tile's text column, rather than
-    the full-screen empty state: the "Earlier days" tile under it is still content and
-    should not be pushed to the middle of the screen (ux.md §5.6).
-
-    Args:
-        on_see_today: What "See what's on today" does, while today is a conference
-            day; None after the conference, when Now has nothing on today.
-        body: A second line, after the conference.
-    """
-    texts: list[ft.Control] = [
-        ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
-            header=True,
-            heading_level=2,  # a section under the page's title, as the day headings (D-211)
-            container=True,
-            content=ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL),
-        )
-    ]
-    if body is not None:
-        texts.append(
-            ft.Text(
-                body,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            )
-        )
-    column: list[ft.Control] = [
-        ft.Semantics(
-            identifier=f"{SCREEN}.all_over",
-            container=True,
-            live_region=True,
-            content=ft.Column(texts, spacing=4),
-        )
-    ]
-    if on_see_today is not None:
-        column.append(ft.FilledTonalButton(SEE_TODAY, on_click=on_see_today))
-    return ft.Container(
-        ft.Row(
-            [
-                ft.Icon(
-                    ft.Icons.EVENT_AVAILABLE_OUTLINED,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                ),
-                ft.Column(column, spacing=12, expand=True),
-            ],
-            spacing=16,  # the text on the fold tile's text column, 56 dp in
-            vertical_alignment=ft.CrossAxisAlignment.START,
-        ),
-        padding=ft.Padding.only(left=16, top=16, right=16, bottom=8),
     )
 
 
@@ -368,13 +320,15 @@ def _fold(
     on_change: Callable[[bool], None],
     style: ft.AnimationStyle,
     identifier: str,
+    high_contrast: bool,
 ) -> ft.Control:
     """Return a ``FoldTile`` that folds what has ended away, collapsed until tapped.
 
     ``title`` is "Earlier days (6 sessions)". ``identifier`` goes around the tile, as
     session detail's other rooms' does: on the title, it split the title from the
-    tile's button, which Android then read as "Collapsed" alone (D-214). The rest is
-    ``FoldTile``'s.
+    tile's button, which Android then read as "Collapsed" alone (D-214). In high
+    contrast, where the open band's fill is the surface, lines above and below it
+    draw the band (D-306). The rest is ``FoldTile``'s.
     """
     fold = FoldTile(
         # Quieter than the day header above it: a fold of what is over (ux.md §5.6).
@@ -391,6 +345,7 @@ def _fold(
         # Open, a tonal fill sets what has ended apart from what is still to come
         # (today's ended 9:30 workshop sits above the 9:00 tutorial that is still on).
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+        lines=high_contrast,
     )
     # Not merged, which would take in the rows it holds: an empty node of its own,
     # the price of an identifier on a fold (F50).

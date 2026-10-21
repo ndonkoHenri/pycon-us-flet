@@ -31,11 +31,12 @@ from pycon_us.screens.schedule_now import NowLine, NowMark
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.time_gutter import slot_layout
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "schedule"
 """The screen's name in its rows' semantics identifiers (decisions §M)."""
@@ -189,9 +190,14 @@ def _DayList(
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
 ) -> ft.Control:
-    """The body of ``DayList``; it runs only when the props change (F34)."""
+    """The body of ``DayList``; it runs only when the props change (F34).
+
+    It also follows the screen's side margin (``use_margin()``, D-305), which changes
+    only with the window.
+    """
     page = ft.context.page
     zone = use_services().year.conference.zone
+    margin = use_margin(LIST)
 
     @report_errors
     def see_sprints() -> None:
@@ -248,7 +254,7 @@ def _DayList(
         expand=True,
         # Today's list builds every slot, so each ScrollKey is registered (D-154).
         cache_extent=FULL_LIST_EXTENT if full else None,
-        padding=ft.Padding.only(bottom=FAB_CLEARANCE if clearance else 8),
+        padding=sides(margin, bottom=FAB_CLEARANCE if clearance else 8),
         scroll_interval=SCROLL_EVENT_MS,
         on_scroll=scrolled,
     )
@@ -314,7 +320,7 @@ def _SlotItem(
     for session in slot.sessions:
         view = views[session.id]
         if is_notice(session, info):
-            rows.append(NoticeRow(view, screen=SCREEN))
+            rows.append(NoticeRow(view, tokens, screen=SCREEN))
         else:
             rows.append(
                 SessionRow(
@@ -332,7 +338,7 @@ def _SlotItem(
 
 
 def now_button(
-    *, on_today: bool, on_click: Callable[[], Awaitable[None]]
+    *, on_today: bool, on_click: Callable[[], Awaitable[None]], margin: float = 0
 ) -> ft.FloatingActionButton:
     """Return the "Now" button (SCHED-15): "Today" while another day shows.
 
@@ -344,6 +350,12 @@ def now_button(
     ``semantics_label``, as a link's "Opens in browser" is (ux.md §4.7): a
     ``Semantics``' ``tooltip`` would show a second tooltip too, and its ``hint_text``
     never reaches Flutter at the pin (#187).
+
+    Args:
+        on_today: Whether today's list shows: "Now", else "Today".
+        on_click: The jump.
+        margin: The screen's side margin (D-305): the button keeps to the list's
+            right edge, its transparent margin passing taps through to the list.
     """
     label = "Now" if on_today else "Today"
     return ft.FloatingActionButton(
@@ -354,4 +366,5 @@ def now_button(
         icon=ft.Icons.SCHEDULE,
         tooltip=ft.Tooltip(JUMP_TOOLTIP, exclude_from_semantics=True),
         on_click=on_click,
+        margin=ft.Margin.only(right=margin),
     )

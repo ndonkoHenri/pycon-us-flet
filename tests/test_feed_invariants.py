@@ -17,7 +17,7 @@ import pytest
 from pycon_us.config import load_year
 from tests.feeds import YEARS, processed, recorded_feed
 from tools import feed_invariants
-from tools.feed_invariants import outline
+from tools.feed_outline import outline
 
 pytestmark = [
     pytest.mark.usefixtures("machine_tz"),
@@ -91,6 +91,22 @@ def test_speakers_and_sessions_link_both_ways(year: int) -> None:
 def test_rooms_and_sessions_agree(year: int) -> None:
     """Rooms are one per slug, naturally sorted, each listing who names it."""
     assert feed_invariants.rooms_and_sessions_agree(recorded_feed(year)) == []
+
+
+def test_sponsor_slugs_are_unique(year: int) -> None:
+    """Each sponsor's slug is its name's, and no two sponsors share one (SPON-02)."""
+    assert feed_invariants.sponsor_slugs_are_unique(recorded_feed(year)) == []
+
+
+def test_sponsor_levels_are_sorted_and_not_empty(year: int) -> None:
+    """The sponsor levels run by their order, each once, none empty (DATA-22)."""
+    feed = recorded_feed(year)
+    assert feed_invariants.sponsor_levels_are_sorted_and_not_empty(feed) == []
+
+
+def test_job_listings_name_a_sponsor(year: int) -> None:
+    """Every job listing names a sponsor exactly; 2025 has no listing (SPON-05)."""
+    assert feed_invariants.job_listings_name_a_sponsor(recorded_feed(year)) == []
 
 
 def test_every_invariant_has_a_test_here(year: int) -> None:

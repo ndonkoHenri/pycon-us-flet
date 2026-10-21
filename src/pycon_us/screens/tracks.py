@@ -35,10 +35,12 @@ from pycon_us.core.timeline import keynote_sessions, track_sessions
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
-from pycon_us.theme import BadgeColors, Tokens, use_tokens
+from pycon_us.theme import Tokens, use_tokens
+from pycon_us.theme_badges import BadgeColors
 from pycon_us.ui.badges import NEW_TRACK, TrackBadge
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import HUB_PAGES, Track
 
 SCREEN = "tracks"
@@ -166,6 +168,7 @@ def sprints_marks(info: ConferenceInfo, projects: int) -> tuple[str, str]:
 def Tracks() -> ft.View:
     """The Tracks hub: the year's tracks by group, each pushing its page."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     tokens = use_tokens()
     info = svc.year.conference
@@ -215,9 +218,10 @@ def Tracks() -> ft.View:
             # The sprints end the Community section, which may have no track this year.
             if groups[-1][0] != GROUP_TITLES["community"]:
                 items.append(_heading(GROUP_TITLES["community"]))
-            items.append(sprints_row(info, len(data.sprints)))
+            items.append(sprints_row(info, len(data.sprints), tokens))
     return AppScaffold(
-        title="Tracks & session types", body=ft.ListView(items, expand=True)
+        title="Tracks & session types",
+        body=ft.ListView(items, expand=True, padding=sides(margin)),
     )
 
 
@@ -253,25 +257,27 @@ def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
     )
 
 
-def sprints_row(info: ConferenceInfo, projects: int) -> ft.Control:
+def sprints_row(info: ConferenceInfo, projects: int, tokens: Tokens) -> ft.Control:
     """Return the hub's Sprints row, pushing the Sprints page (EVT-05).
 
     Built as a track's row, with the sprints' icon (ux.md §3.7) in a neutral circle,
     since they have no badge colours to be the key to; its last line says when they
-    are and how many projects the feed lists.
+    are and how many projects the feed lists. In high contrast the circle is outlined
+    in ink, as the unknown track's is (D-306).
 
     Args:
         info: The year's facts: the sprint days.
         projects: How many sprint projects the feed lists.
+        tokens: The scheme's tokens: ``high_contrast`` outlines the circle.
     """
     shown, spoken = sprints_marks(info, projects)
+    neutral = BadgeColors(
+        text=ft.Colors.ON_SURFACE_VARIANT, fill=ft.Colors.SURFACE_CONTAINER_HIGHEST
+    )
     return hub_tile(
         circle=_circle(
             ft.Icons.ROCKET_LAUNCH_OUTLINED,
-            BadgeColors(
-                text=ft.Colors.ON_SURFACE_VARIANT,
-                fill=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-            ),
+            tokens.unknown_track if tokens.high_contrast else neutral,
         ),
         title="Sprints",
         legend=SPRINTS_LEGEND,
@@ -371,7 +377,8 @@ def track_circle(track: Track, colors: BadgeColors) -> ft.Control:
     """Return a track's icon in a 40 dp circle of its badge's colours (ux.md §5.10).
 
     The fill and the icon take the badge's fill and label colours, a pair that reads
-    at 6.4:1 or better (D-174), so the circle is the key to the badges' colours.
+    at 6.4:1 or better (D-174), so the circle is the key to the badges' colours. An
+    outlined badge (every one in high contrast) gives an outlined circle (D-306).
 
     Args:
         track: The track, whose ``icon`` names an ``ft.Icons`` member.
@@ -381,12 +388,17 @@ def track_circle(track: Track, colors: BadgeColors) -> ft.Control:
 
 
 def _circle(icon: ft.IconData, colors: BadgeColors) -> ft.Control:
-    """An icon in a 40 dp circle: the fill and the icon in the given colours."""
+    """An icon in a 40 dp circle: the fill and the icon in the given colours.
+
+    Without a fill, the circle is a ring in the icon's colour, the badge's border.
+    """
+    ring = None if colors.fill else ft.Border.all(colors.border_width, colors.text)
     return ft.Container(
         ft.Icon(icon, color=colors.text, size=24),
         width=ICON_CIRCLE,
         height=ICON_CIRCLE,
         bgcolor=colors.fill,
+        border=ring,
         shape=ft.BoxShape.CIRCLE,
         alignment=ft.Alignment.CENTER,
     )

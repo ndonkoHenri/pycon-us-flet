@@ -16,10 +16,11 @@ from pycon_us.config import ConferenceInfo
 from pycon_us.core.row_views import SessionView, by_slot
 from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
 from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
 from pycon_us.ui.time_gutter import TimeSlot
+from pycon_us.ui.widths import sides
 
 SCREEN = "room"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -53,6 +54,7 @@ def day_list(
     reveal: str | None,
     lit: bool,
     fade_ms: int,
+    margin: float,
     list_ref: ft.Ref[ft.ListView] | None = None,
     on_scroll: Callable[[ft.OnScrollEvent], None] | None = None,
     head: ft.Control | None = None,
@@ -75,6 +77,7 @@ def day_list(
             that row gets its ``ScrollKey`` and the highlight.
         lit: Whether the highlight is on.
         fade_ms: How long it fades out, through ``prefs.motion_ms()``.
+        margin: The screen's side margin (``ui.widths.use_margin()``, D-305).
         list_ref: The list's ref, for the list that scrolls to the row.
         on_scroll: Its scroll handler, which reads each scroll's end.
         head: What comes before the slots: today's "Now in this room".
@@ -88,7 +91,7 @@ def day_list(
         for view in slot:
             session = view.session
             row = (
-                NoticeRow(view, screen=SCREEN)
+                NoticeRow(view, tokens, screen=SCREEN)
                 if is_notice(session, info)
                 else SessionRow(
                     view, session.id in favorites, on_toggle, tokens, screen=SCREEN
@@ -110,7 +113,7 @@ def day_list(
         [head, *items] if head is not None else items,
         ref=list_ref,
         expand=True,
-        padding=ft.Padding.only(bottom=8),
+        padding=sides(margin, bottom=8),
         # Only the list that scrolls needs every row built (D-154).
         cache_extent=FULL_LIST_EXTENT if list_ref is not None else None,
         scroll_interval=SCROLL_EVENT_MS,

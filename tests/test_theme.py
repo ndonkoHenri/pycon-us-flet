@@ -1,6 +1,7 @@
 """Tests for the themes, tokens, badges and Markdown style sheet.
 
-D-22..D-26, D-33, D-113, D-116.
+D-22..D-26, D-33, D-113, D-116. The high-contrast schemes have
+tests/test_high_contrast.py.
 """
 
 import ast
@@ -15,6 +16,7 @@ import flet as ft
 import pytest
 
 from pycon_us import config, theme
+from pycon_us.theme_badges import BadgeColors
 
 # Background roles and their text partners. A role the theme leaves to the seed is None in
 # both columns; Flutter computes it on the Dart side, so it is checked on screen instead
@@ -316,17 +318,6 @@ def test_dark_overlay_style_has_light_icons() -> None:
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
-def test_high_contrast_uses_the_standard_scheme_until_p2(dark: bool) -> None:
-    """High contrast builds the standard theme and tokens, until P2."""
-    assert theme.build_theme(dark=dark, high_contrast=True) == theme.build_theme(
-        dark=dark, high_contrast=False
-    )
-    assert theme.build_tokens(dark=dark, high_contrast=True) == theme.build_tokens(
-        dark=dark, high_contrast=False
-    )
-
-
-@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_favorite_token_is_the_tertiary_role(dark: bool) -> None:
     """The favourite token is the tertiary role, and success is the live colour."""
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
@@ -341,7 +332,7 @@ YEARS = sorted(
 )
 
 
-def badges(tokens: theme.Tokens) -> dict[str, theme.BadgeColors]:
+def badges(tokens: theme.Tokens) -> dict[str, BadgeColors]:
     """Every badge the tokens hold, by a name for the failure message."""
     return {
         **{f"track {key!r}": colors for key, colors in tokens.tracks.items()},
@@ -355,10 +346,11 @@ def badges(tokens: theme.Tokens) -> dict[str, theme.BadgeColors]:
 def test_every_token_is_a_checked_text_colour_or_badge() -> None:
     """Every token is a text colour or a badge, so a contrast test checks it.
 
-    A new token must join one of the contrast tests, not slip past both.
+    A new token must join one of the contrast tests, not slip past both; the one
+    field that is no colour is the high-contrast flag (D-285).
     """
     names = {field.name for field in dataclasses.fields(theme.Tokens)}
-    assert names == {*TEXT_TOKENS, *BADGE_TOKENS}
+    assert names == {*TEXT_TOKENS, *BADGE_TOKENS, "high_contrast"}
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
@@ -434,8 +426,8 @@ def test_en_espanol_is_the_tonal_pair_inverted_in_dark() -> None:
     D-25: instead of Ionic's #DD04D2 (4.18:1).
     """
     light, dark = theme.LIGHT_TOKENS.spanish, theme.DARK_TOKENS.spanish
-    assert light == theme.BadgeColors(text="#5E0058", fill="#FFD7F3")
-    assert dark == theme.BadgeColors(text="#FFD7F3", fill="#5E0058")
+    assert light == BadgeColors(text="#5E0058", fill="#FFD7F3")
+    assert dark == BadgeColors(text="#FFD7F3", fill="#5E0058")
     ratio = contrast_ratio(light.text, light.fill or "")
     assert ratio == pytest.approx(10.06, abs=0.01)
 
@@ -444,7 +436,7 @@ def test_en_espanol_is_the_tonal_pair_inverted_in_dark() -> None:
 def test_registration_badge_is_outlined_in_the_error_role(dark: bool) -> None:
     """The registration badge is outlined, its text in the error role."""
     registration = theme.build_tokens(dark=dark, high_contrast=False).registration
-    assert registration == theme.BadgeColors(text=hex_role(scheme(dark), "error"))
+    assert registration == BadgeColors(text=hex_role(scheme(dark), "error"))
     assert registration.fill is None  # outlined
 
 
@@ -456,7 +448,7 @@ def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
     sat 6.8 from the En Español pink and in dark outshone every track.
     """
     new_track = theme.build_tokens(dark=dark, high_contrast=False).new_track
-    assert new_track == theme.BadgeColors(text=hex_role(scheme(dark), "primary"))
+    assert new_track == BadgeColors(text=hex_role(scheme(dark), "primary"))
     assert new_track.fill is None  # outlined
 
 
@@ -477,7 +469,7 @@ def test_tokens_are_frozen() -> None:
     with pytest.raises(dataclasses.FrozenInstanceError):
         theme.LIGHT_TOKENS.live = "#000000"  # type: ignore[misc]
     with pytest.raises(TypeError):  # the palette too
-        theme.LIGHT_TOKENS.tracks["Talk"] = theme.BadgeColors("#000000")  # type: ignore[index]
+        theme.LIGHT_TOKENS.tracks["Talk"] = BadgeColors("#000000")  # type: ignore[index]
     # Hashable by value although the palette is a mapping: tokens can be a dict key.
     palette = MappingProxyType(dict(theme.LIGHT_TOKENS.tracks))
     rebuilt = dataclasses.replace(theme.LIGHT_TOKENS, tracks=palette)

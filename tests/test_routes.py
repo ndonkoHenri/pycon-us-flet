@@ -7,6 +7,8 @@ screens themselves are checked on devices (the PR).
 """
 
 import inspect
+from collections.abc import Callable
+from types import SimpleNamespace
 from urllib.parse import unquote
 
 import flet as ft
@@ -20,13 +22,18 @@ from pycon_us.locations import (
     DRILL_KINDS,
     PAGES,
     TAB_ROOTS,
+    WELCOME,
     drill_href,
     is_top_view,
     parent_of,
     query_of,
     start_target,
 )
-from pycon_us.routes import DRILL, ROUTES
+from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
+from pycon_us.routes import DRILL, ROUTES, UNKNOWN
+from pycon_us.theme import BOOT_COLOR
+from tests.fakes import FakePage, bound
 
 type Level = tuple[str, str, dict[str, str]]
 
@@ -85,6 +92,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
     ("location", "screens"),
     [
         ("/", ["Start"]),
+        ("/welcome", ["Welcome"]),
         ("/now", ["Now"]),
         ("/schedule", ["Schedule"]),
         ("/my-schedule", ["MySchedule"]),
@@ -105,8 +113,16 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
             "/more/tracks/open-spaces/session/42",
             ["More", "Tracks", "OpenSpaces", "Drill"],
         ),
+        ("/more/sponsors", ["More", "Sponsors"]),
+        ("/more/sponsors/sponsor/bloomberg", ["More", "Sponsors", "Drill"]),
+        ("/more/jobs", ["More", "Jobs"]),
+        ("/more/jobs/sponsor/bloomberg", ["More", "Jobs", "Drill"]),
+        ("/more/settings", ["More", "Settings"]),
         ("/more/app", ["More", "AboutApp"]),
+        ("/more/app/licences", ["More", "AboutApp", "Licences"]),
+        ("/more/app/licences/flet", ["More", "AboutApp", "Licences", "LicencePage"]),
         ("/more/developer", ["More", "Developer"]),
+        ("/more/social", ["More", "Social"]),
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (
@@ -158,13 +174,53 @@ def test_each_drill_level_reads_its_own_pair(
 
 @pytest.mark.parametrize(
     "location",
-    ["/now/bogus/1", "/now/session", "/more/staff/lead", "/welcome", "/schedule/x"],
+    [
+        "/nope",
+        "/now/bogus/1",
+        "/now/session",
+        "/now/session/42/nope",
+        "/more/staff/lead",
+        "/more/tracks/python/x",
+        "/search/nope",
+        "/welcome/session/42",  # Welcome has no drill: nothing opens over it
+        "/schedule/x",
+    ],
 )
-def test_an_unknown_location_matches_nothing_so_the_router_shows_not_found(
-    location: str,
-) -> None:
-    """An unknown location matches no route, so the Router shows Not found."""
-    assert _match_routes(ROUTES, location) is None
+def test_an_unknown_location_is_one_not_found_view(location: str) -> None:
+    """A location no page or drill matches is the catch-all's one View (D-270).
+
+    Nothing below it: Back on it goes to Now, never out of the app.
+    """
+    assert view_levels(location) == [("NotFound", location, {"unknown": location[1:]})]
+
+
+def test_the_catch_all_is_the_table_s_last_route() -> None:
+    """The catch-all comes last: the Router tries routes in order, and it takes any."""
+    assert ROUTES[-1] is UNKNOWN
+    assert UNKNOWN.component is routes.NotFound
+    assert UNKNOWN not in ROUTES[:-1]
+
+
+def known_locations() -> list[str]:
+    """Every page, and a drill of each kind on every page, quoted ids included."""
+    return [
+        *sorted(PAGES),
+        *(
+            drill_href(drill_href(page, kind, "a/b ç"), "session", "42")
+            for page in sorted(PAGES - {WELCOME})  # the one page without a drill
+            for kind in DRILL_KINDS
+        ),
+        "/more/tracks/python",  # the slug route
+        "/more/app/licences/flet",  # the key route
+        "/more/tracks/python/room/hall-a",
+    ]
+
+
+@pytest.mark.parametrize("location", known_locations())
+def test_the_catch_all_matches_no_page_and_no_drill(location: str) -> None:
+    """Every page and every drill still opens its own screens, never ``NotFound``."""
+    screens = [name for name, _, _ in view_levels(location)]
+    assert "NotFound" not in screens
 
 
 def test_the_drill_takes_every_kind_and_nothing_else() -> None:
@@ -256,7 +312,13 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/tracks/sprints/session/42", "/more/tracks/sprints"),
         ("/more/sprints", "/more"),  # from More, to it
         ("/more/lightning-talks", "/more"),
+        ("/more/sponsors/sponsor/bloomberg", "/more/sponsors"),  # to the list (D-17)
+        ("/more/sponsors", "/more"),
+        ("/more/jobs/sponsor/bloomberg", "/more/jobs"),  # Back to the list (#399)
+        ("/more/jobs", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
+        ("/more/app/licences/flet", "/more/app/licences"),  # a text, to the list
+        ("/more/app/licences", "/more/app"),  # the list, to About this app (D-296)
         ("/map/room/hall-a/plan/expo", "/map/room/hall-a"),
         ("/now/session/poster%20detail%2B1", "/now"),
         ("/now/session/42?highlight=99", "/now"),  # the query is dropped
@@ -385,4 +447,43 @@ def test_the_start_route_returns_a_new_session_to_where_the_user_was(
 
     A location under Search, a modal, goes to the page Search was opened from.
     """
-    assert start_target(last_location, "/schedule/session/42") == target
+    assert start_target(last_location, "/schedule/session/42", onboarded=True) == target
+
+
+@pytest.mark.parametrize(
+    "last_location",
+    ["", "/now", "/now/session/42", "/search?scope=rooms", "/more/developer"],
+)
+def test_a_plain_start_opens_welcome_until_it_is_done(last_location: str) -> None:
+    """Before Get started, every plain start opens Welcome, wherever the user was (D-287).
+
+    A link's target, opened without Welcome, is remembered all the same: Welcome
+    waits for the next plain start, and Reset app, which forgets onboarded, lands
+    on it from any page.
+    """
+    assert (
+        start_target(last_location, "/schedule/session/42", onboarded=False) == WELCOME
+    )
+
+
+@pytest.mark.parametrize(
+    ("onboarded", "target"), [(False, "/welcome"), (True, "/now/session/42")]
+)
+def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
+    monkeypatch: pytest.MonkeyPatch, onboarded: bool, target: str
+) -> None:
+    """``Start`` reads ``Prefs.onboarded``: Welcome first, then where the user was."""
+    memory = ViewMemory(last_location="/now/session/42")
+    effects: list[Callable[[], None]] = []
+    monkeypatch.setattr(routes, "use_services", lambda: SimpleNamespace(memory=memory))
+    monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=onboarded))
+    monkeypatch.setattr(
+        ft, "use_effect", lambda setup, deps=None: effects.append(setup)
+    )
+    page = FakePage()
+    with bound(page):
+        view = inspect.unwrap(routes.Start)()
+        assert view.route == "/" and view.bgcolor == BOOT_COLOR
+        (go,) = effects
+        go()
+    assert page.navigated == [target]

@@ -4,11 +4,12 @@ One theme per colour scheme, identical on Android and iOS (D-10): seeded from th
 indigo with neutral surfaces, the brand overrides of ``docs/ux.md`` §3.2, the bundled Roboto
 (D-105), left-aligned app-bar titles, per-platform page transitions (D-11) and the system
 bar style of D-113. ``Tokens`` holds the colours Material 3 has no role for (D-24), the
-track badges' tonal pairs among them (D-25), and
+track badges among them (D-25, from ``theme_badges.py``), and
 ``MARKDOWN_STYLE`` is the one style sheet every feed text uses (D-116).
 
-The high-contrast schemes arrive in P2 (THEME-04, THEME-05); until then the
-``high_contrast`` flag selects the standard ones.
+The high-contrast schemes, their token colours and their card theme live in
+``theme_hc.py`` (THEME-04..06); the ``high_contrast`` flag selects them, and HC's tokens
+outline every badge and carry the flag to the components (D-285).
 """
 
 from collections.abc import Mapping
@@ -16,6 +17,24 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 
 import flet as ft
+
+from pycon_us.theme_badges import (
+    HC_BADGE_BORDER,
+    NEUTRAL,
+    SPANISH,
+    TRACK_PAIRS,
+    BadgeColors,
+    tonal,
+)
+from pycon_us.theme_hc import (
+    HC_DARK,
+    HC_DARK_LIVE,
+    HC_DARK_WARNING,
+    HC_LIGHT,
+    HC_LIGHT_LIVE,
+    HC_LIGHT_WARNING,
+    with_hc_components,
+)
 
 SEED = "#3B3EA9"
 """PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
@@ -101,33 +120,46 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
 
     Args:
         dark: Build the dark scheme instead of the light one.
-        high_contrast: Build the high-contrast variant. Ignored until P2 (THEME-04,
-            THEME-05): the standard scheme is returned.
+        high_contrast: Build the high-contrast variant (THEME-04, THEME-05), which sets
+            every role by hand (``theme_hc.py``) and draws lines where fills drew
+            edges: cards, chips and the selected pill (THEME-06, D-306); the rest of
+            the theme is the same.
 
     Returns:
         A Material 3 theme; nothing in it depends on the platform except the page
         transitions (D-11).
     """
-    return ft.Theme(
+    if high_contrast:
+        scheme = HC_DARK if dark else HC_LIGHT
+    else:
+        scheme = DARK_SCHEME if dark else LIGHT_SCHEME
+    built = ft.Theme(
         color_scheme_seed=SEED,
         surfaces=ft.ThemeSurfaces.NEUTRAL,
-        color_scheme=DARK_SCHEME if dark else LIGHT_SCHEME,
+        color_scheme=scheme,
+        # Flet builds ThemeData, which derives these, from the seeded scheme, before the
+        # overrides apply: unnamed, HC's page stayed white under cream bars (U64, #483).
+        scaffold_bgcolor=scheme.surface,
+        canvas_color=scheme.surface,
+        card_bgcolor=scheme.surface,
+        divider_color=scheme.outline,
         font_family=FONT_FAMILY,
         appbar_theme=ft.AppBarTheme(center_title=False),  # iOS would centre it (D-10)
         page_transitions=ft.PageTransitionsTheme(
             android=ft.PageTransitionTheme.PREDICTIVE,  # Android 14+ predictive Back
             ios=ft.PageTransitionTheme.CUPERTINO,  # keeps the iOS edge swipe (D-11)
         ),
-        system_overlay_style=overlay_style(dark=dark),
+        system_overlay_style=overlay_style(dark=dark, high_contrast=high_contrast),
         # A tall tile's icons beside its title's first line, not the middle of the
         # block (D-188); fold headers (ExpansionTile) have no setting of their own.
         list_tile_theme=ft.ListTileTheme(
             title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT
         ),
     )
+    return with_hc_components(built, dark=dark) if high_contrast else built
 
 
-def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
+def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:
     """Return the status- and navigation-bar style for a light or dark scheme (D-113).
 
     The icons contrast with the scheme. Navigation-bar contrast is not enforced: the
@@ -137,17 +169,26 @@ def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
     transparent one would show the window background, which a live dark-mode switch
     leaves in the old mode (D-151). Android 15 and later ignore that colour.
 
+    Flet resolves a role in this style against the seeded, neutralised scheme, before
+    the overrides apply (``parseTheme`` in Flet's ``utils/theme.dart``). The standard
+    schemes keep that ramp's ``surface_container``, so the role is the bar's colour;
+    the high-contrast ones replace it, so they name their own (D-265).
+
     Args:
         dark: The scheme is dark.
+        high_contrast: The scheme is a high-contrast one.
 
     Returns:
         The style for ``Theme.system_overlay_style``.
     """
     icons = ft.Brightness.LIGHT if dark else ft.Brightness.DARK
+    if high_contrast:
+        navigation_bar = (HC_DARK if dark else HC_LIGHT).surface_container
+    else:  # the NavigationBar's default fill
+        navigation_bar = ft.Colors.SURFACE_CONTAINER
     return ft.SystemOverlayStyle(
         status_bar_color=ft.Colors.TRANSPARENT,
-        # A role resolves against the seeded scheme: the NavigationBar's default fill.
-        system_navigation_bar_color=ft.Colors.SURFACE_CONTAINER,
+        system_navigation_bar_color=navigation_bar,
         status_bar_icon_brightness=icons,  # Android
         system_navigation_bar_icon_brightness=icons,  # Android
         status_bar_brightness=(  # iOS: the bar's background, so the opposite of icons
@@ -158,62 +199,12 @@ def overlay_style(*, dark: bool) -> ft.SystemOverlayStyle:
 
 
 @dataclass(frozen=True)
-class BadgeColors:
-    """The colours of one badge (D-25), as ``#RRGGBB``.
-
-    Attributes:
-        text: The label's colour.
-        fill: The pill's colour; None for an outlined badge, whose label and 1 dp
-            border are both ``text``, on whatever surface the badge sits on.
-    """
-
-    text: str
-    fill: str | None = None
-
-
-# ux.md §3.4: light fill, light text, dark fill, dark text for each key of the track
-# registry (conference.toml), spaces and capitals included. Keynotes and plenaries share
-# a pair; breaks and notices share the neutral grey, which a key the palette lacks gets
-# too (a new kind in next year's feed). The fills sit on one CIELAB lightness (87 light,
-# 29 dark) and chroma (22, less where sRGB runs out), about 30 degrees of hue apart, with
-# Summit a quieter slate, so any two fills, the En Español pink and the grey included,
-# differ by a CIE76 distance of 10 or more and read as different colours; each label is
-# its fill's hue at lightness 27 (light) or 90 (dark). Tests check both properties.
-_NEUTRAL = ("#E6E6E6", "#383838", "#404040", "#E0E0E0")
-_TRACK_PAIRS = {
-    "Talk": ("#C7DBFE", "#014271", "#2C4666", "#D9E3F5"),
-    "Tutorial": ("#FFCDD8", "#6C293E", "#643743", "#F6DCE1"),
-    "Keynote": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
-    "Plenary": ("#E0D4FD", "#443869", "#483F61", "#E6E0F2"),
-    "Lightning-talks": ("#E9D9B0", "#4B3F0A", "#4E4422", "#EAE2CF"),
-    "Security": ("#FAD3B5", "#5D3712", "#5B3E26", "#F2DFD1"),
-    "Ai": ("#AAE6D8", "#01493E", "#0F4D43", "#CEE8E1"),
-    "Charla": ("#ABE2FD", "#03465A", "#034B60", "#CFE6F2"),
-    "Poster": ("#FFCFC6", "#6A2D25", "#643932", "#F7DDD8"),
-    "Sponsor Presentation": ("#D4DFB5", "#354511", "#3E4826", "#E0E5D2"),
-    "Open Space": ("#BDE4C3", "#134925", "#2A4C32", "#D6E7D8"),
-    "Summit": ("#BED5E1", "#1E4455", "#3C515B", "#CFE6F3"),
-    "Event": ("#A2E6EC", "#03474C", "#024C52", "#CBE8EB"),
-    "Break": _NEUTRAL,
-    "Informational": _NEUTRAL,
-}
-_SPANISH = ("#FFD7F3", "#5E0058", "#5E0058", "#FFD7F3")  # inverted in dark (D-25)
-
-
-def _badge(pair: tuple[str, str, str, str], *, dark: bool) -> BadgeColors:
-    """Return one palette entry's tonal badge in the light or dark scheme."""
-    light_fill, light_text, dark_fill, dark_text = pair
-    if dark:
-        return BadgeColors(text=dark_text, fill=dark_fill)
-    return BadgeColors(text=light_text, fill=light_fill)
-
-
-@dataclass(frozen=True)
 class Tokens:
     """Colours Material 3 has no role for (D-24), as ``#RRGGBB`` for one scheme.
 
     Each text colour reads at 4.5:1 or better on every surface of its scheme, and each
-    badge's label on its fill (tests/test_theme.py). Compared and hashed by value, so
+    badge's label on its fill (tests/test_theme.py); 7:1 in high contrast
+    (tests/test_high_contrast.py). Compared and hashed by value, so
     they can be a dictionary key. Screens get the current scheme's tokens from
     ``use_tokens()``.
 
@@ -229,6 +220,9 @@ class Tokens:
         registration: The "Registration required" badge, outlined in ``error``.
         new_track: The "New track" badge, outlined in ``primary``: a mark of status,
             not another category among the tonal track fills (D-199).
+        high_contrast: The tokens are a high-contrast scheme's, whose structure
+            differs too: a component that draws a line there instead of a fill or a
+            shadow reads it here, never from ``Prefs`` (D-285).
     """
 
     live: str
@@ -242,6 +236,7 @@ class Tokens:
     spanish: BadgeColors
     registration: BadgeColors
     new_track: BadgeColors
+    high_contrast: bool = False
 
     def track_badge(self, key: str) -> BadgeColors:
         """Return the badge colours of track ``key``; the neutral grey if it has none."""
@@ -259,10 +254,10 @@ def _tokens(
         favorite=favorite,
         # Read-only, as the tokens are frozen; a test checks every pair.
         tracks=MappingProxyType(
-            {key: _badge(pair, dark=dark) for key, pair in _TRACK_PAIRS.items()}
+            {key: tonal(pair, dark=dark) for key, pair in TRACK_PAIRS.items()}
         ),
-        unknown_track=_badge(_NEUTRAL, dark=dark),
-        spanish=_badge(_SPANISH, dark=dark),
+        unknown_track=tonal(NEUTRAL, dark=dark),
+        spanish=tonal(SPANISH, dark=dark),
         registration=BadgeColors(text=_ERROR_DARK if dark else _ERROR_LIGHT),
         new_track=BadgeColors(text=primary),
     )
@@ -287,17 +282,47 @@ DARK_TOKENS = _tokens(
 """Tokens for the dark scheme (ux.md §3.3, §3.4)."""
 
 
+def _hc_tokens(scheme: ft.ColorScheme, *, live: str, warning: str) -> Tokens:
+    """Build a high-contrast scheme's tokens: every badge outlined (ux.md §3.4).
+
+    Tracks and En Español are outlined in ``on_surface``, which the star takes too;
+    Registration required keeps ``error`` and New track ``primary``.
+    """
+    ink, error, primary = str(scheme.on_surface), str(scheme.error), str(scheme.primary)
+    outlined = BadgeColors(text=ink, border_width=HC_BADGE_BORDER)
+    return Tokens(
+        live=live,
+        warning=warning,
+        success=live,
+        favorite=ink,
+        tracks=MappingProxyType(dict.fromkeys(TRACK_PAIRS, outlined)),
+        unknown_track=outlined,
+        spanish=outlined,
+        registration=BadgeColors(text=error, border_width=HC_BADGE_BORDER),
+        new_track=BadgeColors(text=primary, border_width=HC_BADGE_BORDER),
+        high_contrast=True,
+    )
+
+
+HC_LIGHT_TOKENS = _hc_tokens(HC_LIGHT, live=HC_LIGHT_LIVE, warning=HC_LIGHT_WARNING)
+"""Tokens for the high-contrast light scheme (ux.md §3.3, §3.4)."""
+
+HC_DARK_TOKENS = _hc_tokens(HC_DARK, live=HC_DARK_LIVE, warning=HC_DARK_WARNING)
+"""Tokens for the high-contrast dark scheme (ux.md §3.3, §3.4)."""
+
+
 def build_tokens(*, dark: bool, high_contrast: bool) -> Tokens:
     """Return the tokens that go with ``build_theme(dark=..., high_contrast=...)``.
 
     Args:
         dark: The dark scheme.
-        high_contrast: The high-contrast variant; ignored until P2, like in
-            ``build_theme``.
+        high_contrast: The high-contrast variant (D-285).
 
     Returns:
         The scheme's tokens.
     """
+    if high_contrast:
+        return HC_DARK_TOKENS if dark else HC_LIGHT_TOKENS
     return DARK_TOKENS if dark else LIGHT_TOKENS
 
 

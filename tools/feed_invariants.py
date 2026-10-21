@@ -6,8 +6,9 @@ the recorded feeds, and ``tools/check_feed.py`` prints them for the live feed, s
 the same code (testing-and-quality.md §3.3). They return problems instead of asserting so
 the weekly check can report every broken invariant, not only the first.
 
-``outline()`` is the reviewed snapshot's view of the model; it lives here because the
-stable-ids invariant compares two outlines.
+The stable-ids invariant compares two outlines of the model: ``tools/feed_outline.py``'s
+``outline()``, the reviewed snapshot's view of it. The sponsor and job-listing invariants
+live in ``tools/sponsor_invariants.py``; ``INVARIANTS`` lists them with the others.
 """
 
 import json
@@ -15,7 +16,7 @@ import re
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -26,6 +27,12 @@ from pycon_us.core.names import plain_text
 from pycon_us.core.rules import COLLAPSED_KINDS
 from pycon_us.core.slugs import room_sort_key, slugify_room
 from pycon_us.core.timefmt import local_date
+from tools.feed_outline import clock, outline
+from tools.sponsor_invariants import (
+    job_listings_name_a_sponsor,
+    sponsor_levels_are_sorted_and_not_empty,
+    sponsor_slugs_are_unique,
+)
 
 ID_FORMS = re.compile(
     r"\d+"  # a slot's conf_key, or an open space's conf_key + 9000
@@ -192,7 +199,7 @@ def times_are_aware_in_the_years_zone_and_ordered(feed: ProcessedFeed) -> list[s
         moments = (session.start, session.display_start, session.end)
         if any(moment.tzinfo != feed.zone for moment in moments):
             problems.append(f"{session.id} has a time outside the conference zone")
-        if session.end < session.start:
+        if session.end.astimezone(UTC) < session.start.astimezone(UTC):  # #513
             problems.append(f"{session.id} ends before it starts")
     return problems
 
@@ -343,6 +350,9 @@ INVARIANTS: tuple[Callable[[ProcessedFeed], list[str]], ...] = (
     only_overridden_sessions_show_another_start,
     speakers_and_sessions_link_both_ways,
     rooms_and_sessions_agree,
+    sponsor_slugs_are_unique,
+    sponsor_levels_are_sorted_and_not_empty,
+    job_listings_name_a_sponsor,
 )
 """Every invariant, in the order of testing-and-quality.md §3.3."""
 
@@ -379,89 +389,3 @@ def _one_row_a_day(
 
 def _dates(days: list[date]) -> str:
     return ", ".join(day.isoformat() for day in days)
-
-
-def outline(data: ConferenceData, zone: ZoneInfo) -> dict[str, object]:
-    """A compact, reviewable view of the model: one line per session.
-
-    A line reads ``id | name | track | shown location | start-end`` in conference time,
-    then, when they apply: ``shown HH:MM``, ``pre-registration``, ``español``,
-    ``speakers <ids>`` and ``text <names not in the directory>``. ``markdown`` shows
-    the converted fields (D-130): see ``markdown_samples``.
-    """
-
-    def line(session: Session) -> str:
-        parts = [
-            session.id,
-            session.name,
-            session.track,
-            session.display_location or "-",
-            f"{clock(session.start, zone)}-{clock(session.end, zone)}",
-        ]
-        if session.display_start != session.start:
-            parts.append(f"shown {clock(session.display_start, zone)}")
-        if session.pre_registered:
-            parts.append("pre-registration")
-        if session.spanish:
-            parts.append("español")
-        if session.speaker_ids:
-            parts.append("speakers " + " ".join(session.speaker_ids))
-        linked = {data.speakers[i].name for i in session.speaker_ids}
-        if text := [name for name in session.speaker_names if name not in linked]:
-            parts.append("text " + "; ".join(text))
-        return " | ".join(parts)
-
-    return {
-        "days": {
-            day.date.isoformat(): {
-                clock(group.start, zone): [
-                    line(data.sessions[i]) for i in group.session_ids
-                ]
-                for group in day.groups
-            }
-            for day in data.days
-        },
-        "outside the timeline": [
-            line(s) for s in data.sessions.values() if not s.in_timeline
-        ],
-        "rooms": [
-            f"{room.slug}: {room.name} ({len(room.session_ids)})"
-            for room in data.rooms.values()
-        ],
-        "speakers": [f"{s.id}: {s.name}" for s in data.speakers.values()],
-        "dropped": {rule: len(ids) for rule, ids in data.dropped.items()},
-        "skipped": list(data.skipped),
-        "markdown": markdown_samples(data),
-    }
-
-
-def markdown_samples(data: ConferenceData) -> dict[str, list[str]]:
-    """Every content block's Markdown, and one of each other converted field, by line.
-
-    The other fields show their first value that conversion changed: enough to review a
-    change of conversion without copying every description into the snapshot. Open
-    spaces pass through unchanged (DATA-25), so none is shown.
-    """
-    samples = {
-        f"content {key}": value.splitlines() for key, value in data.content_md.items()
-    }
-    fields = {
-        "session": [
-            (s.id, s.description, s.description_md) for s in data.sessions.values()
-        ],
-        "speaker": [(s.id, s.bio, s.bio_md) for s in data.speakers.values()],
-        "poster": [(p.id, p.description, p.description_md) for p in data.posters],
-        "sprint": [(s.id, s.description, s.description_md) for s in data.sprints],
-        "job listing": [
-            (j.id, j.description, j.description_md) for j in data.job_listings
-        ],
-    }
-    for field, values in fields.items():
-        if sample := next((v for v in values if v[1] != v[2]), None):
-            samples[f"{field} {sample[0]}"] = sample[2].splitlines()
-    return samples
-
-
-def clock(moment: datetime, zone: ZoneInfo) -> str:
-    """The time of ``moment`` in ``zone``, as ``HH:MM``."""
-    return moment.astimezone(zone).strftime("%H:%M")

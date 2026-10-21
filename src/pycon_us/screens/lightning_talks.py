@@ -32,14 +32,15 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
 from pycon_us.ui.day_groups import DayGroup
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_pages import LightningTalksInfo
 
 SCREEN = "lightning_talks"
@@ -67,6 +68,7 @@ def LightningTalks() -> ft.View:
     """The Lightning talks page: the year's copy, the sign-up, and the talks by day."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     favorites = use_favorites()
     prefs = use_prefs()
@@ -147,7 +149,7 @@ def LightningTalks() -> ft.View:
         )
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=8)),
+        body=ft.ListView(items, expand=True, padding=sides(margin, bottom=8)),
     )
 
 

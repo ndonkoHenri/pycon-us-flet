@@ -4,6 +4,7 @@
 """
 
 from collections.abc import Callable, Iterable
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta, timezone, tzinfo
 
 import pytest
@@ -454,6 +455,20 @@ def test_nothing_saved_is_an_empty_agenda() -> None:
     assert my_schedule(processed(2026), frozenset()) == Agenda((), {})
 
 
+def test_an_agenda_s_sessions_are_its_rows_in_agenda_order() -> None:
+    """``Agenda.sessions`` lists every saved session in the feed, day by day and slot by slot.
+
+    It is what My schedule's export holds (#426): the model's own sessions, an id the
+    feed dropped left out, and nothing at all with nothing saved.
+    """
+    data = processed(2026)
+    saved = frozenset({"188", "19", "2", "153", "9106", "no-such-id"})
+    sessions = my_schedule(data, saved).sessions
+    assert [s.id for s in sessions] == ["2", "19", "188", "153", "9106"]
+    assert all(session is data.sessions[session.id] for session in sessions)
+    assert my_schedule(data, frozenset()).sessions == ()
+
+
 def test_two_saved_sessions_at_the_same_time_overlap_each_other() -> None:
     """Two saved tutorials at one time overlap each other; a later one neither."""
     agenda = my_schedule(processed(2026), frozenset({"2", "19", "188"}))
@@ -747,3 +762,30 @@ def test_the_elapsed_share_follows_the_start_a_row_shows() -> None:
     fair = processed(2026).sessions["178"]  # 9:30 AM-1:00 PM, in the 10:00 slot
     assert fair.display_start < fair.start
     assert elapsed_percent(fair, may(2026, 17, 10, 0)) == 14  # 30 of 210 minutes
+
+
+def test_the_elapsed_share_counts_instants_across_the_end_of_summer_time() -> None:
+    """A session from 1:40 PDT to 1:10 PST is 30 minutes long, not minus 30 (#513).
+
+    The start, the end and ``now`` share the conference zone, where wall clocks would
+    read the end as before the start.
+    """
+    zone = load_year(2026).conference.zone
+    start = datetime(2026, 11, 1, 8, 40, tzinfo=UTC).astimezone(zone)  # 1:40 PDT
+    end = datetime(2026, 11, 1, 9, 10, tzinfo=UTC).astimezone(zone)  # 1:10 PST
+    talk = replace(
+        processed(2026).sessions["142"], start=start, display_start=start, end=end
+    )
+
+    def at(hour: int, minute: int) -> int:
+        """Return the talk's share at ``hour:minute`` UTC, read in the conference zone."""
+        return elapsed_percent(
+            talk, datetime(2026, 11, 1, hour, minute, tzinfo=UTC).astimezone(zone)
+        )
+
+    assert at(8, 30) == 0
+    assert at(8, 49) == 30  # 1:49 PDT: 9 of 30 minutes
+    assert (
+        at(9, 1) == 70
+    )  # 1:01 PST: 21 of 30 minutes, wall-clock earlier than the start
+    assert at(9, 10) == 100

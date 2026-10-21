@@ -39,11 +39,12 @@ def FoldTile(
     leading: ft.Control | None = None,
     bgcolor: ft.ColorValue | None = None,
     controls_padding: ft.PaddingValue | None = None,
+    lines: bool = False,
 ) -> ft.ExpansionTile:
     """Return a controlled fold tile: ``expanded`` comes from the screen's state.
 
     No divider lines above and below it when open (the default ``ExpansionTile``
-    draws them), and what it holds is as wide as the tile.
+    draws them) unless ``lines``, and what it holds is as wide as the tile.
 
     Args:
         title: What the tile says, folded or not.
@@ -54,6 +55,9 @@ def FoldTile(
         leading: The icon before the title.
         bgcolor: Its fill while open.
         controls_padding: The padding around what it holds.
+        lines: Keep Material's lines above and below it while open, in the theme's
+            divider colour (``outline`` in high contrast): the edge of a ``bgcolor``
+            that HC's one surface hides (D-306).
     """
 
     @report_errors
@@ -71,6 +75,6 @@ def FoldTile(
         expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,
         bgcolor=bgcolor,
         controls_padding=controls_padding,
-        shape=no_border,
+        shape=None if lines else no_border,  # None: Flutter's lines while open
         collapsed_shape=no_border,
     )

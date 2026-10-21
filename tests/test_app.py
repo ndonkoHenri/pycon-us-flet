@@ -12,6 +12,7 @@ import logging
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import flet as ft
@@ -26,13 +27,17 @@ from pycon_us.app import (
     on_resume,
     read_accessibility,
 )
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData, load_year
+from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
+from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.services import Services, api, errors
+from pycon_us.services import Services, api, changes_file, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
+from pycon_us.theme_hc import HC_DARK
 from pycon_us.ui.time_gutter import GutterProbe
 from tests.fakes import (
     FakePage,
@@ -121,7 +126,9 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
 async def started(fake_page: FakePage, svc: Services) -> tuple[Conference, Prefs]:
     """Run ``bootstrap()`` on new stores and return its Conference and Prefs."""
     conference, prefs = Conference(), Prefs()
-    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
+    await bootstrap(
+        cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+    )
     return conference, prefs
 
 
@@ -167,7 +174,9 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
 
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
-    await bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
+    await bootstrap(
+        cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+    )
     # No theme flash and no empty first screen (SHELL-01): the stored theme is set before
     # the gate opens, still with no crossfade, and later changes crossfade again.
     assert seen_at_open == [NO_THEME_ANIMATION, ft.ThemeMode.DARK, "bundled"]
@@ -178,15 +187,21 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
 async def test_the_os_brightness_and_accessibility_flags_are_read_at_start(
     svc: Services, semantics: MemorySemantics, network: Network
 ) -> None:
-    """The start reads the OS's dark mode, high contrast and reduced motion."""
+    """The start reads the OS's dark mode, high contrast and reduced motion.
+
+    The high-contrast schemes are on the page before the gate opens (D-161, D-23).
+    """
     semantics.features.update(high_contrast=True, disable_animations=True)
-    _, prefs = await started(FakePage(ft.Brightness.DARK), svc)
+    fake_page = FakePage(ft.Brightness.DARK)
+    _, prefs = await started(fake_page, svc)
     assert (prefs.os_dark, prefs.os_high_contrast, prefs.reduce_motion) == (
         True,
         True,
         True,
     )
     assert prefs.dark  # Appearance System follows the OS
+    assert fake_page.dark_theme is not None
+    assert fake_page.dark_theme.color_scheme == HC_DARK
 
 
 async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
@@ -203,9 +218,24 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
 
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
-    await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
+    await bootstrap(
+        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+    )
     # No star fills in after the first screen (D-48).
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
+
+
+async def test_the_year_s_change_log_is_loaded_at_start(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    """The start reads the batches the last session recorded, before any refresh."""
+    batch = Batch(clock.now(), ())
+    await changes_file.write_batches(svc.storage, [batch])
+    change_log = ChangeLog()
+    await bootstrap(
+        cast(ft.Page, fake_page), svc, Conference(), Prefs(), Favorites(), change_log
+    )
+    assert change_log.batches == (batch,)
 
 
 @pytest.fixture
@@ -356,7 +386,9 @@ async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
     shared.values["pycon.2026.favorites"] = ["17", "42"]
     monkeypatch.setattr(Prefs, "load", broken)
     favorites, prefs = Favorites(), Prefs()
-    await bootstrap(cast(ft.Page, fake_page), svc, Conference(), prefs, favorites)
+    await bootstrap(
+        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+    )
     assert prefs.loaded  # the gate opens (D-161)
     assert not favorites.loaded  # so My schedule says it can't open
     change = await favorites.toggle(svc.storage, "99")
@@ -601,7 +633,9 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
     monkeypatch.setattr(app, "read_accessibility", held_read)
     conference, prefs = Conference(), Prefs()
     start = asyncio.create_task(
-        bootstrap(cast(ft.Page, fake_page), svc, conference, prefs, Favorites())
+        bootstrap(
+            cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+        )
     )
     await reading.wait()
     fake_page.on_close()  # replaced while the start awaits (F26, F29; D-147)
@@ -688,8 +722,13 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     monkeypatch.setattr(ft, "use_memo", lambda *_, **__: object())
     monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
     monkeypatch.setattr(ft, "use_effect", lambda *_, **__: None)
+    banners: list[bool] = []
+    monkeypatch.setattr(
+        app, "use_reminder_banner", lambda *_, ready: banners.append(ready)
+    )
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
+    assert banners == [open_]  # the slot is there before the gate, shown after it
     booting = (
         isinstance(shown, list)
         and len(shown) == 1
@@ -700,6 +739,44 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     if open_:  # the providers end in the Router
         assert isinstance(shown, ft.Component)
         assert shown.fn.__name__ == "Router"
+
+
+def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
+    fake_page: FakePage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``App`` gives the Router a ``Layout`` seeded from ``page.width`` that follows resizes.
+
+    D-277: a first screen opened in landscape shows the rail, and a rotation flips it.
+    """
+    fake_page.width = 900.0
+    prefs = Prefs(loaded=True, time_measured=True)
+    setups: list[Callable[[], object]] = []
+    provided: list[Layout] = []
+
+    def layout_ctx(value: Layout, body: Callable[[], object]) -> object:
+        """Record the ``Layout`` handed to the provider, then render its body."""
+        provided.append(value)
+        return body()
+
+    monkeypatch.setattr(ft, "use_memo", lambda fn, *_, **__: fn())
+    monkeypatch.setattr(ft, "use_state", lambda initial: (prefs, lambda _: None))
+    monkeypatch.setattr(ft, "use_effect", lambda setup, *_, **__: setups.append(setup))
+    monkeypatch.setattr(app, "LayoutCtx", layout_ctx)
+    monkeypatch.setattr(app, "apply_theme", lambda *_: None)
+    # The reminder Banner has its own tests; here it would read stand-in stores.
+    monkeypatch.setattr(app, "use_reminder_banner", lambda *_, **__: None)
+    monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
+    with Renderer().with_context(), bound(fake_page):
+        shown = inspect.unwrap(app.App)(ViewMemory())
+        assert isinstance(shown, ft.Component) and shown.fn.__name__ == "Router"
+        (layout,) = provided  # LayoutCtx is in the chain to the Router
+        assert layout.wide is True  # seeded before any effect runs
+        for setup in setups:
+            if not inspect.iscoroutinefunction(setup):
+                setup()
+        assert fake_page.on_resize is not None
+        fake_page.on_resize(SimpleNamespace(width=375.0))
+        assert layout.wide is False
 
 
 async def test_the_boot_view_measures_the_slots_layout_before_the_first_screen(

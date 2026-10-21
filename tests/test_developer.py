@@ -25,7 +25,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer
 from pycon_us.screens.developer import Developer, zone_line
-from pycon_us.services import Services
+from pycon_us.services import Services, changes_file
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
@@ -37,6 +37,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     bound,
+    phone_margin,
 )
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -127,6 +128,7 @@ def render(
     monkeypatch.setattr(developer, "use_conference", lambda: conference)
     monkeypatch.setattr(developer, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(developer, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(developer, "use_margin", phone_margin)
     # The Data section is a component of its own: test_developer_data.py's.
     monkeypatch.setattr(developer, "DataActions", lambda: ft.Container())
 
@@ -519,25 +521,45 @@ async def test_reset_returns_to_real_time_and_the_year_s_feed(
     assert outcome(render) == "Back to real time and the year's feed."
 
 
-async def test_apply_and_reset_drop_the_cache_when_they_leave_a_feed_url(
-    render: Callable[[], dict[str, Any]], svc: Services, page: FakePage
+async def test_apply_and_reset_drop_the_cache_and_the_log_when_the_feed_url_changes(
+    render: Callable[[], dict[str, Any]],
+    svc: Services,
+    conference: Conference,
+    page: FakePage,
 ) -> None:
-    """Apply or Reset away from a feed URL deletes the cached feed; using one keeps it.
+    """Apply or Reset that changes the feed URL deletes the cache and the change log.
 
-    The rule is the store's (Conference.set_feed_url, D-244); Apply and Reset use it.
+    Whichever way it goes: to a feed URL, back to the year's feed, or Reset. Apply that
+    keeps the URL deletes nothing. The rule is the store's (Conference.set_feed_url,
+    D-255): the feed has loaded, as it always has under the Developer screen.
     """
-    await svc.storage.write_feed(b"{}")
+    await conference.load_local(svc.storage, svc.year)
+    log = changes_file.changes_path(svc.storage)
+
+    async def fill() -> None:
+        """Write a cache and a change log, as refreshes would."""
+        await svc.storage.write_feed(b"{}")
+        await changes_file.write_batches(svc.storage, [])
+
+    def kept() -> tuple[bool, bool]:
+        """Whether the cache and the change log are there."""
+        return svc.storage.feed_path.exists(), log.exists()
+
+    await fill()
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
-    assert svc.storage.feed_path.exists()  # a feed URL in use: kept
+    assert kept() == (False, False)  # to a feed URL
+    await fill()
+    await press(render, "developer.apply")
+    assert kept() == (True, True)  # the same URL: nothing changed
     await type_into(render, "developer.feed_url", "")
     await press(render, "developer.apply")
-    assert not svc.storage.feed_path.exists()  # Apply back to the year's feed
-    await svc.storage.write_feed(b"{}")
+    assert kept() == (False, False)  # back to the year's feed
     await type_into(render, "developer.feed_url", FEED)
     await press(render, "developer.apply")
+    await fill()
     await press(render, "developer.reset")
-    assert not svc.storage.feed_path.exists()  # Reset
+    assert kept() == (False, False)  # Reset
 
 
 async def test_options_that_cannot_be_saved_hold_for_the_session_and_say_so(

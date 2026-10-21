@@ -20,28 +20,16 @@ from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.screens.developer_data import DataActions
-from pycon_us.screens.developer_ui import (
-    LABEL_PADDING,
-    NO_OUTCOME,
-    option_field,
-    outcome_line,
-    padded,
-)
+from pycon_us.screens.developer_ui import LABEL_PADDING, option_field
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.actions import NO_OUTCOME, outcome_line, padded
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
-
-CAPABILITIES = (
-    ("Secure storage", capabilities.SECURE_STORAGE),
-    ("Permissions", capabilities.PERMISSIONS),
-    ("Reminders", capabilities.REMINDERS),
-    ("Badge scanner", capabilities.SCANNER),
-)
-"""The capability flags the screen shows, fixed at import as they are (D-63)."""
+from pycon_us.ui.widths import READING, sides, use_margin
 
 APPLY_IN_SIGHT = 304
 """How far below its text the feed URL field keeps in sight when it takes the focus,
@@ -59,6 +47,7 @@ def Developer() -> ft.View:
     """The Developer screen: the fake clock, the feed URL and the build's capabilities."""
     page = ft.context.page
     svc = use_services()
+    margin = use_margin(READING)  # its width class (D-305)
     prefs = use_prefs()
     conference = use_conference()
     tokens = use_tokens()
@@ -134,7 +123,7 @@ def Developer() -> ft.View:
 
     chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
-        return AppScaffold(title="Developer options", body=locked())
+        return AppScaffold(title="Developer options", body=locked(margin))
     now = clock.now()
     return AppScaffold(
         title="Developer options",
@@ -242,15 +231,20 @@ def Developer() -> ft.View:
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     )
                 ),
-                *(capability_row(name, on) for name, on in CAPABILITIES),
+                *(capability_row(name, on) for name, on in capabilities.ALL),
             ],
             expand=True,
+            padding=sides(margin),
         ),
     )
 
 
-def locked() -> ft.Control:
-    """Return the body shown before the unlock: how to unlock, and the way there."""
+def locked(margin: float) -> ft.Control:
+    """Return the body shown before the unlock: how to unlock, and the way there.
+
+    Args:
+        margin: The screen's side margin (``ui.widths.use_margin()``).
+    """
     return ft.ListView(
         [
             padded(
@@ -263,6 +257,7 @@ def locked() -> ft.Control:
             LinkTile("About this app", "/more/app", icon=ft.Icons.INFO_OUTLINE),
         ],
         expand=True,
+        padding=sides(margin),
     )
 
 

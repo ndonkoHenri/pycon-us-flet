@@ -41,12 +41,13 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.badges import use_favorite_toggle
+from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.status_strip import use_minute
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 HIGHLIGHT_S = 2.0
 """How long the row the room was opened from stays lit, once it is in place (ROOM-03)."""
@@ -112,6 +113,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     """
     page = ft.context.page
     view_path = ft.use_view_path()
+    margin = use_margin(LIST)  # its width class (D-305)
     svc = use_services()
     memory = svc.memory
     conference = use_conference()
@@ -180,6 +182,7 @@ def RoomDetail(room_slug: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
 
@@ -210,6 +213,7 @@ def RoomDetail(room_slug: str) -> ft.View:
             reveal=reveal,
             lit=lit,
             fade_ms=prefs.motion_ms(FADE_MS),
+            margin=margin,
             # "Now" is today's: at the head of its list, it scrolls away with it, so
             # at the largest text the slots keep the screen (D-194).
             head=NowInRoom(room, use_24h=use_24h) if day == current else None,
@@ -220,13 +224,16 @@ def RoomDetail(room_slug: str) -> ft.View:
         for day, group in groups.items()
     ]
     bar: list[ft.Control] = [
-        ft.TabBar(
-            [
-                day_tab(i, day, is_today=day == current, screen=SCREEN)
-                for i, day in enumerate(days)
-            ],
-            scrollable=True,  # five days fit no phone at large text
-            tab_alignment=ft.TabAlignment.START,
+        capped(
+            ft.TabBar(
+                [
+                    day_tab(i, day, is_today=day == current, screen=SCREEN)
+                    for i, day in enumerate(days)
+                ],
+                scrollable=True,  # five days fit no phone at large text
+                tab_alignment=ft.TabAlignment.START,
+            ),
+            margin,
         ),
         ft.TabBarView(pages, expand=True),
     ]

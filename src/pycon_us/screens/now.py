@@ -10,7 +10,9 @@ refreshes the feed every 15 min while Now shows (D-175), then by season:
   with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
   card's session) and a link to the Schedule;
 - on the last evening and the sprint days, the Sprints page; afterwards, the schedule
-  to look back at.
+  to look back at;
+- in every season, the sponsor spotlight (``now_spotlight``, D-37, D-298) when a
+  sponsor may appear there.
 
 Schedule filters never apply (D-20). The screen recomputes on the minute tick
 (``use_minute()``): every 60 s while it is mounted and the app is in the foreground,
@@ -37,6 +39,7 @@ from pycon_us.core.agenda import (
 )
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.row_views import SessionView
+from pycon_us.core.sponsors import pick_spotlight, spotlight_candidates
 from pycon_us.core.timefmt import (
     local_date,
     time_status,
@@ -55,11 +58,12 @@ from pycon_us.screens.now_header import (
     sprints_link,
     up_next_when,
 )
+from pycon_us.screens.now_spotlight import Spotlight
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.badges import ToggleFavorite, use_favorite_toggle
+from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
@@ -72,6 +76,7 @@ from pycon_us.ui.session_rows import (
 )
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -84,6 +89,7 @@ NOTHING_ON = "Nothing in session right now"
 def Now() -> ft.View:
     """The Now root: where the conference stands, and what to do next."""
     list_ref, scroll_to_top = use_scroll_to_top()
+    margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
@@ -102,6 +108,7 @@ def Now() -> ft.View:
         conference, tuple(data.sessions) if data else (), use_24h=use_24h
     )
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
+    candidates = ft.use_memo(lambda: spotlight_candidates(data) if data else (), [data])
 
     @report_errors
     async def refresh() -> None:
@@ -138,7 +145,9 @@ def Now() -> ft.View:
             device_offset=now.astimezone().utcoffset(),
         )
         rows = [
-            StatusHeader(info.name, copy, dark=prefs.dark),
+            StatusHeader(
+                info.name, copy, dark=prefs.dark, high_contrast=tokens.high_contrast
+            ),
             StatusStrip(auto_refresh=True),
             *_sections(
                 copy.season,
@@ -153,11 +162,18 @@ def Now() -> ft.View:
                 use_24h=use_24h,
             ),
         ]
+        # One sponsor for the process (D-298): ViewMemory keeps the pick, so a new
+        # session after Back on Now (F29) thanks the same one.
+        memory = svc.memory
+        sponsor = pick_spotlight(candidates, memory.spotlight, memory.rng)
+        if sponsor is not None:
+            memory.spotlight = sponsor.slug
+            rows.append(Spotlight(sponsor, view_path))
     return AppScaffold(
         title="Now",
         actions=[search_button(svc.memory, "all")],
         body=ft.ListView(
-            rows, expand=True, ref=list_ref, padding=ft.Padding.only(bottom=16)
+            rows, expand=True, ref=list_ref, padding=sides(margin, bottom=16)
         ),
         on_retap=scroll_to_top,
     )
@@ -177,7 +193,7 @@ def _row(
     """One session's memoised row (D-184): a notice's, or a session's with its star."""
     view = by_id[session.id]
     if is_notice(session, info):  # breaks and notices: no star, no bar (D-31)
-        return NoticeRow(view, screen=screen)
+        return NoticeRow(view, tokens, screen=screen)
     return SessionRow(
         view, session.id in saved, on_toggle, tokens, screen=screen, elapsed=elapsed
     )

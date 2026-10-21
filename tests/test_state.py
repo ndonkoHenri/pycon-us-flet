@@ -19,10 +19,11 @@ import pytest
 
 from pycon_us import clock
 from pycon_us.config import YearData, load_year
+from pycon_us.core.change_batches import Batch
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
-from pycon_us.feed_refresh import REFRESH_EVERY, Status
-from pycon_us.services import api
+from pycon_us.feed_refresh import REFRESH_EVERY, Status, feed_digest
+from pycon_us.services import api, changes_file
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from tests.fakes import MemoryPrefs, QueuedWrite
@@ -146,6 +147,17 @@ async def test_without_a_cache_the_bundled_snapshot_is_published(
     assert not storage.feed_path.exists()  # the snapshot is never copied to the cache
 
 
+async def test_the_digest_names_the_published_feed(
+    storage: Storage, year: YearData
+) -> None:
+    """``digest`` is None before a publish, then the SHA-256 of the published bytes (D-271)."""
+    assert Conference().digest is None
+    conference = await loaded(storage, year)
+    assert conference.digest == feed_digest(year.read_snapshot().raw)
+    await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
+    assert conference.digest == feed_digest(NETWORK_FEED)
+
+
 async def test_the_feed_cache_wins_over_the_snapshot(
     storage: Storage, year: YearData
 ) -> None:
@@ -179,9 +191,7 @@ async def test_a_corrupt_cache_is_deleted_and_the_snapshot_published(
     assert conference.source == "bundled"
     assert conference.data is not None
     assert not storage.feed_path.exists()
-    assert "Deleting the cached feed feed-2026.json: it does not parse: not JSON" in (
-        caplog.text
-    )
+    assert "Deleting feed-2026.json: it does not parse: not JSON" in caplog.text
 
 
 async def test_a_cache_with_the_wrong_structure_is_deleted_too(
@@ -1018,23 +1028,74 @@ async def test_a_feed_url_set_in_developer_serves_the_next_refresh(
     assert conference.source == "network"
 
 
-async def test_leaving_a_feed_url_for_the_year_s_deletes_the_cache_it_may_have_filled(
-    storage: Storage, year: YearData
-) -> None:
-    """Only going back from a feed URL to the year's feed deletes the cache.
+async def fill(storage: Storage) -> None:
+    """Write a cache and a change log, as refreshes from the feed URL in effect would."""
+    await storage.write_feed(NETWORK_FEED)
+    await changes_file.write_batches(storage, [Batch(NOW, ())])
 
-    An offline start would publish that feed as the schedule (D-187, D-244).
+
+def files(storage: Storage) -> tuple[bool, bool]:
+    """Whether the cache and the change log are there."""
+    return storage.feed_path.exists(), changes_file.changes_path(storage).exists()
+
+
+@pytest.mark.parametrize(
+    ("was", "url"),
+    [(None, DEV_FEED), (DEV_FEED, OTHER_DEV_FEED), (DEV_FEED, None)],
+    ids=["to a feed URL", "to another", "back to the year's"],
+)
+async def test_any_feed_url_change_after_the_load_deletes_the_cache_and_the_log(
+    storage: Storage, year: YearData, was: str | None, url: str | None
+) -> None:
+    """Once the feed has loaded, every feed URL change deletes the cache and the log.
+
+    Both hold the old URL's feed: an offline start would publish it, and the next diff
+    or the log would mix two feeds (D-255, amending D-244).
     """
     conference = await loaded(storage, year)
-    await storage.write_feed(NETWORK_FEED)
-    await conference.set_feed_url(None, storage)
-    assert storage.feed_path.exists()  # the year's feed all along: kept
+    await conference.set_feed_url(was, storage)
+    await fill(storage)
+    await conference.set_feed_url(was, storage)
+    assert files(storage) == (True, True)  # the same URL: no change
+    await conference.set_feed_url(url, storage)
+    assert files(storage) == (False, False)
+
+
+async def test_the_start_s_restore_of_a_stored_feed_url_deletes_nothing(
+    storage: Storage, year: YearData
+) -> None:
+    """At a start the stored URL is set before the load, which keeps both files.
+
+    ``bootstrap()`` restores it, then loads the cache, which is that URL's (D-255).
+    """
+    await fill(storage)
+    conference = Conference()
     await conference.set_feed_url(DEV_FEED, storage)
-    assert storage.feed_path.exists()  # a feed URL in use: kept
-    await conference.set_feed_url(OTHER_DEV_FEED, storage)
-    assert storage.feed_path.exists()  # from one feed URL to another: kept
-    await conference.set_feed_url(None, storage)
-    assert not storage.feed_path.exists()  # back to the year's feed
+    assert files(storage) == (True, True)
+    await conference.load_local(storage, year)
+    assert conference.source == "cache"
+
+
+async def test_a_feed_url_left_while_a_log_write_is_queued_leaves_no_log(
+    storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A feed URL left while a change log write waits for its lock leaves no log.
+
+    The deletion waits for every write asked for before it, of either file, a cancelled
+    caller's too, so the old URL's batches cannot land after it (D-244's order, D-255).
+    """
+    conference = await loaded(storage, year)
+    held = QueuedWrite(monkeypatch)
+    writing = asyncio.create_task(changes_file.write_batches(storage, [Batch(NOW, ())]))
+    await held.queued()
+    writing.cancel()  # its caller gone: the write, a task of its own, still lands
+    leaving = asyncio.create_task(conference.set_feed_url(DEV_FEED, storage))
+    done, _ = await asyncio.wait({leaving}, timeout=0.1)
+    held.release()
+    await leaving
+    assert not done  # the deletion waited for the write
+    assert not changes_file.changes_path(storage).exists()
+    assert writing.cancelled()
 
 
 @pytest.mark.parametrize("then", [None, OTHER_DEV_FEED])

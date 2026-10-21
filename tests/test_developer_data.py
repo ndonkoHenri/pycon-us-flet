@@ -8,7 +8,6 @@ device are checked on devices (the PR).
 
 import asyncio
 import inspect
-import logging
 from collections.abc import Callable, Iterator
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -20,22 +19,17 @@ import pytest
 from pycon_us import clock
 from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
+from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
-    LOG_NOT_FOUND,
-    LOG_OFFERED,
-    LOG_SHARED,
-    NO_LOG,
-    NOT_SHARED,
     RESET_INCOMPLETE,
     DataActions,
-    refreshed,
     reset_app,
-    schedule_line,
 )
 from pycon_us.screens.developer_ui import (
     NBSP,
@@ -43,10 +37,12 @@ from pycon_us.screens.developer_ui import (
     reset_losses,
     snapshot_day,
 )
-from pycon_us.services import Services, api, errors
+from pycon_us.services import Services, api, changes_file, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui.actions import KEPT, refreshed
+from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -393,7 +389,7 @@ async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(
     """
     await tap(render, "developer.refresh_now")
     assert outcome(render()) == (
-        "No answer from the feed: the app keeps the schedule it has."
+        "Couldn't refresh: no answer from the feed. The app keeps the schedule it has."
     )
     assert conference.source == "bundled"  # kept
 
@@ -559,109 +555,54 @@ def test_the_bundled_schedule_s_day_never_wraps_in_its_middle(svc: Services) -> 
 
 
 # ------------------------------------------------------------------ Share log
+# What the share sends and says in every case is test_share_report.py's.
 
 
-def test_share_log_is_off_outside_a_packaged_build_and_says_why(
-    render: Callable[[], ft.Column], packaged: Callable[[bool], None]
-) -> None:
-    """Outside a packaged build, Share log is disabled and says where the log is."""
-    packaged(False)
-    tile = row(render(), "developer.share_log")
-    assert tile.disabled is True
-    assert subtitle(render(), "developer.share_log") == (
-        "Not a packaged build: the log is in the terminal that runs it"
-    )
-
-
-async def test_share_log_shares_the_console_log_file(
+async def test_share_log_shares_the_console_log_with_the_diagnostics(
     render: Callable[[], ft.Column], svc: Services, tmp_path: Path
 ) -> None:
-    """Share log shares the console log file alone, then says it was shared."""
+    """In a packaged build, Share log says so and shares console.log with the diagnostics.
+
+    The diagnostics are the file's text, and the row says beforehand what a tap sends.
+    """
     log = tmp_path / "console.log"
     log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
     cast(MemoryPaths, svc.paths).console_log = str(log)
+    assert subtitle(render(), "developer.share_log") == WITH_LOG
     await tap(render, "developer.share_log")
-    [files] = cast(MemoryShare, svc.share).shared
+    share = cast(MemoryShare, svc.share)
+    [files] = share.shared
     assert [file.path for file in files] == [str(log)]
+    assert share.file_options[0]["text"].startswith("App: ")
     assert outcome(render()) == LOG_SHARED[0]
-
-
-@pytest.mark.parametrize(
-    ("status", "says"),
-    [
-        (ft.ShareResultStatus.DISMISSED, None),
-        # Some Android targets report neither: the sheet had the log either way.
-        (ft.ShareResultStatus.UNAVAILABLE, LOG_OFFERED[0]),
-    ],
-)
-async def test_a_dismissed_share_sheet_says_nothing(
-    render: Callable[[], ft.Column],
-    svc: Services,
-    tmp_path: Path,
-    status: ft.ShareResultStatus,
-    says: str | None,
-) -> None:
-    """A dismissed share says nothing; an unavailable status says the log was offered.
-
-    Either way, Share log stays usable.
-    """
-    log = tmp_path / "console.log"
-    log.write_text("a line\n")
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    cast(MemoryShare, svc.share).status = status
-    await tap(render, "developer.share_log")
-    assert outcome(render()) == says
     assert row(render(), "developer.share_log").disabled is False  # usable again
 
 
-@pytest.mark.parametrize("content", [None, ""])
-async def test_without_a_log_there_is_nothing_to_share(
+async def test_outside_a_packaged_build_share_log_sends_the_diagnostics_alone(
     render: Callable[[], ft.Column],
     svc: Services,
-    tmp_path: Path,
-    content: str | None,
+    packaged: Callable[[bool], None],
 ) -> None:
-    """A missing or empty log file shares nothing and says there is no log."""
-    log = tmp_path / "console.log"
-    if content is not None:
-        log.write_text(content)
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    await tap(render, "developer.share_log")
-    assert cast(MemoryShare, svc.share).shared == []
-    assert outcome(render()) == NO_LOG[0]
+    """Outside a packaged build, Share log stays on and shares the diagnostics alone.
 
-
-async def test_a_share_that_fails_says_so_and_logs_only_the_error_s_class(
-    render: Callable[[], ft.Column],
-    svc: Services,
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """A failed share says so and logs only the error's class, never the log's path.
-
-    A log whose file name cannot be read says the log was not found.
+    Its second line says beforehand why no log goes; the diagnostics go as a text.
     """
-    log = tmp_path / "console.log"
-    log.write_text("a line\n")
-    cast(MemoryPaths, svc.paths).console_log = str(log)
-    # Flet's invoke error repeats the call's arguments, the path included (D-72).
-    cast(MemoryShare, svc.share).error = RuntimeError(f"share_files({log}) failed")
-    with caplog.at_level(logging.WARNING):
-        await tap(render, "developer.share_log")
-    assert outcome(render()) == NOT_SHARED[0]
-    assert [r.getMessage() for r in caplog.records] == [
-        "Could not share the log: RuntimeError"
-    ]
-    cast(MemoryPaths, svc.paths).error = TimeoutError("get_console_log_filename")
+    packaged(False)
+    assert row(render(), "developer.share_log").disabled is False
+    assert subtitle(render(), "developer.share_log") == WITHOUT_LOG
     await tap(render, "developer.share_log")
-    assert outcome(render()) == LOG_NOT_FOUND[0]
+    share = cast(MemoryShare, svc.share)
+    assert share.shared == []
+    [(text, _)] = share.texts
+    assert text.startswith("App: ")
+    assert outcome(render()) == DIAGNOSTICS_SHARED[0]
 
 
 # ------------------------------------------------------------------ Reset app
 
 
 def test_reset_lists_exactly_what_is_lost() -> None:
-    """Reset lists the settings, saved sessions, cache and Developer options it loses.
+    """Reset lists the settings, saved sessions, cache, change log and Developer options.
 
     With nothing saved it says none, and outside a packaged build Developer does not
     lock again (D-73).
@@ -670,11 +611,12 @@ def test_reset_lists_exactly_what_is_lost() -> None:
         "Your settings: Appearance and the schedule's filters",
         "Your saved sessions in My schedule: 3",
         "The cached schedule: the app shows the bundled one until it refreshes",
+        "Schedule changes: what recent refreshes changed",
         "Developer options: the fake clock and the feed URL, and Developer locks again",
     )
     losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
     assert losses[1] == "Your saved sessions in My schedule: none"
-    assert losses[3] == "Developer options: the fake clock and the feed URL"
+    assert losses[4] == "Developer options: the fake clock and the feed URL"
 
 
 async def test_reset_app_asks_first_and_its_dialog_lists_the_losses(
@@ -715,14 +657,16 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
 ) -> None:
     """Confirming the reset leaves storage and every store as after a fresh install.
 
-    The session has been used: settings, favourites of two years, the Developer options,
-    a cache, a fake clock, a feed URL and remembered places. Only another app's key is
-    left; the device facts stay and Developer locks again. Then, as at a start, a quiet
-    refresh of the year's feed runs, the app goes to Now and says "App reset".
+    The session has been used: settings (reminders too), favourites of two years, the
+    Developer options, a cache, a change log, a fake clock, a feed URL and remembered
+    places. Only another app's key is left; the device facts stay and Developer locks
+    again. Then, as at a start, a quiet refresh of the year's feed runs, the app goes to
+    Welcome, as a first start does (D-287), and says "App reset".
     """
     stored.update(
         {
             "pycon.theme": "dark",
+            "pycon.onboarded": True,
             "pycon.excluded_tracks": [],
             "pycon.2026.favorites": ["1", "2", "3"],
             "pycon.2025.favorites": ["9"],
@@ -730,12 +674,20 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
             "flutter.not_ours": "kept",
         }
     )
-    await svc.storage.write_feed(recorded(2026))
-    await prefs.save(svc.storage, theme="dark", excluded_tracks=())
+    await prefs.save(
+        svc.storage,
+        theme="dark",
+        onboarded=True,
+        excluded_tracks=(),
+        reminders=ReminderSettings(session_lead=10, keynote=False, primer="accepted"),
+    )
     prefs.os_dark = True
     clock.start_fake_clock(datetime(2026, 5, 15, 16, tzinfo=UTC))
     errors.show_details(True)
     await conference.set_feed_url(DEV_FEED, svc.storage)
+    # After the URL change, which deletes both files once the feed has loaded (D-255).
+    await svc.storage.write_feed(recorded(2026))
+    await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
     svc.memory.last_location = "/more/developer"
     svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
     svc.memory.jumped_on = date(2026, 5, 15)
@@ -747,14 +699,17 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # On the device: nothing of the app's is left.
     assert stored == {"flutter.not_ours": "kept"}
     assert not svc.storage.feed_path.exists()
+    assert not changes_file.changes_path(svc.storage).exists()
     # In memory, without a restart.
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
     assert errors._details is False
-    assert (prefs.theme, prefs.excluded_tracks, prefs.dev) == (
+    assert (prefs.theme, prefs.onboarded, prefs.excluded_tracks, prefs.dev) == (
         "system",
+        False,
         ("Open Space",),
         {},
     )
+    assert prefs.reminders == ReminderSettings()  # off, the primer unasked (D-275)
     assert prefs.developer is False  # a packaged build: locked again
     assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
     assert favorites.ids == frozenset()
@@ -764,8 +719,24 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     # Then, as at a start: a quiet refresh of the year's feed, and the index route.
     await asyncio.sleep(0)
     assert offline == [svc.year.conference.feed_url]
-    assert page.navigated == ["/now"]
+    assert page.navigated == ["/welcome"]
     assert said(page) == ["App reset"]
+
+
+async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+) -> None:
+    """Reset app deletes the change log when no feed URL was set (D-255).
+
+    ``Conference.reset()`` deletes the log only through a feed URL change, so here only
+    ``reset_app()``'s own deletion can remove it.
+    """
+    await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
+    assert await reset_app(svc, conference, prefs, favorites) is True
+    assert not changes_file.changes_path(svc.storage).exists()
 
 
 async def test_a_reset_that_cannot_delete_everything_says_so(
@@ -778,7 +749,7 @@ async def test_a_reset_that_cannot_delete_everything_says_so(
 ) -> None:
     """A reset that cannot delete everything still resets the session and says so.
 
-    It goes to Now, as a full reset does (D-120).
+    It goes to Welcome, as a full reset does (D-120, D-287).
     """
     stored["pycon.2026.favorites"] = ["1"]
     cast(MemoryPrefs, svc.storage.prefs).fail_removes = True
@@ -786,7 +757,7 @@ async def test_a_reset_that_cannot_delete_everything_says_so(
     render()
     await press(rendered.dialog, "developer.reset_app.confirm")
     assert favorites.ids == frozenset()  # the session is reset all the same (D-120)
-    assert page.navigated == ["/now"]
+    assert page.navigated == ["/welcome"]
     assert said(page) == [RESET_INCOMPLETE]
 
 
@@ -834,19 +805,6 @@ def test_refresh_now_says_how_the_refresh_ended() -> None:
     assert refreshed(None) == ("Schedule updated from the feed.", True)
     assert refreshed("offline")[1] is False
     assert refreshed("server") == (
-        "The feed's answer couldn't be used: the app keeps the schedule it has.",
+        f"Couldn't refresh: the feed's answer couldn't be used. {KEPT}",
         False,
     )
-
-
-def test_the_schedule_line_names_the_source_and_its_age() -> None:
-    """The schedule line names the source and its age, or says there is none yet."""
-    now = datetime(2026, 5, 15, 12, tzinfo=UTC)
-    three_hours = now - timedelta(hours=3)
-    assert schedule_line("cache", three_hours, now) == (
-        "From the cache, updated 3 hours ago"
-    )
-    assert (
-        schedule_line("bundled", now, now) == "Bundled with the app, updated just now"
-    )
-    assert schedule_line("none", None, now) == "No schedule yet"

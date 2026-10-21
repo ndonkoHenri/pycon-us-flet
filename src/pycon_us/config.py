@@ -1,14 +1,16 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below, through ``year_schema``, then checks their rules. Three
+frozen dataclasses below, through ``year_schema``, then checks their rules. Five
 concerns have modules of their own, each with its tables and their checks: the track
 registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
-(D-217). The dataclasses are the schema: an unknown or missing key, a wrong type or a
-broken rule fails at load time with a ``YearDataError`` that names the file, the key and
-the problem. Years, dates, names and URLs live in the data files, never in code; rolling
-over is a new ``data/<year>/`` folder and a new ``YEAR``.
+(D-217), the info pages in ``year_info`` (D-263; About the PSF's and Social's in
+``year_links``), the conference moments in ``year_moments`` (D-274). The dataclasses
+are the schema: an unknown or missing key, a wrong type or a broken rule fails at load
+time with a ``YearDataError`` that names the file, the key and the problem. Years,
+dates, names and URLs live in the data files, never in code; rolling over is a new
+``data/<year>/`` folder and a new ``YEAR``.
 
 The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
 ``YearData.read_snapshot()`` (D-38, NEW-03).
@@ -20,9 +22,13 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
+from pycon_us.year_info import HelpInfo, SafetyContact, WifiInfo, check_info
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
+from pycon_us.year_links import PsfInfo, SocialInfo
+from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
     LightningTalksInfo,
     OpenSpacesInfo,
@@ -141,7 +147,9 @@ class Content:
     """The year's content from ``content.toml`` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
-    Lightning talks pages (D-205), and the keynotes' people and abstracts (D-217).
+    Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), the info
+    pages' tables (D-263; the Wi-Fi page's network and password, D-280, and the venue
+    hours, D-282), and the hand-authored conference moments (D-274).
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
@@ -158,6 +166,20 @@ class Content:
         lightning_talks: The Lightning talks page's copy and links; None for a year
             that has none, whose page shows its sessions alone.
         keynotes: The keynotes and panels, one entry per session (SESS-08, SPKR-04).
+        wifi: The Wi-Fi page's network and password (INFO-08, D-280); None for a year
+            without them, whose page shows the feed's block.
+        event_reminders: The sign-up moments, written by hand (NOTIF-05); the
+            keynotes' moments are derived from the feed (``year_moments``).
+        safety_contacts: Help & safety's ways to report a concern, each from a public
+            source (INFO-07, D-45, D-281); empty for a year without them.
+        help: Help & safety's other lines and links; None for a year without them,
+            whose page shows the feed's block (D-281).
+        psf: About the PSF's mission, Donate and links (INFO-06, D-283); None for a
+            year without them, whose page shows the feed's block.
+        social: The Social page's hashtags and links (INFO-10, D-284); None for a
+            year without them, whose page shows the feed's block.
+        venue_hours: When each venue service is open, for Venue & hours (MAP-09,
+            D-282); empty for a year without them, whose page shows the feed's block.
     """
 
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
@@ -167,6 +189,13 @@ class Content:
     open_spaces: OpenSpacesInfo | None = None
     lightning_talks: LightningTalksInfo | None = None
     keynotes: tuple[Keynote, ...] = ()
+    wifi: WifiInfo | None = None
+    event_reminders: tuple[EventReminder, ...] = ()
+    safety_contacts: tuple[SafetyContact, ...] = ()
+    help: HelpInfo | None = None
+    psf: PsfInfo | None = None
+    social: SocialInfo | None = None
+    venue_hours: tuple[ServiceHours, ...] = ()
 
 
 @dataclass(frozen=True, eq=False)
@@ -268,7 +297,7 @@ def load_year(
     content = build(
         Content, read_table(folder / "content.toml", content_file), content_file
     )
-    _check_content(content, content_file)
+    _check_content(content, conference, content_file)
     data = YearData(conference, content, folder)
     if check_sessions:
         check_snapshot_sessions(data, KEYNOTE_TRACKS, content_file)
@@ -311,9 +340,11 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
     check_tracks(conference.tracks, file)
 
 
-def _check_content(content: Content, file: str) -> None:
+def _check_content(content: Content, conference: ConferenceInfo, file: str) -> None:
     check_pages(content.open_spaces, content.lightning_talks, file)
     check_keynotes(content.keynotes, file)
+    check_moments(content.event_reminders, conference.year, conference.zone, file)
+    check_info(content, conference, file)
     seen: set[str] = set()
     for index, name in enumerate(content.other_locations):
         slug = slugify_room(name)

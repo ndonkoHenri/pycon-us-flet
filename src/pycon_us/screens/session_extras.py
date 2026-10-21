@@ -1,8 +1,11 @@
-"""Session detail's extras (ux.md §5.5): Share, posters, an open space's image and link.
+"""Session detail's extras (ux.md §5.5): Share, the overflow, posters, an open space's.
 
 - **Share** (NEW-06) sends the session's title, when and where in conference time with
   its zone, and its public page when it has one (``row_views.share_text()``), through
   the platform's share sheet (``ui.share``).
+- **The overflow** ("More options"): "Open on us.pycon.org", the session's public page,
+  and Add to calendar (SESS-04), which hands the session's ``.ics`` to the calendar
+  (``services.calendar``, D-272).
 - **Posters** (SESS-09): the Posters row of the Schedule stands for the poster session,
   so its detail lists the posters (``timeline.posters()``) as the session rows every
   list uses, with their stars; each pushes its poster's detail on top of this one, so
@@ -18,14 +21,20 @@ from urllib.parse import urlsplit
 
 import flet as ft
 
+from pycon_us import clock
+from pycon_us.core.ics import calendar_file, file_slug
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import share_text
 from pycon_us.core.slugs import slugify_room
 from pycon_us.services import use_services
+from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens
-from pycon_us.ui.badges import ToggleFavorite
+from pycon_us.theme_hc import hc_border
+from pycon_us.ui.favorite import ToggleFavorite
+from pycon_us.ui.links import open_link
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
@@ -37,6 +46,9 @@ SCREEN = "session"
 
 SHARE_TOOLTIP = "Share session"
 """The Share button's tooltip, which is also its name (D-27)."""
+
+ADD_TO_CALENDAR = "Add to calendar"
+"""The overflow's calendar item (SESS-04), the same words on both platforms (D-272)."""
 
 OPEN_SPACE = "open-space"
 """The kind of an open space's session (DATA-05): it has an image and a site entry."""
@@ -99,6 +111,63 @@ def ShareButton(session: Session) -> ft.Control:
 
 
 @ft.component
+def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
+    """The app bar's overflow ("More options"): the public page, then Add to calendar.
+
+    "Open on us.pycon.org" leaves the app: a link, read "Opens in browser" after its
+    words (ux.md §4.7). Add to calendar is disabled while the calendar's sheet or
+    the save dialog is up, so a second tap does not serve or save the file twice;
+    in place, so the item keeps its node (D-182). Each label wraps at 200 % text
+    (``menu_item()``, F47, D-233). The caller shows the menu only with an item in it.
+
+    Args:
+        session: The session the page shows.
+        site: Whether to offer the session's public page (``Session.url``).
+        calendar: Whether to offer Add to calendar: a session the schedule still has
+            and that can be saved (D-186, D-31).
+    """
+    svc = use_services()
+    adding, set_adding = ft.use_state(False)
+
+    @report_errors
+    async def open_site() -> None:
+        await open_link(svc, session.url)
+
+    @report_errors
+    async def add() -> None:
+        year = svc.year.conference.year
+        data = calendar_file([session], year=year, now=clock.now())
+        set_adding(True)
+        try:
+            await add_to_calendar(svc, file_slug(session.name), data)
+        finally:
+            set_adding(False)
+
+    items: list[ft.PopupMenuItem] = []
+    if site:
+        items.append(
+            menu_item(
+                ft.Icons.OPEN_IN_NEW,
+                site_title(session.url),
+                open_site,
+                identifier=f"{SCREEN}.open_site",
+                link=True,
+            )
+        )
+    if calendar:
+        items.append(
+            menu_item(
+                ft.Icons.EVENT_AVAILABLE_OUTLINED,
+                ADD_TO_CALENDAR,
+                add,
+                identifier=f"{SCREEN}.add_to_calendar",
+                disabled=adding,
+            )
+        )
+    return overflow_menu(f"{SCREEN}.overflow", items)
+
+
+@ft.component
 def Posters(
     row: Session,
     posters: tuple[Session, ...],
@@ -151,16 +220,20 @@ def Posters(
     return ft.Column([header, *rows], spacing=0)
 
 
-def open_space_extras(session: Session, *, fade_ms: int) -> list[ft.Control]:
+def open_space_extras(
+    session: Session, *, fade_ms: int, high_contrast: bool = False
+) -> list[ft.Control]:
     """Return an open space's image and its site link (SESS-11), as the page's sections.
 
     Args:
         session: The open space.
         fade_ms: How long the image fades in once loaded (``prefs.motion_ms()``).
+        high_contrast: HC is on screen (``Tokens.high_contrast``): the image's frame
+            is outlined.
     """
     extras: list[ft.Control] = []
     if session.image_url:
-        extras.append(_image(session, fade_ms=fade_ms))
+        extras.append(_image(session, fade_ms=fade_ms, high_contrast=high_contrast))
     if session.url:  # its entry on the site's open-spaces page, by the link rule
         extras.append(
             LinkTile(
@@ -173,7 +246,7 @@ def open_space_extras(session: Session, *, fade_ms: int) -> list[ft.Control]:
     return extras
 
 
-def _image(session: Session, *, fade_ms: int) -> ft.Control:
+def _image(session: Session, *, fade_ms: int, high_contrast: bool) -> ft.Control:
     """The open space's image, scaled down to fit a 16:9 frame the content's width.
 
     A small image keeps its size, centred, rather than blur at the frame's. Around an
@@ -184,7 +257,9 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
     Flet sizes the placeholder with the image's own width and height (F44), which an
     image of unknown size does not have, so it could not fill the frame. When the
     image does not load, the frame says so (``error_content``). Its name for screen
-    readers is the session's: the feed has no description of the picture.
+    readers is the session's: the feed has no description of the picture. In high
+    contrast, where the fill is the surface, a 1 dp ``outline`` border draws the frame
+    (D-306).
     """
     fade = ft.Animation(fade_ms, ft.AnimationCurve.EASE_OUT)
     backdrop = ft.Image(
@@ -220,6 +295,7 @@ def _image(session: Session, *, fade_ms: int) -> ft.Control:
         ft.Stack([backdrop, scrim, image], alignment=ft.Alignment.CENTER),
         aspect_ratio=IMAGE_RATIO,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+        border=hc_border(high_contrast),
         border_radius=12,  # a card's shape (ux.md §3.6)
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
     )

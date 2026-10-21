@@ -23,7 +23,7 @@ from pycon_us.core.models import ConferenceData
 from pycon_us.prefs import Prefs
 from pycon_us.screens import session as screen
 from pycon_us.services import Services
-from pycon_us.ui.badges import REMOVED, UNDO
+from pycon_us.ui.favorite import REMOVED, UNDO
 from tests.feeds import processed
 from tests.session_detail import (
     BREAK,
@@ -517,11 +517,11 @@ async def test_the_star_saves_and_undo_brings_it_back(render: Render) -> None:
 
 
 async def test_the_overflow_opens_the_public_page(render: Render) -> None:
-    """The overflow's one item is a link that opens the session's public page."""
+    """The overflow's first item is a link that opens the session's public page."""
     detail = await render(TALK)
     menu = cast(ft.PopupMenuButton, detail.node("session.overflow").content)
     assert menu.tooltip == "More options"
-    (item,) = menu.items
+    item = menu.items[0]  # Add to calendar follows (tests/test_session_calendar.py)
     assert detail.node("session.open_site") is item.content
     title = cast(ft.ListTile, cast(ft.Semantics, item.content).content).title
     assert cast(ft.Semantics, title).link  # it leaves the app (ux.md §4.7)
@@ -543,10 +543,13 @@ async def test_a_break_has_no_star_as_its_row_has_none(render: Render) -> None:
     assert detail.nodes("session.favorite") == []
 
 
-async def test_a_session_without_a_public_page_has_no_overflow(render: Render) -> None:
-    """D-60: no dead controls; Add to calendar joins the menu in P2."""
+async def test_a_session_without_a_public_page_has_no_link_to_it(
+    render: Render,
+) -> None:
+    """D-60: no dead controls; its overflow holds Add to calendar alone (SESS-04)."""
     detail = await render(KEYNOTE)
-    assert detail.nodes("session.overflow") == []
+    assert detail.nodes("session.open_site") == []
+    assert detail.nodes("session.add_to_calendar")
     assert detail.nodes("session.favorite")  # the star is always there
 
 
