@@ -12,6 +12,8 @@ refreshes the feed every 15 min while Now shows (D-175), then by season:
   others (``now_fold``, D-327), and a link to the Schedule;
 - on the last evening and the sprint days, the Sprints page; afterwards, the schedule
   to look back at;
+- on the conference and sprint days, after the sessions, the quick info buttons
+  (``now_quick``: Wi-Fi, Help & safety, Venue & hours, D-338);
 - in every season, the sponsor spotlight (``now_spotlight``, D-37, D-298) when a
   sponsor may appear there.
 
@@ -60,6 +62,7 @@ from pycon_us.screens.now_header import (
     sprints_link,
     up_next_when,
 )
+from pycon_us.screens.now_quick import SEASONS, QuickInfo
 from pycon_us.screens.now_spotlight import Spotlight
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -180,6 +183,8 @@ def Now() -> ft.View:
                 use_24h=use_24h,
             ),
         ]
+        if copy.season in SEASONS:  # under the sessions, never above them (D-338)
+            rows.append(QuickInfo(view_path))
         # One sponsor for the process (D-298): ViewMemory keeps the pick, so a new
         # session after Back on Now (F29) thanks the same one.
         memory = svc.memory
