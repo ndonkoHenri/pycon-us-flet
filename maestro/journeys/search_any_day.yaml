@@ -1,0 +1,109 @@
+# P1 exit criterion 1: search finds sessions, speakers and rooms on any day (D-19,
+# D-46). Search is opened from Friday's Schedule, and each find is on Saturday:
+# - a session: "phishing" finds "Anatomy of a Phishing Campaign" (session 74, Saturday);
+# - a speaker: "fiedler" finds its speaker, Mike Fiedler (speaker 77);
+# - a room: "seaside" finds Seaside Ballroom A, used on Saturday only, whose page lists
+#   its session.
+# Mirrors F3 (tests/ui/test_search_keeps_query.py), which a flet test flow could only
+# check one scope at a time, near the top, with the keyboard up (D-223).
+appId: io.github.ndonkohenri.pyconus
+name: Search finds a session, a speaker and a room on another day
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.day_tab.2
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: app.search
+- extendedWaitUntil:
+    visible:
+      id: search.field
+    timeout: 15000
+# From the Schedule, search opens on its Sessions scope (D-19).
+- assertVisible:
+    id: search.scope.sessions
+    selected: true
+
+# A session on Saturday.
+- inputText: phishing
+- extendedWaitUntil:
+    visible:
+      id: search.session.74
+    timeout: 15000
+- assertVisible:
+    id: search.count
+    text: 1 session
+- assertVisible: Saturday, May 16
+- pressKey: Enter
+- tapOn:
+    id: search.session.74
+- extendedWaitUntil:
+    visible:
+      id: session.title
+      text: Anatomy of a Phishing Campaign
+    timeout: 15000
+- assertVisible:
+    id: session.when
+    text: "Saturday, May 16.*"
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: search.session.74
+    timeout: 15000
+
+# Its speaker, in the Speakers scope.
+- tapOn:
+    id: search.field
+- eraseText: 20
+- inputText: fiedler
+- pressKey: Enter
+- tapOn:
+    id: search.scope.speakers
+- extendedWaitUntil:
+    visible:
+      id: search.speaker.77
+    timeout: 15000
+
+# A room used on Saturday only, in the Rooms scope; its page lists its session.
+- tapOn:
+    id: search.field
+- eraseText: 20
+- inputText: seaside
+- pressKey: Enter
+- tapOn:
+    id: search.scope.rooms
+- extendedWaitUntil:
+    visible:
+      id: search.room.seaside-ballroom-a
+    timeout: 15000
+- tapOn:
+    id: search.room.seaside-ballroom-a
+- extendedWaitUntil:
+    visible:
+      id: room.day_tab.0
+      text: ".*Saturday, May 16"
+    timeout: 15000
+- assertVisible:
+    id: room.session.223
+    text: "Event, Registration required\\. PyLadies Auction\\..*"
+# Back to search, which keeps the query and the scope (D-193).
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: search.room.seaside-ballroom-a
+    timeout: 15000
+- assertVisible:
+    id: search.scope.rooms
+    selected: true
+- assertVisible:
+    id: search.field
+    text: seaside

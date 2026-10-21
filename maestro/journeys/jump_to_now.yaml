@@ -1,0 +1,72 @@
+# P1 exit criterion 2: Jump to now works (D-192), on a simulated conference day.
+#
+# At Friday 14:10 the Schedule opens on today with the now slot, 2:00 PM, at the top
+# (the now line under its rows may be below the fold on a short phone). Flinging down
+# the day takes the slot out of view and brings up the Now button; tapping it puts the
+# 2:00 PM slot back at the top, and on iOS the button goes. A flet test flow could not
+# check this: it can neither fling nor read where a list rests (testing-and-quality.md
+# §5.4).
+appId: io.github.ndonkohenri.pyconus
+name: Jump to now lands on the now slot
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.session.138
+    timeout: 15000
+- waitForAnimationToEnd
+- runFlow: ../subflows/top_slot.yaml
+- assertTrue:
+    condition: ${output.topSlot == '2:00'}
+    label: The Schedule opens with the 2:00 PM slot at the top
+
+# Fling down the day, away from now.
+- repeat:
+    times: 3
+    commands:
+      - swipe:
+          start: "50%, 80%"
+          end: "50%, 30%"
+          duration: 150
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: schedule.jump_now
+    timeout: 15000
+- assertNotVisible:
+    id: schedule.now_line
+- runFlow: ../subflows/top_slot.yaml
+- assertTrue:
+    condition: ${output.topSlot != '2:00'}
+    label: The fling left the 2:00 PM slot
+
+# Jump to now: the 2:00 PM slot is at the top again.
+- tapOn:
+    id: schedule.jump_now
+- extendedWaitUntil:
+    visible:
+      id: schedule.session.138
+    timeout: 15000
+- waitForAnimationToEnd
+- runFlow: ../subflows/top_slot.yaml
+- assertTrue:
+    condition: ${output.topSlot == '2:00'}
+    label: Jump to now put the 2:00 PM slot at the top
+# And the button goes (D-204). iOS only: on Android, Maestro's reads of the screen make
+# Flutter report a screen reader (F72), and the Schedule keeps the button for one, so a
+# tap never removes the focused control.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            id: schedule.jump_now
+          timeout: 15000

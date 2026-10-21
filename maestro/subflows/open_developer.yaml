@@ -1,0 +1,38 @@
+# Open Developer options from a tab root, as a person would (D-73, D-187), as
+# tests/ui/developer.py's open_developer() does: More › About this app › the version
+# row 7 times › Developer options. Once unlocked, the version taps are skipped.
+# Unlike a flet test flow, Maestro can scroll, so About this app is reached on any
+# phone size (the iPhone 17 hides it under the bar).
+appId: io.github.ndonkohenri.pyconus
+---
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.app
+    direction: DOWN
+- tapOn:
+    id: more.app
+- extendedWaitUntil:
+    visible:
+      id: about_app.version
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: about_app.developer
+    commands:
+      - tapOn:
+          id: about_app.version
+          repeat: 7
+          delay: 150
+- tapOn:
+    id: about_app.developer
+- extendedWaitUntil:
+    visible:
+      id: developer.apply
+    timeout: 15000

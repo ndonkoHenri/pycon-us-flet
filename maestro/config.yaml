@@ -1,0 +1,6 @@
+# Maestro's workspace configuration (maestro/README.md): `maestro test maestro` runs the
+# flows these globs match, filtered by --include-tags / --exclude-tags. The sub-flows
+# in subflows/ only run through runFlow.
+flows:
+  - journeys/*
+  - regression/*

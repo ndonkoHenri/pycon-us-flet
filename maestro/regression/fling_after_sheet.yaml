@@ -1,0 +1,152 @@
+# A fling soon after "Show N sessions" must run in full, at Maestro's pace.
+#
+# On #346's branch a fling that started 0.33 to 0.6 s after the filter sheet closed with
+# Open space shown was cut short or did not scroll in 11 of 33 tries on the Android
+# emulator, against 0 of 18 on main (d1f80f3): #346's row D. Maestro cannot fling that
+# soon: one command follows another about 0.85 s later, so this flow flings 0.8 to 1.0 s
+# after the tap, a window where main and #346's build both ran 20 of 20 in full. It does
+# not reach row D's window: tools/fling_after_sheet.py does, tapping and flinging through
+# adb in one command (maestro/README.md). This flow is the same trial at Maestro's pace,
+# on both platforms: install one build, run the flow, install the other, run it again.
+#
+# env:
+#   TRIALS  how many flings after the sheet; default 10, at most about 35: the fake
+#           clock starts at Friday 14:01 and runs, and each trial takes about 30 s, so
+#           past 14:30 the now slot, where each trial starts, is no longer 2:00 PM
+#
+# Before the trials, the flow reads the slot at the top (the now slot, 2:00 PM) and runs
+# three controls. Each shows Open space through the sheet from the now slot (the rest,
+# where "Show N sessions" leaves the list with no fling), flings a while after the sheet
+# has gone, and reads the first four rows where the list stopped
+# (scripts/record_control.js). The controls must be near each other: of any two, one's
+# top row is among the other's rows. Each trial then starts on the now slot, shows Open
+# space through the sheet, flings at once, and reads the first four rows once the list
+# is still (scripts/record_fling.js): "moved" when it is near a control in the same way,
+# so the fling ended no more than three rows from where a full fling ends (not merely in
+# its slot: 3:00 PM is about 20 rows deep with Open space shown); "none" when the rest's
+# row is on top; "short" when it ended anywhere else; "invalid" when the trial did not
+# start on the now slot. The flow prints each control and trial
+# (maestro/README.md says where) and fails unless every trial moved and every tap
+# reached the button.
+appId: io.github.ndonkohenri.pyconus
+name: A fling right after the filter sheet closes runs in full
+tags:
+  - regression
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/fling_setup.yaml
+# The start: the now slot at the top.
+- runFlow: ../subflows/top_slot.yaml
+- evalScript: ${output.startSlot = output.topSlot}
+- assertTrue:
+    condition: ${output.startSlot == '2:00'}
+    label: The Schedule opens with the now slot, 2:00 PM, at the top
+
+# The controls: the trials' fling from the rest, with no sheet just before it, three
+# times. The rows they stop on are the rows a full fling ends on.
+- repeat:
+    times: 3
+    commands:
+      - runFlow: ../subflows/to_now.yaml
+      - runFlow: ../subflows/toggle_open_space.yaml
+      - runFlow: ../subflows/top_slot.yaml
+      - evalScript: ${output.restRow = output.topRow}
+      - swipe:
+          start: "50%, 75%"
+          end: "50%, 25%"
+          duration: 80
+      - waitForAnimationToEnd
+      - runFlow: ../subflows/top_rows.yaml
+      - runScript: ../scripts/record_control.js
+      # Open space hidden again, back on the now slot.
+      - runFlow: ../subflows/toggle_open_space.yaml
+- assertTrue:
+    condition: ${output.controlsOk}
+    label: The three controls left the rest and ended within three rows of each other
+- evalScript: ${output.restRow = output.controls[0].rest}
+
+# "Show N sessions" is tapped by its place, not its identifier: Maestro taps a control
+# by its identifier only after reading the screen, then waits for the screen to change,
+# about 1 s on the emulator. A swipe that starts and ends on one point is a tap with no
+# such waits, so the fling follows it sooner: 0.77 to 1.02 s on the emulator, Maestro's
+# own time between two commands. That is later than row D's 0.33 to 0.6 s, where #346
+# lost its flings, so this flow guards the fling at Maestro's pace (maestro/README.md).
+- repeat:
+    times: ${TRIALS || 10}
+    commands:
+      - runFlow: ../subflows/to_now.yaml
+      - runFlow: ../subflows/top_slot.yaml
+      - evalScript: ${output.trialStart = output.topSlot}
+      - tapOn:
+          id: schedule.filter
+      - extendedWaitUntil:
+          visible:
+            id: schedule.filter.open-space
+          timeout: 30000
+      - tapOn:
+          id: schedule.filter.open-space
+      - extendedWaitUntil:
+          visible:
+            id: schedule.filter.show
+          timeout: 30000
+      # The tap below goes to a place, so the sheet must have finished sliding in.
+      - waitForAnimationToEnd
+      # Tap "Show N sessions", then fling at once. Maestro takes a swipe's points
+      # literally, so each platform has its own (the phones of maestro/README.md).
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - swipe:
+                start: "50%, 93%"
+                end: "50%, 93%"
+                duration: 40
+                waitToSettleTimeoutMs: 1
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - swipe:
+                start: "50%, 95%"
+                end: "50%, 95%"
+                duration: 40
+                waitToSettleTimeoutMs: 1
+      - swipe:
+          start: "50%, 75%"
+          end: "50%, 25%"
+          duration: 80
+      - waitForAnimationToEnd
+      # The tap closed the sheet: record where the fling took the list.
+      - runFlow:
+          when:
+            notVisible:
+              id: schedule.filter.show
+          commands:
+            - runFlow: ../subflows/top_rows.yaml
+            - runScript: ../scripts/record_fling.js
+      # The tap missed (a slow screen, or a phone whose sheet has its button elsewhere:
+      # change the point above). The trial is not counted, and the flow fails at the
+      # end; close the sheet.
+      - runFlow:
+          when:
+            visible:
+              id: schedule.filter.show
+          commands:
+            - evalScript: ${output.missed = (output.missed || 0) + 1}
+            - tapOn:
+                id: schedule.filter.show
+            - extendedWaitUntil:
+                notVisible:
+                  id: schedule.filter.show
+                timeout: 30000
+      # Open space hidden again for the next trial.
+      - runFlow: ../subflows/toggle_open_space.yaml
+
+- evalScript: ${console.log('flings after the sheet, ' + output.summary + '; taps that missed the button, ' + (output.missed || 0))}
+- assertTrue:
+    condition: ${(output.missed || 0) == 0}
+    label: Every tap reached "Show N sessions"
+- assertTrue:
+    condition: ${output.trial > 0 && output.lost == 0}
+    label: Every fling after the sheet ran in full

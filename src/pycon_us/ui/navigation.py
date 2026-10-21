@@ -243,8 +243,9 @@ def tagged_icon(icon: ft.IconData, identifier: str) -> ft.Control:
     """Return a decorative icon that gives its enclosing node a semantics identifier.
 
     Args:
-        icon: The icon; its size and colour come from the bar's icon theme.
-        identifier: The identifier, e.g. ``app.nav.schedule``.
+        icon: The icon; its size and colour come from the bar's or the button's icon
+            theme.
+        identifier: The identifier, e.g. ``app.nav.schedule`` or ``app.search``.
     """
     return ft.Semantics(identifier=identifier, content=ft.Icon(icon))
 
