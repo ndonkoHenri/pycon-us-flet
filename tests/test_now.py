@@ -63,6 +63,10 @@ AT_11 = ("105", "4", "9113", "9040", "9072", "15", "102", "41", "9059", "9086")
 """What is on at 11:10 AM on Friday, May 15, in the Schedule's order: the 11:00 talks
 (30 min) and open spaces (1 h)."""
 
+FIRST_AT_11 = ("105", "4", "15")
+"""What Happening now shows of AT_11 before "Show all" (D-327): its first three talks;
+the open spaces come after the others."""
+
 OPEN_SPACE = "9086"
 """pytest for system tests, an open space at 11:00 AM on Friday: last of AT_11, and
 hidden on the Schedule by default (D-20)."""
@@ -349,6 +353,17 @@ class Shown(sessions.Shown):
         """The texts on screen in reading order, plain strings too (``_texts``)."""
         return _texts(self.body)
 
+    def fold_button(self, section: str) -> ft.TextButton:
+        """The "Show all" button of ``section`` (``happening``, ``up_next``)."""
+        expanded = self.node(f"now.show_all.{section}").content
+        assert isinstance(expanded, ft.Semantics)
+        assert isinstance(expanded.content, ft.TextButton)
+        return expanded.content
+
+    async def show_all(self, section: str = "happening") -> None:
+        """Tap a section's "Show all" button, so it lists all its sessions (D-327)."""
+        await self.click(self.fold_button(section))
+
     async def at(self, now: datetime) -> None:
         """Move the clock to ``now`` and run every minute tick, as a minute passing."""
         self.clock[0] = now
@@ -508,7 +523,7 @@ async def test_on_a_conference_day_it_shows_what_is_on_then_what_is_next(
         "Happening now",
         "Up next · 11:30 AM",
     ]
-    assert shown.listed() == [*AT_11, "27"]
+    assert shown.listed() == [*FIRST_AT_11, "27"]  # folded at a peak (D-327)
     assert "Starts in 20 min" in shown.texts()
     assert "See the rest of today in Schedule" in shown.texts()
 
@@ -532,6 +547,7 @@ async def test_happening_now_ignores_the_schedule_s_filters(
     """Open spaces are hidden on the Schedule by default (D-20), never here."""
     shown = await render(may(15, 11, 10))
     assert "Open Space" in Prefs().excluded_tracks
+    await shown.show_all()
     assert OPEN_SPACE in shown.listed()
 
 
@@ -542,8 +558,8 @@ async def test_saved_sessions_come_first_in_happening_now(
     shown = await render(may(15, 11, 10), saved=(OPEN_SPACE, "9072"))
     (mine,) = shown.listed("now.next.session.")  # one of the two, in the card
     (other,) = {OPEN_SPACE, "9072"} - {mine}
-    happening = shown.listed()[: len(AT_11) - 1]
-    assert happening == [other, *(i for i in AT_11 if i not in (mine, other))]
+    # The saved one, then the first three others (D-327).
+    assert shown.listed()[:4] == [other, *FIRST_AT_11]
 
 
 async def test_each_session_on_shows_and_says_how_much_has_passed(
@@ -551,6 +567,7 @@ async def test_each_session_on_shows_and_says_how_much_has_passed(
 ) -> None:
     """Each session on has a bar and says the percent elapsed; Up next has neither."""
     shown = await render(may(15, 11, 10))
+    await shown.show_all()
     talk = shown.node("now.session.4")  # 11:00-11:30: 10 of 30 minutes
     assert str(talk.label).endswith(" 33 percent elapsed.")
     bars = [c for c in _walk(talk) if isinstance(c, ft.ProgressBar)]
@@ -714,7 +731,8 @@ async def test_your_session_on_is_in_the_card_with_its_bar_not_twice(
     card = shown.node(f"now.next.session.{OPEN_SPACE}")
     assert str(card.label).endswith(" 16 percent elapsed.")
     assert [c.value for c in _walk(card) if isinstance(c, ft.ProgressBar)] == [0.16]
-    assert shown.listed()[: len(AT_11) - 1] == [i for i in AT_11 if i != OPEN_SPACE]
+    assert shown.listed()[:3] == list(FIRST_AT_11)
+    assert OPEN_SPACE not in shown.listed()
 
 
 async def test_your_next_session_is_not_repeated_in_up_next(
@@ -736,7 +754,11 @@ async def test_up_next_lists_the_rest_of_its_slot_but_your_session(
     shown = await render(may(15, 10, 50), saved=("4",))
     assert shown.listed("now.next.session.") == ["4"]
     assert "Up next · 11:00 AM" in shown.headings()
-    assert shown.listed()[-(len(AT_11) - 1) :] == [i for i in AT_11 if i != "4"]
+    await shown.show_all("up_next")
+    # The talks, then the open spaces (D-327), each in the slot's order.
+    talks = [i for i in AT_11 if not i.startswith("9") and i != "4"]
+    open_spaces = [i for i in AT_11 if i.startswith("9")]
+    assert shown.listed()[-(len(AT_11) - 1) :] == [*talks, *open_spaces]
 
 
 async def test_the_card_s_bar_follows_the_time_its_row_shows(
