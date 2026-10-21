@@ -415,15 +415,15 @@ def test_each_place_s_card_shows_the_pin_help_names(
     }
 
 
-def test_all_maps_opens_the_map_tab(
+def test_all_maps_opens_the_map_s_floor_plans(
     render: Callable[[Services], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
-    """All maps is an in-app row to ``/map`` (its Floor plans once #391 adds them)."""
+    """All maps is an in-app row to the Map's Floor plans tab, where the plans are."""
     tile = tile_of(block_named(blocks_of(render(svc)), "help.all_maps"))
     assert tile.title == "All maps"
     assert tile.on_click is not None
     tile.on_click()  # type: ignore[call-arg]  # an in-app row's tap is sync
-    assert page.navigated == ["/map"]
+    assert page.navigated == ["/map?tab=floor-plans"]
 
 
 def test_a_year_without_plans_shows_no_card_and_no_all_maps(
