@@ -225,8 +225,9 @@ def _session_reminders(
             continue
         reminders[session_id] = Reminder(
             id=reminder_id(session_id),
-            # In UTC: a wall-clock subtraction is an hour off across a change (#535).
-            at=instant(session.display_start) - lead,
+            # In UTC, then back in the conference's zone: a wall-clock subtraction
+            # is an hour off across a change (#535).
+            at=(instant(session.display_start) - lead).astimezone(zone),
             title=session.name,
             body=_starts(session, zone, use_24h=use_24h),
             route=drill_href(SESSION_VIEW, "session", session_id),

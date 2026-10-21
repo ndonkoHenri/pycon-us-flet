@@ -162,7 +162,8 @@ def keynote_moments(
             EventReminder(
                 id=moment_id,
                 category="keynote",
-                at=instant(session.start) - KEYNOTE_LEAD,  # #535
+                # Subtracted in UTC, then shown in the conference's zone (#535).
+                at=(instant(session.start) - KEYNOTE_LEAD).astimezone(zone),
                 title=f"{kind} at {start}",
                 body=f"{session.name}{place}",
                 route=f"/schedule/session/{quote(session.id, safe='')}",
