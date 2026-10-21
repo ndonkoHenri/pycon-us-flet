@@ -128,6 +128,7 @@ def EmptyState(
                 disabled=disabled,
                 # Material's 100 % padding at every size (D-344).
                 style=ft.ButtonStyle(padding=LABEL_PADDING),
+                elevation=0,  # with a style, Flet lifts it to 1 (D-344)
             )
         else:
             button = external(
@@ -141,6 +142,7 @@ def EmptyState(
                     on_click=on_action,
                     disabled=disabled,
                     style=ft.ButtonStyle(padding=ICON_PADDING),
+                    elevation=0,  # with a style, Flet lifts it to 1 (D-344)
                 ),
             )
         controls.append(ft.Container(button, padding=ft.Padding.only(top=8)))

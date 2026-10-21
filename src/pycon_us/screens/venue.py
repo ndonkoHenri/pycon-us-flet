@@ -210,6 +210,7 @@ def address_card(svc: Services, info: ConferenceInfo) -> ft.Control:
             icon=ft.Icons.DIRECTIONS_OUTLINED,
             on_click=open_directions,
             style=ft.ButtonStyle(padding=ICON_PADDING),
+            elevation=0,  # with a style, Flet lifts it to 1 (D-344)
         )
         buttons.append(external(f"{SCREEN}.directions", button))
     buttons.append(

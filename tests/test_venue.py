@@ -190,12 +190,19 @@ async def test_directions_opens_the_platform_s_maps_app(
 async def test_the_address_buttons_keep_their_padding_at_every_text_size(
     show: Show,
 ) -> None:
-    """Directions and Copy address pin M3's padding for a button with an icon (D-344)."""
+    """Directions and Copy address pin M3's padding for a button with an icon (D-344).
+
+    The tonal Directions also stays flat: with a style, Flet lifts it to its
+    ``elevation``, 1 unless it is set to 0.
+    """
     page = await show()
     for identifier in ("venue.directions", "venue.copy_address"):
         button = cast(ft.Button, page.node(identifier).content)
         assert button.style is not None
         assert button.style.padding == ICON_PADDING
+    directions = page.node("venue.directions").content
+    assert isinstance(directions, ft.FilledTonalButton)
+    assert directions.elevation == 0
 
 
 async def test_directions_whose_launch_raises_say_so(show: Show) -> None:

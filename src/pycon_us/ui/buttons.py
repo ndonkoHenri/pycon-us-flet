@@ -7,9 +7,10 @@ label can grow takes one of these as its ``ButtonStyle(padding=...)``: Material'
 100 % padding, at every size. A text button has no edge to touch, so it keeps
 Flutter's default.
 
-A filled button given a style also needs ``elevation=0``: with a style, Flet lifts
-every state to the button's ``elevation`` (1 by default), and M3's filled button lies
-flat. The tonal and outlined buttons lie flat already.
+A filled or tonal button given a style also needs ``elevation=0``: with a style, Flet
+lifts every state, disabled included, to the button's ``elevation`` (1 by default),
+and M3's filled and tonal buttons lie flat. An outlined button has no ``elevation``
+of its own and stays flat.
 """
 
 import flet as ft

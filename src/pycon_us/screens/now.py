@@ -397,6 +397,7 @@ def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.C
             on_click=go,
             # Material's 100 % padding at every size (D-344).
             style=ft.ButtonStyle(padding=LABEL_PADDING),
+            elevation=0,  # with a style, Flet lifts it to 1 (D-344)
         )
     return ft.Container(
         named(f"{SCREEN}.{name}", button),

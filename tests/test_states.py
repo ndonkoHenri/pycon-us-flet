@@ -97,29 +97,35 @@ def test_a_disabled_way_out_stays_in_place() -> None:
     assert only(state, ft.FilledTonalButton).disabled
 
 
+@pytest.mark.parametrize("disabled", [False, True], ids=["enabled", "disabled"])
 @pytest.mark.parametrize(
     ("link_id", "padding"),
     [(None, LABEL_PADDING), ("states.web", ICON_PADDING)],
     ids=["label", "web-link"],
 )
 def test_the_way_out_keeps_material_s_padding_at_every_text_size(
-    link_id: str | None, padding: ft.Padding
+    link_id: str | None, padding: ft.Padding, disabled: bool
 ) -> None:
     """The way out pins its padding, so a large label never meets the pill's ends.
 
     Flutter shrinks the side padding as the text grows (D-344): a label-only button
-    takes ``LABEL_PADDING``, a web link's, with its icon, ``ICON_PADDING``.
+    takes ``LABEL_PADDING``, a web link's, with its icon, ``ICON_PADDING``. It stays
+    flat, enabled or disabled: with a style, Flet lifts every state to the button's
+    ``elevation``, 1 unless it is set to 0.
     """
     state = EmptyState(
         "No talks yet",
         icon=ft.Icons.EVENT_BUSY_OUTLINED,
         action="Try again",
         on_action=never,
+        disabled=disabled,
         link_id=link_id,
     )
     button = only(state, ft.FilledTonalButton)
+    assert button.disabled is disabled
     assert button.style is not None
     assert button.style.padding == padding
+    assert button.elevation == 0
 
 
 def test_the_way_out_is_outside_the_live_region_so_it_is_its_own_stop() -> None:

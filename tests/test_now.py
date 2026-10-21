@@ -504,6 +504,7 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
     assert isinstance(button, ft.FilledTonalButton)
     assert button.style is not None  # its sides stay 24 dp at large text (D-344)
     assert button.style.padding == LABEL_PADDING
+    assert button.elevation == 0  # flat, as M3's tonal button
     await shown.click(button)
     assert shown.went == ["/schedule"]
 

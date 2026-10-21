@@ -500,6 +500,7 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
     assert button.content == "See what's on today"
     assert button.style is not None  # its sides stay 24 dp at large text (D-344)
     assert button.style.padding == LABEL_PADDING
+    assert button.elevation == 0  # flat, as M3's tonal button
     await shown.session.dispatch_event(button._i, "click", None)
     await shown.settle()
     assert shown.went == ["/now"]
