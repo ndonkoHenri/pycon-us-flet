@@ -12,6 +12,7 @@ from typing import cast
 import flet as ft
 import pytest
 
+from pycon_us.core import rules
 from pycon_us.core.models import ConferenceData
 from pycon_us.ui import location_card
 from tests.session_detail import BREAK, TALK, VIEW, Detail, Render, rendering
@@ -108,14 +109,52 @@ async def test_the_pin_pulses_once_when_the_page_opens(render: Render) -> None:
     assert sleeps.asked == [location_card.PULSE_MS / 1000]
 
 
-async def test_a_dropped_session_keeps_its_card(render: Render) -> None:
-    """A session a refresh drops keeps its content, the card too (D-186)."""
-    detail = await render(TALK)
+ROOM_101AB = "231"
+"""The PyLadies Lunch, the only session in Room 101AB, which is pinned."""
+
+
+def drop(detail: Detail, session_id: str) -> None:
+    """Publish a newer feed without ``session_id``, its rooms rebuilt from the rest.
+
+    The data core builds the rooms index from the sessions (``rules.rooms``), so a
+    room whose last session goes goes with it.
+    """
     data = cast(ConferenceData, detail.conference.data)
-    newer = replace(
-        data, sessions={k: v for k, v in data.sessions.items() if k != TALK}
-    )
+    sessions = {k: v for k, v in data.sessions.items() if k != session_id}
+    newer = replace(data, sessions=sessions, rooms=rules.rooms(sessions.values()))
     detail.conference.data, detail.conference.version = newer, 2
+
+
+@pytest.mark.parametrize("session_id", [TALK, ROOM_101AB])
+async def test_a_dropped_session_keeps_its_card(
+    render: Render, session_id: str
+) -> None:
+    """A session a refresh drops keeps its content, the card too (D-186).
+
+    Room 101AB had one session: the newer index has no such room, yet the card the
+    page showed stays.
+    """
+    detail = await render(session_id)
+    assert detail.nodes("session.location")
+    drop(detail, session_id)
     await detail.settle()
     assert detail.nodes("session.removed")
     assert detail.nodes("session.location")
+
+
+async def test_dropping_the_session_does_not_pulse_the_pin_again(
+    render: Render,
+) -> None:
+    """The removed note above the card leaves it mounted: the pulse never restarts."""
+    detail = await render(TALK)
+    await detail.settle()
+    sleeps = cast(HeldSleeps, location_card.asyncio)
+    for _ in range(2 * location_card.PULSES):
+        await sleeps.release()
+        await detail.settle()
+    assert len(sleeps.asked) == 2 * location_card.PULSES
+    drop(detail, TALK)
+    await detail.settle()
+    assert detail.nodes("session.removed")
+    assert len(sleeps.asked) == 2 * location_card.PULSES
+    assert sleeps.held == 0

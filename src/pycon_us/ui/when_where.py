@@ -100,12 +100,18 @@ def WhenAndWhere(
         if where.room is not None and not where.others
         else None
     )
-    if located is None:
-        return card
-    return ft.Column(
-        [card, ft.Container(located, padding=ft.Padding.symmetric(horizontal=16))],
-        spacing=12,  # one section: closer than the 24 dp between sections
+    section = (
+        card
+        if located is None
+        else ft.Column(
+            [card, ft.Container(located, padding=ft.Padding.symmetric(horizontal=16))],
+            spacing=12,  # one section: closer than the 24 dp between sections
+        )
     )
+    # Keyed, so the removed note a refresh puts above it (D-186) leaves it mounted
+    # instead of shifting it: the location card's pulse never restarts (D-349).
+    section.key = f"when.{session.id}"
+    return section
 
 
 def _time_tile(
