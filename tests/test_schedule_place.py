@@ -282,3 +282,46 @@ async def test_a_newer_layout_change_stops_a_put_back_still_on_its_way(
     await schedule.until(lambda: memory.schedule_offsets.get(SATURDAY) == 4000.0)
     assert [kwargs for _, kwargs in schedule.scrolls if "offset" in kwargs] == []
     assert SATURDAY not in memory.schedule_places
+
+
+async def test_a_jump_to_now_during_the_old_top_jump_stops_the_put_back(
+    shown: Callable[..., Awaitable[Shown]],
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex's #572 review: superseded while the jump to the slot's old top waits.
+
+    Today's slot left the built range, so the put-back jumps to its old top; "Now" is
+    tapped while that jump waits on the device. Once it returns, the put-back asks for
+    no keyed jump to its slot: only the jump to now moves the list, and no place from
+    before it comes back.
+    """
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.01)  # no end ever comes here
+    schedule = await shown(moves=False)  # Friday, today
+    await _measure(schedule, 40.0)
+    await _report(schedule, FRIDAY, HEIGHT)
+    await schedule.scroll_end(FRIDAY, 3 * HEIGHT + 50)
+    key = memory.schedule_places[FRIDAY].key
+    schedule.forget()
+    keyed = schedule.hold = asyncio.Event()
+    time, _ = _probe(schedule)
+    put_back = asyncio.ensure_future(
+        schedule.session.dispatch_event(time._i, "size_change", {"w": 30.0, "h": 18.0})
+    )
+    await schedule.until(lambda: schedule.scrolls)  # the first keyed jump, held
+    old_top = schedule.hold = asyncio.Event()
+    keyed.set()
+    await schedule.until(lambda: any("offset" in kw for _, kw in schedule.scrolls))
+    asked = len(schedule.scrolls)  # the jump to the old top waits on the device
+    schedule.hold = None
+    await schedule.press_now()
+    await schedule.until(lambda: schedule.jumps)
+    (now_key,) = schedule.jumped()
+    assert now_key != key
+    old_top.set()
+    await put_back
+    await schedule.settle()
+    later = [kwargs for _, kwargs in schedule.scrolls[asked:]]
+    assert later  # the jump to now's asks
+    assert {kwargs["scroll_key"].value for kwargs in later} == {now_key}
+    assert FRIDAY not in memory.schedule_places

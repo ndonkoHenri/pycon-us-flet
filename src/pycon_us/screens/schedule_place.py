@@ -30,7 +30,7 @@ import flet as ft
 from pycon_us.core.list_place import Place, place_at, rescaled
 from pycon_us.core.timeline import NOW_KEY
 from pycon_us.memory import ViewMemory
-from pycon_us.ui.scrolling import jump_to_key
+from pycon_us.ui.scrolling import JUMP_TRIES, Jump, jump_to_key
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +201,8 @@ class PlaceKeeper:
         the top can fall out of the built range: then the list first jumps to the item's
         old offset, which is near it, and the keyed jump follows. Instant, as the change
         it undoes. Nothing while the list scrolls (the place is
-        then forgotten), or when the day has no place to put back.
+        then forgotten), or when the day has no place to put back. A newer change
+        (``round``) stops it after any wait, before it moves the list again.
 
         Args:
             day: The list's day.
@@ -220,10 +221,8 @@ class PlaceKeeper:
             del self.memory.schedule_places[day]
             return True
         jump = await jump_to_key(list_ref, place.key, duration=0, ended=ended, tries=1)
-        if jump == "still" and mine == self.round and list_ref.current is not None:
-            old_top = place.pixels - place.into
-            await list_ref.current.scroll_to(offset=old_top, duration=0)
-            jump = await jump_to_key(list_ref, place.key, duration=0, ended=ended)
+        if jump == "still":
+            jump = await self._from_old_top(mine, place, list_ref, ended)
         if mine != self.round:  # a newer change took over
             return False
         if jump != "landed":  # no end, so no offset to count from
@@ -243,6 +242,43 @@ class PlaceKeeper:
         )
         logger.info("Put the place back: %s, %.0f dp in", place.key, into)
         return True
+
+    async def _from_old_top(
+        self,
+        mine: int,
+        place: Place,
+        list_ref: ft.Ref[ft.ListView],
+        ended: asyncio.Event,
+    ) -> Jump:
+        """Jump to the place's old top, then ask for the keyed jump again, a try at a time.
+
+        The item fell out of the built range (F7), and its old offset is near it. Each
+        step waits on the device, and a newer change (a jump to now, another layout)
+        may take over meanwhile: then it stops at once, before it moves the list again,
+        and ``put_back()`` sees the change in ``round``.
+
+        Args:
+            mine: The put-back's ``round``.
+            place: The place to put back.
+            list_ref: The list's ref.
+            ended: The screen's scroll-end signal (``Signals.ended``).
+
+        Returns:
+            How the last keyed jump ended; "still" when it asked none.
+        """
+        if mine != self.round or list_ref.current is None:
+            return "still"
+        old_top = place.pixels - place.into
+        await list_ref.current.scroll_to(offset=old_top, duration=0)
+        for _ in range(JUMP_TRIES):
+            if mine != self.round:
+                return "still"
+            jump = await jump_to_key(
+                list_ref, place.key, duration=0, ended=ended, tries=1
+            )
+            if jump != "still":
+                return jump
+        return "still"
 
     def supersede(self, day: date) -> None:
         """Forget the day's place, as a jump to now takes its list elsewhere.
