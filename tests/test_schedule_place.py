@@ -9,13 +9,17 @@ device check (#337's PR: Android emulator, trials against ``main``).
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import date
+from types import SimpleNamespace
 from typing import cast
 
 import flet as ft
 import pytest
 
 from pycon_us.memory import ViewMemory
+from pycon_us.screens.schedule_head import HEAD_KEY
+from pycon_us.screens.schedule_place import PlaceKeeper
 from pycon_us.ui import scrolling
 from tests import test_schedule
 from tests.sessions import settle
@@ -325,3 +329,26 @@ async def test_a_jump_to_now_during_the_old_top_jump_stops_the_put_back(
     assert later  # the jump to now's asks
     assert {kwargs["scroll_key"].value for kwargs in later} == {now_key}
     assert FRIDAY not in memory.schedule_places
+
+
+def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) -> None:
+    """An empty head (0 dp) still counts after a resize, so the next place is recorded.
+
+    Flutter reports only a size that changed, so the empty head never reports again:
+    the keeper keeps its 0, a scroll end below it records the slot, and the next
+    text-size change marks that place to be put back.
+    """
+    keeper = PlaceKeeper(memory)
+    keeper.lay_out("feed", {SATURDAY: (HEAD_KEY, "a", "b")})
+    for key, height in ((HEAD_KEY, 0.0), ("a", HEIGHT), ("b", HEIGHT)):
+        keeper.measured(SATURDAY, key, height)
+    keeper.relaid(text=40.0, width=400.0, above=True)
+    assert not keeper.relaid(text=52.0)  # no place yet; only "a" and "b" report again
+    keeper.measured(SATURDAY, "a", HEIGHT * 1.3)
+    keeper.measured(SATURDAY, "b", HEIGHT * 1.3)
+    end = SimpleNamespace(event_type=ft.ScrollType.END, pixels=HEIGHT * 1.3 + 50)
+    keeper.scrolled(SATURDAY, cast(ft.OnScrollEvent, end))
+    place = memory.schedule_places[SATURDAY]
+    assert (place.key, place.into) == ("b", 50.0)
+    assert keeper.relaid(text=60.0)
+    assert keeper.pending(SATURDAY) == replace(place, stale=True)
