@@ -22,6 +22,7 @@ import flet as ft
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.brands import brand_icon
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.info_page import GUTTER, InfoBody
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.rows import LinkTile
@@ -49,11 +50,6 @@ SECTIONS = {
 NO_PSF = "Nothing about the PSF yet"
 NO_PSF_BODY = "It shows here as soon as the conference publishes it."
 """The empty state's way out: the next refresh may bring the feed's block (ux.md §4.6)."""
-
-BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
-"""Donate's padding: M3's for a button with an icon, plus room above and below, so its
-label can wrap at 200 % text without touching the pill's edge (as the Lightning talks
-sign-up's)."""
 
 
 @ft.component
@@ -134,7 +130,7 @@ def donate_button(svc: Services, url: str) -> ft.Control:
         ft.Text(DONATE, semantics_label=f"{DONATE}\n{OPENS_IN[LinkKind.WEB]}"),
         icon=ft.Icons.OPEN_IN_NEW,
         on_click=donate,
-        style=ft.ButtonStyle(padding=BUTTON_PADDING),
+        style=ft.ButtonStyle(padding=ICON_PADDING),
     )
     return ft.Container(
         ft.Column(

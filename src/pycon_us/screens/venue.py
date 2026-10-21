@@ -46,6 +46,7 @@ from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.info_page import GUTTER, InfoBody
 from pycon_us.ui.links import OPENS_IN, LinkKind, copy_text, external, open_link
 from pycon_us.ui.scaffold import AppScaffold
@@ -208,13 +209,18 @@ def address_card(svc: Services, info: ConferenceInfo) -> ft.Control:
             ),
             icon=ft.Icons.DIRECTIONS_OUTLINED,
             on_click=open_directions,
+            style=ft.ButtonStyle(padding=ICON_PADDING),
+            elevation=0,  # with a style, Flet lifts it to 1 (D-344)
         )
         buttons.append(external(f"{SCREEN}.directions", button))
     buttons.append(
         named(
             f"{SCREEN}.copy_address",
             ft.OutlinedButton(
-                COPY_ADDRESS, icon=ft.Icons.CONTENT_COPY_OUTLINED, on_click=copy_address
+                COPY_ADDRESS,
+                icon=ft.Icons.CONTENT_COPY_OUTLINED,
+                on_click=copy_address,
+                style=ft.ButtonStyle(padding=ICON_PADDING),
             ),
         )
     )
