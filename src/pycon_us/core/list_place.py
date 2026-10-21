@@ -5,8 +5,8 @@ not the rows at that offset, so when the text grows every row above the top grow
 it and earlier rows show (#337, F70). The place is therefore the item at the top and how
 far into it, which a keyed jump puts back once the list has its new heights:
 
-- ``Place``: that item's key, how far into it the top was, its height then, and the
-  offset where it was found;
+- ``Place``: that item's key, how far into it the top was, its height then, the offset
+  where it was found, and whether the slots had their time above their rows;
 - ``place_at()``: the place at an offset, from the heights the items reported, counted
   from the list's top or from a place found at another offset;
 - ``rescaled()``: how far into the item to put the top once it has its new height.
@@ -29,6 +29,8 @@ class Place:
             place from another layout says nothing about this one.
         stale: A text-size change has moved the rows since: ``pixels`` and ``height``
             are from before it, until the place is put back.
+        above: Whether the slots had their time above their rows (D-216): ``into``
+            measured rows laid out that way, so it says nothing of the other (#600).
     """
 
     key: str
@@ -37,6 +39,7 @@ class Place:
     pixels: float
     layout: Hashable = None
     stale: bool = False
+    above: bool = False
 
 
 def place_at(
