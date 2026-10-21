@@ -67,8 +67,7 @@ def schedule_order(session: Session) -> tuple[object, ...]:
     time ends, the repeated hour comes after the first, #535), then by the place it
     shows, in natural order (``slugs.room_sort_key``: ``Room 102A`` before ``Room
     1000``, as the printed grid reads), then by name and id, so ties always come out
-    the same. A row without a place
-    (a notice, a generic break) comes first in its slot.
+    the same. A row without a place (a notice, a generic break) comes first in its slot.
 
     Args:
         session: A session of the model.
