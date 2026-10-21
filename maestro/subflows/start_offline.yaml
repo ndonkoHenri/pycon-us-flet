@@ -1,0 +1,30 @@
+# Start the app fresh and offline at a simulated conference moment (PLAN §7, P1 exit
+# criteria 1 and 2). Every journey starts here.
+#
+# env (each has a default):
+#   NOW          the fake clock's start. Default: Friday 2026-05-15 14:10, the busiest
+#                day, during the 2:00 PM slot (#346's moment).
+#   OFFLINE_URL  a feed URL that nothing answers at. Default: a closed port on the
+#                device's own loopback.
+#
+# Android: airplane mode goes on before the launch, so the app starts with no network,
+# as P1's exit criterion 1 asks. The flow that runs this turns it off again in its
+# onFlowComplete. iOS: a simulator shares the Mac's network and Maestro cannot cut it,
+# so the launch's own refresh may publish the year's live feed, which lists the same
+# sessions as the bundled snapshot (D-223). On both, Developer then points the app at
+# OFFLINE_URL, so no later refresh reaches a network during the flow, and Refresh now
+# must say that the feed did not answer.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setAirplaneMode: enabled
+- runFlow: launch_fresh.yaml
+- runFlow:
+    file: set_scene.yaml
+    env:
+      NOW: ${NOW || '2026-05-15 14:10'}
+      FEED_URL: ${OFFLINE_URL || 'http://127.0.0.1:9/conference-2026.json'}
+      OUTCOME: "No answer from the feed: the app keeps the schedule it has\\."

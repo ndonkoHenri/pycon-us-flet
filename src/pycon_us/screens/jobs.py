@@ -45,6 +45,7 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "jobs"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -66,6 +67,7 @@ NO_ROLES = "No roles listed"
 def Jobs() -> ft.View:
     """The Job listings page: the strip, then a card per listing in feed order."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     data = conference.data
 
@@ -100,7 +102,7 @@ def Jobs() -> ft.View:
             items.append(ListingCard(listing, sponsor.slug if sponsor else None))
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24)),
+        body=ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
     )
 
 

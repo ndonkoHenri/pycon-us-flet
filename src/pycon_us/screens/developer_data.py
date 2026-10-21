@@ -4,7 +4,9 @@
 a refresh the user asked for (D-181), with what the schedule on screen is; **Clear cached
 feed**, after which the next start shows the bundled snapshot; **Share log**, the
 packaged app's ``console.log`` and the diagnostics on the share sheet (``ui/share.py``'s
-``share_console_log()``, D-72, D-297); and **Reset app**, which deletes
+``share_console_log()``, D-72, D-297); **Show welcome again**, which clears
+``pycon.onboarded`` and opens Welcome, keeping everything else (SHELL-02, D-73); and
+**Reset app**, which deletes
 what the app keeps and resets every store in memory, so the app is as after a fresh
 install without a restart. The two that delete are confirmed first by an
 ``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
@@ -22,7 +24,7 @@ from flet.utils import is_embedded
 
 from pycon_us import clock
 from pycon_us.favorites import Favorites, use_favorites
-from pycon_us.locations import start_target
+from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
@@ -44,6 +46,12 @@ CLEARED: Outcome = (
 )
 NOT_CLEARED: Outcome = ("Couldn't delete the cached schedule.", False)
 
+WELCOME_NOT_SAVED: Outcome = (
+    "Couldn't save the change, so Welcome didn't open. Try again.",
+    False,
+)
+"""Show welcome again's line when ``pycon.onboarded`` could not be cleared (D-120)."""
+
 RESET_INCOMPLETE = (
     "App reset, but some saved data couldn't be deleted: it returns when you reopen "
     "the app."
@@ -53,7 +61,7 @@ RESET_INCOMPLETE = (
 
 @ft.component
 def DataActions() -> ft.Control:
-    """The Data section: four action rows, their confirmations and their outcome line.
+    """The Data section: five action rows, their confirmations and their outcome line.
 
     A component of its own: its confirmations and its outcome are its own state, and it
     re-renders with the stores it reads (the feed's status, the saved sessions' count)
@@ -109,6 +117,15 @@ def DataActions() -> ft.Control:
             )
         finally:
             set_sharing(False)
+
+    @report_errors
+    async def show_welcome() -> None:
+        set_outcome(NO_OUTCOME)
+        # Saved first, so Welcome shows again at the next start until its Get started.
+        if not await prefs.save(svc.storage, onboarded=False):
+            set_outcome(WELCOME_NOT_SAVED)  # Storage has logged the key (D-120)
+            return
+        page.navigate(WELCOME)  # a root replaces the stack; Get started goes to Now
 
     @report_errors
     async def reset() -> None:
@@ -175,6 +192,13 @@ def DataActions() -> ft.Control:
                 report_subtitle(packaged),
                 share_log,
                 disabled=sharing,
+            ),
+            action_row(
+                "developer.show_welcome",
+                ft.Icons.WAVING_HAND_OUTLINED,
+                "Show welcome again",
+                "Opens Welcome; your settings and saved sessions stay",
+                show_welcome,
             ),
             action_row(
                 "developer.reset_app",
