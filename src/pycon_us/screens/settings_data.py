@@ -4,10 +4,12 @@
 P2-62): **Refresh now**, whose second line says where the schedule on screen came from
 and its age, the bundled snapshot named as such (D-292), and which asks for a refresh
 (D-181) and says in place how it ended (D-29, D-210), a failed one keeping the schedule
-(D-32); and, only while the device's clock differs from the conference's, the zone row,
-"Times are Pacific Time (PDT)" and the device's own offset (D-35, D-240). Apart from
-``settings.py`` so that the store's changes and the minute's tick re-render this
-section and not the page (D-175).
+(D-32); **Schedule changes**, which pushes the change log on Settings
+(``/more/settings/changes/<year>``, D-255) and says how many saved sessions changed
+while Now's card would; and, only while the device's clock differs from the
+conference's, the zone row, "Times are Pacific Time (PDT)" and the device's own offset
+(D-35, D-240). Apart from ``settings.py`` so that the stores' changes and the minute's
+tick re-render this section and not the page (D-175).
 """
 
 from datetime import timedelta
@@ -15,7 +17,11 @@ from datetime import timedelta
 import flet as ft
 
 from pycon_us import clock
+from pycon_us.change_log import use_change_log
+from pycon_us.core.change_views import now_card_text
 from pycon_us.core.timefmt import utc_offset_label, zone_note
+from pycon_us.favorites import use_favorites
+from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -28,10 +34,13 @@ from pycon_us.ui.status_strip import schedule_line, use_minute
 UPDATING = "Updating the schedule…"
 """Refresh now's second line while the refresh it asked for runs, as the strip says it."""
 
+CHANGES_LINE = "What refreshes changed in the schedule"
+"""Schedule changes' second line while no unseen change touches a saved session."""
+
 
 @ft.component
 def DataSection(slot: int) -> ft.Control:
-    """The Data section: its heading, Refresh now, its outcome and the zone row.
+    """The Data section: its heading, Refresh now, its outcome, Schedule changes, the zone.
 
     A component of its own: the outcome is its state, and it re-renders with the
     feed's store, so a refresh that lands, asked for here or not, updates the line,
@@ -43,7 +52,10 @@ def DataSection(slot: int) -> ft.Control:
     """
     svc = use_services()
     conference = use_conference()
+    change_log = use_change_log()  # its count goes once the changes are seen
+    favorites = use_favorites()
     tokens = use_tokens()
+    view_path = ft.use_view_path()
     use_minute()
     info = svc.year.conference
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
@@ -53,6 +65,13 @@ def DataSection(slot: int) -> ft.Control:
         set_outcome(NO_OUTCOME)
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
         set_outcome(refreshed(conference.problem))
+
+    @report_errors
+    def open_changes() -> None:
+        # On Settings' own View, so Back returns here (D-255).
+        ft.context.page.navigate(
+            drill_href(view_path, "changes", str(svc.storage.year))
+        )
 
     refreshing = conference.status(info) == "refreshing"  # as every Refresh (D-181)
     now = clock.now()
@@ -81,6 +100,15 @@ def DataSection(slot: int) -> ft.Control:
             live_region=True,  # a screen reader says how the refresh ended
             visible=bool(outcome[0]),
             content=outcome_line(*outcome, tokens=tokens, slot=slot),
+        ),
+        action_row(
+            "settings.data.changes",
+            ft.Icons.CHANGE_CIRCLE_OUTLINED,
+            "Schedule changes",
+            now_card_text(change_log.batches, favorites.ids, now) or CHANGES_LINE,
+            open_changes,
+            trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT),  # a page, as a LinkTile shows
+            slot=slot,
         ),
     ]
     note = zone_note(now, info.zone, info.time_zone_name, offset)
