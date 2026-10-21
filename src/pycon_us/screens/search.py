@@ -281,6 +281,7 @@ def Search() -> ft.View:
                                 on_change=changed,
                                 on_clear=clear,
                                 ref=field.ref,
+                                focusable=field.focusable,
                                 hint=HINTS[scope],
                                 label=LABEL,
                                 clear_tooltip=CLEAR,

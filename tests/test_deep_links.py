@@ -77,14 +77,14 @@ async def test_every_page_opens_as_a_start_route_and_back_walks_it_down(
     """Every page, as a cold link's start route, is the top View over its parents.
 
     Back then pops one View per press to its root, the root goes to Now and Now
-    leaves the app. Welcome, a root without the bar, is one View, and Back on it
-    leaves the app (D-287).
+    leaves the app. Welcome, a root without the bar, is one View, and Back on it goes
+    to Now, as on the other roots (D-321).
     """
     shown = await open_at(location)
     routes = shown.routes()
     if location == WELCOME:
         assert routes == ["/"]  # the roots' shared key (D-142, D-287)
-        assert await walked(shown) == [EXIT]
+        assert await walked(shown) == ["/now", EXIT]
         return
     if location in TAB_ROOTS:
         assert routes == ["/"]  # one root, the roots' shared key (D-142)

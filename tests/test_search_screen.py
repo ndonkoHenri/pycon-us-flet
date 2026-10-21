@@ -625,6 +625,38 @@ async def test_a_venue_spot_opens_its_plan_with_the_pin_and_back_keeps_the_query
     assert opened.searches == []
 
 
+async def test_the_field_lets_the_focus_go_while_a_result_covers_it(
+    opened: Shown,
+) -> None:
+    """The field can take the focus only while Search is the top View (#344, D-330).
+
+    A field that kept the focus with its keyboard closed would get it back, and the
+    keyboard with it, from Flutter's route focus restoration when Back pops the result.
+    """
+    await opened.type("typing")
+    await opened.pause()
+    assert opened.field.can_request_focus
+    first = session_ids("typing", "sessions")[0]
+    await opened.go(f"/search/session/{first}")
+    assert opened.field.can_request_focus is False  # unfocused as the result opens
+
+    await opened.go(parent_of(f"/search/session/{first}", opened.memory.search_base))
+    assert opened.field.can_request_focus  # a tap focuses it again
+    assert opened.focused == []  # and nothing asked for the focus on Back
+
+
+async def test_a_view_rebuilt_below_a_result_cannot_take_the_focus(
+    render: Render,
+) -> None:
+    """A Search View mounted below a result never autofocuses there (D-330)."""
+    shown = await render(Conference(data=DATA, source="bundled", version=1))
+    await shown.go("/search/room/grand-ballroom-a")
+    assert shown.field.autofocus
+    assert shown.field.can_request_focus is False  # so autofocus takes nothing
+    await shown.go("/search")
+    assert shown.field.can_request_focus
+
+
 async def test_each_opening_starts_a_new_search_and_back_leaves_for_the_opener(
     opened: Shown,
 ) -> None:

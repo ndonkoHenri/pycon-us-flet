@@ -46,6 +46,10 @@ quiet_room = "VIP Room A & B, Thursday to Sunday, for anyone who needs a calm mo
 coc_summary = "PyCon US is for everyone. Be open, considerate and respectful, at the venue, at the events around it and online. Harassment, threats and unwelcome attention or contact are not allowed, and the Code of Conduct team may warn or remove anyone who breaks it. It applies to everyone: attendees, speakers, sponsors, volunteers and staff."
 coc_url = "https://policies.python.org/us.pycon.org/code-of-conduct/"
 procedures_url = "https://policies.python.org/us.pycon.org/code-of-conduct/Procedures-for-Reporting-Incidents/"
+# Each place's pin (a map.toml pin's key, checked), for its location card (#418).
+info_desk_pin = "info-desk"
+lost_and_found_pin = "lost-and-found"
+quiet_room_pin = "quiet-room"
 
 # Shift the displayed start of a session without moving it in the timeline (DATA-11).
 # `match` is a regular expression matched case-insensitively against the whole cleaned
