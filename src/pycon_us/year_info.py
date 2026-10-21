@@ -111,6 +111,43 @@ class WifiInfo:
     password: str
 
 
+@dataclass(frozen=True)
+class Directions:
+    """Where Venue & hours' Directions button takes a maps app (MAP-11, D-313).
+
+    From ``conference.toml``'s ``[directions]``: a point, not the address, so the
+    maps app lands on the venue's door without geocoding a street name.
+
+    Attributes:
+        label: The pin's name in the maps app: "Long Beach Convention Center".
+        latitude: Degrees north, -90 to 90, checked against a public map.
+        longitude: Degrees east, -180 to 180.
+    """
+
+    label: str
+    latitude: float
+    longitude: float
+
+
+def check_directions(directions: Directions, file: str) -> None:
+    """Check ``[directions]``: a label, and a latitude and longitude on the globe.
+
+    Args:
+        directions: The table.
+        file: The data file it comes from, for the messages.
+
+    Raises:
+        YearDataError: A rule is broken; the message names the file and the key.
+    """
+    check_text(directions.label, file, "directions.label")
+    for key, limit in (("latitude", 90), ("longitude", 180)):
+        value = getattr(directions, key)
+        if not -limit <= value <= limit:
+            raise YearDataError(
+                f"{file}: directions.{key}: {value} is not between -{limit} and {limit}"
+            )
+
+
 def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
     """Check the info pages' tables in a year's content.
 

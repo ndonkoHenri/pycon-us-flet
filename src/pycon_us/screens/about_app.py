@@ -15,21 +15,24 @@ import platform
 from urllib.parse import urlsplit
 
 import flet as ft
-from flet.utils import is_embedded
 
 from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL, __version__
-from pycon_us.favorites import use_favorites
 from pycon_us.prefs import DEV_UNLOCKED, use_prefs
 from pycon_us.screens import licences
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.actions import NO_OUTCOME, action_row, outcome_line
+from pycon_us.ui.actions import action_row
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
-from pycon_us.ui.share import report_subtitle, share_console_log
+from pycon_us.ui.share import (
+    new_issue_url,
+    report_outcome,
+    report_subtitle,
+    use_problem_report,
+)
 from pycon_us.ui.status_strip import schedule_line, use_minute
 from pycon_us.ui.widths import READING, sides, use_margin
 
@@ -119,42 +122,18 @@ def HelpUsFixIt() -> ft.Control:
     A component of its own, as Developer's Data section is: whether the sheet is up and
     how the last share ended are its state, so a share re-renders these rows and not
     the page. The outcome is said in place, under the rows (D-29, D-210); a dismissed
-    sheet says nothing (``share_console_log()``).
+    sheet says nothing (``use_problem_report()``).
     """
-    svc = use_services()
-    conference = use_conference()
-    prefs = use_prefs()
-    favorites = use_favorites()
+    report = use_problem_report()
     tokens = use_tokens()
-    outcome, set_outcome = ft.use_state(NO_OUTCOME)
-    sharing, set_sharing = ft.use_state(False)  # the share sheet is up
-    packaged = is_embedded()  # where the log is a file to add
-
-    @report_errors
-    async def share() -> None:
-        set_outcome(NO_OUTCOME)
-        set_sharing(True)
-        try:
-            set_outcome(
-                await share_console_log(
-                    svc,
-                    packaged=packaged,
-                    conference=conference,
-                    prefs=prefs,
-                    favorites=favorites,
-                )
-            )
-        finally:
-            set_sharing(False)
-
-    rows = help_rows(SOURCE_URL, packaged=packaged, sharing=sharing, on_share=share)
+    rows = help_rows(
+        SOURCE_URL,
+        packaged=report.packaged,
+        sharing=report.sharing,
+        on_share=report.share,
+    )
     rows.append(
-        ft.Semantics(
-            identifier="about_app.report_outcome",
-            live_region=True,
-            visible=bool(outcome[0]),
-            content=outcome_line(*outcome, tokens=tokens),
-        )
+        report_outcome("about_app.report_outcome", report.outcome, tokens=tokens)
     )
     return ft.Column(rows, spacing=0)
 
@@ -193,7 +172,7 @@ def help_rows(
             )
         )
         return rows
-    issue_url = f"{source_url.rstrip('/')}/issues/new"
+    issue_url = new_issue_url(source_url)
     rows.append(
         LinkTile(
             "Report a problem",

@@ -17,24 +17,39 @@ import flet as ft
 import pytest
 from flet.components.component import Renderer
 
+from pycon_us import prefs as prefs_module
 from pycon_us.config import load_year
 from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
 from pycon_us.screens import help as help_screen
-from pycon_us.screens.help import Help, contact_line, help_blocks
+from pycon_us.screens.help import Help, ReportProblem, contact_line, help_blocks
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from pycon_us.state import Conference
+from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import info_page, rows
 from pycon_us.ui.info_page import FeedBlock
+from pycon_us.ui.links import OPENS_IN
+from pycon_us.ui.share import LOG_SHARED, WITH_LOG
 from pycon_us.year_info import SafetyContact
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
+    MemoryPaths,
     MemoryPrefs,
     MemorySemantics,
+    MemoryShare,
     bound,
     phone_margin,
+)
+from tests.test_about_app import (
+    States,
+    answer_report_hooks,
+    headings,
+    identified,
+    text_of,
 )
 
 HOTLINE = SafetyContact(
@@ -45,6 +60,9 @@ HOTLINE = SafetyContact(
     checked=date(2026, 10, 20),
 )
 """A phone contact no year ships (the 2026 hotline is on no public page, D-45)."""
+
+REPORT_PROBLEM_SECTION = ft.Container()
+"""What ``ReportProblem`` renders as in the page's tests: its own tests are below."""
 
 
 @pytest.fixture
@@ -79,6 +97,7 @@ def render(
 ) -> Callable[[Services], dict[str, Any]]:
     """Render ``Help`` once over the given services and return its scaffold's kwargs."""
     monkeypatch.setattr(help_screen, "AppScaffold", lambda **kwargs: kwargs)
+    monkeypatch.setattr(help_screen, "ReportProblem", lambda: REPORT_PROBLEM_SECTION)
     monkeypatch.setattr(info_page, "use_margin", phone_margin)
 
     def render(svc: Services) -> dict[str, Any]:
@@ -162,7 +181,9 @@ def outline(blocks: list[ft.Control]) -> list[str]:
     """The page as headings (``# ``), the card, row identifiers and the summary."""
     result = []
     for block in blocks:
-        if isinstance(block, ft.Semantics) and block.header:
+        if block is REPORT_PROBLEM_SECTION:
+            result.append("report_problem")
+        elif isinstance(block, ft.Semantics) and block.header:
             heading = block.content
             assert isinstance(heading, ft.Container)
             assert isinstance(heading.content, ft.Text)
@@ -179,7 +200,7 @@ def outline(blocks: list[ft.Control]) -> list[str]:
 def test_the_card_comes_first_then_the_venue_then_the_code_of_conduct(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
-    """After the title, the page reads the card, the places, then the CoC (D-281)."""
+    """The page reads the card, the places, the CoC, then the app's row (D-281)."""
     scaffold = render(svc)
     assert scaffold["title"] == "Help & safety"
     assert outline(blocks_of(scaffold)) == [
@@ -192,6 +213,7 @@ def test_the_card_comes_first_then_the_venue_then_the_code_of_conduct(
         "help.coc_summary",
         "help.coc",
         "help.procedures",
+        "report_problem",
     ]
 
 
@@ -302,7 +324,7 @@ def test_the_code_of_conduct_links_open_in_the_browser(
 ) -> None:
     """The full text and the procedures are external rows on the PSF's site."""
     blocks = blocks_of(render(svc))
-    coc, procedures = blocks[-2:]
+    coc, procedures = blocks[-3:-1]
     assert tile_of(coc).title == "Read the Code of Conduct"
     assert tile_of(coc).subtitle == "policies.python.org"
     assert isinstance(tile_of(coc).trailing, ft.Icon)  # OPEN_IN_NEW, read aloud
@@ -316,7 +338,8 @@ def test_without_year_data_the_page_shows_the_feed_s_block(
     content = replace(svc.year.content, safety_contacts=(), help=None)
     with Renderer().with_context():  # what calling a component needs, as in a render
         scaffold = render(replace(svc, year=replace(svc.year, content=content)))
-    (item,) = blocks_of(scaffold)
+    item, report = blocks_of(scaffold)
+    assert report is REPORT_PROBLEM_SECTION  # the app's row ends the page still
     assert isinstance(item, ft.Component)
     assert item.fn is inspect.unwrap(FeedBlock)
     assert item.args == ("code-of-conduct",)
@@ -343,3 +366,111 @@ def test_a_contact_s_line_is_its_value_as_it_reads(
 ) -> None:
     """A North American number in groups, others as written, a page by its host."""
     assert contact_line(replace(HOTLINE, kind=kind, value=value)) == line
+
+
+# ------------------------------------------------------- Report a problem with the app
+
+
+@pytest.fixture
+def report_svc(svc: Services, tmp_path: Path) -> Services:
+    """``svc`` with a share sheet and a packaged build's one-line ``console.log``.
+
+    Made before a page is bound, as Flet makes a session's services.
+    """
+    log = tmp_path / "console.log"
+    log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
+    paths = MemoryPaths()
+    paths.console_log = str(log)
+    return replace(svc, share=MemoryShare(), paths=paths)
+
+
+@pytest.fixture
+async def report_section(
+    monkeypatch: pytest.MonkeyPatch, report_svc: Services, page: FakePage
+) -> tuple[Callable[[], list[ft.Control]], Services]:
+    """Render ``ReportProblem`` in a packaged build, while the repository is private.
+
+    Returns the render and the services it shares through.
+    """
+    services = report_svc
+    conference = Conference()
+    await conference.load_local(services.storage, services.year)
+    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
+    states = States()
+    monkeypatch.setattr(ft, "use_state", states.use_state)
+    answer_report_hooks(monkeypatch, services, conference, Prefs())
+    monkeypatch.setattr(help_screen, "use_tokens", lambda: LIGHT_TOKENS)
+    monkeypatch.setattr(help_screen, "SOURCE_URL", None)
+    monkeypatch.setattr(rows, "use_services", lambda: services)
+
+    def render() -> list[ft.Control]:
+        """``ReportProblem``'s controls, its state kept from the last render."""
+        states.index = 0
+        column = inspect.unwrap(ReportProblem)()
+        assert isinstance(column, ft.Column)
+        return column.controls
+
+    return render, services
+
+
+def test_while_private_the_last_row_reports_a_problem_with_the_log(
+    report_section: tuple[Callable[[], list[ft.Control]], Services],
+) -> None:
+    """While private, a level-2 "The app" heads one row that says it sends the log."""
+    render, _ = report_section
+    controls = render()
+    assert headings(controls) == [("The app", 2)]
+    assert list(identified(controls)) == ["help.report_problem", "help.report_outcome"]
+    tile = identified(controls)["help.report_problem"].content
+    assert isinstance(tile, ft.ListTile)
+    assert text_of(tile.title) == "Report a problem with the app"
+    assert text_of(tile.subtitle) == WITH_LOG
+    assert identified(controls)["help.report_outcome"].visible is False
+
+
+async def test_the_row_shares_the_log_and_diagnostics_and_says_so_in_place(
+    report_section: tuple[Callable[[], list[ft.Control]], Services],
+) -> None:
+    """A tap shares console.log with the diagnostics as text, with no email in it.
+
+    Then the line under the row says what was shared, a live region (D-29, D-210).
+    """
+    render, services = report_section
+    row = identified(render())["help.report_problem"].content
+    assert row is not None
+    await click(row)
+    share = cast(MemoryShare, services.share)
+    [files] = share.shared
+    assert len(files) == 1
+    text = share.file_options[0]["text"]
+    assert "Python" in text and "@" not in text  # the diagnostics, no address (D-72)
+    line = identified(render())["help.report_outcome"]
+    assert line.live_region is True and line.visible is True
+    outcome = cast(ft.Row, cast(ft.Container, line.content).content).controls[1]
+    assert text_of(outcome) == LOG_SHARED[0]
+
+
+async def test_once_public_the_row_opens_a_new_issue_in_the_browser(
+    report_section: tuple[Callable[[], list[ft.Control]], Services],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With ``SOURCE_URL`` set, the row is external: it reads "Opens in browser".
+
+    It opens the repository's new issue page in the in-app browser (INFO-14, D-182).
+    """
+    render, services = report_section
+    monkeypatch.setattr(help_screen, "SOURCE_URL", "https://example.org/conf")
+    controls = render()
+    assert list(identified(controls)) == ["help.report_problem", "help.report_outcome"]
+    node = identified(controls)["help.report_problem"]
+    assert node.link
+    tile = node.content
+    assert isinstance(tile, ft.ListTile)
+    assert text_of(tile.title) == "Report a problem with the app"
+    assert text_of(tile.subtitle) == "example.org/conf/issues/new"
+    assert isinstance(tile.trailing, ft.Icon)
+    assert tile.trailing.semantics_label in OPENS_IN.values()
+    await click(tile)
+    assert cast(MemoryLauncher, services.launcher).launched == [
+        ("https://example.org/conf/issues/new", ft.LaunchMode.IN_APP_BROWSER_VIEW)
+    ]

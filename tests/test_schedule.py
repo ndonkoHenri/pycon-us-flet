@@ -36,6 +36,8 @@ from flet.messaging.session import Session
 
 from pycon_us import clock
 from pycon_us.config import load_year
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
@@ -652,6 +654,21 @@ async def test_a_star_tap_re_renders_one_slot_and_one_row(
     assert schedule.favorites.ids == {TALK}
     assert schedule.rows == [TALK]
     assert schedule.slots == ["10:30 AM"]
+
+
+async def test_a_recorded_batch_re_renders_one_slot_and_one_row(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """D-153, D-315: a talk's room change badges its row; no other slot or row runs."""
+    schedule = await shown()
+    schedule.rows.clear()
+    schedule.slots.clear()
+    change = Change(TALK, ChangeKind.ROOM, None, None)
+    schedule.change_log.batches = (Batch(clock.now(), (change,)),)
+    await settle()
+    assert schedule.rows == [TALK]
+    assert schedule.slots == ["10:30 AM"]
+    assert "Room changed" in (schedule.node(f"schedule.session.{TALK}").label or "")
 
 
 async def test_a_sprint_day_says_so_and_links_to_the_sprints(

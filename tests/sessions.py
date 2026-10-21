@@ -41,6 +41,7 @@ from flet.messaging.protocol import Message, configure_encode_object_for_msgpack
 from flet.messaging.session import Session
 from flet.pubsub.pubsub_hub import PubSubHub
 
+from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
@@ -181,8 +182,11 @@ def provide(
     prefs: Prefs,
     favorites: Favorites,
     body: Callable[[], ft.Control],
+    change_log: ChangeLog | None = None,
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
+
+    The change log is an empty one unless the test gives its own.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar), and the
     light tokens' provider comes last, right around ``body``.
@@ -195,7 +199,12 @@ def provide(
                 prefs,
                 lambda: FavoritesCtx(
                     favorites,
-                    lambda: LayoutCtx(Layout(), lambda: TokensCtx(LIGHT_TOKENS, body)),
+                    lambda: ChangeLogCtx(
+                        ChangeLog() if change_log is None else change_log,
+                        lambda: LayoutCtx(
+                            Layout(), lambda: TokensCtx(LIGHT_TOKENS, body)
+                        ),
+                    ),
                 ),
             ),
         ),
@@ -222,6 +231,8 @@ class Shown:
     """The session ids whose row bodies (sessions and notices) ran, in order."""
     retaps: list[Callable[[], object] | None] = field(default_factory=list)
     """The re-tap action ``AppScaffold`` was given on each render, in order."""
+    change_log: ChangeLog = field(default_factory=ChangeLog)
+    """The ``ChangeLog`` store the screen was given: empty unless the test filled it."""
 
     @property
     def launcher(self) -> MemoryLauncher:
@@ -395,6 +406,7 @@ async def showing[S: Shown = Shown](
     memory: ViewMemory | None = None,
     route: str | None = None,
     kind: Callable[..., S] = Shown,
+    change_log: ChangeLog | None = None,
 ) -> AsyncIterator[S]:
     """Render ``screen`` under the store providers; close the session on the way out.
 
@@ -419,6 +431,8 @@ async def showing[S: Shown = Shown](
             its query (a room's highlight); the page's own by default.
         kind: What makes the ``Shown``: a test module's subclass that adds what is
             its screen's own, or a ``functools.partial`` of one.
+        change_log: The ``ChangeLog`` store, with the batches the test recorded; an
+            empty one by default.
     """
     _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path, memory)
@@ -431,19 +445,33 @@ async def showing[S: Shown = Shown](
     session = Session(connection())
     if route is not None:
         session.page.route = route
-    shown = kind(session, svc, conference, prefs, favorites, [], [], view_path)
+    change_log = ChangeLog() if change_log is None else change_log
+    shown = kind(
+        session,
+        svc,
+        conference,
+        prefs,
+        favorites,
+        [],
+        [],
+        view_path,
+        change_log=change_log,
+    )
     monkeypatch.setattr(session.page, "navigate", shown.went.append)
     _OPEN[session.page] = shown
 
     @ft.component
     def Root() -> ft.Control:
-        return provide(svc, conference, prefs, favorites, screen)
+        return provide(svc, conference, prefs, favorites, screen, change_log)
 
     try:
         async with rendering(Root, session, views=view_path is None):
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
+        # ...at their next turn of the loop: a tick task still pending holds its
+        # component, and with it the page, until it has run (use_recent_changes()).
+        await settle()
         del _OPEN[session.page]
 
 
