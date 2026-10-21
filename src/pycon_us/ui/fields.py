@@ -6,8 +6,9 @@ Speakers and Sprints filters (D-189, D-202) and the global search (D-193). A pil
 (ux.md §3.6); in high contrast, where that fill is the surface, a 1 dp ``outline`` ring
 instead (D-306). Pinned above its list so it is always in reach, with a Clear button once
 there is text. ``use_field_query()`` holds the field's text, its ``Ref`` and the Clear
-that puts the focus back in it, and keeps the field in step with what the screen
-filters by however fast the keys come (D-243); ``found_count()`` is the live line under
+that puts the focus back in it, keeps the field in step with what the screen
+filters by however fast the keys come (D-243), and keeps it from taking the focus back
+when its View comes back on top (D-330); ``found_count()`` is the live line under
 the field that says what the text found (D-226).
 """
 
@@ -17,6 +18,7 @@ from typing import Any
 
 import flet as ft
 
+from pycon_us.locations import is_top_view
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.semantics import merged
 
@@ -32,6 +34,7 @@ def SearchField(
     clear_tooltip: str,
     identifier: str,
     autofocus: bool = False,
+    focusable: bool = True,
     on_submit: ft.ControlEventHandler[ft.TextField] | None = None,
     keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT,
     high_contrast: bool = False,
@@ -59,6 +62,8 @@ def SearchField(
         clear_tooltip: The Clear button's tooltip, its accessible name (D-27).
         identifier: The field's semantics identifier, ``<screen>.<element>``.
         autofocus: Focus the field, and open the keyboard, when the View shows.
+        focusable: Whether the field can take the focus: ``FieldQuery.focusable``,
+            False while another View covers the field's (D-330).
         on_submit: Called when the keyboard's action key is pressed.
         keyboard_type: The keyboard to show.
         high_contrast: HC is on screen (``Tokens.high_contrast``): the pill's fill is
@@ -84,6 +89,7 @@ def SearchField(
                 on_change=on_change,
                 on_submit=on_submit,
                 autofocus=autofocus,
+                can_request_focus=focusable,
                 keyboard_type=keyboard_type,
                 hint_text=hint,
                 # While empty the hint wraps at the largest text instead of clipping;
@@ -134,6 +140,10 @@ class FieldQuery:
             text, then puts the focus back in the field.
         focus: Puts the focus in the field, for another control that goes away when
             used (search's "Show all results").
+        focusable: False while a View pushed on top covers the field's, the field's
+            ``can_request_focus``: so the field lets the focus go as a result opens,
+            and Flutter's route focus restoration cannot give it back, with the
+            keyboard, on Back (D-330).
     """
 
     value: str
@@ -141,6 +151,7 @@ class FieldQuery:
     changed: Callable[[ft.Event[ft.TextField]], bool | None]
     clear: Callable[[], Awaitable[None]]
     focus: Callable[[], Awaitable[None]]
+    focusable: bool
 
 
 def use_field_query(initial: str = "") -> FieldQuery:
@@ -169,6 +180,14 @@ def use_field_query(initial: str = "") -> FieldQuery:
     ``changed`` and ``clear`` in handlers of its own, and keeps a report only when
     ``changed`` took it.
 
+    The field can take the focus only while its View is the top one (D-330). A
+    focused field whose keyboard was closed (Android's Back key) keeps the focus, and
+    Flutter gives a route back the focus it had once the route above it pops, which
+    brought the keyboard back up over the results. Losing ``can_request_focus`` as
+    another View is pushed takes the field out of its route's focus history, so Back
+    returns with no field focused and the keyboard comes up only at a tap. Outside a
+    Router (a screen rendered alone in a test) there is no View above it.
+
     Args:
         initial: The text the field starts with (search's remembered query).
     """
@@ -180,6 +199,8 @@ def use_field_query(initial: str = "") -> FieldQuery:
     landing = ft.use_ref(False)  # the empty text is on its way: reports are stale
     overwritten = ft.use_ref(False)  # a stale report came in meanwhile
     ref = ft.use_memo(ft.Ref[ft.TextField], [])  # one for the screen's life
+    view_path = ft.use_view_path()  # "" outside a Router
+    focusable = not view_path or is_top_view(ft.context.page.route, view_path)
     shown = ref.current  # the field the last render built, None until the first
     if shown is None or clears != sent_clears.current:
         sent_clears.current = clears
@@ -225,7 +246,14 @@ def use_field_query(initial: str = "") -> FieldQuery:
 
     ft.use_effect(land, [clears], cleanup=_nothing_to_undo)
 
-    return FieldQuery(value=value, ref=ref, changed=changed, clear=clear, focus=focus)
+    return FieldQuery(
+        value=value,
+        ref=ref,
+        changed=changed,
+        clear=clear,
+        focus=focus,
+        focusable=focusable,
+    )
 
 
 def _nothing_to_undo() -> None:
