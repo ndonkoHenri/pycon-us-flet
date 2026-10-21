@@ -30,6 +30,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
+| `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -166,6 +167,17 @@ longer. Each trial prints its kind and its measured gap; the summary
 gives the counts and every measured gap's range and median, and the exit status is 1
 unless every trial moved inside the window and every tap reached the button. Compare builds as with the flow: the same
 `--trials` on each, one right after the other, on a quiet host.
+
+### Deep links
+
+`journeys/deep_links.yaml` opens each link through `subflows/open_link.yaml`, which joins
+`LINK` (the scheme and host) and the route path. With no `LINK` it uses `pyconus://app`,
+which must equal `[tool.flet.deep_linking]` in `pyproject.toml` (D-269):
+`tests/test_deep_link_flow.py` checks it, so when O-4 (#15) renames the scheme the check
+fails, not the flow. To try a build with other values before that default changes, give
+them: `maestro --device <id> test -e LINK=<scheme>://<host> maestro/journeys/deep_links.yaml`.
+A simulator asks "Open in …?" before the first link it opens (F31); the subflow taps
+Open when it shows.
 
 ## Writing a flow
 

@@ -502,6 +502,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `search_any_day` | journeys | Search finds a session, a speaker and a room on another day (criterion 1) |
 | `filter_persists` | journeys | A hidden track is said on the Schedule and survives a relaunch (criterion 1) |
 | `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
+| `deep_links` | journeys, deep_links | Links land on their target with the root below, cold and warm; an unknown id and an unknown path; an open sheet closes (D-291, #518). Its default scheme and host must equal `[tool.flet.deep_linking]`, which `tests/test_deep_link_flow.py` checks |
 | `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
