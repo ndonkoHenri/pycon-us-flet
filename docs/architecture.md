@@ -920,21 +920,26 @@ open = [                            # local times on conference days; closes aft
 ```
 
 ```toml
-# data/2026/map.toml
-[[plans]]
-id = "concourse"
-title = "Concourse level"
-image = "maps/2026/concourse.png"   # under src/assets, at most 2048 px (S7)
-width = 2048
-height = 1448
+# data/2026/map.toml (built in #372; a year without the file has no plans or pins)
+tour_url = "https://map.concept3d.com/?id=1802"   # optional: the 3D tour, a link (MAP-03)
 
-[[pins]]
-key = "104c"                        # normalize_room_key(room name)
+[[plans]]                           # in the Map's order (MAP-02)
+id = "concourse"                    # unique: the route's plan/<id>
+title = "Concourse level"
+subtitle = "Tutorials, talk tracks, registration, expo entry"   # optional
+image = "maps/2026/concourse.webp"  # under src/assets: tools/encode_plans.py, 2048 px, WebP 80 (D-312)
+thumb = "maps/2026/concourse-thumb.webp"   # the same, fitted to 800 px: pins land on it too
+width = 2048                        # the image's, as the script prints them
+height = 1583
+
+[[pins]]                            # rooms and venue spots in one table
+key = "104c"                        # a room: normalize_room_key(feed name); a venue spot: "info-desk"
 label = "Room 104C"
+sublabel = "Education Summit / Charlas / Open spaces"   # optional
 plan = "concourse"
-x = 41.5                            # percent of the image
-y = 62.0
-sprint = false
+x = 84.0                            # percent of the image, 0-100, a decimal point
+y = 27.0
+sprint = false                      # optional: the sprints use it (MAP-08)
 
 [[plans]]
 id = "job-fair"
@@ -954,9 +959,11 @@ label = "Python Software Foundation"   # only for a booth the feed gives no exhi
 x = 0.621
 ```
 
+**As built (#372).** `year_map.py` holds `Plan`, `Pin` and `MapData` (`plans`, `pins`, `tour_url`), with `plan(id)`, `pin(key)` and `room_pin(name)`, which finds a feed room's pin by `normalize_room_key()` (§7.8), so `Room 102A` and `102A` share one; `YearData.map` holds it, empty for a year without `map.toml` (2025). `check_map()` refuses a repeated plan id or pin key, a pin key that is not `a-z0-9` words joined by `-`, a blank title or label, a size that is not positive, an image or thumbnail missing under `src/assets/`, a pin on a plan that does not exist or outside 0–100 %, and a tour that is not `https`; errors read `2026/map.toml: pins[3].x: 120.0 is not between 0 and 100`. A venue spot's key has a `-` (`info-desk`), which no room key has, and `content.toml`'s `venue_hours` name their pins by it (`check_hours_pins()`). 2026 has Ionic's five plans (Campus, Concourse, Upper, Arena & exhibit halls, Seaside), its 53 room pins (`ROOM_LOCATIONS`, aliases such as `103abc` and `arena` included) and six venue spots (`VENUE_LOCATIONS`: information desk, registration, quiet room, lost & found, swag pickup, staff office), at Ionic's percentages; 16 rooms are marked for the sprints, those whose sublabel names them, as MAP-08 seeds them. `tools/encode_plans.py` makes the plans and thumbnails, and paints over the marks a plan carries (`--cover`: the campus plan's PyCon wordmark and the venue's logo, D-36). Tests (`tests/test_year_map.py`) check the images (WebP, 2048 px, the size in `map.toml`, within S7's budget), that every room of the snapshot and of the recorded feed has a pin or is under `other_locations` (naming any that is not), and that `normalize_room_key()` and `slugify_room()` agree on every feed room name of both years.
+
 A booth lists every sponsor whose `booth_number` is its number, so a shared booth keeps all its exhibitors (2026: 726, 727, 728, 734); `label` names a booth without one, and a test over the bundled snapshot fails when a labelled booth also has an exhibitor (D-254). Job fair tables come from the feed (`job_fair_table_number`), not from `map.toml`; #464 adds their rectangles on the `job-fair` plan.
 
-### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `year_moments.py`, `year_info.py`, `year_links.py`)
+### 8.2 Loader (`config.py`, `year_schema.py`, `year_tracks.py`, `year_pages.py`, `year_keynotes.py`, `year_moments.py`, `year_info.py`, `year_links.py`, `year_map.py`)
 
 `tomllib` loads each file into frozen dataclasses (`Track`, `WifiInfo`, `SafetyContact`, `Keynote`, `EventReminder`, `Plan`, `Pin`, `Booth`, …) gathered in `YearData`. The loader is the schema:
 
@@ -984,7 +991,7 @@ def checked(raw: dict, cls: type, where: str) -> dict:
     return raw
 ```
 
-As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique hand-written moment ids in 8000–8049, with aware times in the conference year, a known category, a route, a source and a check date (`check_moments()` in `year_moments.py`, D-274); pins 0–100 %, booths 0–1; referenced plans, pins and sponsor slugs exist; keynote session ids and sponsor credits' slugs exist in the year's bundled snapshot (`load_year(check_sessions=True)`, which the tests and `tools/update_snapshot.py` use and the app's start does not, D-217; 2025, which bundles none, is checked against its recorded feed, D-274); safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205); the keynotes' (`Keynote`, `KeynoteSpeaker`, `check_keynotes()`, `check_keynote_sessions()`, `keynote_of()`) in `year_keynotes.py` (D-217); the track registry (`Track`, `TRACK_GROUPS`, `HUB_PAGES`, `KEYNOTE_TRACKS`) and its checks (`check_tracks()`, which `_check_conference()` calls last) in `year_tracks.py`, split from `config.py` at D-66's ~400 lines in #275 (D-228); the info pages' tables (Wi-Fi, Help & safety, Venue & hours, About, the PSF, Social), each a field of `Content` added with its page, and their checks, `check_info(content, conference, file)`, which `_check_content()` calls, in `year_info.py` (D-263; so far Wi-Fi's `WifiInfo`, whose `check_info()` rule refuses a blank network or password, D-280, Help & safety's `SafetyContact` and `HelpInfo`, whose contacts must name an `https` source and a checked date, a tel value in E.164 and one contact per kind, D-281, `venue_hours`, whose dataclasses are `core/hours.py`'s and whose rules, `check_venue_hours()`, keep each opening on a day of the conference, before its close and clear of the service's others, D-282; the sponsor credits' `SponsorCredits` and `SponsorCredit`, each with a slug, an `https` source and a checked date, whose slugs `check_credit_sponsors()` checks against a feed, D-337); the pages of links have theirs in `year_links.py`, whose checks `check_info()` calls, split from `year_info.py` at D-66's ~400 lines in #532 (About the PSF's `PsfInfo` and `PsfLink`, with `PSF_SECTIONS`, whose `check_psf()` refuses a blank text, a non-https URL, an unknown section, two labels with one identifier and a brand with an icon, D-283, and Social's `SocialInfo` and `SocialLink`, whose `check_social()` refuses a malformed or repeated hashtag, an unknown section, a non-https URL, a blank label or handle and two rows with one identifier, D-284). `config.py` keeps `load_year()`, the conference facts (`ConferenceInfo`, `Content`, `Snapshot`, `YearData`) and the conference and content rules.
+As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (with `read_table()` and `YearDataError`; split from `config.py` at D-66's ~400 lines in #102) applies this check to every table, builds a table of its own (`[lightning_talks]`, an optional `X | None` field) as its dataclass and turns arrays of tables into tuples of their dataclass (D-205); errors read `2026/conference.toml: tracks[8].group: 'workshops' is not one of (...)`. Entries are then checked by rule (a unit test loads every year): a valid zone; ordered dates; `https://` URLs; unique hand-written moment ids in 8000–8049, with aware times in the conference year, a known category, a route, a source and a check date (`check_moments()` in `year_moments.py`, D-274); pins 0–100 %, booths 0–1; referenced plans, pins and sponsor slugs exist (`check_map()` and `check_hours_pins()` in `year_map.py`, #372); keynote session ids and sponsor credits' slugs exist in the year's bundled snapshot (`load_year(check_sessions=True)`, which the tests and `tools/update_snapshot.py` use and the app's start does not, D-217; 2025, which bundles none, is checked against its recorded feed, D-274); safety contacts carry `source` and `checked`; every feed room has a pin or is under "Other locations". The Open spaces and Lightning talks pages' tables and their checks (`check_pages()`) are in `year_pages.py`, split from `config.py` at D-66's ~400 lines in #248 (D-205); the keynotes' (`Keynote`, `KeynoteSpeaker`, `check_keynotes()`, `check_keynote_sessions()`, `keynote_of()`) in `year_keynotes.py` (D-217); the track registry (`Track`, `TRACK_GROUPS`, `HUB_PAGES`, `KEYNOTE_TRACKS`) and its checks (`check_tracks()`, which `_check_conference()` calls last) in `year_tracks.py`, split from `config.py` at D-66's ~400 lines in #275 (D-228); the info pages' tables (Wi-Fi, Help & safety, Venue & hours, About, the PSF, Social), each a field of `Content` added with its page, and their checks, `check_info(content, conference, file)`, which `_check_content()` calls, in `year_info.py` (D-263; so far Wi-Fi's `WifiInfo`, whose `check_info()` rule refuses a blank network or password, D-280, Help & safety's `SafetyContact` and `HelpInfo`, whose contacts must name an `https` source and a checked date, a tel value in E.164 and one contact per kind, D-281, `venue_hours`, whose dataclasses are `core/hours.py`'s and whose rules, `check_venue_hours()`, keep each opening on a day of the conference, before its close and clear of the service's others, D-282; the sponsor credits' `SponsorCredits` and `SponsorCredit`, each with a slug, an `https` source and a checked date, whose slugs `check_credit_sponsors()` checks against a feed, D-337); the pages of links have theirs in `year_links.py`, whose checks `check_info()` calls, split from `year_info.py` at D-66's ~400 lines in #532 (About the PSF's `PsfInfo` and `PsfLink`, with `PSF_SECTIONS`, whose `check_psf()` refuses a blank text, a non-https URL, an unknown section, two labels with one identifier and a brand with an icon, D-283, and Social's `SocialInfo` and `SocialLink`, whose `check_social()` refuses a malformed or repeated hashtag, an unknown section, a non-https URL, a blank label or handle and two rows with one identifier, D-284). `config.py` keeps `load_year()`, the conference facts (`ConferenceInfo`, `Content`, `Snapshot`, `YearData`) and the conference and content rules.
 
 ---
 

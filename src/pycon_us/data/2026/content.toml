@@ -61,13 +61,14 @@ minutes = -30
 # `venues-hours` block (conference.content in the bundled conference.json, captured
 # 2026-10-11), which tests/test_year_info.py compares with these entries: re-check them
 # against the feed before each build. `service` is unique; `location` is where the venue
-# signs it; `pin` (a map.toml key, none yet) shows it on a floor plan; `note` adds a
+# signs it; `pin` (a map.toml pin's key, checked) shows it on a floor plan; `note` adds a
 # line; each entry of `open` is one stretch of a conference day, `opens` before `closes`
 # (local times, the closing minute closed), never overlapping another.
 # The feed lists Lost & found without hours of its own, and no luggage check this year.
 [[venue_hours]]
 service = "Registration"
 location = "Promenade Lobby (Main Entrance)"
+pin = "registration"
 open = [
     { date = 2026-05-13, opens = 07:30:00, closes = 18:00:00 },
     { date = 2026-05-14, opens = 07:30:00, closes = 18:00:00 },
@@ -79,6 +80,7 @@ open = [
 [[venue_hours]]
 service = "Information desk"
 location = "Promenade Lobby (Main Entrance)"
+pin = "info-desk"
 open = [
     { date = 2026-05-13, opens = 07:30:00, closes = 17:00:00 },
     { date = 2026-05-14, opens = 07:30:00, closes = 17:00:00 },
@@ -90,6 +92,7 @@ open = [
 [[venue_hours]]
 service = "Swag pickup"
 location = "Expo Hall AB"
+pin = "swag-pickup"
 note = "Extra T-shirts on Sunday, May 17, from 11 AM to 1 PM."
 open = [
     { date = 2026-05-15, opens = 09:00:00, closes = 17:00:00 },
@@ -100,6 +103,7 @@ open = [
 [[venue_hours]]
 service = "Quiet room"
 location = "VIP Room A & B"
+pin = "quiet-room"
 open = [
     { date = 2026-05-14, opens = 09:00:00, closes = 17:00:00 },
     { date = 2026-05-15, opens = 07:00:00, closes = 17:00:00 },
@@ -110,6 +114,7 @@ open = [
 [[venue_hours]]
 service = "Lost & found"
 location = "Room 203AB"
+pin = "lost-and-found"
 note = "Ask at the information desk while it is open. Items move to the staff office each day."
 
 [[venue_hours]]

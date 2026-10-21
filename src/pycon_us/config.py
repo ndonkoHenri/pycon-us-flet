@@ -1,12 +1,13 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
 ``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below, through ``year_schema``, then checks their rules. Five
+frozen dataclasses below, through ``year_schema``, then checks their rules. Six
 concerns have modules of their own, each with its tables and their checks: the track
 registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
 Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
 (D-217), the info pages in ``year_info`` (D-263; About the PSF's and Social's in
-``year_links``), the conference moments in ``year_moments`` (D-274). The dataclasses
+``year_links``), the conference moments in ``year_moments`` (D-274), and ``map.toml``'s
+floor plans and pins in ``year_map`` (DATA-32). The dataclasses
 are the schema: an unknown or missing key, a wrong type or a broken rule fails at load
 time with a ``YearDataError`` that names the file, the key and the problem. Years,
 dates, names and URLs live in the data files, never in code; rolling over is a new
@@ -38,6 +39,7 @@ from pycon_us.year_info import (
 )
 from pycon_us.year_keynotes import Keynote, check_keynote_sessions, check_keynotes
 from pycon_us.year_links import PsfInfo, SocialInfo
+from pycon_us.year_map import MapData, check_hours_pins, check_map
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
     LightningTalksInfo,
@@ -241,11 +243,14 @@ class YearData:
         conference: The facts from ``conference.toml``.
         content: The texts and overrides from ``content.toml``.
         folder: The year's folder, where ``read_snapshot()`` finds the snapshot.
+        map: The floor plans and their pins from ``map.toml`` (DATA-32); empty for a
+            year without the file.
     """
 
     conference: ConferenceInfo
     content: Content
     folder: Path
+    map: MapData
 
     @property
     def feed_settings(self) -> FeedSettings:
@@ -306,6 +311,7 @@ def load_year(
 
     Raises:
         YearDataError: A file is missing, is not valid TOML, or breaks the schema.
+            ``map.toml`` alone may be missing: the year then has no plans.
     """
     folder = data_dir / str(year)
     conference_file = f"{year}/conference.toml"
@@ -320,7 +326,13 @@ def load_year(
         Content, read_table(folder / "content.toml", content_file), content_file
     )
     _check_content(content, conference, content_file)
-    data = YearData(conference, content, folder)
+    map_file = f"{year}/map.toml"
+    map_data = MapData()
+    if (folder / "map.toml").exists():  # a year may bundle no plans (2025)
+        map_data = build(MapData, read_table(folder / "map.toml", map_file), map_file)
+        check_map(map_data, map_file)
+    check_hours_pins(content.venue_hours, map_data, content_file)
+    data = YearData(conference, content, folder, map_data)
     if check_sessions and (content.keynotes or content.sponsor_credits.items()):
         # Raises for a year with keynotes or credits but no snapshot to check them by.
         feed = process(data.read_snapshot().raw, data.feed_settings)
