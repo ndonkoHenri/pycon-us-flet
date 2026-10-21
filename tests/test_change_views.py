@@ -189,6 +189,15 @@ def test_item_phrase_says_a_saved_session_is_in_my_schedule() -> None:
     assert item_phrase(v, saved=False) == v.sentence
 
 
+def test_item_phrase_starts_with_new_while_unseen() -> None:
+    """An unseen item's phrase starts "New: ", as its dot shows (ux.md §6.4)."""
+    v = view(change(ChangeKind.ROOM, listing(), listing(location="Room 103ABC")))
+    assert item_phrase(v, saved=True, unseen=True) == (
+        "New: Python for Humans: room changed from Room 104A to Room 103ABC."
+        " In My schedule."
+    )
+
+
 @pytest.mark.parametrize(
     ("kinds", "phrase"),
     [

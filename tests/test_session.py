@@ -91,6 +91,30 @@ async def test_the_title_is_the_page_s_selectable_heading(render: Render) -> Non
     assert detail.titles[-1] == ""  # the heading names the page, not the app bar
 
 
+async def test_at_large_text_the_title_steps_down_and_back(render: Render) -> None:
+    """D-328: where a slot's time leaves the gutter, the title takes a row title's type.
+
+    It follows a text size change while the page is open, and stays the selectable
+    level-1 heading at either size.
+    """
+    detail = await render(TALK)
+
+    def title() -> ft.Text:
+        node = detail.node("session.title")
+        assert (node.header, node.heading_level) == (True, 1)
+        return cast(ft.Text, node.content)
+
+    detail.prefs.time_above = True  # what GutterProbe measures at that size
+    await detail.settle()
+    assert (title().theme_style, title().selectable) == (
+        ft.TextThemeStyle.TITLE_MEDIUM,
+        True,
+    )
+    detail.prefs.time_above = False
+    await detail.settle()
+    assert title().theme_style == ft.TextThemeStyle.HEADLINE_SMALL
+
+
 async def test_the_badges_come_before_the_title(render: Render) -> None:
     """A tutorial's badges wrap in a row above its title, in one group with it."""
     detail = await render(TUTORIAL)

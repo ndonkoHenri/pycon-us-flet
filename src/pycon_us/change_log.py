@@ -6,18 +6,22 @@ records what changed as one batch (``core/change_batches.py``), kept in
 ``changes-<year>.json`` (``services/changes_file.py``). A store of its own, not a field of
 ``Conference``, so ``state.py`` stays the feed's (D-160, D-231). Screens read ``batches``,
 ``recent()`` and the batch to announce; the reminders' re-plan (#27) subscribes too.
+Schedule changes marks batches seen (``mark_seen()``, ux.md §6.4), which Now's card and
+Settings › Data count (``unseen_saved()``).
 """
 
+import asyncio
 import logging
 import time
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Collection
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, tzinfo
 
 import flet as ft
 
 from pycon_us import clock
 from pycon_us.core.change_batches import Batch, trim
+from pycon_us.core.change_views import unseen_saved
 from pycon_us.core.diff import Change, ChangeKind, diff
 from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites
@@ -69,6 +73,14 @@ class ChangeLog:
     # Whether `pycon.<year>.fetched` is set: a network feed was published (D-255).
     _fetched: bool = field(default=False, repr=False)
     _announce: Batch | None = field(default=None, repr=False)
+    # The log's file writes, kept until they land: nobody awaits a cleanup's mark.
+    _saves: set[asyncio.Task[bool]] = field(default_factory=set, repr=False)
+    # One write at a time, each saving the log as it is once the one before landed:
+    # the storage's thread lock gives turns, not order (D-244).
+    _writing: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+    # Counts the deletions and resets: a write asked for before the latest one is
+    # dropped when its turn comes, whatever the order of the turns (``_write()``).
+    _generation: int = field(default=0, repr=False)
 
     async def load(self, storage: Storage, zone: tzinfo) -> None:
         """Read the year's log and its marker; call it once at start, before a refresh.
@@ -82,7 +94,11 @@ class ChangeLog:
         self.batches = tuple(trim(batches, clock.now()))
 
     async def delete(self, storage: Storage, reason: str) -> bool:
-        """Delete the log, once every file write asked for before lands (D-244, D-255).
+        """Delete the log, after a file write under way lands (D-244, D-255).
+
+        A write asked for before the deletion and not yet started is dropped, whenever
+        its turn comes: the log it would save was the old feed URL's, and landing after
+        the deletion would bring the file back. Writes asked for after it land.
 
         A feed URL change after the load: the log was the old URL's.
 
@@ -94,12 +110,15 @@ class ChangeLog:
             Whether the file is gone; the batches in memory go either way.
         """
         self._forget()
-        return await changes_file.delete_batches(storage, reason)
+        async with self._writing:
+            return await changes_file.delete_batches(storage, reason)
 
     def reset(self) -> None:
         """Return to a fresh install's log, without writing: Reset app (D-198, D-255).
 
-        Reset app deletes the file and clears the marker with every ``pycon.`` key.
+        Reset app deletes the file and clears the marker with every ``pycon.`` key; a
+        write asked for before the reset and not yet started is dropped, as for
+        ``delete()``.
         """
         self._fetched = False
         self._forget()
@@ -154,6 +173,82 @@ class ChangeLog:
             if kind in spans and not _came_back(spans[kind])
         )
 
+    @property
+    def has_unseen(self) -> bool:
+        """Whether a batch is still unseen: Mark all as seen has something to do."""
+        return any(not batch.seen for batch in self.batches)
+
+    def unseen_saved(self, saved: Collection[str], now: datetime) -> int:
+        """Return how many saved sessions the unseen batches of the last 24 h changed.
+
+        Each session once, additions left out: the count Now's card and Settings ›
+        Data show (``core.change_views.unseen_saved()``, ux.md §5.1).
+
+        Args:
+            saved: The ids of the saved sessions.
+            now: The current instant (aware), ``clock.now()``.
+        """
+        return unseen_saved(self.batches, saved, now)
+
+    def mark_seen(
+        self, storage: Storage, batches: Collection[Batch] | None = None
+    ) -> asyncio.Task[bool] | None:
+        """Mark ``batches`` seen, or every batch when None, and save the log (ux.md §6.4).
+
+        Synchronous, so a screen's sync cleanup can call it (D-70): the marks apply at
+        once and notify, and the file write is a task the store keeps until it lands.
+        The write saves the batches as they are when its turn comes (``_save()``), so a
+        batch recorded meanwhile is kept.
+
+        Args:
+            storage: Where the log is kept.
+            batches: The batches to mark, as the caller read them from ``batches``;
+                one already marked, or no longer in the log, is skipped.
+
+        Returns:
+            The write's task (its result says whether the file was replaced), or None
+            when nothing was unseen.
+        """
+        picked = None if batches is None else {id(batch) for batch in batches}
+        marked = tuple(
+            replace(batch, seen=True)
+            if not batch.seen and (picked is None or id(batch) in picked)
+            else batch
+            for batch in self.batches
+        )
+        if all(new is old for new, old in zip(marked, self.batches, strict=True)):
+            return None
+        self.batches = marked
+        return self._save(storage)
+
+    def _save(self, storage: Storage) -> asyncio.Task[bool]:
+        """Start writing the log, after the writes before it; return the kept task.
+
+        Every write of the log goes through here, one at a time: each saves the
+        batches as they are once the one before it landed, so a seen mark's write can
+        never land over a newer batch's. The task is kept until it lands, so a
+        cancelled caller (a refresh, a cleanup) leaves it to finish. A deletion or a
+        reset before its turn drops it (``delete()``); its result is then False.
+        """
+        save = asyncio.create_task(self._write(storage, self._generation))
+        self._saves.add(save)
+        save.add_done_callback(self._saves.discard)
+        return save
+
+    async def _write(self, storage: Storage, generation: int) -> bool:
+        """Write the log as it is when its turn comes; a failure is logged (D-120).
+
+        Args:
+            storage: Where the log is kept.
+            generation: ``_generation`` when the write was asked for: once a deletion
+                or a reset has changed it, the write is dropped and returns False.
+        """
+        async with self._writing:
+            if generation != self._generation:
+                logger.info("Change log write dropped: the log was deleted since")
+                return False
+            return await changes_file.write_batches(storage, list(self.batches))
+
     def take_announcement(self) -> Batch | None:
         """Return the batch to announce, once: the next call returns None.
 
@@ -202,10 +297,12 @@ class ChangeLog:
         if any(change.kind is not ChangeKind.ADDED for change in changes):
             self._announce = batch  # before `batches`, whose assignment notifies
         self.batches = (batch, *trim(self.batches, batch.detected_at))
-        await changes_file.write_batches(storage, list(self.batches))
+        await asyncio.shield(self._save(storage))
         return batch
 
     def _forget(self) -> None:
+        """Clear the batches and the announcement, and drop the writes not yet started."""
+        self._generation += 1
         self._announce = None
         self.batches = ()
 

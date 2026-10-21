@@ -59,7 +59,7 @@ from pycon_us.ui.badges import ChangedBadge, TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import LinkTile, SpeakerTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice, use_recent_changes
 from pycon_us.ui.when_where import WhenAndWhere
@@ -166,7 +166,16 @@ def SessionDetail(session_id: str) -> ft.View:
         if current is not None and session.id in marks
         else ()
     )
-    controls.append(_header(session, info, tokens, changed, use_24h=use_24h))
+    controls.append(
+        _header(
+            session,
+            info,
+            tokens,
+            changed,
+            use_24h=use_24h,
+            large_text=prefs.time_above,
+        )
+    )
     controls.append(
         WhenAndWhere(
             session,
@@ -219,19 +228,19 @@ def _header(
     changed: Sequence[Change],
     *,
     use_24h: bool,
+    large_text: bool,
 ) -> ft.Control:
     """The badges, then the title: the page's heading, selectable to copy (D-26).
 
     A change of the last 24 h replaces the rows' Changed with a badge per kind that
-    says the old value, "Moved from Room 102A" (ux.md §5.5).
+    says the old value, "Moved from Room 102A" (ux.md §5.5). At large text
+    (``Prefs.time_above``) the title steps down (``PageTitle``, D-328).
     """
-    title = ft.Semantics(
-        header=True,
-        heading_level=1,
+    title = PageTitle(
+        session.name,
         identifier=f"{SCREEN}.title",
-        content=ft.Text(
-            session.name, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, selectable=True
-        ),
+        large_text=large_text,
+        selectable=True,
     )
     # A badge that repeats the title (a break's "Break") says nothing more.
     badges = [

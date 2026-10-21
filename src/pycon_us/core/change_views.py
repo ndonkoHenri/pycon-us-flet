@@ -3,11 +3,12 @@
 Pure functions of the log's batches, like ``row_views`` for the rows (D-184): Schedule
 changes, the Changed badge, the Review SnackBar and Now's card all say a change the same
 way. ``change_view()`` formats one change once: its old and new values for the line
-"old → new" and the sentence a screen reader says; ``item_phrase()`` adds "In My
-schedule." for a saved session. ``sections()`` puts the batches under "Affects My
+"old → new" and the sentence a screen reader says; ``item_phrase()`` adds "New: " for
+an unseen item and "In My schedule." for a saved session. ``sections()`` puts the batches under "Affects My
 schedule" and "All changes", grouped by detection time ("Today, 10:42 AM").
 ``changed_phrase()`` is the badge's spoken part, ``detail_badge()`` session detail's badge
-of one kind with its old value, ``snackbar_text()`` and ``now_card_text()`` the counts.
+of one kind with its old value, ``snackbar_text()``, ``now_card_text()`` and
+``unseen_saved()`` the counts.
 
 Times are conference time, whatever the device's zone (D-35, D-43), in 24-hour form when
 the device asks for it (F23). A session gone from the feed is "Removed from the latest
@@ -40,6 +41,9 @@ ALL_CHANGES = "All changes"
 
 NO_ROOM = "No room"
 """A room change's side whose location is empty."""
+
+NEW = "New: "
+"""What an unseen item's sentence starts with, as its dot shows it (ux.md §6.4)."""
 
 RECENT = timedelta(hours=24)
 """How long a change counts on Now's card and keeps its Changed badge (D-255)."""
@@ -138,18 +142,21 @@ def change_view(change: Change, zone: tzinfo, *, use_24h: bool) -> ChangeView:
     )
 
 
-def item_phrase(view: ChangeView, *, saved: bool) -> str:
+def item_phrase(view: ChangeView, *, saved: bool, unseen: bool = False) -> str:
     """Return what a screen reader says for an item: its sentence, then whether it is saved.
 
     "Building X: room changed from Room 102A to Room 103ABC. In My schedule." (ux.md
-    §6.4). The star's state changes without the change, so it is added here, not kept
-    in the view.
+    §6.4), after "New: " while the item is unseen, which its dot shows. The star's
+    state and the seen mark change without the change, so they are added here, not
+    kept in the view.
 
     Args:
         view: The item's view.
         saved: Whether the session is in My schedule.
+        unseen: Whether the item's batch is still unseen.
     """
-    return f"{view.sentence} In My schedule." if saved else view.sentence
+    phrase = f"{view.sentence} In My schedule." if saved else view.sentence
+    return f"{NEW}{phrase}" if unseen else phrase
 
 
 def changed_phrase(kinds: Iterable[ChangeKind]) -> str:
@@ -330,14 +337,31 @@ def now_card_text(
         saved: The ids of the saved sessions.
         now: ``clock.now()``.
     """
+    mine = unseen_saved(batches, saved, now)
+    return _saved_changed(mine) if mine else None
+
+
+def unseen_saved(
+    batches: Iterable[Batch], saved: Collection[str], now: datetime
+) -> int:
+    """Return how many saved sessions the unseen batches of the last 24 hours changed.
+
+    Each session once; additions are not counted, and a batch detected exactly 24
+    hours ago still counts (``RECENT``). Now's card says it (``now_card_text()``), and
+    Settings › Data shows it too (ux.md §5.1, §6.9).
+
+    Args:
+        batches: The log's batches.
+        saved: The ids of the saved sessions.
+        now: ``clock.now()``.
+    """
     recent = (
         change
         for batch in batches
         if not batch.seen and now - batch.detected_at <= RECENT
         for change in batch.changes
     )
-    mine = _saved_sessions(counted(recent), saved)
-    return _saved_changed(mine) if mine else None
+    return _saved_sessions(counted(recent), saved)
 
 
 # ------------------------------------------------------------------ helpers

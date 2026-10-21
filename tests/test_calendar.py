@@ -244,7 +244,9 @@ async def test_only_a_get_of_the_file_counts_as_fetched() -> None:
         assert other.status == 404
         assert not served.fetched.is_set()
         await asyncio.to_thread(get, served.url)
-        assert served.fetched.is_set()
+        # Set by the server's thread once its answer is written, which the client can
+        # have read first: wait for it rather than read it at once (#582).
+        assert await asyncio.to_thread(served.fetched.wait, 5)
     finally:
         await asyncio.to_thread(served.close)
 

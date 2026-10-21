@@ -18,6 +18,7 @@ from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.routes import ROUTES
+from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.services.storage import SERVICE_ERRORS, Storage
@@ -87,6 +88,8 @@ def App(memory: ViewMemory):
     ready = prefs.loaded and prefs.time_measured
     # The app's one reminder Banner slot (D-60, architecture §14.2), before the gate.
     use_reminder_banner(svc, conference, favorites, ready=ready)
+    # Each recorded batch's "Schedule updated · Review" (D-255, D-335), before the gate.
+    use_review_snack_bar(svc, change_log, favorites, prefs)
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
     # under the Schedule's first jump (D-216).
