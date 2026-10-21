@@ -118,6 +118,7 @@ def Now() -> ft.View:
     # The sections the user opened past their fold (now_fold.fold_key(), D-327).
     opened, set_opened = ft.use_state(frozenset[str]())
 
+    @report_errors
     def toggle(key: str) -> None:
         set_opened(opened ^ {key})
 
@@ -294,10 +295,14 @@ def _happening(
     if not happening:
         return [header, _note(NOTHING_ON, f"{SCREEN}.nothing_on")]
 
-    def on_row(session: Session) -> ft.Control:
-        return row(session, elapsed=elapsed_percent(session, now))
-
-    return [header, *fold(HAPPENING, happening, row=on_row)]
+    return [
+        header,
+        *fold(
+            HAPPENING,
+            happening,
+            row=lambda session: row(session, elapsed=elapsed_percent(session, now)),
+        ),
+    ]
 
 
 def _up_next(
