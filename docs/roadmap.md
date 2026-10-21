@@ -1332,7 +1332,7 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
 - **Carried from P1** (no roadmap key, except the decisions, which are `P1-34`, `P1-35` and `P1-36` in §4; #347 tracks them):
   - the Schedule keeps its place on a filter change: #333, with the draft PR #346 and upstream #345 (U50);
   - design: #331, #305, #277, #222, #215;
-  - features: #242 (decide and build open-space row thumbnails);
+  - features: #242 (open-space row thumbnails: decided against, D-332);
   - accessibility: #332, #302, #309;
   - tests and tools: #348 (Maestro flows, which the check issues `P2-93`..`P2-96`, `P2-100` and `P2-101` wait for), #312, #257, #339;
   - bugs: #337, #342, #343, #344; docs: #359;
