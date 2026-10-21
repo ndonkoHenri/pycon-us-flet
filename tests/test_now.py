@@ -48,6 +48,7 @@ from pycon_us.screens.now_header import (
 from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.ui import status_strip
+from pycon_us.ui.buttons import LABEL_PADDING
 from tests import sessions
 from tests.feeds import processed
 from tests.test_theme import contrast_ratio
@@ -497,6 +498,8 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
     assert shown.listed() == []  # nothing is on or next for weeks
     button = shown.node("now.build_schedule").content
     assert isinstance(button, ft.FilledTonalButton)
+    assert button.style is not None  # its sides stay 24 dp at large text (D-344)
+    assert button.style.padding == LABEL_PADDING
     await shown.click(button)
     assert shown.went == ["/schedule"]
 

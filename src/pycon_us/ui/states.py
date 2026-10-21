@@ -18,6 +18,7 @@ from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import use_prefs
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_border
+from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING
 from pycon_us.ui.links import OPENS_IN, LinkKind, external
 
 ICON_SIZE = 48
@@ -121,7 +122,13 @@ def EmptyState(
     if action is not None:
         button: ft.Control
         if link_id is None:
-            button = ft.FilledTonalButton(action, on_click=on_action, disabled=disabled)
+            button = ft.FilledTonalButton(
+                action,
+                on_click=on_action,
+                disabled=disabled,
+                # Material's 100 % padding at every size (D-344).
+                style=ft.ButtonStyle(padding=LABEL_PADDING),
+            )
         else:
             button = external(
                 link_id,
@@ -133,6 +140,7 @@ def EmptyState(
                     icon=ft.Icons.OPEN_IN_NEW,
                     on_click=on_action,
                     disabled=disabled,
+                    style=ft.ButtonStyle(padding=ICON_PADDING),
                 ),
             )
         controls.append(ft.Container(button, padding=ft.Padding.only(top=8)))

@@ -17,6 +17,7 @@ import pytest
 from pycon_us.config import load_year
 from pycon_us.screens import wifi as screen
 from pycon_us.state import Conference
+from pycon_us.ui.buttons import ICON_PADDING
 from tests.fakes import MemoryClipboard
 from tests.feeds import processed
 from tests.sessions import Shown, showing, text_of
@@ -137,7 +138,7 @@ async def test_copy_password_copies_the_password_and_says_so_once(show: Show) ->
     button = control_of(page.node("wifi.copy_password"), ft.FilledButton)
     assert button.content == "Copy password"  # it says what it copies
     assert button.style is not None  # room above and below a label at large text
-    assert button.style.padding == screen.BUTTON_PADDING
+    assert button.style.padding == ICON_PADDING
     await page.click(button)
     assert clipboard(page).value == WIFI.password
     assert snack_texts(page) == ["Password copied"]

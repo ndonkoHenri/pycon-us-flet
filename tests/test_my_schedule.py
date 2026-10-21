@@ -28,6 +28,7 @@ from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.state import Conference
 from pycon_us.ui import fold, states
 from pycon_us.ui import session_rows as rows
+from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.favorite import REMOVED, UNDO
 from tests import sessions
 from tests.fakes import MemoryPrefs
@@ -497,6 +498,8 @@ async def test_when_everything_has_ended_it_says_so_and_offers_today(
     assert shown.shown() == []
     (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
     assert button.content == "See what's on today"
+    assert button.style is not None  # its sides stay 24 dp at large text (D-344)
+    assert button.style.padding == LABEL_PADDING
     await shown.session.dispatch_event(button._i, "click", None)
     await shown.settle()
     assert shown.went == ["/now"]
