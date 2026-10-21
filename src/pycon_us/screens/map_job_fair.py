@@ -11,7 +11,9 @@ that pushes the floor viewer at ``…/plan/job-fair`` (no pins), and under it:
   (``core.expo.job_fair_tables()``), in natural table order, a shared table's sponsors
   together by name: "T2 · Bloomberg · 15 open roles" (the count only when its listings
   have roles), one node read "Table T2, Bloomberg, 15 open roles", a button that pushes
-  the sponsor (``…/sponsor/<slug>``), so Back returns to the pane.
+  the sponsor (``…/sponsor/<slug>``), so Back returns to the pane; beside it a 48 dp
+  ``MAP_OUTLINED`` button of its own, "Show table T2 on the plan", that pushes
+  ``…/plan/job-fair?table=T2`` with the table selected (#464).
 
 The rows follow the feed, which a refresh can correct during the conference; the image
 changes only with a build. Without data the pane loads and fails as Rooms does (ux.md
@@ -23,12 +25,14 @@ import flet as ft
 
 from pycon_us.core.expo import JobFairTable, job_fair_tables
 from pycon_us.locations import drill_href
+from pycon_us.screens.plan_tables import show_table_label, table_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.ui.location_card import job_fair_card
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
+from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip
 from pycon_us.ui.widths import LIST, sides, use_margin
@@ -173,19 +177,28 @@ def table_row(entry: JobFairTable, view_path: str) -> ft.Control:
 
     Built as a Sponsors row is, not as a ``ListTile``, so it reads as one phrase that
     says "Table" where the line says "T2" (D-33); 56 dp for one line, it grows with the
-    text. Identifier ``map.table.<sponsor slug>``: a shared table has two rows.
+    text. Identifier ``map.table.<sponsor slug>``: a shared table has two rows. The
+    table's map button follows, a stop of its own (``map.show_table.<sponsor slug>``).
 
     Args:
         entry: The sponsor at its table.
         view_path: The Map's View path, so the sponsor is pushed on top of it.
     """
     target = drill_href(view_path, "sponsor", entry.sponsor.slug)
+    on_plan = table_href(view_path, entry.table)
 
     @report_errors
     def go() -> None:
         ft.context.page.navigate(target)
 
-    return ft.MergeSemantics(  # the phrase and the tap's action: one node
+    @report_errors
+    def show() -> None:
+        ft.context.page.navigate(on_plan)
+
+    show_button = ft.IconButton(
+        ft.Icons.MAP_OUTLINED, tooltip=show_table_label(entry.table), on_click=show
+    )
+    row = ft.MergeSemantics(  # the phrase and the tap's action: one node
         content=ft.Container(
             ft.Semantics(
                 label=table_phrase(entry),
@@ -209,5 +222,12 @@ def table_row(entry: JobFairTable, view_path: str) -> ft.Control:
             on_click=go,
             # 56 dp for a line of 24, as a one-line ListTile; taller as it wraps.
             padding=ft.Padding.symmetric(horizontal=16, vertical=16),
-        )
+        ),
+        expand=True,
+    )
+    # The button sits at the list's edge, its 24 dp icon 12 dp in, as a trailing icon.
+    return ft.Row(
+        [row, named(f"{SCREEN}.show_table.{entry.sponsor.slug}", show_button)],
+        spacing=0,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
     )

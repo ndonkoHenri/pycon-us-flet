@@ -2,9 +2,13 @@
 
 A pushed View (ux.md §6.1): the app bar names the plan and its overflow resets the
 view; the plan fills the body in ``ui/zoom.py``'s zoom layer, from the fitted plan to
-one image pixel per logical pixel (D-312), with a double tap for 2x or back to fit, as
-nothing on it is tappable. The zoom buttons sit bottom-right, the single-pointer way to
-zoom (WCAG 2.5.1).
+one image pixel per logical pixel (D-312), with a double tap for 2x or back to fit
+where nothing on it is tappable. The zoom buttons sit bottom-right, the single-pointer
+way to zoom (WCAG 2.5.1).
+
+On the ``job-fair`` plan each printed table is a tap area, and ``?table=T8`` selects
+one with its card (``screens/plan_tables.py``, #464): no double tap there (D-312).
+``ViewMemory.plan_tables`` keeps the selection for a View rebuilt in a new session.
 
 ``?pin=<key>`` (``use_query()``, U9 interim) marks a room or a venue spot of
 ``map.toml``: a dot on the plan, placed from its percentages, the same size on screen
@@ -26,10 +30,17 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
+from pycon_us.screens.plan_tables import (
+    TABLE_PARAM,
+    sponsors_at,
+    table_area,
+    table_card,
+)
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
+from pycon_us.state import use_conference
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
@@ -41,7 +52,7 @@ from pycon_us.ui.zoom import (
     zoom_buttons,
     zoom_layer,
 )
-from pycon_us.year_map import Pin, Plan
+from pycon_us.year_map import JOB_FAIR_PLAN, Pin, Plan
 
 SCREEN = "plan"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -69,15 +80,18 @@ PULSE_MS = 300
 """Each half of a pulse, out or back (ux.md §3.8's range)."""
 
 
-def plan_label(plan: Plan, pin: Pin | None) -> str:
-    """Return what a screen reader says of the plan: its name, and the pin it marks.
+def plan_label(plan: Plan, pin: Pin | None, table: str = "") -> str:
+    """Return what a screen reader says of the plan: its name, and what it marks.
 
     Args:
         plan: The plan shown.
         pin: The pin on it, if any.
+        table: The job fair table selected on it ("T7"), if any.
     """
     name = f"{plan.title} floor plan"
-    return f"{name}, {pin.label} marked" if pin else name
+    if pin:
+        name = f"{name}, {pin.label} marked"
+    return f"{name}, Table {table} selected" if table else name
 
 
 def pin_on(plan: Plan | None, key: str, pins: dict[str, Pin]) -> Pin | None:
@@ -105,6 +119,18 @@ def forget(memory: ViewMemory, view_path: str) -> None:
         view_path: The floor viewer's View path.
     """
     memory.plan_pins.pop(view_path, None)
+
+
+def forget_table(memory: ViewMemory, view_path: str) -> None:
+    """The table effect's cleanup: a floor viewer that leaves forgets its table.
+
+    As ``forget()``: Back removes the entry, a replaced session never runs it (F30).
+
+    Args:
+        memory: The process's ``ViewMemory``.
+        view_path: The floor viewer's View path.
+    """
+    memory.plan_tables.pop(view_path, None)
 
 
 def pin_marker(
@@ -191,8 +217,10 @@ def PlanViewer(plan_id: str) -> ft.View:
     prefs = use_prefs()
     memory = svc.memory
     query = use_query()
+    conference = use_conference()
     data = svc.year.map
     plan = data.plan(plan_id)
+    on_job_fair = plan is not None and plan.id == JOB_FAIR_PLAN
     pins = ft.use_memo(lambda: {pin.key: pin for pin in data.pins}, [])
     # The query seeds the pin; a View built below the top has no query (D-143).
     key = query.get("pin") or memory.plan_pins.get(view_path, "")
@@ -205,6 +233,11 @@ def PlanViewer(plan_id: str) -> ft.View:
         lambda: pin is not None and memory.plan_pins.get(view_path) != pin.key
     )
     ring, set_ring = ft.use_state(False)
+    # As the pin: the query seeds the table, a View below the top finds it in memory.
+    table, set_table = ft.use_state(
+        lambda: query.get(TABLE_PARAM) or memory.plan_tables.get(view_path, "")
+    )
+    selected = table if on_job_fair else ""
     ring_ms = prefs.motion_ms(PULSE_MS)
 
     @report_errors
@@ -223,6 +256,15 @@ def PlanViewer(plan_id: str) -> ft.View:
             await asyncio.sleep(ring_ms / 1000)
 
     ft.use_effect(pulse_twice, [ready], cleanup=partial(forget, memory, view_path))
+
+    @report_errors
+    async def keep_table() -> None:
+        if selected:
+            memory.plan_tables[view_path] = selected
+
+    ft.use_effect(
+        keep_table, [selected], cleanup=partial(forget_table, memory, view_path)
+    )
 
     if plan is None:
         return AppScaffold(
@@ -245,7 +287,19 @@ def PlanViewer(plan_id: str) -> ft.View:
     async def reset_view() -> None:
         await zoom.reset()
 
+    feed = conference.data
     layers: list[ft.Control] = []
+    if on_job_fair and ready:
+        layers.extend(
+            table_area(
+                item,
+                zoom.shown,
+                sponsors_at(feed, item.number),
+                set_table,
+                selected=item.number == selected,
+            )
+            for item in data.tables
+        )
     if pin is not None and ready:
         layers.append(
             pin_marker(pin, zoom.shown, scale=zoom.scale, ring=ring, ring_ms=ring_ms)
@@ -255,8 +309,20 @@ def PlanViewer(plan_id: str) -> ft.View:
     # gestures, which reach the plan under it: no Container there, since Flet always
     # decorates one and a decorated box takes every pointer inside it.
     card = [label_card(plan, pin)] if pin is not None else []
+    if selected:
+        card.append(
+            table_card(
+                selected,
+                sponsors_at(feed, selected),
+                view_path,
+                placed=data.table(selected) is not None,
+            )
+        )
     controls = ft.Row(
-        [ft.Column(card, expand=True, tight=True), zoom_buttons(zoom, SCREEN)],
+        [
+            ft.Column(card, expand=True, tight=True, spacing=8),
+            zoom_buttons(zoom, SCREEN),
+        ],
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.END,
         left=16,
@@ -279,10 +345,14 @@ def PlanViewer(plan_id: str) -> ft.View:
         actions=[menu],
         body=ft.Stack(
             [
-                # Nothing on the floor viewer's plans is tappable: a double tap
-                # delays no tap here (D-312).
+                # A double tap only where nothing on the plan is tappable: it
+                # delays every tap (D-312).
                 zoom_layer(
-                    zoom, plan.image, plan_label(plan, pin), layers, double_tap=True
+                    zoom,
+                    plan.image,
+                    plan_label(plan, pin, selected),
+                    layers,
+                    double_tap=not (on_job_fair and data.tables),
                 ),
                 controls,
             ],

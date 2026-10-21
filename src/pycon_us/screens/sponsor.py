@@ -8,9 +8,10 @@ and showed an empty card for an unknown slug. This page, top to bottom (ux.md §
   decorative: the name follows), the name as the page's level-1 heading (the app bar's
   title stays empty, D-186, D-211), the level as a plain line, "Visionary sponsor",
   rather than §6.5's first ``Chip``, which would be a control that does nothing, and
-  the facts, "Booth 613 · Job fair table T2". "Website" follows only when the feed
-  gives the sponsor one (``external_url``; the live feed never has). Find booth and
-  the job fair table become actions with the expo map (#409).
+  the facts, "Booth 613". "Job fair table T2", an outlined button, pushes the job fair
+  plan with the table selected (``…/plan/job-fair?table=T2``, #464). "Website"
+  follows only when the feed gives the sponsor one (``external_url``; the live feed
+  never has). Find booth becomes an action with the expo map (#409).
 - **About** (level 2): the feed's plain text, selectable, its line breaks kept;
   left out when the feed has none.
 - **Open roles** (level 2): each role of the sponsor's listings
@@ -30,6 +31,7 @@ from pycon_us.core.links import feed_link
 from pycon_us.core.models import ConferenceData, Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.plan_tables import table_href
 from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
@@ -46,6 +48,7 @@ from pycon_us.ui.links import (
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
+from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin
 
@@ -73,6 +76,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
         sponsor_slug: The sponsor's slug, unquoted.
     """
     svc = use_services()
+    view_path = ft.use_view_path()
     margin = use_margin(READING)  # its width class (D-305)
     conference = use_conference()
     prefs = use_prefs()
@@ -112,7 +116,9 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
                 padding=sides(margin),
             ),
         )
-    items: list[ft.Control] = [intro(sponsor, svc, large_text=prefs.time_above)]
+    items: list[ft.Control] = [
+        intro(sponsor, svc, view_path, large_text=prefs.time_above)
+    ]
     if sponsor.description.strip():
         items.append(SectionHeader("About", level=2))
         items.append(about(sponsor.description))
@@ -123,31 +129,30 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
 
 
 def facts_line(sponsor: Sponsor) -> str | None:
-    """Return where to find the sponsor: "Booth 613 · Job fair table T2", or None.
+    """Return where to find the sponsor's booth: "Booth 613", or None without one.
 
-    Either part alone when it has only one; None when it has neither.
+    The job fair table is a button instead (``job_fair_button()``).
 
     Args:
         sponsor: The sponsor.
     """
-    facts = []
-    if sponsor.booth:
-        facts.append(f"Booth {sponsor.booth}")
-    if sponsor.job_fair_table:
-        facts.append(f"Job fair table {sponsor.job_fair_table}")
-    return " · ".join(facts) or None
+    return f"Booth {sponsor.booth}" if sponsor.booth else None
 
 
-def intro(sponsor: Sponsor, svc: Services, *, large_text: bool) -> ft.Control:
-    """Return the page's intro: the logo, the name, the level, the facts, the website.
+def intro(
+    sponsor: Sponsor, svc: Services, view_path: str, *, large_text: bool
+) -> ft.Control:
+    """Return the page's intro: the logo, the name, the level, the facts, the actions.
 
     Centred. The name is the page's heading (level 1), a ``PageTitle`` selectable to
     copy (D-26), where a long name wraps (D-186). The level and the facts are plain
-    lines, each a node of its own; the facts' middle dot is read as a comma.
+    lines, each a node of its own. The job fair table and the website follow, each
+    only when the sponsor has one.
 
     Args:
         sponsor: The sponsor.
         svc: The session's services, for the website's launch.
+        view_path: The page's View path, so the job fair plan is pushed on top of it.
         large_text: The text is large for the width (``Prefs.time_above``): the
             name steps down (D-328).
     """
@@ -164,7 +169,9 @@ def intro(sponsor: Sponsor, svc: Services, *, large_text: bool) -> ft.Control:
     ]
     facts = facts_line(sponsor)
     if facts is not None:
-        lines.append(_centred(facts, spoken=facts.replace(" · ", ", ")))
+        lines.append(_centred(facts))
+    if sponsor.job_fair_table:
+        lines.append(job_fair_button(sponsor.job_fair_table, view_path))
     website = feed_link(sponsor.external_url, svc.year.conference.site_url)
     if website is not None and link_kind(website) is LinkKind.WEB:
         lines.append(website_button(website, svc))
@@ -174,17 +181,39 @@ def intro(sponsor: Sponsor, svc: Services, *, large_text: bool) -> ft.Control:
     )
 
 
-def _centred(
-    text: str, *, color: ft.ColorValue | None = None, spoken: str | None = None
-) -> ft.Text:
-    """A centred line of the intro in ``BODY_LARGE``, said as ``spoken`` if given."""
+def _centred(text: str, *, color: ft.ColorValue | None = None) -> ft.Text:
+    """A centred line of the intro in ``BODY_LARGE``."""
     return ft.Text(
         text,
         theme_style=ft.TextThemeStyle.BODY_LARGE,
         color=color,
         text_align=ft.TextAlign.CENTER,
-        semantics_label=spoken,
     )
+
+
+def job_fair_button(number: str, view_path: str) -> ft.Control:
+    """Return "Job fair table T2", an outlined button that shows the table on the plan.
+
+    It pushes ``…/plan/job-fair?table=T2`` on the sponsor (#464), so Back returns
+    here; ux.md §6.5's ``GROUPS_OUTLINED`` (identifier ``sponsor.job_fair_table``).
+
+    Args:
+        number: The sponsor's table, as the feed writes it.
+        view_path: The page's View path.
+    """
+    target = table_href(view_path, number)
+
+    @report_errors
+    def go() -> None:
+        ft.context.page.navigate(target)
+
+    button = ft.OutlinedButton(
+        f"Job fair table {number}",
+        icon=ft.Icons.GROUPS_OUTLINED,
+        on_click=go,
+        style=ft.ButtonStyle(padding=ICON_PADDING),
+    )
+    return named(f"{SCREEN}.job_fair_table", button)
 
 
 def website_button(url: str, svc: Services) -> ft.Control:

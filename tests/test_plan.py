@@ -163,8 +163,8 @@ async def render(
 ) -> AsyncIterator[Render]:
     """Yield a function that opens ``PlanViewer`` at a route and returns its ``Plan``.
 
-    The plan is the Concourse level unless ``plan_id`` names another; reduced motion
-    and the view memory can be set too. The pulse's waits are held and the viewer's
+    The plan is the Concourse level unless ``plan_id`` names another; reduced motion,
+    the view memory and the ``Conference`` (no feed by default) can be set too. The pulse's waits are held and the viewer's
     methods are ``FakeViewer``'s.
     """
     sleeps = HeldSleeps()
@@ -179,6 +179,7 @@ async def render(
         plan_id: str = "concourse",
         reduce_motion: bool = False,
         memory: ViewMemory | None = None,
+        conference: Conference | None = None,
     ) -> Plan:
         toggles: list[Callable[[bool], None]] = []
 
@@ -198,7 +199,7 @@ async def render(
                 Opened,
                 screen,
                 year=YEAR,
-                conference=Conference(),
+                conference=conference or Conference(),
                 tmp_path=tmp_path,
                 monkeypatch=monkeypatch,
                 view_path=view,

@@ -4,13 +4,16 @@
 table of the venue's floor plans (images bundled under ``src/assets/``, D-312), a
 ``[[pins]]`` table of the spots marked on them, rooms and venue spots alike, a
 ``[[booths]]`` table of the expo's booths on the ``expo`` plan (EXPO-02, D-254), and the
-venue's 3D tour. The ``job-fair`` plan heads the Map's Job fair pane, with its ``note``. ``config.load_year()`` builds it into ``MapData`` through
+venue's 3D tour. The ``job-fair`` plan heads the Map's Job fair pane, with its ``note``,
+and a ``[[tables]]`` table marks its printed tables (#464). ``config.load_year()`` builds
+it into ``MapData`` through
 ``year_schema`` and checks it with ``check_map()``; ``YearData.map`` holds it, and
 ``MapData.room_pin()`` finds a feed room's pin by ``normalize_room_key()``. A year
 without the file has no plans and no pins. Whether every feed room has a pin is a test
 over the year's snapshot (``tests/test_year_map.py``), since the app never parses the
 snapshot just to check it (D-38); so are the expo's gaps, the booths without an
-exhibitor and the exhibitors without a booth on the plan (``core/expo.py``).
+exhibitor and the exhibitors without a booth on the plan (``core/expo.py``), and the
+feed's job fair tables without a rectangle.
 """
 
 import re
@@ -120,6 +123,30 @@ class Booth:
 
 
 @dataclass(frozen=True)
+class Table:
+    """One printed job fair table on the ``job-fair`` plan, a ``[[tables]]`` entry (#464).
+
+    A rectangle in ratios of the plan, as a booth's, that ``plan/job-fair?table=T8``
+    selects; who is at it comes from the feed (``Sponsor.job_fair_table``), never from
+    here, since the print and the feed disagree (D-254).
+
+    Attributes:
+        number: Its number as the feed's ``job_fair_table_number`` writes it ("T8"),
+            unique in the year.
+        x: Its left edge's distance from the plan's left edge, as a ratio of the width.
+        y: Its top edge's distance from the plan's top edge, as a ratio of the height.
+        w: Its width, as a ratio of the plan's width.
+        h: Its height, as a ratio of the plan's height.
+    """
+
+    number: str
+    x: float
+    y: float
+    w: float
+    h: float
+
+
+@dataclass(frozen=True)
 class MapData:
     """The year's ``map.toml``: its floor plans, its pins and the 3D tour.
 
@@ -127,12 +154,15 @@ class MapData:
         plans: The floor plans, in the Map's order (MAP-02).
         pins: The rooms and venue spots marked on them.
         booths: The expo's booths, on the ``expo`` plan; empty for a year without.
+        tables: The job fair's tables, on the ``job-fair`` plan; empty for a year
+            without.
         tour_url: The venue's 3D tour, opened as a link (MAP-03); empty without one.
     """
 
     plans: tuple[Plan, ...] = ()
     pins: tuple[Pin, ...] = ()
     booths: tuple[Booth, ...] = ()
+    tables: tuple[Table, ...] = ()
     tour_url: str = ""
 
     def plan(self, plan_id: str) -> Plan | None:
@@ -142,6 +172,14 @@ class MapData:
             plan_id: A route's ``plan/<id>`` segment.
         """
         return next((plan for plan in self.plans if plan.id == plan_id), None)
+
+    def table(self, number: str) -> Table | None:
+        """Return the job fair table numbered ``number`` ("T8"), or None.
+
+        Args:
+            number: A table as the feed writes it, or a route's ``?table=`` value.
+        """
+        return next((table for table in self.tables if table.number == number), None)
 
     def pin(self, key: str) -> Pin | None:
         """Return the pin whose key is ``key``, or None.
@@ -190,7 +228,8 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
     joined by ``-``, a label, a plan that exists, and a position within the plan (0 to
     100 percent). Booths: an ``expo`` plan to be on, unique numbers that are not blank,
     a label that is not blank when given, and a rectangle inside the plan (ratios from
-    0 to 1, a positive size, ``x + w`` and ``y + h`` at most 1). The tour: ``https``.
+    0 to 1, a positive size, ``x + w`` and ``y + h`` at most 1). Tables: the same, on
+    a ``job-fair`` plan, without labels. The tour: ``https``.
 
     Args:
         data: The year's map data.
@@ -202,7 +241,11 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
             and the field (``2026/map.toml: pins[3].x: 120.0 is not between 0 and 100``).
     """
     _check_plans_and_pins(data, file, assets_dir)
-    _check_booths(data, file)
+    _check_areas(data.booths, "booths", EXPO_PLAN, data, file)
+    for index, booth in enumerate(data.booths):
+        if booth.label:
+            check_text(booth.label, file, f"booths[{index}].label")
+    _check_areas(data.tables, "tables", JOB_FAIR_PLAN, data, file)
 
 
 def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
@@ -249,32 +292,44 @@ def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
                 )
 
 
-def _check_booths(data: MapData, file: str) -> None:
-    """Check the booths (``check_map()``'s second half)."""
-    if data.booths and data.plan(EXPO_PLAN) is None:
-        raise YearDataError(f"{file}: booths: no plan {EXPO_PLAN!r} to put them on")
+def _check_areas(
+    areas: tuple[Booth, ...] | tuple[Table, ...],
+    field: str,
+    plan_id: str,
+    data: MapData,
+    file: str,
+) -> None:
+    """Check the booths or the tables: their plan, their numbers and their rectangles.
+
+    Args:
+        areas: ``data.booths`` or ``data.tables``.
+        field: Their table's name in ``map.toml`` (``booths``), for the messages.
+        plan_id: The plan they are on, which must exist when there are any.
+        data: The year's map data.
+        file: The file's name in error messages.
+    """
+    if areas and data.plan(plan_id) is None:
+        raise YearDataError(f"{file}: {field}: no plan {plan_id!r} to put them on")
     numbers: set[str] = set()
-    for index, booth in enumerate(data.booths):
-        key = f"booths[{index}]"
-        check_text(booth.number, file, f"{key}.number")
-        if booth.number in numbers:
+    for index, area in enumerate(areas):
+        key = f"{field}[{index}]"
+        check_text(area.number, file, f"{key}.number")
+        if area.number in numbers:
             raise YearDataError(
-                f"{file}: {key}.number: {booth.number!r} is listed twice"
+                f"{file}: {key}.number: {area.number!r} is listed twice"
             )
-        numbers.add(booth.number)
-        if booth.label:
-            check_text(booth.label, file, f"{key}.label")
-        for field in ("x", "y", "w", "h"):
-            value = getattr(booth, field)
+        numbers.add(area.number)
+        for name in ("x", "y", "w", "h"):
+            value = getattr(area, name)
             if not 0 <= value <= 1:
                 raise YearDataError(
-                    f"{file}: {key}.{field}: {value} is not between 0 and 1"
+                    f"{file}: {key}.{name}: {value} is not between 0 and 1"
                 )
-        for field in ("w", "h"):
-            if getattr(booth, field) <= 0:
-                raise YearDataError(f"{file}: {key}.{field}: must be positive")
+        for name in ("w", "h"):
+            if getattr(area, name) <= 0:
+                raise YearDataError(f"{file}: {key}.{name}: must be positive")
         for start, size in (("x", "w"), ("y", "h")):
-            end = getattr(booth, start) + getattr(booth, size)
+            end = getattr(area, start) + getattr(area, size)
             if end > 1:
                 raise YearDataError(
                     f"{file}: {key}.{size}: {start} + {size} is {end:g}, past the plan"
