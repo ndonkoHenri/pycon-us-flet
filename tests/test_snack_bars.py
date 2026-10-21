@@ -53,16 +53,28 @@ async def removed(shown: Rendered) -> ft.SnackBar:
 
 
 async def wait_ticks(count: int = 5) -> None:
-    """Let the watch wait out its 4 s and read the flags a few times."""
+    """A window for something that must not happen: a few of the watch's reads."""
     await asyncio.sleep(TICK * count)
+
+
+async def until(holds: Callable[[], object], *, timeout: float = 30.0) -> None:
+    """Poll until ``holds()`` is true, or fail after ``timeout`` seconds (#237).
+
+    A poll rather than a fixed wait, so a loaded host only makes it slower; the
+    deadline is generous because a passing test never reaches it.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while not holds():
+        assert loop.time() < deadline, "the watch did not get there in time"
+        await asyncio.sleep(TICK)
 
 
 async def test_it_stays_while_the_screen_reader_is_on(rendered: Rendered) -> None:
     """D-184 holds while TalkBack is on: the flags are read again, the bar stays."""
     snack = await removed(rendered)
-    await wait_ticks()
+    await until(lambda: semantics(rendered).reads >= 2)  # read again, not once
     assert snack.open
-    assert semantics(rendered).reads >= 2  # read again and again, not once
 
 
 async def test_it_closes_once_no_screen_reader_is_on(
@@ -78,7 +90,7 @@ async def test_it_closes_once_no_screen_reader_is_on(
 
     monkeypatch.setattr(ft.SnackBar, "update", update)
     semantics(rendered).features["accessible_navigation"] = False
-    await wait_ticks()
+    await until(lambda: not snack.open)
     # Flet removes the SnackBar whose open goes false (snack_bar.dart).
     assert not snack.open and sent == [snack]
     assert not rendered.prefs.screen_reader  # the store follows the read too
@@ -101,8 +113,7 @@ async def test_the_watch_ends_when_the_bar_has_gone(rendered: Rendered) -> None:
     snack = await removed(rendered)
     await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
     await rendered.settle()
-    await wait_ticks()
-    assert not snack_bars._WATCHES  # its task has returned
+    await until(lambda: not snack_bars._WATCHES)  # its task has returned
     reads = semantics(rendered).reads
     await wait_ticks()
     assert semantics(rendered).reads == reads
@@ -112,8 +123,8 @@ async def test_the_watch_ends_when_the_session_closes(rendered: Rendered) -> Non
     """A replaced session's bar is not watched on: its loop returns (D-147)."""
     snack = await removed(rendered)
     rendered.services.close()
-    await wait_ticks()
-    assert snack.open and not snack_bars._WATCHES
+    await until(lambda: not snack_bars._WATCHES)
+    assert snack.open
 
 
 async def test_it_waits_while_the_app_is_in_the_background(
