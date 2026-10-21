@@ -343,7 +343,8 @@ def day_line(
 
     One node read in full words ("Thursday, May 14, 7:30 AM to 6:00 PM, today"): the
     bold says today on screen, the word says it to a screen reader. The line breaks
-    only at its "·", never inside the day or the times (``on_screen()``).
+    at its "·" or after the range's dash (D-229), never inside the day or a time
+    (``on_screen()``).
 
     Args:
         day: The conference-local day.
