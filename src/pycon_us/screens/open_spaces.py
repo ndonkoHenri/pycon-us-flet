@@ -12,7 +12,8 @@ open spaces, else on the first day.
 
 Each day's list starts with the year's intro line, so it scrolls away with the list,
 then its time slots (D-31): the ``TimeGutter`` beside ``SessionRow``s with their
-stars (D-184), without the "Open space" badge every row would repeat (D-199). A tap
+stars (D-184), without the "Open space" badge every row would repeat (D-199), and
+without a thumbnail: an open space's image shows on its detail only (D-332). A tap
 pushes the session, one drill level (D-17). Each day is a memoised list given only its
 own saved ids, so a star tap re-renders one day and in it one row (D-153). The
 Schedule's filter, which hides open spaces by default, never applies here (D-20).
