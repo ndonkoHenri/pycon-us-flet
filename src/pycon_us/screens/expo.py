@@ -279,7 +279,11 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
 
     zoom = use_zoom((plan.width, plan.height), on_transform=keep if zoom_key else None)
     ready = zoom.box[0] > 0  # laid out: the booths are placed
-    selected, set_selected = ft.use_state(memory.expo_booth)
+    # The selection is the memory's, shared with the other hall: a hall left mounted
+    # under a pushed one rereads it when the route comes back (the location's
+    # context re-renders it), and a tap's count re-renders this one (D-312).
+    ft.use_route_location()
+    selected = memory.expo_booth
     taps, set_taps = ft.use_state(0)
     flash, set_flash = ft.use_state(False)
     pulse_ms = prefs.motion_ms(PULSE_MS)
@@ -287,7 +291,6 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
     @report_errors
     def select(number: str) -> None:
         memory.expo_booth = number
-        set_selected(number)
         set_taps(lambda n: n + 1)  # a tap on the selected booth pulses it again
 
     on_select = ft.use_callback(select, [])

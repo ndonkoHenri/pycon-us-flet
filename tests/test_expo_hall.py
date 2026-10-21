@@ -27,7 +27,7 @@ from pycon_us.screens import map as screen
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import zoom
-from tests import sessions
+from tests import links, sessions
 from tests.feeds import processed
 from tests.timers import HeldSleeps
 from tests.viewers import FakeViewer
@@ -103,6 +103,8 @@ class ExpoShown(sessions.Shown):
 
 
 type Render = Callable[..., Awaitable[ExpoShown]]
+
+open_at = links.open_at  # the fixture, under this module's name (tests/chrome.py)
 
 
 @pytest.fixture
@@ -377,3 +379,39 @@ async def test_plan_expo_is_the_hall_in_a_year_with_booths(
         assert shown.titles[-1] == "Expo hall"
         assert len(shown.nodes("expo.booth.")) == (61 if booths else 0)
         assert bool(shown.nodes("plan.zoom_in")) == (not booths)
+
+
+async def test_back_from_a_pushed_hall_shows_the_booth_selected_there(
+    open_at: links.Open, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Expo pane stays mounted under ``/map/plan/expo``; Back shows the new booth.
+
+    Both halls share ``ViewMemory.expo_booth`` (D-312): the pane below rereads it when
+    the route comes back to it, not only when it mounts.
+    """
+    FakeViewer().install(monkeypatch)
+    prefs = Prefs(loaded=True, reduce_motion=True)
+    shown = await open_at("/map?tab=expo", prefs=prefs)
+
+    async def lay_out_top() -> None:
+        """Report the top hall's size, as Flutter does after its first layout."""
+        sized: Any = shown.find(ft.InteractiveViewer)[-1]
+        while not (isinstance(sized, ft.Container) and sized.on_size_change):
+            sized = sized.parent
+        await shown.event(sized, "size_change", {"w": BOX[0], "h": BOX[1]})
+
+    def booths(number: str) -> list[ft.Semantics]:
+        """The mounted nodes of a booth, the pane's first: one per hall."""
+        return shown.nodes(f"{expo.SCREEN}.booth.{number}")
+
+    await lay_out_top()
+    await shown.click(cast(ft.Container, booths("613")[-1].content))
+    await shown.go("/map/plan/expo")
+    assert shown.routes() == ["/", "/map/plan/expo"]
+    await lay_out_top()
+    await shown.click(cast(ft.Container, booths("726")[-1].content))
+    assert shown.memory.expo_booth == "726"
+    await shown.back()
+    assert shown.routes() == ["/"]
+    assert [node.selected for node in booths("613")] == [None]
+    assert [node.selected for node in booths("726")] == [True]
