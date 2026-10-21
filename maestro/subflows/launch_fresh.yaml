@@ -12,13 +12,23 @@ appId: io.github.ndonkohenri.pyconus
     visible:
       id: "welcome\\.start|now\\.title"
     timeout: 120000
+# Get started is tapped until Now shows, as tests/ui/helpers.py's start_app() does: a
+# tap during Welcome's arrival can be lost (#496).
 - runFlow:
     when:
       visible:
         id: welcome.start
     commands:
-      - tapOn:
-          id: welcome.start
+      - retry:
+          maxRetries: 3
+          commands:
+            - tapOn:
+                id: welcome.start
+                optional: true
+            - extendedWaitUntil:
+                visible:
+                  id: now.title
+                timeout: 15000
 - extendedWaitUntil:
     visible:
       id: now.title
