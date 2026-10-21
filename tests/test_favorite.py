@@ -1,9 +1,10 @@
 """Tests for the star's feedback (ux.md §4.4, §4.5): its click and its last SnackBar.
 
-The selection click the star and search's chips share (ux.md §4.5, D-193), and the
-star's last SnackBar, which an edit that says nothing closes (D-251, #334): those tests
-star rows in a real Flet session (``tests/row_sessions.py``). The badges' tests are in
-``tests/test_badges.py`` (D-267).
+The selection click the star and search's chips share (ux.md §4.5, D-193), the star's
+own tap, which sends no "clicked" event (D-355, #342), the "Added to My schedule" a
+screen reader hears, and the star's last SnackBar, which an edit that says nothing
+closes (D-251, #334): those tests star rows in a real Flet session
+(``tests/row_sessions.py``). The badges' tests are in ``tests/test_badges.py`` (D-267).
 """
 
 import asyncio
@@ -18,7 +19,15 @@ import flet as ft
 import pytest
 
 from pycon_us.ui import favorite
-from pycon_us.ui.favorite import REMOVED, selection_click
+from pycon_us.favorites import Change
+from pycon_us.ui.favorite import (
+    ADDED,
+    NOT_SAVED,
+    REMOVED,
+    FavoriteButton,
+    feedback,
+    selection_click,
+)
 from tests import row_sessions
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.row_sessions import Rendered, rendering
@@ -44,6 +53,47 @@ async def test_a_failed_click_is_logged_not_raised(
     assert "Haptic feedback failed" in caplog.text
 
 
+# ------------------------------------------------------------------ the tap's words
+
+
+def star_button(selected: bool) -> ft.IconButton:
+    """Return the ``IconButton`` inside ``FavoriteButton``'s merged semantics."""
+    merge = FavoriteButton(selected, lambda _: None, color="#000000")
+    assert isinstance(merge, ft.MergeSemantics)
+    semantics = merge.content
+    assert isinstance(semantics, ft.Semantics)
+    assert isinstance(semantics.content, ft.IconButton)
+    return semantics.content
+
+
+@pytest.mark.parametrize("selected", [False, True])
+def test_the_star_sends_no_clicked_event(selected: bool) -> None:
+    """The tap gives no Flutter feedback: no "clicked" event read before the state."""
+    assert star_button(selected).enable_feedback is False
+
+
+@pytest.mark.parametrize(
+    ("change", "screen_reader", "message"),
+    [
+        (Change(added=frozenset({"1"})), False, None),
+        (Change(added=frozenset({"1"})), True, ADDED),
+        (Change(removed=frozenset({"1"})), False, REMOVED),
+        (Change(removed=frozenset({"1"})), True, REMOVED),
+        (Change(added=frozenset({"1"}), saved=False), True, NOT_SAVED),
+    ],
+)
+def test_feedback_says_an_add_only_to_a_screen_reader(
+    change: Change, screen_reader: bool, message: str | None
+) -> None:
+    """An add is silent to the eye and "Added to My schedule" to a screen reader."""
+    assert feedback(change, screen_reader=screen_reader) == message
+
+
+def test_the_added_copy() -> None:
+    """The screen reader's word for an add mirrors the removal's (ux.md §4.4)."""
+    assert ADDED == "Added to My schedule"
+
+
 # ------------------------------------------------------------------ the last SnackBar
 
 
@@ -54,6 +104,15 @@ async def rendered(
     """A list of starred rows in a real Flet session, a screen reader on (D-184)."""
     async with rendering(tmp_path, monkeypatch) as shown:
         shown.prefs.screen_reader = True  # the Undo SnackBar stays until used
+        yield shown
+
+
+@pytest.fixture
+async def sighted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[Rendered]:
+    """The same rows with no screen reader on: an add says nothing (ux.md §4.4)."""
+    async with rendering(tmp_path, monkeypatch) as shown:
         yield shown
 
 
@@ -74,37 +133,74 @@ async def removed(rendered: Rendered, session_id: str) -> ft.SnackBar:
     await rendered.tap_star(session_id)
     snack = rendered.snack_bars[-1]
     assert text_of(snack.content) == REMOVED
-    assert snack.open and snack.persist
+    # Only a screen reader keeps it until it is used (D-184).
+    assert snack.open and snack.persist == rendered.prefs.screen_reader
+    return snack
+
+
+def last_says(rendered: Rendered, message: str) -> ft.SnackBar:
+    """Assert the last SnackBar shown says ``message``, open, without Undo; return it."""
+    snack = rendered.snack_bars[-1]
+    assert text_of(snack.content) == message
+    assert snack.open and snack.action is None and not snack.persist
     return snack
 
 
 async def test_saving_a_session_again_closes_its_removed_snack_bar(
-    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+    sighted: Rendered, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """#334: a screen reader must not go on saying "Removed" about a saved session."""
-    snack = await removed(rendered, row_sessions.TALK)
+    """#334: "Removed" must not stay up about a session saved again."""
+    snack = await removed(sighted, row_sessions.TALK)
     sent = updates(monkeypatch)
-    await rendered.tap_star(row_sessions.TALK)
-    assert rendered.favorites.ids == {row_sessions.TALK}
+    await sighted.tap_star(row_sessions.TALK)
+    assert sighted.favorites.ids == {row_sessions.TALK}
     # Flet removes the SnackBar whose open goes false (snack_bar.dart).
     assert not snack.open and sent == [snack]
-    assert rendered.snack_bars == [snack]  # and the add shows none of its own
+    assert sighted.snack_bars == [snack]  # and the add shows none of its own
 
 
-async def test_undo_closes_the_removed_snack_bar(rendered: Rendered) -> None:
+async def test_a_screen_reader_hears_an_add(rendered: Rendered) -> None:
+    """With a screen reader, a tap that saves shows "Added to My schedule" (D-355)."""
+    await rendered.tap_star(row_sessions.TALK)
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    last_says(rendered, ADDED)
+
+
+async def test_a_screen_readers_add_replaces_its_removed_snack_bar(
+    rendered: Rendered,
+) -> None:
+    """#334 with a screen reader: the add's own SnackBar replaces "Removed" (D-355)."""
+    snack = await removed(rendered, row_sessions.TALK)
+    await rendered.tap_star(row_sessions.TALK)
+    assert rendered.favorites.ids == {row_sessions.TALK}
+    added = last_says(rendered, ADDED)
+    assert added is not snack and rendered.snack_bars[-2:] == [snack, added]
+    assert favorite._SHOWN[rendered.session.page]() is added
+
+
+async def test_undo_closes_the_removed_snack_bar(sighted: Rendered) -> None:
     """Undo saves the session again and closes its SnackBar, showing no new one."""
+    snack = await removed(sighted, row_sessions.TALK)
+    await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
+    await sighted.settle()
+    assert sighted.favorites.ids == {row_sessions.TALK}
+    assert not snack.open
+    assert sighted.snack_bars == [snack]
+
+
+async def test_a_screen_reader_hears_an_undo(rendered: Rendered) -> None:
+    """With a screen reader, Undo's add says "Added to My schedule" too (D-355)."""
     snack = await removed(rendered, row_sessions.TALK)
     await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
     await rendered.settle()
     assert rendered.favorites.ids == {row_sessions.TALK}
-    assert not snack.open
-    assert rendered.snack_bars == [snack]
+    assert last_says(rendered, ADDED) is not snack
 
 
-async def test_saving_another_session_closes_it_too(rendered: Rendered) -> None:
+async def test_saving_another_session_closes_it_too(sighted: Rendered) -> None:
     """Any edit that says nothing: the bar would not say which session it removed."""
-    snack = await removed(rendered, row_sessions.TALK)
-    await rendered.tap_star(row_sessions.TUTORIAL)
+    snack = await removed(sighted, row_sessions.TALK)
+    await sighted.tap_star(row_sessions.TUTORIAL)
     assert not snack.open
 
 
@@ -121,27 +217,27 @@ async def test_a_removal_snack_bar_stays_until_the_next_edit(
 
 
 async def test_an_edit_leaves_a_snack_bar_that_is_not_the_stars_alone(
-    rendered: Rendered,
+    sighted: Rendered,
 ) -> None:
     """Never the top dialog (ux.md §4.5): only the star's own SnackBar closes."""
-    snack = await removed(rendered, row_sessions.TALK)
+    snack = await removed(sighted, row_sessions.TALK)
     other = ft.SnackBar(ft.Text("Something went wrong"))
-    rendered.session.page.show_dialog(other)
-    await rendered.tap_star(row_sessions.TALK)
+    sighted.session.page.show_dialog(other)
+    await sighted.tap_star(row_sessions.TALK)
     assert not snack.open and other.open
-    await rendered.tap_star(row_sessions.TUTORIAL)  # with no star SnackBar left
+    await sighted.tap_star(row_sessions.TUTORIAL)  # with no star SnackBar left
     assert other.open
 
 
 async def test_a_snack_bar_that_has_gone_is_not_closed_again(
-    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+    sighted: Rendered, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A star SnackBar that Flet already closed is not sent again by the next edit."""
-    snack = await removed(rendered, row_sessions.TALK)
+    snack = await removed(sighted, row_sessions.TALK)
     snack.open = False  # as Flet reports a SnackBar that timed out or was swiped
     sent = updates(monkeypatch)
-    await rendered.tap_star(row_sessions.TALK)
-    assert rendered.favorites.ids == {row_sessions.TALK}
+    await sighted.tap_star(row_sessions.TALK)
+    assert sighted.favorites.ids == {row_sessions.TALK}
     assert sent == []
 
 
@@ -225,7 +321,9 @@ async def test_an_older_removal_shows_nothing_over_a_newer_add(
     await add
     await rendered.settle()
     assert rendered.favorites.ids == {row_sessions.TALK}
-    assert not any(snack.open for snack in rendered.snack_bars)
+    # Only the newer add reports: its words, never the older removal's.
+    last_says(rendered, ADDED)
+    assert not any(text_of(s.content) == REMOVED for s in rendered.snack_bars)
 
 
 async def test_a_page_with_an_undo_snack_bar_is_released_when_its_session_ends(
