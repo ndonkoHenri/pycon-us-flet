@@ -35,6 +35,16 @@ _MONTHS = (
 )
 
 
+def instant(moment: datetime) -> datetime:
+    """Return an aware ``moment`` in UTC, to compare or subtract as an instant (D-43, #535).
+
+    Two datetimes that share a ``ZoneInfo`` compare and subtract by wall clock and
+    ignore ``fold`` (PEP 495), so 1:10 AM PST, after the end of summer time, would come
+    before 1:40 AM PDT. In UTC they come in the order they happen.
+    """
+    return moment.astimezone(UTC)
+
+
 def local_date(moment: datetime, zone: tzinfo) -> date:
     """Return the conference-local date of ``moment``: the day it belongs to (its day bucket)."""
     return _local(moment, zone).date()
@@ -201,6 +211,8 @@ def time_status(
         zone: The conference's zone, for "its own day" (D-43).
     """
     on_its_day = local_date(now, zone) == local_date(start, zone)  # refuses naive
+    # As instants: one zone's times compare and subtract by wall clock (#535).
+    start, end, now = instant(start), instant(end), instant(now)
     if now < start:
         if not on_its_day:
             return None  # the date beside it says when
@@ -214,7 +226,7 @@ def time_status(
         return TimeStatus(
             f"Starts in {' '.join(short)}", f"Starts in {' '.join(words)}"
         )
-    if start == end:
+    if start == end:  # a notice
         return None
     return HAPPENING_NOW if now < end else ENDED
 

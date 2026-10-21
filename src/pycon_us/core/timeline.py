@@ -17,6 +17,7 @@ from weakref import WeakKeyDictionary
 
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.slugs import room_sort_key
+from pycon_us.core.timefmt import instant
 
 
 @dataclass(frozen=True)
@@ -62,10 +63,11 @@ class DaySessions:
 def schedule_order(session: Session) -> tuple[object, ...]:
     """Return the key that orders sessions as the Schedule shows them (DATA-30, D-31).
 
-    By the start a row shows, then by the place it shows, in natural order
-    (``slugs.room_sort_key``: ``Room 102A`` before ``Room 1000``, as the printed grid
-    reads), then by name and id, so ties always come out the same. A row without a place
-    (a notice, a generic break) comes first in its slot.
+    By the start a row shows, as an instant (``timefmt.instant``: on the night summer
+    time ends, the repeated hour comes after the first, #535), then by the place it
+    shows, in natural order (``slugs.room_sort_key``: ``Room 102A`` before ``Room
+    1000``, as the printed grid reads), then by name and id, so ties always come out
+    the same. A row without a place (a notice, a generic break) comes first in its slot.
 
     Args:
         session: A session of the model.
@@ -74,7 +76,7 @@ def schedule_order(session: Session) -> tuple[object, ...]:
         A key for ``sorted``.
     """
     return (
-        session.display_start,
+        instant(session.display_start),
         room_sort_key(session.display_location),
         session.name,
         session.id,
@@ -173,8 +175,9 @@ def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
     Returns:
         The now line's index and the slot that is on.
     """
-    line = sum(1 for slot in slots if slot.start <= now)  # slots come by start
-    if line and any(s.end > now for s in slots[line - 1].sessions):
+    now = instant(now)  # by instant across a daylight-saving change (D-43, #535)
+    line = sum(1 for slot in slots if instant(slot.start) <= now)  # slots come by start
+    if line and any(instant(s.end) > now for s in slots[line - 1].sessions):
         return NowPlace(line, slots[line - 1].key)
     return NowPlace(line, None)
 
@@ -263,7 +266,7 @@ def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
             for s in data.sessions.values()
             if s.kind == session.kind
             and not s.in_timeline
-            and s.start == session.start
+            and instant(s.start) == instant(session.start)
             and s.location == session.location
         )
         return tuple(sorted(found, key=schedule_order))

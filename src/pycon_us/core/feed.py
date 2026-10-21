@@ -37,6 +37,7 @@ from pycon_us.core.models import (
 from pycon_us.core.queries import fold
 from pycon_us.core.records import OpenSpace, Slot
 from pycon_us.core.rules import FeedSettings
+from pycon_us.core.timefmt import instant
 
 logger = logging.getLogger(__name__)
 
@@ -364,23 +365,27 @@ def _days(sessions: Iterable[Session]) -> tuple[Day, ...]:
 
     Groups are keyed by their start instant, not by a display label, so every group has a
     start and sorting by it is total; Ionic's string keys left some groups without one.
+    The key is the start in UTC (``timefmt.instant``): starts in the conference zone
+    hash and compare by wall clock, which would merge 1:30 PDT and 1:30 PST into one
+    group and put the repeated hour first on the night summer time ends (#535). A group
+    keeps its start in the conference zone, its first session's.
     """
     calendar: defaultdict[date, defaultdict[datetime, list[Session]]] = defaultdict(
         lambda: defaultdict(list)
     )
     for session in sessions:
-        calendar[session.day][session.start].append(session)
+        calendar[session.day][instant(session.start)].append(session)
     return tuple(
         Day(
             day,
             tuple(
                 TimeGroup(
-                    start,
+                    group[0].start,
                     tuple(
                         s.id for s in sorted(group, key=lambda s: (s.location, s.name))
                     ),
                 )
-                for start, group in sorted(groups.items())
+                for _, group in sorted(groups.items())
             ),
         )
         for day, groups in sorted(calendar.items())

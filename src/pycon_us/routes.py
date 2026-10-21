@@ -32,6 +32,7 @@ from pycon_us.screens.plan import PlanViewer
 from pycon_us.screens.psf import AboutPsf
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
+from pycon_us.screens.schedule_changes import ScheduleChanges
 from pycon_us.screens.search import Search
 from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.settings import Settings
@@ -43,6 +44,7 @@ from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
+from pycon_us.screens.venue import Venue
 from pycon_us.screens.welcome import Welcome
 from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
@@ -73,6 +75,8 @@ def Drill() -> ft.View:
             return SponsorDetail(sponsor_slug=ident)
         case "plan":
             return PlanViewer(plan_id=ident)
+        case "changes":  # the change log of the year ``ident`` (D-255)
+            return ScheduleChanges(year=ident)
         case kind:  # DRILL only matches DRILL_KINDS: a new kind needs its case here
             raise ValueError(f"no screen for the drill kind {kind!r}")
 
@@ -222,6 +226,7 @@ ROUTES = [
         pushed("help", Help),
         pushed("psf", AboutPsf),
         pushed("social", Social),
+        pushed("venue", Venue),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
