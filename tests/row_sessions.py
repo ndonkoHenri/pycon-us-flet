@@ -52,10 +52,14 @@ COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
 
 LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
 
+OWNER_RENDERS: list[None] = []
+"""One item per render of ``Owner``'s body: a test clears it and counts."""
+
 
 @ft.component
 def Owner(session_ids: tuple[str, ...]) -> ft.Control:
     """A list owner as the screens write one: it subscribes, its rows do not."""
+    OWNER_RENDERS.append(None)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
@@ -64,7 +68,12 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
     info = use_services().year.conference
     return ft.Column(
         [
-            NoticeRow(view, LIGHT_TOKENS, screen="test")
+            NoticeRow(
+                view,
+                LIGHT_TOKENS,
+                screen="test",
+                changed=changes.get(view.session.id, NO_CHANGES),
+            )
             if is_notice(view.session, info)
             else SessionRow(
                 view,

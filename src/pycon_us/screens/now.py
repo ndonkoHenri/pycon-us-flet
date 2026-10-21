@@ -198,7 +198,12 @@ def _row(
     """One session's memoised row (D-184): a notice's, or a session's with its star."""
     view = by_id[session.id]
     if is_notice(session, info):  # breaks and notices: no star, no bar (D-31)
-        return NoticeRow(view, tokens, screen=screen)
+        return NoticeRow(
+            view,
+            tokens,
+            screen=screen,
+            changed=changes.get(session.id, NO_CHANGES),
+        )
     return SessionRow(
         view,
         session.id in saved,

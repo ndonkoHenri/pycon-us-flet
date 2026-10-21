@@ -44,6 +44,7 @@ from tests.row_sessions import (
     COFFEE,
     LIST,
     NOTICE,
+    OWNER_RENDERS,
     TALK,
     TUTORIAL,
     YEAR,
@@ -189,6 +190,65 @@ async def test_the_badge_goes_a_minute_past_its_24_hours(
                 break
         assert badge_labels(rendered, TALK) == ["Talk"]
         assert rendered.renders == [TALK]
+
+
+async def test_a_tick_after_a_batch_that_ends_no_mark_renders_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, frozen_clock: None
+) -> None:
+    """D-315: a tick compares with the marks the batch's render showed, not older ones.
+
+    So after a recorded batch, ticks whose time ends no mark leave the owner alone
+    (D-194's leaf rule).
+    """
+    monkeypatch.setattr(rows, "TICK_SECONDS", 0.01)
+    async with rendering(tmp_path, monkeypatch) as rendered:
+        await record(rendered, (TALK, ChangeKind.ROOM))
+        OWNER_RENDERS.clear()
+        await asyncio.sleep(0.1)  # about ten ticks, the clock frozen
+        assert OWNER_RENDERS == []
+
+
+def notice_badges(rendered: Rendered, session_id: str) -> list[str]:
+    """The labels of the badges a notice row shows over its title, in order."""
+    row = cast(ft.Row, rendered.notice(session_id).content)
+    column = cast(ft.Column, row.controls[1])
+    first = column.controls[0]
+    if not isinstance(first, ft.Row):
+        return []
+    return [
+        cast(ft.Text, cast(ft.Container, b).content).value or "" for b in first.controls
+    ]
+
+
+async def test_a_changed_notice_shows_the_badge_until_its_24_hours_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, frozen_clock: None
+) -> None:
+    """A moved informational session is badged and says "Room changed", then not.
+
+    Registration Desk Opens is diffed like any session (D-255): its notice row shows
+    Changed a second before the 24 h end, and neither badge nor words a minute after.
+    """
+    monkeypatch.setattr(rows, "TICK_SECONDS", 0.01)
+    async with rendering(tmp_path, monkeypatch) as rendered:
+        rendered.renders.clear()
+        await record(rendered, (NOTICE, ChangeKind.ROOM))
+        assert rendered.renders == [NOTICE]
+        assert notice_badges(rendered, NOTICE) == [CHANGED]
+        phrase = rendered.notice(NOTICE).label or ""
+        assert phrase.startswith("Notice, Room changed. Registration Desk Opens")
+
+        clock.set_test_now(DETECTED + RECENT_FOR - timedelta(seconds=1))
+        await asyncio.sleep(0.05)
+        assert notice_badges(rendered, NOTICE) == [CHANGED]
+
+        clock.set_test_now(DETECTED + RECENT_FOR + timedelta(minutes=1))
+        for _ in range(300):
+            await asyncio.sleep(0.01)
+            if not notice_badges(rendered, NOTICE):
+                break
+        assert notice_badges(rendered, NOTICE) == []
+        phrase = rendered.notice(NOTICE).label or ""
+        assert phrase.startswith("Notice. Registration Desk Opens")
 
 
 # ------------------------------------------------------------------ the star (D-30)

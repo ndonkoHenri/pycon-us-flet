@@ -120,12 +120,17 @@ def use_recent_changes() -> Changes:
     svc = use_services()
     log = use_change_log()
     marks = log.recent(clock.now())
-    # Only a trigger: set to the marks each tick, it renders only when they differ.
-    _, set_seen = ft.use_state(marks)
+    # A tick compares with the marks this render returned, not with a state set once:
+    # after a batch re-renders the owner, a state would still hold the marks before it,
+    # and the next tick would render again though nothing ended (D-315).
+    shown = ft.use_ref(lambda: marks)
+    shown.current = marks
+    _, set_ends = ft.use_state(0)  # only a trigger: a mark ended
 
     @report_errors
     def tick() -> None:
-        set_seen(log.recent(clock.now()))
+        if log.recent(clock.now()) != shown.current:
+            set_ends(lambda ends: ends + 1)
 
     @report_errors
     async def keep_up() -> None:
@@ -311,7 +316,13 @@ def _SessionRow(
     )
 
 
-def NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
+def NoticeRow(
+    view: SessionView,
+    tokens: Tokens,
+    *,
+    screen: str,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
+) -> ft.Control:
     """Return a break, meal or announcement (SCHED-04): a compact tile without a star.
 
     Memoised like ``SessionRow`` and keyed by the session id. Its icon is its
@@ -328,22 +339,40 @@ def NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
         tokens: The scheme's tokens (D-150): ``high_contrast`` outlines the tile.
         screen: The screen's name in its semantics identifier,
             ``<screen>.notice.<key>`` (``semantics_key()``).
+        changed: What changed about it in the last 24 h (``changes_of()``): as on a
+            ``SessionRow``, the Changed badge over its title, and the phrase says what
+            changed after the track, "Notice, Room changed." (D-315).
     """
     # As in SessionRow: the key= is real, its type is not.
-    return _NoticeRow(view, tokens, screen=screen, key=view.session.id)  # pyright: ignore[reportCallIssue]
+    return _NoticeRow(view, tokens, screen=screen, changed=changed, key=view.session.id)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
 @ft.component
-def _NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
+def _NoticeRow(
+    view: SessionView,
+    tokens: Tokens,
+    *,
+    screen: str,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
+) -> ft.Control:
     """The body of ``NoticeRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference
     session = view.session
     track = info.track(session.track)
     tappable = bool(session.description)
+    said = changed_phrase(changed)
+    lines: list[ft.Control] = []
+    if said:
+        lines.append(badge_row([TrackBadge(CHANGED, tokens.changed)]))
+    lines += [
+        ft.Text(session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL),
+        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
+    ]
+    label = f"{track.short}, {said}" if said else track.short
     content = ft.Semantics(
-        label=notice_phrase(track.short, view),
+        label=notice_phrase(label, view),
         identifier=f"{screen}.notice.{semantics_key(session.id)}",
         button=tappable,
         exclude_semantics=True,
@@ -356,12 +385,7 @@ def _NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 ft.Column(
-                    [
-                        ft.Text(
-                            session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL
-                        ),
-                        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
-                    ],
+                    lines,
                     spacing=2,
                     expand=True,
                 ),

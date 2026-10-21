@@ -98,7 +98,12 @@ def _DayGroup(
     """The body of ``DayGroup``; it runs only when its props change (F34)."""
     info = use_services().year.conference
     rows = [
-        NoticeRow(view, tokens, screen=screen)
+        NoticeRow(
+            view,
+            tokens,
+            screen=screen,
+            changed=changes.get(view.session.id, NO_CHANGES),
+        )
         if is_notice(view.session, info)
         else SessionRow(
             view,
