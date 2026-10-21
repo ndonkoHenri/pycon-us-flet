@@ -47,30 +47,30 @@ def QuickInfo(view_path: str) -> ft.Control:
 @ft.component
 def _QuickInfo(view_path: str) -> ft.Control:
     """The body of ``QuickInfo``; it runs only when its View path changes."""
-    page = ft.context.page
-
-    def button(entry: MoreEntry) -> ft.Control:
-        """One page's button, ``now.quick.<page>`` (D-33)."""
-        segment = entry.location.rsplit("/", 1)[-1]
-
-        @report_errors
-        def go() -> None:
-            page.navigate(f"{view_path.rstrip('/')}/{segment}")
-
-        # Material pads a button's tap target to 48 dp on phones, so a 40 dp tonal
-        # button still takes a 48 dp tap (ux.md §9).
-        return named(
-            f"now.quick.{segment}",
-            ft.FilledTonalButton(entry.title, icon=entry.icon, on_click=go),
-        )
-
     return ft.Container(
         # Wrapping, so at 200 % text a button that no longer fits moves down whole.
         ft.Row(
-            [button(entry) for entry in entries()],
+            [_button(entry, view_path) for entry in entries()],
             wrap=True,
             spacing=8,
             run_spacing=0,  # each button's 48 dp tap target already parts the lines
         ),
         padding=ft.Padding.only(left=16, top=16, right=16),
+    )
+
+
+def _button(entry: MoreEntry, view_path: str) -> ft.Control:
+    """One page's button, ``now.quick.<page>`` (D-33), pushing it on ``view_path``."""
+    page = ft.context.page
+    segment = entry.location.rsplit("/", 1)[-1]
+
+    @report_errors
+    def go() -> None:
+        page.navigate(f"{view_path.rstrip('/')}/{segment}")
+
+    # Material pads a button's tap target to 48 dp on phones, so a 40 dp tonal button
+    # still takes a 48 dp tap (ux.md §9).
+    return named(
+        f"now.quick.{segment}",
+        ft.FilledTonalButton(entry.title, icon=entry.icon, on_click=go),
     )
