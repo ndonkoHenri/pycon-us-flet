@@ -162,7 +162,7 @@ async def test_2026_shows_a_card_per_listing_each_header_a_heading(
     assert sorted(str(n.identifier) for n in headers) == sorted(
         f"{CARD}{item.id}" for item in DATA.job_listings
     )
-    assert len(shown.find(ft.Card)) == 13
+    assert len(shown.find(ft.Card)) == 13 + 1  # and the job fair's above (#408)
     node = shown.node(f"{CARD}{listing('Bloomberg').id}")
     assert node.label == "Bloomberg, Visionary sponsor"
     assert node.header and node.heading_level == 2

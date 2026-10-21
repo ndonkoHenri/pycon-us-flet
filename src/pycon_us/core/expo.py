@@ -11,7 +11,8 @@ every render.
 The job fair's tables come from the feed alone (``Sponsor.job_fair_table``):
 ``job_fair_tables()`` lists every sponsor with a table, tables in natural order (T2
 before T10) and a shared table's sponsors by folded name, each with its open roles
-(MAP-04, SPON-10).
+(MAP-04, SPON-10). ``is_job_fair()`` finds the sessions that show the job fair's plan
+card (SESS-10).
 """
 
 from collections.abc import Sequence
@@ -20,7 +21,7 @@ from typing import TYPE_CHECKING
 from weakref import WeakKeyDictionary
 
 from pycon_us.core.jobs import listings_of
-from pycon_us.core.models import ConferenceData, Sponsor
+from pycon_us.core.models import ConferenceData, Session, Sponsor
 from pycon_us.core.queries import fold
 from pycon_us.core.slugs import room_sort_key
 
@@ -129,6 +130,20 @@ def job_fair_tables(data: ConferenceData) -> tuple[JobFairTable, ...]:
             for sponsor in ordered
         )
     return _TABLES[data]
+
+
+def is_job_fair(session: Session) -> bool:
+    """Return whether ``session`` is a Job Fair row, which shows the job fair's card.
+
+    The feed has two (SESS-10), the event in the expo hall and the plenary that marks
+    its time ("Job Fair & Community Showcase & Poster Sessions", "Job Fair & Community
+    Showcase"; 2025's say "and"), with no kind or key of their own, so the name is
+    matched, folded (D-46).
+
+    Args:
+        session: Any session.
+    """
+    return "job fair" in fold(session.name)
 
 
 def _build(data: ConferenceData, booths: tuple[Booth, ...]) -> Expo:
