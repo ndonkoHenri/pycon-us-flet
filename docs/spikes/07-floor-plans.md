@@ -17,7 +17,7 @@ Do the 2026 plans, re-encoded to 2048 px or less, with the expo's 61 booths as h
 - **Pan versus swipe:** a `TabBarView` pane **steals** horizontal pans. At 5.36x, a finger-speed horizontal drag (2.5 s) on the Concourse plan changed the tab instead of panning it, as it did at 1x. So the Map uses `Tabs` with a `TabBar` and **no** `TabBarView` (only the selected pane is built), and **U110** asks for `TabBarView.physics`: the only stop at the pin, `disabled`, disables every booth inside the pane too (F130).
 - **Zoom across a tab switch (D-18):** a pane that leaves loses its zoom (scale 1.0 on return), and `save_state()`/`restore_state()` cannot bring it back: the saved matrix lives in the widget state that left with the pane (F130). The last `on_transform_changed` values, kept in `ViewMemory`, can: `reset()`, `zoom(scale)`, `pan(x / scale, y / scale)` put the pane back at exactly **5.361, (0, −162.7)**. D-18's remembered zoom stands, with that interim until U3 (§5.7).
 
-![The expo plan at its maximum zoom, 5.36x, booth 344 selected](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/PRNUM/s7-expo-max-ios.png?raw=true)
+![The expo plan at its maximum zoom, 5.36x, booth 344 selected](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/561/s7-expo-max-ios.png?raw=true)
 
 ## Method
 
