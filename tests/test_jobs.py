@@ -12,7 +12,13 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.html_md import to_text
-from pycon_us.core.jobs import is_placeholder, listings_of, parse_roles, read_listing
+from pycon_us.core.jobs import (
+    filter_listings,
+    is_placeholder,
+    listings_of,
+    parse_roles,
+    read_listing,
+)
 from pycon_us.core.models import ConferenceData, JobListing, Role, Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from tests.feeds import processed
@@ -369,6 +375,37 @@ def test_search_text_holds_the_sponsor_the_titles_and_the_text() -> None:
     assert "network testing platforms" in listing("Bloomberg").search_text
     assert "molab" in listing("marimo").search_text
     assert "network ai platform" in listing("NVIDIA").search_text  # the em dash folded
+
+
+def names(listings: tuple[JobListing, ...]) -> list[str]:
+    """The sponsors of ``listings``, in their order."""
+    return [job.sponsor_name for job in listings]
+
+
+def test_the_filter_needs_every_word_in_any_order() -> None:
+    """SPON-07: only the listings that hold both words, in feed order."""
+    assert names(filter_listings(DATA.job_listings, "senior python")) == [
+        "NVIDIA",
+        "marimo",
+    ]
+    assert filter_listings(DATA.job_listings, "python senior") == filter_listings(
+        DATA.job_listings, "senior python"
+    )
+    assert names(filter_listings(DATA.job_listings, "MACHINE learning")) == ["Sentry"]
+    assert filter_listings(DATA.job_listings, "rust") == ()
+
+
+@pytest.mark.parametrize("word", ["nofollow", "href", "noopener"])
+def test_the_filter_never_matches_markup(word: str) -> None:
+    """Ionic's filter found Bloomberg from ``nofollow`` in its raw HTML; ours nothing."""
+    assert "nofollow" in listing("Bloomberg").description  # the markup is there
+    assert filter_listings(DATA.job_listings, word) == ()
+
+
+@pytest.mark.parametrize("query", ["", "   ", "\N{RIGHT SINGLE QUOTATION MARK}"])
+def test_a_filter_with_no_word_keeps_the_listings_themselves(query: str) -> None:
+    """The same object, so the screen knows no filter applies (no count line)."""
+    assert filter_listings(DATA.job_listings, query) is DATA.job_listings
 
 
 def test_every_2026_listing_is_found_from_its_sponsor() -> None:
