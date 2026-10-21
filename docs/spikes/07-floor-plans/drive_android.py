@@ -15,7 +15,9 @@ Steps (each prints ``S7-DRIVE`` lines):
 - ``tapsame <file>``: tap the centres saved by ``booths > file`` again (for the
   gesture mode, which has no booth nodes).
 - ``swipe <x1> <y1> <x2> <y2> [ms]``: one drag.
-- ``pans <n>``: n drags across the plan, left, right, up and down.
+- ``pans <n>``: n drags across the plan, left, right, up and down, between
+  points inside the plan's on-screen bounds; says how many transforms the app
+  logged (0 means the plan did not move, so frame numbers would mean nothing).
 - ``frames <seconds>``: SurfaceFlinger's present times of the app's layer while
   ``pans`` runs, as intervals (a relative signal on a loaded host).
 - ``log [since]``: the app's ``S7`` lines.
@@ -141,17 +143,52 @@ def tap_points(points: list[tuple[str, tuple[int, int]]]) -> None:
             say("wrong", expected=a, got=b)
 
 
-def pans(n: int) -> None:
-    """Drag across the plan n times, in four directions."""
-    moves = [
-        (800, 1200, 300, 1200),
-        (300, 1200, 800, 1200),
-        (540, 1500, 540, 900),
-        (540, 900, 540, 1500),
+def plan_box() -> tuple[int, int, int, int]:
+    """Return the on-screen bounds of the plan's image, clipped to the display.
+
+    The image's semantics label ends in " plan" (main.py); without it, the
+    whole display.
+    """
+    width, height = map(int, re.findall(r"\d+", adb("shell", "wm", "size"))[-2:])
+    for node in nodes():
+        if node["desc"].endswith(" plan"):
+            x1, y1, x2, y2 = node["bounds"]
+            return max(x1, 0), max(y1, 0), min(x2, width), min(y2, height)
+    return 0, 0, width, height
+
+
+def pan_moves() -> list[tuple[int, int, int, int]]:
+    """Return four drags, left, right, up and down, kept inside the plan.
+
+    Each drag runs between points 20% in from the plan's edges, so both ends
+    stay on the plan whatever the display or the zoom.
+    """
+    x1, y1, x2, y2 = plan_box()
+    dx, dy = (x2 - x1) // 5, (y2 - y1) // 5
+    left, right, top, bottom = x1 + dx, x2 - dx, y1 + dy, y2 - dy
+    cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+    return [
+        (right, cy, left, cy),
+        (left, cy, right, cy),
+        (cx, bottom, cx, top),
+        (cx, top, cx, bottom),
     ]
+
+
+def pans(n: int, moves: list[tuple[int, int, int, int]] | None = None) -> None:
+    """Drag across the plan n times, in four directions, and say if it moved.
+
+    Args:
+        n: The number of drags.
+        moves: The four drags; measured from the plan's bounds when None.
+    """
+    moves = moves or pan_moves()
+    adb("logcat", "-c")
     for i in range(n):
         x1, y1, x2, y2 = moves[i % 4]
         adb("shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "400")
+    moved = sum(1 for line in app_log() if " transform " in line)
+    say("pans", drags=n, transforms=moved, moves=moves)
 
 
 def frames(seconds: float) -> None:
@@ -167,9 +204,10 @@ def frames(seconds: float) -> None:
     )
     layer = layer or next((name for name in layers if PKG in name), "")
     adb("shell", "dumpsys", "SurfaceFlinger", "--latency-clear")
+    moves = pan_moves()
     end = time.time() + seconds
     while time.time() < end:
-        pans(4)
+        pans(4, moves)
     out = adb("shell", "dumpsys", "SurfaceFlinger", "--latency", layer).split()
     stamps = [
         int(out[i + 1])

@@ -337,10 +337,14 @@ def App() -> ft.Control:
     plain = ft.ListView(
         [ft.ListTile(title=ft.Text(f"Row {i}")) for i in range(40)], expand=True
     )
+    # Keyed, so Plan and Expo in the one slot of the "fixed" body are two
+    # components: unkeyed, Flet migrates one into the other, hook state and all.
     panes = [
         plain,
-        Viewer("plan", "concourse.webp", False, options),
-        ft.Text("Closed") if hidden else Viewer("expo", options.image, True, options),
+        Viewer("plan", "concourse.webp", False, options, key="plan"),
+        ft.Text("Closed")
+        if hidden
+        else Viewer("expo", options.image, True, options, key="expo"),
     ]
     body = ft.TabBarView(panes, expand=True) if options.tabs == "swipe" else panes[tab]
     return ft.SafeArea(
