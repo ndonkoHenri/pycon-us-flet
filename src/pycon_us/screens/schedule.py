@@ -267,11 +267,16 @@ def Schedule() -> ft.View:
     ) -> None:
         if not keeper.relaid(text=text, width=width, above=above):
             return
-        # The text size changed: the shown list now, by key; the others built in full
-        # until they show again, so their item is built for the jump (D-331).
-        if shown is not None:
-            await keeper.put_back(shown, _ref(refs, shown), signals.ended)
+        # The text size changed: every list with a stale place is built in full, so
+        # its item is built for the keyed jump (D-331), the shown one included, as
+        # text that shrank can leave its item far below the built range (#600). The
+        # shown list goes back now, by key, and is lazy again after; the others when
+        # they show again.
         set_relaid(lambda n: n + 1)
+        if shown is not None and await keeper.put_back(
+            shown, _ref(refs, shown), signals.ended
+        ):
+            set_relaid(lambda n: n + 1)
 
     @report_errors
     async def text_measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:

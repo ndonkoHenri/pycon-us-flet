@@ -15,14 +15,17 @@ so the Schedule measures the change itself and puts the place back by key:
 - when the measured widths or the time's position (D-216) change, the places' offsets
   are stale (``relaid()``): the shown list is put back at once, by a keyed jump to its
   item and then as far into it as before, scaled (``put_back()``); another day is put
-  back when it shows again (``restore()``), built in full until then (``pending()``),
-  so its item is built for the jump (D-154). Put-backs take turns, and each jump waits
-  for its own scroll end, as every jump waits on the one signal (#600).
+  back when it shows again (``restore()``). Each list is built in full until it is put
+  back (``pending()``), so its item is built for the jump (D-154);
+- put-backs take turns, and each jump waits for its own scroll end, as every jump
+  waits on the one signal, and comes long enough after the list's last end that Flet
+  sends its own (F182, D-364).
 """
 
 import asyncio
 import contextlib
 import logging
+import time
 from collections.abc import Hashable, Mapping
 from dataclasses import replace
 from datetime import date
@@ -33,7 +36,7 @@ from pycon_us.core.list_place import Place, place_at, rescaled
 from pycon_us.core.timeline import NOW_KEY
 from pycon_us.memory import ViewMemory
 from pycon_us.ui import scrolling
-from pycon_us.ui.scrolling import JUMP_TRIES, Jump, jump_to_key
+from pycon_us.ui.scrolling import JUMP_TRIES, SCROLL_EVENT_MS, Jump, jump_to_key
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,13 @@ PROBE_TEXT = "10:00"
 DIVIDER = 1.0
 """The divider above a slot's time, in dp: a keyed jump puts the slot's anchor, under
 it, at the top (``schedule_days.SlotItem``)."""
+
+END_GAP_S = SCROLL_EVENT_MS / 1000 + 0.05
+"""How long after a list's last scroll end a put-back's next jump waits, in seconds.
+
+Flet sends a list's scroll end only when its last one was at least ``scroll_interval``
+before, and drops it otherwise (F182, U162): the jump would move the list and never
+say so."""
 
 type Measured = ft.EventHandler[ft.LayoutSizeChangeEvent[ft.LayoutControl]]
 """The probe's handler of one width."""
@@ -120,9 +130,10 @@ class PlaceKeeper:
         width: The screen's width, in dp; 0 until reported.
         above: Whether slots put their time above their rows (D-216).
         moving: The days whose list is scrolling: a put-back would fight the user.
+        last_end: When each day list's last scroll end came (``time.monotonic()``).
         round: Counts put-backs and what supersedes them (a layout change, a jump to
             now), so an older put-back still waiting stops.
-        turn: Held by the put-back that is moving a list: one at a time (#600).
+        turn: Held by the put-back that is moving a list: one at a time (#600, D-364).
     """
 
     def __init__(self, memory: ViewMemory) -> None:
@@ -135,6 +146,7 @@ class PlaceKeeper:
         self.width = 0.0
         self.above = False
         self.moving: set[date] = set()
+        self.last_end: dict[date, float] = {}
         self.round = 0
         self.turn = asyncio.Lock()
 
@@ -173,6 +185,7 @@ class PlaceKeeper:
         if e.event_type != ft.ScrollType.END:
             return
         self.moving.discard(day)
+        self.last_end[day] = time.monotonic()
         places = self.memory.schedule_places
         kept = places.get(day)
         if kept is not None and kept.layout != self.layout:
@@ -235,9 +248,10 @@ class PlaceKeeper:
         it undoes. Nothing while the list scrolls (the place is then forgotten), or when
         the day has no place to put back.
 
-        Put-backs take turns (#600): every jump waits on the one scroll-end signal, so
-        a put-back waits for the one before it to stop, and each jump waits for its
-        own end, so no end answers a later jump. At the largest sizes a text-size
+        Put-backs take turns (#600, D-364): every jump waits on the one scroll-end
+        signal, so a put-back waits for the one before it to stop, and each jump waits
+        for its own end, so no end answers a later jump; each comes ``END_GAP_S`` after
+        the list's last end, so Flet sends its end (F182). At the largest sizes a text-size
         change is two layout changes, the text's width and then the time's position
         (D-216): the first put-back stops at its jump's end, and the second jumps in
         the final layout. A newer change (``round``) stops a put-back after any wait,
@@ -262,11 +276,9 @@ class PlaceKeeper:
             if day in self.moving:
                 del self.memory.schedule_places[day]
                 return True
-            jump = await jump_to_key(
-                list_ref, place.key, duration=0, ended=ended, tries=1
-            )
+            jump = await self._keyed(day, place.key, list_ref, ended)
             if jump == "still":
-                jump = await self._from_old_top(mine, place, list_ref, ended)
+                jump = await self._from_old_top(mine, day, place, list_ref, ended)
             if mine != self.round:  # a newer change took over
                 return False
             if jump != "landed":  # no end, so no offset to count from
@@ -292,7 +304,7 @@ class PlaceKeeper:
         into = self._into(place, height)
         target = landed - divider_above(self.keys.get(day, ()), place.key) + into
         if target != landed and list_ref.current is not None:
-            await _jump_to_offset(list_ref.current, target, ended)
+            await self._to_offset(day, list_ref.current, target, ended)
             if mine != self.round:
                 return False
         self.memory.schedule_offsets[day] = target
@@ -314,7 +326,7 @@ class PlaceKeeper:
         (``rescaled()``). The item's top when the time has moved above its rows or back
         since (D-216), as the distance measured rows laid out the other way; or when
         the item has not reported its height in this layout yet, as a height from
-        another layout would scale it past the item (#600).
+        another layout would scale it past the item (#600, D-364).
 
         Args:
             place: The place to put back.
@@ -327,6 +339,7 @@ class PlaceKeeper:
     async def _from_old_top(
         self,
         mine: int,
+        day: date,
         place: Place,
         list_ref: ft.Ref[ft.ListView],
         ended: asyncio.Event,
@@ -340,6 +353,7 @@ class PlaceKeeper:
 
         Args:
             mine: The put-back's ``round``.
+            day: The list's day.
             place: The place to put back.
             list_ref: The list's ref.
             ended: The screen's scroll-end signal (``Signals.ended``).
@@ -349,16 +363,47 @@ class PlaceKeeper:
         """
         if mine != self.round or list_ref.current is None:
             return "still"
-        await _jump_to_offset(list_ref.current, place.pixels - place.into, ended)
+        old_top = place.pixels - place.into
+        await self._to_offset(day, list_ref.current, old_top, ended)
         for _ in range(JUMP_TRIES):
             if mine != self.round:
                 return "still"
-            jump = await jump_to_key(
-                list_ref, place.key, duration=0, ended=ended, tries=1
-            )
+            jump = await self._keyed(day, place.key, list_ref, ended)
             if jump != "still":
                 return jump
         return "still"
+
+    async def ended_apart(self, day: date) -> None:
+        """Wait until a scroll end of the day's list would reach Python (F182).
+
+        ``END_GAP_S`` after its last end, as Flet drops an end that comes sooner. It
+        yields at least once, so a render asked before the jump (the list built in
+        full, ``schedule.py``) reaches the device first.
+        """
+        last = self.last_end.get(day, -END_GAP_S)
+        await asyncio.sleep(max(0.0, last + END_GAP_S - time.monotonic()))
+
+    async def _keyed(
+        self, day: date, key: str, list_ref: ft.Ref[ft.ListView], ended: asyncio.Event
+    ) -> Jump:
+        """Jump to the item with this key, once, so that its end reaches Python."""
+        await self.ended_apart(day)
+        return await jump_to_key(list_ref, key, duration=0, ended=ended, tries=1)
+
+    async def _to_offset(
+        self, day: date, list_view: ft.ListView, offset: float, ended: asyncio.Event
+    ) -> None:
+        """Jump to an offset, and wait for that scroll's end (#600, D-364).
+
+        So its end cannot answer a keyed jump asked after it: every jump waits on the
+        one signal. A list already there sends no end: the wait gives up after
+        ``LANDING_S``.
+        """
+        await self.ended_apart(day)
+        ended.clear()
+        await list_view.scroll_to(offset=offset, duration=0)
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(ended.wait(), scrolling.LANDING_S)
 
     def supersede(self, day: date) -> None:
         """Forget the day's place, as a jump to now takes its list elsewhere.
@@ -389,22 +434,3 @@ class PlaceKeeper:
         if offset and list_ref.current is not None:
             await list_ref.current.scroll_to(offset=offset, duration=0)
         return False
-
-
-async def _jump_to_offset(
-    list_view: ft.ListView, offset: float, ended: asyncio.Event
-) -> None:
-    """Jump a list to an offset, and wait for that scroll's end (#600).
-
-    So its end cannot answer a keyed jump asked after it: every jump waits on the one
-    signal. A list already there sends no end: the wait gives up after ``LANDING_S``.
-
-    Args:
-        list_view: The list.
-        offset: Where to, in dp.
-        ended: The screen's scroll-end signal (``Signals.ended``).
-    """
-    ended.clear()
-    await list_view.scroll_to(offset=offset, duration=0)
-    with contextlib.suppress(TimeoutError):
-        await asyncio.wait_for(ended.wait(), scrolling.LANDING_S)

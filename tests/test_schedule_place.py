@@ -11,6 +11,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import date
+from time import monotonic
 from types import SimpleNamespace
 from typing import cast
 
@@ -19,7 +20,7 @@ import pytest
 
 from pycon_us.memory import ViewMemory
 from pycon_us.screens.schedule_head import HEAD_KEY
-from pycon_us.screens.schedule_place import PlaceKeeper
+from pycon_us.screens.schedule_place import END_GAP_S, PlaceKeeper
 from pycon_us.ui import scrolling
 from tests import test_schedule
 from tests.sessions import settle
@@ -411,3 +412,47 @@ def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) 
     assert (place.key, place.into, place.layout) == ("b", 30.0, "feed 2")
     assert keeper.relaid(text=40.0)
     assert keeper.pending(SATURDAY) == replace(place, stale=True)
+
+
+async def test_the_shown_list_is_built_in_full_before_its_keyed_jump(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """#600: text that shrank can leave the slot far from a lazy list's built range.
+
+    Saturday is not today, so its list is lazy: a text-size change builds it in full
+    before the put-back asks for the keyed jump, and lazy again once it is back.
+    """
+    schedule = await shown()
+    await _at_saturday_s_fourth_slot(schedule)
+    assert schedule.list_of(SATURDAY).cache_extent is None
+    schedule.hold = asyncio.Event()
+    time, _ = _probe(schedule)
+    put_back = asyncio.ensure_future(
+        schedule.session.dispatch_event(time._i, "size_change", {"w": 30.0, "h": 18.0})
+    )
+    await schedule.until(lambda: schedule.scrolls)
+    assert schedule.list_of(SATURDAY).cache_extent == scrolling.FULL_LIST_EXTENT
+    schedule.hold.set()
+    await put_back
+    await schedule.until(lambda: not memory.schedule_places[SATURDAY].stale)
+    await schedule.until(lambda: schedule.list_of(SATURDAY).cache_extent is None)
+
+
+async def test_a_put_back_s_jump_waits_until_flet_would_send_its_end(
+    memory: ViewMemory,
+) -> None:
+    """F182: Flet drops a list's scroll end that comes within its interval of the last.
+
+    So a put-back's next jump on that list waits ``END_GAP_S`` after the last end the
+    list sent, longer than the list's ``scroll_interval``; a list with no end yet
+    waits for nothing.
+    """
+    assert END_GAP_S > scrolling.SCROLL_EVENT_MS / 1000
+    keeper = PlaceKeeper(memory)
+    end = SimpleNamespace(event_type=ft.ScrollType.END, pixels=0.0)
+    keeper.scrolled(SATURDAY, cast(ft.OnScrollEvent, end))
+    start = monotonic()
+    await keeper.ended_apart(FRIDAY)
+    assert monotonic() - start < END_GAP_S / 2
+    await keeper.ended_apart(SATURDAY)
+    assert monotonic() - keeper.last_end[SATURDAY] >= END_GAP_S * 0.95
