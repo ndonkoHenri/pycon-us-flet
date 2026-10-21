@@ -351,13 +351,13 @@ def test_a_long_title_s_ellipsis_never_hides_the_other_sessions(page: FakePage) 
     assert title.color == more.color == LIGHT_TOKENS.live
 
 
-def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
+def test_the_app_bar_searches_places_and_a_retap_scrolls_to_the_top(
     render: Callable[..., dict[str, Any]],
     data: ConferenceData,
     page: FakePage,
     svc: Services,
 ) -> None:
-    """The Map's only action opens Search scoped to rooms; a re-tap scrolls to the top.
+    """The Map's only action opens Search scoped to places; a re-tap scrolls to the top.
 
     The search button merges with its tooltip into one node (D-234), and the search
     remembers ``/map`` as the page it came from.
@@ -372,7 +372,7 @@ def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
     assert search.tooltip == "Search"
     page.route = "/map"
     cast(Callable[[], None], search.on_click)()
-    assert page.navigated == ["/search?scope=rooms"]
+    assert page.navigated == ["/search?scope=places"]
     assert svc.memory.search_base == "/map"
 
 

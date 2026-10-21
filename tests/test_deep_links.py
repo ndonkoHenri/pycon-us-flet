@@ -165,7 +165,7 @@ async def test_an_unknown_path_is_one_view_whose_back_goes_to_now(
         "/now",
         "/more/developer",
         "/map/room/grand-ballroom-a",
-        "/search?scope=rooms",
+        "/search?scope=places",
         "/schedule/session/31/speaker/32",
         "/nope",
     ],
@@ -208,12 +208,12 @@ async def test_a_link_after_back_on_now_lands_in_the_same_process(
 
 async def test_a_link_s_query_is_a_view_option_that_back_drops(open_at: Open) -> None:
     """A query reaches the top View only, as an option; Back leaves it behind."""
-    shown = await open_at("/search?scope=rooms")
-    assert shown.node("search.scope.rooms").content.selected  # pyright: ignore
+    shown = await open_at("/search?scope=places")
+    assert shown.node("search.scope.places").content.selected  # pyright: ignore
     assert shown.routes() == ["/", "/search"]  # Start below a cold /search (D-164)
     assert await walked(shown) == ["/now", EXIT]
 
-    shown = await open_at("/schedule/session/31?highlight=31&scope=rooms")
+    shown = await open_at("/schedule/session/31?highlight=31&scope=places")
     assert await shown.back() == "/schedule"  # no query on the way down
 
 
@@ -227,7 +227,7 @@ async def test_a_link_to_search_returns_to_the_page_it_opened_over(
     """
     memory = ViewMemory(search_base="/schedule", search_query="typing")
     shown = await open_at("/map", memory=memory)
-    await shown.go("/search?scope=rooms")
+    await shown.go("/search?scope=places")
     assert shown.routes() == ["/", "/search"]
     assert shown.find(ft.TextField)[0].value == ""
     assert await walked(shown) == ["/map", "/now", EXIT]

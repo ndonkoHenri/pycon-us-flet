@@ -14,12 +14,14 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from pycon_us.config import load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.search import SearchResults, first_results, search, search_index
 from pycon_us.core.slugs import room_sort_key, slugify_room
 from pycon_us.core.timeline import DaySessions, timeline, track_sessions
+from pycon_us.year_map import Pin
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -96,6 +98,13 @@ def _schedule_order(session: Session) -> tuple[object, ...]:
     """D-31 written out on its own, so the index's order is checked, not restated."""
     place = room_sort_key(session.display_location)
     return session.day, session.display_start, place, session.name, session.id
+
+
+def spot(key: str, label: str, sublabel: str = "") -> Pin:
+    """A venue spot's pin on the concourse plan (``MapData.venue_spots()``)."""
+    return Pin(
+        key=key, label=label, plan="concourse", x=50.0, y=50.0, sublabel=sublabel
+    )
 
 
 def ids(results: SearchResults) -> list[str]:
@@ -233,24 +242,40 @@ def test_results_are_grouped_by_type() -> None:
 
 
 @pytest.mark.parametrize(
-    ("scope", "sessions", "speakers", "rooms"),
+    ("scope", "sessions", "speakers", "places"),
     [
-        ("all", 1, 1, 1),
+        ("all", 1, 1, 2),
         ("sessions", 1, 0, 0),
         ("speakers", 0, 1, 0),
-        ("rooms", 0, 0, 1),
+        ("places", 0, 0, 2),
     ],
 )
 def test_the_scope_limits_the_types(
-    scope: str, sessions: int, speakers: int, rooms: int
+    scope: str, sessions: int, speakers: int, places: int
 ) -> None:
-    """A scope limits the results to its type; "all" finds every type."""
+    """A scope limits the results to its type; "all" finds every type (D-351)."""
     data = model(
         [talk("1", "Hall talk", at(14, 10))], speakers=["Ann Hall"], rooms=["Hall A"]
     )
-    results = search(search_index(data), "hall", scope)
-    counts = (results.session_count, len(results.speakers), len(results.rooms))
-    assert counts == (sessions, speakers, rooms)
+    results = search(
+        search_index(data, [spot("hall-desk", "Hall desk")]), "hall", scope
+    )
+    counts = (results.session_count, len(results.speakers), results.place_count)
+    assert counts == (sessions, speakers, places)
+
+
+def test_a_venue_spot_is_found_by_its_label_or_what_happens_there() -> None:
+    """Places finds a spot by any words of its label and sublabel, after the rooms."""
+    desk = spot("info-desk", "Information desk", "Promenade Lobby (Main Entrance)")
+    data = model([], rooms=["Lobby", "Room 104C"])
+    index = search_index(data, [desk, spot("quiet-room", "Quiet room", "VIP Room A")])
+    assert search(index, "info desk", "places").spots == (desk,)
+    assert search(index, "promenade", "places").spots == (desk,)
+    found = search(index, "lobby", "places")
+    assert ([r.name for r in found.rooms], found.spots) == (["Lobby"], (desk,))
+    assert found.place_count == 2
+    assert search(index, "room 104c", "places").spots == ()
+    assert not search(index, "desk", "sessions").spots
 
 
 def test_an_unknown_scope_is_an_error() -> None:
@@ -276,7 +301,7 @@ def test_building_the_index_is_logged(caplog: pytest.LogCaptureFixture) -> None:
         search_index(TYPING)
     [record] = caplog.records
     assert record.getMessage().startswith("Search index built in ")
-    assert record.getMessage().endswith(" ms: 3 sessions, 3 speakers, 2 rooms")
+    assert record.getMessage().endswith(" ms: 3 sessions, 3 speakers, 2 rooms, 0 spots")
 
 
 # Search over the recorded feeds
@@ -326,7 +351,33 @@ def test_everything_is_found_by_its_own_name(year: int) -> None:
     for speaker in data.speakers.values():
         assert speaker in search(index, speaker.name, "speakers").speakers
     for room in data.rooms.values():
-        assert room in search(index, room.name, "rooms").rooms
+        assert room in search(index, room.name, "places").rooms
+
+
+@pytest.mark.parametrize(
+    ("query", "found"),
+    [
+        ("info desk", "Information desk"),
+        ("104c", "Room 104C"),
+        ("room 104c", "Room 104C"),
+        ("s-3a", "S-3A"),  # a sprint-only room, seeded from map.toml (MAP-08)
+    ],
+)
+def test_places_find_2026_s_rooms_and_venue_spots(query: str, found: str) -> None:
+    """#393's acceptance: Places finds a feed room, a sprint room or a venue spot."""
+    year = load_year(2026)
+    index = search_index(processed(2026), year.map.venue_spots())
+    results = search(index, query, "places")
+    names = [r.name for r in results.rooms] + [pin.label for pin in results.spots]
+    assert names[0] == found
+
+
+def test_a_cut_keeps_every_venue_spot() -> None:
+    """``first_results()`` cuts sessions and speakers, never the venue spots."""
+    index = search_index(processed(2026), load_year(2026).map.venue_spots())
+    found = search(index, "a")
+    assert found.spots and found.session_count > 1
+    assert first_results(found, sessions=1, speakers=1).spots is found.spots
 
 
 @pytest.mark.parametrize("year", YEARS)
@@ -415,7 +466,7 @@ def test_the_first_rows_keep_the_order_and_cut_the_last_day_shown() -> None:
     first = first_results(found, sessions=60, speakers=20)
     assert _ids(first) == _ids(found)[:60]
     assert first.speakers == found.speakers[:20]
-    assert first.rooms is found.rooms  # rooms are never cut
+    assert first.rooms is found.rooms  # places are never cut
     # The days before the cut are the very same objects, so their memoised groups
     # skip a render (D-153); only the last one shown is a new, shorter day.
     *whole, last = first.sessions

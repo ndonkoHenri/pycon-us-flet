@@ -3,11 +3,12 @@
 A global modal route, opened from Now, Schedule, Map and More with a preset scope
 (``search_button()``), which also records where Back from search returns. A pill field
 pinned under the app bar takes the focus as the View opens; scope chips (All, Sessions,
-Speakers, Rooms) sit under it. The field updates at every keystroke (D-157), and the
+Speakers, Places; D-351) sit under it. The field updates at every keystroke (D-157), and the
 search itself runs once the typing pauses for 250 ms (D-46), or at once on the keyboard's
 action key or a scope change, through ``core.search`` over an index built once per feed
 version (D-180). Results come grouped by type, sessions by day, each row pushing its
-detail on top of search (``/search/session/42``); Back returns to the results with the
+detail on top of search (``/search/session/42``), a venue spot its floor plan with the
+pin (``/search/plan/concourse?pin=info-desk``); Back returns to the results with the
 query intact, since this View stays mounted below the detail and the query and scope are
 also in ``ViewMemory`` (D-18, D-141).
 
@@ -44,10 +45,10 @@ DEBOUNCE_SECONDS = 0.25
 """How long the typing must pause before the search runs (D-46)."""
 
 HINTS = {
-    "all": "Search sessions, speakers, rooms",
+    "all": "Search sessions, speakers, places",
     "sessions": "Search sessions",
     "speakers": "Search speakers",
-    "rooms": "Search rooms",
+    "places": "Search rooms and places",
 }
 """The field's hint by scope, which also names it while it is empty (ux.md §4.3): it
 says what will be searched, as the idle title under it does."""
@@ -65,15 +66,15 @@ SCOPE_LABELS = {
     "all": "All",
     "sessions": "Sessions",
     "speakers": "Speakers",
-    "rooms": "Rooms",
+    "places": "Places",
 }
 """Each scope's chip, in ``SCOPES``' order (D-19)."""
 
 IDLE_TITLES = {
-    "all": "Find sessions, speakers and rooms",
+    "all": "Find sessions, speakers and places",
     "sessions": "Find sessions",
     "speakers": "Find speakers",
-    "rooms": "Find rooms",
+    "places": "Find rooms and places",
 }
 """What the screen says before the first word, by scope."""
 
@@ -151,7 +152,8 @@ def Search() -> ft.View:
     data = conference.data
     # Once per feed version: never per keystroke (D-180).
     index = ft.use_memo(
-        lambda: search_index(data) if data else None, [conference.version]
+        lambda: search_index(data, svc.year.map.venue_spots()) if data else None,
+        [conference.version],
     )
     entries = ft.use_memo(
         lambda: {e.speaker.id: e for e in directory(data)} if data else {},

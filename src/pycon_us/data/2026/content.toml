@@ -68,7 +68,7 @@ minutes = -30
 [[venue_hours]]
 service = "Registration"
 location = "Promenade Lobby (Main Entrance)"
-pin = "registration"
+pin = "registration-desk"
 open = [
     { date = 2026-05-13, opens = 07:30:00, closes = 18:00:00 },
     { date = 2026-05-14, opens = 07:30:00, closes = 18:00:00 },

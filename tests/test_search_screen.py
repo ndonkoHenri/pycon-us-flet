@@ -46,7 +46,7 @@ from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
 DATA = processed(2026)
-INDEX = search_index(DATA)
+INDEX = search_index(DATA, YEAR.map.venue_spots())
 
 
 # ------------------------------------------------------------------ pure parts
@@ -55,9 +55,10 @@ INDEX = search_index(DATA)
 @pytest.mark.parametrize(
     ("requested", "remembered", "scope"),
     [
-        ("rooms", "all", "rooms"),  # the opener's preset (D-19)
-        ("sponsors", "rooms", "all"),  # unknown (P2's scopes): All, as D-180 says
-        ("", "rooms", "all"),
+        ("places", "all", "places"),  # the opener's preset (D-19)
+        ("sponsors", "places", "all"),  # unknown (until #24): All, as D-180 says
+        ("rooms", "places", "all"),  # P1's scope, which Places replaced (D-351)
+        ("", "places", "all"),
         (None, "speakers", "speakers"),  # mounted without a query: the memory
         (None, "nonsense", "all"),
     ],
@@ -74,10 +75,14 @@ def test_the_summary_names_only_the_types_found_in_words() -> None:
     sessions = search(INDEX, "a", "all")
     assert search_results.summary(sessions) == (
         f"{sessions.session_count} sessions, {len(sessions.speakers)} speakers, "
-        f"{len(sessions.rooms)} rooms"
+        f"{sessions.place_count} places"
     )
     one_room = SearchResults(rooms=(DATA.rooms["room-103abc"],))
-    assert search_results.summary(one_room) == "1 room"
+    assert search_results.summary(one_room) == "1 place"
+    desk = YEAR.map.pin("info-desk")
+    assert desk is not None
+    both = SearchResults(rooms=one_room.rooms, spots=(desk,))
+    assert search_results.summary(both) == "2 places"  # rooms and spots together
 
 
 # ------------------------------------------------------------------ the harness
@@ -436,7 +441,7 @@ async def test_the_opener_s_scope_is_selected_with_its_check(opened: Shown) -> N
         "All",
         "Sessions",
         "Speakers",
-        "Rooms",
+        "Places",
     ]
     assert [scope for scope, chip in chips.items() if chip.selected] == ["sessions"]
     assert all(chip.show_checkmark for chip in chips.values())  # not colour alone
@@ -449,13 +454,13 @@ async def test_switching_scope_keeps_the_query_and_searches_at_once(
     await opened.type("grand")
     await opened.pause()
     opened.searches.clear()
-    await opened.event(opened.chip("rooms"), "click")
-    assert opened.searches == [("grand", "rooms")]
+    await opened.event(opened.chip("places"), "click")
+    assert opened.searches == [("grand", "places")]
     assert opened.haptics.effects == ["selection_click"]  # a chip toggled (ux.md §4.5)
     assert opened.field.value == "grand"
-    assert opened.chip("rooms").selected
+    assert opened.chip("places").selected
     assert not opened.chip("sessions").selected
-    assert opened.memory.search_scope == "rooms"
+    assert opened.memory.search_scope == "places"
     assert [r for r in opened.results if r.startswith("search.room.")] == [
         "search.room.grand-ballroom-a",
         "search.room.grand-ballroom-b",
@@ -483,9 +488,9 @@ async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
     """The field's hint names what the selected scope searches."""
     assert opened.field.hint_text == "Search sessions"  # the Schedule's scope
     await opened.event(opened.chip("all"), "click")
-    assert opened.field.hint_text == "Search sessions, speakers, rooms"
-    await opened.event(opened.chip("rooms"), "click")
-    assert opened.field.hint_text == "Search rooms"
+    assert opened.field.hint_text == "Search sessions, speakers, places"
+    await opened.event(opened.chip("places"), "click")
+    assert opened.field.hint_text == "Search rooms and places"
 
 
 async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
@@ -521,8 +526,10 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     expected.append("h2:Speakers")
     expected += [f"search.speaker.{semantics_key(s.id)}" for s in first.speakers]
     expected.append("search.show_all.speakers")
-    expected.append("h2:Rooms")
+    expected.append("h2:Places")
     expected += [f"search.room.{room.slug}" for room in found.rooms]
+    expected += [f"search.place.{pin.key}" for pin in found.spots]
+    assert found.spots  # "a" finds venue spots too, after the rooms
     listed = [r for r in opened.results if not r.startswith("search.favorite.")]
     assert listed == expected
 
@@ -594,6 +601,30 @@ async def test_back_from_a_result_returns_to_the_results_with_the_query(
     assert opened.searches == []  # the same View, still mounted: nothing to redo
 
 
+async def test_a_venue_spot_opens_its_plan_with_the_pin_and_back_keeps_the_query(
+    opened: Shown,
+) -> None:
+    """#393: a venue spot pushes its floor plan at its pin; Back finds the results."""
+    await opened.event(opened.chip("places"), "click")
+    await opened.type("info desk")
+    await opened.pause()
+    before = opened.results
+    # One type: no heading (D-193). Lost & found is "the information desk" after hours.
+    assert before == ["search.place.info-desk", "search.place.lost-and-found"]
+    tap = opened.node("search.place.info-desk").content  # the ListTile
+    await opened.event(cast(ft.Control, tap), "click")
+    await opened.settle()  # the navigation's task
+    assert opened.page.route == "/search/plan/concourse?pin=info-desk"
+    assert opened.views == ["/schedule", "/search", "/search/plan/concourse"]
+    opened.searches.clear()
+
+    await opened.go(parent_of(opened.page.route, opened.memory.search_base))
+    assert opened.views == ["/schedule", "/search"]
+    assert opened.field.value == "info desk"
+    assert opened.results == before
+    assert opened.searches == []
+
+
 async def test_each_opening_starts_a_new_search_and_back_leaves_for_the_opener(
     opened: Shown,
 ) -> None:
@@ -616,11 +647,11 @@ async def test_a_view_rebuilt_below_a_result_gets_the_query_and_scope_back(
     """A deep entry under ``/search`` mounts Search below the top (D-18, D-164)."""
     conference = Conference(data=DATA, source="bundled", version=1)
     shown = await render(conference)
-    shown.memory.search_query, shown.memory.search_scope = "grand", "rooms"
+    shown.memory.search_query, shown.memory.search_scope = "grand", "places"
     await shown.go("/search/room/grand-ballroom-a")
     await shown.go("/search")
     assert shown.field.value == "grand"
-    assert shown.chip("rooms").selected
+    assert shown.chip("places").selected
     assert "search.room.grand-ballroom-a" in shown.results
 
 
@@ -670,8 +701,8 @@ async def test_a_miss_in_one_scope_offers_the_results_of_the_others(
     opened: Shown,
 ) -> None:
     """A miss in one scope offers "Show all results", which switches to All."""
-    await opened.event(opened.chip("rooms"), "click")
-    await opened.type("typing")  # sessions, no room
+    await opened.event(opened.chip("places"), "click")
+    await opened.type("typing")  # sessions, no place
     await opened.pause()
     assert opened.has("search.no_match")
     (button,) = opened.find(ft.FilledTonalButton)

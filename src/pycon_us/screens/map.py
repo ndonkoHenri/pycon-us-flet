@@ -91,7 +91,7 @@ def Map() -> ft.View:
         rows = room_rows(listing, view_path, live=tokens.live)
     return AppScaffold(
         title="Map",
-        actions=[search_button(svc.memory, "rooms")],
+        actions=[search_button(svc.memory, "places")],
         body=ft.ListView(rows, expand=True, ref=list_ref, padding=sides(margin)),
         on_retap=scroll_to_top,
     )
