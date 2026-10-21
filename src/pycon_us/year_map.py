@@ -4,7 +4,7 @@
 table of the venue's floor plans (images bundled under ``src/assets/``, D-312), a
 ``[[pins]]`` table of the spots marked on them, rooms and venue spots alike, a
 ``[[booths]]`` table of the expo's booths on the ``expo`` plan (EXPO-02, D-254), and the
-venue's 3D tour. ``config.load_year()`` builds it into ``MapData`` through
+venue's 3D tour. The ``job-fair`` plan heads the Map's Job fair pane, with its ``note``. ``config.load_year()`` builds it into ``MapData`` through
 ``year_schema`` and checks it with ``check_map()``; ``YearData.map`` holds it, and
 ``MapData.room_pin()`` finds a feed room's pin by ``normalize_room_key()``. A year
 without the file has no plans and no pins. Whether every feed room has a pin is a test
@@ -33,6 +33,9 @@ is the app's assets folder (``ft.run``'s default ``assets_dir``, next to ``main.
 EXPO_PLAN = "expo"
 """The id of the plan the booths are on: a year with booths has a plan of this id."""
 
+JOB_FAIR_PLAN = "job-fair"
+"""The id of the job fair's plan: the Map's Job fair pane and its card (MAP-04, D-254)."""
+
 _PIN_KEY = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 
 
@@ -52,6 +55,8 @@ class Plan:
         height: The plan image's height in pixels.
         subtitle: What is on it ("Tutorials, talk tracks, registration"); empty
             without one.
+        note: What the plan's list should be read with, shown under the job fair's
+            card and never in the viewer (D-254); empty without one.
     """
 
     id: str
@@ -61,6 +66,7 @@ class Plan:
     width: int
     height: int
     subtitle: str = ""
+    note: str = ""
 
 
 @dataclass(frozen=True)
@@ -179,12 +185,12 @@ class MapData:
 def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
     """Check the rules of ``map.toml`` that its types cannot say.
 
-    Plans: unique ids, a title, a positive size, and image and thumbnail files that
-    exist. Pins: unique keys of ``a-z0-9`` words joined by ``-``, a label, a plan that
-    exists, and a position within the plan (0 to 100 percent). Booths: an ``expo`` plan
-    to be on, unique numbers that are not blank, a label that is not blank when given,
-    and a rectangle inside the plan (ratios from 0 to 1, a positive size, ``x + w`` and
-    ``y + h`` at most 1). The tour: ``https``.
+    Plans: unique ids, a title, a note that is not blank when given, a positive size,
+    and image and thumbnail files that exist. Pins: unique keys of ``a-z0-9`` words
+    joined by ``-``, a label, a plan that exists, and a position within the plan (0 to
+    100 percent). Booths: an ``expo`` plan to be on, unique numbers that are not blank,
+    a label that is not blank when given, and a rectangle inside the plan (ratios from
+    0 to 1, a positive size, ``x + w`` and ``y + h`` at most 1). The tour: ``https``.
 
     Args:
         data: The year's map data.
@@ -211,6 +217,8 @@ def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
             raise YearDataError(f"{file}: {key}.id: {plan.id!r} is listed twice")
         plan_ids.add(plan.id)
         check_text(plan.title, file, f"{key}.title")
+        if plan.note:
+            check_text(plan.note, file, f"{key}.note")
         for field in ("width", "height"):
             if getattr(plan, field) <= 0:
                 raise YearDataError(f"{file}: {key}.{field}: must be positive")
