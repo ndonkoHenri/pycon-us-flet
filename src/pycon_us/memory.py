@@ -9,6 +9,8 @@ from dataclasses import dataclass, field, fields
 from datetime import date
 from random import Random
 
+from pycon_us.core.list_place import Place
+
 
 @dataclass
 class ViewMemory:
@@ -29,6 +31,10 @@ class ViewMemory:
             the Schedule opens on today during the conference (SCHED-01).
         schedule_offsets: Each day list's scroll offset when its last scroll ended,
             in logical pixels: the Schedule puts it back when the list shows again.
+        schedule_places: Each day list's place, the item at its top and how far into
+            it, which the Schedule puts back after a text-size change (D-331).
+        schedule_basis: The text and list widths and the time's position the
+            places were measured with; a change makes their offsets stale (D-331).
         jumped_on: The conference day on which the Schedule last jumped to now: it
             jumps by itself on the first display of each today in this process, and
             not again that day, a "Now" tap included (D-18, D-155, D-204).
@@ -56,6 +62,8 @@ class ViewMemory:
     search_base: str = "/now"
     schedule_day: date | None = None
     schedule_offsets: dict[date, float] = field(default_factory=dict)
+    schedule_places: dict[date, Place] = field(default_factory=dict)
+    schedule_basis: tuple[float, float, bool] | None = None
     jumped_on: date | None = None
     search_query: str = ""
     search_scope: str = "all"
