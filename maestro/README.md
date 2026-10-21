@@ -17,7 +17,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | Path | What it is |
 |---|---|
 | `config.yaml` | The workspace: `maestro test maestro` runs `journeys/*` and `regression/*` |
-| `journeys/` | P1's exit journeys, tagged `journeys` (two also `smoke`) |
+| `journeys/` | P1's exit journeys and later screens' journeys, tagged `journeys` (two also `smoke`) |
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
 | `subflows/` | Steps the flows share through `runFlow`; never run on their own, except `fling_setup.yaml`, which `tools/fling_after_sheet.py` runs |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
@@ -30,6 +30,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
+| `journeys/sponsors_back.yaml` | journeys | More › Sponsors › a logo card's sponsor (Capital One) › Back: the list shows the same card again, and the sponsor's page is gone (SPON-01, #496) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
@@ -219,6 +220,13 @@ average was in the hundreds took up to 3 minutes a journey.
 | Journeys, run 2 | 6 of 6 passed, 7 min 55 s | 6 of 6 passed, 7 min 29 s |
 | `regression`, `main`'s build (`1a2c2b5`) | `TRIALS=20`: 20 moved, 10 min 23 s; tap to fling 773-914 ms (median 870) | `TRIALS=10`: 10 moved, 5 min 5 s; tap command 0.77 s |
 | `regression`, #346's build (`7ccd74f`) | `TRIALS=20`: 20 moved, 10 min 44 s; tap to fling 807-1,019 ms (median 858) | not run |
+
+After P2 (#496, on 2026-10-21, `main` at `6979c0b`): every journey stopped at the launch,
+because a fresh install now opens Welcome (D-287) and Refresh now's failure line was
+reworded. `launch_fresh.yaml` taps Get started (`welcome.start`) until Now shows, and
+`start_offline.yaml` expects the new words (#496 and #518 made the same fix). Then, on an iPhone 17 simulator (iOS 26.5), at a
+load average of 40 to 300: the six journeys passed (1 min 27 s to 1 min 50 s each), and
+`sponsors_back` passed.
 
 Earlier versions of the flows failed twice on iOS while the host's load average was 400
 to 700: Developer's feed URL lost two characters as it was typed (F63), and the overlap
