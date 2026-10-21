@@ -73,14 +73,14 @@ onFlowComplete:
       id: search.speaker.77
     timeout: 15000
 
-# A room used on Saturday only, in the Rooms scope; its page lists its session.
+# A room used on Saturday only, in the Places scope; its page lists its session.
 - tapOn:
     id: search.field
 - eraseText: 20
 - inputText: seaside
 - pressKey: Enter
 - tapOn:
-    id: search.scope.rooms
+    id: search.scope.places
 - extendedWaitUntil:
     visible:
       id: search.room.seaside-ballroom-a
@@ -102,7 +102,7 @@ onFlowComplete:
       id: search.room.seaside-ballroom-a
     timeout: 15000
 - assertVisible:
-    id: search.scope.rooms
+    id: search.scope.places
     selected: true
 - assertVisible:
     id: search.field

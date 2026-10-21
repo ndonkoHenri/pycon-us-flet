@@ -144,7 +144,7 @@ def query_of(location: str) -> dict[str, str]:
     """Return a location's view options, the query (decisions §M; U9 interim).
 
     Args:
-        location: A location such as ``/search?scope=rooms``.
+        location: A location such as ``/search?scope=places``.
 
     Returns:
         Each option once, its last value winning; blank values are kept as ``""``.
@@ -158,7 +158,7 @@ def is_top_view(location: str, view_path: str) -> bool:
     Compare with ``page.route``, never ``ft.use_route_location()``: under a global
     modal the Router renders the Views below it at the remembered opener's location,
     so the opener's View would pass that test too (``/map`` under
-    ``/search?scope=rooms``), and so would ``Start`` under a modal entered directly.
+    ``/search?scope=places``), and so would ``Start`` under a modal entered directly.
 
     Args:
         location: The addressed location, ``page.route``, query included.

@@ -1,7 +1,8 @@
-"""Tests for the Map tab's rooms list (#100; ROOM-01, D-188, ux.md §5.8).
+"""Tests for the Map's Rooms pane (#100; ROOM-01, D-188, ux.md §5.8).
 
-``Map`` runs outside a renderer: its hooks and ``AppScaffold`` are replaced, and a fake
-page is bound as Flet binds a session's page. What is on in a room is
+``RoomsPane`` runs outside a renderer: its hooks are replaced, and a fake page is
+bound as Flet binds a session's page. The Map around it, its tabs and its app bar, is
+``test_map_tabs.py``'s. What is on in a room is
 ``core.rooms.room_list`` (``test_rooms.py``); here, what the screen makes of it, its
 states without data, and where a tap goes. How the list looks and reads is checked on
 devices (the PR).
@@ -21,10 +22,10 @@ import pytest
 from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
-from pycon_us.locations import PAGES, drill_href
+from pycon_us.locations import drill_href
 from pycon_us.memory import ViewMemory
-from pycon_us.screens import map as map_screen
-from pycon_us.screens.map import Map, now_lines, room_row
+from pycon_us.screens import map_rooms as map_screen
+from pycon_us.screens.map_rooms import RoomsPane, now_lines, room_row
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.theme import LIGHT_TOKENS
@@ -90,8 +91,11 @@ class FakeConference(SimpleNamespace):
         self.refreshes += 1
 
 
-async def retap() -> None:
-    """The root's re-tap action, as ``use_scroll_to_top()`` would return it."""
+type Render = Callable[..., ft.ListView]
+"""The ``render`` fixture's function: the pane at a conference and a time."""
+
+SCROLLS: list[ft.OnScrollEvent] = []
+"""Never written: the pane's lists are not scrolled here."""
 
 
 @pytest.fixture
@@ -106,32 +110,30 @@ def render(
     svc: Services,
     page: FakePage,
     minutes: list[int],
-) -> Callable[..., dict[str, Any]]:
-    """Render ``Map`` once at ``now`` and return what it passed to ``AppScaffold``."""
-    monkeypatch.setattr(map_screen, "use_scroll_to_top", lambda: (ft.Ref(), retap))
+) -> Render:
+    """Render ``RoomsPane`` once at ``now`` and return its ``ListView``."""
     monkeypatch.setattr(map_screen, "use_services", lambda: svc)
     monkeypatch.setattr(map_screen, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(map_screen, "use_minute", lambda: minutes.append(0) or 0)
-    monkeypatch.setattr(map_screen, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(map_screen, "use_margin", phone_margin)
     # Stand-ins for the components, which need a renderer; their own tests check them.
     monkeypatch.setattr(map_screen, "StatusStrip", lambda: STRIP)
     monkeypatch.setattr(map_screen, "SkeletonList", lambda label: ft.Text(label))
     monkeypatch.setattr(ft, "use_view_path", lambda: "/map")
 
-    def render(conference: FakeConference, now: datetime = DURING) -> dict[str, Any]:
+    def render(conference: FakeConference, now: datetime = DURING) -> ft.ListView:
         monkeypatch.setattr(map_screen, "use_conference", lambda: conference)
         monkeypatch.setattr(clock, "now", lambda: now)
-        return cast(dict[str, Any], inspect.unwrap(Map)())
+        pane = inspect.unwrap(RoomsPane)(ft.Ref[ft.ListView](), SCROLLS.append)
+        return cast(ft.ListView, pane)
 
     return render
 
 
-def rows_of(scaffold: dict[str, Any]) -> list[ft.Control]:
-    """Return the rows of the ``ListView`` the screen gave ``AppScaffold``."""
-    body = scaffold["body"]
-    assert isinstance(body, ft.ListView)
-    return list(body.controls)
+def rows_of(pane: ft.ListView) -> list[ft.Control]:
+    """Return the rows of the pane's ``ListView``, checking it is the Rooms pane's."""
+    assert pane.key == "rooms"
+    return list(pane.controls)
 
 
 def headers(rows: list[ft.Control]) -> list[str]:
@@ -184,7 +186,7 @@ def button_of(rows: list[ft.Control]) -> ft.FilledTonalButton:
 
 
 def test_rooms_come_by_floor_then_the_other_locations_under_their_headings(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
+    render: Render, data: ConferenceData
 ) -> None:
     """Rooms come floor by floor, in the Map's order, then the other locations.
 
@@ -221,7 +223,7 @@ def test_rooms_come_by_floor_then_the_other_locations_under_their_headings(
 
 
 def test_each_row_names_its_room_and_counts_its_sessions(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
+    render: Render, data: ConferenceData
 ) -> None:
     """A room row shows the room's name, its session count and a place icon."""
     rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
@@ -233,9 +235,7 @@ def test_each_row_names_its_room_and_counts_its_sessions(
     assert subtitle_lines(rows["map.room.lobby"]) == ["1 session"]
 
 
-def test_a_sprint_only_room_reads_sprints(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
-) -> None:
+def test_a_sprint_only_room_reads_sprints(render: Render, data: ConferenceData) -> None:
     """A seeded sprint-only room says "Sprints" where a room counts its sessions."""
     rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
     assert subtitle_lines(rows["map.room.s-2"]) == ["Sprints"]
@@ -244,7 +244,7 @@ def test_a_sprint_only_room_reads_sprints(
 
 
 def test_a_tap_pushes_the_room_s_detail_on_the_map(
-    render: Callable[..., dict[str, Any]], data: ConferenceData, page: FakePage
+    render: Render, data: ConferenceData, page: FakePage
 ) -> None:
     """Tapping a room row navigates to that room's detail under ``/map``."""
     tile = tiles(rows_of(render(FakeConference(data))))[
@@ -257,7 +257,7 @@ def test_a_tap_pushes_the_room_s_detail_on_the_map(
 
 
 def test_while_a_session_is_on_its_room_says_now_in_the_live_colour(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
+    render: Render, data: ConferenceData
 ) -> None:
     """While a session is on, its room's row adds a Now line in the live colour."""
     tile = tiles(rows_of(render(FakeConference(data))))["map.room.room-103abc"]
@@ -271,7 +271,7 @@ def test_while_a_session_is_on_its_room_says_now_in_the_live_colour(
 
 
 def test_before_the_conference_no_room_says_now(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
+    render: Render, data: ConferenceData
 ) -> None:
     """Before the conference, no room row has a Now line."""
     rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
@@ -281,9 +281,7 @@ def test_before_the_conference_no_room_says_now(
     )
 
 
-def test_the_now_lines_follow_the_clock(
-    render: Callable[..., dict[str, Any]], data: ConferenceData
-) -> None:
+def test_the_now_lines_follow_the_clock(render: Render, data: ConferenceData) -> None:
     """The Now line moves with the clock, from 11:10 to the 11:50 talk.
 
     The fake clock (D-73) and each minute's re-render (D-175) move the lines.
@@ -298,7 +296,7 @@ def test_the_now_lines_follow_the_clock(
 
 
 def test_the_screen_ticks_with_the_minute(
-    render: Callable[..., dict[str, Any]], data: ConferenceData, minutes: list[int]
+    render: Render, data: ConferenceData, minutes: list[int]
 ) -> None:
     """The screen asks for the minute on each render, with data or without."""
     render(FakeConference(data))
@@ -351,53 +349,11 @@ def test_a_long_title_s_ellipsis_never_hides_the_other_sessions(page: FakePage) 
     assert title.color == more.color == LIGHT_TOKENS.live
 
 
-def test_the_app_bar_searches_rooms_and_a_retap_scrolls_to_the_top(
-    render: Callable[..., dict[str, Any]],
-    data: ConferenceData,
-    page: FakePage,
-    svc: Services,
-) -> None:
-    """The Map's only action opens Search scoped to rooms; a re-tap scrolls to the top.
-
-    The search button merges with its tooltip into one node (D-234), and the search
-    remembers ``/map`` as the page it came from.
-    """
-    scaffold = render(FakeConference(data))
-    assert scaffold["title"] == "Map"
-    assert scaffold["on_retap"] is retap
-    (action,) = scaffold["actions"]
-    assert isinstance(action, ft.MergeSemantics)  # one node with its tooltip (D-234)
-    search = action.content
-    assert isinstance(search, ft.IconButton)
-    assert search.tooltip == "Search"
-    page.route = "/map"
-    cast(Callable[[], None], search.on_click)()
-    assert page.navigated == ["/search?scope=rooms"]
-    assert svc.memory.search_base == "/map"
-
-
-def test_the_map_has_no_control_for_the_p2_panes(
-    render: Callable[..., dict[str, Any]], data: ConferenceData, page: FakePage
-) -> None:
-    """Every row of the Map opens a room, and there are no tabs for the P2 panes.
-
-    Floor plans, the expo and the job fair are P2 (MAP-01): no dead controls.
-    """
-    rows = rows_of(render(FakeConference(data)))
-    for tile in tiles(rows).values():
-        cast(Callable[[], None], tile.on_click)()
-    assert all(location.startswith("/map/room/") for location in page.navigated)
-    assert not any(
-        isinstance(n, ft.Tabs | ft.TabBar) for r in rows for n in descendants(r)
-    )
-    assert "/map" in PAGES
-
-
 # ------------------------------------------------------------------ without data
 
 
 def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
-    render: Callable[..., dict[str, Any]],
+    render: Render,
 ) -> None:
     """Without data, the status strip and the rooms' skeleton are all that shows."""
     rows = rows_of(render(FakeConference(None)))
@@ -414,7 +370,7 @@ def test_without_data_the_skeleton_shows_until_the_first_fetch_fails(
     ],
 )
 async def test_after_a_failed_first_fetch_the_rooms_can_be_tried_again(
-    render: Callable[..., dict[str, Any]], problem: str, body: str
+    render: Render, problem: str, body: str
 ) -> None:
     """After a failed first fetch, the problem is explained and Try again refreshes."""
     conference = FakeConference(None, problem=problem)
@@ -428,7 +384,7 @@ async def test_after_a_failed_first_fetch_the_rooms_can_be_tried_again(
 
 
 def test_a_retry_keeps_the_state_with_its_button_disabled(
-    render: Callable[..., dict[str, Any]],
+    render: Render,
 ) -> None:
     """While a retry runs, the empty state stays and its button is disabled."""
     conference = FakeConference(None, problem="offline")
@@ -439,7 +395,7 @@ def test_a_retry_keeps_the_state_with_its_button_disabled(
 
 
 def test_a_schedule_without_rooms_says_so_and_offers_the_schedule(
-    render: Callable[..., dict[str, Any]], page: FakePage
+    render: Render, page: FakePage
 ) -> None:
     """A schedule with no rooms says so, and its button opens the Schedule."""
     empty = ConferenceData(

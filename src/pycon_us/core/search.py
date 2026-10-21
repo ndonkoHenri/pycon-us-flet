@@ -2,7 +2,8 @@
 
 ``search_index()`` is built once per feed version over what ``queries.fold`` has folded:
 each session's ``search_text`` (its title, its description's text from ``html_md`` and its
-speakers' names, never markup; D-140), the speaker directory's names and the rooms' names.
+speakers' names, never markup; D-140), the speaker directory's names, and the places: the
+rooms' names and the venue spots' labels with what happens there (``map.toml``, D-351).
 ``search()`` folds a query the same way and keeps the entries that hold every one of its
 words, grouped by type and day. Screens never fold or match on their own (NEW-02, #97).
 ``first_results()`` cuts results to each type's first rows, which is what the result
@@ -11,17 +12,22 @@ list renders until the user asks for the rest (D-218).
 
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import groupby
+from typing import TYPE_CHECKING
 
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.timeline import DaySessions, schedule_order
 
+if TYPE_CHECKING:  # the year data's type only: core never imports the loader (D-67)
+    from pycon_us.year_map import Pin
+
 logger = logging.getLogger(__name__)
 
-SCOPES = ("all", "sessions", "speakers", "rooms")
-"""Search's scopes in P1, in the order of its chips (D-19); P2 adds sponsors and places."""
+SCOPES = ("all", "sessions", "speakers", "places")
+"""Search's scopes, in the order of its chips (D-19, D-351); sponsors join with #24."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -35,12 +41,16 @@ class SearchIndex:
             order (``timeline.schedule_order``, D-178).
         speakers: The speaker directory with each folded name, as the Speakers list
             orders it (``queries.speaker_order``).
-        rooms: The rooms with each folded name, in natural order (D-125).
+        rooms: The rooms with each folded name, in natural order (D-125), the
+            sprint-only rooms among them (MAP-08).
+        spots: The venue spots (``MapData.venue_spots()``) with each folded label and
+            sublabel, in ``map.toml``'s order.
     """
 
     sessions: tuple[tuple[str, Session], ...]
     speakers: tuple[tuple[str, Speaker], ...]
     rooms: tuple[tuple[str, Room], ...]
+    spots: tuple[tuple[str, Pin], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -55,11 +65,14 @@ class SearchResults:
             pages give them), oldest day first, each day in schedule order.
         speakers: The matching speakers, by folded name, then id.
         rooms: The matching rooms, in natural order.
+        spots: The matching venue spots, in ``map.toml``'s order; with the rooms, the
+            places.
     """
 
     sessions: tuple[DaySessions, ...] = ()
     speakers: tuple[Speaker, ...] = ()
     rooms: tuple[Room, ...] = ()
+    spots: tuple[Pin, ...] = ()
 
     @property
     def session_count(self) -> int:
@@ -67,12 +80,17 @@ class SearchResults:
         return sum(len(day.sessions) for day in self.sessions)
 
     @property
+    def place_count(self) -> int:
+        """How many places matched: rooms and venue spots."""
+        return len(self.rooms) + len(self.spots)
+
+    @property
     def empty(self) -> bool:
         """Whether nothing matched, of any type."""
-        return not (self.sessions or self.speakers or self.rooms)
+        return not (self.sessions or self.speakers or self.rooms or self.spots)
 
 
-def search_index(data: ConferenceData) -> SearchIndex:
+def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex:
     """Return the index that ``search()`` scans, and log how long building it took.
 
     Build it once per feed version, never per keystroke. Every session is in it, poster
@@ -80,6 +98,8 @@ def search_index(data: ConferenceData) -> SearchIndex:
 
     Args:
         data: The processed feed.
+        spots: The year's venue spots (``MapData.venue_spots()``): a spot is found by
+            its label or by what happens there ("info desk", "Promenade Lobby").
 
     Returns:
         The index, its entries in result order.
@@ -93,13 +113,15 @@ def search_index(data: ConferenceData) -> SearchIndex:
         sessions=tuple((s.search_text, s) for s in sessions),
         speakers=tuple((fold(s.name), s) for s in speakers),
         rooms=tuple((fold(room.name), room) for room in data.rooms.values()),
+        spots=tuple((fold(f"{pin.label} {pin.sublabel}"), pin) for pin in spots),
     )
     logger.info(
-        "Search index built in %.1f ms: %d sessions, %d speakers, %d rooms",
+        "Search index built in %.1f ms: %d sessions, %d speakers, %d rooms, %d spots",
         (time.perf_counter() - started) * 1000,
         len(index.sessions),
         len(index.speakers),
         len(index.rooms),
+        len(index.spots),
     )
     return index
 
@@ -117,7 +139,8 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         scope: One of ``SCOPES``; ``all`` searches every type.
 
     Returns:
-        Sessions by day, then speakers, then rooms; types outside the scope are empty.
+        Sessions by day, then speakers, then places (rooms, then venue spots); types
+        outside the scope are empty.
 
     Raises:
         ValueError: ``scope`` is not one of ``SCOPES``.
@@ -137,14 +160,15 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
     return SearchResults(
         sessions=tuple(DaySessions(day, tuple(group)) for day, group in by_day),
         speakers=tuple(found(index.speakers, "speakers")),
-        rooms=tuple(found(index.rooms, "rooms")),
+        rooms=tuple(found(index.rooms, "places")),
+        spots=tuple(found(index.spots, "places")),
     )
 
 
 def first_results(
     results: SearchResults, *, sessions: int | None, speakers: int | None
 ) -> SearchResults:
-    """Return the first rows of each type of ``results``, every room (D-218).
+    """Return the first rows of each type of ``results``, every place (D-218).
 
     A broad query finds most of the feed ("p": 319 sessions), and rendering every row
     of it is what made its first render slow (#216), so the list shows each type's
@@ -159,7 +183,7 @@ def first_results(
         speakers: How many speakers to keep, or None for all of them.
 
     Returns:
-        The results' first rows, in the same order; rooms are never cut.
+        The results' first rows, in the same order; places are never cut.
 
     Raises:
         ValueError: A limit is below 1: a type that matched never shows no row.
@@ -174,7 +198,9 @@ def first_results(
         found = found[:speakers]
     if days is results.sessions and found is results.speakers:
         return results
-    return SearchResults(sessions=days, speakers=found, rooms=results.rooms)
+    return SearchResults(
+        sessions=days, speakers=found, rooms=results.rooms, spots=results.spots
+    )
 
 
 def _first_sessions(

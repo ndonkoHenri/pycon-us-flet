@@ -330,7 +330,7 @@ async def test_no_pin_without_one_on_this_plan(render: Render, query: str) -> No
 
 
 async def test_an_unknown_plan_offers_the_map(render: Render) -> None:
-    """``plan/nowhere``: the not-found state, "Open the map" going to ``/map``."""
+    """``plan/nowhere``: the not-found state, "Open the map" going to the Floor plans tab."""
     plan = await render(plan_id="nowhere")
     assert plan.titles[-1] == "Not found"
     assert screen.NOT_FOUND in plan.texts()
@@ -338,7 +338,7 @@ async def test_an_unknown_plan_offers_the_map(render: Render) -> None:
         b for b in plan.find(ft.FilledTonalButton) if b.content == screen.OPEN_MAP
     ]
     await plan.click(button)
-    assert plan.went == ["/map"]
+    assert plan.went == ["/map?tab=floor-plans"]
     assert plan.find(ft.InteractiveViewer) == []
 
 

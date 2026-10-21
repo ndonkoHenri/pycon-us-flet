@@ -316,7 +316,7 @@ def main(page: ft.Page):
 
 ### 5.4 Search (D-19)
 
-One `Search` component on the global modal route `/search`, opened from Now, Schedule, Map and More with a preset scope (`/search?scope=sessions`, `/search?scope=rooms`); the opener first records its own location, query included, in `ViewMemory.search_base`. Results push details with `drill_href()` (`/search/session/42`), and our `page.on_view_pop` sends Back to `parent_of()`: from a result to the results, from search to `search_base` (§5.3). Query and scope live in `ViewMemory`. S4 confirmed search → result → detail → Back → Back to the results with the query kept (D-141). Each opening starts an empty search: the opener clears `search_query`. The field updates per keystroke; the search runs after a 250 ms pause (an effect each keystroke restarts), at once on the action key, a scope chip or Clear (D-193). The result list renders each type's first rows (`core.search.first_results()`: 50 sessions, 20 speakers, every room) and a "Show all" row that renders the rest on request, so a one-letter query that finds most of the feed renders about as fast as a narrow one (D-218). On return Flutter gives the search field its focus back only when it had it as the result opened, so the first Android Back then closes the keyboard; D-193 keeps that.
+One `Search` component on the global modal route `/search`, opened from Now, Schedule, Map and More with a preset scope (`/search?scope=sessions`, `/search?scope=places`, D-351); the opener first records its own location, query included, in `ViewMemory.search_base`. Results push details with `drill_href()` (`/search/session/42`), and our `page.on_view_pop` sends Back to `parent_of()`: from a result to the results, from search to `search_base` (§5.3). Query and scope live in `ViewMemory`. S4 confirmed search → result → detail → Back → Back to the results with the query kept (D-141). Each opening starts an empty search: the opener clears `search_query`. The field updates per keystroke; the search runs after a 250 ms pause (an effect each keystroke restarts), at once on the action key, a scope chip or Clear (D-193). The result list renders each type's first rows (`core.search.first_results()`: 50 sessions, 20 speakers, every place) and a "Show all" row that renders the rest on request, so a one-letter query that finds most of the feed renders about as fast as a narrow one (D-218). On return Flutter gives the search field its focus back only when it had it as the result opened, so the first Android Back then closes the keyboard; D-193 keeps that.
 
 ### 5.5 Scaffold, tabs and Back (D-15..D-18)
 
@@ -586,7 +586,8 @@ class ViewMemory:
     search_query: str = ""
     search_scope: str = "all"
     search_base: str = "/now"            # where search was opened from; Back returns there (D-19)
-    map_tab: str = "rooms"
+    map_tab: str = "rooms"               # the Map's pane, a PANES slug; ?tab= seeds it (#391)
+    map_offsets: dict[str, float] = field(default_factory=dict)  # each Map pane's scroll end, by slug (#391)
     last_location: str = ""              # the top View's route; Start returns a new session there (D-143)
     room_highlights: dict[str, str] = field(default_factory=dict)  # room View path -> the session it lit up (D-194)
     plan_pins: dict[str, str] = field(default_factory=dict)  # floor viewer View path -> the pin it shows, pulsed once (#388)
