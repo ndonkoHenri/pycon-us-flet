@@ -29,6 +29,7 @@ from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.rows import LinkTile, SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
+from pycon_us.ui.session_rows import Changes, changes_of
 from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "search"
@@ -78,6 +79,7 @@ def ResultList(
     views: Mapping[str, SessionView],
     entries: Mapping[str, SpeakerEntry],
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     state: ft.Control | None,
@@ -108,6 +110,7 @@ def ResultList(
         views: Every session's row view, by id, built once per feed version.
         entries: Every directory speaker's entry, by id, built once per feed version.
         saved: ``Favorites.ids``.
+        changes: Every session's recent changes (``use_recent_changes()``).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         state: What shows instead of results (the hint, a miss, no data), or None.
@@ -152,6 +155,7 @@ def ResultList(
                 group,
                 views,
                 saved & {s.id for s in group.sessions},
+                changes_of(changes, (s.id for s in group.sessions)),
                 on_toggle,
                 tokens,
                 screen=SCREEN,

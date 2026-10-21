@@ -70,7 +70,7 @@ from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
@@ -129,6 +129,7 @@ def Schedule() -> ft.View:
     ids = tuple(data.sessions) if data else ()
     views = use_session_views(conference, ids, use_24h=use_24h)
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
+    changes = use_recent_changes()
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
     keeper.lay_out((conference.version, excluded), _keys(slots, current, place))
@@ -327,6 +328,7 @@ def Schedule() -> ft.View:
                 slots[day],
                 by_id,
                 favorites.ids & day_ids[day],  # only this day's (D-153)
+                changes_of(changes, day_ids[day]),  # and its changes (D-315)
                 on_toggle,
                 tokens,
                 use_24h=use_24h,

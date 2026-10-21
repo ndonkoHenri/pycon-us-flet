@@ -34,7 +34,7 @@ from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin
 
@@ -81,6 +81,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         of_speaker=speaker.name if speaker else None,
     )
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
+    changes = use_recent_changes()
 
     @report_errors
     async def refresh() -> None:
@@ -133,6 +134,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
             day,
             views,
             favorites.ids & {s.id for s in day.sessions},
+            changes_of(changes, (s.id for s in day.sessions)),
             on_toggle,
             tokens,
             screen=SCREEN,

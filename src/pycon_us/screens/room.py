@@ -45,7 +45,7 @@ from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.session_rows import use_recent_changes, use_session_views
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
@@ -132,6 +132,7 @@ def RoomDetail(room_slug: str) -> ft.View:
         use_24h=use_24h,
         in_room=room_slug,
     )
+    changes = use_recent_changes()
     target = highlight_of(query, room)
     # Decided once, when the View mounts: a View rebuilt where it already lit the row
     # up (a new session, D-143) leaves the list where it is (D-18).
@@ -206,6 +207,7 @@ def RoomDetail(room_slug: str) -> ft.View:
             group,
             info,
             favorites=favorites.ids,
+            changes=changes,
             on_toggle=on_toggle,
             tokens=tokens,
             use_24h=use_24h,

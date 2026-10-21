@@ -33,7 +33,14 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
+from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
+    NoticeRow,
+    SessionRow,
+    changes_of,
+    is_notice,
+)
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.time_gutter import slot_layout
 from pycon_us.ui.widths import LIST, sides, use_margin
@@ -115,6 +122,7 @@ def DayList(
     slots: tuple[Slot, ...],
     views: Mapping[str, SessionView],
     favorites: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -132,8 +140,8 @@ def DayList(
     """Return one day's page: its slots, or the reason it has none (D-31, ux.md §4.6).
 
     A memoised component keyed by the day (D-153): with stable props it re-renders only
-    when its slots, its own favourites, the clock format, the slots' layout or the
-    tokens change.
+    when its slots, its own favourites or changes, the clock format, the slots' layout
+    or the tokens change.
 
     Args:
         day: The conference-local date.
@@ -141,6 +149,7 @@ def DayList(
             while the feed and the filter stay the same (D-178).
         views: Every session's row view by id, built once per feed version.
         favorites: The saved ids among this day's sessions only.
+        changes: The recent changes of this day's sessions only (``changes_of()``).
         on_toggle: The screen's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
@@ -161,6 +170,7 @@ def DayList(
         slots,
         views,
         favorites,
+        changes,
         on_toggle,
         tokens,
         use_24h=use_24h,
@@ -184,6 +194,7 @@ def _DayList(
     slots: tuple[Slot, ...],
     views: Mapping[str, SessionView],
     favorites: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -244,6 +255,7 @@ def _DayList(
                 slot,
                 views,
                 favorites & {s.id for s in slot.sessions},
+                changes_of(changes, (s.id for s in slot.sessions)),
                 on_toggle,
                 tokens,
                 label=time_label(slot.start, zone, use_24h=use_24h),
@@ -274,6 +286,7 @@ def SlotItem(
     slot: Slot,
     views: Mapping[str, SessionView],
     favorites: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -294,6 +307,7 @@ def SlotItem(
         slot: The slot, with its sessions in schedule order.
         views: Every session's row view by id.
         favorites: The saved ids among this slot's sessions only.
+        changes: The recent changes of this slot's sessions only.
         on_toggle: The screen's one star handler.
         tokens: The scheme's tokens.
         label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
@@ -306,6 +320,7 @@ def SlotItem(
         slot,
         views,
         favorites,
+        changes,
         on_toggle,
         tokens,
         label=label,
@@ -323,6 +338,7 @@ def _SlotItem(
     slot: Slot,
     views: Mapping[str, SessionView],
     favorites: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -343,11 +359,23 @@ def _SlotItem(
     for session in slot.sessions:
         view = views[session.id]
         if is_notice(session, info):
-            rows.append(NoticeRow(view, tokens, screen=SCREEN))
+            rows.append(
+                NoticeRow(
+                    view,
+                    tokens,
+                    screen=SCREEN,
+                    changed=changes.get(session.id, NO_CHANGES),
+                )
+            )
         else:
             rows.append(
                 SessionRow(
-                    view, session.id in favorites, on_toggle, tokens, screen=SCREEN
+                    view,
+                    session.id in favorites,
+                    on_toggle,
+                    tokens,
+                    screen=SCREEN,
+                    changed=changes.get(session.id, NO_CHANGES),
                 )
             )
     # The jump's target: a ScrollKey, not a plain key, which scroll_to never sees, on
