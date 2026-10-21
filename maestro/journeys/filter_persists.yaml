@@ -1,0 +1,103 @@
+# P1 exit criterion 1: filters stay visible and persist (D-20, D-195).
+#
+# Hide the AI track through the filter sheet: the Schedule says what it hides above the
+# list, and the 2:00 PM slot loses its AI talk (session 138) but keeps The Bakery
+# (session 30). After the app is closed and opened again, the Schedule still hides AI
+# and still says so, and the sheet still has AI off.
+appId: io.github.ndonkohenri.pyconus
+name: A hidden track stays visible on the Schedule and survives a relaunch
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.session.138
+    timeout: 15000
+- assertVisible:
+    id: schedule.filter_summary
+    text: "Hidden: Open space"
+
+# Hide AI.
+- tapOn:
+    id: schedule.filter
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.ai
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: schedule.filter.ai
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.ai
+      selected: false
+    timeout: 15000
+- tapOn:
+    id: schedule.filter.show
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.filter.show
+    timeout: 15000
+
+# The Schedule says what it hides, and the filter button says it changed.
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter_summary
+      text: "Hidden: AI, Open space"
+    timeout: 15000
+# Android reads the button "Changed, Filter sessions"; iOS gives "Changed" as its value.
+- assertVisible:
+    id: schedule.filter
+    text: "Changed(, Filter sessions)?"
+# On main the rows shift once on a filter change (#333), so the 2:00 PM slot may sit
+# above the view. Jump to now puts the slot's top at the list's top: The Bakery is
+# there, and the AI talk, the slot's first row before, is gone.
+- runFlow:
+    when:
+      visible:
+        id: schedule.jump_now
+    commands:
+      - tapOn:
+          id: schedule.jump_now
+- extendedWaitUntil:
+    visible:
+      id: schedule.session.30
+    timeout: 15000
+- assertNotVisible:
+    id: schedule.session.138
+
+# Close the app and open it again: the Schedule opens on the now slot (D-18), still
+# without the AI talk, still saying so.
+- runFlow: ../subflows/relaunch.yaml
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.session.30
+    timeout: 15000
+- assertNotVisible:
+    id: schedule.session.138
+- assertVisible:
+    id: schedule.filter_summary
+    text: "Hidden: AI, Open space"
+
+# The sheet still has AI off.
+- tapOn:
+    id: schedule.filter
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.ai
+      selected: false
+    timeout: 15000
+- assertVisible:
+    id: schedule.filter.open-space
+    selected: false
+- assertVisible:
+    id: schedule.filter.talk
+    selected: true
