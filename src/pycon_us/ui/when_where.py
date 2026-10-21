@@ -7,6 +7,10 @@ clock differs (D-35), then one room tile that pushes room detail and, folded int
 ``FoldTile`` (D-354), the other rooms of a multi-room session (SESS-02). Each tile reads
 as one phrase (D-33).
 
+A session in one room with a pin shows that room's ``LocationCard`` under the card
+(D-349): the room tile says what else is on there (room detail), the card where it is
+(the floor viewer); one node with both destinations could not be one phrase.
+
 ``StatusLine`` is a leaf component with its own minute tick, as ``StatusStrip`` is
 (D-175): the time passing re-renders the line, not the screen around it.
 """
@@ -17,7 +21,7 @@ from urllib.parse import quote
 import flet as ft
 
 from pycon_us import clock
-from pycon_us.config import ConferenceInfo
+from pycon_us.config import ConferenceInfo, YearData
 from pycon_us.core.models import Room, Session
 from pycon_us.core.row_views import Places, session_view
 from pycon_us.core.timefmt import day_heading, on_screen, time_status, zone_note
@@ -27,6 +31,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
+from pycon_us.ui.location_card import room_card
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import TICK_SECONDS, current_minute, stop_ticks
@@ -49,13 +54,13 @@ def room_href(view_path: str, room: Room, session_id: str) -> str:
 def WhenAndWhere(
     session: Session,
     where: Places,
-    info: ConferenceInfo,
+    year: YearData,
     *,
     view_path: str,
     use_24h: bool,
     screen: str,
 ) -> ft.Control:
-    """Return the "When and where" card: the time tile, then the room tiles.
+    """Return the "When and where" card, then the room's ``LocationCard`` if it has one.
 
     An outlined card (ux.md §5.5) of 56 dp+ list tiles, so each is a 48 dp target
     (D-33) that grows with the text. A place the feed has no room for is shown but
@@ -64,12 +69,12 @@ def WhenAndWhere(
     Args:
         session: The session.
         where: Its places, from ``row_views.places()``.
-        info: The year's facts: the zone and its name.
+        year: The year's data: the zone and its name, and the room's pin.
         view_path: The View's own path, so a room opens on top of it (D-17).
         use_24h: The device's 24-hour setting.
         screen: The screen's name in the identifiers, ``<screen>.when`` and so on.
     """
-    tiles = [_time_tile(session, info, use_24h, screen)]
+    tiles = [_time_tile(session, year.conference, use_24h, screen)]
     if where.room is not None:
         tiles.append(
             LinkTile(
@@ -83,12 +88,30 @@ def WhenAndWhere(
         tiles.append(_place_tile(where.label, screen))
     if where.others:
         tiles.append(OtherRooms(session, where, view_path, screen))
-    return ft.Card(
+    card = ft.Card(
         variant=ft.CardVariant.OUTLINED,
         margin=ft.Margin.symmetric(horizontal=16),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,  # the tiles' ink stays inside
         content=ft.Column(tiles, spacing=0),
     )
+    # One room only: a multi-room session's rooms are its tiles (D-349).
+    located = (
+        room_card(year.map, where.room.name, identifier=f"{screen}.location")
+        if where.room is not None and not where.others
+        else None
+    )
+    section = (
+        card
+        if located is None
+        else ft.Column(
+            [card, ft.Container(located, padding=ft.Padding.symmetric(horizontal=16))],
+            spacing=12,  # one section: closer than the 24 dp between sections
+        )
+    )
+    # Keyed, so the removed note a refresh puts above it (D-186) leaves it mounted
+    # instead of shifting it: the location card's pulse never restarts (D-349).
+    section.key = f"when.{session.id}"
+    return section
 
 
 def _time_tile(
