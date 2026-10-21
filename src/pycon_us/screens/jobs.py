@@ -146,6 +146,7 @@ def Jobs() -> ft.View:
                 on_change=field.changed,
                 on_clear=clear,
                 ref=field.ref,
+                focusable=field.focusable,
                 hint=FILTER_HINT,
                 label=FILTER_HINT,
                 clear_tooltip=CLEAR_FILTER,
