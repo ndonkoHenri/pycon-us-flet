@@ -7,7 +7,8 @@ Run it before a build for testers (``docs/development.md`` §8.3)::
 It fetches the public feed of ``config.YEAR`` from the year's ``feed_url`` and checks it with
 ``feed.process``, the app's own parser. A feed that does not parse, that has a record the
 parser skips, whose days fall outside the conference dates, or that lacks a session the
-year's keynote data names, or has it on a track no keynote has (D-217), is refused, and nothing changes: the same bar as the
+year's keynote data names, or has it on a track no keynote has (D-217), or lacks a
+sponsor the year's sponsor credits name (D-337), is refused, and nothing changes: the same bar as the
 tests of the committed snapshot (D-135). Otherwise it writes the
 bytes unchanged to ``data/<year>/conference.json``, records the time in ``conference.toml``'s
 ``snapshot_captured_at``, and prints how the counts changed.
@@ -37,6 +38,7 @@ from pycon_us.config import (
 from pycon_us.core.feed import FeedError, process
 from pycon_us.core.models import ConferenceData
 from pycon_us.services.storage import write_atomic
+from pycon_us.year_info import check_credit_sponsors
 from pycon_us.year_keynotes import check_keynote_sessions
 from pycon_us.year_tracks import KEYNOTE_TRACKS
 
@@ -72,7 +74,7 @@ def update_snapshot(
     Raises:
         SnapshotError: The feed could not be fetched, does not parse, has records the
             parser skips, has days outside the conference dates, or lacks a keynote's
-            session or has it on another track; or ``conference.toml`` could not be updated. Nothing was written.
+            session or has it on another track, or a credited sponsor; or ``conference.toml`` could not be updated. Nothing was written.
         YearDataError: The year's data files are invalid.
         OSError: Writing a file failed; that file is unchanged (``write_atomic``).
     """
@@ -90,6 +92,9 @@ def update_snapshot(
             new.sessions,
             KEYNOTE_TRACKS,
             f"{year}/content.toml",
+        )
+        check_credit_sponsors(
+            year_data.content.sponsor_credits, new, f"{year}/content.toml"
         )
     except YearDataError as error:
         raise SnapshotError(f"the year data does not fit the feed: {error}") from None

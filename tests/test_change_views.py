@@ -19,6 +19,7 @@ from pycon_us.core.change_views import (
     ChangeView,
     change_view,
     changed_phrase,
+    detail_badge,
     detected_label,
     item_phrase,
     now_card_text,
@@ -188,6 +189,15 @@ def test_item_phrase_says_a_saved_session_is_in_my_schedule() -> None:
     assert item_phrase(v, saved=False) == v.sentence
 
 
+def test_item_phrase_starts_with_new_while_unseen() -> None:
+    """An unseen item's phrase starts "New: ", as its dot shows (ux.md §6.4)."""
+    v = view(change(ChangeKind.ROOM, listing(), listing(location="Room 103ABC")))
+    assert item_phrase(v, saved=True, unseen=True) == (
+        "New: Python for Humans: room changed from Room 104A to Room 103ABC."
+        " In My schedule."
+    )
+
+
 @pytest.mark.parametrize(
     ("kinds", "phrase"),
     [
@@ -355,3 +365,30 @@ def test_a_real_cross_day_retime() -> None:
         f"{start.astimezone(LA):%a, %b} {start.astimezone(LA).day}, "
     )
     assert " to " in v.sentence and "–" not in v.sentence
+
+
+# ------------------------------------------------------------------ detail badges
+
+
+def test_detail_badges_say_the_old_value_of_each_kind() -> None:
+    """ux.md §5.5: "Moved from …", "Was <day>, <start>" and "Renamed from “…”"."""
+    old = listing(location="Room 102A")
+    moved = change(ChangeKind.ROOM, old, listing(location="Room 103ABC"))
+    retimed = change(ChangeKind.TIME, listing(start=at(15, 10, 30)), listing())
+    renamed = change(ChangeKind.TITLE, listing(title="Old"), listing())
+    assert detail_badge(moved, LA, use_24h=False) == ("Moved from Room 102A",) * 2
+    assert detail_badge(retimed, LA, use_24h=False) == (
+        "Was Fri, May 15, 10:30\N{NO-BREAK SPACE}AM",  # AM keeps to its digits
+        "Was Friday, May 15, 10:30 AM",  # said whole
+    )
+    assert detail_badge(renamed, LA, use_24h=False) == ("Renamed from “Old”",) * 2
+
+
+def test_detail_badge_times_follow_the_device_clock_and_an_empty_room_is_named() -> (
+    None
+):
+    """24-hour form when the device asks; a session that had no room "moved from no room"."""
+    retimed = change(ChangeKind.TIME, listing(start=at(16, 14, 5)), listing())
+    moved = change(ChangeKind.ROOM, listing(location=""), listing())
+    assert detail_badge(retimed, LA, use_24h=True)[0] == "Was Sat, May 16, 14:05"
+    assert detail_badge(moved, LA, use_24h=False)[0] == "Moved from no room"

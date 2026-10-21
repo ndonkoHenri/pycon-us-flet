@@ -218,6 +218,28 @@ def test_a_feed_without_a_keynote_s_session_is_refused_and_nothing_changes(
     assert files(data_dir) == before
 
 
+def test_a_feed_without_a_credited_sponsor_is_refused_and_nothing_changes(
+    data_dir: Path,
+) -> None:
+    """D-337: a credit's sponsor must be in the feed, as a keynote's session must."""
+
+    def drop_temporal(doc: dict[str, Any]) -> None:
+        levels = doc["conference"]["sponsors"]
+        for level, sponsors in levels.items():
+            levels[level] = [s for s in sponsors if s["name"] != "Temporal"]
+
+    before = files(data_dir)
+    with pytest.raises(SnapshotError) as error:
+        update_snapshot(
+            2026, data_dir, transport=serving(changed(drop_temporal)), now=NOW
+        )
+    assert str(error.value) == (
+        "the year data does not fit the feed: 2026/content.toml: "
+        "sponsor_credits.wifi.slug: 'temporal' is not a sponsor of the year's feed"
+    )
+    assert files(data_dir) == before
+
+
 def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
     data_dir: Path,
 ) -> None:

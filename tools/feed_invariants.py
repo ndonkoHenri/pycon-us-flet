@@ -313,8 +313,12 @@ def speakers_and_sessions_link_both_ways(feed: ProcessedFeed) -> list[str]:
 
 
 def rooms_and_sessions_agree(feed: ProcessedFeed) -> list[str]:
-    """DATA-16, ROOM-06: one room per slug, naturally sorted, listing who names it."""
+    """DATA-16, ROOM-06: one room per slug, naturally sorted, listing who names it.
+
+    Only a sprint-only room seeded from ``map.toml`` lists no session (MAP-08).
+    """
     data = feed.data
+    sprint_rooms = set(feed.year.feed_settings.sprint_rooms)
     problems = []
     names = [room.name for room in data.rooms.values()]
     if names != sorted(names, key=room_sort_key):
@@ -322,7 +326,7 @@ def rooms_and_sessions_agree(feed: ProcessedFeed) -> list[str]:
     for slug, room in data.rooms.items():
         if slug != slugify_room(room.name):
             problems.append(f"room {room.name!r} is filed under {slug!r}")
-        if not room.session_ids:
+        if not room.session_ids and room.name not in sprint_rooms:
             problems.append(f"room {slug} has no session")
         if len(room.session_ids) != len(set(room.session_ids)):
             problems.append(f"room {slug} lists a session twice")

@@ -8,7 +8,8 @@ removed session gets no Add to calendar (D-186). An open space's page is its ent
 the site's open-spaces page, which its detail shows as a link in the page instead
 (SESS-11, D-206).
 
-The page's heading is the title under the badges, so the app bar's title stays empty.
+The page's heading is the title under the badges, so the app bar's title stays empty;
+for 24 h after a change, a badge per kind says the old value ("Moved from Room 102A").
 Then the "When and where" card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
@@ -28,7 +29,11 @@ from typing import cast
 
 import flet as ft
 
+from pycon_us import clock
+from pycon_us.change_log import use_change_log
 from pycon_us.config import ConferenceInfo
+from pycon_us.core.change_views import detail_badge
+from pycon_us.core.diff import Change
 from pycon_us.core.models import Session, Speaker
 from pycon_us.core.row_views import people, places
 from pycon_us.core.timeline import posters
@@ -50,13 +55,13 @@ from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.theme_hc import hc_border
-from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
+from pycon_us.ui.badges import ChangedBadge, TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import LinkTile, SpeakerTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
 from pycon_us.ui.semantics import semantics_key
-from pycon_us.ui.session_rows import is_notice
+from pycon_us.ui.session_rows import is_notice, use_recent_changes
 from pycon_us.ui.when_where import WhenAndWhere
 from pycon_us.ui.widths import READING, sides, use_margin
 from pycon_us.year_keynotes import keynote_of
@@ -97,6 +102,9 @@ def SessionDetail(session_id: str) -> ft.View:
     svc = use_services()
     tokens = use_tokens()
     prefs = use_prefs()
+    marks = use_recent_changes()  # re-renders on a batch and when a mark ends (D-315)
+    log = use_change_log()
+    use_24h = bool(page.media and page.media.always_use_24_hour_format)
     # The session as this View last showed it: a refresh that drops it keeps it here.
     shown = ft.use_ref(cast(Session | None, None))
     info = svc.year.conference
@@ -152,14 +160,29 @@ def SessionDetail(session_id: str) -> ft.View:
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
         controls.append(_removed_note(tokens.high_contrast))
-    controls.append(_header(session, info, tokens))
+    # What changed in the last 24 h, with the old values; none once it is removed.
+    changed = (
+        log.recent_of(session.id, clock.now())
+        if current is not None and session.id in marks
+        else ()
+    )
+    controls.append(
+        _header(
+            session,
+            info,
+            tokens,
+            changed,
+            use_24h=use_24h,
+            large_text=prefs.time_above,
+        )
+    )
     controls.append(
         WhenAndWhere(
             session,
             places(session, data.rooms if data else {}),
             info,
             view_path=view_path,
-            use_24h=bool(page.media and page.media.always_use_24_hour_format),
+            use_24h=use_24h,
             screen=SCREEN,
         )
     )
@@ -198,15 +221,26 @@ def SessionDetail(session_id: str) -> ft.View:
     return AppScaffold(title="", body=body, actions=actions)
 
 
-def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Control:
-    """The badges, then the title: the page's heading, selectable to copy (D-26)."""
-    title = ft.Semantics(
-        header=True,
-        heading_level=1,
+def _header(
+    session: Session,
+    info: ConferenceInfo,
+    tokens: Tokens,
+    changed: Sequence[Change],
+    *,
+    use_24h: bool,
+    large_text: bool,
+) -> ft.Control:
+    """The badges, then the title: the page's heading, selectable to copy (D-26).
+
+    A change of the last 24 h replaces the rows' Changed with a badge per kind that
+    says the old value, "Moved from Room 102A" (ux.md §5.5). At large text
+    (``Prefs.time_above``) the title steps down (``PageTitle``, D-328).
+    """
+    title = PageTitle(
+        session.name,
         identifier=f"{SCREEN}.title",
-        content=ft.Text(
-            session.name, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, selectable=True
-        ),
+        large_text=large_text,
+        selectable=True,
     )
     # A badge that repeats the title (a break's "Break") says nothing more.
     badges = [
@@ -214,6 +248,10 @@ def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Contro
         for label, colors in badge_specs(session, info, tokens)
         if label.casefold() != session.name.casefold()
     ]
+    for change in changed:
+        text, said = detail_badge(change, info.zone, use_24h=use_24h)
+        identifier = f"{SCREEN}.changed.{change.kind}"
+        badges.append(ChangedBadge(text, said, tokens.changed, identifier))
     column: list[ft.Control] = [badge_row(badges), title] if badges else [title]
     return ft.Container(
         ft.Column(column, spacing=8), padding=ft.Padding.symmetric(horizontal=16)
