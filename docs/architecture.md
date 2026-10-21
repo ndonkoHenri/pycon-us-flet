@@ -796,11 +796,17 @@ first_day = 2026-05-13
 last_talk_day = 2026-05-17
 last_day = 2026-05-19
 venue = "Long Beach Convention Center"
-city = "Long Beach, CA"             # later: address (P2)
+city = "Long Beach, CA"
+address = "300 E Ocean Blvd, Long Beach, CA 90802"   # optional: Venue & hours shows and copies it (D-313)
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
 presentation_url = "https://us.pycon.org/2026/schedule/presentation/{id}/"   # P1 (NEW-06)
 snapshot_captured_at = 2026-10-11T09:00:00-07:00     # written by tools/update_snapshot.py; only the active year (D-135)
+
+[directions]                # optional: where Venue & hours' Directions opens a maps app (D-313)
+label = "Long Beach Convention Center (Pine Ave Entrance)"
+latitude = 33.764444        # floats, checked to lie on the globe
+longitude = -118.191722
 
 [[tracks]]
 key = "Ai"                  # as produced by feed processing: the kind, first letter upper-cased

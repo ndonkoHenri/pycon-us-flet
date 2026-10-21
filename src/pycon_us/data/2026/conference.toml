@@ -12,6 +12,12 @@ last_talk_day = 2026-05-17          # the last day of the main conference
 last_day = 2026-05-19               # the last sprint day
 venue = "Long Beach Convention Center"
 city = "Long Beach, CA"
+# The venue's address and the point Directions opens a maps app at (MAP-11, D-313).
+# Optional. The address is the feed's `venues-hours` block's; the point, [directions]
+# below, is the Pine Ave entrance Ionic sent attendees to, which OpenStreetMap puts at
+# the convention center's west end, 300 E Ocean Blvd (nominatim.openstreetmap.org
+# reverse lookup, checked 2026-10-21).
+address = "300 E Ocean Blvd, Long Beach, CA 90802"
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
 # Where attendees check their registration and add tutorials and summits to it; session
@@ -26,6 +32,11 @@ sprint_submit_url = "https://us.pycon.org/2026/sprints/project/submit/"
 # When the bundled snapshot, conference.json, was fetched (D-38, NEW-03). Written by
 # tools/update_snapshot.py; the status strip (P1) shows the data's age from it.
 snapshot_captured_at = 2026-10-11T17:56:49-07:00
+
+[directions]
+label = "Long Beach Convention Center (Pine Ave Entrance)"
+latitude = 33.764444
+longitude = -118.191722
 
 # The track registry (DATA-14, DATA-28). `key` is the track as feed processing names it:
 # the feed's kind with its first letter upper-cased (`sponsor-workshop` becomes
