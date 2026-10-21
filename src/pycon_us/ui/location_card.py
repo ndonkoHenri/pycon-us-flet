@@ -126,7 +126,12 @@ def pin_dot(
 
 
 def LocationCard(
-    plan: Plan, pin: Pin | None, *, identifier: str, seen: set[str] | None = None
+    plan: Plan,
+    pin: Pin | None,
+    *,
+    identifier: str,
+    seen: set[str] | None = None,
+    active: bool = True,
 ) -> ft.Control:
     """Return the card of a place on a plan, or of the plan alone, a memoised component.
 
@@ -142,14 +147,28 @@ def LocationCard(
             the card again as it scrolls or changes tab (room detail's day lists): a
             card whose pin is in it stays still, and a card that pulses adds its pin.
             None: the card pulses each time it mounts.
+        active: Whether the card shows: a card on a hidden tab waits, without
+            claiming its pin in ``seen``, and pulses when it first shows (#602).
     """
     key = f"{plan.id}:{pin.key if pin else ''}"
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
-    return _LocationCard(plan, pin, identifier=identifier, seen=seen, key=key)  # pyright: ignore[reportCallIssue]
+    return _LocationCard(
+        plan,
+        pin,
+        identifier=identifier,
+        seen=seen,
+        active=active,
+        key=key,  # pyright: ignore[reportCallIssue]
+    )  # pyright: ignore[reportCallIssue]
 
 
 def room_card(
-    data: MapData, room_name: str, *, identifier: str, seen: set[str] | None = None
+    data: MapData,
+    room_name: str,
+    *,
+    identifier: str,
+    seen: set[str] | None = None,
+    active: bool = True,
 ) -> ft.Control | None:
     """Return a room's ``LocationCard``, or None for a room without a pin.
 
@@ -158,12 +177,13 @@ def room_card(
         room_name: The room's name as the feed writes it, which finds its pin.
         identifier: For UI flows, ``<screen>.location``.
         seen: As ``LocationCard``'s.
+        active: As ``LocationCard``'s.
     """
     pin = data.room_pin(room_name)
     plan = data.plan(pin.plan) if pin else None
     if pin is None or plan is None:
         return None
-    return LocationCard(plan, pin, identifier=identifier, seen=seen)
+    return LocationCard(plan, pin, identifier=identifier, seen=seen, active=active)
 
 
 def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
@@ -187,7 +207,7 @@ def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
 @ft.memo
 @ft.component
 def _LocationCard(
-    plan: Plan, pin: Pin | None, *, identifier: str, seen: set[str] | None
+    plan: Plan, pin: Pin | None, *, identifier: str, seen: set[str] | None, active: bool
 ) -> ft.Control:
     """The body of ``LocationCard``; it runs only when its plan or pin changes."""
     page = ft.context.page
@@ -199,9 +219,10 @@ def _LocationCard(
 
     @report_errors
     async def pulse_twice() -> None:
-        # Once, when the card mounts: Back from the viewer finds it mounted, so a
-        # return never pulses (D-18); under reduced motion it stays still (D-173).
-        if pin is None:
+        # Once, when the card first shows: Back from the viewer finds it mounted, so
+        # a return never pulses (D-18); under reduced motion it stays still (D-173).
+        # A card on a hidden tab waits for its tab, its pin unclaimed (#602).
+        if pin is None or not active:
             return
         if seen is not None:
             # A card whose pin pulsed on this View already (another day's list, a
@@ -214,14 +235,18 @@ def _LocationCard(
             return
         # A round trip: Flutter has drawn the pin before it pulses (D-156).
         await svc.storage.get(THEME)
-        for _ in range(PULSES):
-            set_ring(True)
-            await asyncio.sleep(ring_ms / 1000)
+        try:
+            for _ in range(PULSES):
+                set_ring(True)
+                await asyncio.sleep(ring_ms / 1000)
+                set_ring(False)
+                await asyncio.sleep(ring_ms / 1000)
+        finally:  # a tab left mid-pulse cancels it: the ring goes back in
             set_ring(False)
-            await asyncio.sleep(ring_ms / 1000)
 
-    # The cleanup's presence makes Flet cancel a pulse still running on unmount (F2).
-    ft.use_effect(pulse_twice, [], cleanup=lambda: None)
+    # Runs again when the card's tab shows or hides. The cleanup's presence makes
+    # Flet cancel a pulse still running then, or on unmount (F2).
+    ft.use_effect(pulse_twice, [active], cleanup=lambda: None)
 
     @report_errors
     def go() -> None:
