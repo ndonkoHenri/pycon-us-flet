@@ -239,9 +239,12 @@ def RoomDetail(room_slug: str) -> ft.View:
             margin=margin,
             # The card and today's "Now" head the lists, so they scroll away with
             # them and at the largest text the slots keep the screen (D-194, D-346).
-            head=list_head(located(), NowInRoom(room, use_24h=use_24h))
+            # Only the shown day's card may pulse: the others mount hidden (#602).
+            head=list_head(
+                located(active=day == shown), NowInRoom(room, use_24h=use_24h)
+            )
             if day == current
-            else list_head(located()),
+            else list_head(located(active=day == shown)),
             # Only the list that scrolls to the row needs every row built (D-154).
             list_ref=list_ref if reveal and day == highlighted else None,
             on_scroll=scrolled if reveal and day == highlighted else None,
@@ -276,16 +279,22 @@ def RoomDetail(room_slug: str) -> ft.View:
     )
 
 
-def location(data: MapData, room_name: str, pulsed: set[str]) -> list[ft.Control]:
+def location(
+    data: MapData, room_name: str, pulsed: set[str], *, active: bool = True
+) -> list[ft.Control]:
     """Return the room's ``LocationCard``, or nothing for a room without a pin.
 
     Args:
         data: The year's ``map.toml``.
         room_name: The room's name as the feed writes it, which finds its pin.
         pulsed: The View's pins already pulsed: each day's list builds the card, and
-            its pin pulses on the first only.
+            its pin pulses on the first shown only.
+        active: Whether the card's list is the shown day's: a hidden day's card
+            neither pulses nor claims the pin (#602).
     """
-    card = room_card(data, room_name, identifier=f"{SCREEN}.location", seen=pulsed)
+    card = room_card(
+        data, room_name, identifier=f"{SCREEN}.location", seen=pulsed, active=active
+    )
     if card is None:
         return []
     return [ft.Container(card, padding=ft.Padding.only(left=16, top=12, right=16))]
