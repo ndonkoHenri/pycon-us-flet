@@ -17,7 +17,7 @@ from math import ceil
 from zlib import crc32
 
 from pycon_us.core.models import ConferenceData, Session
-from pycon_us.core.timefmt import time_label
+from pycon_us.core.timefmt import instant, time_label
 from pycon_us.locations import drill_href
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.year_moments import EventReminder
@@ -113,15 +113,19 @@ def due_session(
         for session_id in favorites
         if session_id not in skipped
         and (session := data.sessions.get(session_id)) is not None
-        and session.display_start - BANNER_LEAD <= now < session.display_start
+        and instant(session.display_start) - BANNER_LEAD
+        <= instant(now)
+        < instant(session.display_start)
     ]
     if not due:
         return None
-    session = min(due, key=lambda s: (s.display_start, s.id))
+    session = min(due, key=lambda s: (instant(s.display_start), s.id))
     return DueSession(
         id=session.id,
         name=session.name,
-        minutes=ceil((session.display_start - now) / timedelta(minutes=1)),
+        minutes=ceil(
+            (instant(session.display_start) - instant(now)) / timedelta(minutes=1)
+        ),
         location=session.display_location,
         route=drill_href(SESSION_VIEW, "session", session.id),
     )
@@ -178,7 +182,11 @@ def plan(
     Returns:
         The reminders, sorted by time and then id.
     """
-    wanted = [m for m in moments if settings.wants(m.category) and m.at > now]
+    wanted = [
+        m
+        for m in moments
+        if settings.wants(m.category) and instant(m.at) > instant(now)
+    ]
     saved = _session_reminders(data, favorites, settings, now, zone, use_24h=use_24h)
     moment_at = {m.session_id: m.at for m in wanted if m.session_id}
     saved_at = {session_id: r.at for session_id, r in saved.items()}
@@ -213,11 +221,12 @@ def _session_reminders(
         session = data.sessions.get(session_id)
         # The shown start, which the Job Fair's is earlier than its slot's (DATA-11):
         # "10 min before" is before the time the user saw.
-        if session is None or session.display_start - lead <= now:
+        if session is None or instant(session.display_start) - lead <= instant(now):
             continue
         reminders[session_id] = Reminder(
             id=reminder_id(session_id),
-            at=session.display_start - lead,
+            # In UTC: a wall-clock subtraction is an hour off across a change (#535).
+            at=instant(session.display_start) - lead,
             title=session.name,
             body=_starts(session, zone, use_24h=use_24h),
             route=drill_href(SESSION_VIEW, "session", session_id),

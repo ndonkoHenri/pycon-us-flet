@@ -12,13 +12,13 @@ by id.
 from collections.abc import Callable, Mapping
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta, tzinfo
+from datetime import date, datetime, timedelta, tzinfo
 from enum import StrEnum
 from itertools import groupby
 from operator import attrgetter
 
 from pycon_us.core.models import ConferenceData, Day, Session
-from pycon_us.core.timefmt import today
+from pycon_us.core.timefmt import instant, today
 from pycon_us.core.timeline import Slot, day_slots, schedule_order
 
 NEXT_SESSION_WINDOW = timedelta(hours=3)
@@ -152,15 +152,16 @@ def now_next(data: ConferenceData, now: datetime) -> NowNext:
         ValueError: ``now`` is naive.
     """
     _require_aware(now)
+    now = instant(now)
     slots = [slot for day in data.days for slot in day_slots(data, day.date)]
     happening = tuple(
         session
         for slot in slots
-        if slot.start <= now
+        if instant(slot.start) <= now
         for session in slot.sessions
-        if now < session.end
+        if now < instant(session.end)
     )
-    up_next = next((slot for slot in slots if slot.start > now), None)
+    up_next = next((slot for slot in slots if instant(slot.start) > now), None)
     return NowNext(_phase(data, now), happening, up_next)
 
 
@@ -188,12 +189,13 @@ def next_for_me(
     """
     _require_aware(now)
     saved = sorted(_saved(data, favorites), key=_agenda_order)
-    upcoming = [s for s in saved if now < s.start <= now + NEXT_SESSION_WINDOW]
+    now = instant(now)
+    upcoming = [s for s in saved if now < instant(s.start) <= now + NEXT_SESSION_WINDOW]
     if upcoming:
         return upcoming[0]
-    ongoing = [s for s in saved if s.start <= now < s.end]
+    ongoing = [s for s in saved if instant(s.start) <= now < instant(s.end)]
     # ``max`` keeps the first of equal starts, so a tie goes to the agenda's order.
-    return max(ongoing, key=attrgetter("start")) if ongoing else None
+    return max(ongoing, key=lambda s: instant(s.start)) if ongoing else None
 
 
 def elapsed_percent(session: Session, now: datetime) -> int:
@@ -216,11 +218,7 @@ def elapsed_percent(session: Session, now: datetime) -> int:
         ValueError: ``now`` is naive.
     """
     _require_aware(now)
-    # In UTC: datetimes sharing a ZoneInfo compare and subtract by wall clock, ignoring
-    # ``fold``, which is wrong for a session across the end of summer time (#513).
-    now, start, end = (
-        moment.astimezone(UTC) for moment in (now, session.display_start, session.end)
-    )
+    now, start, end = (instant(m) for m in (now, session.display_start, session.end))
     if now >= end:
         return 100
     if now <= start:
@@ -291,8 +289,8 @@ def fold_ended(agenda: Agenda, now: datetime, zone: tzinfo) -> FoldedAgenda:
         if agenda_day.day > day:
             ahead.append(agenda_day)
         elif agenda_day.day == day:
-            ended = _slots_where(agenda_day, lambda session: session.end <= now)
-            to_come = _slots_where(agenda_day, lambda session: now < session.end)
+            ended = _slots_where(agenda_day, lambda s: instant(s.end) <= instant(now))
+            to_come = _slots_where(agenda_day, lambda s: instant(now) < instant(s.end))
             earlier_today = AgendaDay(day, ended) if ended else None
             if to_come:
                 ahead.append(AgendaDay(day, to_come))
@@ -301,7 +299,8 @@ def fold_ended(agenda: Agenda, now: datetime, zone: tzinfo) -> FoldedAgenda:
     overlaps = {
         session: live
         for session, others in agenda.overlaps.items()
-        if session in on_or_next and (live := tuple(o for o in others if now < o.end))
+        if session in on_or_next
+        and (live := tuple(o for o in others if instant(now) < instant(o.end)))
     }
     return FoldedAgenda(earlier_days, earlier_today, tuple(ahead), overlaps)
 
@@ -341,9 +340,10 @@ def _overlaps(saved: list[Session]) -> dict[Session, tuple[Session, ...]]:
     # The sessions that started before the current one and have not ended at its start.
     running: list[Session] = []
     for session in saved:
-        if session.end == session.start:
+        if instant(session.end) == instant(session.start):
             continue  # an instant overlaps nothing
-        running = [other for other in running if other.end > session.start]
+        start = instant(session.start)
+        running = [other for other in running if instant(other.end) > start]
         for other in running:
             if _same_visit(session, other):
                 continue
@@ -367,8 +367,9 @@ def _saved(data: ConferenceData, favorites: AbstractSet[str]) -> list[Session]:
 
 def _agenda_order(session: Session) -> tuple[datetime, tuple[object, ...]]:
     # The Schedule's order: by slot (``start``), then as the slot lists its rows. The
-    # slot comes first because the Job Fair shows 9:30 but sits in the 10:00 slot.
-    return session.start, schedule_order(session)
+    # slot comes first because the Job Fair shows 9:30 but sits in the 10:00 slot. By
+    # instant, so 1:10 AM PST comes after 1:40 AM PDT (#535).
+    return instant(session.start), schedule_order(session)
 
 
 def _require_aware(now: datetime) -> None:

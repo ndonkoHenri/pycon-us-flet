@@ -726,6 +726,7 @@ def start_fake_clock(at: datetime | None) -> None:
 
 | Function | Result |
 |---|---|
+| `instant(moment)` | the moment in UTC: every comparison or subtraction of session times goes through it, since two datetimes in one `ZoneInfo` compare by wall clock and ignore `fold`, which is wrong on the night summer time ends (#535) |
 | `local_date(moment, zone)`, `today(now, zone)` | the conference-local date: the day bucket, and the one "today" |
 | `time_label(moment, zone, use_24h=...)` | `9:25 AM`, or `09:25` when `page.media.always_use_24_hour_format` is set (F23) |
 | `time_range_label(start, end, zone, use_24h=...)` | `9:25–10:10 AM`, `11:30 AM–12:15 PM`, one time when start equals end |

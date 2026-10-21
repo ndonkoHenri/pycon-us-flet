@@ -17,6 +17,7 @@ from weakref import WeakKeyDictionary
 
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.slugs import room_sort_key
+from pycon_us.core.timefmt import instant
 
 
 @dataclass(frozen=True)
@@ -173,8 +174,9 @@ def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
     Returns:
         The now line's index and the slot that is on.
     """
-    line = sum(1 for slot in slots if slot.start <= now)  # slots come by start
-    if line and any(s.end > now for s in slots[line - 1].sessions):
+    now = instant(now)  # by instant across a daylight-saving change (D-43, #535)
+    line = sum(1 for slot in slots if instant(slot.start) <= now)  # slots come by start
+    if line and any(instant(s.end) > now for s in slots[line - 1].sessions):
         return NowPlace(line, slots[line - 1].key)
     return NowPlace(line, None)
 
