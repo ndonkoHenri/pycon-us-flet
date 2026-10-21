@@ -1,7 +1,7 @@
 """A session's badges (decisions §M): the pills that say its track and its flags.
 
 A badge is a text pill: a tonal fill per track in light and dark, or an outline for
-"Registration required" (D-25; ux.md §3.4); in high contrast every badge is outlined,
+"Registration required" and "Changed" (D-25, D-315; ux.md §3.4); in high contrast every badge is outlined,
 1.5 dp wide (THEME-06). Badges always carry text, so colour is never the only signal
 (D-33), and every name comes from ``ConferenceInfo.track_name()`` (DATA-28). The
 colours are the current scheme's ``Tokens`` (D-24); the builders take them as an
@@ -28,6 +28,11 @@ REGISTRATION = "Registration required"
 NEW_TRACK = "New track"
 """The badge of a track new this year (SCHED-21), shown beside the track's own badge
 on the Tracks hub and the track's page, outlined in ``Tokens.new_track`` (D-199)."""
+
+
+CHANGED = "Changed"
+"""The badge of a session whose time, room or title changed in the last 24 h (NEW-04),
+outlined in ``Tokens.changed`` (D-315); its row says what changed (``changed_phrase()``)."""
 
 
 def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
@@ -64,12 +69,14 @@ def badge_specs(
     tokens: Tokens,
     *,
     omit: frozenset[str] = frozenset(),
+    changed: bool = False,
 ) -> list[tuple[str, BadgeColors]]:
     """Return a session's badges as labels and colours, in the one order they show in.
 
     Its track, then En Español, then Registration required: Ionic's order and set
-    (SCHED-03), so a charla shows both "Charla" and "En Español". A row draws them
-    with ``TrackBadge`` and also says their labels (D-33).
+    (SCHED-03), so a charla shows both "Charla" and "En Español"; then Changed, a
+    status of the last 24 h rather than of the session (D-315). A row draws them with
+    ``TrackBadge`` and also says their labels (D-33).
 
     Args:
         session: The session.
@@ -77,6 +84,8 @@ def badge_specs(
         tokens: The current scheme's tokens.
         omit: Labels the page already shows, left out of every row: a track page's
             own badge, and "En Español" on the Charlas page (D-199).
+        changed: Whether its time, room or title changed in the last 24 h
+            (``ChangeLog.recent()``).
 
     Returns:
         The label and colours of each badge; none for a session without a track and
@@ -90,6 +99,8 @@ def badge_specs(
         specs.append((SPANISH, tokens.spanish))
     if session.pre_registered:
         specs.append((REGISTRATION, tokens.registration))
+    if changed:
+        specs.append((CHANGED, tokens.changed))
     return [spec for spec in specs if spec[0] not in omit]
 
 

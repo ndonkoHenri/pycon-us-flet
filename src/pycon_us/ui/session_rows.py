@@ -4,17 +4,23 @@
 a list owner builds each session's ``SessionView`` once per feed version
 (``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
 tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
-star is a separate stop (D-33). The lines under a row's title are
+star is a separate stop (D-33). A list owner also reads the sessions changed in the last
+24 h (``use_recent_changes()``) and hands each list only its own (``changes_of()``), so a
+recorded batch re-renders only the lists and rows it touches (D-153, D-315). The lines under a row's title are
 ``ui.row_lines``'s, the gutter beside the rows is ``ui.time_gutter``, the other rows
 are ``ui.rows``'s (ux.md §3.9, D-184, D-200, D-227).
 """
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import cast
 
 import flet as ft
 
+from pycon_us import clock
+from pycon_us.change_log import use_change_log
 from pycon_us.config import ConferenceInfo
+from pycon_us.core.change_views import changed_phrase
+from pycon_us.core.diff import ChangeKind
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import (
     SessionView,
@@ -29,10 +35,17 @@ from pycon_us.services.errors import report_errors
 from pycon_us.state import Conference
 from pycon_us.theme import Tokens
 from pycon_us.theme_hc import hc_border
-from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
+from pycon_us.ui.badges import CHANGED, TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite
 from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
 from pycon_us.ui.semantics import semantics_key
+from pycon_us.ui.status_strip import TICK_SECONDS, stop_ticks
+
+type Changes = Mapping[str, frozenset[ChangeKind]]
+"""The sessions changed in the last 24 h, by id: what changed (``ChangeLog.recent()``)."""
+
+NO_CHANGES: frozenset[ChangeKind] = frozenset()
+"""What changed about a session without a recent change: nothing, so no badge."""
 
 NOTICE_GROUP = "logistics"
 """The track group (``conference.toml``) whose sessions are notices: breaks, meals and
@@ -93,6 +106,55 @@ def use_session_views(
     )
 
 
+def use_recent_changes() -> Changes:
+    """Return the sessions to badge as Changed, for the component that owns a list.
+
+    A hook: the caller re-renders when a refresh records a batch, and when a mark
+    reaches its 24 h end (``RECENT_FOR``), which the strip's 60 s loop checks while the
+    caller is mounted and the app is in the foreground (``Services.run_every``, D-175),
+    and at once on a resume. So a badge goes within a minute of its end while its list
+    shows, or when the list next shows. Unlike ``use_minute()``, a tick that ends no
+    mark renders nothing: a screen that keeps its minute work in a leaf (a room's "Now
+    in this room") keeps it there. Hand each list ``changes_of()`` of the result.
+    """
+    svc = use_services()
+    log = use_change_log()
+    marks = log.recent(clock.now())
+    # A tick compares with the marks this render returned, not with a state set once:
+    # after a batch re-renders the owner, a state would still hold the marks before it,
+    # and the next tick would render again though nothing ended (D-315).
+    shown = ft.use_ref(lambda: marks)
+    shown.current = marks
+    _, set_ends = ft.use_state(0)  # only a trigger: a mark ended
+
+    @report_errors
+    def tick() -> None:
+        if log.recent(clock.now()) != shown.current:
+            set_ends(lambda ends: ends + 1)
+
+    @report_errors
+    async def keep_up() -> None:
+        await svc.run_every(TICK_SECONDS, tick)
+
+    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    return marks
+
+
+def changes_of(
+    changes: Changes, session_ids: Iterable[str]
+) -> dict[str, frozenset[ChangeKind]]:
+    """Return the recent changes of some sessions only: a list's, a day's or a slot's.
+
+    Two calls over the same marks give equal mappings, so a memoised list given one
+    skips its body when another list's sessions change (D-153).
+
+    Args:
+        changes: Every session's recent changes (``use_recent_changes()``).
+        session_ids: The sessions the list shows.
+    """
+    return {key: changes[key] for key in session_ids if key in changes}
+
+
 def _open_session(view_path: str, session_id: str) -> ft.ControlEventHandler:
     """Return a tap handler that pushes the session's detail on top of this View."""
     page = ft.context.page
@@ -115,6 +177,7 @@ def SessionRow(
     elapsed: int | None = None,
     omit: frozenset[str] = frozenset(),
     show_time: bool = True,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
 ) -> ft.Control:
     """Return a session in any list (SCHED-03): badges, title, time, place, speakers, star.
 
@@ -146,6 +209,9 @@ def SessionRow(
             phrase (``badge_specs()``): a track page's own badge (D-199).
         show_time: False where the page above says the time of every row, as the
             Posters detail does: the row and its phrase leave it out (D-206).
+        changed: What changed about the session in the last 24 h (``changes_of()``):
+            any time, room or title change adds the Changed badge, which the phrase
+            says as what changed, "Time and room changed" (D-315).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     key = view.session.id
@@ -159,6 +225,7 @@ def SessionRow(
         elapsed=elapsed,
         omit=omit,
         show_time=show_time,
+        changed=changed,
         key=key,  # pyright: ignore[reportCallIssue]
     )
 
@@ -176,12 +243,14 @@ def _SessionRow(
     elapsed: int | None = None,
     omit: frozenset[str] = frozenset(),
     show_time: bool = True,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
 ) -> ft.Control:
     """The body of ``SessionRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference  # a plain value: subscribes to nothing
     session = view.session
-    specs = badge_specs(session, info, tokens, omit=omit)
+    said = changed_phrase(changed)
+    specs = badge_specs(session, info, tokens, omit=omit, changed=bool(said))
 
     @report_errors
     async def star() -> None:
@@ -206,7 +275,8 @@ def _SessionRow(
         lines.append(secondary(view.speakers))
     if overlaps:
         lines.append(overlap_line(overlaps, tokens.warning))
-    labels = [label for label, _ in specs]
+    # The badge shows "Changed"; the phrase says what changed (ux.md §3.4).
+    labels = [said if label == CHANGED else label for label, _ in specs]
     phrase = spoken_phrase(labels, view, overlaps=overlaps, show_time=show_time)
     if elapsed is not None:
         lines.append(elapsed_bar(elapsed, tokens.live))
@@ -246,7 +316,13 @@ def _SessionRow(
     )
 
 
-def NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
+def NoticeRow(
+    view: SessionView,
+    tokens: Tokens,
+    *,
+    screen: str,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
+) -> ft.Control:
     """Return a break, meal or announcement (SCHED-04): a compact tile without a star.
 
     Memoised like ``SessionRow`` and keyed by the session id. Its icon is its
@@ -263,22 +339,40 @@ def NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
         tokens: The scheme's tokens (D-150): ``high_contrast`` outlines the tile.
         screen: The screen's name in its semantics identifier,
             ``<screen>.notice.<key>`` (``semantics_key()``).
+        changed: What changed about it in the last 24 h (``changes_of()``): as on a
+            ``SessionRow``, the Changed badge over its title, and the phrase says what
+            changed after the track, "Notice, Room changed." (D-315).
     """
     # As in SessionRow: the key= is real, its type is not.
-    return _NoticeRow(view, tokens, screen=screen, key=view.session.id)  # pyright: ignore[reportCallIssue]
+    return _NoticeRow(view, tokens, screen=screen, changed=changed, key=view.session.id)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
 @ft.component
-def _NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
+def _NoticeRow(
+    view: SessionView,
+    tokens: Tokens,
+    *,
+    screen: str,
+    changed: frozenset[ChangeKind] = NO_CHANGES,
+) -> ft.Control:
     """The body of ``NoticeRow``; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference
     session = view.session
     track = info.track(session.track)
     tappable = bool(session.description)
+    said = changed_phrase(changed)
+    lines: list[ft.Control] = []
+    if said:
+        lines.append(badge_row([TrackBadge(CHANGED, tokens.changed)]))
+    lines += [
+        ft.Text(session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL),
+        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
+    ]
+    label = f"{track.short}, {said}" if said else track.short
     content = ft.Semantics(
-        label=notice_phrase(track.short, view),
+        label=notice_phrase(label, view),
         identifier=f"{screen}.notice.{semantics_key(session.id)}",
         button=tappable,
         exclude_semantics=True,
@@ -291,12 +385,7 @@ def _NoticeRow(view: SessionView, tokens: Tokens, *, screen: str) -> ft.Control:
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 ft.Column(
-                    [
-                        ft.Text(
-                            session.name, theme_style=ft.TextThemeStyle.TITLE_SMALL
-                        ),
-                        meta(view, style=ft.TextThemeStyle.BODY_SMALL),
-                    ],
+                    lines,
                     spacing=2,
                     expand=True,
                 ),

@@ -468,23 +468,26 @@ async def test_recent_badges_neither_additions_nor_removals(
     assert log.recent(NOW) == {}
 
 
-async def test_recent_keeps_the_latest_change_of_a_session(
+async def test_recent_joins_the_kinds_of_every_batch_of_the_last_24_hours(
     storage: Storage, year: YearData
 ) -> None:
-    """A session changed twice is badged with the newer batch's change."""
+    """A session moved, then renamed an hour later, is badged with both kinds."""
     await storage.write_feed(recorded(2026))
     conference, log = await started(storage, year)
     await conference.refresh(
         storage, year, transport=serving(changed(2026, move(TALK, "Room 101B")))
     )
     clock.set_test_now(NOW + timedelta(hours=1))
-    await conference.refresh(
-        storage, year, transport=serving(changed(2026, move(TALK, "Room 101C")))
-    )
+    doc = json.loads(changed(2026, move(TALK, "Room 101B")))
+    rename(TALK, "Python for Humans, again")(doc)
+    await conference.refresh(storage, year, transport=serving(json.dumps(doc).encode()))
 
-    change = log.recent(NOW + timedelta(hours=1))[str(TALK)]
-    assert change.new is not None
-    assert change.new.location == "Room 101C"
+    assert log.recent(NOW + timedelta(hours=1)) == {
+        str(TALK): {ChangeKind.ROOM, ChangeKind.TITLE}
+    }
+    # A minute past the first batch's 24 h, only the rename is left.
+    later = NOW + RECENT_FOR + timedelta(minutes=1)
+    assert log.recent(later) == {str(TALK): {ChangeKind.TITLE}}
 
 
 def test_the_fixture_talks_exist_in_the_snapshot(year: YearData) -> None:
