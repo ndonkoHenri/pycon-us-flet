@@ -30,6 +30,7 @@ import flet as ft
 
 from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -39,7 +40,7 @@ from pycon_us.ui.badges import NEW_TRACK, SPANISH, TrackBadge, badge_row
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_add_all, use_favorite_toggle
 from pycon_us.ui.menus import menu_item, overflow_menu
-from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.scaffold import AppScaffold, PageTitle
 from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.widths import LIST, sides, use_margin
@@ -79,6 +80,7 @@ def TrackDetail(slug: str) -> ft.View:
     on_toggle = use_favorite_toggle(favorites)
     add_all = use_add_all(favorites)
     tokens = use_tokens()
+    prefs = use_prefs()
     track = svc.year.conference.track_for_slug(slug)
     data = conference.data
     # Once per feed version (and memoised per feed by the query itself, D-178): the
@@ -120,7 +122,9 @@ def TrackDetail(slug: str) -> ft.View:
                 padding=sides(margin),
             ),
         )
-    items: list[ft.Control] = [intro(track, tokens, spanish=SPANISH in shared)]
+    items: list[ft.Control] = [
+        intro(track, tokens, spanish=SPANISH in shared, large_text=prefs.time_above)
+    ]
     if data is None and conference.problem is None:
         items.append(SkeletonList())  # the first fetch runs (NEW-03)
     elif data is None:
@@ -215,10 +219,12 @@ def shared_badges(track: Track, days: Sequence[DaySessions]) -> frozenset[str]:
     return frozenset({track.short, *([SPANISH] if spanish else [])})
 
 
-def intro(track: Track, tokens: Tokens, *, spanish: bool) -> ft.Control:
+def intro(
+    track: Track, tokens: Tokens, *, spanish: bool, large_text: bool
+) -> ft.Control:
     """Return the page's intro: the badges, the track's name and its legend line.
 
-    The name is the page's heading (level 1, F40) in ``HEADLINE_SMALL``, as on session
+    The name is the page's heading (level 1, F40), a ``PageTitle`` as on session
     detail (D-186), rather than the app bar's title: a long name ("Trailblazing Python
     Security") was cut there at large text, while here it wraps.
 
@@ -227,18 +233,15 @@ def intro(track: Track, tokens: Tokens, *, spanish: bool) -> ft.Control:
         tokens: The scheme's tokens, for the badge's colours (D-150).
         spanish: Whether every session is in Spanish: "En Español" joins the track's
             badge here, and leaves the rows (``shared_badges()``).
+        large_text: The text is large for the width (``Prefs.time_above``): the
+            name steps down (D-328).
     """
     badges = [TrackBadge(track.short, tokens.track_badge(track.key))]
     if spanish:
         badges.append(TrackBadge(SPANISH, tokens.spanish))
     if track.new:
         badges.append(TrackBadge(NEW_TRACK, tokens.new_track))
-    title = ft.Semantics(
-        header=True,
-        heading_level=1,
-        identifier=f"{SCREEN}.title",
-        content=ft.Text(track.plural, theme_style=ft.TextThemeStyle.HEADLINE_SMALL),
-    )
+    title = PageTitle(track.plural, identifier=f"{SCREEN}.title", large_text=large_text)
     return ft.Container(
         ft.Column(
             [

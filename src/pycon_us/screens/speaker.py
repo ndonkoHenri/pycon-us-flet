@@ -24,6 +24,7 @@ import flet as ft
 from pycon_us.core.models import Speaker
 from pycon_us.core.speakers import has_bio, speaker_sessions
 from pycon_us.favorites import use_favorites
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -33,7 +34,7 @@ from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import speaker_avatar
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
 from pycon_us.ui.session_rows import use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin
@@ -65,6 +66,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     tokens = use_tokens()
+    prefs = use_prefs()
     data = conference.data
     speaker = data.speakers.get(speaker_id) if data else None
     # Once per feed version: the page re-renders on every star tap, and its day items
@@ -116,7 +118,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
                 padding=sides(margin),
             ),
         )
-    items: list[ft.Control] = [intro(speaker)]
+    items: list[ft.Control] = [intro(speaker, large_text=prefs.time_above)]
     if not days:  # a directory speaker whose sessions left the feed
         items.append(
             EmptyState(
@@ -148,16 +150,18 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     return AppScaffold(title="", body=body)
 
 
-def intro(speaker: Speaker) -> ft.Control:
+def intro(speaker: Speaker, *, large_text: bool) -> ft.Control:
     """Return the page's intro: the speaker's photo over their initials, then the name.
 
-    Centred (ux.md §5.7). The name is the page's heading (level 1, F40) in
-    ``HEADLINE_SMALL``, selectable to copy (D-26), where a long name wraps rather than
+    Centred (ux.md §5.7). The name is the page's heading (level 1, F40), a
+    ``PageTitle`` selectable to copy (D-26), where a long name wraps rather than
     being cut as an app bar title is at large text (D-186). The photo is decorative:
     the heading says whose it is.
 
     Args:
         speaker: The directory speaker.
+        large_text: The text is large for the width (``Prefs.time_above``): the
+            name steps down (D-328).
     """
     photo = ft.Semantics(
         exclude_semantics=True,  # the initials would be read before the name
@@ -167,16 +171,12 @@ def intro(speaker: Speaker) -> ft.Control:
             initials_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
         ),
     )
-    name = ft.Semantics(
-        header=True,
-        heading_level=1,
+    name = PageTitle(
+        speaker.name,
         identifier=f"{SCREEN}.title",
-        content=ft.Text(
-            speaker.name,
-            theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
-            text_align=ft.TextAlign.CENTER,
-            selectable=True,
-        ),
+        large_text=large_text,
+        centred=True,
+        selectable=True,
     )
     return ft.Container(
         ft.Column(
