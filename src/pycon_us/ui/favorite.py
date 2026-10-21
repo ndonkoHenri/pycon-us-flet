@@ -20,10 +20,11 @@ from weakref import WeakKeyDictionary, ref
 import flet as ft
 
 from pycon_us.favorites import Change, Favorites
-from pycon_us.prefs import use_prefs
-from pycon_us.services import use_services
+from pycon_us.prefs import Prefs, use_prefs
+from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS, Storage
+from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,6 @@ so there is no Undo (ux.md §5.10, D-209)."""
 
 UNDO = "Undo"
 """The SnackBar's one action when the edit can be taken back (D-29)."""
-
-SNACK_BAR_MS = 4000
-"""How long a SnackBar shows (ux.md §4.5), unless a screen reader keeps it (D-184)."""
 
 _SHOWN: WeakKeyDictionary[ft.Page, ref[ft.SnackBar]] = WeakKeyDictionary()
 """The last favourites SnackBar each page showed, which the next edit closes (D-251).
@@ -184,8 +182,7 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
         change = await favorites.toggle(svc.storage, session_id)
         if change.added:
             await selection_click(svc.haptics)
-        keep = prefs.screen_reader
-        _announce(page, favorites, svc.storage, change, keep=keep, edit=edit)
+        _announce(page, favorites, svc, prefs, change, edit=edit)
 
     return ft.use_callback(toggle, [])
 
@@ -193,10 +190,10 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
 def _announce(
     page: ft.Page,
     favorites: Favorites,
-    storage: Storage,
+    svc: Services,
+    prefs: Prefs,
     change: Change,
     *,
-    keep: bool,
     edit: int,
 ) -> None:
     """Report a star edit through ``_report()``: ``feedback()``'s SnackBar, or none.
@@ -206,21 +203,20 @@ def _announce(
     Args:
         page: The session's page.
         favorites: The store the edit changed; Undo reverses the edit in it.
-        storage: Where the favourites are kept.
+        svc: The session's services: where the favourites are kept.
+        prefs: The session's ``Prefs``: a screen reader keeps an Undo SnackBar.
         change: The edit.
-        keep: A screen reader is on: an Undo SnackBar stays until it is used,
-            replaced or closed by the next edit (D-184, D-251).
         edit: The edit's number from ``_begin()``.
     """
 
     @report_errors
     async def undo() -> None:
         edit = _begin(page)
-        reverse = await favorites.undo(storage, change)
-        _announce(page, favorites, storage, reverse, keep=keep, edit=edit)
+        reverse = await favorites.undo(svc.storage, change)
+        _announce(page, favorites, svc, prefs, reverse, edit=edit)
 
     undoes = undo if change.removed else None
-    _report(page, feedback(change), undo=undoes, keep=keep, edit=edit)
+    _report(page, feedback(change), undo=undoes, svc=svc, prefs=prefs, edit=edit)
 
 
 def added_feedback(change: Change) -> str:
@@ -277,11 +273,11 @@ def use_add_all(favorites: Favorites) -> AddAll:
             edit = _begin(page)
             reverse = await favorites.undo(svc.storage, change)
             message = None if reverse.saved else NOT_SAVED
-            _report(page, message, undo=None, keep=prefs.screen_reader, edit=edit)
+            _report(page, message, undo=None, svc=svc, prefs=prefs, edit=edit)
 
         undoes = undo if change.added else None
         message = added_feedback(change)
-        _report(page, message, undo=undoes, keep=prefs.screen_reader, edit=edit)
+        _report(page, message, undo=undoes, svc=svc, prefs=prefs, edit=edit)
 
     return add_all
 
@@ -308,8 +304,7 @@ def use_forget(favorites: Favorites) -> RemoveAll:
     async def forget(session_ids: Iterable[str]) -> None:
         edit = _begin(page)
         change = await favorites.remove_many(svc.storage, session_ids)
-        keep = prefs.screen_reader
-        _announce(page, favorites, svc.storage, change, keep=keep, edit=edit)
+        _announce(page, favorites, svc, prefs, change, edit=edit)
 
     return forget
 
@@ -326,7 +321,8 @@ def _report(
     message: str | None,
     *,
     undo: Callable[[], Awaitable[None]] | None,
-    keep: bool,
+    svc: Services,
+    prefs: Prefs,
     edit: int,
 ) -> None:
     """Report a favourites edit: its SnackBar, or none, never the last edit's (D-251).
@@ -349,9 +345,10 @@ def _report(
         page: The session's page.
         message: What it says, or None when the edit says nothing.
         undo: Undo's handler, or None for a SnackBar without an action.
-        keep: A screen reader is on: an Undo SnackBar stays until it is used,
-            replaced or closed by the next edit, as Flutter keeps one with an
-            action (D-184, D-251).
+        svc: The session's services, which watch a screen reader's SnackBar.
+        prefs: The session's ``Prefs``: while a screen reader is on, an Undo
+            SnackBar stays until it is used, replaced, closed by the next edit, or
+            no screen reader is on (D-184, D-251, D-356).
         edit: The edit's number from ``_begin()``, taken before its first await.
     """
     if _EDITS.get(page) != edit:
@@ -363,6 +360,7 @@ def _report(
             last.open = False
             last.update()
         return
+    keep = undo is not None and prefs.screen_reader
     bar = ft.SnackBar(
         content=ft.Text(message),
         action=ft.SnackBarAction(UNDO, on_click=undo) if undo else None,
@@ -370,7 +368,9 @@ def _report(
         duration=SNACK_BAR_MS,
         # Flutter keeps a SnackBar with an action until it is used; only a
         # screen-reader user needs that time to reach Undo (D-184).
-        persist=undo is not None and keep,
+        persist=keep,
     )
     page.show_dialog(bar)
     _SHOWN[page] = ref(bar)
+    if keep:
+        keep_while_screen_reader(bar, svc, prefs)

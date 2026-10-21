@@ -28,8 +28,8 @@ from pycon_us.locations import drill_href
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.favorite import SNACK_BAR_MS
 from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
 
 REVIEW = "Review"
 """The SnackBar's one action, which pushes Schedule changes (D-255)."""
@@ -56,10 +56,12 @@ def use_review_snack_bar(
     additions only, a load and a deletion have none to take.
 
     Args:
-        svc: The session's services: the active year, whose log the store keeps.
+        svc: The session's services: the active year, whose log the store keeps, and
+            the ``SemanticsService`` that says when no screen reader is on.
         change_log: The session's ``ChangeLog`` store.
         favorites: The session's ``Favorites`` store: the saved sessions counted first.
-        prefs: The session's ``Prefs`` store: a screen reader keeps the SnackBar.
+        prefs: The session's ``Prefs`` store: a screen reader keeps the SnackBar,
+            until none is on (D-356).
     """
     page = ft.context.page
     # The store keeps its listeners weakly: the listener and its disposer live here.
@@ -74,7 +76,10 @@ def use_review_snack_bar(
             return
         text = snackbar_text(batch.changes, favorites.ids)
         if text is not None:
-            show_review(page, text, str(svc.storage.year), keep=prefs.screen_reader)
+            keep = prefs.screen_reader
+            bar = show_review(page, text, str(svc.storage.year), keep=keep)
+            if keep:  # until no screen reader is on (D-356)
+                keep_while_screen_reader(bar, svc, prefs)
 
     @report_errors
     async def listen() -> None:
