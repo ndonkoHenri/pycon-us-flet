@@ -39,6 +39,9 @@ from pycon_us.theme_hc import (
 SEED = "#3B3EA9"
 """PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
 
+BOOTH_AMBER = "#F2C14E"
+"""A selected expo booth's fill in every scheme, as the plan is the same (ux.md §6.2)."""
+
 BOOT_COLOR = "#680579"
 """The splash's purple (``[tool.flet.splash]``, ux.md §2.6): the boot view and the start
 route show it in every scheme, so the launch never flashes."""
@@ -223,6 +226,10 @@ class Tokens:
         changed: The "Changed" badge of a session whose time, room or title changed in
             the last 24 h, outlined in ``warning``: a mark of status, like New track,
             and never En Español's fill (D-315).
+        booth_outline: A selected expo booth's outline, 3:1 or better on white (the
+            booths), on ``surface`` and on ``booth_fill`` (EXPO-01).
+        booth_fill: A selected booth's fill (ux.md §6.2), drawn see-through over the
+            plan, and every booth's faint outline.
         high_contrast: The tokens are a high-contrast scheme's, whose structure
             differs too: a component that draws a line there instead of a fill or a
             shadow reads it here, never from ``Prefs`` (D-285).
@@ -240,6 +247,8 @@ class Tokens:
     registration: BadgeColors
     new_track: BadgeColors
     changed: BadgeColors
+    booth_outline: str
+    booth_fill: str = BOOTH_AMBER
     high_contrast: bool = False
 
     def track_badge(self, key: str) -> BadgeColors:
@@ -248,7 +257,13 @@ class Tokens:
 
 
 def _tokens(
-    *, dark: bool, live: str, warning: str, favorite: str, primary: str
+    *,
+    dark: bool,
+    live: str,
+    warning: str,
+    favorite: str,
+    primary: str,
+    booth_outline: str,
 ) -> Tokens:
     """Build one scheme's tokens: the given colours and that scheme's badges."""
     return Tokens(
@@ -265,6 +280,7 @@ def _tokens(
         registration=BadgeColors(text=_ERROR_DARK if dark else _ERROR_LIGHT),
         new_track=BadgeColors(text=primary),
         changed=BadgeColors(text=warning),
+        booth_outline=booth_outline,
     )
 
 
@@ -274,6 +290,7 @@ LIGHT_TOKENS = _tokens(
     warning="#7A5900",
     favorite="#A1009A",  # the light tertiary (tested)
     primary=SEED,  # the light primary (tested)
+    booth_outline="#5C4300",
 )
 """Tokens for the light scheme (ux.md §3.3, §3.4)."""
 
@@ -283,11 +300,14 @@ DARK_TOKENS = _tokens(
     warning="#F2C14E",
     favorite="#FFACEB",  # the dark tertiary (tested)
     primary="#BFC1FF",  # the dark primary (tested)
+    booth_outline="#8A6500",  # 3:1 on white, on surface and on the amber alike
 )
 """Tokens for the dark scheme (ux.md §3.3, §3.4)."""
 
 
-def _hc_tokens(scheme: ft.ColorScheme, *, live: str, warning: str) -> Tokens:
+def _hc_tokens(
+    scheme: ft.ColorScheme, *, live: str, warning: str, booth_outline: str
+) -> Tokens:
     """Build a high-contrast scheme's tokens: every badge outlined (ux.md §3.4).
 
     Tracks, En Español and Changed are outlined in ``on_surface``, which the star takes
@@ -306,14 +326,22 @@ def _hc_tokens(scheme: ft.ColorScheme, *, live: str, warning: str) -> Tokens:
         registration=BadgeColors(text=error, border_width=HC_BADGE_BORDER),
         new_track=BadgeColors(text=primary, border_width=HC_BADGE_BORDER),
         changed=outlined,
+        booth_outline=booth_outline,
         high_contrast=True,
     )
 
 
-HC_LIGHT_TOKENS = _hc_tokens(HC_LIGHT, live=HC_LIGHT_LIVE, warning=HC_LIGHT_WARNING)
+HC_LIGHT_TOKENS = _hc_tokens(
+    HC_LIGHT,
+    live=HC_LIGHT_LIVE,
+    warning=HC_LIGHT_WARNING,
+    booth_outline=str(HC_LIGHT.on_surface),
+)
 """Tokens for the high-contrast light scheme (ux.md §3.3, §3.4)."""
 
-HC_DARK_TOKENS = _hc_tokens(HC_DARK, live=HC_DARK_LIVE, warning=HC_DARK_WARNING)
+HC_DARK_TOKENS = _hc_tokens(
+    HC_DARK, live=HC_DARK_LIVE, warning=HC_DARK_WARNING, booth_outline="#7F5D00"
+)
 """Tokens for the high-contrast dark scheme (ux.md §3.3, §3.4)."""
 
 

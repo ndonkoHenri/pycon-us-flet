@@ -18,6 +18,9 @@ outside the zoom layer, names it at any zoom. ``ViewMemory.plan_pins`` keeps a V
 rebuilt in a new session (D-143) from pulsing again (D-18). An unknown pin, or one on
 another plan, shows no pin; an unknown plan shows its not-found state, whose way out
 is the Map's Floor plans tab (D-186, ux.md §4.6).
+
+``ExpoPlan`` is ``…/plan/expo`` in a year with booths: the expo hall, booths and all
+(``screens/expo.py``, EXPO-01), with no pin and no double tap (D-312).
 """
 
 import asyncio
@@ -28,6 +31,7 @@ import flet as ft
 from pycon_us.locations import use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.expo import ExpoHall
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.plan_tables import (
@@ -52,7 +56,7 @@ from pycon_us.ui.zoom import (
     zoom_buttons,
     zoom_layer,
 )
-from pycon_us.year_map import JOB_FAIR_PLAN, Pin, Plan
+from pycon_us.year_map import EXPO_PLAN, JOB_FAIR_PLAN, Pin, Plan
 
 SCREEN = "plan"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -360,3 +364,17 @@ def PlanViewer(plan_id: str) -> ft.View:
             expand=True,
         ),
     )
+
+
+@ft.component
+def ExpoPlan() -> ft.View:
+    """``…/plan/expo``: the expo hall pushed as a View, named by its plan (ux.md §6.2).
+
+    A year without booths has no hall: its expo plan, or its not-found state, is
+    ``PlanViewer``'s.
+    """
+    year_map = use_services().year.map
+    plan = year_map.plan(EXPO_PLAN)
+    if plan is None or not year_map.booths:
+        return PlanViewer(plan_id=EXPO_PLAN)
+    return AppScaffold(title=plan.title, body=ExpoHall())

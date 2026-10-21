@@ -29,7 +29,7 @@ from pycon_us.screens.more import More
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.screens.now import Now
 from pycon_us.screens.open_spaces import OpenSpaces
-from pycon_us.screens.plan import PlanViewer
+from pycon_us.screens.plan import ExpoPlan, PlanViewer
 from pycon_us.screens.psf import AboutPsf
 from pycon_us.screens.room import RoomDetail
 from pycon_us.screens.schedule import Schedule
@@ -54,6 +54,7 @@ from pycon_us.theme import BOOT_COLOR
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.year_map import EXPO_PLAN
 
 
 @ft.component
@@ -61,7 +62,8 @@ def Drill() -> ft.View:
     """One detail level: the detail screen for this level's own kind and id (D-141).
 
     The Router gives each level the params of its own pair (F6). Ids arrive quoted, as
-    ``drill_href()`` wrote them, and are unquoted here (D-42).
+    ``drill_href()`` wrote them, and are unquoted here (D-42). The expo plan is the
+    expo hall, booths and all (EXPO-01).
     """
     params = ft.use_route_params()
     ident = unquote(params["ident"])
@@ -74,6 +76,8 @@ def Drill() -> ft.View:
             return RoomDetail(room_slug=ident)
         case "sponsor":
             return SponsorDetail(sponsor_slug=ident)
+        case "plan" if ident == EXPO_PLAN:
+            return ExpoPlan()
         case "plan":
             return PlanViewer(plan_id=ident)
         case "changes":  # the change log of the year ``ident`` (D-255)
