@@ -162,29 +162,27 @@ def OtherRooms(
     """
     prefs = use_prefs()
     is_open, set_open = ft.use_state(False)
-    return ft.Semantics(
+    return FoldTile(
+        ft.Text(where.others_label),
+        [
+            LinkTile(
+                room.name,
+                room_href(view_path, room, session.id),
+                identifier=f"{screen}.room.{room.slug}",
+            )
+            for room in where.others
+        ],
+        expanded=is_open,
+        on_change=set_open,
+        style=expand_style(prefs),
         identifier=f"{screen}.other_rooms",
-        content=FoldTile(
-            ft.Text(where.others_label),
-            [
-                LinkTile(
-                    room.name,
-                    room_href(view_path, room, session.id),
-                    identifier=f"{screen}.room.{room.slug}",
-                )
-                for room in where.others
-            ],
-            expanded=is_open,
-            on_change=set_open,
-            style=expand_style(prefs),
-            # Under the room tile, a blank as wide as its icon lines the two titles
-            # up; alone (a break in many rooms), the place icon.
-            leading=ft.Container(width=24)
-            if where.label
-            else ft.Icon(ft.Icons.PLACE_OUTLINED),
-            # Each room's title under the tile's title: 16 + 24 + 16 dp in.
-            controls_padding=ft.Padding.only(left=40),
-        ),
+        # Under the room tile, a blank as wide as its icon lines the two titles up;
+        # alone (a break in many rooms), the place icon.
+        leading=ft.Container(width=24)
+        if where.label
+        else ft.Icon(ft.Icons.PLACE_OUTLINED),
+        # Each room's title under the tile's title: 16 + 24 + 16 dp in.
+        controls_padding=ft.Padding.only(left=40),
     )
 
 

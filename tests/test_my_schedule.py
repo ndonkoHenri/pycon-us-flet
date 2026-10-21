@@ -36,6 +36,7 @@ from pycon_us.ui.favorite import REMOVED, UNDO
 from tests import sessions
 from tests.fakes import MemoryPrefs
 from tests.feeds import processed
+from tests.folds import Fold, as_fold, fold_named
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone
@@ -135,21 +136,15 @@ class Shown(sessions.Shown):
             and isinstance(c.content.content, ft.Text)
         ]
 
-    def fold(self, identifier: str) -> ft.ExpansionTile:
-        """The ``ExpansionTile`` of the fold ``identifier``.
-
-        The identifier is on a node around the tile, not on its title, which it split
-        from the tile's button on Android (D-214).
-        """
-        tile = self.node(f"my_schedule.{identifier}").content
-        assert isinstance(tile, ft.ExpansionTile)
-        return tile
+    def fold(self, identifier: str) -> Fold:
+        """The ``FoldTile`` whose header is ``my_schedule.<identifier>``."""
+        return fold_named(self.controls, f"my_schedule.{identifier}")
 
     def folded(self, identifier: str) -> list[str]:
-        """The rows inside a fold tile, in reading order."""
+        """The rows inside a fold, shown or not, in reading order."""
         return [
             str(c.identifier).removeprefix("my_schedule.session.")
-            for c in _walk(self.fold(identifier).controls or [])
+            for c in _walk(self.fold(identifier).controls)
             if isinstance(c, ft.Semantics)
             and str(c.identifier).startswith("my_schedule.session.")
         ]
@@ -166,8 +161,10 @@ class Shown(sessions.Shown):
         await self.click(star)
 
     async def toggle_fold(self, identifier: str, expanded: bool) -> None:
-        """Open or close the fold ``identifier`` with a change event."""
-        await self.event(self.fold(identifier), "change", expanded)
+        """Open or close the fold ``identifier`` with a tap on its header."""
+        found = self.fold(identifier)
+        assert found.expanded is not expanded
+        await self.click(found.header)
 
 
 _PARTS = ("content", "leading", "title", "subtitle", "trailing")
@@ -177,7 +174,7 @@ def _walk(node: Any, *, folds: bool = False) -> Iterator[ft.Control]:
     """Yield the controls under ``node`` in reading order, through components' bodies.
 
     A component's rendered body is its ``_b`` (Flet's ``Component``, at the D-81
-    pin). Fold tiles are yielded but not entered unless ``folds`` is set.
+    pin). A fold's header is yielded, what it holds only if ``folds`` is set.
     """
     if isinstance(node, list):
         for item in node:
@@ -189,8 +186,8 @@ def _walk(node: Any, *, folds: bool = False) -> Iterator[ft.Control]:
     if not isinstance(node, ft.Control):
         return
     yield node
-    if isinstance(node, ft.ExpansionTile) and not folds:
-        yield from _walk(node.title)
+    if not folds and (found := as_fold(node)):
+        yield from _walk(found.node)
         return
     for part in _PARTS:
         yield from _walk(getattr(node, part, None), folds=folds)
@@ -417,8 +414,8 @@ async def test_earlier_days_and_today_s_ended_sessions_fold_away(
     title = cast(ft.Text, earlier_days.title)
     assert title.value == f"Earlier days (3{NBSP}sessions)"
     assert earlier_days.expanded is False  # folded until tapped
-    style = cast(ft.AnimationStyle, earlier_days.animation_style)
-    assert style.duration == fold.EXPAND_MS
+    assert earlier_days.said == "Collapsed"
+    assert earlier_days.animation.duration == fold.EXPAND_MS
     assert shown.folded("earlier_days") == [MCP, DECORATORS, RAG]
     assert f"Earlier today (1{NBSP}session)" in shown.texts()
     assert shown.folded("earlier_today") == [CHEESE_SHOP]
@@ -439,8 +436,7 @@ async def test_the_folds_open_without_animation_under_reduced_motion(
 ) -> None:
     """D-173: the tiles' animation is ``prefs.motion_ms()`` long, 0 here."""
     for identifier in ("earlier_days", "earlier_today"):
-        style = cast(ft.AnimationStyle, shown.fold(identifier).animation_style)
-        assert style.duration == 0
+        assert shown.fold(identifier).animation.duration == 0
 
 
 async def test_a_fold_stays_open_across_renders(shown: Shown) -> None:
@@ -534,8 +530,7 @@ async def test_the_all_over_notice_sits_above_the_earlier_days_tile(
     """Compact, not the full-screen empty state: the tile is still content."""
     root = shown.root().controls  # the strip, the quiet dropped notice (D-329), ...
     notice, tile = root[2], root[3]
-    assert tile is shown.node("my_schedule.earlier_days")
-    assert isinstance(shown.node("my_schedule.earlier_days").content, ft.ExpansionTile)
+    assert tile is shown.fold("earlier_days").root
     assert not any(
         isinstance(c, ft.Icon) and c.size == states.ICON_SIZE for c in _walk(notice)
     )
