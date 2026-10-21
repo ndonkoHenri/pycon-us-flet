@@ -109,12 +109,7 @@ def all_over(
         body: A second line, after the conference.
     """
     texts: list[ft.Control] = [
-        ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
-            header=True,
-            heading_level=2,  # a section under the page's title, as the day headings (D-211)
-            container=True,
-            content=ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL),
-        )
+        ft.Text(ALL_OVER, theme_style=ft.TextThemeStyle.TITLE_SMALL)
     ]
     if body is not None:
         texts.append(
@@ -129,6 +124,13 @@ def all_over(
             identifier=f"{SCREEN}.all_over",
             container=True,
             live_region=True,
+            # One explicit label in reading order, as the dropped notice (D-329): a
+            # heading Semantics inside would conflict on ``enabled`` (F42), become a
+            # child node, and be read after the body.
+            label="\n".join(t for t in (ALL_OVER, body) if t is not None),
+            header=True,
+            heading_level=2,  # a section under the page's title, as the day headings (D-211)
+            exclude_semantics=True,  # the label says the texts, in their order
             content=ft.Column(texts, spacing=4),
         )
     ]
