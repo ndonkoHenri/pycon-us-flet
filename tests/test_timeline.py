@@ -7,6 +7,7 @@ import ast
 import gc
 import inspect
 import weakref
+from annotationlib import Format
 from dataclasses import replace
 from datetime import date, datetime
 from pathlib import Path
@@ -357,7 +358,10 @@ def test_only_the_timeline_takes_the_schedule_filter() -> None:
         for name, function in inspect.getmembers(module, inspect.isfunction)
         if function.__module__ == module.__name__
         and not name.startswith("_")
-        and "excluded" in inspect.signature(function).parameters
+        # Names only: a type core takes from the year data exists only for the type
+        # checker (D-67), so its annotation stays a forward reference.
+        and "excluded"
+        in inspect.signature(function, annotation_format=Format.FORWARDREF).parameters
     }
     assert takers == {"timeline"}
 

@@ -7,7 +7,7 @@ and speaker rows (D-153): new results re-render only the days and rows they chan
 and a star tap one row.
 
 A broad query finds most of the feed, so each type shows its first rows
-(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every room) and a "Show all 326 sessions" row
+(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every place) and a "Show all 326 sessions" row
 renders the rest of its type on request (D-218): the first render of a one-letter
 query stays near that of a query that finds a few dozen rows, and every result stays
 one tap away.
@@ -31,6 +31,7 @@ from pycon_us.ui.rows import LinkTile, SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.session_rows import Changes, changes_of
 from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.year_map import Pin
 
 SCREEN = "search"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -51,9 +52,10 @@ def plural(count: int, noun: str) -> str:
 
 
 def summary(results: SearchResults) -> str:
-    """Return what a search found, in words: "12 sessions, 3 speakers, 1 room".
+    """Return what a search found, in words: "12 sessions, 3 speakers, 2 places".
 
-    Only the types that matched are named; the line is a polite live region, so a
+    Only the types that matched are named, rooms and venue spots together as places
+    (D-351); the line is a polite live region, so a
     screen reader hears what typing did without leaving the field (ux.md §4.3).
 
     Args:
@@ -62,7 +64,7 @@ def summary(results: SearchResults) -> str:
     counts = (
         (results.session_count, "session"),
         (len(results.speakers), "speaker"),
-        (len(results.rooms), "room"),
+        (results.place_count, "place"),
     )
     return ", ".join(plural(count, noun) for count, noun in counts if count)
 
@@ -99,7 +101,7 @@ def ResultList(
     the first), so that on screen too it opens a kind of result, not one more day.
 
     Each type shows its first rows (``first_results()``: ``FIRST_SESSIONS``,
-    ``FIRST_SPEAKERS``, every room), then a "Show all" row when it found more, which
+    ``FIRST_SPEAKERS``, every place), then a "Show all" row when it found more, which
     renders the rest of that type (D-218). Which types are shown whole is this list's
     own state, held with the results it was asked of: a search that finds other
     results starts cut again, and so does the old query typed again after it; the
@@ -146,7 +148,9 @@ def ResultList(
 
     if state is not None:
         return ft.ListView([state], expand=True, padding=sides(margin))
-    titled = sum(map(bool, (results.sessions, results.speakers, results.rooms))) > 1
+    titled = (
+        sum(map(bool, (results.sessions, results.speakers, results.place_count))) > 1
+    )
     day_level = 3 if titled else 2
     sections: list[tuple[str, list[ft.Control]]] = []
     if shown.sessions:
@@ -173,9 +177,10 @@ def ResultList(
         if len(shown.speakers) < len(results.speakers):
             speakers.append(show_all_row("speakers", len(results.speakers), show_whole))
         sections.append(("Speakers", speakers))
-    if shown.rooms:
-        rooms = [room_row(room, view_path) for room in shown.rooms]
-        sections.append(("Rooms", rooms))
+    if shown.place_count:
+        places = [room_row(room, view_path) for room in shown.rooms]
+        places += [spot_row(pin, view_path) for pin in shown.spots]
+        sections.append(("Places", places))
     items: list[ft.Control] = []
     for i, (name, rows) in enumerate(sections):
         if titled:
@@ -253,4 +258,24 @@ def room_row(room: Room, view_path: str) -> ft.Control:
         icon=ft.Icons.PLACE_OUTLINED,
         subtitle=count_line(room),
         identifier=f"{SCREEN}.room.{room.slug}",
+    )
+
+
+def spot_row(pin: Pin, view_path: str) -> ft.Control:
+    """Return a venue spot result: its label and sublabel, opening its floor plan.
+
+    A tap pushes the floor viewer at the spot's pin (``…/plan/<plan>?pin=<key>``), as
+    a ``LocationCard`` does, so Back returns to the results (D-351). Its leading icon
+    is the pin's rather than the rooms' place mark: it opens a plan, not a detail.
+
+    Args:
+        pin: The venue spot (``MapData.venue_spots()``).
+        view_path: This View's path, so the plan is pushed on top of search.
+    """
+    return LinkTile(
+        pin.label,
+        f"{drill_href(view_path, 'plan', pin.plan)}?pin={pin.key}",
+        icon=ft.Icons.PIN_DROP_OUTLINED,
+        subtitle=pin.sublabel or None,
+        identifier=f"{SCREEN}.place.{pin.key}",
     )

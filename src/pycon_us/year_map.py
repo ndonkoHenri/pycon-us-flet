@@ -146,6 +146,16 @@ class MapData:
         """
         return next((pin for pin in self.pins if pin.key == key), None)
 
+    def venue_spots(self) -> tuple[Pin, ...]:
+        """Return the pins that are venue spots, not rooms, in the file's order.
+
+        A venue spot's key has a ``-`` (``info-desk``), which ``normalize_room_key()``
+        never leaves in a room's: what search's Places scope finds besides the feed's
+        rooms (D-351). A room's pin is found through its feed room instead, and a room
+        pin no feed room names (a part of a joined room) is not a place to search.
+        """
+        return tuple(pin for pin in self.pins if "-" in pin.key)
+
     def floors(self) -> tuple[tuple[str, frozenset[str]], ...]:
         """Return each plan's title and the keys of the pins on it, in the Map's order.
 
