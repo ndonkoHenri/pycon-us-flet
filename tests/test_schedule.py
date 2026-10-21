@@ -456,7 +456,9 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     """#313: a line that comes and goes would shift the day pages and rebuild them."""
     schedule = await shown()
     column = cast(ft.Column, schedule.tabs.content)
-    assert len(column.controls) == 5
+    assert (
+        len(column.controls) == 6
+    )  # the probe (D-331), the bar, the summary, the strip, the note, the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
     assert isinstance(pages.controls[-1], ft.TabBarView)
 

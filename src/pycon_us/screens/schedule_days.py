@@ -69,6 +69,9 @@ type Empty = Literal["sprint", "filtered"]
 type Scrolled = Callable[[date, ft.OnScrollEvent], None]
 """The Schedule's one scroll handler: a day list passes its day and the event."""
 
+type Reported = Callable[[date, str, float], None]
+"""The Schedule's one height handler: an item's day, its key and its height (D-331)."""
+
 
 def day_tab(index: int, day: date, *, is_today: bool, screen: str = SCREEN) -> ft.Tab:
     """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
@@ -123,6 +126,7 @@ def DayList(
     now: NowMark | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
+    on_measure: Reported,
     on_clear_filters: Callable[[], object],
 ) -> ft.Control:
     """Return one day's page: its slots, or the reason it has none (D-31, ux.md §4.6).
@@ -148,6 +152,8 @@ def DayList(
         now: Today's now line; None on the other days.
         list_ref: The day's list ref, which the jumps and the re-tap scroll.
         on_scroll: The screen's scroll handler, given this day.
+        on_measure: The screen's height handler, which each slot and the now line
+            report to (D-331).
         on_clear_filters: What "Clear filters" does on a day the filter emptied.
     """
     return _DayList(
@@ -165,6 +171,7 @@ def DayList(
         now=now,
         list_ref=list_ref,
         on_scroll=on_scroll,
+        on_measure=on_measure,
         on_clear_filters=on_clear_filters,
         key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
     )
@@ -188,6 +195,7 @@ def _DayList(
     now: NowMark | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
+    on_measure: Reported,
     on_clear_filters: Callable[[], object],
 ) -> ft.Control:
     """The body of ``DayList``; it runs only when the props change (F34).
@@ -240,13 +248,15 @@ def _DayList(
                 tokens,
                 label=time_label(slot.start, zone, use_24h=use_24h),
                 time_above=time_above,
+                day=day,
+                on_measure=on_measure,
                 # The now line divides it from the slot above: one line, not two.
                 divider=index > 0 and (now is None or index != now.index),
             )
             for index, slot in enumerate(slots)
         ]
         if now is not None:
-            items.insert(now.index, NowLine(now.time))
+            items.insert(now.index, NowLine(now.time, day, on_measure))
     return ft.ListView(
         items,
         key=f"day-{day.isoformat()}",
@@ -270,6 +280,8 @@ def SlotItem(
     label: str,
     time_above: bool,
     divider: bool,
+    day: date,
+    on_measure: Reported,
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
@@ -287,6 +299,8 @@ def SlotItem(
         label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
         time_above: Put the time above the rows rather than in the gutter (D-216).
         divider: Draw a 1 dp divider above the slot (every slot but the first).
+        day: The slot's day, which it reports its height with.
+        on_measure: The screen's height handler (D-331).
     """
     return _SlotItem(
         slot,
@@ -297,6 +311,8 @@ def SlotItem(
         label=label,
         time_above=time_above,
         divider=divider,
+        day=day,
+        on_measure=on_measure,
         key=slot.key,  # pyright: ignore[reportCallIssue]  # as SessionRow's
     )
 
@@ -313,9 +329,16 @@ def _SlotItem(
     label: str,
     time_above: bool,
     divider: bool,
+    day: date,
+    on_measure: Reported,
 ) -> ft.Control:
     """The body of ``SlotItem``; it runs only when the props change (F34)."""
     info = use_services().year.conference
+
+    @report_errors
+    def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        on_measure(day, slot.key, e.height)
+
     rows: list[ft.Control] = []
     for session in slot.sessions:
         view = views[session.id]
@@ -334,7 +357,12 @@ def _SlotItem(
     # divider, under the tab bar's own line (one 1 dp line there, not two). Hidden
     # rather than left out: the slot keeps its place in the tree when the now line
     # takes or gives back the divider, so its rows are kept as they are (D-204).
-    return ft.Column([ft.Divider(height=1, visible=divider), keyed], spacing=0)
+    # Its height, divider included, places the list's top among the slots (D-331).
+    return ft.Column(
+        [ft.Divider(height=1, visible=divider), keyed],
+        spacing=0,
+        on_size_change=measured,
+    )
 
 
 def now_button(

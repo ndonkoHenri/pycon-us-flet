@@ -10,7 +10,8 @@ fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
-(D-18). A detail pushed over the Schedule keeps it mounted, and so its place.
+(D-18); a text-size change puts each list back on the item at its top, by key (D-331,
+``screens/schedule_place.py``). A detail pushed over the Schedule keeps it mounted, and so its place.
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -36,7 +37,7 @@ from pycon_us import clock
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_heading, time_label, today, zone_note
-from pycon_us.core.timeline import Slot, now_place, timeline
+from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot, now_place, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.schedule_days import (
@@ -59,6 +60,7 @@ from pycon_us.screens.schedule_now import (
     shows_now,
     spoken_place,
 )
+from pycon_us.screens.schedule_place import PlaceKeeper, layout_probe
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
@@ -108,6 +110,8 @@ def Schedule() -> ft.View:
     said, set_said = ft.use_state("")  # where an asked jump landed, for TalkBack
     refs = ft.use_memo(dict[date, ft.Ref[ft.ListView]], [])
     signals = ft.use_memo(Signals, [])
+    keeper = ft.use_memo(lambda: PlaceKeeper(memory), [])
+    _, set_relaid = ft.use_state(0)  # a list built in full for its put-back (D-331)
     excluded = prefs.excluded_tracks
     slots = ft.use_memo(
         lambda: (
@@ -127,6 +131,7 @@ def Schedule() -> ft.View:
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
+    keeper.lay_out((conference.version, excluded), _keys(slots, current, place))
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
@@ -195,8 +200,8 @@ def Schedule() -> ft.View:
         set_rest(True)
         if jumps:
             await jump_to_now(asked=False)
-        else:
-            await _restore(_ref(refs, shown), memory.schedule_offsets.get(shown))
+        elif await keeper.restore(shown, _ref(refs, shown), signals.ended):
+            set_relaid(lambda n: n + 1)  # built lazy again
 
     # Runs again once, when the first data arrives (no snapshot or cache, NEW-03).
     ft.use_effect(opened, [shown is None], cleanup=_cancel_on_unmount)
@@ -223,8 +228,8 @@ def Schedule() -> ft.View:
         set_picked(day)
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
-        else:
-            await _restore(_ref(refs, day), memory.schedule_offsets.get(day))
+        elif await keeper.restore(day, _ref(refs, day), signals.ended):
+            set_relaid(lambda n: n + 1)  # built lazy again
 
     @report_errors
     async def now_pressed() -> None:
@@ -242,8 +247,40 @@ def Schedule() -> ft.View:
         if target is not None:
             await target.scroll_to(offset=0, duration=prefs.motion_ms(RETAP_SCROLL_MS))
 
+    async def relaid(
+        *,
+        text: float | None = None,
+        width: float | None = None,
+        above: bool | None = None,
+    ) -> None:
+        if not keeper.relaid(text=text, width=width, above=above):
+            return
+        # The text size changed: the shown list now, by key; the others built in full
+        # until they show again, so their item is built for the jump (D-331).
+        if shown is not None:
+            await keeper.put_back(shown, _ref(refs, shown), signals.ended)
+        set_relaid(lambda n: n + 1)
+
+    @report_errors
+    async def text_measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        await relaid(text=e.width)
+
+    @report_errors
+    async def width_measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        await relaid(width=e.width)
+
+    @report_errors
+    async def time_moved() -> None:
+        await relaid(above=prefs.time_above)
+
+    # The time going above the rows at the largest sizes (D-216) relays them out too.
+    ft.use_effect(time_moved, [prefs.time_above], cleanup=_cancel_on_unmount)
+
+    on_measure = ft.use_callback(keeper.measured, [])
+
     @report_errors
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
+        keeper.scrolled(day, e)
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels
@@ -294,7 +331,9 @@ def Schedule() -> ft.View:
                 tokens,
                 use_24h=use_24h,
                 time_above=prefs.time_above,
-                full=day == current,  # the one list a jump targets (D-154)
+                # The one list a jump targets (D-154), and a list waiting to be put
+                # back by key after a text-size change (D-331).
+                full=day == current or keeper.pending(day) is not None,
                 clearance=bool(today_slots),
                 empty=_empty(data, day, slots[day]),
                 now=NowMark(place.line, time_label(now, info.zone, use_24h=use_24h))
@@ -302,6 +341,7 @@ def Schedule() -> ft.View:
                 else None,
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
+                on_measure=on_measure,
                 on_clear_filters=track_filter.show_all,
             )
         )
@@ -313,6 +353,8 @@ def Schedule() -> ft.View:
         expand=True,
         content=ft.Column(
             [
+                # First, so Flutter reports it before the lists' items (D-331).
+                layout_probe(text_measured, width_measured),
                 # The fixed chrome keeps to the list's width (D-305).
                 capped(
                     ft.TabBar(
@@ -386,14 +428,17 @@ def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView
     return refs.setdefault(day, ft.Ref[ft.ListView]())
 
 
-async def _restore(list_ref: ft.Ref[ft.ListView], offset: float | None) -> None:
-    """Put a day list back where its last scroll ended (D-18).
-
-    A day list that shows again is a new list on the device, at the top: the tab
-    bar's pages keep nothing of a page they no longer show.
-    """
-    if offset and list_ref.current is not None:
-        await list_ref.current.scroll_to(offset=offset, duration=0)
+def _keys(
+    slots: dict[date, tuple[Slot, ...]], current: date, place: NowPlace | None
+) -> dict[date, tuple[str, ...]]:
+    """Return each day list's item keys in order: its slots, today's now line among them."""
+    keys = {
+        day: tuple(slot.key for slot in day_slots) for day, day_slots in slots.items()
+    }
+    if place is not None:
+        today = keys[current]
+        keys[current] = (*today[: place.line], NOW_KEY, *today[place.line :])
+    return keys
 
 
 def _default_day(all_days: tuple[date, ...], current: date) -> date | None:
