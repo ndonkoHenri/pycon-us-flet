@@ -78,6 +78,9 @@ class ChangeLog:
     # One write at a time, each saving the log as it is once the one before landed:
     # the storage's thread lock gives turns, not order (D-244).
     _writing: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+    # Counts the deletions and resets: a write asked for before the latest one is
+    # dropped when its turn comes, whatever the order of the turns (``_write()``).
+    _generation: int = field(default=0, repr=False)
 
     async def load(self, storage: Storage, zone: tzinfo) -> None:
         """Read the year's log and its marker; call it once at start, before a refresh.
@@ -91,10 +94,11 @@ class ChangeLog:
         self.batches = tuple(trim(batches, clock.now()))
 
     async def delete(self, storage: Storage, reason: str) -> bool:
-        """Delete the log, once every file write asked for before lands (D-244, D-255).
+        """Delete the log, after a file write under way lands (D-244, D-255).
 
-        The writes still waiting for their turn land first: one landing after the
-        deletion would bring the file back.
+        A write asked for before the deletion and not yet started is dropped, whenever
+        its turn comes: the log it would save was the old feed URL's, and landing after
+        the deletion would bring the file back. Writes asked for after it land.
 
         A feed URL change after the load: the log was the old URL's.
 
@@ -112,7 +116,9 @@ class ChangeLog:
     def reset(self) -> None:
         """Return to a fresh install's log, without writing: Reset app (D-198, D-255).
 
-        Reset app deletes the file and clears the marker with every ``pycon.`` key.
+        Reset app deletes the file and clears the marker with every ``pycon.`` key; a
+        write asked for before the reset and not yet started is dropped, as for
+        ``delete()``.
         """
         self._fetched = False
         self._forget()
@@ -189,16 +195,26 @@ class ChangeLog:
         Every write of the log goes through here, one at a time: each saves the
         batches as they are once the one before it landed, so a seen mark's write can
         never land over a newer batch's. The task is kept until it lands, so a
-        cancelled caller (a refresh, a cleanup) leaves it to finish.
+        cancelled caller (a refresh, a cleanup) leaves it to finish. A deletion or a
+        reset before its turn drops it (``delete()``); its result is then False.
         """
-        save = asyncio.create_task(self._write(storage))
+        save = asyncio.create_task(self._write(storage, self._generation))
         self._saves.add(save)
         save.add_done_callback(self._saves.discard)
         return save
 
-    async def _write(self, storage: Storage) -> bool:
-        """Write the log as it is when its turn comes; a failure is logged (D-120)."""
+    async def _write(self, storage: Storage, generation: int) -> bool:
+        """Write the log as it is when its turn comes; a failure is logged (D-120).
+
+        Args:
+            storage: Where the log is kept.
+            generation: ``_generation`` when the write was asked for: once a deletion
+                or a reset has changed it, the write is dropped and returns False.
+        """
         async with self._writing:
+            if generation != self._generation:
+                logger.info("Change log write dropped: the log was deleted since")
+                return False
             return await changes_file.write_batches(storage, list(self.batches))
 
     def take_announcement(self) -> Batch | None:
@@ -253,6 +269,8 @@ class ChangeLog:
         return batch
 
     def _forget(self) -> None:
+        """Clear the batches and the announcement, and drop the writes not yet started."""
+        self._generation += 1
         self._announce = None
         self.batches = ()
 

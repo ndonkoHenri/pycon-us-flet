@@ -133,10 +133,10 @@ async def test_a_batch_recorded_while_a_write_is_held_is_saved_after_it(
     assert len(relaunched.batches) == 2
 
 
-async def test_a_delete_waits_for_the_writes_asked_before_it(
+async def test_a_delete_waits_for_a_write_under_way_and_drops_the_queued_ones(
     storage: Storage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A write still waiting for its turn lands before the delete, never after it."""
+    """A write already writing lands before the delete; one still queued is dropped."""
     real = changes_file.write_batches
     release = asyncio.Event()
 
@@ -156,7 +156,43 @@ async def test_a_delete_waits_for_the_writes_asked_before_it(
     await asyncio.sleep(0.05)
     release.set()
     assert await delete
-    await asyncio.gather(*(write for write in writes if write is not None))
+    assert await asyncio.gather(*(write for write in writes if write is not None)) == [
+        True,
+        False,
+    ]
+    assert not changes_file.changes_path(storage).exists()
+
+
+async def test_a_write_asked_for_before_a_delete_never_recreates_the_file(
+    storage: Storage,
+) -> None:
+    """A write that has not started when the log is deleted is dropped, not run after.
+
+    No yield between the two: the delete takes the free lock before the write's task
+    runs, so the write's turn comes after the deletion. A write asked for after the
+    deletion is the new log's and lands.
+    """
+    log = ChangeLog(batches=(NEWEST, OLDER))
+    write = log.mark_seen(storage)
+    assert await log.delete(storage, "the feed URL changed")
+    assert write is not None and not await write
+    assert not changes_file.changes_path(storage).exists()
+
+    log.batches = (NEWEST,)
+    after = log.mark_seen(storage)
+    assert after is not None and await after
+    assert changes_file.changes_path(storage).exists()
+
+
+async def test_a_write_asked_for_before_a_reset_never_recreates_the_file(
+    storage: Storage,
+) -> None:
+    """Reset app forgets the log as a delete does: a write still queued is dropped."""
+    log = ChangeLog(batches=(NEWEST,))
+    write = log.mark_seen(storage)
+    log.reset()
+    assert await changes_file.delete_batches(storage, "Reset app")
+    assert write is not None and not await write
     assert not changes_file.changes_path(storage).exists()
 
 
