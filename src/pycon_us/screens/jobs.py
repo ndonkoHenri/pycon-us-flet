@@ -60,6 +60,7 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "jobs"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -90,6 +91,7 @@ DEBOUNCE_SECONDS = 0.25
 def Jobs() -> ft.View:
     """The Job listings page: the strip and the filter, then a card per listing."""
     svc = use_services()
+    margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     tokens = use_tokens()
     field = use_field_query()
@@ -174,13 +176,17 @@ def Jobs() -> ft.View:
         body=ft.Column(
             [
                 # The strip, the field and its count in a column of their own, so
-                # the list keeps its place in the body as they come and go (D-153).
-                ft.Column(
-                    pinned,
-                    spacing=0,
-                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                # the list keeps its place in the body as they come and go (D-153);
+                # between the list's margins (D-305).
+                capped(
+                    ft.Column(
+                        pinned,
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
                 ),
-                ft.ListView(items, expand=True, padding=ft.Padding.only(bottom=24)),
+                ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
             ],
             spacing=0,
             expand=True,
