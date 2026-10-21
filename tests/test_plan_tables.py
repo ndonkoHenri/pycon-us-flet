@@ -159,6 +159,22 @@ async def test_a_view_below_the_top_keeps_its_table_and_back_forgets_it(
     assert plan.memory.plan_tables == {}
 
 
+async def test_a_new_session_keeps_the_tapped_table_over_the_route_s(
+    show: Render,
+) -> None:
+    """Open ``?table=T7``, tap T2, rebuild the session at that route: T2 stays (D-18)."""
+    memory = ViewMemory()
+    plan = await show("?table=T7", plan_id="job-fair", conference=FEED, memory=memory)
+    await plan.lay_out()
+    await plan.click(cast(ft.Container, areas(plan)["T2"].content))
+    again = await show("?table=T7", plan_id="job-fair", conference=FEED, memory=memory)
+    await again.lay_out()
+    assert selected(again) == ["T2"]
+    assert memory.plan_tables == {VIEW: "T2"}
+    await again.show(False)
+    assert memory.plan_tables == {}
+
+
 @pytest.mark.parametrize("query", ["?table=T7", ""])
 async def test_other_plans_have_no_tables(show: Render, query: str) -> None:
     """The Concourse level ignores ``?table=``: no areas, no card, its double tap."""

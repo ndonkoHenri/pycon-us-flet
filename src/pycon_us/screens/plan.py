@@ -237,9 +237,10 @@ def PlanViewer(plan_id: str) -> ft.View:
         lambda: pin is not None and memory.plan_pins.get(view_path) != pin.key
     )
     ring, set_ring = ft.use_state(False)
-    # As the pin: the query seeds the table, a View below the top finds it in memory.
+    # Memory first: a View rebuilt in a new session keeps the table last tapped, though
+    # its route still holds the first one; a View pushed fresh has no entry (D-18, D-143).
     table, set_table = ft.use_state(
-        lambda: query.get(TABLE_PARAM) or memory.plan_tables.get(view_path, "")
+        lambda: memory.plan_tables.get(view_path) or query.get(TABLE_PARAM, "")
     )
     selected = table if on_job_fair else ""
     ring_ms = prefs.motion_ms(PULSE_MS)
