@@ -28,6 +28,7 @@ from pycon_us.screens import session as screen
 from pycon_us.services import Services
 from pycon_us.ui.favorite import REMOVED, UNDO
 from tests.feeds import processed
+from tests.folds import Fold, fold_named
 from tests.session_detail import (
     BREAK,
     TALK,
@@ -284,6 +285,11 @@ async def test_the_room_tile_pushes_the_room_with_the_session_highlighted(
     assert detail.nodes("session.other_rooms") == []  # one room, nothing folded
 
 
+def other_rooms(detail: Detail) -> Fold:
+    """Return the fold of the detail's other rooms, ``session.other_rooms``."""
+    return fold_named(detail.find(ft.Container), "session.other_rooms")
+
+
 async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
     """A streamed session shows its main room and folds the four others.
 
@@ -291,10 +297,10 @@ async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
     """
     detail = await render(LIGHTNING)
     assert words(detail.node("session.room")) == ["Pacific Ballroom - Arena"]
-    folded = detail.node("session.other_rooms").content
-    assert isinstance(folded, ft.ExpansionTile)
+    folded = other_rooms(detail)
     assert cast(ft.Text, folded.title).value == "+4 more rooms"
-    rooms = folded.controls or []
+    assert folded.said == "Collapsed"
+    rooms = folded.controls
     assert [words(room) for room in rooms] == [
         ["Room 103ABC"],
         ["Room 104AB"],
@@ -309,12 +315,12 @@ async def test_a_streamed_session_folds_its_other_rooms(render: Render) -> None:
 async def test_the_folded_rooms_stay_open_once_opened(render: Render) -> None:
     """Coming back from a room's detail re-rendered the tile folded (iOS simulator)."""
     detail = await render(LIGHTNING)
-    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
+    folded = other_rooms(detail)
     assert folded.expanded is False
-    await detail.session.dispatch_event(folded._i, "change", True)
-    await detail.settle()
-    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
+    await detail.click(folded.header)
+    folded = other_rooms(detail)
     assert folded.expanded is True
+    assert folded.said == "Expanded"
 
 
 async def test_a_break_in_many_rooms_lists_them_without_one_place(
@@ -326,9 +332,9 @@ async def test_a_break_in_many_rooms_lists_them_without_one_place(
     """
     detail = await render(BREAK)
     assert detail.nodes("session.room") == []
-    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
+    folded = other_rooms(detail)
     assert cast(ft.Text, folded.title).value == "In 5 rooms"
-    first = (folded.controls or [])[0]
+    first = folded.controls[0]
     await detail.click(
         next(n for n in descendants(first) if isinstance(n, ft.ListTile))
     )
@@ -344,8 +350,7 @@ async def test_reduced_motion_opens_the_rooms_without_animation(
     """With reduced motion, the folded rooms open with a 0 ms animation."""
     monkeypatch.setattr(Prefs, "motion_ms", lambda self, ms: 0)
     detail = await render(LIGHTNING)
-    folded = cast(ft.ExpansionTile, detail.node("session.other_rooms").content)
-    assert cast(ft.AnimationStyle, folded.animation_style).duration == 0
+    assert other_rooms(detail).animation.duration == 0
 
 
 # ------------------------------------------------------------------ speakers (SESS-07)
