@@ -17,7 +17,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | Path | What it is |
 |---|---|
 | `config.yaml` | The workspace: `maestro test maestro` runs `journeys/*` and `regression/*` |
-| `journeys/` | P1's exit journeys, tagged `journeys` (two also `smoke`) |
+| `journeys/` | P1's exit journeys and later screens' journeys, tagged `journeys` (two also `smoke`) |
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
 | `subflows/` | Steps the flows share through `runFlow`; never run on their own, except `fling_setup.yaml`, which `tools/fling_after_sheet.py` runs |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
@@ -30,6 +30,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
+| `journeys/sponsors_back.yaml` | journeys | More › Sponsors › a logo card's sponsor (Capital One) › Back: the list shows the same card again, and the sponsor's page is gone (SPON-01, #496) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
