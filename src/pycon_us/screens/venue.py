@@ -15,7 +15,8 @@ at once from bundled year data (D-45, INFO-05), offline, and answers both questi
   are read as words and never a chip, since a tap does nothing (ux.md §6.7); where it
   is, its days with today's in bold, and its note. The page re-renders on the minute
   (``use_minute()``), so the labels follow the clock, the Developer fake clock too;
-  off-season there are none (``hours_status()`` is None).
+  off-season there are none (``hours_status()`` is None). The Quiet room's card ends
+  with the sponsor who provides it, a row that pushes its detail (D-337).
 
 Hours are conference time; while the device's zone differs a line says so (D-35,
 D-240). A year without ``[[venue_hours]]`` shows the feed's ``venues-hours`` block, and
@@ -41,6 +42,7 @@ from pycon_us.core.timefmt import (
     time_range_label,
     zone_note,
 )
+from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens, use_tokens
@@ -129,9 +131,20 @@ def venue_blocks(
         hours_status(hours, now, zone, use_24h=use_24h) or {}
     )
     today = local_date(now, zone)
+    quiet_room = SponsorCreditTile(
+        svc.year.content.sponsor_credits.quiet_room,
+        "Quiet room",
+        f"{SCREEN}.service.quiet_room.sponsor",
+    )
     blocks += [
         service_card(
-            item, statuses.get(item.service), tokens, zone, today, use_24h=use_24h
+            item,
+            statuses.get(item.service),
+            tokens,
+            zone,
+            today,
+            use_24h=use_24h,
+            footer=quiet_room if service_key(item.service) == "quiet_room" else None,
         )
         for item in hours
     ]
@@ -253,6 +266,7 @@ def service_card(
     today: date,
     *,
     use_24h: bool,
+    footer: ft.Control | None = None,
 ) -> ft.Control:
     """Return a service's card: name, status, where, its days and its note.
 
@@ -266,6 +280,7 @@ def service_card(
         zone: The conference's zone, which the hours are written in.
         today: The conference-local day, whose hours are in bold.
         use_24h: Whether the device shows 24-hour times (D-35).
+        footer: A row under the lines, edge to edge: the Quiet room's sponsor credit.
     """
     key = f"{SCREEN}.service.{service_key(item.service)}"
     lines: list[ft.Control] = [heading(item.service, key)]
@@ -295,7 +310,7 @@ def service_card(
                 color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
-    return card(lines)
+    return card(lines, footer)
 
 
 def status_label(status: HoursStatus, tokens: Tokens, key: str) -> ft.Control:
@@ -387,19 +402,25 @@ def heading(text: str, identifier: str) -> ft.Control:
     )
 
 
-def card(lines: list[ft.Control]) -> ft.Control:
+def card(lines: list[ft.Control], footer: ft.Control | None = None) -> ft.Control:
     """Return an outlined card of ``lines``, ``GUTTER`` from the page's sides.
 
     Outlined, so its fill is the surface, on which ``live`` reads at AA (D-24).
 
     Args:
         lines: Its content, top to bottom.
+        footer: A row under them, outside their padding, so its own 16 dp inset lines
+            it up with them.
     """
+    body: ft.Control = ft.Container(ft.Column(lines, spacing=8), padding=16)
+    if footer is not None:
+        body = ft.Column([body, footer], spacing=0)
     return ft.Container(
         ft.Card(
-            ft.Container(ft.Column(lines, spacing=8), padding=16),
+            body,
             variant=ft.CardVariant.OUTLINED,
             margin=0,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,  # a footer's ink stays inside
             semantic_container=False,  # else the card reads as one node (D-211)
         ),
         padding=ft.Padding.symmetric(horizontal=GUTTER, vertical=8),

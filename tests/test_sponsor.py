@@ -107,6 +107,19 @@ async def test_the_name_is_the_page_s_heading_over_the_logo_plate(show: Show) ->
     assert isinstance(image, ft.Image) and image.exclude_from_semantics
 
 
+async def test_at_large_text_the_name_steps_down_still_centred(show: Show) -> None:
+    """D-328: where a slot's time leaves the gutter, the name takes a row title's type."""
+    shown = await show("bloomberg")
+    shown.prefs.time_above = True  # what GutterProbe measures at that size
+    await shown.settle()
+    name = cast(ft.Text, shown.node("sponsor.title").content)
+    assert (name.theme_style, name.text_align, name.selectable) == (
+        ft.TextThemeStyle.TITLE_MEDIUM,
+        ft.TextAlign.CENTER,
+        True,
+    )
+
+
 async def test_the_level_is_a_line_not_a_control_and_the_facts_read_as_words(
     show: Show,
 ) -> None:
