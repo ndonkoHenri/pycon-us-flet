@@ -208,6 +208,13 @@ average was in the hundreds took up to 3 minutes a journey.
 | `regression`, `main`'s build (`1a2c2b5`) | `TRIALS=20`: 20 moved, 10 min 23 s; tap to fling 773-914 ms (median 870) | `TRIALS=10`: 10 moved, 5 min 5 s; tap command 0.77 s |
 | `regression`, #346's build (`7ccd74f`) | `TRIALS=20`: 20 moved, 10 min 44 s; tap to fling 807-1,019 ms (median 858) | not run |
 
+After P2 (#496, on 2026-10-21, `main` at `6979c0b`): every journey stopped at the launch,
+because a fresh install now opens Welcome (D-287) and Refresh now's failure line was
+reworded. `launch_fresh.yaml` now taps Get started (`welcome.start`) until Now shows, and
+`start_offline.yaml` expects the new words. Then, on an iPhone 17 simulator (iOS 26.5), at a
+load average of 40 to 300: the six journeys passed (1 min 27 s to 1 min 50 s each), and
+`sponsors_back` passed.
+
 Earlier versions of the flows failed twice on iOS while the host's load average was 400
 to 700: Developer's feed URL lost two characters as it was typed (F63), and the overlap
 flow's star tap landed while the Schedule was still jumping to now. Both are handled now
