@@ -38,6 +38,7 @@ from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.widths import LIST, capped, use_margin
 
 DEBOUNCE_SECONDS = 0.25
 """How long the typing must pause before the search runs (D-46)."""
@@ -137,6 +138,7 @@ def Search() -> ft.View:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     tokens = use_tokens()
+    margin = use_margin(LIST)  # its width class, for the field above the list (D-305)
     options = use_query()
     page = ft.context.page
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
@@ -269,27 +271,30 @@ def Search() -> ft.View:
                 # The field, the chips and the count stay put above the list, in a
                 # column of their own: the count coming and going never moves the
                 # list to another place in the body, where Flet would rebuild it.
-                ft.Column(
-                    [
-                        SearchField(
-                            value=field.value,
-                            on_change=changed,
-                            on_clear=clear,
-                            ref=field.ref,
-                            hint=HINTS[scope],
-                            label=LABEL,
-                            clear_tooltip=CLEAR,
-                            identifier=f"{SCREEN}.field",
-                            autofocus=True,
-                            on_submit=submitted,
-                            keyboard_type=ft.KeyboardType.WEB_SEARCH,
-                            high_contrast=tokens.high_contrast,
-                        ),
-                        _scope_chips(scope, picked),
-                        *([count] if count else []),
-                    ],
-                    spacing=0,
-                    horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                capped(
+                    ft.Column(
+                        [
+                            SearchField(
+                                value=field.value,
+                                on_change=changed,
+                                on_clear=clear,
+                                ref=field.ref,
+                                hint=HINTS[scope],
+                                label=LABEL,
+                                clear_tooltip=CLEAR,
+                                identifier=f"{SCREEN}.field",
+                                autofocus=True,
+                                on_submit=submitted,
+                                keyboard_type=ft.KeyboardType.WEB_SEARCH,
+                                high_contrast=tokens.high_contrast,
+                            ),
+                            _scope_chips(scope, picked),
+                            *([count] if count else []),
+                        ],
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
                 ),
                 ResultList(
                     results,

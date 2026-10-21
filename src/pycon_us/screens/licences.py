@@ -16,6 +16,7 @@ from pycon_us.screens.stub import not_found
 from pycon_us.ui.info_page import GUTTER
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.widths import LIST, READING, sides, use_margin
 
 SCREEN = "licences"
 """The list's name in its semantics identifiers: ``licences.<key>`` (decisions §M)."""
@@ -47,6 +48,7 @@ def licence_href(component: Component) -> str:
 @ft.component
 def Licences() -> ft.View:
     """The Licences list: the app and its notices, then each component by section."""
+    margin = use_margin(LIST)  # its width class (D-305)
     rows: list[ft.Control] = []
     for group in GROUPS:
         rows.append(SectionHeader(group.title))
@@ -61,7 +63,7 @@ def Licences() -> ft.View:
         )
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(rows, expand=True, padding=ft.Padding.only(bottom=GUTTER)),
+        body=ft.ListView(rows, expand=True, padding=sides(margin, bottom=GUTTER)),
     )
 
 
@@ -82,6 +84,7 @@ def LicenceText(licence: str) -> ft.View:
     Args:
         licence: The component's key from the route (``Component.key``), unquoted.
     """
+    margin = use_margin(READING)  # its width class (D-305)
     component = COMPONENTS.get(licence)
     # Read and split once per page: a re-render (a theme change) reads no file.
     blocks = ft.use_memo(
@@ -101,6 +104,7 @@ def LicenceText(licence: str) -> ft.View:
                     )
                 ],
                 expand=True,
+                padding=sides(margin),
             ),
         )
     items: list[ft.Control] = [header(component)]
@@ -111,7 +115,8 @@ def LicenceText(licence: str) -> ft.View:
             items,
             expand=True,
             spacing=12,
-            padding=ft.Padding.only(left=GUTTER, top=16, right=GUTTER, bottom=GUTTER),
+            # The gutter inside the margins, which centre the text at 720 dp.
+            padding=sides(margin + GUTTER, top=16, bottom=GUTTER),
         ),
     )
 
