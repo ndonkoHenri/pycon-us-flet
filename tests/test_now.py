@@ -134,9 +134,19 @@ def copy_at(data: ConferenceData, now: datetime, **kwargs: Any) -> tuple[str, ..
             may(15, 6),
             (Season.CONFERENCE, "Day 3 of 5 · Friday", "First up today at 7:30 AM"),
         ),
+        # While the day runs, when its next slot starts (D-366).
         (
             may(15, 11, 10),
-            (Season.CONFERENCE, "Day 3 of 5 · Friday", "Long Beach Convention Center"),
+            (Season.CONFERENCE, "Day 3 of 5 · Friday", "Up next at 11:30 AM"),
+        ),
+        # The day's last slot: nothing more starts today, so the venue.
+        (
+            may(14, 18, 30),
+            (
+                Season.CONFERENCE,
+                "Day 2 of 5 · Thursday",
+                "Long Beach Convention Center",
+            ),
         ),
         (
             may(15, 21),
@@ -193,9 +203,11 @@ def test_the_seasons_follow_the_phases_and_the_year_s_dates(
 def test_the_first_start_follows_the_device_s_clock_format(
     data: ConferenceData,
 ) -> None:
-    """On a 24-hour device, the first start reads ``07:30``."""
+    """On a 24-hour device, the first start reads ``07:30``, and the next ``11:30``."""
     _, _, subtitle = copy_at(data, may(15, 6), use_24h=True)
     assert subtitle == "First up today at 07:30"
+    _, _, subtitle = copy_at(data, may(15, 11, 10), use_24h=True)
+    assert subtitle == "Up next at 11:30"
 
 
 def test_the_header_names_pacific_time_on_a_device_elsewhere(
@@ -799,7 +811,7 @@ async def test_with_nothing_saved_it_says_how_to_save_a_session(
     tile = shown.node("now.next_session")
     assert _texts(tile)[:2] == [
         "Nothing saved yet",
-        "Tap the star on a session, and your next one shows here",
+        "Star a session to see it here",
     ]
 
 
@@ -861,7 +873,7 @@ async def test_a_resume_recomputes_at_once(
     shown.clock[0] = may(15, 21)
     await asyncio.sleep(0.05)
     await shown.settle()
-    assert "Long Beach Convention Center" in header(shown)  # still the morning
+    assert "Up next at 11:30 AM" in header(shown)  # still the morning
     shown.services.foreground.set()  # resume
     await asyncio.sleep(0)
     await shown.settle()

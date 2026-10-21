@@ -2,7 +2,8 @@
 
 The header says where the conference stands, in the brand's indigo (one of D-28's
 identity moments): "Starts in 23 days", "Day 3 of 5 · Friday" with "First up today at
-9:00 AM" or "That's a wrap for today", the sprints, then "See you next year".
+9:00 AM", "Up next at 11:30 AM" or "That's a wrap for today", the sprints, then "See
+you next year".
 ``season()`` and ``header_copy()`` are pure: they map Now & Next's phase (D-179) and
 the conference-local date to the words, so the tests hold them at fixed times;
 ``StatusHeader`` draws them; ``up_next_when()`` words the next slot's start. Before
@@ -158,7 +159,8 @@ def header_copy(
             title = f"Day {number} of {len(data.days)} · {weekday_name(day)}"
             # Only this season shows times, so only it says which zone they are in.
             note = zone_note(now, zone, info.time_zone_name, device_offset)
-            return HeaderCopy(current, title, _day_line(now_next, info, use_24h), note)
+            line = _day_line(now_next, day, info, use_24h)
+            return HeaderCopy(current, title, line, note)
 
 
 def _countdown(days: int) -> str:
@@ -167,13 +169,21 @@ def _countdown(days: int) -> str:
     return "Starts tomorrow" if days == 1 else f"Starts in {days} days"
 
 
-def _day_line(now_next: NowNext, info: ConferenceInfo, use_24h: bool) -> str:
-    """The line under a conference day's title, by where the day stands."""
+def _day_line(now_next: NowNext, day: date, info: ConferenceInfo, use_24h: bool) -> str:
+    """The line under a conference day's title, by where the day stands.
+
+    While the day runs, its next slot's start when it is today (D-366): Up next's
+    heading is below the first screen at peak times, so the header says when it is.
+    """
+    upcoming = now_next.up_next
+    start = upcoming and time_label(upcoming.start, info.zone, use_24h=use_24h)
+    today_next = upcoming is not None and local_date(upcoming.start, info.zone) == day
     match now_next.phase:
-        case Phase.BEFORE | Phase.BEFORE_DAY if now_next.up_next is not None:
-            first = time_label(now_next.up_next.start, info.zone, use_24h=use_24h)
-            return f"First up today at {first}"
-        case Phase.DAY:
+        case Phase.BEFORE | Phase.BEFORE_DAY if upcoming is not None:
+            return f"First up today at {start}"
+        case Phase.DAY if today_next:
+            return f"Up next at {start}"
+        case Phase.DAY:  # the day's last slot: nothing more starts today
             return info.venue
         case _:  # after the day's last end: the evening, or the last day's
             return "That's a wrap for today"
