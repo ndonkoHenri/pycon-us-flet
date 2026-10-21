@@ -206,7 +206,8 @@ TAKEN_IN = ("Button", "Chip", "TextField", "Tile")
 """The name endings of the controls that a bare identifier splits from (F50).
 
 Every ``*Button`` (``PopupMenuButton`` too), every ``*Chip``, ``TextField``, and every
-``*Tile``: ``ListTile``, and the folds' ``ExpansionTile`` and ``FoldTile``.
+``*Tile``: ``ListTile``, ``ExpansionTile`` and the app's fold, ``FoldTile``, whose
+identifier goes on its header (D-354).
 """
 
 ON_PURPOSE = {
@@ -214,15 +215,6 @@ ON_PURPOSE = {
     # button of its own; an empty node of its own until U34. (The same function
     # merges the feed URL's field, which has no picker, through named().)
     ("developer_ui.py", "option_field", "identifier"): "developer.fake_clock",
-    # D-214: the folds, around the tile and not merged, which would take in the rows
-    # they hold; an empty node of their own until an identifier on the control itself.
-    ("lightning_talks.py", "doubts_fold", "f'{SCREEN}.doubts'"): (
-        "lightning_talks.doubts"
-    ),
-    ("my_schedule.py", "_fold", "identifier"): (
-        "my_schedule.earlier_days, my_schedule.earlier_today"
-    ),
-    ("when_where.py", "OtherRooms", "f'{screen}.other_rooms'"): "session.other_rooms",
     # D-230, D-233: inside a PopupMenuItem, whose own MergeSemantics takes the
     # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
     # dump shows it. Every overflow item is built there.
@@ -361,6 +353,11 @@ SPLIT = {
         'tile: ft.Control = ft.Text("Go")',
         "tile = ft.ListTile(title=tile)",
         'return ft.Semantics(identifier="x", content=tile)',
+    ],
+    # D-354: a fold's identifier goes on its header, through FoldTile(identifier=).
+    "fold": [
+        'fold = FoldTile(ft.Text("Earlier days"), [], expanded=False)',
+        'return ft.Semantics(identifier="x", content=fold)',
     ],
     "in-a-column": [
         'return ft.Column([ft.Semantics(identifier="x", content=ft.TextField())])'

@@ -344,15 +344,18 @@ def test_the_filter_sheet_is_outlined_only_in_hc(high_contrast: bool) -> None:
 
 @pytest.mark.parametrize("lines", [False, True])
 def test_a_fold_keeps_material_s_lines_only_when_asked(lines: bool) -> None:
-    """With ``lines`` an open fold keeps Flutter's divider lines (``outline`` in HC)."""
-    fold = FoldTile(
-        ft.Text("Earlier days"),
-        [],
-        expanded=True,
-        on_change=never,
-        style=ft.AnimationStyle(),
-        bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-        lines=lines,
-    )
-    assert (fold.shape is None) == lines
-    assert fold.collapsed_shape is not None
+    """With ``lines`` an open fold draws a line above and below it, in ``outline``."""
+    line = ft.BorderSide(1, ft.Colors.OUTLINE)
+    for expanded in (False, True):
+        fold = FoldTile(
+            ft.Text("Earlier days"),
+            [],
+            expanded=expanded,
+            on_change=never,
+            style=ft.Animation(0),
+            identifier="my_schedule.earlier_days",
+            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+            lines=lines,
+        )
+        drawn = ft.Border(top=line, bottom=line) if expanded and lines else None
+        assert fold.border == drawn

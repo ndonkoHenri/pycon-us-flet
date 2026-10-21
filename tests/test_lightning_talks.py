@@ -21,6 +21,7 @@ from pycon_us.screens import lightning_talks as screen
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
 from tests.feeds import processed
+from tests.folds import folds
 from tests.sessions import Shown, showing, text_of
 
 YEAR = load_year(2026)
@@ -131,23 +132,21 @@ def doubt_texts(control: ft.Control) -> list[str]:
 
 
 async def test_think_you_cant_do_one_starts_folded_and_opens(show: Show) -> None:
-    """EVT-03: a collapsed ``ExpansionTile``, controlled so a render keeps it open."""
+    """EVT-03: a collapsed ``FoldTile``, controlled so a render keeps it open."""
     page = await show()
-    (fold,) = page.find(ft.ExpansionTile)
+    (fold,) = folds(page.find(ft.Container))
     assert text_of(fold.title) == "Think you can't do one?"
-    # The identifier is around the tile: on the title, it split the title from the
-    # tile's button, which Android read as "Collapsed" alone (D-214).
-    assert page.node("lightning_talks.doubts").content is fold
+    assert fold.identifier == "lightning_talks.doubts"  # on its header (D-354)
     # A row's title, as the link row under it, not a heading's size (ux.md §5.11).
     title = cast(ft.Text, fold.title)
     assert title.theme_style is None
     assert fold.expanded is False
-    await page.event(fold, "change", True)
-    (fold,) = page.find(ft.ExpansionTile)
+    await page.click(fold.header)
+    (fold,) = folds(page.find(ft.Container))
     assert fold.expanded is True
     star = page.nodes("lightning_talks.favorite.")[0]
     await page.click(cast(ft.Control, star.content))  # a render of the page
-    (fold,) = page.find(ft.ExpansionTile)
+    (fold,) = folds(page.find(ft.Container))
     assert fold.expanded is True
 
 
@@ -155,8 +154,8 @@ async def test_each_doubt_reads_as_one_node_with_its_answer(show: Show) -> None:
     """Each doubt under the fold is one node: the doubt, then its answer."""
     assert COPY is not None
     page = await show()
-    (fold,) = page.find(ft.ExpansionTile)
-    controls = fold.controls or []
+    (fold,) = folds(page.find(ft.Container))
+    controls = fold.controls
     assert all(cast(ft.Semantics, c).container for c in controls)
     assert [doubt_texts(c) for c in controls] == [
         [d.doubt, d.answer] for d in COPY.doubts
@@ -226,7 +225,7 @@ async def test_a_year_without_the_copy_shows_its_talks_alone(show: Show) -> None
     """2025's year data has no ``[lightning_talks]``."""
     page = await show(year=2025)
     assert page.find(ft.Card) == []
-    assert page.find(ft.ExpansionTile) == []
+    assert folds(page.find(ft.Container)) == []
     assert len(page.nodes("lightning_talks.session.")) == len(talks(2025)) == 4
 
 
