@@ -94,7 +94,8 @@ class PlaceKeeper:
         width: The screen's width, in dp; 0 until reported.
         above: Whether slots put their time above their rows (D-216).
         moving: The days whose list is scrolling: a put-back would fight the user.
-        round: Counts put-backs, so a newer one stops an older one still waiting.
+        round: Counts put-backs and what supersedes them (a layout change, a jump to
+            now), so an older put-back still waiting stops.
     """
 
     def __init__(self, memory: ViewMemory) -> None:
@@ -183,6 +184,7 @@ class PlaceKeeper:
         before, self.memory.schedule_basis = self.memory.schedule_basis, basis
         if before is None or before == basis:
             return False
+        self.round += 1  # a put-back still waiting scales for the old layout
         self.heights.clear()
         places = self.memory.schedule_places
         for day, place in places.items():
@@ -212,11 +214,11 @@ class PlaceKeeper:
         place = self.pending(day)
         if place is None:
             return False
+        self.round += 1
+        mine = self.round
         if day in self.moving:
             del self.memory.schedule_places[day]
             return True
-        self.round += 1
-        mine = self.round
         jump = await jump_to_key(list_ref, place.key, duration=0, ended=ended, tries=1)
         if jump == "still" and mine == self.round and list_ref.current is not None:
             old_top = place.pixels - place.into
@@ -233,12 +235,24 @@ class PlaceKeeper:
         target = landed - divider_above(self.keys.get(day, ()), place.key) + into
         if target != landed and list_ref.current is not None:
             await list_ref.current.scroll_to(offset=target, duration=0)
+            if mine != self.round:
+                return False
         self.memory.schedule_offsets[day] = target
         self.memory.schedule_places[day] = replace(
             place, into=into, height=height, pixels=target, stale=False
         )
         logger.info("Put the place back: %s, %.0f dp in", place.key, into)
         return True
+
+    def supersede(self, day: date) -> None:
+        """Forget the day's place, as a jump to now takes its list elsewhere.
+
+        A put-back still waiting stops, and the jump's scroll end records the new place:
+        else a stale place would wait for a put-back that never comes, and keep every
+        later scroll end from counting (``scrolled()``).
+        """
+        self.round += 1
+        self.memory.schedule_places.pop(day, None)
 
     async def restore(
         self, day: date, list_ref: ft.Ref[ft.ListView], ended: asyncio.Event

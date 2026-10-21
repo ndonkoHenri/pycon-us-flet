@@ -224,3 +224,61 @@ async def test_a_slot_that_left_the_built_range_is_reached_from_its_old_offset(
     assert asks[1] == {"offset": 3 * HEIGHT, "duration": 0}
     assert {a["scroll_key"].value for a in asks[2:]} == {key}
     assert SATURDAY not in memory.schedule_places
+
+
+async def test_today_s_jump_to_now_drops_a_stale_place_so_later_ends_count(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """Codex's #572 review: "Today" from another day supersedes today's put-back.
+
+    Today's place went stale while Saturday showed; the jump to now moves the list
+    elsewhere, so a later scroll end records the user's place, not the old one.
+    """
+    schedule = await shown()  # Friday, today, jumped to now
+    await _measure(schedule, 40.0)
+    await _report(schedule, FRIDAY, HEIGHT)
+    await schedule.scroll_end(FRIDAY, 3 * HEIGHT + 50)
+    await schedule.change_day(SATURDAY)
+    await _measure(schedule, 52.0)
+    assert memory.schedule_places[FRIDAY].stale
+    schedule.forget()
+    await schedule.press_now()
+    await schedule.change_day(FRIDAY)  # Flutter's echo of the switch
+    await schedule.until(lambda: schedule.jumps)
+    await _report(schedule, FRIDAY, HEIGHT * 1.3)
+    await schedule.scroll_end(FRIDAY, 6000.0)
+    place = memory.schedule_places[FRIDAY]
+    assert (place.pixels, place.stale) == (6000.0, False)
+
+
+async def test_a_newer_layout_change_stops_a_put_back_still_on_its_way(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """Codex's #572 review: a second report while the first jump moves wins.
+
+    The first put-back's keyed jump has started (its scroll start came) when the text
+    changes again; once its end comes, the older put-back scrolls no further and
+    restores nothing, so no place from the old layout comes back as current.
+    """
+    schedule = await shown()
+    await _at_saturday_s_fourth_slot(schedule)
+    schedule.hold = asyncio.Event()
+    time, _ = _probe(schedule)
+    put_back = asyncio.ensure_future(
+        schedule.session.dispatch_event(time._i, "size_change", {"w": 52.0, "h": 26.0})
+    )
+    await schedule.until(lambda: schedule.scrolls)
+    start = {
+        "event_type": "start",
+        "pixels": 1000.0,
+        "min_scroll_extent": 0.0,
+        "max_scroll_extent": 20_000.0,
+        "viewport_dimension": 700.0,
+    }
+    await schedule.event(schedule.list_of(SATURDAY), "scroll", start)
+    await _measure(schedule, 60.0)
+    schedule.hold.set()
+    await put_back
+    await schedule.until(lambda: memory.schedule_offsets.get(SATURDAY) == 4000.0)
+    assert [kwargs for _, kwargs in schedule.scrolls if "offset" in kwargs] == []
+    assert SATURDAY not in memory.schedule_places
