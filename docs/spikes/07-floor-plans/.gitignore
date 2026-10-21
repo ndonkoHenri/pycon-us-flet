@@ -1,0 +1,4 @@
+src/assets/plans/
+build/
+.venv/
+uv.lock
