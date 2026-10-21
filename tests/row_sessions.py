@@ -22,9 +22,11 @@ from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import (
+    NO_CHANGES,
     NoticeRow,
     SessionRow,
     is_notice,
+    use_recent_changes,
     use_session_views,
 )
 from tests.fakes import MemoryHaptics, MemoryPrefs
@@ -58,6 +60,7 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     views = use_session_views(conference, session_ids, use_24h=False)
+    changes = use_recent_changes()
     info = use_services().year.conference
     return ft.Column(
         [
@@ -69,6 +72,7 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
                 on_toggle,
                 LIGHT_TOKENS,
                 screen="test",
+                changed=changes.get(view.session.id, NO_CHANGES),
             )
             for view in views
         ]

@@ -18,7 +18,13 @@ from pycon_us.core.timefmt import time_label
 from pycon_us.theme import Tokens
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT, SCROLL_EVENT_MS, anchored
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
+from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
+    NoticeRow,
+    SessionRow,
+    is_notice,
+)
 from pycon_us.ui.time_gutter import TimeSlot
 from pycon_us.ui.widths import sides
 
@@ -47,6 +53,7 @@ def day_list(
     info: ConferenceInfo,
     *,
     favorites: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
@@ -68,6 +75,7 @@ def day_list(
         views: The day's row views, in the room's order (by start, then name).
         info: The year's facts: the zone and the track registry.
         favorites: The saved ids (``Favorites.ids``).
+        changes: Every session's recent changes (``use_recent_changes()``).
         on_toggle: The screen's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
@@ -94,7 +102,12 @@ def day_list(
                 NoticeRow(view, tokens, screen=SCREEN)
                 if is_notice(session, info)
                 else SessionRow(
-                    view, session.id in favorites, on_toggle, tokens, screen=SCREEN
+                    view,
+                    session.id in favorites,
+                    on_toggle,
+                    tokens,
+                    screen=SCREEN,
+                    changed=changes.get(session.id, NO_CHANGES),
                 )
             )
             if session.id == reveal and not alone:

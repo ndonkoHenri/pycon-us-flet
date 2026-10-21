@@ -12,13 +12,19 @@ as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks throu
 of them breaks that module, not the rows: look there first.
 """
 
+import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
 
+from pycon_us import clock
+from pycon_us.change_log import RECENT_FOR
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
 from pycon_us.ui.favorite import (
@@ -29,6 +35,7 @@ from pycon_us.ui.favorite import (
     REMOVED,
     UNDO,
 )
+from pycon_us.ui.badges import CHANGED
 from pycon_us.ui.row_lines import elapsed_bar
 from pycon_us.ui.session_rows import is_notice
 from tests.feeds import processed
@@ -102,6 +109,87 @@ async def test_the_handler_is_the_same_object_on_every_render(
     finally:
         rows._SessionRow = original  # pyright: ignore[reportAttributeAccessIssue]
     assert len(handlers) == 1  # use_callback(..., []): memoised rows stay skipped
+
+
+# ------------------------------------------------------------------ Changed (D-315)
+
+DETECTED = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
+"""When the tests' batch was recorded."""
+
+
+@pytest.fixture
+def frozen_clock() -> Iterator[None]:
+    """Freeze ``clock.now()`` an hour after ``DETECTED``; real time again after."""
+    clock.set_test_now(DETECTED + timedelta(hours=1))
+    yield
+    clock.set_test_now(None)
+
+
+def badge_labels(rendered: Rendered, session_id: str) -> list[str]:
+    """The labels of the badges a session row shows, in order."""
+    column = rendered.node(f"test.session.{session_id}").content
+    badges = cast(ft.Column, column).controls[0]
+    assert isinstance(badges, ft.Row)
+    return [
+        cast(ft.Text, cast(ft.Container, b).content).value or ""
+        for b in badges.controls
+    ]
+
+
+async def record(rendered: Rendered, *changes: tuple[str, ChangeKind]) -> None:
+    """Record one batch of ``(session id, kind)`` changes, as a refresh would."""
+    batch = Batch(
+        DETECTED, tuple(Change(key, kind, None, None) for key, kind in changes)
+    )
+    rendered.change_log.batches = (batch,)  # the store notifies its subscribers
+    await rendered.settle()
+
+
+async def test_a_changed_row_shows_the_badge_and_says_what_changed(
+    rendered: Rendered, frozen_clock: None
+) -> None:
+    """A moved and retimed talk shows Changed and says "Time and room changed"."""
+    rendered.renders.clear()
+    await record(rendered, (TALK, ChangeKind.ROOM), (TALK, ChangeKind.TIME))
+    assert badge_labels(rendered, TALK) == ["Talk", CHANGED]
+    assert rendered.node(f"test.session.{TALK}").label.startswith(
+        "Talk, Time and room changed. Python for Humans"
+    )
+    assert rendered.renders == [TALK]  # the other rows skip their bodies (D-153)
+
+
+async def test_additions_and_removals_badge_no_row(
+    rendered: Rendered, frozen_clock: None
+) -> None:
+    """D-255: only a time, room or title change is badged."""
+    await record(rendered, (TALK, ChangeKind.ADDED), (CHARLA, ChangeKind.REMOVED))
+    assert badge_labels(rendered, TALK) == ["Talk"]
+    assert badge_labels(rendered, CHARLA) == ["Charla", "En Español"]
+
+
+async def test_the_badge_goes_a_minute_past_its_24_hours(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, frozen_clock: None
+) -> None:
+    """The tick removes the badge once its batch is 24 h old, re-rendering one row.
+
+    The tick is the strip's 60 s loop, made 10 ms here before the list mounts.
+    """
+    monkeypatch.setattr(rows, "TICK_SECONDS", 0.01)
+    async with rendering(tmp_path, monkeypatch) as rendered:
+        await record(rendered, (TALK, ChangeKind.TITLE))
+        assert CHANGED in badge_labels(rendered, TALK)
+        clock.set_test_now(DETECTED + RECENT_FOR - timedelta(seconds=1))
+        await asyncio.sleep(0.05)  # ticks a second before the end: still shown
+        assert CHANGED in badge_labels(rendered, TALK)
+        rendered.renders.clear()
+
+        clock.set_test_now(DETECTED + RECENT_FOR + timedelta(minutes=1))
+        for _ in range(300):
+            await asyncio.sleep(0.01)
+            if CHANGED not in badge_labels(rendered, TALK):
+                break
+        assert badge_labels(rendered, TALK) == ["Talk"]
+        assert rendered.renders == [TALK]
 
 
 # ------------------------------------------------------------------ the star (D-30)
