@@ -193,17 +193,17 @@ def MySchedule() -> ft.View:
         # Only with something to export, ended sessions included (D-289); Export to
         # calendar is the overflow's one item until Reminder settings (P2-89).
         actions = [ScheduleMenu(agenda.sessions)]
-        content = []
-        if dropped:  # some saved sessions are gone, the rest still listed (D-329)
-            content.append(
-                dropped_notice(
-                    len(dropped),
-                    on_forget=forget_dropped,
-                    on_see_changes=(
-                        see_changes if logged(dropped, change_log.batches) else None
-                    ),
-                )
+        # Some saved sessions gone, the rest still listed (D-329); always in the
+        # list, quiet with none, so its live region exists before it speaks (F61).
+        content = [
+            dropped_notice(
+                len(dropped),
+                on_forget=forget_dropped,
+                on_see_changes=(
+                    see_changes if logged(dropped, change_log.batches) else None
+                ),
             )
+        ]
         if not folded.ahead:
             if today(now, info.zone) <= data.days[-1].date:  # Now has a day to show
                 content.append(all_over(see_today))

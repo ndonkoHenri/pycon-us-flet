@@ -528,8 +528,8 @@ async def test_the_all_over_notice_sits_above_the_earlier_days_tile(
     shown: Shown,
 ) -> None:
     """Compact, not the full-screen empty state: the tile is still content."""
-    root = shown.root().controls
-    notice, tile = root[1], root[2]
+    root = shown.root().controls  # the strip, the quiet dropped notice (D-329), ...
+    notice, tile = root[2], root[3]
     assert tile is shown.node("my_schedule.earlier_days")
     assert isinstance(shown.node("my_schedule.earlier_days").content, ft.ExpansionTile)
     assert not any(
@@ -731,7 +731,8 @@ async def test_forget_unsaves_only_the_dropped_ids_with_undo(shown: Shown) -> No
     await shown.click(forget)
     assert shown.favorites.ids == frozenset(SAVED)
     assert shown.prefs_service.values[FAVORITES] == sorted(SAVED)
-    assert not shown.nodes("my_schedule.dropped_notice")
+    assert not _words(shown.node("my_schedule.dropped_notice"))  # quiet again
+    assert not shown.nodes("my_schedule.forget")
     (snack,) = shown.snack_bars
     assert cast(ft.Text, snack.content).value == REMOVED
     action = cast(ft.SnackBarAction, snack.action)
@@ -740,7 +741,62 @@ async def test_forget_unsaves_only_the_dropped_ids_with_undo(shown: Shown) -> No
     await cast(Callable[[], Any], action.on_click)()
     await shown.settle()
     assert GONE in shown.favorites.ids
-    shown.node("my_schedule.dropped_notice")
+    assert _words(shown.node("my_schedule.dropped_notice"))
+
+
+def _words(node: ft.Semantics) -> list[str]:
+    """Return the texts under the live-region ``node``, in reading order."""
+    return [str(c.value) for c in _walk(node) if isinstance(c, ft.Text)]
+
+
+@pytest.mark.usefixtures("one_dropped", "before")
+async def test_the_notice_words_are_one_merged_node_with_the_count(
+    shown: Shown,
+) -> None:
+    """D-329: title and body merge into the live region; the buttons stay out of it.
+
+    A nested container would make the heading a node of its own, so the live
+    region's label would hold only the body, which a new count leaves unchanged.
+    """
+    node = shown.node("my_schedule.dropped_notice")
+    (merge,) = [
+        c
+        for c in _walk(shown.root())
+        if isinstance(c, ft.MergeSemantics) and c.content is node
+    ]
+    assert _words(merge) == [
+        "1 saved session is no longer in the schedule",
+        "If the schedule lists it again, it comes back here.",
+    ]
+    inner = [c for c in _walk(node) if isinstance(c, ft.Semantics) and c is not node]
+    assert not any(c.container for c in inner)
+    assert [c.heading_level for c in inner if c.header] == [2]
+    assert not any(isinstance(c, ft.TextButton) for c in _walk(merge))
+
+
+@pytest.mark.usefixtures("before")
+async def test_the_live_region_is_there_before_a_session_is_dropped(
+    shown: Shown,
+) -> None:
+    """D-329, F61: the quiet node is mounted and keeps its id when a drop appears.
+
+    Android's engine sends a live region's change only for a node it had in its
+    previous update, so the notice must not mount with its words.
+    """
+    quiet = shown.node("my_schedule.dropped_notice")
+    assert quiet.live_region
+    assert not _words(quiet)
+    assert not shown.nodes("my_schedule.forget")
+    assert "EVENT_BUSY_OUTLINED" not in [
+        str(c.icon) for c in shown.find(ft.Icon) if c.visible
+    ]
+
+    await shown.favorites.add_many(shown.storage, [GONE])  # as a refresh would
+    await shown.settle()
+    spoken = shown.node("my_schedule.dropped_notice")
+    assert spoken._i == quiet._i  # the same node, its label changed
+    assert _words(spoken)[0] == "1 saved session is no longer in the schedule"
+    shown.node("my_schedule.forget")
 
 
 @pytest.fixture

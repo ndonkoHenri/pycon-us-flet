@@ -207,52 +207,69 @@ def dropped_notice(
 
     Compact and start-aligned on the fold tile's text column, as ``all_over()``: the
     saved sessions still in the schedule stay the content (D-329). Its words are one
-    live region, so a screen reader says them when the notice appears.
+    merged live-region node, the title's heading and the body together, so the label
+    changes when the count does and a screen reader says it.
+
+    With ``count`` 0 it is the same tree, quiet: a 1 dp node with no words. The list
+    always has it, so the node exists before the first dropped session: Android's
+    engine sends a live region's change only for a node it had in its previous
+    update (F61, D-241), and a notice that mounted with its words would go unsaid.
+    Empty, the node has nothing a reader could stop on.
 
     Args:
-        count: How many saved ids the feed no longer lists; at least one.
+        count: How many saved ids the feed no longer lists; 0 for the quiet node.
         on_forget: What "Forget them" does: unsave those ids, with Undo.
         on_see_changes: What "See what changed" does, while the change log holds one
             of the removals (``logged()``); None leaves the button out.
     """
-    words = ft.Semantics(
-        identifier=f"{SCREEN}.dropped_notice",
-        container=True,
-        live_region=True,
-        content=ft.Column(
-            [
-                ft.Semantics(  # a container of its own, as EmptyState's title (D-182)
-                    header=True,
-                    heading_level=2,
-                    container=True,
-                    content=ft.Text(
-                        dropped_title(count), theme_style=ft.TextThemeStyle.TITLE_SMALL
-                    ),
-                ),
-                ft.Text(
-                    dropped_body(count),
-                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                ),
-            ],
-            spacing=4,
-        ),
+    shown = count > 0
+    words = ft.MergeSemantics(  # one node: the heading's label is in the live region
+        content=ft.Semantics(
+            identifier=f"{SCREEN}.dropped_notice",
+            container=True,
+            live_region=True,
+            content=(
+                ft.Column(
+                    [
+                        ft.Semantics(
+                            header=True,
+                            heading_level=2,
+                            content=ft.Text(
+                                dropped_title(count),
+                                theme_style=ft.TextThemeStyle.TITLE_SMALL,
+                            ),
+                        ),
+                        ft.Text(
+                            dropped_body(count),
+                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    spacing=4,
+                )
+                if shown
+                else ft.Container(width=1, height=1)  # a node needs a size (F61)
+            ),
+        )
     )
     buttons: list[ft.Control] = []
-    if on_see_changes is not None:
+    if shown and on_see_changes is not None:
         button = ft.TextButton(SEE_CHANGES, on_click=on_see_changes)
         buttons.append(named(f"{SCREEN}.see_changes", button))
-    forget = ft.TextButton(forget_label(count), on_click=on_forget)
-    buttons.append(named(f"{SCREEN}.forget", forget))
+    if shown:
+        forget = ft.TextButton(forget_label(count), on_click=on_forget)
+        buttons.append(named(f"{SCREEN}.forget", forget))
     return ft.Container(
         ft.Row(
             [
                 ft.Icon(
-                    ft.Icons.EVENT_BUSY_OUTLINED, color=ft.Colors.ON_SURFACE_VARIANT
+                    ft.Icons.EVENT_BUSY_OUTLINED,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    visible=shown,
                 ),
                 ft.Column(
                     # A row that wraps at large text, under the words.
-                    [words, ft.Row(buttons, wrap=True, spacing=8)],
+                    [words, ft.Row(buttons, wrap=True, spacing=8, visible=shown)],
                     spacing=8,
                     expand=True,
                 ),
@@ -260,5 +277,9 @@ def dropped_notice(
             spacing=16,  # the text on the fold tile's text column, 56 dp in
             vertical_alignment=ft.CrossAxisAlignment.START,
         ),
-        padding=ft.Padding.only(left=16, top=16, right=16, bottom=8),
+        padding=(
+            ft.Padding.only(left=16, top=16, right=16, bottom=8)
+            if shown
+            else ft.Padding.all(0)
+        ),
     )
