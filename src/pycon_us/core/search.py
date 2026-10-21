@@ -3,7 +3,8 @@
 ``search_index()`` is built once per feed version over what ``queries.fold`` has folded:
 each session's ``search_text`` (its title, its description's text from ``html_md`` and its
 speakers' names, never markup; D-140), the speaker directory's names, and the places: the
-rooms' names and the venue spots' labels with what happens there (``map.toml``, D-351).
+rooms' names and the venue spots' labels with what happens there (``map.toml``, D-351),
+and the sponsors' names and levels (#397).
 ``search()`` folds a query the same way and keeps the entries that hold every one of its
 words, grouped by type and day. Screens never fold or match on their own (NEW-02, #97).
 ``first_results()`` cuts results to each type's first rows, which is what the result
@@ -17,7 +18,7 @@ from dataclasses import dataclass
 from itertools import groupby
 from typing import TYPE_CHECKING
 
-from pycon_us.core.models import ConferenceData, Room, Session, Speaker
+from pycon_us.core.models import ConferenceData, Room, Session, Speaker, Sponsor
 from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.timeline import DaySessions, schedule_order
 
@@ -26,8 +27,8 @@ if TYPE_CHECKING:  # the year data's type only: core never imports the loader (D
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ("all", "sessions", "speakers", "places")
-"""Search's scopes, in the order of its chips (D-19, D-351); sponsors join with #24."""
+SCOPES = ("all", "sessions", "speakers", "places", "sponsors")
+"""Search's scopes, in the order of its chips (D-19, D-351)."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -45,12 +46,16 @@ class SearchIndex:
             sprint-only rooms among them (MAP-08).
         spots: The venue spots (``MapData.venue_spots()``) with each folded label and
             sublabel, in ``map.toml``'s order.
+        sponsors: The sponsors with each folded name and level, in the Sponsors page's
+            order: by level, then feed order. Never the booth, which Places finds, nor
+            the description, whose mentions would bury the sponsor named (D-351).
     """
 
     sessions: tuple[tuple[str, Session], ...]
     speakers: tuple[tuple[str, Speaker], ...]
     rooms: tuple[tuple[str, Room], ...]
     spots: tuple[tuple[str, Pin], ...] = ()
+    sponsors: tuple[tuple[str, Sponsor], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,12 +72,14 @@ class SearchResults:
         rooms: The matching rooms, in natural order.
         spots: The matching venue spots, in ``map.toml``'s order; with the rooms, the
             places.
+        sponsors: The matching sponsors, by level, then feed order.
     """
 
     sessions: tuple[DaySessions, ...] = ()
     speakers: tuple[Speaker, ...] = ()
     rooms: tuple[Room, ...] = ()
     spots: tuple[Pin, ...] = ()
+    sponsors: tuple[Sponsor, ...] = ()
 
     @property
     def session_count(self) -> int:
@@ -87,7 +94,9 @@ class SearchResults:
     @property
     def empty(self) -> bool:
         """Whether nothing matched, of any type."""
-        return not (self.sessions or self.speakers or self.rooms or self.spots)
+        return not (
+            self.sessions or self.speakers or self.rooms or self.spots or self.sponsors
+        )
 
 
 def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex:
@@ -114,14 +123,21 @@ def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex
         speakers=tuple((fold(s.name), s) for s in speakers),
         rooms=tuple((fold(room.name), room) for room in data.rooms.values()),
         spots=tuple((fold(f"{pin.label} {pin.sublabel}"), pin) for pin in spots),
+        sponsors=tuple(
+            (fold(f"{sponsor.name} {sponsor.level}"), sponsor)
+            for level in data.sponsor_levels
+            for sponsor in level.sponsors
+        ),
     )
     logger.info(
-        "Search index built in %.1f ms: %d sessions, %d speakers, %d rooms, %d spots",
+        "Search index built in %.1f ms: %d sessions, %d speakers, %d rooms, %d spots, "
+        "%d sponsors",
         (time.perf_counter() - started) * 1000,
         len(index.sessions),
         len(index.speakers),
         len(index.rooms),
         len(index.spots),
+        len(index.sponsors),
     )
     return index
 
@@ -139,8 +155,8 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         scope: One of ``SCOPES``; ``all`` searches every type.
 
     Returns:
-        Sessions by day, then speakers, then places (rooms, then venue spots); types
-        outside the scope are empty.
+        Sessions by day, then speakers, then places (rooms, then venue spots), then
+        sponsors; types outside the scope are empty.
 
     Raises:
         ValueError: ``scope`` is not one of ``SCOPES``.
@@ -162,11 +178,16 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         speakers=tuple(found(index.speakers, "speakers")),
         rooms=tuple(found(index.rooms, "places")),
         spots=tuple(found(index.spots, "places")),
+        sponsors=tuple(found(index.sponsors, "sponsors")),
     )
 
 
 def first_results(
-    results: SearchResults, *, sessions: int | None, speakers: int | None
+    results: SearchResults,
+    *,
+    sessions: int | None,
+    speakers: int | None,
+    sponsors: int | None = None,
 ) -> SearchResults:
     """Return the first rows of each type of ``results``, every place (D-218).
 
@@ -181,6 +202,7 @@ def first_results(
         results: A search's results.
         sessions: How many sessions to keep, or None for all of them.
         speakers: How many speakers to keep, or None for all of them.
+        sponsors: How many sponsors to keep, or None for all of them.
 
     Returns:
         The results' first rows, in the same order; places are never cut.
@@ -188,19 +210,34 @@ def first_results(
     Raises:
         ValueError: A limit is below 1: a type that matched never shows no row.
     """
-    if any(limit is not None and limit < 1 for limit in (sessions, speakers)):
-        raise ValueError(f"Limits must be at least 1: {sessions=}, {speakers=}")
+    limits = (sessions, speakers, sponsors)
+    if any(limit is not None and limit < 1 for limit in limits):
+        raise ValueError(
+            f"Limits must be at least 1: {sessions=}, {speakers=}, {sponsors=}"
+        )
     days = results.sessions
     if sessions is not None and results.session_count > sessions:
         days = _first_sessions(days, sessions)
-    found = results.speakers
-    if speakers is not None and len(found) > speakers:
-        found = found[:speakers]
-    if days is results.sessions and found is results.speakers:
+    found = _first(results.speakers, speakers)
+    backers = _first(results.sponsors, sponsors)
+    if (
+        days is results.sessions
+        and found is results.speakers
+        and backers is results.sponsors
+    ):
         return results
     return SearchResults(
-        sessions=days, speakers=found, rooms=results.rooms, spots=results.spots
+        sessions=days,
+        speakers=found,
+        rooms=results.rooms,
+        spots=results.spots,
+        sponsors=backers,
     )
+
+
+def _first[T](items: tuple[T, ...], count: int | None) -> tuple[T, ...]:
+    """Return the first ``count`` of ``items``: ``items`` itself when none is cut."""
+    return items if count is None or len(items) <= count else items[:count]
 
 
 def _first_sessions(

@@ -146,6 +146,14 @@ def test_a_sponsor_reads_as_its_name_level_and_booth() -> None:
     assert screen.booth_line(sponsor("nvidia")) is None
 
 
+def test_a_row_outside_its_level_says_the_level_with_the_booth() -> None:
+    """Search's rows have no level heading, so their line says it (#397)."""
+    assert (
+        screen.level_line(sponsor("bloomberg")) == "Visionary \N{MIDDLE DOT} Booth 613"
+    )
+    assert screen.level_line(sponsor("nvidia")) == "Visionary"
+
+
 # ------------------------------------------------------------------ the page
 
 
