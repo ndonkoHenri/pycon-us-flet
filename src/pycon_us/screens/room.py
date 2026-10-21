@@ -13,7 +13,8 @@ room opens on that session's day, scrolls its row to the top once and lights it 
 the effect ran once, and the query is not read again. ``ViewMemory.room_highlights``
 keeps a View rebuilt in a new session (D-143) from doing it again (D-18).
 
-An unknown slug shows the not-found state under the back arrow (D-186).
+An unknown slug shows the not-found state under the back arrow (D-186). A sprint-only
+room, which has no sessions (MAP-08), says the sprints run there, with the way to them.
 """
 
 import asyncio
@@ -34,7 +35,7 @@ from pycon_us.locations import drill_href, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
-from pycon_us.screens.schedule_days import TAB_MS, day_tab
+from pycon_us.screens.schedule_days import SPRINTS, TAB_MS, day_tab
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -46,6 +47,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
+from pycon_us.ui.states import EmptyState
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
@@ -187,6 +189,14 @@ def RoomDetail(room_slug: str) -> ft.View:
             ),
         )
 
+    if not room.session_ids:  # a sprint-only room (MAP-08)
+        return AppScaffold(
+            title=room.name,
+            body=ft.ListView(
+                [sprint_room_state(page)], expand=True, padding=sides(margin)
+            ),
+        )
+
     groups = dict(by_day(views, info.zone))
     days = list(groups)
     current = today(clock.now(), info.zone)
@@ -250,6 +260,32 @@ def RoomDetail(room_slug: str) -> ft.View:
     return AppScaffold(
         title=room.name,
         body=tabs,
+    )
+
+
+def sprint_room_state(page: ft.Page) -> ft.Control:
+    """Return a sprint-only room's state: what the room is for, and the way to it.
+
+    The room has no sessions, so its detail has no day tabs: it says the sprints run
+    there after the talks and offers the Sprints page, as a sprint day on the Schedule
+    does (ux.md §4.6), rather than the not-found state.
+
+    Args:
+        page: The session's page, which the button navigates.
+    """
+
+    @report_errors
+    def see_sprints() -> None:
+        page.navigate(SPRINTS)
+
+    return EmptyState(
+        "Sprints run here after the talks",
+        icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
+        body="No talks in this room: on the sprint days, people work on open-source "
+        "projects here together, and anyone can join one.",
+        action="See the sprints",
+        on_action=see_sprints,
+        identifier=f"{SCREEN}.sprints",
     )
 
 

@@ -505,7 +505,10 @@ def test_multi_room_session_appears_in_each_room() -> None:
 
 
 def test_rooms_are_indexed_by_slug_in_natural_order() -> None:
-    """DATA-16, ROOM-06: Ionic's 28 rooms with sessions in 2026, and their counts."""
+    """DATA-16, ROOM-06: Ionic's 28 rooms with sessions in 2026, and their counts.
+
+    The 10 sprint-only rooms seeded from ``map.toml`` join them, empty (MAP-08).
+    """
     rooms = processed(2026).rooms
     assert [(r.name, len(r.session_ids)) for r in rooms.values()][:4] == [
         ("Elsewhere", 8),
@@ -513,7 +516,8 @@ def test_rooms_are_indexed_by_slug_in_natural_order() -> None:
         ("Expo Hall C", 1),
         ("Grand Ballroom A", 26),
     ]
-    assert len(rooms) == 28
+    assert len([room for room in rooms.values() if room.session_ids]) == 28
+    assert len(rooms) == 38
     assert all(slug == slugify_room(room.name) for slug, room in rooms.items())
     names = [room.name for room in rooms.values()]
     assert names.index("Room 101AB") < names.index("Room 102A") < names.index("S-1")

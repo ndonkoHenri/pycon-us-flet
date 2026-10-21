@@ -107,6 +107,7 @@ class Room:
         slug: Its slug (``slugs.slugify_room``), the key of its route.
         name: Its name, as the feed first writes it.
         session_ids: Its sessions, by start, then name; a multi-room session is in each.
+            Empty only for a sprint-only room, seeded from ``map.toml`` (MAP-08).
     """
 
     slug: str

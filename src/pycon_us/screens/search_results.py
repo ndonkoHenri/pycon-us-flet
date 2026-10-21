@@ -18,7 +18,7 @@ from collections.abc import Mapping
 import flet as ft
 
 from pycon_us.core.models import Room
-from pycon_us.core.rooms import session_count
+from pycon_us.core.rooms import count_line
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.search import SearchResults, first_results
 from pycon_us.core.speakers import SpeakerEntry
@@ -251,6 +251,6 @@ def room_row(room: Room, view_path: str) -> ft.Control:
         room.name,
         drill_href(view_path, "room", room.slug),
         icon=ft.Icons.PLACE_OUTLINED,
-        subtitle=session_count(len(room.session_ids)),
+        subtitle=count_line(room),
         identifier=f"{SCREEN}.room.{room.slug}",
     )

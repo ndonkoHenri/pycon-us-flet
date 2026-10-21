@@ -189,7 +189,14 @@ ROUTES = [
     ft.Route(index=True, component=Start),
     ft.Route(path=WELCOME[1:], component=Welcome),  # no drill: nothing opens over it
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),
-    pushed("now", Now),
+    pushed(
+        "now",
+        Now,
+        # Now's quick info buttons (D-338): under Now, so Back returns there.
+        pushed("wifi", Wifi),
+        pushed("help", Help),
+        pushed("venue", Venue),
+    ),
     pushed("schedule", Schedule),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
