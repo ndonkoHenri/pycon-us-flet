@@ -380,6 +380,88 @@ async def test_a_jump_to_now_during_the_old_top_jump_stops_the_put_back(
     assert FRIDAY not in memory.schedule_places
 
 
+class _StandIn:
+    """A stand-in day list: records each jump; a keyed one lands at 4,000 dp."""
+
+    def __init__(self, memory: ViewMemory, ended: asyncio.Event) -> None:
+        """Start with no jump asked."""
+        self.memory, self.ended = memory, ended
+        self.asks: list[dict[str, object]] = []
+
+    async def scroll_to(self, **kwargs: object) -> None:
+        """Record the jump; a keyed one ends at 4,000 dp, as the screen records it."""
+        self.asks.append(kwargs)
+        if "scroll_key" in kwargs:
+            self.memory.schedule_offsets[SATURDAY] = 4000.0
+            self.ended.set()
+
+
+async def _superseded_in_wait(
+    memory: ViewMemory, monkeypatch: pytest.MonkeyPatch, held: int
+) -> tuple[bool, list[dict[str, object]]]:
+    """Put Saturday's place back, with a jump to now during its ``held``-th end-gap wait.
+
+    Returns:
+        What the put-back returned, and every jump it asked after the jump to now.
+    """
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.01)
+    keeper = PlaceKeeper(memory)
+    keeper.lay_out("feed", {SATURDAY: (HEAD_KEY, "a", "b")})
+    for key, height in ((HEAD_KEY, 0.0), ("a", HEIGHT), ("b", HEIGHT)):
+        keeper.measured(SATURDAY, key, height)
+    keeper.relaid(text=40.0, width=400.0, above=False)
+    end = SimpleNamespace(event_type=ft.ScrollType.END, pixels=HEIGHT + 50)
+    keeper.scrolled(SATURDAY, cast(ft.OnScrollEvent, end))
+    assert keeper.relaid(text=52.0)
+    keeper.measured(SATURDAY, "b", HEIGHT * 1.3)
+    gate, waiting, waits = asyncio.Event(), asyncio.Event(), [0]
+
+    async def ended_apart(day: date) -> None:
+        """Hold the ``held``-th wait until the gate opens; pass the others."""
+        waits[0] += 1
+        if waits[0] == held:
+            waiting.set()
+            await gate.wait()
+
+    monkeypatch.setattr(keeper, "ended_apart", ended_apart)
+    ended = asyncio.Event()
+    stand_in = _StandIn(memory, ended)
+    list_ref = ft.Ref[ft.ListView]()
+    list_ref.current = cast(ft.ListView, stand_in)
+    put_back = asyncio.ensure_future(keeper.put_back(SATURDAY, list_ref, ended))
+    await waiting.wait()
+    asked = len(stand_in.asks)
+    keeper.supersede(SATURDAY)  # the jump to now
+    gate.set()
+    done = await put_back
+    return done, stand_in.asks[asked:]
+
+
+async def test_a_jump_to_now_before_the_keyed_jump_stops_the_put_back(
+    memory: ViewMemory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex's #620 review: superseded while the keyed jump waits for the end gap.
+
+    Once the wait is over, the put-back asks for no jump and records no place.
+    """
+    done, later = await _superseded_in_wait(memory, monkeypatch, held=1)
+    assert (done, later) == (False, [])
+    assert SATURDAY not in memory.schedule_places
+
+
+async def test_a_jump_to_now_before_the_jump_into_the_slot_stops_the_put_back(
+    memory: ViewMemory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex's #620 review: superseded while the jump into the slot waits for the gap.
+
+    The keyed jump has landed; once the wait is over, the put-back asks for no jump
+    into the slot and records no place, so nothing moves the list after "Now".
+    """
+    done, later = await _superseded_in_wait(memory, monkeypatch, held=2)
+    assert (done, later) == (False, [])
+    assert SATURDAY not in memory.schedule_places
+
+
 def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) -> None:
     """An empty head (0 dp) still counts after a resize, so the next place is recorded.
 

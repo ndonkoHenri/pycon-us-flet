@@ -276,7 +276,7 @@ class PlaceKeeper:
             if day in self.moving:
                 del self.memory.schedule_places[day]
                 return True
-            jump = await self._keyed(day, place.key, list_ref, ended)
+            jump = await self._keyed(mine, day, place.key, list_ref, ended)
             if jump == "still":
                 jump = await self._from_old_top(mine, day, place, list_ref, ended)
             if mine != self.round:  # a newer change took over
@@ -304,7 +304,7 @@ class PlaceKeeper:
         into = self._into(place, height)
         target = landed - divider_above(self.keys.get(day, ()), place.key) + into
         if target != landed and list_ref.current is not None:
-            await self._to_offset(day, list_ref.current, target, ended)
+            await self._to_offset(mine, day, list_ref.current, target, ended)
             if mine != self.round:
                 return False
         self.memory.schedule_offsets[day] = target
@@ -364,11 +364,11 @@ class PlaceKeeper:
         if mine != self.round or list_ref.current is None:
             return "still"
         old_top = place.pixels - place.into
-        await self._to_offset(day, list_ref.current, old_top, ended)
+        await self._to_offset(mine, day, list_ref.current, old_top, ended)
         for _ in range(JUMP_TRIES):
             if mine != self.round:
                 return "still"
-            jump = await self._keyed(day, place.key, list_ref, ended)
+            jump = await self._keyed(mine, day, place.key, list_ref, ended)
             if jump != "still":
                 return jump
         return "still"
@@ -384,22 +384,39 @@ class PlaceKeeper:
         await asyncio.sleep(max(0.0, last + END_GAP_S - time.monotonic()))
 
     async def _keyed(
-        self, day: date, key: str, list_ref: ft.Ref[ft.ListView], ended: asyncio.Event
+        self,
+        mine: int,
+        day: date,
+        key: str,
+        list_ref: ft.Ref[ft.ListView],
+        ended: asyncio.Event,
     ) -> Jump:
-        """Jump to the item with this key, once, so that its end reaches Python."""
+        """Jump to the item with this key, once, so that its end reaches Python.
+
+        "still" without a jump when a newer change took over (``round``) during the wait.
+        """
         await self.ended_apart(day)
+        if mine != self.round:
+            return "still"
         return await jump_to_key(list_ref, key, duration=0, ended=ended, tries=1)
 
     async def _to_offset(
-        self, day: date, list_view: ft.ListView, offset: float, ended: asyncio.Event
+        self,
+        mine: int,
+        day: date,
+        list_view: ft.ListView,
+        offset: float,
+        ended: asyncio.Event,
     ) -> None:
         """Jump to an offset, and wait for that scroll's end (#600, D-364).
 
         So its end cannot answer a keyed jump asked after it: every jump waits on the
         one signal. A list already there sends no end: the wait gives up after
-        ``LANDING_S``.
+        ``LANDING_S``. Nothing when a newer change took over (``round``) during the wait.
         """
         await self.ended_apart(day)
+        if mine != self.round:
+            return
         ended.clear()
         await list_view.scroll_to(offset=offset, duration=0)
         with contextlib.suppress(TimeoutError):
