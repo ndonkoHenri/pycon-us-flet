@@ -11,8 +11,9 @@ a screen reader. Here the pin pulses twice when the card first shows, then stays
 and is still from the start under reduced motion (D-34, D-173); the card is one button
 node that says where it leads ("Show Room 104A on the Concourse level floor plan"), the
 thumbnail excluded. Help & safety and Venue & hours show a venue spot's card by its pin
-key (``spot_card()``). At large text (``Prefs.time_above``, D-216) the words go under the
-thumbnail rather than squeeze beside it; nothing has a fixed height but the image.
+key (``spot_card()``); the job fair's pane shows its plan's (``job_fair_card()``). At
+large text (``Prefs.time_above``, D-216) the words go under the thumbnail rather than
+squeeze beside it; nothing has a fixed height but the image.
 Apart from ``ui/rows.py`` so that it stays under about 400 lines (D-66).
 """
 
@@ -25,7 +26,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
-from pycon_us.year_map import MapData, Pin, Plan
+from pycon_us.year_map import JOB_FAIR_PLAN, MapData, Pin, Plan
 
 THUMB_DP = 112
 """The thumbnail's width; its height follows the plan's aspect ratio."""
@@ -163,6 +164,24 @@ def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
     if pin is None or plan is None:
         return None
     return LocationCard(plan, pin, identifier=identifier)
+
+
+def job_fair_card(data: MapData, *, identifier: str) -> ft.Control | None:
+    """Return the job fair plan's card, ``LocationCard``'s plan-only form, or None.
+
+    One card in three places (D-254): it heads the Map's Job fair pane (MAP-04) and
+    comes to Job listings (SPON-10) and Job Fair sessions (SESS-10) with #408. A tap
+    pushes ``…/plan/job-fair``, the floor viewer without pins. None for a year whose
+    ``map.toml`` has no ``job-fair`` plan.
+
+    Args:
+        data: The year's ``map.toml``.
+        identifier: The card's, ``<screen>.job_fair.location``.
+    """
+    plan = data.plan(JOB_FAIR_PLAN)
+    if plan is None:
+        return None
+    return LocationCard(plan, None, identifier=identifier)
 
 
 @ft.memo

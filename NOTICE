@@ -24,7 +24,10 @@ smaller size; on the campus plan, the PyCon US wordmark and the venue's logo
 are painted over. The expo hall plan is that app's too
 (src/assets/img/pycon-us-2026-floorplan-nologo.jpg), re-encoded the same way,
 with its sun-and-palms mark painted over; the sponsors' logos on it are
-trademarks of their owners. The room and venue pin positions and the booth
+trademarks of their owners. The job fair plan is that app's too
+(src/assets/img/floor-plans/job-fair.jpg), cropped to the floor without its
+header and its PyCon US logo, and re-encoded the same way; the sponsors' logos
+on it are trademarks of their owners. The room and venue pin positions and the booth
 rectangles in src/pycon_us/data/2026/map.toml are that app's too.
 
 This is not an official Python Software Foundation app. "PyCon" and "Python"
