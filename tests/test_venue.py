@@ -20,6 +20,7 @@ from pycon_us import clock, theme
 from pycon_us.config import load_year
 from pycon_us.screens import venue as screen
 from pycon_us.state import Conference
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.year_info import Directions
 from tests.fakes import MemoryClipboard
 from tests.feeds import processed
@@ -186,6 +187,24 @@ async def test_directions_opens_the_platform_s_maps_app(
     assert page.launcher.launched == [(url, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
 
+async def test_the_address_buttons_keep_their_padding_at_every_text_size(
+    show: Show,
+) -> None:
+    """Directions and Copy address pin M3's padding for a button with an icon (D-344).
+
+    The tonal Directions also stays flat: with a style, Flet lifts it to its
+    ``elevation``, 1 unless it is set to 0.
+    """
+    page = await show()
+    for identifier in ("venue.directions", "venue.copy_address"):
+        button = cast(ft.Button, page.node(identifier).content)
+        assert button.style is not None
+        assert button.style.padding == ICON_PADDING
+    directions = page.node("venue.directions").content
+    assert isinstance(directions, ft.FilledTonalButton)
+    assert directions.elevation == 0
+
+
 async def test_directions_whose_launch_raises_say_so(show: Show) -> None:
     """A launch that raises says "Couldn't open the link" (D-182).
 
@@ -243,6 +262,44 @@ async def test_without_hours_or_a_feed_block_the_page_sends_to_the_desk(
     page = await show(year=2025, feed=2025)
     assert page.nodes("venue.empty")
     assert "information desk" in screen.NO_VENUE_BODY
+
+
+async def test_each_service_with_a_pin_ends_with_its_location_card(
+    show: Show,
+) -> None:
+    """INFO-12, MAP-09: a card per pinned service; Luggage check has none."""
+    page = await show()
+    labels = {str(node.identifier): node.label for node in page.nodes("venue.service.")}
+    assert {
+        key: label for key, label in labels.items() if key.endswith(".location")
+    } == {
+        "venue.service.registration.location": (
+            "Show Registration on the Concourse level floor plan"
+        ),
+        "venue.service.information_desk.location": (
+            "Show Information desk on the Concourse level floor plan"
+        ),
+        "venue.service.swag_pickup.location": (
+            "Show Swag pickup on the Arena & exhibit halls floor plan"
+        ),
+        "venue.service.quiet_room.location": (
+            "Show Quiet room on the Concourse level floor plan"
+        ),
+        "venue.service.lost_found.location": (
+            "Show Lost & found on the Upper level floor plan"
+        ),
+    }
+
+
+async def test_a_service_s_card_pushes_the_floor_viewer_at_its_pin(
+    show: Show,
+) -> None:
+    """The tap pushes ``plan/<plan>?pin=<key>`` on Venue & hours' View."""
+    page = await show()
+    tap = page.node("venue.service.swag_pickup.location").parent
+    assert isinstance(tap, ft.Container) and tap.on_click is not None
+    await page.click(tap)
+    assert page.went == [f"{VIEW}/plan/arena?pin=swag-pickup"]
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

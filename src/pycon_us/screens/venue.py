@@ -15,8 +15,10 @@ at once from bundled year data (D-45, INFO-05), offline, and answers both questi
   are read as words and never a chip, since a tap does nothing (ux.md §6.7); where it
   is, its days with today's in bold, and its note. The page re-renders on the minute
   (``use_minute()``), so the labels follow the clock, the Developer fake clock too;
-  off-season there are none (``hours_status()`` is None). The Quiet room's card ends
-  with the sponsor who provides it, a row that pushes its detail (D-337).
+  off-season there are none (``hours_status()`` is None). A service with a ``pin``
+  ends with its ``LocationCard`` (``spot_card()``), which pushes the floor viewer at
+  it. The Quiet room's card ends with the sponsor who provides it, a row that pushes
+  its detail (D-337).
 
 Hours are conference time; while the device's zone differs a line says so (D-35,
 D-240). A year without ``[[venue_hours]]`` shows the feed's ``venues-hours`` block, and
@@ -46,8 +48,10 @@ from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.info_page import GUTTER, InfoBody
 from pycon_us.ui.links import OPENS_IN, LinkKind, copy_text, external, open_link
+from pycon_us.ui.location_card import spot_card
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
@@ -145,6 +149,11 @@ def venue_blocks(
             today,
             use_24h=use_24h,
             footer=quiet_room if service_key(item.service) == "quiet_room" else None,
+            location=spot_card(
+                svc.year.map,
+                item.pin,
+                identifier=f"{SCREEN}.service.{service_key(item.service)}.location",
+            ),
         )
         for item in hours
     ]
@@ -208,13 +217,18 @@ def address_card(svc: Services, info: ConferenceInfo) -> ft.Control:
             ),
             icon=ft.Icons.DIRECTIONS_OUTLINED,
             on_click=open_directions,
+            style=ft.ButtonStyle(padding=ICON_PADDING),
+            elevation=0,  # with a style, Flet lifts it to 1 (D-344)
         )
         buttons.append(external(f"{SCREEN}.directions", button))
     buttons.append(
         named(
             f"{SCREEN}.copy_address",
             ft.OutlinedButton(
-                COPY_ADDRESS, icon=ft.Icons.CONTENT_COPY_OUTLINED, on_click=copy_address
+                COPY_ADDRESS,
+                icon=ft.Icons.CONTENT_COPY_OUTLINED,
+                on_click=copy_address,
+                style=ft.ButtonStyle(padding=ICON_PADDING),
             ),
         )
     )
@@ -267,8 +281,9 @@ def service_card(
     *,
     use_24h: bool,
     footer: ft.Control | None = None,
+    location: ft.Control | None = None,
 ) -> ft.Control:
-    """Return a service's card: name, status, where, its days and its note.
+    """Return a service's card: name, status, where, its days, its note and its pin.
 
     Not one node (``semantic_container=False``, as Help's card, D-211): a screen
     reader stops on the name, a heading, then on each line.
@@ -281,6 +296,8 @@ def service_card(
         today: The conference-local day, whose hours are in bold.
         use_24h: Whether the device shows 24-hour times (D-35).
         footer: A row under the lines, edge to edge: the Quiet room's sponsor credit.
+        location: Its ``LocationCard`` (``spot_card()``), last of the lines; None
+            for a service without a pin.
     """
     key = f"{SCREEN}.service.{service_key(item.service)}"
     lines: list[ft.Control] = [heading(item.service, key)]
@@ -310,6 +327,8 @@ def service_card(
                 color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
+    if location is not None:
+        lines.append(location)
     return card(lines, footer)
 
 

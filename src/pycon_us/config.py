@@ -39,7 +39,7 @@ from pycon_us.year_info import (
 )
 from pycon_us.year_keynotes import Keynote, check_keynote_sessions, check_keynotes
 from pycon_us.year_links import PsfInfo, SocialInfo
-from pycon_us.year_map import MapData, check_hours_pins, check_map
+from pycon_us.year_map import MapData, check_hours_pins, check_map, check_pin_keys
 from pycon_us.year_moments import EventReminder, check_moments
 from pycon_us.year_pages import (
     LightningTalksInfo,
@@ -333,6 +333,8 @@ def load_year(
         map_data = build(MapData, read_table(folder / "map.toml", map_file), map_file)
         check_map(map_data, map_file)
     check_hours_pins(content.venue_hours, map_data, content_file)
+    if content.help is not None:
+        check_pin_keys(content.help.pin_keys(), map_data, content_file)
     data = YearData(conference, content, folder, map_data)
     if check_sessions and (content.keynotes or content.sponsor_credits.items()):
         # Raises for a year with keynotes or credits but no snapshot to check them by.
