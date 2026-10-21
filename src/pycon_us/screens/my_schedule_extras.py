@@ -207,10 +207,17 @@ def dropped_notice(
 
     Compact and start-aligned on the fold tile's text column, as ``all_over()``: the
     saved sessions still in the schedule stay the content (D-329). Its words are one
-    merged live-region node, the title's heading and the body together, so the label
-    changes when the count does and a screen reader says it.
+    live-region node, a level-2 heading whose label is the title then the body, so
+    the label changes when the count does and a screen reader says it.
 
-    With ``count`` 0 it is the same tree, quiet: a hidden 1 dp node with no words.
+    The label is explicit and the texts are left out of the semantics tree, because
+    a merge of the texts reads the body first. Flet's ``Semantics`` always states
+    ``enabled`` (F42), and two configurations that both state it conflict
+    (``Tristate.hasConflict``), so a heading ``Semantics`` inside the live region
+    becomes a child node; the live region keeps the body as its own label, and a
+    merge puts a node's own label before its children's (D-329).
+
+    With ``count`` 0 it is the same node, quiet: a hidden 1 dp node with no words.
     The list always has it, so the node exists before the first dropped session:
     Android's engine sends a live region's change only for a node it had in its
     previous update (F61, D-241), and a notice that mounted with its words would go
@@ -226,35 +233,31 @@ def dropped_notice(
             of the removals (``logged()``); None leaves the button out.
     """
     shown = count > 0
-    words = ft.MergeSemantics(  # one node: the heading's label is in the live region
-        content=ft.Semantics(
-            identifier=f"{SCREEN}.dropped_notice",
-            container=True,
-            live_region=True,
-            hidden=not shown,  # quiet: no blank TalkBack stop (F95)
-            content=(
-                ft.Column(
-                    [
-                        ft.Semantics(
-                            header=True,
-                            heading_level=2,
-                            content=ft.Text(
-                                dropped_title(count),
-                                theme_style=ft.TextThemeStyle.TITLE_SMALL,
-                            ),
-                        ),
-                        ft.Text(
-                            dropped_body(count),
-                            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                    ],
-                    spacing=4,
-                )
-                if shown
-                else ft.Container(width=1, height=1)  # a node needs a size (F61)
-            ),
-        )
+    title, body = (dropped_title(count), dropped_body(count)) if shown else ("", "")
+    words = ft.Semantics(
+        identifier=f"{SCREEN}.dropped_notice",
+        container=True,
+        live_region=True,
+        hidden=not shown,  # quiet: no blank TalkBack stop (F95)
+        label=f"{title}\n{body}" if shown else None,  # in reading order
+        header=shown,
+        heading_level=2 if shown else None,
+        exclude_semantics=True,  # the label says the texts, in their order
+        content=(
+            ft.Column(
+                [
+                    ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_SMALL),
+                    ft.Text(
+                        body,
+                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                ],
+                spacing=4,
+            )
+            if shown
+            else ft.Container(width=1, height=1)  # a node needs a size (F61)
+        ),
     )
     buttons: list[ft.Control] = []
     if shown and on_see_changes is not None:

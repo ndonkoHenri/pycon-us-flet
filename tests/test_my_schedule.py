@@ -750,28 +750,37 @@ def _words(node: ft.Control) -> list[str]:
 
 
 @pytest.mark.usefixtures("one_dropped", "before")
-async def test_the_notice_words_are_one_merged_node_with_the_count(
+async def test_the_notice_says_its_title_then_its_body_as_one_heading(
     shown: Shown,
 ) -> None:
-    """D-329: title and body merge into the live region; the buttons stay out of it.
+    """D-329: one node whose label is the title, then the body, as the screen shows.
 
-    A nested container would make the heading a node of its own, so the live
-    region's label would hold only the body, which a new count leaves unchanged.
+    A merge of the texts read the body first on Android: Flet's ``Semantics``
+    always states ``enabled``, so a heading ``Semantics`` inside the live region
+    conflicted with it and became a child node, whose label a merge puts after the
+    live region's own. So the label is explicit and the texts are excluded.
     """
-    node = shown.node("my_schedule.dropped_notice")
-    (merge,) = [
-        c
-        for c in _walk(shown.root())
-        if isinstance(c, ft.MergeSemantics) and c.content is node
-    ]
-    assert _words(merge) == [
-        "1 saved session is no longer in the schedule",
-        "If the schedule lists it again, it comes back here.",
-    ]
-    inner = [c for c in _walk(node) if isinstance(c, ft.Semantics) and c is not node]
-    assert not any(c.container for c in inner)
-    assert [c.heading_level for c in inner if c.header] == [2]
-    assert not any(isinstance(c, ft.TextButton) for c in _walk(merge))
+    node = cast(ft.Semantics, shown.node("my_schedule.dropped_notice"))
+    title = "1 saved session is no longer in the schedule"
+    body = "If the schedule lists it again, it comes back here."
+    assert node.label == f"{title}\n{body}"
+    assert _words(node) == [title, body]  # the screen's order too
+    assert node.exclude_semantics
+    assert node.container and node.live_region
+    assert node.header and node.heading_level == 2
+    inner = [c for c in _walk(node) if c is not node]
+    assert not any(isinstance(c, ft.Semantics | ft.MergeSemantics) for c in inner)
+    assert not any(isinstance(c, ft.TextButton) for c in inner)
+
+
+@pytest.mark.usefixtures("two_dropped_one_logged")
+async def test_the_notice_label_follows_the_count(shown: Shown) -> None:
+    """D-329: with two dropped, the label is the plural title, then the plural body."""
+    node = cast(ft.Semantics, shown.node("my_schedule.dropped_notice"))
+    assert node.label == (
+        "2 saved sessions are no longer in the schedule\n"
+        "If the schedule lists them again, they come back here."
+    )
 
 
 @pytest.mark.usefixtures("before")
@@ -809,9 +818,10 @@ async def test_the_quiet_node_is_hidden_and_shows_with_its_words(
     a focusable flag, so only ``hidden`` keeps TalkBack from stopping on the blank
     node. The node keeps its id throughout, so its reveal is a label change (F61).
     """
-    quiet = shown.node("my_schedule.dropped_notice")
+    quiet = cast(ft.Semantics, shown.node("my_schedule.dropped_notice"))
     assert quiet.hidden is True
     assert not _words(quiet)
+    assert not quiet.label
 
     await shown.favorites.add_many(shown.storage, [GONE])  # 0 -> 1, as a refresh
     await shown.settle()
@@ -819,12 +829,14 @@ async def test_the_quiet_node_is_hidden_and_shows_with_its_words(
     assert spoken._i == quiet._i
     assert spoken.hidden is False
     assert _words(spoken)[0] == "1 saved session is no longer in the schedule"
+    assert cast(ft.Semantics, spoken).label  # the reveal changes the label (F61)
 
     await shown.click(cast(ft.TextButton, shown.node("my_schedule.forget").content))
     again = shown.node("my_schedule.dropped_notice")  # 1 -> 0
     assert again._i == quiet._i
     assert again.hidden is True
     assert not _words(again)
+    assert not cast(ft.Semantics, again).label
 
 
 @pytest.fixture
