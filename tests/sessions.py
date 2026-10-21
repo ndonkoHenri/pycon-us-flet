@@ -41,6 +41,7 @@ from flet.messaging.protocol import Message, configure_encode_object_for_msgpack
 from flet.messaging.session import Session
 from flet.pubsub.pubsub_hub import PubSubHub
 
+from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
 from pycon_us.favorites import Favorites, FavoritesCtx
@@ -181,8 +182,11 @@ def provide(
     prefs: Prefs,
     favorites: Favorites,
     body: Callable[[], ft.Control],
+    change_log: ChangeLog | None = None,
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
+
+    The change log is an empty one unless ``change_log`` is given.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar), and the
     light tokens' provider comes last, right around ``body``.
@@ -195,7 +199,12 @@ def provide(
                 prefs,
                 lambda: FavoritesCtx(
                     favorites,
-                    lambda: LayoutCtx(Layout(), lambda: TokensCtx(LIGHT_TOKENS, body)),
+                    lambda: ChangeLogCtx(
+                        ChangeLog() if change_log is None else change_log,
+                        lambda: LayoutCtx(
+                            Layout(), lambda: TokensCtx(LIGHT_TOKENS, body)
+                        ),
+                    ),
                 ),
             ),
         ),
@@ -395,6 +404,7 @@ async def showing[S: Shown = Shown](
     memory: ViewMemory | None = None,
     route: str | None = None,
     kind: Callable[..., S] = Shown,
+    change_log: ChangeLog | None = None,
 ) -> AsyncIterator[S]:
     """Render ``screen`` under the store providers; close the session on the way out.
 
@@ -419,6 +429,7 @@ async def showing[S: Shown = Shown](
             its query (a room's highlight); the page's own by default.
         kind: What makes the ``Shown``: a test module's subclass that adds what is
             its screen's own, or a ``functools.partial`` of one.
+        change_log: The ``ChangeLog`` store; by default an empty one.
     """
     _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path, memory)
@@ -437,7 +448,7 @@ async def showing[S: Shown = Shown](
 
     @ft.component
     def Root() -> ft.Control:
-        return provide(svc, conference, prefs, favorites, screen)
+        return provide(svc, conference, prefs, favorites, screen, change_log)
 
     try:
         async with rendering(Root, session, views=view_path is None):

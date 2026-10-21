@@ -10,7 +10,7 @@ fixed. The fold itself is a pure function, tested in ``test_agenda.py``.
 
 from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -18,7 +18,10 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.core.row_views import spoken_phrase
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
@@ -203,6 +206,7 @@ class Setup:
     data: bool = True
     problem: Any = None
     reduce_motion: bool = False
+    batches: tuple[Batch, ...] = ()
 
 
 @pytest.fixture
@@ -259,6 +263,7 @@ async def shown(
             favorites=None if setup.loaded else Favorites(),  # not read yet
             saved=setup.saved,
             kind=Shown,
+            change_log=ChangeLog(batches=setup.batches),
         ) as shown:
             yield shown
     finally:
@@ -631,6 +636,7 @@ async def test_saved_sessions_the_feed_dropped_are_not_nothing_saved(
     untrue.
     """
     shown.node("my_schedule.dropped")
+    assert not shown.nodes("my_schedule.dropped_notice")  # the state says it all
     assert "None of your saved sessions is in the schedule" in shown.texts()
     assert "Nothing saved yet" not in shown.texts()
     (button,) = [c for c in shown.controls if isinstance(c, ft.FilledTonalButton)]
@@ -677,3 +683,92 @@ async def test_without_data_a_failed_fetch_offers_try_again(shown: Shown) -> Non
     """Without data, a failed fetch shows the "Can't load the schedule" state."""
     shown.node("my_schedule.no_data")
     assert "Can't load the schedule" in shown.texts()
+
+
+# ------------------------------------------------------------------ some dropped (D-329)
+
+GONE, LOST = "gone-session", "lost-session"
+"""Saved ids the 2026 feed does not list."""
+
+
+def removal(session_id: str) -> Batch:
+    """A batch, an hour before Thursday's clock, that removed ``session_id``."""
+    start = datetime(2026, 5, 15, 11, 0, tzinfo=ZONE)
+    last = Listing("A dropped talk", start, start + timedelta(minutes=30), "Room 104A")
+    change = Change(session_id, ChangeKind.REMOVED, last, None)
+    return Batch(THURSDAY - timedelta(hours=1), (change,))
+
+
+@pytest.fixture
+def one_dropped(setup: Setup) -> None:
+    """Save every default session and one id the feed no longer lists."""
+    setup.saved = (*SAVED, GONE)
+
+
+@pytest.mark.usefixtures("one_dropped", "before")
+async def test_a_notice_says_a_saved_session_is_no_longer_in_the_schedule(
+    shown: Shown,
+) -> None:
+    """D-329: one live node says how many are gone; the rest of the list stays."""
+    node = shown.node("my_schedule.dropped_notice")
+    assert node.live_region
+    texts = shown.texts()
+    assert "1 saved session is no longer in the schedule" in texts
+    assert "If the schedule lists it again, it comes back here." in texts
+    assert shown.shown() == list(SAVED)
+    # Under the status strip, before the first day's header.
+    under_strip = list(_walk(shown.root().controls[1]))
+    assert node in under_strip
+    assert not shown.nodes("my_schedule.see_changes")  # the log has no removal
+    shown.node("my_schedule.forget")
+
+
+@pytest.mark.usefixtures("one_dropped", "before")
+async def test_forget_unsaves_only_the_dropped_ids_with_undo(shown: Shown) -> None:
+    """D-329: "Forget it" removes the dropped id, says so with Undo, and Undo restores."""
+    forget = cast(ft.TextButton, shown.node("my_schedule.forget").content)
+    assert forget.content == "Forget it"
+    await shown.click(forget)
+    assert shown.favorites.ids == frozenset(SAVED)
+    assert shown.prefs_service.values[FAVORITES] == sorted(SAVED)
+    assert not shown.nodes("my_schedule.dropped_notice")
+    (snack,) = shown.snack_bars
+    assert cast(ft.Text, snack.content).value == REMOVED
+    action = cast(ft.SnackBarAction, snack.action)
+    assert action.label == UNDO
+
+    await cast(Callable[[], Any], action.on_click)()
+    await shown.settle()
+    assert GONE in shown.favorites.ids
+    shown.node("my_schedule.dropped_notice")
+
+
+@pytest.fixture
+def two_dropped_one_logged(setup: Setup) -> None:
+    """Save two ids the feed no longer lists, one of them removed in the change log."""
+    setup.saved = (*SAVED, GONE, LOST)
+    setup.batches = (removal(LOST),)
+
+
+@pytest.mark.usefixtures("two_dropped_one_logged")
+async def test_a_logged_removal_links_to_schedule_changes(shown: Shown) -> None:
+    """D-329: with a removal in the log, "See what changed" pushes Schedule changes."""
+    texts = shown.texts()
+    assert "2 saved sessions are no longer in the schedule" in texts
+    assert "If the schedule lists them again, they come back here." in texts
+    forget = cast(ft.TextButton, shown.node("my_schedule.forget").content)
+    assert forget.content == "Forget them"
+    see = cast(ft.TextButton, shown.node("my_schedule.see_changes").content)
+    assert see.content == "See what changed"
+    await shown.click(see)
+    assert shown.went == ["/changes/2026"]  # on top of the View (no Router here)
+
+
+def test_only_a_removal_of_a_dropped_id_counts_as_logged() -> None:
+    """D-329: another session's removal, or a dropped id's retiming, links nowhere."""
+    assert extras.logged({GONE}, [removal(GONE)])
+    assert not extras.logged({GONE}, [removal(LOST)])
+    moved = removal(GONE).changes[0]
+    retimed = Change(GONE, ChangeKind.TIME, moved.old, moved.old)
+    assert not extras.logged({GONE}, [Batch(THURSDAY, (retimed,))])
+    assert not extras.logged({GONE}, [])

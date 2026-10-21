@@ -4,8 +4,9 @@
 row and in session detail. A list owner gets the one handler its stars share from
 ``use_favorite_toggle()``, which saves, gives the selection click and shows the
 SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to My
-schedule" (SCHED-24), with the same SnackBar and its count (D-209). An edit that says
-nothing closes the favourites SnackBar still showing, so a screen reader is never left
+schedule" (SCHED-24), with the same SnackBar and its count (D-209); ``use_forget()``
+is My schedule's "Forget them", the saved sessions the feed dropped (D-329). An edit
+that says nothing closes the favourites SnackBar still showing, so a screen reader is never left
 with "Removed" about a session saved again (D-251).
 ``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
 
@@ -67,6 +68,9 @@ type ToggleFavorite = Callable[[str], Awaitable[None]]
 
 type AddAll = Callable[[Iterable[str]], Awaitable[None]]
 """A track page's "Add all to My schedule": ``await add_all(session_ids)``."""
+
+type RemoveAll = Callable[[Iterable[str]], Awaitable[None]]
+"""My schedule's "Forget them": ``await forget(session_ids)`` (D-329)."""
 
 
 def FavoriteButton(
@@ -280,6 +284,34 @@ def use_add_all(favorites: Favorites) -> AddAll:
         _report(page, message, undo=undoes, keep=prefs.screen_reader, edit=edit)
 
     return add_all
+
+
+def use_forget(favorites: Favorites) -> RemoveAll:
+    """Return My schedule's "Forget them": ``await forget(ids)`` (D-329).
+
+    It removes every id at once (``Favorites.remove_many()``) and says so as a star's
+    removal does, through ``_announce()``: "Removed from My schedule" with Undo, which
+    saves them all again, or "Couldn't save your change". No dialog: it is reversible
+    (D-29). Not memoised, as ``use_add_all()``: no memoised control receives it.
+
+    Args:
+        favorites: The screen's ``use_favorites()`` store.
+
+    Returns:
+        The handler; it reports an unexpected error rather than raising (D-163).
+    """
+    page = ft.context.page
+    svc = use_services()
+    prefs = use_prefs()
+
+    @report_errors
+    async def forget(session_ids: Iterable[str]) -> None:
+        edit = _begin(page)
+        change = await favorites.remove_many(svc.storage, session_ids)
+        keep = prefs.screen_reader
+        _announce(page, favorites, svc.storage, change, keep=keep, edit=edit)
+
+    return forget
 
 
 def _begin(page: ft.Page) -> int:
