@@ -707,7 +707,7 @@ async def test_outside_the_conference_no_list_is_built_in_full(
 
 @pytest.mark.parametrize("time_above", [False, True])
 async def test_a_star_tap_re_renders_one_slot_and_one_row(
-    shown: Callable[[], Awaitable[Shown]], time_above: bool
+    shown: Callable[..., Awaitable[Shown]], time_above: bool
 ) -> None:
     """D-153: the screen re-renders, but every other day, slot and row is skipped.
 
