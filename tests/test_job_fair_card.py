@@ -184,7 +184,7 @@ async def test_the_jobs_card_pushes_the_plan_on_job_listings(
 
 
 async def test_a_year_without_listings_has_no_card(show_jobs: ShowJobs) -> None:
-    """"No job listings yet" stands alone: the card heads listings only."""
+    """A feed without listings says "No job listings yet", with no card above."""
     shown = await show_jobs(None)
     data = cast(ConferenceData, shown.conference.data)
     await show_jobs(replace(data, job_listings=()))
