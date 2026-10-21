@@ -606,8 +606,8 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
   active window through `UiAutomation`, with `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` so TalkBack can stay on.
   Each node is one line: class, `HEADING` when `isHeading()`, `#<resource-id>`, the label, then its states
   (`focusable`, `clickable`, `accessibility-focused`, `disabled`, ...). With the app open:
-  `uv run python -m tools.a11y_tree --serial <your emulator> --headings` lists the headings alone (on More: "More",
-  "Programme", "You", "Appearance", D-208); `--route /more` opens a route first through the deep link (D-269),
+  `uv run python -m tools.a11y_tree --serial <your emulator> --headings` lists the headings alone (on More, on screen: "More",
+  "Programme", "Expo & sponsors", "At the venue"; Flutter leaves out what is off screen, so scroll for the rest); `--route /more` opens a route first through the deep link (D-269),
   `--bounds` adds bounds, `--xml` prints the raw XML (`uiautomator dump`'s attributes plus `heading`,
   `accessibility-focused`, `state-description` and `hint`). Name your own emulator's serial, never another agent's.
   Like `uiautomator dump`, it makes Flutter report a screen reader (F72). Its parsing is tested on a recorded dump
