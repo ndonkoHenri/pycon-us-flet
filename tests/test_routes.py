@@ -267,6 +267,15 @@ def test_each_drill_kind_opens_its_own_screen_with_the_unquoted_id(
     assert drill_screen(monkeypatch, kind) == (name, {argument: "a/b"})
 
 
+def test_the_expo_plan_opens_the_expo_hall(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``…/plan/expo`` is ``ExpoPlan``, the expo hall with its booths (EXPO-01)."""
+    monkeypatch.setattr(
+        ft, "use_route_params", lambda: {"kind": "plan", "ident": "expo"}
+    )
+    monkeypatch.setattr(routes, "ExpoPlan", lambda: "ExpoPlan")
+    assert inspect.unwrap(routes.Drill)() == "ExpoPlan"
+
+
 def test_a_drill_kind_without_a_screen_is_an_error_not_another_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -13,8 +13,9 @@ its focus in place (``refocus()``, F76) until U56 (#472). A double tap (2x, or b
 fit) is only for plans with nothing to tap: its detector delays every single tap
 (D-312). A resize (a rotation) lowers the maximum zoom and moves the viewer's bounds
 without clamping its transform, so ``use_zoom()`` zooms back down to the maximum and
-pans back inside the bounds (``into_bounds()``, #588). Every duration goes through
-``prefs.motion_ms()`` (D-173).
+pans back inside the bounds (``into_bounds()``, #588). A pane that leaves and comes
+back keeps its zoom through ``on_transform`` and ``Zoom.restore()`` (D-312, D-18).
+Every duration goes through ``prefs.motion_ms()`` (D-173).
 """
 
 from collections.abc import Awaitable, Callable
@@ -234,12 +235,35 @@ class Zoom:
         duration = ft.Duration(milliseconds=self.reset_ms) if self.reset_ms else None
         await viewer.reset(animation_duration=duration)
 
+    async def restore(self, to: Transform) -> None:
+        """Put back a transform the viewer reported before: reset, zoom, pan (D-312).
 
-def use_zoom(natural: Size) -> Zoom:
+        ``zoom()`` keeps the translation at the reset's 0 and ``pan()`` moves in the
+        plan's units (F76), so ``pan(x / s, y / s)`` lands on ``(x, y)``; until U3's
+        ``set_transform``, two or three frames show the steps. The scale is held to
+        today's maximum, which a rotation may have lowered.
+
+        Args:
+            to: The transform to put back, as ``on_transform_changed`` reported it.
+        """
+        if self.viewer.current is None:
+            return
+        scale = min(to.scale, self.max_scale)
+        # The Ref afresh each step, as in zoom_by(): a render between them replaces it.
+        await self.viewer.current.reset()
+        await self.viewer.current.zoom(scale)
+        await self.viewer.current.pan(to.x / scale, to.y / scale)
+
+
+def use_zoom(
+    natural: Size, *, on_transform: Callable[[Transform], None] | None = None
+) -> Zoom:
     """Return a zoom layer's state for an image of ``natural`` size (a hook).
 
     Args:
         natural: The image's width and height, in pixels (``map.toml``'s).
+        on_transform: Called with each transform the viewer reports, for a pane
+            that keeps its zoom in ``ViewMemory`` (D-312); None for none.
     """
     prefs = use_prefs()
     viewer = ft.use_memo(ft.Ref[ft.InteractiveViewer], [])
@@ -254,6 +278,8 @@ def use_zoom(natural: Size) -> Zoom:
     @report_errors
     def transformed(e: ft.InteractiveViewerTransformEvent) -> None:
         set_scale(e.scale)
+        if on_transform is not None:
+            on_transform(Transform(e.scale, e.translation_x, e.translation_y))
 
     zoom = Zoom(
         viewer=viewer,
