@@ -16,10 +16,12 @@ from pycon_us.config import ConferenceInfo, load_year
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.theme_badges import BadgeColors
 from pycon_us.ui.badges import (
+    CHANGED,
     REGISTRATION,
     SPANISH,
     TrackBadge,
     badge_row,
+    badge_specs,
     session_badges,
 )
 from tests.feeds import processed
@@ -181,3 +183,15 @@ def test_a_session_without_a_track_shows_no_empty_pill(
     """
     assert labels(replace(data.sessions[TALK], track=""), info) == []
     assert labels(replace(data.sessions[TUTORIAL], track=""), info) == [REGISTRATION]
+
+
+def test_a_recent_change_adds_changed_last_outlined_in_its_token(
+    data: ConferenceData, info: ConferenceInfo
+) -> None:
+    """Changed follows the session's own badges, outlined in ``Tokens.changed`` (D-315)."""
+    specs = badge_specs(data.sessions[TUTORIAL], info, theme.LIGHT_TOKENS, changed=True)
+    assert [label for label, _ in specs][-1] == CHANGED
+    assert specs[-1][1] == theme.LIGHT_TOKENS.changed
+    assert specs[-1][1].fill is None  # outlined, never En Español's fill
+    plain = badge_specs(data.sessions[TUTORIAL], info, theme.LIGHT_TOKENS)
+    assert CHANGED not in [label for label, _ in plain]

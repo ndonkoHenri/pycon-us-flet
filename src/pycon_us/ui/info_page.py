@@ -33,6 +33,7 @@ def InfoBody(
     block: str,
     screen: str,
     empty: ft.Control,
+    footer: Sequence[ft.Control] = (),
 ) -> ft.ListView:
     """Return an info page's body: its blocks, else the feed's block, else its empty state.
 
@@ -52,9 +53,12 @@ def InfoBody(
             ``<screen>.feed`` (decisions §M).
         empty: What the page shows when neither has anything: its ``EmptyState``,
             which names the way out (ux.md §4.6).
+        footer: What ends the page whichever of them shows: Help & safety's Report
+            a problem with the app (INFO-11).
     """
     margin = use_margin(READING)
     items = list(blocks) or [FeedBlock(block, screen=screen, empty=empty)]
+    items += footer
     return ft.ListView(items, expand=True, padding=sides(margin, top=8, bottom=GUTTER))
 
 

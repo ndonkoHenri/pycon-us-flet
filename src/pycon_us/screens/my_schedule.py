@@ -39,7 +39,14 @@ from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.session_rows import SessionRow, use_session_views
+from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
+    SessionRow,
+    changes_of,
+    use_recent_changes,
+    use_session_views,
+)
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.time_gutter import TimeSlot
@@ -95,6 +102,7 @@ def MySchedule() -> ft.View:
         conference, tuple(data.sessions) if data else (), use_24h=use_24h
     )
     by_id = ft.use_memo(lambda: {view.session.id: view for view in views}, [views])
+    changes = use_recent_changes()
 
     @report_errors
     async def refresh() -> None:
@@ -154,6 +162,7 @@ def MySchedule() -> ft.View:
         day = partial(
             _day,
             views=by_id,
+            changes=changes,
             on_toggle=on_toggle,
             tokens=tokens,
             use_24h=use_24h,
@@ -234,6 +243,7 @@ def _day(
     part: str = "to_come",
     *,
     views: Mapping[str, SessionView],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
@@ -248,6 +258,7 @@ def _day(
         part: Which part of the day it is, so today's two parts keep their own
             component when the fold moves a session from one to the other.
         views: Every session's row view, by id.
+        changes: Every session's recent changes; the day gets only its own (D-315).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
@@ -262,10 +273,12 @@ def _day(
         if session in overlaps
     }
     # As SessionRow: ft.component's typing leaves out the key= its wrapper takes.
+    ids = (session.id for slot in day.slots for session in slot.sessions)
     return _Day(
         day,
         views,
         notes,
+        changes_of(changes, ids),
         on_toggle,
         tokens,
         use_24h,
@@ -280,6 +293,7 @@ def _Day(
     day: AgendaDay,
     views: Mapping[str, SessionView],
     notes: Mapping[str, tuple[str, ...]],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     use_24h: bool,
@@ -287,8 +301,8 @@ def _Day(
 ) -> ft.Control:
     """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
 
-    Memoised (D-153): it runs only when the day's slots, their clashes, the clock
-    format, the slots' layout (D-216) or the scheme change. Every row is saved, so every
+    Memoised (D-153): it runs only when the day's slots, their clashes or changes, the
+    clock format, the slots' layout (D-216) or the scheme change. Every row is saved, so every
     star is filled; a tap removes the row, with Undo.
     """
     zone = use_services().year.conference.zone  # a plain value: subscribes to nothing
@@ -304,6 +318,7 @@ def _Day(
                 tokens,
                 screen=SCREEN,
                 overlaps=notes.get(session.id, ()),
+                changed=changes.get(session.id, NO_CHANGES),
             )
             for session in slot.sessions
         ]

@@ -325,7 +325,14 @@ def test_favorite_token_is_the_tertiary_role(dark: bool) -> None:
     assert tokens.success == tokens.live
 
 
-BADGE_TOKENS = ("tracks", "unknown_track", "spanish", "registration", "new_track")
+BADGE_TOKENS = (
+    "tracks",
+    "unknown_track",
+    "spanish",
+    "registration",
+    "new_track",
+    "changed",
+)
 
 YEARS = sorted(
     int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
@@ -340,6 +347,7 @@ def badges(tokens: theme.Tokens) -> dict[str, BadgeColors]:
         "En Español": tokens.spanish,
         "Registration required": tokens.registration,
         "New track": tokens.new_track,
+        "Changed": tokens.changed,
     }
 
 
@@ -450,6 +458,21 @@ def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
     new_track = theme.build_tokens(dark=dark, high_contrast=False).new_track
     assert new_track == BadgeColors(text=hex_role(scheme(dark), "primary"))
     assert new_track.fill is None  # outlined
+
+
+@pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
+def test_changed_badge_is_outlined_in_the_warning_token(dark: bool) -> None:
+    """The Changed badge is outlined in ``warning``, never En Español's tonal fill.
+
+    D-315: ``tertiary_container``, ux.md §3.4's first choice, is the pink of En Español;
+    an outline in ``warning`` reads as a status mark, as Registration required does.
+    ``test_every_badge_reads_at_aa`` checks its label on every surface.
+    """
+    tokens = theme.build_tokens(dark=dark, high_contrast=False)
+    assert tokens.changed == BadgeColors(text=tokens.warning)
+    assert tokens.changed.fill is None  # outlined
+    assert tokens.spanish.fill is not None  # tonal: the two never look alike
+    assert color_distance(tokens.changed.text, tokens.spanish.text) >= 10
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

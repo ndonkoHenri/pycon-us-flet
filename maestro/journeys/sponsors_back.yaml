@@ -1,0 +1,56 @@
+# SPON-01 (#395, #496): More › Sponsors › a sponsor › Back returns to the same list.
+#
+# Capital One is one of 2026's logo cards (the second and third levels, D-279), below
+# the fold on a phone, so the flow scrolls to it. A tap pushes its page,
+# /more/sponsors/sponsor/capital-one (D-17); Back leaves that one View, and the list
+# shows the same card again.
+appId: io.github.ndonkohenri.pyconus
+name: More, Sponsors, a sponsor, then Back to the list
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Sponsors.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.sponsors
+    direction: DOWN
+- tapOn:
+    id: more.sponsors
+# The list is open once any sponsor shows (Maestro's id: is a regular expression).
+- extendedWaitUntil:
+    visible:
+      id: "sponsors\\.sponsor\\..*"
+    timeout: 15000
+
+# → a logo card's sponsor.
+- scrollUntilVisible:
+    element:
+      id: sponsors.sponsor.capital-one
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: sponsors.sponsor.capital-one
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Capital One
+    timeout: 15000
+
+# Back: the list, with the same card.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: sponsors.sponsor.capital-one
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title
