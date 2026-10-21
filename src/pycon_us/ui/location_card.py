@@ -188,8 +188,8 @@ def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
 def job_fair_card(data: MapData, *, identifier: str) -> ft.Control | None:
     """Return the job fair plan's card, ``LocationCard``'s plan-only form, or None.
 
-    One card in three places (D-254): it heads the Map's Job fair pane (MAP-04) and
-    comes to Job listings (SPON-10) and Job Fair sessions (SESS-10) with #408. A tap
+    One card in three places (D-254): it heads the Map's Job fair pane (MAP-04) and Job
+    listings (SPON-10), and follows the room's on Job Fair sessions (SESS-10). A tap
     pushes ``…/plan/job-fair``, the floor viewer without pins. None for a year whose
     ``map.toml`` has no ``job-fair`` plan.
 
