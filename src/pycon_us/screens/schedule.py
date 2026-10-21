@@ -1,10 +1,11 @@
 """Schedule (``/schedule``): the programme by day and time slot (SCHED-01, SCHED-02).
 
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
-``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
-one page per conference day, sprint days included. Under the strip, "Times are Pacific
-Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The
-tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
+``TabBar`` (no ``AppBar.bottom``, U10), then the head (the filter summary, the status
+strip and "Times are Pacific Time (PDT)" while the device's clock differs from the
+conference's, D-20, D-32, D-240), then a ``TabBarView`` with one page per conference
+day, sprint days included. At the largest text sizes the head tops each day's list
+instead, so it scrolls away (``screens/schedule_head.py``, D-345). The tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
 is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
 fills only the shown day, the second the others (D-156).
 
@@ -48,6 +49,7 @@ from pycon_us.screens.schedule_days import (
     now_button,
 )
 from pycon_us.screens.schedule_filter import use_track_filter
+from pycon_us.screens.schedule_head import Head, ScheduleHead
 from pycon_us.screens.schedule_now import (
     PENDING,
     SAID_S,
@@ -71,7 +73,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
+from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 logger = logging.getLogger(__name__)
@@ -281,6 +283,12 @@ def Schedule() -> ft.View:
             ),
         )
 
+    head = Head(
+        track_filter.summary,
+        # The device's offset now: the packaged app's Python reads the device's
+        # zone (F60), and the minute tick follows a DST change.
+        zone_note(now, info.zone, info.time_zone_name, now.astimezone().utcoffset()),
+    )
     pages: list[ft.Control] = []
     for day in all_days:
         if day != shown and not rest:
@@ -303,6 +311,8 @@ def Schedule() -> ft.View:
                 now=NowMark(place.line, time_label(now, info.zone, use_24h=use_24h))
                 if day == current and place is not None
                 else None,
+                # At the largest sizes it scrolls away with the slots (D-345).
+                head=head if prefs.time_above else None,
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
                 on_clear_filters=track_filter.show_all,
@@ -331,21 +341,11 @@ def Schedule() -> ft.View:
                     ),
                     margin,
                 ),
-                capped(track_filter.summary, margin),
-                capped(StatusStrip(auto_refresh=True), margin),
-                # The device's offset now: the packaged app's Python reads the
-                # device's zone (F60), and the minute tick follows a DST change.
-                capped(
-                    zone_note_line(
-                        zone_note(
-                            now,
-                            info.zone,
-                            info.time_zone_name,
-                            now.astimezone().utcoffset(),
-                        )
-                    ),
-                    margin,
-                ),
+                # At the largest sizes the head is in the lists; a placeholder keeps
+                # the day pages' place in the column (#313).
+                ft.Container()
+                if prefs.time_above
+                else capped(ScheduleHead(head, track_filter.show_all), margin),
                 ft.Stack(
                     [landing_note(said), ft.TabBarView(pages)],
                     fit=ft.StackFit.EXPAND,

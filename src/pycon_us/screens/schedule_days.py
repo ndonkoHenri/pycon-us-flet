@@ -10,6 +10,8 @@ is what it places (D-31, D-153..D-156, D-192):
   to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s,
   or its time above them at the largest text sizes (D-216);
 - today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
+- at the largest text sizes, the Schedule's head above the slots, so it scrolls away
+  (``screens/schedule_head.py``, D-345);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
 - ``now_button()``, the "Now" button over today's list (SCHED-15).
 
@@ -27,6 +29,7 @@ import flet as ft
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, weekday_name
 from pycon_us.core.timeline import Slot
+from pycon_us.screens.schedule_head import HEAD_KEY, Head, ScheduleHead
 from pycon_us.screens.schedule_now import NowLine, NowMark
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -129,6 +132,7 @@ def DayList(
     clearance: bool,
     empty: Empty | None,
     now: NowMark | None,
+    head: Head | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
@@ -155,6 +159,8 @@ def DayList(
         clearance: Leave room at the end for the "Now" button.
         empty: Why ``slots`` is empty, when it is.
         now: Today's now line; None on the other days.
+        head: The Schedule's head, at the top of the list at the largest text sizes
+            (D-345); None while it stays fixed above the day pages.
         list_ref: The day's list ref, which the jumps and the re-tap scroll.
         on_scroll: The screen's scroll handler, given this day.
         on_clear_filters: What "Clear filters" does on a day the filter emptied.
@@ -173,6 +179,7 @@ def DayList(
         clearance=clearance,
         empty=empty,
         now=now,
+        head=head,
         list_ref=list_ref,
         on_scroll=on_scroll,
         on_clear_filters=on_clear_filters,
@@ -197,6 +204,7 @@ def _DayList(
     clearance: bool,
     empty: Empty | None,
     now: NowMark | None,
+    head: Head | None,
     list_ref: ft.Ref[ft.ListView],
     on_scroll: Scrolled,
     on_clear_filters: Callable[[], object],
@@ -259,6 +267,8 @@ def _DayList(
         ]
         if now is not None:
             items.insert(now.index, NowLine(now.time))
+    if head is not None:  # it scrolls away with the slots (D-345)
+        items.insert(0, ScheduleHead(head, on_clear_filters, key=HEAD_KEY))  # pyright: ignore[reportCallIssue]
     return ft.ListView(
         items,
         key=f"day-{day.isoformat()}",

@@ -43,7 +43,7 @@ from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule as screen
-from pycon_us.screens import schedule_days, schedule_now
+from pycon_us.screens import schedule_days, schedule_head, schedule_now
 from pycon_us.services import Services
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference
@@ -310,6 +310,7 @@ async def shown(
     monkeypatch.setattr(Services, "run_every", run_every)
     monkeypatch.setattr(screen, "jump_to_key", recorded_jump)
     monkeypatch.setattr(screen, "StatusStrip", Strip)
+    monkeypatch.setattr(schedule_head, "StatusStrip", Strip)
     monkeypatch.setattr(schedule_days, "slot_layout", counted_slot)
 
     @ft.component
@@ -470,7 +471,7 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     """#313: a line that comes and goes would shift the day pages and rebuild them."""
     schedule = await shown()
     column = cast(ft.Column, schedule.tabs.content)
-    assert len(column.controls) == 5
+    assert len(column.controls) == 3  # the tabs, the head and the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
     assert isinstance(pages.controls[-1], ft.TabBarView)
 
@@ -619,6 +620,55 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
     )
 
 
+async def test_at_the_largest_text_the_head_tops_each_day_list_and_scrolls_away(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """D-345 (#331): the summary and the strip leave the fixed chrome for the lists.
+
+    The column keeps its three places, so the day pages keep theirs (#313); each
+    day's list gets a head of its own, as its first item; back at a smaller size
+    the head is fixed again and no list has one.
+    """
+    schedule = await shown()
+    pages = cast(ft.Column, schedule.tabs.content).controls[-1]._i  # its id
+    fixed = _head_parts(schedule)
+    assert fixed and not any(_in_a_list(schedule, c) for c in fixed)
+    schedule.prefs.time_above = True  # what GutterProbe measures at that size
+    await settle()
+    column = cast(ft.Column, schedule.tabs.content)
+    assert len(column.controls) == 3 and column.controls[-1]._i == pages
+    assert cast(ft.Container, column.controls[1]).content is None  # a placeholder
+    lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
+    assert len(lists) == len(DAYS)  # the other days are rendered by now (D-156)
+    for day_list in lists:
+        head = day_list.controls[0]
+        assert head.key == schedule_head.HEAD_KEY
+        assert sum(inside(c, head) for c in _head_parts(schedule)) == 2
+    assert all(_in_a_list(schedule, c) for c in _head_parts(schedule))
+    schedule.prefs.time_above = False
+    await settle()
+    assert cast(ft.Column, schedule.tabs.content).controls[-1]._i == pages
+    assert len(_head_parts(schedule)) == len(fixed)
+    assert not any(_in_a_list(schedule, c) for c in _head_parts(schedule))
+
+
+def _head_parts(schedule: Shown) -> list[ft.BaseControl]:
+    """The filter summaries' nodes and the strips' stand-ins the Schedule shows."""
+    summaries = find(
+        schedule.session,
+        ft.Semantics,
+        lambda c: c.identifier == "schedule.filter_summary",
+    )
+    strips = find(schedule.session, ft.Text, lambda c: c.value == "strip")
+    return [*summaries, *strips]
+
+
+def _in_a_list(schedule: Shown, control: ft.BaseControl) -> bool:
+    """Whether ``control`` is in one of the day lists."""
+    lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
+    return any(inside(control, day_list) for day_list in lists)
+
+
 def _slot(anchor: ft.Container) -> ft.Control:
     """The slot a ``ScrollKey`` anchor marks: the control after it (D-242)."""
     _, slot = cast(ft.Column, anchor.parent).controls
@@ -655,11 +705,16 @@ async def test_outside_the_conference_no_list_is_built_in_full(
     assert {schedule.list_of(day).cache_extent for day in DAYS} == {None}
 
 
+@pytest.mark.parametrize("time_above", [False, True])
 async def test_a_star_tap_re_renders_one_slot_and_one_row(
-    shown: Callable[[], Awaitable[Shown]],
+    shown: Callable[[], Awaitable[Shown]], time_above: bool
 ) -> None:
-    """D-153: the screen re-renders, but every other day, slot and row is skipped."""
-    schedule = await shown()
+    """D-153: the screen re-renders, but every other day, slot and row is skipped.
+
+    At the largest text too, where every day list carries the head (D-345): its words
+    are a value, equal from render to render, so they keep the lists skipped.
+    """
+    schedule = await shown(time_above=time_above)
     schedule.rows.clear()
     schedule.slots.clear()
     await schedule.tap_star(TALK)
