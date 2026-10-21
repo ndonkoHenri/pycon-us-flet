@@ -8,16 +8,19 @@ background colour first: the way to hide a PyCon mark printed on a plan (D-36).
 
 Run it from the repository's root with each plan as ``<id>=<source image>``; it writes
 ``<id>.webp`` and ``<id>-thumb.webp`` into ``--out`` and prints each file's size, to be
-copied into ``map.toml``'s ``width`` and ``height``. 2026's plans (``NOTICE``)::
+copied into ``map.toml``'s ``width`` and ``height``. 2026's plans (``NOTICE``), the
+expo's sun-and-palms mark covered too (#401)::
 
     IMG=excluded/pycon-us-mobile/src/assets/img
     uv run python tools/encode_plans.py --out src/assets/maps/2026 \
         --cover campus=150,40,520,185 --cover campus=150,1566,500,1680 \
+        --cover expo=30,230,545,650 \
         campus=$IMG/floor-plans/campus-map.jpg \
         concourse=$IMG/floor-plans/floor-plan-1.jpg \
         upper=$IMG/floor-plans/floor-plan-2.jpg \
         arena=$IMG/floor-plans/floor-plan-3.jpg \
-        seaside=$IMG/floor-plans/floor-plan-4.jpg
+        seaside=$IMG/floor-plans/floor-plan-4.jpg \
+        expo=$IMG/pycon-us-2026-floorplan-nologo.jpg
 """
 
 import argparse

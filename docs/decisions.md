@@ -411,6 +411,7 @@
   - `logos.py`: `logo_tile()`, a logo on a white tile with the initials when there is none or it cannot load, and its `INK`, for the Sprints cards and the sponsor screens (D-262).
   - `buttons.py`: `LABEL_PADDING` and `ICON_PADDING`, the padding a filled, tonal or outlined button keeps at every text size (D-344).
   - `brands.py`: `brand_icon()`, a brand's mark beside a link to it, `BRANDS` (each mark's tint), `BRAND_SURFACES` and `SIMPLE_ICONS_VERSION`; the SVGs are `src/assets/icons/brands/<key>.svg` (D-264).
+  - `zoom.py`: a floor plan's zoom layer, for the floor viewer and the Map's plans (D-312): the hook `use_zoom()` and its `Zoom` (the viewer's `Ref`, size and scale, `zoom_by()` and `reset()`), `zoom_layer()`, `zoom_buttons()` with `zoom_button()`, and the maths `fitted()`, `max_scale()`, `centred_on()`, `refocus()` (F76's interim) (#388).
 - **Stores and hooks:** `Conference` / `use_conference()`, `Prefs` / `use_prefs()`, `Favorites` / `use_favorites()`, `ChangeLog` / `use_change_log()` (P2, D-301), `Layout` / `use_layout()` (D-277), `Account` / `use_account()` (P3), `Staff` / `use_staff()` (P3), plus `use_services()` (`services/__init__.py`, with `Services` and `ServicesCtx`) and `use_tokens()`.
 - **Routes.** S4 confirmed the shape (D-141), and `docs/architecture.md` §5 holds the full table; keep it and this list in sync.
   - Roots: `/now`, `/schedule`, `/my-schedule`, `/map`, `/more`. `/` goes to `/welcome` until its Get started (D-287) and to `/now` or the last location otherwise; `/welcome` is a root without a bar or the drill.

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The accessibility tree dumper (#257): an instrumentation with no activity, run by tools/a11y_tree.py.
+     It instruments itself; UiAutomation reads whichever app is on screen. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.ndonkohenri.a11ytree">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="36" />
+    <application android:label="a11y tree" android:hasCode="true" />
+    <instrumentation
+        android:name=".A11yTree"
+        android:targetPackage="io.github.ndonkohenri.a11ytree" />
+</manifest>
