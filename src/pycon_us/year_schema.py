@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 _TYPE_NAMES = {
     str: "a string",
     int: "an integer",
+    float: "a number with a decimal point",
     bool: "true or false",
     date: "a date",
     datetime: "a date and time",

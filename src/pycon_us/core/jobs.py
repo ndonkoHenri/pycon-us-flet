@@ -16,7 +16,8 @@ them as links, where Ionic linked a role only when its URL was the anchor's text
 A placeholder such as ``N/A`` (OpenEDG) is no roles and no description
 (``is_placeholder``). ``feed.process()`` reads each listing once (``read_listing``), and
 the screens find a sponsor's listings by its exact name (``listings_of``), and a
-listing's sponsor the same way (``sponsor_of``).
+listing's sponsor the same way (``sponsor_of``). Job listings' filter keeps the listings
+whose text holds every word (``filter_listings``, SPON-07).
 """
 
 import re
@@ -108,6 +109,30 @@ def read_listing(
         roles=roles,
         search_text=fold(" ".join([listing.sponsor_name, *titles, text])),
     )
+
+
+def filter_listings(
+    listings: tuple[JobListing, ...], query: str
+) -> tuple[JobListing, ...]:
+    """Return the listings a filter keeps: those whose text holds every word (SPON-07).
+
+    The query folds as search's does (D-46), and each word may sit anywhere in the
+    listing's ``search_text`` (its sponsor, role titles and visible text), as a
+    substring; never in its markup, where Ionic's filter found ``nofollow``. A filter
+    with no word to match returns ``listings`` itself, so the screen knows no filter
+    applies: a blank one, and one that folds to nothing (a lone ``’``).
+
+    Args:
+        listings: The feed's listings, in feed order.
+        query: What the user typed in the filter field.
+
+    Returns:
+        The listings found, in feed order.
+    """
+    words = fold(query).split()
+    if not words:
+        return listings
+    return tuple(j for j in listings if all(word in j.search_text for word in words))
 
 
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:

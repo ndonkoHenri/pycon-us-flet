@@ -1,8 +1,8 @@
 """The content widths: reading screens 720 dp, lists 840 dp, centred (D-09, D-305).
 
 On a phone the content takes the whole width. On a tablet, or a phone in landscape,
-each screen caps it by its width class: ``READING`` for detail pages, About, Developer
-and the info pages, ``LIST`` for every other screen, and ``FULL`` for the floor viewer.
+each screen caps it by its width class: ``READING`` for detail pages, About, Developer,
+the info pages and a licence's text, ``LIST`` for every other screen, and ``FULL`` for the floor viewer.
 Flet has no max-width constraint (D-165), so a screen gets the cap as side margins,
 ``use_margin()``, from the ``Layout`` store's room: a list puts them in its own
 padding (``sides()``), so it scrolls from the margins too, and a screen's fixed chrome
@@ -20,7 +20,7 @@ from pycon_us.ui.navigation import RAIL_WIDTH
 
 READING = float(READING_DP)
 """A reading screen's width class: a session, a speaker, a sponsor, the info pages,
-About this app and Developer options (ux.md §8)."""
+About this app, Developer options and a licence's text (ux.md §8)."""
 
 LIST = float(LIST_DP)
 """A list's width class, every screen's but a reading one's or the floor viewer's."""

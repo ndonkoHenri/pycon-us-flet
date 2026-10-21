@@ -1,20 +1,19 @@
 # Launch the app as a fresh install starts: no settings, no favourites, no cache,
 # Developer options locked, real time and the year's feed (D-73). Maestro clears the
 # app's data first (`pm clear` on Android, the app's container on iOS).
-#
-# A fresh install opens Welcome (D-287); Get started replaces it with Now, as
-# tests/ui/helpers.py's start_app() does. It is tapped until Now shows: a tap during
-# Welcome's arrival can be lost.
 appId: io.github.ndonkohenri.pyconus
 ---
 - launchApp:
     clearState: true
     stopApp: true
-# A first launch unpacks the bundled Python before the first screen shows.
+# A first launch unpacks the bundled Python, then shows Welcome (D-287, #504): Get
+# started goes to Now. `id:` is a regular expression, so this waits for either.
 - extendedWaitUntil:
     visible:
       id: "welcome\\.start|now\\.title"
     timeout: 120000
+# Get started is tapped until Now shows, as tests/ui/helpers.py's start_app() does: a
+# tap during Welcome's arrival can be lost (#496).
 - runFlow:
     when:
       visible:

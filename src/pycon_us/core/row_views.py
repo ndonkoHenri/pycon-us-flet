@@ -17,7 +17,7 @@ from itertools import groupby
 
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker
 from pycon_us.core.slugs import slugify_room
-from pycon_us.core.timefmt import day_heading, local_date, time_range_label
+from pycon_us.core.timefmt import day_heading, instant, local_date, time_range_label
 
 _DASH = "–"
 """The en dash of ``timefmt`` ranges, which a screen reader may skip or call a dash."""
@@ -162,10 +162,12 @@ def by_slot(views: Iterable[SessionView]) -> list[tuple[datetime, list[SessionVi
         Each slot's start and its views, by start whatever order the views came in;
         within a slot, in the order given.
     """
+    # Keyed by instant: starts in one zone hash and compare by wall clock, which would
+    # merge 1:30 PDT and 1:30 PST on the night summer time ends (#535).
     slots: dict[datetime, list[SessionView]] = {}
     for view in views:
-        slots.setdefault(view.session.start, []).append(view)
-    return sorted(slots.items(), key=lambda slot: slot[0])
+        slots.setdefault(instant(view.session.start), []).append(view)
+    return [(group[0].session.start, group) for _, group in sorted(slots.items())]
 
 
 @dataclass(frozen=True, eq=False)

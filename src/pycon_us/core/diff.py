@@ -20,6 +20,7 @@ from enum import StrEnum
 
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.rules import COLLAPSED_KINDS
+from pycon_us.core.timefmt import instant
 
 
 class ChangeKind(StrEnum):
@@ -150,7 +151,9 @@ def _compared(data: ConferenceData) -> dict[str, Session]:
 
 
 def _changes(key: str, old: Listing, new: Listing) -> Iterator[Change]:
-    if (old.start, old.end) != (new.start, new.end):
+    # As instants: one zone's times compare by wall clock, so a move from 1:30 PDT to
+    # 1:30 PST on the night summer time ends would go unseen (#535).
+    if (instant(old.start), instant(old.end)) != (instant(new.start), instant(new.end)):
         yield Change(key, ChangeKind.TIME, old, new)
     if old.location != new.location:
         yield Change(key, ChangeKind.ROOM, old, new)
@@ -159,4 +162,4 @@ def _changes(key: str, old: Listing, new: Listing) -> Iterator[Change]:
 
 
 def _order(change: Change) -> tuple[datetime, str, int]:
-    return change.latest.start, change.id, _KIND_ORDER[change.kind]
+    return instant(change.latest.start), change.id, _KIND_ORDER[change.kind]

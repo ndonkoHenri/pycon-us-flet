@@ -2,7 +2,8 @@
 
 Bundled, per-year conference data (D-45): one folder per year, e.g. `2026/`, holding
 
-- `conference.toml`: name, dates, time zone, venue, site and feed URLs, and the track registry;
+- `conference.toml`: name, dates, time zone, venue, its address and the point Directions opens (`address`,
+  `[directions]`, D-313), site and feed URLs, and the track registry;
 - `content.toml`: texts and links for the info pages (today the display-time overrides, the venue's names for
   feed processing, the places that are not rooms, the Map's "Other locations", the Open spaces and Lightning
   talks pages' copy, the keynotes and panels, keyed by the feed's session ids, D-217, and the

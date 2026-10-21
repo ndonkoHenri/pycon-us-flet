@@ -25,7 +25,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pycon_us.core.hours import ServiceHours
 from pycon_us.core.rules import DisplayTimeOverride, FeedSettings
 from pycon_us.core.slugs import slugify_room
-from pycon_us.year_info import HelpInfo, SafetyContact, WifiInfo, check_info
+from pycon_us.year_info import (
+    Directions,
+    HelpInfo,
+    SafetyContact,
+    WifiInfo,
+    check_directions,
+    check_info,
+)
 from pycon_us.year_keynotes import Keynote, check_keynotes, check_snapshot_sessions
 from pycon_us.year_links import PsfInfo, SocialInfo
 from pycon_us.year_moments import EventReminder, check_moments
@@ -34,6 +41,7 @@ from pycon_us.year_pages import (
     OpenSpacesInfo,
     check_https,
     check_pages,
+    check_text,
 )
 from pycon_us.year_schema import YearDataError, build, read_table
 from pycon_us.year_tracks import KEYNOTE_TRACKS, Track, TrackFormat, check_tracks
@@ -80,6 +88,12 @@ class ConferenceInfo:
     sprint_submit_url: str = ""
     """Where a project signs up for the sprints, for the Sprints page (EVT-08); empty
     when not known."""
+    address: str = ""
+    """The venue's street address, which Venue & hours shows and copies (MAP-11,
+    D-313); empty when not known."""
+    directions: Directions | None = None
+    """Where Venue & hours' Directions opens a maps app (MAP-11, D-313); None for a
+    year without it, whose page has no Directions."""
 
     @property
     def first_sprint_day(self) -> date | None:
@@ -337,6 +351,10 @@ def _check_conference(conference: ConferenceInfo, year: int, file: str) -> None:
         check_https(getattr(conference, key), file, key)
     if not conference.site_url.endswith("/"):  # site-relative links resolve against it
         raise YearDataError(f"{file}: site_url: expected a final '/'")
+    if conference.address:
+        check_text(conference.address, file, "address")
+    if conference.directions is not None:
+        check_directions(conference.directions, file)
     check_tracks(conference.tracks, file)
 
 

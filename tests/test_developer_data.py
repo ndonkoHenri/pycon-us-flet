@@ -28,6 +28,7 @@ from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     CLEARED,
     RESET_INCOMPLETE,
+    WELCOME_NOT_SAVED,
     DataActions,
     reset_app,
 )
@@ -293,11 +294,12 @@ def said(page: FakePage) -> list[str]:
 def test_each_action_carries_the_identifier_ui_flows_use(
     render: Callable[[], ft.Column],
 ) -> None:
-    """The section's identifiers are exactly its four rows' and the outcome line's."""
+    """The section's identifiers are exactly its five rows' and the outcome line's."""
     assert set(identified(render())) == {
         "developer.refresh_now",
         "developer.clear_cache",
         "developer.share_log",
+        "developer.show_welcome",
         "developer.reset_app",
         "developer.data_outcome",
     }
@@ -306,13 +308,13 @@ def test_each_action_carries_the_identifier_ui_flows_use(
 def test_each_action_is_one_node_with_its_identifier(
     render: Callable[[], ft.Column],
 ) -> None:
-    """Each of the four rows is a MergeSemantics over its identified tile: one node.
+    """Each of the five rows is a MergeSemantics over its identified tile: one node.
 
     A bare Semantics(identifier) around a control is an empty extra node for TalkBack;
     merged, the row is one button node that carries it (D-190).
     """
     rows = [c for c in render().controls if isinstance(c, ft.MergeSemantics)]
-    assert len(rows) == 4
+    assert len(rows) == 5
     for merged in rows:
         inner = merged.content
         assert isinstance(inner, ft.Semantics) and inner.identifier
@@ -596,6 +598,43 @@ async def test_outside_a_packaged_build_share_log_sends_the_diagnostics_alone(
     [(text, _)] = share.texts
     assert text.startswith("App: ")
     assert outcome(render()) == DIAGNOSTICS_SHARED[0]
+
+
+# ------------------------------------------------------------ Show welcome again
+
+
+async def test_show_welcome_again_clears_onboarded_and_opens_welcome(
+    render: Callable[[], ft.Column],
+    stored: dict[str, Any],
+    prefs: Prefs,
+    favorites: Favorites,
+    page: FakePage,
+) -> None:
+    """Show welcome again stores onboarded as false and opens Welcome, keeping the rest.
+
+    The settings and saved sessions stay (SHELL-02); Welcome's Get started saves
+    onboarded again, so a relaunch after it opens Now (D-287).
+    """
+    stored["pycon.onboarded"] = True
+    prefs.onboarded = True
+    prefs.theme = "dark"
+    await tap(render, "developer.show_welcome")
+    assert stored["pycon.onboarded"] is False
+    assert prefs.onboarded is False
+    assert page.navigated == ["/welcome"]
+    assert (prefs.theme, favorites.ids) == ("dark", frozenset({"1", "2", "3"}))
+    assert outcome(render()) is None
+    assert said(page) == []
+
+
+async def test_show_welcome_again_says_in_place_when_it_cannot_save(
+    render: Callable[[], ft.Column], svc: Services, page: FakePage
+) -> None:
+    """A failed save stays on Developer and says so under the rows (D-120, D-210)."""
+    cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
+    await tap(render, "developer.show_welcome")
+    assert page.navigated == []
+    assert outcome(render()) == WELCOME_NOT_SAVED[0]
 
 
 # ------------------------------------------------------------------ Reset app

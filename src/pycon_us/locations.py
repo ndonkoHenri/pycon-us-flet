@@ -19,7 +19,7 @@ TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 WELCOME = "/welcome"
 """The first-run page, a root without a bar and without the drill (SHELL-02, D-287)."""
 
-DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan")
+DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan", "changes")
 """The drill's segment pairs, ``<kind>/<id>``, one pushed View each (D-17, D-141)."""
 
 PAGES = frozenset(
@@ -44,6 +44,7 @@ PAGES = frozenset(
         "/more/help",
         "/more/psf",
         "/more/social",
+        "/more/venue",
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).
