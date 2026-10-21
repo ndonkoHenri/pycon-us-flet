@@ -34,6 +34,7 @@ from pycon_us.ui.navigation import (
     Retap,
     Select,
     navigation_bar,
+    tagged_icon,
 )
 from pycon_us.ui.semantics import merged
 from pycon_us.ui.time_gutter import GutterProbe
@@ -320,9 +321,14 @@ def search_button(memory: ViewMemory, scope: str) -> ft.Control:
         memory.search_query = ""  # a new search; Back to its results keeps the old one
         page.navigate(f"/search?scope={scope}")
 
-    # Merged, so the tooltip names the button's own node (F55, D-234).
+    # Merged, so the tooltip names the button's own node (F55, D-234). The icon carries
+    # the identifier UI flows tap it by, merged into that node too (D-252).
     return merged(
-        ft.IconButton(ft.Icons.SEARCH, tooltip="Search", on_click=open_search)
+        ft.IconButton(
+            tagged_icon(ft.Icons.SEARCH, "app.search"),
+            tooltip="Search",
+            on_click=open_search,
+        )
     )
 
 
