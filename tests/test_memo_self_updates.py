@@ -12,12 +12,18 @@ Each test opens the app (``tests/links.py``'s ``open_at``: the real Router and s
 over the 2026 feed, with saved sessions and a change log) at a location with memoised
 parts, before, during and after the conference, at the default and the largest text.
 It lists every component under a memoised one that could re-render on its own (one
-holding state, an effect or a subscription), re-renders the app from its root so each
-memoised part with equal props is skipped, runs the collector, then re-renders each of
+holding state, an effect or a subscription), re-renders each memoised part's parent so
+the parts with equal props are skipped, runs the collector, then re-renders each of
 those components by itself, as its tick, toggle or store would. The scheduler must
 still run after each, and none may exist: under a memoised component, values only
-(F150's rule). On #586's parent commit, the Schedule at the largest text fails here:
-its status strip ticked inside the day lists.
+(F150's rule). Whether a skipped part's links die depends on what else still holds the
+old instances (on the Schedule they die in every run), so the list's own assertion is
+what holds on every screen. On #586's parent commit, the Schedule at the largest text
+fails here: its status strip ticked inside the day lists.
+
+A memoised component may hold state itself (Jobs' and Sprints' cards, the keynote
+cards, the location cards, search's results): it is made anew by each render of its
+parent, so its own links are always live; the rule is for what is under it.
 """
 
 import gc
@@ -224,7 +230,7 @@ async def test_nothing_under_a_skipped_memo_re_renders_on_its_own(
     assert [why for _, why in found] == []
 
 
-Ctx = ft.create_context(None)
+Ctx: ft.ContextProvider[str | None] = ft.create_context(None)
 """The context the harness's own check reads under a memoised component."""
 
 
