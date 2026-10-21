@@ -188,7 +188,6 @@ def _ChangeItem(
         leading=ft.Icon(ICONS.get(change.kind, ft.Icons.CHANGE_CIRCLE_OUTLINED)),
         title=ft.Text(view.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
         subtitle=change_line(view),
-        on_click=None if removed else open_session,
         content_padding=ft.Padding.only(left=16, right=4),
     )
     text = ft.Semantics(
@@ -201,7 +200,16 @@ def _ChangeItem(
     )
     return ft.Row(
         [
-            ft.MergeSemantics(expand=True, content=text),
+            # The tap sits outside the excluded subtree, so the merged node keeps the
+            # tap action a screen reader activates, as on a session row.
+            ft.MergeSemantics(
+                expand=True,
+                content=ft.Container(
+                    text,
+                    ink=not removed,
+                    on_click=None if removed else open_session,
+                ),
+            ),
             ft.Container(
                 FavoriteButton(
                     saved,

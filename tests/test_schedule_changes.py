@@ -211,10 +211,17 @@ def test_a_removal_says_removed_inline_and_an_addition_shows_its_new_value() -> 
 async def test_a_tap_pushes_the_session_on_the_list_and_back_returns_to_it(
     show: Show,
 ) -> None:
-    """A tap pushes ``…/changes/2026/session/<id>``; Back pops that one level."""
+    """A tap pushes ``…/changes/2026/session/<id>``; Back pops that one level.
+
+    The tap sits on a Container outside the excluded subtree, under the
+    MergeSemantics, so the item's one node keeps the action a screen reader activates
+    (a handler inside ``exclude_semantics`` is dropped from the tree).
+    """
     page = await show()
-    tile = cast(ft.ListTile, page.node("changes.change.7.title").content)
-    await page.click(tile)
+    tappable = page.node("changes.change.7.title").parent
+    assert isinstance(tappable, ft.Container) and tappable.on_click is not None
+    assert isinstance(tappable.parent, ft.MergeSemantics)
+    await page.click(tappable)
     assert page.went == [f"{VIEW}/session/7"]
     assert parent_of(page.went[0]) == VIEW
 
@@ -224,8 +231,8 @@ async def test_a_removed_item_is_no_link_but_keeps_its_star(show: Show) -> None:
     page = await show()
     node = page.node("changes.change.8.removed")
     assert not node.button
-    tile = cast(ft.ListTile, node.content)
-    assert tile.on_click is None
+    tappable = node.parent
+    assert isinstance(tappable, ft.Container) and tappable.on_click is None
     star = page.node("changes.favorite.8.removed")
     assert star.toggled is False
     await page.click(cast(ft.IconButton, star.content))
