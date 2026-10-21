@@ -586,7 +586,8 @@ class ViewMemory:
     search_query: str = ""
     search_scope: str = "all"
     search_base: str = "/now"            # where search was opened from; Back returns there (D-19)
-    map_tab: str = "rooms"
+    map_tab: str = "rooms"               # the Map's pane, a PANES slug; ?tab= seeds it (#391)
+    map_offsets: dict[str, float] = field(default_factory=dict)  # each Map pane's scroll end, by slug (#391)
     last_location: str = ""              # the top View's route; Start returns a new session there (D-143)
     room_highlights: dict[str, str] = field(default_factory=dict)  # room View path -> the session it lit up (D-194)
     plan_pins: dict[str, str] = field(default_factory=dict)  # floor viewer View path -> the pin it shows, pulsed once (#388)

@@ -13,7 +13,7 @@ still from the start under reduced motion (D-173). The label card under the plan
 outside the zoom layer, names it at any zoom. ``ViewMemory.plan_pins`` keeps a View
 rebuilt in a new session (D-143) from pulsing again (D-18). An unknown pin, or one on
 another plan, shows no pin; an unknown plan shows its not-found state, whose way out
-is the Map (D-186, ux.md §4.6).
+is the Map's Floor plans tab (D-186, ux.md §4.6).
 """
 
 import asyncio
@@ -24,6 +24,8 @@ import flet as ft
 from pycon_us.locations import use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.map import tab_href
+from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -231,7 +233,7 @@ def PlanViewer(plan_id: str) -> ft.View:
                         NOT_FOUND,
                         icon=ft.Icons.MAP_OUTLINED,
                         action=OPEN_MAP,
-                        location="/map",
+                        location=tab_href(FLOOR_PLANS),
                         identifier=f"{SCREEN}.not_found",
                     )
                 ],
