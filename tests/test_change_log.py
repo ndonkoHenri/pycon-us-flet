@@ -20,7 +20,8 @@ import pytest
 from pycon_us import clock
 from pycon_us.change_log import RECENT_FOR, ChangeLog
 from pycon_us.config import YearData, load_year
-from pycon_us.core.diff import ChangeKind
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.favorites import Favorites
 from pycon_us.services import changes_file
 from pycon_us.services.storage import Pref, Storage, fetched
@@ -488,6 +489,40 @@ async def test_recent_joins_the_kinds_of_every_batch_of_the_last_24_hours(
     # A minute past the first batch's 24 h, only the rename is left.
     later = NOW + RECENT_FOR + timedelta(minutes=1)
     assert log.recent(later) == {str(TALK): {ChangeKind.TITLE}}
+
+
+def room_batch(detected: datetime, old: str, new: str, key: str = "142") -> Batch:
+    """A batch moving session ``key`` from room ``old`` to room ``new``."""
+    start = datetime(2026, 5, 16, 17, 30, tzinfo=UTC)
+    end = start + timedelta(minutes=30)
+    before, after = (Listing("Talk", start, end, room) for room in (old, new))
+    return Batch(detected, (Change(key, ChangeKind.ROOM, before, after),))
+
+
+def test_recent_of_spans_the_last_24_hours_from_the_oldest_old_value() -> None:
+    """Moved twice in 24 h, a session says the room before the first move (ux.md §5.5)."""
+    log = ChangeLog(
+        batches=(
+            room_batch(NOW, "Room 102B", "Room 103C"),
+            room_batch(NOW - timedelta(hours=2), "Room 102A", "Room 102B"),
+            room_batch(NOW - RECENT_FOR, "Room 101", "Room 102A"),  # too old
+        )
+    )
+    (moved,) = log.recent_of("142", NOW)
+    assert moved.old is not None and moved.new is not None
+    assert (moved.old.location, moved.new.location) == ("Room 102A", "Room 103C")
+    assert log.recent_of("51", NOW) == ()  # another session: nothing
+
+
+def test_recent_of_leaves_out_a_value_that_came_back() -> None:
+    """Moved, then moved back within 24 h: "Moved from" its own room would mislead."""
+    log = ChangeLog(
+        batches=(
+            room_batch(NOW, "Room 102B", "Room 102A"),
+            room_batch(NOW - timedelta(hours=1), "Room 102A", "Room 102B"),
+        )
+    )
+    assert log.recent_of("142", NOW) == ()
 
 
 def test_the_fixture_talks_exist_in_the_snapshot(year: YearData) -> None:

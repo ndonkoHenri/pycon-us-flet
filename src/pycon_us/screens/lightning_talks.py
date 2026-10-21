@@ -32,6 +32,7 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
@@ -54,13 +55,6 @@ TITLE = "Lightning talks"
 
 SIGN_UP = "Sign up for a lightning talk"
 DOUBTS = "Think you can't do one?"
-
-BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
-"""The sign-up's padding: M3's for a button with an icon, plus room above and below.
-
-M3 buttons have none above and below, since their height is fixed at 40 dp; at 200 %
-text the label wraps to two lines that would touch the pill's edge. 10 dp keeps the
-one-line button 40 dp tall (20 dp of label)."""
 
 
 @ft.component
@@ -197,7 +191,7 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
         ft.Text(SIGN_UP, semantics_label=f"{SIGN_UP}\n{OPENS_IN[LinkKind.WEB]}"),
         icon=ft.Icons.OPEN_IN_NEW,
         on_click=sign_up,
-        style=ft.ButtonStyle(padding=BUTTON_PADDING),
+        style=ft.ButtonStyle(padding=ICON_PADDING),
     )
     return ft.Container(
         ft.Card(

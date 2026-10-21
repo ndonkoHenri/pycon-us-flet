@@ -1,0 +1,1003 @@
+# PyCon US 2026: the venue's floor plans and the pins on them (D-45, DATA-32, MAP-07).
+# Loaded by pycon_us.config.load_year() through pycon_us.year_map.
+#
+# Plans: the images are under src/assets/, made by tools/encode_plans.py from the Ionic
+# app's plans (2048 px, lossy WebP 80, and an 800-px thumbnail; D-312; credited in NOTICE,
+# D-87). width and height are the image's, as the script prints them. The campus plan's
+# PyCon wordmark and the venue's logo, and the expo plan's sun-and-palms mark, are painted
+# over (D-36). In the Map's order; "expo" is the plan the booths are on.
+#
+# Pins: one table for rooms and venue spots. A room's key is normalize_room_key() of its
+# feed name (core/slugs.py), so "Room 102A" and "102A" find the same pin; a venue spot's
+# key has a hyphen, which no room key has, and Venue & hours names it (content.toml's
+# venue_hours pin). x and y are percent of the plan, from Ionic's tables (ROOM_LOCATIONS,
+# VENUE_LOCATIONS), and land on the thumbnail too. sprint marks the rooms the sprints
+# use (MAP-08). A feed room without a pin, and not under content.toml's other_locations,
+# fails tests/test_year_map.py.
+#
+# Booths (EXPO-02, D-254): Ionic's 61 booth rectangles (expo-hall-map.component.ts), turned
+# once from pixels of its 9931 x 7021 reference into ratios of the plan (x, y, w, h, 0-1),
+# by number. number is the feed's booth_number, as text. A booth lists every sponsor with
+# its number; label names only a booth the feed gives no exhibitor. 2026's gaps, pinned by
+# tests/test_expo.py: booths 139 and 336 have sponsors but no rectangle, 407 and 606 a
+# rectangle but no sponsor.
+
+tour_url = "https://map.concept3d.com/?id=1802"   # the venue's 3D tour (Ionic's "3D Tour")
+
+[[plans]]
+id = "campus"
+title = "Campus overview"
+subtitle = "Convention center, hotels, halls and entrances"
+image = "maps/2026/campus.webp"
+thumb = "maps/2026/campus-thumb.webp"
+width = 2048
+height = 1583
+
+[[plans]]
+id = "concourse"
+title = "Concourse level"
+subtitle = "Tutorials, talk tracks, registration, expo entry"
+image = "maps/2026/concourse.webp"
+thumb = "maps/2026/concourse-thumb.webp"
+width = 2048
+height = 1583
+
+[[plans]]
+id = "upper"
+title = "Upper level"
+subtitle = "Talk tracks, sponsor presentations, speaker ready room, summits"
+image = "maps/2026/upper.webp"
+thumb = "maps/2026/upper-thumb.webp"
+width = 2048
+height = 1583
+
+[[plans]]
+id = "arena"
+title = "Arena & exhibit halls"
+subtitle = "Keynotes, lightning talks, expo hall, job fair"
+image = "maps/2026/arena.webp"
+thumb = "maps/2026/arena-thumb.webp"
+width = 1583
+height = 2048
+
+[[plans]]
+id = "seaside"
+title = "Seaside meeting rooms"
+subtitle = "Sprints, open spaces, PyLadies auction, WebAssembly Summit"
+image = "maps/2026/seaside.webp"
+thumb = "maps/2026/seaside-thumb.webp"
+width = 2048
+height = 1583
+
+[[plans]]
+id = "expo"
+title = "Expo hall"
+subtitle = "Sponsor booths, Startup Row, community booths"
+image = "maps/2026/expo.webp"
+thumb = "maps/2026/expo-thumb.webp"
+width = 2048
+height = 1448
+
+# Venue spots (Ionic's VENUE_LOCATIONS), named as Help & safety and Venue & hours name them.
+
+[[pins]]
+key = "info-desk"
+label = "Information desk"
+sublabel = "Promenade Lobby (Main Entrance)"
+plan = "concourse"
+x = 55.0
+y = 53.0
+
+[[pins]]
+key = "registration"
+label = "Registration"
+sublabel = "Promenade Lobby (Main Entrance)"
+plan = "concourse"
+x = 67.0
+y = 58.0
+
+[[pins]]
+key = "quiet-room"
+label = "Quiet room"
+sublabel = "VIP Room A & B"
+plan = "concourse"
+x = 58.0
+y = 36.0
+
+[[pins]]
+key = "swag-pickup"
+label = "Swag pickup"
+sublabel = "Expo Hall AB"
+plan = "arena"
+x = 42.0
+y = 68.0
+
+[[pins]]
+key = "lost-and-found"
+label = "Lost & found"
+sublabel = "Room 203AB; the information desk while it is open"
+plan = "upper"
+x = 40.0
+y = 58.0
+
+[[pins]]
+key = "staff-office"
+label = "Staff office"
+sublabel = "Room 203AB"
+plan = "upper"
+x = 40.0
+y = 58.0
+
+# Rooms (Ionic's ROOM_LOCATIONS), floor by floor. Joined rooms (Room 103ABC, Expo Hall
+# AB) have a pin of their own, at the middle of the joined space.
+
+[[pins]]
+key = "101a"
+label = "Room 101A"
+sublabel = "Tutorials / PSF members' lunch / PyLadies lunch"
+plan = "concourse"
+x = 14.0
+y = 50.0
+
+[[pins]]
+key = "101b"
+label = "Room 101B"
+sublabel = "Tutorials / PSF members' lunch / PyLadies lunch"
+plan = "concourse"
+x = 19.0
+y = 50.0
+
+[[pins]]
+key = "101ab"
+label = "Room 101AB"
+sublabel = "Tutorials / PSF members' lunch / PyLadies lunch"
+plan = "concourse"
+x = 17.0
+y = 50.0
+
+[[pins]]
+key = "102a"
+label = "Room 102A"
+sublabel = "Tutorials / Open spaces"
+plan = "concourse"
+x = 23.0
+y = 50.0
+
+[[pins]]
+key = "102b"
+label = "Room 102B"
+sublabel = "Tutorials / Open spaces"
+plan = "concourse"
+x = 27.0
+y = 50.0
+
+[[pins]]
+key = "102c"
+label = "Room 102C"
+sublabel = "Tutorials / Open spaces"
+plan = "concourse"
+x = 31.0
+y = 50.0
+
+[[pins]]
+key = "103a"
+label = "Room 103A"
+sublabel = "Talk track / Security track"
+plan = "concourse"
+x = 39.0
+y = 50.0
+
+[[pins]]
+key = "103b"
+label = "Room 103B"
+sublabel = "Talk track / Security track"
+plan = "concourse"
+x = 43.0
+y = 50.0
+
+[[pins]]
+key = "103c"
+label = "Room 103C"
+sublabel = "Talk track / Security track"
+plan = "concourse"
+x = 46.0
+y = 50.0
+
+[[pins]]
+key = "103abc"
+label = "Room 103"
+sublabel = "Talk track / Security track"
+plan = "concourse"
+x = 43.0
+y = 50.0
+
+[[pins]]
+key = "104a"
+label = "Room 104A"
+sublabel = "Talk track"
+plan = "concourse"
+x = 72.0
+y = 38.0
+
+[[pins]]
+key = "104b"
+label = "Room 104B"
+sublabel = "Talk track"
+plan = "concourse"
+x = 80.0
+y = 35.0
+
+[[pins]]
+key = "104c"
+label = "Room 104C"
+sublabel = "Education Summit / Charlas / Open spaces"
+plan = "concourse"
+x = 84.0
+y = 27.0
+
+[[pins]]
+key = "104ab"
+label = "Room 104AB"
+sublabel = "Talk track"
+plan = "concourse"
+x = 76.0
+y = 37.0
+
+[[pins]]
+key = "104abc"
+label = "Room 104"
+sublabel = "Talk track / Education Summit"
+plan = "concourse"
+x = 78.0
+y = 33.0
+
+[[pins]]
+key = "201a"
+label = "Room 201A"
+sublabel = "Summits / Open spaces"
+plan = "upper"
+x = 7.0
+y = 59.0
+
+[[pins]]
+key = "201b"
+label = "Room 201B"
+sublabel = "Sponsor presentations / Open spaces"
+plan = "upper"
+x = 14.0
+y = 59.0
+
+[[pins]]
+key = "202a"
+label = "Room 202A"
+sublabel = "Sponsor presentations / Open spaces"
+plan = "upper"
+x = 19.0
+y = 59.0
+
+[[pins]]
+key = "202b"
+label = "Room 202B"
+sublabel = "Sponsor presentations / Open spaces"
+plan = "upper"
+x = 23.0
+y = 59.0
+
+[[pins]]
+key = "202c"
+label = "Room 202C"
+sublabel = "Sponsor presentations / Open spaces"
+plan = "upper"
+x = 27.0
+y = 59.0
+
+[[pins]]
+key = "203a"
+label = "Room 203A"
+sublabel = "Staff office"
+plan = "upper"
+x = 36.0
+y = 59.0
+
+[[pins]]
+key = "203b"
+label = "Room 203B"
+sublabel = "Staff office"
+plan = "upper"
+x = 41.0
+y = 59.0
+
+[[pins]]
+key = "203c"
+label = "Room 203C"
+sublabel = "Green room / Speaker ready room"
+plan = "upper"
+x = 45.0
+y = 59.0
+
+[[pins]]
+key = "204"
+label = "Room 204"
+sublabel = "AV room"
+plan = "upper"
+x = 60.0
+y = 48.0
+
+[[pins]]
+key = "grandballrooma"
+label = "Grand Ballroom A"
+sublabel = "AI track / Talk track"
+plan = "upper"
+x = 76.0
+y = 36.0
+
+[[pins]]
+key = "grandballroomb"
+label = "Grand Ballroom B"
+sublabel = "Talk track"
+plan = "upper"
+x = 84.0
+y = 50.0
+
+[[pins]]
+key = "grandballroom"
+label = "Grand Ballroom"
+sublabel = "Talk tracks"
+plan = "upper"
+x = 80.0
+y = 43.0
+
+[[pins]]
+key = "pacificballroomarena"
+label = "Pacific Ballroom — Arena"
+sublabel = "Keynotes, lightning talks, general sessions"
+plan = "arena"
+x = 60.0
+y = 16.0
+
+[[pins]]
+key = "arena"
+label = "Arena"
+sublabel = "Keynotes, lightning talks, general sessions"
+plan = "arena"
+x = 60.0
+y = 16.0
+
+[[pins]]
+key = "halla"
+label = "Hall A"
+sublabel = "Exhibit hall"
+plan = "arena"
+x = 18.0
+y = 72.0
+
+[[pins]]
+key = "hallb"
+label = "Hall B"
+sublabel = "Exhibit hall"
+plan = "arena"
+x = 43.0
+y = 63.0
+
+[[pins]]
+key = "hallc"
+label = "Hall C"
+sublabel = "Exhibit hall"
+plan = "arena"
+x = 58.0
+y = 55.0
+
+[[pins]]
+key = "hallab"
+label = "Hall AB"
+sublabel = "Expo hall: booths, job fair, community showcase"
+plan = "arena"
+x = 32.0
+y = 67.0
+
+[[pins]]
+key = "expohallab"
+label = "Expo Hall AB"
+sublabel = "Booths, job fair, community showcase"
+plan = "arena"
+x = 32.0
+y = 67.0
+
+[[pins]]
+key = "expohallc"
+label = "Expo Hall C"
+sublabel = "Posters, open spaces"
+plan = "arena"
+x = 58.0
+y = 55.0
+
+[[pins]]
+key = "expohall"
+label = "Expo Hall"
+sublabel = "Booths, job fair, community showcase"
+plan = "arena"
+x = 38.0
+y = 64.0
+
+[[pins]]
+key = "s1"
+label = "S-1"
+sublabel = "Sprints"
+plan = "seaside"
+x = 85.0
+y = 63.0
+sprint = true
+
+[[pins]]
+key = "s2"
+label = "S-2"
+sublabel = "Sprints"
+plan = "seaside"
+x = 53.0
+y = 57.0
+sprint = true
+
+[[pins]]
+key = "s3"
+label = "S-3"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 58.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s3a"
+label = "S-3A"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 60.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s3b"
+label = "S-3B"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 55.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s4"
+label = "S-4"
+sublabel = "WebAssembly Summit / Open spaces / Sprints"
+plan = "seaside"
+x = 46.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s4a"
+label = "S-4A"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 49.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s4b"
+label = "S-4B"
+sublabel = "WebAssembly Summit / Open spaces / Sprints"
+plan = "seaside"
+x = 44.0
+y = 68.0
+sprint = true
+
+[[pins]]
+key = "s5"
+label = "S-5"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 45.0
+y = 24.0
+sprint = true
+
+[[pins]]
+key = "s5a"
+label = "S-5A"
+sublabel = "Sprints"
+plan = "seaside"
+x = 47.0
+y = 24.0
+sprint = true
+
+[[pins]]
+key = "s5b"
+label = "S-5B"
+sublabel = "Open spaces / Sprints"
+plan = "seaside"
+x = 43.0
+y = 24.0
+sprint = true
+
+[[pins]]
+key = "s6"
+label = "S-6"
+sublabel = "Sprints"
+plan = "seaside"
+x = 53.0
+y = 24.0
+sprint = true
+
+[[pins]]
+key = "s7"
+label = "S-7"
+sublabel = "Satellite staff office"
+plan = "seaside"
+x = 80.0
+y = 27.0
+
+[[pins]]
+key = "seasidelobby"
+label = "Seaside Lobby"
+sublabel = "Sprints"
+plan = "seaside"
+x = 33.0
+y = 44.0
+sprint = true
+
+[[pins]]
+key = "seasideballrooma"
+label = "Seaside Ballroom A"
+sublabel = "PyLadies auction / Sprints"
+plan = "seaside"
+x = 55.0
+y = 44.0
+sprint = true
+
+[[pins]]
+key = "seasideballroomb"
+label = "Seaside Ballroom B"
+sublabel = "PyLadies auction / Sprints"
+plan = "seaside"
+x = 44.0
+y = 44.0
+sprint = true
+
+[[pins]]
+key = "seasideballroom"
+label = "Seaside Ballroom"
+sublabel = "PyLadies auction / Sprints"
+plan = "seaside"
+x = 50.0
+y = 44.0
+sprint = true
+
+# Booths, by number.
+
+[[booths]]
+number = "112"
+x = 0.2365
+y = 0.6965
+w = 0.0473
+h = 0.0912
+
+[[booths]]
+number = "113"
+x = 0.3002
+y = 0.6821
+w = 0.0655
+h = 0.1054
+
+[[booths]]
+number = "116"
+x = 0.2294
+y = 0.6025
+w = 0.0549
+h = 0.0931
+
+[[booths]]
+number = "119"
+x = 0.3001
+y = 0.5633
+w = 0.0655
+h = 0.1054
+
+[[booths]]
+number = "122"
+x = 0.2374
+y = 0.5022
+w = 0.0468
+h = 0.0919
+
+[[booths]]
+number = "126"
+x = 0.2372
+y = 0.4098
+w = 0.0463
+h = 0.0912
+
+[[booths]]
+number = "127"
+x = 0.2846
+y = 0.4092
+w = 0.0489
+h = 0.0923
+
+[[booths]]
+number = "134"
+x = 0.2388
+y = 0.3531
+w = 0.0430
+h = 0.0473
+
+[[booths]]
+number = "135"
+x = 0.2942
+y = 0.3524
+w = 0.0393
+h = 0.0490
+
+[[booths]]
+number = "136"
+x = 0.2386
+y = 0.3054
+w = 0.0433
+h = 0.0470
+
+[[booths]]
+number = "137"
+x = 0.2942
+y = 0.3052
+w = 0.0394
+h = 0.0463
+
+[[booths]]
+number = "138"
+x = 0.2387
+y = 0.2574
+w = 0.0432
+h = 0.0470
+
+[[booths]]
+number = "140"
+x = 0.2388
+y = 0.2094
+w = 0.0431
+h = 0.0473
+
+[[booths]]
+number = "141"
+x = 0.2952
+y = 0.2088
+w = 0.0383
+h = 0.0477
+
+[[booths]]
+number = "213"
+x = 0.4070
+y = 0.6377
+w = 0.0665
+h = 0.1510
+
+[[booths]]
+number = "226"
+x = 0.3340
+y = 0.4089
+w = 0.0433
+h = 0.0940
+
+[[booths]]
+number = "234"
+x = 0.3341
+y = 0.3524
+w = 0.0443
+h = 0.0491
+
+[[booths]]
+number = "235"
+x = 0.4005
+y = 0.3537
+w = 0.0413
+h = 0.0450
+
+[[booths]]
+number = "236"
+x = 0.3342
+y = 0.3057
+w = 0.0480
+h = 0.0459
+
+[[booths]]
+number = "237"
+x = 0.3920
+y = 0.3054
+w = 0.0505
+h = 0.0477
+
+[[booths]]
+number = "238"
+x = 0.3342
+y = 0.2578
+w = 0.0478
+h = 0.0470
+
+[[booths]]
+number = "240"
+x = 0.3341
+y = 0.2091
+w = 0.0478
+h = 0.0477
+
+[[booths]]
+number = "243"
+x = 0.3933
+y = 0.1631
+w = 0.0483
+h = 0.0470
+
+[[booths]]
+number = "245"
+x = 0.3933
+y = 0.1152
+w = 0.0483
+h = 0.0470
+
+[[booths]]
+number = "313"
+x = 0.4991
+y = 0.6841
+w = 0.0685
+h = 0.1040
+
+[[booths]]
+number = "334"
+x = 0.4423
+y = 0.3525
+w = 0.0403
+h = 0.0484
+
+[[booths]]
+number = "335"
+x = 0.4972
+y = 0.3072
+w = 0.0445
+h = 0.0926
+
+[[booths]]
+number = "342"
+x = 0.4423
+y = 0.1629
+w = 0.0393
+h = 0.0470
+
+[[booths]]
+number = "344"
+x = 0.4424
+y = 0.1152
+w = 0.0393
+h = 0.0470
+
+[[booths]]
+number = "407"
+label = "Python Software Foundation"
+x = 0.6215
+y = 0.8157
+w = 0.0644
+h = 0.1054
+
+[[booths]]
+number = "413"
+x = 0.6194
+y = 0.6388
+w = 0.0705
+h = 0.1524
+
+[[booths]]
+number = "421"
+x = 0.6169
+y = 0.5236
+w = 0.0735
+h = 0.1040
+
+[[booths]]
+number = "427"
+x = 0.6173
+y = 0.4059
+w = 0.0735
+h = 0.1090
+
+[[booths]]
+number = "434"
+x = 0.5423
+y = 0.3069
+w = 0.0423
+h = 0.0926
+
+[[booths]]
+number = "513"
+x = 0.7037
+y = 0.6835
+w = 0.0705
+h = 0.1072
+
+[[booths]]
+number = "531"
+x = 0.6954
+y = 0.3744
+w = 0.0428
+h = 0.0947
+
+[[booths]]
+number = "539"
+x = 0.6915
+y = 0.1713
+w = 0.0461
+h = 0.0927
+
+[[booths]]
+number = "606"
+label = "Attendee lounge"
+x = 0.6865
+y = 0.8153
+w = 0.0967
+h = 0.1054
+
+[[booths]]
+number = "613"
+x = 0.7968
+y = 0.6392
+w = 0.0705
+h = 0.1524
+
+[[booths]]
+number = "621"
+x = 0.7900
+y = 0.5315
+w = 0.0428
+h = 0.0976
+
+[[booths]]
+number = "627"
+x = 0.7916
+y = 0.4716
+w = 0.0420
+h = 0.0524
+
+[[booths]]
+number = "629"
+x = 0.7914
+y = 0.4239
+w = 0.0423
+h = 0.0470
+
+[[booths]]
+number = "630"
+x = 0.7387
+y = 0.3742
+w = 0.0418
+h = 0.0950
+
+[[booths]]
+number = "631"
+x = 0.7916
+y = 0.3762
+w = 0.0418
+h = 0.0470
+
+[[booths]]
+number = "633"
+x = 0.7931
+y = 0.3284
+w = 0.0403
+h = 0.0470
+
+[[booths]]
+number = "635"
+x = 0.7935
+y = 0.2806
+w = 0.0403
+h = 0.0470
+
+[[booths]]
+number = "638"
+x = 0.7381
+y = 0.1711
+w = 0.0418
+h = 0.0940
+
+[[booths]]
+number = "639"
+x = 0.7913
+y = 0.1664
+w = 0.0463
+h = 0.0997
+
+[[booths]]
+number = "709"
+x = 0.8945
+y = 0.8244
+w = 0.0393
+h = 0.0555
+
+[[booths]]
+number = "713"
+x = 0.8901
+y = 0.6918
+w = 0.0440
+h = 0.0954
+
+[[booths]]
+number = "720"
+x = 0.8332
+y = 0.5307
+w = 0.0483
+h = 0.0983
+
+[[booths]]
+number = "726"
+x = 0.8343
+y = 0.4714
+w = 0.0527
+h = 0.0527
+
+[[booths]]
+number = "727"
+x = 0.9135
+y = 0.4714
+w = 0.0493
+h = 0.0570
+
+[[booths]]
+number = "728"
+x = 0.8341
+y = 0.4239
+w = 0.0443
+h = 0.0470
+
+[[booths]]
+number = "729"
+x = 0.9196
+y = 0.4239
+w = 0.0433
+h = 0.0470
+
+[[booths]]
+number = "730"
+x = 0.8341
+y = 0.3763
+w = 0.0443
+h = 0.0471
+
+[[booths]]
+number = "731"
+x = 0.9200
+y = 0.3753
+w = 0.0428
+h = 0.0479
+
+[[booths]]
+number = "732"
+x = 0.8339
+y = 0.3279
+w = 0.0443
+h = 0.0470
+
+[[booths]]
+number = "733"
+x = 0.9196
+y = 0.3279
+w = 0.0433
+h = 0.0470
+
+[[booths]]
+number = "734"
+x = 0.8340
+y = 0.2806
+w = 0.0443
+h = 0.0467
+
+[[booths]]
+number = "735"
+x = 0.9195
+y = 0.2814
+w = 0.0433
+h = 0.0456

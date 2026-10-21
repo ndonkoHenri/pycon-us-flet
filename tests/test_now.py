@@ -28,6 +28,7 @@ import pytest
 from flet.components.component import Component
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, now_next
 from pycon_us.core.models import ConferenceData
@@ -48,6 +49,7 @@ from pycon_us.screens.now_header import (
 from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.ui import status_strip
+from pycon_us.ui.buttons import LABEL_PADDING
 from tests import sessions
 from tests.feeds import processed
 from tests.test_theme import contrast_ratio
@@ -423,11 +425,13 @@ async def render(
             saved: tuple[str, ...] = (),
             ticks: Ticks | None = None,
             memory: ViewMemory | None = None,
+            change_log: ChangeLog | None = None,
         ) -> Shown:
             """Render Now at ``now``, with ``saved`` in My schedule.
 
             With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
-            ``memory`` is the process's view memory, when a test keeps one.
+            ``memory`` is the process's view memory, when a test keeps one;
+            ``change_log`` the session's, when a test records batches.
             """
             held = [now]
             ticker = ticks or Ticks()
@@ -456,6 +460,7 @@ async def render(
                     view_path="/now",
                     saved=saved,
                     memory=memory,
+                    change_log=change_log,
                     kind=partial(Shown, clock=held, ticks=ticker),
                 )
             )
@@ -497,6 +502,9 @@ async def test_before_the_conference_it_counts_down_and_lists_the_key_dates(
     assert shown.listed() == []  # nothing is on or next for weeks
     button = shown.node("now.build_schedule").content
     assert isinstance(button, ft.FilledTonalButton)
+    assert button.style is not None  # its sides stay 24 dp at large text (D-344)
+    assert button.style.padding == LABEL_PADDING
+    assert button.elevation == 0  # flat, as M3's tonal button
     await shown.click(button)
     assert shown.went == ["/schedule"]
 

@@ -11,6 +11,7 @@ import logging
 from collections.abc import Callable, Iterator
 from datetime import date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
@@ -321,3 +322,27 @@ async def test_a_failed_save_still_goes_to_now_and_is_logged(
     assert page.navigated == ["/now"]
     assert "pycon.onboarded" in caplog.text  # Storage names the key (D-120)
     assert "Welcome is done for this session only" in caplog.text
+
+
+async def test_back_goes_to_now_without_marking_welcome_seen(
+    render: Callable[[], ft.View], prefs: Prefs, shared: MemoryPrefs, page: FakePage
+) -> None:
+    """Back replaces Welcome with Now, as on a non-Now root, and saves nothing (D-321).
+
+    The View declines the pop, so the app stays open whether a link or a first start
+    showed Welcome; Welcome shows again at the next plain start.
+    """
+    view = render()
+    assert view.can_pop is False
+    confirmed: list[bool] = []
+
+    async def confirm_pop(ok: bool) -> None:
+        """Record the answer the View gives Flet."""
+        confirmed.append(ok)
+
+    control = SimpleNamespace(confirm_pop=confirm_pop)
+    await cast(Any, view.on_confirm_pop)(SimpleNamespace(control=control))
+    assert page.navigated == ["/now"]
+    assert confirmed == [False]
+    assert shared.values == {}
+    assert prefs.onboarded is False

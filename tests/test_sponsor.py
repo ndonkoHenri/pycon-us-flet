@@ -21,6 +21,7 @@ from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.screens import sponsor as screen
 from pycon_us.state import Conference
+from pycon_us.ui.buttons import ICON_PADDING
 from tests.feeds import processed
 from tests.sessions import Shown, showing, text_of
 
@@ -107,6 +108,19 @@ async def test_the_name_is_the_page_s_heading_over_the_logo_plate(show: Show) ->
     assert isinstance(image, ft.Image) and image.exclude_from_semantics
 
 
+async def test_at_large_text_the_name_steps_down_still_centred(show: Show) -> None:
+    """D-328: where a slot's time leaves the gutter, the name takes a row title's type."""
+    shown = await show("bloomberg")
+    shown.prefs.time_above = True  # what GutterProbe measures at that size
+    await shown.settle()
+    name = cast(ft.Text, shown.node("sponsor.title").content)
+    assert (name.theme_style, name.text_align, name.selectable) == (
+        ft.TextThemeStyle.TITLE_MEDIUM,
+        ft.TextAlign.CENTER,
+        True,
+    )
+
+
 async def test_the_level_is_a_line_not_a_control_and_the_facts_read_as_words(
     show: Show,
 ) -> None:
@@ -137,6 +151,8 @@ async def test_website_shows_only_when_the_feed_gives_one(show: Show) -> None:
     node = shown.node("sponsor.website")
     assert node.link
     (button,) = shown.find(ft.OutlinedButton)
+    assert button.style is not None  # its sides stay put at large text (D-344)
+    assert button.style.padding == ICON_PADDING
     await shown.click(button)
     assert shown.launcher.launched == [
         ("https://www.bloomberg.com/", ft.LaunchMode.IN_APP_BROWSER_VIEW)

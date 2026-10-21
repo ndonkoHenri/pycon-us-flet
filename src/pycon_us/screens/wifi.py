@@ -5,15 +5,19 @@ from the bundled year data (``content.toml``'s ``[wifi]``, D-280) and show at on
 offline. Each is selectable monospace text, read with its label as one phrase; Copy
 beside the network and a "Copy password" button, the one way to copy the password, go
 through ``copy_text()``, which confirms each copy once and says when one fails (D-263),
-where Ionic copied only the password and assumed it worked. A year without the table
+where Ionic copied only the password and assumed it worked. Under them, "Wi-Fi provided
+by Temporal" pushes the sponsor who provides it, named by the year data
+(``screens.sponsor_credit``, D-337). A year without the table
 shows the feed's own ``wifi`` block, and without that an empty state that sends the
 attendee to the information desk (``InfoBody``).
 """
 
 import flet as ft
 
+from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.info_page import GUTTER, InfoBody
 from pycon_us.ui.links import copy_text
 from pycon_us.ui.scaffold import AppScaffold
@@ -47,11 +51,6 @@ VALUE_STYLE = ft.TextStyle(
 """A value's font, as the feed's code spans have it (``theme.MARKDOWN_STYLE``): in a
 monospace font ``l``, ``1`` and ``I``, or ``O`` and ``0``, never look alike."""
 
-BUTTON_PADDING = ft.Padding.only(left=16, top=10, right=24, bottom=10)
-""""Copy password"'s padding: M3's for a button with an icon, plus room above and below,
-as the Lightning talks sign-up has it: at the largest text the label otherwise touches
-the pill's edges, and 10 dp keeps the one-line button 40 dp tall."""
-
 
 @ft.component
 def Wifi() -> ft.View:
@@ -74,6 +73,9 @@ def Wifi() -> ft.View:
 def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
     """Return the page's blocks: the network with its Copy, the password, its button.
 
+    Then the credit to the sponsor who provides the Wi-Fi, when the year names one and
+    the feed has it.
+
     Args:
         svc: The session's services, for the clipboard.
         wifi: The year's network and password.
@@ -94,7 +96,7 @@ def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
         COPY_PASSWORD,
         icon=ft.Icons.CONTENT_COPY_OUTLINED,
         on_click=copy_password,
-        style=ft.ButtonStyle(padding=BUTTON_PADDING),
+        style=ft.ButtonStyle(padding=ICON_PADDING),
     )
     return [
         # 12 dp from the edge puts Copy's 24 dp icon where a row's trailing icon sits.
@@ -121,6 +123,9 @@ def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
                 horizontal_alignment=ft.CrossAxisAlignment.START,
             ),
             padding=ft.Padding.symmetric(horizontal=GUTTER, vertical=8),
+        ),
+        SponsorCreditTile(
+            svc.year.content.sponsor_credits.wifi, TITLE, f"{SCREEN}.sponsor"
         ),
     ]
 

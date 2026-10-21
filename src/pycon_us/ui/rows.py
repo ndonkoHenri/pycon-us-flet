@@ -2,7 +2,7 @@
 
 ``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
 session (SPKR-01), ``SpeakerTile`` a speaker in a session's Speakers section (SESS-07).
-P2 adds ``LocationCard`` here (ux.md §3.9); the session and notice rows are in
+``LocationCard`` is ``ui.location_card``'s (#389); the session and notice rows are in
 ``ui.session_rows`` (D-184), the time gutter in ``ui.time_gutter`` (D-200).
 
 ``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page

@@ -36,7 +36,7 @@ from pycon_us.screens import room as screen
 from pycon_us.screens import room_days
 from pycon_us.state import Conference
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME
-from pycon_us.ui import scrolling, status_strip
+from pycon_us.ui import location_card, scrolling, status_strip
 from tests import sessions
 from tests.feeds import processed
 from tests.test_theme import contrast_ratio
@@ -155,6 +155,8 @@ async def render(
     """
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the room module's name only
+    # The location card's pulse waits on its own, never released here.
+    monkeypatch.setattr(location_card, "asyncio", HeldSleeps())
 
     async def scroll(
         list_ref: ft.Ref[ft.ListView],
@@ -583,7 +585,8 @@ async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
     """
     room = await render(VIEW, now=SATURDAY_MORNING)
     today = room.day_lists()[1]
-    # The outermost column between the tile and today's list: NowInRoom's own.
+    # The columns between the tile and today's list: the list's head (the location
+    # card, then Now) outermost, NowInRoom's own inside it.
     columns: list[ft.Column] = []
     parent = room.node("room.now").parent
     while parent is not None and parent is not today:
@@ -591,7 +594,7 @@ async def test_a_divider_closes_now_in_this_room(render: Render) -> None:
             columns.append(parent)
         parent = parent.parent
     assert parent is today
-    assert isinstance(columns[-1].controls[-1], ft.Divider)
+    assert isinstance(columns[-2].controls[-1], ft.Divider)
 
 
 async def test_now_in_this_room_says_where_a_streamed_session_is_given(
@@ -639,9 +642,9 @@ async def test_now_in_this_room_heads_today_s_list_only(render: Render) -> None:
     It scrolls away with today's slots, so at large text they keep the screen.
     """
     room = await render(highlighted(SUNDAY_TALK))  # Sunday shows; today is Saturday
-    heads = [lst.controls[0] for lst in room.day_lists()]
-    assert [isinstance(head, ft.Component) for head in heads] == [False, True, False]
-    assert len(room.nodes("room.now")) == 1
+    (now,) = room.nodes("room.now")
+    lists = room.day_lists()
+    assert [lst in ancestors(now) for lst in lists] == [False, True, False]
 
 
 async def test_now_in_this_room_follows_the_clock_on_the_minute_tick(
@@ -724,3 +727,111 @@ async def test_an_unknown_room_names_the_thing_and_offers_the_rooms(
     await room.session.dispatch_event(button._i, "click", None)
     await room.settle()
     assert room.went == ["/map"]
+
+
+# ------------------------------------------------------------------ sprint-only (MAP-08)
+
+
+async def test_a_sprint_only_room_says_the_sprints_run_there_and_leads_to_them(
+    render: Render,
+) -> None:
+    """A sprint-only room shows its state, not Not found, and opens the Sprints page.
+
+    It has no sessions, so no day tabs; its title is the room's name (ux.md §4.6).
+    """
+    room = await render("/map/room/s-2", slug="s-2")
+    assert room.titles[-1] == "S-2"
+    state = room.node("room.sprints")
+    assert "Sprints run here after the talks" in texts(state)
+    assert room.nodes("room.not_found") == []
+    assert room.find(ft.TabBar) == []
+    (button,) = [
+        c for c in room.session.index.values() if isinstance(c, ft.FilledTonalButton)
+    ]
+    assert button.content == "See the sprints"
+    await room.session.dispatch_event(button._i, "click", None)
+    await room.settle()
+    assert room.went == ["/more/sprints"]
+
+
+# ------------------------------------------------------------------ location (ROOM-04)
+
+
+def above_the_lists(room: Room) -> list[ft.Control]:
+    """The column the day tabs are in: what sits above the day lists, then them."""
+    column = room.tabs.content
+    assert isinstance(column, ft.Column)
+    return column.controls
+
+
+def ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
+    """The controls ``control`` is in, from its parent up to the page."""
+    found: list[ft.BaseControl] = []
+    parent = control.parent
+    while parent is not None:
+        found.append(parent)
+        parent = parent.parent
+    return found
+
+
+async def test_a_pinned_room_s_card_heads_each_day_s_list(render: Render) -> None:
+    """The card names the room and its floor, heads every day's list, and opens it.
+
+    In the lists, not above the tabs: at the largest text it filled half the screen
+    there and left the slots a quarter (D-346, as D-194 did for Now).
+    """
+    room = await render(VIEW)
+    nodes = room.nodes("room.location")
+    lists = room.day_lists()
+    assert len(nodes) == len(lists) == 3
+    for day in lists:
+        (node,) = [n for n in nodes if day.controls[0] in ancestors(n)]
+        assert node.label == "Show Grand Ballroom A on the Upper level floor plan"
+    (tabs, _pages) = above_the_lists(room)
+    assert isinstance(cast(ft.Container, tabs).content, ft.TabBar)
+    tap = nodes[0].parent
+    assert isinstance(tap, ft.Container) and tap.on_click is not None
+    await room.click(tap)
+    assert room.went == [f"{VIEW}/plan/upper?pin=grandballrooma"]
+
+
+async def test_the_card_heads_today_s_list_before_now_in_this_room(
+    render: Render,
+) -> None:
+    """Today's head: the card, then "Now in this room" and its divider."""
+    room = await render(VIEW, now=SATURDAY_MORNING)
+    head = room.day_lists()[1].controls[0]
+    assert isinstance(head, ft.Column)
+    (card,) = [n for n in room.nodes("room.location") if head in ancestors(n)]
+    (now,) = room.nodes("room.now")
+    first, second = head.controls
+    assert first in ancestors(card)
+    assert second in ancestors(now)
+
+
+async def test_the_card_pulses_once_per_room_view(render: Render) -> None:
+    """Each day's list builds a card; only the first to mount pulses (D-34)."""
+    room = await render(VIEW)
+    await room.settle()
+    assert len(room.nodes("room.location")) == 3
+    assert card_sleeps(room).asked == [location_card.PULSE_MS / 1000]
+
+
+def card_sleeps(room: Room) -> HeldSleeps:
+    """The location card's held sleeps, which the fixture installed."""
+    return cast(HeldSleeps, location_card.asyncio)
+
+
+async def test_a_room_without_a_pin_shows_no_card_and_no_gap(render: Render) -> None:
+    """A room without a pin ("Elsewhere"): the day tabs come first, as before."""
+    room = await render("/map/room/elsewhere", slug="elsewhere")
+    assert room.nodes("room.location") == []
+    first = above_the_lists(room)[0]
+    assert isinstance(cast(ft.Container, first).content, ft.TabBar)
+
+
+async def test_a_sprint_only_room_shows_its_location_card_too(render: Render) -> None:
+    """S-2 has no sessions but a pin: the card heads its sprints state."""
+    room = await render("/map/room/s-2", slug="s-2")
+    label = room.node("room.location").label
+    assert label == "Show S-2 on the Seaside meeting rooms floor plan"

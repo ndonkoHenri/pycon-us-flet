@@ -5,7 +5,9 @@ day the room has sessions, today preselected (ux.md §5.9; the Schedule's tabs, 
 in ``screens/room_days.py``). Today's list starts with "Now in this room" while something
 is on there (``NowInRoom``, on the minute tick). Each day lists its time slots (D-31),
 whose rows leave out the room's own name, since the title already says it
-(``in_room``). A tap pushes the session, one drill level.
+(``in_room``). A tap pushes the session, one drill level. Each list starts with the
+room's ``LocationCard`` when the room has a pin, which pushes the floor viewer at it
+(ROOM-04, D-346); its pin pulses once per View.
 
 Opened from a session (``?highlight=<id>``, read once with ``use_query()`` until U9), the
 room opens on that session's day, scrolls its row to the top once and lights it up for
@@ -13,7 +15,8 @@ room opens on that session's day, scrolls its row to the top once and lights it 
 the effect ran once, and the query is not read again. ``ViewMemory.room_highlights``
 keeps a View rebuilt in a new session (D-143) from doing it again (D-18).
 
-An unknown slug shows the not-found state under the back arrow (D-186).
+An unknown slug shows the not-found state under the back arrow (D-186). A sprint-only
+room, which has no sessions (MAP-08), says the sprints run there, with the way to them.
 """
 
 import asyncio
@@ -34,7 +37,7 @@ from pycon_us.locations import drill_href, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
-from pycon_us.screens.schedule_days import TAB_MS, day_tab
+from pycon_us.screens.schedule_days import SPRINTS, TAB_MS, day_tab
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -42,12 +45,15 @@ from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import use_favorite_toggle
+from pycon_us.ui.location_card import LocationCard
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
+from pycon_us.ui.states import EmptyState
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
+from pycon_us.year_map import MapData
 
 HIGHLIGHT_S = 2.0
 """How long the row the room was opened from stays lit, once it is in place (ROOM-03)."""
@@ -142,6 +148,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     lit, set_lit = ft.use_state(reveal is not None)
     picked, set_picked = ft.use_state(cast(date | None, None))
     list_ref = ft.use_memo(ft.Ref[ft.ListView], [])
+    pulsed = ft.use_memo(set[str], [])  # the card's pin pulses once per View
     ended = ft.use_memo(asyncio.Event, [])
 
     @report_errors
@@ -187,6 +194,20 @@ def RoomDetail(room_slug: str) -> ft.View:
             ),
         )
 
+    # The room's place on the venue's plans, at the head of each list (ROOM-04,
+    # D-346); a room without a pin shows nothing in its place, and no gap. A card of
+    # its own per list: a control has one parent.
+    located = partial(location, svc.year.map, room.name, pulsed)
+    if not room.session_ids:  # a sprint-only room (MAP-08)
+        return AppScaffold(
+            title=room.name,
+            body=ft.ListView(
+                [*located(), sprint_room_state(page)],
+                expand=True,
+                padding=sides(margin),
+            ),
+        )
+
     groups = dict(by_day(views, info.zone))
     days = list(groups)
     current = today(clock.now(), info.zone)
@@ -216,9 +237,11 @@ def RoomDetail(room_slug: str) -> ft.View:
             lit=lit,
             fade_ms=prefs.motion_ms(FADE_MS),
             margin=margin,
-            # "Now" is today's: at the head of its list, it scrolls away with it, so
-            # at the largest text the slots keep the screen (D-194).
-            head=NowInRoom(room, use_24h=use_24h) if day == current else None,
+            # The card and today's "Now" head the lists, so they scroll away with
+            # them and at the largest text the slots keep the screen (D-194, D-346).
+            head=list_head(located(), NowInRoom(room, use_24h=use_24h))
+            if day == current
+            else list_head(located()),
             # Only the list that scrolls to the row needs every row built (D-154).
             list_ref=list_ref if reveal and day == highlighted else None,
             on_scroll=scrolled if reveal and day == highlighted else None,
@@ -250,6 +273,60 @@ def RoomDetail(room_slug: str) -> ft.View:
     return AppScaffold(
         title=room.name,
         body=tabs,
+    )
+
+
+def location(data: MapData, room_name: str, pulsed: set[str]) -> list[ft.Control]:
+    """Return the room's ``LocationCard``, or nothing for a room without a pin.
+
+    Args:
+        data: The year's ``map.toml``.
+        room_name: The room's name as the feed writes it, which finds its pin.
+        pulsed: The View's pins already pulsed: each day's list builds the card, and
+            its pin pulses on the first only.
+    """
+    pin = data.room_pin(room_name)
+    plan = data.plan(pin.plan) if pin else None
+    if pin is None or plan is None:
+        return []
+    card = LocationCard(plan, pin, identifier=f"{SCREEN}.location", seen=pulsed)
+    return [ft.Container(card, padding=ft.Padding.only(left=16, top=12, right=16))]
+
+
+def list_head(located: list[ft.Control], *more: ft.Control) -> ft.Control | None:
+    """Return what heads a day's list: the location card, then "Now", or None.
+
+    Args:
+        located: The room's location card, or nothing (``location()``).
+        *more: Today's "Now in this room".
+    """
+    heads = [*located, *more]
+    return ft.Column(heads, spacing=0) if heads else None
+
+
+def sprint_room_state(page: ft.Page) -> ft.Control:
+    """Return a sprint-only room's state: what the room is for, and the way to it.
+
+    The room has no sessions, so its detail has no day tabs: it says the sprints run
+    there after the talks and offers the Sprints page, as a sprint day on the Schedule
+    does (ux.md §4.6), rather than the not-found state.
+
+    Args:
+        page: The session's page, which the button navigates.
+    """
+
+    @report_errors
+    def see_sprints() -> None:
+        page.navigate(SPRINTS)
+
+    return EmptyState(
+        "Sprints run here after the talks",
+        icon=ft.Icons.ROCKET_LAUNCH_OUTLINED,
+        body="No talks in this room: on the sprint days, people work on open-source "
+        "projects here together, and anyone can join one.",
+        action="See the sprints",
+        on_action=see_sprints,
+        identifier=f"{SCREEN}.sprints",
     )
 
 

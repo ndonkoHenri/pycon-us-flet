@@ -183,21 +183,29 @@ def button_of(rows: list[ft.Control]) -> ft.FilledTonalButton:
 # ------------------------------------------------------------------ the list
 
 
-def test_rooms_come_first_then_the_other_locations_under_their_headings(
+def test_rooms_come_by_floor_then_the_other_locations_under_their_headings(
     render: Callable[..., dict[str, Any]], data: ConferenceData
 ) -> None:
-    """Rooms come first, then the other locations under a heading of their own.
+    """Rooms come floor by floor, in the Map's order, then the other locations.
 
-    Every room in the feed has a row, and the second heading sits right above the first
-    other location.
+    Every room in the feed has a row, each heading is level 2 (D-211), and the last
+    heading sits right above the first other location.
     """
     rows = rows_of(render(FakeConference(data)))
-    assert headers(rows) == ["Rooms", "Other locations"]
+    assert headers(rows) == [
+        "Concourse level",
+        "Upper level",
+        "Arena & exhibit halls",
+        "Seaside meeting rooms",
+        "Other locations",
+    ]
+    levels = {r.heading_level for r in rows if isinstance(r, ft.Semantics) and r.header}
+    assert levels == {2}
     keys = list(tiles(rows))
     assert keys[:3] == [
-        "map.room.expo-hall-ab",
-        "map.room.expo-hall-c",
-        "map.room.grand-ballroom-a",
+        "map.room.room-101a",
+        "map.room.room-101ab",
+        "map.room.room-101b",
     ]
     assert keys[-3:] == [
         "map.room.elsewhere",
@@ -223,6 +231,16 @@ def test_each_row_names_its_room_and_counts_its_sessions(
     assert isinstance(tile.leading, ft.Icon)
     assert tile.leading.icon == ft.Icons.PLACE_OUTLINED
     assert subtitle_lines(rows["map.room.lobby"]) == ["1 session"]
+
+
+def test_a_sprint_only_room_reads_sprints(
+    render: Callable[..., dict[str, Any]], data: ConferenceData
+) -> None:
+    """A seeded sprint-only room says "Sprints" where a room counts its sessions."""
+    rows = tiles(rows_of(render(FakeConference(data), now=BEFORE)))
+    assert subtitle_lines(rows["map.room.s-2"]) == ["Sprints"]
+    assert subtitle_lines(rows["map.room.seaside-lobby"]) == ["Sprints"]
+    assert subtitle_lines(rows["map.room.s-1"])[0].endswith("sessions")
 
 
 def test_a_tap_pushes_the_room_s_detail_on_the_map(
