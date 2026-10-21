@@ -280,8 +280,8 @@ def test_a_venue_spot_is_found_by_its_label_or_what_happens_there() -> None:
 
 def test_an_unknown_scope_is_an_error() -> None:
     """An unknown scope raises ``ValueError`` naming it."""
-    with pytest.raises(ValueError, match="sponsors"):
-        search(search_index(TYPING), "python", "sponsors")
+    with pytest.raises(ValueError, match="booths"):
+        search(search_index(TYPING), "python", "booths")
 
 
 def test_results_are_frozen_values_equal_for_the_same_matches() -> None:
@@ -301,7 +301,9 @@ def test_building_the_index_is_logged(caplog: pytest.LogCaptureFixture) -> None:
         search_index(TYPING)
     [record] = caplog.records
     assert record.getMessage().startswith("Search index built in ")
-    assert record.getMessage().endswith(" ms: 3 sessions, 3 speakers, 2 rooms, 0 spots")
+    assert record.getMessage().endswith(
+        " ms: 3 sessions, 3 speakers, 2 rooms, 0 spots, 0 sponsors"
+    )
 
 
 # Search over the recorded feeds
@@ -370,6 +372,69 @@ def test_places_find_2026_s_rooms_and_venue_spots(query: str, found: str) -> Non
     results = search(index, query, "places")
     names = [r.name for r in results.rooms] + [pin.label for pin in results.spots]
     assert names[0] == found
+
+
+@pytest.mark.parametrize(
+    ("query", "found"),
+    [
+        ("bloomberg", ["Bloomberg"]),
+        ("anthropic pbc", ["Anthropic, PBC"]),  # the comma folds away (D-180)
+        ("ANTHROPIC", ["Anthropic, PBC"]),
+    ],
+)
+def test_sponsors_are_found_by_their_name(query: str, found: list[str]) -> None:
+    """#397's acceptance: a sponsor is found by any words of its folded name."""
+    results = search(search_index(processed(2026)), query, "sponsors")
+    assert [s.name for s in results.sponsors] == found
+
+
+def test_a_level_finds_its_sponsors_in_the_sponsors_page_order() -> None:
+    """A level finds its sponsors: "visionary" finds the 7, in feed order."""
+    data = processed(2026)
+    results = search(search_index(data), "visionary", "sponsors")
+    assert results.sponsors == data.sponsor_levels[0].sponsors
+    assert len(results.sponsors) == 7
+
+
+def test_a_sponsor_is_never_found_by_its_booth_or_description() -> None:
+    """Booth numbers are Places' (D-351), and a description's mentions would bury it."""
+    data = processed(2026)
+    index = search_index(data)
+    bloomberg = next(s for _, s in index.sponsors if s.name == "Bloomberg")
+    assert bloomberg.booth == "613"
+    assert search(index, "613", "sponsors").empty
+    assert "techatbloomberg" in fold(bloomberg.description)
+    assert search(index, "techatbloomberg", "sponsors").empty
+
+
+@pytest.mark.parametrize(
+    ("scope", "found"), [("all", 1), ("sponsors", 1), ("places", 0)]
+)
+def test_the_sponsors_scope_finds_sponsors_only(scope: str, found: int) -> None:
+    """All and Sponsors find sponsors; every other scope leaves them out."""
+    results = search(search_index(processed(2026)), "bloomberg", scope)
+    assert len(results.sponsors) == found
+    assert results.session_count == 0 or scope == "all"
+
+
+def test_every_sponsor_is_in_the_index_in_level_order() -> None:
+    """The index holds each sponsor once, by level, then feed order (DATA-22)."""
+    data = processed(2026)
+    expected = [s for level in data.sponsor_levels for s in level.sponsors]
+    assert [s for _, s in search_index(data).sponsors] == expected
+
+
+def test_sponsors_are_cut_on_their_own_limit() -> None:
+    """``first_results()`` cuts sponsors to their limit; None leaves them whole."""
+    broad = search(search_index(processed(2026)), "a")
+    assert len(broad.sponsors) > 5
+    cut = first_results(broad, sessions=None, speakers=None, sponsors=5)
+    assert cut.sponsors == broad.sponsors[:5]
+    assert cut.sessions is broad.sessions and cut.speakers is broad.speakers
+    whole = first_results(broad, sessions=None, speakers=None, sponsors=None)
+    assert whole is broad
+    with pytest.raises(ValueError, match="at least 1"):
+        first_results(broad, sessions=None, speakers=None, sponsors=0)
 
 
 def test_a_cut_keeps_every_venue_spot() -> None:

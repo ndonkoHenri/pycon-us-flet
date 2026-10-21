@@ -52,7 +52,11 @@ def use_margin(cap: float) -> float:
         cap: The screen's width class: ``READING``, ``LIST`` or ``FULL``.
     """
     layout = use_layout()
-    rail = RAIL_WIDTH if layout.wide and ft.use_view_path() in TAB_ROOTS else 0
+    # Both hooks on every render (D-70): a hook behind ``layout.wide`` shifted the
+    # caller's hooks at a rotation across 600 dp, and the render's error stopped all
+    # of the session's renders (#606, U111).
+    view_path = ft.use_view_path()
+    rail = RAIL_WIDTH if layout.wide and view_path in TAB_ROOTS else 0
     return side_margin(layout.room, cap, rail=rail)
 
 
