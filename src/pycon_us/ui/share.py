@@ -6,22 +6,28 @@ plain diagnostics as its text, or the diagnostics alone where there is no log
 (``share_console_log()``, INFO-04, D-297). Both point the sheet from the window's centre
 (``centre()``), which a phone ignores and a tablet needs (D-09). A failure to open the
 sheet is expected (D-71): it is logged by its class only, since the error's text repeats
-the call's arguments (D-72).
+the call's arguments (D-72). The rows that report a problem, About this app's and Help &
+safety's, hold the share's state through ``use_problem_report()`` (INFO-11).
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import flet as ft
+from flet.utils import is_embedded
 
 from pycon_us import APP_NAME
-from pycon_us.favorites import Favorites
-from pycon_us.prefs import Prefs
-from pycon_us.services import Services
+from pycon_us.favorites import Favorites, use_favorites
+from pycon_us.prefs import Prefs, use_prefs
+from pycon_us.services import Services, use_services
 from pycon_us.services.diagnostics import diagnostics_text, gather_facts
+from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
-from pycon_us.state import Conference
-from pycon_us.ui.actions import NO_OUTCOME, Outcome
+from pycon_us.state import Conference, use_conference
+from pycon_us.theme import Tokens
+from pycon_us.ui.actions import NO_OUTCOME, Outcome, outcome_line
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +51,82 @@ REPORT_OFFERED: Outcome = ("Handed to the share sheet.", True)
 
 REPORT_SUBJECT = f"{APP_NAME}: problem report"
 """The subject of an email made from a report."""
+
+
+class ProblemReport(NamedTuple):
+    """A report row's state and action, from ``use_problem_report()``."""
+
+    outcome: Outcome
+    """How the last share ended, said under the rows; ``NO_OUTCOME`` before one."""
+    sharing: bool
+    """The share sheet is up: the row is disabled until it closes."""
+    packaged: bool
+    """A packaged build, whose share adds ``console.log`` (``report_subtitle()``)."""
+    share: Callable[[], Awaitable[None]]
+    """The row's action: ``share_console_log()``, its outcome kept for the line."""
+
+
+def use_problem_report() -> ProblemReport:
+    """Hold a report row's share: its outcome, whether the sheet is up, and the action.
+
+    A hook, called from the component that owns the rows (About this app's Help us fix
+    it, Help & safety's Report a problem with the app), so a share re-renders those
+    rows and not their page (D-297, INFO-11). A dismissed sheet leaves no outcome.
+    """
+    svc = use_services()
+    conference = use_conference()
+    prefs = use_prefs()
+    favorites = use_favorites()
+    outcome, set_outcome = ft.use_state(NO_OUTCOME)
+    sharing, set_sharing = ft.use_state(False)
+    packaged = is_embedded()  # where the log is a file to add
+
+    @report_errors
+    async def share() -> None:
+        set_outcome(NO_OUTCOME)
+        set_sharing(True)
+        try:
+            set_outcome(
+                await share_console_log(
+                    svc,
+                    packaged=packaged,
+                    conference=conference,
+                    prefs=prefs,
+                    favorites=favorites,
+                )
+            )
+        finally:
+            set_sharing(False)
+
+    return ProblemReport(outcome, sharing, packaged, share)
+
+
+def report_outcome(identifier: str, outcome: Outcome, *, tokens: Tokens) -> ft.Control:
+    """Return the line under a report's rows that says how the share ended (D-29, D-210).
+
+    A live region, so a screen reader says it when a share ends; hidden while there
+    are no words.
+
+    Args:
+        identifier: For UI flows, e.g. ``help.report_outcome``.
+        outcome: ``ProblemReport.outcome``.
+        tokens: The theme's tokens, for the line's colours.
+    """
+    return ft.Semantics(
+        identifier=identifier,
+        live_region=True,
+        visible=bool(outcome[0]),
+        content=outcome_line(*outcome, tokens=tokens),
+    )
+
+
+def new_issue_url(source_url: str) -> str:
+    """Return the page that opens a new issue in the repository at ``source_url`` (D-88).
+
+    Args:
+        source_url: ``SOURCE_URL``, once the repository is public.
+    """
+    return f"{source_url.rstrip('/')}/issues/new"
 
 
 def centre(page: ft.Page) -> ft.Offset | None:
@@ -103,7 +185,8 @@ async def share_console_log(
     """Open the share sheet with ``console.log`` and the diagnostics as its text.
 
     The one way the app shares a bug report (INFO-04, D-297): About this app's Report a
-    problem, the Developer screen's Share log and, later, Help & safety. The text is
+    problem, the Developer screen's Share log and Help & safety's Report a problem with
+    the app (INFO-11). The text is
     ``diagnostics_text()`` (D-271); the log holds no secrets or email addresses: the app
     never logs them, and the handler writes any address a line quotes as ``<email>``
     (D-196). Where there is no log to add, the companion app's run, whose Python is on

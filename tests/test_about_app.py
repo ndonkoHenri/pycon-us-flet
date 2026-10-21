@@ -38,6 +38,7 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import rows as rows_module
+from pycon_us.ui import share as share_module
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests.fakes import (
     FakePage,
@@ -549,6 +550,23 @@ class States:
         return self.values[index], lambda value: self.values.__setitem__(index, value)
 
 
+def answer_report_hooks(
+    monkeypatch: pytest.MonkeyPatch,
+    svc: Services,
+    conference: Conference,
+    prefs: Prefs,
+) -> None:
+    """Answer ``use_problem_report()``'s hooks, as in a packaged build with no saves.
+
+    Shared with Help & safety's tests, whose Report a problem row uses the same hook.
+    """
+    monkeypatch.setattr(share_module, "use_services", lambda: svc)
+    monkeypatch.setattr(share_module, "use_conference", lambda: conference)
+    monkeypatch.setattr(share_module, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(share_module, "use_favorites", lambda: Favorites(loaded=True))
+    monkeypatch.setattr(share_module, "is_embedded", lambda: True)
+
+
 @pytest.fixture
 def help_section(
     monkeypatch: pytest.MonkeyPatch,
@@ -564,12 +582,8 @@ def help_section(
     cast(MemoryPaths, svc.paths).console_log = str(log)
     states = States()
     monkeypatch.setattr(ft, "use_state", states.use_state)
-    monkeypatch.setattr(about_app, "use_services", lambda: svc)
-    monkeypatch.setattr(about_app, "use_conference", lambda: conference)
-    monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
-    monkeypatch.setattr(about_app, "use_favorites", lambda: Favorites(loaded=True))
+    answer_report_hooks(monkeypatch, svc, conference, prefs)
     monkeypatch.setattr(about_app, "use_tokens", lambda: LIGHT_TOKENS)
-    monkeypatch.setattr(about_app, "is_embedded", lambda: True)
     monkeypatch.setattr(about_app, "SOURCE_URL", None)
     monkeypatch.setattr(
         rows_module, "_ExternalLinkTile", inspect.unwrap(rows_module._ExternalLinkTile)
@@ -659,7 +673,7 @@ async def test_in_the_companion_app_the_row_says_it_sends_the_diagnostics_alone(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Outside a packaged build the row says, before the tap, that no log goes."""
-    monkeypatch.setattr(about_app, "is_embedded", lambda: False)
+    monkeypatch.setattr(share_module, "is_embedded", lambda: False)
     tile = help_tile(help_section(), "about_app.report_problem")
     assert text_of(tile.subtitle) == WITHOUT_LOG
     await tap_row(help_section, "about_app.report_problem")
