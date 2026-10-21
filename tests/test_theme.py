@@ -358,7 +358,39 @@ def test_every_token_is_a_checked_text_colour_or_badge() -> None:
     field that is no colour is the high-contrast flag (D-285).
     """
     names = {field.name for field in dataclasses.fields(theme.Tokens)}
-    assert names == {*TEXT_TOKENS, *BADGE_TOKENS, "high_contrast"}
+    assert names == {*TEXT_TOKENS, *BADGE_TOKENS, *BOOTH_TOKENS, "high_contrast"}
+
+
+BOOTH_TOKENS = ("booth_outline", "booth_fill")
+"""The tokens a selected expo booth is drawn with (EXPO-01)."""
+
+BOOTH_SCHEMES = {
+    "light": (theme.LIGHT_TOKENS, "#FFFFFF"),
+    "dark": (theme.DARK_TOKENS, "#121212"),
+    "hc light": (theme.HC_LIGHT_TOKENS, str(theme.HC_LIGHT.surface)),
+    "hc dark": (theme.HC_DARK_TOKENS, str(theme.HC_DARK.surface)),
+}
+"""Each scheme's tokens and its ``surface``, which the expo plan sits on."""
+
+
+@pytest.mark.parametrize("name", BOOTH_SCHEMES)
+def test_a_selected_booths_outline_passes_3_to_1(name: str) -> None:
+    """The outline reads at 3:1 on white, on ``surface`` and on the amber fill.
+
+    The booths are white tiles on the plan, the plan sits on ``surface``, and the
+    fill is inside the outline: WCAG 1.4.11's 3:1 for a component's boundary, in
+    every scheme (ux.md §6.2; Ionic's selection was 1.7:1).
+    """
+    tokens, surface = BOOTH_SCHEMES[name]
+    outline = tokens.booth_outline
+    for against in ("#FFFFFF", surface, tokens.booth_fill):
+        assert contrast_ratio(outline, against) >= 3, (name, outline, against)
+
+
+def test_high_contrast_changes_the_booth_outline() -> None:
+    """High contrast has outlines of its own: ink on its light scheme (D-285)."""
+    assert theme.HC_LIGHT_TOKENS.booth_outline == str(theme.HC_LIGHT.on_surface)
+    assert theme.HC_DARK_TOKENS.booth_outline != theme.DARK_TOKENS.booth_outline
 
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])

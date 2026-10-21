@@ -141,20 +141,21 @@ async def render(
 # ------------------------------------------------------------------ the tabs
 
 
-async def test_the_map_opens_on_rooms_under_two_named_tabs(render: Render) -> None:
-    """Rooms and Floor plans are the first row, Rooms shown, with no ``TabBarView``.
+async def test_the_map_opens_on_rooms_under_three_named_tabs(render: Render) -> None:
+    """Rooms, Floor plans and Expo are the first row, Rooms shown, no ``TabBarView``.
 
     Each tab carries ``map.tab.<slug>``; the pane shown is the rooms' keyed list,
     alone under the bar (D-312).
     """
     shown = await render()
-    assert shown.tabs.length == 2
+    assert shown.tabs.length == 3
     assert shown.tabs.selected_index == 0
     labels = [text_of(tab.label) for tab in shown.find(ft.Tab)]
-    assert sorted(labels) == ["Floor plans", "Rooms"]
+    assert sorted(labels) == ["Expo", "Floor plans", "Rooms"]
     assert {str(n.identifier) for n in shown.nodes("map.tab.")} == {
         "map.tab.rooms",
         "map.tab.floor-plans",
+        "map.tab.expo",
     }
     assert shown.find(ft.TabBarView) == []
     assert shown.pane.key == "rooms"

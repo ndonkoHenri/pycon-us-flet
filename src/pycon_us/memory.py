@@ -46,6 +46,11 @@ class ViewMemory:
             (MAP-01).
         map_offsets: Each Map pane's scroll offset when its last scroll ended, by
             slug, in logical pixels: the Map puts it back when the pane shows again.
+        map_zooms: Each Map plan pane's last transform, by slug, as the viewer
+            reported it: scale, then the translation in logical pixels. The pane puts
+            it back when it shows again (D-312).
+        expo_booth: The number of the booth selected on the expo plan; empty for
+            none. The Expo pane and ``…/plan/expo`` share it (EXPO-01).
         room_highlights: The session each mounted room View has highlighted, by its
             View path (ROOM-03): a View rebuilt in a new session from the same
             location (D-143) finds its own and neither scrolls nor lights up again
@@ -73,6 +78,8 @@ class ViewMemory:
     search_scope: str = "all"
     map_tab: str = "rooms"
     map_offsets: dict[str, float] = field(default_factory=dict)
+    map_zooms: dict[str, tuple[float, float, float]] = field(default_factory=dict)
+    expo_booth: str = ""
     room_highlights: dict[str, str] = field(default_factory=dict)
     plan_pins: dict[str, str] = field(default_factory=dict)
     spotlight: str = ""
