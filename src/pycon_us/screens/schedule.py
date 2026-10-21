@@ -39,6 +39,7 @@ from pycon_us.core.timefmt import day_heading, time_label, today, zone_note
 from pycon_us.core.timeline import Slot, now_place, timeline
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.changes_review import ScheduleOverflow
 from pycon_us.screens.schedule_days import (
     TAB_MS,
     DayList,
@@ -264,7 +265,7 @@ def Schedule() -> ft.View:
     if data is None or shown is None:
         return AppScaffold(
             title="Schedule",
-            actions=[search_button(memory, "sessions")],
+            actions=[search_button(memory, "sessions"), ScheduleOverflow()],
             body=ft.ListView(
                 [
                     StatusStrip(auto_refresh=True),
@@ -363,7 +364,11 @@ def Schedule() -> ft.View:
     )
     return AppScaffold(
         title="Schedule",
-        actions=[search_button(memory, "sessions"), track_filter.button],
+        actions=[
+            search_button(memory, "sessions"),
+            track_filter.button,
+            ScheduleOverflow(),  # Schedule changes (D-255)
+        ],
         body=tabs,
         on_retap=scroll_to_top,
         fab=now_button(on_today=shown == current, on_click=now_pressed, margin=margin)
