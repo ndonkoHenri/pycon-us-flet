@@ -32,6 +32,7 @@ from pycon_us.ui.info_page import FeedBlock
 from pycon_us.ui.links import OPENS_IN
 from pycon_us.ui.share import LOG_SHARED, WITH_LOG
 from pycon_us.year_info import SafetyContact
+from pycon_us.year_map import MapData
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -105,6 +106,17 @@ def render(
         "SponsorCreditTile",
         lambda credit, what, identifier: ft.Semantics(
             identifier=identifier, label=f"{what}, {credit.slug if credit else ''}"
+        ),
+    )
+    # The card is a component of its own, tested in test_location_card.py: here a
+    # node that says where it stands and which pin it shows, as spot_card finds it.
+    monkeypatch.setattr(
+        help_screen,
+        "spot_card",
+        lambda data, key, *, identifier: (
+            ft.Semantics(identifier=identifier, label=key)
+            if key and data.pin(key)
+            else None
         ),
     )
     monkeypatch.setattr(info_page, "use_margin", phone_margin)
@@ -186,6 +198,17 @@ def said(page: FakePage) -> list[str]:
     return texts
 
 
+def block_named(blocks: list[ft.Control], identifier: str) -> ft.Control:
+    """Return the one in-app or plain row whose merged node is ``identifier``."""
+    (block,) = [
+        block
+        for block in blocks
+        if isinstance(block, ft.MergeSemantics)
+        and getattr(block.content, "identifier", None) == identifier
+    ]
+    return block
+
+
 def outline(blocks: list[ft.Control]) -> list[str]:
     """The page as headings (``# ``), the card, row identifiers and the summary."""
     result = []
@@ -199,6 +222,10 @@ def outline(blocks: list[ft.Control]) -> list[str]:
             result.append(f"# {heading.content.value}")
         elif isinstance(block, ft.Container) and isinstance(block.content, ft.Card):
             result.append("card")
+        elif isinstance(block, ft.Container) and isinstance(
+            block.content, ft.Semantics
+        ):  # a place's location card, in the gutter
+            result.append(str(block.content.identifier))
         elif isinstance(block, ft.Semantics):
             result.append(str(block.identifier))
         else:
@@ -216,9 +243,13 @@ def test_the_card_comes_first_then_the_venue_then_the_code_of_conduct(
         "card",
         "# At the venue",
         "help.info_desk",
+        "help.info_desk.location",
         "help.lost_and_found",
+        "help.lost_and_found.location",
         "help.quiet_room",
+        "help.quiet_room.location",
         "help.quiet_room.sponsor",
+        "help.all_maps",
         "# Code of Conduct",
         "help.coc_summary",
         "help.coc",
@@ -334,8 +365,7 @@ def test_each_place_reads_as_one_phrase(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
     """A place's row is one merged node: its name, then where it is."""
-    block = blocks_of(render(svc))[4]
-    tile = tile_of(block)
+    tile = tile_of(block_named(blocks_of(render(svc)), "help.quiet_room"))
     assert tile.title == "Quiet room"
     info = svc.year.content.help
     assert info is not None and tile.subtitle == info.quiet_room
@@ -367,6 +397,47 @@ def test_without_year_data_the_page_shows_the_feed_s_block(
     assert item.fn is inspect.unwrap(FeedBlock)
     assert item.args == ("code-of-conduct",)
     assert item.kwargs["screen"] == "help"
+
+
+def test_each_place_s_card_shows_the_pin_help_names(
+    render: Callable[[Services], dict[str, Any]], svc: Services
+) -> None:
+    """INFO-12: the desk, lost and found and the quiet room each show their pin."""
+    cards = {
+        str(block.content.identifier): block.content.label
+        for block in blocks_of(render(svc))
+        if isinstance(block, ft.Container) and isinstance(block.content, ft.Semantics)
+    }
+    assert cards == {
+        "help.info_desk.location": "info-desk",
+        "help.lost_and_found.location": "lost-and-found",
+        "help.quiet_room.location": "quiet-room",
+    }
+
+
+def test_all_maps_opens_the_map_tab(
+    render: Callable[[Services], dict[str, Any]], svc: Services, page: FakePage
+) -> None:
+    """All maps is an in-app row to ``/map`` (its Floor plans once #391 adds them)."""
+    tile = tile_of(block_named(blocks_of(render(svc)), "help.all_maps"))
+    assert tile.title == "All maps"
+    assert tile.on_click is not None
+    tile.on_click()  # type: ignore[call-arg]  # an in-app row's tap is sync
+    assert page.navigated == ["/map"]
+
+
+def test_a_year_without_plans_shows_no_card_and_no_all_maps(
+    render: Callable[[Services], dict[str, Any]], svc: Services
+) -> None:
+    """Without ``map.toml`` (2025's case) the places are their lines alone."""
+    year = replace(svc.year, map=MapData())
+    assert outline(blocks_of(render(replace(svc, year=year))))[2:7] == [
+        "help.info_desk",
+        "help.lost_and_found",
+        "help.quiet_room",
+        "help.quiet_room.sponsor",
+        "# Code of Conduct",
+    ]
 
 
 def test_contacts_without_help_show_the_card_alone(page: FakePage) -> None:
