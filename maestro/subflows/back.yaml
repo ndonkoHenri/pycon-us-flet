@@ -1,0 +1,17 @@
+# Go back one step, as a person does on each platform (D-17).
+# Android: the system Back (KEYCODE_BACK), which pops one View (#279).
+# iOS: the app bar's back arrow, a button named "Back" by its tooltip (D-234). It has no
+# identifier: see maestro/README.md, "Identifiers".
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - back
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: Back

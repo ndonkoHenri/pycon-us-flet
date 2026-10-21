@@ -1,0 +1,78 @@
+# P1 exit criterion 1 (open on Now, then session → speaker → session → Back) and 2
+# (Back pops one step, #279). Mirrors F5 (tests/ui/test_drill_back.py), from Now.
+#
+# At Friday 14:10 Now lists the panel (session 123) as happening now. One of its
+# speakers, Dawn Wages (speaker 128), has another session that day (119). Each Back
+# must leave exactly one View: the speaker, then the panel, then Now.
+appId: io.github.ndonkohenri.pyconus
+name: Now, session, speaker, session, then Back one step at a time
+tags:
+  - journeys
+  - smoke
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Now → the panel, happening now.
+- tapOn:
+    id: now.session.123
+- extendedWaitUntil:
+    visible:
+      id: session.title
+      text: "Panel: Fostering better collaboration between the scientific Python community and core Python development"
+    timeout: 15000
+- assertVisible:
+    id: session.when
+    text: ".*Happening now.*"
+
+# → its speaker.
+- scrollUntilVisible:
+    element:
+      id: session.speaker.128
+- tapOn:
+    id: session.speaker.128
+- extendedWaitUntil:
+    visible:
+      id: speaker.session.119
+    timeout: 15000
+- assertVisible:
+    text: Dawn Wages
+
+# → the speaker's other session.
+- tapOn:
+    id: speaker.session.119
+- extendedWaitUntil:
+    visible:
+      id: session.title
+      text: "How many spoons does your environment cost: Feat\\. demos breaking and the human element of your broken env"
+    timeout: 15000
+
+# Back: the speaker, not the panel.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: speaker.session.119
+    timeout: 15000
+- assertNotVisible:
+    id: session.title
+
+# Back: the panel.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: session.title
+      text: "Panel: Fostering.*"
+    timeout: 15000
+
+# Back: Now, its root, with the bar.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- assertVisible:
+    id: app.nav.now
+    selected: true
+- assertVisible:
+    id: now.session.123

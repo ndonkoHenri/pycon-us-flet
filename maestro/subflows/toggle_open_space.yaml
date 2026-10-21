@@ -1,0 +1,19 @@
+# Show or hide Open space through the Schedule's filter sheet: open the sheet, tap the
+# Open space chip, then "Show N sessions", and wait for the sheet to go (D-20, D-195).
+appId: io.github.ndonkohenri.pyconus
+---
+- tapOn:
+    id: schedule.filter
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.open-space
+    timeout: 30000
+- tapOn:
+    id: schedule.filter.open-space
+- tapOn:
+    id: schedule.filter.show
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.filter.show
+    timeout: 30000
+- waitForAnimationToEnd
