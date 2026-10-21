@@ -141,6 +141,38 @@ class ChangeLog:
                         badged.setdefault(change.id, set()).add(change.kind)
         return {key: frozenset(kinds) for key, kinds in badged.items()}
 
+    def recent_of(self, session_id: str, now: datetime) -> tuple[Change, ...]:
+        """Return a session's badged changes of the last 24 h, one per kind (ux.md §5.5).
+
+        Session detail's badges say the old value ("Moved from Room 102A"), so each kind
+        spans every batch of the last 24 h: its old side is the oldest change's, the
+        value before the first of them, and its new side the newest change's. A kind
+        whose value came back to where it was (a move, then a move back) is left out.
+
+        Args:
+            session_id: The session's id (D-42).
+            now: The current instant (aware), ``clock.now()``.
+
+        Returns:
+            The merged changes in ``ChangeKind``'s order; empty for an unchanged session.
+        """
+        spans: dict[ChangeKind, Change] = {}
+        oldest_first = sorted(self.batches, key=lambda batch: batch.detected_at)
+        for batch in oldest_first:
+            if now - batch.detected_at >= RECENT_FOR:
+                continue
+            for change in batch.changes:
+                if change.id != session_id or change.kind not in BADGED:
+                    continue
+                first = spans.get(change.kind)
+                old = first.old if first is not None else change.old
+                spans[change.kind] = Change(session_id, change.kind, old, change.new)
+        return tuple(
+            spans[kind]
+            for kind in ChangeKind
+            if kind in spans and not _came_back(spans[kind])
+        )
+
     @property
     def has_unseen(self) -> bool:
         """Whether a batch is still unseen: Mark all as seen has something to do."""
@@ -301,6 +333,18 @@ class ChangeLog:
         elapsed = (time.perf_counter() - started) * 1000
         logger.info("Feeds diffed in %.1f ms: %d changes", elapsed, len(changes))
         return changes
+
+
+def _came_back(change: Change) -> bool:
+    """Return whether a merged change ends where it started: nothing to say."""
+    old, new = change.old, change.new
+    if old is None or new is None:
+        return False
+    if change.kind is ChangeKind.TIME:
+        return (old.start, old.end) == (new.start, new.end)
+    if change.kind is ChangeKind.ROOM:
+        return old.location == new.location
+    return old.title == new.title
 
 
 ChangeLogCtx: ft.ContextProvider[ChangeLog | None] = ft.create_context(None)

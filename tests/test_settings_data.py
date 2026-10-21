@@ -1,4 +1,4 @@
-"""Tests for Settings' Data section: the schedule's age, Refresh now, the zone row (#422).
+"""Tests for Settings' Data section: Refresh now, Schedule changes, the zone row (#422, #438).
 
 ``DataSection`` runs outside a renderer, as ``DataActions`` does in
 ``test_developer_data.py``: its hooks are replaced, and the feed fetch too, so no test
@@ -16,7 +16,11 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind, Listing
+from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import settings_data
 from pycon_us.screens.settings import RADIO_WIDTH
@@ -27,11 +31,13 @@ from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.actions import KEPT
 from tests.fakes import (
+    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
+    bound,
 )
 from tests.feeds import recorded
 
@@ -96,10 +102,24 @@ def minutes() -> list[int]:
 
 
 @pytest.fixture
+def change_log() -> ChangeLog:
+    """The session's ``ChangeLog``: empty unless a test records a batch in it."""
+    return ChangeLog()
+
+
+@pytest.fixture
+def favorites() -> Favorites:
+    """The saved sessions: none unless a test saves some."""
+    return Favorites()
+
+
+@pytest.fixture
 def render(
     monkeypatch: pytest.MonkeyPatch,
     svc: Services,
     conference: Conference,
+    change_log: ChangeLog,
+    favorites: Favorites,
     minutes: list[int],
 ) -> Callable[[], ft.Column]:
     """Render ``DataSection`` by hand, its one state kept across renders: its column."""
@@ -114,6 +134,9 @@ def render(
     monkeypatch.setattr(settings_data, "use_services", lambda: svc)
     monkeypatch.setattr(settings_data, "use_conference", lambda: conference)
     monkeypatch.setattr(settings_data, "use_tokens", lambda: LIGHT_TOKENS)
+    monkeypatch.setattr(settings_data, "use_change_log", lambda: change_log)
+    monkeypatch.setattr(settings_data, "use_favorites", lambda: favorites)
+    monkeypatch.setattr(ft, "use_view_path", lambda: "/more/settings")
     # The minute tick needs a renderer; its own tests are test_status_strip_ticks.py's.
     monkeypatch.setattr(settings_data, "use_minute", lambda: minutes.append(0) or 0)
 
@@ -300,3 +323,62 @@ def test_the_zone_row_shows_only_while_the_device_s_zone_differs(
     assert row.title == "Times are Pacific Time (PDT)"
     assert row.subtitle == "This device is on UTC+14:00"
     assert row.on_click is None  # nothing to change: read, not tapped
+
+
+# ------------------------------------------------------------------ Schedule changes
+
+TALK = "142"
+"""A 2026 session, saved in the tests that save one."""
+
+
+def moved(session: str, at: datetime, *, seen: bool = False) -> Batch:
+    """A batch detected ``at`` that moved ``session`` from Room 104A to Room 103ABC."""
+    start = datetime.fromisoformat("2026-05-16T10:30:00-07:00")
+    end = start + timedelta(minutes=30)
+    old = Listing("Python for Humans", start, end, "Room 104A")
+    new = Listing("Python for Humans", start, end, "Room 103ABC")
+    return Batch(at, (Change(session, ChangeKind.ROOM, old, new),), seen=seen)
+
+
+def changes_row(column: ft.Column) -> ft.ListTile:
+    """Schedule changes' tile."""
+    tile = identified(column)["settings.data.changes"]
+    assert isinstance(tile, ft.ListTile)
+    return tile
+
+
+def changes_said(column: ft.Column) -> str:
+    """Schedule changes' second line."""
+    return str(cast(ft.Text, changes_row(column).subtitle).value)
+
+
+def test_schedule_changes_sits_under_refresh_now_and_opens_on_settings(
+    render: Callable[[], ft.Column],
+) -> None:
+    """The row pushes the year's list on Settings' View, so Back returns there (D-255)."""
+    column = render()
+    ids = list(identified(column))
+    assert ids.index("settings.data.changes") > ids.index("settings.data.refresh")
+    tile = changes_row(column)
+    assert cast(ft.Text, tile.title).value == "Schedule changes"
+    assert changes_said(column) == settings_data.CHANGES_LINE
+    page = FakePage()
+    with bound(page):
+        cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == ["/more/settings/changes/2026"]
+
+
+def test_schedule_changes_counts_unseen_changes_to_saved_sessions(
+    render: Callable[[], ft.Column],
+    change_log: ChangeLog,
+    favorites: Favorites,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """While Now's card would show, the row says how many saved sessions changed."""
+    monkeypatch.setattr(clock, "now", lambda: DURING)
+    change_log.batches = (moved(TALK, DURING - timedelta(hours=1)),)
+    assert changes_said(render()) == settings_data.CHANGES_LINE  # not saved
+    favorites.ids = frozenset({TALK})
+    assert changes_said(render()) == "1 saved session changed"
+    change_log.batches = (moved(TALK, DURING - timedelta(hours=1), seen=True),)
+    assert changes_said(render()) == settings_data.CHANGES_LINE

@@ -11,6 +11,7 @@ mode, is checked on devices (the PR); here, what it says and what a tap does.
 import asyncio
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
@@ -19,6 +20,8 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
+from pycon_us.core.change_batches import Batch
+from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.core.models import ConferenceData
 from pycon_us.prefs import Prefs
 from pycon_us.screens import session as screen
@@ -86,6 +89,30 @@ async def test_the_title_is_the_page_s_selectable_heading(render: Render) -> Non
         True,
     )
     assert detail.titles[-1] == ""  # the heading names the page, not the app bar
+
+
+async def test_at_large_text_the_title_steps_down_and_back(render: Render) -> None:
+    """D-328: where a slot's time leaves the gutter, the title takes a row title's type.
+
+    It follows a text size change while the page is open, and stays the selectable
+    level-1 heading at either size.
+    """
+    detail = await render(TALK)
+
+    def title() -> ft.Text:
+        node = detail.node("session.title")
+        assert (node.header, node.heading_level) == (True, 1)
+        return cast(ft.Text, node.content)
+
+    detail.prefs.time_above = True  # what GutterProbe measures at that size
+    await detail.settle()
+    assert (title().theme_style, title().selectable) == (
+        ft.TextThemeStyle.TITLE_MEDIUM,
+        True,
+    )
+    detail.prefs.time_above = False
+    await detail.settle()
+    assert title().theme_style == ft.TextThemeStyle.HEADLINE_SMALL
 
 
 async def test_the_badges_come_before_the_title(render: Render) -> None:
@@ -207,8 +234,8 @@ async def test_the_status_follows_the_clock_on_the_minute_tick(
     detail = await render(TALK)
     assert "Starts in 1 min" in detail.text("session.when")
     clock.set_test_now(at("2026-05-16 10:31"))
-    (tick,) = ticks
-    tick()
+    for tick in ticks:  # the status line's, and the Changed badges' (D-315)
+        tick()
     await detail.settle()
     assert "Happening now" in detail.text("session.when")
 
@@ -225,10 +252,10 @@ async def test_leaving_the_detail_stops_its_minute_ticks(
 
     monkeypatch.setattr(Services, "run_every", run_every)
     detail = await render(TALK)
-    (loop,) = loops
-    assert not loop.done()
+    assert loops  # the status line's, and the Changed badges' (D-315)
+    assert not any(loop.done() for loop in loops)
     await detail.show(None)
-    assert loop.cancelled()
+    assert all(loop.cancelled() for loop in loops)
 
 
 async def test_a_device_in_another_zone_gets_the_pacific_time_note(
@@ -599,3 +626,95 @@ async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
     assert words(note)[0] == screen.REMOVED
     assert detail.nodes("session.title")  # the content stays
     assert detail.nodes("session.favorite")  # and the star still works
+
+
+# ------------------------------------------------------------------ changed (NEW-04)
+
+
+async def record_changes(detail: Detail, *kinds: ChangeKind) -> None:
+    """Record one batch changing TALK by ``kinds``, an hour before the frozen now.
+
+    Its old sides: Room 102A, Friday 10:30 AM and the title "Python for People".
+    """
+    data = cast(ConferenceData, detail.conference.data)
+    talk = data.sessions[TALK]
+    new = Listing(talk.name, talk.display_start, talk.end, talk.location)
+    olds = {
+        ChangeKind.ROOM: replace(new, location="Room 102A"),
+        ChangeKind.TIME: replace(
+            new,
+            start=talk.display_start - timedelta(days=1),
+            end=talk.end - timedelta(days=1),
+        ),
+        ChangeKind.TITLE: replace(new, title="Python for People"),
+    }
+    now = at("2026-05-14 12:00")
+    clock.set_test_now(now)
+    changes = tuple(Change(TALK, kind, olds[kind], new) for kind in kinds)
+    detail.change_log.batches = (Batch(now - timedelta(hours=1), changes),)
+    await detail.settle()
+
+
+def changed_badges(detail: Detail) -> list[tuple[str, str]]:
+    """The Changed badges under the title: what each says, and what it shows."""
+    found = [
+        n
+        for n in detail.session.index.values()
+        if isinstance(n, ft.Semantics)
+        and (n.identifier or "").startswith("session.changed.")
+    ]
+    return [(n.label or "", " ".join(words(n))) for n in found]
+
+
+async def test_each_kind_of_change_shows_its_badge_with_the_old_value(
+    render: Render,
+) -> None:
+    """Moved, retimed and renamed: a badge each, after the track's, read whole."""
+    detail = await render(TALK)
+    assert changed_badges(detail) == []  # unchanged: none
+    await record_changes(detail, ChangeKind.TIME, ChangeKind.ROOM, ChangeKind.TITLE)
+    assert changed_badges(detail) == [
+        ("Was Friday, May 15, 10:30 AM", "Was Fri, May 15, 10:30\N{NO-BREAK SPACE}AM"),
+        ("Moved from Room 102A", "Moved from Room 102A"),
+        ("Renamed from “Python for People”", "Renamed from “Python for People”"),
+    ]
+    header = detail.node("session.title").parent
+    assert isinstance(header, ft.Column)
+    assert texts(header.controls[0])[0] == "Talk"  # the track's badge first
+    assert detail.node("session.changed.room").exclude_semantics  # one phrase
+
+
+async def test_a_badge_goes_on_the_tick_after_its_24_hours(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The badges last 24 h, like the rows' Changed, and go on the open page (D-315)."""
+    ticks: list[Callable[[], object]] = []
+
+    async def run_every(self: Services, seconds: float, action: Callable[[], object]):
+        ticks.append(action)
+
+    monkeypatch.setattr(Services, "run_every", run_every)
+    detail = await render(TALK)
+    await record_changes(detail, ChangeKind.ROOM)
+    assert detail.nodes("session.changed.room")
+    clock.set_test_now(at("2026-05-15 11:00"))  # 24 h after the batch
+    for tick in ticks:
+        tick()
+    await detail.settle()
+    assert detail.nodes("session.changed.room") == []
+
+
+async def test_a_removed_session_keeps_its_note_without_change_badges(
+    render: Render,
+) -> None:
+    """D-186's note is unchanged: a dropped session no longer says what moved."""
+    detail = await render(TALK)
+    await record_changes(detail, ChangeKind.ROOM)
+    data = cast(ConferenceData, detail.conference.data)
+    newer = replace(
+        data, sessions={k: v for k, v in data.sessions.items() if k != TALK}
+    )
+    detail.conference.data, detail.conference.version = newer, 2
+    await detail.settle()
+    assert detail.nodes("session.removed")
+    assert detail.nodes("session.changed.room") == []
