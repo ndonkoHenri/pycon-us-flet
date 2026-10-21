@@ -411,6 +411,18 @@ async def test_today_is_selected_during_the_conference(
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
 
 
+@pytest.mark.parametrize("loaded", [True, False])
+async def test_the_app_bar_has_the_schedule_changes_overflow(
+    shown: Callable[[], Awaitable[Shown]], conference: Conference, loaded: bool
+) -> None:
+    """The overflow, "Schedule changes" (D-255), is there with data and without."""
+    if not loaded:
+        conference.data = None
+    schedule = await shown()
+    assert bool(schedule.find(ft.Tabs)) is loaded  # no day tabs without data
+    assert len(schedule.nodes("schedule.overflow")) == 1
+
+
 async def test_the_first_day_is_selected_outside_the_conference(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
@@ -458,7 +470,9 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     """#313: a line that comes and goes would shift the day pages and rebuild them."""
     schedule = await shown()
     column = cast(ft.Column, schedule.tabs.content)
-    assert len(column.controls) == 5
+    assert (
+        len(column.controls) == 6
+    )  # the probe (D-331), the bar, the summary, the strip, the note, the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
     assert isinstance(pages.controls[-1], ft.TabBarView)
 

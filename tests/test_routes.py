@@ -123,6 +123,10 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/app/licences/flet", ["More", "AboutApp", "Licences", "LicencePage"]),
         ("/more/developer", ["More", "Developer"]),
         ("/more/social", ["More", "Social"]),
+        ("/more/about", ["More", "AboutPycon"]),
+        # Its rows open the same pages over it (D-207's pattern).
+        ("/more/about/help", ["More", "AboutPycon", "Help"]),
+        ("/more/about/venue", ["More", "AboutPycon", "Venue"]),
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (
@@ -320,6 +324,9 @@ def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
         ("/more/app/licences/flet", "/more/app/licences"),  # a text, to the list
         ("/more/app/licences", "/more/app"),  # the list, to About this app (D-296)
+        ("/more/about/help", "/more/about"),  # from About PyCon US, to it (#414)
+        ("/more/about/venue", "/more/about"),
+        ("/more/about", "/more"),
         ("/map/room/hall-a/plan/expo", "/map/room/hall-a"),
         ("/now/session/poster%20detail%2B1", "/now"),
         ("/now/session/42?highlight=99", "/now"),  # the query is dropped
