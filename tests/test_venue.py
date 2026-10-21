@@ -186,8 +186,11 @@ async def test_directions_opens_the_platform_s_maps_app(
     assert page.launcher.launched == [(url, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
 
-async def test_directions_that_cannot_open_say_so(show: Show) -> None:
-    """A launch that fails says "Couldn't open the link" (D-182)."""
+async def test_directions_whose_launch_raises_say_so(show: Show) -> None:
+    """A launch that raises says "Couldn't open the link" (D-182).
+
+    A launcher that returns ``false`` says nothing: the pin drops the result (U79).
+    """
     page = await show()
     page.launcher.error = RuntimeError("no maps app")
     await page.click(cast(ft.Control, page.node("venue.directions").content))
