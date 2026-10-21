@@ -26,7 +26,7 @@ from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.names import plain_text
 from pycon_us.core.rules import COLLAPSED_KINDS
 from pycon_us.core.slugs import room_sort_key, slugify_room
-from pycon_us.core.timefmt import local_date
+from pycon_us.core.timefmt import instant, local_date
 from tools.feed_outline import clock, outline
 from tools.sponsor_invariants import (
     job_listings_name_a_sponsor,
@@ -205,17 +205,21 @@ def times_are_aware_in_the_years_zone_and_ordered(feed: ProcessedFeed) -> list[s
 
 
 def every_group_has_a_start_and_ordered_rows(feed: ProcessedFeed) -> list[str]:
-    """DATA-13, D-31: groups sorted by their start; rows by location, then name."""
+    """DATA-13, D-31: groups sorted by their start; rows by location, then name.
+
+    Starts compare as instants: one zone's starts compare by wall clock, which would
+    read 1:30 PDT and 1:30 PST as one start on the night summer time ends (#535).
+    """
     data = feed.data
     problems = []
     for day in data.days:
-        starts = [group.start for group in day.groups]
+        starts = [instant(group.start) for group in day.groups]
         if starts != sorted(set(starts)):
             problems.append(f"{day.date}: the groups are not sorted, or repeat a start")
         for group in day.groups:
             rows = [data.sessions[i] for i in group.session_ids]
             where = f"{day.date} {clock(group.start, feed.zone)}"
-            if any(row.start != group.start for row in rows):
+            if any(instant(row.start) != instant(group.start) for row in rows):
                 problems.append(f"{where}: a row starts at another time")
             keys = [(row.location, row.name) for row in rows]
             if keys != sorted(keys):
@@ -323,7 +327,8 @@ def rooms_and_sessions_agree(feed: ProcessedFeed) -> list[str]:
         if len(room.session_ids) != len(set(room.session_ids)):
             problems.append(f"room {slug} lists a session twice")
         order = [
-            (data.sessions[i].start, data.sessions[i].name) for i in room.session_ids
+            (instant(data.sessions[i].start), data.sessions[i].name)
+            for i in room.session_ids
         ]
         if order != sorted(order):  # by start, then name (D-125)
             problems.append(f"room {slug}'s sessions are not by start, then name")

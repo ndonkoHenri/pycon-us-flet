@@ -15,6 +15,7 @@ import flet as ft
 from pycon_us.core.agenda import elapsed_percent
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.row_views import places
+from pycon_us.core.timefmt import instant
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
@@ -39,7 +40,7 @@ def next_session(
     room = places(session, data.rooms).room
     # From the start the row shows, as its status and its bar count (D-186): the Job
     # Fair says 9:30 and is "Happening now" from then, though its slot starts at 10:00.
-    on = session.display_start <= now < session.end
+    on = instant(session.display_start) <= instant(now) < instant(session.end)
 
     @report_errors
     def show_room() -> None:

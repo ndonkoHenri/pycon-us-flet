@@ -27,7 +27,7 @@ from pycon_us.core.models import Poster, Room, Session, Speaker
 from pycon_us.core.names import PLENARY_KINDS, clean_title, plain_text, trailing_room
 from pycon_us.core.records import OpenSpace, Slot
 from pycon_us.core.slugs import room_sort_key, slugify_room
-from pycon_us.core.timefmt import local_date
+from pycon_us.core.timefmt import instant, local_date
 
 COLLAPSED_KINDS = ("poster", "break")
 """The kinds whose slots fold into collapsed rows (DATA-06)."""
@@ -173,7 +173,9 @@ def collapse(slots: Iterable[Slot], settings: FeedSettings) -> list[Session]:
         name = plain_text(slot.name)
         own_start = slot.kind == "break" and not _LUNCH.match(name)
         key = (slot.kind, local_date(slot.start, settings.time_zone), name)
-        rows.setdefault((*key, slot.start if own_start else None), []).append(slot)
+        # By instant: one zone's starts hash by wall clock, ignoring fold (#535).
+        own = instant(slot.start) if own_start else None
+        rows.setdefault((*key, own), []).append(slot)
     return [_collapsed_row(group, settings) for group in rows.values()]
 
 
@@ -193,14 +195,14 @@ def _collapsed_row(slots: Sequence[Slot], settings: FeedSettings) -> Session:
     if not room:  # Ionic: a later slot's "(Room)" fills an empty room
         later = (trailing_room(plain_text(slot.name))[1] for slot in slots[1:])
         room = _hall(next((r for r in later if r), ""), settings.hall_prefix)
-    start = min(slot.start for slot in slots)
+    start = min((slot.start for slot in slots), key=instant)  # #535
     return _session(
         id=f"{first.kind}-{room}-{start.astimezone(zone).isoformat()}",
         name=name,
         kind=first.kind,
         location=room,
         start=start,
-        end=max(slot.end for slot in slots),
+        end=max((slot.end for slot in slots), key=instant),
         zone=zone,
         no_location=first.kind == "break" and name == "Break",
     )
@@ -232,7 +234,11 @@ def slot_session(
         override = settings.lightning_talks_location
     display_start = next(
         (
-            slot.start + timedelta(minutes=shift.minutes)
+            # Added in UTC, then back in the conference's zone: wall-clock arithmetic
+            # is an hour off across a daylight-saving change (#535).
+            (instant(slot.start) + timedelta(minutes=shift.minutes)).astimezone(
+                settings.time_zone
+            )
             for shift in settings.display_time_overrides
             if shift.pattern.fullmatch(title.name)
         ),
@@ -327,7 +333,8 @@ def rooms(sessions: Iterable[Session]) -> dict[str, Room]:
 
     A session is listed under each of its rooms, so a plenary streamed to seven rooms is
     in all seven. A room takes the first spelling met for its slug. Its sessions are
-    sorted by start, then name (Ionic sorted by start only, keeping input order).
+    sorted by start, as an instant (#535), then name (Ionic sorted by start only,
+    keeping input order).
     """
     names: dict[str, str] = {}
     listed: dict[str, list[Session]] = {}
@@ -341,7 +348,8 @@ def rooms(sessions: Iterable[Session]) -> dict[str, Room]:
             slug=slug,
             name=names[slug],
             session_ids=tuple(
-                s.id for s in sorted(listed[slug], key=lambda s: (s.start, s.name))
+                s.id
+                for s in sorted(listed[slug], key=lambda s: (instant(s.start), s.name))
             ),
         )
         for slug in sorted(names, key=lambda slug: room_sort_key(names[slug]))

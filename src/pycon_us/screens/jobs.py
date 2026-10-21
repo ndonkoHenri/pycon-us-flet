@@ -24,20 +24,35 @@ The refresh is the ``Conference`` store's (D-145): the status strip's, then a
 ``RefreshIndicator`` once U1 (#20) is pinned; it never deletes the cache, so a failed
 one keeps the listings and the schedule. Without data the page loads and fails as the
 Sponsors list does (ux.md §4.1); a feed without listings says "No job listings yet"
-(2025). Each card is a memoised component keyed by its listing id (D-153). The job
-fair card at the top comes with #408, the filter with #400.
+(2025), and has no filter. Each card is a memoised component keyed by its listing id
+(D-153), so a keystroke re-renders no card that stays. The job fair card at the top
+comes with #408.
+
+**The filter** (SPON-07): the pinned ``SearchField`` "Filter jobs" the Speakers and
+Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
+word, in the sponsor's name, the role titles or the visible text, never the markup
+(``core.jobs.filter_listings()``, D-46), where Ionic's matched raw HTML: ``nofollow``
+found Bloomberg. The field follows every keystroke (D-243), and the list follows once
+the typing pauses for 250 ms, as search does; a Clear empties both at once. The live
+count line says "3 listings" (D-226); a miss says "No roles match “rust”" with Clear
+filter, which puts the focus back in the field (D-182). The page stays mounted under a
+sponsor's detail, so Back finds the filter as it was.
 """
+
+import asyncio
 
 import flet as ft
 
 from pycon_us.core.html_md import to_text
-from pycon_us.core.jobs import sponsor_of
+from pycon_us.core.jobs import filter_listings, sponsor_of
 from pycon_us.core.models import JobListing
 from pycon_us.core.sprints import needs_more
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.theme import use_tokens
+from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
@@ -45,7 +60,7 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
-from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "jobs"
 """The page's name in its semantics identifiers (decisions §M)."""
@@ -62,20 +77,47 @@ PLATE = 48
 NO_ROLES = "No roles listed"
 """What a placeholder listing's card says under its header."""
 
+FILTER_HINT = "Filter jobs"
+"""The filter field's hint, and its name for screen readers, which stays with text in it."""
+
+CLEAR_FILTER = "Clear filter"
+"""The label of the two controls that empty the filter: the field's and the no-match state's."""
+
+DEBOUNCE_SECONDS = 0.25
+"""How long the typing pauses before the list follows the field (SPON-07)."""
+
 
 @ft.component
 def Jobs() -> ft.View:
-    """The Job listings page: the strip, then a card per listing in feed order."""
+    """The Job listings page: the strip and the filter, then a card per listing."""
     svc = use_services()
     margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
+    tokens = use_tokens()
+    field = use_field_query()
+    query, set_query = ft.use_state("")  # the field's text once the typing pauses
     data = conference.data
+    text = field.value
+
+    @report_errors
+    async def settle() -> None:
+        # Restarted by every keystroke: Flet cancels the wait in progress (F2).
+        await asyncio.sleep(DEBOUNCE_SECONDS)
+        set_query(text)
+
+    ft.use_effect(settle, [text], cleanup=_stop_waiting)
+
+    @report_errors
+    async def clear() -> None:
+        set_query("")  # at once, not after the pause
+        await field.clear()  # the Clear went: the focus goes back to the field
 
     @report_errors
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
-    items: list[ft.Control] = [StatusStrip()]
+    pinned: list[ft.Control] = [StatusStrip()]
+    items: list[ft.Control] = []
     if data is None:
         items.append(
             NoDataState(
@@ -97,13 +139,75 @@ def Jobs() -> ft.View:
             )
         )
     else:
-        for listing in data.job_listings:
+        found = filter_listings(data.job_listings, query)
+        pinned.append(
+            SearchField(
+                value=text,
+                on_change=field.changed,
+                on_clear=clear,
+                ref=field.ref,
+                hint=FILTER_HINT,
+                label=FILTER_HINT,
+                clear_tooltip=CLEAR_FILTER,
+                identifier=f"{SCREEN}.filter",
+                high_contrast=tokens.high_contrast,
+            )
+        )
+        if found and found is not data.job_listings:  # a filter applies, finds some
+            pinned.append(
+                found_count(count_line(len(found)), identifier=f"{SCREEN}.count")
+            )
+        for listing in found:
             sponsor = sponsor_of(data, listing)
             items.append(ListingCard(listing, sponsor.slug if sponsor else None))
+        if not found:
+            items.append(
+                EmptyState(
+                    f"No roles match \N{LEFT DOUBLE QUOTATION MARK}{query.strip()}"
+                    "\N{RIGHT DOUBLE QUOTATION MARK}",
+                    icon=ft.Icons.SEARCH_OFF,
+                    action=CLEAR_FILTER,
+                    on_action=clear,  # the focus goes back to the field (D-182)
+                    identifier=f"{SCREEN}.no_match",
+                )
+            )
     return AppScaffold(
         title=TITLE,
-        body=ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
+        body=ft.Column(
+            [
+                # The strip, the field and its count in a column of their own, so
+                # the list keeps its place in the body as they come and go (D-153);
+                # between the list's margins (D-305).
+                capped(
+                    ft.Column(
+                        pinned,
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
+                ),
+                ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
+            ],
+            spacing=0,
+            expand=True,
+            # The field takes the screen's width; a Column would size it to its own.
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        ),
     )
+
+
+def count_line(count: int) -> str:
+    """Return the filter's count line: "1 listing", "3 listings"."""
+    return f"{count} listing" + ("" if count == 1 else "s")
+
+
+def _stop_waiting() -> None:
+    """The debounce effect's cleanup: nothing to undo.
+
+    Its presence is what makes Flet cancel a pending wait when the View unmounts (F2),
+    and it is passed as ``cleanup=``, since a returned one would be lost at the next
+    render (F39).
+    """
 
 
 def ListingCard(listing: JobListing, slug: str | None) -> ft.Control:

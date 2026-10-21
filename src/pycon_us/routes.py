@@ -44,6 +44,7 @@ from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
+from pycon_us.screens.venue import Venue
 from pycon_us.screens.welcome import Welcome
 from pycon_us.screens.wifi import Wifi
 from pycon_us.services import use_services
@@ -225,6 +226,7 @@ ROUTES = [
         pushed("help", Help),
         pushed("psf", AboutPsf),
         pushed("social", Social),
+        pushed("venue", Venue),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

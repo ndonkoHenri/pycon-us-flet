@@ -11,11 +11,11 @@ detail and Now never disagree.
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from operator import attrgetter
 
 from pycon_us.core.agenda import now_next
 from pycon_us.core.models import ConferenceData, Room, Session
 from pycon_us.core.slugs import slugify_room
+from pycon_us.core.timefmt import instant
 
 
 @dataclass(frozen=True)
@@ -121,5 +121,9 @@ def _on_by_room(data: ConferenceData, now: datetime) -> dict[str, list[Session]]
 
 
 def _latest_first(sessions: Iterable[Session]) -> tuple[Session, ...]:
-    """Return sessions by start, the latest first; a stable sort keeps ties in order."""
-    return tuple(sorted(sessions, key=attrgetter("start"), reverse=True))
+    """Return sessions by start, the latest first; a stable sort keeps ties in order.
+
+    By instant, so a start in the repeated hour of the night summer time ends counts as
+    later than one in the first (#535).
+    """
+    return tuple(sorted(sessions, key=lambda s: instant(s.start), reverse=True))

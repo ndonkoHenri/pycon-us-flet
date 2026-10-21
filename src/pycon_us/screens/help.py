@@ -13,6 +13,10 @@ is what someone in trouble needs:
   are, a line each (P2-58 adds their location cards).
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
+- **The app:** Report a problem with the app, last on the page whatever the year has.
+  While the repository is private it shares the app's log and diagnostics, as About
+  this app's Report a problem does; once ``SOURCE_URL`` is set it opens a new issue in
+  the in-app browser (``ReportProblem``, INFO-11, D-88, D-297).
 
 Everything is bundled year data (``[help]``, ``year_info``), so the page works in
 airplane mode with no loader. A year without it shows the feed's own
@@ -25,11 +29,21 @@ from urllib.parse import urlsplit
 
 import flet as ft
 
+from pycon_us import SOURCE_URL
+from pycon_us.screens.about_app import shown_url
 from pycon_us.services import use_services
+from pycon_us.theme import use_tokens
+from pycon_us.ui.actions import action_row
 from pycon_us.ui.info_page import GUTTER, InfoBody
 from pycon_us.ui.rows import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
+from pycon_us.ui.share import (
+    new_issue_url,
+    report_outcome,
+    report_subtitle,
+    use_problem_report,
+)
 from pycon_us.ui.states import EmptyState
 from pycon_us.year_info import HelpInfo, SafetyContact
 
@@ -41,6 +55,9 @@ TITLE = "Help & safety"
 
 REPORT = "Report a concern"
 """The card's heading."""
+
+REPORT_PROBLEM = "Report a problem with the app"
+"""The last row's title: a problem with this app, not a safety concern."""
 
 CONTACT_ICONS = {
     "tel": ft.Icons.CALL_OUTLINED,
@@ -79,7 +96,72 @@ def Help() -> ft.View:
                 body="At the conference, any staff member can help you report a concern.",
                 identifier=f"{SCREEN}.empty",
             ),
+            footer=[ReportProblem()],
         ),
+    )
+
+
+@ft.component
+def ReportProblem() -> ft.Control:
+    """The page's last section: Report a problem with the app, and how it ended.
+
+    A component of its own, as About this app's Help us fix it is, so a share
+    re-renders these rows and not the page (``use_problem_report()``).
+    """
+    report = use_problem_report()
+    tokens = use_tokens()
+    return ft.Column(
+        [
+            SectionHeader("The app"),
+            report_problem_row(
+                SOURCE_URL,
+                packaged=report.packaged,
+                sharing=report.sharing,
+                on_share=report.share,
+            ),
+            report_outcome(f"{SCREEN}.report_outcome", report.outcome, tokens=tokens),
+        ],
+        spacing=0,
+    )
+
+
+def report_problem_row(
+    source_url: str | None,
+    *,
+    packaged: bool,
+    sharing: bool,
+    on_share: ft.ControlEventHandler[ft.ListTile],
+) -> ft.Control:
+    """Return Report a problem with the app, which switches on ``SOURCE_URL`` (D-88).
+
+    While the repository is private, an action that shares the log and diagnostics
+    (``share_console_log()``); once it is public, an external row that opens a new
+    issue in the in-app browser and reads "Opens in browser" (INFO-14, D-182). One
+    row either way: under stress, one way to report; Share log stays on About this app.
+
+    Args:
+        source_url: ``SOURCE_URL``: None while the repository is private.
+        packaged: A packaged build, whose share adds ``console.log``.
+        sharing: The share sheet is up: the row is disabled until it closes.
+        on_share: The row's action while the repository is private.
+    """
+    identifier = f"{SCREEN}.report_problem"
+    if source_url is None:
+        return action_row(
+            identifier,
+            ft.Icons.BUG_REPORT_OUTLINED,
+            REPORT_PROBLEM,
+            report_subtitle(packaged),
+            on_share,
+            disabled=sharing,
+        )
+    issue_url = new_issue_url(source_url)
+    return LinkTile(
+        REPORT_PROBLEM,
+        issue_url,
+        icon=ft.Icons.BUG_REPORT_OUTLINED,
+        subtitle=shown_url(issue_url),
+        identifier=identifier,
     )
 
 
