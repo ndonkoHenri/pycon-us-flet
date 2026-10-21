@@ -6,7 +6,7 @@ the Appearance rows that stood in for it here (D-169, D-286), then About this ap
 Developer, which is always there when not embedded and, in a packaged build, once
 unlocked in About this app (D-73, D-187). **Expo & sponsors** came with the Sponsors
 page (#395) and Job listings with theirs (#399), **At the venue** with Wi-Fi (D-280) and
-Help & safety (D-281), and **About** with About the PSF (D-283) and Social media
+Help & safety (D-281), Venue & hours first (D-313), and **About** with About the PSF (D-283) and Social media
 (D-284); their other rows join with their P2 pages; the profile row and Staff tools,
 first in the list, with P3's mock account (D-16, D-51).
 Every row pushes its page, so Back returns here (D-17).
@@ -54,6 +54,7 @@ EXPO_AND_SPONSORS = (
 """The Expo & sponsors section; Expo hall joins it with its page."""
 
 AT_THE_VENUE = (
+    MoreEntry("Venue & hours", "/more/venue", ft.Icons.PLACE_OUTLINED),
     MoreEntry("Wi-Fi", "/more/wifi", ft.Icons.WIFI),
     MoreEntry("Help & safety", "/more/help", ft.Icons.SUPPORT_OUTLINED),
 )
