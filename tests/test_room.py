@@ -817,6 +817,43 @@ async def test_the_card_pulses_once_per_room_view(render: Render) -> None:
     assert card_sleeps(room).asked == [location_card.PULSE_MS / 1000]
 
 
+async def test_the_shown_day_s_card_pulses_twice_and_hidden_ones_stay_still(
+    render: Render,
+) -> None:
+    """Opened on Saturday (tab 1), Saturday's pin pulses, not Friday's hidden one.
+
+    Both pulses run, the hidden days' rings never move, and a tab change replays
+    nothing (#602).
+    """
+    room = await render(VIEW)
+    sleeps = card_sleeps(room)
+    assert room.tabs.selected_index == 1
+    for _ in range(location_card.PULSES):
+        for out in (True, False):
+            await room.until(lambda: sleeps.held == 1)
+            assert [ring_out(room, day) for day in range(3)] == [False, out, False]
+            await sleeps.release()
+    await room.until(lambda: sleeps.held == 0)
+    assert len(sleeps.asked) == 2 * location_card.PULSES
+    room.session.apply_patch(room.tabs._i, {"selected_index": 0})  # as Flutter does
+    await room.session.dispatch_event(room.tabs._i, "change", 0)
+    await room.settle()
+    assert room.tabs.selected_index == 0
+    assert sleeps.held == 0 and len(sleeps.asked) == 2 * location_card.PULSES
+    assert [ring_out(room, day) for day in range(3)] == [False, False, False]
+
+
+def ring_out(room: Room, day: int) -> bool:
+    """Whether the card heading the day's list has its pin's ring out, mid-pulse."""
+    head = room.day_lists()[day].controls[0]
+    (halo,) = [
+        c
+        for c in room.find(ft.Container)
+        if c.animate_scale is not None and head in ancestors(c)
+    ]
+    return halo.scale == location_card.RING_SCALE
+
+
 def card_sleeps(room: Room) -> HeldSleeps:
     """The location card's held sleeps, which the fixture installed."""
     return cast(HeldSleeps, location_card.asyncio)
