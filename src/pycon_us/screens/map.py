@@ -1,183 +1,251 @@
-"""Map (``/map``): the rooms list, P1's one pane (ROOM-01; ux.md §5.8, D-188).
+"""Map (``/map``): Rooms and Floor plans as tabs, one pane shown (MAP-01..03, ux.md §5.8).
 
-Every room of the feed under its floor's heading (``map.toml``'s plans, in the Map's
-order), in natural order on each, with its session count ("Sprints" for a sprint-only
-room, MAP-08) and, while something is on in it, "Now: <title>"
-(``core.rooms.room_list``); then the places that are not rooms, under "Other
-locations". A row pushes the room's detail, one drill level.
-The list recomputes on the minute tick (``use_minute()``, D-175), from ``clock.now()``,
-so the Developer fake clock drives it. Without data it shows the skeleton until the
-first fetch has failed, then "Can't load the rooms" with Try again (D-32, ux.md §4.1).
-Floor plans, the expo and the job fair join as panes in P2 (MAP-01); until then the
-screen has no control for them.
+The tab bar is the body's first row (U10's interim) and the selected pane alone sits
+under it, each pane with its own key, with no swipeable ``TabBarView``: its pages took
+a zoomed plan's horizontal pans (D-312, S7; U110). ``ViewMemory.map_tab`` keeps the
+pane and ``ViewMemory.map_offsets`` each pane's scroll, so another bottom tab and back
+finds both (D-18); ``/map?tab=floor-plans`` opens a pane, an unknown value Rooms. A
+re-tap of the Map tab scrolls the pane shown (D-166). The overflow's "3D venue tour"
+opens ``map.toml``'s ``tour_url`` in the in-app browser (MAP-03, D-182). A year
+without plans shows the rooms alone, without a tab bar. The expo and job fair panes
+join ``PANES`` with #23.
+
+The panes: Rooms in ``screens/map_rooms.py``, Floor plans in ``screens/map_plans.py``.
 """
+
+from dataclasses import dataclass
 
 import flet as ft
 
-from pycon_us import clock
-from pycon_us.core.rooms import RoomEntry, RoomList, count_line, room_list
-from pycon_us.locations import drill_href
-from pycon_us.services import use_services
+from pycon_us.locations import is_top_view, query_of
+from pycon_us.memory import ViewMemory
+from pycon_us.prefs import use_prefs
+from pycon_us.screens.map_plans import FLOOR_PLANS, plans_pane
+from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
+from pycon_us.screens.schedule_days import TAB_HEIGHT, TAB_MS
+from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.state import use_conference
-from pycon_us.theme import use_tokens
+from pycon_us.services.storage import THEME
+from pycon_us.ui.links import open_link
+from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.navigation import use_scroll_to_top
-from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
-from pycon_us.ui.status_strip import StatusStrip, use_minute
-from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.ui.scaffold import AppScaffold, search_button
+from pycon_us.ui.widths import LIST, capped, use_margin
+from pycon_us.year_map import MapData
 
-SCREEN = "map"
-"""The screen's name in its semantics identifiers (decisions §M)."""
+TOUR = "3D venue tour"
+"""The overflow item that opens the venue's 3D tour (MAP-03)."""
+
+
+@dataclass(frozen=True)
+class Pane:
+    """One of the Map's panes, as its tab names it.
+
+    Attributes:
+        slug: Its ``?tab=`` value, ``ViewMemory.map_tab`` and identifier key.
+        label: The tab's text.
+    """
+
+    slug: str
+    label: str
+
+
+PANES = (Pane(ROOMS, "Rooms"), Pane(FLOOR_PLANS, "Floor plans"))
+"""The Map's panes in their tabs' order; the expo and job fair join with #23."""
+
+
+def tab_href(slug: str) -> str:
+    """Return the location that opens the Map on a pane, e.g. ``/map?tab=floor-plans``.
+
+    Args:
+        slug: A ``Pane.slug``.
+    """
+    return f"/{SCREEN}?tab={slug}"
+
+
+def panes_of(data: MapData) -> tuple[Pane, ...]:
+    """Return the panes the year has: Floor plans only when it has plans.
+
+    Args:
+        data: The year's ``map.toml``.
+    """
+    return tuple(pane for pane in PANES if pane.slug != FLOOR_PLANS or data.plans)
+
+
+def asked_pane(memory: ViewMemory, route: str, view_path: str) -> None:
+    """Remember the pane ``?tab=`` names, when the route addresses the Map itself.
+
+    An unknown value is Rooms. A route that addresses another View (a floor viewer on
+    top of the Map, a search over it) says nothing of the Map's pane.
+
+    Args:
+        memory: The process's ``ViewMemory``.
+        route: ``page.route``, query included.
+        view_path: The Map's View path.
+    """
+    if not is_top_view(route, view_path):
+        return
+    asked = query_of(route).get("tab")
+    if asked is not None:
+        memory.map_tab = asked if asked in {pane.slug for pane in PANES} else ROOMS
 
 
 @ft.component
 def Map() -> ft.View:
-    """The Map root: the rooms, then the other locations, each row opening its room."""
+    """The Map root: a tab bar over the one pane picked, Rooms or Floor plans."""
     list_ref, scroll_to_top = use_scroll_to_top()
     margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
-    conference = use_conference()
-    tokens = use_tokens()
-    use_minute()  # "Now:" keeps up with the clock while the list shows
+    prefs = use_prefs()
+    memory = svc.memory
+    _, set_switches = ft.use_state(0)  # a pick re-renders; the memory holds the pane
+    seen = ft.use_ref("")
+    # Each route once, so a pane the user picks is not undone by the same query; a
+    # route, since the floor viewer's way out pops it onto the Map (``?tab=``).
+    if page.route != seen.current:
+        seen.current = page.route
+        asked_pane(memory, page.route, view_path)
+    panes = panes_of(svc.year.map)
+    slugs = [pane.slug for pane in panes]
+    tab = memory.map_tab if memory.map_tab in slugs else ROOMS
 
     @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
+    async def put_back() -> None:
+        offset = memory.map_offsets.get(tab)
+        if not offset:
+            return
+        # A round trip: Flutter has built the pane before it scrolls (D-156).
+        await svc.storage.get(THEME)
+        if list_ref.current is not None:
+            await list_ref.current.scroll_to(offset=offset, duration=0)
+
+    # A pane that shows again, after a pick or a return to the tab, is a new list
+    # at its top: put it where its last scroll ended (D-18).
+    ft.use_effect(put_back, [tab], cleanup=_cancel_on_unmount)
 
     @report_errors
-    def open_schedule() -> None:
-        page.navigate("/schedule")
+    def scrolled(e: ft.OnScrollEvent) -> None:
+        if e.event_type == ft.ScrollType.END:
+            memory.map_offsets[tab] = e.pixels
 
-    data = conference.data
-    rows: list[ft.Control]
-    if data is None and conference.problem is None:
-        # The first fetch runs, or is about to (NEW-03); the strip says so.
-        rows = [StatusStrip(), SkeletonList("Loading rooms")]
-    elif data is None:
-        rows = [
-            StatusStrip(),  # its bar shows a retry; the button below stays in place
-            EmptyState(
-                "Can't load the rooms",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,
-                identifier="map.no_data",
-            ),
-        ]
-    elif not data.rooms:
-        rows = [
-            EmptyState(
-                "No rooms yet",
-                icon=ft.Icons.MEETING_ROOM_OUTLINED,
-                body="Rooms appear here once the schedule lists them.",
-                action="Open schedule",
-                on_action=open_schedule,
-                identifier="map.no_rooms",
-            )
-        ]
+    @report_errors
+    def changed(e: ft.Event[ft.Tabs]) -> None:
+        memory.map_tab = slugs[e.control.selected_index]
+        set_switches(lambda n: n + 1)
+
+    pane: ft.Control
+    if tab == FLOOR_PLANS:
+        pane = plans_pane(
+            svc.year.map.plans, view_path, list_ref, scrolled, margin=margin
+        )
     else:
-        listing = room_list(
-            data,
-            clock.now(),
-            svc.year.content.other_locations,
-            svc.year.map.floors(),
+        pane = RoomsPane(list_ref, scrolled)
+    actions = [search_button(memory, "rooms")]
+    if svc.year.map.tour_url:
+        actions.append(tour_menu(svc, svc.year.map.tour_url))
+    body = pane
+    if len(panes) > 1:
+        body = map_tabs(
+            panes,
+            slugs.index(tab),
+            pane,
+            changed,
+            margin=margin,
+            tab_ms=prefs.motion_ms(TAB_MS),
         )
-        rows = room_rows(listing, view_path, live=tokens.live)
-    return AppScaffold(
-        title="Map",
-        actions=[search_button(svc.memory, "rooms")],
-        body=ft.ListView(rows, expand=True, ref=list_ref, padding=sides(margin)),
-        on_retap=scroll_to_top,
-    )
+    return AppScaffold(title="Map", actions=actions, body=body, on_retap=scroll_to_top)
 
 
-def room_rows(listing: RoomList, view_path: str, *, live: str) -> list[ft.Control]:
-    """Return the list's rows: a level-2 heading per floor, then a row per room.
+def map_tabs(
+    panes: tuple[Pane, ...],
+    selected: int,
+    pane: ft.Control,
+    on_change: ft.ControlEventHandler[ft.Tabs],
+    *,
+    margin: float,
+    tab_ms: int,
+) -> ft.Control:
+    """Return the tab bar over the one pane shown, with no ``TabBarView`` (D-312).
 
-    The floors come in the Map's order of the plans, the other locations last.
-
-    Args:
-        listing: The rooms by floor and the other locations (``room_list()``).
-        view_path: This View's path, so a row's detail is pushed on top of it.
-        live: The "happening now" colour (``Tokens.live``).
-    """
-    rows: list[ft.Control] = []
-    for heading, entries in (
-        *((floor.title, floor.rooms) for floor in listing.floors),
-        ("Other locations", listing.other_locations),
-    ):
-        if entries:
-            rows.append(SectionHeader(heading))
-            rows.extend(room_row(entry, view_path, live=live) for entry in entries)
-    return rows
-
-
-def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
-    """Return one room's row: its name, its session count and what is on in it now.
-
-    A ``LinkTile``, so it is one node for screen readers, read as one phrase ("Room
-    103ABC, 26 sessions, Now: Building X"), and a tap pushes the room. The count keeps
-    its place under the name in every row; the "Now:" lines, when there are any, come
-    under it in the ``live`` colour, and their words say the same, so colour is never
-    the only signal (D-33).
-
-    The count is every session listed under the room, poster details included, as the
-    room's detail lists them (ROOM-02) and as Ionic counted ("Expo Hall AB 35"), while
-    "Now:" follows Now & Next's timeline-only rule (D-179): so Expo Hall AB counts 35
-    where the Schedule shows 10 rows there. A sprint-only room, which has no sessions,
-    says "Sprints" instead (MAP-08).
-
-    The title of the session on is cut at three lines, as a session row's title is
-    (ux.md §3.6); "and 1 more" is a line of its own, so the cut never hides it.
+    Flutter's tab bar reads each tab as its label, its place and its selection
+    ("Floor plans, Tab 2 of 2, selected"); its identifier is ``map.tab.<slug>``. One
+    line each, in a 56 dp tab that keeps the largest iOS text (``TAB_HEIGHT``), and
+    a scrollable bar, as four panes (#23) fit no phone at large text.
 
     Args:
-        entry: The room and the sessions on in it.
-        view_path: This View's path.
-        live: The "happening now" colour (``Tokens.live``).
+        panes: The year's panes, in order.
+        selected: The index of the pane shown.
+        pane: The pane shown, keyed by its slug.
+        on_change: Called when the user picks a tab.
+        margin: The screen's side margin (``use_margin()``).
+        tab_ms: How long the indicator slides (``prefs.motion_ms()``).
     """
-    room = entry.room
-    count = ft.Text(count_line(room))
-    subtitle: ft.Control = count
-    if lines := now_lines(entry):
-        title, *more = lines
-        subtitle = ft.Column(
+    tabs: list[ft.Control] = [
+        ft.Tab(
+            height=TAB_HEIGHT,
+            # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
+            label=ft.Semantics(
+                identifier=f"{SCREEN}.tab.{p.slug}", content=ft.Text(p.label)
+            ),
+        )
+        for p in panes
+    ]
+    return ft.Tabs(
+        length=len(panes),
+        selected_index=selected,
+        animation_duration=ft.Duration(milliseconds=tab_ms),
+        on_change=on_change,
+        expand=True,
+        content=ft.Column(
             [
-                count,
-                ft.Text(
-                    title,
-                    color=live,
-                    max_lines=3,
-                    overflow=ft.TextOverflow.ELLIPSIS,
+                capped(
+                    ft.TabBar(
+                        tabs, scrollable=True, tab_alignment=ft.TabAlignment.START
+                    ),
+                    margin,
                 ),
-                *(ft.Text(line, color=live) for line in more),
+                pane,
             ],
-            spacing=2,
-        )
-    return LinkTile(
-        room.name,
-        drill_href(view_path, "room", room.slug),
-        icon=ft.Icons.PLACE_OUTLINED,
-        subtitle=subtitle,
-        identifier=f"{SCREEN}.room.{room.slug}",
+            spacing=0,
+            expand=True,
+        ),
     )
 
 
-def now_lines(entry: RoomEntry) -> list[str]:
-    """Return what is on in the room: ["Now: <title>"], or [] when nothing is.
+def tour_menu(svc: Services, url: str) -> ft.Control:
+    """Return the overflow with "3D venue tour", which opens ``url`` (MAP-03).
 
-    With several sessions on, the one that started last is named, and a second line
-    counts the others: ["Now: Organizing IRL meetups", "and 1 more"].
+    A web page by the link rule: the in-app browser, never an iframe pane, which took
+    pans in Ionic (D-182). Read "3D venue tour, Opens in browser".
+
+    Args:
+        svc: The session's services, for the launcher.
+        url: The year's tour (``MapData.tour_url``).
     """
-    if not entry.on_now:
-        return []
-    first, *rest = entry.on_now
-    lines = [f"Now: {first.name}"]
-    if rest:
-        lines.append(f"and {len(rest)} more")
-    return lines
+
+    @report_errors
+    async def open_tour() -> None:
+        await open_link(svc, url)
+
+    return overflow_menu(
+        f"{SCREEN}.overflow",
+        [
+            menu_item(
+                ft.Icons.VIEW_IN_AR_OUTLINED,
+                TOUR,
+                open_tour,
+                identifier=f"{SCREEN}.tour",
+                link=True,
+            )
+        ],
+    )
+
+
+def _cancel_on_unmount() -> None:
+    """The scroll's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
+
+    Without one, a scroll still waiting when the user leaves would reach a list that
+    has left the page.
+    """

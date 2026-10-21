@@ -42,6 +42,10 @@ class ViewMemory:
             each search starts empty (D-193).
         search_scope: The search's scope, one of ``core.search.SCOPES``, for a Search
             View that mounts without its ``?scope=`` (a deep entry below a result).
+        map_tab: The Map's pane, a ``screens.map.PANES`` slug; ``?tab=`` seeds it
+            (MAP-01).
+        map_offsets: Each Map pane's scroll offset when its last scroll ended, by
+            slug, in logical pixels: the Map puts it back when the pane shows again.
         room_highlights: The session each mounted room View has highlighted, by its
             View path (ROOM-03): a View rebuilt in a new session from the same
             location (D-143) finds its own and neither scrolls nor lights up again
@@ -67,6 +71,8 @@ class ViewMemory:
     jumped_on: date | None = None
     search_query: str = ""
     search_scope: str = "all"
+    map_tab: str = "rooms"
+    map_offsets: dict[str, float] = field(default_factory=dict)
     room_highlights: dict[str, str] = field(default_factory=dict)
     plan_pins: dict[str, str] = field(default_factory=dict)
     spotlight: str = ""

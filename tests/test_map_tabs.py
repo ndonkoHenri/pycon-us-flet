@@ -1,0 +1,307 @@
+"""Tests for the Map's tabs, its Floor plans pane and its app bar (#391; MAP-01..03).
+
+``Map`` runs in a real Flet session (``tests/sessions.py``) over the 2026 feed and
+``map.toml``. ``ListView.scroll_to`` is recorded instead of sent to a client. The Rooms
+pane's rows are ``test_map.py``'s. How the tabs and cards look and read, and that the
+pane keeps its place on the device, are checked on devices (the PR).
+"""
+
+import dataclasses
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AsyncExitStack
+from pathlib import Path
+from typing import Any, cast
+
+import flet as ft
+import pytest
+
+from pycon_us.config import YearData, load_year
+from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
+from pycon_us.screens import map as screen
+from pycon_us.screens import map_plans
+from pycon_us.state import Conference
+from pycon_us.year_map import MapData
+from tests import sessions
+from tests.feeds import processed
+from tests.sessions import Shown, menu_text, text_of
+from tests.trees import descendants
+
+YEAR = load_year(2026)
+PLAN_IDS = ["campus", "concourse", "upper", "arena", "seaside"]
+"""The 2026 plans, in ``map.toml``'s order (MAP-02)."""
+
+
+@dataclasses.dataclass
+class MapShown(Shown):
+    """The harness's ``Shown`` on the Map, with the scrolls its lists were asked for."""
+
+    scrolls: list[tuple[str, dict[str, Any]]] = dataclasses.field(default_factory=list)
+    """Each ``scroll_to``: the list's key and its arguments."""
+
+    @property
+    def tabs(self) -> ft.Tabs:
+        """The Map's one ``Tabs``."""
+        (found,) = self.find(ft.Tabs)
+        return found
+
+    @property
+    def pane(self) -> ft.ListView:
+        """The one pane shown: the ``ListView`` under the tab bar."""
+        (found,) = self.find(ft.ListView)
+        return found
+
+    def cards(self) -> list[str]:
+        """The Floor plans cards' identifiers, in the pane's order."""
+        return [
+            str(node.identifier)
+            for row in self.pane.controls
+            for node in descendants(row)
+            if isinstance(node, ft.Semantics)
+            and str(node.identifier or "").startswith("map.plan.")
+        ]
+
+    async def pick(self, index: int) -> None:
+        """Pick a tab as the user does: Flutter moves the selection, then reports it."""
+        self.session.apply_patch(self.tabs._i, {"selected_index": index})
+        await self.session.dispatch_event(self.tabs._i, "change", index)
+        await self.settle()
+
+    async def scroll_end(self, pixels: float) -> None:
+        """What Flutter sends when a scroll of the pane shown ends at ``pixels``."""
+        data = {
+            "event_type": "end",
+            "pixels": pixels,
+            "min_scroll_extent": 0.0,
+            "max_scroll_extent": 4000.0,
+            "viewport_dimension": 700.0,
+        }
+        await self.event(self.pane, "scroll", data)
+
+
+type Render = Callable[..., Awaitable[MapShown]]
+
+
+@pytest.fixture
+async def render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[Render]:
+    """Yield a function that opens the Map at a route and returns its ``MapShown``.
+
+    The route is ``/map`` unless the test gives another (a query); the view memory and
+    the year can be given too, a memory kept across sessions as the app keeps it.
+    """
+    shown_now: list[MapShown] = []
+
+    async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
+        shown_now[-1].scrolls.append((str(self.key), kwargs))
+
+    monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
+    data = processed(2026)
+
+    async def show(
+        stack: AsyncExitStack,
+        route: str = "/map",
+        *,
+        memory: ViewMemory | None = None,
+        year: YearData = YEAR,
+    ) -> MapShown:
+        def make(*args: Any, **kwargs: Any) -> MapShown:
+            made = MapShown(*args, **kwargs)
+            shown_now.append(made)
+            return made
+
+        return await stack.enter_async_context(
+            sessions.showing(
+                screen.Map,
+                screen,
+                year=year,
+                conference=Conference(data=data, source="bundled", version=1),
+                tmp_path=tmp_path,
+                monkeypatch=monkeypatch,
+                view_path="/map",
+                prefs=Prefs(loaded=True),
+                memory=memory,
+                route=route,
+                kind=make,
+            )
+        )
+
+    async with AsyncExitStack() as stack:
+
+        async def opened(*args: Any, **kwargs: Any) -> MapShown:
+            return await show(stack, *args, **kwargs)
+
+        yield opened
+
+
+# ------------------------------------------------------------------ the tabs
+
+
+async def test_the_map_opens_on_rooms_under_two_named_tabs(render: Render) -> None:
+    """Rooms and Floor plans are the first row, Rooms shown, with no ``TabBarView``.
+
+    Each tab carries ``map.tab.<slug>``; the pane shown is the rooms' keyed list,
+    alone under the bar (D-312).
+    """
+    shown = await render()
+    assert shown.tabs.length == 2
+    assert shown.tabs.selected_index == 0
+    labels = [text_of(tab.label) for tab in shown.find(ft.Tab)]
+    assert sorted(labels) == ["Floor plans", "Rooms"]
+    assert {str(n.identifier) for n in shown.nodes("map.tab.")} == {
+        "map.tab.rooms",
+        "map.tab.floor-plans",
+    }
+    assert shown.find(ft.TabBarView) == []
+    assert shown.pane.key == "rooms"
+    assert shown.nodes("map.room.")
+    assert shown.titles[-1] == "Map"
+
+
+async def test_floor_plans_lists_a_card_per_plan_in_the_map_s_order(
+    render: Render,
+) -> None:
+    """``?tab=floor-plans`` opens the pane: a card per plan, in ``map.toml``'s order."""
+    shown = await render("/map?tab=floor-plans")
+    assert shown.tabs.selected_index == 1
+    assert shown.pane.key == "floor-plans"
+    assert shown.cards() == [f"map.plan.{plan}" for plan in PLAN_IDS]
+    assert shown.memory.map_tab == "floor-plans"
+
+
+@pytest.mark.parametrize("route", ["/map?tab=nowhere", "/map?tab="])
+async def test_an_unknown_tab_falls_back_to_rooms(render: Render, route: str) -> None:
+    """A ``?tab=`` that names no pane opens Rooms, and the memory says Rooms."""
+    memory = ViewMemory(map_tab="floor-plans")
+    shown = await render(route, memory=memory)
+    assert shown.pane.key == "rooms"
+    assert memory.map_tab == "rooms"
+
+
+async def test_a_picked_tab_stays_across_a_new_session(render: Render) -> None:
+    """A tab the user picks shows its pane and is remembered: a return finds it (D-18).
+
+    The second Map, in a new session with the same memory, stands in for another
+    bottom tab and back (a tab root is built again) and for an activity recreation.
+    """
+    memory = ViewMemory()
+    shown = await render(memory=memory)
+    await shown.pick(1)
+    assert shown.pane.key == "floor-plans"
+    assert memory.map_tab == "floor-plans"
+    again = await render(memory=memory)
+    assert again.tabs.selected_index == 1
+    assert again.pane.key == "floor-plans"
+
+
+async def test_a_pane_s_scroll_is_remembered_and_put_back(render: Render) -> None:
+    """Where a pane's scroll ended is kept per pane and put back when it shows again.
+
+    A pane that never scrolled is left at its top: nothing moves by itself (D-18).
+    """
+    memory = ViewMemory()
+    shown = await render(memory=memory)
+    assert shown.scrolls == []
+    await shown.scroll_end(640.0)
+    await shown.pick(1)
+    await shown.scroll_end(120.0)
+    assert memory.map_offsets == {"rooms": 640.0, "floor-plans": 120.0}
+    assert shown.scrolls == []  # Floor plans had not scrolled before
+    await shown.pick(0)
+    assert shown.scrolls == [("rooms", {"offset": 640.0, "duration": 0})]
+    again = await render(memory=memory)
+    assert again.scrolls == [("rooms", {"offset": 640.0, "duration": 0})]
+
+
+async def test_a_retap_scrolls_the_pane_shown_to_its_top(render: Render) -> None:
+    """Re-tapping the Map tab scrolls the pane shown, whichever it is (D-166)."""
+    shown = await render("/map?tab=floor-plans")
+    retap = shown.retaps[-1]
+    assert retap is not None
+    await cast(Callable[[], Awaitable[None]], retap)()
+    ((key, asked),) = shown.scrolls
+    assert (key, asked["offset"]) == ("floor-plans", 0)
+
+
+def test_a_route_to_another_view_says_nothing_of_the_pane() -> None:
+    """Only a route that addresses the Map itself picks its pane."""
+    memory = ViewMemory(map_tab="floor-plans")
+    screen.asked_pane(memory, "/map/plan/upper?tab=rooms", "/map")
+    screen.asked_pane(memory, "/search?scope=rooms&tab=rooms", "/map")
+    screen.asked_pane(memory, "/map", "/map")  # no query: as it was
+    assert memory.map_tab == "floor-plans"
+    screen.asked_pane(memory, "/map?tab=rooms", "/map")
+    assert memory.map_tab == "rooms"
+    assert screen.tab_href("floor-plans") == "/map?tab=floor-plans"
+
+
+async def test_a_year_without_plans_shows_the_rooms_without_tabs(
+    render: Render,
+) -> None:
+    """With no plans, Floor plans is no pane: the rooms alone, no bar and no tour."""
+    year = dataclasses.replace(YEAR, map=MapData())
+    assert screen.panes_of(year.map) == (screen.PANES[0],)
+    shown = await render("/map?tab=floor-plans", year=year)
+    assert shown.find(ft.Tabs) == []
+    assert shown.pane.key == "rooms"
+    assert shown.find(ft.PopupMenuButton) == []
+
+
+# ------------------------------------------------------------------ the cards
+
+
+async def test_a_card_reads_as_one_button_and_pushes_its_plan(render: Render) -> None:
+    """A card is one node, its plan and what is on it, and a tap pushes the viewer.
+
+    Its thumbnail is the bundled 16:10 crop, said by the card's phrase only, and its
+    icon says it opens full screen (MAP-02).
+    """
+    shown = await render("/map?tab=floor-plans")
+    node = shown.node("map.plan.concourse")
+    assert node.label == (
+        "Concourse level floor plan, Tutorials, talk tracks, registration, expo entry"
+    )
+    assert node.button and node.exclude_semantics
+    (image,) = [
+        i for i in shown.find(ft.Image) if i.src == "maps/2026/concourse-thumb.webp"
+    ]
+    assert image.aspect_ratio == map_plans.THUMB_RATIO
+    assert image.fit == ft.BoxFit.COVER
+    assert image.exclude_from_semantics
+    icons = [i.icon for i in shown.find(ft.Icon)]
+    assert icons.count(ft.Icons.OPEN_IN_FULL) == len(PLAN_IDS)
+    (tile,) = [c for c in shown.find(ft.Container) if c.content is node]
+    await shown.click(tile)
+    assert shown.went == ["/map/plan/concourse"]
+
+
+def test_a_plan_without_a_subtitle_is_read_by_its_name() -> None:
+    """A plan with nothing said of what is on it reads "<title> floor plan"."""
+    plan = YEAR.map.plans[0]
+    bare = dataclasses.replace(plan, subtitle="")
+    assert map_plans.plan_phrase(bare) == "Campus overview floor plan"
+
+
+# ------------------------------------------------------------------ the app bar
+
+
+async def test_the_app_bar_searches_rooms_and_opens_the_tour(render: Render) -> None:
+    """Search opens rooms' scope; the overflow's tour opens in the in-app browser.
+
+    The tour item is a link, read "3D venue tour, Opens in browser" (MAP-03, D-182).
+    """
+    shown = await render()
+    (search,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Search"]
+    await shown.click(search)
+    assert shown.went == ["/search?scope=rooms"]
+    assert shown.memory.search_base == "/map"
+    (item,) = shown.find(ft.PopupMenuItem)
+    text = menu_text(item)
+    assert text.value == screen.TOUR
+    assert text.semantics_label == "3D venue tour\nOpens in browser"
+    assert shown.node("map.overflow")
+    await shown.click(item)
+    assert shown.launcher.launched == [
+        (YEAR.map.tour_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
+    ]
