@@ -2,13 +2,15 @@
 
 ``map.toml`` replaces Ionic's ``ROOM_LOCATIONS`` and ``VENUE_LOCATIONS``: a ``[[plans]]``
 table of the venue's floor plans (images bundled under ``src/assets/``, D-312), a
-``[[pins]]`` table of the spots marked on them, rooms and venue spots alike, and the
+``[[pins]]`` table of the spots marked on them, rooms and venue spots alike, a
+``[[booths]]`` table of the expo's booths on the ``expo`` plan (EXPO-02, D-254), and the
 venue's 3D tour. ``config.load_year()`` builds it into ``MapData`` through
 ``year_schema`` and checks it with ``check_map()``; ``YearData.map`` holds it, and
 ``MapData.room_pin()`` finds a feed room's pin by ``normalize_room_key()``. A year
 without the file has no plans and no pins. Whether every feed room has a pin is a test
 over the year's snapshot (``tests/test_year_map.py``), since the app never parses the
-snapshot just to check it (D-38).
+snapshot just to check it (D-38); so are the expo's gaps, the booths without an
+exhibitor and the exhibitors without a booth on the plan (``core/expo.py``).
 """
 
 import re
@@ -27,6 +29,9 @@ ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 ``flet build`` bundles ``src/`` whole, so the files are there on the phone too, and it
 is the app's assets folder (``ft.run``'s default ``assets_dir``, next to ``main.py``).
 """
+
+EXPO_PLAN = "expo"
+"""The id of the plan the booths are on: a year with booths has a plan of this id."""
 
 _PIN_KEY = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 
@@ -84,17 +89,44 @@ class Pin:
 
 
 @dataclass(frozen=True)
+class Booth:
+    """One booth on the expo plan, a ``[[booths]]`` entry: a rectangle to tap (D-312).
+
+    The rectangle is in ratios of the plan, so it lands on the image at any size.
+
+    Attributes:
+        number: Its number as the feed's ``booth_number`` writes it ("613"), unique in
+            the year; numbers compare as text, never as integers.
+        x: Its left edge's distance from the plan's left edge, as a ratio of the width.
+        y: Its top edge's distance from the plan's top edge, as a ratio of the height.
+        w: Its width, as a ratio of the plan's width.
+        h: Its height, as a ratio of the plan's height.
+        label: The name of a booth the feed gives no exhibitor ("Attendee lounge",
+            D-254); empty for the others, which their sponsors name.
+    """
+
+    number: str
+    x: float
+    y: float
+    w: float
+    h: float
+    label: str = ""
+
+
+@dataclass(frozen=True)
 class MapData:
     """The year's ``map.toml``: its floor plans, its pins and the 3D tour.
 
     Attributes:
         plans: The floor plans, in the Map's order (MAP-02).
         pins: The rooms and venue spots marked on them.
+        booths: The expo's booths, on the ``expo`` plan; empty for a year without.
         tour_url: The venue's 3D tour, opened as a link (MAP-03); empty without one.
     """
 
     plans: tuple[Plan, ...] = ()
     pins: tuple[Pin, ...] = ()
+    booths: tuple[Booth, ...] = ()
     tour_url: str = ""
 
     def plan(self, plan_id: str) -> Plan | None:
@@ -139,7 +171,10 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
 
     Plans: unique ids, a title, a positive size, and image and thumbnail files that
     exist. Pins: unique keys of ``a-z0-9`` words joined by ``-``, a label, a plan that
-    exists, and a position within the plan (0 to 100 percent). The tour: ``https``.
+    exists, and a position within the plan (0 to 100 percent). Booths: an ``expo`` plan
+    to be on, unique numbers that are not blank, a label that is not blank when given,
+    and a rectangle inside the plan (ratios from 0 to 1, a positive size, ``x + w`` and
+    ``y + h`` at most 1). The tour: ``https``.
 
     Args:
         data: The year's map data.
@@ -150,6 +185,12 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
         YearDataError: An entry breaks a rule; the message names the file, the entry
             and the field (``2026/map.toml: pins[3].x: 120.0 is not between 0 and 100``).
     """
+    _check_plans_and_pins(data, file, assets_dir)
+    _check_booths(data, file)
+
+
+def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
+    """Check the tour, the plans and the pins (``check_map()``'s first half)."""
     if data.tour_url:
         check_https(data.tour_url, file, "tour_url")
     plan_ids: set[str] = set()
@@ -187,6 +228,38 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
             if not 0 <= value <= 100:
                 raise YearDataError(
                     f"{file}: {key}.{field}: {value} is not between 0 and 100"
+                )
+
+
+def _check_booths(data: MapData, file: str) -> None:
+    """Check the booths (``check_map()``'s second half)."""
+    if data.booths and data.plan(EXPO_PLAN) is None:
+        raise YearDataError(f"{file}: booths: no plan {EXPO_PLAN!r} to put them on")
+    numbers: set[str] = set()
+    for index, booth in enumerate(data.booths):
+        key = f"booths[{index}]"
+        check_text(booth.number, file, f"{key}.number")
+        if booth.number in numbers:
+            raise YearDataError(
+                f"{file}: {key}.number: {booth.number!r} is listed twice"
+            )
+        numbers.add(booth.number)
+        if booth.label:
+            check_text(booth.label, file, f"{key}.label")
+        for field in ("x", "y", "w", "h"):
+            value = getattr(booth, field)
+            if not 0 <= value <= 1:
+                raise YearDataError(
+                    f"{file}: {key}.{field}: {value} is not between 0 and 1"
+                )
+        for field in ("w", "h"):
+            if getattr(booth, field) <= 0:
+                raise YearDataError(f"{file}: {key}.{field}: must be positive")
+        for start, size in (("x", "w"), ("y", "h")):
+            end = getattr(booth, start) + getattr(booth, size)
+            if end > 1:
+                raise YearDataError(
+                    f"{file}: {key}.{size}: {start} + {size} is {end:g}, past the plan"
                 )
 
 
