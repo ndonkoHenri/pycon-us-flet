@@ -75,7 +75,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip, use_minute
+from pycon_us.ui.status_strip import strip_view, use_minute, use_strip
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 logger = logging.getLogger(__name__)
@@ -100,6 +100,9 @@ def Schedule() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     use_minute()  # today, its now line and the button follow the clock (D-204)
+    # The strip's state is the screen's: at the largest sizes the memoised day lists
+    # show it, and only a value may go there (F150, D-345).
+    strip = use_strip(auto_refresh=True)
     now = clock.now()  # the Developer fake clock moves it (D-43)
     current = today(now, info.zone)
     all_days = days(data, info.first_day, info.last_day) if data else ()
@@ -312,7 +315,7 @@ def Schedule() -> ft.View:
             actions=[search_button(memory, "sessions"), ScheduleOverflow()],
             body=ft.ListView(
                 [
-                    StatusStrip(auto_refresh=True),
+                    strip_view(strip, tokens),
                     NoDataState(
                         conference.problem,
                         on_retry=try_again,
@@ -330,6 +333,7 @@ def Schedule() -> ft.View:
         # The device's offset now: the packaged app's Python reads the device's
         # zone (F60), and the minute tick follows a DST change.
         zone_note(now, info.zone, info.time_zone_name, now.astimezone().utcoffset()),
+        strip,
     )
     pages: list[ft.Control] = []
     for day in all_days:
@@ -392,7 +396,7 @@ def Schedule() -> ft.View:
                 # the day pages' place in the column (#313).
                 ft.Container()
                 if prefs.time_above
-                else capped(ScheduleHead(head, track_filter.show_all), margin),
+                else capped(ScheduleHead(head, track_filter.show_all, tokens), margin),
                 ft.Stack(
                     [landing_note(said), ft.TabBarView(pages)],
                     fit=ft.StackFit.EXPAND,

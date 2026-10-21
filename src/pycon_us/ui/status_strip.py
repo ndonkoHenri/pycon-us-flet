@@ -2,7 +2,9 @@
 
 ``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
 (U1) arrives (D-32, D-146); the screens that show the feed's state place it under
-their app bar. ``zone_note_line()`` is the Schedule's line under it, "Times are
+their app bar. It is ``use_strip()``, which reads the feed's state and ticks, with
+``strip_view()``, which draws a ``Strip`` value: the Schedule calls the two itself, so
+its memoised day lists get only the value (D-345, F150). ``zone_note_line()`` is the Schedule's line under it, "Times are
 Pacific Time (PDT)", while the device's clock differs from the conference's (D-35,
 D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 ``use_minute()`` is that tick as a hook, for any other view that depends on
@@ -12,6 +14,8 @@ D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 pages that say it whether or not it is fresh (D-292).
 """
 
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime, tzinfo
 
 import flet as ft
@@ -22,7 +26,7 @@ from pycon_us.feed_refresh import Source, Status
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
-from pycon_us.theme import use_tokens
+from pycon_us.theme import Tokens, use_tokens
 
 STATUS_ICONS: dict[Status, ft.IconData] = {
     "refreshing": ft.Icons.SYNC,
@@ -123,21 +127,37 @@ TICK_SECONDS = 60
 """How often a shown strip reads the clock again: its age, and fresh turning stale (D-40)."""
 
 
-@ft.component
-def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
-    """Say when the schedule on screen is not fresh, and offer Refresh (D-32).
+@dataclass(frozen=True)
+class Strip:
+    """What the status strip shows, from ``use_strip()``: a plain value.
 
-    Shown while a refresh the user asked for runs, when the data is stale, and after a
-    failed refresh; hidden when fresh. A live region, so a screen reader announces each
-    change. An automatic refresh is quiet (D-181): the line, its icon and the button
-    stay as they were, and only the 2 dp bar runs, so the strip stays hidden over fresh
-    data and the live region changes only when the outcome does.
+    Equal from render to render while the strip's words stay the same, so a memoised
+    component given it stays skipped (D-153). The Schedule hands it to its day lists
+    at the largest text sizes (D-345): a component that re-rendered on its own in such
+    a list would lose its contexts (F150).
 
-    While it is mounted and the app is in the foreground, it ticks every
-    ``TICK_SECONDS`` (``Services.run_every``): it re-renders when the minute has
-    changed, so its age keeps up and it appears when the data turns stale, and with
-    ``auto_refresh`` it starts a refresh whenever one is due (D-40). Leaving the
-    screen stops the ticks, and so does the background.
+    Attributes:
+        status: ``Conference.status()``.
+        line: ``strip_line()``'s words; None hides the strip (fresh data).
+        refreshing: Any refresh runs, a quiet one too (D-181): the bar shows.
+        on_refresh: What Refresh does; the same callable for the strip's life.
+    """
+
+    status: Status
+    line: str | None
+    refreshing: bool
+    on_refresh: Callable[[], Awaitable[None]]
+
+
+def use_strip(*, auto_refresh: bool = False) -> Strip:
+    """Read what the status strip shows, and keep it up to date (D-32, D-40).
+
+    A hook (D-70). While the calling component is mounted and the app is in the
+    foreground, it ticks every ``TICK_SECONDS`` (``Services.run_every``): it
+    re-renders the caller when the minute has changed, so the strip's age keeps up and
+    it appears when the data turns stale, and with ``auto_refresh`` it starts a
+    refresh whenever one is due (D-40). Leaving the screen stops the ticks, and so
+    does the background.
 
     Args:
         auto_refresh: True on Now and Schedule, the screens that refresh the feed
@@ -146,7 +166,6 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     page = ft.context.page
     svc = use_services()
     conference = use_conference()
-    tokens = use_tokens()
     _, set_minute = ft.use_state(current_minute)
     info = svc.year.conference
     status = conference.status(info)
@@ -171,6 +190,37 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
+    on_refresh = ft.use_callback(refresh, [conference, svc])
+    return Strip(status, line, conference.refreshing, on_refresh)
+
+
+@ft.component
+def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
+    """Say when the schedule on screen is not fresh, and offer Refresh (D-32).
+
+    ``use_strip()`` with ``strip_view()``: the strip, its tick and, with
+    ``auto_refresh``, the refreshes that fall due.
+
+    Args:
+        auto_refresh: True on Now and Schedule (``use_strip()``, D-40).
+    """
+    return strip_view(use_strip(auto_refresh=auto_refresh), use_tokens())
+
+
+def strip_view(strip: Strip, tokens: Tokens) -> ft.Control:
+    """Return the status strip that ``strip`` describes; no hooks (D-32, D-146).
+
+    Shown while a refresh the user asked for runs, when the data is stale, and after a
+    failed refresh; hidden when fresh. A live region, so a screen reader announces each
+    change. An automatic refresh is quiet (D-181): the line, its icon and the button
+    stay as they were, and only the 2 dp bar runs, so the strip stays hidden over fresh
+    data and the live region changes only when the outcome does.
+
+    Args:
+        strip: What it shows (``use_strip()``).
+        tokens: The scheme's tokens (D-150).
+    """
+    status = strip.status
     asked = status == "refreshing"  # the user's refresh; an automatic one is quiet
     icon = ft.Icon(
         STATUS_ICONS.get(status, ft.Icons.UPDATE),  # fresh: hidden, any icon
@@ -181,7 +231,7 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         color=ft.Colors.ON_SURFACE_VARIANT if asked else tokens.warning,
     )
     text = ft.Text(
-        line or "",
+        strip.line or "",
         theme_style=ft.TextThemeStyle.BODY_SMALL,
         color=ft.Colors.ON_SURFACE,
         # Its own width up to what is left beside the icon: wide enough to wrap,
@@ -190,11 +240,11 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         expand_loose=True,
     )
     # Enabled during a quiet refresh: a tap joins it and makes it the user's (D-181).
-    button = ft.TextButton("Refresh", on_click=refresh, disabled=asked)
+    button = ft.TextButton("Refresh", on_click=strip.on_refresh, disabled=asked)
     progress = ft.ProgressBar(
         bar_height=PROGRESS_HEIGHT,
         value=None,  # indeterminate
-        visible=conference.refreshing,  # any refresh, the quiet ones too (D-181)
+        visible=strip.refreshing,  # any refresh, the quiet ones too (D-181)
         # No label: the line says it, and the strip's node would say it twice.
     )
     # The bar's slot keeps its height when the bar hides, so the strip and the list
@@ -234,7 +284,7 @@ def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
         identifier="app.status",
         container=True,
         live_region=True,
-        visible=line is not None,
+        visible=strip.line is not None,
         content=ft.Container(
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             # In HC the fill is the surface: lines above and below draw the band.

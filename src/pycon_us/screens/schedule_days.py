@@ -278,7 +278,7 @@ def _DayList(
         if now is not None:
             items.insert(now.index, NowLine(now.time, day, on_measure))
     if head is not None:  # it scrolls away with the slots (D-345)
-        top = ListHead(head, on_clear_filters, day, on_measure, key=HEAD_KEY)  # pyright: ignore[reportCallIssue]
+        top = ListHead(head, on_clear_filters, tokens, day, on_measure, key=HEAD_KEY)  # pyright: ignore[reportCallIssue]
         items.insert(0, top)
     return ft.ListView(
         items,

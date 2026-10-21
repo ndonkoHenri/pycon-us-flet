@@ -406,6 +406,10 @@ class Hooks:
 
         return self.state, set_state
 
+    def use_callback(self, fn: Callable[..., Any], dependencies: Any = None) -> Any:
+        """Return ``fn`` itself: one render has nothing to keep it stable across."""
+        return fn
+
 
 class QueuedWrite:
     """Holds the feed cache's write in its worker thread, before the writers' lock.

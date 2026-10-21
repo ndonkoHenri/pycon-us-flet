@@ -19,6 +19,7 @@ jump lands, how the tabs read at 200 % and what TalkBack says are device checks 
 """
 
 import asyncio
+import gc
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -47,7 +48,8 @@ from pycon_us.screens import schedule_days, schedule_head, schedule_now
 from pycon_us.services import Services
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference
-from pycon_us.ui import scrolling
+from pycon_us.theme import Tokens
+from pycon_us.ui import scrolling, status_strip
 from tests import sessions
 from tests.fakes import MemoryPrefs, MemorySemantics
 from tests.feeds import changed, processed
@@ -89,7 +91,7 @@ class Shown(sessions.Shown):
     scrolls: list[tuple[ft.ListView, dict[str, Any]]] = field(default_factory=list)
     """Each ``ListView.scroll_to`` asked: the list and its arguments."""
     strips: list[bool] = field(default_factory=list)
-    """Each ``StatusStrip``'s ``auto_refresh``, as the screen placed it."""
+    """Each ``use_strip()``'s ``auto_refresh``, as the screen asked for it."""
     slots: list[str] = field(default_factory=list)
     """The time labels of the slot bodies that ran, in order."""
     leave: Callable[[], None] = lambda: None
@@ -281,9 +283,12 @@ async def shown(
             )
         )
 
-    @ft.component
-    def Strip(*, auto_refresh: bool = False) -> ft.Control:
+    def recorded_strip(*, auto_refresh: bool = False) -> status_strip.Strip:
         sessions.current(Shown).strips.append(auto_refresh)
+        # The real strip, but a minute tick (``Shown.at``) starts no feed refresh.
+        return status_strip.use_strip(auto_refresh=False)
+
+    def strip_stand_in(strip: status_strip.Strip, tokens: Tokens) -> ft.Control:
         return ft.Text("strip")
 
     def counted_slot(label: str, slot_rows: Any, *, above: bool) -> ft.Control:
@@ -309,8 +314,9 @@ async def shown(
     monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
     monkeypatch.setattr(Services, "run_every", run_every)
     monkeypatch.setattr(screen, "jump_to_key", recorded_jump)
-    monkeypatch.setattr(screen, "StatusStrip", Strip)
-    monkeypatch.setattr(schedule_head, "StatusStrip", Strip)
+    monkeypatch.setattr(screen, "use_strip", recorded_strip)
+    monkeypatch.setattr(screen, "strip_view", strip_stand_in)
+    monkeypatch.setattr(schedule_head, "strip_view", strip_stand_in)
     monkeypatch.setattr(schedule_days, "slot_layout", counted_slot)
 
     @ft.component
@@ -738,6 +744,28 @@ async def test_a_star_tap_re_renders_one_slot_and_one_row(
     assert schedule.favorites.ids == {TALK}
     assert schedule.rows == [TALK]
     assert schedule.slots == ["10:30 AM"]
+
+
+async def test_at_the_largest_text_the_screen_still_re_renders_after_a_minute_tick(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F150 (#586): nothing under a skipped day list re-renders on its own.
+
+    The head's strip in each list once ticked by itself: after a re-render that skipped
+    the lists, the list it was built in was gone, so its tick lost the contexts and
+    raised, and Flet re-rendered nothing more in the session. With the real strip, a
+    star tap (the lists skipped), a collection and a minute tick, the next star tap
+    still re-renders its row.
+    """
+    monkeypatch.setattr(schedule_head, "strip_view", status_strip.strip_view)
+    schedule = await shown(time_above=True)
+    await schedule.tap_star(TALK)
+    gc.collect()  # the replaced lists' components, kept until now by their cycles
+    await schedule.at(DURING + timedelta(minutes=2))
+    schedule.rows.clear()
+    await schedule.tap_star(TALK)
+    assert schedule.favorites.ids == set()
+    assert schedule.rows == [TALK]
 
 
 async def test_a_recorded_batch_re_renders_one_slot_and_one_row(
