@@ -389,7 +389,42 @@ async def test_a_rotation_brings_the_zoom_down_to_the_new_maximum(
     top = zoom.max_scale(2048, zoom.fitted(landscape, (2048, 1583))[0])
     assert float(plan.zoom_layer.max_scale) == pytest.approx(top)
     assert plan.viewer.scale == pytest.approx(top)
-    assert [name for name, _ in plan.viewer.calls] == ["zoom", "pan"]
+    # The refocusing pan, then (this fake's pan clamps nothing) the pan into bounds.
+    assert [name for name, _ in plan.viewer.calls][:2] == ["zoom", "pan"]
+    assert_in_bounds(plan.viewer, landscape)
+
+
+def assert_in_bounds(viewer: FakeViewer, box: tuple[float, float]) -> None:
+    """Assert no blank shows beyond the box-sized content: ``box (1 - s) <= t <= 0``."""
+    for t, side in ((viewer.x, box[0]), (viewer.y, box[1])):
+        assert side * (1 - viewer.scale) - 1e-6 <= t <= 1e-6
+
+
+async def test_a_rotation_pans_back_inside_the_new_bounds(render: Render) -> None:
+    """Zoomed 2x at landscape's right edge, portrait pans to its right edge (#588)."""
+    plan = await render()
+    landscape = (874.0, 330.0)
+    await plan.lay_out(landscape)
+    plan.viewer.scale = 2.0
+    plan.viewer.x = landscape[0] * (1 - 2.0)  # the right edge: -874
+    await plan.transformed()
+    await plan.lay_out()
+    await plan.settle()
+    assert plan.viewer.scale == pytest.approx(2.0)  # under portrait's maximum: kept
+    assert [name for name, _ in plan.viewer.calls] == ["pan"]
+    assert plan.viewer.x == pytest.approx(BOX[0] * (1 - 2.0))  # portrait's right edge
+    assert_in_bounds(plan.viewer, BOX)
+
+
+async def test_a_resize_in_bounds_pans_nothing(render: Render) -> None:
+    """A zoomed plan that stays in bounds after a resize is left where it is."""
+    plan = await render()
+    await plan.lay_out((874.0, 330.0))
+    plan.viewer.scale, plan.viewer.x, plan.viewer.y = 2.0, -100.0, -100.0
+    await plan.transformed()
+    await plan.lay_out()
+    await plan.settle()
+    assert plan.viewer.calls == []
 
 
 @pytest.mark.parametrize("query", ["?pin=104c", ""])

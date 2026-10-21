@@ -11,10 +11,11 @@ Every viewer has the zoom buttons, the single-pointer way to zoom (WCAG 2.5.1). 
 pin, ``zoom()`` scales about the plan's top-left corner, so each zoom pans back to keep
 its focus in place (``refocus()``, F76) until U56 (#472). A double tap (2x, or back to
 fit) is only for plans with nothing to tap: its detector delays every single tap
-(D-312). A resize (a rotation) lowers the maximum zoom without clamping the viewer's
-transform, so ``use_zoom()`` zooms back down to it. A pane that leaves and comes back
-keeps its zoom through ``on_transform`` and ``Zoom.restore()`` (D-312, D-18). Every
-duration goes through ``prefs.motion_ms()`` (D-173).
+(D-312). A resize (a rotation) lowers the maximum zoom and moves the viewer's bounds
+without clamping its transform, so ``use_zoom()`` zooms back down to the maximum and
+pans back inside the bounds (``into_bounds()``, #588). A pane that leaves and comes
+back keeps its zoom through ``on_transform`` and ``Zoom.restore()`` (D-312, D-18).
+Every duration goes through ``prefs.motion_ms()`` (D-173).
 """
 
 from collections.abc import Awaitable, Callable
@@ -37,6 +38,9 @@ RESET_MS = 250
 
 AT_FIT = 1.001
 """A scale under which the plan counts as fitted: the viewer reports float scales."""
+
+PAN_SLACK = 0.5
+"""How far out of bounds, in logical pixels, a resized viewer may stay: float noise."""
 
 BUTTON_DP = 48
 """A zoom button's size: the minimum touch target (D-33)."""
@@ -124,6 +128,29 @@ def refocus(before: Transform, after: Transform, focus: Size) -> tuple[float, fl
     for f, t, t_after in ((focus[0], before.x, after.x), (focus[1], before.y, after.y)):
         point = (f - t) / before.scale
         deltas.append((f - after.scale * point - t_after) / after.scale)
+    return deltas[0], deltas[1]
+
+
+def into_bounds(now: Transform, box: Size) -> tuple[float, float]:
+    """Return the ``pan()`` that brings the viewer back inside its bounds after a resize.
+
+    The viewer's content fills it, so at scale ``s`` the content is ``s`` times the
+    box and its translation ``t`` stays in ``[box (1 - s), 0]`` on each axis: then no
+    blank shows beyond the content's edges. Flutter checks that bound on a gesture,
+    not on a resize, so a rotation can leave ``t`` outside it (#588). A pan of ``dx``
+    moves ``t`` by ``s dx`` (F76).
+
+    Args:
+        now: The transform after the resize (read back).
+        box: The viewer's new size.
+
+    Returns:
+        The ``dx`` and ``dy`` to give ``pan()``: ``(0, 0)`` when already in bounds.
+    """
+    deltas = []
+    for t, side in ((now.x, box[0]), (now.y, box[1])):
+        inside = min(0.0, max(side * (1 - now.scale), t))
+        deltas.append((inside - t) / now.scale)
     return deltas[0], deltas[1]
 
 
@@ -267,14 +294,18 @@ def use_zoom(
 
     @report_errors
     async def clamp() -> None:
-        # Flutter keeps the transform when max_scale drops (a rotation): zoom down to
-        # the new maximum. Effects run after the new max_scale is sent, so the
-        # viewer clamps to it (D-312).
+        # Flutter keeps the transform when the viewer resizes (a rotation): zoom down
+        # to the new maximum, then pan back inside the new bounds. Effects run after
+        # the new max_scale is sent, so the viewer clamps to it (D-312).
         if viewer.current is None:
             return
         now = await read(viewer.current)
         if now.scale > zoom.max_scale:
             await zoom.zoom_by(zoom.max_scale / now.scale)
+            now = await read(viewer.current)
+        dx, dy = into_bounds(now, box)
+        if abs(dx) * now.scale > PAN_SLACK or abs(dy) * now.scale > PAN_SLACK:
+            await viewer.current.pan(dx, dy)
 
     ft.use_effect(clamp, [box])
     return zoom
