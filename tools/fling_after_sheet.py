@@ -15,32 +15,44 @@ From the repo root, with the app installed on your own emulator (``maestro/READM
 
 First it runs ``maestro/subflows/fling_setup.yaml`` with the local Maestro CLI: a fresh,
 offline start with the fake clock at Friday 2026-05-15 14:01, on the Schedule
-(``--no-setup`` skips it when the app is already there). Then, like the Maestro flow, it
-reads the rest (where "Show N sessions" leaves the list, with no fling), runs three
-control flings from there with no sheet just before them, and runs the trials: each one
-starts on the now slot, shows Open space through the sheet, taps "Show N sessions" and
-flings ``--gap`` seconds later. A trial is "moved" when it ended within three rows of
-where a control ended (``near``, ``classify``), as in ``maestro/scripts/record_fling.js``. It
+(``--no-setup`` skips it when the app is already there). Like the Maestro flow, it
+refuses to go on unless the Schedule starts on the now slot, 2:00 PM. Then it reads the
+rest (where "Show N sessions" leaves the list, with no fling), runs three control flings
+from there with no sheet just before them, and runs the trials: each one starts on the
+now slot, shows Open space through the sheet, taps "Show N sessions" and flings
+``--gap`` seconds later. A trial whose measured tap-to-fling time is missing or outside
+row D's window (330 to 600 ms) is "off window", whatever the fling did; otherwise it is
+"moved" when it ended within three rows of where a control ended, as in
+``maestro/scripts/record_fling.js`` (``tools/fling_trials.py`` holds those rules). It
 prints each trial and a summary, turns airplane mode off, and exits with 1 unless every
-trial moved and every tap reached the button.
+trial moved inside the window and every tap reached the button.
 
 The screen is read with ``uiautomator dump``. Like Maestro, that makes Flutter report a
 screen reader (F72), as it did in #346's own matrix.
 """
 
 import argparse
-import re
-import statistics
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from pathlib import Path
 
-ROWS = 4
-"""Rows read from the top once a fling ends: two ends are near when one's top row is among the other's."""
+from tools.fling_trials import (
+    NOW_SLOT,
+    ROWS,
+    WINDOW_MS,
+    Control,
+    Node,
+    Tally,
+    classify,
+    controls_agree,
+    parse_nodes,
+    session_rows,
+    slot_of,
+    tap_to_fling_ms,
+)
 
 CONTROLS = 3
 """Control flings before the trials, from the same rest."""
@@ -58,174 +70,6 @@ SWIPE_MS = 80
 SETUP_FLOW = (
     Path(__file__).resolve().parent.parent / "maestro" / "subflows" / "fling_setup.yaml"
 )
-
-SESSION_ID = re.compile(r"^schedule\.session\.")
-SLOT = re.compile(r"(\d{1,2}:\d{2}) to ")
-BOUNDS = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
-TOUCH = re.compile(
-    r"(ACTION_DOWN|ACTION_UP).*?x\[0\]=([\d.]+), y\[0\]=([\d.]+).*?eventTime=(\d+)"
-)
-
-
-# ------------------------------------------------------------------ reading the screen
-
-
-@dataclass(frozen=True)
-class Node:
-    """One element of a ``uiautomator dump``: its identifier, its label and its bounds."""
-
-    ident: str
-    label: str
-    bounds: tuple[int, int, int, int]
-
-    @property
-    def center(self) -> tuple[int, int]:
-        """The point a tap on this element goes to."""
-        x1, y1, x2, y2 = self.bounds
-        return (x1 + x2) // 2, (y1 + y2) // 2
-
-
-def parse_nodes(xml: str) -> list[Node]:
-    """Return the dump's elements that carry an identifier and show on screen."""
-    nodes = []
-    for element in ET.fromstring(xml).iter("node"):
-        ident = element.get("resource-id", "")
-        match = BOUNDS.match(element.get("bounds", ""))
-        if not ident or not match or element.get("visible-to-user", "true") != "true":
-            continue
-        x1, y1, x2, y2 = map(int, match.groups())
-        if x2 <= x1 or y2 <= y1:
-            continue
-        label = element.get("content-desc") or element.get("text") or ""
-        nodes.append(Node(ident, label, (x1, y1, x2, y2)))
-    return nodes
-
-
-def session_rows(nodes: Sequence[Node]) -> list[str]:
-    """Return the Schedule's session rows on screen, from the top, as their phrases (D-190)."""
-    rows = sorted(
-        (n for n in nodes if SESSION_ID.match(n.ident)), key=lambda n: n.bounds[1]
-    )
-    return [n.label for n in rows]
-
-
-def slot_of(row: str) -> str:
-    """Return a row's start time, the phrase's first "H:MM to" ("2:00"), or "" without one."""
-    match = SLOT.search(row)
-    return match.group(1) if match else ""
-
-
-def tap_to_fling_ms(
-    log: str, tap: tuple[int, int], fling: tuple[int, int]
-) -> int | None:
-    """Return the ms from the tap's ACTION_UP to the fling's ACTION_DOWN in ``TaplEvents`` lines.
-
-    The launcher logs each touch with its point and ``eventTime``; the last tap at ``tap``
-    followed by a touch down at ``fling`` is the pair. ``None`` when the log lacks either.
-    """
-    up = None
-    gap = None
-    for match in TOUCH.finditer(log):
-        action, x, y, when = match.groups()
-        point = (round(float(x)), round(float(y)))
-        if action == "ACTION_UP" and point == tap:
-            up = int(when)
-        elif action == "ACTION_DOWN" and point == fling and up is not None:
-            gap = int(when) - up
-            up = None
-    return gap
-
-
-# ------------------------------------------------------------------ judging a fling
-
-
-@dataclass(frozen=True)
-class Control:
-    """One control fling: the rest it started from, and the first rows once it ended."""
-
-    rest: str
-    rows: tuple[str, ...]
-
-    @property
-    def top(self) -> str:
-        """The row on top once the fling ended ("" when none could be read)."""
-        return self.rows[0] if self.rows else ""
-
-
-def near(a: Sequence[str], b: Sequence[str]) -> bool:
-    """Say whether two lists of first rows ended near each other.
-
-    One's top row must be among the other's rows: with ``ROWS`` rows read, the two ends
-    are no more than three rows apart, either way. The rows, not their slot: 3:00 PM,
-    where a full fling ends, is about 20 rows deep with Open space shown.
-    """
-    return bool(a) and bool(b) and (a[0] in b or b[0] in a)
-
-
-def controls_agree(controls: Sequence[Control]) -> bool:
-    """Say whether the controls measure a full fling, as ``record_control.js`` does.
-
-    Each must start from the first one's rest and leave it, and any two must be ``near``.
-    """
-    if not controls:
-        return False
-    for i, c in enumerate(controls):
-        if not c.top or c.rest != controls[0].rest or c.rest in c.rows:
-            return False
-        if not all(near(c.rows, d.rows) for d in controls[:i]):
-            return False
-    return True
-
-
-def classify(
-    *,
-    start_slot: str,
-    trial_start: str,
-    rows: Sequence[str],
-    rest_row: str,
-    controls: Sequence[Control],
-) -> str:
-    """Judge one trial from its first rows, by the rules of ``maestro/scripts/record_fling.js``.
-
-    Returns "invalid" when the trial did not start on the now slot or no row could be
-    read; "moved" when it is ``near`` a control; "none" when the rest's row is still on
-    top, so the list did not scroll; "short" otherwise (rarely, past the controls).
-    """
-    if trial_start != start_slot or not rows:
-        return "invalid"
-    if any(near(rows, c.rows) for c in controls):
-        return "moved"
-    if rows[0] == rest_row:
-        return "none"
-    return "short"
-
-
-@dataclass
-class Tally:
-    """The trials so far: how many of each kind, missed taps, and tap-to-fling times."""
-
-    counts: dict[str, int] = field(
-        default_factory=lambda: dict.fromkeys(("moved", "short", "none", "invalid"), 0)
-    )
-    missed: int = 0
-    gaps: list[int] = field(default_factory=list)
-
-    @property
-    def passed(self) -> bool:
-        """Every trial moved, at least one ran, and no tap missed the button."""
-        lost = self.counts["short"] + self.counts["none"] + self.counts["invalid"]
-        return self.counts["moved"] > 0 and lost == 0 and self.missed == 0
-
-    def summary(self) -> str:
-        """One line, the Maestro flow's summary plus the measured tap-to-fling times."""
-        c = self.counts
-        line = f"{c['moved']} moved, {c['short']} short, {c['none']} none, {c['invalid']} invalid, of {sum(c.values())}"
-        line += f"; taps that missed the button, {self.missed}"
-        if self.gaps:
-            gaps = sorted(self.gaps)
-            line += f"; tap to fling {gaps[0]}-{gaps[-1]} ms (median {statistics.median(gaps):.0f})"
-        return line
-
 
 # ------------------------------------------------------------------ the device
 
@@ -365,6 +209,13 @@ def run(device: Device, trials: int, gap: float) -> Tally:
     start_rows = device.rows_when_still()
     start_slot = slot_of(start_rows[0]) if start_rows else ""
     print(f"start: the now slot, {start_slot or '-'}")
+    if start_slot != NOW_SLOT:
+        # As the flow asserts 2:00: another scene (say --no-setup on the wrong clock)
+        # would run trials that are not row D's and could still pass.
+        raise RuntimeError(
+            f"the Schedule starts on {start_slot or 'no slot'}, not {NOW_SLOT}: "
+            "run the setup (fling_setup.yaml), or start at Friday 14:01"
+        )
 
     controls: list[Control] = []
     for _ in range(CONTROLS):
@@ -405,21 +256,22 @@ def run(device: Device, trials: int, gap: float) -> Tally:
             device.gone("schedule.filter.show")
             toggle_open_space(device)
             continue
-        rows = device.rows_when_still()[:ROWS]
-        top_row = rows[0] if rows else ""
-        kind = classify(
-            start_slot=start_slot,
-            trial_start=trial_start,
-            rows=rows,
-            rest_row=rest_row,
-            controls=controls,
-        )
-        tally.counts[kind] += 1
+        # The time first: a trial outside row D's window says nothing about row D.
         ms = tap_to_fling_ms(
             device.shell("logcat -d -s TaplEvents"), show.center, device.fling_points[0]
         )
         if ms is not None:
             tally.gaps.append(ms)
+        rows = device.rows_when_still()[:ROWS]
+        top_row = rows[0] if rows else ""
+        kind = classify(
+            trial_start=trial_start,
+            gap_ms=ms,
+            rows=rows,
+            rest_row=rest_row,
+            controls=controls,
+        )
+        tally.counts[kind] += 1
         print(
             f'trial {trial}: {kind} (tap to fling {ms if ms is not None else "?"} ms; top row "{top_row or "-"}")'
         )
@@ -428,7 +280,7 @@ def run(device: Device, trials: int, gap: float) -> Tally:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the trials on one device; return 0 when every fling ran in full, else 1."""
+    """Run the trials on one device; return 0 when every fling ran in full inside the window, else 1."""
     parser = argparse.ArgumentParser(description="Repeat #346's row D through adb.")
     parser.add_argument(
         "--serial", required=True, help="your own emulator, e.g. emulator-5570"
@@ -448,7 +300,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--no-setup",
         action="store_true",
-        help="the app is already on the Schedule at 14:01",
+        help="the app is already on the Schedule at 14:01 (the run checks the 2:00 slot)",
     )
     args = parser.parse_args(argv)
 
@@ -462,7 +314,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         tally = run(device, args.trials, args.gap)
     finally:
         device.shell("cmd connectivity airplane-mode disable")
-    print(f"flings after the sheet, {tally.summary()}")
+    low, high = WINDOW_MS
+    print(f"flings after the sheet (window {low}-{high} ms), {tally.summary()}")
     return 0 if tally.passed else 1
 
 

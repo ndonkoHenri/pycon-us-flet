@@ -149,7 +149,11 @@ emulator: it sends the tap and the fling in one `adb shell` command (`input tap`
 `TaplEvents` log, and judges each trial by the flow's rules (three controls, then
 "moved" only within three rows of one). It runs `subflows/fling_setup.yaml` with the local
 Maestro CLI first (a fresh, offline start at Friday 14:01, on the Schedule), reads the
-screen with `uiautomator dump`, and turns airplane mode off at the end.
+screen with `uiautomator dump`, and turns airplane mode off at the end. Like the flow, it
+refuses to run unless the Schedule starts on the now slot, 2:00 PM, `--no-setup` included.
+A trial whose measured gap is missing or outside row D's window, 330 to 600 ms, is "off
+window" whatever the fling did: it says nothing about row D and fails the run, and its
+gap still shows in the summary. The rules are in `tools/fling_trials.py`.
 
 ```bash
 uv run python -m tools.fling_after_sheet --serial emulator-5570 --trials 20
@@ -159,8 +163,8 @@ The default `--gap 0.5` puts the fling about 0.5 s after the tap (`input` adds a
 30 ms), inside row D's window. Much sooner, the sheet is still leaving and the fling does
 not scroll on any build: #346 saw that at 0.2 to 0.3 s, and on a busy host it lasts
 longer. Each trial prints its kind and its measured gap; the summary
-gives the counts and the gaps' range and median, and the exit status is 1 unless every
-trial moved and every tap reached the button. Compare builds as with the flow: the same
+gives the counts and every measured gap's range and median, and the exit status is 1
+unless every trial moved inside the window and every tap reached the button. Compare builds as with the flow: the same
 `--trials` on each, one right after the other, on a quiet host.
 
 ## Writing a flow
@@ -231,7 +235,9 @@ is measured on the device, from the tap's `ACTION_UP` to the fling's `ACTION_DOW
 
 Every lost fling, on both builds, came with a slow injection (648 to 742 ms instead of
 about 525) during a spike of the host's load; at a steady gap every fling ran in full on
-both. A first #346 run stopped before its trials when one of its controls was cut short
+both. These runs were counted before #484's review added the window rule: those lost
+flings (and any other trial past 600 ms) fell outside row D's window, so the driver now
+counts them "off window", not "short" or "none". A first #346 run stopped before its trials when one of its controls was cut short
 at a load average of 550. So on this host the driver reaches row D's window, but has
 not yet told #346's build from `main`: #346 lost 11 of 33 there in its own matrix. Run
 both builds again, on a quiet host and with more trials, before trusting either way.

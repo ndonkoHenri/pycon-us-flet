@@ -519,8 +519,11 @@ simulator's network, so there the launch's refresh may publish the year's live f
   at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full. Row D's
   window is reached by `tools/fling_after_sheet.py` (Android): it sends the tap and the
   fling in one `adb shell` command, measures the gap from the launcher's touch log, and
-  judges each fling by the flow's rules. Its first runs (`maestro/README.md`) have not
-  yet told #346's build from `main`: both lost flings only during load spikes.
+  judges each fling by the flow's rules. It refuses a run that does not start on the now
+  slot, 2:00 PM, and counts a trial whose gap is missing or outside 330 to 600 ms as "off
+  window", a failure that says nothing about row D. Its first runs (`maestro/README.md`),
+  counted before that rule, have not yet told #346's build from `main`: both lost flings
+  only during load spikes, at gaps past the window.
 - The app bar's back arrow has no identifier: Android flows press the system Back, iOS
   flows tap the button named "Back".
 

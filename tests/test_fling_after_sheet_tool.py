@@ -1,226 +1,128 @@
-"""Tests for ``tools/fling_after_sheet.py``, the adb driver for #346's row D.
+"""Tests for ``tools/fling_after_sheet.py``'s run, the adb driver for #346's row D.
 
-Only what it computes is tested here, never a device: reading a ``uiautomator dump``,
-timing the tap and the fling from the launcher's ``TaplEvents`` log, and judging a fling
-by the rules of ``maestro/scripts/record_fling.js`` (``tests/test_fling_scripts.py``
-holds the same cases for the script).
+``run()`` drives a scripted stand-in for the emulator, never a device: the rows it shows
+follow the driver's taps and swipes, and its launcher log gives each trial a chosen
+tap-to-fling time. They pin row D's two rules through the whole run (#484's review): a
+trial counts only inside row D's window, and the run refuses a scene that does not start
+on the now slot. What the run computes is tested in ``tests/test_fling_trials.py``.
 """
 
-from tools.fling_after_sheet import (
-    Control,
-    Node,
-    Tally,
-    classify,
-    controls_agree,
-    parse_nodes,
-    session_rows,
-    slot_of,
-    tap_to_fling_ms,
-)
+import pytest
 
-REST = "Talk. R. 12:30 to 1:00 PM, Grand Ballroom B."
-SLOT = tuple(f"Open space. Row {n}. 3:00 to 4:00 PM, Room {n}." for n in range(14))
-"""The 3:00 PM slot's rows, in the list's order: where a full fling ends."""
+from tools import fling_after_sheet
+from tools.fling_after_sheet import Device, run
+from tools.fling_trials import Node
 
-END = 6
-"""Where the controls end: the index in ``SLOT`` of a control's top row."""
+NOW = ("Talk. N. 2:00 to 2:30 PM, Room 1.", "Talk. M. 2:00 to 2:30 PM, Room 2.")
+"""The rows at the top on the now slot, as the setup leaves the Schedule."""
+
+REST = ("Talk. R. 12:30 to 1:00 PM, Grand Ballroom B.", "Talk. S. 12:30 to 1:00 PM.")
+"""Where "Show N sessions" leaves the list, with no fling."""
+
+END = tuple(f"Open space. Row {n}. 3:00 to 4:00 PM, Room {n}." for n in range(4))
+"""Where every fling ends, the controls' and the trials': a full fling."""
+
+SHOW = Node("schedule.filter.show", "Show 345 sessions", (40, 2160, 1040, 2304))
 
 
-def rows_at(index: int) -> tuple[str, ...]:
-    """Return the first four rows on screen when ``SLOT[index]`` is the top row."""
-    return SLOT[index : index + 4]
+class FakeDevice(Device):
+    """An emulator in a script: the Schedule moves as the driver taps and flings."""
+
+    def __init__(self, gap_ms: int | None, start: tuple[str, ...] = NOW) -> None:
+        """Start on ``start``'s rows; each trial's fling comes ``gap_ms`` after its tap (``None``: unlogged)."""
+        self.serial = "emulator-fake"
+        self.width, self.height = 1080, 2400
+        self.gap_ms = gap_ms
+        self.now = start
+        self.rows = start
+        self.commands: list[str] = []
+
+    def shell(self, command: str) -> str:
+        """Record ``command``; a swipe ends the list on ``END``; the log holds the last tap and fling."""
+        self.commands.append(command)
+        if "input swipe" in command:
+            self.rows = END
+        if command.startswith("logcat -d") and self.gap_ms is not None:
+            (x, y), (fx, fy) = SHOW.center, self.fling_points[0]
+            line = "D TaplEvents: MotionEvent {{ action={}, x[0]={}, y[0]={}, eventTime={} }}"
+            return "\n".join(
+                [
+                    line.format("ACTION_UP", x, y, 1000),
+                    line.format("ACTION_DOWN", fx, fy, 1000 + self.gap_ms),
+                ]
+            )
+        return ""
+
+    def nodes(self) -> list[Node]:
+        """Show the Now button, so every control and trial starts with a jump to the now slot."""
+        return [Node("schedule.jump_now", "Now", (900, 2000, 1000, 2100))]
+
+    def find(self, ident: str, timeout: float = 30) -> Node | None:
+        """Find every element at once; "Show N sessions" at its place."""
+        return SHOW if ident == SHOW.ident else Node(ident, "", (0, 0, 10, 10))
+
+    def tap(self, ident: str) -> None:
+        """Jump to now on the Now button; rest on ``REST`` when "Show N sessions" closes the sheet."""
+        if ident == "schedule.jump_now":
+            self.rows = self.now
+        elif ident == SHOW.ident:
+            self.rows = REST
+
+    def gone(self, ident: str, timeout: float = 30) -> bool:
+        """Every element leaves at once: the sheet closes, the tap reached the button."""
+        return True
+
+    def rows_when_still(self) -> list[str]:
+        """The rows on screen now."""
+        return list(self.rows)
+
+    def swipes(self) -> int:
+        """How many flings the driver sent."""
+        return sum("input swipe" in c for c in self.commands)
 
 
-CONTROLS = (Control(REST, rows_at(END)),) * 3
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip the driver's waits: the fake device is still at once."""
+    monkeypatch.setattr(fling_after_sheet.time, "sleep", lambda _: None)
 
 
-def node(ident: str, label: str, bounds: str, visible: str = "true") -> str:
-    """Return one ``<node>`` of a ``uiautomator dump`` with Flutter's attributes."""
-    return (
-        f'<node index="0" text="" resource-id="{ident}" content-desc="{label}" '
-        f'visible-to-user="{visible}" bounds="{bounds}" />'
-    )
-
-
-def dump(*nodes: str) -> str:
-    """Return a whole ``uiautomator dump`` holding ``nodes``."""
-    return (
-        "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?><hierarchy rotation=\"0\">"
-        + "".join(nodes)
-        + "</hierarchy>"
-    )
-
-
-def judge(rows: tuple[str, ...], trial_start: str = "2:00") -> str:
-    """Return how the driver judges a trial that began on ``trial_start`` and ended with ``rows`` on top."""
-    return classify(
-        start_slot="2:00",
-        trial_start=trial_start,
-        rows=rows,
-        rest_row=REST,
-        controls=CONTROLS,
-    )
-
-
-# ------------------------------------------------------------------ reading the screen
-
-
-def test_session_rows_come_from_the_top_and_skip_what_does_not_show() -> None:
-    """Rows are ordered by their place on screen, not the dump's order; hidden or empty ones are left out."""
-    xml = dump(
-        node(
-            "schedule.session.2",
-            "Second. 2:00 to 2:30 PM, Room 1.",
-            "[0,900][1080,1200]",
-        ),
-        node("schedule.filter", "Filter", "[900,100][1000,200]"),
-        node(
-            "schedule.session.1", "First. 2:00 to 2:30 PM, Room 2.", "[0,600][1080,900]"
-        ),
-        node(
-            "schedule.session.3",
-            "Off screen. 2:00 to 2:30 PM, Room 3.",
-            "[0,2400][1080,2400]",
-        ),
-        node(
-            "schedule.session.4",
-            "Hidden. 2:00 to 2:30 PM, Room 4.",
-            "[0,1200][1080,1500]",
-            visible="false",
-        ),
-    )
-    assert session_rows(parse_nodes(xml)) == [
-        "First. 2:00 to 2:30 PM, Room 2.",
-        "Second. 2:00 to 2:30 PM, Room 1.",
-    ]
-
-
-def test_a_node_is_tapped_at_its_centre() -> None:
-    """A tap on an element goes to the middle of its bounds."""
-    assert Node(
-        "schedule.filter.show", "Show 345 sessions", (40, 2160, 1040, 2304)
-    ).center == (540, 2232)
-
-
-def test_a_slot_is_the_phrases_first_start_time() -> None:
-    """The slot is the first "H:MM to" of a row's phrase, and empty without one."""
-    assert (
-        slot_of("Talk. Something at 9:00 to 5:00. 2:00 to 2:30 PM, Room 1.") == "9:00"
-    )
-    assert slot_of(SLOT[0]) == "3:00"
-    assert slot_of("") == ""
-
-
-# ------------------------------------------------------------------ the touch log
-
-TAPL = (
-    "D TaplEvents: TIS / TouchInteractionService.onInputEvent: MotionEvent "
-    "{{ action={action}, actionButton=0, id[0]=0, x[0]={x}, y[0]={y}, toolType[0]=TOOL_TYPE_FINGER, "
-    "eventTime={t}, downTime={t}, deviceId=-1 }}"
-)
-
-
-def touch(action: str, x: float, y: float, t: int) -> str:
-    """Return one ``TaplEvents`` line, as the launcher logs a touch."""
-    return TAPL.format(action=action, x=x, y=y, t=t)
-
-
-def test_the_tap_to_fling_time_runs_from_the_taps_up_to_the_flings_down() -> None:
-    """The gap is the fling's ACTION_DOWN at its start point minus the tap's ACTION_UP on the button."""
-    log = "\n".join(
-        [
-            touch("ACTION_DOWN", 540.0, 2232.0, 1000),
-            touch("ACTION_UP", 540.0, 2232.0, 1060),
-            touch("ACTION_DOWN", 540.0, 1800.0, 1472),
-            touch("ACTION_UP", 540.0, 600.0, 1552),
-        ]
-    )
-    assert tap_to_fling_ms(log, (540, 2232), (540, 1800)) == 412
-
-
-def test_the_tap_to_fling_time_is_unknown_without_both_touches() -> None:
-    """A log that lacks the tap or the fling gives no time rather than a wrong one."""
-    assert (
-        tap_to_fling_ms(
-            touch("ACTION_DOWN", 540.0, 1800.0, 1472), (540, 2232), (540, 1800)
-        )
-        is None
-    )
-    assert (
-        tap_to_fling_ms(
-            touch("ACTION_UP", 540.0, 2232.0, 1060), (540, 2232), (540, 1800)
-        )
-        is None
-    )
-
-
-# ------------------------------------------------------------------ judging a fling
-
-
-def test_a_trial_that_ends_up_to_three_rows_from_the_controls_moved() -> None:
-    """A full fling varies by a row or two: on the controls' row, or up to three rows either side, is near."""
-    for index in (END - 3, END - 1, END, END + 1, END + 3):
-        assert judge(rows_at(index)) == "moved", index
-
-
-def test_a_trial_that_ends_in_the_controls_slot_but_rows_short_is_short() -> None:
-    """A fling that stops four or more rows short of the controls, in their slot, is cut short (#484's review)."""
-    assert judge(rows_at(END - 4)) == "short"
-    assert judge(rows_at(0)) == "short"
-
-
-def test_a_trial_that_ends_rows_past_the_controls_is_not_moved() -> None:
-    """A fling that ends four or more rows past the controls is no full fling either."""
-    assert judge(rows_at(END + 4)) == "short"
-
-
-def test_a_trial_that_ends_on_the_rests_row_did_not_scroll() -> None:
-    """The rest's row on top after the fling means the list did not scroll."""
-    assert judge((REST, *SLOT[:3])) == "none"
-
-
-def test_a_trial_off_the_now_slot_or_with_no_row_is_invalid() -> None:
-    """A trial that began off the now slot, or whose rows could not be read, says nothing."""
-    assert judge(rows_at(END), trial_start="2:45") == "invalid"
-    assert judge(()) == "invalid"
-
-
-def test_controls_that_end_near_each_other_agree() -> None:
-    """Controls up to three rows apart measure one full fling."""
-    assert controls_agree(
-        [
-            Control(REST, rows_at(END)),
-            Control(REST, rows_at(END + 2)),
-            Control(REST, rows_at(END - 1)),
-        ]
-    )
-
-
-def test_controls_that_disagree_or_did_not_move_measure_nothing() -> None:
-    """Controls four rows apart, one that kept the rest's row, one from another rest, or none at all fail."""
-    assert not controls_agree(
-        [Control(REST, rows_at(END)), Control(REST, rows_at(END + 4))]
-    )
-    assert not controls_agree([Control(REST, (REST, *SLOT[:3]))])
-    other_rest = "Talk. S. 12:30 to 1:00 PM, Room 2."
-    assert not controls_agree(
-        [Control(REST, rows_at(END)), Control(other_rest, rows_at(END))]
-    )
-    assert not controls_agree([Control(REST, ())])
-    assert not controls_agree([])
-
-
-def test_the_tally_passes_only_when_every_trial_moved_and_no_tap_missed() -> None:
-    """One lost fling or one missed tap fails the run, and the summary gives the counts and the times."""
-    tally = Tally()
-    tally.counts["moved"] = 2
-    tally.gaps = [412, 380, 455]
+def test_a_run_whose_flings_land_inside_the_window_passes() -> None:
+    """Trials flung 520 ms after the tap, which end where the controls end, all moved."""
+    tally = run(FakeDevice(gap_ms=520), trials=3, gap=0.5)
+    assert tally.counts["moved"] == 3
     assert tally.passed
-    assert tally.summary() == (
-        "2 moved, 0 short, 0 none, 0 invalid, of 2; taps that missed the button, 0; tap to fling 380-455 ms (median 412)"
-    )
-    tally.missed = 1
+
+
+@pytest.mark.parametrize("gap_ms", [900, 648, 300])
+def test_a_run_whose_flings_land_outside_the_window_fails_and_keeps_their_times(
+    gap_ms: int,
+) -> None:
+    """Full flings at 900, 648 or 300 ms are off window, not moved: they fail the run, their times stay in the summary."""
+    tally = run(FakeDevice(gap_ms=gap_ms), trials=3, gap=0.5)
+    assert tally.counts["off window"] == 3
+    assert tally.counts["moved"] == 0
     assert not tally.passed
-    tally.missed = 0
-    tally.counts["short"] = 1
+    assert tally.gaps == [gap_ms] * 3
+    assert f"tap to fling {gap_ms}-{gap_ms} ms" in tally.summary()
+
+
+def test_a_run_with_no_timing_evidence_fails() -> None:
+    """Trials whose tap and fling never reached the launcher's log are off window, and the run fails."""
+    tally = run(FakeDevice(gap_ms=None), trials=2, gap=0.5)
+    assert tally.counts["off window"] == 2
+    assert tally.gaps == []
     assert not tally.passed
+
+
+@pytest.mark.parametrize(
+    "start", [("Talk. Early. 9:00 to 9:30 AM, Room 1.",), ()], ids=["9:00", "empty"]
+)
+def test_a_run_that_does_not_start_on_the_2_00_slot_is_refused(
+    start: tuple[str, ...],
+) -> None:
+    """A scene at 9:00, or with no row at all, stops the run before any fling (--no-setup on the wrong clock)."""
+    device = FakeDevice(gap_ms=520, start=start)
+    with pytest.raises(RuntimeError, match="not 2:00"):
+        run(device, trials=3, gap=0.5)
+    assert device.swipes() == 0
