@@ -225,7 +225,7 @@ def test_the_catch_all_matches_no_page_and_no_drill(location: str) -> None:
 
 def test_the_drill_takes_every_kind_and_nothing_else() -> None:
     """The drill's path accepts exactly the drill kinds, each matched in order."""
-    assert DRILL.path == ":kind(session|speaker|room|sponsor|plan)/:ident"
+    assert DRILL.path == ":kind(session|speaker|room|sponsor|plan|changes)/:ident"
     assert [kind for kind, _ in drill_params(f"/now/{'/1/'.join(DRILL_KINDS)}/1")] == [
         *DRILL_KINDS
     ]
@@ -237,6 +237,7 @@ DRILL_SCREENS = {
     "room": ("RoomDetail", "room_slug"),
     "sponsor": ("SponsorDetail", "sponsor_slug"),
     "plan": ("PlanViewer", "plan_id"),
+    "changes": ("ScheduleChanges", "year"),
 }
 
 

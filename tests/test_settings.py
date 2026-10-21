@@ -1,10 +1,11 @@
-"""Tests for Settings: Appearance, its High contrast switch, then Data (#421, #422).
+"""Tests for Settings: Appearance, its High contrast switch, Reminders, Data (#421, #429).
 
 ``Settings`` runs outside a renderer, as ``More`` does in ``test_more.py``: its hooks and
 ``AppScaffold`` are replaced, and a fake page is bound as Flet binds a session's page.
 That the theme follows ``Prefs`` is ``test_app.py``'s; how the page looks and reads is
 checked on devices (the PR). The Data section is a component of its own, whose tests
-are ``test_settings_data.py``'s; here it is a stand-in.
+are ``test_settings_data.py``'s; here it is a stand-in. Reminders' rows are
+``test_settings_reminders.py``'s; here, only where the section sits.
 """
 
 import inspect
@@ -20,7 +21,7 @@ from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.screens import settings
+from pycon_us.screens import settings, settings_reminders
 from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
@@ -181,9 +182,32 @@ def test_the_page_is_titled_and_opens_with_appearance_as_a_section_heading(
     assert isinstance(heading.content, ft.Container)
     assert isinstance(heading.content.content, ft.Text)
     assert heading.content.content.value == "Appearance"
-    # The heading, the radios, the switch row, then Data (ux.md §6.9).
-    assert len(rows_of(scaffold)) == 4
-    assert rows_of(scaffold)[3] is DATA_SECTION
+    # The heading, the radios, the switch row, Reminders, then Data (ux.md §6.9).
+    assert len(rows_of(scaffold)) == 5
+    assert rows_of(scaffold)[4] is DATA_SECTION
+
+
+def test_reminders_sit_between_appearance_and_data_in_the_interim(
+    render: Callable[[], dict[str, Any]],
+) -> None:
+    """Without E3, Reminders' interim section follows Appearance and precedes Data."""
+    section = rows_of(render())[3]
+    assert isinstance(section, ft.Column)
+    heading = section.controls[0]
+    assert isinstance(heading, ft.Semantics) and heading.heading_level == 2
+    assert isinstance(heading.content, ft.Container)
+    assert isinstance(heading.content.content, ft.Text)
+    assert heading.content.content.value == "Reminders"
+
+
+def test_a_build_with_reminders_shows_no_interim_section(
+    render: Callable[[], dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With E3 bundled the interim goes; its live controls are P2-89's."""
+    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS", True)
+    rows = rows_of(render())
+    assert len(rows) == 4
+    assert rows[3] is DATA_SECTION
 
 
 def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
