@@ -1,0 +1,117 @@
+# Deep links land on their target with the root below, cold and warm (D-21, D-291).
+#
+# - Cold, with the app stopped: /schedule/session/31 opens the session over the
+#   Schedule, and Back goes to the Schedule.
+# - Warm, on Now: /now/speaker/nope opens the speaker's not-found state over Now
+#   (D-186), and Back goes to Now.
+# - An unknown path, /schedule/nope/31, is D-270's own View, "This page isn't in the
+#   app", whose Back goes to Now.
+# - With the filter sheet open on the Schedule, a link to /now closes the sheet and
+#   lands on Now.
+#
+# LINK sets the scheme and host (subflows/open_link.yaml).
+appId: io.github.ndonkohenri.pyconus
+name: Deep links, cold and warm, an unknown id and an unknown path
+tags:
+  - journeys
+  - deep_links
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Cold: the session over the Schedule.
+- stopApp
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/session/31
+- extendedWaitUntil:
+    visible:
+      id: session.title
+      text: "Tachyon: Python 3\\.15's sampling profiler is faster than your code"
+    timeout: 120000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: schedule.title
+    timeout: 15000
+- assertVisible:
+    id: app.nav.schedule
+    selected: true
+- assertNotVisible:
+    id: session.title
+
+# Warm, on Now: an unknown speaker, over Now.
+- tapOn:
+    id: app.nav.now
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /now/speaker/nope
+- extendedWaitUntil:
+    visible:
+      id: speaker.not_found
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- assertNotVisible:
+    id: speaker.not_found
+
+# An unknown path: its own View, whose Back goes to Now.
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/nope/31
+- extendedWaitUntil:
+    visible:
+      id: app.not_found
+    timeout: 15000
+- assertVisible:
+    text: "This page isn't in the app"
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- assertVisible:
+    id: app.nav.now
+    selected: true
+- assertNotVisible:
+    id: app.not_found
+
+# The filter sheet open on the Schedule when a link to Now comes: the sheet closes.
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.title
+    timeout: 15000
+- tapOn:
+    id: schedule.filter
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.show
+    timeout: 30000
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /now
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.filter.show
+    timeout: 15000
+- assertVisible:
+    id: app.nav.now
+    selected: true

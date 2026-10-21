@@ -30,13 +30,15 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/search_any_day.yaml` | journeys | From Friday's Schedule, search finds a Saturday session, its speaker and a room used only on Saturday; Back keeps the query and the scope |
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
+| `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
-airplane mode on Android, then Developer options set as `tests/ui/developer.py` does
+airplane mode on Android, Get started on the first-run Welcome (D-287), then Developer
+options set as `tests/ui/developer.py` does
 (More › About this app › the version row 7 times › Developer options): a fake clock at
 **Friday 2026-05-15 14:10** (the busiest day, during the 2:00 PM slot) and a feed URL
-nothing answers at, then Refresh now must say "No answer from the feed". `NOW` and
+nothing answers at, then Refresh now must say "Couldn't refresh: no answer from the feed". `NOW` and
 `OFFLINE_URL` override them (`-e NOW="2026-05-16 10:00"`). On iOS Maestro cannot cut the
 simulator's network, so the launch's own refresh may publish the year's live feed, which
 lists the same sessions as the bundled snapshot.
@@ -167,6 +169,17 @@ gives the counts and every measured gap's range and median, and the exit status 
 unless every trial moved inside the window and every tap reached the button. Compare builds as with the flow: the same
 `--trials` on each, one right after the other, on a quiet host.
 
+### Deep links
+
+`journeys/deep_links.yaml` opens each link through `subflows/open_link.yaml`, which joins
+`LINK` (the scheme and host) and the route path. With no `LINK` it uses `pyconus://app`,
+which must equal `[tool.flet.deep_linking]` in `pyproject.toml` (D-269):
+`tests/test_deep_link_flow.py` checks it, so when O-4 (#15) renames the scheme the check
+fails, not the flow. To try a build with other values before that default changes, give
+them: `maestro --device <id> test -e LINK=<scheme>://<host> maestro/journeys/deep_links.yaml`.
+A simulator asks "Open in …?" before the first link it opens (F31); the subflow taps
+Open when it shows.
+
 ## Writing a flow
 
 - Find a control by its identifier, `id:` (`<screen>.<element>[.<key>]`, D-33), copied
@@ -215,6 +228,12 @@ tapped again if it stayed off). At that load the regression flow also lost a fli
 `main`, with 1.3 to 3.5 s between the tap and the fling: a busy host stretches the
 sheet's exit past the fling. Compare builds only on a quiet host, one right after the
 other.
+
+`deep_links` (#518), on 2026-10-21 at a load average of 100 to 500: passed on an iPhone 17
+simulator (iOS 26.5), the first link through "Open in …?". Not yet run on Android: the
+emulator did not finish booting at that load. By then `main` had the first-run Welcome
+(#504) and Developer's new refresh wording, which `launch_fresh.yaml` and
+`start_offline.yaml` now expect, so every journey starts again.
 
 #346's row D failed with 0.33 to 0.6 s between the tap and the fling. Both builds ran
 every fling in full at about 0.85 s, the soonest Maestro gets there, so this flow does

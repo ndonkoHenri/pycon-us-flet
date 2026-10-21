@@ -27,4 +27,4 @@ appId: io.github.ndonkohenri.pyconus
     env:
       NOW: ${NOW || '2026-05-15 14:10'}
       FEED_URL: ${OFFLINE_URL || 'http://127.0.0.1:9/conference-2026.json'}
-      OUTCOME: "No answer from the feed: the app keeps the schedule it has\\."
+      OUTCOME: "Couldn't refresh: no answer from the feed\\. The app keeps the schedule it has\\."
