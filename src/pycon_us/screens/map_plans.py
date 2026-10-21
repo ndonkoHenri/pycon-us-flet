@@ -14,7 +14,7 @@ from pycon_us.locations import drill_href
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
 from pycon_us.ui.widths import sides
-from pycon_us.year_map import Plan
+from pycon_us.year_map import EXPO_PLAN, Plan
 
 SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -115,7 +115,10 @@ def plans_pane(
     *,
     margin: float,
 ) -> ft.Control:
-    """Return the Floor plans pane: a card per plan, in ``map.toml``'s order.
+    """Return the Floor plans pane: a card per floor plan, in ``map.toml``'s order.
+
+    The expo plan is not one: the booths are the Expo pane's (#402, EXPO-02), as in
+    Ionic, whose Floor plans listed five.
 
     Args:
         plans: The year's plans (``MapData.plans``).
@@ -125,7 +128,7 @@ def plans_pane(
         margin: The screen's side margin (``use_margin()``).
     """
     return ft.ListView(
-        [plan_card(plan, view_path) for plan in plans],
+        [plan_card(plan, view_path) for plan in plans if plan.id != EXPO_PLAN],
         key=FLOOR_PLANS,  # its own, so Flutter never reuses another pane's list (F130)
         ref=list_ref,
         expand=True,

@@ -29,7 +29,7 @@ from tests.trees import descendants
 
 YEAR = load_year(2026)
 PLAN_IDS = ["campus", "concourse", "upper", "arena", "seaside"]
-"""The 2026 plans, in ``map.toml``'s order (MAP-02)."""
+"""The 2026 floor plans, in ``map.toml``'s order (MAP-02): the expo's is not one."""
 
 
 @dataclasses.dataclass
@@ -270,7 +270,7 @@ async def test_a_card_reads_as_one_button_and_pushes_its_plan(render: Render) ->
     assert image.fit == ft.BoxFit.COVER
     assert image.exclude_from_semantics
     icons = [i.icon for i in shown.find(ft.Icon)]
-    assert icons.count(ft.Icons.OPEN_IN_FULL) == len(PLAN_IDS)
+    assert icons.count(ft.Icons.OPEN_IN_FULL) == len(PLAN_IDS)  # no expo card
     (tile,) = [c for c in shown.find(ft.Container) if c.content is node]
     await shown.click(tile)
     assert shown.went == ["/map/plan/concourse"]
