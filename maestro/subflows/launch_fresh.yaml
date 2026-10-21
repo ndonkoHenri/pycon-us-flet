@@ -6,8 +6,20 @@ appId: io.github.ndonkohenri.pyconus
 - launchApp:
     clearState: true
     stopApp: true
-# A first launch unpacks the bundled Python before Now shows.
+# A first launch unpacks the bundled Python, then shows Welcome (D-287, #504): Get
+# started goes to Now. `id:` is a regular expression, so this waits for either.
+- extendedWaitUntil:
+    visible:
+      id: "welcome\\.start|now\\.title"
+    timeout: 120000
+- runFlow:
+    when:
+      visible:
+        id: welcome.start
+    commands:
+      - tapOn:
+          id: welcome.start
 - extendedWaitUntil:
     visible:
       id: now.title
-    timeout: 120000
+    timeout: 30000

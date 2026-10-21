@@ -24,7 +24,7 @@ from datetime import date, datetime, timedelta, tzinfo
 from urllib.parse import quote
 
 from pycon_us.core.models import ConferenceData
-from pycon_us.core.timefmt import time_label
+from pycon_us.core.timefmt import instant, time_label
 from pycon_us.core.timeline import keynote_sessions
 from pycon_us.year_keynotes import Keynote, keynote_of
 from pycon_us.year_pages import check_https, check_text
@@ -162,7 +162,8 @@ def keynote_moments(
             EventReminder(
                 id=moment_id,
                 category="keynote",
-                at=session.start - KEYNOTE_LEAD,
+                # Subtracted in UTC, then shown in the conference's zone (#535).
+                at=(instant(session.start) - KEYNOTE_LEAD).astimezone(zone),
                 title=f"{kind} at {start}",
                 body=f"{session.name}{place}",
                 route=f"/schedule/session/{quote(session.id, safe='')}",
