@@ -9,7 +9,9 @@ as one phrase (D-33).
 
 A session in one room with a pin shows that room's ``LocationCard`` under the card
 (D-349): the room tile says what else is on there (room detail), the card where it is
-(the floor viewer); one node with both destinations could not be one phrase.
+(the floor viewer); one node with both destinations could not be one phrase. A Job
+Fair row (``core.expo.is_job_fair()``, SESS-10) then shows the job fair plan's card, the
+one the Map's Job fair pane and Job listings show (D-254): where the tables are.
 
 ``StatusLine`` is a leaf component with its own minute tick, as ``StatusStrip`` is
 (D-175): the time passing re-renders the line, not the screen around it.
@@ -22,6 +24,7 @@ import flet as ft
 
 from pycon_us import clock
 from pycon_us.config import ConferenceInfo, YearData
+from pycon_us.core.expo import is_job_fair
 from pycon_us.core.models import Room, Session
 from pycon_us.core.row_views import Places, session_view
 from pycon_us.core.timefmt import day_heading, on_screen, time_status, zone_note
@@ -31,7 +34,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
-from pycon_us.ui.location_card import room_card
+from pycon_us.ui.location_card import job_fair_card, room_card
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import TICK_SECONDS, current_minute, stop_ticks
@@ -60,7 +63,9 @@ def WhenAndWhere(
     use_24h: bool,
     screen: str,
 ) -> ft.Control:
-    """Return the "When and where" card, then the room's ``LocationCard`` if it has one.
+    """Return the "When and where" card, then the room's and the job fair's cards.
+
+    The room's ``LocationCard`` when it has one; the job fair plan's on a Job Fair row.
 
     An outlined card (ux.md §5.5) of 56 dp+ list tiles, so each is a 48 dp target
     (D-33) that grows with the text. A place the feed has no room for is shown but
@@ -69,7 +74,7 @@ def WhenAndWhere(
     Args:
         session: The session.
         where: Its places, from ``row_views.places()``.
-        year: The year's data: the zone and its name, and the room's pin.
+        year: The year's data: the zone and its name, the room's pin and the plans.
         view_path: The View's own path, so a room opens on top of it (D-17).
         use_24h: The device's 24-hour setting.
         screen: The screen's name in the identifiers, ``<screen>.when`` and so on.
@@ -95,18 +100,28 @@ def WhenAndWhere(
         content=ft.Column(tiles, spacing=0),
     )
     # One room only: a multi-room session's rooms are its tiles (D-349).
-    located = (
+    room = (
         room_card(year.map, where.room.name, identifier=f"{screen}.location")
         if where.room is not None and not where.others
         else None
     )
+    job_fair = (
+        job_fair_card(year.map, identifier=f"{screen}.job_fair.location")
+        if is_job_fair(session)
+        else None
+    )
+    located = [
+        ft.Container(found, padding=ft.Padding.symmetric(horizontal=16))
+        for found in (room, job_fair)
+        if found is not None
+    ]
     section = (
-        card
-        if located is None
-        else ft.Column(
-            [card, ft.Container(located, padding=ft.Padding.symmetric(horizontal=16))],
+        ft.Column(
+            [card, *located],
             spacing=12,  # one section: closer than the 24 dp between sections
         )
+        if located
+        else card
     )
     # Keyed, so the removed note a refresh puts above it (D-186) leaves it mounted
     # instead of shifting it: the location card's pulse never restarts (D-349).

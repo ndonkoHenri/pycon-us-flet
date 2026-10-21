@@ -25,8 +25,9 @@ The refresh is the ``Conference`` store's (D-145): the status strip's, then a
 one keeps the listings and the schedule. Without data the page loads and fails as the
 Sponsors list does (ux.md §4.1); a feed without listings says "No job listings yet"
 (2025), and has no filter. Each card is a memoised component keyed by its listing id
-(D-153), so a keystroke re-renders no card that stays. The job fair card at the top
-comes with #408.
+(D-153), so a keystroke re-renders no card that stays. Above the cards, the job fair
+plan's card (``job_fair_card()``, SPON-10, D-254) pushes the floor viewer at
+``/more/jobs/plan/job-fair``: the tables where the listings' sponsors meet people.
 
 **The filter** (SPON-07): the pinned ``SearchField`` "Filter jobs" the Speakers and
 Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
@@ -55,6 +56,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.fold import toggle_button
 from pycon_us.ui.links import feed_markdown
+from pycon_us.ui.location_card import job_fair_card
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
@@ -157,6 +159,14 @@ def Jobs() -> ft.View:
         if found and found is not data.job_listings:  # a filter applies, finds some
             pinned.append(
                 found_count(count_line(len(found)), identifier=f"{SCREEN}.count")
+            )
+        # The plan heads the list whatever the filter keeps: it is where they all are.
+        plan = job_fair_card(svc.year.map, identifier=f"{SCREEN}.job_fair.location")
+        if plan is not None:
+            items.append(
+                ft.Container(
+                    plan, padding=ft.Padding.only(left=16, right=16, top=8, bottom=6)
+                )
             )
         for listing in found:
             sponsor = sponsor_of(data, listing)
