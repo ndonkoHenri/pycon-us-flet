@@ -10,7 +10,8 @@ is what someone in trouble needs:
   Copy beside it (``copy_contact()``): ``tel:`` opens nothing on an iPad or a
   simulator. Then the year's line on reporting in person to any staff member.
 - **At the venue:** where the information desk, lost and found and the quiet room
-  are, a line each (P2-58 adds their location cards).
+  are, a line each (P2-58 adds their location cards), and under the quiet room the
+  sponsor who provides it, which pushes its detail (``SponsorCreditTile``, D-337).
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
 - **The app:** Report a problem with the app, last on the page whatever the year has.
@@ -31,6 +32,7 @@ import flet as ft
 
 from pycon_us import SOURCE_URL
 from pycon_us.screens.about_app import shown_url
+from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import use_services
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import action_row
@@ -45,7 +47,7 @@ from pycon_us.ui.share import (
     use_problem_report,
 )
 from pycon_us.ui.states import EmptyState
-from pycon_us.year_info import HelpInfo, SafetyContact
+from pycon_us.year_info import HelpInfo, SafetyContact, SponsorCredit
 
 SCREEN = "help"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -82,7 +84,9 @@ def Help() -> ft.View:
     """The Help & safety page: Report a concern first, then the venue and the CoC."""
     svc = use_services()
     content = svc.year.content
-    blocks = help_blocks(content.safety_contacts, content.help)
+    blocks = help_blocks(
+        content.safety_contacts, content.help, content.sponsor_credits.quiet_room
+    )
     return AppScaffold(
         title=TITLE,
         body=InfoBody(
@@ -166,7 +170,9 @@ def report_problem_row(
 
 
 def help_blocks(
-    contacts: tuple[SafetyContact, ...], info: HelpInfo | None
+    contacts: tuple[SafetyContact, ...],
+    info: HelpInfo | None,
+    quiet_room_credit: SponsorCredit | None = None,
 ) -> list[ft.Control]:
     """Return the page's blocks from its year data, in reading order; none without it.
 
@@ -174,6 +180,8 @@ def help_blocks(
         contacts: The year's safety contacts; the card shows when there is one.
         info: The year's ``[help]`` table, or None; the loader refuses one without a
             contact, so the card always heads it.
+        quiet_room_credit: The quiet room's sponsor, credited under its line
+            (D-337); None when the year names none.
     """
     blocks: list[ft.Control] = []
     if contacts:
@@ -184,6 +192,9 @@ def help_blocks(
             *(
                 place_row(title, getattr(info, key), icon, key)
                 for key, title, icon in PLACES
+            ),
+            SponsorCreditTile(
+                quiet_room_credit, "Quiet room", f"{SCREEN}.quiet_room.sponsor"
             ),
             SectionHeader("Code of Conduct"),
             ft.Semantics(
