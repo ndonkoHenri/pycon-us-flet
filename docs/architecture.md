@@ -756,7 +756,7 @@ Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `ligh
 
 ### 7.9 Change log (`core/diff.py`; D-47, NEW-04, P2)
 
-`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are kept in `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). The `ChangeLog` store (`change_log.py`, D-301) holds them and gives the last 24 h for the "Changed" badge (`recent()`, D-315); a batch shows "Schedule updated · Review" (SnackBar) and a Now card; Schedule changes (the drill pair `changes/<year>`, D-255) lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
+`diff(old, new) -> list[Change]` compares sessions by id, skipping collapsed `break` and `poster` rows (their ids embed their start): `added`, `removed`, `time` (start or end), `room` (location) and `title`, each with old and new values. Batches are kept in `<data dir>/changes-<year>.json` (`[{"detected_at": ..., "changes": [...]}]`, trimmed to 14 days). The `ChangeLog` store (`change_log.py`, D-301) holds them and gives the last 24 h for the "Changed" badge (`recent()`, D-315), and session detail a badge per kind with the old value (`ChangeLog.recent_of()`, ux.md §5.5); a batch shows "Schedule updated · Review" (SnackBar) and a Now card; Schedule changes (the drill pair `changes/<year>`, D-255) lists saved sessions first. Wording: "Removed from the latest schedule", never "cancelled". A change also re-runs `reminders.plan()`.
 
 The rules (D-255):
 
