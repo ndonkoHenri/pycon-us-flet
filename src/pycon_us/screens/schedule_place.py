@@ -78,6 +78,29 @@ def divider_above(keys: tuple[str, ...], key: str) -> float:
     return DIVIDER
 
 
+def known_empties(
+    heights: Mapping[date, Mapping[str, float]], keys: Mapping[date, tuple[str, ...]]
+) -> dict[date, dict[str, float]]:
+    """Return the 0 dp heights of the items still laid out, to keep when heights go stale.
+
+    An empty item (the head with nothing to say, D-345) stays 0 dp at any size and with
+    any feed, and Flutter reports no size that did not change, so its 0 is kept: else
+    every place under it would wait for a report that never comes.
+
+    Args:
+        heights: Each day's reported item heights by key, in dp.
+        keys: Each day's items in order, as laid out now.
+    """
+    return {
+        day: {
+            key: 0.0
+            for key, height in day_heights.items()
+            if not height and key in keys.get(day, ())
+        }
+        for day, day_heights in heights.items()
+    }
+
+
 class PlaceKeeper:
     """What the Schedule knows of its day lists' layout, and the jumps that use it.
 
@@ -111,9 +134,12 @@ class PlaceKeeper:
         self.round = 0
 
     def lay_out(self, layout: Hashable, keys: Mapping[date, tuple[str, ...]]) -> None:
-        """Note what the render laid out; another feed or filter forgets the heights."""
+        """Note what the render laid out; another feed or filter forgets the heights.
+
+        All but the 0 dp heights of items it still lays out (``known_empties()``).
+        """
         if layout != self.layout:
-            self.heights.clear()
+            self.heights = known_empties(self.heights, keys)
             self.layout = layout
         self.keys = keys
 
@@ -167,8 +193,9 @@ class PlaceKeeper:
         """Note a measurement; return whether it made the places' offsets stale.
 
         The first complete measurement only records the basis. After that, a change of
-        the text size, the width or the time's position forgets every height and marks
-        every place to be put back by key (``pending()``).
+        the text size, the width or the time's position forgets every height but the
+        0 dp ones, which no change of size reports again, and marks every place to be
+        put back by key (``pending()``).
 
         Args:
             text: The probe's time width, in dp.
@@ -185,7 +212,7 @@ class PlaceKeeper:
         if before is None or before == basis:
             return False
         self.round += 1  # a put-back still waiting scales for the old layout
-        self.heights.clear()
+        self.heights = known_empties(self.heights, self.keys)
         places = self.memory.schedule_places
         for day, place in places.items():
             places[day] = replace(place, stale=True)
