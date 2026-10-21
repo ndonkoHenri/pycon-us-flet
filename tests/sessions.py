@@ -469,6 +469,9 @@ async def showing[S: Shown = Shown](
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
+        # ...at their next turn of the loop: a tick task still pending holds its
+        # component, and with it the page, until it has run (use_recent_changes()).
+        await settle()
         del _OPEN[session.page]
 
 
