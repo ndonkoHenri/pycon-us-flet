@@ -3,19 +3,22 @@
 The screen runs in a real Flet session (``tests/sessions.py``) under a ``ChangeLog``
 seeded with batches built by hand, so each line and sentence is pinned exactly; the
 words themselves are ``tests/test_change_views.py``'s. The clock is held at 10:42 AM
-on Saturday, May 16 in Long Beach.
+on Saturday, May 16 in Long Beach. The seen marks' 2 s wait is held until the test
+releases it (``tests/timers.py``), and the list can be left in the same session.
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from typing import cast
 
 import flet as ft
 import pytest
 
-from pycon_us.change_log import ChangeLog, ChangeLogCtx
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
 from pycon_us.core.change_batches import Batch
 from pycon_us.core.change_views import (
@@ -27,10 +30,14 @@ from pycon_us.core.change_views import (
 )
 from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.locations import parent_of
+from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule_changes as screen
+from pycon_us.screens import schedule_changes_seen as seen
+from pycon_us.services.changes_file import read_batches
 from pycon_us.state import Conference
 from tests.feeds import processed
 from tests.sessions import Shown, showing
+from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -70,19 +77,57 @@ OLDER = Batch(
         Change(SAVED, ChangeKind.TIME, listing(), listing(hour=11)),
         Change("9", ChangeKind.ADDED, None, listing("New talk", location="Hall B")),
     ),
+    seen=True,
 )
-"""Yesterday, 8:42 AM: the saved session retimed and an addition."""
+"""Yesterday, 8:42 AM, seen: the saved session retimed and an addition."""
 
-type Show = Callable[..., Awaitable[Shown]]
+
+@dataclass
+class Changes(Shown):
+    """The harness's ``Shown`` on Schedule changes, with its held wait and a way out."""
+
+    sleeps: HeldSleeps = field(default_factory=HeldSleeps)
+    """The seen marks' sleeps: the 2 s wait ends when the test releases it."""
+    toggles: list[Callable[[bool], None]] = field(default_factory=list)
+    """The setter that shows the list or leaves it, once its first render has run."""
+
+    async def leave(self) -> None:
+        """Leave the list (Back) in the same Flet session; let the cleanups run."""
+        self.toggles[0](False)
+        await self.settle()
+
+    def unseen(self) -> list[bool]:
+        """Each batch's seen mark in the log, ``True`` for unseen, in the log's order."""
+        return [not batch.seen for batch in self.change_log.batches]
+
+    def dots(self) -> dict[str, float]:
+        """Each item's dot opacity, by the item's identifier."""
+        return {
+            str(node.identifier): _dot(node).opacity or 0.0
+            for node in self.nodes("changes.change.")
+        }
+
+
+def _dot(node: ft.Semantics) -> ft.Container:
+    """The unseen dot of an item's node: the second child of its leading ``Stack``."""
+    tile = cast(ft.ListTile, node.content)
+    stack = cast(ft.Stack, tile.leading)
+    return cast(ft.Container, stack.controls[1])
+
+
+type Show = Callable[..., Awaitable[Changes]]
 
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return a function that shows Schedule changes over the recorded 2026 feed.
 
-    It takes the log's ``batches``, the ``saved`` session ids and the drill id.
+    It takes the log's ``batches``, the ``saved`` session ids, the drill id and the
+    ``Prefs`` (a screen reader, reduced motion). The seen marks' wait is held.
     """
     monkeypatch.setattr(screen, "now", lambda: NOW)
+    sleeps = HeldSleeps()
+    monkeypatch.setattr(seen, "asyncio", sleeps)  # the seen module's name only
     async with AsyncExitStack() as stack:
 
         async def render(
@@ -90,18 +135,31 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             *,
             saved: tuple[str, ...] = (SAVED,),
             year: str = "2026",
-        ) -> Shown:
-            log = ChangeLog(batches=batches)
+            prefs: Prefs | None = None,
+        ) -> Changes:
+            toggles: list[Callable[[bool], None]] = []
+
+            @ft.component
+            def Opened() -> ft.Control:
+                shown, set_shown = ft.use_state(True)
+                toggles[:] = [set_shown]
+                if not shown:
+                    return ft.Text("Back on Now")
+                return screen.ScheduleChanges(year)
+
             return await stack.enter_async_context(
                 showing(
-                    lambda: ChangeLogCtx(log, lambda: screen.ScheduleChanges(year)),
+                    Opened,
                     screen,
                     year=YEAR,
                     conference=Conference(data=DATA, source="bundled", version=1),
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path=VIEW,
+                    prefs=prefs,
                     saved=saved,
+                    change_log=ChangeLog(batches=batches),
+                    kind=partial(Changes, sleeps=sleeps, toggles=toggles),
                 )
             )
 
@@ -151,7 +209,7 @@ async def test_saved_sessions_come_first_and_groups_go_newest_first(
         f"h2 {AFFECTS_MY_SCHEDULE}",
         "h3 Today, 10:12 AM",
         (
-            "Python for Humans: room changed from Room 104A to Room 103ABC."
+            "New: Python for Humans: room changed from Room 104A to Room 103ABC."
             " In My schedule."
         ),
         "h3 Yesterday, 8:42 AM",
@@ -161,9 +219,9 @@ async def test_saved_sessions_come_first_and_groups_go_newest_first(
         ),
         f"h2 {ALL_CHANGES}",
         "h3 Today, 10:12 AM",
-        "Building Y: renamed from “Old name”.",
+        "New: Building Y: renamed from “Old name”.",
         (
-            "Gone talk: removed from the latest schedule."
+            "New: Gone talk: removed from the latest schedule."
             " Was Saturday, May 16, 10:30 to 11:00 AM, Room 104A."
         ),
         "h3 Yesterday, 8:42 AM",
@@ -250,7 +308,7 @@ async def test_a_star_tap_keeps_the_item_in_its_section(show: Show) -> None:
     assert lines[:3] == [
         f"h2 {AFFECTS_MY_SCHEDULE}",
         "h3 Today, 10:12 AM",
-        "Python for Humans: room changed from Room 104A to Room 103ABC.",
+        "New: Python for Humans: room changed from Room 104A to Room 103ABC.",
     ]
 
 
@@ -272,3 +330,89 @@ async def test_an_id_that_is_not_the_year_shows_the_not_found_state(
     assert page.node("changes.not_found")
     assert screen.NOT_FOUND in page.texts()
     assert not page.nodes("changes.change.")
+
+
+# ------------------------------------------------------------------ seen marks (#436)
+
+
+async def test_unseen_items_have_a_dot_and_seen_ones_none(show: Show) -> None:
+    """The newest batch's items show the 6 dp dot; the seen batch's have it at 0."""
+    page = await show()
+    dots = page.dots()
+    assert dots["changes.change.142.room"] == 1.0
+    assert dots["changes.change.8.removed"] == 1.0
+    assert dots["changes.change.142.time"] == 0.0
+    dot = _dot(page.node("changes.change.142.room"))
+    assert (dot.width, dot.height, dot.bgcolor) == (6, 6, ft.Colors.PRIMARY)
+
+
+async def test_the_list_marks_what_it_shows_seen_after_two_seconds(
+    show: Show,
+) -> None:
+    """After the 2 s wait the batch is seen, "New:" goes, the dot fades, and it is saved."""
+    page = await show()
+    assert page.sleeps.asked == [seen.SEEN_AFTER_S]
+    await page.sleeps.release()
+    await page.settle()
+    assert page.unseen() == [False, False]
+    assert not any(line.startswith("New: ") for line in outline(page))
+    assert set(page.dots().values()) == {0.0}
+    assert _dot(page.node("changes.change.142.room")).animate_opacity == seen.FADE_MS
+    saved = await read_batches(page.storage, LA)
+    assert [batch.seen for batch in saved] == [True, True]
+
+
+async def test_leaving_before_two_seconds_keeps_the_batch_unseen(show: Show) -> None:
+    """Left at 1 s, the wait is cancelled: the batch stays unseen, Now's card stays."""
+    page = await show()
+    assert page.sleeps.held == 1
+    await page.leave()
+    assert page.sleeps.held == 0
+    assert page.unseen() == [True, False]
+    assert page.change_log.unseen_saved({SAVED}, NOW) == 1
+
+
+async def test_with_a_screen_reader_the_list_marks_on_leaving(show: Show) -> None:
+    """No timer drops "New:" mid-reading: the batches are marked when the list is left."""
+    page = await show(prefs=Prefs(loaded=True, screen_reader=True))
+    await page.settle()
+    assert page.sleeps.asked == []
+    assert page.unseen() == [True, False]
+    await page.leave()
+    assert page.unseen() == [False, False]
+    saved = await read_batches(page.storage, LA)
+    assert [batch.seen for batch in saved] == [True, True]
+
+
+async def test_mark_all_as_seen_marks_every_batch_then_disables(show: Show) -> None:
+    """The overflow's Mark all as seen marks the log seen and is then disabled."""
+    unseen_older = Batch(OLDER.detected_at, OLDER.changes)
+    page = await show((NEWEST, unseen_older))
+    item = _mark_all(page)
+    assert not item.disabled
+    await page.click(item)
+    assert page.unseen() == [False, False]
+    assert _mark_all(page).disabled
+    saved = await read_batches(page.storage, LA)
+    assert [batch.seen for batch in saved] == [True, True]
+
+
+def _mark_all(page: Changes) -> ft.PopupMenuItem:
+    """The overflow's Mark all as seen item."""
+    (menu,) = page.find(ft.PopupMenuButton)
+    (item,) = menu.items or []
+    assert cast(ft.Semantics, item.content).identifier == "changes.mark_all"
+    return item
+
+
+async def test_mark_all_is_disabled_with_nothing_unseen(show: Show) -> None:
+    """A log whose batches are all seen shows Mark all as seen disabled, and no wait."""
+    page = await show((OLDER,))
+    assert _mark_all(page).disabled
+    assert page.sleeps.asked == []
+
+
+async def test_under_reduced_motion_the_dot_does_not_fade(show: Show) -> None:
+    """With reduced motion the dot goes at once (D-173)."""
+    page = await show(prefs=Prefs(loaded=True, reduce_motion=True))
+    assert _dot(page.node("changes.change.142.room")).animate_opacity is None

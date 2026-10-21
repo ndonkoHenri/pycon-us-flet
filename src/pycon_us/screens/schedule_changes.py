@@ -18,6 +18,9 @@ The sections are sorted by the sessions saved when the list opened (or when the
 favourites load): a star tap changes the item's star and phrase, never its place, so a
 screen reader's focus is not moved away from the item just tapped. An id that is not
 the active year shows the not-found state on its own level (D-186, D-255).
+
+An unseen item has a dot and reads "New: " first; the list marks what it shows seen
+after 2 s, and the overflow has Mark all as seen (``schedule_changes_seen.py``).
 """
 
 import flet as ft
@@ -33,6 +36,13 @@ from pycon_us.core.change_views import (
 from pycon_us.core.diff import ChangeKind
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
+from pycon_us.prefs import use_prefs
+from pycon_us.screens.schedule_changes_seen import (
+    FADE_MS,
+    mark_all_menu,
+    use_seen_marks,
+    with_dot,
+)
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -82,6 +92,7 @@ def ScheduleChanges(year: str) -> ft.View:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     tokens = use_tokens()
+    prefs = use_prefs()
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     zone = svc.year.conference.zone
     # The saved set the sections are sorted by: taken once the favourites have loaded,
@@ -92,12 +103,20 @@ def ScheduleChanges(year: str) -> ft.View:
         [change_log.batches, opened_with, use_24h],
     )
 
+    current = year == str(svc.storage.year)
+    unseen = ft.use_memo(
+        lambda: tuple(b for b in change_log.batches if not b.seen) if current else (),
+        [change_log.batches, current],
+    )
+    use_seen_marks(change_log, svc.storage, prefs, unseen)
+    fade_ms = prefs.motion_ms(FADE_MS)
+
     @report_errors
     def open_schedule() -> None:
         page.navigate("/schedule")
 
     items: list[ft.Control]
-    if year != str(svc.storage.year):
+    if not current:
         items = [
             not_found(
                 NOT_FOUND,
@@ -129,22 +148,30 @@ def ScheduleChanges(year: str) -> ft.View:
                     ChangeItem(
                         view,
                         view.change.id in favorites.ids,
+                        not group.batch.seen,
                         on_toggle,
                         tokens,
+                        fade_ms,
                         key=f"{stamp}/{view.change.id}/{view.change.kind}",
                     )
                     for view in group.views
                 )
     return AppScaffold(
-        title=TITLE, body=ft.ListView(items, expand=True, padding=sides(margin))
+        title=TITLE,
+        body=ft.ListView(items, expand=True, padding=sides(margin)),
+        actions=[mark_all_menu(change_log, svc.storage, screen=SCREEN)]
+        if current
+        else None,
     )
 
 
 def ChangeItem(
     view: ChangeView,
     saved: bool,
+    unseen: bool,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
+    fade_ms: int,
     *,
     key: str,
 ) -> ft.Control:
@@ -156,18 +183,25 @@ def ChangeItem(
         view: The change's view, the same object while the log and the clock format
             stay.
         saved: Whether the session is in My schedule.
+        unseen: Whether the item's batch is unseen: a dot, and "New: " first.
         on_toggle: The list's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150), for the star's colour.
+        fade_ms: How long the dot fades once seen (``prefs.motion_ms()``).
         key: Unique in the list: the batch's detection time, the id and the kind.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
-    return _ChangeItem(view, saved, on_toggle, tokens, key=key)  # pyright: ignore[reportCallIssue]
+    return _ChangeItem(view, saved, unseen, on_toggle, tokens, fade_ms, key=key)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
 @ft.component
 def _ChangeItem(
-    view: ChangeView, saved: bool, on_toggle: ToggleFavorite, tokens: Tokens
+    view: ChangeView,
+    saved: bool,
+    unseen: bool,
+    on_toggle: ToggleFavorite,
+    tokens: Tokens,
+    fade_ms: int,
 ) -> ft.Control:
     """The body of ``ChangeItem``; it runs only when the props change (F34)."""
     page = ft.context.page
@@ -185,13 +219,17 @@ def _ChangeItem(
         await on_toggle(change.id)
 
     tile = ft.ListTile(
-        leading=ft.Icon(ICONS.get(change.kind, ft.Icons.CHANGE_CIRCLE_OUTLINED)),
+        leading=with_dot(
+            ft.Icon(ICONS.get(change.kind, ft.Icons.CHANGE_CIRCLE_OUTLINED)),
+            unseen=unseen,
+            fade_ms=fade_ms,
+        ),
         title=ft.Text(view.title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
         subtitle=change_line(view),
         content_padding=ft.Padding.only(left=16, right=4),
     )
     text = ft.Semantics(
-        label=item_phrase(view, saved=saved),
+        label=item_phrase(view, saved=saved, unseen=unseen),
         identifier=f"{SCREEN}.change.{ident}",
         button=not removed,  # a removed session opens nothing (D-255)
         # The sentence replaces the texts, which would otherwise be read after it.

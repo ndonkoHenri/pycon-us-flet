@@ -6,18 +6,22 @@ records what changed as one batch (``core/change_batches.py``), kept in
 ``changes-<year>.json`` (``services/changes_file.py``). A store of its own, not a field of
 ``Conference``, so ``state.py`` stays the feed's (D-160, D-231). Screens read ``batches``,
 ``recent()`` and the batch to announce; the reminders' re-plan (#27) subscribes too.
+Schedule changes marks batches seen (``mark_seen()``, ux.md §6.4), which Now's card and
+Settings › Data count (``unseen_saved()``).
 """
 
+import asyncio
 import logging
 import time
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Collection
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, tzinfo
 
 import flet as ft
 
 from pycon_us import clock
 from pycon_us.core.change_batches import Batch, trim
+from pycon_us.core.change_views import unseen_saved
 from pycon_us.core.diff import Change, ChangeKind, diff
 from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites
@@ -69,6 +73,8 @@ class ChangeLog:
     # Whether `pycon.<year>.fetched` is set: a network feed was published (D-255).
     _fetched: bool = field(default=False, repr=False)
     _announce: Batch | None = field(default=None, repr=False)
+    # The seen marks' file writes, kept until they land: nobody awaits a cleanup's.
+    _saves: set[asyncio.Task[bool]] = field(default_factory=set, repr=False)
 
     async def load(self, storage: Storage, zone: tzinfo) -> None:
         """Read the year's log and its marker; call it once at start, before a refresh.
@@ -121,6 +127,61 @@ class ChangeLog:
                     if change.kind in BADGED:
                         badged.setdefault(change.id, set()).add(change.kind)
         return {key: frozenset(kinds) for key, kinds in badged.items()}
+
+    @property
+    def has_unseen(self) -> bool:
+        """Whether a batch is still unseen: Mark all as seen has something to do."""
+        return any(not batch.seen for batch in self.batches)
+
+    def unseen_saved(self, saved: Collection[str], now: datetime) -> int:
+        """Return how many saved sessions the unseen batches of the last 24 h changed.
+
+        Each session once, additions left out: the count Now's card and Settings ›
+        Data show (``core.change_views.unseen_saved()``, ux.md §5.1).
+
+        Args:
+            saved: The ids of the saved sessions.
+            now: The current instant (aware), ``clock.now()``.
+        """
+        return unseen_saved(self.batches, saved, now)
+
+    def mark_seen(
+        self, storage: Storage, batches: Collection[Batch] | None = None
+    ) -> asyncio.Task[bool] | None:
+        """Mark ``batches`` seen, or every batch when None, and save the log (ux.md §6.4).
+
+        Synchronous, so a screen's sync cleanup can call it (D-70): the marks apply at
+        once and notify, and the file write is a task the store keeps until it lands.
+        The write saves the batches as they are when it starts, so a batch recorded
+        meanwhile is kept.
+
+        Args:
+            storage: Where the log is kept.
+            batches: The batches to mark, as the caller read them from ``batches``;
+                one already marked, or no longer in the log, is skipped.
+
+        Returns:
+            The write's task (its result says whether the file was replaced), or None
+            when nothing was unseen.
+        """
+        picked = None if batches is None else {id(batch) for batch in batches}
+        marked = tuple(
+            replace(batch, seen=True)
+            if not batch.seen and (picked is None or id(batch) in picked)
+            else batch
+            for batch in self.batches
+        )
+        if all(new is old for new, old in zip(marked, self.batches, strict=True)):
+            return None
+        self.batches = marked
+        save = asyncio.create_task(self._save(storage))
+        self._saves.add(save)
+        save.add_done_callback(self._saves.discard)
+        return save
+
+    async def _save(self, storage: Storage) -> bool:
+        """Write the log as it is now; a failure is logged and returned (D-120)."""
+        return await changes_file.write_batches(storage, list(self.batches))
 
     def take_announcement(self) -> Batch | None:
         """Return the batch to announce, once: the next call returns None.
