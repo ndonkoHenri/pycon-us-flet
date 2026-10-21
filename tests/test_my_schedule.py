@@ -744,8 +744,8 @@ async def test_forget_unsaves_only_the_dropped_ids_with_undo(shown: Shown) -> No
     assert _words(shown.node("my_schedule.dropped_notice"))
 
 
-def _words(node: ft.Semantics) -> list[str]:
-    """Return the texts under the live-region ``node``, in reading order."""
+def _words(node: ft.Control) -> list[str]:
+    """Return the texts under ``node`` (the live region or its merge), in order."""
     return [str(c.value) for c in _walk(node) if isinstance(c, ft.Text)]
 
 
