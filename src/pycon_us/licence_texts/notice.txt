@@ -17,5 +17,12 @@ version 13.21.0 (https://github.com/simple-icons/simple-icons), dedicated to
 the public domain under CC0 1.0 Universal. The marks themselves are trademarks
 of their owners; the app shows each one only beside a link to that brand.
 
+The floor plans in src/assets/maps/ are the PyCon US mobile app's
+(src/assets/img/floor-plans/, Apache License, Version 2.0), drawings of the
+Long Beach Convention Center's spaces prepared by GES, re-encoded to WebP at a
+smaller size; on the campus plan, the PyCon US wordmark and the venue's logo
+are painted over. The room and venue pin positions in
+src/pycon_us/data/2026/map.toml are that app's too.
+
 This is not an official Python Software Foundation app. "PyCon" and "Python"
 are trademarks of the Python Software Foundation.
