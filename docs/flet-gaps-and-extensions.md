@@ -656,7 +656,7 @@ class AppInfo:
 | Field | Value |
 |---|---|
 | Serves | THEME-11 (text at 200 %), THEME-09 (reduced motion), the high-contrast switch default (D-23) |
-| Interim | Fluid layouts with no fixed heights around text (D-26). The one layout that must change with the size, a slot's time beside or above its rows, measures an invisible copy of the widest gutter against the body with `on_size_change` (`GutterProbe`, D-216, F51). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). On Android a change made while the app is in the background often reaches Flutter seconds after that read, so the app's own durations follow only at the following resume (#178, accepted until U17 by D-183). |
+| Interim | Fluid layouts with no fixed heights around text (D-26). The one layout that must change with the size, a slot's time beside or above its rows, measures an invisible copy of the widest gutter against the body with `on_size_change` (`GutterProbe`, D-216, F51); detail pages' titles step down at the same answer (D-328). Accessibility features are read with `SemanticsService.get_accessibility_features()` at start and on resume (F13, D-34). On Android a change made while the app is in the background often reaches Flutter seconds after that read, so the app's own durations follow only at the following resume (#178, accepted until U17 by D-183). |
 | Today | `PageMediaData` has `padding`, `view_padding`, `view_insets`, `device_pixel_ratio`, `orientation` and `always_use_24_hour_format`. Its Dart builder (`DART/widgets/page_media.dart:56-64`) already sends a `media_change` event whenever these change, and `page.on_media_change` receives the new `PageMediaData` (exists). |
 | Change | Add five fields, read in the same Dart builder:<br>• `text_scale_factor` from `MediaQuery.textScalerOf(context)`;<br>• `disable_animations`, `high_contrast`, `bold_text` and `accessible_navigation` from `MediaQuery`.<br>Reading them makes the builder depend on them, so the **existing** `on_media_change` becomes the change event. That covers U17 with no new event type. |
 
@@ -669,7 +669,7 @@ class AppInfo:
 #     accessible_navigation: bool = False
 ```
 
-**Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live. `GutterProbe` stays: the share of the width the gutter takes depends on the font and the width as well as on the factor, and measuring it is exact.
+**Upgrade.** `Prefs` reads these from `page.media` at start and follows `page.on_media_change`, replacing the resume re-read, so reduced motion and the high-contrast default follow live. `GutterProbe` stays: the share of the width the gutter takes depends on the font and the width as well as on the factor, and measuring it is exact. So do detail pages' titles, which step down at the probe's answer (D-328): whether a long word fits depends on the width too. With the factor, a title could instead grow less than body text, as iOS's own headings do, by a `size` divided by the factor (Flutter scales every size again); a refinement, which no title needs today.
 
 **Test.** Changing the font size or "Remove animations" in the emulator's settings fires `on_media_change` with the new values, also when the change was made with the app in the background and reaches Flutter seconds after the return (#178's case, D-183; tracked by #183).
 

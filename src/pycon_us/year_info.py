@@ -17,6 +17,12 @@ this module at D-66's ~400 lines (#532); ``check_info()`` runs their checks too.
 other pages' issues add theirs, with their rules, to this module. Until a page has its table, or for a year that has none,
 the page shows the feed's own block for it (``ui.info_page``).
 
+The sponsor credits (D-337): ``[sponsor_credits]`` (``SponsorCredits``), the sponsor
+who provides the Wi-Fi and the one who provides the quiet room, each by its slug with the
+public page that says so and the day someone checked it there (D-37, INFO-09, MAP-10);
+``check_credit_sponsors()`` checks the slugs against a feed's sponsors, as the keynotes'
+ids are checked against its sessions (D-217).
+
 Help & safety (D-281): ``[[safety_contacts]]`` (``SafetyContact``), the ways to report
 a concern, each with the public page that shows it and the day someone checked it
 there, and ``[help]`` (``HelpInfo``), the page's other lines and links.
@@ -28,6 +34,8 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from pycon_us.core.hours import ServiceHours
+from pycon_us.core.models import ConferenceData
+from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.year_links import check_psf, check_social
 from pycon_us.year_pages import check_https, check_text
 from pycon_us.year_schema import YearDataError
@@ -112,6 +120,44 @@ class WifiInfo:
 
 
 @dataclass(frozen=True)
+class SponsorCredit:
+    """The sponsor who provides something at the venue, credited where it is (D-37).
+
+    Attributes:
+        slug: The sponsor's slug (``slugs.sponsor_slug``, SPON-02), "temporal": named
+            explicitly, never guessed from a substring of the name as Ionic did.
+        source: The public ``https`` page that credits the sponsor with it.
+        checked: The day the credit was last checked on ``source``.
+    """
+
+    slug: str
+    source: str
+    checked: date
+
+
+@dataclass(frozen=True)
+class SponsorCredits:
+    """``[sponsor_credits]``: who provides what, each credit optional (INFO-09, MAP-10).
+
+    Attributes:
+        wifi: The Wi-Fi's sponsor, credited on the Wi-Fi page.
+        quiet_room: The quiet room's sponsor, credited on Venue & hours' Quiet room
+            card and Help & safety's Quiet room line.
+    """
+
+    wifi: SponsorCredit | None = None
+    quiet_room: SponsorCredit | None = None
+
+    def items(self) -> tuple[tuple[str, SponsorCredit], ...]:
+        """Return the credits the year gives, by key (``wifi``, ``quiet_room``)."""
+        return tuple(
+            (key, credit)
+            for key in ("wifi", "quiet_room")
+            if (credit := getattr(self, key)) is not None
+        )
+
+
+@dataclass(frozen=True)
 class Directions:
     """Where Venue & hours' Directions button takes a maps app (MAP-11, D-313).
 
@@ -180,7 +226,36 @@ def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
     if content.psf is not None:
         check_psf(content.psf, file)
     check_social(content.social, file)
+    for key, credit in content.sponsor_credits.items():
+        check_text(credit.slug, file, f"sponsor_credits.{key}.slug")
+        check_https(credit.source, file, f"sponsor_credits.{key}.source")
     check_venue_hours(content.venue_hours, conference, file)
+
+
+def check_credit_sponsors(
+    credits: SponsorCredits, data: ConferenceData, file: str
+) -> None:
+    """Refuse a credit whose slug names no sponsor of a feed (D-337).
+
+    A typo, or a sponsor the feed dropped, would hide the credit on every phone: the
+    loader checks the year's bundled snapshot when asked
+    (``config.load_year(check_sessions=True)``), and the snapshot tool a new feed, as
+    they check the keynotes' sessions (D-217).
+
+    Args:
+        credits: The ``[sponsor_credits]`` table.
+        data: The processed feed.
+        file: The data file the credits come from, for the message.
+
+    Raises:
+        YearDataError: A credit's slug is not a sponsor of the feed.
+    """
+    for key, credit in credits.items():
+        if sponsor_by_slug(data, credit.slug) is None:
+            raise YearDataError(
+                f"{file}: sponsor_credits.{key}.slug: {credit.slug!r} is not a "
+                "sponsor of the year's feed"
+            )
 
 
 def check_safety_contacts(contacts: tuple[SafetyContact, ...], file: str) -> None:
