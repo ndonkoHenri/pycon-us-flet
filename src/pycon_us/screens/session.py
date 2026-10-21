@@ -10,7 +10,7 @@ the site's open-spaces page, which its detail shows as a link in the page instea
 
 The page's heading is the title under the badges, so the app bar's title stays empty;
 for 24 h after a change, a badge per kind says the old value ("Moved from Room 102A").
-Then the "When and where" card
+Then the "When and where" card and the room's location card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
@@ -180,7 +180,7 @@ def SessionDetail(session_id: str) -> ft.View:
         WhenAndWhere(
             session,
             places(session, data.rooms if data else {}),
-            info,
+            svc.year,
             view_path=view_path,
             use_24h=use_24h,
             screen=SCREEN,

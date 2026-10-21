@@ -3,7 +3,8 @@
 A place on the venue's plans, as one card (DATA-33, MAP-06; ux.md §3.9): the plan's
 thumbnail, 112 dp wide, with the pin on its spot, beside the pin's label, what happens
 there and the floor; a tap pushes the floor viewer at it, ``…/plan/<plan>?pin=<key>``
-(ux.md §6.1). Room detail is its first place (ROOM-04). Without a pin it is the plan's
+(ux.md §6.1). Room detail and session detail show a room's (ROOM-04, D-346, D-349;
+``room_card()``). Without a pin it is the plan's
 own card, which the job fair's uses (D-254): the thumbnail and the plan's title.
 
 **Better than the original:** Ionic's pin pulsed forever and the card said nothing to
@@ -24,7 +25,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
-from pycon_us.year_map import Pin, Plan
+from pycon_us.year_map import MapData, Pin, Plan
 
 THUMB_DP = 112
 """The thumbnail's width; its height follows the plan's aspect ratio."""
@@ -144,6 +145,24 @@ def LocationCard(
     key = f"{plan.id}:{pin.key if pin else ''}"
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _LocationCard(plan, pin, identifier=identifier, seen=seen, key=key)  # pyright: ignore[reportCallIssue]
+
+
+def room_card(
+    data: MapData, room_name: str, *, identifier: str, seen: set[str] | None = None
+) -> ft.Control | None:
+    """Return a room's ``LocationCard``, or None for a room without a pin.
+
+    Args:
+        data: The year's ``map.toml``.
+        room_name: The room's name as the feed writes it, which finds its pin.
+        identifier: For UI flows, ``<screen>.location``.
+        seen: As ``LocationCard``'s.
+    """
+    pin = data.room_pin(room_name)
+    plan = data.plan(pin.plan) if pin else None
+    if pin is None or plan is None:
+        return None
+    return LocationCard(plan, pin, identifier=identifier, seen=seen)
 
 
 @ft.memo
