@@ -34,10 +34,11 @@ next to the `flet test` flows in `tests/ui/` is in
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
-airplane mode on Android, then Developer options set as `tests/ui/developer.py` does
+airplane mode on Android, Get started on the first-run Welcome (D-287), then Developer
+options set as `tests/ui/developer.py` does
 (More › About this app › the version row 7 times › Developer options): a fake clock at
 **Friday 2026-05-15 14:10** (the busiest day, during the 2:00 PM slot) and a feed URL
-nothing answers at, then Refresh now must say "No answer from the feed". `NOW` and
+nothing answers at, then Refresh now must say "Couldn't refresh: no answer from the feed". `NOW` and
 `OFFLINE_URL` override them (`-e NOW="2026-05-16 10:00"`). On iOS Maestro cannot cut the
 simulator's network, so the launch's own refresh may publish the year's live feed, which
 lists the same sessions as the bundled snapshot.
@@ -227,6 +228,12 @@ tapped again if it stayed off). At that load the regression flow also lost a fli
 `main`, with 1.3 to 3.5 s between the tap and the fling: a busy host stretches the
 sheet's exit past the fling. Compare builds only on a quiet host, one right after the
 other.
+
+`deep_links` (#518), on 2026-10-21 at a load average of 100 to 500: passed on an iPhone 17
+simulator (iOS 26.5), the first link through "Open in …?". Not yet run on Android: the
+emulator did not finish booting at that load. By then `main` had the first-run Welcome
+(#504) and Developer's new refresh wording, which `launch_fresh.yaml` and
+`start_offline.yaml` now expect, so every journey starts again.
 
 #346's row D failed with 0.33 to 0.6 s between the tap and the fling. Both builds ran
 every fling in full at about 0.85 s, the soonest Maestro gets there, so this flow does
