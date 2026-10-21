@@ -2,10 +2,13 @@
 # Loaded by pycon_us.config.load_year() through pycon_us.year_map.
 #
 # Plans: the images are under src/assets/, made by tools/encode_plans.py from the Ionic
-# app's plans (2048 px, lossy WebP 80, and an 800-px thumbnail; D-312; credited in NOTICE,
-# D-87). width and height are the image's, as the script prints them. The campus plan's
-# PyCon wordmark and the venue's logo, and the expo plan's sun-and-palms mark, are painted
-# over (D-36). In the Map's order; "expo" is the plan the booths are on.
+# app's plans (at most 2048 px, lossy WebP 80, and an 800-px thumbnail; D-312; credited
+# in NOTICE, D-87). width and height are the image's, as the script prints them. The
+# campus plan's PyCon wordmark and the venue's logo, and the expo plan's sun-and-palms
+# mark, are painted over (D-36), and the job fair's print is cropped to the floor,
+# without its header and its logo (D-254). In the Map's order; "expo" is the plan the
+# booths are on, and "job-fair" the Map's Job fair pane's, whose note shows under its
+# card (D-254).
 #
 # Pins: one table for rooms and venue spots. A room's key is normalize_room_key() of its
 # feed name (core/slugs.py), so "Room 102A" and "102A" find the same pin; a venue spot's
@@ -77,6 +80,16 @@ image = "maps/2026/expo.webp"
 thumb = "maps/2026/expo-thumb.webp"
 width = 2048
 height = 1448
+
+[[plans]]
+id = "job-fair"
+title = "Job fair & community showcase"
+subtitle = "Sponsor tables, food and beverage area"
+image = "maps/2026/job-fair.webp"
+thumb = "maps/2026/job-fair-thumb.webp"
+width = 1700
+height = 1438
+note = "The printed plan shows some tables with other sponsors. This list follows the conference's sponsor data."
 
 # Venue spots (Ionic's VENUE_LOCATIONS), named as Help & safety and Venue & hours name them.
 
