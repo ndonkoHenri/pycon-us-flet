@@ -37,7 +37,7 @@ Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearStat
 airplane mode on Android, then Developer options set as `tests/ui/developer.py` does
 (More › About this app › the version row 7 times › Developer options): a fake clock at
 **Friday 2026-05-15 14:10** (the busiest day, during the 2:00 PM slot) and a feed URL
-nothing answers at, then Refresh now must say "No answer from the feed". `NOW` and
+nothing answers at, then Refresh now must say "Couldn't refresh: no answer from the feed". `NOW` and
 `OFFLINE_URL` override them (`-e NOW="2026-05-16 10:00"`). On iOS Maestro cannot cut the
 simulator's network, so the launch's own refresh may publish the year's live feed, which
 lists the same sessions as the bundled snapshot.
