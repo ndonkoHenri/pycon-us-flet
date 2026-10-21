@@ -152,14 +152,26 @@ def scheduler(session: Session) -> Any:
     return session._Session__updates_task  # pyright: ignore[reportAttributeAccessIssue]
 
 
-async def skip_memos(session: Session) -> None:
-    """Re-render the app from its root, so each memoised part with equal props skips.
+def memo_parents(session: Session) -> list[Component]:
+    """The components that render a memoised part with none above it: the screens."""
+    found: dict[int, Component] = {}
+    for component in mounted(session):
+        ref = component._parent_component
+        parent = ref() if ref is not None else None
+        if component.memoized and parent is not None and memo_above(component) is None:
+            found[id(parent)] = parent
+    return list(found.values())
 
-    Then run the collector: the instances that rendered the skipped parts' output are
-    freed, as on a device once Python's cycle collector has run (F150).
+
+async def skip_memos(session: Session) -> None:
+    """Re-render each memoised part's parent, so the parts with equal props skip.
+
+    As a star tap or a minute tick re-renders a screen. Then run the collector: the
+    instances that rendered the skipped parts' output are freed, as on a device once
+    Python's cycle collector has run (F150).
     """
-    for root in [c for c in mounted(session) if c._parent_component is None]:
-        root._schedule_update()
+    for parent in memo_parents(session):
+        parent._schedule_update()
     await sessions.settle()
     gc.collect()
 
