@@ -9,7 +9,9 @@ into a tile under today's header (``agenda.fold_ended()``), re-folded every minu
 while the screen shows (D-40). A star tap removes the session at once, with Undo (ux.md
 §4.4). The Schedule's filters never apply (D-20): a saved open space always shows.
 With something saved, the app bar's overflow exports it all to the calendar, and the
-list is headed by a notice once all of it has ended (``screens.my_schedule_extras``).
+list is headed by a notice once all of it has ended, and by another while some saved
+sessions are no longer in the schedule, which links to Schedule changes or forgets them
+(D-329; ``screens.my_schedule_extras``).
 
 The list memoises its whole path (D-153): day sections given values that stay equal
 while nothing in the day changes, rows keyed by session id given views built once per
@@ -24,18 +26,26 @@ from typing import cast
 import flet as ft
 
 from pycon_us import clock
+from pycon_us.change_log import use_change_log
 from pycon_us.core.agenda import AgendaDay, fold_ended, my_schedule
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading, time_label, today
 from pycon_us.favorites import use_favorites
+from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.my_schedule_extras import CONFERENCE_OVER, ScheduleMenu, all_over
+from pycon_us.screens.my_schedule_extras import (
+    CONFERENCE_OVER,
+    ScheduleMenu,
+    all_over,
+    dropped_notice,
+    logged,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
+from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle, use_forget
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
@@ -82,6 +92,9 @@ def MySchedule() -> ft.View:
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
+    forget = use_forget(favorites)
+    change_log = use_change_log()
+    view_path = ft.use_view_path()
     tokens = use_tokens()
     prefs = use_prefs()
     use_minute()  # the fold follows the clock
@@ -94,6 +107,13 @@ def MySchedule() -> ft.View:
     saved = favorites.ids
     agenda = ft.use_memo(
         lambda: my_schedule(data, saved) if data else None,
+        [conference.version, saved],
+    )
+    # Saved ids the feed no longer lists (D-172), sorted for a stable Undo.
+    dropped = ft.use_memo(
+        lambda: (
+            tuple(sorted(i for i in saved if i not in data.sessions)) if data else ()
+        ),
         [conference.version, saved],
     )
     # Every session's view, not only the saved ones': the views then stay the same
@@ -115,6 +135,14 @@ def MySchedule() -> ft.View:
     @report_errors
     def see_today() -> None:
         page.navigate("/now")
+
+    @report_errors
+    def see_changes() -> None:
+        page.navigate(drill_href(view_path, "changes", str(svc.storage.year)))
+
+    @report_errors
+    async def forget_dropped() -> None:
+        await forget(dropped)
 
     content: list[ft.Control]
     actions: list[ft.Control] = []
@@ -174,7 +202,17 @@ def MySchedule() -> ft.View:
         # Only with something to export, ended sessions included (D-289); Export to
         # calendar is the overflow's one item until Reminder settings (P2-89).
         actions = [ScheduleMenu(agenda.sessions)]
-        content = []
+        # Some saved sessions gone, the rest still listed (D-329); always in the
+        # list, quiet with none, so its live region exists before it speaks (F61).
+        content = [
+            dropped_notice(
+                len(dropped),
+                on_forget=forget_dropped,
+                on_see_changes=(
+                    see_changes if logged(dropped, change_log.batches) else None
+                ),
+            )
+        ]
         if not folded.ahead:
             if today(now, info.zone) <= data.days[-1].date:  # Now has a day to show
                 content.append(all_over(see_today))
