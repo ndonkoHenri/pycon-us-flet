@@ -321,11 +321,11 @@ def _phase(data: ConferenceData, now: datetime) -> Phase:
     spans = [(day.groups[0].start, _day_end(data, day)) for day in data.days]
     if not spans or now < spans[0][0]:
         return Phase.BEFORE
-    if now >= max(end for _, end in spans):
+    if now >= max((end for _, end in spans), key=instant):
         return Phase.AFTER
     if any(start <= now < end for start, end in spans):
         return Phase.DAY
-    next_start = min(start for start, _ in spans if start > now)
+    next_start = min((start for start, _ in spans if start > now), key=instant)
     # Compare dates in the conference's zone (the feed's), not in the zone of ``now``.
     if now.astimezone(next_start.tzinfo).date() == next_start.date():
         return Phase.BEFORE_DAY
@@ -333,7 +333,8 @@ def _phase(data: ConferenceData, now: datetime) -> Phase:
 
 
 def _day_end(data: ConferenceData, day: Day) -> datetime:
-    return max(data.sessions[i].end for group in day.groups for i in group.session_ids)
+    ends = (data.sessions[i].end for group in day.groups for i in group.session_ids)
+    return max(ends, key=instant)  # by instant, not wall clock (#535)
 
 
 def _overlaps(saved: list[Session]) -> dict[Session, tuple[Session, ...]]:

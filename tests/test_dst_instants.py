@@ -9,20 +9,24 @@ Only a shifted feed (#383) can put a session on that night.
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Agenda, AgendaDay, fold_ended, my_schedule, next_for_me
+from pycon_us.core.diff import ChangeKind, diff
+from pycon_us.core.feed import process
 from pycon_us.core.ics import calendar_file
 from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.row_views import by_slot, session_view
 from pycon_us.core.timefmt import instant
-from pycon_us.core.timeline import Slot, now_place
+from pycon_us.core.timeline import Slot, now_place, schedule_order, timeline
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services.reminders import due_session, plan
 from pycon_us.year_moments import keynote_moments
-from tests.feeds import processed
+from tests.feeds import changed, processed, settings
 
 ZONE = ZoneInfo("America/Los_Angeles")
 """2026's conference zone."""
@@ -65,6 +69,25 @@ def retimed(
 def with_sessions(data: ConferenceData, *sessions: Session) -> ConferenceData:
     """Return ``data`` holding only ``sessions``, by id."""
     return replace(data, sessions={s.id: s for s in sessions})
+
+
+def night_feed(
+    first: tuple[datetime, ...], second: tuple[datetime, ...]
+) -> ConferenceData:
+    """Return 2026's feed processed with talks 142 and 153 moved to ``first`` and ``second``.
+
+    The feed's own times are rewritten, so the Schedule's days and time groups are built
+    from them as from any feed.
+    """
+    spans = {142: first, 153: second}
+
+    def move(doc: dict[str, Any]) -> None:
+        """Rewrite the two talks' start and end in the feed's JSON."""
+        for item in doc["schedule"]:
+            if (span := spans.get(item.get("conf_key"))) is not None:
+                item["start"], item["end"] = (moment.isoformat() for moment in span)
+
+    return process(changed(2026, move), settings(2026))
 
 
 def test_instant_is_utc_and_orders_the_repeated_hour() -> None:
@@ -183,3 +206,72 @@ def test_the_same_wall_time_twice_is_two_slots(data: ConferenceData) -> None:
     second = retimed(data, "153", (at(9, 30), at(9, 45)))  # 1:30-1:45 PST
     agenda = my_schedule(with_sessions(data, first, second), {first.id, second.id})
     assert [slot.sessions for slot in agenda.days[0].slots] == [(first,), (second,)]
+
+
+def test_the_schedule_shows_the_same_wall_time_twice_as_two_slots() -> None:
+    """The Schedule's night has a 1:30 PDT slot, then a 1:30 PST slot, not one merged slot."""
+    data = night_feed((at(8, 30), at(8, 45)), (at(9, 30), at(9, 45)))
+    slots = timeline(data, NIGHT, ())
+    assert [[s.id for s in slot.sessions] for slot in slots] == [["142"], ["153"]]
+    assert [slot.start for slot in slots] == [at(8, 30), at(9, 30)]
+    assert slots[0].key != slots[1].key  # each slot keeps its own offset
+
+
+def test_the_schedule_lists_the_repeated_hour_after_the_first() -> None:
+    """On the Schedule, 1:40 PDT comes before 1:05 PST, though its wall clock is later."""
+    data = night_feed(ACROSS, AFTER_THE_CHANGE)
+    slots = timeline(data, NIGHT, ())
+    assert [[s.id for s in slot.sessions] for slot in slots] == [["142"], ["153"]]
+
+
+def test_schedule_order_puts_sessions_in_the_order_they_happen(
+    data: ConferenceData,
+) -> None:
+    """``schedule_order`` sorts a 1:40 PDT talk before a 1:05 PST one."""
+    first = retimed(data, "153", ACROSS)
+    second = retimed(data, "142", AFTER_THE_CHANGE)
+    assert sorted([second, first], key=schedule_order) == [first, second]
+
+
+def test_a_rooms_day_shows_the_same_wall_time_twice_as_two_slots(
+    data: ConferenceData,
+) -> None:
+    """``by_slot`` keeps 1:30 PDT and 1:30 PST apart, in the order they happen."""
+    first = retimed(data, "142", (at(8, 30), at(8, 45)))
+    second = retimed(data, "153", (at(9, 30), at(9, 45)))
+    views = [session_view(s, ZONE, use_24h=False) for s in (second, first)]
+    slots = by_slot(views)
+    assert [(start, [v.session for v in group]) for start, group in slots] == [
+        (at(8, 30), [first]),
+        (at(9, 30), [second]),
+    ]
+
+
+def test_a_move_by_the_repeated_hour_is_a_time_change(data: ConferenceData) -> None:
+    """A talk moved from 1:30 PDT to 1:30 PST shows in the change log as a new time."""
+    before = retimed(data, "142", (at(8, 30), at(8, 45)))
+    after = retimed(data, "142", (at(9, 30), at(9, 45)))
+    changes = diff(with_sessions(data, before), with_sessions(data, after))
+    assert [change.kind for change in changes] == [ChangeKind.TIME]
+
+
+def test_reminders_come_in_the_order_they_fire(data: ConferenceData) -> None:
+    """A reminder at 1:30 PDT is planned before one at 1:10 PST, which reads earlier."""
+    first = retimed(data, "142", (at(8, 40), at(9, 0)))  # 1:40 PDT, reminded 1:30 PDT
+    second = retimed(data, "153", (at(9, 20), at(9, 40)))  # 1:20 PST, reminded 1:10 PST
+    settings_ = ReminderSettings(
+        lightning=False, open_space=False, keynote=False, session_lead=10
+    )
+    reminders = plan(
+        with_sessions(data, first, second),
+        [second.id, first.id],
+        settings_,
+        [],
+        at(7, 0),
+        zone=ZONE,
+        use_24h=False,
+    )
+    assert [instant(r.at) for r in reminders] == [
+        datetime(2026, 11, 1, 8, 30, tzinfo=UTC),
+        datetime(2026, 11, 1, 9, 10, tzinfo=UTC),
+    ]

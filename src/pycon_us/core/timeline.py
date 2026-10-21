@@ -63,9 +63,11 @@ class DaySessions:
 def schedule_order(session: Session) -> tuple[object, ...]:
     """Return the key that orders sessions as the Schedule shows them (DATA-30, D-31).
 
-    By the start a row shows, then by the place it shows, in natural order
-    (``slugs.room_sort_key``: ``Room 102A`` before ``Room 1000``, as the printed grid
-    reads), then by name and id, so ties always come out the same. A row without a place
+    By the start a row shows, as an instant (``timefmt.instant``: on the night summer
+    time ends, the repeated hour comes after the first, #535), then by the place it
+    shows, in natural order (``slugs.room_sort_key``: ``Room 102A`` before ``Room
+    1000``, as the printed grid reads), then by name and id, so ties always come out
+    the same. A row without a place
     (a notice, a generic break) comes first in its slot.
 
     Args:
@@ -75,7 +77,7 @@ def schedule_order(session: Session) -> tuple[object, ...]:
         A key for ``sorted``.
     """
     return (
-        session.display_start,
+        instant(session.display_start),
         room_sort_key(session.display_location),
         session.name,
         session.id,
@@ -265,7 +267,7 @@ def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
             for s in data.sessions.values()
             if s.kind == session.kind
             and not s.in_timeline
-            and s.start == session.start
+            and instant(s.start) == instant(session.start)
             and s.location == session.location
         )
         return tuple(sorted(found, key=schedule_order))

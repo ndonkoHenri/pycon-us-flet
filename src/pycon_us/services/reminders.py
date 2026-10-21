@@ -188,19 +188,21 @@ def plan(
         if settings.wants(m.category) and instant(m.at) > instant(now)
     ]
     saved = _session_reminders(data, favorites, settings, now, zone, use_24h=use_24h)
-    moment_at = {m.session_id: m.at for m in wanted if m.session_id}
-    saved_at = {session_id: r.at for session_id, r in saved.items()}
+    # Compared and sorted as instants: reminder times are in the conference zone, where
+    # they compare by wall clock and put the repeated hour first (#535).
+    moment_at = {m.session_id: instant(m.at) for m in wanted if m.session_id}
+    saved_at = {session_id: instant(r.at) for session_id, r in saved.items()}
     reminders = [
         r
         for session_id, r in saved.items()
-        if session_id not in moment_at or r.at < moment_at[session_id]
+        if session_id not in moment_at or instant(r.at) < moment_at[session_id]
     ]
     reminders += [
         Reminder(m.id, m.at, m.title, m.body, m.route)
         for m in wanted
-        if m.session_id not in saved_at or m.at <= saved_at[m.session_id]
+        if m.session_id not in saved_at or instant(m.at) <= saved_at[m.session_id]
     ]
-    return sorted(reminders, key=lambda r: (r.at, r.id))[:MAX_PENDING]
+    return sorted(reminders, key=lambda r: (instant(r.at), r.id))[:MAX_PENDING]
 
 
 def _session_reminders(

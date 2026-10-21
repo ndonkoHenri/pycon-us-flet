@@ -224,7 +224,7 @@ def time_status(
         return TimeStatus(
             f"Starts in {' '.join(short)}", f"Starts in {' '.join(words)}"
         )
-    if start == end:
+    if instant(start) == instant(end):  # a notice; by instant (#535)
         return None
     return HAPPENING_NOW if now < end else ENDED
 
