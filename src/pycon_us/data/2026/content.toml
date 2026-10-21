@@ -2,8 +2,8 @@
 # For now it holds what feed processing and the Map need, the copy and links of the
 # Open spaces and Lightning talks pages (D-205), the keynotes (D-217), the Wi-Fi (D-280),
 # the conference moments written by hand (D-274), Help & safety (D-281), the venue hours
-# (D-282), About the PSF (D-283) and Social media (D-284); the rest arrive with their
-# screens.
+# (D-282), About the PSF (D-283), Social media (D-284) and the sponsor credits (D-337);
+# the rest arrive with their screens.
 
 # The feed names the expo halls "Hall AB" and "Hall C" inside break, poster and plenary
 # names ("Lunch (Hall AB)") and "Expo Hall AB" elsewhere, so a room named "Hall ..." gets
@@ -313,6 +313,24 @@ photo_url = "https://pycon-assets.s3.amazonaws.com/2026/media/images/Thomas_Wout
 [wifi]
 network = "PyConUS26"
 password = "pyconLB2026"
+
+# The sponsor credits (D-37, INFO-09, MAP-10, D-337): who provides the Wi-Fi and the
+# quiet room, by sponsor slug (SPON-02: Ionic's slug of the feed's name), credited on
+# the Wi-Fi page and on the quiet room's card and line. The tests and
+# tools/update_snapshot.py refuse a slug the feed's sponsors lack; the app hides a
+# credit whose sponsor the current feed lacks. No public page of the site names either
+# credit (checked 2026-10-21 on the sponsors page and the site's search); the PSF's
+# own 2026 app shows them, in its public repository, so that is the source. Re-check
+# each year: a new year credits no one until a public source names the sponsor.
+[sponsor_credits.wifi]
+slug = "temporal"
+source = "https://github.com/PyCon/pycon-us-mobile/blob/main/src/app/pages/wifi/wifi.page.ts"
+checked = 2026-10-21
+
+[sponsor_credits.quiet_room]
+slug = "google"
+source = "https://github.com/PyCon/pycon-us-mobile/blob/main/src/app/pages/venues-hours/venues-hours.page.ts"
+checked = 2026-10-21
 
 # The conference moments written by hand (NOTIF-05, D-274): reminders at fixed times that
 # no feed knows about, ids 8000-8049. The keynotes' and panels' moments are not here: the
