@@ -5,7 +5,9 @@ day the room has sessions, today preselected (ux.md §5.9; the Schedule's tabs, 
 in ``screens/room_days.py``). Today's list starts with "Now in this room" while something
 is on there (``NowInRoom``, on the minute tick). Each day lists its time slots (D-31),
 whose rows leave out the room's own name, since the title already says it
-(``in_room``). A tap pushes the session, one drill level.
+(``in_room``). A tap pushes the session, one drill level. Each list starts with the
+room's ``LocationCard`` when the room has a pin, which pushes the floor viewer at it
+(ROOM-04, D-346); its pin pulses once per View.
 
 Opened from a session (``?highlight=<id>``, read once with ``use_query()`` until U9), the
 room opens on that session's day, scrolls its row to the top once and lights it up for
@@ -43,6 +45,7 @@ from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import use_favorite_toggle
+from pycon_us.ui.location_card import LocationCard
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
@@ -50,6 +53,7 @@ from pycon_us.ui.session_rows import use_recent_changes, use_session_views
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
+from pycon_us.year_map import MapData
 
 HIGHLIGHT_S = 2.0
 """How long the row the room was opened from stays lit, once it is in place (ROOM-03)."""
@@ -144,6 +148,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     lit, set_lit = ft.use_state(reveal is not None)
     picked, set_picked = ft.use_state(cast(date | None, None))
     list_ref = ft.use_memo(ft.Ref[ft.ListView], [])
+    pulsed = ft.use_memo(set[str], [])  # the card's pin pulses once per View
     ended = ft.use_memo(asyncio.Event, [])
 
     @report_errors
@@ -189,11 +194,17 @@ def RoomDetail(room_slug: str) -> ft.View:
             ),
         )
 
+    # The room's place on the venue's plans, at the head of each list (ROOM-04,
+    # D-346); a room without a pin shows nothing in its place, and no gap. A card of
+    # its own per list: a control has one parent.
+    located = partial(location, svc.year.map, room.name, pulsed)
     if not room.session_ids:  # a sprint-only room (MAP-08)
         return AppScaffold(
             title=room.name,
             body=ft.ListView(
-                [sprint_room_state(page)], expand=True, padding=sides(margin)
+                [*located(), sprint_room_state(page)],
+                expand=True,
+                padding=sides(margin),
             ),
         )
 
@@ -226,9 +237,11 @@ def RoomDetail(room_slug: str) -> ft.View:
             lit=lit,
             fade_ms=prefs.motion_ms(FADE_MS),
             margin=margin,
-            # "Now" is today's: at the head of its list, it scrolls away with it, so
-            # at the largest text the slots keep the screen (D-194).
-            head=NowInRoom(room, use_24h=use_24h) if day == current else None,
+            # The card and today's "Now" head the lists, so they scroll away with
+            # them and at the largest text the slots keep the screen (D-194, D-346).
+            head=list_head(located(), NowInRoom(room, use_24h=use_24h))
+            if day == current
+            else list_head(located()),
             # Only the list that scrolls to the row needs every row built (D-154).
             list_ref=list_ref if reveal and day == highlighted else None,
             on_scroll=scrolled if reveal and day == highlighted else None,
@@ -261,6 +274,34 @@ def RoomDetail(room_slug: str) -> ft.View:
         title=room.name,
         body=tabs,
     )
+
+
+def location(data: MapData, room_name: str, pulsed: set[str]) -> list[ft.Control]:
+    """Return the room's ``LocationCard``, or nothing for a room without a pin.
+
+    Args:
+        data: The year's ``map.toml``.
+        room_name: The room's name as the feed writes it, which finds its pin.
+        pulsed: The View's pins already pulsed: each day's list builds the card, and
+            its pin pulses on the first only.
+    """
+    pin = data.room_pin(room_name)
+    plan = data.plan(pin.plan) if pin else None
+    if pin is None or plan is None:
+        return []
+    card = LocationCard(plan, pin, identifier=f"{SCREEN}.location", seen=pulsed)
+    return [ft.Container(card, padding=ft.Padding.only(left=16, top=12, right=16))]
+
+
+def list_head(located: list[ft.Control], *more: ft.Control) -> ft.Control | None:
+    """Return what heads a day's list: the location card, then "Now", or None.
+
+    Args:
+        located: The room's location card, or nothing (``location()``).
+        *more: Today's "Now in this room".
+    """
+    heads = [*located, *more]
+    return ft.Column(heads, spacing=0) if heads else None
 
 
 def sprint_room_state(page: ft.Page) -> ft.Control:
