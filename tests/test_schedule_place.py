@@ -255,37 +255,85 @@ async def test_today_s_jump_to_now_drops_a_stale_place_so_later_ends_count(
     assert (place.pixels, place.stale) == (6000.0, False)
 
 
-async def test_a_newer_layout_change_stops_a_put_back_still_on_its_way(
+async def test_a_newer_layout_change_waits_for_the_put_back_on_its_way(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """Codex's #572 review: a second report while the first jump moves wins.
+    """#600: at the largest sizes a text-size change is two layout changes in a row.
 
-    The first put-back's keyed jump has started (its scroll start came) when the text
-    changes again; once its end comes, the older put-back scrolls no further and
-    restores nothing, so no place from the old layout comes back as current.
+    The second comes while the first put-back's keyed jump moves (Flet runs each event
+    as its own task). It asks nothing until that jump's end has come, as every jump
+    waits on the one scroll-end signal: the first put-back then stops without scrolling
+    into the slot, and the second jumps from its own end, with the heights reported in
+    the final layout.
     """
     schedule = await shown()
-    await _at_saturday_s_fourth_slot(schedule)
+    key = await _at_saturday_s_fourth_slot(schedule)
     schedule.hold = asyncio.Event()
     time, _ = _probe(schedule)
-    put_back = asyncio.ensure_future(
+    first = asyncio.ensure_future(
         schedule.session.dispatch_event(time._i, "size_change", {"w": 52.0, "h": 26.0})
     )
     await schedule.until(lambda: schedule.scrolls)
-    start = {
-        "event_type": "start",
-        "pixels": 1000.0,
-        "min_scroll_extent": 0.0,
-        "max_scroll_extent": 20_000.0,
-        "viewport_dimension": 700.0,
-    }
-    await schedule.event(schedule.list_of(SATURDAY), "scroll", start)
-    await _measure(schedule, 60.0)
+    second = asyncio.ensure_future(_measure(schedule, 60.0))
+    await schedule.until(lambda: (memory.schedule_basis or (0.0,))[0] == 60.0)
+    assert len(schedule.scrolls) == 1  # the second waits for the first jump's end
+    await _report(schedule, SATURDAY, HEIGHT * 1.3)
     schedule.hold.set()
-    await put_back
-    await schedule.until(lambda: memory.schedule_offsets.get(SATURDAY) == 4000.0)
-    assert [kwargs for _, kwargs in schedule.scrolls if "offset" in kwargs] == []
-    assert SATURDAY not in memory.schedule_places
+    await first
+    await second
+    await schedule.until(lambda: not memory.schedule_places[SATURDAY].stale)
+    asks = [kwargs for _, kwargs in schedule.scrolls]
+    assert schedule.keyed() == [key, key]
+    assert asks[2:] == [{"offset": 4000.0 - 1 + 65.0, "duration": 0}]  # the second's
+    place = memory.schedule_places[SATURDAY]
+    assert (place.key, place.into, place.pixels) == (key, 65.0, 4064.0)
+
+
+async def test_a_slot_that_has_not_reported_its_new_height_shows_from_its_top(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """#600: the old height would scale the distance past the slot, so it is not used.
+
+    The keyed jump has landed before the slot reported its height at the new size: the
+    list stays at the slot's top (its anchor under the divider), not a guess inside it.
+    """
+    schedule = await shown()
+    key = await _at_saturday_s_fourth_slot(schedule)
+    await _measure(schedule, 52.0)
+    await schedule.until(lambda: not memory.schedule_places[SATURDAY].stale)
+    assert schedule.keyed() == [key]
+    assert [kw for _, kw in schedule.scrolls if "offset" in kw] == [
+        {"offset": 4000.0 - 1, "duration": 0}
+    ]
+    assert memory.schedule_places[SATURDAY].into == 0.0
+
+
+async def test_the_time_moving_above_the_rows_puts_the_slot_s_top_back(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """#600: a distance into a slot beside its time says nothing of rows under it.
+
+    The time goes above the rows at the largest sizes (D-216), so the slot is put back
+    at its top, even with its height reported in the new layout; the place it leaves
+    records that layout, so the next put-back in it scales the distance again.
+    """
+    schedule = await shown()
+    key = await _at_saturday_s_fourth_slot(schedule)
+    assert not memory.schedule_places[SATURDAY].above
+    schedule.hold = asyncio.Event()
+    schedule.prefs.time_above = True  # what GutterProbe measures at that size
+    await schedule.until(lambda: schedule.scrolls)
+    await _report(schedule, SATURDAY, HEIGHT * 1.3)
+    schedule.hold.set()
+    await schedule.until(lambda: not memory.schedule_places[SATURDAY].stale)
+    assert schedule.keyed() == [key]
+    place = memory.schedule_places[SATURDAY]
+    assert (place.key, place.into, place.pixels, place.above) == (
+        key,
+        0.0,
+        4000.0 - 1,
+        True,
+    )
 
 
 async def test_a_jump_to_now_during_the_old_top_jump_stops_the_put_back(

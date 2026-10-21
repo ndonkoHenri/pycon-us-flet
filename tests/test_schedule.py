@@ -97,7 +97,8 @@ class Shown(sessions.Shown):
     leave: Callable[[], None] = lambda: None
     """Replace the Schedule with another screen, as a bottom-tab switch does (D-142)."""
     moves: bool = True
-    """Whether a keyed scroll ends with a scroll end; False: the list is already there."""
+    """Whether a scroll ends with a scroll end, a keyed one at 4,000 dp and one to an
+    offset there; False: the list is already there."""
     late: bool = False
     """Whether the first keyed scroll's end comes too late, as on a loaded host (#237)."""
     hold: asyncio.Event | None = None
@@ -268,7 +269,15 @@ async def shown(
         result.scrolls.append((self, kwargs))
         if result.hold is not None:
             await result.hold.wait()
-        if kwargs.get("scroll_key") is None or not result.moves:
+        if not result.moves:
+            return
+        if kwargs.get("scroll_key") is None:  # an offset jump ends where it was asked
+            pixels = float(kwargs["offset"])
+            asyncio.get_running_loop().call_soon(
+                lambda: asyncio.ensure_future(
+                    session.dispatch_event(self._i, "scroll", _scroll_end(pixels))
+                )
+            )
             return
         if result.late:
             # The first ask's wait ends at once, before its end could come; the
