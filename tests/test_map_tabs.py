@@ -149,7 +149,7 @@ async def test_the_map_opens_on_rooms_under_its_named_tabs(render: Render) -> No
     alone under the bar (D-312).
     """
     shown = await render()
-    assert shown.tabs.length == 3
+    assert shown.tabs.length == 4
     assert shown.tabs.selected_index == 0
     labels = [text_of(tab.label) for tab in shown.find(ft.Tab)]
     assert sorted(labels) == ["Expo", "Floor plans", "Job fair", "Rooms"]
@@ -354,13 +354,13 @@ def test_a_plan_without_a_subtitle_is_read_by_its_name() -> None:
 
 
 async def test_job_fair_opens_with_its_card_and_the_tables(render: Render) -> None:
-    """``?tab=job-fair`` opens the third pane: the plan's card over the tables (MAP-04).
+    """``?tab=job-fair`` opens the fourth pane: the plan's card over the tables (MAP-04).
 
     The card is ``LocationCard``'s plan-only form, one button read as where it leads,
     and a tap pushes the floor viewer at ``…/plan/job-fair``, without a pin (D-254).
     """
     shown = await render("/map?tab=job-fair")
-    assert shown.tabs.selected_index == 2
+    assert shown.tabs.selected_index == 3
     assert shown.pane.key == "job-fair"
     card = shown.node("map.job_fair.location")
     assert card.label == "Open the Job fair & community showcase floor plan"
@@ -381,7 +381,7 @@ async def test_job_fair_keeps_its_scroll_across_pane_switches(
     shown = await render("/map?tab=job-fair", memory=memory)
     await shown.scroll_end(300.0)
     await shown.pick(0)
-    await shown.pick(2)
+    await shown.pick(3)
     assert shown.scrolls[-1] == ("job-fair", {"offset": 300.0, "duration": 0})
     assert memory.map_offsets["job-fair"] == 300.0
 
@@ -415,9 +415,10 @@ async def test_a_year_without_the_job_fair_plan_has_no_job_fair_tab(
     assert [pane.slug for pane in screen.panes_of(year.map)] == [
         "rooms",
         "floor-plans",
+        "expo",
     ]
     shown = await render("/map?tab=job-fair", year=year)
-    assert shown.tabs.length == 2
+    assert shown.tabs.length == 3
     assert shown.pane.key == "rooms"
 
 

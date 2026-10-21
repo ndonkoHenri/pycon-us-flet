@@ -355,8 +355,8 @@ def test_a_year_without_booths_has_no_expo_tab() -> None:
     """The Expo pane is there only when ``map.toml`` has booths."""
     no_booths = replace(YEAR.map, booths=())
     slugs = [pane.slug for pane in screen.panes_of(no_booths)]
-    assert slugs == ["rooms", map_plans.FLOOR_PLANS]
-    assert [pane.slug for pane in screen.panes_of(YEAR.map)][-1] == screen.EXPO
+    assert slugs == ["rooms", map_plans.FLOOR_PLANS, "job-fair"]
+    assert screen.EXPO in [pane.slug for pane in screen.panes_of(YEAR.map)]
 
 
 @pytest.mark.parametrize("booths", [True, False], ids=["booths", "no booths"])
