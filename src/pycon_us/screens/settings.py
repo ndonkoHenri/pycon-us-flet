@@ -1,14 +1,14 @@
-"""Settings (``/more/settings``): Appearance, High contrast and Data (THEME-01, P2-62).
+"""Settings (``/more/settings``): Appearance, Reminders and Data (THEME-01, P2-62).
 
 Two Material controls instead of Ionic's four-mode Cupertino sheet, both following the
 OS until the user chooses otherwise (D-23, ux.md §6.9): the System, Light and Dark
 radio rows, which More held until this page existed (D-169), and a High contrast
 switch, which shows the OS flag until it is switched against it (D-286). A choice
 applies at once and is saved with ``Prefs.save()``; one that cannot be saved still
-applies for the session, and a SnackBar says so (D-120). Then Data, the schedule's
-source and age with Refresh now, and the zone the times are in (``settings_data.py``).
-Reminders (#27) join the page with their issue. More pushes it, so Back returns there
-(D-17).
+applies for the session, and a SnackBar says so (D-120). Then Reminders, in D-60's
+interim until E3 (``settings_reminders.py``), and Data, the schedule's source and age
+with Refresh now, and the zone the times are in (``settings_data.py``). More pushes it,
+so Back returns there (D-17).
 """
 
 from typing import cast
@@ -17,6 +17,7 @@ import flet as ft
 
 from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.screens.settings_data import DataSection
+from pycon_us.screens.settings_reminders import reminders_section
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.favorite import NOT_SAVED
@@ -45,7 +46,7 @@ icon would start its title 24 dp left of theirs (#503's review). Data's icons ge
 
 @ft.component
 def Settings() -> ft.View:
-    """The Settings page: Appearance's three rows, the High contrast switch and Data."""
+    """The Settings page: Appearance's rows and High contrast switch, Reminders, Data."""
     page = ft.context.page
     svc = use_services()
     margin = use_margin(LIST)  # its width class (D-305)
@@ -61,19 +62,23 @@ def Settings() -> ft.View:
         setting = prefs.high_contrast_setting(bool(e.control.value))
         say_if_unsaved(page, await prefs.save(svc.storage, high_contrast=setting))
 
+    rows: list[ft.Control] = [
+        SectionHeader("Appearance"),  # level 2, a section of the page (D-211)
+        appearance(prefs.theme, choose_appearance),
+        high_contrast(
+            prefs.high_contrast_on,
+            follows_device=prefs.high_contrast == "system",
+            on_change=switch_high_contrast,
+        ),
+    ]
+    reminders = reminders_section(page.platform, slot=RADIO_WIDTH)
+    if reminders is not None:
+        rows.append(reminders)
+    rows.append(DataSection(RADIO_WIDTH))
     return AppScaffold(
         title="Settings",
         body=ft.ListView(
-            [
-                SectionHeader("Appearance"),  # level 2, a section of the page (D-211)
-                appearance(prefs.theme, choose_appearance),
-                high_contrast(
-                    prefs.high_contrast_on,
-                    follows_device=prefs.high_contrast == "system",
-                    on_change=switch_high_contrast,
-                ),
-                DataSection(RADIO_WIDTH),
-            ],
+            rows,
             expand=True,
             padding=sides(margin),
         ),
