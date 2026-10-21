@@ -1,7 +1,7 @@
 # Testing and quality (v2)
 
 **Status:** plan of record, 2026-10-11. Replaces the v1 testing document (kept in git history, not binding).
-**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-273 (local checks while the repo is private), D-93 (done), §M (names), §N (Flet facts).
+**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-252 (Maestro), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-273 (local checks while the repo is private), D-93 (done), §M (names), §N (Flet facts).
 **Flet ground truth:** the local monorepo at `9fbe52a61` (unreleased 1.1.0): `flet/testing/` (`FletTestApp`, `Tester`, `Finder`, `remote_tester.RemoteTester`), `flet/pytest_plugin.py` (fixture `flet_app`), `flet_cli/commands/test.py` (`flet test`), `packages/flet/integration_tests/README.md` and the integration-testing guide. Gaps Flet has today, with interims, are in §13.
 
 > Per D-96 this file is the test strategy (D-76..D-80). [`development.md`](development.md) is the developer guide (toolchain, dev loop, builds, CI) and links here.
@@ -11,7 +11,7 @@
 ## 0. Principles
 
 1. **Test what protects correctness.** Feed rules, time zones, ids, signing, the outbox and the PSF guard get thorough, fast tests. Screens get a few journey flows, not a test per feature id (D-04).
-2. **One obvious tool per layer.** pytest (+ hypothesis) for logic, `httpx.MockTransport` over the mock's `handle()` for the API, `flet test` for UI. No Node, jsonschema or snapshot libraries.
+2. **One obvious tool per layer.** pytest (+ hypothesis) for logic, `httpx.MockTransport` over the mock's `handle()` for the API, `flet test` and Maestro for UI, each for what the other cannot do (D-252). No Node, jsonschema or snapshot libraries.
 3. **API evidence is not device evidence.** Device behaviour is proven by spikes, flows and the phase checklist (D-79).
 4. **No test-only code in the app.** Flows use the real UI, including the Developer screen (D-73). Unit tests inject `now`, `httpx` transports and temporary directories.
 5. **Measure, don't gate, what CI cannot see.** Device performance and accessibility are measured at phase exits and recorded in the phase status issue (D-79, D-80).
@@ -24,6 +24,7 @@
 | Feed: rules, invariants, snapshot, Ionic reference (§3.3) | pytest, recorded feeds | every PR | yes |
 | Mock API, client, signing, outbox (§4) | `httpx.MockTransport`, hypothesis | every PR, from P3 | yes |
 | UI smoke flows (§5) | `flet test`, `flet_app`, `RemoteTester` | UI-heavy PRs; phase exits | no |
+| Device journeys and regression matrices (§5.5) | Maestro on packaged builds (`maestro/`) | PRs that change a journey; phase exits; a matrix's PRs | no |
 | Goldens (§6) | `take_screenshot`, `assert_screenshot` | P4 only | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
@@ -387,7 +388,7 @@ The machine records each row's attribution at enqueue time and compares it in an
 ### 5.2 Driving state without test hooks
 
 - **Identifiers.** Key controls carry `Semantics(identifier="<screen>.<element>[.<key>]")` (D-33, §M), e.g. `schedule.favorite.42`, `now.next_session`. They become Android `resource-id` and iOS `accessibilityIdentifier`, so they never contain names, emails or badge codes. Plain string literals; a typo fails a flow.
-- **The Developer screen** (D-73) sets the scene; flows unlock it with 7 taps on the version row (`about_app.version`), as a person would, then the **Developer options** row it adds (`about_app.developer`; #88, D-187). It has `developer.fake_clock` (ISO 8601 text; without an offset it is conference time), `developer.feed_url`, `developer.apply`, `developer.reset` (back to real time and the year's feed, no confirmation) and `developer.outcome`, the line that says what is in effect; the Data section (#107, D-198) has `developer.refresh_now`, `developer.clear_cache`, `developer.share_log` and `developer.reset_app`, whose confirmations' buttons are `<row>.confirm` and `<row>.cancel`, and `developer.data_outcome`; `developer.mock_url` comes in P3. A flow that needs a clean slate in the middle of a run can use Reset app › Reset app, which leaves the app as after a fresh install, on Now. A test build is a fresh install (§5.1), so a flow starts locked, on real time and on the year's feed.
+- **The Developer screen** (D-73) sets the scene; flows unlock it with 7 taps on the version row (`about_app.version`), as a person would, then the **Developer options** row it adds (`about_app.developer`; #88, D-187). It has `developer.fake_clock` (ISO 8601 text; without an offset it is conference time), `developer.feed_url`, `developer.apply`, `developer.reset` (back to real time and the year's feed, no confirmation) and `developer.outcome`, the line that says what is in effect; the Data section (#107, D-198) has `developer.refresh_now`, `developer.clear_cache`, `developer.share_log`, `developer.show_welcome` (Welcome again, keeping the settings and saved sessions; #424) and `developer.reset_app`, whose confirmations' buttons are `<row>.confirm` and `<row>.cancel`, and `developer.data_outcome`; `developer.mock_url` comes in P3. A flow that needs a clean slate in the middle of a run can use Reset app › Reset app, which leaves the app as after a fresh install, on Now. A test build is a fresh install (§5.1), so a flow starts locked, on real time and on the year's feed.
 - **Data.** The `feed_url` fixture (in `tests/ui/conftest.py`) serves `tests/fixtures/feeds/` from the laptop with `http.server.ThreadingHTTPServer` on `127.0.0.1` and returns the URL the app can reach: `http://10.0.2.2:<port>/conference-2026.json` on Android, `http://127.0.0.1:<port>/…` on iOS. "Offline" is the `silent_feed` fixture (`SilentFeed`, in `tests/ui/feeds.py`): a server on the laptop that takes each request and hangs up unanswered, which the app reads as no answer; real airplane mode would also cut the tester's socket. It counts the requests it takes, and `hold()` keeps the next ones open until `hang_up()`, so a flow sees a refresh it asked for run ("Updating the schedule…") and end, where a refused connection on a closed port can start and end between two polls (D-223). F2–F5 run on the recorded feed at 09:00 the day before the conference (`before_conference()`): the Schedule opens on its first day at the top, with no jump to now (D-192, D-204), so the rows a flow taps are on screen. What a flow looks for comes from `tests/ui/targets.py`, which processes the recorded feed (`recorded()`) or the bundled snapshot (`bundled()`) with the app's own code and lists a day's rows as the Schedule shows them, with the default filter, which hides open spaces (`day_rows()`, D-20); no id is written out (D-223).
 - **Which screen.** A `Finder` only counts matches, and a root's title also shows as its tab's label, so each tab root's app-bar title carries `<tab>.title` (`now.title` … `more.title`, D-170); a pushed View is known by its back arrow (`find_by_tooltip("Back")`) and by the bar's absence (D-144).
 - **Back.** Both platforms: tap the app bar's back arrow (`tap_back_arrow`). Android also: the Back key, `adb -s $FLET_TEST_DEVICE shell input keyevent KEYCODE_BACK` from the test (`press_system_back`). The iOS edge swipe and Android predictive back stay manual (§9).
@@ -473,9 +474,64 @@ About eight journeys, added in the phase that builds them. Each runs on the Andr
 | F7 | `test_room_pin_from_session` | P2 | Session → "Show on map" → floor plan with `map.pin.<room-slug>`; Back returns to the session | ROOM-04, MAP-05, DATA-32 |
 | F8 | `test_offline_scans_sync_once` | P3 | Mock lead account (in-process mock, URL set in Developer); stop the mock; two manual entries show Queued; restart; Sync now → Confirmed; the mock holds one capture per code with the scan-time sponsor | LEAD-07, API-10, D-56, D-65 |
 
-Scroll position (#313, Jump to now) cannot be read through a `Finder`, so it stays on the device checklist.
+Scroll position (#313, Jump to now) cannot be read through a `Finder`. A Maestro flow reads it (§5.5): `jump_to_now.yaml` checks where Jump to now lands.
 
 **When they run.** Locally before merging a PR that changes a journey (one platform), at every phase exit and after every Flet pin bump (both platforms), and once per phase at 200 % text (§7.2). A flaky flow gets a `test` issue and is fixed or deleted, never retried in a loop.
+
+### 5.5 Device flows with Maestro (D-252)
+
+[Maestro](https://maestro.dev) drives the packaged app from outside, with YAML flows in
+[`maestro/`](../maestro/README.md): a release APK on an Android emulator and an
+`ios-simulator` build on an iOS simulator, from one set of files. Only the free local
+CLI is used, never Maestro Cloud. `maestro/README.md` has the setup, the commands and
+how to write a flow; [`development.md`](development.md) §5.9 has the short version.
+
+**Where it fits.** Maestro owns the device journeys (PLAN §7's exit criteria 1 and 2)
+and regression matrices that repeat a trial on two builds. It can fling and scroll, use
+the keyboard, relaunch the app with its data, turn on airplane mode (Android), and read
+which row tops a list, all of which `RemoteTester` cannot (§13, #288). `flet test` keeps
+F1-F5 (§5.4) for what needs the host's side: a feed the flow controls (`SilentFeed`),
+targets from the app's own processing (`targets.py`), and a Flutter error failing the
+run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-241,
+§7.3) or performance (D-80, §8), and neither runs in CI.
+
+| Flow | Tags | Criterion |
+|---|---|---|
+| `drill_back` | journeys, smoke | Now → session → speaker → session; each Back pops one step (criteria 1, 2; #279) |
+| `star_undo` | journeys, smoke | Star, unstar with Undo; Now shows a saved session happening now as your next session (criteria 1, 2; part of F6) |
+| `my_schedule_overlap` | journeys | My schedule shows overlaps (criterion 1) |
+| `search_any_day` | journeys | Search finds a session, a speaker and a room on another day (criterion 1) |
+| `filter_persists` | journeys | A hidden track is said on the Schedule and survives a relaunch (criterion 1) |
+| `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
+| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
+
+**The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
+Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday
+2026-05-15 14:10 and a feed URL nothing answers at. Maestro cannot cut an iOS
+simulator's network, so there the launch's refresh may publish the year's live feed.
+
+**Caveats.**
+- On Android, any read of the accessibility tree makes Flutter report a screen reader
+  (F72), so under Maestro the app takes its screen-reader paths: the Schedule keeps its
+  Now button (D-204), and by D-184 SnackBars stay until used. `jump_to_now` checks the
+  button on iOS only; no flow checks a SnackBar's timeout.
+- About 0.85 s passes between two Maestro commands on the emulator, so the regression
+  flow's fling comes 0.8 to 1.0 s after the tap. #346 saw its failures at 0.33 to 0.6 s;
+  at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full. Row D's
+  window is reached by `tools/fling_after_sheet.py` (Android): it sends the tap and the
+  fling in one `adb shell` command, measures the gap from the launcher's touch log, and
+  judges each fling by the flow's rules. It refuses a run that does not start on the now
+  slot, 2:00 PM, and counts a trial whose gap is missing or outside 330 to 600 ms as "off
+  window", a failure that says nothing about row D. Its first runs (`maestro/README.md`),
+  counted before that rule, have not yet told #346's build from `main`: both lost flings
+  only during load spikes, at gaps past the window.
+- The app bar's back arrow has no identifier: Android flows press the system Back, iOS
+  flows tap the button named "Back".
+
+**When they run.** The journeys locally before merging a PR that changes one (one
+platform), and at every phase exit and Flet pin bump on both platforms, with the device
+checklist (§9). A regression matrix runs on a PR that touches what it guards, against
+`main`'s build on the same device.
 
 ## 6. Goldens (P4 only)
 
@@ -686,7 +742,7 @@ Not in Flet today. Each has an interim; the upstream fixes are candidates withou
 
 | Gap | Interim | Candidate upstream fix |
 |---|---|---|
-| `RemoteTester` has no drag, fling or scroll, and no keyboard action to close the keyboard `enter_text` opens (U35, #288) | Reach targets via search and its scopes, day tabs, Jump to now; rows near a list's top; the iOS flows on an iPhone 17 Pro Max simulator, whose More root shows About this app; the Android AVD's on-screen keyboard off; Developer's feed URL field keeps Apply in sight (D-223) | Drag, `scroll_until_visible` and `receive_action` in the device protocol |
+| `RemoteTester` has no drag, fling or scroll, and no keyboard action to close the keyboard `enter_text` opens (U35, #288) | A journey that needs one is a Maestro flow (§5.5, D-252). In `flet test` flows: reach targets via search and its scopes, day tabs, Jump to now; rows near a list's top; the iOS flows on an iPhone 17 Pro Max simulator, whose More root shows About this app; the Android AVD's on-screen keyboard off; Developer's feed URL field keeps Apply in sight (D-223) | Drag, `scroll_until_visible` and `receive_action` in the device protocol |
 | Flows can't reach physical phones (`10.0.2.2` / `127.0.0.1` fixed, `flet_test_app.py:295`) | Emulator and simulator; the iPhone via the checklist | A host override (`adb reverse` on Android) |
 | A `Finder` only counts matches | Assert presence of text, tooltips, identifiers | Finder text, bounds and semantics flags |
 | `RemoteTester.pump_and_settle` has a fixed 60 s timeout | `wait_for_id` polling | A `timeout` argument, as on `Tester` |
