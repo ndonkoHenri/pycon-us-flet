@@ -16,6 +16,7 @@ import flet as ft
 
 from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, start_target
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.about import AboutPycon
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.help import Help
@@ -188,7 +189,14 @@ ROUTES = [
     ft.Route(index=True, component=Start),
     ft.Route(path=WELCOME[1:], component=Welcome),  # no drill: nothing opens over it
     ft.Route(path="search", component=Search, modal=True, children=[DRILL]),
-    pushed("now", Now),
+    pushed(
+        "now",
+        Now,
+        # Now's quick info buttons (D-338): under Now, so Back returns there.
+        pushed("wifi", Wifi),
+        pushed("help", Help),
+        pushed("venue", Venue),
+    ),
     pushed("schedule", Schedule),
     pushed("my-schedule", MySchedule),
     pushed("map", Map),
@@ -224,6 +232,14 @@ ROUTES = [
         pushed("wifi", Wifi),
         pushed("jobs", Jobs),
         pushed("help", Help),
+        pushed(
+            "about",
+            AboutPycon,
+            # Its in-app links, More's pages again: under it, Back returns to it
+            # (D-207's pattern).
+            pushed("help", Help),
+            pushed("venue", Venue),
+        ),
         pushed("psf", AboutPsf),
         pushed("social", Social),
         pushed("venue", Venue),

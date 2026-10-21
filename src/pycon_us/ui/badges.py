@@ -128,3 +128,27 @@ def badge_row(badges: list[ft.Control]) -> ft.Row:
         badges: The badges, e.g. from ``session_badges()``.
     """
     return ft.Row(badges, wrap=True, spacing=8, run_spacing=4)
+
+
+def ChangedBadge(
+    text: str, said: str, colors: BadgeColors, identifier: str
+) -> ft.Control:
+    """Return session detail's badge of one recent change, read as one phrase.
+
+    Drawn as the rows' Changed badge (D-315), it shows the old value, "Was Fri, May 15,
+    10:30 AM", and a screen reader hears it whole, "Was Friday, May 15, 10:30 AM"
+    (ux.md §5.5, D-33).
+
+    Args:
+        text: What it shows (``change_views.detail_badge()``).
+        said: What a screen reader says.
+        colors: ``Tokens.changed``.
+        identifier: Its semantics identifier, e.g. ``session.changed.room``.
+    """
+    return ft.Semantics(
+        label=said,
+        identifier=identifier,
+        container=True,
+        exclude_semantics=True,  # the label replaces the shown text, not repeated
+        content=TrackBadge(text, colors),
+    )
