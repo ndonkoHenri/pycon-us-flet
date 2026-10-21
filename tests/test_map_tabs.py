@@ -30,7 +30,8 @@ from tests.trees import descendants
 
 YEAR = load_year(2026)
 PLAN_IDS = ["campus", "concourse", "upper", "arena", "seaside"]
-"""The 2026 floor plans, in ``map.toml``'s order (MAP-02): the expo's is not one."""
+"""The 2026 floor plans, in ``map.toml``'s order (MAP-02): the expo's and the job
+fair's are not among them."""
 
 
 @dataclasses.dataclass
@@ -141,20 +142,21 @@ async def render(
 # ------------------------------------------------------------------ the tabs
 
 
-async def test_the_map_opens_on_rooms_under_two_named_tabs(render: Render) -> None:
-    """Rooms and Floor plans are the first row, Rooms shown, with no ``TabBarView``.
+async def test_the_map_opens_on_rooms_under_its_named_tabs(render: Render) -> None:
+    """Rooms, Floor plans and Job fair are the first row, Rooms shown, no ``TabBarView``.
 
     Each tab carries ``map.tab.<slug>``; the pane shown is the rooms' keyed list,
     alone under the bar (D-312).
     """
     shown = await render()
-    assert shown.tabs.length == 2
+    assert shown.tabs.length == 3
     assert shown.tabs.selected_index == 0
     labels = [text_of(tab.label) for tab in shown.find(ft.Tab)]
-    assert sorted(labels) == ["Floor plans", "Rooms"]
+    assert sorted(labels) == ["Floor plans", "Job fair", "Rooms"]
     assert {str(n.identifier) for n in shown.nodes("map.tab.")} == {
         "map.tab.rooms",
         "map.tab.floor-plans",
+        "map.tab.job-fair",
     }
     assert shown.find(ft.TabBarView) == []
     assert shown.pane.key == "rooms"
@@ -334,7 +336,7 @@ async def test_a_card_reads_as_one_button_and_pushes_its_plan(render: Render) ->
     assert image.fit == ft.BoxFit.COVER
     assert image.exclude_from_semantics
     icons = [i.icon for i in shown.find(ft.Icon)]
-    assert icons.count(ft.Icons.OPEN_IN_FULL) == len(PLAN_IDS)  # no expo card
+    assert icons.count(ft.Icons.OPEN_IN_FULL) == len(PLAN_IDS)  # no expo or job fair
     (tile,) = [c for c in shown.find(ft.Container) if c.content is node]
     await shown.click(tile)
     assert shown.went == ["/map/plan/concourse"]
@@ -345,6 +347,77 @@ def test_a_plan_without_a_subtitle_is_read_by_its_name() -> None:
     plan = YEAR.map.plans[0]
     bare = dataclasses.replace(plan, subtitle="")
     assert map_plans.plan_phrase(bare) == "Campus overview floor plan"
+
+
+# ------------------------------------------------------------------ the job fair
+
+
+async def test_job_fair_opens_with_its_card_and_the_tables(render: Render) -> None:
+    """``?tab=job-fair`` opens the third pane: the plan's card over the tables (MAP-04).
+
+    The card is ``LocationCard``'s plan-only form, one button read as where it leads,
+    and a tap pushes the floor viewer at ``…/plan/job-fair``, without a pin (D-254).
+    """
+    shown = await render("/map?tab=job-fair")
+    assert shown.tabs.selected_index == 2
+    assert shown.pane.key == "job-fair"
+    card = shown.node("map.job_fair.location")
+    assert card.label == "Open the Job fair & community showcase floor plan"
+    assert card.button
+    assert shown.node("map.table.bloomberg").label == (
+        "Table T2, Bloomberg, 15 open roles"
+    )
+    (tile,) = [c for c in shown.find(ft.Container) if c.content is card]
+    await shown.click(tile)
+    assert shown.went == ["/map/plan/job-fair"]
+
+
+async def test_job_fair_keeps_its_scroll_across_pane_switches(
+    render: Render,
+) -> None:
+    """Where the job fair's scroll ended is put back when its tab is picked again."""
+    memory = ViewMemory()
+    shown = await render("/map?tab=job-fair", memory=memory)
+    await shown.scroll_end(300.0)
+    await shown.pick(0)
+    await shown.pick(2)
+    assert shown.scrolls[-1] == ("job-fair", {"offset": 300.0, "duration": 0})
+    assert memory.map_offsets["job-fair"] == 300.0
+
+
+async def test_a_table_row_opens_its_sponsor_and_back_returns_to_the_pane(
+    open_at: links.Open,
+) -> None:
+    """A row › sponsor › Back finds the Job fair pane again, as the user left it."""
+    memory = ViewMemory()
+    shown = await open_at("/map?tab=job-fair", memory=memory)
+    (row,) = [
+        c
+        for c in shown.find(ft.Container)
+        if isinstance(c.content, ft.Semantics)
+        and c.content.identifier == "map.table.bloomberg"
+    ]
+    await shown.click(row)
+    await shown.settle()
+    assert shown.routes()[-1] == "/map/sponsor/bloomberg"
+    # Back pops to the Map's own path (``parent_of()``, D-141); the pane is memory's.
+    assert await shown.back() == "/map"
+    assert pane_shown(shown) == "job-fair"
+
+
+async def test_a_year_without_the_job_fair_plan_has_no_job_fair_tab(
+    render: Render,
+) -> None:
+    """Without a ``job-fair`` plan there is no pane; ``?tab=job-fair`` opens Rooms."""
+    plans = tuple(plan for plan in YEAR.map.plans if plan.id != "job-fair")
+    year = dataclasses.replace(YEAR, map=dataclasses.replace(YEAR.map, plans=plans))
+    assert [pane.slug for pane in screen.panes_of(year.map)] == [
+        "rooms",
+        "floor-plans",
+    ]
+    shown = await render("/map?tab=job-fair", year=year)
+    assert shown.tabs.length == 2
+    assert shown.pane.key == "rooms"
 
 
 # ------------------------------------------------------------------ the app bar

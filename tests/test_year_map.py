@@ -61,9 +61,10 @@ def feed_room_strings(year: int) -> set[str]:
 
 
 def test_2026_has_the_floor_plans_in_the_maps_order() -> None:
-    """2026's plans are Ionic's five, in its order, then the expo's, with the 3D tour.
+    """2026's plans are Ionic's five, in its order, then the expo's and the job fair's.
 
-    MAP-02, MAP-03; the expo plan is the one the booths are on (EXPO-02).
+    MAP-02, MAP-03, with the 3D tour; the expo plan is the one the booths are on
+    (EXPO-02), and the job fair's carries the note its pane shows (MAP-04, D-254).
     """
     data = load_year(2026).map
     assert [plan.id for plan in data.plans] == [
@@ -73,7 +74,12 @@ def test_2026_has_the_floor_plans_in_the_maps_order() -> None:
         "arena",
         "seaside",
         "expo",
+        "job-fair",
     ]
+    job_fair = data.plan("job-fair")
+    assert job_fair is not None
+    assert job_fair.note.startswith("The printed plan shows some tables")
+    assert all(not plan.note for plan in data.plans if plan is not job_fair)
     assert data.tour_url == "https://map.concept3d.com/?id=1802"
     assert all(plan.title and plan.subtitle for plan in data.plans)
 
@@ -88,6 +94,9 @@ def test_a_year_without_a_map_file_has_no_plans_or_pins() -> None:
 def test_plans_are_webp_within_the_size_budget(plan: Plan) -> None:
     """Each plan is a WebP of at most 2048 px, its recorded size, and within S7's budget.
 
+    A plan larger than that is fitted to 2048 px; the job fair's, cropped to 1700 px
+    wide (D-254), keeps its size, as the script never scales up.
+
     Its thumbnail is the plan fitted to 800 px, with the plan's aspect ratio to the
     pixel's rounding, so a pin's percentages land on the same spot on both (MAP-06).
     """
@@ -95,7 +104,7 @@ def test_plans_are_webp_within_the_size_budget(plan: Plan) -> None:
     with Image.open(image_path) as image, Image.open(thumb_path) as thumb:
         assert (image.format, thumb.format) == ("WEBP", "WEBP")
         assert image.size == (plan.width, plan.height)
-        assert max(image.size) == 2048
+        assert max(image.size) == (1700 if plan.id == "job-fair" else 2048)
         assert max(thumb.size) == 800
         assert abs(thumb.width / thumb.height - image.width / image.height) < 0.005
     assert image_path.stat().st_size <= PLAN_BUDGET
@@ -277,6 +286,7 @@ def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
         ),
         ('label = "Attendee lounge"', 'label = " "', r"booths\[\d+\]\.label: is empty"),
         ('id = "expo"', 'id = "hall"', r"2026/map.toml: booths: no plan 'expo' to put"),
+        ('note = "The printed', 'note = " " # "', r"plans\[6\]\.note: is empty"),
     ],
 )
 def test_a_bad_map_entry_names_file_entry_and_field(

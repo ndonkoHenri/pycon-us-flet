@@ -5,22 +5,28 @@ as lossy WebP, quality 80, as spike S7 decided (``docs/spikes/07-floor-plans.md`
 its thumbnail is the fitted plan fitted again to 800 px, so a pin's percentages land
 on the same spot in both. ``--cover`` paints a rectangle of the source in the plan's
 background colour first: the way to hide a PyCon mark printed on a plan (D-36).
+``--crop`` keeps one rectangle of the source, after the covers: the way to drop a
+print's header with its logo (the job fair's, D-254). A plan smaller than 2048 px
+after its crop keeps its own size, since the script never scales up.
 
 Run it from the repository's root with each plan as ``<id>=<source image>``; it writes
 ``<id>.webp`` and ``<id>-thumb.webp`` into ``--out`` and prints each file's size, to be
 copied into ``map.toml``'s ``width`` and ``height``. 2026's plans (``NOTICE``), the
-expo's sun-and-palms mark covered too (#401)::
+expo's sun-and-palms mark covered too (#401) and the job fair's print cropped to the
+floor, without its header (#407)::
 
     IMG=excluded/pycon-us-mobile/src/assets/img
     uv run python tools/encode_plans.py --out src/assets/maps/2026 \
         --cover campus=150,40,520,185 --cover campus=150,1566,500,1680 \
         --cover expo=30,230,545,650 \
+        --crop job-fair=0,640,1700,2078 \
         campus=$IMG/floor-plans/campus-map.jpg \
         concourse=$IMG/floor-plans/floor-plan-1.jpg \
         upper=$IMG/floor-plans/floor-plan-2.jpg \
         arena=$IMG/floor-plans/floor-plan-3.jpg \
         seaside=$IMG/floor-plans/floor-plan-4.jpg \
-        expo=$IMG/pycon-us-2026-floorplan-nologo.jpg
+        expo=$IMG/pycon-us-2026-floorplan-nologo.jpg \
+        job-fair=$IMG/floor-plans/job-fair.jpg
 """
 
 import argparse
@@ -83,12 +89,14 @@ def webp(image: Image.Image) -> bytes:
 
 
 def _box(text: str) -> tuple[str, tuple[int, int, int, int]]:
+    """Read ``<id>=left,top,right,bottom``, the form of ``--cover`` and ``--crop``."""
     plan, _, numbers = text.partition("=")
     left, top, right, bottom = (int(n) for n in numbers.split(","))
     return plan, (left, top, right, bottom)
 
 
 def _plan(text: str) -> tuple[str, Path]:
+    """Read ``<id>=<source image>``, a plan to encode."""
     plan, _, source = text.partition("=")
     return plan, Path(source)
 
@@ -100,6 +108,7 @@ def main() -> None:
     )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--cover", type=_box, action="append", default=[])
+    parser.add_argument("--crop", type=_box, action="append", default=[])
     parser.add_argument("plans", type=_plan, nargs="+", metavar="ID=SOURCE")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -107,7 +116,11 @@ def main() -> None:
         with Image.open(source) as opened:
             image = opened.convert("RGB")
         boxes = [box for name, box in args.cover if name == plan]
-        fitted = fit(cover(image, boxes), PLAN_SIDE)
+        image = cover(image, boxes)
+        crop = next((box for name, box in args.crop if name == plan), None)
+        if crop is not None:
+            image = image.crop(crop)
+        fitted = fit(image, PLAN_SIDE)
         thumb = fit(fitted, THUMB_SIDE)
         sizes = []
         for name, picture in ((plan, fitted), (f"{plan}-thumb", thumb)):

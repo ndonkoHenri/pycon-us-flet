@@ -265,3 +265,8 @@ def test_a_spot_without_a_pin_has_no_card(key: str) -> None:
     """``spot_card()`` gives no card for an empty key or one ``map.toml`` lacks."""
     data = load_year(2026).map
     assert card.spot_card(data, key, identifier="help.info_desk.location") is None
+
+
+def test_a_year_without_the_job_fair_plan_has_no_job_fair_card() -> None:
+    """``job_fair_card()`` is None without a ``job-fair`` plan (2025 has no map.toml)."""
+    assert card.job_fair_card(load_year(2025).map, identifier=IDENTIFIER) is None
