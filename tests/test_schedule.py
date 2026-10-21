@@ -668,7 +668,7 @@ async def test_a_recorded_batch_re_renders_one_slot_and_one_row(
     await settle()
     assert schedule.rows == [TALK]
     assert schedule.slots == ["10:30 AM"]
-    assert "Room changed" in schedule.node(f"schedule.session.{TALK}").label
+    assert "Room changed" in (schedule.node(f"schedule.session.{TALK}").label or "")
 
 
 async def test_a_sprint_day_says_so_and_links_to_the_sprints(

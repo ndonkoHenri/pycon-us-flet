@@ -27,6 +27,7 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.theme import DARK_TOKENS, LIGHT_TOKENS
 from pycon_us.ui import session_rows as rows
+from pycon_us.ui.badges import CHANGED
 from pycon_us.ui.favorite import (
     ADD_LABEL,
     FAVORITE_LABEL,
@@ -35,7 +36,6 @@ from pycon_us.ui.favorite import (
     REMOVED,
     UNDO,
 )
-from pycon_us.ui.badges import CHANGED
 from pycon_us.ui.row_lines import elapsed_bar
 from pycon_us.ui.session_rows import is_notice
 from tests.feeds import processed
@@ -152,9 +152,8 @@ async def test_a_changed_row_shows_the_badge_and_says_what_changed(
     rendered.renders.clear()
     await record(rendered, (TALK, ChangeKind.ROOM), (TALK, ChangeKind.TIME))
     assert badge_labels(rendered, TALK) == ["Talk", CHANGED]
-    assert rendered.node(f"test.session.{TALK}").label.startswith(
-        "Talk, Time and room changed. Python for Humans"
-    )
+    phrase = rendered.node(f"test.session.{TALK}").label or ""
+    assert phrase.startswith("Talk, Time and room changed. Python for Humans")
     assert rendered.renders == [TALK]  # the other rows skip their bodies (D-153)
 
 
