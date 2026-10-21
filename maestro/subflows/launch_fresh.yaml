@@ -1,0 +1,13 @@
+# Launch the app as a fresh install starts: no settings, no favourites, no cache,
+# Developer options locked, real time and the year's feed (D-73). Maestro clears the
+# app's data first (`pm clear` on Android, the app's container on iOS).
+appId: io.github.ndonkohenri.pyconus
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+# A first launch unpacks the bundled Python before Now shows.
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 120000

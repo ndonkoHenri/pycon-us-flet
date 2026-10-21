@@ -1,0 +1,12 @@
+# Read what is at the top of the Schedule's day: the first session row on screen.
+# Sets output.topRow to its phrase (D-190) and output.topSlot to its start time, e.g.
+# "2:00" (both empty strings when no row shows). Maestro matches only what is on
+# screen, in the list's order, so index 0 is the top row; a row cut by the list's top
+# edge still counts. The time is the phrase's first "H:MM to" ("2:00 to 2:30 PM").
+appId: io.github.ndonkohenri.pyconus
+---
+- copyTextFrom:
+    id: "schedule\\.session\\..*"
+    index: 0
+- evalScript: ${output.topRow = maestro.copiedText || ''}
+- evalScript: ${output.topSlot = (output.topRow.match(/(\d{1,2}:\d{2}) to /) || ['', ''])[1]}
