@@ -35,7 +35,7 @@ from pycon_us.core.change_views import (
 )
 from pycon_us.core.diff import ChangeKind
 from pycon_us.favorites import use_favorites
-from pycon_us.locations import drill_href
+from pycon_us.locations import drill_href, is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.schedule_changes_seen import (
     FADE_MS,
@@ -108,7 +108,9 @@ def ScheduleChanges(year: str) -> ft.View:
         lambda: tuple(b for b in change_log.batches if not b.seen) if current else (),
         [change_log.batches, current],
     )
-    use_seen_marks(change_log, svc.storage, prefs, unseen)
+    # Shown only as the top View: a session pushed on it keeps it mounted (D-164).
+    on_top = is_top_view(page.route, ft.use_view_path())
+    use_seen_marks(change_log, svc.storage, prefs, svc.closed, unseen if on_top else ())
     fade_ms = prefs.motion_ms(FADE_MS)
 
     @report_errors

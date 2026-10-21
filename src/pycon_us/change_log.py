@@ -73,8 +73,11 @@ class ChangeLog:
     # Whether `pycon.<year>.fetched` is set: a network feed was published (D-255).
     _fetched: bool = field(default=False, repr=False)
     _announce: Batch | None = field(default=None, repr=False)
-    # The seen marks' file writes, kept until they land: nobody awaits a cleanup's.
+    # The log's file writes, kept until they land: nobody awaits a cleanup's mark.
     _saves: set[asyncio.Task[bool]] = field(default_factory=set, repr=False)
+    # One write at a time, each saving the log as it is once the one before landed:
+    # the storage's thread lock gives turns, not order (D-244).
+    _writing: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
     async def load(self, storage: Storage, zone: tzinfo) -> None:
         """Read the year's log and its marker; call it once at start, before a refresh.
@@ -90,6 +93,9 @@ class ChangeLog:
     async def delete(self, storage: Storage, reason: str) -> bool:
         """Delete the log, once every file write asked for before lands (D-244, D-255).
 
+        The writes still waiting for their turn land first: one landing after the
+        deletion would bring the file back.
+
         A feed URL change after the load: the log was the old URL's.
 
         Args:
@@ -100,7 +106,8 @@ class ChangeLog:
             Whether the file is gone; the batches in memory go either way.
         """
         self._forget()
-        return await changes_file.delete_batches(storage, reason)
+        async with self._writing:
+            return await changes_file.delete_batches(storage, reason)
 
     def reset(self) -> None:
         """Return to a fresh install's log, without writing: Reset app (D-198, D-255).
@@ -152,8 +159,8 @@ class ChangeLog:
 
         Synchronous, so a screen's sync cleanup can call it (D-70): the marks apply at
         once and notify, and the file write is a task the store keeps until it lands.
-        The write saves the batches as they are when it starts, so a batch recorded
-        meanwhile is kept.
+        The write saves the batches as they are when its turn comes (``_save()``), so a
+        batch recorded meanwhile is kept.
 
         Args:
             storage: Where the log is kept.
@@ -174,14 +181,25 @@ class ChangeLog:
         if all(new is old for new, old in zip(marked, self.batches, strict=True)):
             return None
         self.batches = marked
-        save = asyncio.create_task(self._save(storage))
+        return self._save(storage)
+
+    def _save(self, storage: Storage) -> asyncio.Task[bool]:
+        """Start writing the log, after the writes before it; return the kept task.
+
+        Every write of the log goes through here, one at a time: each saves the
+        batches as they are once the one before it landed, so a seen mark's write can
+        never land over a newer batch's. The task is kept until it lands, so a
+        cancelled caller (a refresh, a cleanup) leaves it to finish.
+        """
+        save = asyncio.create_task(self._write(storage))
         self._saves.add(save)
         save.add_done_callback(self._saves.discard)
         return save
 
-    async def _save(self, storage: Storage) -> bool:
-        """Write the log as it is now; a failure is logged and returned (D-120)."""
-        return await changes_file.write_batches(storage, list(self.batches))
+    async def _write(self, storage: Storage) -> bool:
+        """Write the log as it is when its turn comes; a failure is logged (D-120)."""
+        async with self._writing:
+            return await changes_file.write_batches(storage, list(self.batches))
 
     def take_announcement(self) -> Batch | None:
         """Return the batch to announce, once: the next call returns None.
@@ -231,7 +249,7 @@ class ChangeLog:
         if any(change.kind is not ChangeKind.ADDED for change in changes):
             self._announce = batch  # before `batches`, whose assignment notifies
         self.batches = (batch, *trim(self.batches, batch.detected_at))
-        await changes_file.write_batches(storage, list(self.batches))
+        await asyncio.shield(self._save(storage))
         return batch
 
     def _forget(self) -> None:

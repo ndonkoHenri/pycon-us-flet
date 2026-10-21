@@ -2,10 +2,10 @@
 
 NEW-04. An item of an unseen batch has a 6 dp ``primary`` dot beside its icon and its
 sentence starts with "New: " (``item_phrase()``). The list marks the batches it shows
-seen 2 s after it shows them (``use_seen_marks()``), which also clears Now's card; left
-sooner, they stay unseen. With a screen reader on, a 2 s timer would drop "New:" while
-the list is still being read, so the batches are marked when the list is left instead.
-The app bar's overflow has Mark all as seen, disabled with nothing unseen. The marks are
+seen once it has shown them 2 s as the top View (``use_seen_marks()``), which also
+clears Now's card; left sooner, or a session pushed on it, they stay unseen. With a
+screen reader on, a 2 s timer would drop "New:" while the list is still being read, so
+the batches are marked when the list is left instead. The app bar's overflow has Mark all as seen, disabled with nothing unseen. The marks are
 saved in the log's file (``ChangeLog.mark_seen()``), so they survive a relaunch.
 """
 
@@ -34,40 +34,66 @@ FADE_MS = 200
 
 
 def use_seen_marks(
-    change_log: ChangeLog, storage: Storage, prefs: Prefs, shown: tuple[Batch, ...]
+    change_log: ChangeLog,
+    storage: Storage,
+    prefs: Prefs,
+    closed: asyncio.Event,
+    shown: tuple[Batch, ...],
 ) -> None:
     """Mark the unseen batches the list shows seen: after 2 s, or on leaving.
 
     A plain function that calls hooks, so the screen calls it once per render, before
-    any early return (D-70). The wait restarts when the unseen batches change (a refresh
-    records one while the list is open), and stops when the list is left: its task is
-    cancelled before the sync cleanup runs. With a screen reader on there is no wait:
-    the batches still unseen are marked when the list is left.
+    any early return (D-70). The list shows batches only while it is the top View: a
+    session pushed on it, or a deep link to one beneath it, keeps it mounted unseen
+    (``is_top_view()``), so the screen passes none then. The wait restarts when the
+    batches shown change (a refresh records one, a View is pushed or popped) or the
+    screen reader is turned on or off, and stops when the list is left: Flet cancels
+    the effect's task first. With a screen reader on there is no wait: the batches the
+    list showed are marked when it is left, by a push or an unmount. Nothing is marked
+    once the session has closed (D-147): its log is stale.
 
     Args:
         change_log: The session's ``ChangeLog``.
         storage: Where the log is kept.
-        prefs: The ``Prefs`` store, read for ``screen_reader`` when it matters.
-        shown: The unseen batches the list shows; none for a list that shows no log
-            (the not-found state).
+        prefs: The ``Prefs`` store, read for ``screen_reader``.
+        closed: ``Services.closed``, set when a new session replaced this one.
+        shown: The unseen batches the list shows; none while it is not the top View,
+            or shows no log (the not-found state).
     """
-    showing = ft.use_ref(shown)
-    showing.current = shown  # the leave cleanup marks what the last render showed
+    showing = ft.use_ref(shown)  # what the list showed last, for a reader's marks
+    reader = prefs.screen_reader
 
     @report_errors
     async def after_a_while() -> None:
-        if not shown or prefs.screen_reader:
+        left, showing.current = showing.current, shown
+        if reader:
+            if not shown:  # pushed under a session: the reader left the list
+                _mark(change_log, storage, closed, left)
+            return
+        if not shown:
             return
         await asyncio.sleep(SEEN_AFTER_S)
-        change_log.mark_seen(storage, shown)
+        if not prefs.screen_reader:  # turned on meanwhile: the list is still read
+            _mark(change_log, storage, closed, shown)
 
     @report_errors
     def on_leaving() -> None:
-        if prefs.screen_reader and showing.current:
-            change_log.mark_seen(storage, showing.current)
+        if prefs.screen_reader:
+            _mark(change_log, storage, closed, showing.current)
 
-    ft.use_effect(after_a_while, [shown], cleanup=_stop_waiting)
+    ft.use_effect(after_a_while, [shown, reader], cleanup=_stop_waiting)
     ft.on_unmounted(on_leaving)
+
+
+def _mark(
+    change_log: ChangeLog,
+    storage: Storage,
+    closed: asyncio.Event,
+    batches: tuple[Batch, ...] | None,
+) -> None:
+    """Mark ``batches`` seen, unless none or the session has closed (D-147)."""
+    if batches and not closed.is_set():
+        change_log.mark_seen(storage, batches)
 
 
 def _stop_waiting() -> None:

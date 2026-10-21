@@ -7,6 +7,7 @@ on Saturday, May 16 in Long Beach. The seen marks' 2 s wait is held until the te
 releases it (``tests/timers.py``), and the list can be left in the same session.
 """
 
+import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
@@ -33,9 +34,11 @@ from pycon_us.locations import parent_of
 from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule_changes as screen
 from pycon_us.screens import schedule_changes_seen as seen
-from pycon_us.services.changes_file import read_batches
+from pycon_us.services.changes_file import changes_path, read_batches
 from pycon_us.state import Conference
+from tests import links
 from tests.feeds import processed
+from tests.links import Open
 from tests.sessions import Shown, showing
 from tests.timers import HeldSleeps
 
@@ -96,6 +99,14 @@ class Changes(Shown):
         self.toggles[0](False)
         await self.settle()
 
+    async def saved(self) -> list[bool]:
+        """Each batch's seen mark in the log's file, once the log's writes have landed.
+
+        A write runs in a thread, which ``settle()`` does not wait for.
+        """
+        await asyncio.gather(*self.change_log._saves)  # pyright: ignore[reportPrivateUsage]
+        return [batch.seen for batch in await read_batches(self.storage, LA)]
+
     def unseen(self) -> list[bool]:
         """Each batch's seen mark in the log, ``True`` for unseen, in the log's order."""
         return [not batch.seen for batch in self.change_log.batches]
@@ -116,6 +127,8 @@ def _dot(node: ft.Semantics) -> ft.Container:
 
 
 type Show = Callable[..., Awaitable[Changes]]
+
+open_at = links.open_at  # the fixture, under this module's name (tests/chrome.py)
 
 
 @pytest.fixture
@@ -156,6 +169,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path=VIEW,
+                    route=VIEW,  # the list is the top View (is_top_view())
                     prefs=prefs,
                     saved=saved,
                     change_log=ChangeLog(batches=batches),
@@ -358,8 +372,7 @@ async def test_the_list_marks_what_it_shows_seen_after_two_seconds(
     assert not any(line.startswith("New: ") for line in outline(page))
     assert set(page.dots().values()) == {0.0}
     assert _dot(page.node("changes.change.142.room")).animate_opacity == seen.FADE_MS
-    saved = await read_batches(page.storage, LA)
-    assert [batch.seen for batch in saved] == [True, True]
+    assert await page.saved() == [True, True]
 
 
 async def test_leaving_before_two_seconds_keeps_the_batch_unseen(show: Show) -> None:
@@ -380,8 +393,7 @@ async def test_with_a_screen_reader_the_list_marks_on_leaving(show: Show) -> Non
     assert page.unseen() == [True, False]
     await page.leave()
     assert page.unseen() == [False, False]
-    saved = await read_batches(page.storage, LA)
-    assert [batch.seen for batch in saved] == [True, True]
+    assert await page.saved() == [True, True]
 
 
 async def test_mark_all_as_seen_marks_every_batch_then_disables(show: Show) -> None:
@@ -393,8 +405,7 @@ async def test_mark_all_as_seen_marks_every_batch_then_disables(show: Show) -> N
     await page.click(item)
     assert page.unseen() == [False, False]
     assert _mark_all(page).disabled
-    saved = await read_batches(page.storage, LA)
-    assert [batch.seen for batch in saved] == [True, True]
+    assert await page.saved() == [True, True]
 
 
 def _mark_all(page: Changes) -> ft.PopupMenuItem:
@@ -416,3 +427,101 @@ async def test_under_reduced_motion_the_dot_does_not_fade(show: Show) -> None:
     """With reduced motion the dot goes at once (D-173)."""
     page = await show(prefs=Prefs(loaded=True, reduce_motion=True))
     assert _dot(page.node("changes.change.142.room")).animate_opacity is None
+
+
+async def test_a_screen_reader_turned_on_during_the_wait_stops_it(show: Show) -> None:
+    """Turned on mid-wait, the timer stops: "New:" stays until the list is left."""
+    page = await show()
+    assert page.sleeps.held == 1
+    page.prefs.screen_reader = True
+    await page.settle()
+    assert page.sleeps.held == 0
+    assert page.unseen() == [True, False]
+    await page.leave()
+    assert page.unseen() == [False, False]
+
+
+async def test_a_screen_reader_turned_off_starts_the_wait(show: Show) -> None:
+    """Turned off on the list, the 2 s wait starts and then marks what it shows."""
+    page = await show(prefs=Prefs(loaded=True, screen_reader=True))
+    assert page.sleeps.asked == []
+    page.prefs.screen_reader = False
+    await page.settle()
+    assert page.sleeps.asked == [seen.SEEN_AFTER_S]
+    await page.sleeps.release()
+    await page.settle()
+    assert page.unseen() == [False, False]
+
+
+async def test_a_closed_session_marks_nothing_and_writes_nothing(show: Show) -> None:
+    """The wait that ends after its session closed leaves the log and its file (D-147)."""
+    page = await show()
+    page.services.closed.set()  # a new session replaced this one, still mounted (F30)
+    await page.sleeps.release()
+    await page.settle()
+    assert page.unseen() == [True, False]
+    assert not changes_path(page.storage).exists()
+
+
+# ------------------------------------------------------------------ under the Router
+
+
+@pytest.fixture
+def routed(
+    open_at: Open, monkeypatch: pytest.MonkeyPatch
+) -> Callable[..., Awaitable[links.Shown]]:
+    """Return ``open(location, prefs=...)``: the app's Views at a location (D-141).
+
+    The log holds ``NEWEST`` (unseen) and ``OLDER``; the seen marks' wait is held, its
+    ``HeldSleeps`` in the result's ``sleeps``.
+    """
+    monkeypatch.setattr(screen, "now", lambda: NOW)
+    sleeps = HeldSleeps()
+    monkeypatch.setattr(seen, "asyncio", sleeps)
+
+    async def open_(location: str, prefs: Prefs | None = None) -> links.Shown:
+        shown = await open_at(
+            location, change_log=ChangeLog(batches=(NEWEST, OLDER)), prefs=prefs
+        )
+        shown.sleeps = sleeps  # pyright: ignore[reportAttributeAccessIssue]
+        return shown
+
+    return open_
+
+
+async def test_a_session_pushed_on_the_list_stops_the_wait(
+    routed: Callable[..., Awaitable[links.Shown]],
+) -> None:
+    """The list stays mounted under a session, unseen: the wait restarts on Back."""
+    page = await routed(VIEW)
+    sleeps: HeldSleeps = page.sleeps  # pyright: ignore[reportAttributeAccessIssue]
+    assert sleeps.held == 1
+    await page.go(f"{VIEW}/session/7")
+    assert page.routes()[-2:] == [VIEW, f"{VIEW}/session/7"]
+    assert sleeps.held == 0
+    assert [b.seen for b in page.change_log.batches] == [False, True]
+    await page.go(VIEW)  # Back
+    await sleeps.release()
+    await page.settle()
+    assert [b.seen for b in page.change_log.batches] == [True, True]
+
+
+async def test_a_deep_link_to_a_session_beneath_the_list_starts_no_wait(
+    routed: Callable[..., Awaitable[links.Shown]],
+) -> None:
+    """A cold link to ``…/changes/2026/session/7`` builds the list unseen: no wait."""
+    page = await routed(f"{VIEW}/session/7")
+    sleeps: HeldSleeps = page.sleeps  # pyright: ignore[reportAttributeAccessIssue]
+    assert VIEW in page.routes()
+    assert sleeps.asked == []
+    assert [b.seen for b in page.change_log.batches] == [False, True]
+
+
+async def test_with_a_screen_reader_a_pushed_session_marks_the_list(
+    routed: Callable[..., Awaitable[links.Shown]],
+) -> None:
+    """With a screen reader, leaving the list for a session marks what it showed."""
+    page = await routed(VIEW, prefs=Prefs(loaded=True, screen_reader=True))
+    assert [b.seen for b in page.change_log.batches] == [False, True]
+    await page.go(f"{VIEW}/session/7")
+    assert [b.seen for b in page.change_log.batches] == [True, True]
