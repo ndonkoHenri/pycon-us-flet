@@ -60,6 +60,10 @@ class ViewMemory:
             ``?pin=`` seeds it, and a View rebuilt in a new session from the same
             location finds it and does not pulse the pin again (D-18, D-34). The
             View removes its entry when it leaves, so the next opening pulses.
+        plan_tables: The job fair table each mounted floor viewer has selected, by its
+            View path (#464): ``?table=`` seeds it and a tap changes it, so a View
+            rebuilt in a new session keeps the selection (D-18, D-143). The View
+            removes its entry when it leaves.
         spotlight: The slug of the sponsor Now's spotlight thanks: picked once for
             the process, so a relaunch after Back on Now (F29) shows the same one,
             and picked again only when it leaves the feed (D-298).
@@ -82,6 +86,7 @@ class ViewMemory:
     expo_booth: str = ""
     room_highlights: dict[str, str] = field(default_factory=dict)
     plan_pins: dict[str, str] = field(default_factory=dict)
+    plan_tables: dict[str, str] = field(default_factory=dict)
     spotlight: str = ""
     rng: Random = field(default_factory=Random, compare=False)
 

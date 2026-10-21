@@ -144,6 +144,11 @@ def table_nodes(rows: list[ft.Control]) -> list[ft.Semantics]:
     ]
 
 
+def descendants_of(rows: list[ft.Control]) -> list[ft.Control]:
+    """Return every control under ``rows``, the rows included, in reading order."""
+    return [node for row in rows for node in descendants(row)]
+
+
 def state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
     """Return the one ``Semantics`` node with ``identifier`` under ``rows``."""
     (found,) = [
@@ -193,13 +198,31 @@ def test_a_row_reads_its_table_sponsor_and_roles(
     assert texts(node) == ["T2 · Bloomberg · 15 open roles"]
     (row,) = [
         r
-        for r in rows
+        for r in descendants_of(rows)
         if isinstance(r, ft.MergeSemantics)
         and isinstance(r.content, ft.Container)
         and r.content.content is node
     ]
     cast(Callable[[], None], cast(ft.Container, row.content).on_click)()
     assert page.navigated == ["/map/sponsor/bloomberg"]
+
+
+def test_a_row_s_map_button_shows_its_table_on_the_plan(
+    render: Render, data: ConferenceData, page: FakePage
+) -> None:
+    """Beside each row, its own stop: "Show table T7 on the plan", a 48 dp map button.
+
+    It pushes ``…/plan/job-fair?table=T7`` on the Map (#464); both of T7's sponsors
+    have one, and the row itself still pushes the sponsor.
+    """
+    rows = render(FakeConference(data))
+    for slug in ("chainguard", "red-hat"):
+        node = state(rows, f"map.show_table.{slug}")
+        button = cast(ft.IconButton, node.content)
+        assert button.icon == ft.Icons.MAP_OUTLINED
+        assert button.tooltip == "Show table T7 on the plan"
+        cast(Callable[[], None], button.on_click)()
+    assert page.navigated == ["/map/plan/job-fair?table=T7"] * 2
 
 
 def test_the_count_shows_only_with_roles() -> None:

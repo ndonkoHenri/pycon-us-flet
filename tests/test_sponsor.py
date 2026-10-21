@@ -83,12 +83,12 @@ def role_ids(shown: Shown) -> list[str]:
 # ------------------------------------------------------------------ the rules
 
 
-def test_the_facts_say_the_booth_and_the_table_or_either_alone() -> None:
-    """The booth and the table, either alone, or None when the sponsor has neither."""
-    assert screen.facts_line(sponsor("bloomberg")) == "Booth 613 · Job fair table T2"
+def test_the_facts_say_the_booth_and_leave_the_table_to_its_button() -> None:
+    """The booth alone, or None without one: the job fair table is a button (#464)."""
+    assert screen.facts_line(sponsor("bloomberg")) == "Booth 613"
     assert screen.facts_line(sponsor("hudson-river-trading")) == "Booth 127"
     bare = replace(sponsor("nvidia"), booth=None, job_fair_table="T9")
-    assert screen.facts_line(bare) == "Job fair table T9"
+    assert screen.facts_line(bare) is None
     assert screen.facts_line(sponsor("nvidia")) is None
 
 
@@ -121,17 +121,32 @@ async def test_at_large_text_the_name_steps_down_still_centred(show: Show) -> No
     )
 
 
-async def test_the_level_is_a_line_not_a_control_and_the_facts_read_as_words(
-    show: Show,
-) -> None:
-    """No Chip that does nothing; the middle dot is said as a comma."""
+async def test_the_level_and_the_booth_are_lines_not_controls(show: Show) -> None:
+    """No Chip that does nothing; the level and the booth are plain lines."""
     shown = await show("bloomberg")
     assert "Visionary sponsor" in shown.texts()
+    assert "Booth 613" in shown.texts()
     assert shown.find(ft.Chip) == []
-    (facts,) = [
-        t for t in shown.find(ft.Text) if t.value == "Booth 613 · Job fair table T2"
-    ]
-    assert facts.semantics_label == "Booth 613, Job fair table T2"
+
+
+async def test_the_job_fair_table_button_shows_the_table_on_the_plan(
+    show: Show,
+) -> None:
+    """The "Job fair table T2" button pushes the job fair plan with T2 selected."""
+    shown = await show("bloomberg")
+    button = cast(ft.OutlinedButton, shown.node("sponsor.job_fair_table").content)
+    assert (button.content, button.icon) == (
+        "Job fair table T2",
+        ft.Icons.GROUPS_OUTLINED,
+    )
+    await shown.click(button)
+    assert shown.went == [f"{VIEW_PATH}/plan/job-fair?table=T2"]
+
+
+async def test_a_sponsor_without_a_table_has_no_job_fair_button(show: Show) -> None:
+    """NVIDIA has no job fair table, so no button."""
+    shown = await show("nvidia")
+    assert shown.nodes("sponsor.job_fair_table") == []
 
 
 async def test_website_shows_only_when_the_feed_gives_one(show: Show) -> None:
@@ -150,7 +165,9 @@ async def test_website_shows_only_when_the_feed_gives_one(show: Show) -> None:
     shown = await show("bloomberg", Conference(data=data, source="bundled", version=1))
     node = shown.node("sponsor.website")
     assert node.link
-    (button,) = shown.find(ft.OutlinedButton)
+    (button,) = [
+        b for b in shown.find(ft.OutlinedButton) if b.icon == ft.Icons.OPEN_IN_NEW
+    ]
     assert button.style is not None  # its sides stay put at large text (D-344)
     assert button.style.padding == ICON_PADDING
     await shown.click(button)

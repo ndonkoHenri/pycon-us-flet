@@ -13,6 +13,7 @@ from PIL import Image
 
 from pycon_us import config
 from pycon_us.config import YearData, YearDataError, load_year
+from pycon_us.core.expo import job_fair_tables
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import normalize_room_key, slugify_room
@@ -168,6 +169,45 @@ def test_every_2026_feed_room_has_a_pin_or_is_another_location(source: str) -> N
     assert rooms_without_pins(data, year) == []
 
 
+def tables_off_the_plan(data: ConferenceData, year: YearData) -> list[str]:
+    """The feed's job fair tables that have no rectangle on the job fair plan."""
+    return sorted(
+        {entry.table for entry in job_fair_tables(data)}
+        - {table.number for table in year.map.tables}
+    )
+
+
+@pytest.mark.parametrize("source", ["snapshot", "recorded"])
+def test_every_2026_feed_table_has_a_rectangle(source: str) -> None:
+    """Every job fair table of 2026's feed is marked on the plan (#464).
+
+    A table without one opens the plan saying it isn't there yet; here it fails the
+    build, as a room without a pin does.
+    """
+    year = load_year(2026)
+    if source == "snapshot":
+        data = process(year.read_snapshot().raw, year.feed_settings)
+    else:
+        data = processed(2026)
+    assert job_fair_tables(data)
+    assert tables_off_the_plan(data, year) == []
+
+
+def test_the_printed_tables_are_t1_to_t20_without_overlaps() -> None:
+    """2026's plan prints T1 to T20, each a rectangle no other one overlaps."""
+    tables = load_year(2026).map.tables
+    assert [table.number for table in tables] == [f"T{n}" for n in range(1, 21)]
+    for index, one in enumerate(tables):
+        for other in tables[index + 1 :]:
+            apart = (
+                one.x + one.w <= other.x
+                or other.x + other.w <= one.x
+                or one.y + one.h <= other.y
+                or other.y + other.h <= one.y
+            )
+            assert apart, (one.number, other.number)
+
+
 def test_a_new_room_without_a_pin_is_named() -> None:
     """A feed room the registry lacks is reported by name, not silently left mapless."""
     year = load_year(2026)
@@ -287,6 +327,13 @@ def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
         ('label = "Attendee lounge"', 'label = " "', r"booths\[\d+\]\.label: is empty"),
         ('id = "expo"', 'id = "hall"', r"2026/map.toml: booths: no plan 'expo' to put"),
         ('note = "The printed', 'note = " " # "', r"plans\[6\]\.note: is empty"),
+        ('number = "T8"', 'number = "T7"', r"tables\[7\]\.number: 'T7' is listed"),
+        (
+            'number = "T1"\nx = 0.0765',
+            'number = "T1"\nx = 1.0765',
+            r"2026/map.toml: tables\[0\]\.x: 1.0765 is not between 0 and 1",
+        ),
+        ('id = "job-fair"', 'id = "jobs"', r"tables: no plan 'job-fair' to put them"),
     ],
 )
 def test_a_bad_map_entry_names_file_entry_and_field(
