@@ -175,3 +175,11 @@ def test_a_keynote_in_the_repeated_hour_is_due_its_lead_before(
     )
     [moment] = [m for m in moments if m.session_id == keynote.id]
     assert instant(moment.at) == datetime(2026, 11, 1, 8, 50, tzinfo=UTC)
+
+
+def test_the_same_wall_time_twice_is_two_slots(data: ConferenceData) -> None:
+    """1:30 PDT and 1:30 PST are an hour apart: My schedule lists two slots, not one."""
+    first = retimed(data, "142", (at(8, 30), at(8, 45)))  # 1:30-1:45 PDT
+    second = retimed(data, "153", (at(9, 30), at(9, 45)))  # 1:30-1:45 PST
+    agenda = my_schedule(with_sessions(data, first, second), {first.id, second.id})
+    assert [slot.sessions for slot in agenda.days[0].slots] == [(first,), (second,)]

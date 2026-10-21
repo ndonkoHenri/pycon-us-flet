@@ -247,8 +247,10 @@ def my_schedule(data: ConferenceData, favorites: AbstractSet[str]) -> Agenda:
         AgendaDay(
             day,
             tuple(
-                Slot(start, tuple(slot))
-                for start, slot in groupby(on_day, key=attrgetter("start"))
+                Slot(slot[0].start, slot)
+                # By instant: 1:30 PDT and 1:30 PST are two slots (#535).
+                for _, group in groupby(on_day, key=lambda s: instant(s.start))
+                if (slot := tuple(group))
             ),
         )
         # Sorted by start, sessions are sorted by day too: a day is the local date of
