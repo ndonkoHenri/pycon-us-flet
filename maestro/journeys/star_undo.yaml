@@ -1,0 +1,70 @@
+# P1 exit criterion 1: star and unstar with Undo. Mirrors F4
+# (tests/ui/test_favourite_undo.py), starting on Now.
+#
+# Star the panel happening now (session 123) on Now: Now shows it as your session
+# (P1 exit criterion 2), and My schedule lists it. Unstar it on My schedule: the row
+# goes and the SnackBar offers Undo (D-30, D-184), which brings the row back.
+appId: io.github.ndonkohenri.pyconus
+name: Star on Now, unstar on My schedule, then Undo
+tags:
+  - journeys
+  - smoke
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Star it on Now: Now moves it to "Your next session", its star on (the star's
+# spoken name stays "Save to My schedule", its state says saved, D-184).
+- tapOn:
+    id: now.favorite.123
+- extendedWaitUntil:
+    visible:
+      id: now.next.session.123
+    timeout: 15000
+- assertVisible:
+    id: now.next.favorite.123
+    checked: true
+
+# My schedule lists it.
+- tapOn:
+    id: app.nav.my_schedule
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.title
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.123
+    timeout: 15000
+
+# Unstar it there: the row goes, and the SnackBar offers Undo.
+- tapOn:
+    id: my_schedule.favorite.123
+- extendedWaitUntil:
+    visible:
+      text: Removed from My schedule
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: my_schedule.session.123
+    timeout: 15000
+
+# Undo saves it again: the row is back.
+- tapOn:
+    text: Undo
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.123
+    timeout: 15000
+
+# Now shows it as your session again.
+- tapOn:
+    id: app.nav.now
+- extendedWaitUntil:
+    visible:
+      id: now.next.session.123
+    timeout: 15000
+- assertVisible:
+    id: now.next.favorite.123
+    checked: true

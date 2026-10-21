@@ -1,0 +1,12 @@
+# Stop the app and start it again with its data: a person closing the app and opening
+# it later. The fake clock starts again at the time Developer set (D-187).
+appId: io.github.ndonkohenri.pyconus
+---
+- stopApp
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 120000
