@@ -799,6 +799,34 @@ async def test_the_live_region_is_there_before_a_session_is_dropped(
     shown.node("my_schedule.forget")
 
 
+@pytest.mark.usefixtures("before")
+async def test_the_quiet_node_is_hidden_and_shows_with_its_words(
+    shown: Shown,
+) -> None:
+    """D-329, F95: hidden with no dropped session, shown with one, hidden after Forget.
+
+    Empty is not quiet on Android: Flet's ``Semantics`` always states ``enabled``,
+    a focusable flag, so only ``hidden`` keeps TalkBack from stopping on the blank
+    node. The node keeps its id throughout, so its reveal is a label change (F61).
+    """
+    quiet = shown.node("my_schedule.dropped_notice")
+    assert quiet.hidden is True
+    assert not _words(quiet)
+
+    await shown.favorites.add_many(shown.storage, [GONE])  # 0 -> 1, as a refresh
+    await shown.settle()
+    spoken = shown.node("my_schedule.dropped_notice")
+    assert spoken._i == quiet._i
+    assert spoken.hidden is False
+    assert _words(spoken)[0] == "1 saved session is no longer in the schedule"
+
+    await shown.click(cast(ft.TextButton, shown.node("my_schedule.forget").content))
+    again = shown.node("my_schedule.dropped_notice")  # 1 -> 0
+    assert again._i == quiet._i
+    assert again.hidden is True
+    assert not _words(again)
+
+
 @pytest.fixture
 def two_dropped_one_logged(setup: Setup) -> None:
     """Save two ids the feed no longer lists, one of them removed in the change log."""

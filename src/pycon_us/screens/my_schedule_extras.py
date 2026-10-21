@@ -210,11 +210,14 @@ def dropped_notice(
     merged live-region node, the title's heading and the body together, so the label
     changes when the count does and a screen reader says it.
 
-    With ``count`` 0 it is the same tree, quiet: a 1 dp node with no words. The list
-    always has it, so the node exists before the first dropped session: Android's
-    engine sends a live region's change only for a node it had in its previous
-    update (F61, D-241), and a notice that mounted with its words would go unsaid.
-    Empty, the node has nothing a reader could stop on.
+    With ``count`` 0 it is the same tree, quiet: a hidden 1 dp node with no words.
+    The list always has it, so the node exists before the first dropped session:
+    Android's engine sends a live region's change only for a node it had in its
+    previous update (F61, D-241), and a notice that mounted with its words would go
+    unsaid. Empty is not enough to be quiet: Flet's ``Semantics`` always states
+    ``enabled``, which makes the node focusable on Android, a blank TalkBack stop
+    (F95). Hidden, Android keeps the node but leaves it out of the tree a reader
+    walks; the update that shows it also changes its label, so it is announced.
 
     Args:
         count: How many saved ids the feed no longer lists; 0 for the quiet node.
@@ -228,6 +231,7 @@ def dropped_notice(
             identifier=f"{SCREEN}.dropped_notice",
             container=True,
             live_region=True,
+            hidden=not shown,  # quiet: no blank TalkBack stop (F95)
             content=(
                 ft.Column(
                     [
