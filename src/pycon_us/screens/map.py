@@ -1,19 +1,19 @@
-"""Map (``/map``): Rooms, Floor plans and Expo as tabs, one pane shown (MAP-01..03, §5.8).
+"""Map (``/map``): Rooms, Floor plans, Expo and Job fair as tabs, one pane shown (MAP-01..04).
 
 The tab bar is the body's first row (U10's interim) and the selected pane alone sits
 under it, each pane with its own key, with no swipeable ``TabBarView``: its pages took
 a zoomed plan's horizontal pans (D-312, S7; U110). ``ViewMemory.map_tab`` keeps the
 pane and ``ViewMemory.map_offsets`` each pane's scroll, so another bottom tab and back
-finds both (D-18); ``/map?tab=floor-plans`` opens a pane, an unknown value Rooms, and
+finds both (D-18); ``/map?tab=job-fair`` opens a pane, an unknown value Rooms, and
 a pick puts its own ``?tab=`` in the route, so a return or a new session finds it. A
 re-tap of the Map tab scrolls the pane shown (D-166). The overflow's "3D venue tour"
 opens ``map.toml``'s ``tour_url`` in the in-app browser (MAP-03, D-182). A year
-without plans shows the rooms alone, without a tab bar, and one without booths no Expo.
-The Expo pane keeps its zoom and its booth in ``ViewMemory`` instead of a scroll, and a
-re-tap there does nothing. The job fair pane joins ``PANES`` with #23.
+without plans shows the rooms alone, without a tab bar; one without booths no Expo; Job
+fair needs the year's ``job-fair`` plan (ux.md §5.8, §6.3). The Expo pane keeps its zoom
+and its booth in ``ViewMemory`` instead of a scroll, and a re-tap there does nothing.
 
 The panes: Rooms in ``screens/map_rooms.py``, Floor plans in ``screens/map_plans.py``,
-Expo in ``screens/expo.py`` (EXPO-01).
+Expo in ``screens/expo.py`` (EXPO-01), Job fair in ``screens/map_job_fair.py``.
 """
 
 from dataclasses import dataclass
@@ -24,7 +24,8 @@ from pycon_us.locations import is_top_view, query_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.expo import ExpoHall
-from pycon_us.screens.map_plans import FLOOR_PLANS, plans_pane
+from pycon_us.screens.map_job_fair import JOB_FAIR, JobFairPane
+from pycon_us.screens.map_plans import FLOOR_PLANS, floor_plans, plans_pane
 from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
 from pycon_us.screens.schedule_days import TAB_HEIGHT, TAB_MS
 from pycon_us.services import Services, use_services
@@ -35,7 +36,7 @@ from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.widths import LIST, capped, use_margin
-from pycon_us.year_map import MapData
+from pycon_us.year_map import JOB_FAIR_PLAN, MapData
 
 EXPO = "expo"
 """The Expo pane's slug: its ``?tab=`` value, its key and its zoom's in ``ViewMemory``."""
@@ -57,8 +58,13 @@ class Pane:
     label: str
 
 
-PANES = (Pane(ROOMS, "Rooms"), Pane(FLOOR_PLANS, "Floor plans"), Pane(EXPO, "Expo"))
-"""The Map's panes in their tabs' order; the job fair joins with #23."""
+PANES = (
+    Pane(ROOMS, "Rooms"),
+    Pane(FLOOR_PLANS, "Floor plans"),
+    Pane(EXPO, "Expo"),
+    Pane(JOB_FAIR, "Job fair"),
+)
+"""The Map's panes in their tabs' order (ux.md §5.8)."""
 
 
 def tab_href(slug: str) -> str:
@@ -71,12 +77,19 @@ def tab_href(slug: str) -> str:
 
 
 def panes_of(data: MapData) -> tuple[Pane, ...]:
-    """Return the panes the year has: Floor plans with plans, Expo with booths.
+    """Return the panes the year has: each plan pane only when the year has its data.
+
+    Floor plans needs a floor plan (``floor_plans()``), Expo the booths, Job fair the
+    ``job-fair`` plan.
 
     Args:
         data: The year's ``map.toml``.
     """
-    has = {FLOOR_PLANS: bool(data.plans), EXPO: bool(data.booths)}
+    has = {
+        FLOOR_PLANS: bool(floor_plans(data.plans)),
+        EXPO: bool(data.booths),
+        JOB_FAIR: data.plan(JOB_FAIR_PLAN) is not None,
+    }
     return tuple(pane for pane in PANES if has.get(pane.slug, True))
 
 
@@ -100,7 +113,8 @@ def asked_pane(memory: ViewMemory, route: str, view_path: str) -> None:
 
 @ft.component
 def Map() -> ft.View:
-    """The Map root: a tab bar over the one pane picked: Rooms, Floor plans or Expo."""
+    """The Map root: a tab bar over the one pane picked: Rooms, Floor plans, Expo or
+    Job fair."""
     list_ref, scroll_to_top = use_scroll_to_top()
     margin = use_margin(LIST)  # its width class (D-305)
     page = ft.context.page
@@ -156,6 +170,8 @@ def Map() -> ft.View:
     elif tab == EXPO:
         # Keyed, so Flet never migrates another pane's state into it (F130).
         pane = ExpoHall(EXPO, key=EXPO)  # pyright: ignore[reportCallIssue]
+    elif tab == JOB_FAIR:
+        pane = JobFairPane(list_ref, scrolled)
     else:
         pane = RoomsPane(list_ref, scrolled)
     actions = [search_button(memory, "places")]
