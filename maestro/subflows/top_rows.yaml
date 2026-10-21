@@ -1,0 +1,21 @@
+# Read the first rows of the Schedule's day, from the top: top_slot.yaml's output.topRow
+# and output.topSlot, and output.topRows, the phrases (D-190) of the first four rows on
+# screen, in order. regression/fling_after_sheet.yaml reads them after each control and
+# each trial: a trial ended near where a full fling ends when its top row is among a
+# control's rows, or the control's top row among its own (scripts/record_fling.js).
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow: top_slot.yaml
+- evalScript: ${output.topRows = [output.topRow]}
+- copyTextFrom:
+    id: "schedule\\.session\\..*"
+    index: 1
+- evalScript: ${output.topRows.push(maestro.copiedText || '')}
+- copyTextFrom:
+    id: "schedule\\.session\\..*"
+    index: 2
+- evalScript: ${output.topRows.push(maestro.copiedText || '')}
+- copyTextFrom:
+    id: "schedule\\.session\\..*"
+    index: 3
+- evalScript: ${output.topRows.push(maestro.copiedText || '')}

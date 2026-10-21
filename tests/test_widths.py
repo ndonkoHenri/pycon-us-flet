@@ -4,9 +4,13 @@ What the margins look like on a tablet, in both orientations, is checked on the
 emulator and the simulators (the PR).
 """
 
+import ast
+from pathlib import Path
+
 import flet as ft
 import pytest
 
+from pycon_us import screens
 from pycon_us.layout import Layout
 from pycon_us.screens.schedule_days import now_button
 from pycon_us.ui import widths
@@ -20,6 +24,42 @@ from pycon_us.ui.widths import (
     sides,
     use_margin,
 )
+
+SCREENS_DIR = Path(screens.__file__).parent
+"""Every screen module's folder, ``pycon_us/screens``."""
+
+FULL_WIDTH = {"plan"}
+"""The screen modules of class ``FULL``, which call no hook: the floor viewer."""
+
+WIDTH_CALLS = {"use_margin", "InfoBody"}
+"""The calls that give a page its width class: the hook, or the info pages' body."""
+
+
+def calls(source: str) -> set[str]:
+    """The names a module's source calls, as ``f()`` or ``module.f()``.
+
+    Args:
+        source: The module's Python source.
+    """
+    names = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name):
+                names.add(func.id)
+            elif isinstance(func, ast.Attribute):
+                names.add(func.attr)
+    return names
+
+
+def lacks_width_class(source: str) -> bool:
+    """Whether a module builds a page (``AppScaffold``) without a width class.
+
+    Args:
+        source: The module's Python source.
+    """
+    called = calls(source)
+    return "AppScaffold" in called and not called & WIDTH_CALLS
 
 
 async def _jump() -> None:
@@ -119,3 +159,29 @@ def test_the_now_button_keeps_to_the_list_s_right_edge() -> None:
     """The Schedule's FAB moves in by the margin, so it sits on the capped list."""
     button = now_button(on_today=True, on_click=_jump, margin=190.0)
     assert button.margin == ft.Margin.only(right=190.0)
+
+
+def test_every_screen_that_builds_a_page_has_a_width_class() -> None:
+    """A screen module calling ``AppScaffold`` calls ``use_margin()``, or is FULL.
+
+    Jobs and Licences landed after D-305 without it and stretched on a tablet (#547).
+    """
+    missing = sorted(
+        path.stem
+        for path in SCREENS_DIR.glob("*.py")
+        if path.stem not in FULL_WIDTH and lacks_width_class(path.read_text())
+    )
+    assert missing == []
+    for stem in FULL_WIDTH:
+        assert (SCREENS_DIR / f"{stem}.py").exists()  # no stale exemption
+
+
+def test_the_guard_flags_a_page_without_a_width_class() -> None:
+    """A page body with no hook fails the guard; with the hook or ``InfoBody`` it passes."""
+    bare = "def Page():\n    return AppScaffold(title='Jobs', body=ft.ListView([]))\n"
+    hooked = "def Page():\n    m = use_margin(LIST)\n    return AppScaffold(body=m)\n"
+    info = "def Page():\n    return AppScaffold(body=info_page.InfoBody([]))\n"
+    assert lacks_width_class(bare)
+    assert not lacks_width_class(hooked)
+    assert not lacks_width_class(info)
+    assert not lacks_width_class("def helper():\n    return ft.Text('x')\n")
