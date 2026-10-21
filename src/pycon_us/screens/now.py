@@ -71,9 +71,12 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
     NoticeRow,
     SessionRow,
     is_notice,
+    use_recent_changes,
     use_session_views,
 )
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
@@ -114,6 +117,7 @@ def Now() -> ft.View:
         conference, tuple(data.sessions) if data else (), use_24h=use_24h
     )
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
+    changes = use_recent_changes()
     candidates = ft.use_memo(lambda: spotlight_candidates(data) if data else (), [data])
     # The sections the user opened past their fold (now_fold.fold_key(), D-327).
     opened, set_opened = ft.use_state(frozenset[str]())
@@ -126,7 +130,7 @@ def Now() -> ft.View:
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
-    row = partial(_row, by_id, info, favorites.ids, on_toggle, tokens)
+    row = partial(_row, by_id, info, favorites.ids, changes, on_toggle, tokens)
     fold = partial(folded, saved=favorites.ids, opened=opened, toggle=toggle)
 
     rows: list[ft.Control]
@@ -197,6 +201,7 @@ def _row(
     by_id: Mapping[str, SessionView],
     info: ConferenceInfo,
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     session: Session,
@@ -207,9 +212,20 @@ def _row(
     """One session's memoised row (D-184): a notice's, or a session's with its star."""
     view = by_id[session.id]
     if is_notice(session, info):  # breaks and notices: no star, no bar (D-31)
-        return NoticeRow(view, tokens, screen=screen)
+        return NoticeRow(
+            view,
+            tokens,
+            screen=screen,
+            changed=changes.get(session.id, NO_CHANGES),
+        )
     return SessionRow(
-        view, session.id in saved, on_toggle, tokens, screen=screen, elapsed=elapsed
+        view,
+        session.id in saved,
+        on_toggle,
+        tokens,
+        screen=screen,
+        elapsed=elapsed,
+        changed=changes.get(session.id, NO_CHANGES),
     )
 
 

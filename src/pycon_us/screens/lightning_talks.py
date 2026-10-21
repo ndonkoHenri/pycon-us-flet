@@ -38,7 +38,7 @@ from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_pages import LightningTalksInfo
@@ -89,6 +89,7 @@ def LightningTalks() -> ft.View:
         use_24h=bool(page.media and page.media.always_use_24_hour_format),
     )
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
+    changes = use_recent_changes()
     # The badge every row would repeat; one object, so the day items still skip.
     omit = ft.use_memo(lambda: frozenset({info.track_name(TRACK)}), [])
 
@@ -139,6 +140,7 @@ def LightningTalks() -> ft.View:
                 day,
                 views,
                 favorites.ids & {s.id for s in day.sessions},
+                changes_of(changes, (s.id for s in day.sessions)),
                 on_toggle,
                 tokens,
                 screen=SCREEN,

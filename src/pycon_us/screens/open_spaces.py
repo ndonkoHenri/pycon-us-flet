@@ -41,7 +41,14 @@ from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.session_rows import SessionRow, use_session_views
+from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
+    SessionRow,
+    changes_of,
+    use_recent_changes,
+    use_session_views,
+)
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.time_gutter import TimeSlot
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
@@ -83,6 +90,7 @@ def OpenSpaces() -> ft.View:
     # Each day's views as one tuple, the same object until the views change, so the
     # memoised day lists skip a render that leaves their day as it was.
     days = ft.use_memo(lambda: day_views(all_views, groups), [all_views, groups])
+    changes = use_recent_changes()
     # The badge every row would repeat; one object, so the day lists still skip.
     omit = ft.use_memo(lambda: frozenset({info.track_name(TRACK)}), [])
 
@@ -129,6 +137,7 @@ def OpenSpaces() -> ft.View:
             day,
             views,
             favorites.ids & {view.session.id for view in views},
+            changes_of(changes, (view.session.id for view in views)),
             on_toggle,
             tokens,
             use_24h=use_24h,
@@ -261,6 +270,7 @@ def DayList(
     day: date,
     views: tuple[SessionView, ...],
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -278,6 +288,7 @@ def DayList(
         day: The conference-local date.
         views: The day's row views, in schedule order; the same object per feed.
         saved: The saved ids among this day's open spaces only.
+        changes: The recent changes of this day's open spaces only (D-315).
         on_toggle: The page's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
@@ -290,6 +301,7 @@ def DayList(
         day,
         views,
         saved,
+        changes,
         on_toggle,
         tokens,
         use_24h=use_24h,
@@ -306,6 +318,7 @@ def _DayList(
     day: date,
     views: tuple[SessionView, ...],
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -342,6 +355,7 @@ def _DayList(
                 tokens,
                 screen=SCREEN,
                 omit=omit,
+                changed=changes.get(view.session.id, NO_CHANGES),
             )
             for view in slot
         ]

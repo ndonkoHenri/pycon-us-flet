@@ -220,6 +220,9 @@ class Tokens:
         registration: The "Registration required" badge, outlined in ``error``.
         new_track: The "New track" badge, outlined in ``primary``: a mark of status,
             not another category among the tonal track fills (D-199).
+        changed: The "Changed" badge of a session whose time, room or title changed in
+            the last 24 h, outlined in ``warning``: a mark of status, like New track,
+            and never En Español's fill (D-315).
         high_contrast: The tokens are a high-contrast scheme's, whose structure
             differs too: a component that draws a line there instead of a fill or a
             shadow reads it here, never from ``Prefs`` (D-285).
@@ -236,6 +239,7 @@ class Tokens:
     spanish: BadgeColors
     registration: BadgeColors
     new_track: BadgeColors
+    changed: BadgeColors
     high_contrast: bool = False
 
     def track_badge(self, key: str) -> BadgeColors:
@@ -260,6 +264,7 @@ def _tokens(
         spanish=tonal(SPANISH, dark=dark),
         registration=BadgeColors(text=_ERROR_DARK if dark else _ERROR_LIGHT),
         new_track=BadgeColors(text=primary),
+        changed=BadgeColors(text=warning),
     )
 
 
@@ -285,8 +290,8 @@ DARK_TOKENS = _tokens(
 def _hc_tokens(scheme: ft.ColorScheme, *, live: str, warning: str) -> Tokens:
     """Build a high-contrast scheme's tokens: every badge outlined (ux.md §3.4).
 
-    Tracks and En Español are outlined in ``on_surface``, which the star takes too;
-    Registration required keeps ``error`` and New track ``primary``.
+    Tracks, En Español and Changed are outlined in ``on_surface``, which the star takes
+    too; Registration required keeps ``error`` and New track ``primary`` (D-315).
     """
     ink, error, primary = str(scheme.on_surface), str(scheme.error), str(scheme.primary)
     outlined = BadgeColors(text=ink, border_width=HC_BADGE_BORDER)
@@ -300,6 +305,7 @@ def _hc_tokens(scheme: ft.ColorScheme, *, live: str, warning: str) -> Tokens:
         spanish=outlined,
         registration=BadgeColors(text=error, border_width=HC_BADGE_BORDER),
         new_track=BadgeColors(text=primary, border_width=HC_BADGE_BORDER),
+        changed=outlined,
         high_contrast=True,
     )
 
