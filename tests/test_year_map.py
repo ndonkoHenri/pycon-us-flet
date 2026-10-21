@@ -277,9 +277,35 @@ def test_a_bad_map_entry_names_file_entry_and_field(
 
 def test_a_venue_service_must_name_a_pin_that_exists(data_dir: Path) -> None:
     """A venue service's pin that map.toml lacks fails in content.toml's name."""
-    edit(data_dir / "2026" / "content.toml", 'pin = "quiet-room"', 'pin = "spa"')
+    # "\npin": the service's own key, not [help]'s quiet_room_pin.
+    edit(data_dir / "2026" / "content.toml", '\npin = "quiet-room"', '\npin = "spa"')
     with pytest.raises(
         YearDataError,
         match=r"2026/content.toml: venue_hours\[3\].pin: no pin 'spa' in map.toml",
     ):
+        load_year(2026, data_dir)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "message"),
+    [
+        (
+            'quiet_room_pin = "quiet-room"',
+            'quiet_room_pin = "spa"',
+            r"2026/content.toml: help.quiet_room_pin: no pin 'spa' in map.toml",
+        ),
+        (
+            'info_desk_pin = "info-desk"',
+            'info_desk_pin = " "',
+            r"2026/content.toml: help.info_desk_pin: is empty",
+        ),
+    ],
+    ids=["unknown", "blank"],
+)
+def test_help_s_places_must_name_pins_that_exist(
+    data_dir: Path, old: str, new: str, message: str
+) -> None:
+    """A Help & safety place's pin that map.toml lacks, or a blank one, fails to load."""
+    edit(data_dir / "2026" / "content.toml", old, new)
+    with pytest.raises(YearDataError, match=message):
         load_year(2026, data_dir)

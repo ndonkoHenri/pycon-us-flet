@@ -82,6 +82,10 @@ class SafetyContact:
         return self.value if self.kind == "https" else f"{self.kind}:{self.value}"
 
 
+HELP_PLACES = ("info_desk", "lost_and_found", "quiet_room")
+"""The places Help & safety names, in order: each a ``HelpInfo`` line and its pin."""
+
+
 @dataclass(frozen=True)
 class HelpInfo:
     """Help & safety's lines and links beside the contacts (INFO-07, INFO-11).
@@ -95,6 +99,10 @@ class HelpInfo:
         coc_summary: The Code of Conduct in a few sentences, in our words.
         coc_url: The full Code of Conduct, "Read the Code of Conduct".
         procedures_url: How reports are handled, "How reports are handled".
+        info_desk_pin: The information desk's pin, a key of ``map.toml``'s pins,
+            for its location card; empty for none.
+        lost_and_found_pin: Lost and found's pin; empty for none.
+        quiet_room_pin: The quiet room's pin; empty for none.
     """
 
     in_person: str
@@ -104,6 +112,19 @@ class HelpInfo:
     coc_summary: str
     coc_url: str
     procedures_url: str
+    info_desk_pin: str = ""
+    lost_and_found_pin: str = ""
+    quiet_room_pin: str = ""
+
+    def pin_keys(self) -> tuple[tuple[str, str], ...]:
+        """Return each place's pin field and its key, the empty ones included.
+
+        For the loader's check against ``map.toml`` (``check_pin_keys()``):
+        ``("help.quiet_room_pin", "quiet-room")``.
+        """
+        return tuple(
+            (f"help.{name}_pin", getattr(self, f"{name}_pin")) for name in HELP_PLACES
+        )
 
 
 @dataclass(frozen=True)
@@ -305,7 +326,9 @@ def check_contact_value(contact: SafetyContact, file: str, key: str) -> None:
 
 
 def check_help(info: HelpInfo, file: str) -> None:
-    """Check ``[help]``: no blank line, ``https://`` links.
+    """Check ``[help]``: no blank line, ``https://`` links, no blank pin.
+
+    Whether each pin is in ``map.toml`` is the loader's check (``check_pin_keys()``).
 
     Args:
         info: The ``[help]`` table.
@@ -314,8 +337,11 @@ def check_help(info: HelpInfo, file: str) -> None:
     Raises:
         YearDataError: A rule is broken; the message names the file and the key.
     """
-    for name in ("in_person", "info_desk", "lost_and_found", "quiet_room"):
+    for name in ("in_person", *HELP_PLACES):
         check_text(getattr(info, name), file, f"help.{name}")
+    for key, pin in info.pin_keys():
+        if pin:  # empty is no pin; a blank one is a mistake
+            check_text(pin, file, key)
     check_text(info.coc_summary, file, "help.coc_summary")
     check_https(info.coc_url, file, "help.coc_url")
     check_https(info.procedures_url, file, "help.procedures_url")
