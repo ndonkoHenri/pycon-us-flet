@@ -261,6 +261,7 @@ class YearData:
             hall_prefix=self.content.hall_prefix,
             lightning_talks_location=self.content.lightning_talks_location,
             display_time_overrides=self.content.display_time_overrides,
+            sprint_rooms=tuple(pin.label for pin in self.map.pins if pin.sprint),
         )
 
     def read_snapshot(self) -> Snapshot:

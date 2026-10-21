@@ -1,8 +1,10 @@
 """Map (``/map``): the rooms list, P1's one pane (ROOM-01; ux.md §5.8, D-188).
 
-Every room of the feed in natural order, each with its session count and, while
-something is on in it, "Now: <title>" (``core.rooms.room_list``); then the places that
-are not rooms, under "Other locations". A row pushes the room's detail, one drill level.
+Every room of the feed under its floor's heading (``map.toml``'s plans, in the Map's
+order), in natural order on each, with its session count ("Sprints" for a sprint-only
+room, MAP-08) and, while something is on in it, "Now: <title>"
+(``core.rooms.room_list``); then the places that are not rooms, under "Other
+locations". A row pushes the room's detail, one drill level.
 The list recomputes on the minute tick (``use_minute()``, D-175), from ``clock.now()``,
 so the Developer fake clock drives it. Without data it shows the skeleton until the
 first fetch has failed, then "Can't load the rooms" with Try again (D-32, ux.md §4.1).
@@ -13,7 +15,7 @@ screen has no control for them.
 import flet as ft
 
 from pycon_us import clock
-from pycon_us.core.rooms import RoomEntry, RoomList, room_list, session_count
+from pycon_us.core.rooms import RoomEntry, RoomList, count_line, room_list
 from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -80,7 +82,12 @@ def Map() -> ft.View:
             )
         ]
     else:
-        listing = room_list(data, clock.now(), svc.year.content.other_locations)
+        listing = room_list(
+            data,
+            clock.now(),
+            svc.year.content.other_locations,
+            svc.year.map.floors(),
+        )
         rows = room_rows(listing, view_path, live=tokens.live)
     return AppScaffold(
         title="Map",
@@ -91,16 +98,18 @@ def Map() -> ft.View:
 
 
 def room_rows(listing: RoomList, view_path: str, *, live: str) -> list[ft.Control]:
-    """Return the list's rows: a heading per group, then a row per room.
+    """Return the list's rows: a level-2 heading per floor, then a row per room.
+
+    The floors come in the Map's order of the plans, the other locations last.
 
     Args:
-        listing: The rooms and the other locations (``room_list()``).
+        listing: The rooms by floor and the other locations (``room_list()``).
         view_path: This View's path, so a row's detail is pushed on top of it.
         live: The "happening now" colour (``Tokens.live``).
     """
     rows: list[ft.Control] = []
     for heading, entries in (
-        ("Rooms", listing.rooms),
+        *((floor.title, floor.rooms) for floor in listing.floors),
         ("Other locations", listing.other_locations),
     ):
         if entries:
@@ -121,7 +130,8 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
     The count is every session listed under the room, poster details included, as the
     room's detail lists them (ROOM-02) and as Ionic counted ("Expo Hall AB 35"), while
     "Now:" follows Now & Next's timeline-only rule (D-179): so Expo Hall AB counts 35
-    where the Schedule shows 10 rows there.
+    where the Schedule shows 10 rows there. A sprint-only room, which has no sessions,
+    says "Sprints" instead (MAP-08).
 
     The title of the session on is cut at three lines, as a session row's title is
     (ux.md §3.6); "and 1 more" is a line of its own, so the cut never hides it.
@@ -132,7 +142,7 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
         live: The "happening now" colour (``Tokens.live``).
     """
     room = entry.room
-    count = ft.Text(session_count(len(room.session_ids)))
+    count = ft.Text(count_line(room))
     subtitle: ft.Control = count
     if lines := now_lines(entry):
         title, *more = lines

@@ -156,7 +156,7 @@ Each of those modules starts with `pytestmark = pytest.mark.usefixtures("machine
 | Every time group has an aware start in the conference zone; groups sort by start | `test_every_group_has_aware_start` | DATA-12, DATA-13 |
 | Speakers link by name; pseudo-speakers ("Hosted by …") are text, not directory entries | `test_hosted_by_is_not_a_speaker` | DATA-15 |
 | Rooms fan out from multi-room strings | `test_multi_room_session_appears_in_each_room` | DATA-16 |
-| Sprint-only rooms from `map.toml` are seeded (from P2, with the pin registry) | `test_sprint_only_rooms_are_seeded` | MAP-08, DATA-32 |
+| Sprint-only rooms from `map.toml` are seeded once, natural-sorted, never over a feed room, without S-7 (#392) | `tests/test_rooms.py`'s `test_sprint_rooms_are_seeded_once_in_natural_order`, `test_a_sprint_room_the_feed_has_keeps_its_sessions`, `test_the_2026_sprint_rooms_leave_out_the_staff_office`; Ionic's own in `test_ionic_seeded_2026s_sprint_rooms_into_every_year` | MAP-08, DATA-32 |
 | Ids are strings in four stable forms | `test_ids_are_unique_stable_strings_in_ionics_forms` (an invariant) | DATA-26, D-42 |
 | A malformed slot is skipped and logged; the rest of the day survives | `test_bad_slot_is_skipped_and_logged` (uses `caplog`) | D-41 |
 | Sponsors decode by level, sorted once; a malformed sponsor is skipped and named; Ionic's slugs | `tests/test_sponsors.py`, `test_sponsor_slug_matches_ionic` | DATA-22, SPON-02, D-261 |

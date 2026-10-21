@@ -114,6 +114,17 @@ class MapData:
         """
         return next((pin for pin in self.pins if pin.key == key), None)
 
+    def floors(self) -> tuple[tuple[str, frozenset[str]], ...]:
+        """Return each plan's title and the keys of the pins on it, in the Map's order.
+
+        What ``rooms.room_list()`` groups the Rooms list by (ROOM-01): a room is on the
+        floor of its pin.
+        """
+        return tuple(
+            (plan.title, frozenset(pin.key for pin in self.pins if pin.plan == plan.id))
+            for plan in self.plans
+        )
+
     def room_pin(self, room: str) -> Pin | None:
         """Return the pin of a room, found by ``normalize_room_key()``, or None.
 

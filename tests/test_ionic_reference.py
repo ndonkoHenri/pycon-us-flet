@@ -228,11 +228,18 @@ def test_ionic_left_a_new_days_first_group_without_start(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_ionic_seeded_2026s_sprint_rooms_into_every_year(year: int) -> None:
-    """MAP-08: Ionic's empty rooms are its 2026 venue's sprint rooms; ours has none yet."""
+    """MAP-08: Ionic's empty rooms are its 2026 venue's sprint rooms, and so are ours.
+
+    Ours come from the year's ``map.toml``, so 2026 seeds exactly Ionic's rooms and
+    2025, which has no plans, seeds none, where Ionic seeded 2026's venue into it.
+    """
     empty = {room["name"] for room in captured(year, "rooms") if not room["sessions"]}
     assert empty
     assert all(re.fullmatch(r"S-\d[AB]?|Seaside .+", name) for name in empty)
-    assert all(room.session_ids for room in processed(year).rooms.values())
+    ours = {
+        room.name for room in processed(year).rooms.values() if not room.session_ids
+    }
+    assert ours == (empty if year == 2026 else set())
 
 
 def test_a_null_ionic_location_shows_as_a_mismatch_not_a_crash() -> None:
