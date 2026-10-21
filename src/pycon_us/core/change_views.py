@@ -6,8 +6,8 @@ way. ``change_view()`` formats one change once: its old and new values for the l
 "old → new" and the sentence a screen reader says; ``item_phrase()`` adds "In My
 schedule." for a saved session. ``sections()`` puts the batches under "Affects My
 schedule" and "All changes", grouped by detection time ("Today, 10:42 AM").
-``changed_phrase()`` is the badge's spoken part, ``snackbar_text()`` and
-``now_card_text()`` the counts.
+``changed_phrase()`` is the badge's spoken part, ``detail_badge()`` session detail's badge
+of one kind with its old value, ``snackbar_text()`` and ``now_card_text()`` the counts.
 
 Times are conference time, whatever the device's zone (D-35, D-43), in 24-hour form when
 the device asks for it (F23). A session gone from the feed is "Removed from the latest
@@ -24,6 +24,7 @@ from pycon_us.core.timefmt import (
     day_heading,
     day_label,
     local_date,
+    on_screen,
     time_label,
     time_range_label,
 )
@@ -166,6 +167,34 @@ def changed_phrase(kinds: Iterable[ChangeKind]) -> str:
     if not words:
         return ""
     return f"{_joined(words).capitalize()} changed"
+
+
+def detail_badge(change: Change, zone: tzinfo, *, use_24h: bool) -> tuple[str, str]:
+    """Return session detail's badge for one recent change: its text, and as said.
+
+    "Moved from Room 102A"; "Was Fri, May 15, 10:30 AM", said "Was Friday, May 15,
+    10:30 AM"; "Renamed from “Old title”" (ux.md §5.5). The old value is the one before
+    the last 24 h's changes (``ChangeLog.recent_of()``). Times are conference time.
+
+    Args:
+        change: A time, room or title change with both sides.
+        zone: The conference's zone (D-35, D-43).
+        use_24h: Whether the device uses the 24-hour clock.
+    """
+    old = change.old
+    assert old is not None, "a badged change has an old side"
+    if change.kind is ChangeKind.TIME:
+        day = local_date(old.start, zone)
+        time = time_label(old.start, zone, use_24h=use_24h)
+        return (
+            f"Was {day_label(day)}, {on_screen(time)}",
+            f"Was {day_heading(day)}, {time}",
+        )
+    if change.kind is ChangeKind.ROOM:
+        text = f"Moved from {old.location or NO_ROOM.lower()}"
+        return text, text
+    text = f"Renamed from “{old.title}”"
+    return text, text
 
 
 @dataclass(frozen=True, eq=False)
