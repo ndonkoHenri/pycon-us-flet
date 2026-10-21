@@ -347,7 +347,7 @@ No blocking loaders (SCHED-28 dropped); never a full-screen error while data exi
 
 ### 4.5 Feedback (D-29) and haptics
 
-- **Transient result, maybe undoable:** `SnackBar(behavior=SnackBarBehavior.FLOATING, duration=4000, action=SnackBarAction(...))`, one action: "Removed from My schedule · Undo", "Password copied". Flutter keeps a SnackBar with an action until it is used (`persist` defaults to true then), so ours set `persist` to `Prefs.screen_reader`: 4 s for everyone, until used or replaced while TalkBack or VoiceOver is on (D-184); a favourites SnackBar also goes with the next favourites edit (D-251).
+- **Transient result, maybe undoable:** `SnackBar(behavior=SnackBarBehavior.FLOATING, duration=4000, action=SnackBarAction(...))`, one action: "Removed from My schedule · Undo", "Password copied". Flutter keeps a SnackBar with an action until it is used (`persist` defaults to true then), so ours set `persist` to `Prefs.screen_reader`: 4 s for everyone, until used or replaced while TalkBack or VoiceOver is on (D-184); a favourites SnackBar also goes with the next favourites edit (D-251). One that a screen reader keeps closes once no screen reader is on: the OS gives no change event (U17), so while it shows, after its 4 s, the app reads the flags again every 2 s in the foreground (D-356).
 - **Persistent condition needing action:** `Banner(leading, content, actions)`: "Notifications are off · Open settings", "3 scans haven't synced · Sync now".
 - **Data status:** `StatusStrip`. **A result the user waits for** (sign-in errors, scan outcomes): in place.
 - **Choice in context:** `BottomSheet(show_drag_handle=True, use_safe_area=True)`: filters, permission primer, lead note.

@@ -333,6 +333,7 @@ async def test_a_page_with_an_undo_snack_bar_is_released_when_its_session_ends(
     patches = pytest.MonkeyPatch()  # its own: the test's would hold the page
     try:
         async with rendering(tmp_path, patches) as shown:
+            shown.session.page.on_close = shown.services.close  # as App does (D-147)
             shown.prefs.screen_reader = True
             await removed(shown, row_sessions.TALK)
             page = ref(shown.session.page)
