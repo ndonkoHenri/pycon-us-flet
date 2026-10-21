@@ -36,6 +36,7 @@ from pycon_us.core.models import (
 )
 from pycon_us.core.queries import fold
 from pycon_us.core.records import OpenSpace, Slot
+from pycon_us.core.rooms import seed_sprint_rooms
 from pycon_us.core.rules import FeedSettings
 from pycon_us.core.timefmt import instant
 
@@ -155,7 +156,7 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         sessions=sessions,
         speakers=speakers,
         days=_days(s for s in sessions.values() if s.in_timeline),
-        rooms=rules.rooms(sessions.values()),
+        rooms=seed_sprint_rooms(rules.rooms(sessions.values()), settings.sprint_rooms),
         posters=tuple(poster for poster, _ in posters),
         sprints=tuple(
             _decode(sections["sprints"], "sprints", records.sprint, _id_of, skip)

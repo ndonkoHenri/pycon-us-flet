@@ -724,3 +724,28 @@ async def test_an_unknown_room_names_the_thing_and_offers_the_rooms(
     await room.session.dispatch_event(button._i, "click", None)
     await room.settle()
     assert room.went == ["/map"]
+
+
+# ------------------------------------------------------------------ sprint-only (MAP-08)
+
+
+async def test_a_sprint_only_room_says_the_sprints_run_there_and_leads_to_them(
+    render: Render,
+) -> None:
+    """A sprint-only room shows its state, not Not found, and opens the Sprints page.
+
+    It has no sessions, so no day tabs; its title is the room's name (ux.md §4.6).
+    """
+    room = await render("/map/room/s-2", slug="s-2")
+    assert room.titles[-1] == "S-2"
+    state = room.node("room.sprints")
+    assert "Sprints run here after the talks" in texts(state)
+    assert room.nodes("room.not_found") == []
+    assert room.find(ft.TabBar) == []
+    (button,) = [
+        c for c in room.session.index.values() if isinstance(c, ft.FilledTonalButton)
+    ]
+    assert button.content == "See the sprints"
+    await room.session.dispatch_event(button._i, "click", None)
+    await room.settle()
+    assert room.went == ["/more/sprints"]
