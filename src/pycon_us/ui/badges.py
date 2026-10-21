@@ -40,7 +40,9 @@ def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
 
     Not a ``Chip``: chips are interactive, and a badge is text. The label uses the
     Material 3 label type (``LABEL_SMALL``) and wraps inside the pill rather than
-    clipping when a large text size makes it wider than the row (D-26).
+    clipping when a large text size makes it wider than the row (D-26). Its lines
+    start at the pill's start edge, as the text around it does: a one-line label fills
+    the pill, so the alignment shows only once it wraps (#579).
 
     Args:
         label: What the badge says, in sentence case.
@@ -51,7 +53,7 @@ def TrackBadge(label: str, colors: BadgeColors) -> ft.Control:
             label,
             theme_style=ft.TextThemeStyle.LABEL_SMALL,
             color=colors.text,
-            text_align=ft.TextAlign.CENTER,  # for a label that wraps at large text
+            text_align=ft.TextAlign.START,
         ),
         bgcolor=colors.fill,
         # Every badge has a border, its fill's colour on a tonal one, so an outlined

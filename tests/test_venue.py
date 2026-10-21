@@ -264,6 +264,44 @@ async def test_without_hours_or_a_feed_block_the_page_sends_to_the_desk(
     assert "information desk" in screen.NO_VENUE_BODY
 
 
+async def test_each_service_with_a_pin_ends_with_its_location_card(
+    show: Show,
+) -> None:
+    """INFO-12, MAP-09: a card per pinned service; Luggage check has none."""
+    page = await show()
+    labels = {str(node.identifier): node.label for node in page.nodes("venue.service.")}
+    assert {
+        key: label for key, label in labels.items() if key.endswith(".location")
+    } == {
+        "venue.service.registration.location": (
+            "Show Registration on the Concourse level floor plan"
+        ),
+        "venue.service.information_desk.location": (
+            "Show Information desk on the Concourse level floor plan"
+        ),
+        "venue.service.swag_pickup.location": (
+            "Show Swag pickup on the Arena & exhibit halls floor plan"
+        ),
+        "venue.service.quiet_room.location": (
+            "Show Quiet room on the Concourse level floor plan"
+        ),
+        "venue.service.lost_found.location": (
+            "Show Lost & found on the Upper level floor plan"
+        ),
+    }
+
+
+async def test_a_service_s_card_pushes_the_floor_viewer_at_its_pin(
+    show: Show,
+) -> None:
+    """The tap pushes ``plan/<plan>?pin=<key>`` on Venue & hours' View."""
+    page = await show()
+    tap = page.node("venue.service.swag_pickup.location").parent
+    assert isinstance(tap, ft.Container) and tap.on_click is not None
+    await page.click(tap)
+    assert page.went == [f"{VIEW}/plan/arena?pin=swag-pickup"]
+
+
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_live_reads_at_aa_on_the_card(dark: bool) -> None:
     """The outlined card's fill is the surface, where ``live`` reads at 4.5:1 (D-33)."""

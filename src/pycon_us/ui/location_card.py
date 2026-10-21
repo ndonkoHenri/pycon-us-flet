@@ -10,7 +10,8 @@ own card, which the job fair's uses (D-254): the thumbnail and the plan's title.
 a screen reader. Here the pin pulses twice when the card first shows, then stays still,
 and is still from the start under reduced motion (D-34, D-173); the card is one button
 node that says where it leads ("Show Room 104A on the Concourse level floor plan"), the
-thumbnail excluded. At large text (``Prefs.time_above``, D-216) the words go under the
+thumbnail excluded. Help & safety and Venue & hours show a venue spot's card by its pin
+key (``spot_card()``). At large text (``Prefs.time_above``, D-216) the words go under the
 thumbnail rather than squeeze beside it; nothing has a fixed height but the image.
 Apart from ``ui/rows.py`` so that it stays under about 400 lines (D-66).
 """
@@ -24,7 +25,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
-from pycon_us.year_map import Pin, Plan
+from pycon_us.year_map import MapData, Pin, Plan
 
 THUMB_DP = 112
 """The thumbnail's width; its height follows the plan's aspect ratio."""
@@ -144,6 +145,24 @@ def LocationCard(
     key = f"{plan.id}:{pin.key if pin else ''}"
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _LocationCard(plan, pin, identifier=identifier, seen=seen, key=key)  # pyright: ignore[reportCallIssue]
+
+
+def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
+    """Return the ``LocationCard`` of the pin ``key``, or None without one.
+
+    The loader refuses a key ``map.toml`` lacks, so None here is a place with no pin
+    (an empty key) or a year with no plans.
+
+    Args:
+        data: The year's ``map.toml``.
+        key: A venue spot's pin key (``info-desk``), as ``content.toml`` names it.
+        identifier: The card's, ``<screen>.<place>.location``.
+    """
+    pin = data.pin(key) if key else None
+    plan = data.plan(pin.plan) if pin else None
+    if pin is None or plan is None:
+        return None
+    return LocationCard(plan, pin, identifier=identifier)
 
 
 @ft.memo
