@@ -158,7 +158,7 @@ def Map() -> ft.View:
         pane = ExpoHall(EXPO, key=EXPO)  # pyright: ignore[reportCallIssue]
     else:
         pane = RoomsPane(list_ref, scrolled)
-    actions = [search_button(memory, "rooms")]
+    actions = [search_button(memory, "places")]
     if svc.year.map.tour_url:
         actions.append(tour_menu(svc, svc.year.map.tour_url))
     body = pane

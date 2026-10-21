@@ -10,7 +10,7 @@ the site's open-spaces page, which its detail shows as a link in the page instea
 
 The page's heading is the title under the badges, so the app bar's title stays empty;
 for 24 h after a change, a badge per kind says the old value ("Moved from Room 102A").
-Then the "When and where" card
+Then the "When and where" card and the room's location card
 (``ui.when_where``), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
@@ -35,7 +35,7 @@ from pycon_us.config import ConferenceInfo
 from pycon_us.core.change_views import detail_badge
 from pycon_us.core.diff import Change
 from pycon_us.core.models import Session, Speaker
-from pycon_us.core.row_views import people, places
+from pycon_us.core.row_views import Places, people, places
 from pycon_us.core.timeline import posters
 from pycon_us.favorites import use_favorites
 from pycon_us.locations import drill_href
@@ -107,17 +107,21 @@ def SessionDetail(session_id: str) -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     # The session as this View last showed it: a refresh that drops it keeps it here.
     shown = ft.use_ref(cast(Session | None, None))
+    # Its places too: the rooms index is rebuilt from the sessions, so a room whose
+    # last session the refresh dropped is gone from it (D-186, D-349).
+    shown_where = ft.use_ref(cast(Places | None, None))
     info = svc.year.conference
     data = conference.data
     current = data.sessions.get(session_id) if data else None
     if current is not None:
         shown.current = current
+        shown_where.current = places(current, data.rooms if data else {})
     elif shown.current is not None and shown.current.id != session_id:
         # The same View given another id in place (a deep link at the same depth):
         # what it showed before belongs to a different session.
-        shown.current = None
-    session = shown.current
-    if session is None:
+        shown.current = shown_where.current = None
+    session, where = shown.current, shown_where.current
+    if session is None or where is None:
         return AppScaffold(
             title="Not found",
             body=ft.ListView(
@@ -179,8 +183,8 @@ def SessionDetail(session_id: str) -> ft.View:
     controls.append(
         WhenAndWhere(
             session,
-            places(session, data.rooms if data else {}),
-            info,
+            where,
+            svc.year,
             view_path=view_path,
             use_24h=use_24h,
             screen=SCREEN,

@@ -351,15 +351,15 @@ def test_a_plan_without_a_subtitle_is_read_by_its_name() -> None:
 # ------------------------------------------------------------------ the app bar
 
 
-async def test_the_app_bar_searches_rooms_and_opens_the_tour(render: Render) -> None:
-    """Search opens rooms' scope; the overflow's tour opens in the in-app browser.
+async def test_the_app_bar_searches_places_and_opens_the_tour(render: Render) -> None:
+    """Search opens the places scope; the overflow's tour opens in the in-app browser.
 
     The tour item is a link, read "3D venue tour, Opens in browser" (MAP-03, D-182).
     """
     shown = await render()
     (search,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Search"]
     await shown.click(search)
-    assert shown.went == ["/search?scope=rooms"]
+    assert shown.went == ["/search?scope=places"]
     assert shown.memory.search_base == "/map"
     (item,) = shown.find(ft.PopupMenuItem)
     text = menu_text(item)

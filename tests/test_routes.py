@@ -355,7 +355,7 @@ def test_back_from_search_results_walks_back_through_search_to_its_opener() -> N
     assert parent_of(result, base) == "/search/speaker/17"
     assert parent_of("/search/speaker/17", base) == "/search"
     assert parent_of("/search", base) == base
-    assert parent_of("/search?scope=rooms", base) == base
+    assert parent_of("/search?scope=places", base) == base
 
 
 # ------------------------------------------------------------------ links
@@ -395,11 +395,11 @@ def test_any_id_round_trips_through_its_link_and_back(
 @pytest.mark.parametrize(
     ("location", "options"),
     [
-        ("/search?scope=rooms", {"scope": "rooms"}),
+        ("/search?scope=places", {"scope": "places"}),
         ("/search", {}),
         ("/more/sponsors/sponsor/acme/plan/expo?booth=613", {"booth": "613"}),
         ("/map/plan/level-1?pin=room-102a&booth=", {"pin": "room-102a", "booth": ""}),
-        ("/search?scope=all&scope=rooms", {"scope": "rooms"}),
+        ("/search?scope=all&scope=places", {"scope": "places"}),
         ("/search?q=caf%C3%A9+tables", {"q": "café tables"}),
     ],
 )
@@ -439,8 +439,8 @@ def test_under_the_global_search_only_search_is_the_top_view(below: str) -> None
     The Router renders the Views below a global modal at the opener's location, or at
     "/" (Start) when /search is entered directly; neither is the top View.
     """
-    assert not is_top_view("/search?scope=rooms", below)
-    assert is_top_view("/search?scope=rooms", "/search")
+    assert not is_top_view("/search?scope=places", below)
+    assert is_top_view("/search?scope=places", "/search")
 
 
 # ------------------------------------------------------------------ start
@@ -453,7 +453,7 @@ def test_under_the_global_search_only_search_is_the_top_view(below: str) -> None
         ("/now", "/now"),
         ("/now/session/42/speaker/17", "/now/session/42/speaker/17"),
         ("/map/room/hall-a?highlight=42", "/map/room/hall-a?highlight=42"),
-        ("/search?scope=rooms", "/schedule/session/42"),  # a modal goes to its opener
+        ("/search?scope=places", "/schedule/session/42"),  # a modal goes to its opener
         ("/search/speaker/17", "/schedule/session/42"),
     ],
 )
@@ -469,7 +469,7 @@ def test_the_start_route_returns_a_new_session_to_where_the_user_was(
 
 @pytest.mark.parametrize(
     "last_location",
-    ["", "/now", "/now/session/42", "/search?scope=rooms", "/more/developer"],
+    ["", "/now", "/now/session/42", "/search?scope=places", "/more/developer"],
 )
 def test_a_plain_start_opens_welcome_until_it_is_done(last_location: str) -> None:
     """Before Get started, every plain start opens Welcome, wherever the user was (D-287).

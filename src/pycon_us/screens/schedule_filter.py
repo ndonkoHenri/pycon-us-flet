@@ -3,10 +3,12 @@
 Only the Schedule filters (D-20, D-178): this module is what it places for that.
 
 - ``use_track_filter()``, the Schedule's hook: the ``TUNE`` action ("Filter sessions"),
-  with a dot only when the filter differs from the default; the summary under the day
-  tabs whenever a track is hidden, the default included ("Hidden: Open space" with
-  "Show all"); and the sheet (``screens/schedule_sheet.py``, ux.md §5.3), a modal
-  ``BottomSheet`` shown through ``ft.use_dialog``.
+  with a dot only when the filter differs from the default; the summary's words
+  whenever a track is hidden, the default included ("Hidden: Open space"); and the
+  sheet (``screens/schedule_sheet.py``, ux.md §5.3), a modal ``BottomSheet`` shown
+  through ``ft.use_dialog``.
+- ``summary_line()``, those words with "Show all", which the Schedule's head places
+  under the day tabs (``screens/schedule_head.py``, D-345).
 - The words, as pure functions: ``hidden_tracks()``, ``summary_text()`` and
   ``differs_from_default()``.
 
@@ -58,17 +60,14 @@ class TrackFilter:
 
     Attributes:
         button: The app bar's ``TUNE`` action, which opens the sheet.
-        summary: The line under the day tabs, or an empty placeholder while nothing
-            is hidden: always one control, so the controls after it keep their
-            places. Without it, the line coming or going shifted the day pages in
-            Flutter's ``Column``, which rebuilt them and put every day list back at
-            its top (#313).
+        summary: The summary's words (``summary_text()``), or None while nothing
+            is hidden; the Schedule's head places them (``summary_line()``, D-345).
         show_all: Hide no track; stable across renders, so a memoised day list given
             it ("Clear filters") stays skipped (D-153).
     """
 
     button: ft.Control
-    summary: ft.Control
+    summary: str | None
     show_all: Callable[[], object]
 
 
@@ -198,10 +197,9 @@ def use_track_filter(
         if is_open and tracks
         else None
     )
-    text = summary_text(info, hidden_tracks(info, tracks, excluded))
     return TrackFilter(
         button=_button(changed, open_sheet),
-        summary=_summary(text, on_show_all) if text else ft.Container(),
+        summary=summary_text(info, hidden_tracks(info, tracks, excluded)),
         show_all=on_show_all,
     )
 
@@ -268,7 +266,7 @@ def _button(changed: bool, on_click: Callable[[], None]) -> ft.Control:
     )
 
 
-def _summary(text: str, on_show_all: Callable[[], object]) -> ft.Control:
+def summary_line(text: str, on_show_all: Callable[[], object]) -> ft.Control:
     """Return the line under the day tabs: what is hidden, and "Show all" (D-20).
 
     The words and the button share a wrapping row, the button at its end: at large
