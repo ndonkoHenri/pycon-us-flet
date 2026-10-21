@@ -18,8 +18,8 @@ from weakref import ref
 import flet as ft
 import pytest
 
-from pycon_us.ui import favorite
 from pycon_us.favorites import Change
+from pycon_us.ui import favorite
 from pycon_us.ui.favorite import (
     ADDED,
     NOT_SAVED,
