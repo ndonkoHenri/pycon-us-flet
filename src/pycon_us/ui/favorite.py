@@ -7,7 +7,8 @@ SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to
 schedule" (SCHED-24), with the same SnackBar and its count (D-209); ``use_forget()``
 is My schedule's "Forget them", the saved sessions the feed dropped (D-329). An edit
 that says nothing closes the favourites SnackBar still showing, so a screen reader is never left
-with "Removed" about a session saved again (D-251).
+with "Removed" about a session saved again (D-251). With a screen reader on, an add says
+"Added to My schedule": the star's tap no longer says its state itself (D-355).
 ``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
 
 A session's badges, which its row shows beside the star, are ``ui/badges.py``'s (D-267).
@@ -40,6 +41,10 @@ REMOVE_LABEL = "Remove from My schedule"
 
 REMOVED = "Removed from My schedule"
 """The SnackBar after a removal, with Undo (ux.md §4.4): the row may vanish."""
+
+ADDED = "Added to My schedule"
+"""The SnackBar after an add, only while a screen reader is on (D-355): what TalkBack
+says once the star is filled, where its "on" could come too early (#342)."""
 
 NOT_SAVED = "Couldn't save your change"
 """The SnackBar when an edit was shown but not written (D-120, D-172)."""
@@ -92,6 +97,11 @@ def FavoriteButton(
     it after the label), and the icon is swapped here rather than through
     ``IconButton.selected``, which would add a "selected" to the toggle's "on".
 
+    The tap gives no click of its own (``enable_feedback=False``, D-355): Flutter's
+    click sends Android's "clicked" event at once, and TalkBack read the star's state
+    from it before Python had changed it, so it sometimes said "on" after a removal
+    (#342, F173). The tap's word comes from the SnackBar instead (``feedback()``).
+
     Args:
         selected: Whether the session is saved to My schedule.
         on_click: What a tap does; it calls the list owner's
@@ -114,27 +124,33 @@ def FavoriteButton(
                     message=REMOVE_LABEL if selected else ADD_LABEL,
                     exclude_from_semantics=True,
                 ),
+                # No "clicked" event before the round trip: TalkBack would read the
+                # old state from it (#342, F173).
+                enable_feedback=False,
                 on_click=on_click,
             ),
         )
     )
 
 
-def feedback(change: Change) -> str | None:
+def feedback(change: Change, *, screen_reader: bool = False) -> str | None:
     """Return what the SnackBar says after a star tap, or None when it says nothing.
 
-    An add says nothing: the filled star and the selection click are its feedback. A
-    removal says so, because the row may vanish (My schedule). An edit that was shown
-    but not saved says that instead, as the tap's one SnackBar (ux.md §4.4).
+    An add says nothing to the eye: the filled star and the selection click are its
+    feedback. With a screen reader on it says ``ADDED``, since the star's tap does not
+    say its state (D-355). A removal says so, because the row may vanish (My
+    schedule). An edit that was shown but not saved says that instead, as the tap's
+    one SnackBar (ux.md §4.4).
 
     Args:
         change: What ``Favorites.toggle()`` or ``Favorites.undo()`` returned.
+        screen_reader: A screen reader is on (``Prefs.screen_reader``).
     """
     if not change.saved:
         return NOT_SAVED
     if change.removed:
         return REMOVED
-    return None
+    return ADDED if screen_reader else None
 
 
 async def selection_click(haptics: ft.HapticFeedback) -> None:
@@ -163,8 +179,9 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     - a removal shows "Removed from My schedule" with Undo;
     - an edit that was not saved shows "Couldn't save your change" instead, keeping
       Undo when the edit was a removal;
-    - an edit that says nothing (an add, an Undo) closes the favourites SnackBar
-      still showing, as a new one replaces it (D-251).
+    - an add, with a screen reader on, shows "Added to My schedule" (D-355);
+    - an edit that says nothing (an add or an Undo without a screen reader) closes
+      the favourites SnackBar still showing, as a new one replaces it (D-251).
 
     Args:
         favorites: The list owner's ``use_favorites()`` store.
@@ -199,12 +216,14 @@ def _announce(
     """Report a star edit through ``_report()``: ``feedback()``'s SnackBar, or none.
 
     A removal's SnackBar has Undo; an edit that says nothing closes the last (D-251).
+    With a screen reader on, an add (an Undo's too) says ``ADDED`` (D-355).
 
     Args:
         page: The session's page.
         favorites: The store the edit changed; Undo reverses the edit in it.
         svc: The session's services: where the favourites are kept.
-        prefs: The session's ``Prefs``: a screen reader keeps an Undo SnackBar.
+        prefs: The session's ``Prefs``: with a screen reader on, an add says
+            ``ADDED`` and an Undo SnackBar stays (D-355, D-184).
         change: The edit.
         edit: The edit's number from ``_begin()``.
     """
@@ -216,7 +235,8 @@ def _announce(
         _announce(page, favorites, svc, prefs, reverse, edit=edit)
 
     undoes = undo if change.removed else None
-    _report(page, feedback(change), undo=undoes, svc=svc, prefs=prefs, edit=edit)
+    message = feedback(change, screen_reader=prefs.screen_reader)
+    _report(page, message, undo=undoes, svc=svc, prefs=prefs, edit=edit)
 
 
 def added_feedback(change: Change) -> str:
@@ -348,7 +368,8 @@ def _report(
         svc: The session's services, which watch a screen reader's SnackBar.
         prefs: The session's ``Prefs``: while a screen reader is on, an Undo
             SnackBar stays until it is used, replaced, closed by the next edit, or
-            no screen reader is on (D-184, D-251, D-356).
+            no screen reader is on (D-184, D-251, D-356). A SnackBar without Undo,
+            ``ADDED`` among them (D-355), goes after its 4 s and is not watched.
         edit: The edit's number from ``_begin()``, taken before its first await.
     """
     if _EDITS.get(page) != edit:

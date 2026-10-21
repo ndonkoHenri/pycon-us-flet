@@ -1,7 +1,8 @@
 """Tests for the SnackBar a screen reader keeps until it is off (D-356, #343).
 
 The star's "Removed from My schedule · Undo" in a real Flet session
-(``tests/row_sessions.py``), with the watch's 4 s and its reads shortened.
+(``tests/row_sessions.py``), with the watch's 4 s and its reads shortened; and the
+screen reader's "Added to My schedule" (D-355), which is not kept, so not watched.
 """
 
 import asyncio
@@ -13,7 +14,7 @@ import flet as ft
 import pytest
 
 from pycon_us.ui import snack_bars
-from pycon_us.ui.favorite import REMOVED
+from pycon_us.ui.favorite import ADDED, REMOVED
 from tests import row_sessions
 from tests.fakes import MemorySemantics
 from tests.row_sessions import Rendered, rendering
@@ -109,14 +110,45 @@ async def test_it_waits_out_the_snack_bars_own_time_first(
 
 
 async def test_the_watch_ends_when_the_bar_has_gone(rendered: Rendered) -> None:
-    """Undo closes the bar (D-251), and nothing reads the flags for it after."""
+    """Undo's "Added" replaces the bar (D-355); once it has gone, nothing reads."""
     snack = await removed(rendered)
     await cast(Callable[[], Any], cast(ft.SnackBarAction, snack.action).on_click)()
     await rendered.settle()
+    added = rendered.snack_bars[-1]
+    assert text_of(added.content) == ADDED and added is not snack
+    # Flet reports the bar the new one replaced as gone (snack_bar.dart).
+    snack.open = False
     await until(lambda: not snack_bars._WATCHES)  # its task has returned
     reads = semantics(rendered).reads
     await wait_ticks()
     assert semantics(rendered).reads == reads
+
+
+async def test_a_screen_readers_added_bar_is_not_watched(rendered: Rendered) -> None:
+    """D-355's "Added to My schedule" has no Undo: it is not kept, so not watched."""
+    await rendered.tap_star(row_sessions.TALK)
+    added = rendered.snack_bars[-1]
+    assert text_of(added.content) == ADDED
+    assert added.open and added.action is None and not added.persist
+    assert not snack_bars._WATCHES
+    reads = semantics(rendered).reads
+    await wait_ticks()
+    assert semantics(rendered).reads == reads
+
+
+async def test_a_removal_after_an_add_is_watched(
+    rendered: Rendered, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The kept "Removed" that follows an "Added" closes once TalkBack is off."""
+    await rendered.tap_star(row_sessions.TALK)
+    assert text_of(rendered.snack_bars[-1].content) == ADDED
+    await rendered.tap_star(row_sessions.TALK)
+    snack = rendered.snack_bars[-1]
+    assert text_of(snack.content) == REMOVED and snack.persist
+    monkeypatch.setattr(ft.SnackBar, "update", lambda bar: None)
+    semantics(rendered).features["accessible_navigation"] = False
+    await until(lambda: not snack.open)
+    await until(lambda: not snack_bars._WATCHES)
 
 
 async def test_the_watch_ends_when_the_session_closes(rendered: Rendered) -> None:
