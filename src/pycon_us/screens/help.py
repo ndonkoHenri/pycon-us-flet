@@ -13,8 +13,8 @@ is what someone in trouble needs:
   are, a line each, each followed by its ``LocationCard`` when ``[help]`` names its
   pin (``spot_card()``, INFO-12), which pushes the floor viewer at it; under the
   quiet room the sponsor who provides it, which pushes its detail
-  (``SponsorCreditTile``, D-337); then All maps, which opens the Map tab (its Floor
-  plans once #391 adds them).
+  (``SponsorCreditTile``, D-337); then All maps, which opens the Map tab on its Floor
+  plans (#391).
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
 - **The app:** Report a problem with the app, last on the page whatever the year has.
@@ -35,6 +35,8 @@ import flet as ft
 
 from pycon_us import SOURCE_URL
 from pycon_us.screens.about_app import shown_url
+from pycon_us.screens.map import tab_href
+from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import use_services
 from pycon_us.theme import use_tokens
@@ -64,7 +66,7 @@ REPORT = "Report a concern"
 """The card's heading."""
 
 ALL_MAPS = "All maps"
-"""The row after the places, to the Map tab, where every floor plan is."""
+"""The row after the places, to the Map tab's Floor plans, where every plan is."""
 
 REPORT_PROBLEM = "Report a problem with the app"
 """The last row's title: a problem with this app, not a safety concern."""
@@ -216,7 +218,7 @@ def help_blocks(
                 [
                     LinkTile(
                         ALL_MAPS,
-                        "/map",
+                        tab_href(FLOOR_PLANS),
                         icon=ft.Icons.MAP_OUTLINED,
                         identifier=f"{SCREEN}.all_maps",
                     )
