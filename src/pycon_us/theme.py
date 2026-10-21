@@ -154,7 +154,7 @@ def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
         ),
         system_overlay_style=overlay_style(dark=dark, high_contrast=high_contrast),
         # A tall tile's icons beside its title's first line, not the middle of the
-        # block (D-188); fold headers (ExpansionTile) have no setting of their own.
+        # block (D-188), fold headers (FoldTile's ListTile, D-354) included.
         list_tile_theme=ft.ListTileTheme(
             title_alignment=ft.ListTileTitleAlignment.TITLE_HEIGHT
         ),

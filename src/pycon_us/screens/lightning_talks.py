@@ -225,7 +225,7 @@ def doubts_fold(
     *,
     expanded: bool,
     on_change: Callable[[bool], None],
-    style: ft.AnimationStyle,
+    style: ft.Animation,
 ) -> ft.Control:
     """Return "Think you can't do one?": the doubts and their answers, folded.
 
@@ -259,15 +259,12 @@ def doubts_fold(
         )
         for doubt in copy.doubts
     ]
-    fold = FoldTile(
+    return FoldTile(
         ft.Text(DOUBTS),  # a row's title, as the link row under it
         answers,
         expanded=expanded,
         on_change=on_change,
         style=style,
+        identifier=f"{SCREEN}.doubts",
         leading=ft.Icon(ft.Icons.LIGHTBULB_OUTLINE),
     )
-    # Around the tile, not on its title, which it split from the tile's button, read
-    # "Collapsed" alone on Android; not merged, which would take in the answers. An
-    # empty node of its own, the price of an identifier on a fold (F50, D-214).
-    return ft.Semantics(identifier=f"{SCREEN}.doubts", content=fold)

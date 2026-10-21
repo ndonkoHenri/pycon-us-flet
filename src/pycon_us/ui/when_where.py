@@ -3,9 +3,9 @@
 Time and place answer the attendee's first question (ux.md §1, §5.5), so they come
 before everything else about a session: the day and time, where the session stands now
 ("Starts in 25 min", "Happening now", "Ended"), the Pacific Time note when the device's
-clock differs (D-35), then one room tile that pushes room detail and, folded into an
-``ExpansionTile``, the other rooms of a multi-room session (SESS-02). Each tile reads as
-one phrase (D-33).
+clock differs (D-35), then one room tile that pushes room detail and, folded into a
+``FoldTile`` (D-354), the other rooms of a multi-room session (SESS-02). Each tile reads
+as one phrase (D-33).
 
 A session in one room with a pin shows that room's ``LocationCard`` under the card
 (D-349): the room tile says what else is on there (room detail), the card where it is
@@ -185,29 +185,27 @@ def OtherRooms(
     """
     prefs = use_prefs()
     is_open, set_open = ft.use_state(False)
-    return ft.Semantics(
+    return FoldTile(
+        ft.Text(where.others_label),
+        [
+            LinkTile(
+                room.name,
+                room_href(view_path, room, session.id),
+                identifier=f"{screen}.room.{room.slug}",
+            )
+            for room in where.others
+        ],
+        expanded=is_open,
+        on_change=set_open,
+        style=expand_style(prefs),
         identifier=f"{screen}.other_rooms",
-        content=FoldTile(
-            ft.Text(where.others_label),
-            [
-                LinkTile(
-                    room.name,
-                    room_href(view_path, room, session.id),
-                    identifier=f"{screen}.room.{room.slug}",
-                )
-                for room in where.others
-            ],
-            expanded=is_open,
-            on_change=set_open,
-            style=expand_style(prefs),
-            # Under the room tile, a blank as wide as its icon lines the two titles
-            # up; alone (a break in many rooms), the place icon.
-            leading=ft.Container(width=24)
-            if where.label
-            else ft.Icon(ft.Icons.PLACE_OUTLINED),
-            # Each room's title under the tile's title: 16 + 24 + 16 dp in.
-            controls_padding=ft.Padding.only(left=40),
-        ),
+        # Under the room tile, a blank as wide as its icon lines the two titles up;
+        # alone (a break in many rooms), the place icon.
+        leading=ft.Container(width=24)
+        if where.label
+        else ft.Icon(ft.Icons.PLACE_OUTLINED),
+        # Each room's title under the tile's title: 16 + 24 + 16 dp in.
+        controls_padding=ft.Padding.only(left=40),
     )
 
 
