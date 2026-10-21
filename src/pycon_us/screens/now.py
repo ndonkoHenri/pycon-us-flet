@@ -6,12 +6,15 @@ refreshes the feed every 15 min while Now shows (D-175), then by season:
 - before the conference, the key dates and "Build your schedule";
 - on its days, **Your next session** (``now_card``: ``agenda.next_for_me()``'s saved
   session to go to next, with its star, its countdown and "Show room", and its elapsed
-  bar once it is on), **Happening now** (the other sessions on, saved ones first, each
-  with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
+  bar once it is on), the Schedule changes card while changes to saved sessions are
+  unseen (``now_changes``, D-255), **Happening now** (the other sessions on, saved
+  ones first, each with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
   card's session), each folded at peak times after your saved sessions and three
   others (``now_fold``, D-327), and a link to the Schedule;
 - on the last evening and the sprint days, the Sprints page; afterwards, the schedule
   to look back at;
+- on the conference and sprint days, after the sessions, the quick info buttons
+  (``now_quick``: Wi-Fi, Help & safety, Venue & hours, D-338);
 - in every season, the sponsor spotlight (``now_spotlight``, D-37, D-298) when a
   sponsor may appear there.
 
@@ -30,6 +33,7 @@ from functools import partial
 import flet as ft
 
 from pycon_us import clock
+from pycon_us.change_log import use_change_log
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.agenda import (
     NowNext,
@@ -50,6 +54,7 @@ from pycon_us.core.timeline import Slot
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.now_card import Row, next_session, nothing_next
+from pycon_us.screens.now_changes import changes_card
 from pycon_us.screens.now_fold import HAPPENING, UP_NEXT, folded
 from pycon_us.screens.now_header import (
     Season,
@@ -60,6 +65,7 @@ from pycon_us.screens.now_header import (
     sprints_link,
     up_next_when,
 )
+from pycon_us.screens.now_quick import SEASONS, QuickInfo
 from pycon_us.screens.now_spotlight import Spotlight
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -104,6 +110,7 @@ def Now() -> ft.View:
     svc = use_services()
     conference = use_conference()
     favorites = use_favorites()
+    change_log = use_change_log()  # Now's card goes once its changes are seen
     on_toggle = use_favorite_toggle(favorites)
     tokens = use_tokens()
     prefs = use_prefs()
@@ -175,11 +182,20 @@ def Now() -> ft.View:
                 row,
                 fold,
                 saved=favorites.ids,
+                changed=changes_card(
+                    change_log,
+                    favorites.ids,
+                    now,
+                    view_path=view_path,
+                    year=svc.storage.year,
+                ),
                 view_path=view_path,
                 live=tokens.live,
                 use_24h=use_24h,
             ),
         ]
+        if copy.season in SEASONS:  # under the sessions, never above them (D-338)
+            rows.append(QuickInfo(view_path))
         # One sponsor for the process (D-298): ViewMemory keeps the pick, so a new
         # session after Back on Now (F29) thanks the same one.
         memory = svc.memory
@@ -239,11 +255,15 @@ def _sections(
     fold: Fold,
     *,
     saved: frozenset[str],
+    changed: list[ft.Control],
     view_path: str,
     live: str,
     use_24h: bool,
 ) -> list[ft.Control]:
-    """Return what Now shows under the header and the strip, in the given season."""
+    """Return what Now shows under the header and the strip, in the given season.
+
+    ``changed`` is the Schedule changes card, if any, shown under Your next session.
+    """
     day = today(now, info.zone)
     sections: list[ft.Control] = []
     if current is Season.COUNTDOWN:
@@ -271,6 +291,7 @@ def _sections(
     else:
         has_saved = any(session_id in data.sessions for session_id in saved)
         sections += nothing_next(has_saved, tonight=answer.phase is Phase.AFTER_DAY)
+    sections += changed
     # The card already shows your session; when it is all that is on, or all that is
     # next, the card says so, and an empty Happening now would claim nothing is.
     others = _without(answer.happening, mine)

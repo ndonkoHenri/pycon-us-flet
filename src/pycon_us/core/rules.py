@@ -72,6 +72,9 @@ class FeedSettings:
         lightning_talks_location: Where lightning talks are shown to happen, whatever
             rooms they are streamed to; empty for none (D-124).
         display_time_overrides: Displayed starts to shift (DATA-11).
+        sprint_rooms: The names of the rooms the sprints use (``map.toml``'s pins
+            marked ``sprint``), seeded into the rooms index when no session names
+            them (MAP-08).
     """
 
     time_zone: ZoneInfo
@@ -79,6 +82,7 @@ class FeedSettings:
     hall_prefix: str
     lightning_talks_location: str = ""
     display_time_overrides: tuple[DisplayTimeOverride, ...] = ()
+    sprint_rooms: tuple[str, ...] = ()
 
 
 def track(kind: str) -> str:
