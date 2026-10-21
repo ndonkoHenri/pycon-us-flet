@@ -104,23 +104,23 @@ class ChangeLog:
         self._fetched = False
         self._forget()
 
-    def recent(self, now: datetime) -> dict[str, Change]:
-        """Return the sessions to badge as Changed: id → its latest time, room or title change.
+    def recent(self, now: datetime) -> dict[str, frozenset[ChangeKind]]:
+        """Return the sessions to badge as Changed: id → what changed in the last 24 h.
 
         A change counts for 24 h after its batch's detection (``RECENT_FOR``), seen or
-        not; additions and removals never count (D-255). The latest is the newest
-        batch's, and in a batch the first in ``diff()``'s order.
+        not; additions and removals never count (D-255). A session changed by two
+        batches of the last 24 h has the kinds of both: "Time and room changed".
 
         Args:
             now: The current instant (aware), ``clock.now()``.
         """
-        badged: dict[str, Change] = {}
+        badged: dict[str, set[ChangeKind]] = {}
         for batch in self.batches:
             if now - batch.detected_at < RECENT_FOR:
                 for change in batch.changes:
                     if change.kind in BADGED:
-                        badged.setdefault(change.id, change)
-        return badged
+                        badged.setdefault(change.id, set()).add(change.kind)
+        return {key: frozenset(kinds) for key, kinds in badged.items()}
 
     def take_announcement(self) -> Batch | None:
         """Return the batch to announce, once: the next call returns None.

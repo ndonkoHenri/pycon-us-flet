@@ -41,7 +41,12 @@ from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_add_all, use_favorite_toggle
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold, PageTitle
-from pycon_us.ui.session_rows import NOTICE_GROUP, use_session_views
+from pycon_us.ui.session_rows import (
+    NOTICE_GROUP,
+    changes_of,
+    use_recent_changes,
+    use_session_views,
+)
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import Track
@@ -96,6 +101,7 @@ def TrackDetail(slug: str) -> ft.View:
         use_24h=bool(page.media and page.media.always_use_24_hour_format),
     )
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
+    changes = use_recent_changes()
     # The same frozenset per feed version, so the memoised day items still skip.
     shared = ft.use_memo(
         lambda: shared_badges(track, days) if track else frozenset[str](), [days]
@@ -155,6 +161,7 @@ def TrackDetail(slug: str) -> ft.View:
                 day,
                 views,
                 favorites.ids & {s.id for s in day.sessions},
+                changes_of(changes, (s.id for s in day.sessions)),
                 on_toggle,
                 tokens,
                 screen=SCREEN,
