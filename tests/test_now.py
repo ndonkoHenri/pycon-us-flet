@@ -28,6 +28,7 @@ import pytest
 from flet.components.component import Component
 
 from pycon_us import clock
+from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, now_next
 from pycon_us.core.models import ConferenceData
@@ -424,11 +425,13 @@ async def render(
             saved: tuple[str, ...] = (),
             ticks: Ticks | None = None,
             memory: ViewMemory | None = None,
+            change_log: ChangeLog | None = None,
         ) -> Shown:
             """Render Now at ``now``, with ``saved`` in My schedule.
 
             With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
-            ``memory`` is the process's view memory, when a test keeps one.
+            ``memory`` is the process's view memory, when a test keeps one;
+            ``change_log`` the session's, when a test records batches.
             """
             held = [now]
             ticker = ticks or Ticks()
@@ -457,6 +460,7 @@ async def render(
                     view_path="/now",
                     saved=saved,
                     memory=memory,
+                    change_log=change_log,
                     kind=partial(Shown, clock=held, ticks=ticker),
                 )
             )
