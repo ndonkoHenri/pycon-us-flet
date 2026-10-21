@@ -60,8 +60,11 @@ def feed_room_strings(year: int) -> set[str]:
     return names
 
 
-def test_2026_has_the_five_floor_plans_in_the_maps_order() -> None:
-    """2026's plans are Ionic's five, in its order, with the 3D tour (MAP-02, MAP-03)."""
+def test_2026_has_the_floor_plans_in_the_maps_order() -> None:
+    """2026's plans are Ionic's five, in its order, then the expo's, with the 3D tour.
+
+    MAP-02, MAP-03; the expo plan is the one the booths are on (EXPO-02).
+    """
     data = load_year(2026).map
     assert [plan.id for plan in data.plans] == [
         "campus",
@@ -69,6 +72,7 @@ def test_2026_has_the_five_floor_plans_in_the_maps_order() -> None:
         "upper",
         "arena",
         "seaside",
+        "expo",
     ]
     assert data.tour_url == "https://map.concept3d.com/?id=1802"
     assert all(plan.title and plan.subtitle for plan in data.plans)
@@ -242,6 +246,24 @@ def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
             r"tour_url: expected",
         ),
         ("sprint = true", 'sprint = "yes"', r"pins\[\d+\]\.sprint: expected true or"),
+        ('number = "113"', 'number = "112"', r"booths\[1\]\.number: '112' is listed"),
+        ('number = "112"', 'number = " "', r"booths\[0\]\.number: is empty"),
+        ('number = "112"', "number = 112", r"booths\[0\]\.number: expected"),
+        ("x = 0.2365", "x = 1.2365", r"booths\[0\]\.x: 1.2365 is not between 0 and 1"),
+        ("h = 0.0912", "h = -0.1", r"booths\[0\]\.h: -0.1 is not between 0 and 1"),
+        ("w = 0.0473", "w = 0.0", r"booths\[0\]\.w: must be positive"),
+        (
+            "x = 0.2365",
+            "x = 0.9600",
+            r"booths\[0\]\.w: x \+ w is 1.0073, past the plan",
+        ),
+        (
+            "y = 0.6965",
+            "y = 0.9500",
+            r"booths\[0\]\.h: y \+ h is 1.0412, past the plan",
+        ),
+        ('label = "Attendee lounge"', 'label = " "', r"booths\[\d+\]\.label: is empty"),
+        ('id = "expo"', 'id = "hall"', r"2026/map.toml: booths: no plan 'expo' to put"),
     ],
 )
 def test_a_bad_map_entry_names_file_entry_and_field(
