@@ -118,7 +118,9 @@ def nothing_next(has_saved: bool, *, tonight: bool) -> list[ft.Control]:
             "Nothing saved yet",
             "/schedule",
             icon=ft.Icons.STAR_BORDER,
-            subtitle="Tap the star on a session, and your next one shows here",
+            # One line at the default size, so the tile leaves room for the sessions
+            # under it at peak times (D-366).
+            subtitle="Star a session to see it here",
             identifier="now.next_session",
         )
     return [SectionHeader(HEADING, level=2), tile]
