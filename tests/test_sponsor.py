@@ -132,7 +132,7 @@ async def test_the_level_and_the_booth_are_lines_not_controls(show: Show) -> Non
 async def test_the_job_fair_table_button_shows_the_table_on_the_plan(
     show: Show,
 ) -> None:
-    """ "Job fair table T2" pushes the job fair plan with T2 selected, on the sponsor."""
+    """The "Job fair table T2" button pushes the job fair plan with T2 selected."""
     shown = await show("bloomberg")
     button = cast(ft.OutlinedButton, shown.node("sponsor.job_fair_table").content)
     assert (button.content, button.icon) == (
