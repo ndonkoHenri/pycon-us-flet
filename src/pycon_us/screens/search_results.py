@@ -7,7 +7,7 @@ and speaker rows (D-153): new results re-render only the days and rows they chan
 and a star tap one row.
 
 A broad query finds most of the feed, so each type shows its first rows
-(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every place) and a "Show all 326 sessions" row
+(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every place, ``FIRST_SPONSORS``) and a "Show all 326 sessions" row
 renders the rest of its type on request (D-218): the first render of a one-letter
 query stays near that of a query that finds a few dozen rows, and every result stays
 one tap away.
@@ -23,6 +23,7 @@ from pycon_us.core.row_views import SessionView
 from pycon_us.core.search import SearchResults, first_results
 from pycon_us.core.speakers import SpeakerEntry
 from pycon_us.locations import drill_href
+from pycon_us.screens.sponsors import SponsorRow
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.day_groups import DayGroup
@@ -42,6 +43,9 @@ FIRST_SESSIONS = 50
 FIRST_SPEAKERS = 20
 """How many speakers a search shows until "Show all" (D-218): about five screens."""
 
+FIRST_SPONSORS = 20
+"""How many sponsors a search shows until "Show all" (D-218): "sponsor" finds every one."""
+
 WHOLE: frozenset[str] = frozenset()
 """No type shown whole: what every new search starts with (D-218)."""
 
@@ -52,7 +56,7 @@ def plural(count: int, noun: str) -> str:
 
 
 def summary(results: SearchResults) -> str:
-    """Return what a search found, in words: "12 sessions, 3 speakers, 2 places".
+    """Return what a search found, in words: "12 sessions, 3 speakers, 2 places, 1 sponsor".
 
     Only the types that matched are named, rooms and venue spots together as places
     (D-351); the line is a polite live region, so a
@@ -65,6 +69,7 @@ def summary(results: SearchResults) -> str:
         (results.session_count, "session"),
         (len(results.speakers), "speaker"),
         (results.place_count, "place"),
+        (len(results.sponsors), "sponsor"),
     )
     return ", ".join(plural(count, noun) for count, noun in counts if count)
 
@@ -101,7 +106,7 @@ def ResultList(
     the first), so that on screen too it opens a kind of result, not one more day.
 
     Each type shows its first rows (``first_results()``: ``FIRST_SESSIONS``,
-    ``FIRST_SPEAKERS``, every place), then a "Show all" row when it found more, which
+    ``FIRST_SPEAKERS``, every place, ``FIRST_SPONSORS``), then a "Show all" row when it found more, which
     renders the rest of that type (D-218). Which types are shown whole is this list's
     own state, held with the results it was asked of: a search that finds other
     results starts cut again, and so does the old query typed again after it; the
@@ -129,6 +134,7 @@ def ResultList(
             results,
             sessions=None if "sessions" in whole else FIRST_SESSIONS,
             speakers=None if "speakers" in whole else FIRST_SPEAKERS,
+            sponsors=None if "sponsors" in whole else FIRST_SPONSORS,
         ),
         [results, whole],
     )
@@ -148,9 +154,8 @@ def ResultList(
 
     if state is not None:
         return ft.ListView([state], expand=True, padding=sides(margin))
-    titled = (
-        sum(map(bool, (results.sessions, results.speakers, results.place_count))) > 1
-    )
+    kinds = (results.sessions, results.speakers, results.place_count, results.sponsors)
+    titled = sum(map(bool, kinds)) > 1
     day_level = 3 if titled else 2
     sections: list[tuple[str, list[ft.Control]]] = []
     if shown.sessions:
@@ -181,6 +186,11 @@ def ResultList(
         places = [room_row(room, view_path) for room in shown.rooms]
         places += [spot_row(pin, view_path) for pin in shown.spots]
         sections.append(("Places", places))
+    if shown.sponsors:
+        sponsors = [SponsorRow(s, screen=SCREEN) for s in shown.sponsors]
+        if len(shown.sponsors) < len(results.sponsors):
+            sponsors.append(show_all_row("sponsors", len(results.sponsors), show_whole))
+        sections.append(("Sponsors", sponsors))
     items: list[ft.Control] = []
     for i, (name, rows) in enumerate(sections):
         if titled:
@@ -219,7 +229,8 @@ def show_all_row(
     and "button"; the icon says nothing. The rows it renders take its place.
 
     Args:
-        kind: ``sessions`` or ``speakers``: its identifier's key and its noun.
+        kind: ``sessions``, ``speakers`` or ``sponsors``: its identifier's key and
+            its noun.
         count: How many the type found, every row included.
         on_click: Renders the rest of the type, which it reads from the row's
             ``data``.

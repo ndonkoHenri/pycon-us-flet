@@ -34,7 +34,11 @@ from pycon_us.core.timefmt import day_heading
 from pycon_us.locations import parent_of
 from pycon_us.screens import search as screen
 from pycon_us.screens import search_results
-from pycon_us.screens.search_results import FIRST_SESSIONS, FIRST_SPEAKERS
+from pycon_us.screens.search_results import (
+    FIRST_SESSIONS,
+    FIRST_SPEAKERS,
+    FIRST_SPONSORS,
+)
 from pycon_us.services import use_services
 from pycon_us.state import Conference
 from pycon_us.ui import scaffold, session_rows
@@ -56,7 +60,8 @@ INDEX = search_index(DATA, YEAR.map.venue_spots())
     ("requested", "remembered", "scope"),
     [
         ("places", "all", "places"),  # the opener's preset (D-19)
-        ("sponsors", "places", "all"),  # unknown (until #24): All, as D-180 says
+        ("sponsors", "places", "sponsors"),  # #397's scope
+        ("booths", "places", "all"),  # unknown: All, as D-180 says
         ("rooms", "places", "all"),  # P1's scope, which Places replaced (D-351)
         ("", "places", "all"),
         (None, "speakers", "speakers"),  # mounted without a query: the memory
@@ -75,7 +80,7 @@ def test_the_summary_names_only_the_types_found_in_words() -> None:
     sessions = search(INDEX, "a", "all")
     assert search_results.summary(sessions) == (
         f"{sessions.session_count} sessions, {len(sessions.speakers)} speakers, "
-        f"{sessions.place_count} places"
+        f"{sessions.place_count} places, {len(sessions.sponsors)} sponsors"
     )
     one_room = SearchResults(rooms=(DATA.rooms["room-103abc"],))
     assert search_results.summary(one_room) == "1 place"
@@ -83,6 +88,8 @@ def test_the_summary_names_only_the_types_found_in_words() -> None:
     assert desk is not None
     both = SearchResults(rooms=one_room.rooms, spots=(desk,))
     assert search_results.summary(both) == "2 places"  # rooms and spots together
+    bloomberg = search(INDEX, "bloomberg", "sponsors")
+    assert search_results.summary(bloomberg) == "1 sponsor"
 
 
 # ------------------------------------------------------------------ the harness
@@ -435,13 +442,14 @@ async def test_a_keystroke_before_the_pause_re_renders_no_result_row(
 
 
 async def test_the_opener_s_scope_is_selected_with_its_check(opened: Shown) -> None:
-    """The four scope chips show a check, and the opener's alone is selected."""
+    """The five scope chips show a check, and the opener's alone is selected."""
     chips = {scope: opened.chip(scope) for scope in screen.SCOPE_LABELS}
     assert [chip.label for chip in chips.values()] == [
         "All",
         "Sessions",
         "Speakers",
         "Places",
+        "Sponsors",
     ]
     assert [scope for scope, chip in chips.items() if chip.selected] == ["sessions"]
     assert all(chip.show_checkmark for chip in chips.values())  # not colour alone
@@ -491,13 +499,15 @@ async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
     assert opened.field.hint_text == "Search sessions, speakers, places"
     await opened.event(opened.chip("places"), "click")
     assert opened.field.hint_text == "Search rooms and places"
+    await opened.event(opened.chip("sponsors"), "click")
+    assert opened.field.hint_text == "Search sponsors"
 
 
 async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
-    """``/search?scope=sponsors`` opens with All selected."""
+    """``/search?scope=booths`` opens with All selected."""
     conference = Conference(data=DATA, source="bundled", version=1)
     shown = await render(conference)
-    await shown.go("/search?scope=sponsors")  # a P2 scope, or a typo
+    await shown.go("/search?scope=booths")  # a typo, or a scope of a later version
     assert shown.chip("all").selected
 
 
@@ -512,7 +522,12 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     await opened.type("a")
     await opened.pause()
     found = search(INDEX, "a", "all")
-    first = first_results(found, sessions=FIRST_SESSIONS, speakers=FIRST_SPEAKERS)
+    first = first_results(
+        found,
+        sessions=FIRST_SESSIONS,
+        speakers=FIRST_SPEAKERS,
+        sponsors=FIRST_SPONSORS,
+    )
     # No counts: the count line above the list says them (D-193). Each type shows its
     # first rows, then a row that shows the rest (D-218).
     expected: list[str] = ["h2:Sessions"]
@@ -530,6 +545,9 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     expected += [f"search.room.{room.slug}" for room in found.rooms]
     expected += [f"search.place.{pin.key}" for pin in found.spots]
     assert found.spots  # "a" finds venue spots too, after the rooms
+    expected.append("h2:Sponsors")
+    expected += [f"search.sponsor.{s.slug}" for s in first.sponsors]
+    expected.append("search.show_all.sponsors")
     listed = [r for r in opened.results if not r.startswith("search.favorite.")]
     assert listed == expected
 
@@ -554,7 +572,7 @@ async def test_a_type_heading_looks_a_step_above_a_day_heading(opened: Shown) ->
     assert day_text.color == ft.Colors.PRIMARY
     # A divider before each type but the first, and the first day close under its type.
     kinds = [type(c).__name__ for c in body.controls]
-    assert kinds.count("Divider") == 2
+    assert kinds.count("Divider") == 3
     assert not isinstance(body.controls[0], ft.Divider)
     day_box = cast(ft.Container, headings[first_day].content)
     assert day_box.padding == ft.Padding.only(left=16, top=0, right=16, bottom=8)
@@ -621,6 +639,32 @@ async def test_a_venue_spot_opens_its_plan_with_the_pin_and_back_keeps_the_query
     await opened.go(parent_of(opened.page.route, opened.memory.search_base))
     assert opened.views == ["/schedule", "/search"]
     assert opened.field.value == "info desk"
+    assert opened.results == before
+    assert opened.searches == []
+
+
+async def test_a_sponsor_opens_its_detail_and_back_keeps_the_query_and_scope(
+    opened: Shown,
+) -> None:
+    """#397: a sponsor row is one phrase; it pushes sponsor detail over the results."""
+    await opened.event(opened.chip("sponsors"), "click")
+    await opened.type("bloomberg")
+    await opened.pause()
+    before = opened.results
+    assert before == ["search.sponsor.bloomberg"]  # one type: no heading (D-193)
+    node = opened.node("search.sponsor.bloomberg")
+    assert node.label == "Bloomberg, Visionary sponsor, booth 613"
+    assert node.button and node.exclude_semantics  # one node, its texts unread
+    assert _all_text(node) == "Bloomberg Visionary \N{MIDDLE DOT} Booth 613"
+    await opened.event(cast(ft.Control, node.parent), "click")  # the inked row
+    await opened.settle()  # the navigation's task
+    assert opened.views == ["/schedule", "/search", "/search/sponsor/bloomberg"]
+    opened.searches.clear()
+
+    await opened.go(parent_of(opened.page.route, opened.memory.search_base))
+    assert opened.views == ["/schedule", "/search"]
+    assert opened.field.value == "bloomberg"
+    assert opened.chip("sponsors").selected
     assert opened.results == before
     assert opened.searches == []
 
@@ -784,6 +828,13 @@ def _listed_speakers(shown: Shown) -> list[str]:
     ]
 
 
+def _listed_sponsors(shown: Shown) -> list[str]:
+    """The slugs of the sponsor rows the list shows, in order."""
+    return [
+        r.split(".", 2)[2] for r in shown.results if r.startswith("search.sponsor.")
+    ]
+
+
 def _tile_text(node: ft.Semantics) -> str:
     """A "Show all" row's words: its tile's title."""
     tile = cast(ft.ListTile, node.content)
@@ -812,6 +863,7 @@ async def test_a_broad_query_renders_each_type_s_first_rows_and_the_full_count(
     found = search(INDEX, "a", "all")
     assert found.session_count > FIRST_SESSIONS
     assert len(found.speakers) > FIRST_SPEAKERS
+    assert len(found.sponsors) > FIRST_SPONSORS
     first = _keys(session_ids("a")[:FIRST_SESSIONS])
     assert _listed_sessions(opened) == first
     assert (
@@ -827,6 +879,10 @@ async def test_a_broad_query_renders_each_type_s_first_rows_and_the_full_count(
     assert _tile_text(show) == f"Show all {found.session_count} sessions"
     assert _tile_text(opened.node("search.show_all.speakers")) == (
         f"Show all {len(found.speakers)} speakers"
+    )
+    assert _listed_sponsors(opened) == [s.slug for s in found.sponsors][:FIRST_SPONSORS]
+    assert _tile_text(opened.node("search.show_all.sponsors")) == (
+        f"Show all {len(found.sponsors)} sponsors"
     )
     # It ends the shown sessions, before the next type.
     listed = [r for r in opened.results if not r.startswith("search.favorite.")]
@@ -862,6 +918,10 @@ async def test_show_all_renders_the_rest_of_its_type_and_each_new_row_once(
     assert _listed_speakers(opened) == _keys([s.id for s in found.speakers])
     assert not opened.has("search.show_all.speakers")
     assert _listed_sessions(opened) == _keys(every)  # still whole
+
+    await _show_whole(opened, "sponsors")
+    assert _listed_sponsors(opened) == [s.slug for s in found.sponsors]
+    assert not opened.has("search.show_all.sponsors")
 
 
 async def test_a_keystroke_keeps_what_was_shown_and_a_new_search_cuts_again(

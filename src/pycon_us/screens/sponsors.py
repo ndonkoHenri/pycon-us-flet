@@ -19,8 +19,10 @@ there is none or it cannot load (offline), at a fixed height, so nothing moves w
 logo arrives or fails. Each sponsor is one node, a button read "Bloomberg, Visionary
 sponsor, booth 613" (D-33), and a tap pushes its detail, ``…/sponsor/<slug>`` (D-17).
 Each item is a memoised component keyed by its slug (D-153), so a refresh that keeps
-the feed re-renders none. Without data the page loads and fails as the Schedule does
-(ux.md §4.1); the status strip says how fresh the list is (D-32).
+the feed re-renders none. Search lists sponsors as these rows (``SponsorRow``), whose
+line says the level too, "Visionary · Booth 613" (#397). Without data the page loads
+and fails as the Schedule does (ux.md §4.1); the status strip says how fresh the list
+is (D-32).
 """
 
 from typing import Literal
@@ -102,6 +104,19 @@ def sponsor_phrase(sponsor: Sponsor) -> str:
 def booth_line(sponsor: Sponsor) -> str | None:
     """Return the line under a sponsor's name, "Booth 613", or None without a booth."""
     return f"Booth {sponsor.booth}" if sponsor.booth else None
+
+
+def level_line(sponsor: Sponsor) -> str:
+    """Return a sponsor row's line outside its level's section: "Visionary · Booth 613".
+
+    Search lists sponsors without the level headings, so the line says the level too;
+    a sponsor without a booth has the level alone.
+
+    Args:
+        sponsor: The sponsor.
+    """
+    booth = booth_line(sponsor)
+    return f"{sponsor.level} \N{MIDDLE DOT} {booth}" if booth else sponsor.level
 
 
 @ft.component
@@ -195,20 +210,9 @@ def _SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
     def go() -> None:
         page.navigate(drill_href(view_path, "sponsor", sponsor.slug))
 
-    texts: list[ft.Control] = [
-        ft.Text(sponsor.name, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
-    ]
-    booth = booth_line(sponsor)
-    if booth is not None:
-        texts.append(
-            ft.Text(
-                booth,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-            )
-        )
+    texts = _texts(sponsor.name, booth_line(sponsor))
     if tier == "tile":
-        return _row(sponsor, texts, go)
+        return _row(sponsor, texts, go, screen=SCREEN)
     plate = FEATURE_PLATE if tier == "feature" else LOGO_PLATE
     card = _card(sponsor, plate, texts, go)
     if tier == "logo":
@@ -216,7 +220,54 @@ def _SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
     return card
 
 
-def _spoken(sponsor: Sponsor, content: ft.Control) -> ft.Semantics:
+def SponsorRow(sponsor: Sponsor, *, screen: str) -> ft.Control:
+    """Return a sponsor as a row outside the Sponsors page: plate, name, level and booth.
+
+    The Sponsors page's row (``_row()``), its line saying the level too
+    (``level_line()``), as search lists it (#397): one node, read as
+    ``sponsor_phrase()``, a button, and a tap pushes the sponsor's detail on top of
+    the current View (D-17). A memoised component keyed by the slug (D-153), so new
+    results re-render only the rows they add.
+
+    Args:
+        sponsor: The sponsor, the same object for one feed version.
+        screen: The screen's name in the row's identifier, ``<screen>.sponsor.<slug>``.
+    """
+    # As SponsorItem's: ft.component's typing leaves out the key= its wrapper takes.
+    return _SponsorRow(sponsor, screen, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
+
+
+@ft.memo
+@ft.component
+def _SponsorRow(sponsor: Sponsor, screen: str) -> ft.Control:
+    """The body of ``SponsorRow``; it runs only when its sponsor changes."""
+    view_path = ft.use_view_path()
+    page = ft.context.page
+
+    @report_errors
+    def go() -> None:
+        page.navigate(drill_href(view_path, "sponsor", sponsor.slug))
+
+    return _row(sponsor, _texts(sponsor.name, level_line(sponsor)), go, screen=screen)
+
+
+def _texts(name: str, line: str | None) -> list[ft.Control]:
+    """Return a sponsor's name and the line under it, when there is one."""
+    texts: list[ft.Control] = [
+        ft.Text(name, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
+    ]
+    if line is not None:
+        texts.append(
+            ft.Text(
+                line,
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            )
+        )
+    return texts
+
+
+def _spoken(sponsor: Sponsor, content: ft.Control, screen: str) -> ft.Semantics:
     """Wrap ``content`` as the sponsor's one node: its phrase, a button, its identifier.
 
     The phrase replaces the texts, which would be read too, and the plate says nothing
@@ -224,7 +275,7 @@ def _spoken(sponsor: Sponsor, content: ft.Control) -> ft.Semantics:
     """
     return ft.Semantics(
         label=sponsor_phrase(sponsor),
-        identifier=f"{SCREEN}.sponsor.{sponsor.slug}",
+        identifier=f"{screen}.sponsor.{sponsor.slug}",
         button=True,  # it opens the sponsor: "…, button" (D-33)
         exclude_semantics=True,
         content=content,
@@ -254,6 +305,7 @@ def _card(
                         ],
                         spacing=12,
                     ),
+                    SCREEN,
                 ),
                 ink=True,
                 on_click=go,
@@ -267,9 +319,13 @@ def _card(
 
 
 def _row(
-    sponsor: Sponsor, texts: list[ft.Control], go: ft.ControlEventHandler
+    sponsor: Sponsor,
+    texts: list[ft.Control],
+    go: ft.ControlEventHandler,
+    *,
+    screen: str,
 ) -> ft.MergeSemantics:
-    """A row: a 48 dp plate, the name and the booth, and a chevron to the detail.
+    """A row: a 48 dp plate, the name and its line, and a chevron to the detail.
 
     Built like ``SpeakerRow`` rather than as a ``ListTile``, so it reads as one phrase
     with its level; nothing but the plate has a fixed size, so it grows with the text.
@@ -289,6 +345,7 @@ def _row(
                     # which at the plate's top would leave half the row empty.
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
+                screen,
             ),
             ink=True,
             on_click=go,

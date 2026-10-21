@@ -3,13 +3,14 @@
 A global modal route, opened from Now, Schedule, Map and More with a preset scope
 (``search_button()``), which also records where Back from search returns. A pill field
 pinned under the app bar takes the focus as the View opens; scope chips (All, Sessions,
-Speakers, Places; D-351) sit under it. The field updates at every keystroke (D-157), and the
-search itself runs once the typing pauses for 250 ms (D-46), or at once on the keyboard's
-action key or a scope change, through ``core.search`` over an index built once per feed
-version (D-180). Results come grouped by type, sessions by day, each row pushing its
-detail on top of search (``/search/session/42``), a venue spot its floor plan with the
-pin (``/search/plan/concourse?pin=info-desk``); Back returns to the results with the
-query intact, since this View stays mounted below the detail and the query and scope are
+Speakers, Places, Sponsors; D-351) sit under it. The field updates at every keystroke
+(D-157), and the search itself runs once the typing pauses for 250 ms (D-46), or at
+once on the keyboard's action key or a scope change, through ``core.search`` over an
+index built once per feed version (D-180). Results come grouped by type, sessions by
+day, each row pushing its detail on top of search (``/search/session/42``,
+``/search/sponsor/bloomberg``), a venue spot its floor plan with the pin
+(``/search/plan/concourse?pin=info-desk``); Back returns to the results with the query
+intact, since this View stays mounted below the detail and the query and scope are
 also in ``ViewMemory`` (D-18, D-141).
 
 The result list (``screens/search_results.py``) memoises its path as the Schedule's
@@ -49,6 +50,7 @@ HINTS = {
     "sessions": "Search sessions",
     "speakers": "Search speakers",
     "places": "Search rooms and places",
+    "sponsors": "Search sponsors",
 }
 """The field's hint by scope, which also names it while it is empty (ux.md §4.3): it
 says what will be searched, as the idle title under it does."""
@@ -67,6 +69,7 @@ SCOPE_LABELS = {
     "sessions": "Sessions",
     "speakers": "Speakers",
     "places": "Places",
+    "sponsors": "Sponsors",
 }
 """Each scope's chip, in ``SCOPES``' order (D-19)."""
 
@@ -75,6 +78,7 @@ IDLE_TITLES = {
     "sessions": "Find sessions",
     "speakers": "Find speakers",
     "places": "Find rooms and places",
+    "sponsors": "Find sponsors",
 }
 """What the screen says before the first word, by scope."""
 
