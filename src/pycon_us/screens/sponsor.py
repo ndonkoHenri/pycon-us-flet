@@ -34,6 +34,7 @@ from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.links import (
     OPENS_IN,
     LinkKind,
@@ -205,6 +206,7 @@ def website_button(url: str, svc: Services) -> ft.Control:
         ft.Text(WEBSITE, semantics_label=f"{WEBSITE}\n{OPENS_IN[LinkKind.WEB]}"),
         icon=ft.Icons.OPEN_IN_NEW,
         on_click=go,
+        style=ft.ButtonStyle(padding=ICON_PADDING),
     )
     return ft.Container(
         external(f"{SCREEN}.website", button), padding=ft.Padding.only(top=8)

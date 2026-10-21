@@ -21,6 +21,7 @@ from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.screens import sponsor as screen
 from pycon_us.state import Conference
+from pycon_us.ui.buttons import ICON_PADDING
 from tests.feeds import processed
 from tests.sessions import Shown, showing, text_of
 
@@ -150,6 +151,8 @@ async def test_website_shows_only_when_the_feed_gives_one(show: Show) -> None:
     node = shown.node("sponsor.website")
     assert node.link
     (button,) = shown.find(ft.OutlinedButton)
+    assert button.style is not None  # its sides stay put at large text (D-344)
+    assert button.style.padding == ICON_PADDING
     await shown.click(button)
     assert shown.launcher.launched == [
         ("https://www.bloomberg.com/", ft.LaunchMode.IN_APP_BROWSER_VIEW)

@@ -1,7 +1,6 @@
 """The Developer screen's drawing: its fields and its confirmations.
 
-``option_field()`` is one option's text field, the fake clock's or the feed URL's, and
-``LABEL_PADDING`` the padding of Reset and Apply under them (``developer.py``); and
+``option_field()`` is one option's text field, the fake clock's or the feed URL's; and
 ``confirmation()`` returns the ``AlertDialog`` the Data section shows before an action
 that deletes something, naming what is lost (D-29), or None while none is open. What the
 actions do is ``developer_data.py``'s; apart so that each module stays under about 400
@@ -19,16 +18,6 @@ from pycon_us.config import ConferenceInfo
 from pycon_us.core.timefmt import day_label, local_date
 from pycon_us.ui.actions import padded
 from pycon_us.ui.semantics import named
-
-LABEL_PADDING = ft.Padding.symmetric(horizontal=24, vertical=8)
-"""Reset's and Apply's padding: Material's 24 dp sides at every text size (#280).
-
-Flutter shrinks a button's side padding as the text grows (24 dp at 100 %, 12 at 200 %,
-6 at 300 % and over), and at the largest text the labels touched the rounded ends, as
-the Schedule sheet's Show did. The 8 dp above and below keep a tall label off the
-outline; at 100 % the 20 dp label line and its 16 dp are under Material's 40 dp
-minimum, so the buttons keep their height there.
-"""
 
 type Asking = Literal["clear", "reset"] | None
 """Which confirmation is open: Clear cached feed's, Reset app's, or none."""

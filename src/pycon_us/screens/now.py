@@ -71,6 +71,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
@@ -396,7 +397,13 @@ def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.C
             label, icon=ft.Icons.CALENDAR_MONTH_OUTLINED, on_click=go
         )
     else:
-        button = ft.FilledTonalButton(label, on_click=go)
+        button = ft.FilledTonalButton(
+            label,
+            on_click=go,
+            # Material's 100 % padding at every size (D-344).
+            style=ft.ButtonStyle(padding=LABEL_PADDING),
+            elevation=0,  # with a style, Flet lifts it to 1 (D-344)
+        )
     return ft.Container(
         named(f"{SCREEN}.{name}", button),
         # At the list's start, as its rows' text: a text button's label sits 8 dp

@@ -28,6 +28,7 @@ from pycon_us.core.models import Session
 from pycon_us.services import use_services
 from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.semantics import named
 
@@ -132,7 +133,15 @@ def all_over(
         )
     ]
     if on_see_today is not None:
-        column.append(ft.FilledTonalButton(SEE_TODAY, on_click=on_see_today))
+        column.append(
+            ft.FilledTonalButton(
+                SEE_TODAY,
+                on_click=on_see_today,
+                # Material's 100 % padding at every size (D-344).
+                style=ft.ButtonStyle(padding=LABEL_PADDING),
+                elevation=0,  # with a style, Flet lifts it to 1 (D-344)
+            )
+        )
     return ft.Container(
         ft.Row(
             [
