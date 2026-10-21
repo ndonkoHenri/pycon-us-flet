@@ -74,6 +74,7 @@ async def jump_to_key(
     *,
     duration: int,
     ended: asyncio.Event,
+    tries: int = JUMP_TRIES,
 ) -> Jump:
     """Scroll a list so the item with this ``ScrollKey`` is at the top (D-155).
 
@@ -103,12 +104,13 @@ async def jump_to_key(
         duration: The scroll's length in milliseconds, already through
             ``prefs.motion_ms()``.
         ended: Set by the list's ``on_scroll`` when a scroll ends.
+        tries: How many times to ask before it is "still".
 
     Returns:
         "landed" when the list reported a scroll that ended, "still" when it reported
         none in ``JUMP_TRIES`` tries, "failed" when there was no list to scroll.
     """
-    for attempt in range(1, JUMP_TRIES + 1):
+    for attempt in range(1, tries + 1):
         list_view = list_ref.current
         if list_view is None:
             return "failed"
@@ -129,5 +131,5 @@ async def jump_to_key(
             continue  # not built yet, or already in place
         logger.info("Jumped to %s (try %d)", key, attempt)
         return "landed"
-    logger.info("Jump to %s: the list did not move after %d tries", key, JUMP_TRIES)
+    logger.info("Jump to %s: the list did not move after %d tries", key, tries)
     return "still"
