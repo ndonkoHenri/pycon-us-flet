@@ -19,6 +19,7 @@ jump lands, how the tabs read at 200 % and what TalkBack says are device checks 
 """
 
 import asyncio
+import gc
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -43,11 +44,12 @@ from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule as screen
-from pycon_us.screens import schedule_days, schedule_now
+from pycon_us.screens import schedule_days, schedule_head, schedule_now
 from pycon_us.services import Services
 from pycon_us.services.storage import THEME, Storage
 from pycon_us.state import Conference
-from pycon_us.ui import scrolling
+from pycon_us.theme import Tokens
+from pycon_us.ui import scrolling, status_strip
 from tests import sessions
 from tests.fakes import MemoryPrefs, MemorySemantics
 from tests.feeds import changed, processed
@@ -89,7 +91,7 @@ class Shown(sessions.Shown):
     scrolls: list[tuple[ft.ListView, dict[str, Any]]] = field(default_factory=list)
     """Each ``ListView.scroll_to`` asked: the list and its arguments."""
     strips: list[bool] = field(default_factory=list)
-    """Each ``StatusStrip``'s ``auto_refresh``, as the screen placed it."""
+    """Each ``use_strip()``'s ``auto_refresh``, as the screen asked for it."""
     slots: list[str] = field(default_factory=list)
     """The time labels of the slot bodies that ran, in order."""
     leave: Callable[[], None] = lambda: None
@@ -281,9 +283,12 @@ async def shown(
             )
         )
 
-    @ft.component
-    def Strip(*, auto_refresh: bool = False) -> ft.Control:
+    def recorded_strip(*, auto_refresh: bool = False) -> status_strip.Strip:
         sessions.current(Shown).strips.append(auto_refresh)
+        # The real strip, but a minute tick (``Shown.at``) starts no feed refresh.
+        return status_strip.use_strip(auto_refresh=False)
+
+    def strip_stand_in(strip: status_strip.Strip, tokens: Tokens) -> ft.Control:
         return ft.Text("strip")
 
     def counted_slot(label: str, slot_rows: Any, *, above: bool) -> ft.Control:
@@ -309,7 +314,9 @@ async def shown(
     monkeypatch.setattr(ft.ListView, "scroll_to", scroll_to)
     monkeypatch.setattr(Services, "run_every", run_every)
     monkeypatch.setattr(screen, "jump_to_key", recorded_jump)
-    monkeypatch.setattr(screen, "StatusStrip", Strip)
+    monkeypatch.setattr(screen, "use_strip", recorded_strip)
+    monkeypatch.setattr(screen, "strip_view", strip_stand_in)
+    monkeypatch.setattr(schedule_head, "strip_view", strip_stand_in)
     monkeypatch.setattr(schedule_days, "slot_layout", counted_slot)
 
     @ft.component
@@ -470,9 +477,7 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     """#313: a line that comes and goes would shift the day pages and rebuild them."""
     schedule = await shown()
     column = cast(ft.Column, schedule.tabs.content)
-    assert (
-        len(column.controls) == 6
-    )  # the probe (D-331), the bar, the summary, the strip, the note, the pages
+    assert len(column.controls) == 4  # the probe (D-331), the bar, the head, the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
     assert isinstance(pages.controls[-1], ft.TabBarView)
 
@@ -601,6 +606,7 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
             lambda c: (
                 isinstance(c.key, ft.ScrollKey)
                 and c.key != ft.ScrollKey(NOW_KEY)
+                and c.key != ft.ScrollKey(schedule_head.HEAD_KEY)  # D-345
                 and inside(c, friday)
             ),
         )
@@ -619,6 +625,71 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
     assert not find(  # no gutter left in the day
         schedule.session, ft.Stack, lambda c: inside(c, friday)
     )
+
+
+async def test_at_the_largest_text_the_head_tops_each_day_list_and_scrolls_away(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """D-345 (#331): the summary and the strip leave the fixed chrome for the lists.
+
+    The column keeps its four places, so the day pages keep theirs (#313); each
+    day's list gets a head of its own, as its first item; back at a smaller size
+    the head is fixed again and no list has one.
+    """
+    schedule = await shown()
+    pages = cast(ft.Column, schedule.tabs.content).controls[-1]._i  # its id
+    fixed = _head_parts(schedule)
+    assert fixed and not any(_in_a_list(schedule, c) for c in fixed)
+    schedule.prefs.time_above = True  # what GutterProbe measures at that size
+    await settle()
+    column = cast(ft.Column, schedule.tabs.content)
+    assert len(column.controls) == 4 and column.controls[-1]._i == pages
+    assert cast(ft.Container, column.controls[2]).content is None  # a placeholder
+    lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
+    assert len(lists) == len(DAYS)  # the other days are rendered by now (D-156)
+    for day_list in lists:
+        head = day_list.controls[0]
+        assert head.key == schedule_head.HEAD_KEY
+        assert sum(inside(c, head) for c in _head_parts(schedule)) == 2
+    assert all(_in_a_list(schedule, c) for c in _head_parts(schedule))
+    schedule.prefs.time_above = False
+    await settle()
+    assert cast(ft.Column, schedule.tabs.content).controls[-1]._i == pages
+    assert len(_head_parts(schedule)) == len(fixed)
+    assert not any(_in_a_list(schedule, c) for c in _head_parts(schedule))
+
+
+def test_at_the_largest_text_the_places_count_the_head_first() -> None:
+    """D-345 with D-331: the head is each list's first item, before today's now line.
+
+    A place is counted from the list's top over its items' keys, so the head, which
+    reports its height as the slots do, comes first; the now line keeps its slot.
+    """
+    data = processed(2026)
+    slots = {day: timeline(data, day, ()) for day in (THURSDAY, FRIDAY)}
+    place = now_place(slots[FRIDAY], DURING)
+    plain = screen._keys(slots, FRIDAY, place, head=False)
+    headed = screen._keys(slots, FRIDAY, place, head=True)
+    for day in slots:
+        assert headed[day] == (schedule_head.HEAD_KEY, *plain[day])
+    assert NOW_KEY in plain[FRIDAY]
+
+
+def _head_parts(schedule: Shown) -> list[ft.BaseControl]:
+    """The filter summaries' nodes and the strips' stand-ins the Schedule shows."""
+    summaries = find(
+        schedule.session,
+        ft.Semantics,
+        lambda c: c.identifier == "schedule.filter_summary",
+    )
+    strips = find(schedule.session, ft.Text, lambda c: c.value == "strip")
+    return [*summaries, *strips]
+
+
+def _in_a_list(schedule: Shown, control: ft.BaseControl) -> bool:
+    """Whether ``control`` is in one of the day lists."""
+    lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
+    return any(inside(control, day_list) for day_list in lists)
 
 
 def _slot(anchor: ft.Container) -> ft.Control:
@@ -657,17 +728,44 @@ async def test_outside_the_conference_no_list_is_built_in_full(
     assert {schedule.list_of(day).cache_extent for day in DAYS} == {None}
 
 
+@pytest.mark.parametrize("time_above", [False, True])
 async def test_a_star_tap_re_renders_one_slot_and_one_row(
-    shown: Callable[[], Awaitable[Shown]],
+    shown: Callable[..., Awaitable[Shown]], time_above: bool
 ) -> None:
-    """D-153: the screen re-renders, but every other day, slot and row is skipped."""
-    schedule = await shown()
+    """D-153: the screen re-renders, but every other day, slot and row is skipped.
+
+    At the largest text too, where every day list carries the head (D-345): its words
+    are a value, equal from render to render, so they keep the lists skipped.
+    """
+    schedule = await shown(time_above=time_above)
     schedule.rows.clear()
     schedule.slots.clear()
     await schedule.tap_star(TALK)
     assert schedule.favorites.ids == {TALK}
     assert schedule.rows == [TALK]
     assert schedule.slots == ["10:30 AM"]
+
+
+async def test_at_the_largest_text_the_screen_still_re_renders_after_a_minute_tick(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F150 (#586): nothing under a skipped day list re-renders on its own.
+
+    The head's strip in each list once ticked by itself: after a re-render that skipped
+    the lists, the list it was built in was gone, so its tick lost the contexts and
+    raised, and Flet re-rendered nothing more in the session. With the real strip, a
+    star tap (the lists skipped), a collection and a minute tick, the next star tap
+    still re-renders its row.
+    """
+    monkeypatch.setattr(schedule_head, "strip_view", status_strip.strip_view)
+    schedule = await shown(time_above=True)
+    await schedule.tap_star(TALK)
+    gc.collect()  # the replaced lists' components, kept until now by their cycles
+    await schedule.at(DURING + timedelta(minutes=2))
+    schedule.rows.clear()
+    await schedule.tap_star(TALK)
+    assert schedule.favorites.ids == set()
+    assert schedule.rows == [TALK]
 
 
 async def test_a_recorded_batch_re_renders_one_slot_and_one_row(
