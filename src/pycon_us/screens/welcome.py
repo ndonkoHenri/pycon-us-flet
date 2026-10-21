@@ -8,8 +8,10 @@ app" (D-36). No permission prompt (D-61), no icon until O-4 gives the app one (#
 
 It is a root without a bar, in the splash's purple in every scheme, one of D-28's
 identity moments. Get started saves ``pycon.onboarded`` and replaces the route with
-Now, so Back on Now leaves the app rather than returning here. The start route sends
-a plain start here until then (``locations.start_target()``, D-287).
+Now, so Back on Now leaves the app rather than returning here. Back on Welcome goes to
+Now, as on the other non-Now roots, whether a plain start or a link opened it (D-321).
+The start route sends a plain start here until then (``locations.start_target()``,
+D-287).
 """
 
 import logging
@@ -106,10 +108,19 @@ def Welcome() -> ft.View:
             logger.warning("Welcome is done for this session only: not saved")
         page.navigate("/now")  # a root replaces a root: Back on Now leaves the app
 
+    @report_errors
+    async def leave_for_now(e: ft.Event[ft.View]) -> None:
+        # D-142's rule for a non-Now root (D-321): Now replaces Welcome rather than
+        # the app closing. Not Get started: Welcome shows again at the next start.
+        page.navigate("/now")
+        await e.control.confirm_pop(False)
+
     return ft.View(
         # The roots' key, which Start's View has too: the purple Start gives way to
         # Welcome, and Welcome to Now, without a transition (D-142).
         route="/",
+        can_pop=False,
+        on_confirm_pop=leave_for_now,
         bgcolor=BOOT_COLOR,
         padding=0,
         spacing=0,
