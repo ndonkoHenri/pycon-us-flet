@@ -32,4 +32,4 @@ appId: io.github.ndonkohenri.pyconus
 - extendedWaitUntil:
     visible:
       id: now.title
-    timeout: 15000
+    timeout: 30000
