@@ -82,7 +82,7 @@ from pycon_us.ui.widths import LIST, sides, use_margin
 
 type Fold = Callable[..., list[ft.Control]]
 """``now_fold.folded()`` with the saved ids and the opened sections given: a section's
-rows, folded at peak times, from its name, its sessions and ``row=``."""
+rows, folded at peak times, from its name, its sessions, ``whole=`` and ``row=``."""
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -259,7 +259,7 @@ def _sections(
     # next, the card says so, and an empty Happening now would claim nothing is.
     others = _without(answer.happening, mine)
     if answer.phase is Phase.DAY and (others or not answer.happening):
-        sections += _happening(others, now, row, fold, live)
+        sections += _happening(others, answer.happening, now, row, fold, live)
     if upcoming is not None and (later := _without(upcoming.sessions, mine)):
         sections += _up_next(upcoming, later, row, fold, now, info, use_24h=use_24h)
     # Only a navigation: the Schedule (#86) opens on today during the conference. With
@@ -281,6 +281,7 @@ def _without(
 
 def _happening(
     happening: tuple[Session, ...],
+    whole: tuple[Session, ...],
     now: datetime,
     row: Row,
     fold: Fold,
@@ -288,7 +289,8 @@ def _happening(
 ) -> list[ft.Control]:
     """Happening now: the sessions on but yours, saved ones first, each with its bar.
 
-    Folded at peak times after the saved ones and three others (``fold``, D-327).
+    Folded at peak times after the saved ones and three others (``fold``, D-327),
+    and kept open by ``whole``, every session on, the card's too.
     """
     dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=live)
     header = SectionHeader("Happening now", level=2, leading=dot)
@@ -300,6 +302,7 @@ def _happening(
         *fold(
             HAPPENING,
             happening,
+            whole=whole,
             row=lambda session: row(session, elapsed=elapsed_percent(session, now)),
         ),
     ]
@@ -338,7 +341,7 @@ def _up_next(
                 padding=ft.Padding.only(left=16, right=16),
             )
         )
-    controls += fold(UP_NEXT, sessions, row=row)
+    controls += fold(UP_NEXT, sessions, whole=slot.sessions, row=row)
     return controls
 
 

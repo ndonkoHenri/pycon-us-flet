@@ -68,8 +68,9 @@ def cut(
 def fold_key(section: str, sessions: tuple[Session, ...]) -> str:
     """Return the key an opened section is kept under: its name and its sessions.
 
-    A new slot is a new key, so a section the user opened folds again when what it
-    lists changes; a star or a minute keeps it open.
+    A new slot is a new key, so a section the user opened folds again when the slot
+    changes; a minute keeps it open, and so does a star, since ``sessions`` are the
+    section's whole set: the card's session too, which a star moves in and out.
     """
     return f"{section}:{','.join(sorted(session.id for session in sessions))}"
 
@@ -81,18 +82,22 @@ def folded(
     row: Callable[[Session], ft.Control],
     opened: frozenset[str],
     toggle: Callable[[str], None],
+    *,
+    whole: tuple[Session, ...],
 ) -> list[ft.Control]:
     """Return a section's rows, cut by ``cut()``, and its "Show all" button if any.
 
     Args:
         section: ``HAPPENING`` or ``UP_NEXT``: the identifier's and the label's.
-        sessions: The section's sessions, in the slot's order.
+        sessions: The section's rows, in the slot's order: ``whole`` but the card's.
         saved: The ids in My schedule.
         row: Builds one session's row.
         opened: The keys (``fold_key()``) of the sections the user opened.
         toggle: Opens or folds the section with that key.
+        whole: All the section's sessions, the card's included: its key, so that a
+            star that moves a session into the card or out of it keeps it open.
     """
-    key = fold_key(section, sessions)
+    key = fold_key(section, whole)
     expanded = key in opened
     rows, foldable = cut(sessions, saved, expanded=expanded)
     controls: list[ft.Control] = [

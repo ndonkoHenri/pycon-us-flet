@@ -9,6 +9,7 @@ far down Up next sits on a phone is checked on devices (the PR).
 """
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 import flet as ft
@@ -152,6 +153,32 @@ async def test_a_minute_keeps_a_section_open_and_a_new_slot_folds_it(
     assert isinstance(words, ft.Text)
     assert str(words.value).startswith("Show all ")
     assert len(shown.listed()) < len(AT_11)
+
+
+@pytest.mark.parametrize(
+    ("now", "section", "star"),
+    [(may(15, 11, 10), "happening", "105"), (may(15, 10, 50), "up_next", "4")],
+)
+async def test_a_star_that_changes_the_card_keeps_a_section_open(
+    show: Callable[..., Any], now: datetime, section: str, star: str
+) -> None:
+    """Starring a row moves it into the card and unstarring it back: still open."""
+    shown = await show(now)
+    await shown.show_all(section)
+    words = shown.fold_button(section).content
+    assert isinstance(words, ft.Text) and words.value == "Show fewer sessions"
+
+    await shown.favorites.toggle(shown.storage, star)
+    await shown.settle()
+    assert shown.listed("now.next.session.") == [star]
+    words = shown.fold_button(section).content
+    assert isinstance(words, ft.Text) and words.value == "Show fewer sessions"
+
+    await shown.favorites.toggle(shown.storage, star)
+    await shown.settle()
+    assert shown.listed("now.next.session.") == []
+    words = shown.fold_button(section).content
+    assert isinstance(words, ft.Text) and words.value == "Show fewer sessions"
 
 
 def test_the_test_s_open_spaces_are_open_spaces() -> None:
