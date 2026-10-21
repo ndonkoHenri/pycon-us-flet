@@ -236,8 +236,8 @@ def landing_note(words: str) -> ft.Control:
     linear navigation while it holds words (``SAID_S``); the same words twice must
     pass through empty to be said again. 1 dp square at the list's top start, under
     the list: a node with no size is dropped from the tree, and the list takes any
-    touch there. iOS keeps ``announce_message()``: a live region there moves
-    VoiceOver's focus to it (F13).
+    touch there. iOS keeps ``announce_message()``: iOS takes announcements, so
+    it is the direct path there (D-241).
 
     Args:
         words: Where the list went, "Friday, May 15, 2:00 PM"; empty between landings.
