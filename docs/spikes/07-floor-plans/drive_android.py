@@ -6,7 +6,7 @@ Run from this folder with the release APK installed::
 
 Steps (each prints ``S7-DRIVE`` lines):
 
-- ``launch``: force-stop, start the app, wait 8 s.
+- ``launch``: force-stop, start the app (``am start -W``), wait 8 s.
 - ``tap <text>``: tap the node whose text or description starts with ``<text>``.
 - ``mem <label>``: ``dumpsys meminfo`` of the app: the App Summary and TOTAL PSS/RSS.
 - ``booths``: every ``booth.*`` node's bounds, in tree order (TalkBack's order).
@@ -55,8 +55,15 @@ def say(event: str, **values: object) -> None:
 
 def nodes() -> list[dict]:
     """Return every node of the screen's accessibility tree, in tree order."""
-    adb("shell", "uiautomator", "dump", "/sdcard/s7.xml")
-    root = ET.fromstring(adb("shell", "cat", "/sdcard/s7.xml"))
+    # Up to three tries: on the 2.5 GB AVD, UiAutomation's connect times out
+    # now and then while the system server is busy.
+    for _ in range(3):
+        adb("shell", "rm", "-f", "/sdcard/s7.xml", check=False)
+        adb("shell", "uiautomator", "dump", "/sdcard/s7.xml", check=False)
+        xml = adb("shell", "cat", "/sdcard/s7.xml", check=False)
+        if xml.strip():
+            break
+    root = ET.fromstring(xml)
     out = []
     for node in root.iter("node"):
         x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds", "[0,0][0,0]")))
@@ -90,7 +97,8 @@ def app_log(since: str = "") -> list[str]:
 
 def mem(label: str) -> None:
     """Print the app's memory: the App Summary rows and the totals."""
-    out = adb("shell", "dumpsys", "meminfo", PKG)
+    # -t 60: on the 2.5 GB AVD the default 10-s dump timeout expires.
+    out = adb("shell", "dumpsys", "-t", "60", "meminfo", PKG)
     rows = {}
     for key in (
         "Java Heap",
@@ -236,9 +244,11 @@ def main() -> None:
     if step == "launch":
         adb("shell", "am", "force-stop", PKG)
         adb("logcat", "-c")
-        adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+        # am start, not monkey: monkey exited 251 once on the 2.5 GB AVD.
+        out = adb("shell", "am", "start", "-W", "-n", f"{PKG}/.MainActivity")
+        total = re.search(r"TotalTime:\s+(\d+)", out)
         time.sleep(8)
-        say("launched")
+        say("launched", total_ms=total[1] if total else None)
     elif step == "tap":
         tap_text(" ".join(args))
     elif step == "mem":
