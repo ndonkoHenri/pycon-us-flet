@@ -258,3 +258,10 @@ async def test_a_card_that_pulses_marks_its_pin_seen(render: Render) -> None:
     seen: set[str] = set()
     await (await render(seen=seen)).until_held()
     assert seen == {"info-desk"}
+
+
+@pytest.mark.parametrize("key", ["", "spa"], ids=["no-pin", "unknown"])
+def test_a_spot_without_a_pin_has_no_card(key: str) -> None:
+    """``spot_card()`` gives no card for an empty key or one ``map.toml`` lacks."""
+    data = load_year(2026).map
+    assert card.spot_card(data, key, identifier="help.info_desk.location") is None

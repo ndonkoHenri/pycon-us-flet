@@ -274,8 +274,25 @@ def check_hours_pins(hours: Iterable[ServiceHours], data: MapData, file: str) ->
     Raises:
         YearDataError: A ``pin`` is not a key of ``data.pins``.
     """
-    for index, item in enumerate(hours):
-        if item.pin and data.pin(item.pin) is None:
-            raise YearDataError(
-                f"{file}: venue_hours[{index}].pin: no pin {item.pin!r} in map.toml"
-            )
+    check_pin_keys(
+        ((f"venue_hours[{index}].pin", item.pin) for index, item in enumerate(hours)),
+        data,
+        file,
+    )
+
+
+def check_pin_keys(keys: Iterable[tuple[str, str]], data: MapData, file: str) -> None:
+    """Refuse a pin key, given where it is written, that names no pin of ``map.toml``.
+
+    Args:
+        keys: Each key's field and the key, an empty key standing for no pin:
+            ``("help.quiet_room_pin", "quiet-room")`` (``HelpInfo.pin_keys()``).
+        data: The year's map data.
+        file: The file the keys come from, for the message (``2026/content.toml``).
+
+    Raises:
+        YearDataError: A key is not a key of ``data.pins``.
+    """
+    for where, key in keys:
+        if key and data.pin(key) is None:
+            raise YearDataError(f"{file}: {where}: no pin {key!r} in map.toml")
