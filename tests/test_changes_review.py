@@ -232,6 +232,21 @@ async def test_showing_the_list_closes_it(
     assert not bar.open and sent == [bar]
 
 
+@pytest.mark.parametrize("route", ["/now/changes/2026", "/more/settings/changes/2026"])
+async def test_opening_from_now_s_card_or_settings_closes_it(
+    host: Shown, monkeypatch: pytest.MonkeyPatch, route: str
+) -> None:
+    """The list pushed by Now's card or Settings › Data closes it too (#438)."""
+    host.prefs.screen_reader = True
+    await record(host, feed(), feed(move(OTHER, "Room 101B")))
+    sent = updates(monkeypatch)
+    host.session.page.route = route
+    OPEN[0](True)
+    await host.settle()
+    (bar,) = host.snack_bars
+    assert not bar.open and sent == [bar]
+
+
 async def test_a_newer_batch_outlives_an_earlier_opening(
     host: Shown, monkeypatch: pytest.MonkeyPatch
 ) -> None:

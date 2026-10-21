@@ -471,7 +471,7 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     """#313: a line that comes and goes would shift the day pages and rebuild them."""
     schedule = await shown()
     column = cast(ft.Column, schedule.tabs.content)
-    assert len(column.controls) == 3  # the tabs, the head and the pages
+    assert len(column.controls) == 4  # the probe (D-331), the bar, the head, the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
     assert isinstance(pages.controls[-1], ft.TabBarView)
 
@@ -600,6 +600,7 @@ async def test_at_the_largest_text_each_slot_puts_its_time_above_its_rows(
             lambda c: (
                 isinstance(c.key, ft.ScrollKey)
                 and c.key != ft.ScrollKey(NOW_KEY)
+                and c.key != ft.ScrollKey(schedule_head.HEAD_KEY)  # D-345
                 and inside(c, friday)
             ),
         )
@@ -625,7 +626,7 @@ async def test_at_the_largest_text_the_head_tops_each_day_list_and_scrolls_away(
 ) -> None:
     """D-345 (#331): the summary and the strip leave the fixed chrome for the lists.
 
-    The column keeps its three places, so the day pages keep theirs (#313); each
+    The column keeps its four places, so the day pages keep theirs (#313); each
     day's list gets a head of its own, as its first item; back at a smaller size
     the head is fixed again and no list has one.
     """
@@ -636,8 +637,8 @@ async def test_at_the_largest_text_the_head_tops_each_day_list_and_scrolls_away(
     schedule.prefs.time_above = True  # what GutterProbe measures at that size
     await settle()
     column = cast(ft.Column, schedule.tabs.content)
-    assert len(column.controls) == 3 and column.controls[-1]._i == pages
-    assert cast(ft.Container, column.controls[1]).content is None  # a placeholder
+    assert len(column.controls) == 4 and column.controls[-1]._i == pages
+    assert cast(ft.Container, column.controls[2]).content is None  # a placeholder
     lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
     assert len(lists) == len(DAYS)  # the other days are rendered by now (D-156)
     for day_list in lists:
@@ -650,6 +651,22 @@ async def test_at_the_largest_text_the_head_tops_each_day_list_and_scrolls_away(
     assert cast(ft.Column, schedule.tabs.content).controls[-1]._i == pages
     assert len(_head_parts(schedule)) == len(fixed)
     assert not any(_in_a_list(schedule, c) for c in _head_parts(schedule))
+
+
+def test_at_the_largest_text_the_places_count_the_head_first() -> None:
+    """D-345 with D-331: the head is each list's first item, before today's now line.
+
+    A place is counted from the list's top over its items' keys, so the head, which
+    reports its height as the slots do, comes first; the now line keeps its slot.
+    """
+    data = processed(2026)
+    slots = {day: timeline(data, day, ()) for day in (THURSDAY, FRIDAY)}
+    place = now_place(slots[FRIDAY], DURING)
+    plain = screen._keys(slots, FRIDAY, place, head=False)
+    headed = screen._keys(slots, FRIDAY, place, head=True)
+    for day in slots:
+        assert headed[day] == (schedule_head.HEAD_KEY, *plain[day])
+    assert NOW_KEY in plain[FRIDAY]
 
 
 def _head_parts(schedule: Shown) -> list[ft.BaseControl]:

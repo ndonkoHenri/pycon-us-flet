@@ -1,0 +1,61 @@
+# INFO-08, INFO-07, MAP-09 (#419, D-338): Now's quick info buttons push their pages
+# over Now, and Back returns to Now with the buttons where they were.
+#
+# The buttons follow Now's sessions, so at Friday 14:10 (start_offline.yaml's moment,
+# a peak) the flow scrolls down to them. Each tap pushes /now/<page>; Back leaves that
+# one View. A page is open once any of its own identifiers shows (Maestro's id: is a
+# regular expression).
+appId: io.github.ndonkohenri.pyconus
+name: Now, each quick info page, then Back to Now
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# → Wi-Fi, then Back.
+- scrollUntilVisible:
+    element:
+      id: now.quick.wifi
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: now.quick.wifi
+- extendedWaitUntil:
+    visible:
+      id: "wifi\\..*"
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.quick.wifi
+    timeout: 15000
+
+# → Help & safety, then Back.
+- tapOn:
+    id: now.quick.help
+- extendedWaitUntil:
+    visible:
+      id: "help\\..*"
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.quick.help
+    timeout: 15000
+
+# → Venue & hours, then Back.
+- tapOn:
+    id: now.quick.venue
+- extendedWaitUntil:
+    visible:
+      id: "venue\\..*"
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.quick.venue
+    timeout: 15000
+- assertVisible:
+    id: now.title

@@ -9,15 +9,20 @@ bottom bar left (#331), so they head each day's list instead and scroll away wit
 as "Now in this room" does on a room's page (D-194).
 
 ``Head`` is the head's words, a plain value, so a memoised day list given it stays
-skipped while they are the same (D-153); ``ScheduleHead`` places them.
+skipped while they are the same (D-153); ``ScheduleHead`` places them, and ``ListHead``
+puts them at the top of a day list as one of its items: keyed, and reporting its height,
+as the slots do, so a text-size change keeps the reader's place there too (D-331).
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 
 import flet as ft
 
 from pycon_us.screens.schedule_filter import summary_line
+from pycon_us.services.errors import report_errors
+from pycon_us.ui.scrolling import anchored
 from pycon_us.ui.status_strip import StatusStrip, zone_note_line
 
 HEAD_KEY = "head"
@@ -60,4 +65,32 @@ def ScheduleHead(head: Head, on_show_all: Callable[[], object]) -> ft.Control:
         ],
         spacing=0,
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )
+
+
+@ft.component
+def ListHead(
+    head: Head,
+    on_show_all: Callable[[], object],
+    day: date,
+    on_measure: Callable[[date, str, float], None],
+) -> ft.Control:
+    """Return the head as a day list's first item (D-345).
+
+    Under an anchor keyed ``HEAD_KEY``, so a place at the head can be put back by a
+    keyed jump, and reporting its height, so the places below it count it (D-331).
+
+    Args:
+        head: The words.
+        on_show_all: What "Show all" does.
+        day: The list's day, in the height's report.
+        on_measure: The Schedule's height handler, a stable callable (D-331).
+    """
+
+    @report_errors
+    def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
+        on_measure(day, HEAD_KEY, e.height)
+
+    return ft.Container(
+        anchored(HEAD_KEY, ScheduleHead(head, on_show_all)), on_size_change=measured
     )
