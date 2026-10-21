@@ -186,7 +186,7 @@ def provide(
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
 
-    The change log is an empty one unless ``change_log`` is given.
+    The change log is an empty one unless the test gives its own.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar), and the
     light tokens' provider comes last, right around ``body``.
@@ -231,6 +231,8 @@ class Shown:
     """The session ids whose row bodies (sessions and notices) ran, in order."""
     retaps: list[Callable[[], object] | None] = field(default_factory=list)
     """The re-tap action ``AppScaffold`` was given on each render, in order."""
+    change_log: ChangeLog = field(default_factory=ChangeLog)
+    """The ``ChangeLog`` store the screen was given: empty unless the test filled it."""
 
     @property
     def launcher(self) -> MemoryLauncher:
@@ -429,7 +431,8 @@ async def showing[S: Shown = Shown](
             its query (a room's highlight); the page's own by default.
         kind: What makes the ``Shown``: a test module's subclass that adds what is
             its screen's own, or a ``functools.partial`` of one.
-        change_log: The ``ChangeLog`` store; by default an empty one.
+        change_log: The ``ChangeLog`` store, with the batches the test recorded; an
+            empty one by default.
     """
     _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path, memory)
@@ -442,7 +445,18 @@ async def showing[S: Shown = Shown](
     session = Session(connection())
     if route is not None:
         session.page.route = route
-    shown = kind(session, svc, conference, prefs, favorites, [], [], view_path)
+    change_log = ChangeLog() if change_log is None else change_log
+    shown = kind(
+        session,
+        svc,
+        conference,
+        prefs,
+        favorites,
+        [],
+        [],
+        view_path,
+        change_log=change_log,
+    )
     monkeypatch.setattr(session.page, "navigate", shown.went.append)
     _OPEN[session.page] = shown
 
@@ -455,6 +469,9 @@ async def showing[S: Shown = Shown](
             yield shown
     finally:
         svc.close()  # a status line's ticks end (D-147)
+        # ...at their next turn of the loop: a tick task still pending holds its
+        # component, and with it the page, until it has run (use_recent_changes()).
+        await settle()
         del _OPEN[session.page]
 
 

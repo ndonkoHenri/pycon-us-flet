@@ -22,9 +22,11 @@ from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import (
+    NO_CHANGES,
     NoticeRow,
     SessionRow,
     is_notice,
+    use_recent_changes,
     use_session_views,
 )
 from tests.fakes import MemoryHaptics, MemoryPrefs
@@ -50,18 +52,28 @@ COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
 
 LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
 
+OWNER_RENDERS: list[None] = []
+"""One item per render of ``Owner``'s body: a test clears it and counts."""
+
 
 @ft.component
 def Owner(session_ids: tuple[str, ...]) -> ft.Control:
     """A list owner as the screens write one: it subscribes, its rows do not."""
+    OWNER_RENDERS.append(None)
     conference = use_conference()
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     views = use_session_views(conference, session_ids, use_24h=False)
+    changes = use_recent_changes()
     info = use_services().year.conference
     return ft.Column(
         [
-            NoticeRow(view, LIGHT_TOKENS, screen="test")
+            NoticeRow(
+                view,
+                LIGHT_TOKENS,
+                screen="test",
+                changed=changes.get(view.session.id, NO_CHANGES),
+            )
             if is_notice(view.session, info)
             else SessionRow(
                 view,
@@ -69,6 +81,7 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
                 on_toggle,
                 LIGHT_TOKENS,
                 screen="test",
+                changed=changes.get(view.session.id, NO_CHANGES),
             )
             for view in views
         ]

@@ -347,8 +347,8 @@ def test_the_hc_text_tokens_read_at_7_to_1_on_every_surface(dark: bool) -> None:
 def test_every_hc_badge_is_outlined_1_5_dp(dark: bool) -> None:
     """Every HC badge has no fill and a 1.5 dp outline (ux.md §3.4, THEME-06).
 
-    Tracks, the unknown track's grey and En Español in ``on_surface``; Registration
-    required keeps ``error`` and New track ``primary``.
+    Tracks, the unknown track's grey, En Español and Changed in ``on_surface``;
+    Registration required keeps ``error`` and New track ``primary`` (D-315).
     """
     tokens = theme.build_tokens(dark=dark, high_contrast=True)
     s = hc_scheme(dark)
@@ -356,7 +356,7 @@ def test_every_hc_badge_is_outlined_1_5_dp(dark: bool) -> None:
         assert (colors.fill, colors.border_width) == (None, HC_BADGE_BORDER), name
     ink = BadgeColors(text=str(s.on_surface), border_width=HC_BADGE_BORDER)
     assert set(tokens.tracks.values()) == {ink}
-    assert (tokens.unknown_track, tokens.spanish) == (ink, ink)
+    assert (tokens.unknown_track, tokens.spanish, tokens.changed) == (ink, ink, ink)
     assert tokens.registration.text == s.error
     assert tokens.new_track.text == s.primary
 

@@ -35,7 +35,7 @@ from pycon_us.ui.favorite import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
-from pycon_us.ui.session_rows import use_session_views
+from pycon_us.ui.session_rows import use_recent_changes, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip
 from pycon_us.ui.widths import LIST, capped, use_margin
@@ -161,6 +161,7 @@ def Search() -> ft.View:
         conference, tuple(data.sessions) if data else (), use_24h=use_24h
     )
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
+    changes = use_recent_changes()
     results = ft.use_memo(
         lambda: search(index, query, scope) if index else SearchResults(),
         [index, query, scope],
@@ -296,7 +297,14 @@ def Search() -> ft.View:
                     margin,
                 ),
                 ResultList(
-                    results, views, entries, favorites.ids, on_toggle, tokens, state
+                    results,
+                    views,
+                    entries,
+                    favorites.ids,
+                    changes,
+                    on_toggle,
+                    tokens,
+                    state,
                 ),
             ],
             spacing=0,

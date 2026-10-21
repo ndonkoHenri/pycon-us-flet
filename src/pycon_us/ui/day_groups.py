@@ -18,13 +18,20 @@ from pycon_us.services import use_services
 from pycon_us.theme import Tokens
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.scaffold import SectionHeader
-from pycon_us.ui.session_rows import NoticeRow, SessionRow, is_notice
+from pycon_us.ui.session_rows import (
+    NO_CHANGES,
+    Changes,
+    NoticeRow,
+    SessionRow,
+    is_notice,
+)
 
 
 def DayGroup(
     group: DaySessions,
     views: Mapping[str, SessionView],
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -45,6 +52,8 @@ def DayGroup(
         views: The row view of every session the list shows, by id; built once per
             feed version, so the same objects on every render.
         saved: The day's saved sessions (``Favorites.ids`` ∩ the day's ids).
+        changes: The recent changes of the day's sessions only (``changes_of()``),
+            so a recorded batch re-renders only the days it touches (D-315).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         screen: The screen's name in the rows' semantics identifiers, e.g. ``search``
@@ -60,6 +69,7 @@ def DayGroup(
         group,
         views,
         saved,
+        changes,
         on_toggle,
         tokens,
         screen=screen,
@@ -76,6 +86,7 @@ def _DayGroup(
     group: DaySessions,
     views: Mapping[str, SessionView],
     saved: frozenset[str],
+    changes: Changes,
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     *,
@@ -87,7 +98,12 @@ def _DayGroup(
     """The body of ``DayGroup``; it runs only when its props change (F34)."""
     info = use_services().year.conference
     rows = [
-        NoticeRow(view, tokens, screen=screen)
+        NoticeRow(
+            view,
+            tokens,
+            screen=screen,
+            changed=changes.get(view.session.id, NO_CHANGES),
+        )
         if is_notice(view.session, info)
         else SessionRow(
             view,
@@ -96,6 +112,7 @@ def _DayGroup(
             tokens,
             screen=screen,
             omit=omit,
+            changed=changes.get(view.session.id, NO_CHANGES),
         )
         for view in (views[session.id] for session in group.sessions)
     ]
