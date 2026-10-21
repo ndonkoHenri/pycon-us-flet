@@ -174,7 +174,7 @@ async def test_each_batch_gets_its_own_snack_bar_once(host: Shown) -> None:
     first = feed(move(OTHER, "Room 101B"))
     await record(host, feed(), first)
     await record(host, first, feed(move(OTHER, "Room 101B"), rename(TALK, "New")))
-    host.change_log.batches = host.change_log.batches  # a notification, no batch
+    cast(ft.Observable, host.change_log).notify()  # a notification, no batch
     await host.settle()
     assert said(host) == ["Schedule updated · 1 change"] * 2
 
