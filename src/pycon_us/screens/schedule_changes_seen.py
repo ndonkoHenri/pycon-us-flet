@@ -61,16 +61,20 @@ def use_seen_marks(
         await asyncio.sleep(SEEN_AFTER_S)
         change_log.mark_seen(storage, shown)
 
-    def stop_waiting() -> None:
-        """Nothing to undo: Flet cancels the wait's task before a cleanup."""
-
     @report_errors
     def on_leaving() -> None:
         if prefs.screen_reader and showing.current:
             change_log.mark_seen(storage, showing.current)
 
-    ft.use_effect(after_a_while, [shown], cleanup=stop_waiting)
+    ft.use_effect(after_a_while, [shown], cleanup=_stop_waiting)
     ft.on_unmounted(on_leaving)
+
+
+def _stop_waiting() -> None:
+    """The wait's cleanup: nothing to undo, since Flet cancels the setup's task first.
+
+    It must exist: Flet cancels an effect's task on unmount only when it has a cleanup.
+    """
 
 
 def mark_all_menu(
