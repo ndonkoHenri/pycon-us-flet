@@ -89,6 +89,19 @@ async def test_the_name_is_the_page_s_heading_not_the_app_bar_s(show: Show) -> N
     assert shown.titles[-1] == ""
 
 
+async def test_at_large_text_the_name_steps_down_still_centred(show: Show) -> None:
+    """D-328: where a slot's time leaves the gutter, the name takes a row title's type."""
+    shown = await show(CATHERINE)
+    shown.prefs.time_above = True  # what GutterProbe measures at that size
+    await shown.settle()
+    name = cast(ft.Text, shown.node("speaker.title").content)
+    assert (name.theme_style, name.text_align, name.selectable) == (
+        ft.TextThemeStyle.TITLE_MEDIUM,
+        ft.TextAlign.CENTER,
+        True,
+    )
+
+
 async def test_the_photo_is_decorative_beside_the_name(show: Show) -> None:
     """The speaker's photo is an avatar of the photo radius that screen readers skip."""
     shown = await show(CATHERINE)

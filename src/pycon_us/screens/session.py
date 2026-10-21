@@ -54,7 +54,7 @@ from pycon_us.ui.badges import TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.rows import LinkTile, SpeakerTile
-from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from pycon_us.ui.when_where import WhenAndWhere
@@ -152,7 +152,7 @@ def SessionDetail(session_id: str) -> ft.View:
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
         controls.append(_removed_note(tokens.high_contrast))
-    controls.append(_header(session, info, tokens))
+    controls.append(_header(session, info, tokens, large_text=prefs.time_above))
     controls.append(
         WhenAndWhere(
             session,
@@ -198,15 +198,18 @@ def SessionDetail(session_id: str) -> ft.View:
     return AppScaffold(title="", body=body, actions=actions)
 
 
-def _header(session: Session, info: ConferenceInfo, tokens: Tokens) -> ft.Control:
-    """The badges, then the title: the page's heading, selectable to copy (D-26)."""
-    title = ft.Semantics(
-        header=True,
-        heading_level=1,
+def _header(
+    session: Session, info: ConferenceInfo, tokens: Tokens, *, large_text: bool
+) -> ft.Control:
+    """The badges, then the title: the page's heading, selectable to copy (D-26).
+
+    At large text (``Prefs.time_above``) the title steps down (``PageTitle``, D-328).
+    """
+    title = PageTitle(
+        session.name,
         identifier=f"{SCREEN}.title",
-        content=ft.Text(
-            session.name, theme_style=ft.TextThemeStyle.HEADLINE_SMALL, selectable=True
-        ),
+        large_text=large_text,
+        selectable=True,
     )
     # A badge that repeats the title (a break's "Break") says nothing more.
     badges = [

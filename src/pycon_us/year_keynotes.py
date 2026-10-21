@@ -7,7 +7,7 @@ description to the site, and has no photo, role or bio for the people on stage.
 ``check_keynotes()`` checks the entries' own rules when the year loads;
 ``check_keynote_sessions()`` checks their ids against a feed's sessions, each a keynote
 or a plenary: the loader's against the year's bundled snapshot when asked
-(``check_snapshot_sessions()``, ``config.load_year(check_sessions=True)``), and the
+(``config.load_year(check_sessions=True)``), and the
 snapshot tool's against a new feed. The callers pass the tracks
 (``year_tracks.KEYNOTE_TRACKS``), so this module stays free of the config it builds part
 of.
@@ -16,15 +16,10 @@ A module of its own, as ``year_pages`` is, so ``config.py`` grows by little (D-6
 
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from pycon_us.core.feed import process
 from pycon_us.core.models import Session
 from pycon_us.year_pages import check_https, check_text
 from pycon_us.year_schema import YearDataError
-
-if TYPE_CHECKING:
-    from pycon_us.config import YearData
 
 KINDS = ("keynote", "panel")
 """What a keynote entry can be: a talk by one or two people, or a panel of several."""
@@ -138,29 +133,6 @@ def check_keynote_sessions(
             raise YearDataError(
                 f"{key} is a {session.track} session, not a keynote or a plenary"
             )
-
-
-def check_snapshot_sessions(year: YearData, tracks: Collection[str], file: str) -> None:
-    """Refuse a keynote whose session the year's bundled snapshot lacks or is no keynote.
-
-    The snapshot is the feed the app ships with, so the year data and it are checked
-    together: a test loads every year this way (D-217).
-
-    Args:
-        year: The year's data, with its keynotes and its snapshot.
-        tracks: The track keys a keynote or panel can have
-            (``year_tracks.KEYNOTE_TRACKS``).
-        file: The keynotes' data file, for the message (``2026/content.toml``).
-
-    Raises:
-        YearDataError: An entry names no session of the snapshot or a session of
-            another track, or the year has keynotes but bundles no snapshot to check
-            them against.
-    """
-    keynotes = year.content.keynotes
-    if keynotes:
-        sessions = process(year.read_snapshot().raw, year.feed_settings).sessions
-        check_keynote_sessions(keynotes, sessions, tracks, file)
 
 
 def keynote_of(keynotes: Iterable[Keynote], session_id: str) -> Keynote | None:

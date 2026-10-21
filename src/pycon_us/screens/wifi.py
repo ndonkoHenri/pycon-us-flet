@@ -5,13 +5,16 @@ from the bundled year data (``content.toml``'s ``[wifi]``, D-280) and show at on
 offline. Each is selectable monospace text, read with its label as one phrase; Copy
 beside the network and a "Copy password" button, the one way to copy the password, go
 through ``copy_text()``, which confirms each copy once and says when one fails (D-263),
-where Ionic copied only the password and assumed it worked. A year without the table
+where Ionic copied only the password and assumed it worked. Under them, "Wi-Fi provided
+by Temporal" pushes the sponsor who provides it, named by the year data
+(``screens.sponsor_credit``, D-337). A year without the table
 shows the feed's own ``wifi`` block, and without that an empty state that sends the
 attendee to the information desk (``InfoBody``).
 """
 
 import flet as ft
 
+from pycon_us.screens.sponsor_credit import SponsorCreditTile
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.info_page import GUTTER, InfoBody
@@ -74,6 +77,9 @@ def Wifi() -> ft.View:
 def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
     """Return the page's blocks: the network with its Copy, the password, its button.
 
+    Then the credit to the sponsor who provides the Wi-Fi, when the year names one and
+    the feed has it.
+
     Args:
         svc: The session's services, for the clipboard.
         wifi: The year's network and password.
@@ -121,6 +127,9 @@ def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
                 horizontal_alignment=ft.CrossAxisAlignment.START,
             ),
             padding=ft.Padding.symmetric(horizontal=GUTTER, vertical=8),
+        ),
+        SponsorCreditTile(
+            svc.year.content.sponsor_credits.wifi, TITLE, f"{SCREEN}.sponsor"
         ),
     ]
 

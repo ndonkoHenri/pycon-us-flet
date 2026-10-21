@@ -1,7 +1,8 @@
-"""Slugs, semantics keys and the room sort order (DATA-16, ROOM-06, SPON-02).
+"""Slugs, semantics keys and the room sort order (DATA-16, ROOM-06, SPON-02, DATA-32).
 
-``slugify_room`` and ``sponsor_slug`` are copied exactly from Ionic, because routes and
-links key on them: each is the only function that makes its kind of slug. They differ on
+``slugify_room``, ``normalize_room_key`` and ``sponsor_slug`` are copied exactly from
+Ionic, because routes, links and floor-plan pins key on them: each is the only function
+that makes its kind of key. They differ on
 purpose, as Ionic's did: a sponsor slug keeps a ``-`` for each space, so ``Code & Supply``
 is ``code--supply``.
 
@@ -21,6 +22,8 @@ _JS_SPACE = re.compile(
     "[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+"
 )
 _NOT_SPONSOR_SLUG = re.compile(r"[^a-z0-9-]")
+_ROOM_PREFIX = re.compile("^room" + _JS_SPACE.pattern)
+_NOT_ROOM_KEY = re.compile(r"[^a-z0-9]+")
 
 
 def slugify_room(name: str) -> str:
@@ -29,6 +32,18 @@ def slugify_room(name: str) -> str:
     ``Room 103ABC`` → ``room-103abc``; ``Pacific Ballroom - Arena`` → ``pacific-ballroom-arena``.
     """
     return _NOT_SLUG.sub("-", name.lower()).strip("-")
+
+
+def normalize_room_key(name: str) -> str:
+    """Return the key of a room's floor-plan pin: lower-case, no ``room`` prefix, ``a-z0-9`` only.
+
+    Ionic's ``normalizeRoomKey`` exactly (JavaScript's whitespace after ``room``), so
+    ``Room 102A``, ``102A`` and ``room 102a`` all find the pin ``102a``, and ``Pacific
+    Ballroom - Arena`` is ``pacificballroomarena`` (DATA-32, MAP-07). Unlike a room slug it
+    keeps no separators, which is why a venue spot's pin key, which has a ``-``, can never
+    be a room's.
+    """
+    return _NOT_ROOM_KEY.sub("", _ROOM_PREFIX.sub("", name.lower()))
 
 
 def semantics_key(session_id: str) -> str:

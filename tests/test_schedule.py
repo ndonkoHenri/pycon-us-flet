@@ -411,6 +411,18 @@ async def test_today_is_selected_during_the_conference(
     assert schedule.tabs.selected_index == DAYS.index(FRIDAY)
 
 
+@pytest.mark.parametrize("loaded", [True, False])
+async def test_the_app_bar_has_the_schedule_changes_overflow(
+    shown: Callable[[], Awaitable[Shown]], conference: Conference, loaded: bool
+) -> None:
+    """The overflow, "Schedule changes" (D-255), is there with data and without."""
+    if not loaded:
+        conference.data = None
+    schedule = await shown()
+    assert bool(schedule.find(ft.Tabs)) is loaded  # no day tabs without data
+    assert len(schedule.nodes("schedule.overflow")) == 1
+
+
 async def test_the_first_day_is_selected_outside_the_conference(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime]
 ) -> None:
