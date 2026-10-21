@@ -15,13 +15,22 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from pycon_us.config import load_year
-from pycon_us.core.agenda import Agenda, AgendaDay, fold_ended, my_schedule, next_for_me
+from pycon_us.core.agenda import (
+    Agenda,
+    AgendaDay,
+    Phase,
+    fold_ended,
+    my_schedule,
+    next_for_me,
+    now_next,
+)
 from pycon_us.core.diff import ChangeKind, diff
 from pycon_us.core.feed import process
 from pycon_us.core.ics import calendar_file
 from pycon_us.core.models import ConferenceData, Session
+from pycon_us.core.rooms import room_now
 from pycon_us.core.row_views import by_slot, session_view
-from pycon_us.core.timefmt import instant
+from pycon_us.core.timefmt import ENDED, HAPPENING_NOW, instant, time_status
 from pycon_us.core.timeline import Slot, now_place, schedule_order, timeline
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services.reminders import due_session, plan
@@ -79,10 +88,18 @@ def night_feed(
     The feed's own times are rewritten, so the Schedule's days and time groups are built
     from them as from any feed.
     """
-    spans = {142: first, 153: second}
+    return feed_moved({142: first, 153: second})
+
+
+def feed_moved(spans: dict[int, tuple[datetime, ...]]) -> ConferenceData:
+    """Return 2026's feed processed with each slot (by ``conf_key``) moved to its span.
+
+    The feed's own times are rewritten, so everything processing derives from them (days,
+    time groups, rooms, collapsed rows, displayed starts) is built as from any feed.
+    """
 
     def move(doc: dict[str, Any]) -> None:
-        """Rewrite the two talks' start and end in the feed's JSON."""
+        """Rewrite the slots' start and end in the feed's JSON."""
         for item in doc["schedule"]:
             if (span := spans.get(item.get("conf_key"))) is not None:
                 item["start"], item["end"] = (moment.isoformat() for moment in span)
@@ -274,4 +291,110 @@ def test_reminders_come_in_the_order_they_fire(data: ConferenceData) -> None:
     assert [instant(r.at) for r in reminders] == [
         datetime(2026, 11, 1, 8, 30, tzinfo=UTC),
         datetime(2026, 11, 1, 9, 10, tzinfo=UTC),
+    ]
+
+
+@pytest.mark.parametrize("zone", [UTC, ZONE], ids=["utc", "conference"])
+def test_a_session_across_the_change_is_happening_in_the_first_hour(zone: Any) -> None:
+    """At 1:50 PDT the 1:40 PDT-1:10 PST talk is on, then ended at 1:10 PST, in any zone."""
+    start, end = ACROSS
+    assert time_status(start, end, at(8, 50).astimezone(zone), ZONE) == HAPPENING_NOW
+    assert time_status(start, end, at(9, 10).astimezone(zone), ZONE) == ENDED
+
+
+@pytest.mark.parametrize("zone", [UTC, ZONE], ids=["utc", "conference"])
+def test_the_countdown_to_a_start_in_the_repeated_hour_counts_elapsed_time(
+    zone: Any,
+) -> None:
+    """At 1:30 PDT a talk at 1:40 PST starts in 1 h 10 min, not 10 min, in any zone."""
+    status = time_status(at(9, 40), at(10, 0), at(8, 30).astimezone(zone), ZONE)
+    assert status is not None
+    assert status.label == "Starts in 1 h 10 min"
+
+
+def test_one_room_at_the_same_wall_times_twice_still_overlaps(
+    data: ConferenceData,
+) -> None:
+    """In one room, 1:30 PDT-1:45 PST and 1:30-1:45 PST overlap: they are not one visit."""
+    first = retimed(data, "142", (at(8, 30), at(9, 45)))  # 1:30 PDT-1:45 PST
+    second = retimed(data, "10", (at(9, 30), at(9, 45)))  # 1:30-1:45 PST
+    assert first.location == second.location  # what makes them look like one visit
+    agenda = my_schedule(with_sessions(data, first, second), {first.id, second.id})
+    assert agenda.overlaps == {first: (second,), second: (first,)}
+
+
+def test_the_job_fairs_earlier_display_is_half_an_hour_across_the_change() -> None:
+    """Processing the Job Fair at 1:10 PST shows it from 1:40 PDT, 30 minutes earlier."""
+    data = feed_moved({178: (at(9, 10), at(10, 0))})  # 1:10-2:00 PST
+    job_fair = data.sessions["178"]
+    assert instant(job_fair.display_start) == datetime(2026, 11, 1, 8, 40, tzinfo=UTC)
+    assert job_fair.display_start.tzinfo is ZONE  # shown in the conference's zone
+    assert job_fair.display_start.utcoffset() == at(8, 40).utcoffset()  # PDT
+
+
+def test_now_shows_a_session_across_the_change_as_happening() -> None:
+    """At 1:50 PDT the 1:40 PDT-1:10 PST talk is on, and 1:05 PST's slot is next."""
+    data = night_feed(ACROSS, AFTER_THE_CHANGE)
+    now = now_next(data, at(8, 50))  # in the conference zone, where wall clocks mislead
+    assert [s.id for s in now.happening] == ["142"]
+    assert now.up_next is not None
+    assert [s.id for s in now.up_next.sessions] == ["153"]
+
+
+def test_a_day_ends_with_its_latest_end_in_the_repeated_hour() -> None:
+    """A night ending at 1:35 PST, after a 1:55 PDT end, is still on at 1:20 PST."""
+    data = night_feed((at(8, 40), at(8, 55)), AFTER_THE_CHANGE)  # 1:55 PDT, 1:35 PST
+    assert now_next(data, at(9, 20)).phase is Phase.DAY
+    assert now_next(data, at(9, 35)).phase is Phase.AFTER
+
+
+def test_a_rooms_sessions_come_in_the_order_they_happen() -> None:
+    """In one room, a 1:40 PDT talk is listed before a 1:05 PST one, and on now after it.
+
+    The room's list runs by start; "Now in this room" puts the latest start first.
+    """
+    data = feed_moved({142: (at(8, 40), at(9, 30)), 10: AFTER_THE_CHANGE})
+    [room] = [r for r in data.rooms.values() if r.name == "Grand Ballroom A"]
+    assert [i for i in room.session_ids if i in {"142", "10"}] == ["142", "10"]
+    assert [s.id for s in room_now(data, room.slug, at(9, 10))] == ["10", "142"]
+
+
+def test_breaks_at_the_same_wall_time_twice_are_two_rows() -> None:
+    """Breaks at 1:30 PDT and 1:30 PST, both "Break", collapse into two rows, not one."""
+    data = feed_moved({154: (at(8, 30), at(8, 45)), 166: (at(9, 30), at(9, 45))})
+    breaks = sorted(
+        (s for s in data.sessions.values() if s.kind == "break" and s.day == NIGHT),
+        key=lambda s: instant(s.start),
+    )
+    assert [(instant(s.start), instant(s.end)) for s in breaks] == [
+        (instant(at(8, 30)), instant(at(8, 45))),
+        (instant(at(9, 30)), instant(at(9, 45))),
+    ]
+
+
+def test_a_posters_row_spans_its_slots_in_the_order_they_happen() -> None:
+    """Posters at 1:40-1:55 PDT and 1:05-1:35 PST make one row from 1:40 PDT to 1:35 PST."""
+    data = feed_moved({62: (at(8, 40), at(8, 55)), 11: AFTER_THE_CHANGE})
+    [row] = [
+        s
+        for s in data.sessions.values()
+        if s.kind == "poster" and s.in_timeline and s.day == NIGHT
+    ]
+    assert (instant(row.start), instant(row.end)) == (
+        instant(at(8, 40)),
+        instant(at(9, 35)),
+    )
+
+
+def test_the_change_log_lists_changes_in_the_order_they_happen(
+    data: ConferenceData,
+) -> None:
+    """A talk moved to 1:40 PDT is listed before one moved to 1:05 PST."""
+    first = retimed(data, "142", ACROSS)
+    second = retimed(data, "153", AFTER_THE_CHANGE)
+    old = with_sessions(data, data.sessions["142"], data.sessions["153"])
+    changes = diff(old, with_sessions(data, first, second))
+    assert [(c.id, c.kind) for c in changes] == [
+        ("142", ChangeKind.TIME),
+        ("153", ChangeKind.TIME),
     ]

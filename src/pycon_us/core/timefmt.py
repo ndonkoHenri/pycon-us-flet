@@ -211,6 +211,8 @@ def time_status(
         zone: The conference's zone, for "its own day" (D-43).
     """
     on_its_day = local_date(now, zone) == local_date(start, zone)  # refuses naive
+    # As instants: one zone's times compare and subtract by wall clock (#535).
+    start, end, now = instant(start), instant(end), instant(now)
     if now < start:
         if not on_its_day:
             return None  # the date beside it says when
@@ -224,7 +226,7 @@ def time_status(
         return TimeStatus(
             f"Starts in {' '.join(short)}", f"Starts in {' '.join(words)}"
         )
-    if instant(start) == instant(end):  # a notice; by instant (#535)
+    if start == end:  # a notice
         return None
     return HAPPENING_NOW if now < end else ENDED
 

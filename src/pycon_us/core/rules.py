@@ -234,7 +234,11 @@ def slot_session(
         override = settings.lightning_talks_location
     display_start = next(
         (
-            slot.start + timedelta(minutes=shift.minutes)
+            # Added in UTC, then back in the conference's zone: wall-clock arithmetic
+            # is an hour off across a daylight-saving change (#535).
+            (instant(slot.start) + timedelta(minutes=shift.minutes)).astimezone(
+                settings.time_zone
+            )
             for shift in settings.display_time_overrides
             if shift.pattern.fullmatch(title.name)
         ),

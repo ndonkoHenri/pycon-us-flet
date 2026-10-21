@@ -361,7 +361,12 @@ def _overlaps(saved: list[Session]) -> dict[Session, tuple[Session, ...]]:
 def _same_visit(a: Session, b: Session) -> bool:
     # The posters of one poster session, its Posters row and the Job Fair listed with it
     # share one hall and one time: the attendee can see them all, so they do not clash.
-    return (a.location, a.start, a.end) == (b.location, b.start, b.end)
+    # As instants, so 1:30 PDT and 1:30 PST are not one time (#535).
+    return (a.location, instant(a.start), instant(a.end)) == (
+        b.location,
+        instant(b.start),
+        instant(b.end),
+    )
 
 
 def _saved(data: ConferenceData, favorites: AbstractSet[str]) -> list[Session]:
