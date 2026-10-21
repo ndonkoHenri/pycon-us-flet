@@ -8,7 +8,8 @@ refreshes the feed every 15 min while Now shows (D-175), then by season:
   session to go to next, with its star, its countdown and "Show room", and its elapsed
   bar once it is on), **Happening now** (the other sessions on, saved ones first, each
   with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
-  card's session) and a link to the Schedule;
+  card's session), each folded at peak times after your saved sessions and three
+  others (``now_fold``, D-327), and a link to the Schedule;
 - on the last evening and the sprint days, the Sprints page; afterwards, the schedule
   to look back at;
 - in every season, the sponsor spotlight (``now_spotlight``, D-37, D-298) when a
@@ -22,7 +23,7 @@ feed version (D-153, D-184), and a row pushes its session over Now, so Back retu
 here (D-17). Without data, the skeleton, then "Can't load the schedule" (D-32).
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from functools import partial
 
@@ -49,6 +50,7 @@ from pycon_us.core.timeline import Slot
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.now_card import Row, next_session, nothing_next
+from pycon_us.screens.now_fold import HAPPENING, UP_NEXT, folded
 from pycon_us.screens.now_header import (
     Season,
     StatusHeader,
@@ -77,6 +79,10 @@ from pycon_us.ui.session_rows import (
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.widths import LIST, sides, use_margin
+
+type Fold = Callable[..., list[ft.Control]]
+"""``now_fold.folded()`` with the saved ids and the opened sections given: a section's
+rows, folded at peak times, from its name, its sessions and ``row=``."""
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -109,12 +115,18 @@ def Now() -> ft.View:
     )
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     candidates = ft.use_memo(lambda: spotlight_candidates(data) if data else (), [data])
+    # The sections the user opened past their fold (now_fold.fold_key(), D-327).
+    opened, set_opened = ft.use_state(frozenset[str]())
+
+    def toggle(key: str) -> None:
+        set_opened(opened ^ {key})
 
     @report_errors
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
     row = partial(_row, by_id, info, favorites.ids, on_toggle, tokens)
+    fold = partial(folded, saved=favorites.ids, opened=opened, toggle=toggle)
 
     rows: list[ft.Control]
     if data is None and conference.problem is None:
@@ -156,6 +168,7 @@ def Now() -> ft.View:
                 data,
                 info,
                 row,
+                fold,
                 saved=favorites.ids,
                 view_path=view_path,
                 live=tokens.live,
@@ -206,6 +219,7 @@ def _sections(
     data: ConferenceData,
     info: ConferenceInfo,
     row: Row,
+    fold: Fold,
     *,
     saved: frozenset[str],
     view_path: str,
@@ -244,9 +258,9 @@ def _sections(
     # next, the card says so, and an empty Happening now would claim nothing is.
     others = _without(answer.happening, mine)
     if answer.phase is Phase.DAY and (others or not answer.happening):
-        sections += _happening(others, now, row, saved, live)
+        sections += _happening(others, now, row, fold, live)
     if upcoming is not None and (later := _without(upcoming.sessions, mine)):
-        sections += _up_next(upcoming, later, now, row, info, use_24h=use_24h)
+        sections += _up_next(upcoming, later, row, fold, now, info, use_24h=use_24h)
     # Only a navigation: the Schedule (#86) opens on today during the conference. With
     # no slot after this one, the rest of today is the slot that is on.
     rest_of_today = upcoming is None or local_date(upcoming.start, info.zone) == day
@@ -268,40 +282,38 @@ def _happening(
     happening: tuple[Session, ...],
     now: datetime,
     row: Row,
-    saved: frozenset[str],
+    fold: Fold,
     live: str,
 ) -> list[ft.Control]:
-    """Happening now: the sessions on but yours, saved ones first, each with its bar."""
+    """Happening now: the sessions on but yours, saved ones first, each with its bar.
+
+    Folded at peak times after the saved ones and three others (``fold``, D-327).
+    """
     dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=live)
     header = SectionHeader("Happening now", level=2, leading=dot)
     if not happening:
         return [header, _note(NOTHING_ON, f"{SCREEN}.nothing_on")]
-    # Stable: within each group, the slot's order (schedule_order) stays.
-    ordered = sorted(happening, key=lambda session: session.id not in saved)
-    return [
-        header,
-        ft.Column(
-            [
-                row(session, elapsed=elapsed_percent(session, now))
-                for session in ordered
-            ],
-            spacing=0,
-        ),
-    ]
+
+    def on_row(session: Session) -> ft.Control:
+        return row(session, elapsed=elapsed_percent(session, now))
+
+    return [header, *fold(HAPPENING, happening, row=on_row)]
 
 
 def _up_next(
     slot: Slot,
     sessions: tuple[Session, ...],
-    now: datetime,
     row: Row,
+    fold: Fold,
+    now: datetime,
     info: ConferenceInfo,
     *,
     use_24h: bool,
 ) -> list[ft.Control]:
     """Up next: the next slot's start, its countdown on its own day, then its rows.
 
-    ``sessions`` are the slot's rows but your next session, which the card shows.
+    ``sessions`` are the slot's rows but your next session, which the card shows,
+    saved ones first and folded at peak times as Happening now's (``fold``, D-327).
     """
     heading = f"Up next · {up_next_when(slot, now, info, use_24h=use_24h)}"
     controls: list[ft.Control] = [
@@ -321,7 +333,7 @@ def _up_next(
                 padding=ft.Padding.only(left=16, right=16),
             )
         )
-    controls.append(ft.Column([row(session) for session in sessions], spacing=0))
+    controls += fold(UP_NEXT, sessions, row=row)
     return controls
 
 

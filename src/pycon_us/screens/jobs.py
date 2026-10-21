@@ -38,11 +38,11 @@ from pycon_us.locations import drill_href
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
+from pycon_us.ui.fold import toggle_button
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
 from pycon_us.ui.widths import LIST, sides, use_margin
@@ -153,7 +153,9 @@ def _ListingCard(listing: JobListing, slug: str | None) -> ft.Control:
         )
         if len(listing.roles) > SHOWN_ROLES:
             word = "Show fewer roles" if expanded else roles_label(len(listing.roles))
-            controls.append(toggle_button(word, expanded, toggle, f"all_roles.{key}"))
+            controls.append(
+                toggle_button(word, expanded, toggle, f"{SCREEN}.all_roles.{key}")
+            )
     elif listing.description_md:
         text = to_text(listing.description)
         long = needs_more(text, listing.description_md)
@@ -172,7 +174,9 @@ def _ListingCard(listing: JobListing, slug: str | None) -> ft.Control:
         if long:
             word = "Less" if expanded else "More"
             label = f"{word} about {listing.sponsor_name}'s listing"
-            controls.append(toggle_button(word, expanded, toggle, f"more.{key}", label))
+            controls.append(
+                toggle_button(word, expanded, toggle, f"{SCREEN}.more.{key}", label)
+            )
     else:
         controls.append(
             ft.Container(
@@ -245,34 +249,4 @@ def header(listing: JobListing, on_click: ft.ControlEventHandler | None) -> ft.C
             on_click=on_click,
             padding=16,
         )
-    )
-
-
-def toggle_button(
-    word: str,
-    expanded: bool,
-    on_click: ft.ControlEventHandler,
-    key: str,
-    label: str | None = None,
-) -> ft.Control:
-    """Return a card's text button that shows more of it, or less, in place.
-
-    Said "collapsed" or "expanded"; the visible words come first in its label, so
-    "tap More" works for voice control users (WCAG 2.5.3).
-
-    Args:
-        word: Its visible words.
-        expanded: Whether the card shows it all.
-        on_click: Toggles the card.
-        key: Its identifier after ``jobs.``.
-        label: What a screen reader says, if more than the words.
-    """
-    button = ft.TextButton(
-        content=ft.Text(word, semantics_label=label), on_click=on_click
-    )
-    return ft.Container(
-        named(f"{SCREEN}.{key}", ft.Semantics(expanded=expanded, content=button)),
-        # A text button's label sits 12 dp in: 4 + 12 lines it up with the text.
-        padding=ft.Padding.only(left=4, top=4, right=4, bottom=4),
-        alignment=ft.Alignment.CENTER_LEFT,
     )
