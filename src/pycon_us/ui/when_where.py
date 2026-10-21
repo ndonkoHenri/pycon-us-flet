@@ -3,9 +3,9 @@
 Time and place answer the attendee's first question (ux.md §1, §5.5), so they come
 before everything else about a session: the day and time, where the session stands now
 ("Starts in 25 min", "Happening now", "Ended"), the Pacific Time note when the device's
-clock differs (D-35), then one room tile that pushes room detail and, folded into an
-``ExpansionTile``, the other rooms of a multi-room session (SESS-02). Each tile reads as
-one phrase (D-33).
+clock differs (D-35), then one room tile that pushes room detail and, folded into a
+``FoldTile`` (D-354), the other rooms of a multi-room session (SESS-02). Each tile reads
+as one phrase (D-33).
 
 ``StatusLine`` is a leaf component with its own minute tick, as ``StatusStrip`` is
 (D-175): the time passing re-renders the line, not the screen around it.
