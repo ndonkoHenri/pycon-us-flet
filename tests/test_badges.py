@@ -195,3 +195,13 @@ def test_a_recent_change_adds_changed_last_outlined_in_its_token(
     assert specs[-1][1].fill is None  # outlined, never En Español's fill
     plain = badge_specs(data.sessions[TUTORIAL], info, theme.LIGHT_TOKENS)
     assert CHANGED not in [label for label, _ in plain]
+
+
+def test_a_wrapped_badge_starts_its_lines_at_the_same_edge() -> None:
+    """A badge's label is start-aligned, so its wrapped lines share one edge (#579).
+
+    A one-line label fills its pill, so it looks the same as when it was centred.
+    """
+    badge = TrackBadge("Renamed from “Python for People”", theme.LIGHT_TOKENS.changed)
+    assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
+    assert badge.content.text_align == ft.TextAlign.START
