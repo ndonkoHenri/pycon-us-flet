@@ -23,6 +23,7 @@ import flet as ft
 from pycon_us.core.timefmt import time_label
 from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot
 from pycon_us.memory import ViewMemory
+from pycon_us.services.errors import report_errors
 from pycon_us.ui.scrolling import anchored
 
 NOW_LINE = 2
@@ -75,6 +76,7 @@ def _NowLine(
 ) -> ft.Control:
     """The body of ``NowLine``; it runs only when the time changes (F34)."""
 
+    @report_errors
     def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
         on_measure(day, NOW_KEY, e.height)
 

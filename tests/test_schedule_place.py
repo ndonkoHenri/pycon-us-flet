@@ -206,7 +206,7 @@ async def test_a_rotation_puts_the_place_back_too(
 
 
 async def test_a_slot_that_left_the_built_range_is_reached_from_its_old_offset(
-    shown: Callable[[], Awaitable[Shown]],
+    shown: Callable[..., Awaitable[Shown]],
     memory: ViewMemory,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

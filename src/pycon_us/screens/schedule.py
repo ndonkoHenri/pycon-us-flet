@@ -248,6 +248,7 @@ def Schedule() -> ft.View:
         if target is not None:
             await target.scroll_to(offset=0, duration=prefs.motion_ms(RETAP_SCROLL_MS))
 
+    @report_errors
     async def relaid(
         *,
         text: float | None = None,
