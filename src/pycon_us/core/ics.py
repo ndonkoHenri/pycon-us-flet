@@ -15,11 +15,12 @@ argument, and nothing here imports Flet (D-68).
 import re
 import unicodedata
 from collections.abc import Iterable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
 from pycon_us import APP_NAME, CALENDAR_DOMAIN
 from pycon_us.core.models import Session
+from pycon_us.core.timefmt import instant
 from pycon_us.core.timeline import schedule_order
 
 ALARM = timedelta(minutes=10)
@@ -124,7 +125,7 @@ def _event(
         f"DTSTAMP:{_utc(now)}",
         f"DTSTART:{_utc(session.display_start)}",
     ]
-    if session.end > session.display_start:
+    if instant(session.end) > instant(session.display_start):
         lines.append(f"DTEND:{_utc(session.end)}")
     lines.append(f"SUMMARY:{_text(session.name)}")
     if session.display_location:
@@ -147,7 +148,7 @@ def _event(
 
 def _utc(moment: datetime) -> str:
     """Return an aware instant as a UTC DATE-TIME: ``20260516T173000Z``."""
-    return moment.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return instant(moment).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _text(value: str) -> str:
