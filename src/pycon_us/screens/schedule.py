@@ -1,10 +1,11 @@
 """Schedule (``/schedule``): the programme by day and time slot (SCHED-01, SCHED-02).
 
 Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
-``TabBar`` (no ``AppBar.bottom``, U10), then the status strip, then a ``TabBarView`` with
-one page per conference day, sprint days included. Under the strip, "Times are Pacific
-Time (PDT)" while the device's clock differs from the conference's (D-35, D-240). The
-tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
+``TabBar`` (no ``AppBar.bottom``, U10), then the head (the filter summary, the status
+strip and "Times are Pacific Time (PDT)" while the device's clock differs from the
+conference's, D-20, D-32, D-240), then a ``TabBarView`` with one page per conference
+day, sprint days included. At the largest text sizes the head tops each day's list
+instead, so it scrolls away (``screens/schedule_head.py``, D-345). The tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
 is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
 fills only the shown day, the second the others (D-156).
 
@@ -49,6 +50,7 @@ from pycon_us.screens.schedule_days import (
     now_button,
 )
 from pycon_us.screens.schedule_filter import use_track_filter
+from pycon_us.screens.schedule_head import HEAD_KEY, Head, ScheduleHead
 from pycon_us.screens.schedule_now import (
     PENDING,
     SAID_S,
@@ -73,7 +75,7 @@ from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
-from pycon_us.ui.status_strip import StatusStrip, use_minute, zone_note_line
+from pycon_us.ui.status_strip import strip_view, use_minute, use_strip
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 logger = logging.getLogger(__name__)
@@ -98,6 +100,9 @@ def Schedule() -> ft.View:
     use_24h = bool(page.media and page.media.always_use_24_hour_format)
     data = conference.data
     use_minute()  # today, its now line and the button follow the clock (D-204)
+    # The strip's state is the screen's: at the largest sizes the memoised day lists
+    # show it, and only a value may go there (F150, D-345).
+    strip = use_strip(auto_refresh=True)
     now = clock.now()  # the Developer fake clock moves it (D-43)
     current = today(now, info.zone)
     all_days = days(data, info.first_day, info.last_day) if data else ()
@@ -133,7 +138,10 @@ def Schedule() -> ft.View:
     changes = use_recent_changes()
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
-    keeper.lay_out((conference.version, excluded), _keys(slots, current, place))
+    keeper.lay_out(
+        (conference.version, excluded),
+        _keys(slots, current, place, head=prefs.time_above),
+    )
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
@@ -307,7 +315,7 @@ def Schedule() -> ft.View:
             actions=[search_button(memory, "sessions"), ScheduleOverflow()],
             body=ft.ListView(
                 [
-                    StatusStrip(auto_refresh=True),
+                    strip_view(strip, tokens),
                     NoDataState(
                         conference.problem,
                         on_retry=try_again,
@@ -320,6 +328,13 @@ def Schedule() -> ft.View:
             ),
         )
 
+    head = Head(
+        track_filter.summary,
+        # The device's offset now: the packaged app's Python reads the device's
+        # zone (F60), and the minute tick follows a DST change.
+        zone_note(now, info.zone, info.time_zone_name, now.astimezone().utcoffset()),
+        strip,
+    )
     pages: list[ft.Control] = []
     for day in all_days:
         if day != shown and not rest:
@@ -344,6 +359,8 @@ def Schedule() -> ft.View:
                 now=NowMark(place.line, time_label(now, info.zone, use_24h=use_24h))
                 if day == current and place is not None
                 else None,
+                # At the largest sizes it scrolls away with the slots (D-345).
+                head=head if prefs.time_above else None,
                 list_ref=_ref(refs, day),
                 on_scroll=on_scroll,
                 on_measure=on_measure,
@@ -375,21 +392,11 @@ def Schedule() -> ft.View:
                     ),
                     margin,
                 ),
-                capped(track_filter.summary, margin),
-                capped(StatusStrip(auto_refresh=True), margin),
-                # The device's offset now: the packaged app's Python reads the
-                # device's zone (F60), and the minute tick follows a DST change.
-                capped(
-                    zone_note_line(
-                        zone_note(
-                            now,
-                            info.zone,
-                            info.time_zone_name,
-                            now.astimezone().utcoffset(),
-                        )
-                    ),
-                    margin,
-                ),
+                # At the largest sizes the head is in the lists; a placeholder keeps
+                # the day pages' place in the column (#313).
+                ft.Container()
+                if prefs.time_above
+                else capped(ScheduleHead(head, track_filter.show_all, tokens), margin),
                 ft.Stack(
                     [landing_note(said), ft.TabBarView(pages)],
                     fit=ft.StackFit.EXPAND,
@@ -438,15 +445,25 @@ def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView
 
 
 def _keys(
-    slots: dict[date, tuple[Slot, ...]], current: date, place: NowPlace | None
+    slots: dict[date, tuple[Slot, ...]],
+    current: date,
+    place: NowPlace | None,
+    *,
+    head: bool,
 ) -> dict[date, tuple[str, ...]]:
-    """Return each day list's item keys in order: its slots, today's now line among them."""
+    """Return each day list's item keys in order: its slots, today's now line among them.
+
+    With ``head``, at the largest text sizes, each list starts with the head (D-345).
+    """
+    first = (HEAD_KEY,) if head else ()
     keys = {
-        day: tuple(slot.key for slot in day_slots) for day, day_slots in slots.items()
+        day: (*first, *(slot.key for slot in day_slots))
+        for day, day_slots in slots.items()
     }
     if place is not None:
         today = keys[current]
-        keys[current] = (*today[: place.line], NOW_KEY, *today[place.line :])
+        line = place.line + len(first)
+        keys[current] = (*today[:line], NOW_KEY, *today[line:])
     return keys
 
 
