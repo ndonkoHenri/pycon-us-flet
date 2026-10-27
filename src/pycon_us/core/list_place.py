@@ -1,8 +1,8 @@
 """Where the reader is in a Schedule day list, as a key, so a text-size or filter change keeps it.
 
-Pure: ``screens/schedule_place.py`` measures and scrolls. A list keeps its pixel offset,
-not the rows at that offset, so when the text grows every row above the top grows with
-it and earlier rows show (#337, F70). The place is therefore the item at the top and how
+Pure: ``screens/schedule_layout.py`` measures and ``screens/schedule_place.py``
+scrolls. A list keeps its pixel offset, not the rows at that offset, so when the text
+grows every row above the top grows with it and earlier rows show (#337, F70). The place is therefore the item at the top and how
 far into it, which a keyed jump puts back once the list has its new heights:
 
 - ``Place``: that item's key, how far into it the top was, its height then, the offset

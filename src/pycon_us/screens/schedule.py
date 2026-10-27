@@ -51,6 +51,7 @@ from pycon_us.screens.schedule_days import (
 )
 from pycon_us.screens.schedule_filter import use_track_filter
 from pycon_us.screens.schedule_head import HEAD_KEY, Head, ScheduleHead
+from pycon_us.screens.schedule_layout import layout_probe
 from pycon_us.screens.schedule_now import (
     PENDING,
     SAID_S,
@@ -63,7 +64,7 @@ from pycon_us.screens.schedule_now import (
     shows_now,
     spoken_place,
 )
-from pycon_us.screens.schedule_place import PlaceKeeper, layout_probe
+from pycon_us.screens.schedule_place import PlaceKeeper
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
