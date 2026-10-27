@@ -29,7 +29,7 @@ name: A moved saved session from a feed pair, through the change log
 tags:
   - feed_pair
 env:
-  FEED_URL: ${FEED_URL || (maestro.platform == 'android' ? 'http://10.0.2.2:8460/conference-2026.json' : 'http://127.0.0.1:8460/conference-2026.json')}
+  FEED_URL: "${FEED_URL || (maestro.platform == 'android' ? 'http://10.0.2.2:8460/conference-2026.json' : 'http://127.0.0.1:8460/conference-2026.json')}"
   CONTROL_URL: ${CONTROL_URL || 'http://127.0.0.1:8460'}
 ---
 # The old feed, whatever an earlier run left the server serving.
