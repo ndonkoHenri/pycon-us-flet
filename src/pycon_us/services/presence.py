@@ -7,8 +7,8 @@ left and come back: the lifecycle handler (``app.start()``) calls ``leave()`` on
 ``inactive`` and ``come_back()`` on ``resume``, which Flet reports for every change of
 Flutter's lifecycle (F192). On Android the browser and the share sheet are other
 activities, so the app goes ``inactive`` under them. Where a window opens over the app
-without that (iOS presents both inside the app), the app never leaves, and nothing
-waits for a return (``back_since()``).
+without that (iOS presents both inside the app, which may stay active: not checked
+yet), the app never leaves, and nothing waits for a return (``back_since()``).
 """
 
 import asyncio
