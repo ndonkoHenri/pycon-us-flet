@@ -17,12 +17,16 @@ in ``ViewMemory.map_zooms``, put back once it is laid out (D-312, D-18).
 
 The booth layer and each booth are memoised components given values only (D-153,
 F150): the selection, the pulse and the zoom live in ``ExpoHall``, above them, so a
-change of selection re-renders two booths, a pulse one, and a zoom none. The booth
-card, the List and ``?booth=`` come with #403..#405.
+change of selection re-renders two booths, a pulse one, and a zoom none.
+
+The selected booth's card (``screens/booth_card.py``, #403) sits at the bottom of the
+``Stack`` with the zoom buttons above it, so both stay in reach; its Close clears the
+selection. The List and ``?booth=`` come with #404 and #405.
 """
 
 import asyncio
 from collections.abc import Callable, Sequence
+from typing import cast
 
 import flet as ft
 
@@ -30,6 +34,7 @@ from pycon_us.core.expo import ExpoBooth, expo_booths
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import room_sort_key
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.booth_card import BoothCard, hiring_line
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -294,6 +299,23 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
         set_taps(lambda n: n + 1)  # a tap on the selected booth pulses it again
 
     on_select = ft.use_callback(select, [])
+    _, set_closes = ft.use_state(0)  # a Close re-renders the hall
+    # The rows' own height, by booth: the card keeps no state of its own (F150).
+    rows_size, set_rows_size = ft.use_state(cast(tuple[str, float], ("", 0.0)))
+    view_path = ft.use_view_path()
+
+    @report_errors
+    def close() -> None:
+        memory.expo_booth = ""
+        set_closes(lambda n: n + 1)
+
+    on_close = ft.use_callback(close, [])
+
+    @report_errors
+    def rows_measured(e: ft.LayoutSizeChangeEvent) -> None:
+        set_rows_size((memory.expo_booth, e.height))
+
+    on_rows_size = ft.use_callback(rows_measured, [])
 
     @report_errors
     async def put_back() -> None:
@@ -329,13 +351,39 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
                 pulse_ms=pulse_ms,
             )
         )
+    bottom: list[ft.Control] = [
+        ft.Row([zoom_buttons(zoom, SCREEN)], alignment=ft.MainAxisAlignment.END)
+    ]
+    item = next((each for each in booths if each.booth.number == selected), None)
+    if item is not None:
+        half = zoom.box[1] / 2
+        measured = rows_size[1] if rows_size[0] == selected else 0.0
+        hiring = hiring_line(data, item.sponsors[0]) if len(item.sponsors) == 1 else ""
+        bottom.append(
+            BoothCard(
+                item,
+                hiring=hiring,
+                view_path=view_path,
+                rows_box=half if half and measured > half else None,
+                on_close=on_close,
+                on_rows_size=on_rows_size,
+            )
+        )
     return ft.Stack(
         [
             # Booths to tap: no double-tap detector, which delays every tap (D-312).
             zoom_layer(zoom, plan.image, expo_label(plan), layers, double_tap=False),
-            # No Container around the buttons: a decorated box would take the
-            # gestures beside them, which belong to the plan.
-            ft.Column([zoom_buttons(zoom, SCREEN)], right=16, bottom=16, tight=True),
+            # No Container around the buttons and the card: a decorated box would
+            # take the gestures beside them, which belong to the plan.
+            ft.Column(
+                bottom,
+                left=16,
+                right=16,
+                bottom=16,
+                spacing=16,
+                tight=True,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+            ),
         ],
         fit=ft.StackFit.EXPAND,
         expand=True,
