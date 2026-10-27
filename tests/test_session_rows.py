@@ -537,6 +537,20 @@ async def test_a_notice_s_title_starts_on_the_gutter_s_line(
     assert margin.top + padding.top == 12
 
 
+async def test_a_notice_s_icon_is_one_title_line_tall_at_every_text_size(
+    rendered: Rendered,
+) -> None:
+    """D-373: the track icon scales with the text and tops the row, by the title."""
+    row = cast(ft.Row, rendered.notice(COFFEE).content)
+    icon, lines = row.controls
+    assert isinstance(icon, ft.Icon) and isinstance(lines, ft.Column)
+    assert (icon.size, icon.apply_text_scaling) == (20, True)  # a TITLE_SMALL line
+    assert row.vertical_alignment == ft.CrossAxisAlignment.START
+    title = lines.controls[0]
+    assert isinstance(title, ft.Text)
+    assert title.theme_style == ft.TextThemeStyle.TITLE_SMALL
+
+
 def _children(control: ft.Control) -> Sequence[ft.Control]:
     """A control's direct children: its ``content`` and its ``controls``."""
     found: list[ft.Control] = []

@@ -53,6 +53,10 @@ words, in dp, so a "Show all" that wraps under the words starts its label under
 theirs (D-229). Material shrinks a text button's side padding as text grows (12 dp
 at 100 %, 8 at 200 %, 4 from 300 %), which left a wrapped label out of line."""
 
+SUMMARY_ICON = 20
+"""The ``FILTER_LIST`` mark's size at 100 %, in dp: one ``BODY_MEDIUM`` line, which
+it stays at every text size (D-373)."""
+
 
 @dataclass(frozen=True)
 class TrackFilter:
@@ -271,20 +275,38 @@ def summary_line(text: str, on_show_all: Callable[[], object]) -> ft.Control:
 
     The words and the button share a wrapping row, the button at its end: at large
     text the button moves under the words whole, instead of squeezing them into a
-    narrow column beside it. The words start ``SHOW_ALL_INSET`` into that row and the
-    button's label as far into the button, so the label lines up with the words when
-    it takes a run of its own; at 100 % it ends 20 dp from the edge, as before.
+    narrow column beside it. The ``FILTER_LIST`` mark is in the words' own row, one
+    line tall at every text size and at its top, so it stays beside their first line
+    whether they share the button's run or not (D-373, as the status strip's icon,
+    D-215). The words start ``SHOW_ALL_INSET`` after the mark, and the button is
+    indented so that its label, ``SHOW_ALL_INSET`` into it, lines up with the words
+    when it takes a run of its own; at 100 % it ends 20 dp from the edge, as before.
     """
-    words = ft.Container(
-        ft.Semantics(
-            identifier=f"{SCREEN}.filter_summary",
-            content=ft.Text(
-                text,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+    words = ft.Row(
+        [
+            # Unlabelled, so decorative: the words say it.
+            ft.Icon(
+                ft.Icons.FILTER_LIST,
+                size=SUMMARY_ICON,
+                apply_text_scaling=True,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
-        ),
-        padding=ft.Padding.only(left=SHOW_ALL_INSET),
+            ft.Semantics(
+                identifier=f"{SCREEN}.filter_summary",
+                content=ft.Text(
+                    text,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                # Its own width up to what is left beside the mark: wide enough to
+                # wrap, narrow enough to leave the button room on the same run.
+                expand=True,
+                expand_loose=True,
+            ),
+        ],
+        spacing=SHOW_ALL_INSET,
+        tight=True,  # the words' own width, so the wrap below can measure them
+        vertical_alignment=ft.CrossAxisAlignment.START,
     )
     show_all = named(
         f"{SCREEN}.show_all",
@@ -301,29 +323,15 @@ def summary_line(text: str, on_show_all: Callable[[], object]) -> ft.Control:
     return ft.Container(
         ft.Row(
             [
-                # Unlabelled, so decorative: the words say it. In a 48 dp box, so it
-                # stays beside the first line, which the button's height centres.
-                ft.Container(
-                    ft.Icon(
-                        ft.Icons.FILTER_LIST,
-                        size=18,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    ),
-                    height=48,
-                    alignment=ft.Alignment.CENTER,
-                ),
-                ft.Row(
-                    [words, show_all],
-                    wrap=True,
-                    spacing=0,  # the button's own padding parts it from the words
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=True,  # a bounded width, so the words wrap in it
-                ),
+                words,
+                # The mark's width: on a run of its own, the label (SHOW_ALL_INSET
+                # into the button) starts under the words, SHOW_ALL_INSET after it.
+                ft.Container(show_all, padding=ft.Padding.only(left=SUMMARY_ICON)),
             ],
-            # The words' inset is the gap after the icon: 8 dp, as before.
-            spacing=0,
-            vertical_alignment=ft.CrossAxisAlignment.START,
+            wrap=True,
+            spacing=0,  # the button's indent parts it from the words
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         # 12 + the button's 8 dp: its label ends 20 dp from the edge, as at 100 %
         # before, when Material gave it 12 dp beside an 8 dp margin.
