@@ -1,6 +1,6 @@
 """Tests for the Schedule keeping each day's place across a text-size change (D-331, #337).
 
-The Schedule renders in ``tests/test_schedule.py``'s harness: ``ListView.scroll_to`` is
+The Schedule renders in ``tests/schedule_view.py``'s harness: ``ListView.scroll_to`` is
 recorded and a keyed scroll answered with a scroll end at 4,000 dp. The device's
 reports are dispatched by hand: each slot's height (``size_change`` on its column), the
 probe's widths, and scroll starts and ends. Whether the rows really stay in view is a
@@ -22,14 +22,14 @@ from pycon_us.memory import ViewMemory
 from pycon_us.screens.schedule_head import HEAD_KEY
 from pycon_us.screens.schedule_place import END_GAP_S, PlaceKeeper
 from pycon_us.ui import scrolling
-from tests import test_schedule
-from tests.test_schedule import FRIDAY, SATURDAY, THURSDAY, Shown, inside
+from tests import schedule_view
+from tests.schedule_view import FRIDAY, SATURDAY, THURSDAY, Shown, inside
 
 # The Schedule's fixtures, shared by name: pytest finds fixtures among a module's names.
-now = test_schedule.now
-memory = test_schedule.memory
-conference = test_schedule.conference
-shown = test_schedule.shown
+now = schedule_view.now
+memory = schedule_view.memory
+conference = schedule_view.conference
+shown = schedule_view.shown
 
 HEIGHT = 300.0
 """Every slot's height in these tests, in dp, before the text grows."""

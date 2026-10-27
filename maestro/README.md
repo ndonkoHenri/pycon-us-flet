@@ -37,8 +37,18 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/sponsors_offline_logos.yaml` | offline_logos | Offline with no logo cache: Now's spotlight, Sponsors and Job listings say "Offline" and show initials; screenshots to look at ([below](#offline-logos), #455) |
 | `journeys/sponsors_large_text.yaml` | large_text | The spotlight, Sponsors and Job listings journeys at the largest text, with no fresh start; a screenshot of each page to look at ([below](#large-text), #455) |
 | `journeys/sponsor_find_booth.yaml` | journeys | A sponsor (Bloomberg) › Find booth 613 › Back: the expo hall opens at the booth with its card, and Back returns to the sponsor (SPON-04, #409) |
+| `journeys/expo_list_card.yaml` | journeys, expo | More › Expo hall › List › "socal": SoCal Python's row alone; its tap shows booth 726 on the Map with its card, which lists 726's exhibitors; SoCal Python's page › Back: the hall again with the card (EXPO-03, EXPO-04, #454) |
+| `journeys/expo_map_card.yaml` | journeys, expo | Map › Expo › booth 613 on the hall: its card with Sponsor details and Close; Close: the card goes, the hall stays (EXPO-01, EXPO-04, #454) |
+| `journeys/job_fair_sponsor.yaml` | journeys, expo | Map › Job fair › Bloomberg's row (T2) › its page › Back: the pane with the row again (MAP-04, #454) |
+| `journeys/search_booth_unplaced.yaml` | journeys, expo | Search "phemeral": "Booth 139 · Phemeral", "Not on the map yet"; its tap opens the expo's List under "Booth 139 isn't on the map yet", Phemeral in its section; Back keeps the query (EXPO-05, #406, #454) |
 | `journeys/now_quick_back.yaml` | journeys | Now › each quick info button (Wi-Fi, Help & safety, Venue & hours) › Back: each page is pushed over Now, and Back returns to Now with the buttons (#419, D-338) |
+| `journeys/wifi_copy.yaml` | journeys, venue | More › Wi-Fi shows the network and the password with the feed unreachable, and Copy password copies it: "Password copied" on iOS, no failure on Android, whose own overlay confirms a copy (INFO-08, #456) |
+| `journeys/help_report.yaml` | journeys, venue | More › Help & safety opens on Report a concern, its email row and its Copy on screen before any scroll; Copy says "Email address copied" on iOS; the places and the Code of Conduct follow (INFO-07, #456) |
+| `journeys/venue_open_now.yaml` | journeys, venue | On a conference morning (Friday 09:30, `NOW` overrides it) More › Venue & hours says Registration, the information desk and Swag pickup are open now, each until its closing time (MAP-09, #456) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
+| `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s; My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
+| `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
+| `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss; Settings' Reminders sentence, with the alarm on iOS only (D-60, D-272, #458) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -213,9 +223,9 @@ the flow stops there.
 
 ### Large text
 
-The fresh start's Developer steps assume the default text size: at the largest, About
-this app's version row and Developer's Apply fall below the fold. So
-`journeys/sponsors_large_text.yaml` (tag `large_text`) starts from the data the last flow
+A fresh start goes through Developer options, which were made for the default text size
+and which the largest text pushes far below the fold (at first, About this app's version
+row and Apply). So `journeys/sponsors_large_text.yaml` (tag `large_text`) starts from the data the last flow
 left (no `clearState`): run a journey at the default size, set the largest text, then
 run it. It walks the spotlight, Sponsors and Job listings journeys with their Backs, and
 takes a screenshot of each page to look at for clipping and overlap (ux.md §9). The
@@ -229,6 +239,27 @@ xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large   # or
 maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/journeys/sponsors_large_text.yaml
 ```
 
+### Feed pairs
+
+`journeys/change_log.yaml` reads its feeds from the laptop: the recorded 2026 feed, then
+a copy with session 123 moved, at one feed URL (D-255;
+[`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §9.2). Start the server
+first and keep it running; the flow resets it to the old feed at its start and swaps it
+with a script (`scripts/feed_pair.js`), which posts to it from the laptop:
+
+```bash
+uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
+maestro --device <udid> test maestro/journeys/change_log.yaml
+```
+
+Its tag is `feed_pair`, not `journeys`, so `--include-tags=journeys` runs without the
+server. It turns no airplane mode on: that would cut the emulator's way to the laptop too.
+`FEED_URL` (the feed as the device reaches it: `10.0.2.2` on the Android emulator,
+`127.0.0.1` on the simulator) and `CONTROL_URL` (the server as the laptop reaches it)
+default to port 8460, the server's; for another `--port`, give both, as the server
+prints them. Its screenshots, one per step (`change_log-01-old-feed` …), go to the
+debug output's folder.
+
 ## Writing a flow
 
 - Find a control by its identifier, `id:` (`<screen>.<element>[.<key>]`, D-33), copied
@@ -238,6 +269,10 @@ maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/
 - A control with no identifier gets one in `src`, the smallest change (as `app.search`,
   D-252). The app bar's back arrow has none: use `subflows/back.yaml`, the system Back on
   Android and the button named "Back" on iOS.
+- A tab goes through `subflows/tab.yaml` (`TAB: more`, `NAME: "More.*Tab 5 of 5"`):
+  the bar's `app.nav.<tab>` on a phone, the destination's name on a tablet's rail,
+  which has no identifiers (D-277, #163). The shared subflows and the venue flows use
+  it, so they run on an iPad too; the older journeys still tap `app.nav.*`.
 - After typing, `pressKey: Enter` closes the keyboard. On Android a Back would only close
   Gboard's bar, which comes back while the field keeps the focus.
 - `subflows/top_slot.yaml` reads the Schedule's top row and its start time, which is how
@@ -253,6 +288,26 @@ maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/
   the `adb` driver's ([Row D through adb](#row-d-through-adb)).
 - Each flow that runs `start_offline.yaml` turns the network back on in its
   `onFlowComplete` (`subflows/online.yaml`).
+- Open a Map pane with `subflows/map_tab.yaml` (`env: TAB: expo`): the tab bar scrolls
+  (D-312), and at the largest text only Rooms and Floor plans fit a phone, so it swipes
+  the bar until the tab shows.
+- The expo opens on the List under a screen reader and on the Map otherwise
+  (`view_of()`), and Maestro makes Android report one (F72): a flow that needs one view
+  taps its segment (`expo.view.map`, `expo.view.list`) when that view isn't showing.
+
+## Calendar and reminders (#458)
+
+On an iPhone 17 simulator (iOS 26.5) with an `ios-simulator` build of `main` at
+`e5f2e0a` (Flet pin `15854a0ac`), on 2026-10-27, at iOS's `accessibility-large` text
+size (about 200 %): `calendar_export` passed in 2 min 36 s and `reminder_banner` in
+2 min 35 s, on a freshly erased simulator. What landed in the simulator's calendar was
+read from its store (`data/Library/Calendar/Calendar.sqlitedb`): both events at their
+UTC times (21:45 and 21:00 on May 15), each with its `UID` (`2026-<key>@…`) and an alarm
+600 s before. A second run on the same simulator finds the events already there: iOS
+then shows "Delete Event" (one event) or "Add (1)" (some added), and the subflow taps
+Add only when it shows. At 200 % text, Developer options' rows sit below the fold, so
+`open_developer.yaml` and `set_scene.yaml` scroll to each row before they tap it.
+The Android half runs later (#458).
 
 ## Run times (#348)
 
@@ -328,3 +383,48 @@ initials; `sponsors_large_text` passed with Bold Text at `accessibility-large` a
 `accessibility-extra-extra-extra-large`. A second scene in one flow first failed:
 Developer's feed URL kept its old tail, since the tap put the caret mid-URL, so
 `set_scene.yaml` now taps and erases twice. Not yet run on Android.
+
+**The expo flows (#454)**, on 2026-10-27, `main` at `e5f2e0a`, an `ios-simulator`
+build on an iPhone 17 simulator (iOS 26.5): the four `expo` journeys passed (1 min 24 s
+to 1 min 47 s each, 6 min 7 s in all). Not yet run on Android (#454's Android sweep).
+
+## Offline on a fresh iOS install
+
+Maestro cannot cut a simulator's network, so the launch's refresh reaches the year's
+feed. To see a fresh install start from the bundled data alone, give it Developer's
+feed URL before its first launch: SharedPreferences are the app container's own
+`NSUserDefaults` (`flutter.` + the key), not the simulator's global domain.
+
+```bash
+xcrun simctl install <udid> build/ios-simulator/pycon-us.app
+data=$(xcrun simctl get_app_container <udid> io.github.ndonkohenri.pyconus data)
+xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.ndonkohenri.pyconus" \
+  flutter.pycon.dev -string '{"feed_url": "http://127.0.0.1:9/conference-2026.json"}'
+```
+
+Then launch it without `clearState` (which would drop the value): its refresh finds no
+feed, and Settings › Refresh now says "Bundled with the app" (#454).
+
+## Venue pages (#456)
+
+The three `venue` flows, on 2026-10-27, `main` at `e5f2e0a` plus the flows, an
+`ios-simulator` build whose bundle matched `build/python-app`, Flet pin `15854a0ac`, at
+load averages of 15 to 730:
+
+| Device | Run | Result |
+|---|---|---|
+| iPhone 17, iOS 26.5 | `--include-tags=venue` | 3 of 3 passed, 4 min 12 s; `xcrun simctl pbpaste` gave the password |
+| iPad Air 11-inch (M4), iOS 26.5 (the rail) | `--include-tags=venue` | 3 of 3 passed, 5 min 9 s, through `tab.yaml`; `pbpaste` gave the password |
+| Android | not run yet | the Android sweep runs them, TalkBack and airplane mode included |
+
+At 200 % text (iOS's Larger Text at `accessibility-large`) the flows cannot start:
+Developer options' rows (`about_app.developer`, `developer.apply`) are below the fold,
+and the shared subflows tap them without a scroll. The pages were checked at 200 % in
+an app the flows had set up, after the text size changed: nothing clips, Report a
+concern stays first, and both copies are confirmed; the email address breaks inside
+`python.org` (#642).
+
+A simulator cannot be put in airplane mode, so on iOS the launch's own refresh may
+reach the year's live feed before Developer points the app at a feed that never
+answers; a cold start with no network is checked on Android. The three pages need no
+feed: they are bundled year data (`content.toml`).

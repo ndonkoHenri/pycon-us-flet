@@ -311,7 +311,11 @@ def test_2026_s_card_has_the_email_row_then_the_danger_and_staff_line(
     tile = tile_of(row)
     # One node read as action plus value.
     assert tile.title == "Email the Code of Conduct team"
-    assert tile.subtitle == "pycon-us-report@python.org"
+    # It may wrap only after its @ or a hyphen, never inside the domain (#642), and
+    # a screen reader says it as written.
+    assert isinstance(tile.subtitle, ft.Text)
+    assert tile.subtitle.value == "pycon-us-report@\u200bpython.org"
+    assert tile.subtitle.semantics_label == "pycon-us-report@python.org"
     assert copy_node(row).identifier == "help.copy.mailto"
     assert isinstance(line, ft.Container) and isinstance(line.content, ft.Text)
     assert str(line.content.value).startswith("If someone is in danger, contact local")
@@ -451,14 +455,17 @@ def test_contacts_without_help_show_the_card_alone(page: FakePage) -> None:
     [
         ("tel", "+15625550100", "+1 562-555-0100"),
         ("tel", "+442071234567", "+442071234567"),
-        ("mailto", "a@b.org", "a@b.org"),
+        ("mailto", "a@b.org", "a@\u200bb.org"),
         ("https", "https://example.org/report/", "example.org"),
     ],
 )
 def test_a_contact_s_line_is_its_value_as_it_reads(
     kind: str, value: str, line: str
 ) -> None:
-    """A North American number in groups, others as written, a page by its host."""
+    """A North American number in groups, an address with a break after its ``@``.
+
+    Other numbers read as written, a page by its host.
+    """
     assert contact_line(replace(HOTLINE, kind=kind, value=value)) == line
 
 

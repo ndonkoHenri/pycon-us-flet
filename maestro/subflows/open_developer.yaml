@@ -5,8 +5,11 @@
 # phone size (the iPhone 17 hides it under the bar).
 appId: io.github.ndonkohenri.pyconus
 ---
-- tapOn:
-    id: app.nav.more
+- runFlow:
+    file: tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
 - extendedWaitUntil:
     visible:
       id: more.title
@@ -21,6 +24,11 @@ appId: io.github.ndonkohenri.pyconus
     visible:
       id: about_app.version
     timeout: 15000
+# At 200 % text the version row and Developer options sit below the fold (#458).
+- scrollUntilVisible:
+    element:
+      id: about_app.version
+    direction: DOWN
 - runFlow:
     when:
       notVisible:
@@ -30,9 +38,13 @@ appId: io.github.ndonkohenri.pyconus
           id: about_app.version
           repeat: 7
           delay: 150
+- scrollUntilVisible:
+    element:
+      id: about_app.developer
+    direction: DOWN
 - tapOn:
     id: about_app.developer
 - extendedWaitUntil:
     visible:
-      id: developer.apply
+      id: developer.fake_clock
     timeout: 15000

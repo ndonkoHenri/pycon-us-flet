@@ -1,0 +1,124 @@
+# The reminders interim (D-60; NEW-05, NOTIF-01; #458): the in-app Banner on the
+# fake clock, then Settings' sentence.
+#
+# The fake clock starts at Friday 14:38, seven minutes before the 2:45 PM talks.
+# - Save session 25 ("pathlib: why and how to use it", Grand Ballroom B): the Banner
+#   says it starts in a few minutes, and stays on the Schedule after Back. Open shows
+#   the session over My schedule, and the Banner goes.
+# - Save session 126 (Grand Ballroom A, the same start): its own Banner; Dismiss sends
+#   it away.
+# - More › Settings › Reminders says reminders aren't available in this build; on iOS
+#   it adds that calendar exports include an alarm, which Android's import drops
+#   (D-272).
+appId: io.github.ndonkohenri.pyconus
+name: The reminder Banner on the fake clock, and Settings' interim
+tags:
+  - journeys
+  - reminders
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow:
+    file: ../subflows/start_offline.yaml
+    env:
+      NOW: 2026-05-15 14:38
+
+# Save session 25: its Banner shows.
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/session/25
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- tapOn:
+    id: session.favorite
+- extendedWaitUntil:
+    visible:
+      id: reminder.banner
+    timeout: 70000
+- assertVisible: "pathlib: why and how to use it starts in \\d+ min · Grand Ballroom B"
+- assertVisible:
+    id: reminder.dismiss
+- assertVisible:
+    id: reminder.open
+
+# The Banner is the app's, not the View's: Back keeps it.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: app.nav.schedule
+    timeout: 15000
+- assertVisible:
+    id: reminder.banner
+
+# Open: the session over My schedule, and the Banner goes.
+- tapOn:
+    id: reminder.open
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: reminder.banner
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.25
+    timeout: 15000
+
+# Save session 126: a new Banner; Dismiss sends it away.
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/session/126
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- tapOn:
+    id: session.favorite
+- extendedWaitUntil:
+    visible:
+      id: reminder.banner
+    timeout: 70000
+- assertVisible: "Distributing AI with Python in the Browser: .* starts in \\d+ min · Grand Ballroom A"
+- tapOn:
+    id: reminder.dismiss
+- extendedWaitUntil:
+    notVisible:
+      id: reminder.banner
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+
+# Settings' Reminders section: the interim's sentence, no switch.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.settings
+    direction: DOWN
+- tapOn:
+    id: more.settings
+- scrollUntilVisible:
+    element:
+      id: settings.reminders.interim
+    direction: DOWN
+    timeout: 30000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: "Reminders aren't available in this build\\. Your next session appears on Now, and calendar exports include an alarm\\."
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Reminders aren't available in this build\\. Your next session appears on Now\\."

@@ -1,0 +1,100 @@
+# EXPO-03, EXPO-04 (#454): More › Expo hall › List › "socal" › booth 726 › its card ›
+# an exhibitor's page › Back.
+#
+# The List narrows to SoCal Python as "socal" is typed (EXPO-03, D-46). Its row selects
+# booth 726 on the Map with its card; 726 is shared with PyBeach, so the card lists both
+# exhibitors, each a row to its page (D-254). SoCal Python's row pushes
+# /more/plan/expo/sponsor/socal-python; Back leaves that one View, and the hall shows
+# again with 726's card.
+#
+# Under Maestro on Android the app sees a screen reader (F72) and opens the expo on the
+# List; on iOS it opens on the Map. The flow taps List when the field isn't there.
+appId: io.github.ndonkohenri.pyconus
+name: More, Expo hall, the List narrowed, a booth's card, an exhibitor, then Back
+tags:
+  - journeys
+  - expo
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Expo hall.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.expo
+    direction: DOWN
+- tapOn:
+    id: more.expo
+- extendedWaitUntil:
+    visible:
+      id: expo.view.list
+    timeout: 15000
+
+# → List.
+- runFlow:
+    when:
+      notVisible:
+        id: expo.filter
+    commands:
+      - tapOn:
+          id: expo.view.list
+- extendedWaitUntil:
+    visible:
+      id: expo.filter
+    timeout: 15000
+
+# "socal": one row, SoCal Python at 726.
+- tapOn:
+    id: expo.filter
+- inputText: socal
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: expo.row.726.socal-python
+    timeout: 15000
+- assertVisible:
+    id: expo.count
+- assertNotVisible:
+    id: expo.row.726.pybeach
+
+# → its row: the Map at 726, with the card naming both exhibitors.
+- tapOn:
+    id: expo.row.726.socal-python
+- extendedWaitUntil:
+    visible:
+      id: expo.card
+    timeout: 15000
+- assertVisible:
+    id: expo.view.map
+    selected: true
+- assertVisible:
+    id: expo.card.sponsor.pybeach
+- assertVisible:
+    id: expo.card.sponsor.socal-python
+
+# → SoCal Python's page.
+- tapOn:
+    id: expo.card.sponsor.socal-python
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: SoCal Python
+    timeout: 15000
+- assertNotVisible:
+    id: expo.card
+
+# Back: the hall again, with 726's card.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: expo.card.sponsor.socal-python
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title

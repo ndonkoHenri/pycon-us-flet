@@ -62,7 +62,7 @@ def check_psf(psf: PsfInfo, file: str) -> None:
     A row's identifier is ``psf.link.<semantics_key(label)>`` (D-33), so two labels
     that give one key ("PSF blog", "PSF Blog") are refused, as is a label with no
     letter or digit, whose key is empty. A brand or an icon names something the page
-    draws, so ``tests/test_year_info.py``'s
+    draws, so ``tests/test_year_links.py``'s
     ``test_psf_brands_are_bundled_marks_and_icons_are_material_icons`` checks every
     bundled year's names against ``ui.brands`` and ``ft.Icons``, as the tracks' icons
     are (the loader imports nothing from Flet).

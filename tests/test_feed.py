@@ -2,8 +2,8 @@
 
 They run on the recorded 2025 and 2026 feeds, under two machine time zones (``machine_tz``).
 Edge cases are deep copies of the recorded feeds with one record changed. Ionic's rules
-have their own tests in ``test_rules.py``, and the invariants and snapshot of the
-processed model are in ``test_feed_invariants.py``.
+have their own tests in ``test_rules.py`` and ``test_rules_details.py``, and the
+invariants and snapshot of the processed model are in ``test_feed_invariants.py``.
 """
 
 import logging

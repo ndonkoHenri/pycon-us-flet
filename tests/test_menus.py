@@ -1,6 +1,6 @@
 """Tests for ``ui/menus.py``: the overflow menu and its items (F47, D-233).
 
-The screens' own tests click the items (``test_session.py``, ``test_sprints.py``,
+The screens' own tests click the items (``test_session_actions.py``, ``test_sprints.py``,
 ``test_track_add_all.py``); these hold the item's shape, which is what makes its
 label wrap at 200 % text, and a scan keeps every menu item on it.
 """

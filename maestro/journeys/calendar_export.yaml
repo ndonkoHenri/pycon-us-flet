@@ -1,0 +1,86 @@
+# Calendar exports (D-60's interim, D-272; SESS-04, SESS-05; #458): session detail's
+# Add to calendar, then My schedule's Export to calendar (.ics), each through the
+# system's screens and back to the app (subflows/calendar_handoff.yaml).
+#
+# - Session 25 ("pathlib: why and how to use it", Friday 2:45 PM): its overflow's Add to
+#   calendar. iOS shows the one event with its Alert, "10 minutes before"; Android
+#   saves the file and says how to open it.
+# - Star it and session 30 (2:00 PM), then My schedule's overflow exports both: iOS
+#   lists "2 Events", with "Add (1)" when session 25 is in the calendar already.
+#
+# What lands in the calendar (the times in UTC, the alarm of each event, the UIDs)
+# the flow cannot read; #458's check read it from the simulator's calendar store.
+appId: io.github.ndonkohenri.pyconus
+name: Add a session and My schedule to the calendar
+tags:
+  - journeys
+  - calendar
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Session detail: Add to calendar.
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/session/25
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- tapOn:
+    id: session.overflow
+- tapOn:
+    id: session.add_to_calendar
+- runFlow:
+    file: ../subflows/calendar_handoff.yaml
+    env:
+      FILE: pathlib-why-and-how-to-use-it
+      ALARM: "true"
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+
+# Save it and session 30 to My schedule.
+- tapOn:
+    id: session.favorite
+- assertVisible:
+    id: session.favorite
+    checked: true
+- runFlow:
+    file: ../subflows/open_link.yaml
+    env:
+      ROUTE: /schedule/session/30
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- tapOn:
+    id: session.favorite
+- assertVisible:
+    id: session.favorite
+    checked: true
+- runFlow: ../subflows/back.yaml
+
+# My schedule: Export to calendar (.ics), both sessions in one file.
+- tapOn:
+    id: app.nav.my_schedule
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.30
+    timeout: 15000
+- tapOn:
+    id: my_schedule.overflow
+- tapOn:
+    id: my_schedule.export
+- runFlow:
+    file: ../subflows/calendar_handoff.yaml
+    env:
+      FILE: pycon-us-2026-my-schedule
+      ALARM: "false"
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.title
+    timeout: 15000

@@ -1,0 +1,29 @@
+# Open one of the Map's panes by its tab (map.tab.<slug>).
+#
+# The bar scrolls (D-312): at the largest text only Rooms and part of Floor plans fit a
+# phone, so the bar is swiped left from a tab it shows until the tab is there (a swipe
+# from a tab moves the bar about one tab). For the later panes only: the bar is never
+# swiped back to Rooms.
+#
+# env:
+#   TAB  the pane's slug: floor-plans, expo or job-fair.
+appId: io.github.ndonkohenri.pyconus
+---
+- tapOn:
+    id: app.nav.map
+- extendedWaitUntil:
+    visible:
+      id: "map\\.tab\\..*"
+    timeout: 15000
+- repeat:
+    while:
+      notVisible:
+        id: map.tab.${TAB}
+    times: 4
+    commands:
+      - swipe:
+          from:
+            id: "map\\.tab\\..*"
+          direction: LEFT
+- tapOn:
+    id: map.tab.${TAB}
