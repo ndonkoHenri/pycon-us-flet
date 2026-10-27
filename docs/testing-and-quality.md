@@ -509,6 +509,9 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
 | `sponsors_back` | journeys | More › Sponsors › a sponsor › Back returns to the same card (SPON-01, #496) |
 | `sponsor_find_booth` | journeys | A sponsor › Find booth › Back: the hall at the booth, then the sponsor again (SPON-04, #409) |
+| `wifi_copy` | journeys, venue | More › Wi-Fi shows both values with the feed unreachable; Copy password copies (INFO-08, #456) |
+| `help_report` | journeys, venue | Help & safety opens on Report a concern; its Copy copies the address (INFO-07, #456) |
+| `venue_open_now` | journeys, venue | On a conference morning Venue & hours says which services are open now (MAP-09, #456) |
 | `deep_links` | journeys, deep_links | Links land on their target with the root below, cold and warm; an unknown id and an unknown path; an open sheet closes (D-291, #518). Its default scheme and host must equal `[tool.flet.deep_linking]`, which `tests/test_deep_link_flow.py` checks |
 | `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
 
