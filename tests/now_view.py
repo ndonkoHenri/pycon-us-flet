@@ -28,6 +28,7 @@ from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
 from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
 from pycon_us.screens import now as screen
 from pycon_us.services import Services
 from pycon_us.state import Conference
@@ -207,12 +208,14 @@ async def render(
             ticks: Ticks | None = None,
             memory: ViewMemory | None = None,
             change_log: ChangeLog | None = None,
+            prefs: Prefs | None = None,
         ) -> Shown:
             """Render Now at ``now``, with ``saved`` in My schedule.
 
             With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
             ``memory`` is the process's view memory, when a test keeps one;
-            ``change_log`` the session's, when a test records batches.
+            ``change_log`` the session's, when a test records batches; ``prefs``
+            the settings, large text say, when a test sets them.
             """
             held = [now]
             ticker = ticks or Ticks()
@@ -242,6 +245,7 @@ async def render(
                     saved=saved,
                     memory=memory,
                     change_log=change_log,
+                    prefs=prefs,
                     kind=partial(Shown, clock=held, ticks=ticker),
                 )
             )

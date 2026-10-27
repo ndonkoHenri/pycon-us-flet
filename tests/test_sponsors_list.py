@@ -20,6 +20,7 @@ import pytest
 from pycon_us.config import load_year
 from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
+from pycon_us.prefs import Prefs
 from pycon_us.screens import sponsors as screen
 from pycon_us.state import Conference
 from tests import harness
@@ -56,8 +57,9 @@ class Listed(Shown):
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Render the Sponsors page and record which item bodies ran.
 
-    It takes a ``conference``, the recorded 2026 one by default. Each item body asks
-    for its phrase once, so counting the calls counts the bodies (S2).
+    It takes a ``conference``, the recorded 2026 one by default, and ``prefs``, the
+    defaults by default. Each item body asks for its phrase once, so counting the
+    calls counts the bodies (S2).
     """
     phrase = screen.sponsor_phrase
 
@@ -69,7 +71,9 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
     async with AsyncExitStack() as stack:
 
-        async def render(conference: Conference | None = None) -> Listed:
+        async def render(
+            conference: Conference | None = None, *, prefs: Prefs | None = None
+        ) -> Listed:
             return await stack.enter_async_context(
                 harness.showing(
                     screen.Sponsors,
@@ -81,6 +85,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path=VIEW,
+                    prefs=prefs,
                     kind=Listed,
                 )
             )
@@ -223,6 +228,30 @@ async def test_the_next_two_levels_are_logo_cards_sharing_a_responsive_row(
             (plate,) = plates(merged)
             assert plate.height == screen.LOGO_PLATE
             assert plate.width is None
+
+
+def test_logo_cards_take_a_whole_row_only_at_large_text() -> None:
+    """``logo_columns()``: two or more to a row, one at large text (#649)."""
+    assert screen.logo_columns(False) == screen.LOGO_COLUMNS
+    assert screen.logo_columns(True) == 12  # all of a ResponsiveRow's columns
+
+
+async def test_logo_cards_go_one_to_a_row_when_the_text_grows_large(
+    show: Any,
+) -> None:
+    """At the largest sizes half a phone's width broke a name inside a word (#649).
+
+    The probe's answer (``Prefs.time_above``) reaches the memoised cards: each takes
+    the whole row, and the other tiers keep their shape.
+    """
+    prefs = Prefs(loaded=True)
+    shown = await show(prefs=prefs)
+    logo_slugs = [s.slug for level in DATA.sponsor_levels[1:3] for s in level.sponsors]
+    prefs.time_above = True
+    await shown.settle()
+    assert [item_of(shown, slug).col for slug in logo_slugs] == [12] * len(logo_slugs)
+    top = DATA.sponsor_levels[0].sponsors[0]
+    assert isinstance(item_of(shown, top.slug).content, ft.Card)
 
 
 async def test_the_other_levels_are_rows_with_a_48_dp_plate(show: Any) -> None:

@@ -108,9 +108,9 @@ tags:
           id: jobs.filter
           text: temporal
 - pressKey: Enter
-# The job fair's card heads the list, a screen tall at this size, and the strip, the
-# field and the count fill the screen's top half, so scrollUntilVisible's swipe, from
-# the middle, starts on the field: swipe the list itself, low on the screen.
+# The job fair's card heads the list, a screen tall at this size, under the strip, the
+# field and the count, which scroll with it at the largest sizes (#649); a swipe from the
+# middle can start on the field: swipe the list low on the screen.
 - repeat:
     while:
       notVisible:

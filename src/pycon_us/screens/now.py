@@ -169,7 +169,7 @@ def Now() -> ft.View:
         sponsor = pick_spotlight(candidates, memory.spotlight, memory.rng)
         if sponsor is not None:
             memory.spotlight = sponsor.slug
-            rows.append(Spotlight(sponsor, view_path))
+            rows.append(Spotlight(sponsor, view_path, large_text=prefs.time_above))
     return AppScaffold(
         title="Now",
         actions=[search_button(svc.memory, "all")],

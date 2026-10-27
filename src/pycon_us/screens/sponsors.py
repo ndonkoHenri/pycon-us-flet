@@ -10,7 +10,7 @@ An intro line, then a level-2 heading per level, in the feed's ``level_order``
   the booth;
 - the next two as logo cards, two to a phone's row, more on a wider screen
   (``ft.ResponsiveRow``, D-279: a ``GridView`` cannot size itself to its content
-  inside the page's list, U32);
+  inside the page's list, U32), and one to a row at large text (``logo_columns()``);
 - the rest as rows with a 48 dp plate.
 
 Tiers go by a level's place, never its name, so next year's levels need no code. Each
@@ -31,6 +31,7 @@ import flet as ft
 
 from pycon_us.core.models import Sponsor, SponsorLevel
 from pycon_us.locations import drill_href
+from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -71,6 +72,11 @@ LOGO_COLUMNS: ft.ResponsiveNumber = {"xs": 6, "sm": 4, "md": 3}
 """A logo card's share of a ``ResponsiveRow``'s 12 columns, by Flet's breakpoints
 (the page's width): two cards to a phone's row, three from 576 dp, four from 768 dp."""
 
+LOGO_COLUMNS_AT_LARGE_TEXT: ft.ResponsiveNumber = 12
+"""A logo card's share at large text: the row's whole width, one card to a row. Half
+a phone's width broke a name inside a word at the largest sizes, "Anaco / nda, Inc"
+(#649); a whole one wraps it between its words."""
+
 GAP = 8
 """The space between logo cards, across and down, in dp: §3.6's grid within a group."""
 
@@ -86,6 +92,20 @@ def tier_of(position: int) -> Tier:
     if position < FEATURE_LEVELS + LOGO_LEVELS:
         return "logo"
     return "tile"
+
+
+def logo_columns(large_text: bool) -> ft.ResponsiveNumber:
+    """Return a logo card's share of its ``ResponsiveRow``'s 12 columns.
+
+    Two or more cards to a row (``LOGO_COLUMNS``), or one when the text is large for
+    the width (``Prefs.time_above``, D-216, the signal detail titles and the
+    Schedule's head use, D-328, D-345), where a name in half a phone's width broke
+    inside a word (#649).
+
+    Args:
+        large_text: The text is large for the width (``Prefs.time_above``).
+    """
+    return LOGO_COLUMNS_AT_LARGE_TEXT if large_text else LOGO_COLUMNS
 
 
 def sponsor_phrase(sponsor: Sponsor) -> str:
@@ -123,6 +143,7 @@ def level_line(sponsor: Sponsor) -> str:
 def Sponsors() -> ft.View:
     """The Sponsors page: the strip, then the intro and a section per level."""
     svc = use_services()
+    prefs = use_prefs()
     margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     data = conference.data
@@ -163,29 +184,37 @@ def Sponsors() -> ft.View:
             )
         )
         for position, level in enumerate(data.sponsor_levels):
-            items.extend(level_section(level, tier_of(position)))
+            items.extend(
+                level_section(level, tier_of(position), large_text=prefs.time_above)
+            )
     return AppScaffold(
         title=TITLE,
         body=ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
     )
 
 
-def level_section(level: SponsorLevel, tier: Tier) -> list[ft.Control]:
+def level_section(
+    level: SponsorLevel, tier: Tier, *, large_text: bool
+) -> list[ft.Control]:
     """Return one level's heading and its sponsors, drawn as its tier says.
 
     Args:
         level: The level and its sponsors, in feed order.
         tier: How its sponsors are drawn (``tier_of()``).
+        large_text: The text is large for the width (``Prefs.time_above``): logo
+            cards go one to a row (``logo_columns()``).
     """
     heading = SectionHeader(level.name)
-    sponsors = [SponsorItem(sponsor, tier) for sponsor in level.sponsors]
+    sponsors = [
+        SponsorItem(sponsor, tier, large_text=large_text) for sponsor in level.sponsors
+    ]
     if tier != "logo":
         return [heading, *sponsors]
     grid = ft.ResponsiveRow(sponsors, spacing=GAP, run_spacing=GAP)
     return [heading, ft.Container(grid, padding=ft.Padding.symmetric(horizontal=16))]
 
 
-def SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
+def SponsorItem(sponsor: Sponsor, tier: Tier, *, large_text: bool) -> ft.Control:
     """Return one sponsor as its tier draws it, a memoised component keyed by its slug.
 
     Given the same sponsor it skips its body (D-153, F34), so a refresh that keeps the
@@ -194,15 +223,17 @@ def SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
     Args:
         sponsor: The sponsor, the same object for one feed version.
         tier: How it is drawn.
+        large_text: The text is large for the width: a logo card takes a whole row
+            (``logo_columns()``).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
-    return _SponsorItem(sponsor, tier, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
+    return _SponsorItem(sponsor, tier, large_text, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
 @ft.component
-def _SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
-    """The body of ``SponsorItem``; it runs only when its sponsor or tier changes."""
+def _SponsorItem(sponsor: Sponsor, tier: Tier, large_text: bool) -> ft.Control:
+    """The body of ``SponsorItem``; it runs only when one of its arguments changes."""
     view_path = ft.use_view_path()
     page = ft.context.page
 
@@ -216,7 +247,7 @@ def _SponsorItem(sponsor: Sponsor, tier: Tier) -> ft.Control:
     plate = FEATURE_PLATE if tier == "feature" else LOGO_PLATE
     card = _card(sponsor, plate, texts, go)
     if tier == "logo":
-        card.col = LOGO_COLUMNS  # the ResponsiveRow reads it from its child
+        card.col = logo_columns(large_text)  # the ResponsiveRow reads it from its child
     return card
 
 
