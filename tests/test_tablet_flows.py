@@ -93,7 +93,9 @@ def test_about_app_accepts_the_failure_line_only_when_the_run_expects_it() -> No
 
     Elsewhere a share error must fail the flow rather than pass as the iPad's outcome.
     """
-    assert "assertVisible:\n          id: about_app.report_outcome" in share_branch(FAILS)
+    assert "assertVisible:\n          id: about_app.report_outcome" in share_branch(
+        FAILS
+    )
     assert "Couldn't open" not in share_branch(OPENS)
 
 
@@ -104,7 +106,9 @@ def test_about_app_waits_for_each_platform_s_sheet_before_dismissing_it() -> Non
     """
     before, _, _ = share_branch(OPENS).partition("../subflows/dismiss_share.yaml")
     for platform, sheet in (("Android", '".*resolver_list"'), ("iOS", "ShareSheet")):
-        wait = rf"platform: {platform}\n.*?extendedWaitUntil:\n\s+visible:\n\s+id: {sheet}"
+        wait = (
+            rf"platform: {platform}\n.*?extendedWaitUntil:\n\s+visible:\n\s+id: {sheet}"
+        )
         assert re.search(wait, before, flags=re.DOTALL), platform
 
 
