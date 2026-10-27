@@ -145,6 +145,17 @@ def test_the_dot_shows_only_when_the_filter_differs_from_the_default() -> None:
     assert not differs_from_default({"Talk"}, ())  # no open spaces to show anyway
 
 
+def test_the_registry_is_what_the_sheet_reads() -> None:
+    """The groups come from conference.toml, not code: a moved track moves its chip."""
+    talk = next(t for t in INFO.tracks if t.key == "Talk")
+    moved = dataclasses.replace(talk, group="community")
+    edited = dataclasses.replace(
+        INFO, tracks=tuple(moved if t.key == "Talk" else t for t in INFO.tracks)
+    )
+    groups = {g.label: g.tracks for g in filter_groups(edited, {"Talk", "Keynote"})}
+    assert groups == {"Talks and keynotes": ("Keynote",), "Community": ("Talk",)}
+
+
 # ------------------------------------------------------------------ the summary
 
 
@@ -288,14 +299,3 @@ async def test_the_summary_keeps_its_place_so_the_day_pages_keep_theirs(
     assert [type(c) for c in after][2:] == [type(c) for c in before][2:]
     pages = after[-1]  # the day pages, over the landing note (D-241)
     assert isinstance(pages, ft.Stack) and isinstance(pages.controls[-1], ft.TabBarView)
-
-
-def test_the_registry_is_what_the_sheet_reads() -> None:
-    """The groups come from conference.toml, not code: a moved track moves its chip."""
-    talk = next(t for t in INFO.tracks if t.key == "Talk")
-    moved = dataclasses.replace(talk, group="community")
-    edited = dataclasses.replace(
-        INFO, tracks=tuple(moved if t.key == "Talk" else t for t in INFO.tracks)
-    )
-    groups = {g.label: g.tracks for g in filter_groups(edited, {"Talk", "Keynote"})}
-    assert groups == {"Talks and keynotes": ("Keynote",), "Community": ("Talk",)}
