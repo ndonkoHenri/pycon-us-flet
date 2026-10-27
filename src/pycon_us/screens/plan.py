@@ -372,10 +372,12 @@ def ExpoPlan() -> ft.View:
     """``…/plan/expo``: the expo hall pushed as a View, named by its plan (ux.md §6.2).
 
     A year without booths has no hall: its expo plan, or its not-found state, is
-    ``PlanViewer``'s.
+    ``PlanViewer``'s. The View's path keys the hall's zoom, so a switch to the List
+    and back puts it back, apart from the Map pane's (D-18).
     """
+    view_path = ft.use_view_path()  # before the return: no conditional hooks (D-70)
     year_map = use_services().year.map
     plan = year_map.plan(EXPO_PLAN)
     if plan is None or not year_map.booths:
         return PlanViewer(plan_id=EXPO_PLAN)
-    return AppScaffold(title=plan.title, body=ExpoPane())
+    return AppScaffold(title=plan.title, body=ExpoPane(view_path))

@@ -26,13 +26,14 @@ from pycon_us.core.expo import (
 )
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.screens import expo_list, expo_pane
+from pycon_us.screens import expo_list, expo_pane, plan
 from pycon_us.screens import map as screen
 from pycon_us.screens.expo import placed_booths
 from pycon_us.state import Conference
 from tests import sessions
 from tests.feeds import processed
 from tests.trees import descendants
+from tests.viewers import FakeViewer
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -334,3 +335,44 @@ def test_the_count_line_says_match_or_matches() -> None:
     """One match, then matches."""
     assert expo_list.found_line(1) == "1 match"
     assert expo_list.found_line(4) == "4 matches"
+
+
+async def test_a_pushed_hall_keeps_its_zoom_across_the_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``…/plan/expo``: Map, List, Map puts the zoom back, under the View's path (D-18)."""
+    viewer = FakeViewer()
+    viewer.install(monkeypatch)
+    path = "/map/plan/expo"
+    async with sessions.showing(
+        plan.ExpoPlan,
+        plan,
+        year=YEAR,
+        conference=Conference(data=DATA, source="bundled", version=1),
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        view_path=path,
+        prefs=Prefs(loaded=True, reduce_motion=True),
+        kind=ListShown,
+    ) as shown:
+
+        async def lay_out() -> None:
+            """Report the hall's size, as Flutter does after its first layout."""
+            (sized,) = [c for c in shown.find(ft.Container) if c.on_size_change]
+            await shown.event(sized, "size_change", {"w": 382.0, "h": 560.0})
+
+        await lay_out()
+        viewer.scale, viewer.x, viewer.y = 3.0, -300.0, -150.0
+        (layer,) = shown.find(ft.InteractiveViewer)
+        data = {"s": 3.0, "tx": -300.0, "ty": -150.0, "tz": 0.0, "m": []}
+        await shown.event(layer, "transform_changed", data)
+        assert shown.memory.map_zooms == {path: (3.0, -300.0, -150.0)}
+        await shown.show(expo_pane.LIST_VIEW)
+        viewer.scale, viewer.x, viewer.y = 1.0, 0.0, 0.0  # the next viewer is new
+        viewer.calls.clear()
+        await shown.show(expo_pane.MAP)
+        await lay_out()
+        assert [name for name, _ in viewer.calls] == ["reset", "zoom", "pan"]
+        assert (viewer.scale, viewer.x, viewer.y) == pytest.approx(
+            (3.0, -300.0, -150.0)
+        )

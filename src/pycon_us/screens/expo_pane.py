@@ -46,8 +46,8 @@ def ExpoPane(zoom_key: str = "") -> ft.Control:
     """The expo: the Map | List switch over the hall or the List (EXPO-01, #404).
 
     Args:
-        zoom_key: The hall's ``zoom_key``: the Map pane's slug, or empty for
-            ``…/plan/expo``.
+        zoom_key: The hall's ``zoom_key``: the Map pane's slug, or the View's path
+            for ``…/plan/expo``.
     """
     svc = use_services()
     prefs = use_prefs()
