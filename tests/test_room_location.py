@@ -106,6 +106,40 @@ async def test_the_card_heads_today_s_list_before_now_in_this_room(
     assert second in ancestors(now)
 
 
+async def test_now_in_this_room_is_a_semantics_node_after_the_card(
+    render: Render,
+) -> None:
+    """Screen readers read the card, then "Now in this room", as drawn (#656).
+
+    "Now" is a semantics container of its own, holding its heading and tile: without
+    one, the heading's flags and label merged up into the list item's node, the card
+    became that node's child, and TalkBack read the heading first. Its node follows
+    the card's in the head, and the card is in no container of "Now".
+    """
+    room = await render(VIEW, now=SATURDAY_MORNING)
+    head = cast(ft.Column, room.day_lists()[1].controls[0])
+    (card,) = [n for n in room.nodes("room.location") if head in ancestors(n)]
+    (now,) = room.nodes("room.now")
+    first, second = head.controls
+    assert first in ancestors(card)
+    # The outermost semantics container between the tile and the head's second
+    # control: "Now"'s own node, after the card's.
+    (section, *_) = [
+        c
+        for c in reversed(ancestors(now))
+        if isinstance(c, ft.Semantics)
+        and c.container
+        and (c is second or second in ancestors(c))
+    ]
+    assert section not in ancestors(card)
+    headings = [
+        c
+        for c in room.session.index.values()
+        if isinstance(c, ft.Semantics) and c.header and section in ancestors(c)
+    ]
+    assert [texts(h) for h in headings] == [["Now in this room"]]
+
+
 async def test_the_card_pulses_once_per_room_view(render: Render) -> None:
     """Each day's list builds a card; only the first to mount pulses (D-34)."""
     room = await render(VIEW)
