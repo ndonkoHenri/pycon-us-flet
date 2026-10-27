@@ -49,6 +49,8 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s on iOS, still new on Android until the list is left (a screen reader's rule, F72); My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss; Settings' Reminders sentence, with the alarm on iOS only (D-60, D-272, #458) |
+| `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
+| `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` (an iPad, U95, #525) "Couldn't open the share sheet." (INFO-03, INFO-04, #461) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -392,6 +394,67 @@ Developer's feed URL kept its old tail, since the tap put the caret mid-URL, so
 **The expo flows (#454)**, on 2026-10-27, `main` at `e5f2e0a`, an `ios-simulator`
 build on an iPhone 17 simulator (iOS 26.5): the four `expo` journeys passed (1 min 24 s
 to 1 min 47 s each, 6 min 7 s in all). Not yet run on Android (#454's Android sweep).
+
+## Tablets and landscape (#461)
+
+`rail_tabs` and `about_app` (tag `tablet`) run on a tablet in both orientations and on
+a phone in landscape. `ORIENTATION=LANDSCAPE` turns the device a quarter turn from its
+natural orientation first (`subflows/orientation.yaml`); without it the device is put
+back in its natural one. On the Pixel Tablet AVD (`pycon_tablet_api36`,
+[`docs/development.md`](../docs/development.md) §5.5) the natural orientation is
+landscape, so there `ORIENTATION=LANDSCAPE` is portrait. `rail_tabs` asserts that no
+bar shows on a tab root, so it fails on a phone in portrait by design.
+
+```bash
+# Android: the tablet AVD (read-only after its first boot), then the Pixel 6a turned.
+~/Library/Android/sdk/emulator/emulator -avd pycon_tablet_api36 -read-only -no-audio -no-boot-anim -port 5578 &
+adb -s emulator-5578 install -r build/apk/pycon-us.apk
+maestro --device emulator-5578 test --include-tags=tablet maestro                         # landscape
+maestro --device emulator-5578 test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro  # portrait
+adb -s emulator-5578 shell cmd uimode night yes   # dark; `no` for light
+
+# iOS: an iPad of your own, where the sheet cannot open at this pin (U95), so
+# SHARE_FAILS=true expects about_app's failure line; then an iPhone 17 in landscape.
+xcrun simctl create "<issue>-ipadpro11" "iPad Pro 11-inch (M5)" com.apple.CoreSimulator.SimRuntime.iOS-26-5
+maestro --device <udid> test -e SHARE_FAILS=true --include-tags=tablet maestro
+maestro --device <udid> test -e SHARE_FAILS=true -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
+maestro --device <iphone-udid> test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
+xcrun simctl ui <udid> appearance dark   # or light
+```
+
+Each step's screenshot (`rail-01-now` … `about-04-share`) lands in the run's
+`takeScreenshot/` folder under `--test-output-dir`: look at them for the rail, the
+content widths (D-305) and the sheets. Android saves them as shown; iOS saves a
+landscape screen in portrait, so turn it a quarter clockwise to read it.
+
+What the flows met on the way, now handled in the shared subflows:
+- On an iPad in landscape the keyboard covers the middle of the screen, where a scroll
+  swipes: `set_scene.yaml` closes it after the fake clock, or the feed URL stayed out
+  of sight.
+- On a phone in landscape About this app's version row is below the fold:
+  `open_developer.yaml` waits for the push (More's row gone), then scrolls.
+- On an iPad in landscape Report a problem rests on the list's end, and the line under
+  it comes in below the fold: with `SHARE_FAILS=true`, `about_app` scrolls to it.
+- Each run says which outcome it expects (`SHARE_FAILS`), so a share error where the
+  sheet should open fails: elsewhere the flow waits for the sheet itself (Android's
+  chooser list, `resolver_list`; iOS's `ShareSheet.RemoteContainerView`), and after
+  the dismissal checks at the list's end that no outcome line came (D-297).
+- iOS 26's share sheet lies over a dismiss region (`PopoverDismissRegion`) in both
+  orientations; `subflows/dismiss_share.yaml` taps it on the right, since a tap near the
+  left edge of an iPhone in landscape left the sheet open.
+
+**Results** (2026-10-27, `main` at `e0f3c1f` plus these flows, Flet pin `15854a0ac`,
+load averages 2 to 16):
+
+| Device | Run | Result |
+|---|---|---|
+| iPad Pro 11-inch (M5), iOS 26.5, `ios-simulator` build | `tablet`, portrait and landscape, light | 2 of 2 passed each (4 min 25 s, 5 min 6 s) |
+| same | `rail_tabs`, portrait and landscape, dark | passed |
+| iPhone 17, iOS 26.5 | `tablet` in landscape; `about_app` in portrait | passed (7 min 13 s for the pair) |
+| `pycon_tablet_api36`, Android 16, release APK (arm64) | `tablet`, landscape and portrait, light | 2 of 2 passed each (7 min 20 s, 6 min 18 s) |
+| same | `rail_tabs`, landscape, dark | passed |
+| same | `rail_tabs`, portrait, dark | stopped twice in `set_scene.yaml` while erasing the feed URL (the caret sat at the field's start, and Maestro's erase never returned), at a load average of 15; the dark portrait screenshots were taken by hand |
+| `pycon_pixel6a_api36`, Android 16, release APK | `tablet` in landscape | 2 of 2 passed, 7 min 37 s; More, at the short rail's bottom edge, is reached through `tab.yaml` |
 
 ## Offline on a fresh iOS install
 

@@ -20,11 +20,12 @@ appId: io.github.ndonkohenri.pyconus
     direction: DOWN
 - tapOn:
     id: more.app
+# About this app is pushed once More's row has gone. At 200 % text, and on a phone in
+# landscape, the version row and Developer options sit below the fold (#458, #461).
 - extendedWaitUntil:
-    visible:
-      id: about_app.version
+    notVisible:
+      id: more.app
     timeout: 15000
-# At 200 % text the version row and Developer options sit below the fold (#458).
 - scrollUntilVisible:
     element:
       id: about_app.version

@@ -1,0 +1,163 @@
+# INFO-03, INFO-04 (#441, #442, #443, #461): More › About this app: the data row, the
+# Licences page and a licence's text, each Back one View, and Report a problem's share.
+#
+# Schedule says where the schedule came from and its age (D-292): "Bundled with the
+# app" offline on Android, "From the feed" on iOS, whose launch may reach the feed
+# (start_offline.yaml). Licences pushes /more/app/licences and a row its text (D-296).
+# Report a problem opens the share sheet with the log (D-297); a dismissed sheet says
+# nothing. On an iPad the sheet cannot open at the Flet pin (F115, U95, #525), and the
+# line under the row says so: run it there with SHARE_FAILS=true, which checks that
+# line instead of the sheet, so it fails once U95 lands and the sheet opens; then the
+# iPad runs without it. ORIENTATION turns the device first (subflows/orientation.yaml).
+#
+# env:
+#   SHARE_FAILS  true expects "Couldn't open the share sheet."; anything else (the
+#                default) expects the system's sheet, dismissed with no line.
+appId: io.github.ndonkohenri.pyconus
+name: About this app, its data row, Licences and Report a problem
+tags:
+  - journeys
+  - tablet
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/orientation.yaml
+- runFlow: ../subflows/start_offline.yaml
+
+# More › About this app.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.app
+    direction: DOWN
+- tapOn:
+    id: more.app
+# Pushed once More's row has gone.
+- extendedWaitUntil:
+    notVisible:
+      id: more.app
+    timeout: 15000
+
+# The data rows: the conference, and the schedule's source and age in Refresh now's
+# words. On a phone in landscape they sit at the fold.
+- scrollUntilVisible:
+    element:
+      id: about_app.schedule
+    direction: DOWN
+- assertVisible:
+    text: "Conference\\s+PyCon US 2026"
+- assertVisible:
+    id: about_app.schedule
+    text: "Schedule\\s+(Bundled with the app|From the feed), updated .+"
+- takeScreenshot: about-01-top
+
+# Licences › Python's text › Back › Back: About this app again.
+- scrollUntilVisible:
+    element:
+      id: about_app.licences
+    direction: DOWN
+- tapOn:
+    id: about_app.licences
+- extendedWaitUntil:
+    visible:
+      id: licences.app
+    timeout: 15000
+- assertNotVisible:
+    id: about_app.version
+- takeScreenshot: about-02-licences
+- scrollUntilVisible:
+    element:
+      id: licences.python
+    direction: DOWN
+- tapOn:
+    id: licences.python
+- extendedWaitUntil:
+    visible:
+      id: licence.header
+      text: "PSF-2\\.0\\s+Copyright 2001 Python Software Foundation"
+    timeout: 15000
+- takeScreenshot: about-03-licence
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: licences.python
+    timeout: 15000
+- assertNotVisible:
+    id: licence.header
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: about_app.licences
+    timeout: 15000
+- assertNotVisible:
+    id: licences.python
+
+# Report a problem: the system's share sheet, then dismissed with no line; or, with
+# SHARE_FAILS=true (an iPad at this pin, U95), the line that says it couldn't open.
+# The run says which it expects, so a share error elsewhere, or a tap that opens
+# nothing, fails.
+- scrollUntilVisible:
+    element:
+      id: about_app.report_problem
+    direction: DOWN
+- tapOn:
+    id: about_app.report_problem
+- runFlow:
+    when:
+      true: ${SHARE_FAILS == 'true'}
+    commands:
+      # On an iPad in landscape the row rests on the list's end, and the line comes
+      # in under it, below the fold.
+      - scrollUntilVisible:
+          element:
+            id: about_app.report_outcome
+          direction: DOWN
+          timeout: 15000
+      - assertVisible:
+          id: about_app.report_outcome
+          text: "Couldn't open the share sheet\\."
+      - takeScreenshot: about-04-share
+- runFlow:
+    when:
+      true: ${SHARE_FAILS != 'true'}
+    commands:
+      # The sheet itself: Android's chooser list, iOS's share sheet.
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - extendedWaitUntil:
+                visible:
+                  id: ".*resolver_list"
+                timeout: 15000
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - extendedWaitUntil:
+                visible:
+                  id: ShareSheet.RemoteContainerView
+                timeout: 15000
+      - takeScreenshot: about-04-share
+      - runFlow: ../subflows/dismiss_share.yaml
+      # Dismissed: the row takes taps again, and at the list's end no line comes
+      # under it (D-297), not even a "shared" one.
+      - extendedWaitUntil:
+          visible:
+            id: about_app.report_problem
+            enabled: true
+          timeout: 15000
+      - repeat:
+          times: 3
+          commands:
+            - scroll
+      - assertNotVisible:
+          id: about_app.report_outcome

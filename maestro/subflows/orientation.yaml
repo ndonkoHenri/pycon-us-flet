@@ -1,0 +1,23 @@
+# Turn the device before a flow (#461).
+#
+# env:
+#   ORIENTATION  LANDSCAPE gives Maestro's LANDSCAPE_LEFT, a quarter turn from the
+#                device's natural orientation; anything else (the default) gives
+#                PORTRAIT, the natural one. Android counts from the natural
+#                orientation, which is landscape on the Pixel Tablet
+#                (pycon_tablet_api36): there PORTRAIT shows it in landscape and
+#                LANDSCAPE in portrait. Phones and iPads are natural in portrait.
+#
+# Maestro's setOrientation takes no variable, so each value is its own branch.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      true: ${ORIENTATION == 'LANDSCAPE'}
+    commands:
+      - setOrientation: LANDSCAPE_LEFT
+- runFlow:
+    when:
+      true: ${ORIENTATION != 'LANDSCAPE'}
+    commands:
+      - setOrientation: PORTRAIT

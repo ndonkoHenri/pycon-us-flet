@@ -39,6 +39,9 @@ appId: io.github.ndonkohenri.pyconus
       - inputText: ${NOW}
       - assertVisible:
           text: ${NOW}
+# The keyboard's Done closes the keyboard: on an iPad in landscape it covers the middle
+# of the screen, where the next scroll swipes, and the feed URL stayed out of sight (#461).
+- pressKey: Enter
 - retry:
     maxRetries: 3
     commands:
