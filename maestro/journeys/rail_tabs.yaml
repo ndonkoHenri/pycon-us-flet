@@ -1,0 +1,160 @@
+# SHELL-14 (#387, #461): from 600 dp the tab roots show a NavigationRail, and pushed
+# Views show neither the rail nor the bar (D-09, D-277, ux.md §8).
+#
+# For a tablet, in portrait or landscape, and a phone in landscape: ORIENTATION
+# (subflows/orientation.yaml) turns the device first. Each root is reached through the
+# rail by its destination's name (subflows/tab.yaml) and shows no bar; a session pushed
+# from Now, the filter sheet, a SnackBar with Undo, and About this app pushed from More
+# come on the way, with a screenshot of each to look at for the content widths (D-305).
+appId: io.github.ndonkohenri.pyconus
+name: The rail's five tabs, and no rail on a pushed View
+tags:
+  - tablet
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/orientation.yaml
+- runFlow: ../subflows/start_offline.yaml
+
+# Now, with the rail and no bar.
+- assertVisible:
+    text: "Now.*Tab 1 of 5"
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- takeScreenshot: rail-01-now
+
+# Star the session happening now (123), then open it: a pushed View, no rail. On a
+# phone in landscape its row is below the fold, and "Your next session" above it.
+- scrollUntilVisible:
+    element:
+      id: now.favorite.123
+    direction: DOWN
+- tapOn:
+    id: now.favorite.123
+- scrollUntilVisible:
+    element:
+      id: now.next.session.123
+    direction: UP
+- tapOn:
+    id: now.next.session.123
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- assertNotVisible:
+    text: "(Now|More).*Tab [15] of 5"
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- takeScreenshot: rail-02-session
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 15000
+- assertVisible:
+    text: "Now.*Tab 1 of 5"
+
+# Schedule, and its filter sheet over the rail.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: schedule
+      NAME: "Schedule.*Tab 2 of 5"
+- extendedWaitUntil:
+    visible:
+      id: schedule.title
+    timeout: 15000
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- takeScreenshot: rail-03-schedule
+- tapOn:
+    id: schedule.filter
+- extendedWaitUntil:
+    visible:
+      id: schedule.filter.show
+    timeout: 15000
+- takeScreenshot: rail-04-filter-sheet
+- tapOn:
+    id: schedule.filter.show
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.filter.show
+    timeout: 15000
+
+# My schedule lists the session; unstar it: the SnackBar offers Undo, which keeps it.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: my_schedule
+      NAME: "My schedule.*Tab 3 of 5"
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.123
+    timeout: 15000
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- tapOn:
+    id: my_schedule.favorite.123
+- extendedWaitUntil:
+    visible:
+      text: Removed from My schedule
+    timeout: 15000
+- takeScreenshot: rail-05-snackbar
+- tapOn:
+    text: Undo
+- extendedWaitUntil:
+    visible:
+      id: my_schedule.session.123
+    timeout: 15000
+
+# Map.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: map
+      NAME: "Map.*Tab 4 of 5"
+- extendedWaitUntil:
+    visible:
+      id: map.title
+    timeout: 15000
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- takeScreenshot: rail-06-map
+
+# More › About this app: a pushed View, no rail; Back to More and its rail.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- assertNotVisible:
+    id: "app\\.nav\\..*"
+- takeScreenshot: rail-07-more
+- scrollUntilVisible:
+    element:
+      id: more.app
+    direction: DOWN
+- tapOn:
+    id: more.app
+# Pushed once More's row has gone; the version row may be below the fold (landscape).
+- extendedWaitUntil:
+    notVisible:
+      id: more.app
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: about_app.version
+    direction: DOWN
+- assertNotVisible:
+    text: "(Now|More).*Tab [15] of 5"
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- assertVisible:
+    text: "More.*Tab 5 of 5"

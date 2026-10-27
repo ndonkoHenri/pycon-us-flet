@@ -1,0 +1,28 @@
+# Close the system's share sheet without sharing (#461): the app hears "dismissed".
+# Android: the system Back closes the sheet. iOS 26: the sheet lies over a dismiss
+# region (PopoverDismissRegion) in both orientations, and a tap on it beside the sheet
+# closes it: on the right, mid-height, since a tap near the left edge of an iPhone in
+# landscape left it open. A sheet with a close button ("Close") is closed with it.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - back
+- runFlow:
+    when:
+      platform: iOS
+      visible:
+        id: PopoverDismissRegion
+    commands:
+      - tapOn:
+          point: "97%,50%"
+- runFlow:
+    when:
+      platform: iOS
+      visible:
+        text: Close
+    commands:
+      - tapOn:
+          text: Close
