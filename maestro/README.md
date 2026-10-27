@@ -296,8 +296,9 @@ load averages of 15 to 730:
 At 200 % text (iOS's Larger Text at `accessibility-large`) the flows cannot start:
 Developer options' rows (`about_app.developer`, `developer.apply`) are below the fold,
 and the shared subflows tap them without a scroll. The pages were checked at 200 % in
-an app the flows had set up, after the text size changed: everything wraps, nothing
-clips, Report a concern stays first, and both copies are confirmed.
+an app the flows had set up, after the text size changed: nothing clips, Report a
+concern stays first, and both copies are confirmed; the email address breaks inside
+`python.org` (#642).
 
 A simulator cannot be put in airplane mode, so on iOS the launch's own refresh may
 reach the year's live feed before Developer points the app at a feed that never
