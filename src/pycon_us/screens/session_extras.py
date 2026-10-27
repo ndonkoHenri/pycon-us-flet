@@ -33,6 +33,7 @@ from pycon_us.state import use_conference
 from pycon_us.theme import Tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.favorite import ToggleFavorite
+from pycon_us.ui.focus_back import focus_back
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.rows import LinkTile
@@ -78,7 +79,8 @@ def site_title(url: str) -> str:
 def ShareButton(session: Session) -> ft.Control:
     """The app bar's Share (NEW-06): the share sheet with the session's text.
 
-    Disabled while the sheet is up, so a second tap does not ask for a second sheet.
+    Disabled while the sheet is up, so a second tap does not ask for a second sheet;
+    back from the sheet, it has the focus again (D-372).
     Every session has it, a break too: its time and place are worth sending.
 
     Args:
@@ -90,14 +92,16 @@ def ShareButton(session: Session) -> ft.Control:
     info = svc.year.conference
 
     @report_errors
-    async def share() -> None:
+    async def share(e: ft.Event[ft.IconButton]) -> None:
         use_24h = bool(page.media and page.media.always_use_24_hour_format)
         text = share_text(session, info.name, info.zone, use_24h=use_24h)
-        set_sharing(True)
-        try:
-            await share_sheet(svc, text, subject=session.name)
-        finally:
-            set_sharing(False)
+        # Enabled again before the focus comes back to it (D-372).
+        async with focus_back(svc, e.control):
+            set_sharing(True)
+            try:
+                await share_sheet(svc, text, subject=session.name)
+            finally:
+                set_sharing(False)
 
     return named(
         f"{SCREEN}.share",

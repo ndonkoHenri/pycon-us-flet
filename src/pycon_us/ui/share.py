@@ -146,7 +146,8 @@ async def share_text(svc: Services, text: str, *, subject: str) -> None:
 
     When the platform reports that the sheet could not open, a SnackBar says so, on the
     View the button is on (D-210). Whether the person then shared or dismissed it needs
-    no answer.
+    no answer. The caller wraps it in ``focus_back()``, so the button gets the focus
+    again once the sheet has closed (D-372).
 
     Args:
         svc: The session's services, for the share sheet.

@@ -57,9 +57,9 @@ def _ProjectCard(sprint: Sprint) -> ft.Control:
         set_expanded(not expanded)
 
     @report_errors
-    async def open_page() -> None:
+    async def open_page(e: ft.Event[ft.TextButton]) -> None:
         if target is not None:
-            await open_link(svc, target)
+            await open_link(svc, target, opener=e.control)
 
     lines: list[ft.Control] = [
         ft.Semantics(

@@ -17,6 +17,7 @@ import pytest
 from pycon_us.locations import parent_of
 from pycon_us.prefs import Prefs
 from pycon_us.screens import session_extras as extras
+from pycon_us.ui import focus_back
 from pycon_us.ui.share import NOT_SHARED
 from tests.session_detail import (
     BREAK,
@@ -129,6 +130,35 @@ async def test_a_break_shares_its_time_without_a_url(render: Render) -> None:
     await detail.click(share_button(detail))
     ((text, _),) = detail.share.texts
     assert text == "Break\nPyCon US 2026 · Saturday, May 16, 10:05–10:30 AM PDT"
+
+
+async def test_back_from_the_share_sheet_share_has_the_focus_again(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-372: on the return, the Share button mounted then is focused, and enabled.
+
+    The share re-renders the button (disabled, then enabled), so the event's own
+    control is detached by then: the focus goes to the one under its id (F192).
+    """
+    monkeypatch.setattr(focus_back, "SETTLE_SECONDS", 0)
+    monkeypatch.setattr(focus_back, "LEAVE_WITHIN", 1)  # the trip below leaves
+    focused: list[tuple[ft.IconButton, bool | None]] = []
+
+    async def focus(self: ft.IconButton) -> None:
+        focused.append((self, self.disabled))
+
+    monkeypatch.setattr(ft.IconButton, "focus", focus)
+    detail = await render(TALK)
+    tapped = share_button(detail)
+    click = asyncio.create_task(detail.click(tapped))
+    await asyncio.sleep(0.05)  # the sheet is up
+    detail.services.presence.leave()
+    await asyncio.sleep(0.05)
+    detail.services.presence.come_back()
+    await click
+    current = share_button(detail)
+    assert current is not tapped  # rebuilt under the same id
+    assert focused == [(current, False)]
 
 
 async def test_a_share_sheet_that_fails_to_open_says_so(render: Render) -> None:
