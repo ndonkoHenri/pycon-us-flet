@@ -1,7 +1,7 @@
 """Tests for the job fair's tables on the floor viewer (#464; MAP-04, D-254, D-312).
 
 ``PlanViewer`` runs in a real Flet session over the 2026 ``map.toml`` and the recorded
-feed, with ``test_plan.py``'s harness. How the selection looks over the print, and
+feed, with ``tests/plan_view.py``'s harness. How the selection looks over the print, and
 that each area covers its printed table on screen, are checked on devices (the PR).
 """
 
@@ -14,20 +14,23 @@ from pycon_us.memory import ViewMemory
 from pycon_us.screens import plan_tables
 from pycon_us.state import Conference
 from pycon_us.ui import zoom
+from tests import plan_view
 from tests.feeds import processed
-from tests.test_plan import BOX, YEAR, Plan, Render, render  # noqa: F401  (the fixture)
+from tests.plan_view import BOX, YEAR, Plan, Render
 from tests.trees import texts
 
+render = plan_view.render
+
 VIEW = "/map/room/room-104c/plan/job-fair"
-"""The job fair plan's View path in ``test_plan.py``'s harness."""
+"""The job fair plan's View path in ``tests/plan_view.py``'s harness."""
 
 FEED = Conference(data=processed(2026), source="bundled", version=1)
 """The store holding the recorded 2026 feed."""
 
 
 @pytest.fixture
-def show(render: Render) -> Render:  # noqa: F811
-    """``test_plan.py``'s ``render``: the floor viewer at a route, in a Flet session."""
+def show(render: Render) -> Render:
+    """``tests/plan_view.py``'s ``render``: the floor viewer at a route, in a Flet session."""
     return render
 
 

@@ -22,8 +22,9 @@ settings.register_profile("ci", settings.get_profile("ci"), max_examples=200)
 
 # Local runs get the `dev` profile: Hypothesis's defaults without the 200 ms deadline per
 # example, which a Mac busy with builds and emulators overran in a correctness test
-# (`test_html_md.py`, 268 ms). Speed is measured on devices (testing-and-quality.md §8),
-# not by a property's deadline. `--hypothesis-profile=ci` still overrides it.
+# (now in `test_html_md_text.py`, 268 ms). Speed is measured on devices
+# (testing-and-quality.md §8), not by a property's deadline. `--hypothesis-profile=ci`
+# still overrides it.
 settings.register_profile("dev", settings.get_profile("default"), deadline=None)
 settings.load_profile("dev")
 
