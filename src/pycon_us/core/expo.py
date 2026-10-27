@@ -12,7 +12,9 @@ The expo List (#404) has one row per exhibitor (D-254): ``list_rows()`` makes th
 by booth number in natural order with a shared booth's exhibitors together by name, or
 by name (``by_name()``), and a booth without an exhibitor is a row by its label.
 ``filter_rows()`` and ``filter_sponsors()`` keep those whose name or booth number holds
-every word of the List's filter, folded as search folds (D-46).
+every word of the List's filter, folded as search folds (D-46). ``booth_entries()``
+gives search's Places the same exhibitors, each at its booth, the ones off the plan
+among them (EXPO-04, #406).
 
 The job fair's tables come from the feed alone (``Sponsor.job_fair_table``):
 ``job_fair_tables()`` lists every sponsor with a table, tables in natural order (T2
@@ -94,6 +96,29 @@ class ExpoRow:
 
 
 @dataclass(frozen=True)
+class BoothEntry:
+    """One exhibitor at its booth, or a booth without one, as search finds it (#406).
+
+    Attributes:
+        number: The booth's number, as the feed and ``map.toml`` write it.
+        name: The exhibitor's name, else the booth's label; "" for neither.
+        slug: The exhibitor's slug; "" for a booth without one.
+        placed: Whether the expo plan draws the booth; False for a sponsor's booth
+            that ``map.toml`` does not have, which opens the List's line instead.
+    """
+
+    number: str
+    name: str
+    slug: str = ""
+    placed: bool = True
+
+    @property
+    def key(self) -> str:
+        """The entry's key, unique in the year: "726.pybeach", or "407" alone."""
+        return f"{self.number}.{self.slug}" if self.slug else self.number
+
+
+@dataclass(frozen=True)
 class JobFairTable:
     """One sponsor at its job fair table: a row of the Map's Job fair pane (MAP-04).
 
@@ -141,6 +166,32 @@ def list_rows(booths: Sequence[ExpoBooth]) -> tuple[ExpoRow, ...]:
     """
     return tuple(
         _row(item, sponsor) for item in booths for sponsor in (item.sponsors or (None,))
+    )
+
+
+def booth_entries(expo: Expo) -> tuple[BoothEntry, ...]:
+    """Return every exhibitor at its booth, the booths off the plan among them (#406).
+
+    One entry per List row (``list_rows()``, D-254), and one per sponsor of
+    ``Expo.unplaced``, all by booth number in natural order, a shared booth's
+    exhibitors in folded-name order.
+
+    Args:
+        expo: The year's expo (``expo_booths()``).
+    """
+    placed = [
+        BoothEntry(
+            row.number, row.name, row.sponsor.slug if row.sponsor else "", placed=True
+        )
+        for row in list_rows(expo.booths)
+    ]
+    unplaced = [
+        BoothEntry(sponsor.booth or "", sponsor.name, sponsor.slug, placed=False)
+        for sponsor in expo.unplaced
+    ]
+    # A stable sort: each part is in booth order already, its exhibitors by name.
+    return tuple(
+        sorted(placed + unplaced, key=lambda entry: room_sort_key(entry.number))
     )
 
 

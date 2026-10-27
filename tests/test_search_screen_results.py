@@ -68,7 +68,8 @@ async def test_results_are_grouped_by_type_then_day_under_headings(
     expected.append("h2:Places")
     expected += [f"search.room.{room.slug}" for room in found.rooms]
     expected += [f"search.place.{pin.key}" for pin in found.spots]
-    assert found.spots  # "a" finds venue spots too, after the rooms
+    expected += [f"search.booth.{entry.key}" for entry in found.booths]
+    assert found.spots and found.booths  # "a" finds venue spots too, after the rooms
     expected.append("h2:Sponsors")
     expected += [f"search.sponsor.{s.slug}" for s in first.sponsors]
     expected.append("search.show_all.sponsors")
@@ -191,6 +192,50 @@ async def test_a_sponsor_opens_its_detail_and_back_keeps_the_query_and_scope(
     assert opened.chip("sponsors").selected
     assert opened.results == before
     assert opened.searches == []
+
+
+async def test_a_booth_opens_the_expo_at_it_and_back_keeps_the_query(
+    opened: Shown,
+) -> None:
+    """#406: "613" lists Bloomberg's booth under Places; it opens the expo at 613."""
+    await opened.event(opened.chip("all"), "click")
+    await opened.type("613")
+    await opened.pause()
+    before = opened.results
+    # Places alone: Bloomberg's sponsor row is found by its name, never its booth.
+    assert before == ["search.booth.613.bloomberg"]
+    node = opened.node("search.booth.613.bloomberg")
+    tile = cast(ft.ListTile, node.content)
+    title = cast(ft.Text, tile.title)
+    assert title.value == "Booth 613 \N{MIDDLE DOT} Bloomberg"
+    assert title.semantics_label == "Booth 613, Bloomberg"  # the dot is not read
+    assert tile.subtitle is None
+    await opened.event(tile, "click")
+    await opened.settle()  # the navigation's task
+    assert opened.page.route == "/search/plan/expo?booth=613"
+    assert opened.views == ["/schedule", "/search", "/search/plan/expo"]
+    opened.searches.clear()
+
+    await opened.go(parent_of(opened.page.route, opened.memory.search_base))
+    assert opened.views == ["/schedule", "/search"]
+    assert opened.field.value == "613"
+    assert opened.results == before
+    assert opened.searches == []
+
+
+async def test_a_booth_off_the_plan_says_so_and_opens_the_expo_at_it(
+    opened: Shown,
+) -> None:
+    """#406: "phemeral" finds booth 139, which the plan does not draw."""
+    await opened.event(opened.chip("places"), "click")
+    await opened.type("phemeral")
+    await opened.pause()
+    assert opened.results == ["search.booth.139.phemeral"]
+    tile = cast(ft.ListTile, opened.node("search.booth.139.phemeral").content)
+    assert tile.subtitle == "Not on the map yet"
+    await opened.event(tile, "click")
+    await opened.settle()
+    assert opened.page.route == "/search/plan/expo?booth=139"
 
 
 async def test_the_field_lets_the_focus_go_while_a_result_covers_it(

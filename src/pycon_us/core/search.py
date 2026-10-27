@@ -3,8 +3,9 @@
 ``search_index()`` is built once per feed version over what ``queries.fold`` has folded:
 each session's ``search_text`` (its title, its description's text from ``html_md`` and its
 speakers' names, never markup; D-140), the speaker directory's names, and the places: the
-rooms' names and the venue spots' labels with what happens there (``map.toml``, D-351),
-and the sponsors' names and levels (#397).
+rooms' names, the venue spots' labels with what happens there (``map.toml``, D-351)
+and the expo's booths by number and exhibitor (#406), and the sponsors' names and
+levels (#397).
 ``search()`` folds a query the same way and keeps the entries that hold every one of its
 words, grouped by type and day. Screens never fold or match on their own (NEW-02, #97).
 ``first_results()`` cuts results to each type's first rows, which is what the result
@@ -18,12 +19,13 @@ from dataclasses import dataclass
 from itertools import groupby
 from typing import TYPE_CHECKING
 
+from pycon_us.core.expo import BoothEntry, booth_entries, expo_booths
 from pycon_us.core.models import ConferenceData, Room, Session, Speaker, Sponsor
 from pycon_us.core.queries import fold, speaker_order
 from pycon_us.core.timeline import DaySessions, schedule_order
 
 if TYPE_CHECKING:  # the year data's type only: core never imports the loader (D-67)
-    from pycon_us.year_map import Pin
+    from pycon_us.year_map import Booth, Pin
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,9 @@ class SearchIndex:
             sprint-only rooms among them (MAP-08).
         spots: The venue spots (``MapData.venue_spots()``) with each folded label and
             sublabel, in ``map.toml``'s order.
+        booths: Each exhibitor at its booth, and each booth without one
+            (``expo.booth_entries()``), with "booth", the number and the name folded,
+            by booth number in natural order.
         sponsors: The sponsors with each folded name and level, in the Sponsors page's
             order: by level, then feed order. Never the booth, which Places finds, nor
             the description, whose mentions would bury the sponsor named (D-351).
@@ -55,6 +60,7 @@ class SearchIndex:
     speakers: tuple[tuple[str, Speaker], ...]
     rooms: tuple[tuple[str, Room], ...]
     spots: tuple[tuple[str, Pin], ...] = ()
+    booths: tuple[tuple[str, BoothEntry], ...] = ()
     sponsors: tuple[tuple[str, Sponsor], ...] = ()
 
 
@@ -70,8 +76,9 @@ class SearchResults:
             pages give them), oldest day first, each day in schedule order.
         speakers: The matching speakers, by folded name, then id.
         rooms: The matching rooms, in natural order.
-        spots: The matching venue spots, in ``map.toml``'s order; with the rooms, the
-            places.
+        spots: The matching venue spots, in ``map.toml``'s order.
+        booths: The matching booths, an entry per exhibitor, by number; with the
+            rooms and the spots, the places.
         sponsors: The matching sponsors, by level, then feed order.
     """
 
@@ -79,6 +86,7 @@ class SearchResults:
     speakers: tuple[Speaker, ...] = ()
     rooms: tuple[Room, ...] = ()
     spots: tuple[Pin, ...] = ()
+    booths: tuple[BoothEntry, ...] = ()
     sponsors: tuple[Sponsor, ...] = ()
 
     @property
@@ -88,18 +96,25 @@ class SearchResults:
 
     @property
     def place_count(self) -> int:
-        """How many places matched: rooms and venue spots."""
-        return len(self.rooms) + len(self.spots)
+        """How many places matched: rooms, venue spots and booths."""
+        return len(self.rooms) + len(self.spots) + len(self.booths)
 
     @property
     def empty(self) -> bool:
         """Whether nothing matched, of any type."""
         return not (
-            self.sessions or self.speakers or self.rooms or self.spots or self.sponsors
+            self.sessions
+            or self.speakers
+            or self.rooms
+            or self.spots
+            or self.booths
+            or self.sponsors
         )
 
 
-def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex:
+def search_index(
+    data: ConferenceData, spots: Sequence[Pin] = (), booths: Sequence[Booth] = ()
+) -> SearchIndex:
     """Return the index that ``search()`` scans, and log how long building it took.
 
     Build it once per feed version, never per keystroke. Every session is in it, poster
@@ -109,6 +124,9 @@ def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex
         data: The processed feed.
         spots: The year's venue spots (``MapData.venue_spots()``): a spot is found by
             its label or by what happens there ("info desk", "Promenade Lobby").
+        booths: The year's booths (``MapData.booths``): an exhibitor is found at its
+            booth by the number ("613", "booth 613") or its name ("socal python"),
+            and so is a sponsor's booth the plan does not draw.
 
     Returns:
         The index, its entries in result order.
@@ -123,6 +141,10 @@ def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex
         speakers=tuple((fold(s.name), s) for s in speakers),
         rooms=tuple((fold(room.name), room) for room in data.rooms.values()),
         spots=tuple((fold(f"{pin.label} {pin.sublabel}"), pin) for pin in spots),
+        booths=tuple(
+            (fold(f"booth {entry.number} {entry.name}"), entry)
+            for entry in booth_entries(expo_booths(data, booths))
+        ),
         sponsors=tuple(
             (fold(f"{sponsor.name} {sponsor.level}"), sponsor)
             for level in data.sponsor_levels
@@ -131,12 +153,13 @@ def search_index(data: ConferenceData, spots: Sequence[Pin] = ()) -> SearchIndex
     )
     logger.info(
         "Search index built in %.1f ms: %d sessions, %d speakers, %d rooms, %d spots, "
-        "%d sponsors",
+        "%d booths, %d sponsors",
         (time.perf_counter() - started) * 1000,
         len(index.sessions),
         len(index.speakers),
         len(index.rooms),
         len(index.spots),
+        len(index.booths),
         len(index.sponsors),
     )
     return index
@@ -155,8 +178,8 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         scope: One of ``SCOPES``; ``all`` searches every type.
 
     Returns:
-        Sessions by day, then speakers, then places (rooms, then venue spots), then
-        sponsors; types outside the scope are empty.
+        Sessions by day, then speakers, then places (rooms, venue spots, then
+        booths), then sponsors; types outside the scope are empty.
 
     Raises:
         ValueError: ``scope`` is not one of ``SCOPES``.
@@ -178,6 +201,7 @@ def search(index: SearchIndex, query: str, scope: str = "all") -> SearchResults:
         speakers=tuple(found(index.speakers, "speakers")),
         rooms=tuple(found(index.rooms, "places")),
         spots=tuple(found(index.spots, "places")),
+        booths=tuple(found(index.booths, "places")),
         sponsors=tuple(found(index.sponsors, "sponsors")),
     )
 
@@ -231,6 +255,7 @@ def first_results(
         speakers=found,
         rooms=results.rooms,
         spots=results.spots,
+        booths=results.booths,
         sponsors=backers,
     )
 

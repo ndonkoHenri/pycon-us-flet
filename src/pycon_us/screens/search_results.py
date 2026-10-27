@@ -17,12 +17,14 @@ from collections.abc import Mapping
 
 import flet as ft
 
+from pycon_us.core.expo import BoothEntry
 from pycon_us.core.models import Room
 from pycon_us.core.rooms import count_line
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.search import SearchResults, first_results
 from pycon_us.core.speakers import SpeakerEntry
-from pycon_us.locations import drill_href
+from pycon_us.locations import booth_href, drill_href
+from pycon_us.screens.expo_list import UNPLACED
 from pycon_us.screens.sponsors import SponsorRow
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
@@ -58,7 +60,7 @@ def plural(count: int, noun: str) -> str:
 def summary(results: SearchResults) -> str:
     """Return what a search found, in words: "12 sessions, 3 speakers, 2 places, 1 sponsor".
 
-    Only the types that matched are named, rooms and venue spots together as places
+    Only the types that matched are named, rooms, venue spots and booths as places
     (D-351); the line is a polite live region, so a
     screen reader hears what typing did without leaving the field (ux.md §4.3).
 
@@ -185,6 +187,7 @@ def ResultList(
     if shown.place_count:
         places = [room_row(room, view_path) for room in shown.rooms]
         places += [spot_row(pin, view_path) for pin in shown.spots]
+        places += [booth_row(entry, view_path) for entry in shown.booths]
         sections.append(("Places", places))
     if shown.sponsors:
         sponsors = [SponsorRow(s, screen=SCREEN) for s in shown.sponsors]
@@ -289,4 +292,43 @@ def spot_row(pin: Pin, view_path: str) -> ft.Control:
         icon=ft.Icons.PIN_DROP_OUTLINED,
         subtitle=pin.sublabel or None,
         identifier=f"{SCREEN}.place.{pin.key}",
+    )
+
+
+def booth_title(entry: BoothEntry) -> str:
+    """Return a booth result's title: "Booth 613 · Bloomberg", or "Booth 412" alone."""
+    if not entry.name:
+        return f"Booth {entry.number}"
+    return f"Booth {entry.number} \N{MIDDLE DOT} {entry.name}"
+
+
+def booth_phrase(entry: BoothEntry) -> str:
+    """Return what a screen reader says of a booth result's title (#406).
+
+    Returns:
+        "Booth 613, Bloomberg", as the expo's booths and List rows are read; "Booth
+        412" for a booth without a name.
+    """
+    return ", ".join(part for part in (f"Booth {entry.number}", entry.name) if part)
+
+
+def booth_row(entry: BoothEntry, view_path: str) -> ft.Control:
+    """Return a booth result: its number and exhibitor, opening the expo at the booth.
+
+    A tap pushes the expo hall with the booth selected and its card
+    (``booth_href()``, D-377), so Back returns to the results; a booth the plan does
+    not draw says so under its title, and opens the List under its line. One node,
+    read "Booth 613, Bloomberg" (the middle dot is not read), then the line when
+    there is one. Its icon is the Sponsors entry's: a booth, not a room's place mark.
+
+    Args:
+        entry: The exhibitor at its booth (``core.expo.booth_entries()``).
+        view_path: This View's path, so the expo is pushed on top of search.
+    """
+    return LinkTile(
+        ft.Text(booth_title(entry), semantics_label=booth_phrase(entry)),
+        booth_href(view_path, entry.number),
+        icon=ft.Icons.STOREFRONT_OUTLINED,
+        subtitle=None if entry.placed else UNPLACED,
+        identifier=f"{SCREEN}.booth.{entry.key}",
     )

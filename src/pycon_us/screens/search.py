@@ -9,7 +9,8 @@ once on the keyboard's action key or a scope change, through ``core.search`` ove
 index built once per feed version (D-180). Results come grouped by type, sessions by
 day, each row pushing its detail on top of search (``/search/session/42``,
 ``/search/sponsor/bloomberg``), a venue spot its floor plan with the pin
-(``/search/plan/concourse?pin=info-desk``); Back returns to the results with the query
+(``/search/plan/concourse?pin=info-desk``), a booth the expo at it
+(``/search/plan/expo?booth=613``, #406); Back returns to the results with the query
 intact, since this View stays mounted below the detail and the query and scope are
 also in ``ViewMemory`` (D-18, D-141).
 
@@ -156,7 +157,11 @@ def Search() -> ft.View:
     data = conference.data
     # Once per feed version: never per keystroke (D-180).
     index = ft.use_memo(
-        lambda: search_index(data, svc.year.map.venue_spots()) if data else None,
+        lambda: (
+            search_index(data, svc.year.map.venue_spots(), svc.year.map.booths)
+            if data
+            else None
+        ),
         [conference.version],
     )
     entries = ft.use_memo(

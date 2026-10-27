@@ -41,7 +41,7 @@ from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)
 DATA = processed(2026)
-INDEX = search_index(DATA, YEAR.map.venue_spots())
+INDEX = search_index(DATA, YEAR.map.venue_spots(), YEAR.map.booths)
 
 
 # ------------------------------------------------------------------ the harness
