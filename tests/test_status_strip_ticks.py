@@ -186,5 +186,5 @@ async def test_elsewhere_a_tick_never_refreshes(
     assert conference._task is None
 
 
-# Now, the Schedule and My schedule each check their own strip (test_now.py,
+# Now, the Schedule and My schedule each check their own strip (test_now_card.py,
 # test_schedule.py, test_my_schedule.py; D-40).

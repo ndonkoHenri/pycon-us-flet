@@ -381,7 +381,10 @@ def _NoticeRow(
                 ft.Icon(
                     # A name the year data checks (test_config.py).
                     cast(ft.IconData, getattr(ft.Icons, track.icon)),
+                    # One TITLE_SMALL line tall at every text size (D-373), at the
+                    # top, so it stays beside the title's first line.
                     size=20,
+                    apply_text_scaling=True,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 ft.Column(

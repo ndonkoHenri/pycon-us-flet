@@ -4,8 +4,8 @@ The cut is pure (``now_fold.ordered()`` and ``cut()``); on the screen, at fixed 
 the 2026 feed: the fold after your saved sessions and three others, the count in the
 button's words and its spoken label, the button's target (the rest in place, then
 "Show fewer sessions"), and a fold that holds through a minute and closes on a new
-slot. The screen runs in a real Flet session through ``test_now.py``'s harness. How
-far down Up next sits on a phone is checked on devices (the PR).
+slot. The screen runs in a real Flet session through ``tests/now_view.py``'s harness.
+How far down Up next sits on a phone is checked on devices (the PR).
 """
 
 from collections.abc import Callable
@@ -18,7 +18,7 @@ import pytest
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.screens.now_fold import SHOWN, cut, ordered
 from tests.feeds import processed
-from tests.test_now import AT_11, FIRST_AT_11, may, render  # noqa: F401  (fixture)
+from tests.now_view import AT_11, FIRST_AT_11, may, render  # noqa: F401  (fixture)
 
 OPEN_SPACES_AT_11 = ("9113", "9040", "9072", "9059", "9086")
 """The open spaces of AT_11, in the slot's order."""
@@ -26,7 +26,7 @@ OPEN_SPACES_AT_11 = ("9113", "9040", "9072", "9059", "9086")
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``test_now.py``'s ``render``: Now at a time, in a real Flet session."""
+    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
     return render
 
 

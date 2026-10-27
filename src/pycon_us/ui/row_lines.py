@@ -64,7 +64,8 @@ def overlap_line(names: Sequence[str], color: str) -> ft.Control:
     "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
     "and 2 more" on a line of its own, so the cut never hides the count (D-188's "Now:"
     line). Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface
-    (§3.3). The icon tops the text, beside its first line when it wraps.
+    (§3.3). The icon is one line tall, scaled with the text, and tops the text, so it
+    is beside its first line at every size (D-373).
     """
     first, *rest = names
     texts: list[ft.Control] = [
@@ -83,9 +84,10 @@ def overlap_line(names: Sequence[str], color: str) -> ft.Control:
         )
     return ft.Row(
         [
-            ft.Container(  # 2 dp down: centred on the 20 dp first line
-                ft.Icon(ft.Icons.WARNING_AMBER, size=16, color=color),
-                padding=ft.Padding.only(top=2),
+            # One BODY_MEDIUM line tall at every text size (D-373): it tops the
+            # row, so it stays level with the first line however far the text grows.
+            ft.Icon(
+                ft.Icons.WARNING_AMBER, size=20, apply_text_scaling=True, color=color
             ),
             ft.Column(texts, spacing=0, expand=True),
         ],
