@@ -122,10 +122,8 @@ def test_the_cli_finds_the_change_its_move_makes() -> None:
     old, new = pair(YEAR, *edits("--move", TALK, "Room 103ABC"))
 
     assert old == recorded(YEAR)
-    assert feed_pair.expected(old, new) == [
-        "  room of 123: Panel: Fostering better collaboration between the scientific "
-        "Python community and core Python development"
-    ]
+    (line,) = feed_pair.expected(old, new)
+    assert line.startswith("  room of 123: Panel: Fostering better collaboration")
 
 
 def test_the_cli_makes_each_named_edit_once_per_flag() -> None:

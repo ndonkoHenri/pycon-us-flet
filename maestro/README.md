@@ -34,6 +34,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/sponsor_find_booth.yaml` | journeys | A sponsor (Bloomberg) › Find booth 613 › Back: the expo hall opens at the booth with its card, and Back returns to the sponsor (SPON-04, #409) |
 | `journeys/now_quick_back.yaml` | journeys | Now › each quick info button (Wi-Fi, Help & safety, Venue & hours) › Back: each page is pushed over Now, and Back returns to Now with the buttons (#419, D-338) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
+| `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the move under "Affects My schedule", seen after 2 s; My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -182,6 +183,27 @@ fails, not the flow. To try a build with other values before that default change
 them: `maestro --device <id> test -e LINK=<scheme>://<host> maestro/journeys/deep_links.yaml`.
 A simulator asks "Open in …?" before the first link it opens (F31); the subflow taps
 Open when it shows.
+
+### Feed pairs
+
+`journeys/change_log.yaml` reads its feeds from the laptop: the recorded 2026 feed, then
+a copy with session 123 moved, at one feed URL (D-255;
+[`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §9.2). Start the server
+first and keep it running; the flow resets it to the old feed at its start and swaps it
+with a script (`scripts/feed_pair.js`), which posts to it from the laptop:
+
+```bash
+uv run python -m tools.feed_pair --move 123 "Room 103ABC"
+maestro --device <udid> test maestro/journeys/change_log.yaml
+```
+
+Its tag is `feed_pair`, not `journeys`, so `--include-tags=journeys` runs without the
+server. It turns no airplane mode on: that would cut the emulator's way to the laptop too.
+`FEED_URL` (the feed as the device reaches it: `10.0.2.2` on the Android emulator,
+`127.0.0.1` on the simulator) and `CONTROL_URL` (the server as the laptop reaches it)
+default to port 8460, the server's; for another `--port`, give both, as the server
+prints them. Its screenshots, one per step (`change_log-01-old-feed` …), go to the
+debug output's folder.
 
 ## Writing a flow
 
