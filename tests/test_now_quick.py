@@ -3,7 +3,7 @@
 What Now makes of them: three tonal buttons in the conference and sprint seasons only,
 after the sessions and the Schedule link, so at peak times they push no session down,
 each pushing its page over Now so Back returns there. The screen runs in a real Flet
-session through ``test_now.py``'s harness. How the row wraps at 200 % and reads to
+session through ``tests/now_view.py``'s harness. How the row wraps at 200 % and reads to
 TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -17,7 +17,7 @@ import pytest
 from pycon_us.locations import parent_of
 from pycon_us.screens import now_quick
 from pycon_us.screens.more import AT_THE_VENUE
-from tests.test_now import may, render  # noqa: F401  (the harness's fixture)
+from tests.now_view import may, render  # noqa: F401  (the harness's fixture)
 
 BUTTONS = [f"now.quick.{segment}" for segment in now_quick.PAGES]
 """The buttons' identifiers, in the row's order."""
@@ -25,7 +25,7 @@ BUTTONS = [f"now.quick.{segment}" for segment in now_quick.PAGES]
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``test_now.py``'s ``render``: Now at a time, in a real Flet session."""
+    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
     return render
 
 

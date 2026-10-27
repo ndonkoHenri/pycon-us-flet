@@ -4,8 +4,8 @@ What the card counts is ``core.change_views.now_card_text()``'s (``test_change_v
 here, on the screen at a fixed time of the 2026 feed: the card shows under Your next
 session while an unseen change of the last 24 hours touches a saved session, never for
 an unsaved one, goes once its batch is seen or 24 hours have passed, and pushes the
-list on Now. The screen runs in a real Flet session through ``test_now.py``'s harness.
-How the card looks and reads is checked on devices (the PR).
+list on Now. The screen runs in a real Flet session through ``tests/now_view.py``'s
+harness. How the card looks and reads is checked on devices (the PR).
 """
 
 from collections.abc import Callable
@@ -19,7 +19,7 @@ from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.screens.now_changes import IDENTIFIER
-from tests.test_now import TALK, may, render  # noqa: F401  (fixture)
+from tests.now_view import TALK, may, render  # noqa: F401  (fixture)
 
 AT = may(16, 9)
 """9:00 AM on Saturday, May 16: TALK, saved, is next at 10:30 AM."""
@@ -30,7 +30,7 @@ OTHER = "7"
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``test_now.py``'s ``render``: Now at a time, in a real Flet session."""
+    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
     return render
 
 
