@@ -43,6 +43,7 @@ from pycon_us import clock
 from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind, Listing
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from tests import links, sessions
 from tests.links import Open, Shown
@@ -77,12 +78,14 @@ LOCATIONS = [
     "/schedule/session/42/speaker/17",
     "/map/room/grand-ballroom-a",
     "/more/sponsors/sponsor/bloomberg",
+    "/map?tab=expo",
     "/schedule/changes/2026",
     "/search",
 ]
 """Every location with a memoised part: each ``ft.memo`` component in ``src/`` is
-under one of them (the audit in #601's PR). Map, Tracks, a track, Wi-Fi and a floor
-plan have none."""
+under one of them (the audit in #601's PR). The Map's Expo pane is opened on its List
+(#404), whose rows are memoised; the plan's booths need a layout the harness never
+reports. The Map's other panes, Tracks, a track, Wi-Fi and a floor plan have none."""
 
 
 @pytest.fixture(params=list(MOMENTS))
@@ -218,8 +221,13 @@ async def test_nothing_under_a_skipped_memo_re_renders_on_its_own(
     the scheduler must survive it; then the list of them must be empty.
     """
     prefs = Prefs(loaded=True, time_above=time_above, time_measured=True)
+    memory = ViewMemory(expo_view="list") if location == "/map?tab=expo" else None
     shown = await open_at(
-        location, saved=SAVED, prefs=prefs, change_log=change_log(moment)
+        location,
+        saved=SAVED,
+        prefs=prefs,
+        change_log=change_log(moment),
+        memory=memory,
     )
     if location == "/search":
         await search(shown, "python")

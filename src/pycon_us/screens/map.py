@@ -9,11 +9,13 @@ a pick puts its own ``?tab=`` in the route, so a return or a new session finds i
 re-tap of the Map tab scrolls the pane shown (D-166). The overflow's "3D venue tour"
 opens ``map.toml``'s ``tour_url`` in the in-app browser (MAP-03, D-182). A year
 without plans shows the rooms alone, without a tab bar; one without booths no Expo; Job
-fair needs the year's ``job-fair`` plan (ux.md §5.8, §6.3). The Expo pane keeps its zoom
-and its booth in ``ViewMemory`` instead of a scroll, and a re-tap there does nothing.
+fair needs the year's ``job-fair`` plan (ux.md §5.8, §6.3). The Expo pane keeps its view,
+zoom, booth and List in ``ViewMemory`` instead of the Map's scroll, and a re-tap there does
+nothing.
 
 The panes: Rooms in ``screens/map_rooms.py``, Floor plans in ``screens/map_plans.py``,
-Expo in ``screens/expo.py`` (EXPO-01), Job fair in ``screens/map_job_fair.py``.
+Expo in ``screens/expo_pane.py`` (its Map | List switch over ``screens/expo.py``'s hall
+and ``screens/expo_list.py``'s List, EXPO-01), Job fair in ``screens/map_job_fair.py``.
 """
 
 from dataclasses import dataclass
@@ -23,7 +25,7 @@ import flet as ft
 from pycon_us.locations import is_top_view, query_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.expo import ExpoHall
+from pycon_us.screens.expo_pane import ExpoPane
 from pycon_us.screens.map_job_fair import JOB_FAIR, JobFairPane
 from pycon_us.screens.map_plans import FLOOR_PLANS, floor_plans, plans_pane
 from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
@@ -168,7 +170,7 @@ def Map() -> ft.View:
         )
     elif tab == EXPO:
         # Keyed, so Flet never migrates another pane's state into it (F130).
-        pane = ExpoHall(EXPO, key=EXPO)  # pyright: ignore[reportCallIssue]
+        pane = ExpoPane(EXPO, key=EXPO)  # pyright: ignore[reportCallIssue]
     elif tab == JOB_FAIR:
         pane = JobFairPane(list_ref, scrolled)
     else:

@@ -31,7 +31,7 @@ import flet as ft
 from pycon_us.locations import use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.expo import ExpoHall
+from pycon_us.screens.expo_pane import ExpoPane
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.plan_tables import (
@@ -372,10 +372,12 @@ def ExpoPlan() -> ft.View:
     """``…/plan/expo``: the expo hall pushed as a View, named by its plan (ux.md §6.2).
 
     A year without booths has no hall: its expo plan, or its not-found state, is
-    ``PlanViewer``'s.
+    ``PlanViewer``'s. The View's path keys the hall's zoom, so a switch to the List
+    and back puts it back, apart from the Map pane's (D-18).
     """
+    view_path = ft.use_view_path()  # before the return: no conditional hooks (D-70)
     year_map = use_services().year.map
     plan = year_map.plan(EXPO_PLAN)
     if plan is None or not year_map.booths:
         return PlanViewer(plan_id=EXPO_PLAN)
-    return AppScaffold(title=plan.title, body=ExpoHall())
+    return AppScaffold(title=plan.title, body=ExpoPane(view_path))
