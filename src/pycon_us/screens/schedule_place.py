@@ -1,4 +1,4 @@
-"""The Schedule keeps the reader's place in each day list across a text-size change (D-331).
+"""The Schedule keeps each day list's place across a text-size or filter change (D-331, D-371).
 
 A list keeps its pixel offset, and a lazy list keeps the offset of its first built item
 by index (F70), so when the text grows the rows above the top grow and earlier rows
@@ -19,21 +19,26 @@ so the Schedule measures the change itself and puts the place back by key:
   back (``pending()``), so its item is built for the jump (D-154);
 - put-backs take turns, and each jump waits for its own scroll end, as every jump
   waits on the one signal, and comes long enough after the list's last end that Flet
-  sends its own (F182, D-364).
+  sends its own (F182, D-364);
+- a filter change (``lay_out()``) carries each place into the new list, its item or the
+  next one still shown (``core/list_place.carried()``), keeps the heights of the slots
+  it left as they were, and marks the places stale: the shown list is put back once
+  Flutter has laid the change out (``put_back_refiltered()``), another day when it
+  shows again (#333, D-371). A user's scroll stops a put-back between its jumps.
 """
 
 import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import Hashable, Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import date
 
 import flet as ft
 
-from pycon_us.core.list_place import Place, place_at, rescaled
-from pycon_us.core.timeline import NOW_KEY
+from pycon_us.core.list_place import Place, carried, place_at, rescaled
+from pycon_us.core.timeline import NOW_KEY, Slot
 from pycon_us.memory import ViewMemory
 from pycon_us.ui import scrolling
 from pycon_us.ui.scrolling import JUMP_TRIES, SCROLL_EVENT_MS, Jump, jump_to_key
@@ -53,6 +58,10 @@ END_GAP_S = SCROLL_EVENT_MS / 1000 + 0.05
 Flet sends a list's scroll end only when its last one was at least ``scroll_interval``
 before, and drops it otherwise (F182, U162): the jump would move the list and never
 say so."""
+
+LAYOUT_S = 0.5
+"""How long a put-back after a filter change waits for Flutter to lay the change out, in
+seconds: until a day item reports its height, at most this (D-371)."""
 
 type Measured = ft.EventHandler[ft.LayoutSizeChangeEvent[ft.LayoutControl]]
 """The probe's handler of one width."""
@@ -79,7 +88,7 @@ def layout_probe(on_text: Measured, on_width: Measured) -> ft.Control:
     return ft.Container(ft.Row([time]), height=0, on_size_change=on_width)
 
 
-def divider_above(keys: tuple[str, ...], key: str) -> float:
+def divider_above(keys: Sequence[str], key: str) -> float:
     """Return the divider over an item's anchor, in dp, as ``DayList`` draws it.
 
     Every slot but the first has one, except the slot right under the now line; the
@@ -89,6 +98,35 @@ def divider_above(keys: tuple[str, ...], key: str) -> float:
     if key == NOW_KEY or index == 0 or keys[index - 1] == NOW_KEY:
         return 0.0
     return DIVIDER
+
+
+def unchanged_keys(
+    before: Sequence[str],
+    after: Sequence[str],
+    slots_before: Mapping[str, Slot],
+    slots_after: Mapping[str, Slot],
+) -> frozenset[str]:
+    """Return the items of a day list whose height a filter change kept.
+
+    The now line, and each slot with the same sessions and the same divider above it
+    (``divider_above()``): ``Slot``s compare their sessions by identity.
+
+    Args:
+        before: The list's items before the change, in order.
+        after: The list's items after it, in order.
+        slots_before: The list's slots by key before the change.
+        slots_after: The list's slots by key after it.
+    """
+    return frozenset(
+        key
+        for key in after
+        if key == NOW_KEY
+        or (
+            key in slots_before
+            and slots_before[key] == slots_after.get(key)
+            and divider_above(before, key) == divider_above(after, key)
+        )
+    )
 
 
 def known_empties(
@@ -125,7 +163,11 @@ class PlaceKeeper:
         heights: Each day's reported item heights by key, in dp, for the current
             layout and text size.
         keys: Each day's items in order, as the last render laid them out.
+        slots: Each day's slots by key, as the last render laid them out.
         layout: What the lists were laid out from: the feed version and the filter.
+        refiltered: A filter change waits for the shown list's put-back
+            (``put_back_refiltered()``).
+        reported: Set by every height report: Flutter has laid out a change.
         text: The probe's time width, in dp; 0 until reported.
         width: The screen's width, in dp; 0 until reported.
         above: Whether slots put their time above their rows (D-216).
@@ -141,7 +183,10 @@ class PlaceKeeper:
         self.memory = memory
         self.heights: dict[date, dict[str, float]] = {}
         self.keys: Mapping[date, tuple[str, ...]] = {}
-        self.layout: Hashable = None
+        self.slots: Mapping[date, Mapping[str, Slot]] = {}
+        self.layout: tuple[int, tuple[str, ...]] | None = None
+        self.refiltered = False
+        self.reported = asyncio.Event()
         self.text = 0.0
         self.width = 0.0
         self.above = False
@@ -150,19 +195,77 @@ class PlaceKeeper:
         self.round = 0
         self.turn = asyncio.Lock()
 
-    def lay_out(self, layout: Hashable, keys: Mapping[date, tuple[str, ...]]) -> None:
-        """Note what the render laid out; another feed or filter forgets the heights.
+    def lay_out(
+        self,
+        version: int,
+        excluded: tuple[str, ...],
+        keys: Mapping[date, tuple[str, ...]],
+        slots: Mapping[date, Mapping[str, Slot]],
+    ) -> None:
+        """Note what the render laid out: the feed version, the filter and the items.
 
-        All but the 0 dp heights of items it still lays out (``known_empties()``).
+        Another feed forgets every height but the 0 dp ones of items it still lays out
+        (``known_empties()``), and its places say nothing of it. Another filter of the
+        same feed keeps the heights of the items it left as they were and carries each
+        place into the new list, to be put back (``refilter()``, D-371).
+
+        Args:
+            version: The feed's version.
+            excluded: The filter, ``Prefs.excluded_tracks``.
+            keys: Each day's items in order (``schedule._keys()``).
+            slots: Each day's slots by key.
         """
-        if layout != self.layout:
-            self.heights = known_empties(self.heights, keys)
-            self.layout = layout
+        layout = (version, excluded)
+        if self.layout is not None and layout != self.layout:
+            if version == self.layout[0]:
+                self.refilter(layout, keys, slots)
+            else:
+                self.heights = known_empties(self.heights, keys)
+        self.layout = layout
         self.keys = keys
+        self.slots = slots
+
+    def refilter(
+        self,
+        layout: tuple[int, tuple[str, ...]],
+        keys: Mapping[date, tuple[str, ...]],
+        slots: Mapping[date, Mapping[str, Slot]],
+    ) -> None:
+        """Carry each day's place into the list a filter change lays out (#333, D-371).
+
+        Its item, or the next one still shown (``carried()``), stale, so the list is
+        built in full and put back by key; a place from an older layout, which says
+        nothing, is left as it is. The heights of the items the change kept stay
+        (``unchanged_keys()``): Flutter reports no size that did not change.
+        """
+        kept: dict[date, dict[str, float]] = known_empties(self.heights, keys)
+        places = self.memory.schedule_places
+        for day, after in keys.items():
+            before = self.keys.get(day, ())
+            same = unchanged_keys(
+                before, after, self.slots.get(day, {}), slots.get(day, {})
+            )
+            heights = self.heights.get(day, {})
+            kept.setdefault(day, {}).update(
+                (key, heights[key]) for key in same if key in heights
+            )
+            place = places.get(day)
+            if place is None or place.layout != self.layout:
+                continue
+            moved = carried(place, before, after, same)
+            if moved is None:
+                del places[day]
+            else:
+                places[day] = replace(moved, layout=layout)
+        self.heights = kept
+        self.round += 1  # a put-back still waiting is for the old list
+        self.refiltered = True
+        self.reported.clear()
 
     def measured(self, day: date, key: str, height: float) -> None:
-        """Keep an item's reported height."""
+        """Keep an item's reported height; Flutter has laid out a change."""
         self.heights.setdefault(day, {})[key] = height
+        self.reported.set()
 
     def pending(self, day: date) -> Place | None:
         """Return the day's place when it waits to be put back by key, else None."""
@@ -255,7 +358,8 @@ class PlaceKeeper:
         change is two layout changes, the text's width and then the time's position
         (D-216): the first put-back stops at its jump's end, and the second jumps in
         the final layout. A newer change (``round``) stops a put-back after any wait,
-        before it moves the list again.
+        before it moves the list again; so does a scroll of the user's, which drops the
+        place (#333, D-371).
 
         Args:
             day: The list's day.
@@ -273,18 +377,41 @@ class PlaceKeeper:
             place = self.pending(day)
             if mine != self.round or place is None:  # superseded while it waited
                 return False
-            if day in self.moving:
-                del self.memory.schedule_places[day]
-                return True
             jump = await self._keyed(mine, day, place.key, list_ref, ended)
             if jump == "still":
                 jump = await self._from_old_top(mine, day, place, list_ref, ended)
             if mine != self.round:  # a newer change took over
                 return False
-            if jump != "landed":  # no end, so no offset to count from
+            # The user scrolls, or no end gave an offset to count from.
+            if day in self.moving or jump != "landed":
                 self.memory.schedule_places.pop(day, None)
                 return True
             return await self._go_into(mine, day, place, list_ref, ended)
+
+    async def put_back_refiltered(
+        self, day: date, list_ref: ft.Ref[ft.ListView], ended: asyncio.Event
+    ) -> bool:
+        """Put the shown list back at its place after a filter change (#333, D-371).
+
+        Once Flutter has laid the change out, so the keyed jump reads the new list: at
+        the first height report since the change (``reported``), the new slots' or the
+        list built in full's, else after ``LAYOUT_S``. The change marked the place
+        stale (``refilter()``); ``put_back()`` does the rest.
+
+        Args:
+            day: The shown day.
+            list_ref: Its list's ref.
+            ended: The screen's scroll-end signal (``Signals.ended``).
+
+        Returns:
+            Whether a place waited for it, so the screen re-renders the list lazy again.
+        """
+        refiltered, self.refiltered = self.refiltered, False
+        if not refiltered or self.pending(day) is None:
+            return False
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(self.reported.wait(), LAYOUT_S)
+        return await self.put_back(day, list_ref, ended)
 
     async def _go_into(
         self,
@@ -307,6 +434,9 @@ class PlaceKeeper:
             await self._to_offset(mine, day, list_ref.current, target, ended)
             if mine != self.round:
                 return False
+            if day in self.moving:  # the user's scroll took over
+                self.memory.schedule_places.pop(day, None)
+                return True
         self.memory.schedule_offsets[day] = target
         self.memory.schedule_places[day] = replace(
             place,
@@ -361,12 +491,12 @@ class PlaceKeeper:
         Returns:
             How the last keyed jump ended; "still" when it asked none.
         """
-        if mine != self.round or list_ref.current is None:
+        if self._stopped(mine, day) or list_ref.current is None:
             return "still"
         old_top = place.pixels - place.into
         await self._to_offset(mine, day, list_ref.current, old_top, ended)
         for _ in range(JUMP_TRIES):
-            if mine != self.round:
+            if self._stopped(mine, day):
                 return "still"
             jump = await self._keyed(mine, day, place.key, list_ref, ended)
             if jump != "still":
@@ -393,10 +523,11 @@ class PlaceKeeper:
     ) -> Jump:
         """Jump to the item with this key, once, so that its end reaches Python.
 
-        "still" without a jump when a newer change took over (``round``) during the wait.
+        "still" without a jump when a newer change took over (``round``) or the user
+        scrolls (``moving``) after the wait.
         """
         await self.ended_apart(day)
-        if mine != self.round:
+        if self._stopped(mine, day):
             return "still"
         return await jump_to_key(list_ref, key, duration=0, ended=ended, tries=1)
 
@@ -412,15 +543,24 @@ class PlaceKeeper:
 
         So its end cannot answer a keyed jump asked after it: every jump waits on the
         one signal. A list already there sends no end: the wait gives up after
-        ``LANDING_S``. Nothing when a newer change took over (``round``) during the wait.
+        ``LANDING_S``. Nothing when a newer change took over (``round``) or the user
+        scrolls (``moving``) after the wait.
         """
         await self.ended_apart(day)
-        if mine != self.round:
+        if self._stopped(mine, day):
             return
         ended.clear()
         await list_view.scroll_to(offset=offset, duration=0)
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(ended.wait(), scrolling.LANDING_S)
+
+    def _stopped(self, mine: int, day: date) -> bool:
+        """Return whether a put-back must not move the list now.
+
+        A newer change took over, or the list scrolls: the user's own scroll, once
+        the put-back's last jump has had its end.
+        """
+        return mine != self.round or day in self.moving
 
     def supersede(self, day: date) -> None:
         """Forget the day's place, as a jump to now takes its list elsewhere.

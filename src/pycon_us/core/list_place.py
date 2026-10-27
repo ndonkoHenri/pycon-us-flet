@@ -1,4 +1,4 @@
-"""Where the reader is in a Schedule day list, as a key, so a text-size change keeps it (D-331).
+"""Where the reader is in a Schedule day list, as a key, so a text-size or filter change keeps it.
 
 Pure: ``screens/schedule_place.py`` measures and scrolls. A list keeps its pixel offset,
 not the rows at that offset, so when the text grows every row above the top grows with
@@ -9,11 +9,14 @@ far into it, which a keyed jump puts back once the list has its new heights:
   where it was found, and whether the slots had their time above their rows;
 - ``place_at()``: the place at an offset, from the heights the items reported, counted
   from the list's top or from a place found at another offset;
-- ``rescaled()``: how far into the item to put the top once it has its new height.
+- ``rescaled()``: how far into the item to put the top once it has its new height
+  (D-331);
+- ``carried()``: the place in the list a filter change lays out, its item or the next one
+  still shown (D-371).
 """
 
-from collections.abc import Hashable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Collection, Hashable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -107,3 +110,35 @@ def rescaled(place: Place, height: float) -> float:
     if place.height <= 0 or height <= 0:
         return 0.0
     return max(0.0, min(place.into * height / place.height, height - 1))
+
+
+def carried(
+    place: Place,
+    before: Sequence[str],
+    after: Sequence[str],
+    unchanged: Collection[str],
+) -> Place | None:
+    """Return the place in the list a filter change lays out, waiting to be put back.
+
+    The same item when it is still shown, as far in when its rows are unchanged, else
+    at its top; when it is hidden, the top of the next item that is still shown (#333,
+    D-371). Stale, so the Schedule puts it back by key (``PlaceKeeper.pending()``).
+
+    Args:
+        place: The place in the list before the change.
+        before: The list's items before the change, in order.
+        after: The list's items after it, in order.
+        unchanged: The items whose rows, and so whose heights, the change kept.
+
+    Returns:
+        The place, its ``layout`` still ``place``'s; None when no item at or after
+        ``place``'s is still shown.
+    """
+    if place.key in after:
+        into = place.into if place.key in unchanged else 0.0
+        return replace(place, into=into, stale=True)
+    index = before.index(place.key) if place.key in before else len(before)
+    for key in before[index + 1 :]:
+        if key in after:
+            return replace(place, key=key, into=0.0, stale=True)
+    return None

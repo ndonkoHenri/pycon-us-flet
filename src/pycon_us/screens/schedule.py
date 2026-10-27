@@ -11,8 +11,8 @@ fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
-(D-18); a text-size change puts each list back on the item at its top, by key (D-331,
-``screens/schedule_place.py``). A detail pushed over the Schedule keeps it mounted, and so its place.
+(D-18); a text-size or filter change puts each list back on the item at its top, by key
+(D-331, D-371, ``screens/schedule_place.py``). A detail pushed over the Schedule keeps it mounted, and so its place.
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -138,9 +138,18 @@ def Schedule() -> ft.View:
     changes = use_recent_changes()
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
+    by_key = ft.use_memo(
+        lambda: {
+            day: {slot.key: slot for slot in day_slots}
+            for day, day_slots in slots.items()
+        },
+        [slots],
+    )
     keeper.lay_out(
-        (conference.version, excluded),
+        conference.version,
+        excluded,
         _keys(slots, current, place, head=prefs.time_above),
+        by_key,
     )
     tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
     count = sum(
@@ -293,6 +302,19 @@ def Schedule() -> ft.View:
     # The time going above the rows at the largest sizes (D-216) relays them out too.
     ft.use_effect(time_moved, [prefs.time_above], cleanup=_cancel_on_unmount)
 
+    @report_errors
+    async def refiltered() -> None:
+        # The filter changed: the shown list goes back to its place once Flutter has
+        # laid it out, built in full until then, and is lazy again after (D-371).
+        if shown is not None and await keeper.put_back_refiltered(
+            shown, _ref(refs, shown), signals.ended
+        ):
+            set_relaid(lambda n: n + 1)
+
+    # A chip applies at once (D-20), so this runs under the open sheet; a newer change
+    # cancels the run still waiting.
+    ft.use_effect(refiltered, [excluded], cleanup=_cancel_on_unmount)
+
     on_measure = ft.use_callback(keeper.measured, [])
 
     @report_errors
@@ -357,7 +379,7 @@ def Schedule() -> ft.View:
                 use_24h=use_24h,
                 time_above=prefs.time_above,
                 # The one list a jump targets (D-154), and a list waiting to be put
-                # back by key after a text-size change (D-331).
+                # back by key after a text-size or filter change (D-331, D-371).
                 full=day == current or keeper.pending(day) is not None,
                 clearance=bool(today_slots),
                 empty=_empty(data, day, slots[day]),

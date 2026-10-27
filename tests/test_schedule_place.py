@@ -23,7 +23,6 @@ from pycon_us.screens.schedule_head import HEAD_KEY
 from pycon_us.screens.schedule_place import END_GAP_S, PlaceKeeper
 from pycon_us.ui import scrolling
 from tests import test_schedule
-from tests.sessions import settle
 from tests.test_schedule import FRIDAY, SATURDAY, THURSDAY, Shown, inside
 
 # The Schedule's fixtures, shared by name: pytest finds fixtures among a module's names.
@@ -185,19 +184,6 @@ async def test_another_day_is_built_in_full_and_put_back_by_key_when_it_shows(
     assert schedule.keyed() == [key]  # not the stale offset
     assert schedule.list_of(SATURDAY).cache_extent is None
     assert schedule.list_of(FRIDAY).cache_extent == scrolling.FULL_LIST_EXTENT
-
-
-async def test_a_place_from_before_a_filter_change_is_not_put_back(
-    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
-) -> None:
-    """The filter changed the rows above it, so it no longer says where the user is."""
-    schedule = await shown()
-    await _at_saturday_s_fourth_slot(schedule)
-    await schedule.prefs.save(schedule.storage, excluded_tracks=("talk",))
-    await settle()
-    schedule.forget()
-    await _measure(schedule, 52.0)
-    assert schedule.keyed() == []
 
 
 async def test_a_rotation_puts_the_place_back_too(
@@ -406,7 +392,7 @@ async def _superseded_in_wait(
     """
     monkeypatch.setattr(scrolling, "LANDING_S", 0.01)
     keeper = PlaceKeeper(memory)
-    keeper.lay_out("feed", {SATURDAY: (HEAD_KEY, "a", "b")})
+    keeper.lay_out(1, (), {SATURDAY: (HEAD_KEY, "a", "b")}, {})
     for key, height in ((HEAD_KEY, 0.0), ("a", HEIGHT), ("b", HEIGHT)):
         keeper.measured(SATURDAY, key, height)
     keeper.relaid(text=40.0, width=400.0, above=False)
@@ -472,7 +458,7 @@ def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) 
     is still recorded and put back after the next resize.
     """
     keeper = PlaceKeeper(memory)
-    keeper.lay_out("feed", {SATURDAY: (HEAD_KEY, "a", "b")})
+    keeper.lay_out(1, (), {SATURDAY: (HEAD_KEY, "a", "b")}, {})
     for key, height in ((HEAD_KEY, 0.0), ("a", HEIGHT), ("b", HEIGHT)):
         keeper.measured(SATURDAY, key, height)
     keeper.relaid(text=40.0, width=400.0, above=True)
@@ -485,13 +471,13 @@ def test_an_empty_head_s_height_outlives_a_text_size_change(memory: ViewMemory) 
     assert (place.key, place.into) == ("b", 50.0)
     assert keeper.relaid(text=60.0)
     assert keeper.pending(SATURDAY) == replace(place, stale=True)
-    keeper.lay_out("feed 2", {SATURDAY: (HEAD_KEY, "a", "b")})
+    keeper.lay_out(2, (), {SATURDAY: (HEAD_KEY, "a", "b")}, {})
     keeper.measured(SATURDAY, "a", HEIGHT * 1.4)
     keeper.measured(SATURDAY, "b", HEIGHT * 1.4)
     end = SimpleNamespace(event_type=ft.ScrollType.END, pixels=HEIGHT * 1.4 + 30)
     keeper.scrolled(SATURDAY, cast(ft.OnScrollEvent, end))
     place = memory.schedule_places[SATURDAY]
-    assert (place.key, place.into, place.layout) == ("b", 30.0, "feed 2")
+    assert (place.key, place.into, place.layout) == ("b", 30.0, (2, ()))
     assert keeper.relaid(text=40.0)
     assert keeper.pending(SATURDAY) == replace(place, stale=True)
 
