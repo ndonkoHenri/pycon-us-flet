@@ -1,0 +1,65 @@
+# EXPO-05 (#406, #454): search "phemeral" › its booth › the expo's List and its line.
+#
+# Phemeral (Startup Row) has booth 139, which the plan doesn't draw: Places lists
+# "Booth 139 · Phemeral", "Not on the map yet". A tap pushes the expo at the booth
+# (/search/plan/expo?booth=139); with no booth to select, it opens on the List, under
+# the line "Booth 139 isn't on the map yet" (expo.missing), with Phemeral in its
+# "Not on the map yet" section. Back returns to the results, the query kept.
+appId: io.github.ndonkohenri.pyconus
+name: Search finds a booth off the plan, and the expo's List says so
+tags:
+  - journeys
+  - expo
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: app.search
+- extendedWaitUntil:
+    visible:
+      id: search.field
+    timeout: 15000
+# Opened from Now, search shows All: the booth is its one place.
+- assertVisible:
+    id: search.scope.all
+    selected: true
+- inputText: phemeral
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: search.booth.139.phemeral
+    timeout: 15000
+# One node: its title's phrase, then the line (`text:` must match the whole label).
+- assertVisible:
+    id: search.booth.139.phemeral
+    text: "Booth 139, Phemeral\\sNot on the map yet"
+
+# → the booth: the List, under its line.
+- tapOn:
+    id: search.booth.139.phemeral
+- extendedWaitUntil:
+    visible:
+      id: expo.missing
+    timeout: 15000
+- assertVisible:
+    text: Booth 139 isn't on the map yet
+- assertVisible:
+    id: expo.view.list
+    selected: true
+- scrollUntilVisible:
+    element:
+      id: expo.sponsor.phemeral
+    direction: DOWN
+    timeout: 60000
+
+# Back: the results, the query kept.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: search.booth.139.phemeral
+    timeout: 15000
+- assertVisible:
+    id: search.field
+    text: phemeral
