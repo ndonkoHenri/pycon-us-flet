@@ -188,7 +188,13 @@ def _loss(icon: ft.IconData, text: str) -> ft.Control:
     """One line of what is lost: a decorative icon beside the words, top-aligned."""
     return ft.Row(
         [
-            ft.Icon(icon, size=20, color=ft.Colors.ON_SURFACE_VARIANT),
+            # One BODY_MEDIUM line tall at every text size (D-373).
+            ft.Icon(
+                icon,
+                size=20,
+                apply_text_scaling=True,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
             ft.Text(
                 text,
                 theme_style=ft.TextThemeStyle.BODY_MEDIUM,

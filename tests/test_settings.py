@@ -2,8 +2,8 @@
 
 ``Settings`` runs outside a renderer, as ``More`` does in ``test_more.py``: its hooks and
 ``AppScaffold`` are replaced, and a fake page is bound as Flet binds a session's page.
-That the theme follows ``Prefs`` is ``test_app.py``'s; how the page looks and reads is
-checked on devices (the PR). The Data section is a component of its own, whose tests
+That the theme follows ``Prefs`` is ``test_app_theme.py``'s; how the page looks and
+reads is checked on devices (the PR). The Data section is a component of its own, whose tests
 are ``test_settings_data.py``'s; here it is a stand-in. Reminders' rows are
 ``test_settings_reminders.py``'s; here, only where the section sits.
 """

@@ -254,8 +254,14 @@ def zone_line(note: str) -> ft.Control:
     return ft.Container(
         ft.Row(
             [
-                # Decorative: the words say it.
-                ft.Icon(ft.Icons.PUBLIC, size=18, color=ft.Colors.ON_SURFACE_VARIANT),
+                # Decorative: the words say it. One line tall at every text size
+                # (D-373), at the top, so it stays beside the first line.
+                ft.Icon(
+                    ft.Icons.PUBLIC,
+                    size=20,
+                    apply_text_scaling=True,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
                 ft.Semantics(
                     identifier=f"{SCREEN}.zone_note",
                     expand=True,
@@ -308,8 +314,8 @@ def service_card(
         lines.append(
             ft.Row(
                 [
-                    # Decorative: the words say where.
-                    ft.Icon(ft.Icons.PLACE_OUTLINED, size=18),
+                    # Decorative: the words say where. One line tall (D-373).
+                    ft.Icon(ft.Icons.PLACE_OUTLINED, size=20, apply_text_scaling=True),
                     ft.Text(item.location, expand=True),
                 ],
                 spacing=8,
@@ -348,7 +354,10 @@ def status_label(status: HoursStatus, tokens: Tokens, key: str) -> ft.Control:
     color = tokens.live if status.kind == "open" else ft.Colors.ON_SURFACE_VARIANT
     return ft.Row(
         [
-            ft.Icon(STATUS_ICONS[status.kind], size=18, color=color),
+            # One LABEL_LARGE line tall at every text size (D-373).
+            ft.Icon(
+                STATUS_ICONS[status.kind], size=20, apply_text_scaling=True, color=color
+            ),
             ft.Semantics(
                 identifier=f"{key}.status",
                 expand=True,
