@@ -509,6 +509,10 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
 | `sponsors_back` | journeys | More › Sponsors › a sponsor › Back returns to the same card (SPON-01, #496) |
 | `sponsor_find_booth` | journeys | A sponsor › Find booth › Back: the hall at the booth, then the sponsor again (SPON-04, #409) |
+| `expo_list_card` | journeys, expo | More › Expo hall › List narrowed by "socal" › booth 726's card › an exhibitor › Back to the card (EXPO-03, EXPO-04, #454) |
+| `expo_map_card` | journeys, expo | Map › Expo › booth 613's card › Close (EXPO-01, EXPO-04, #454) |
+| `job_fair_sponsor` | journeys, expo | Map › Job fair › a sponsor › Back to the pane (MAP-04, #454) |
+| `search_booth_unplaced` | journeys, expo | Search finds a booth off the plan; the expo's List says so; Back keeps the query (EXPO-05, #454) |
 | `wifi_copy` | journeys, venue | More › Wi-Fi shows both values with the feed unreachable; Copy password copies (INFO-08, #456) |
 | `help_report` | journeys, venue | Help & safety opens on Report a concern; its Copy copies the address (INFO-07, #456) |
 | `venue_open_now` | journeys, venue | On a conference morning Venue & hours says which services are open now (MAP-09, #456) |
@@ -518,7 +522,9 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
 Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday
 2026-05-15 14:10 and a feed URL nothing answers at. Maestro cannot cut an iOS
-simulator's network, so there the launch's refresh may publish the year's live feed.
+simulator's network, so there the launch's refresh may publish the year's live feed. A fresh iOS install
+that never reaches the feed is set up by writing that URL into the app's container
+before its first launch (`maestro/README.md`, "Offline on a fresh iOS install").
 
 **Caveats.**
 - On Android, any read of the accessibility tree makes Flutter report a screen reader

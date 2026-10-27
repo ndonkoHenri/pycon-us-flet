@@ -32,6 +32,10 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
 | `journeys/sponsors_back.yaml` | journeys | More › Sponsors › a logo card's sponsor (Capital One) › Back: the list shows the same card again, and the sponsor's page is gone (SPON-01, #496) |
 | `journeys/sponsor_find_booth.yaml` | journeys | A sponsor (Bloomberg) › Find booth 613 › Back: the expo hall opens at the booth with its card, and Back returns to the sponsor (SPON-04, #409) |
+| `journeys/expo_list_card.yaml` | journeys, expo | More › Expo hall › List › "socal": SoCal Python's row alone; its tap shows booth 726 on the Map with its card, which lists 726's exhibitors; SoCal Python's page › Back: the hall again with the card (EXPO-03, EXPO-04, #454) |
+| `journeys/expo_map_card.yaml` | journeys, expo | Map › Expo › booth 613 on the hall: its card with Sponsor details and Close; Close: the card goes, the hall stays (EXPO-01, EXPO-04, #454) |
+| `journeys/job_fair_sponsor.yaml` | journeys, expo | Map › Job fair › Bloomberg's row (T2) › its page › Back: the pane with the row again (MAP-04, #454) |
+| `journeys/search_booth_unplaced.yaml` | journeys, expo | Search "phemeral": "Booth 139 · Phemeral", "Not on the map yet"; its tap opens the expo's List under "Booth 139 isn't on the map yet", Phemeral in its section; Back keeps the query (EXPO-05, #406, #454) |
 | `journeys/now_quick_back.yaml` | journeys | Now › each quick info button (Wi-Fi, Help & safety, Venue & hours) › Back: each page is pushed over Now, and Back returns to Now with the buttons (#419, D-338) |
 | `journeys/wifi_copy.yaml` | journeys, venue | More › Wi-Fi shows the network and the password with the feed unreachable, and Copy password copies it: "Password copied" on iOS, no failure on Android, whose own overlay confirms a copy (INFO-08, #456) |
 | `journeys/help_report.yaml` | journeys, venue | More › Help & safety opens on Report a concern, its email row and its Copy on screen before any scroll; Copy says "Email address copied" on iOS; the places and the Code of Conduct follow (INFO-07, #456) |
@@ -216,6 +220,12 @@ Open when it shows.
   the `adb` driver's ([Row D through adb](#row-d-through-adb)).
 - Each flow that runs `start_offline.yaml` turns the network back on in its
   `onFlowComplete` (`subflows/online.yaml`).
+- Open a Map pane with `subflows/map_tab.yaml` (`env: TAB: expo`): the tab bar scrolls
+  (D-312), and at the largest text only Rooms and Floor plans fit a phone, so it swipes
+  the bar until the tab shows.
+- The expo opens on the List under a screen reader and on the Map otherwise
+  (`view_of()`), and Maestro makes Android report one (F72): a flow that needs one view
+  taps its segment (`expo.view.map`, `expo.view.list`) when that view isn't showing.
 
 ## Calendar and reminders (#458)
 
@@ -296,6 +306,27 @@ both builds again, on a quiet host and with more trials, before trusting either 
 The flow and the driver read the same rest and controls on each build: `main` rests on
 12:30 PM and its flings end in 3:00 PM; #346's build keeps the 2:00 PM slot, and its
 flings end in 4:00 PM.
+
+**The expo flows (#454)**, on 2026-10-27, `main` at `e5f2e0a`, an `ios-simulator`
+build on an iPhone 17 simulator (iOS 26.5): the four `expo` journeys passed (1 min 24 s
+to 1 min 47 s each, 6 min 7 s in all). Not yet run on Android (#454's Android sweep).
+
+## Offline on a fresh iOS install
+
+Maestro cannot cut a simulator's network, so the launch's refresh reaches the year's
+feed. To see a fresh install start from the bundled data alone, give it Developer's
+feed URL before its first launch: SharedPreferences are the app container's own
+`NSUserDefaults` (`flutter.` + the key), not the simulator's global domain.
+
+```bash
+xcrun simctl install <udid> build/ios-simulator/pycon-us.app
+data=$(xcrun simctl get_app_container <udid> io.github.ndonkohenri.pyconus data)
+xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.ndonkohenri.pyconus" \
+  flutter.pycon.dev -string '{"feed_url": "http://127.0.0.1:9/conference-2026.json"}'
+```
+
+Then launch it without `clearState` (which would drop the value): its refresh finds no
+feed, and Settings › Refresh now says "Bundled with the app" (#454).
 
 ## Venue pages (#456)
 
