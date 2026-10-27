@@ -177,7 +177,10 @@ def test_the_zoom_buttons_stay_in_the_pane(pane: float, body: float) -> None:
     """
     assert zoom_in_top(pane, body) >= booth_card.EDGE
     row, box = booth_card.card_layout(pane, body)
-    assert row == (pane < booth_card.ROW_UNDER)
+    if pane < booth_card.ROW_UNDER:
+        assert row
+    elif not row:  # the column, unless it leaves the plan too thin a band (D-377)
+        assert pane - booth_card.covered(pane, body) >= booth_card.BAND
     if box is not None:
         assert box <= pane / 2
 

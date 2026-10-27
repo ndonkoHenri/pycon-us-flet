@@ -11,6 +11,7 @@ from urllib.parse import parse_qsl, quote, urlparse
 
 import flet as ft
 
+from pycon_us.year_map import EXPO_PLAN
 from pycon_us.year_tracks import HUB_PAGES
 
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
@@ -75,6 +76,25 @@ def drill_href(view_path: str, kind: str, ident: str) -> str:
         The location, e.g. ``/now/session/poster%20detail%2B1``.
     """
     return f"{view_path.rstrip('/')}/{kind}/{quote(ident, safe='')}"
+
+
+BOOTH_PARAM = "booth"
+"""The expo's view option: ``…/plan/expo?booth=613`` selects that booth (EXPO-05)."""
+
+
+def booth_href(base: str, number: str) -> str:
+    """Return the location that pushes the expo hall on a View, at one booth (EXPO-05).
+
+    Args:
+        base: The View's own path (``ft.use_view_path()``): Back returns there.
+        number: The booth's number, quoted whole (D-42).
+
+    Returns:
+        The location, e.g. ``/more/sponsors/sponsor/bloomberg/plan/expo?booth=613``.
+    """
+    return (
+        f"{drill_href(base, 'plan', EXPO_PLAN)}?{BOOTH_PARAM}={quote(number, safe='')}"
+    )
 
 
 def parent_of(location: str, search_base: str = "/now") -> str:

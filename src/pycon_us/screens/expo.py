@@ -21,7 +21,8 @@ change of selection re-renders two booths, a pulse one, and a zoom none.
 
 The selected booth's card (``screens/booth_card.py``, #403) sits at the bottom of the
 ``Stack`` with the zoom buttons above it, so both stay in reach; its Close clears the
-selection. The List is ``screens/expo_list.py``'s, ``?booth=`` #405's.
+selection. A booth picked from the List or a ``?booth=`` link (``reveal``) is brought
+into view above its card once that is measured (``screens/expo_camera.py``, D-377).
 """
 
 import asyncio
@@ -34,12 +35,13 @@ from pycon_us.core.expo import ExpoBooth, expo_booths
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import room_sort_key
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.booth_card import BoothCard, card_layout, hiring_line
+from pycon_us.screens.booth_card import BoothCard, card_layout, covered, hiring_line
+from pycon_us.screens.expo_camera import use_camera
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.zoom import AT_FIT, Size, Transform, use_zoom, zoom_buttons, zoom_layer
+from pycon_us.ui.zoom import Size, Transform, use_zoom, zoom_buttons, zoom_layer
 from pycon_us.year_map import EXPO_PLAN, Booth, Plan
 
 SCREEN = "expo"
@@ -258,7 +260,7 @@ def expo_label(plan: Plan) -> str:
 
 
 @ft.component
-def ExpoHall(zoom_key: str = "") -> ft.Control:
+def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
     """The expo plan with its booths: tap one to select it (EXPO-01, ux.md §6.2).
 
     The year must have booths, so it has the expo plan (``check_map()``).
@@ -266,6 +268,8 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
     Args:
         zoom_key: The pane's slug, under which ``ViewMemory.map_zooms`` keeps its
             zoom; empty for a View that keeps it only while it is open.
+        reveal: The number of a booth picked elsewhere, to bring into view when it
+            is still the selected one (D-377); empty for none.
     """
     svc = use_services()
     prefs = use_prefs()
@@ -317,13 +321,15 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
 
     on_body_size = ft.use_callback(body_measured, [])
 
-    @report_errors
-    async def put_back() -> None:
-        kept = memory.map_zooms.get(zoom_key) if zoom_key and ready else None
-        if kept is not None and kept[0] > AT_FIT:
-            await zoom.restore(Transform(*kept))
-
-    ft.use_effect(put_back, [ready], cleanup=_cancel)
+    item = next((each for each in booths if each.booth.number == selected), None)
+    measured = body_size[1] if body_size[0] == selected else 0.0
+    use_camera(
+        zoom,
+        memory,
+        zoom_key=zoom_key,
+        reveal=item.booth if item is not None and reveal == selected else None,
+        cover=covered(zoom.box[1], measured) if measured else 0.0,
+    )
 
     @report_errors
     async def pulse_twice() -> None:
@@ -351,14 +357,12 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
                 pulse_ms=pulse_ms,
             )
         )
-    measured = body_size[1] if body_size[0] == selected else 0.0
     row, box = card_layout(zoom.box[1], measured)
     bottom: list[ft.Control] = [
         ft.Row(
             [zoom_buttons(zoom, SCREEN, row=row)], alignment=ft.MainAxisAlignment.END
         )
     ]
-    item = next((each for each in booths if each.booth.number == selected), None)
     if item is not None:
         hiring = hiring_line(data, item.sponsors[0]) if len(item.sponsors) == 1 else ""
         bottom.append(
@@ -395,6 +399,6 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
 def _cancel() -> None:
     """An effect's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
 
-    Without one, a pulse or a put-back still running when the pane leaves would
-    reach a viewer that has left the page.
+    Without one, a pulse still running when the pane leaves would reach a viewer
+    that has left the page.
     """

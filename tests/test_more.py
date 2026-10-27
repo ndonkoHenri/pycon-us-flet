@@ -8,6 +8,7 @@ devices (the PR).
 
 import inspect
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -132,7 +133,7 @@ def outline(rows: list[ft.Control]) -> list[str]:
 def test_the_list_has_programme_expo_venue_and_you_under_section_headers(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """Programme, Expo (Sponsors, Job listings), At the venue, About, then You's rows."""
+    """Programme, Expo (Sponsors, Expo hall, Job listings), the venue, About, You."""
     assert outline(rows_of(render())) == [
         "# Programme",
         "Speakers",
@@ -143,6 +144,7 @@ def test_the_list_has_programme_expo_venue_and_you_under_section_headers(
         "Sprints",
         "# Expo & sponsors",
         "Sponsors",
+        "Expo hall",
         "Job listings",
         "# At the venue",
         "Venue & hours",
@@ -181,7 +183,8 @@ def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(
         if (tile := tile_of(row)) is not None:
             cast(Callable[[], None], tile.on_click)()
     assert page.navigated == [entry.location for entry in MORE_PAGES]
-    assert set(page.navigated) <= PAGES
+    # Every one a page, but the hall: the drill's ``plan/expo`` on More (D-17).
+    assert set(page.navigated) - PAGES == {"/more/plan/expo"}
 
 
 @pytest.mark.parametrize("entry", MORE_PAGES, ids=lambda entry: entry.location)
@@ -222,6 +225,7 @@ def test_identifiers_name_the_page_in_snake_case() -> None:
         "more.lightning_talks",
         "more.sprints",
         "more.sponsors",
+        "more.expo",
         "more.jobs",
         "more.venue",
         "more.wifi",
@@ -262,3 +266,16 @@ def test_lightning_talks_appear_once_and_open_their_own_page(
     assert [str(t.title) for t in lightning] == ["Lightning talks"]
     cast(Callable[[], None], lightning[0].on_click)()
     assert page.navigated == ["/more/lightning-talks"]
+
+
+def test_a_year_without_booths_has_no_expo_hall_row(
+    monkeypatch: pytest.MonkeyPatch,
+    render: Callable[[], dict[str, Any]],
+    svc: Services,
+) -> None:
+    """No booths, no hall to push: the row would be dead, so it isn't there."""
+    year = replace(svc.year, map=replace(svc.year.map, booths=()))
+    monkeypatch.setattr(more, "use_services", lambda: replace(svc, year=year))
+    titles = outline(rows_of(render()))
+    assert "Expo hall" not in titles
+    assert titles[titles.index("# Expo & sponsors") + 1] == "Sponsors"

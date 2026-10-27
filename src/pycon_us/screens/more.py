@@ -5,23 +5,27 @@ whose pages are stubs until P1, and **You**: Settings (P2, THEME-01), which took
 the Appearance rows that stood in for it here (D-169, D-286), then About this app and
 Developer, which is always there when not embedded and, in a packaged build, once
 unlocked in About this app (D-73, D-187). **Expo & sponsors** came with the Sponsors
-page (#395) and Job listings with theirs (#399), **At the venue** with Wi-Fi (D-280) and
+page (#395), Job listings with theirs (#399) and Expo hall, in a year with booths, with
+``?booth=`` (#405), **At the venue** with Wi-Fi (D-280) and
 Help & safety (D-281), Venue & hours first (D-313), and **About** with About PyCon US (#414), About the PSF (D-283) and Social media
 (D-284); their other rows join with their P2 pages; the profile row and Staff tools,
 first in the list, with P3's mock account (D-16, D-51).
-Every row pushes its page, so Back returns here (D-17).
+Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
+``/more/plan/expo``, a pushed View like any page.
 """
 
 from typing import NamedTuple
 
 import flet as ft
 
+from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.year_map import EXPO_PLAN
 
 
 class MoreEntry(NamedTuple):
@@ -30,11 +34,14 @@ class MoreEntry(NamedTuple):
     title: str
     location: str
     icon: ft.IconData
+    name: str = ""
+    """The page's name in the identifier, for a location that isn't a page's own."""
 
     @property
     def identifier(self) -> str:
         """The semantics identifier UI tests find it by: ``more.<page>`` (section M)."""
-        return "more." + self.location.removeprefix("/more/").replace("-", "_")
+        page = self.name or self.location.removeprefix("/more/")
+        return "more." + page.replace("-", "_")
 
 
 PROGRAMME = (
@@ -47,11 +54,17 @@ PROGRAMME = (
 )
 """The Programme section, in the list's order (ux.md §2.2; icons §3.7)."""
 
+EXPO_HALL = MoreEntry(
+    "Expo hall", drill_href("/more", "plan", EXPO_PLAN), ft.Icons.MAP_OUTLINED, "expo"
+)
+"""The expo hall pushed on More (``ExpoPlan``), only in a year with booths."""
+
 EXPO_AND_SPONSORS = (
     MoreEntry("Sponsors", "/more/sponsors", ft.Icons.STOREFRONT_OUTLINED),
+    EXPO_HALL,
     MoreEntry("Job listings", "/more/jobs", ft.Icons.WORK_OUTLINE),
 )
-"""The Expo & sponsors section; Expo hall joins it with its page."""
+"""The Expo & sponsors section, in the list's order (ux.md §2.2)."""
 
 AT_THE_VENUE = (
     MoreEntry("Venue & hours", "/more/venue", ft.Icons.PLACE_OUTLINED),
@@ -95,6 +108,8 @@ def More() -> ft.View:
     you = [SETTINGS, ABOUT_APP]
     if prefs.developer:
         you.append(DEVELOPER)
+    booths = bool(svc.year.map.booths)  # no hall, no row: none is dead
+    expo = [entry for entry in EXPO_AND_SPONSORS if booths or entry != EXPO_HALL]
     return AppScaffold(
         title="More",
         actions=[search_button(svc.memory, "all")],
@@ -103,7 +118,7 @@ def More() -> ft.View:
                 SectionHeader("Programme"),
                 *(link(entry) for entry in PROGRAMME),
                 SectionHeader("Expo & sponsors"),
-                *(link(entry) for entry in EXPO_AND_SPONSORS),
+                *(link(entry) for entry in expo),
                 SectionHeader("At the venue"),
                 *(link(entry) for entry in AT_THE_VENUE),
                 SectionHeader("About"),

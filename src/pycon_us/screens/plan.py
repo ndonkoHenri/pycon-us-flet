@@ -20,7 +20,8 @@ another plan, shows no pin; an unknown plan shows its not-found state, whose way
 is the Map's Floor plans tab (D-186, ux.md §4.6).
 
 ``ExpoPlan`` is ``…/plan/expo`` in a year with booths: the expo hall, booths and all
-(``screens/expo.py``, EXPO-01), with no pin and no double tap (D-312).
+(``screens/expo.py``, EXPO-01), with no pin and no double tap (D-312). ``?booth=613``
+opens it with that booth selected, or the List for a booth off the plan (EXPO-05).
 """
 
 import asyncio
@@ -28,7 +29,7 @@ from functools import partial
 
 import flet as ft
 
-from pycon_us.locations import use_query
+from pycon_us.locations import BOOTH_PARAM, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.expo_pane import ExpoPane
@@ -373,11 +374,15 @@ def ExpoPlan() -> ft.View:
 
     A year without booths has no hall: its expo plan, or its not-found state, is
     ``PlanViewer``'s. The View's path keys the hall's zoom, so a switch to the List
-    and back puts it back, apart from the Map pane's (D-18).
+    and back puts it back, apart from the Map pane's (D-18). ``?booth=`` seeds the
+    pane (``expo_pane.seed()``).
     """
     view_path = ft.use_view_path()  # before the return: no conditional hooks (D-70)
+    query = use_query()
     year_map = use_services().year.map
     plan = year_map.plan(EXPO_PLAN)
     if plan is None or not year_map.booths:
         return PlanViewer(plan_id=EXPO_PLAN)
-    return AppScaffold(title=plan.title, body=ExpoPane(view_path))
+    return AppScaffold(
+        title=plan.title, body=ExpoPane(view_path, query.get(BOOTH_PARAM, ""))
+    )
