@@ -1,0 +1,44 @@
+# MAP-04 (#454): Map › Job fair › a sponsor's row › its page › Back.
+#
+# Bloomberg is at job fair table T2. Its row (map.table.bloomberg) pushes
+# /map/sponsor/bloomberg on the Map; Back leaves that one View, and the Job fair pane
+# shows the same row again.
+appId: io.github.ndonkohenri.pyconus
+name: Map, Job fair, a sponsor, then Back to the pane
+tags:
+  - journeys
+  - expo
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Map › Job fair.
+- runFlow:
+    file: ../subflows/map_tab.yaml
+    env:
+      TAB: job-fair
+- scrollUntilVisible:
+    element:
+      id: map.table.bloomberg
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+
+# → Bloomberg's row: its page.
+- tapOn:
+    id: map.table.bloomberg
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Bloomberg
+    timeout: 15000
+
+# Back: the Job fair pane, with the row.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: map.table.bloomberg
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title

@@ -1,0 +1,60 @@
+# EXPO-01, EXPO-04 (#454): Map › Expo › booth 613 › its card › Close.
+#
+# Booth 613 (Bloomberg, one exhibitor) is drawn on the hall; a tap selects it and opens
+# its card, which offers Sponsor details (expo.card.details) and Close. Close lets the
+# card go and leaves the hall, its booth still there.
+#
+# Under Maestro on Android the app sees a screen reader (F72) and opens the expo on the
+# List; the flow taps Map when booth 613 isn't there.
+appId: io.github.ndonkohenri.pyconus
+name: Map, Expo, a booth's card, then Close
+tags:
+  - journeys
+  - expo
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Map › Expo.
+- runFlow:
+    file: ../subflows/map_tab.yaml
+    env:
+      TAB: expo
+- extendedWaitUntil:
+    visible:
+      id: expo.view.map
+    timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: expo.booth.613
+    commands:
+      - tapOn:
+          id: expo.view.map
+- extendedWaitUntil:
+    visible:
+      id: expo.booth.613
+    timeout: 15000
+
+# → 613: its card, with Sponsor details.
+- tapOn:
+    id: expo.booth.613
+- extendedWaitUntil:
+    visible:
+      id: expo.card
+    timeout: 15000
+- assertVisible:
+    id: expo.card.details
+- assertVisible:
+    id: expo.card.close
+
+# Close: the card goes, the hall stays.
+- tapOn:
+    id: expo.card.close
+- extendedWaitUntil:
+    notVisible:
+      id: expo.card
+    timeout: 15000
+- assertVisible:
+    id: expo.booth.613
