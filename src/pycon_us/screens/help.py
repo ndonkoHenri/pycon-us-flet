@@ -88,6 +88,9 @@ PLACES = (
 _NANP = re.compile(r"\+1(\d{3})(\d{3})(\d{4})")
 """A North American number in E.164, in its three groups."""
 
+_BREAK = "\u200b"
+"""A zero-width space: where a line may break, unseen (an address after its ``@``)."""
+
 
 @ft.component
 def Help() -> ft.View:
@@ -330,11 +333,14 @@ def contact_row(contact: SafetyContact) -> ft.Control:
     Args:
         contact: The safety contact.
     """
+    line = contact_line(contact)
+    # The break is for the eye: a screen reader says the address as written.
+    subtitle = ft.Text(line, semantics_label=contact.value) if _BREAK in line else line
     return LinkTile(
         contact.label,
         contact.target,
         icon=CONTACT_ICONS[contact.kind],
-        subtitle=contact_line(contact),
+        subtitle=subtitle,
         identifier=f"{SCREEN}.report.{contact.kind}",
         copy_identifier=f"{SCREEN}.copy.{contact.kind}",
     )
@@ -344,8 +350,9 @@ def contact_line(contact: SafetyContact) -> str:
     """Return how a contact's value reads under its title.
 
     A North American number in groups ("+1 562-555-0100"), which a screen reader says
-    digit group by digit group rather than as one large number; any other number and
-    an address as written; a web page by its host.
+    digit group by digit group rather than as one large number; any other number as
+    written; an address with a break after its ``@``, so that at 200 % text a narrow
+    row wraps it there, never inside the domain (#642); a web page by its host.
 
     Args:
         contact: The safety contact.
@@ -354,6 +361,8 @@ def contact_line(contact: SafetyContact) -> str:
         return urlsplit(contact.value).hostname or contact.value
     if contact.kind == "tel" and (groups := _NANP.fullmatch(contact.value)):
         return "+1 {}-{}-{}".format(*groups.groups())
+    if contact.kind == "mailto":
+        return contact.value.replace("@", f"@{_BREAK}", 1)
     return contact.value
 
 
