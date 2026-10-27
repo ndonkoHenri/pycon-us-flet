@@ -332,7 +332,7 @@ class Conference:
             if discarded():
                 return
             if data is None:
-                self._confirm()
+                self._confirm(url)
                 return
             before = Published(self.data, self.source, self._shown_url)
             self._publish(data, digest, "network", clock.now(), url)
@@ -371,13 +371,16 @@ class Conference:
         self.problem = None
         self.version += 1
 
-    def _confirm(self) -> None:
+    def _confirm(self, url: str) -> None:
         """Record a good refresh that brought the published feed again (D-224).
 
         ``data`` and ``version`` stay (D-153); only the freshness changes: the age, the
-        source (the network, even for the snapshot's bytes) and the last problem.
+        source (the network, even for the snapshot's bytes) and the last problem. The
+        feed shown now counts as ``url``'s, the one it came from again, so after a feed
+        URL change the next feed from it is diffed against it (D-255, #460).
         """
         logger.info("Feed refresh: the same feed as shown; nothing new to publish")
+        self._shown_url = url
         self.source = "network"
         self.fetched_at = clock.now()
         self.problem = None
