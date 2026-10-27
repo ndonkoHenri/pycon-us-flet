@@ -509,13 +509,19 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `jump_to_now` | journeys | Jump to now lands on the now slot (criterion 2) |
 | `sponsors_back` | journeys | More › Sponsors › a sponsor › Back returns to the same card (SPON-01, #496) |
 | `sponsor_find_booth` | journeys | A sponsor › Find booth › Back: the hall at the booth, then the sponsor again (SPON-04, #409) |
+| `expo_list_card` | journeys, expo | More › Expo hall › List narrowed by "socal" › booth 726's card › an exhibitor › Back to the card (EXPO-03, EXPO-04, #454) |
+| `expo_map_card` | journeys, expo | Map › Expo › booth 613's card › Close (EXPO-01, EXPO-04, #454) |
+| `job_fair_sponsor` | journeys, expo | Map › Job fair › a sponsor › Back to the pane (MAP-04, #454) |
+| `search_booth_unplaced` | journeys, expo | Search finds a booth off the plan; the expo's List says so; Back keeps the query (EXPO-05, #454) |
 | `deep_links` | journeys, deep_links | Links land on their target with the root below, cold and warm; an unknown id and an unknown path; an open sheet closes (D-291, #518). Its default scheme and host must equal `[tool.flet.deep_linking]`, which `tests/test_deep_link_flow.py` checks |
 | `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
 Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday
 2026-05-15 14:10 and a feed URL nothing answers at. Maestro cannot cut an iOS
-simulator's network, so there the launch's refresh may publish the year's live feed.
+simulator's network, so there the launch's refresh may publish the year's live feed. A fresh iOS install
+that never reaches the feed is set up by writing that URL into the app's container
+before its first launch (`maestro/README.md`, "Offline on a fresh iOS install").
 
 **Caveats.**
 - On Android, any read of the accessibility tree makes Flutter report a screen reader
