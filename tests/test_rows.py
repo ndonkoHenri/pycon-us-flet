@@ -1,148 +1,24 @@
-"""Tests for the shared rows: ``LinkTile``, in-app and external (#77, #83; ux.md §3.9).
+"""Tests for the shared rows: in-app ``LinkTile`` and ``SpeakerTile`` (#77; ux.md §3.9).
 
-The link rule itself is tested in ``test_links.py``.
+The link rule itself is tested in ``test_links.py``, the external rows in
+``test_rows_external.py`` (#83, #623).
 
-The builders run outside a renderer, with a fake page bound as Flet binds a session's
-page; the external form's component body runs unwrapped, with the session's services
-given by the test. How tall a row is on screen, what TalkBack and VoiceOver read, and
-what the in-app browser looks like are checked on devices (the PR).
+The builders run outside a renderer, with ``tests/row_tiles.py``'s fake page bound as
+Flet binds a session's page. How tall a row is on screen and what TalkBack and
+VoiceOver read are checked on devices (the PR).
 """
-
-import inspect
-from collections.abc import Awaitable, Callable, Iterator
-from pathlib import Path
-from typing import cast
 
 import flet as ft
 import pytest
 
-from pycon_us.config import load_year
 from pycon_us.core.models import Speaker
-from pycon_us.memory import ViewMemory
-from pycon_us.services import Services
-from pycon_us.services.storage import Storage
-from pycon_us.ui import rows
 from pycon_us.ui.brands import brand_icon
 from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
-from tests.fakes import (
-    FakePage,
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPrefs,
-    MemorySemantics,
-    bound,
-)
+from tests import row_tiles
+from tests.fake_page import FakePage
+from tests.row_tiles import HOTLINE, PROFILE, node_of, tap, tile_of
 
-WEB = "https://us.pycon.org/2026/"
-PROFILE = "https://fosstodon.org/@pycon"
-HOTLINE = "tel:+1-562-662-4082"
-EMAIL = "mailto:pycon-coc@python.org?subject=Report"
-
-
-@pytest.fixture
-def svc(tmp_path: Path) -> Services:
-    """The session's services, built before a page is bound, as ``App`` builds them."""
-    return Services(
-        year=load_year(2026),
-        storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-
-
-@pytest.fixture
-def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
-    """A ``FakePage`` bound, with the external row's body inline over ``svc``.
-
-    The external row's component body runs inline: there is no renderer here.
-    """
-    monkeypatch.setattr(
-        rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
-    )
-    monkeypatch.setattr(rows, "use_services", lambda: svc)
-    fake = FakePage()
-    with bound(fake):
-        yield fake
-
-
-def launcher(svc: Services) -> MemoryLauncher:
-    """Return the services' ``MemoryLauncher``."""
-    return cast(MemoryLauncher, svc.launcher)
-
-
-def clipboard(svc: Services) -> MemoryClipboard:
-    """Return the services' ``MemoryClipboard``."""
-    return cast(MemoryClipboard, svc.clipboard)
-
-
-def said(page: FakePage) -> list[str]:
-    """The SnackBars' texts, in order."""
-    result = []
-    for dialog in page.dialogs:
-        assert isinstance(dialog, ft.SnackBar)
-        assert isinstance(dialog.content, ft.Text)
-        result.append(str(dialog.content.value))
-    return result
-
-
-def tile_of(row: ft.Control) -> ft.ListTile:
-    """The ``ListTile`` inside a row's semantics wrappers."""
-    if isinstance(row, ft.Row):  # a phone or email row: the link, then Copy
-        holder = row.controls[0]
-        assert isinstance(holder, ft.Container) and holder.content is not None
-        row = holder.content
-    assert isinstance(row, ft.MergeSemantics)  # one node for screen readers
-    inner = row.content
-    if isinstance(inner, ft.Semantics):
-        inner = inner.content
-    assert isinstance(inner, ft.ListTile)
-    return inner
-
-
-def node_of(row: ft.Control) -> ft.Semantics | None:
-    """The ``Semantics`` that annotates a row's merged node, if any."""
-    tile = tile_of(row)
-    merged = row if isinstance(row, ft.MergeSemantics) else None
-    if isinstance(row, ft.Row):
-        holder = row.controls[0]
-        assert isinstance(holder, ft.Container)
-        merged = holder.content
-    assert isinstance(merged, ft.MergeSemantics)
-    node = merged.content
-    if isinstance(node, ft.Semantics):
-        assert node.content is tile
-        return node
-    return None
-
-
-def copy_button_of(row: ft.Control) -> ft.IconButton:
-    """Return the Copy ``IconButton`` beside a phone or email row's link."""
-    assert isinstance(row, ft.Row)
-    holder = row.controls[1]
-    assert isinstance(holder, ft.Container)
-    button = holder.content
-    assert isinstance(button, ft.MergeSemantics)  # one node with its tooltip (D-234)
-    button = button.content
-    if isinstance(button, ft.Semantics):  # with an identifier (D-214)
-        button = button.content
-    assert isinstance(button, ft.IconButton)
-    return button
-
-
-def tap(tile: ft.ListTile) -> None:
-    """Call a tile's ``on_click``, as a tap does."""
-    assert tile.on_click is not None
-    cast(Callable[[], None], tile.on_click)()
-
-
-async def tap_async(control: ft.ListTile | ft.IconButton) -> None:
-    """Await a tile's or a button's ``on_click``, as a tap does."""
-    assert control.on_click is not None
-    await cast(Callable[[], Awaitable[None]], control.on_click)()
+svc, page = row_tiles.svc, row_tiles.page  # the fixtures, under this module's names
 
 
 # ------------------------------------------------------------------ in-app rows
@@ -262,125 +138,6 @@ def test_a_tap_that_fails_is_reported_not_raised(page: FakePage) -> None:
 
 
 # ------------------------------------------------------------------ external rows
-
-
-@pytest.mark.parametrize(
-    ("target", "app", "heard"),
-    [(WEB, False, "Opens in browser"), (PROFILE, True, "Opens in another app")],
-)
-def test_an_external_row_is_a_link_whose_icon_says_where_it_opens(
-    page: FakePage, target: str, app: bool, heard: str
-) -> None:
-    """An external row is a link whose open-in-new icon says where it opens."""
-    row = LinkTile("PyCon US website", target, app=app, identifier="about.website")
-    node = node_of(row)
-    assert node is not None
-    assert node.link  # screen readers say "link" (INFO-14)
-    assert node.identifier == "about.website"
-    trailing = tile_of(row).trailing
-    assert isinstance(trailing, ft.Icon)
-    assert trailing.icon == ft.Icons.OPEN_IN_NEW  # external (§3.7)
-    # Read after the title in the one merged node: "PyCon US website, Opens in browser"
-    assert trailing.semantics_label == heard
-
-
-async def test_a_web_row_opens_in_the_in_app_browser(
-    page: FakePage, svc: Services
-) -> None:
-    """A web row opens its URL in the in-app browser, without a navigation."""
-    await tap_async(tile_of(LinkTile("PyCon US website", WEB)))
-    assert launcher(svc).launched == [(WEB, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
-    assert page.navigated == []
-
-
-async def test_a_profile_row_opens_in_its_app(page: FakePage, svc: Services) -> None:
-    """A profile row with ``app=True`` opens its URL in the external app."""
-    await tap_async(tile_of(LinkTile("PyCon on Mastodon", PROFILE, app=True)))
-    assert launcher(svc).launched == [(PROFILE, ft.LaunchMode.EXTERNAL_APPLICATION)]
-
-
-async def test_a_row_the_platform_cannot_open_says_so(
-    page: FakePage, svc: Services
-) -> None:
-    """A row whose launch fails says it couldn't open the link."""
-    launcher(svc).error = RuntimeError("no app")
-    await tap_async(tile_of(LinkTile("Email the CoC team", EMAIL)))
-    assert said(page) == ["Couldn't open the link"]
-
-
-@pytest.mark.parametrize(
-    ("target", "tooltip", "copied", "message"),
-    [
-        (HOTLINE, "Copy phone number", "+1-562-662-4082", "Phone number copied"),
-        (EMAIL, "Copy email address", "pycon-coc@python.org", "Email address copied"),
-    ],
-)
-async def test_a_phone_or_email_row_offers_copy_beside_it(
-    page: FakePage,
-    svc: Services,
-    target: str,
-    tooltip: str,
-    copied: str,
-    message: str,
-) -> None:
-    """A phone or email row's Copy copies the number or address and says so."""
-    row = LinkTile("Call the hotline", target, identifier="help.coc")
-    button = copy_button_of(row)
-    assert button.tooltip == tooltip  # its accessible name (D-27)
-    assert tile_of(row).trailing is None  # the title says where a tap goes
-    await tap_async(button)
-    assert clipboard(svc).value == copied
-    assert said(page) == [message]
-
-
-async def test_a_phone_row_hands_the_number_to_the_phone_app(
-    page: FakePage, svc: Services
-) -> None:
-    """A phone row opens its ``tel:`` URL in the external app."""
-    await tap_async(tile_of(LinkTile("Call the hotline", HOTLINE)))
-    assert launcher(svc).launched == [(HOTLINE, ft.LaunchMode.EXTERNAL_APPLICATION)]
-
-
-def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
-    page: FakePage,
-) -> None:
-    """Copy is outside the link's merge, a merged node of its own with an identifier."""
-    row = LinkTile("Call the hotline", HOTLINE, identifier="help.coc")
-    assert isinstance(row, ft.Row)
-    merged = row.controls[0]
-    assert isinstance(merged, ft.Container)
-    assert isinstance(merged.content, ft.MergeSemantics)  # Copy is outside the merge
-    holder = row.controls[1]
-    assert isinstance(holder, ft.Container)
-    # Merged: bare, an identifier is a node of its own around the button (D-190).
-    assert isinstance(holder.content, ft.MergeSemantics)
-    node = holder.content.content
-    assert isinstance(node, ft.Semantics) and node.identifier == "help.coc.copy"
-    assert isinstance(node.content, ft.IconButton)
-
-
-def test_a_screen_can_name_the_copy_button_otherwise(page: FakePage) -> None:
-    """``copy_identifier`` names Copy where the screen's scheme differs (D-281)."""
-    row = LinkTile(
-        "Call the hotline",
-        HOTLINE,
-        identifier="help.report.tel",
-        copy_identifier="help.copy.tel",
-    )
-    holder = cast(ft.Row, row).controls[1]
-    assert isinstance(holder, ft.Container)
-    assert isinstance(holder.content, ft.MergeSemantics)
-    node = holder.content.content
-    assert isinstance(node, ft.Semantics) and node.identifier == "help.copy.tel"
-    link = node_of(row)
-    assert link is not None and link.identifier == "help.report.tel"
-
-
-async def test_a_copy_that_fails_says_so(page: FakePage, svc: Services) -> None:
-    """A copy that fails says it couldn't copy the phone number."""
-    clipboard(svc).error = TimeoutError()
-    await tap_async(copy_button_of(LinkTile("Call the hotline", HOTLINE)))
-    assert said(page) == ["Couldn't copy the phone number"]
 
 
 # ------------------------------------------------------------------ speaker tiles

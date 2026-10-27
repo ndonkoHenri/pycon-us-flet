@@ -34,8 +34,8 @@ from pycon_us.ui.share import (
     centre,
     share_console_log,
 )
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
@@ -43,7 +43,6 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     MemoryShare,
-    bound,
 )
 
 ANCHOR = ft.Offset(200, 400)

@@ -18,14 +18,13 @@ from pycon_us.config import load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
 )
 
 WEB = "https://us.pycon.org/2026/"

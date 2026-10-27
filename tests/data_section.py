@@ -29,8 +29,8 @@ from pycon_us.services import Services, api, errors
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
@@ -38,7 +38,6 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     MemoryShare,
-    bound,
 )
 
 DEV_FEED = "http://127.0.0.1:8000/conference-2026.json"

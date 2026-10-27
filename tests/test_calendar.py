@@ -26,7 +26,8 @@ from pycon_us.services.calendar import (
     add_to_calendar,
     saved_text,
 )
-from tests.fakes import FakePage, MemoryFilePicker, MemoryLauncher, bound
+from tests.fake_page import FakePage, bound
+from tests.fakes import MemoryFilePicker, MemoryLauncher
 from tests.sessions import memory_services
 
 DATA = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n"

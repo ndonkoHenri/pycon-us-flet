@@ -1,132 +1,32 @@
 """Tests for the Job listings page (``screens/jobs.py``; SPON-06, SPON-08, #399).
 
-The page runs in a real Flet session (``tests/sessions.py``'s ``showing()``) on the
-recorded 2026 feed: 13 listings, Bloomberg's with 15 roles, SerpApi's and marimo's
-long form, OpenEDG's a placeholder. The roles and the filter's matching come from
-``core/jobs.py``, tested in ``tests/test_jobs.py``; these tests read what the page makes
-of them (SPON-07, #400: the filter's debounce is held by ``tests/timers.py``). How the cards
-look, wrap at 200 % and read to TalkBack and VoiceOver is checked on devices (the PR).
+The page runs in ``tests/jobs_view.py``'s harness on the recorded 2026 feed: 13
+listings, Bloomberg's with 15 roles, SerpApi's and marimo's long form, OpenEDG's a
+placeholder. The roles come from ``core/jobs.py``, tested in ``tests/test_jobs.py``;
+these tests read what the page makes of them. The filter (SPON-07, #400) is
+``tests/test_jobs_page_filter.py``'s (#623). How the cards look, wrap at 200 % and
+read to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
-import asyncio
-from collections.abc import AsyncIterator
-from contextlib import AsyncExitStack
 from dataclasses import replace
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
 import httpx
-import pytest
 
-from pycon_us.config import load_year
 from pycon_us.core.jobs import sponsor_of
-from pycon_us.core.models import JobListing
 from pycon_us.core.sprints import needs_more
 from pycon_us.locations import parent_of
 from pycon_us.screens import jobs as screen
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests import sessions
+from tests import jobs_view
 from tests.fakes import MemoryPrefs
-from tests.feeds import processed, recorded
-from tests.sessions import Shown
-from tests.timers import HeldSleeps
+from tests.feeds import recorded
+from tests.jobs_view import CARD, DATA, VIEW, YEAR, listing, role_ids, toggle_of
 
-YEAR = load_year(2026)
-DATA = processed(2026)
-VIEW = "/more/jobs"
-"""The page's View path, which a sponsor's detail is pushed on."""
-
-CARD = "jobs.listing."
-"""The prefix of a card header's semantics identifier."""
-
-
-def listing(name: str) -> JobListing:
-    """Return the 2026 listing of the sponsor named ``name``."""
-    (found,) = [j for j in DATA.job_listings if j.sponsor_name == name]
-    return found
-
-
-def role_ids(shown: Shown, item: JobListing) -> list[str]:
-    """The identifiers of a card's role rows, in the rows' order."""
-    prefix = f"jobs.role.{item.id}."
-    ids = [str(n.identifier) for n in shown.nodes(prefix)]
-    return sorted(ids, key=lambda i: int(i.removeprefix(prefix)))
-
-
-def toggle_of(shown: Shown, identifier: str) -> tuple[ft.Semantics, ft.TextButton]:
-    """A card's toggle: the node that says its state, and its button."""
-    toggle = cast(ft.Semantics, shown.node(identifier).content)
-    return toggle, cast(ft.TextButton, toggle.content)
-
-
-def cards(shown: Shown) -> list[str]:
-    """The sponsors of the cards on the page, in the list's order."""
-    by_id = {f"{CARD}{item.id}": item.sponsor_name for item in DATA.job_listings}
-    return [
-        by_id[str(n.identifier)]
-        for n in shown.find(ft.Semantics)
-        if n.identifier in by_id
-    ]
-
-
-async def type_into(shown: Shown, text: str) -> None:
-    """Type into the filter as Flutter reports it: the value, then the event."""
-    (text_field,) = shown.find(ft.TextField)
-    shown.session.apply_patch(text_field._i, {"value": text})
-    await shown.event(text_field, "change", None)
-
-
-async def pause(shown: Shown, sleeps: HeldSleeps) -> None:
-    """The typing pauses: end the debounce's wait, then let the re-render through."""
-    await sleeps.release()
-    await shown.settle()
-
-
-@pytest.fixture
-def sleeps(monkeypatch: pytest.MonkeyPatch) -> HeldSleeps:
-    """The page's debounce, held until a test's ``pause()`` (``tests/timers.py``)."""
-    held = HeldSleeps()
-    monkeypatch.setattr(screen, "asyncio", held)  # the jobs module's only
-    return held
-
-
-@pytest.fixture
-def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
-    """The fields asked to take the focus; the harness has no Flutter to answer."""
-    asked: list[ft.TextField] = []
-
-    async def focus(self: ft.TextField) -> None:
-        asked.append(self)
-
-    monkeypatch.setattr(ft.TextField, "focus", focus)
-    return asked
-
-
-@pytest.fixture
-async def show(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sleeps: HeldSleeps
-) -> AsyncIterator[Any]:
-    """Return a function that shows the page, with a ``conference`` (2026 by default)."""
-    async with AsyncExitStack() as stack:
-
-        async def render(conference: Conference | None = None) -> Shown:
-            return await stack.enter_async_context(
-                sessions.showing(
-                    screen.Jobs,
-                    screen,
-                    year=YEAR,
-                    conference=conference
-                    or Conference(data=DATA, source="bundled", version=1),
-                    tmp_path=tmp_path,
-                    monkeypatch=monkeypatch,
-                    view_path=VIEW,
-                )
-            )
-
-        yield render
+show, sleeps = jobs_view.show, jobs_view.sleeps  # the fixtures, under these names
 
 
 # ------------------------------------------------------------------ the rules
@@ -247,135 +147,6 @@ async def test_a_placeholder_says_no_roles(show: Any) -> None:
 
 
 # ------------------------------------------------------------------ the filter
-
-
-async def test_the_filter_keeps_the_listings_with_every_word_once_typing_pauses(
-    show: Any, sleeps: HeldSleeps
-) -> None:
-    """SPON-07: "senior python" keeps NVIDIA and marimo, after the 250 ms pause."""
-    shown = await show()
-    (text_field,) = shown.find(ft.TextField)
-    assert text_field.hint_text == screen.FILTER_HINT
-    await type_into(shown, "senior python")
-    assert len(cards(shown)) == 13  # still typing: the list waits
-    assert sleeps.asked[-1] == screen.DEBOUNCE_SECONDS
-    await pause(shown, sleeps)
-    assert cards(shown) == ["NVIDIA", "marimo"]
-
-
-async def test_markup_finds_nothing_and_offers_to_clear_the_filter(
-    show: Any, sleeps: HeldSleeps, focused: list[ft.TextField]
-) -> None:
-    """``nofollow`` is in Bloomberg's HTML, not its text: a miss, and Clear filter.
-
-    The button empties the field and the list at once, and puts the focus back in the
-    field, since the button goes with the miss (D-182).
-    """
-    shown = await show()
-    await type_into(shown, "nofollow")
-    await pause(shown, sleeps)
-    assert cards(shown) == []
-    assert shown.node("jobs.no_match").live_region
-    assert (
-        "No roles match \N{LEFT DOUBLE QUOTATION MARK}nofollow"
-        "\N{RIGHT DOUBLE QUOTATION MARK}" in shown.texts()
-    )
-    (button,) = shown.find(ft.FilledTonalButton)
-    assert button.content == screen.CLEAR_FILTER
-    await shown.click(button)
-    assert len(cards(shown)) == 13  # no pause to wait for
-    (text_field,) = shown.find(ft.TextField)
-    assert text_field.value == ""
-    assert [f._i for f in focused] == [text_field._i]
-
-
-async def test_the_count_is_a_live_region_only_while_the_filter_finds_some(
-    show: Any, sleeps: HeldSleeps
-) -> None:
-    """D-226: "2 listings" read without leaving the field; none unfiltered or on a miss."""
-    shown = await show()
-    assert shown.nodes("jobs.count") == []
-    await type_into(shown, "senior python")
-    await pause(shown, sleeps)
-    (count,) = shown.nodes("jobs.count")
-    assert count.live_region
-    assert "2 listings" in shown.texts()
-    await type_into(shown, "bloomberg")
-    await pause(shown, sleeps)
-    assert "1 listing" in shown.texts()
-    await type_into(shown, "rust")
-    await pause(shown, sleeps)
-    assert shown.nodes("jobs.count") == []
-
-
-async def test_a_count_change_keeps_the_typed_text_on_the_field(
-    show: Any, sleeps: HeldSleeps
-) -> None:
-    """D-243: the count changes and the field stays, with what was typed last.
-
-    The list catching up after the pause neither rebuilds the field, which would lose
-    its focus, nor sends older text over what was typed since.
-    """
-    shown = await show()
-    await type_into(shown, "senior")
-    await type_into(shown, "senior python")
-    (text_field,) = shown.find(ft.TextField)
-    await pause(shown, sleeps)
-    assert cards(shown) == ["NVIDIA", "marimo"]
-    (same,) = shown.find(ft.TextField)
-    # The same field (Flutter keeps its focus) holding what was typed last.
-    assert same._i == text_field._i and same.value == "senior python"
-
-
-@ft.component
-def Detail() -> ft.View:
-    """A pushed sponsor detail: its path, so a test can tell it shows."""
-    return ft.View(route=ft.use_view_path(), controls=[ft.Text(ft.use_view_path())])
-
-
-async def test_the_filter_survives_a_sponsor_and_back(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sleeps: HeldSleeps
-) -> None:
-    """The page stays mounted under a sponsor's detail: Back finds the filter as it was."""
-    routes = [
-        ft.Route(
-            path="more/jobs",
-            component=screen.Jobs,
-            children=[ft.Route(path="sponsor/:slug", component=Detail)],
-        )
-    ]
-    async with sessions.showing(
-        lambda: ft.Router(routes, manage_views=True),
-        screen,
-        year=YEAR,
-        conference=Conference(data=DATA, source="bundled", version=1),
-        tmp_path=tmp_path,
-        monkeypatch=monkeypatch,
-        view_path=None,  # a real Router, rendered as the page's Views
-        route=VIEW,
-    ) as shown:
-        page = cast(ft.Page, shown.session.page)
-
-        async def go(location: str) -> None:
-            page.route = location
-            handler: Any = page.on_route_change  # the Router's own handler
-            handler(SimpleNamespace(route=location))
-            await shown.settle()
-
-        def navigate(location: str) -> None:
-            asyncio.get_running_loop().create_task(go(location))
-
-        monkeypatch.setattr(page, "navigate", navigate)
-        await type_into(shown, "senior python")
-        await pause(shown, sleeps)
-        node = shown.node(f"{CARD}{listing('NVIDIA').id}")
-        await shown.click(cast(ft.Control, node.parent))
-        assert "/more/jobs/sponsor/nvidia" in shown.texts()
-
-        await go(VIEW)  # Back
-        (text_field,) = shown.find(ft.TextField)
-        assert text_field.value == "senior python"
-        assert cards(shown) == ["NVIDIA", "marimo"]
 
 
 async def test_a_year_without_listings_has_no_filter(show: Any) -> None:

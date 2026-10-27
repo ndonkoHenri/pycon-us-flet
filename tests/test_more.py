@@ -24,15 +24,13 @@ from pycon_us.screens import more
 from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 
 

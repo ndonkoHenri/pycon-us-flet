@@ -22,7 +22,8 @@ from pycon_us.prefs import Prefs
 from pycon_us.services.diagnostics import Facts, diagnostics_text, gather_facts
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests.fakes import FakePage, MemoryPrefs
+from tests.fake_page import FakePage
+from tests.fakes import MemoryPrefs
 
 NOW = datetime(2026, 5, 15, 17, 30, tzinfo=UTC)
 """10:30 in Pacific Time on the first conference day."""

@@ -30,14 +30,13 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.actions import KEPT
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
 )
 from tests.feeds import recorded
 

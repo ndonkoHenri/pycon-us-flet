@@ -23,7 +23,7 @@ from pycon_us.services.errors import (
     MESSAGE,
     report_errors,
 )
-from tests.fakes import FakePage, bound
+from tests.fake_page import FakePage, bound
 
 
 @pytest.fixture

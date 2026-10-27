@@ -23,7 +23,7 @@ from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import StatusStrip
-from tests.fakes import Hooks
+from tests.fake_page import Hooks
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 

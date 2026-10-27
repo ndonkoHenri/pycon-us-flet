@@ -23,7 +23,7 @@ from pycon_us.services import Services
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from tests import chrome
 from tests.chrome import app_bar, back_arrow, body_of, click, merged_button, view_at
-from tests.fakes import FakePage, Hooks
+from tests.fake_page import FakePage, Hooks
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
 year, svc, page, conference, hooks = (

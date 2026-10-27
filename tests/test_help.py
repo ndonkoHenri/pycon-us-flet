@@ -22,7 +22,8 @@ from pycon_us.services import Services
 from pycon_us.ui.info_page import FeedBlock
 from pycon_us.year_map import MapData
 from tests import help_page
-from tests.fakes import FakePage, MemoryClipboard, MemoryLauncher
+from tests.fake_page import FakePage
+from tests.fakes import MemoryClipboard, MemoryLauncher
 from tests.help_page import (
     HOTLINE,
     REPORT_PROBLEM_SECTION,

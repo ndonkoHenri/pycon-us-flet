@@ -35,14 +35,13 @@ from pycon_us.screens.welcome import (
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.theme import BOOT_COLOR
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
 )
 from tests.test_theme import contrast_ratio
 from tests.trees import descendants, only, texts

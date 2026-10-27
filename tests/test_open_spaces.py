@@ -24,7 +24,8 @@ from pycon_us.screens import open_spaces as screen
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)

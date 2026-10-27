@@ -23,7 +23,7 @@ from pycon_us.screens import sprint_card
 from pycon_us.screens import sprints as screen
 from pycon_us.screens import tracks as hub_screen
 from pycon_us.state import Conference
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 
 YEAR = load_year(2026)
@@ -46,8 +46,8 @@ def names(listed: tuple[Sprint, ...]) -> list[str]:
 
 
 @dataclass
-class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``), and which cards ran."""
+class Shown(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``), and which cards ran."""
 
     cards: list[str] = field(default_factory=list)
     """The project ids whose card bodies ran, in order."""
@@ -79,7 +79,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     counted = sprint_card.cut_short
 
     def cut(sprint: Sprint) -> bool:
-        sessions.current(Shown).cards.append(sprint.id)
+        harness.current(Shown).cards.append(sprint.id)
         return counted(sprint)
 
     # Each card body asks once: counting the calls counts the bodies (S2).
@@ -93,7 +93,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             year: YearData = YEAR,
         ) -> Shown:
             return await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     component,
                     screen,
                     hub_screen,

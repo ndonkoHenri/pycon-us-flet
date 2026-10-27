@@ -17,7 +17,8 @@ import pytest
 import pycon_us
 from pycon_us.screens.schedule_days import JUMP_TOOLTIP, now_button
 from pycon_us.ui.semantics import merged
-from tests.test_semantics import SOURCES, called, own_nodes, scope_of
+from tests.test_semantics import SOURCES, called
+from tests.test_semantics_bare import own_nodes, scope_of
 
 MERGES = {"MergeSemantics", "named", "merged", "external"}
 """The calls that merge their control into one node with its tooltip."""

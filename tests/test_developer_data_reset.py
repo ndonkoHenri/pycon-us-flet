@@ -41,12 +41,8 @@ from tests.data_section import (
     subtitle,
     tap,
 )
-from tests.fakes import (
-    FakePage,
-    MemoryPaths,
-    MemoryPrefs,
-    MemoryShare,
-)
+from tests.fake_page import FakePage
+from tests.fakes import MemoryPaths, MemoryPrefs, MemoryShare
 from tests.feeds import recorded
 
 (

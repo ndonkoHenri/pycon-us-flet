@@ -26,7 +26,8 @@ from pycon_us.state import Conference
 from pycon_us.theme_hc import HC_DARK
 from tests import app_start
 from tests.app_start import Network, finish_refresh, started
-from tests.fakes import FakePage, MemoryPrefs, MemorySemantics
+from tests.fake_page import FakePage
+from tests.fakes import MemoryPrefs, MemorySemantics
 from tests.feeds import changed, recorded
 
 year, shared, semantics, svc, fake_page, network = (

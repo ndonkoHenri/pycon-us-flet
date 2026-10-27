@@ -21,7 +21,8 @@ from pycon_us.services import Services, api
 from pycon_us.state import Conference
 from tests import app_start
 from tests.app_start import Network, finish_refresh, started
-from tests.fakes import FakePage, MemorySemantics, bound
+from tests.fake_page import FakePage, bound
+from tests.fakes import MemorySemantics
 
 year, shared, semantics, svc, fake_page, network = (
     app_start.year,

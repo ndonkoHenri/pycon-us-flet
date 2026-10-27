@@ -25,7 +25,7 @@ from pycon_us.theme import DARK_TOKENS, HC_DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import schedule_line, strip_line
 from tests import chrome, strip
-from tests.fakes import FakePage, Hooks
+from tests.fake_page import FakePage, Hooks
 from tests.strip import PACIFIC, Network, render_strip, strip_parts
 
 # The harness's fixtures, under this module's names, where pytest looks them up.

@@ -4,7 +4,7 @@
 ``test_search_screen_results.py`` (the results, their taps and the empty states) and
 ``test_search_screen_show_all.py`` (the first rows of each type and Show all) run the
 screen in a real Flet session under the real Router with ``manage_views``, as the app
-renders it (``tests/sessions.py``'s ``showing()`` with ``view_path=None``): a small
+renders it (``tests/harness.py``'s ``showing()`` with ``view_path=None``): a small
 route table with a Schedule stand-in, the global modal ``/search`` and a drill whose
 detail is a plain View, so a result tap, Back and a fresh open go through the Router's
 own view stack (S4, D-141). Navigation is ``page.navigate`` replaced by what Flutter
@@ -34,7 +34,7 @@ from pycon_us.screens import search as screen
 from pycon_us.services import use_services
 from pycon_us.state import Conference
 from pycon_us.ui import scaffold
-from tests import sessions
+from tests import harness
 from tests.fakes import MemoryHaptics
 from tests.feeds import processed
 from tests.timers import HeldSleeps
@@ -71,8 +71,8 @@ ROUTES = [
 
 
 @dataclass
-class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on the app's Views.
+class Shown(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``) on the app's Views.
 
     It also records what the search screen asked for: its searches, the focus and its
     sleeps.
@@ -205,11 +205,11 @@ async def render(
     """Provide ``show(conference)``: the app's Views at the Schedule stand-in."""
 
     def counted_search(index: Any, query: str, scope: str = "all") -> SearchResults:
-        sessions.current(Shown).searches.append((query, scope))
+        harness.current(Shown).searches.append((query, scope))
         return search(index, query, scope)
 
     async def focus(self: ft.TextField) -> None:
-        sessions.current(Shown).focused.append(self)
+        harness.current(Shown).focused.append(self)
 
     monkeypatch.setattr(screen, "search", counted_search)
     monkeypatch.setattr(ft.TextField, "focus", focus)
@@ -220,7 +220,7 @@ async def render(
 
         async def show(conference: Conference) -> Shown:
             shown = await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     lambda: ft.Router(ROUTES, manage_views=True),
                     year=YEAR,
                     conference=conference,

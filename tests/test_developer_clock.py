@@ -16,7 +16,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.screens.developer_clock import clock_picker, picked_date
-from tests.fakes import FakePage, bound
+from tests.fake_page import FakePage, bound
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 INFO = load_year(2026).conference

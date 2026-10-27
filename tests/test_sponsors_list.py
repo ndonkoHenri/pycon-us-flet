@@ -1,6 +1,6 @@
 """Tests for the Sponsors list (``screens/sponsors.py``; SPON-01, D-37, D-279, #395).
 
-The page runs in a real Flet session (``tests/sessions.py``'s ``showing()``) on the
+The page runs in a real Flet session (``tests/harness.py``'s ``showing()``) on the
 recorded 2026 feed: 13 levels, 105 sponsors. These tests read the control tree: the
 levels' headings, each tier's shape, the one node per sponsor, where a tap goes, the
 states without data, and that a re-render with the same feed runs no item body
@@ -22,9 +22,10 @@ from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.screens import sponsors as screen
 from pycon_us.state import Conference
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
-from tests.sessions import Shown, text_of
+from tests.harness import Shown
+from tests.sessions import text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)
@@ -61,7 +62,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     phrase = screen.sponsor_phrase
 
     def counted(item: Sponsor) -> str:
-        sessions.current(Listed).bodies.append(item.slug)
+        harness.current(Listed).bodies.append(item.slug)
         return phrase(item)
 
     monkeypatch.setattr(screen, "sponsor_phrase", counted)
@@ -70,7 +71,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
         async def render(conference: Conference | None = None) -> Listed:
             return await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     screen.Sponsors,
                     screen,
                     year=YEAR,

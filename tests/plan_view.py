@@ -23,7 +23,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import plan as screen
 from pycon_us.state import Conference
-from tests import sessions
+from tests import harness
 from tests.timers import HeldSleeps
 from tests.viewers import FakeViewer
 
@@ -36,7 +36,7 @@ BOX = (382.0, 640.0)
 
 
 @dataclass
-class Plan(sessions.Shown):
+class Plan(harness.Shown):
     """The harness's ``Shown`` on one ``PlanViewer``."""
 
     viewer: FakeViewer = field(default_factory=FakeViewer)
@@ -134,7 +134,7 @@ async def render(
             return Plan(*args, viewer=viewer, sleeps=sleeps, toggles=toggles, **kwargs)
 
         return await stack.enter_async_context(
-            sessions.showing(
+            harness.showing(
                 Opened,
                 screen,
                 year=YEAR,

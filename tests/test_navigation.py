@@ -31,7 +31,7 @@ from pycon_us.ui.navigation import (
 )
 from tests import chrome
 from tests.chrome import inner_rail
-from tests.fakes import Hooks
+from tests.fake_page import Hooks
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
 year, svc, page, conference, hooks = (

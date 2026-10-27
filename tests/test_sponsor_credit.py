@@ -26,7 +26,7 @@ from pycon_us.screens import help as help_screen
 from pycon_us.screens import venue, wifi
 from pycon_us.state import Conference
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 
 CREDITS = load_year(2026).content.sponsor_credits
 

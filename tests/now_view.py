@@ -32,7 +32,7 @@ from pycon_us.screens import now as screen
 from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.ui import status_strip
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 
 YEAR = load_year(2026)
@@ -89,8 +89,8 @@ class Ticks:
 
 
 @dataclass
-class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on Now, with the test's clock."""
+class Shown(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``) on Now, with the test's clock."""
 
     clock: list[datetime] = field(default_factory=list)
     """The time ``clock.now()`` answers: ``clock[0]``."""
@@ -231,7 +231,7 @@ async def render(
                     fetched_at=now,  # fresh: no strip
                 )
             return await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     screen.Now,
                     screen,
                     year=YEAR,

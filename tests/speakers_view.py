@@ -3,7 +3,7 @@
 ``test_speakers.py`` (the query), ``test_speakers_screen.py`` (the list and its filter
 field) and ``test_speakers_rows.py`` (the rows, the headings and the states) share the
 small built cases and the harness here. The screen runs in a real Flet session under the
-store providers (``tests/sessions.py``'s ``showing()``, which names the Flet internals
+store providers (``tests/harness.py``'s ``showing()``, which names the Flet internals
 it uses): a keystroke is the field's value patched in and its change event dispatched,
 as Flutter sends them, and Flet's scheduler re-renders what changed, so a test sees
 which row and section bodies ran (D-153). A module takes the fixtures by assigning them
@@ -25,7 +25,7 @@ from pycon_us.screens import speakers as screen
 from pycon_us.state import Conference
 from pycon_us.ui import rows
 from pycon_us.ui.rows import speaker_phrase
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 
 YEAR = load_year(2026)
@@ -54,8 +54,8 @@ def names(entries: tuple[SpeakerEntry, ...]) -> list[str]:
 
 
 @dataclass
-class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on the Speakers screen.
+class Shown(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``) on the Speakers screen.
 
     Its rows are speakers: ``rows`` holds the speaker ids whose row bodies ran.
     """
@@ -112,11 +112,11 @@ async def render(
     header = screen.SectionHeader
 
     def counted_phrase(entry: SpeakerEntry) -> str:
-        sessions.current(Shown).rows.append(entry.speaker.id)
+        harness.current(Shown).rows.append(entry.speaker.id)
         return speaker_phrase(entry)
 
     def counted_header(text: str) -> ft.Control:
-        sessions.current(Shown).sections.append(text)
+        harness.current(Shown).sections.append(text)
         return header(text)
 
     # Each body calls these once: counting the calls counts the bodies (S2).
@@ -127,7 +127,7 @@ async def render(
 
         async def show(conference: Conference) -> Shown:
             return await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     screen.Speakers,
                     screen,
                     year=YEAR,

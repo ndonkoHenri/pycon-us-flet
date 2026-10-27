@@ -27,7 +27,7 @@ from pycon_us.locations import (
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.theme import BOOT_COLOR
-from tests.fakes import FakePage, bound
+from tests.fake_page import FakePage, bound
 from tests.route_levels import drill_params, view_levels
 
 # ------------------------------------------------------------------ Back

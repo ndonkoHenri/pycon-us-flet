@@ -1,7 +1,7 @@
 """The session detail harness: ``SessionDetail`` in a real Flet session (ux.md §5.5).
 
 ``tests/test_session.py``, its parts and ``tests/test_session_extras.py`` share it. The session is
-``tests/sessions.py``'s ``showing()``, under a component that can re-render the detail
+``tests/harness.py``'s ``showing()``, under a component that can re-render the detail
 in place with another id, or without it. The sessions are the recorded 2026 feed's.
 """
 
@@ -23,7 +23,7 @@ from pycon_us.state import Conference
 from pycon_us.ui import location_card
 from tests.fakes import MemoryShare
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)

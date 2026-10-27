@@ -27,7 +27,7 @@ from pycon_us.screens import map as screen
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import zoom
-from tests import links, sessions
+from tests import harness, links
 from tests.feeds import processed
 from tests.timers import HeldSleeps
 from tests.viewers import FakeViewer
@@ -41,7 +41,7 @@ type Box = tuple[float, float, float, float]
 
 
 @dataclass
-class ExpoShown(sessions.Shown):
+class ExpoShown(harness.Shown):
     """The harness's ``Shown`` on the Map's Expo pane, with what its booths did."""
 
     viewer: FakeViewer = field(default_factory=FakeViewer)
@@ -123,7 +123,7 @@ async def render(
     phrase = expo.booth_phrase
 
     def counted(item: ExpoBooth) -> str:
-        sessions.current(ExpoShown).renders.append(item.booth.number)
+        harness.current(ExpoShown).renders.append(item.booth.number)
         return phrase(item)
 
     monkeypatch.setattr(expo, "booth_phrase", counted)
@@ -144,7 +144,7 @@ async def render(
             else Conference()
         )
         return await stack.enter_async_context(
-            sessions.showing(
+            harness.showing(
                 screen.Map,
                 screen,
                 year=YEAR,
@@ -365,7 +365,7 @@ async def test_plan_expo_is_the_hall_in_a_year_with_booths(
 ) -> None:
     """``…/plan/expo`` pushes the hall with its booths; without booths, the plan alone."""
     year = YEAR if booths else replace(YEAR, map=replace(YEAR.map, booths=()))
-    async with sessions.showing(
+    async with harness.showing(
         plan.ExpoPlan,
         plan,
         year=year,

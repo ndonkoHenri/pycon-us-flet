@@ -24,7 +24,8 @@ from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.year_info import Directions
 from tests.fakes import MemoryClipboard
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 from tests.test_theme import contrast_ratio, hex_role, scheme
 
 PACIFIC = ZoneInfo("America/Los_Angeles")

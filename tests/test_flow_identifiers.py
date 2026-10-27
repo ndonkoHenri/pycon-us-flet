@@ -13,7 +13,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.ui.scaffold import search_button
 from tests import chrome
 from tests.chrome import merged_button
-from tests.fakes import FakePage
+from tests.fake_page import FakePage
 
 # The harness's fixture, under this module's name, where pytest looks it up.
 page = chrome.page

@@ -33,7 +33,7 @@ from pycon_us.ui.fold import FoldTile
 from pycon_us.ui.scaffold import AppScaffold
 from tests import chrome
 from tests.chrome import view_at
-from tests.fakes import FakePage, Hooks
+from tests.fake_page import FakePage, Hooks
 from tests.sessions import find, rendering, settle
 from tests.test_theme import contrast_ratio
 from tests.trees import descendants

@@ -21,7 +21,7 @@ from pycon_us.licences import COMPONENTS, GROUPS, TEXTS_DIR, Paragraph, paragrap
 from pycon_us.routes import ROUTES
 from pycon_us.screens import licences as screen
 from pycon_us.state import Conference
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 
 ROOT = Path(__file__).parent.parent
 
