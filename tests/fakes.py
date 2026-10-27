@@ -271,6 +271,11 @@ class FakePage:
         self.platform = ft.PagePlatform.IOS
         self.device: ft.DeviceInfo | None = None
         self.device_error: Exception | None = None
+        self.controls: dict[int, ft.BaseControl] = {}
+
+    def get_control(self, id: int) -> ft.BaseControl | None:
+        """Return the control mounted under ``id``: ``controls``, which the test fills."""
+        return self.controls.get(id)
 
     async def get_device_info(self) -> ft.DeviceInfo | None:
         """Return ``device``, or raise ``device_error``, as the Flutter side would."""

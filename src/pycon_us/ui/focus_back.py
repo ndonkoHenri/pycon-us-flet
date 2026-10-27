@@ -17,7 +17,9 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator
-from typing import Protocol
+from typing import Protocol, runtime_checkable
+
+import flet as ft
 
 from pycon_us.services import Services
 from pycon_us.services.storage import SERVICE_ERRORS
@@ -37,6 +39,7 @@ build, which waited for no return, moved nothing 0.5 s after the share call and 
 both focuses 2.5 s after it (F192)."""
 
 
+@runtime_checkable
 class Focusable(Protocol):
     """A control that can take the focus: Flet's buttons at the pin (``focus()``)."""
 
@@ -45,20 +48,30 @@ class Focusable(Protocol):
 
 
 @contextlib.asynccontextmanager
-async def focus_back(svc: Services, opener: Focusable | None) -> AsyncIterator[None]:
+async def focus_back(
+    svc: Services, opener: ft.BaseControl | None
+) -> AsyncIterator[None]:
     """Wrap a call that opens another app's window; after it, focus ``opener`` again.
 
-    The focus moves only when the app has left and come back since the call began
-    (``Presence.back_since()``): a window that never opened (a launch with no app for
-    the link, a share that failed) leaves the focus where it is. It waits through
-    the time the other window is up, so the caller's handler returns only then. An
-    exception from the call passes through, and nothing is focused.
+    Call it from the event handler. The focus moves only when the app has left and
+    come back since the call began (``Presence.back_since()``): a window that never
+    opened (a launch with no app for the link, a share that failed) leaves the focus
+    where it is. It waits through the time the other window is up, so the caller's
+    handler returns only then. An exception from the call passes through, and nothing
+    is focused.
+
+    The control focused is the one mounted on the return, found by the opener's id
+    (``page.get_control()``): a render meanwhile (Share re-enabled, a feed refresh)
+    builds a new control that takes over the id, and the event's own is left
+    detached, its ``focus()`` refused (F192).
 
     Args:
         svc: The session's services: the app's presence.
-        opener: The button that was tapped (the event's ``control``); None for a
-            control without ``focus()``, which is left as it is (U182).
+        opener: The control that was tapped, the event's ``control``; None to leave
+            the focus alone. A control without ``focus()`` (a ``ListTile``, U182) is
+            left alone too.
     """
+    page = ft.context.page
     returns = svc.presence.returns
     yield
     if opener is None:
@@ -66,8 +79,11 @@ async def focus_back(svc: Services, opener: Focusable | None) -> AsyncIterator[N
     if not await svc.presence.back_since(returns, leave_within=LEAVE_WITHIN):
         return
     await asyncio.sleep(SETTLE_SECONDS)
+    current = page.get_control(opener._i)
+    if not isinstance(current, Focusable):
+        return  # gone from the page meanwhile, or never focusable
     try:
-        await opener.focus()
+        await current.focus()
     except SERVICE_ERRORS as error:
-        # Gone from the page meanwhile (RuntimeError), or no answer: nothing to say.
+        # No answer from Flutter, or detached meanwhile: nothing to say.
         logger.info("Could not give the focus back: %s", type(error).__name__)

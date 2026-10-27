@@ -39,7 +39,7 @@ from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.theme import MARKDOWN_STYLE
-from pycon_us.ui.focus_back import Focusable, focus_back
+from pycon_us.ui.focus_back import focus_back
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,11 @@ def contact_of(target: str) -> str:
 
 
 async def open_link(
-    svc: Services, target: str, *, app: bool = False, opener: Focusable | None = None
+    svc: Services,
+    target: str,
+    *,
+    app: bool = False,
+    opener: ft.BaseControl | None = None,
 ) -> None:
     """Open ``target`` by the link rule; call it from an event handler.
 
