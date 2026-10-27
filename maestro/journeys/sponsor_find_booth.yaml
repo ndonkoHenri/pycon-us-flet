@@ -1,0 +1,60 @@
+# SPON-04 (#409): a sponsor › Find booth › Back returns to the sponsor.
+#
+# Bloomberg (2026's booth 613, job fair table T2) shows "Find booth 613"; the tap
+# pushes the expo hall on the sponsor at the booth, its card naming the exhibitor
+# (/more/sponsors/sponsor/bloomberg/plan/expo?booth=613, EXPO-05); Back leaves that
+# one View, and the sponsor's page shows again.
+appId: io.github.ndonkohenri.pyconus
+name: A sponsor, Find booth, then Back to the sponsor
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Sponsors › Bloomberg.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.sponsors
+    direction: DOWN
+- tapOn:
+    id: more.sponsors
+- scrollUntilVisible:
+    element:
+      id: sponsors.sponsor.bloomberg
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: sponsors.sponsor.bloomberg
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Bloomberg
+    timeout: 15000
+
+# → Find booth 613: the hall, with the booth's card.
+- tapOn:
+    id: sponsor.find_booth
+- extendedWaitUntil:
+    visible:
+      id: expo.card
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title
+
+# Back: the sponsor again.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Bloomberg
+    timeout: 15000
+- assertNotVisible:
+    id: expo.card

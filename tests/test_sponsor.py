@@ -83,13 +83,16 @@ def role_ids(shown: Shown) -> list[str]:
 # ------------------------------------------------------------------ the rules
 
 
-def test_the_facts_say_the_booth_and_leave_the_table_to_its_button() -> None:
-    """The booth alone, or None without one: the job fair table is a button (#464)."""
-    assert screen.facts_line(sponsor("bloomberg")) == "Booth 613"
-    assert screen.facts_line(sponsor("hudson-river-trading")) == "Booth 127"
+def test_the_facts_say_the_booth_only_in_a_year_without_a_hall() -> None:
+    """The booth is a plain line without a hall, a button with one; the table, a button."""
+    assert screen.facts_line(sponsor("bloomberg"), hall=False) == "Booth 613"
+    assert screen.facts_line(sponsor("hudson-river-trading"), hall=False) == (
+        "Booth 127"
+    )
+    assert screen.facts_line(sponsor("bloomberg"), hall=True) is None
     bare = replace(sponsor("nvidia"), booth=None, job_fair_table="T9")
-    assert screen.facts_line(bare) is None
-    assert screen.facts_line(sponsor("nvidia")) is None
+    assert screen.facts_line(bare, hall=False) is None
+    assert screen.facts_line(sponsor("nvidia"), hall=False) is None
 
 
 # ------------------------------------------------------------------ the intro
@@ -121,12 +124,64 @@ async def test_at_large_text_the_name_steps_down_still_centred(show: Show) -> No
     )
 
 
-async def test_the_level_and_the_booth_are_lines_not_controls(show: Show) -> None:
-    """No Chip that does nothing; the level and the booth are plain lines."""
+async def test_the_level_is_a_line_not_a_control(show: Show) -> None:
+    """No Chip that does nothing; the level is a plain line, the booth a button."""
     shown = await show("bloomberg")
     assert "Visionary sponsor" in shown.texts()
-    assert "Booth 613" in shown.texts()
+    assert "Booth 613" not in shown.texts()  # Find booth 613 says it
     assert shown.find(ft.Chip) == []
+
+
+async def test_find_booth_shows_the_booth_in_the_expo_hall(show: Show) -> None:
+    """The tonal "Find booth 613" pushes the hall at booth 613 on the sponsor."""
+    shown = await show("bloomberg")
+    button = cast(ft.FilledTonalButton, shown.node("sponsor.find_booth").content)
+    assert (button.content, button.icon, button.style.padding) == (
+        "Find booth 613",
+        ft.Icons.STOREFRONT_OUTLINED,
+        ICON_PADDING,
+    )
+    await shown.click(button)
+    assert shown.went == [f"{VIEW_PATH}/plan/expo?booth=613"]
+
+
+async def test_bloomberg_has_both_place_buttons_in_one_wrapping_row(
+    show: Show,
+) -> None:
+    """Find booth, then Job fair table, side by side, stacking at large text."""
+    shown = await show("bloomberg")
+    booth = shown.node("sponsor.find_booth")
+    table = shown.node("sponsor.job_fair_table")
+    (row,) = [r for r in shown.find(ft.Row) if booth.parent in r.controls]
+    assert row.controls == [booth.parent, table.parent]  # each in its merge (D-214)
+    assert (row.wrap, row.alignment) == (True, ft.MainAxisAlignment.CENTER)
+
+
+async def test_nvidia_has_neither_place_button(show: Show) -> None:
+    """No booth and no table: no Find booth, no Job fair table, no facts line."""
+    shown = await show("nvidia")
+    assert shown.nodes("sponsor.find_booth") == []
+    assert shown.nodes("sponsor.job_fair_table") == []
+    assert not any(text.startswith("Booth ") for text in shown.texts())
+
+
+async def test_a_year_without_a_hall_says_the_booth_as_a_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No expo hall to open: "Booth 613" stays a plain line, and no Find booth."""
+    year = replace(YEAR, map=replace(YEAR.map, booths=()))
+    async with showing(
+        lambda: screen.SponsorDetail("bloomberg"),
+        screen,
+        year=year,
+        conference=Conference(data=DATA, source="bundled", version=1),
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        view_path=VIEW_PATH,
+    ) as shown:
+        assert "Booth 613" in shown.texts()
+        assert shown.nodes("sponsor.find_booth") == []
+        assert shown.nodes("sponsor.job_fair_table")
 
 
 async def test_the_job_fair_table_button_shows_the_table_on_the_plan(
