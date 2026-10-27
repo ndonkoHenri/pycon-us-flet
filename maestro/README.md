@@ -37,6 +37,9 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/job_fair_sponsor.yaml` | journeys, expo | Map › Job fair › Bloomberg's row (T2) › its page › Back: the pane with the row again (MAP-04, #454) |
 | `journeys/search_booth_unplaced.yaml` | journeys, expo | Search "phemeral": "Booth 139 · Phemeral", "Not on the map yet"; its tap opens the expo's List under "Booth 139 isn't on the map yet", Phemeral in its section; Back keeps the query (EXPO-05, #406, #454) |
 | `journeys/now_quick_back.yaml` | journeys | Now › each quick info button (Wi-Fi, Help & safety, Venue & hours) › Back: each page is pushed over Now, and Back returns to Now with the buttons (#419, D-338) |
+| `journeys/wifi_copy.yaml` | journeys, venue | More › Wi-Fi shows the network and the password with the feed unreachable, and Copy password copies it: "Password copied" on iOS, no failure on Android, whose own overlay confirms a copy (INFO-08, #456) |
+| `journeys/help_report.yaml` | journeys, venue | More › Help & safety opens on Report a concern, its email row and its Copy on screen before any scroll; Copy says "Email address copied" on iOS; the places and the Code of Conduct follow (INFO-07, #456) |
+| `journeys/venue_open_now.yaml` | journeys, venue | On a conference morning (Friday 09:30, `NOW` overrides it) More › Venue & hours says Registration, the information desk and Swag pickup are open now, each until its closing time (MAP-09, #456) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
@@ -196,6 +199,10 @@ Open when it shows.
 - A control with no identifier gets one in `src`, the smallest change (as `app.search`,
   D-252). The app bar's back arrow has none: use `subflows/back.yaml`, the system Back on
   Android and the button named "Back" on iOS.
+- A tab goes through `subflows/tab.yaml` (`TAB: more`, `NAME: "More.*Tab 5 of 5"`):
+  the bar's `app.nav.<tab>` on a phone, the destination's name on a tablet's rail,
+  which has no identifiers (D-277, #163). The shared subflows and the venue flows use
+  it, so they run on an iPad too; the older journeys still tap `app.nav.*`.
 - After typing, `pressKey: Enter` closes the keyboard. On Android a Back would only close
   Gboard's bar, which comes back while the field keeps the focus.
 - `subflows/top_slot.yaml` reads the Schedule's top row and its start time, which is how
@@ -305,3 +312,26 @@ xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.nd
 Then launch it without `clearState` (which would drop the value): its refresh finds no
 feed, and Settings › Refresh now says "Bundled with the app" (#454).
 
+## Venue pages (#456)
+
+The three `venue` flows, on 2026-10-27, `main` at `e5f2e0a` plus the flows, an
+`ios-simulator` build whose bundle matched `build/python-app`, Flet pin `15854a0ac`, at
+load averages of 15 to 730:
+
+| Device | Run | Result |
+|---|---|---|
+| iPhone 17, iOS 26.5 | `--include-tags=venue` | 3 of 3 passed, 4 min 12 s; `xcrun simctl pbpaste` gave the password |
+| iPad Air 11-inch (M4), iOS 26.5 (the rail) | `--include-tags=venue` | 3 of 3 passed, 5 min 9 s, through `tab.yaml`; `pbpaste` gave the password |
+| Android | not run yet | the Android sweep runs them, TalkBack and airplane mode included |
+
+At 200 % text (iOS's Larger Text at `accessibility-large`) the flows cannot start:
+Developer options' rows (`about_app.developer`, `developer.apply`) are below the fold,
+and the shared subflows tap them without a scroll. The pages were checked at 200 % in
+an app the flows had set up, after the text size changed: nothing clips, Report a
+concern stays first, and both copies are confirmed; the email address breaks inside
+`python.org` (#642).
+
+A simulator cannot be put in airplane mode, so on iOS the launch's own refresh may
+reach the year's live feed before Developer points the app at a feed that never
+answers; a cold start with no network is checked on Android. The three pages need no
+feed: they are bundled year data (`content.toml`).

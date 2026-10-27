@@ -1,6 +1,6 @@
 """Tests for ``NotFound``, the View of an unknown location (#83, #385; D-270).
 
-The details' own not-found states are tested with their screens (``test_session.py``,
+The details' own not-found states are tested with their screens (``test_session_actions.py``,
 #90; ``test_room.py``, #101; ``test_speaker.py``, #99; ``test_tracks.py``, #102).
 ``AppScaffold``'s Back rules for it are tested in ``test_scaffold.py``, and that the
 table's catch-all reaches it only for a location nothing else matches in
