@@ -617,7 +617,7 @@ def test_every_brand_names_a_bundled_mark(year: int) -> None:
     """Each link's brand is a key of ``BRANDS``, so its row draws a mark (D-264).
 
     The loader stays free of Flet, so this test, not the loader, holds it, as
-    ``test_config.py`` holds the track icons.
+    ``test_config_tracks.py`` holds the track icons.
     """
     table = load_year(year).content.social
     for link in table.links if table is not None else ():
