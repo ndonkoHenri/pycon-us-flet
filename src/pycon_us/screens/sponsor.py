@@ -8,10 +8,14 @@ and showed an empty card for an unknown slug. This page, top to bottom (ux.md §
   decorative: the name follows), the name as the page's level-1 heading (the app bar's
   title stays empty, D-186, D-211), the level as a plain line, "Visionary sponsor",
   rather than §6.5's first ``Chip``, which would be a control that does nothing, and
-  the facts, "Booth 613". "Job fair table T2", an outlined button, pushes the job fair
-  plan with the table selected (``…/plan/job-fair?table=T2``, #464). "Website"
-  follows only when the feed gives the sponsor one (``external_url``; the live feed
-  never has). Find booth becomes an action with the expo map (#409).
+  where to find them, as buttons in a wrapping row, each only when the sponsor has
+  one: "Find booth 613", a tonal button, pushes the expo hall at the booth
+  (``locations.booth_href()``, #409; a booth the plan doesn't draw opens the List
+  with its line), and "Job fair table T2", an outlined one, pushes the job fair plan
+  with the table selected (``…/plan/job-fair?table=T2``, #464). Both push on the
+  sponsor, so Back returns here. In a year without an expo hall the booth is a plain
+  line, "Booth 613". "Website" follows only when the feed gives the sponsor one
+  (``external_url``; the live feed never has).
 - **About** (level 2): the feed's plain text, selectable, its line breaks kept;
   left out when the feed has none.
 - **Open roles** (level 2): each role of the sponsor's listings
@@ -30,6 +34,7 @@ from pycon_us.core.jobs import listings_of
 from pycon_us.core.links import feed_link
 from pycon_us.core.models import ConferenceData, Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
+from pycon_us.locations import booth_href
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.plan_tables import table_href
 from pycon_us.screens.stub import not_found
@@ -128,15 +133,18 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     return AppScaffold(title="", body=body)
 
 
-def facts_line(sponsor: Sponsor) -> str | None:
-    """Return where to find the sponsor's booth: "Booth 613", or None without one.
+def facts_line(sponsor: Sponsor, *, hall: bool) -> str | None:
+    """Return the sponsor's booth as a plain line, "Booth 613", or None.
 
-    The job fair table is a button instead (``job_fair_button()``).
+    None without a booth, and in a year with an expo hall, where the booth is the
+    Find booth button instead (``find_booth_button()``); the job fair table is
+    always a button (``job_fair_button()``).
 
     Args:
         sponsor: The sponsor.
+        hall: The year has an expo hall to open (``YearMap.booths``).
     """
-    return f"Booth {sponsor.booth}" if sponsor.booth else None
+    return f"Booth {sponsor.booth}" if sponsor.booth and not hall else None
 
 
 def intro(
@@ -146,13 +154,13 @@ def intro(
 
     Centred. The name is the page's heading (level 1), a ``PageTitle`` selectable to
     copy (D-26), where a long name wraps (D-186). The level and the facts are plain
-    lines, each a node of its own. The job fair table and the website follow, each
+    lines, each a node of its own. The places' buttons and the website follow, each
     only when the sponsor has one.
 
     Args:
         sponsor: The sponsor.
         svc: The session's services, for the website's launch.
-        view_path: The page's View path, so the job fair plan is pushed on top of it.
+        view_path: The page's View path, so the plans are pushed on top of it.
         large_text: The text is large for the width (``Prefs.time_above``): the
             name steps down (D-328).
     """
@@ -167,11 +175,26 @@ def intro(
         ),
         _centred(f"{sponsor.level} sponsor", color=ft.Colors.ON_SURFACE_VARIANT),
     ]
-    facts = facts_line(sponsor)
+    hall = bool(svc.year.map.booths)  # no hall, no Find booth: none is dead
+    facts = facts_line(sponsor, hall=hall)
     if facts is not None:
         lines.append(_centred(facts))
+    places: list[ft.Control] = []
+    if sponsor.booth and hall:
+        places.append(find_booth_button(sponsor.booth, view_path))
     if sponsor.job_fair_table:
-        lines.append(job_fair_button(sponsor.job_fair_table, view_path))
+        places.append(job_fair_button(sponsor.job_fair_table, view_path))
+    if places:
+        # A wrapping row: at 200 % text the two buttons stack, nothing clips.
+        lines.append(
+            ft.Row(
+                places,
+                wrap=True,
+                spacing=8,
+                run_spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
+        )
     website = feed_link(sponsor.external_url, svc.year.conference.site_url)
     if website is not None and link_kind(website) is LinkKind.WEB:
         lines.append(website_button(website, svc))
@@ -189,6 +212,34 @@ def _centred(text: str, *, color: ft.ColorValue | None = None) -> ft.Text:
         color=color,
         text_align=ft.TextAlign.CENTER,
     )
+
+
+def find_booth_button(number: str, view_path: str) -> ft.Control:
+    """Return "Find booth 613", a tonal button that shows the booth in the expo hall.
+
+    It pushes ``…/plan/expo?booth=613`` on the sponsor (``booth_href()``, #405), so
+    Back returns here; a booth the plan doesn't draw opens the hall's List with its
+    line. ux.md §6.5's ``STOREFRONT_OUTLINED`` (identifier ``sponsor.find_booth``).
+    Material pads its 40 dp to a 48 dp tap on phones (ux.md §9).
+
+    Args:
+        number: The sponsor's booth, as the feed writes it.
+        view_path: The page's View path.
+    """
+    target = booth_href(view_path, number)
+
+    @report_errors
+    def go() -> None:
+        ft.context.page.navigate(target)
+
+    button = ft.FilledTonalButton(
+        f"Find booth {number}",
+        icon=ft.Icons.STOREFRONT_OUTLINED,
+        on_click=go,
+        style=ft.ButtonStyle(padding=ICON_PADDING),
+        elevation=0,  # with a style, Flet lifts it to 1 (D-344)
+    )
+    return named(f"{SCREEN}.find_booth", button)
 
 
 def job_fair_button(number: str, view_path: str) -> ft.Control:

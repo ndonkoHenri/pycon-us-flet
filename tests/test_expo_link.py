@@ -205,6 +205,20 @@ async def test_a_link_off_the_plan_opens_the_list_with_a_live_line(
     assert await shown.back() == sponsor
 
 
+async def test_sponsor_s_find_booth_pushes_the_hall_and_back_returns_to_it(
+    open_at: links.Open, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sponsor › Find booth 613: the hall on the sponsor at 613; Back to the sponsor."""
+    FakeViewer().install(monkeypatch)
+    sponsor = "/more/sponsors/sponsor/bloomberg"
+    shown = await open_at(sponsor)
+    await shown.click(cast(ft.Control, shown.node("sponsor.find_booth").content))
+    assert shown.routes()[-2:] == [sponsor, f"{sponsor}/plan/expo"]
+    assert str(shown.node("expo.card").label).startswith("Booth 613, Bloomberg")
+    assert await shown.back() == sponsor
+    assert shown.routes()[-1] == sponsor
+
+
 async def test_more_s_expo_hall_pushes_the_hall_and_back_returns_to_more(
     open_at: links.Open, monkeypatch: pytest.MonkeyPatch
 ) -> None:
