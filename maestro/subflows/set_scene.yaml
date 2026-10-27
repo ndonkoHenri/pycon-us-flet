@@ -12,6 +12,10 @@
 appId: io.github.ndonkohenri.pyconus
 ---
 - runFlow: open_developer.yaml
+- scrollUntilVisible:
+    element:
+      id: developer.refresh_now
+    direction: DOWN
 - tapOn:
     id: developer.refresh_now
 # The outcome line is under the Data rows, below the fold on a phone.
@@ -38,6 +42,10 @@ appId: io.github.ndonkohenri.pyconus
 - retry:
     maxRetries: 3
     commands:
+      - scrollUntilVisible:
+          element:
+            id: developer.feed_url
+          direction: DOWN
       - tapOn:
           id: developer.feed_url
       - eraseText: 120
@@ -48,11 +56,17 @@ appId: io.github.ndonkohenri.pyconus
 # Android a Back would only close the keyboard, and Gboard's bar comes back while the
 # field keeps the focus.
 - pressKey: Enter
+# At 200 % text Apply and its outcome sit below the fold (#458).
+- scrollUntilVisible:
+    element:
+      id: developer.apply
+    direction: DOWN
 - tapOn:
     id: developer.apply
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       text: "Applied: a fake clock in Pacific Time and your feed URL\\."
+    direction: DOWN
     timeout: 15000
 # Leave and reopen, so Refresh now's outcome line starts empty.
 - runFlow: back.yaml
@@ -61,6 +75,10 @@ appId: io.github.ndonkohenri.pyconus
       id: more.title
     timeout: 15000
 - runFlow: open_developer.yaml
+- scrollUntilVisible:
+    element:
+      id: developer.refresh_now
+    direction: DOWN
 - tapOn:
     id: developer.refresh_now
 - scrollUntilVisible:

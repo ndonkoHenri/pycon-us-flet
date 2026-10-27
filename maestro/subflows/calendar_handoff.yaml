@@ -1,0 +1,66 @@
+# Take an .ics file the app just handed to the calendar through the system's own
+# screens, back to the app (D-272; SESS-04, SESS-05). Run it right after a tap on Add to
+# calendar (session detail) or Export to calendar (.ics) (My schedule).
+#
+# env:
+#   FILE   the file's name without ".ics", e.g. "pathlib-why-and-how-to-use-it": what
+#          Android's SnackBar names
+#   ALARM  "true" when the sheet shows one event, whose alarm it shows ("10 minutes
+#          before"); a sheet of several events lists them without their alarms
+#
+# iOS: the in-app browser hands the file to iOS's calendar sheet: one event shows its
+# details, its Alert and "Add To Calendar"; several show "N Events" and "Add All", or
+# "Add (N)" when some are in the calendar already (the UID, D-62). An event already in
+# the calendar shows "Delete Event" instead, as when the flow runs a second time on the
+# same simulator. Add, Done, then Close on the empty browser view that stays behind
+# (the spike's three taps, docs/spikes/10-ics-share.md).
+#
+# Android: the system save dialog, whose Save keeps the folder it opens on; then the
+# app's SnackBar says to open the file from the Files app, and promises no alarm.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: "Add To Calendar|Add All|Add \\(\\d+\\)|Delete Event|\\d+ Events"
+          timeout: 30000
+      - runFlow:
+          when:
+            true: ${ALARM == 'true'}
+          commands:
+            # At 200 % text, or for an event already added, the Alert row is below
+            # the fold; Add or Delete Event floats over the sheet.
+            - scrollUntilVisible:
+                element:
+                  id: alert-cell
+                direction: DOWN
+                visibilityPercentage: 50
+            - assertVisible: 10 minutes before
+      - runFlow:
+          when:
+            visible: "Add To Calendar|Add All|Add \\(\\d+\\)"
+          commands:
+            - tapOn: "Add To Calendar|Add All|Add \\(\\d+\\)"
+            - extendedWaitUntil:
+                notVisible: "Add To Calendar|Add All|Add \\(\\d+\\)"
+                timeout: 15000
+      - tapOn: Done
+      - extendedWaitUntil:
+          visible:
+            id: Close
+          timeout: 15000
+      - tapOn:
+          id: Close
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible: Save
+          timeout: 30000
+      - tapOn: Save
+      - extendedWaitUntil:
+          visible: "Saved ${FILE}\\.ics\\. Open it from the Files app to add it to your calendar\\."
+          timeout: 15000
