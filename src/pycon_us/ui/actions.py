@@ -84,6 +84,10 @@ def padded(control: ft.Control) -> ft.Container:
     )
 
 
+ICON = 20
+"""The outcome icon's size at 100 %, in dp: one ``BODY_MEDIUM`` line (D-373)."""
+
+
 def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.Control:
     """Return the line under a group of buttons: an icon and what was done.
 
@@ -98,6 +102,9 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.C
         tokens: The scheme's tokens.
         slot: The icon's slot: the width of the leading icons above it.
     """
+    # The icon centred in the slot at 100 %; its sides are padding, not a fixed
+    # width, so at large text the icon grows (D-373) and the words move over.
+    side = (slot - ICON) / 2
     return padded(
         ft.Row(
             [
@@ -106,10 +113,11 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.C
                     ft.Icon(
                         ft.Icons.CHECK_CIRCLE_OUTLINE if ok else ft.Icons.WARNING_AMBER,
                         color=tokens.success if ok else tokens.warning,
-                        size=20,
+                        # One BODY_MEDIUM line tall at every text size (D-373).
+                        size=ICON,
+                        apply_text_scaling=True,
                     ),
-                    width=slot,
-                    alignment=ft.Alignment.CENTER,
+                    padding=ft.Padding.only(left=side),
                 ),
                 ft.Text(
                     text,
@@ -118,7 +126,7 @@ def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.C
                     expand=True,
                 ),
             ],
-            spacing=16,
+            spacing=side + 16,
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
     )

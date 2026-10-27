@@ -240,10 +240,14 @@ def outcome(render: Callable[[], dict[str, Any]]) -> str | None:
 def outcome_icon(row: ft.Row) -> ft.Icon:
     """The outcome line's icon, in the slot that lines its words up with the tiles."""
     slot = row.controls[0]
-    # A ListTile's leading slot and gap: the words start where the tiles' do (56 dp).
-    assert isinstance(slot, ft.Container) and slot.width == 24 and row.spacing == 16
-    assert isinstance(slot.content, ft.Icon)
-    return slot.content
+    assert isinstance(slot, ft.Container) and isinstance(slot.content, ft.Icon)
+    icon = slot.content
+    # A ListTile's leading slot and gap at 100 %: the 20 dp icon centred in 24 dp,
+    # the words starting where the tiles' do (56 dp).
+    side = cast(ft.Padding, slot.padding).left
+    assert (side, icon.size, row.spacing) == (2, 20, 18)
+    assert icon.apply_text_scaling  # one line tall at every text size (D-373)
+    return icon
 
 
 # ------------------------------------------------------------------ the screen

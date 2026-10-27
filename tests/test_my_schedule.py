@@ -344,8 +344,11 @@ async def test_both_rows_of_a_clash_say_so_in_words_and_with_an_icon(
     (text,) = [c for c in shown.controls if isinstance(c, ft.Text) and c.value == line]
     row = cast(ft.Control, text.parent).parent
     assert isinstance(row, ft.Row)
-    icon = cast(ft.Container, row.controls[0]).content
+    icon = row.controls[0]
     assert isinstance(icon, ft.Icon) and icon.icon == ft.Icons.WARNING_AMBER
+    # One line tall at every text size, topping the row: beside the first line (D-373).
+    assert (icon.size, icon.apply_text_scaling) == (20, True)
+    assert row.vertical_alignment == ft.CrossAxisAlignment.START
 
 
 @pytest.mark.usefixtures("before")

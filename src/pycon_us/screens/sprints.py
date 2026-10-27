@@ -210,7 +210,12 @@ def intro(info: ConferenceInfo) -> list[ft.Control]:
                 content=ft.Container(
                     ft.Row(
                         [
-                            ft.Icon(ft.Icons.EVENT_OUTLINED, size=20),
+                            # One TITLE_SMALL line tall at every size (D-373).
+                            ft.Icon(
+                                ft.Icons.EVENT_OUTLINED,
+                                size=20,
+                                apply_text_scaling=True,
+                            ),
                             ft.Text(
                                 dates,
                                 theme_style=ft.TextThemeStyle.TITLE_SMALL,
@@ -218,6 +223,8 @@ def intro(info: ConferenceInfo) -> list[ft.Control]:
                             ),
                         ],
                         spacing=12,
+                        # Beside the first line when the dates wrap (large text).
+                        vertical_alignment=ft.CrossAxisAlignment.START,
                     ),
                     padding=ft.Padding.only(left=16, top=12, right=16, bottom=4),
                 ),
