@@ -7,7 +7,6 @@ from dataclasses import replace
 from typing import cast
 
 import flet as ft
-import pytest
 
 from pycon_us.core.speakers import initials, letter_groups
 from pycon_us.screens import speakers as screen
@@ -18,20 +17,6 @@ from tests.feeds import processed
 from tests.speakers_view import ALL, ROW, Render, Shown, _under
 
 render, shown = (speakers_view.render, speakers_view.shown)
-
-
-@pytest.fixture
-def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
-    """The fields asked to take the focus; the harness has no Flutter to answer."""
-    asked: list[ft.TextField] = []
-
-    async def focus(self: ft.TextField) -> None:
-        # As the real one, which invokes the method through the field's page.
-        assert self.page is not None, "the field is not on the page"
-        asked.append(self)
-
-    monkeypatch.setattr(ft.TextField, "focus", focus)
-    return asked
 
 
 async def test_each_letter_is_a_heading_node_of_its_own(shown: Shown) -> None:

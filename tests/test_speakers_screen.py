@@ -12,7 +12,11 @@ from pycon_us.screens import speakers as screen
 from tests import speakers_view
 from tests.speakers_view import ALL, Shown, _under
 
-render, shown = (speakers_view.render, speakers_view.shown)
+render, shown, focused = (
+    speakers_view.render,
+    speakers_view.shown,
+    speakers_view.focused,
+)
 
 
 # ------------------------------------------------------------------ the screen

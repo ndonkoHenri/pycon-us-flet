@@ -151,6 +151,20 @@ async def shown(render: Render) -> Shown:
 ALL = directory(processed(2026))
 
 
+@pytest.fixture
+def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
+    """The fields asked to take the focus; the harness has no Flutter to answer."""
+    asked: list[ft.TextField] = []
+
+    async def focus(self: ft.TextField) -> None:
+        # As the real one, which invokes the method through the field's page.
+        assert self.page is not None, "the field is not on the page"
+        asked.append(self)
+
+    monkeypatch.setattr(ft.TextField, "focus", focus)
+    return asked
+
+
 def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
     """Whether ``ancestor`` is ``control`` or one of its parents."""
     node: ft.BaseControl | None = control
