@@ -317,6 +317,9 @@ def test_a_session_without_authors_has_no_one() -> None:
     assert people(data.sessions["176"], data.speakers) == ()  # a keynote
 
 
+# ------------------------------------------------------------------ slots (D-31)
+
+
 def test_by_slot_groups_a_days_rows_by_their_time_group_keeping_their_order() -> None:
     """D-31: the Job Fair, shown at 9:30, sits in the 10:00 slot (DATA-11)."""
     data = processed(2026)
