@@ -1,6 +1,6 @@
 """The session detail harness: ``SessionDetail`` in a real Flet session (ux.md §5.5).
 
-``tests/test_session.py`` and ``tests/test_session_extras.py`` share it. The session is
+``tests/test_session.py``, its parts and ``tests/test_session_extras.py`` share it. The session is
 ``tests/sessions.py``'s ``showing()``, under a component that can re-render the detail
 in place with another id, or without it. The sessions are the recorded 2026 feed's.
 """
@@ -161,3 +161,34 @@ def headings(detail: Detail) -> list[tuple[str, int | None]]:
 def at(text: str) -> datetime:
     """An instant in conference time, e.g. ``at("2026-05-16 10:05")``."""
     return datetime.fromisoformat(text).replace(tzinfo=PACIFIC)
+
+
+TUTORIAL = "19"
+"""A tutorial: registration required."""
+
+LIGHTNING = "175"
+"""Lightning talks: shown in the Arena, streamed to four rooms (D-124)."""
+
+KEYNOTE = "176"
+"""A keynote: no public page in the feed; its people are year data (D-217)."""
+
+WELCOME = "151"
+"""The Friday welcome, a plenary: no speakers in the feed, no keynote data."""
+
+JOB_FAIR = "178"
+"""Sun May 17, shown from 9:30 though grouped at its 10:00 start (DATA-11)."""
+
+PANEL = "110"
+"""Beyond the Hype: six speakers, five of them without a photo in the feed."""
+
+OPEN_SPACE = "9086"
+"""pytest for system tests: its Markdown links ``[pytest](pytest.org)`` (D-140)."""
+
+
+@pytest.fixture
+async def render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[Render]:
+    """Provide an async function that renders a session's detail at ``VIEW`` by id."""
+    async with rendering(tmp_path, monkeypatch) as show:
+        yield show

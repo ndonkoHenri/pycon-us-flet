@@ -5,8 +5,11 @@
 # phone size (the iPhone 17 hides it under the bar).
 appId: io.github.ndonkohenri.pyconus
 ---
-- tapOn:
-    id: app.nav.more
+- runFlow:
+    file: tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
 - extendedWaitUntil:
     visible:
       id: more.title

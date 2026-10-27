@@ -1,0 +1,59 @@
+# INFO-08 (#456): More › Wi-Fi shows the network and the password offline, and Copy
+# password copies it, unaided.
+#
+# Both values are bundled year data (content.toml's [wifi], D-280), so the page shows
+# them with the feed unreachable (start_offline.yaml). Each value is one node read with
+# its label ("Password, pyconLB2026"). The copy is confirmed by the app's SnackBar on
+# iOS and on Android before 13; Android 13 and later confirms every copy itself, so
+# there the flow only checks that no failure is said (D-263). That the clipboard holds
+# the password is read outside the flow: `xcrun simctl pbpaste <udid>` on a simulator.
+appId: io.github.ndonkohenri.pyconus
+name: More, Wi-Fi, Copy password
+tags:
+  - journeys
+  - venue
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Wi-Fi.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.wifi
+    direction: DOWN
+- tapOn:
+    id: more.wifi
+- extendedWaitUntil:
+    visible:
+      id: wifi.password
+    timeout: 15000
+- assertVisible:
+    id: wifi.network
+    text: "Network, PyConUS26"
+- assertVisible:
+    id: wifi.password
+    text: "Password, pyconLB2026"
+
+# Copy password.
+- tapOn:
+    id: wifi.copy_password
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: Password copied
+          timeout: 10000
+- assertNotVisible:
+    text: "Couldn't copy the password"

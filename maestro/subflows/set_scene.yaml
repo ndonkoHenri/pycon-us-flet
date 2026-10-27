@@ -73,8 +73,11 @@ appId: io.github.ndonkohenri.pyconus
     visible:
       id: more.title
     timeout: 15000
-- tapOn:
-    id: app.nav.now
+- runFlow:
+    file: tab.yaml
+    env:
+      TAB: now
+      NAME: "Now.*Tab 1 of 5"
 - extendedWaitUntil:
     visible:
       id: now.title

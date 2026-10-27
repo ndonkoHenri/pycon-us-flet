@@ -1,0 +1,65 @@
+# MAP-09 (#456): on a conference morning, More › Venue & hours says which services are
+# open now, offline.
+#
+# The fake clock starts at Friday 2026-05-15 09:30 (NOW overrides it), when 2026's
+# [[venue_hours]] (content.toml, D-282) has Registration open 7:30 AM to 5:00 PM, the
+# information desk to 4:00 PM and Swag pickup from 9:00 AM. The page is bundled year
+# data, so it shows with the feed unreachable (start_offline.yaml). Each status is read
+# as words ("Open now, until 5:00 PM", core/hours.py's spoken form), which is the text
+# Maestro finds on both platforms.
+appId: io.github.ndonkohenri.pyconus
+name: More, Venue & hours, Open now on a conference morning
+tags:
+  - journeys
+  - venue
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow:
+    file: ../subflows/start_offline.yaml
+    env:
+      NOW: ${NOW || '2026-05-15 09:30'}
+
+# More › Venue & hours.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.venue
+    direction: DOWN
+- tapOn:
+    id: more.venue
+- extendedWaitUntil:
+    visible:
+      id: venue.address
+    timeout: 15000
+
+# Each service open at 09:30, with the time it closes.
+- scrollUntilVisible:
+    element:
+      id: venue.service.registration.status
+    direction: DOWN
+- assertVisible:
+    id: venue.service.registration.status
+    text: "Open now.*until 5:00 PM"
+- scrollUntilVisible:
+    element:
+      id: venue.service.information_desk.status
+    direction: DOWN
+- assertVisible:
+    id: venue.service.information_desk.status
+    text: "Open now.*until 4:00 PM"
+- scrollUntilVisible:
+    element:
+      id: venue.service.swag_pickup.status
+    direction: DOWN
+- assertVisible:
+    id: venue.service.swag_pickup.status
+    text: "Open now.*until 5:00 PM"
