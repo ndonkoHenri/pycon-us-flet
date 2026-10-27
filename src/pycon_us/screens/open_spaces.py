@@ -215,8 +215,8 @@ def propose_button(url: str, svc: Services) -> ft.Control:
     """
 
     @report_errors
-    async def propose() -> None:
-        await open_link(svc, url)
+    async def propose(e: ft.Event[ft.IconButton]) -> None:
+        await open_link(svc, url, opener=e.control)
 
     button = ft.IconButton(
         ft.Icons.ADD,
@@ -245,8 +245,8 @@ def none_yet(url: str | None, svc: Services, margin: float) -> ft.Control:
     if url is not None:
 
         @report_errors
-        async def propose() -> None:
-            await open_link(svc, url)
+        async def propose(e: ft.Event[ft.Button]) -> None:
+            await open_link(svc, url, opener=e.control)
 
         on_action = propose
     return ft.ListView(

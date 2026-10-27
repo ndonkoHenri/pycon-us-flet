@@ -43,7 +43,7 @@ def EmptyState(
     icon: ft.IconData,
     body: str | None = None,
     action: str | None = None,
-    on_action: Callable[[], Any] | None = None,
+    on_action: ft.ControlEventHandler[ft.Button] | None = None,
     disabled: bool = False,
     link_id: str | None = None,
     identifier: str | None = None,

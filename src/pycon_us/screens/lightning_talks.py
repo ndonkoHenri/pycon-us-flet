@@ -166,8 +166,8 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     """
 
     @report_errors
-    async def sign_up() -> None:
-        await open_link(svc, copy.signup_url)
+    async def sign_up(e: ft.Event[ft.Button]) -> None:
+        await open_link(svc, copy.signup_url, opener=e.control)
 
     # The heading and the paragraphs each a node of its own, as About's app name and
     # its lines (D-211): in one node, the whole card read as one heading.

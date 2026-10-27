@@ -228,8 +228,8 @@ def website_button(url: str, svc: Services) -> ft.Control:
     """
 
     @report_errors
-    async def go() -> None:
-        await open_link(svc, url)
+    async def go(e: ft.Event[ft.OutlinedButton]) -> None:
+        await open_link(svc, url, opener=e.control)
 
     button = ft.OutlinedButton(
         ft.Text(WEBSITE, semantics_label=f"{WEBSITE}\n{OPENS_IN[LinkKind.WEB]}"),

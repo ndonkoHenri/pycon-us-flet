@@ -122,7 +122,7 @@ def App(memory: ViewMemory):
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `launcher` (`ft.UrlLauncher()`) and `clipboard` (`ft.Clipboard()`), which `ui/links.py`'s link rule uses (D-182), `share` (`ft.Share()`) and `paths` (`ft.StoragePaths()`), for the Developer screen's Share log (D-198), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) and `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 also `ft.HapticFeedback()` (`haptics`) and session detail's Share (#92); P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`) and `file_picker` (`ft.FilePicker()`, Android's save in `services/calendar.py`, D-272); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `launcher` (`ft.UrlLauncher()`) and `clipboard` (`ft.Clipboard()`), which `ui/links.py`'s link rule uses (D-182), `share` (`ft.Share()`) and `paths` (`ft.StoragePaths()`), for the Developer screen's Share log (D-198), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175) and `presence` (`services/presence.py`'s `Presence`: `inactive` leaves and `resume` comes back, so `ui/focus_back.py`'s `focus_back()` can give a button the focus again after the browser or the share sheet it opened, D-372). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 also `ft.HapticFeedback()` (`haptics`) and session detail's Share (#92); P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`) and `file_picker` (`ft.FilePicker()`, Android's save in `services/calendar.py`, D-272); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51), the outbox database, `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
 
 ### 4.3 Bootstrap (DATA-35)
 
@@ -154,7 +154,9 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
 
     async def on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
-        if e.state == ft.AppLifecycleState.PAUSE:
+        if e.state == ft.AppLifecycleState.INACTIVE:
+            svc.presence.leave()                  # another window in front (D-372)
+        elif e.state == ft.AppLifecycleState.PAUSE:
             svc.foreground.clear()                # the 60 s ticks wait (D-40)
         elif e.state == ft.AppLifecycleState.RESUME:
             await on_resume(svc, conference, prefs)
@@ -166,6 +168,7 @@ async def bootstrap(page: ft.Page, svc: Services, conference: Conference, prefs:
 async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None:
     """The one place for what a resume does; each consumer is one line (D-173, D-175)."""
     svc.foreground.set()                                                 # ticks again
+    svc.presence.come_back()                                             # D-372
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)   # D-40
     await read_accessibility(svc.semantics, prefs)                       # a snapshot (F13, U17)
 ```

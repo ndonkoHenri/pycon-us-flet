@@ -39,6 +39,7 @@ from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.theme import MARKDOWN_STYLE
+from pycon_us.ui.focus_back import focus_back
 
 logger = logging.getLogger(__name__)
 
@@ -141,19 +142,28 @@ def contact_of(target: str) -> str:
     return unquote(urlsplit(target).path)
 
 
-async def open_link(svc: Services, target: str, *, app: bool = False) -> None:
+async def open_link(
+    svc: Services,
+    target: str,
+    *,
+    app: bool = False,
+    opener: ft.BaseControl | None = None,
+) -> None:
     """Open ``target`` by the link rule; call it from an event handler.
 
     A page is pushed. Anything else goes to ``UrlLauncher.launch_url`` with its kind's
     mode; when the platform reports that it could not open it, a SnackBar says
     "Couldn't open the link" (an expected failure, D-71). A phone or a simulator with
     no app for a ``tel:`` link may also do nothing without saying so, which is why
-    those rows offer Copy.
+    those rows offer Copy. Back from the browser or the other app, ``opener`` gets
+    the focus again (``focus_back()``, D-372): the call returns only then.
 
     Args:
         svc: The session's services, for the launcher.
         target: An app location or a URL (``link_kind()``).
         app: The web address opens in the app that handles it (``link_kind()``).
+        opener: The button that was tapped, the event's ``control``; None for a row
+            or a menu item, which have no ``focus()`` at the pin (U182).
     """
     page = ft.context.page
     kind = link_kind(target, app=app)
@@ -161,7 +171,8 @@ async def open_link(svc: Services, target: str, *, app: bool = False) -> None:
         page.navigate(target)
         return
     try:
-        await svc.launcher.launch_url(target, mode=LAUNCH_MODES[kind])
+        async with focus_back(svc, opener):
+            await svc.launcher.launch_url(target, mode=LAUNCH_MODES[kind])
     except SERVICE_ERRORS as error:
         # The kind and the class only: the error's text repeats the target (D-72).
         logger.warning(

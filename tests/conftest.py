@@ -9,6 +9,8 @@ import httpx
 import pytest
 from hypothesis import settings
 
+from pycon_us.ui import focus_back
+
 SNAPSHOTS = Path(__file__).parent / "fixtures" / "snapshots"
 
 # CI runs `pytest --hypothesis-profile=ci` (docs/testing-and-quality.md §3.1, §12).
@@ -33,6 +35,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         help="Rewrite snapshot files instead of comparing with them.",
     )
+
+
+@pytest.fixture(autouse=True)
+def quick_focus_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let a tapped link or Share stop waiting for a departure at once (D-372).
+
+    No test leaves the app unless it says so (``Presence.leave()``), so a handler that
+    opened a link from a button would otherwise wait ``LEAVE_WITHIN`` (3 s) for nothing.
+    """
+    monkeypatch.setattr(focus_back, "LEAVE_WITHIN", 0.01)
 
 
 @pytest.fixture(autouse=True)

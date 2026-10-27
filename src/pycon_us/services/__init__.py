@@ -14,6 +14,7 @@ import flet as ft
 
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
+from pycon_us.services.presence import Presence
 from pycon_us.services.storage import Storage, data_dir
 
 
@@ -51,6 +52,9 @@ class Services:
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
             loops wait for it, so nothing ticks in the background (D-40).
+        presence: Whether the app's window is in front, from ``inactive`` to
+            ``resume``: ``ui.focus_back`` waits on it for the return from another
+            app's window (D-372).
         shown_versions: The feed versions this session has logged D-112's content line
             for; ``AppScaffold``'s ``Shown`` logs each version once, from the first
             screen that shows it (D-165).
@@ -71,6 +75,7 @@ class Services:
     file_picker: ft.FilePicker = field(default_factory=ft.FilePicker)
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
+    presence: Presence = field(default_factory=Presence)
     shown_versions: set[int] = field(default_factory=set)
 
     @classmethod
@@ -113,6 +118,7 @@ class Services:
         # Wakes the run_every() loops that wait for a resume, so they see `closed` and
         # return: a session replaced in the background never resumes.
         self.foreground.set()
+        self.presence.close()  # and a focus that waits for a return (D-372)
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
         """Call ``action`` now, then every ``seconds`` while the app is in the foreground.
