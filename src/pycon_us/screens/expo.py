@@ -34,7 +34,7 @@ from pycon_us.core.expo import ExpoBooth, expo_booths
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import room_sort_key
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.booth_card import BoothCard, hiring_line
+from pycon_us.screens.booth_card import BoothCard, card_layout, hiring_line
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -351,20 +351,22 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
                 pulse_ms=pulse_ms,
             )
         )
+    measured = body_size[1] if body_size[0] == selected else 0.0
+    row, box = card_layout(zoom.box[1], measured)
     bottom: list[ft.Control] = [
-        ft.Row([zoom_buttons(zoom, SCREEN)], alignment=ft.MainAxisAlignment.END)
+        ft.Row(
+            [zoom_buttons(zoom, SCREEN, row=row)], alignment=ft.MainAxisAlignment.END
+        )
     ]
     item = next((each for each in booths if each.booth.number == selected), None)
     if item is not None:
-        half = zoom.box[1] / 2
-        measured = body_size[1] if body_size[0] == selected else 0.0
         hiring = hiring_line(data, item.sponsors[0]) if len(item.sponsors) == 1 else ""
         bottom.append(
             BoothCard(
                 item,
                 hiring=hiring,
                 view_path=view_path,
-                body_box=half if half and measured > half else None,
+                body_box=box,
                 on_close=on_close,
                 on_body_size=on_body_size,
             )

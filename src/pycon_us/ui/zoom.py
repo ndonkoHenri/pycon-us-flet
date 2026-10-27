@@ -401,7 +401,7 @@ def zoom_button(
     )
 
 
-def zoom_buttons(zoom: Zoom, screen: str) -> ft.Control:
+def zoom_buttons(zoom: Zoom, screen: str, *, row: bool = False) -> ft.Control:
     """Return the zoom buttons, in a column: zoom in, zoom out, reset view.
 
     The single-pointer alternative to a pinch (WCAG 2.5.1), 48 dp each, named by
@@ -412,6 +412,7 @@ def zoom_buttons(zoom: Zoom, screen: str) -> ft.Control:
     Args:
         zoom: The layer's state (``use_zoom()``).
         screen: The screen's name in the identifiers, e.g. ``plan``.
+        row: Lay them in a row instead, for a pane too short for the column (D-370).
     """
 
     @report_errors
@@ -426,22 +427,21 @@ def zoom_buttons(zoom: Zoom, screen: str) -> ft.Control:
     async def reset() -> None:
         await zoom.reset()
 
-    return ft.Column(
-        [
-            zoom_button(
-                f"{screen}.zoom_in", ft.Icons.ZOOM_IN, ZOOM_IN, zoom_in, zoom.at_max
-            ),
-            zoom_button(
-                f"{screen}.zoom_out", ft.Icons.ZOOM_OUT, ZOOM_OUT, zoom_out, zoom.at_fit
-            ),
-            zoom_button(
-                f"{screen}.reset",
-                ft.Icons.CENTER_FOCUS_STRONG,
-                RESET_VIEW,
-                reset,
-                zoom.at_fit,
-            ),
-        ],
-        spacing=8,
-        tight=True,
-    )
+    buttons: list[ft.Control] = [
+        zoom_button(
+            f"{screen}.zoom_in", ft.Icons.ZOOM_IN, ZOOM_IN, zoom_in, zoom.at_max
+        ),
+        zoom_button(
+            f"{screen}.zoom_out", ft.Icons.ZOOM_OUT, ZOOM_OUT, zoom_out, zoom.at_fit
+        ),
+        zoom_button(
+            f"{screen}.reset",
+            ft.Icons.CENTER_FOCUS_STRONG,
+            RESET_VIEW,
+            reset,
+            zoom.at_fit,
+        ),
+    ]
+    if row:
+        return ft.Row(buttons, spacing=8, tight=True)
+    return ft.Column(buttons, spacing=8, tight=True)

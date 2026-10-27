@@ -152,6 +152,51 @@ async def test_a_body_taller_than_half_the_pane_scrolls(
     assert beside.controls[0] is box  # Close is the scroll's sibling, not inside it
 
 
+def zoom_in_top(pane: float, body: float) -> float:
+    """Where Zoom in's top sits in a pane, in dp from its top, for a measured body.
+
+    The bottom column's own arithmetic, from its parts: the bottom inset, the card's
+    padding, the body's box (or its content and top padding when it fits), the gap
+    and the buttons. Below 0, the Stack clips the button.
+    """
+    row, box = booth_card.card_layout(pane, body)
+    shown = box if box is not None else body + booth_card.BODY_TOP
+    buttons = booth_card.ROW_DP if row else booth_card.COLUMN_DP
+    edge = booth_card.EDGE
+    return pane - edge - sum(booth_card.CARD_PADDING) - shown - edge - buttons
+
+
+@pytest.mark.parametrize("pane", [200.0, 300.0, 360.0, 463.0, 464.0, 560.0, 900.0])
+@pytest.mark.parametrize("body", [40.0, 150.0, 1000.0])
+def test_the_zoom_buttons_stay_in_the_pane(pane: float, body: float) -> None:
+    """Whatever the pane and the body, Zoom in keeps an inset above it (D-370).
+
+    A landscape pane 300 dp high put the column's Zoom in 66 dp above the pane, with
+    a half-pane box under it; the buttons go in a row there, and the box takes what
+    is left when that is less than half the pane.
+    """
+    assert zoom_in_top(pane, body) >= booth_card.EDGE
+    row, box = booth_card.card_layout(pane, body)
+    assert row == (pane < booth_card.ROW_UNDER)
+    if box is not None:
+        assert box <= pane / 2
+
+
+async def test_a_short_pane_puts_the_zoom_buttons_in_a_row(render: Render) -> None:
+    """A landscape pane lays the zoom buttons in a row and bounds the card under them."""
+    shown = await render(reduce_motion=True)
+    await shown.lay_out((700.0, 300.0))
+    await shown.tap("726")
+    (measured,) = [c for c in shown.find(ft.Column) if c.on_size_change]
+    await shown.event(measured, "size_change", {"w": 600.0, "h": 400.0})
+    zoom_in = shown.node(f"{expo.SCREEN}.zoom_in")
+    buttons = cast(ft.Control, cast(ft.Control, zoom_in.parent).parent)
+    assert isinstance(buttons, ft.Row) and len(buttons.controls) == 3
+    (measured,) = [c for c in shown.find(ft.Column) if c.on_size_change]
+    box = cast(ft.Column, cast(ft.Control, measured.parent).parent)
+    assert (box.height, box.scroll) == (150.0, ft.ScrollMode.AUTO)
+
+
 async def test_a_pulse_or_a_zoom_does_not_re_render_the_card(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
