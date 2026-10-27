@@ -58,7 +58,7 @@ async def focus_back(
     opened (a launch with no app for the link, a share that failed) leaves the focus
     where it is. It waits through the time the other window is up, so the caller's
     handler returns only then. An exception from the call passes through, and nothing
-    is focused.
+    is focused; nor is anything when the session closes meanwhile (D-147).
 
     The control focused is the one mounted on the return, found by the opener's id
     (``page.get_control()``): a render meanwhile (Share re-enabled, a feed refresh)
@@ -78,11 +78,17 @@ async def focus_back(
         return
     if not await svc.presence.back_since(returns, leave_within=LEAVE_WITHIN):
         return
-    await asyncio.sleep(SETTLE_SECONDS)
-    current = page.get_control(opener._i)
-    if not isinstance(current, Focusable):
-        return  # gone from the page meanwhile, or never focusable
+    # Sleeps SETTLE_SECONDS, or less when the session closes meanwhile: a replaced
+    # session stops its work (D-147), and a focus() sent after its close would wait
+    # for an answer that never comes.
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(svc.closed.wait(), SETTLE_SECONDS)
+    if svc.closed.is_set():
+        return
     try:
+        current = page.get_control(opener._i)
+        if not isinstance(current, Focusable):
+            return  # gone from the page meanwhile, or never focusable
         await current.focus()
     except SERVICE_ERRORS as error:
         # No answer from Flutter, or detached meanwhile: nothing to say.

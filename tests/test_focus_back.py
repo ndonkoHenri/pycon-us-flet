@@ -192,6 +192,33 @@ async def test_a_failed_call_moves_no_focus(
     assert focused == []
 
 
+async def test_a_session_closed_while_settling_moves_no_focus(
+    page: FakePage,
+    svc: Services,
+    focused: list[ft.IconButton],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A close during the settling delay ends the wait at once, and focuses nothing.
+
+    A replaced session stops its work (D-147): a ``focus()`` sent after the close
+    would wait for an answer Flet never cancels.
+    """
+    monkeypatch.setattr(module, "SETTLE_SECONDS", 60)
+    opener = mounted(page, ft.IconButton(ft.Icons.SHARE))
+
+    async def trip() -> None:
+        async with focus_back(svc, opener):
+            svc.presence.leave()
+            svc.presence.come_back()
+
+    task = asyncio.create_task(trip())
+    await asyncio.sleep(0.05)  # back, and settling
+    assert not task.done()
+    svc.close()
+    await asyncio.wait_for(task, 1)
+    assert focused == []
+
+
 @pytest.mark.parametrize(
     "control",
     [None, ft.ListTile(title=ft.Text("Website"))],
