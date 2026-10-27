@@ -33,6 +33,13 @@ from pycon_us.ui.links import OPENS_IN
 from pycon_us.ui.share import LOG_SHARED, WITH_LOG
 from pycon_us.year_info import SafetyContact
 from pycon_us.year_map import MapData
+from tests.about_page import (
+    States,
+    answer_report_hooks,
+    headings,
+    identified,
+    text_of,
+)
 from tests.fakes import (
     FakePage,
     MemoryClipboard,
@@ -44,13 +51,6 @@ from tests.fakes import (
     MemoryShare,
     bound,
     phone_margin,
-)
-from tests.test_about_app import (
-    States,
-    answer_report_hooks,
-    headings,
-    identified,
-    text_of,
 )
 
 HOTLINE = SafetyContact(
