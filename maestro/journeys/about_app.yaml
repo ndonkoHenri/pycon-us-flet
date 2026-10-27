@@ -6,9 +6,13 @@
 # (start_offline.yaml). Licences pushes /more/app/licences and a row its text (D-296).
 # Report a problem opens the share sheet with the log (D-297); a dismissed sheet says
 # nothing. On an iPad the sheet cannot open at the Flet pin (F115, U95, #525), and the
-# line under the row says so: the flow checks that line there, so it fails once U95
-# lands and the sheet opens, and the iPad's branch then moves to the sheet's.
-# ORIENTATION turns the device first (subflows/orientation.yaml).
+# line under the row says so: run it there with SHARE_FAILS=true, which checks that
+# line instead of the sheet, so it fails once U95 lands and the sheet opens; then the
+# iPad runs without it. ORIENTATION turns the device first (subflows/orientation.yaml).
+#
+# env:
+#   SHARE_FAILS  true expects "Couldn't open the share sheet."; anything else (the
+#                default) expects the system's sheet, dismissed with no line.
 appId: io.github.ndonkohenri.pyconus
 name: About this app, its data row, Licences and Report a problem
 tags:
@@ -96,53 +100,64 @@ onFlowComplete:
 - assertNotVisible:
     id: licences.python
 
-# Report a problem: the share sheet, or on an iPad the line that says it couldn't open.
+# Report a problem: the system's share sheet, then dismissed with no line; or, with
+# SHARE_FAILS=true (an iPad at this pin, U95), the line that says it couldn't open.
+# The run says which it expects, so a share error elsewhere, or a tap that opens
+# nothing, fails.
 - scrollUntilVisible:
     element:
       id: about_app.report_problem
     direction: DOWN
 - tapOn:
     id: about_app.report_problem
-# The line comes at once where the sheet fails; elsewhere this waits for the sheet.
-- extendedWaitUntil:
-    visible:
-      id: about_app.report_outcome
-    timeout: 4000
-    optional: true
-# On an iPad in landscape the row rests on the list's end, and the line comes in under
-# it, below the fold: with no sheet up, the list scrolls to it.
 - runFlow:
     when:
-      platform: iOS
-      notVisible:
-        id: ActivityListView
+      true: ${SHARE_FAILS == 'true'}
     commands:
+      # On an iPad in landscape the row rests on the list's end, and the line comes
+      # in under it, below the fold.
       - scrollUntilVisible:
           element:
             id: about_app.report_outcome
           direction: DOWN
-          timeout: 5000
-          optional: true
-- takeScreenshot: about-04-share
-- runFlow:
-    when:
-      visible:
-        id: about_app.report_outcome
-    commands:
+          timeout: 15000
       - assertVisible:
           id: about_app.report_outcome
           text: "Couldn't open the share sheet\\."
+      - takeScreenshot: about-04-share
 - runFlow:
     when:
-      notVisible:
-        id: about_app.report_outcome
+      true: ${SHARE_FAILS != 'true'}
     commands:
+      # The sheet itself: Android's chooser list, iOS's share sheet.
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - extendedWaitUntil:
+                visible:
+                  id: ".*resolver_list"
+                timeout: 15000
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - extendedWaitUntil:
+                visible:
+                  id: ShareSheet.RemoteContainerView
+                timeout: 15000
+      - takeScreenshot: about-04-share
       - runFlow: ../subflows/dismiss_share.yaml
-      # Dismissed: no line, and the row takes taps again.
+      # Dismissed: the row takes taps again, and at the list's end no line comes
+      # under it (D-297), not even a "shared" one.
       - extendedWaitUntil:
           visible:
             id: about_app.report_problem
             enabled: true
           timeout: 15000
+      - repeat:
+          times: 3
+          commands:
+            - scroll
       - assertNotVisible:
-          text: "Couldn't open the share sheet\\."
+          id: about_app.report_outcome

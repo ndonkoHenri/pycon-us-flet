@@ -68,3 +68,47 @@ def test_about_app_expects_the_schedule_line_s_two_sources() -> None:
     text = ABOUT_APP.read_text(encoding="utf-8")
     sources = f"({SOURCES['bundled']}|{SOURCES['network']})"
     assert f"Schedule\\\\s+{sources}, updated .+" in text
+
+
+FAILS = "${SHARE_FAILS == 'true'}"
+"""The ``when: true:`` of the branch for a run where the sheet cannot open (U95)."""
+OPENS = "${SHARE_FAILS != 'true'}"
+"""The ``when: true:`` of the branch for a run where the sheet opens."""
+
+
+def share_branch(condition: str) -> str:
+    """Return the text of ``about_app``'s top-level step whose condition is ``condition``.
+
+    Args:
+        condition: The branch's ``when: true:`` expression, ``FAILS`` or ``OPENS``.
+    """
+    steps = re.split(r"^- ", ABOUT_APP.read_text(encoding="utf-8"), flags=re.MULTILINE)
+    found = [step for step in steps if f"      true: {condition}\n" in step]
+    assert len(found) == 1, condition
+    return found[0]
+
+
+def test_about_app_accepts_the_failure_line_only_when_the_run_expects_it() -> None:
+    """U95: only a ``SHARE_FAILS=true`` run (an iPad) passes with "Couldn't open…".
+
+    Elsewhere a share error must fail the flow rather than pass as the iPad's outcome.
+    """
+    assert "assertVisible:\n          id: about_app.report_outcome" in share_branch(FAILS)
+    assert "Couldn't open" not in share_branch(OPENS)
+
+
+def test_about_app_waits_for_each_platform_s_sheet_before_dismissing_it() -> None:
+    """#461: the system's sheet itself comes up, on Android and iOS, before the dismissal.
+
+    A tap that opens nothing, or a failure, then fails instead of passing.
+    """
+    before, _, _ = share_branch(OPENS).partition("../subflows/dismiss_share.yaml")
+    for platform, sheet in (("Android", '".*resolver_list"'), ("iOS", "ShareSheet")):
+        wait = rf"platform: {platform}\n.*?extendedWaitUntil:\n\s+visible:\n\s+id: {sheet}"
+        assert re.search(wait, before, flags=re.DOTALL), platform
+
+
+def test_about_app_checks_a_dismissed_sheet_leaves_no_outcome_line() -> None:
+    """D-297: a dismissal says nothing; no line, not even a "shared" one, comes under the row."""
+    _, _, after = share_branch(OPENS).partition("../subflows/dismiss_share.yaml")
+    assert "assertNotVisible:\n          id: about_app.report_outcome\n" in after

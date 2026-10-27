@@ -50,7 +50,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss; Settings' Reminders sentence, with the alarm on iOS only (D-60, D-272, #458) |
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
-| `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or on an iPad "Couldn't open the share sheet." (U95, #525) (INFO-03, INFO-04, #461) |
+| `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` (an iPad, U95, #525) "Couldn't open the share sheet." (INFO-03, INFO-04, #461) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -413,10 +413,12 @@ maestro --device emulator-5578 test --include-tags=tablet maestro               
 maestro --device emulator-5578 test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro  # portrait
 adb -s emulator-5578 shell cmd uimode night yes   # dark; `no` for light
 
-# iOS: an iPad of your own, then an iPhone 17 in landscape.
+# iOS: an iPad of your own, where the sheet cannot open at this pin (U95), so
+# SHARE_FAILS=true expects about_app's failure line; then an iPhone 17 in landscape.
 xcrun simctl create "<issue>-ipadpro11" "iPad Pro 11-inch (M5)" com.apple.CoreSimulator.SimRuntime.iOS-26-5
-maestro --device <udid> test --include-tags=tablet maestro
-maestro --device <udid> test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
+maestro --device <udid> test -e SHARE_FAILS=true --include-tags=tablet maestro
+maestro --device <udid> test -e SHARE_FAILS=true -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
+maestro --device <iphone-udid> test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
 xcrun simctl ui <udid> appearance dark   # or light
 ```
 
@@ -432,7 +434,11 @@ What the flows met on the way, now handled in the shared subflows:
 - On a phone in landscape About this app's version row is below the fold:
   `open_developer.yaml` waits for the push (More's row gone), then scrolls.
 - On an iPad in landscape Report a problem rests on the list's end, and the line under
-  it comes in below the fold: `about_app` scrolls to it when no sheet is up.
+  it comes in below the fold: with `SHARE_FAILS=true`, `about_app` scrolls to it.
+- Each run says which outcome it expects (`SHARE_FAILS`), so a share error where the
+  sheet should open fails: elsewhere the flow waits for the sheet itself (Android's
+  chooser list, `resolver_list`; iOS's `ShareSheet.RemoteContainerView`), and after
+  the dismissal checks at the list's end that no outcome line came (D-297).
 - iOS 26's share sheet lies over a dismiss region (`PopoverDismissRegion`) in both
   orientations; `subflows/dismiss_share.yaml` taps it on the right, since a tap near the
   left edge of an iPhone in landscape left the sheet open.
