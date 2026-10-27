@@ -103,6 +103,21 @@ def card_layout(pane: float, measured: float) -> tuple[bool, float | None]:
     return row, box if pane and measured + BODY_TOP > box else None
 
 
+def covered(pane: float, measured: float) -> float:
+    """Return how much of the pane, from its bottom, the card and the zoom buttons take.
+
+    The bottom column as ``card_layout()`` lays it out, with an inset above it too:
+    what lies higher is in sight (D-377).
+
+    Args:
+        pane: The pane's height (the viewer's measured height).
+        measured: The card body's measured content height.
+    """
+    row, box = card_layout(pane, measured)
+    body = box if box is not None else BODY_TOP + measured
+    return _AROUND + max(body, BUTTON_DP) + (ROW_DP if row else COLUMN_DP)
+
+
 type OnBodySize = Callable[[ft.LayoutSizeChangeEvent], None]
 """``ExpoHall``'s handler for the card body's measured size."""
 

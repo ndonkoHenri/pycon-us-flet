@@ -6,8 +6,15 @@ targets on a raster are hard to reach with a screen reader or at large text, so 
 is an equal way to a booth (EXPO-01, EXPO-04), and the pane opens on it while a screen
 reader is on (``Prefs.screen_reader``, Flutter's ``accessible_navigation``) until the
 user picks a view. ``ViewMemory.expo_view`` keeps the pick for both places (D-18). A
-List row's tap switches to the Map with its booth selected, so its card shows.
+List row's tap switches to the Map with its booth selected, so its card shows, and
+brought into view above the card (D-377).
+
+``…/plan/expo?booth=613`` (``ExpoPlan``'s ``link``) seeds the pane once, as a row's tap
+does (EXPO-05, D-164); a number the plan doesn't draw opens the List under a live line,
+"Booth 139 isn't on the map yet", until the user switches or picks.
 """
+
+from collections.abc import Collection
 
 import flet as ft
 
@@ -29,6 +36,35 @@ VIEWS = {MAP: ("Map", ft.Icons.MAP_OUTLINED), LIST_VIEW: ("List", ft.Icons.LIST)
 """Each view's segment: its label and icon, in the switch's order."""
 
 
+def seed(memory: ViewMemory, number: str, placed: Collection[str]) -> tuple[str, str]:
+    """Open the pane at a link's booth: selected on the Map, or the List (EXPO-05).
+
+    A booth on the plan is selected and shown on the Map, as a List row's tap does;
+    any other number leaves the memory alone, for the List and its line.
+
+    Args:
+        memory: The process's ``ViewMemory``.
+        number: ``?booth=``'s number; empty for none.
+        placed: The numbers of the booths the plan draws.
+
+    Returns:
+        ``(reveal, missing)``: the booth to bring into view, or the number the plan
+        doesn't draw; both empty without a link.
+    """
+    if not number:
+        return "", ""
+    if number not in placed:
+        return "", number
+    memory.expo_booth = number
+    memory.expo_view = MAP
+    return number, ""
+
+
+def missing_line(number: str) -> str:
+    """Return the line over the List for a link's booth that the plan doesn't draw."""
+    return f"Booth {number} isn't on the map yet"
+
+
 def view_of(memory: ViewMemory, prefs: Prefs) -> str:
     """Return the view the pane shows: the user's pick, else the List under a reader.
 
@@ -42,40 +78,50 @@ def view_of(memory: ViewMemory, prefs: Prefs) -> str:
 
 
 @ft.component
-def ExpoPane(zoom_key: str = "") -> ft.Control:
+def ExpoPane(zoom_key: str = "", link: str = "") -> ft.Control:
     """The expo: the Map | List switch over the hall or the List (EXPO-01, #404).
 
     Args:
         zoom_key: The hall's ``zoom_key``: the Map pane's slug, or the View's path
             for ``…/plan/expo``.
+        link: ``?booth=``'s number, for ``…/plan/expo`` (EXPO-05); empty for none.
     """
     svc = use_services()
     prefs = use_prefs()
     margin = use_margin(LIST)
     memory = svc.memory
+    # Once, as the pane mounts, before the hall reads the memory: the link's booth.
+    placed = {booth.number for booth in svc.year.map.booths}
+    picks, set_picks = ft.use_state(lambda: seed(memory, link, placed))
+    reveal, missing = picks
     _, set_switches = ft.use_state(0)  # a switch re-renders; the memory holds it
-    view = view_of(memory, prefs)
+    view = LIST_VIEW if missing else view_of(memory, prefs)
 
     @report_errors
     def switched(e: ft.Event[ft.SegmentedButton]) -> None:
         memory.expo_view = e.control.selected[0]
-        set_switches(lambda n: n + 1)
+        set_picks(("", ""))
+        set_switches(lambda n: n + 1)  # the same picks re-render nothing
 
     @report_errors
     def picked(number: str) -> None:
         memory.expo_booth = number
         memory.expo_view = MAP
+        set_picks((number, ""))
         set_switches(lambda n: n + 1)
 
     on_pick = ft.use_callback(picked, [])
     # Keyed, so Flet never moves one view's state into the other (F130).
     body = (
-        ExpoHall(zoom_key, key=MAP)  # pyright: ignore[reportCallIssue]
+        ExpoHall(zoom_key, reveal, key=MAP)  # pyright: ignore[reportCallIssue]
         if view == MAP
         else ExpoList(on_pick, key=LIST_VIEW)  # pyright: ignore[reportCallIssue]
     )
+    top = [capped(view_switch(view, switched), margin)]
+    if missing:
+        top.append(capped(missing_note(missing), margin))
     return ft.Column(
-        [capped(view_switch(view, switched), margin), body],
+        [*top, body],
         spacing=0,
         expand=True,
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
@@ -110,4 +156,26 @@ def view_switch(
             on_change=on_change,
         ),
         padding=ft.Padding.only(left=16, top=8, right=16, bottom=4),
+    )
+
+
+def missing_note(number: str) -> ft.Control:
+    """Return the line over the List for a link's booth the plan doesn't draw.
+
+    A polite live region, so a screen reader says why the List opened (ux.md §9).
+
+    Args:
+        number: The link's booth number.
+    """
+    note = ft.Text(
+        missing_line(number),
+        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+    )
+    return ft.Semantics(
+        live_region=True,
+        identifier=f"{SCREEN}.missing",
+        content=ft.Container(
+            note, padding=ft.Padding.symmetric(horizontal=16, vertical=4)
+        ),
     )
