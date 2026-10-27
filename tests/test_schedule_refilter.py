@@ -1,6 +1,6 @@
 """Tests for the Schedule keeping each day's place across a filter change (D-371, #333).
 
-The Schedule renders in ``tests/test_schedule.py``'s harness, with
+The Schedule renders in ``tests/schedule_view.py``'s harness, with
 ``tests/test_schedule_place.py``'s helpers: a keyed scroll is answered with a scroll end
 at 4,000 dp, an offset jump with one where it was asked. Saturday's first slots in the
 2026 feed, with the default filter (Open space hidden): 8:00 (notices, a break and
@@ -17,16 +17,16 @@ from pycon_us.core.timeline import NOW_KEY, Slot, timeline
 from pycon_us.memory import ViewMemory
 from pycon_us.screens.schedule_layout import unchanged_keys
 from pycon_us.ui import scrolling
-from tests import test_schedule, test_schedule_place
+from tests import schedule_view, test_schedule_place
 from tests.feeds import processed
-from tests.test_schedule import FRIDAY, SATURDAY, THURSDAY, Shown
+from tests.schedule_view import FRIDAY, SATURDAY, THURSDAY, Shown
 from tests.test_schedule_place import HEIGHT, _report, _slots
 
 # The Schedule's fixtures, shared by name: pytest finds fixtures among a module's names.
-now = test_schedule.now
-memory = test_schedule.memory
-conference = test_schedule.conference
-shown = test_schedule.shown
+now = schedule_view.now
+memory = schedule_view.memory
+conference = schedule_view.conference
+shown = schedule_view.shown
 
 KEYNOTE = "slot-2026-05-16T09:25:00-07:00"
 BREAK = "slot-2026-05-16T10:05:00-07:00"
@@ -277,13 +277,13 @@ def test_the_heights_a_filter_change_keeps(
     before: tuple[str, ...], after: tuple[str, ...], same: set[str]
 ) -> None:
     """Flutter reports no size that did not change, so these heights must outlive it."""
-    slots = {key: Slot(test_schedule.DURING, ()) for key in ("a", "b", "c")}
+    slots = {key: Slot(schedule_view.DURING, ()) for key in ("a", "b", "c")}
     assert unchanged_keys(before, after, slots, slots) == same
 
 
 def test_a_slot_with_other_sessions_is_changed() -> None:
     """``Slot``s compare their sessions: another tuple is another height."""
     one = next(iter(processed(2026).sessions.values()))
-    before = {"a": Slot(test_schedule.DURING, (one,))}
-    after = {"a": Slot(test_schedule.DURING, ())}
+    before = {"a": Slot(schedule_view.DURING, (one,))}
+    after = {"a": Slot(schedule_view.DURING, ())}
     assert unchanged_keys(("a",), ("a",), before, after) == frozenset()
