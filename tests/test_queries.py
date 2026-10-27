@@ -1,7 +1,8 @@
 """Tests for the days query, the fold and the Speakers order (architecture §7.5).
 
 DATA-17's days, and the fold and Speakers order of D-46 and D-180. The schedule queries
-are tested in ``test_timeline.py``, Now's and My schedule's in ``test_agenda.py``.
+are tested in ``test_timeline.py``, Now's and My schedule's in ``test_agenda.py`` and
+its parts.
 """
 
 import unicodedata

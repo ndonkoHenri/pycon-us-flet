@@ -3,8 +3,8 @@
 The pick itself is ``core.sponsors`` (``test_sponsors.py``); here, what Now makes of it:
 one still card, one button node, the same sponsor for the process, nothing without a
 candidate, and a tap that pushes the sponsor over Now. The screen runs in a real Flet
-session through ``test_now.py``'s harness. How the card looks, wraps at 200 % and reads
-to TalkBack and VoiceOver is checked on devices (the PR).
+session through ``tests/now_view.py``'s harness. How the card looks, wraps at 200 % and
+reads to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
 from collections.abc import Callable
@@ -22,12 +22,12 @@ from pycon_us.memory import ViewMemory
 from pycon_us.screens import now_spotlight
 from pycon_us.state import Conference
 from tests.feeds import processed
-from tests.test_now import may, render  # noqa: F401  (the harness's fixture)
+from tests.now_view import may, render  # noqa: F401  (the harness's fixture)
 
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``test_now.py``'s ``render``: Now at a time, in a real Flet session."""
+    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
     return render
 
 

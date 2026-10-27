@@ -22,6 +22,7 @@ from pycon_us.core.timeline import Slot, timeline
 from pycon_us.prefs import Prefs
 from pycon_us.screens.schedule_filter import (
     SHOW_ALL_INSET,
+    SUMMARY_ICON,
     differs_from_default,
     hidden_tracks,
     summary_text,
@@ -319,19 +320,20 @@ async def test_the_default_hides_open_spaces_and_says_so_without_a_dot(
 async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
     shown: Show,
 ) -> None:
-    """Show all's side padding equals the words' inset; the wrap adds no spacing.
+    """Show all's indent and side padding put its label under the summary's words.
 
     #283: Material shrinks a text button's side padding as text grows (12 dp to 4), so
     at large text a "Show all" on a run of its own started right of the words. Pinned,
-    and the words inset as much, the two share their left edge.
+    and indented by the mark's width, its label starts where the words do: the mark,
+    then ``SHOW_ALL_INSET`` (D-373).
     """
     schedule = await shown()
     (words,) = find(
         schedule.session,
-        ft.Container,
-        lambda c: (
-            isinstance(c.content, ft.Semantics)
-            and c.content.identifier == "schedule.filter_summary"
+        ft.Row,
+        lambda r: any(
+            isinstance(c, ft.Semantics) and c.identifier == "schedule.filter_summary"
+            for c in r.controls
         ),
     )
     (show_all,) = find(
@@ -340,12 +342,34 @@ async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
     button = cast(ft.TextButton, show_all.content)
     assert button.content == "Show all"  # the label, its own node's name
     padding = cast(ft.Padding, cast(ft.ButtonStyle, button.style).padding)
-    inset = cast(ft.Padding, words.padding)
-    assert padding.left == padding.right == inset.left == SHOW_ALL_INSET
+    assert padding.left == padding.right == words.spacing == SHOW_ALL_INSET
     (wrap,) = find(
         schedule.session, ft.Row, lambda r: bool(r.wrap) and words in r.controls
     )
     assert wrap.spacing == 0  # nothing else between a run's start and the label
+    indent = cast(ft.Container, wrap.controls[1])
+    assert cast(ft.MergeSemantics, indent.content).content is show_all  # named()
+    assert cast(ft.Padding, indent.padding).left == SUMMARY_ICON
+
+
+async def test_the_filter_mark_is_one_line_tall_beside_the_words_first_line(
+    shown: Show,
+) -> None:
+    """D-373: the mark scales with the text and tops the words' own row.
+
+    In the words' row, not before the wrap, it stays beside their first line whether
+    they share the button's run (centred against its 48 dp) or not (large text).
+    """
+    schedule = await shown()
+    (mark,) = find(schedule.session, ft.Icon, lambda i: i.icon == ft.Icons.FILTER_LIST)
+    assert (mark.size, mark.apply_text_scaling) == (SUMMARY_ICON, True)
+    words = cast(ft.Row, mark.parent)
+    assert not words.wrap and words.tight
+    assert words.vertical_alignment == ft.CrossAxisAlignment.START
+    summary_node = words.controls[1]
+    assert isinstance(summary_node, ft.Semantics)
+    assert summary_node.identifier == "schedule.filter_summary"
+    assert summary_node.expand and summary_node.expand_loose  # wraps beside the mark
 
 
 async def test_show_all_restores_every_track_and_stores_an_explicit_empty_list(

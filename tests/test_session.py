@@ -504,6 +504,17 @@ async def test_a_session_without_a_description_has_no_about(render: Render) -> N
 # ------------------------------------------------------------------ registration
 
 
+def assert_line_icon(node: ft.Control, name: ft.IconData) -> None:
+    """Assert the icon topping ``node``'s TITLE_SMALL line is one line tall at any size.
+
+    D-373: 20 dp, scaled with the text, so it stays beside the first line.
+    """
+    icon = next(
+        n for n in descendants(node) if isinstance(n, ft.Icon) and n.icon == name
+    )
+    assert (icon.size, icon.apply_text_scaling) == (20, True)
+
+
 async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
     render: Render,
 ) -> None:
@@ -519,6 +530,7 @@ async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
     assert detail.launcher.launched == [
         (YEAR.conference.registration_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
     ]
+    assert_line_icon(detail.node("session.registration"), ft.Icons.INFO_OUTLINE)
 
 
 async def test_a_talk_needs_no_registration_card(render: Render) -> None:
@@ -721,5 +733,5 @@ async def test_a_removed_session_keeps_its_note_without_change_badges(
     )
     detail.conference.data, detail.conference.version = newer, 2
     await detail.settle()
-    assert detail.nodes("session.removed")
+    assert_line_icon(detail.node("session.removed"), ft.Icons.EVENT_BUSY_OUTLINED)
     assert detail.nodes("session.changed.room") == []

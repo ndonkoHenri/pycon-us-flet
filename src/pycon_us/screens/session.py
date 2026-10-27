@@ -266,7 +266,12 @@ def _registration(url: str) -> ft.Control:
     """The registration guidance of a tutorial or summit (DATA-09, SESS-01)."""
     text = ft.Row(
         [
-            ft.Icon(ft.Icons.INFO_OUTLINE, color=ft.Colors.ON_SURFACE_VARIANT),
+            ft.Icon(
+                ft.Icons.INFO_OUTLINE,
+                size=20,  # a TITLE_SMALL line, scaled as it is (D-373)
+                apply_text_scaling=True,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
             ft.Column(
                 [
                     ft.Text(
@@ -376,7 +381,12 @@ def _removed_note(high_contrast: bool) -> ft.Control:
         content=ft.Container(
             ft.Row(
                 [
-                    ft.Icon(ft.Icons.EVENT_BUSY_OUTLINED, color=on_container),
+                    ft.Icon(
+                        ft.Icons.EVENT_BUSY_OUTLINED,
+                        size=20,  # a TITLE_SMALL line, scaled as it is (D-373)
+                        apply_text_scaling=True,
+                        color=on_container,
+                    ),
                     ft.Column(
                         [
                             ft.Text(
