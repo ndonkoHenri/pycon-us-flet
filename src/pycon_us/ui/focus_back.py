@@ -31,12 +31,12 @@ LEAVE_WITHIN = 3.0
 launch returns before the browser is up, a share once the sheet has closed. Past it,
 nothing opened (no app for the link) and nothing waits for a return (``Presence``)."""
 
-SETTLE_SECONDS = 0.5
-"""How long after the return the focus moves, in seconds, so the button re-enabled
-meanwhile (Share is disabled while its sheet is up, and a disabled button takes no
-focus) has been drawn, and TalkBack is back on the app's window. #302's throwaway
-build, which waited for no return, moved nothing 0.5 s after the share call and moved
-both focuses 2.5 s after it (F192)."""
+SETTLE_SECONDS = 1.0
+"""How long after the return the focus moves, in seconds. TalkBack settles on the
+app's window first, putting its own focus on the app bar's Back or on no node: a focus
+sent before that is lost. On the Android 16 emulator, 0.5 s lost that race in 2 of 10
+trips; 1 s won all 8 (F192). It also leaves time to draw a button re-enabled meanwhile
+(Share is disabled while its sheet is up, and a disabled button takes no focus)."""
 
 
 @runtime_checkable
