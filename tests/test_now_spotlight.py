@@ -19,6 +19,7 @@ import pytest
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.sponsors import pick_spotlight, spotlight_candidates
 from pycon_us.memory import ViewMemory
+from pycon_us.prefs import Prefs
 from pycon_us.screens import now_spotlight
 from pycon_us.state import Conference
 from tests.feeds import processed
@@ -79,6 +80,32 @@ async def test_the_same_sponsor_shows_for_the_process(
     again = await show(may(16, 9), memory=memory)
     assert memory.spotlight == expected()
     assert str(again.node(now_spotlight.IDENTIFIER).label).startswith("Thanks to ")
+
+
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_at_large_text_the_words_go_under_the_tile(
+    show: Callable[..., Any], large_text: bool
+) -> None:
+    """Beside the tile; under it, the card's whole width, at large text (#649).
+
+    Beside the 56 dp tile and the chevron, the words broke inside a word at the
+    largest sizes ("Maintaini / ng"); under them, the chevron stays at the right.
+    """
+    shown = await show(
+        may(15, 11, 10),
+        memory=seeded(),
+        prefs=Prefs(loaded=True, time_above=large_text),
+    )
+    body = shown.node(now_spotlight.IDENTIFIER).content
+    if large_text:
+        assert isinstance(body, ft.Column)
+        top, words = body.controls
+        assert isinstance(top, ft.Row) and isinstance(words, ft.Text)
+        assert isinstance(top.controls[-1], ft.Icon)  # the chevron
+    else:
+        assert isinstance(body, ft.Row)
+        (words,) = [c for c in body.controls if isinstance(c, ft.Text)]
+        assert words.expand  # what the tile and the chevron leave
 
 
 async def test_a_sponsor_that_left_the_feed_is_replaced(

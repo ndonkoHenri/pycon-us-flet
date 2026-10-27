@@ -37,7 +37,10 @@ found Bloomberg. The field follows every keystroke (D-243), and the list follows
 the typing pauses for 250 ms, as search does; a Clear empties both at once. The live
 count line says "3 listings" (D-226); a miss says "No roles match “rust”" with Clear
 filter, which puts the focus back in the field (D-182). The page stays mounted under a
-sponsor's detail, so Back finds the filter as it was.
+sponsor's detail, so Back finds the filter as it was. At large text (``Prefs.time_above``,
+D-216) the strip, the field and the count head the list and scroll away with it, as the
+Schedule's head does (D-345): pinned, they took half the screen at the largest sizes
+(#649).
 """
 
 import asyncio
@@ -49,6 +52,7 @@ from pycon_us.core.jobs import filter_listings, sponsor_of
 from pycon_us.core.models import JobListing
 from pycon_us.core.sprints import needs_more
 from pycon_us.locations import drill_href
+from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -93,6 +97,7 @@ DEBOUNCE_SECONDS = 0.25
 def Jobs() -> ft.View:
     """The Job listings page: the strip and the filter, then a card per listing."""
     svc = use_services()
+    prefs = use_prefs()
     margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
     tokens = use_tokens()
@@ -182,21 +187,20 @@ def Jobs() -> ft.View:
                     identifier=f"{SCREEN}.no_match",
                 )
             )
+    # The strip, the field and its count in a column of their own, so the list keeps
+    # its place in the body, and the field its place in the column, as the strip and
+    # the count come and go (D-153).
+    head = ft.Column(
+        pinned, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH
+    )
+    if prefs.time_above:
+        items.insert(0, head)  # at large text it scrolls away with the list (#649)
+        head = ft.Column([])  # an empty column keeps the list's place in the body
     return AppScaffold(
         title=TITLE,
         body=ft.Column(
             [
-                # The strip, the field and its count in a column of their own, so
-                # the list keeps its place in the body as they come and go (D-153);
-                # between the list's margins (D-305).
-                capped(
-                    ft.Column(
-                        pinned,
-                        spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-                    ),
-                    margin,
-                ),
+                capped(head, margin),  # between the list's margins (D-305)
                 ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
             ],
             spacing=0,

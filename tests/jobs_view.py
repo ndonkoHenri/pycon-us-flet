@@ -17,6 +17,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.models import JobListing
+from pycon_us.prefs import Prefs
 from pycon_us.screens import jobs as screen
 from pycon_us.state import Conference
 from tests import harness
@@ -104,10 +105,15 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 async def show(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sleeps: HeldSleeps
 ) -> AsyncIterator[Any]:
-    """Return a function that shows the page, with a ``conference`` (2026 by default)."""
+    """Return a function that shows the page, with a ``conference`` (2026 by default).
+
+    ``prefs`` sets the settings, large text say; by default the defaults.
+    """
     async with AsyncExitStack() as stack:
 
-        async def render(conference: Conference | None = None) -> Shown:
+        async def render(
+            conference: Conference | None = None, *, prefs: Prefs | None = None
+        ) -> Shown:
             return await stack.enter_async_context(
                 harness.showing(
                     screen.Jobs,
@@ -118,6 +124,7 @@ async def show(
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path=VIEW,
+                    prefs=prefs,
                 )
             )
 

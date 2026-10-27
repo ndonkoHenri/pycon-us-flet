@@ -14,6 +14,7 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
+from pycon_us.prefs import Prefs
 from pycon_us.screens import jobs as screen
 from pycon_us.state import Conference
 from tests import harness, jobs_view
@@ -80,6 +81,34 @@ async def test_the_count_is_a_live_region_only_while_the_filter_finds_some(
     await type_into(shown, "rust")
     await pause(shown, sleeps)
     assert shown.nodes("jobs.count") == []
+
+
+def in_list(control: ft.BaseControl) -> bool:
+    """Return whether ``control`` is mounted inside a ``ListView``: it scrolls."""
+    node = control.parent
+    while node is not None and not isinstance(node, ft.ListView):
+        node = node.parent
+    return node is not None
+
+
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_at_large_text_the_field_and_its_count_scroll_with_the_list(
+    show: Any, sleeps: HeldSleeps, large_text: bool
+) -> None:
+    """Pinned over the list; at large text they head it and scroll away (#649).
+
+    Pinned, the strip, the field and the count took half the screen at the largest
+    sizes. In the list or not, the count comes without rebuilding the field (D-243).
+    """
+    shown = await show(prefs=Prefs(loaded=True, time_above=large_text))
+    (text_field,) = shown.find(ft.TextField)
+    assert in_list(text_field) is large_text
+    await type_into(shown, "senior python")
+    await pause(shown, sleeps)
+    (count,) = shown.nodes("jobs.count")
+    assert in_list(count) is large_text
+    (same,) = shown.find(ft.TextField)
+    assert same._i == text_field._i
 
 
 async def test_a_count_change_keeps_the_typed_text_on_the_field(
