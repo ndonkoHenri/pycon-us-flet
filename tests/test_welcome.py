@@ -3,7 +3,8 @@
 ``welcome_copy()`` is pure, so its words are pinned at fixed days for two years.
 ``Welcome`` runs outside a renderer: its hooks are replaced and a fake page is bound
 as Flet binds a session's page. How it looks and reads on a screen is checked on
-devices (the PR); where the start route sends a session is ``test_routes.py``'s.
+devices (the PR); where the start route sends a session is
+``test_routes_locations.py``'s.
 """
 
 import inspect
