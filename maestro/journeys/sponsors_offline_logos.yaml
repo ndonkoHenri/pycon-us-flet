@@ -1,0 +1,99 @@
+# SPON-01, SPON-06, SHELL-08 (#455): offline with no logo cache, every logo tile shows
+# its sponsor's initials (logo_tile(), D-262), and the pages say they are offline.
+#
+# A fresh install holds no logo: Flutter keeps images in memory only. Android: airplane
+# mode is on from the launch (start_offline.yaml), so no logo loads. iOS: Maestro cannot
+# cut a simulator's network, so the app first refreshes from NO_LOGO_URL, the year's
+# snapshot with every logo pointed at a closed port, served from this Mac
+# (maestro/README.md, "Offline logos"), then from a feed URL nothing answers at. The
+# initials are drawn, not said (the name is said beside them), so the flow cannot
+# assert them: it takes a screenshot of each page to look at (maestro/README.md).
+#
+# env (iOS): NO_LOGO_URL, default http://127.0.0.1:8766/conference-2026.json.
+appId: io.github.ndonkohenri.pyconus
+name: Offline with no logo cache, Now, Sponsors and Job listings show initials
+tags:
+  - offline_logos
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - runFlow: ../subflows/start_offline.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow: ../subflows/launch_fresh.yaml
+      - runFlow:
+          file: ../subflows/set_scene.yaml
+          env:
+            NOW: ${NOW || '2026-05-15 14:10'}
+            FEED_URL: ${NO_LOGO_URL || 'http://127.0.0.1:8766/conference-2026.json'}
+            OUTCOME: "Schedule updated from the feed\\."
+      - runFlow:
+          file: ../subflows/set_scene.yaml
+          env:
+            NOW: ${NOW || '2026-05-15 14:10'}
+            FEED_URL: ${OFFLINE_URL || 'http://127.0.0.1:9/conference-2026.json'}
+            OUTCOME: "Couldn't refresh: no answer from the feed\\. The app keeps the schedule it has\\."
+
+# Now: the spotlight's tile.
+- scrollUntilVisible:
+    element:
+      id: now.spotlight
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- takeScreenshot: offline-logos-now-spotlight
+
+# More › Sponsors: the Visionary cards, then the logo cards.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.sponsors
+    direction: DOWN
+- tapOn:
+    id: more.sponsors
+- extendedWaitUntil:
+    visible:
+      id: "sponsors\\.sponsor\\..*"
+    timeout: 15000
+- assertVisible:
+    id: app.status
+    text: "Offline.*"
+- takeScreenshot: offline-logos-sponsors-top
+- scrollUntilVisible:
+    element:
+      id: sponsors.sponsor.capital-one
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: offline-logos-sponsors-logo-cards
+
+# More › Job listings: each card's header tile.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.jobs
+    direction: DOWN
+- tapOn:
+    id: more.jobs
+- extendedWaitUntil:
+    visible:
+      id: jobs.listing.6
+    timeout: 15000
+- assertVisible:
+    id: app.status
+    text: "Offline.*"
+- takeScreenshot: offline-logos-jobs

@@ -1,0 +1,48 @@
+# SHELL-08 (#455): Now › the sponsor spotlight › its sponsor › Back returns to Now.
+#
+# The app picks the spotlight's sponsor once per process (D-298), so the flow reads it
+# from the card, "Thanks to NVIDIA, a Visionary sponsor" (scripts/spotlight_name.js),
+# and expects that sponsor's page, /now/sponsor/<slug> (D-17). Back leaves that one
+# View, and Now shows the same card.
+appId: io.github.ndonkohenri.pyconus
+name: Now, the sponsor spotlight, its sponsor, then Back to Now
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# The card is under Now's sessions, below the fold on a phone.
+- scrollUntilVisible:
+    element:
+      id: now.spotlight
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- copyTextFrom:
+    id: now.spotlight
+- runScript: ../scripts/spotlight_name.js
+- assertTrue:
+    condition: ${output.spotlightName != ''}
+    label: The spotlight names a sponsor
+
+# → its sponsor.
+- tapOn:
+    id: now.spotlight
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: ${output.spotlightName}
+    timeout: 15000
+
+# Back: Now, with the same card.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.spotlight
+    timeout: 15000
+- assertVisible:
+    id: now.title
+- assertNotVisible:
+    id: sponsor.title

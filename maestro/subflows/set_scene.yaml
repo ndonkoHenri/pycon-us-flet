@@ -49,6 +49,12 @@ appId: io.github.ndonkohenri.pyconus
       - tapOn:
           id: developer.feed_url
       - eraseText: 120
+      # On iOS the tap puts the caret where it lands, mid-URL when the field already
+      # holds a long one (a second scene, #455), and the erase leaves what follows it.
+      # A second tap lands past the short rest's end, so a second erase clears it.
+      - tapOn:
+          id: developer.feed_url
+      - eraseText: 120
       - inputText: ${FEED_URL}
       - assertVisible:
           text: ${FEED_URL}
