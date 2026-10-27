@@ -1,0 +1,77 @@
+# INFO-07 (#456): More › Help & safety opens on Report a concern, its rows and its
+# copies, offline.
+#
+# The page is bundled year data (content.toml's [[safety_contacts]] and [help], D-281),
+# so it shows with the feed unreachable (start_offline.yaml). Report a concern is the
+# first content, on screen without a scroll; each contact row is one node read as
+# action plus value, and its Copy is a stop of its own (help.copy.<kind>). 2026 lists
+# the email alone (no public hotline), so the flow copies the address; a year with a
+# phone row would add help.copy.tel. The copy is confirmed by the app's SnackBar on iOS
+# and on Android before 13; Android 13 and later confirms every copy itself (D-263).
+appId: io.github.ndonkohenri.pyconus
+name: More, Help & safety, Report a concern first, copy the address
+tags:
+  - journeys
+  - venue
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Help & safety.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.help
+    direction: DOWN
+- tapOn:
+    id: more.help
+- extendedWaitUntil:
+    visible:
+      id: help.report
+    timeout: 15000
+
+# Report a concern first, with its row and its Copy, before any scroll.
+- assertVisible:
+    id: help.report
+    text: Report a concern
+- assertVisible:
+    id: help.report.mailto
+- assertVisible:
+    id: help.copy.mailto
+
+# Copy the address.
+- tapOn:
+    id: help.copy.mailto
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: Email address copied
+          timeout: 10000
+- assertNotVisible:
+    text: "Couldn't copy the email address"
+
+# The rest of the page, from the bundled data: the places, then the Code of Conduct.
+- scrollUntilVisible:
+    element:
+      id: help.quiet_room
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: help.coc_summary
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: help.coc
+    direction: DOWN
