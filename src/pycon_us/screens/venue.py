@@ -207,9 +207,10 @@ def address_card(svc: Services, info: ConferenceInfo) -> ft.Control:
         point = directions
 
         @report_errors
-        async def open_directions() -> None:
+        async def open_directions(e: ft.Event[ft.Button]) -> None:
             ios = ft.context.page.platform is ft.PagePlatform.IOS
-            await open_link(svc, directions_url(point, ios=ios), app=True)
+            url = directions_url(point, ios=ios)
+            await open_link(svc, url, app=True, opener=e.control)
 
         button = ft.FilledTonalButton(
             ft.Text(

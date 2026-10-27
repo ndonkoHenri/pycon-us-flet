@@ -535,6 +535,22 @@ async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
     assert svc.foreground.is_set()
 
 
+async def test_inactive_and_resume_mark_a_trip_away_from_the_app(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    """``inactive`` alone (the share sheet's) leaves, and ``resume`` comes back (D-372)."""
+    await started(fake_page, svc)
+    handler = fake_page.on_app_lifecycle_state_change
+    returns = svc.presence.returns
+    back = asyncio.create_task(svc.presence.back_since(returns, leave_within=1))
+    await handler(lifecycle(fake_page, ft.AppLifecycleState.INACTIVE))
+    assert svc.foreground.is_set()  # the ticks go on: the app is still on screen
+    await asyncio.sleep(0)
+    assert not back.done()
+    await handler(lifecycle(fake_page, ft.AppLifecycleState.RESUME))
+    assert await back and svc.presence.returns == returns + 1
+
+
 async def test_a_resume_refreshes_once_the_last_refresh_began_15_minutes_ago(
     fake_page: FakePage, svc: Services, network: Network, frozen_clock: datetime
 ) -> None:

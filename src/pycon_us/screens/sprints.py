@@ -78,8 +78,8 @@ def Sprints() -> ft.View:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
     @report_errors
-    async def submit() -> None:
-        await open_link(svc, info.sprint_submit_url)
+    async def submit(e: ft.Event[ft.Button]) -> None:
+        await open_link(svc, info.sprint_submit_url, opener=e.control)
 
     pinned: list[ft.Control] = []
     items: list[ft.Control]

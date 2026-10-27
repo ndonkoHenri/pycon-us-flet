@@ -123,8 +123,8 @@ def donate_button(svc: Services, url: str) -> ft.Control:
     """
 
     @report_errors
-    async def donate() -> None:
-        await open_link(svc, url)
+    async def donate(e: ft.Event[ft.Button]) -> None:
+        await open_link(svc, url, opener=e.control)
 
     button = ft.FilledButton(
         ft.Text(DONATE, semantics_label=f"{DONATE}\n{OPENS_IN[LinkKind.WEB]}"),
