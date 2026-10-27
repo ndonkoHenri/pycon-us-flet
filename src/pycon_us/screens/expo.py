@@ -21,7 +21,7 @@ change of selection re-renders two booths, a pulse one, and a zoom none.
 
 The selected booth's card (``screens/booth_card.py``, #403) sits at the bottom of the
 ``Stack`` with the zoom buttons above it, so both stay in reach; its Close clears the
-selection. The List and ``?booth=`` come with #404 and #405.
+selection. The List is ``screens/expo_list.py``'s, ``?booth=`` #405's.
 """
 
 import asyncio

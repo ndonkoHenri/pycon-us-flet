@@ -31,7 +31,7 @@ import flet as ft
 from pycon_us.locations import use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.expo import ExpoHall
+from pycon_us.screens.expo_pane import ExpoPane
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.plan_tables import (
@@ -378,4 +378,4 @@ def ExpoPlan() -> ft.View:
     plan = year_map.plan(EXPO_PLAN)
     if plan is None or not year_map.booths:
         return PlanViewer(plan_id=EXPO_PLAN)
-    return AppScaffold(title=plan.title, body=ExpoHall())
+    return AppScaffold(title=plan.title, body=ExpoPane())

@@ -8,6 +8,12 @@ the expo List can still show them and a test can name the gap. The answer is bui
 once per feed version (D-153), so the expo's memoised views get the same objects on
 every render.
 
+The expo List (#404) has one row per exhibitor (D-254): ``list_rows()`` makes them,
+by booth number in natural order with a shared booth's exhibitors together by name, or
+by name (``by_name()``), and a booth without an exhibitor is a row by its label.
+``filter_rows()`` and ``filter_sponsors()`` keep those whose name or booth number holds
+every word of the List's filter, folded as search folds (D-46).
+
 The job fair's tables come from the feed alone (``Sponsor.job_fair_table``):
 ``job_fair_tables()`` lists every sponsor with a table, tables in natural order (T2
 before T10) and a shared table's sponsors by folded name, each with its open roles
@@ -58,6 +64,36 @@ class Expo:
 
 
 @dataclass(frozen=True)
+class ExpoRow:
+    """One row of the expo List: an exhibitor at its booth, or a booth without one.
+
+    Attributes:
+        item: The booth and all its exhibitors, which a tap selects on the plan.
+        sponsor: The row's exhibitor; None for a booth without one, or before the feed.
+        search_text: The booth's number and the row's name, folded (D-46).
+    """
+
+    item: ExpoBooth
+    sponsor: Sponsor | None = None
+    search_text: str = ""
+
+    @property
+    def number(self) -> str:
+        """The booth's number, as ``map.toml`` writes it."""
+        return self.item.booth.number
+
+    @property
+    def name(self) -> str:
+        """The exhibitor's name, else the booth's label; "" for neither."""
+        return self.sponsor.name if self.sponsor else self.item.booth.label
+
+    @property
+    def key(self) -> str:
+        """The row's key, unique in the List: "726.pybeach", or "407" alone."""
+        return f"{self.number}.{self.sponsor.slug}" if self.sponsor else self.number
+
+
+@dataclass(frozen=True)
 class JobFairTable:
     """One sponsor at its job fair table: a row of the Map's Job fair pane (MAP-04).
 
@@ -92,6 +128,67 @@ def expo_booths(data: ConferenceData, booths: Sequence[Booth]) -> Expo:
     if key not in results:
         results[key] = _build(data, key)
     return results[key]
+
+
+def list_rows(booths: Sequence[ExpoBooth]) -> tuple[ExpoRow, ...]:
+    """Return the List's rows in booth order: one per exhibitor, or one for the booth.
+
+    A shared booth's rows follow its exhibitors' folded-name order (``expo_booths()``),
+    so they stay together under its number (D-254).
+
+    Args:
+        booths: The booths with their exhibitors, in natural number order.
+    """
+    return tuple(
+        _row(item, sponsor) for item in booths for sponsor in (item.sponsors or (None,))
+    )
+
+
+def by_name(rows: Sequence[ExpoRow]) -> tuple[ExpoRow, ...]:
+    """Return ``rows`` by folded name (D-46), then booth number; nameless rows last.
+
+    Args:
+        rows: The List's rows (``list_rows()``).
+    """
+    return tuple(
+        sorted(
+            rows,
+            key=lambda row: (not row.name, fold(row.name), room_sort_key(row.number)),
+        )
+    )
+
+
+def filter_rows(rows: tuple[ExpoRow, ...], query: str) -> tuple[ExpoRow, ...]:
+    """Return the rows whose number or name holds every word of ``query`` (D-46).
+
+    A query with no word to match returns ``rows`` itself, as ``filter_projects()``
+    does: "socal" finds 726's SoCal Python, "613" booth 613.
+
+    Args:
+        rows: The List's rows, in the order shown.
+        query: What the user typed in the List's filter.
+    """
+    words = fold(query).split()
+    if not words:
+        return rows
+    return tuple(row for row in rows if all(word in row.search_text for word in words))
+
+
+def filter_sponsors(sponsors: tuple[Sponsor, ...], query: str) -> tuple[Sponsor, ...]:
+    """Return the unplaced sponsors whose booth number or name holds every word.
+
+    Args:
+        sponsors: ``Expo.unplaced``.
+        query: What the user typed in the List's filter.
+    """
+    words = fold(query).split()
+    if not words:
+        return sponsors
+    return tuple(
+        sponsor
+        for sponsor in sponsors
+        if all(word in fold(f"{sponsor.booth} {sponsor.name}") for word in words)
+    )
 
 
 def job_fair_tables(data: ConferenceData) -> tuple[JobFairTable, ...]:
@@ -165,6 +262,12 @@ def _build(data: ConferenceData, booths: tuple[Booth, ...]) -> Expo:
         for sponsor in _by_name(by_number[number])
     )
     return Expo(placed, unplaced)
+
+
+def _row(item: ExpoBooth, sponsor: Sponsor | None) -> ExpoRow:
+    """One List row, with the folded text its filter matches."""
+    name = sponsor.name if sponsor else item.booth.label
+    return ExpoRow(item, sponsor, fold(f"{item.booth.number} {name}"))
 
 
 def _by_name(sponsors: list[Sponsor]) -> tuple[Sponsor, ...]:
