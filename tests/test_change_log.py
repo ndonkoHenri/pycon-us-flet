@@ -260,6 +260,27 @@ async def test_a_feed_from_another_feed_url_is_not_diffed(
     assert len(log.batches) == 1
 
 
+async def test_a_new_feed_urls_same_bytes_count_as_its_feed_for_the_next_diff(
+    storage: Storage, year: YearData
+) -> None:
+    """A new feed URL's first refresh that brings the feed shown makes it that URL's.
+
+    It publishes nothing (D-224), but the next feed from that URL is diffed against
+    it, as after a first refresh that publishes (D-255): a feed pair whose old side is
+    the feed already shown keeps its change (#460).
+    """
+    await storage.write_feed(recorded(2026))
+    conference, log = await started(storage, year)
+    await conference.set_feed_url(TEST_URL, storage)
+
+    await conference.refresh(storage, year, transport=serving(recorded(2026)))
+    assert log.batches == ()
+    feed = changed(2026, move(TALK, "Room 101B"))
+    await conference.refresh(storage, year, transport=serving(feed))
+
+    assert [change.kind for change in log.batches[0].changes] == [ChangeKind.ROOM]
+
+
 async def test_a_feed_url_change_forgets_the_batches_in_memory(
     storage: Storage, year: YearData
 ) -> None:
