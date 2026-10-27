@@ -7,10 +7,10 @@ focus was on no node, and a screen reader user started again from the top (WCAG 
 
 ``focus_back()`` wraps the call that opens such a window. Once the app has left and
 come back (``services.presence``), and ``SETTLE_SECONDS`` later, it calls the opener's
-``focus()``: Flutter then reports the button as focused, and TalkBack moves its focus
-there (F192). Only buttons have ``focus()`` at the pin: a row (``ListTile``) and an
-overflow menu (``PopupMenuButton``) have none, so their windows still return to no
-node until U182.
+``focus()``: Flutter then reports the button as focused (``TYPE_VIEW_FOCUSED`` on
+Android), and TalkBack moves its focus there (F192). Only buttons have ``focus()`` at
+the pin: a row (``ListTile``) and an overflow menu (``PopupMenuButton``) have none, so
+their windows still return to no node until U182.
 """
 
 import asyncio
@@ -30,8 +30,11 @@ launch returns before the browser is up, a share once the sheet has closed. Past
 nothing opened (no app for the link) and nothing waits for a return (``Presence``)."""
 
 SETTLE_SECONDS = 0.5
-"""How long after the return the focus moves, in seconds. TalkBack settles on the
-app's window again first; a focus sent before it was lost (F192)."""
+"""How long after the return the focus moves, in seconds, so the button re-enabled
+meanwhile (Share is disabled while its sheet is up, and a disabled button takes no
+focus) has been drawn, and TalkBack is back on the app's window. #302's throwaway
+build, which waited for no return, moved nothing 0.5 s after the share call and moved
+both focuses 2.5 s after it (F192)."""
 
 
 class Focusable(Protocol):

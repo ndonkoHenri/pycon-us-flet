@@ -4,9 +4,11 @@ Another app's window over the app (the in-app browser, the share sheet, a maps a
 is no route of Flutter's `Navigator`, so nothing gives the screen reader's focus back
 when it closes (F54, #302). ``ui.focus_back`` does, and needs to know when the app has
 left and come back: the lifecycle handler (``app.start()``) calls ``leave()`` on
-``inactive`` and ``come_back()`` on ``resume``. Android reports both for the share
-sheet and for the browser (F192); iOS shows both over the app's own window, which stays
-active, so there it never leaves.
+``inactive`` and ``come_back()`` on ``resume``, which Flet reports for every change of
+Flutter's lifecycle (F192). On Android the browser and the share sheet are other
+activities, so the app goes ``inactive`` under them. Where a window opens over the app
+without that (iOS presents both inside the app), the app never leaves, and nothing
+waits for a return (``back_since()``).
 """
 
 import asyncio
