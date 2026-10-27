@@ -3,9 +3,10 @@
 ``test_schedule.py`` (the day tabs, the now line and the states without data),
 ``test_schedule_lists.py`` (the day lists), ``test_schedule_jump.py`` (positions and
 Jump to now) and ``test_schedule_button.py`` (the jump's policy and the "Now" button)
-share it, as do ``test_schedule_filter.py``, ``test_schedule_place.py`` and
-``test_schedule_refilter.py``. A module takes the fixtures by assigning them to its own
-names, as ``docs/testing-and-quality.md`` §3.1 says.
+share it, as do ``test_schedule_filter.py``, ``test_schedule_place.py``,
+``test_schedule_place_turns.py`` and ``test_schedule_refilter.py``. A module takes the
+fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` §3.1
+says.
 
 ``Schedule`` renders in a real Flet session under the store providers
 (``tests/sessions.py``'s ``showing()``), so the memoised path (D-153), the two renders
