@@ -46,7 +46,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/help_report.yaml` | journeys, venue | More › Help & safety opens on Report a concern, its email row and its Copy on screen before any scroll; Copy says "Email address copied" on iOS; the places and the Code of Conduct follow (INFO-07, #456) |
 | `journeys/venue_open_now.yaml` | journeys, venue | On a conference morning (Friday 09:30, `NOW` overrides it) More › Venue & hours says Registration, the information desk and Swag pickup are open now, each until its closing time (MAP-09, #456) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
-| `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s; My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
+| `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s on iOS, still new on Android until the list is left (a screen reader's rule, F72); My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss; Settings' Reminders sentence, with the alarm on iOS only (D-60, D-272, #458) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
@@ -242,7 +242,7 @@ maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/
 ### Feed pairs
 
 `journeys/change_log.yaml` reads its feeds from the laptop: the recorded 2026 feed, then
-a copy with session 123 moved, at one feed URL (D-255;
+a copy with sessions 123 (saved) and 142 (not saved) moved, at one feed URL (D-255;
 [`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §9.2). Start the server
 first and keep it running; the flow resets it to the old feed at its start and swaps it
 with a script (`scripts/feed_pair.js`), which posts to it from the laptop:
@@ -251,6 +251,11 @@ with a script (`scripts/feed_pair.js`), which posts to it from the laptop:
 uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
 maestro --device <udid> test maestro/journeys/change_log.yaml
 ```
+
+Both `--move` edits are needed: without session 142's, the flow fails at its first
+"All changes" check. On Android, Maestro makes the app see a screen reader (F72), so the
+list runs no 2 s timer and marks its items seen when it is left (ux.md §6.4): the flow
+asserts the item still reads "New: " there, and Now's missing card shows it seen.
 
 Its tag is `feed_pair`, not `journeys`, so `--include-tags=journeys` runs without the
 server. It turns no airplane mode on: that would cut the emulator's way to the laptop too.

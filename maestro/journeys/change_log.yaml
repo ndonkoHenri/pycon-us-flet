@@ -19,9 +19,13 @@
 # on Now; the server swapped to the moved copy, and Refresh now: the SnackBar says
 # "1 saved session changed" (the unsaved move is not counted), and Review opens Schedule
 # changes, where the saved move is under "Affects My schedule", above "All changes" and
-# the unsaved move (talk 142, Grand Ballroom A), and is marked seen after 2 s; My schedule's row has the Changed
-# badge, the session its "Moved from" badge; Now has no Schedule changes card, its
-# change seen. A screenshot per step (takeScreenshot), in the debug output's folder.
+# the unsaved move (talk 142, Grand Ballroom A), and is marked seen after 2 s on iOS; on
+# Android, where Maestro makes the app see a screen reader (F72), it still reads "New: "
+# on the list and is marked seen when the list is left (ux.md §6.4); My schedule's row
+# has the Changed badge, the session its "Moved from" badge; Now has no Schedule changes
+# card, its change seen. A screenshot per step (takeScreenshot), in the debug output's
+# folder. Both --move edits are needed: without talk 142's, nothing is below
+# "All changes".
 #
 # Not airplane mode, unlike the other journeys: it would cut the emulator's way to the
 # laptop too. The launch's own refresh may publish the year's live feed; the feed URL
@@ -108,12 +112,32 @@ env:
 - assertVisible:
     text: "New: .*room changed from Grand Ballroom A to Room 101B\\."
 - takeScreenshot: change_log-04-review
-# Seen after 2 s on the list: the item no longer reads "New: ".
-- extendedWaitUntil:
-    visible:
-      text: "Panel: .*room changed from Grand Ballroom B to Room 103ABC\\. In My schedule\\."
-    timeout: 15000
-- takeScreenshot: change_log-05-seen
+# iOS: seen after 2 s on the list, so the item no longer reads "New: ".
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: "Panel: .*room changed from Grand Ballroom B to Room 103ABC\\. In My schedule\\."
+          timeout: 15000
+      - takeScreenshot: change_log-05-seen
+# Android: Maestro makes the app see a screen reader (F72), and with one on the list runs
+# no timer and marks the items seen when it is left (ux.md §6.4). So the item still reads
+# "New: " after more than 2 s on the list (the optional wait gives the timer it must not
+# run 4 s to drop it); step 08's Now, with no Schedule changes card, shows it was seen.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            text: "New: .*room changed from Grand Ballroom B to Room 103ABC\\. In My schedule\\."
+          timeout: 4000
+          optional: true
+      - assertVisible:
+          text: "New: .*room changed from Grand Ballroom B to Room 103ABC\\. In My schedule\\."
+      - takeScreenshot: change_log-05-still-new
 
 # Back to Developer, then More; My schedule's row has the Changed badge, which says
 # what changed.
