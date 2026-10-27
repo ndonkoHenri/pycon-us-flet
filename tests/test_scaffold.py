@@ -1,8 +1,9 @@
 """Tests for the shared chrome: ``AppScaffold`` and ``SectionHeader`` (#76).
 
-``AppScaffold``'s bottom bar and its tab switches are tested in ``test_navigation.py``
-with the bar's own parts (#75), ``Shown`` and the content line in ``test_shown.py``,
-and the status strip in ``test_status_strip.py`` (D-200).
+``AppScaffold``'s bottom bar and its tab switches are tested in
+``test_navigation_views.py`` (the bar's own parts in ``test_navigation.py``, #75),
+``Shown`` and the content line in ``test_shown.py``, and the status strip in
+``test_status_strip.py`` (D-200).
 
 The builders run outside a renderer, with the fixtures of ``tests/chrome.py``:
 the hooks they call (``ft.use_view_path``, ``ft.use_effect`` and the store hooks) are
