@@ -7,7 +7,7 @@ set the feed URL it prints and Refresh now (no batch: the first refresh from a n
 is not diffed), save the session, swap, and Refresh now: the app records the change as
 it would a real one (testing-and-quality.md §9.2)::
 
-    uv run python -m tools.feed_pair --move 123 "Room 103ABC"
+    uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
     curl -X POST http://127.0.0.1:8460/swap    # serve the new feed; /reset: the old one
 
 It prints the changes the app will find, the feed URL on the Android emulator and on the

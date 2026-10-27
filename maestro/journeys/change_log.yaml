@@ -2,9 +2,10 @@
 # pair, saved sessions first (NEW-04, D-255).
 #
 # Needs the feed-pair server running on the laptop, serving the recorded 2026 feed and a
-# copy with the saved session moved (testing-and-quality.md §9.2):
+# copy with the saved session moved, and an unsaved one, so the order of the sections
+# shows (testing-and-quality.md §9.2):
 #
-#   uv run python -m tools.feed_pair --move 123 "Room 103ABC"
+#   uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
 #
 # env (each has a default, for the server's default port, 8460):
 #   FEED_URL     the pair's feed URL as the device reaches it: the laptop's loopback is
@@ -16,8 +17,9 @@
 # The steps: the old feed set in Developer and refreshed (a new feed URL's first feed is
 # not diffed: no batch); the panel happening now (session 123, Grand Ballroom B) saved
 # on Now; the server swapped to the moved copy, and Refresh now: the SnackBar says
-# "1 saved session changed", and Review opens Schedule changes, where the move is under
-# "Affects My schedule" and is marked seen after 2 s; My schedule's row has the Changed
+# "1 saved session changed" (the unsaved move is not counted), and Review opens Schedule
+# changes, where the saved move is under "Affects My schedule", above "All changes" and
+# the unsaved move (talk 142, Grand Ballroom A), and is marked seen after 2 s; My schedule's row has the Changed
 # badge, the session its "Moved from" badge; Now has no Schedule changes card, its
 # change seen. A screenshot per step (takeScreenshot), in the debug output's folder.
 #
@@ -87,10 +89,24 @@ env:
     visible:
       id: changes.change.123.room
     timeout: 15000
+# Saved sessions first: "Affects My schedule" and the saved move above "All changes",
+# the unsaved move below it (D-255).
 - assertVisible:
     text: "Affects My schedule"
+    above:
+      id: changes.change.123.room
+- assertVisible:
+    id: changes.change.123.room
+    above:
+      text: "All changes"
+- assertVisible:
+    id: changes.change.142.room
+    below:
+      text: "All changes"
 - assertVisible:
     text: "New: .*room changed from Grand Ballroom B to Room 103ABC\\. In My schedule\\."
+- assertVisible:
+    text: "New: .*room changed from Grand Ballroom A to Room 101B\\."
 - takeScreenshot: change_log-04-review
 # Seen after 2 s on the list: the item no longer reads "New: ".
 - extendedWaitUntil:

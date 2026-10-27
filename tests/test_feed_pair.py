@@ -11,6 +11,7 @@ guards the app's feed refresh, not a test's own server.
 import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.error import HTTPError
 
 import pytest
@@ -20,6 +21,8 @@ from tests.feeds import Edit, pair, recorded
 from tests.ui.feeds import PairFeed
 from tools import feed_pair
 
+ROOT = Path(__file__).resolve().parents[1]
+"""The repository's root, where the Maestro flows are."""
 OLD, NEW = b'{"side": "old"}', b'{"side": "new"}'
 TALK = "123"
 """A panel on 2026-05-15 at 1:45 PM in Grand Ballroom B: the change-log flow's session."""
@@ -124,6 +127,21 @@ def test_the_cli_finds_the_change_its_move_makes() -> None:
     assert old == recorded(YEAR)
     (line,) = feed_pair.expected(old, new)
     assert line.startswith("  room of 123: Panel: Fostering better collaboration")
+
+
+def test_the_flows_pair_moves_a_saved_and_an_unsaved_talk() -> None:
+    """The change-log flow's command moves two talks, so both sections show.
+
+    The flow saves 123 and not 142: its move goes under "Affects My schedule", above
+    "All changes" and 142's move, which is how the flow checks the order (D-255).
+    """
+    argv = ("--move", TALK, "Room 103ABC", "--move", "142", "Room 101B")
+    old, new = pair(YEAR, *edits(*argv))
+
+    lines = feed_pair.expected(old, new)
+    assert [line.split(":")[0].strip() for line in lines] == ["room of 123", "room of 142"]
+    flow = (ROOT / "maestro" / "journeys" / "change_log.yaml").read_text()
+    assert 'tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"' in flow
 
 
 def test_the_cli_makes_each_named_edit_once_per_flag() -> None:

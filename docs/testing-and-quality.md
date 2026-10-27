@@ -720,13 +720,13 @@ uv run python -m http.server 8765 --bind 127.0.0.1 --directory build/shifted-fee
 P2's exit criterion 4 asks for the change log on a device from a fixture feed pair. `tools/feed_pair.py` serves one at a single feed URL from the laptop: the recorded feed of the active year (`tests/feeds.py`'s `recorded()`), and once swapped a copy with named edits (`changed()`, D-255), through `PairFeed` in `tests/ui/feeds.py`, beside `SilentFeed`:
 
 ```sh
-uv run python -m tools.feed_pair --move 123 "Room 103ABC"   # keep it running
+uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"   # keep it running
 curl -X POST http://127.0.0.1:8460/swap                      # serve the copy; /reset: the recorded feed again
 ```
 
 - **Edits:** `--move KEY ROOM`, `--retime KEY START END`, `--rename KEY NAME`, `--add KEY LIKE NAME`, `--remove KEY`, each repeatable, by the slot's `conf_key`. Before it serves, it runs the app's parser and diff on the pair and prints the changes the app will find, and refuses a pair in which it finds none (an edit of a break, a move to the same room).
 - **On the device:** in Developer options, set the feed URL it prints (`http://10.0.2.2:8460/conference-<year>.json` on the Android emulator, `http://127.0.0.1:8460/…` on the iOS simulator), Apply, Refresh now: the first refresh from a new feed URL is not diffed, so no batch. Save a session the edits touch, swap, Refresh now: the app records the batch as it would a real change. Both addresses are the Mac's loopback, so a physical phone cannot reach them.
-- **The flow:** `maestro/journeys/change_log.yaml` (tag `feed_pair`, not `journeys`, since it needs the server) runs those steps with `--move 123 "Room 103ABC"`, from the SnackBar's Review to Now's card gone once seen; `FEED_URL` and `CONTROL_URL` name the server on another port (`maestro/README.md`).
+- **The flow:** `maestro/journeys/change_log.yaml` (tag `feed_pair`, not `journeys`, since it needs the server) runs those steps with `--move 123 "Room 103ABC" --move 142 "Room 101B"`, from the SnackBar's Review to Now's card gone once seen; `FEED_URL` and `CONTROL_URL` name the server on another port (`maestro/README.md`).
 - **The same bytes:** a new feed URL's first refresh that brings the very feed shown publishes nothing (D-224) but makes it that URL's, so the swapped copy is still diffed against it (D-255; before #460 that change was lost when the shown feed was the pair's old side, such as the bundled snapshot after an offline launch).
 
 ## 10. Definition of done for a PR (D-93)
