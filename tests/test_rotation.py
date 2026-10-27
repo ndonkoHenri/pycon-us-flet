@@ -21,7 +21,7 @@ import pytest
 from pycon_us.ui import zoom
 from tests import links
 from tests.links import Open, Shown
-from tests.test_plan import FakeViewer
+from tests.viewers import FakeViewer
 
 open_at = links.open_at
 
