@@ -2,7 +2,7 @@
 
 D-23, D-151, D-265, D-285; THEME-04..06, THEME-08; ux.md §3.2..§3.4;
 testing-and-quality.md §7.1. The line above the bottom bar is tested with the bar, in
-``test_navigation.py``.
+``test_navigation_views.py``.
 """
 
 import dataclasses

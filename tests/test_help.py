@@ -1,236 +1,45 @@
 """Tests for Help & safety (``/more/help``; INFO-07, INFO-11, D-281).
 
-``Help`` runs outside a renderer: its services and ``AppScaffold`` are replaced, and a
-fake page is bound as Flet binds a session's page; the contact rows' component body
-runs inline over the same services, as ``test_rows.py`` runs it. What TalkBack and
-VoiceOver read, and how the card looks at 200 % text, are checked on devices (the PR).
+``Help`` runs outside a renderer over the fixtures and lookups of
+``tests/help_page.py``: its services and ``AppScaffold`` are replaced, and a fake page
+is bound as Flet binds a session's page; the contact rows' component body runs inline
+over the same services, as ``test_rows.py`` runs it. Report a problem with the app is
+tested in ``test_help_report.py``. What TalkBack and VoiceOver read, and how the card
+looks at 200 % text, are checked on devices (the PR).
 """
 
 import inspect
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Callable
 from dataclasses import replace
-from datetime import date
-from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
 from flet.components.component import Renderer
 
-from pycon_us import prefs as prefs_module
-from pycon_us.config import load_year
-from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs
-from pycon_us.screens import help as help_screen
-from pycon_us.screens.help import Help, ReportProblem, contact_line, help_blocks
+from pycon_us.screens.help import contact_line, help_blocks
 from pycon_us.services import Services
-from pycon_us.services.storage import Storage
-from pycon_us.state import Conference
-from pycon_us.theme import LIGHT_TOKENS
-from pycon_us.ui import info_page, rows
 from pycon_us.ui.info_page import FeedBlock
-from pycon_us.ui.links import OPENS_IN
-from pycon_us.ui.share import LOG_SHARED, WITH_LOG
-from pycon_us.year_info import SafetyContact
 from pycon_us.year_map import MapData
-from tests.about_page import (
-    States,
-    answer_report_hooks,
-    headings,
-    identified,
-    text_of,
-)
-from tests.fakes import (
-    FakePage,
-    MemoryClipboard,
-    MemoryHaptics,
-    MemoryLauncher,
-    MemoryPaths,
-    MemoryPrefs,
-    MemorySemantics,
-    MemoryShare,
-    bound,
-    phone_margin,
+from tests import help_page
+from tests.fakes import FakePage, MemoryClipboard, MemoryLauncher
+from tests.help_page import (
+    HOTLINE,
+    REPORT_PROBLEM_SECTION,
+    block_named,
+    blocks_of,
+    card_items,
+    card_of,
+    click,
+    copy_node,
+    link_node,
+    outline,
+    said,
+    tile_of,
 )
 
-HOTLINE = SafetyContact(
-    label="Call the Code of Conduct hotline",
-    kind="tel",
-    value="+15625550100",
-    source="https://example.org/coc/",
-    checked=date(2026, 10, 20),
-)
-"""A phone contact no year ships (the 2026 hotline is on no public page, D-45)."""
-
-REPORT_PROBLEM_SECTION = ft.Container()
-"""What ``ReportProblem`` renders as in the page's tests: its own tests are below."""
-
-
-@pytest.fixture
-def svc(tmp_path: Path) -> Services:
-    """The session's services over in-memory fakes and the 2026 year data."""
-    return Services(
-        year=load_year(2026),
-        storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
-        memory=ViewMemory(),
-        semantics=MemorySemantics(),
-        haptics=MemoryHaptics(),
-        launcher=MemoryLauncher(),
-        clipboard=MemoryClipboard(),
-    )
-
-
-@pytest.fixture
-def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
-    """A ``FakePage`` (iOS) bound, with the contact rows' body inline over ``svc``."""
-    monkeypatch.setattr(
-        rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
-    )
-    monkeypatch.setattr(rows, "use_services", lambda: svc)
-    fake = FakePage()
-    with bound(fake):
-        yield fake
-
-
-@pytest.fixture
-def render(
-    monkeypatch: pytest.MonkeyPatch, page: FakePage
-) -> Callable[[Services], dict[str, Any]]:
-    """Render ``Help`` once over the given services and return its scaffold's kwargs."""
-    monkeypatch.setattr(help_screen, "AppScaffold", lambda **kwargs: kwargs)
-    monkeypatch.setattr(help_screen, "ReportProblem", lambda: REPORT_PROBLEM_SECTION)
-    # The credit is a component of its own, tested in test_sponsor_credit.py: here a
-    # node that says where it stands and whose sponsor it names.
-    monkeypatch.setattr(
-        help_screen,
-        "SponsorCreditTile",
-        lambda credit, what, identifier: ft.Semantics(
-            identifier=identifier, label=f"{what}, {credit.slug if credit else ''}"
-        ),
-    )
-    # The card is a component of its own, tested in test_location_card.py: here a
-    # node that says where it stands and which pin it shows, as spot_card finds it.
-    monkeypatch.setattr(
-        help_screen,
-        "spot_card",
-        lambda data, key, *, identifier: (
-            ft.Semantics(identifier=identifier, label=key)
-            if key and data.pin(key)
-            else None
-        ),
-    )
-    monkeypatch.setattr(info_page, "use_margin", phone_margin)
-
-    def render(svc: Services) -> dict[str, Any]:
-        """``Help``'s body, its services answered with ``svc``."""
-        monkeypatch.setattr(help_screen, "use_services", lambda: svc)
-        return cast(dict[str, Any], inspect.unwrap(Help)())
-
-    return render
-
-
-def blocks_of(scaffold: dict[str, Any]) -> list[ft.Control]:
-    """Return the items of the scaffold's ``ListView`` body."""
-    body = scaffold["body"]
-    assert isinstance(body, ft.ListView)
-    return list(body.controls)
-
-
-def card_of(block: ft.Control) -> ft.Card:
-    """Return the Report a concern ``Card`` inside its gutter."""
-    assert isinstance(block, ft.Container)
-    card = block.content
-    assert isinstance(card, ft.Card)
-    return card
-
-
-def card_items(block: ft.Control) -> list[ft.Control]:
-    """Return what the card holds, top to bottom."""
-    column = card_of(block).content
-    assert isinstance(column, ft.Column)
-    return list(column.controls)
-
-
-def link_node(row: ft.Control) -> ft.Semantics:
-    """Return a link row's merged ``Semantics`` node (its identifier and link flag)."""
-    if isinstance(row, ft.Row):  # a phone or email row: the link, then Copy
-        holder = row.controls[0]
-        assert isinstance(holder, ft.Container) and holder.content is not None
-        row = holder.content
-    assert isinstance(row, ft.MergeSemantics)
-    node = row.content
-    assert isinstance(node, ft.Semantics)
-    return node
-
-
-def tile_of(row: ft.Control) -> ft.ListTile:
-    """Return a row's ``ListTile``."""
-    tile = link_node(row).content
-    assert isinstance(tile, ft.ListTile)
-    return tile
-
-
-def copy_node(row: ft.Control) -> ft.Semantics:
-    """Return the Copy button's named node beside a phone or email row."""
-    assert isinstance(row, ft.Row)
-    holder = row.controls[1]
-    assert isinstance(holder, ft.Container)
-    merged = holder.content
-    assert isinstance(merged, ft.MergeSemantics)  # one node with its tooltip (D-234)
-    node = merged.content
-    assert isinstance(node, ft.Semantics)
-    return node
-
-
-async def click(control: ft.Control) -> None:
-    """Await a tile's or a button's ``on_click``, as a tap does."""
-    handler = getattr(control, "on_click", None)
-    assert handler is not None
-    await cast(Callable[[], Awaitable[None]], handler)()
-
-
-def said(page: FakePage) -> list[str]:
-    """The SnackBars' texts, in order."""
-    texts = []
-    for dialog in page.dialogs:
-        assert isinstance(dialog, ft.SnackBar) and isinstance(dialog.content, ft.Text)
-        texts.append(str(dialog.content.value))
-    return texts
-
-
-def block_named(blocks: list[ft.Control], identifier: str) -> ft.Control:
-    """Return the one in-app or plain row whose merged node is ``identifier``."""
-    (block,) = [
-        block
-        for block in blocks
-        if isinstance(block, ft.MergeSemantics)
-        and getattr(block.content, "identifier", None) == identifier
-    ]
-    return block
-
-
-def outline(blocks: list[ft.Control]) -> list[str]:
-    """The page as headings (``# ``), the card, row identifiers and the summary."""
-    result = []
-    for block in blocks:
-        if block is REPORT_PROBLEM_SECTION:
-            result.append("report_problem")
-        elif isinstance(block, ft.Semantics) and block.header:
-            heading = block.content
-            assert isinstance(heading, ft.Container)
-            assert isinstance(heading.content, ft.Text)
-            result.append(f"# {heading.content.value}")
-        elif isinstance(block, ft.Container) and isinstance(block.content, ft.Card):
-            result.append("card")
-        elif isinstance(block, ft.Container) and isinstance(
-            block.content, ft.Semantics
-        ):  # a place's location card, in the gutter
-            result.append(str(block.content.identifier))
-        elif isinstance(block, ft.Semantics):
-            result.append(str(block.identifier))
-        else:
-            result.append(str(link_node(block).identifier))
-    return result
+# The harness's fixtures, under this module's names, where pytest looks them up.
+svc, page, render = help_page.svc, help_page.page, help_page.render
 
 
 def test_the_card_comes_first_then_the_venue_then_the_code_of_conduct(
@@ -467,111 +276,3 @@ def test_a_contact_s_line_is_its_value_as_it_reads(
     Other numbers read as written, a page by its host.
     """
     assert contact_line(replace(HOTLINE, kind=kind, value=value)) == line
-
-
-# ------------------------------------------------------- Report a problem with the app
-
-
-@pytest.fixture
-def report_svc(svc: Services, tmp_path: Path) -> Services:
-    """``svc`` with a share sheet and a packaged build's one-line ``console.log``.
-
-    Made before a page is bound, as Flet makes a session's services.
-    """
-    log = tmp_path / "console.log"
-    log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
-    paths = MemoryPaths()
-    paths.console_log = str(log)
-    return replace(svc, share=MemoryShare(), paths=paths)
-
-
-@pytest.fixture
-async def report_section(
-    monkeypatch: pytest.MonkeyPatch, report_svc: Services, page: FakePage
-) -> tuple[Callable[[], list[ft.Control]], Services]:
-    """Render ``ReportProblem`` in a packaged build, while the repository is private.
-
-    Returns the render and the services it shares through.
-    """
-    services = report_svc
-    conference = Conference()
-    await conference.load_local(services.storage, services.year)
-    monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
-    states = States()
-    monkeypatch.setattr(ft, "use_state", states.use_state)
-    answer_report_hooks(monkeypatch, services, conference, Prefs())
-    monkeypatch.setattr(help_screen, "use_tokens", lambda: LIGHT_TOKENS)
-    monkeypatch.setattr(help_screen, "SOURCE_URL", None)
-    monkeypatch.setattr(rows, "use_services", lambda: services)
-
-    def render() -> list[ft.Control]:
-        """``ReportProblem``'s controls, its state kept from the last render."""
-        states.index = 0
-        column = inspect.unwrap(ReportProblem)()
-        assert isinstance(column, ft.Column)
-        return column.controls
-
-    return render, services
-
-
-def test_while_private_the_last_row_reports_a_problem_with_the_log(
-    report_section: tuple[Callable[[], list[ft.Control]], Services],
-) -> None:
-    """While private, a level-2 "The app" heads one row that says it sends the log."""
-    render, _ = report_section
-    controls = render()
-    assert headings(controls) == [("The app", 2)]
-    assert list(identified(controls)) == ["help.report_problem", "help.report_outcome"]
-    tile = identified(controls)["help.report_problem"].content
-    assert isinstance(tile, ft.ListTile)
-    assert text_of(tile.title) == "Report a problem with the app"
-    assert text_of(tile.subtitle) == WITH_LOG
-    assert identified(controls)["help.report_outcome"].visible is False
-
-
-async def test_the_row_shares_the_log_and_diagnostics_and_says_so_in_place(
-    report_section: tuple[Callable[[], list[ft.Control]], Services],
-) -> None:
-    """A tap shares console.log with the diagnostics as text, with no email in it.
-
-    Then the line under the row says what was shared, a live region (D-29, D-210).
-    """
-    render, services = report_section
-    row = identified(render())["help.report_problem"].content
-    assert row is not None
-    await click(row)
-    share = cast(MemoryShare, services.share)
-    [files] = share.shared
-    assert len(files) == 1
-    text = share.file_options[0]["text"]
-    assert "Python" in text and "@" not in text  # the diagnostics, no address (D-72)
-    line = identified(render())["help.report_outcome"]
-    assert line.live_region is True and line.visible is True
-    outcome = cast(ft.Row, cast(ft.Container, line.content).content).controls[1]
-    assert text_of(outcome) == LOG_SHARED[0]
-
-
-async def test_once_public_the_row_opens_a_new_issue_in_the_browser(
-    report_section: tuple[Callable[[], list[ft.Control]], Services],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """With ``SOURCE_URL`` set, the row is external: it reads "Opens in browser".
-
-    It opens the repository's new issue page in the in-app browser (INFO-14, D-182).
-    """
-    render, services = report_section
-    monkeypatch.setattr(help_screen, "SOURCE_URL", "https://example.org/conf")
-    controls = render()
-    assert list(identified(controls)) == ["help.report_problem", "help.report_outcome"]
-    node = identified(controls)["help.report_problem"]
-    assert node.link
-    tile = node.content
-    assert isinstance(tile, ft.ListTile)
-    assert text_of(tile.title) == "Report a problem with the app"
-    assert text_of(tile.subtitle) == "example.org/conf/issues/new"
-    assert isinstance(tile.trailing, ft.Icon)
-    assert tile.trailing.semantics_label in OPENS_IN.values()
-    await click(tile)
-    assert cast(MemoryLauncher, services.launcher).launched == [
-        ("https://example.org/conf/issues/new", ft.LaunchMode.IN_APP_BROWSER_VIEW)
-    ]

@@ -4,8 +4,8 @@
 links and the Conference data section) and ``test_about_app_help.py`` (Help us fix it)
 run ``AboutApp``, ``ConferenceData`` and ``HelpUsFixIt`` outside a renderer: their hooks
 and ``AppScaffold`` are replaced, an external link row's body runs inline, and a fake
-page is bound as Flet binds a session's page. ``test_help.py`` reuses the help section's
-stand-ins. A module takes the fixtures by assigning them to its own names, as
+page is bound as Flet binds a session's page. ``test_help_report.py`` reuses the help
+section's stand-ins. A module takes the fixtures by assigning them to its own names, as
 ``docs/testing-and-quality.md`` §3.1 says.
 """
 
