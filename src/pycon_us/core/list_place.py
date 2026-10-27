@@ -17,6 +17,7 @@ far into it, which a keyed jump puts back once the list has its new heights:
 
 from collections.abc import Collection, Hashable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from datetime import datetime
 
 
 @dataclass(frozen=True)
@@ -117,18 +118,22 @@ def carried(
     before: Sequence[str],
     after: Sequence[str],
     unchanged: Collection[str],
+    starts: Mapping[str, datetime],
 ) -> Place | None:
     """Return the place in the list a filter change lays out, waiting to be put back.
 
     The same item when it is still shown, as far in when its rows are unchanged, else
-    at its top; when it is hidden, the top of the next item that is still shown (#333,
-    D-371). Stale, so the Schedule puts it back by key (``PlaceKeeper.pending()``).
+    at its top; when it is hidden, the top of the first item after it that is shown
+    now, a slot the change reveals included (#333, D-371). Stale, so the Schedule puts
+    it back by key (``PlaceKeeper.pending()``).
 
     Args:
         place: The place in the list before the change.
         before: The list's items before the change, in order.
         after: The list's items after it, in order.
         unchanged: The items whose rows, and so whose heights, the change kept.
+        starts: Each slot's start by key, before and after the change: an item
+            without one (the now line) is after the hidden slot when it was before.
 
     Returns:
         The place, its ``layout`` still ``place``'s; None when no item at or after
@@ -137,8 +142,14 @@ def carried(
     if place.key in after:
         into = place.into if place.key in unchanged else 0.0
         return replace(place, into=into, stale=True)
+    start = starts.get(place.key)
     index = before.index(place.key) if place.key in before else len(before)
-    for key in before[index + 1 :]:
-        if key in after:
+    followed = frozenset(before[index + 1 :])
+    for key in after:
+        later = starts.get(key)
+        if later is None or start is None:
+            if key in followed:
+                return replace(place, key=key, into=0.0, stale=True)
+        elif later > start:
             return replace(place, key=key, into=0.0, stale=True)
     return None

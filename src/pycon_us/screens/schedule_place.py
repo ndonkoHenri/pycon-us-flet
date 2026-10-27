@@ -24,7 +24,8 @@ so the Schedule measures the change itself and puts the place back by key:
   next one still shown (``core/list_place.carried()``), keeps the heights of the slots
   it left as they were, and marks the places stale: the shown list is put back once
   Flutter has laid the change out (``put_back_refiltered()``), another day when it
-  shows again (#333, D-371). A user's scroll stops a put-back between its jumps.
+  shows again (#333, D-371). A user's scroll stops a put-back between its jumps, and
+  one started while a put-back waits drops its place for good.
 """
 
 import asyncio
@@ -172,6 +173,8 @@ class PlaceKeeper:
         width: The screen's width, in dp; 0 until reported.
         above: Whether slots put their time above their rows (D-216).
         moving: The days whose list is scrolling: a put-back would fight the user.
+        jumping: The days whose list a put-back has asked to move, until its scroll
+            end: a scroll that starts at any other time is the user's.
         last_end: When each day list's last scroll end came (``time.monotonic()``).
         round: Counts put-backs and what supersedes them (a layout change, a jump to
             now), so an older put-back still waiting stops.
@@ -191,6 +194,7 @@ class PlaceKeeper:
         self.width = 0.0
         self.above = False
         self.moving: set[date] = set()
+        self.jumping: set[date] = set()
         self.last_end: dict[date, float] = {}
         self.round = 0
         self.turn = asyncio.Lock()
@@ -242,9 +246,8 @@ class PlaceKeeper:
         places = self.memory.schedule_places
         for day, after in keys.items():
             before = self.keys.get(day, ())
-            same = unchanged_keys(
-                before, after, self.slots.get(day, {}), slots.get(day, {})
-            )
+            old, new = self.slots.get(day, {}), slots.get(day, {})
+            same = unchanged_keys(before, after, old, new)
             heights = self.heights.get(day, {})
             kept.setdefault(day, {}).update(
                 (key, heights[key]) for key in same if key in heights
@@ -252,7 +255,8 @@ class PlaceKeeper:
             place = places.get(day)
             if place is None or place.layout != self.layout:
                 continue
-            moved = carried(place, before, after, same)
+            starts = {key: slot.start for key, slot in (*old.items(), *new.items())}
+            moved = carried(place, before, after, same, starts)
             if moved is None:
                 del places[day]
             else:
@@ -280,14 +284,19 @@ class PlaceKeeper:
         Counted from the top when every item above has reported, as on today's list
         (D-154), else from the place before, as a lazy list's items report while the
         user scrolls through them; unknown, the place is forgotten. A place that waits
-        for its put-back is kept: the heights may still be on their way.
+        for its put-back is kept at a put-back's own end, as the heights may still be on
+        their way, and dropped when the user starts a scroll (``jumping``, D-371).
         """
         if e.event_type in (ft.ScrollType.START, ft.ScrollType.UPDATE):
             self.moving.add(day)
+            if day not in self.jumping and self.pending(day) is not None:
+                # The user's scroll wins (D-371): its end records the new place.
+                del self.memory.schedule_places[day]
             return
         if e.event_type != ft.ScrollType.END:
             return
         self.moving.discard(day)
+        self.jumping.discard(day)
         self.last_end[day] = time.monotonic()
         places = self.memory.schedule_places
         kept = places.get(day)
@@ -375,15 +384,17 @@ class PlaceKeeper:
         mine = self.round
         async with self.turn:
             place = self.pending(day)
-            if mine != self.round or place is None:  # superseded while it waited
+            if mine != self.round:  # superseded while it waited
                 return False
+            if place is None:  # the user's scroll took over
+                return True
             jump = await self._keyed(mine, day, place.key, list_ref, ended)
             if jump == "still":
                 jump = await self._from_old_top(mine, day, place, list_ref, ended)
             if mine != self.round:  # a newer change took over
                 return False
             # The user scrolls, or no end gave an offset to count from.
-            if day in self.moving or jump != "landed":
+            if self._taken(day) or jump != "landed":
                 self.memory.schedule_places.pop(day, None)
                 return True
             return await self._go_into(mine, day, place, list_ref, ended)
@@ -411,6 +422,8 @@ class PlaceKeeper:
             return False
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(self.reported.wait(), LAYOUT_S)
+        if self.pending(day) is None:  # the user's scroll took over meanwhile
+            return True
         return await self.put_back(day, list_ref, ended)
 
     async def _go_into(
@@ -434,7 +447,7 @@ class PlaceKeeper:
             await self._to_offset(mine, day, list_ref.current, target, ended)
             if mine != self.round:
                 return False
-            if day in self.moving:  # the user's scroll took over
+            if self._taken(day):  # the user's scroll took over
                 self.memory.schedule_places.pop(day, None)
                 return True
         self.memory.schedule_offsets[day] = target
@@ -529,7 +542,11 @@ class PlaceKeeper:
         await self.ended_apart(day)
         if self._stopped(mine, day):
             return "still"
-        return await jump_to_key(list_ref, key, duration=0, ended=ended, tries=1)
+        self.jumping.add(day)
+        try:
+            return await jump_to_key(list_ref, key, duration=0, ended=ended, tries=1)
+        finally:
+            self.jumping.discard(day)
 
     async def _to_offset(
         self,
@@ -550,17 +567,29 @@ class PlaceKeeper:
         if self._stopped(mine, day):
             return
         ended.clear()
-        await list_view.scroll_to(offset=offset, duration=0)
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(ended.wait(), scrolling.LANDING_S)
+        self.jumping.add(day)
+        try:
+            await list_view.scroll_to(offset=offset, duration=0)
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(ended.wait(), scrolling.LANDING_S)
+        finally:
+            self.jumping.discard(day)
 
     def _stopped(self, mine: int, day: date) -> bool:
         """Return whether a put-back must not move the list now.
 
-        A newer change took over, or the list scrolls: the user's own scroll, once
-        the put-back's last jump has had its end.
+        A newer change took over, or the user's scroll did (``_taken()``).
         """
-        return mine != self.round or day in self.moving
+        return mine != self.round or self._taken(day)
+
+    def _taken(self, day: date) -> bool:
+        """Return whether the user's scroll took the list from its put-back.
+
+        The list scrolls, the user's own scroll once the put-back's last jump has had
+        its end; or the user started a scroll since the put-back began, which dropped
+        the place (``scrolled()``), even if it has ended (D-371).
+        """
+        return day in self.moving or self.pending(day) is None
 
     def supersede(self, day: date) -> None:
         """Forget the day's place, as a jump to now takes its list elsewhere.

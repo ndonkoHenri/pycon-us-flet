@@ -12,7 +12,8 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 
-from pycon_us.core.timeline import NOW_KEY, Slot
+from pycon_us.core.list_place import Place, carried
+from pycon_us.core.timeline import NOW_KEY, Slot, timeline
 from pycon_us.memory import ViewMemory
 from pycon_us.screens.schedule_place import unchanged_keys
 from pycon_us.ui import scrolling
@@ -31,6 +32,7 @@ KEYNOTE = "slot-2026-05-16T09:25:00-07:00"
 BREAK = "slot-2026-05-16T10:05:00-07:00"
 TALKS = "slot-2026-05-16T10:30:00-07:00"
 FIRST = "slot-2026-05-16T08:00:00-07:00"
+OPEN_SPACE = "slot-2026-05-16T10:00:00-07:00"
 
 
 async def _at_saturday(schedule: Shown, pixels: float) -> None:
@@ -141,6 +143,75 @@ async def test_a_scroll_of_the_user_s_stops_the_put_back_between_its_jumps(
     await schedule.event(schedule.list_of(SATURDAY), "scroll", start)
     await schedule.until(lambda: SATURDAY not in memory.schedule_places)
     assert [kwargs.get("offset") for _, kwargs in schedule.scrolls] == [None]
+
+
+def _user_scroll(event_type: str, pixels: float) -> dict[str, object]:
+    """A scroll event of the user's at ``pixels``, as Flutter sends it."""
+    return {
+        "event_type": event_type,
+        "pixels": pixels,
+        "min_scroll_extent": 0.0,
+        "max_scroll_extent": 20_000.0,
+        "viewport_dimension": 700.0,
+    }
+
+
+async def test_a_scroll_the_user_ends_while_the_layout_waits_drops_the_put_back(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """The user wins (D-371): a whole scroll before the layout's report moves nothing.
+
+    Its end records the user's place; the old one must not come back over it.
+    """
+    schedule = await shown()
+    await _at_saturday(schedule, 3 * HEIGHT + 50)
+    await schedule.prefs.save(
+        schedule.storage, excluded_tracks=("Open Space", "Keynote")
+    )
+    await schedule.settle()
+    day_list = schedule.list_of(SATURDAY)
+    await schedule.event(day_list, "scroll", _user_scroll("start", 650.0))
+    await schedule.event(day_list, "scroll", _user_scroll("end", 650.0))
+    await _report(schedule, SATURDAY, HEIGHT)
+    await schedule.until(lambda: schedule.list_of(SATURDAY).cache_extent is None)
+    assert schedule.scrolls == []
+    assert not memory.schedule_places.get(SATURDAY, Place("", 0, 0, 0)).stale
+
+
+async def test_a_scroll_the_user_ends_between_the_jumps_drops_the_put_back(
+    shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
+) -> None:
+    """After the keyed jump, a whole scroll of the user's stops the jump into the slot."""
+    schedule = await shown()
+    await _at_saturday(schedule, 3 * HEIGHT + 50)
+    await _hide(schedule, "Keynote")
+    await schedule.until(lambda: memory.schedule_offsets.get(SATURDAY) == 4000.0)
+    day_list = schedule.list_of(SATURDAY)
+    await schedule.event(day_list, "scroll", _user_scroll("start", 4000.0))
+    await schedule.event(day_list, "scroll", _user_scroll("end", 650.0))
+    await schedule.until(lambda: schedule.list_of(SATURDAY).cache_extent is None)
+    assert [kwargs.get("offset") for _, kwargs in schedule.scrolls] == [None]
+    assert not memory.schedule_places.get(SATURDAY, Place("", 0, 0, 0)).stale
+
+
+def test_a_hidden_slot_gives_way_to_a_slot_the_change_reveals() -> None:
+    """Reset from Open space shown and Break hidden: 10:05 follows 10:00, not 10:30.
+
+    The 10:05 break was hidden before, so only its start says it comes first.
+    """
+    data = processed(2026)
+    before = timeline(data, SATURDAY, ("Break",))
+    after = timeline(data, SATURDAY, ("Open Space",))
+    starts = {slot.key: slot.start for slot in (*before, *after)}
+    place = Place(OPEN_SPACE, 10.0, 100.0, 500.0)
+    moved = carried(
+        place,
+        [slot.key for slot in before],
+        [slot.key for slot in after],
+        frozenset(),
+        starts,
+    )
+    assert moved == Place(BREAK, 0.0, 100.0, 500.0, stale=True)
 
 
 async def test_another_day_s_place_is_put_back_when_it_shows_again(
