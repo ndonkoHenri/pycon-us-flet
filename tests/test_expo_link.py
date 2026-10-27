@@ -97,12 +97,17 @@ def test_a_link_to_a_booth_on_the_plan_selects_it_on_the_map() -> None:
     assert (memory.expo_booth, memory.expo_view) == ("613", "map")
 
 
-def test_a_link_to_a_booth_off_the_plan_leaves_the_memory_for_the_list() -> None:
-    """A number the plan doesn't draw is the List's line; no link changes nothing."""
-    memory = ViewMemory(expo_booth="726")
-    assert expo_pane.seed(memory, "139", {"613", "726"}) == ("", "139")
+def test_a_link_to_a_booth_off_the_plan_filters_the_list_to_it() -> None:
+    """A number the plan doesn't draw is the List's line and filter, from its top.
+
+    Whatever was typed before gives way to the number (#643); the selection and the
+    remembered view stay, and no link changes nothing.
+    """
+    memory = ViewMemory(expo_booth="726", expo_query="socal", expo_offset=900.0)
     assert expo_pane.seed(memory, "", {"613", "726"}) == ("", "")
-    assert memory == ViewMemory(expo_booth="726")
+    assert memory == ViewMemory(expo_booth="726", expo_query="socal", expo_offset=900.0)
+    assert expo_pane.seed(memory, "139", {"613", "726"}) == ("", "139")
+    assert memory == ViewMemory(expo_booth="726", expo_query="139")
     assert expo_pane.missing_line("139") == "Booth 139 isn't on the map yet"
 
 
@@ -203,6 +208,19 @@ async def test_a_link_off_the_plan_opens_the_list_with_a_live_line(
     assert not shown.has("expo.missing")
     assert shown.memory.expo_view == "map"
     assert await shown.back() == sponsor
+
+
+async def test_a_link_off_the_plan_shows_its_exhibitor_whatever_was_typed(
+    open_at: links.Open,
+) -> None:
+    """A filter left from an earlier List ("socal") no longer hides the booth (#643)."""
+    memory = ViewMemory(expo_query="socal", expo_offset=900.0)
+    shown = await open_at("/map/plan/expo?booth=139", memory=memory)
+    assert "Booth 139 isn't on the map yet" in shown.texts()
+    assert [field.value for field in shown.find(ft.TextField)] == ["139"]
+    listed = shown.nodes("expo.row.") + shown.nodes("expo.sponsor.")
+    assert [node.identifier for node in listed] == ["expo.sponsor.phemeral"]
+    assert shown.memory.expo_offset == 0.0  # from the List's top: no scroll back
 
 
 async def test_sponsor_s_find_booth_pushes_the_hall_and_back_returns_to_it(

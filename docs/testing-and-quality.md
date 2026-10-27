@@ -512,7 +512,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `expo_list_card` | journeys, expo | More › Expo hall › List narrowed by "socal" › booth 726's card › an exhibitor › Back to the card (EXPO-03, EXPO-04, #454) |
 | `expo_map_card` | journeys, expo | Map › Expo › booth 613's card › Close (EXPO-01, EXPO-04, #454) |
 | `job_fair_sponsor` | journeys, expo | Map › Job fair › a sponsor › Back to the pane (MAP-04, #454) |
-| `search_booth_unplaced` | journeys, expo | Search finds a booth off the plan; the expo's List says so; Back keeps the query (EXPO-05, #454) |
+| `search_booth_unplaced` | journeys, expo | Search finds a booth off the plan; the expo's List says so, filtered to the booth whatever the Map's List had; Back keeps the query (EXPO-05, #454, #643) |
 | `wifi_copy` | journeys, venue | More › Wi-Fi shows both values with the feed unreachable; Copy password copies (INFO-08, #456) |
 | `help_report` | journeys, venue | Help & safety opens on Report a concern; its Copy copies the address (INFO-07, #456) |
 | `venue_open_now` | journeys, venue | On a conference morning Venue & hours says which services are open now (MAP-09, #456) |
