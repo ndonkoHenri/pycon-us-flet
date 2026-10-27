@@ -15,7 +15,7 @@ import pytest
 from pycon_us.core.list_place import Place, carried
 from pycon_us.core.timeline import NOW_KEY, Slot, timeline
 from pycon_us.memory import ViewMemory
-from pycon_us.screens.schedule_place import unchanged_keys
+from pycon_us.screens.schedule_layout import unchanged_keys
 from pycon_us.ui import scrolling
 from tests import test_schedule, test_schedule_place
 from tests.feeds import processed
