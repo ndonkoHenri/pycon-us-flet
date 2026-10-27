@@ -206,8 +206,8 @@ class Tokens:
     """Colours Material 3 has no role for (D-24), as ``#RRGGBB`` for one scheme.
 
     Each text colour reads at 4.5:1 or better on every surface of its scheme, and each
-    badge's label on its fill (tests/test_theme.py); 7:1 in high contrast
-    (tests/test_high_contrast.py). Compared and hashed by value, so
+    badge's label on its fill (tests/test_theme.py, tests/test_theme_badges.py); 7:1
+    in high contrast (tests/test_high_contrast.py). Compared and hashed by value, so
     they can be a dictionary key. Screens get the current scheme's tokens from
     ``use_tokens()``.
 

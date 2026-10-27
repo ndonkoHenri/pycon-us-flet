@@ -1,7 +1,7 @@
 """Tests for the badges (THEME-08, SCHED-20; D-25): the pill, and which a session shows.
 
-The colours' contrast is in ``tests/test_theme.py``; here, that a badge draws them and
-always carries a name from ``track_name()`` (DATA-28). How badges look is checked on
+The colours' contrast is in ``tests/test_theme_badges.py``; here, that a badge draws them
+and always carries a name from ``track_name()`` (DATA-28). How badges look is checked on
 devices (the PR). The sessions are the recorded 2026 feed's. The star's tests are in
 ``tests/test_favorite.py`` (D-267).
 """
