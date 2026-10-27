@@ -301,7 +301,7 @@ def _head(item: ExpoBooth, hiring: str) -> ft.Control:
         sponsor = item.sponsors[0]
         lead.append(logo_tile(sponsor.name, sponsor.logo_url, size=LEAD))
     elif not item.sponsors:
-        lead.append(_place_tile())
+        lead.append(place_tile())
     return ft.Semantics(
         label=card_phrase(item, hiring),
         identifier=f"{SCREEN}.card",
@@ -316,12 +316,16 @@ def _head(item: ExpoBooth, hiring: str) -> ft.Control:
     )
 
 
-def _place_tile() -> ft.Control:
-    """A booth without an exhibitor's icon, where a logo would be (D-254, D-36)."""
+def place_tile(size: float = LEAD) -> ft.Control:
+    """A booth without an exhibitor's icon, where a logo would be (D-254, D-36).
+
+    Args:
+        size: The tile's side, in dp: the card's 56, or the expo List's row plate.
+    """
     return ft.Container(
         ft.Icon(ft.Icons.PLACE_OUTLINED, color=ft.Colors.ON_SURFACE_VARIANT),
-        width=LEAD,
-        height=LEAD,
+        width=size,
+        height=size,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
         border_radius=12,
         alignment=ft.Alignment.CENTER,

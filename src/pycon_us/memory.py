@@ -51,6 +51,12 @@ class ViewMemory:
             it back when it shows again (D-312).
         expo_booth: The number of the booth selected on the expo plan; empty for
             none. The Expo pane and ``…/plan/expo`` share it (EXPO-01).
+        expo_view: The expo's view, "map" or "list"; empty until the user picks one,
+            so the expo opens on the List while a screen reader is on (#404).
+        expo_by_name: Whether the expo List is sorted by name, not by booth.
+        expo_query: What is typed in the expo List's filter.
+        expo_offset: The expo List's scroll offset when its last scroll ended, in
+            logical pixels: the List puts it back when it shows again.
         room_highlights: The session each mounted room View has highlighted, by its
             View path (ROOM-03): a View rebuilt in a new session from the same
             location (D-143) finds its own and neither scrolls nor lights up again
@@ -84,6 +90,10 @@ class ViewMemory:
     map_offsets: dict[str, float] = field(default_factory=dict)
     map_zooms: dict[str, tuple[float, float, float]] = field(default_factory=dict)
     expo_booth: str = ""
+    expo_view: str = ""
+    expo_by_name: bool = False
+    expo_query: str = ""
+    expo_offset: float = 0.0
     room_highlights: dict[str, str] = field(default_factory=dict)
     plan_pins: dict[str, str] = field(default_factory=dict)
     plan_tables: dict[str, str] = field(default_factory=dict)
