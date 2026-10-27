@@ -139,7 +139,10 @@ def test_the_flows_pair_moves_a_saved_and_an_unsaved_talk() -> None:
     old, new = pair(YEAR, *edits(*argv))
 
     lines = feed_pair.expected(old, new)
-    assert [line.split(":")[0].strip() for line in lines] == ["room of 123", "room of 142"]
+    assert [line.split(":")[0].strip() for line in lines] == [
+        "room of 123",
+        "room of 142",
+    ]
     flow = (ROOT / "maestro" / "journeys" / "change_log.yaml").read_text()
     assert 'tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"' in flow
 
