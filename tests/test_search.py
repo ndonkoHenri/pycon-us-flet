@@ -302,7 +302,7 @@ def test_building_the_index_is_logged(caplog: pytest.LogCaptureFixture) -> None:
     [record] = caplog.records
     assert record.getMessage().startswith("Search index built in ")
     assert record.getMessage().endswith(
-        " ms: 3 sessions, 3 speakers, 2 rooms, 0 spots, 0 sponsors"
+        " ms: 3 sessions, 3 speakers, 2 rooms, 0 spots, 0 booths, 0 sponsors"
     )
 
 
