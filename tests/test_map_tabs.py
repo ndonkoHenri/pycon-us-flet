@@ -255,7 +255,7 @@ async def test_a_pick_over_a_tab_link_survives_a_new_session(
     shown = await open_at("/map?tab=floor-plans", memory=memory)
     await pick_in_app(shown, 0)
     assert memory.last_location == "/map?tab=rooms"
-    # Where Start sends the new session (``routes.Start``, checked in test_routes).
+    # Where Start sends the new session (``routes.Start``, checked in test_routes_locations).
     target = start_target(memory.last_location, memory.search_base, onboarded=True)
     assert target == "/map?tab=rooms"
     again = await open_at(target, memory=memory)
