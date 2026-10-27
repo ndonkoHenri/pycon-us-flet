@@ -1,7 +1,7 @@
 """Tests for the Schedule's track filter: its words, its sheet and its summary (#87).
 
 STORE-09, SCHED-09, SCHED-10; D-20, D-178. The pure words are checked on the 2026 year
-data; the screen renders in a real Flet session through ``tests/test_schedule.py``'s
+data; the screen renders in a real Flet session through ``tests/schedule_view.py``'s
 ``shown`` fixture, whose ``AppScaffold`` stand-in places the app bar's actions, so the
 ``TUNE`` action, the sheet (``ft.use_dialog``), the chips and the summary run as Flet
 runs them. How the sheet looks and scrolls at 200 % text is a device check (#87).
@@ -34,17 +34,17 @@ from pycon_us.screens.schedule_sheet import (
     filter_groups,
 )
 from pycon_us.state import Conference
-from tests import sessions, test_schedule
+from tests import schedule_view, sessions
 from tests.fakes import MemoryPrefs
+from tests.schedule_view import DAYS, Shown
 from tests.sessions import find, settle
-from tests.test_schedule import DAYS, Shown
 from tests.trees import texts
 
 # The Schedule's fixtures, shared by name: pytest finds fixtures among a module's names.
-now = test_schedule.now
-memory = test_schedule.memory
-conference = test_schedule.conference
-shown = test_schedule.shown
+now = schedule_view.now
+memory = schedule_view.memory
+conference = schedule_view.conference
+shown = schedule_view.shown
 
 
 @pytest.fixture(autouse=True)
