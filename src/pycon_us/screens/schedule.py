@@ -162,7 +162,7 @@ def Schedule() -> ft.View:
         if not today_slots:
             return
         memory.jumped_on = current  # asked or not, today's jump is done (D-18, D-204)
-        keeper.supersede(current)  # the jump's end records the new place (D-331)
+        keeper.supersede(current)  # a jump that moves records the new place (D-331)
         if asked:
             set_said("")  # the same words again are a change only after a silence
         else:

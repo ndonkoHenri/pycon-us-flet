@@ -19,7 +19,7 @@ from pycon_us.screens.schedule_place import unchanged_keys
 from pycon_us.ui import scrolling
 from tests import test_schedule, test_schedule_place
 from tests.feeds import processed
-from tests.test_schedule import SATURDAY, THURSDAY, Shown
+from tests.test_schedule import FRIDAY, SATURDAY, THURSDAY, Shown
 from tests.test_schedule_place import HEIGHT, _report, _slots
 
 # The Schedule's fixtures, shared by name: pytest finds fixtures among a module's names.
@@ -229,6 +229,37 @@ async def test_another_day_s_place_is_put_back_when_it_shows_again(
     await schedule.until(lambda: not memory.schedule_places[SATURDAY].stale)
     assert schedule.keyed() == [BREAK]
     assert memory.schedule_offsets[SATURDAY] == 4049.0
+
+
+async def test_now_on_a_list_already_there_keeps_the_place_for_a_filter_change(
+    shown: Callable[..., Awaitable[Shown]],
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#628's Android check: "Now" on the now slot, then Open space shown, lost the place.
+
+    The list is already there, so the jump scrolls nothing and Flutter sends no end
+    to record a place. The place found before stays, and the filter change puts it
+    back (the Now button always shows to a screen reader, as to Maestro on Android).
+    """
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.01)
+    schedule = await shown(screen_reader=True)  # Friday, today
+    await test_schedule_place._measure(schedule, 40.0)
+    await _report(schedule, FRIDAY, HEIGHT)
+    await schedule.scroll_end(FRIDAY, 4000.0)  # where the first display's jump landed
+    key = memory.schedule_places[FRIDAY].key
+    schedule.moves = False
+    schedule.forget()
+    await schedule.press_now()
+    await schedule.until(lambda: schedule.jumps)
+    assert [ended for _, ended in schedule.jumps] == ["still"]
+    schedule.moves = True
+    schedule.forget()
+    await schedule.prefs.save(schedule.storage, excluded_tracks=())  # Open space on
+    await schedule.settle()
+    await _report(schedule, FRIDAY, HEIGHT)
+    await schedule.until(lambda: not memory.schedule_places[FRIDAY].stale)
+    assert schedule.keyed() == [key]
 
 
 @pytest.mark.parametrize(

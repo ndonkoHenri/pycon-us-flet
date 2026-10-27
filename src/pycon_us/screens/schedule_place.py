@@ -592,14 +592,19 @@ class PlaceKeeper:
         return day in self.moving or self.pending(day) is None
 
     def supersede(self, day: date) -> None:
-        """Forget the day's place, as a jump to now takes its list elsewhere.
+        """Stop the day's put-back, as a jump to now takes its list elsewhere.
 
-        A put-back still waiting stops, and the jump's scroll end records the new place:
-        else a stale place would wait for a put-back that never comes, and keep every
-        later scroll end from counting (``scrolled()``).
+        A put-back still waiting stops, and its stale place goes, so the jump's scroll
+        end records the new place: else the stale place would wait for a put-back that
+        never comes, and keep every later scroll end from counting (``scrolled()``).
+        A place that is not stale stays: a list already on the now slot does not
+        scroll, so no end comes to replace it, and a filter change would then have no
+        place to carry (#628's Android check, D-371).
         """
         self.round += 1
-        self.memory.schedule_places.pop(day, None)
+        place = self.memory.schedule_places.get(day)
+        if place is not None and place.stale:
+            del self.memory.schedule_places[day]
 
     async def restore(
         self, day: date, list_ref: ft.Ref[ft.ListView], ended: asyncio.Event
