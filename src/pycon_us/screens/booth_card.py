@@ -10,16 +10,17 @@ zoom buttons, so the plan stays in use (a modal sheet would block it, D-29). It 
   details")``, which pushes ``…/sponsor/<slug>`` (D-17), so Back returns to the booth.
 - **A shared booth:** headed "Booth 726 · Community" (the level only when every
   exhibitor has it) over "4 exhibitors", then one 48 dp row per exhibitor in name order,
-  each pushing its sponsor. When the rows are taller than half the pane they scroll in a
-  box half the pane high, so the booth stays in sight at the largest text.
+  each pushing its sponsor.
 - **No exhibitor:** the booth's ``map.toml`` label (or its number before the feed is
   there) beside a ``PLACE_OUTLINED`` icon where a logo would be (no PSF logo, D-36), and
   no sponsor action.
 
 Its head is one node in a live region, so a screen reader hears each newly selected
 booth: "Booth 613, Bloomberg, Visionary sponsor, hiring, 15 open roles". A 48 dp Close
-clears the selection. The card is a memoised component given values only (D-153,
-F150): the rows' measured height lives in ``ExpoHall``, above it.
+clears the selection. A body taller than half the pane (many exhibitors, the largest
+text) scrolls in a box half the pane high, Close pinned beside it, so the zoom buttons
+and most of the plan stay in sight (D-370). The card is a memoised component given
+values only (D-153, F150): the body's measured height lives in ``ExpoHall``, above it.
 """
 
 from collections.abc import Callable
@@ -53,8 +54,8 @@ LEAD = 56
 ROW_LOGO = 40
 """A shared booth's row logo, in dp: with 4 dp above and below, a 48 dp row."""
 
-type OnRowsSize = Callable[[ft.LayoutSizeChangeEvent], None]
-"""``ExpoHall``'s handler for the rows' measured size."""
+type OnBodySize = Callable[[ft.LayoutSizeChangeEvent], None]
+"""``ExpoHall``'s handler for the card body's measured size."""
 
 
 def hiring_line(data: ConferenceData | None, sponsor: Sponsor) -> str:
@@ -138,9 +139,9 @@ def BoothCard(
     *,
     hiring: str,
     view_path: str,
-    rows_box: float | None,
+    body_box: float | None,
     on_close: Callable[[], None],
-    on_rows_size: OnRowsSize,
+    on_body_size: OnBodySize,
 ) -> ft.Control:
     """Return the card of the selected booth: a memoised component keyed by its number.
 
@@ -148,19 +149,19 @@ def BoothCard(
         item: The selected booth and its exhibitors.
         hiring: ``hiring_line()`` for a booth of one exhibitor, else "".
         view_path: The hall's View path, on top of which a sponsor is pushed.
-        rows_box: The height of the box a shared booth's rows scroll in; None while
-            they fit in half the pane.
+        body_box: The height of the box the card's body scrolls in; None while it
+            fits in half the pane.
         on_close: ``ExpoHall``'s handler that clears the selection.
-        on_rows_size: ``ExpoHall``'s handler for the rows' measured size.
+        on_body_size: ``ExpoHall``'s handler for the body's measured size.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     return _BoothCard(
         item,
         hiring=hiring,
         view_path=view_path,
-        rows_box=rows_box,
+        body_box=body_box,
         on_close=on_close,
-        on_rows_size=on_rows_size,
+        on_body_size=on_body_size,
         key=item.booth.number,  # pyright: ignore[reportCallIssue]
     )
 
@@ -172,12 +173,12 @@ def _BoothCard(
     *,
     hiring: str,
     view_path: str,
-    rows_box: float | None,
+    body_box: float | None,
     on_close: Callable[[], None],
-    on_rows_size: OnRowsSize,
+    on_body_size: OnBodySize,
 ) -> ft.Control:
     """The body of ``BoothCard()``: it runs only when its props change (F34)."""
-    parts: list[ft.Control] = [_head(item, hiring, on_close)]
+    parts: list[ft.Control] = [_head(item, hiring)]
     if len(item.sponsors) == 1:
         target = drill_href(view_path, "sponsor", item.sponsors[0].slug)
 
@@ -196,30 +197,43 @@ def _BoothCard(
             )
         )
     elif item.sponsors:
-        rows = [
-            _exhibitor(s, view_path, mixed=not shared_level(item))
-            for s in item.sponsors
-        ]
-        # The same two Columns either way: one that measures the rows' own height and
-        # one that bounds and scrolls them once that is more than half the pane.
-        parts.append(
-            ft.Column(
-                [ft.Column(rows, spacing=0, on_size_change=on_rows_size)],
-                height=rows_box,
-                scroll=ft.ScrollMode.AUTO if rows_box else None,
+        mixed = not shared_level(item)
+        rows = [_exhibitor(s, view_path, mixed=mixed) for s in item.sponsors]
+        parts.append(ft.Column(rows, spacing=0))
+
+    @report_errors
+    def close() -> None:
+        on_close()
+
+    closer = ft.IconButton(ft.Icons.CLOSE, tooltip=CLOSE, on_click=close)
+    # The same two Columns either way: one that measures the body's own height and
+    # one that bounds and scrolls it once that is more than half the pane. Close
+    # stays outside them, in reach however far the body scrolls.
+    body = ft.Column(
+        [
+            ft.Container(
+                ft.Column(parts, spacing=12, tight=True, on_size_change=on_body_size),
+                padding=ft.Padding.only(top=8),
             )
-        )
+        ],
+        height=body_box,
+        scroll=ft.ScrollMode.AUTO if body_box else None,
+        expand=True,
+    )
     return ft.Card(
         ft.Container(
-            ft.Column(parts, spacing=12, tight=True),
+            ft.Row(
+                [body, named(f"{SCREEN}.card.close", closer)],
+                vertical_alignment=ft.CrossAxisAlignment.START,
+            ),
             padding=ft.Padding.only(left=16, top=8, right=8, bottom=16),
         ),
         margin=0,
     )
 
 
-def _head(item: ExpoBooth, hiring: str, on_close: Callable[[], None]) -> ft.Control:
-    """The card's head: the logo or place icon, the title and its lines, and Close."""
+def _head(item: ExpoBooth, hiring: str) -> ft.Control:
+    """The card's head: the logo or place icon, the title and its lines; one node."""
     title, line = card_title(item)
     texts: list[ft.Control] = [
         ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
@@ -239,12 +253,7 @@ def _head(item: ExpoBooth, hiring: str, on_close: Callable[[], None]) -> ft.Cont
         lead.append(logo_tile(sponsor.name, sponsor.logo_url, size=LEAD))
     elif not item.sponsors:
         lead.append(_place_tile())
-
-    @report_errors
-    def close() -> None:
-        on_close()
-
-    head = ft.Semantics(
+    return ft.Semantics(
         label=card_phrase(item, hiring),
         identifier=f"{SCREEN}.card",
         container=True,
@@ -255,14 +264,6 @@ def _head(item: ExpoBooth, hiring: str, on_close: Callable[[], None]) -> ft.Cont
             spacing=16,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-    )
-    closer = ft.IconButton(ft.Icons.CLOSE, tooltip=CLOSE, on_click=close)
-    return ft.Row(
-        [
-            ft.Container(head, padding=ft.Padding.only(top=8), expand=True),
-            named(f"{SCREEN}.card.close", closer),
-        ],
-        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
 

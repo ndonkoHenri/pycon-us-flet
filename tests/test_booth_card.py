@@ -30,12 +30,12 @@ def card(shown: ExpoShown) -> ft.Semantics:
 
 def row_labels(shown: ExpoShown) -> list[str]:
     """A shared booth's rows' labels, in the card's order."""
-    (rows,) = [c for c in shown.find(ft.Column) if c.on_size_change]
-    labels = []
-    for row in rows.controls:
-        box = cast(ft.Container, cast(ft.MergeSemantics, row).content)
-        labels.append(str(cast(ft.Semantics, box.content).label))
-    return labels
+    placed = []
+    for node in shown.nodes(f"{expo.SCREEN}.card.sponsor."):
+        row = cast(ft.Control, cast(ft.Control, node.parent).parent)
+        rows = cast(ft.Column, row.parent)
+        placed.append((rows.controls.index(row), str(node.label)))
+    return [label for _, label in sorted(placed)]
 
 
 def sponsor_of(name: str) -> Any:
@@ -125,23 +125,31 @@ async def test_the_zoom_buttons_sit_above_the_card(render: Render) -> None:
     assert not isinstance(second, ft.Row)
 
 
+@pytest.mark.parametrize("number", ["613", "726"])
 @pytest.mark.parametrize("height", [200.0, 400.0])
-async def test_rows_taller_than_half_the_pane_scroll(
-    render: Render, height: float
+async def test_a_body_taller_than_half_the_pane_scrolls(
+    render: Render, number: str, height: float
 ) -> None:
-    """Rows taller than half the pane scroll in a box half the pane high (D-254)."""
+    """A body taller than half the pane scrolls in a box half its height; Close stays.
+
+    Many exhibitors or the largest text (D-254, D-370): the zoom buttons above the
+    card and most of the plan stay in sight, and Close is outside the scroll.
+    """
     shown = await render(reduce_motion=True)
     await shown.lay_out()
-    await shown.tap("726")
+    await shown.tap(number)
     (measured,) = [c for c in shown.find(ft.Column) if c.on_size_change]
     await shown.event(measured, "size_change", {"w": 300.0, "h": height})
     (measured,) = [c for c in shown.find(ft.Column) if c.on_size_change]
-    box = cast(ft.Column, measured.parent)
+    box = cast(ft.Column, cast(ft.Control, measured.parent).parent)
     half = BOX[1] / 2
     if height > half:
         assert (box.height, box.scroll) == (half, ft.ScrollMode.AUTO)
     else:
         assert (box.height, box.scroll) == (None, None)
+    close = shown.node(f"{expo.SCREEN}.card.close")
+    beside = cast(ft.Row, cast(ft.Control, close.parent).parent)
+    assert beside.controls[0] is box  # Close is the scroll's sibling, not inside it
 
 
 async def test_a_pulse_or_a_zoom_does_not_re_render_the_card(

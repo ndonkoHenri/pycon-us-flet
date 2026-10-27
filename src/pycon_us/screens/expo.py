@@ -300,8 +300,8 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
 
     on_select = ft.use_callback(select, [])
     _, set_closes = ft.use_state(0)  # a Close re-renders the hall
-    # The rows' own height, by booth: the card keeps no state of its own (F150).
-    rows_size, set_rows_size = ft.use_state(cast(tuple[str, float], ("", 0.0)))
+    # The card body's own height, by booth: the card keeps no state itself (F150).
+    body_size, set_body_size = ft.use_state(cast(tuple[str, float], ("", 0.0)))
     view_path = ft.use_view_path()
 
     @report_errors
@@ -312,10 +312,10 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
     on_close = ft.use_callback(close, [])
 
     @report_errors
-    def rows_measured(e: ft.LayoutSizeChangeEvent) -> None:
-        set_rows_size((memory.expo_booth, e.height))
+    def body_measured(e: ft.LayoutSizeChangeEvent) -> None:
+        set_body_size((memory.expo_booth, e.height))
 
-    on_rows_size = ft.use_callback(rows_measured, [])
+    on_body_size = ft.use_callback(body_measured, [])
 
     @report_errors
     async def put_back() -> None:
@@ -357,16 +357,16 @@ def ExpoHall(zoom_key: str = "") -> ft.Control:
     item = next((each for each in booths if each.booth.number == selected), None)
     if item is not None:
         half = zoom.box[1] / 2
-        measured = rows_size[1] if rows_size[0] == selected else 0.0
+        measured = body_size[1] if body_size[0] == selected else 0.0
         hiring = hiring_line(data, item.sponsors[0]) if len(item.sponsors) == 1 else ""
         bottom.append(
             BoothCard(
                 item,
                 hiring=hiring,
                 view_path=view_path,
-                rows_box=half if half and measured > half else None,
+                body_box=half if half and measured > half else None,
                 on_close=on_close,
-                on_rows_size=on_rows_size,
+                on_body_size=on_body_size,
             )
         )
     return ft.Stack(
