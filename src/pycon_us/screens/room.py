@@ -387,7 +387,10 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     # (a level, F40). Level 3, a group inside the day as the slots under it are: the
     # selected day tab heads the list (D-211).
     dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=tokens.live)
-    return ft.Column(
+    # A node of its own (#656): else the heading's flags and label merge up into the
+    # list item's node, which also holds the location card above, and a screen
+    # reader says "Now in this room" before the card.
+    section = ft.Column(
         [
             SectionHeader("Now in this room", level=3, leading=dot),
             LinkTile(
@@ -402,3 +405,4 @@ def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
         ],
         spacing=0,
     )
+    return ft.Semantics(content=section, container=True)
