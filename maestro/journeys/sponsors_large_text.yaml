@@ -1,0 +1,136 @@
+# #455: the sponsor and job pages at the largest text (and iOS Bold Text), each journey's
+# Back, and a screenshot of each page to look at for clipping and overlap (ux.md §9).
+#
+# The scene's Developer steps assume the default text size (Apply and the version row
+# fall below the fold at the largest), so this flow starts from the app's data as the
+# last flow left it (no clearState): run sponsors_offline_logos.yaml (or any journey)
+# at the default size first, then set the largest text and relaunch through this flow
+# (maestro/README.md, "Large text").
+appId: io.github.ndonkohenri.pyconus
+name: The sponsor and job pages at the largest text
+tags:
+  - large_text
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 120000
+
+# Now › the spotlight › its sponsor › Back.
+- scrollUntilVisible:
+    element:
+      id: now.spotlight
+    direction: DOWN
+    timeout: 120000
+    centerElement: true
+    timeout: 120000  # every row is two or three times as tall
+- takeScreenshot: large-text-now-spotlight
+- tapOn:
+    id: now.spotlight
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+    timeout: 15000
+- takeScreenshot: large-text-sponsor
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: now.spotlight
+    timeout: 15000
+
+# More › Sponsors: the top, then a logo card › its sponsor › Back.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.sponsors
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: more.sponsors
+- extendedWaitUntil:
+    visible:
+      id: "sponsors\\.sponsor\\..*"
+    timeout: 15000
+- takeScreenshot: large-text-sponsors-top
+- scrollUntilVisible:
+    element:
+      id: sponsors.sponsor.capital-one
+    direction: DOWN
+    centerElement: true
+    timeout: 120000
+- takeScreenshot: large-text-sponsors-logo-cards
+- tapOn:
+    id: sponsors.sponsor.capital-one
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Capital One
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: sponsors.sponsor.capital-one
+    timeout: 15000
+
+# More › Job listings › filter › its sponsor › Back.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.jobs
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: more.jobs
+- extendedWaitUntil:
+    visible:
+      id: jobs.filter
+    timeout: 15000
+- takeScreenshot: large-text-jobs
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: jobs.filter
+      - eraseText: 20
+      - inputText: temporal
+      - assertVisible:
+          id: jobs.filter
+          text: temporal
+- pressKey: Enter
+# The job fair's card heads the list, a screen tall at this size, and the strip, the
+# field and the count fill the screen's top half, so scrollUntilVisible's swipe, from
+# the middle, starts on the field: swipe the list itself, low on the screen.
+- repeat:
+    while:
+      notVisible:
+        id: jobs.listing.10
+    times: 15
+    commands:
+      - swipe:
+          start: 50%, 92%
+          end: 50%, 72%
+          duration: 600
+- takeScreenshot: large-text-jobs-filtered
+- tapOn:
+    id: jobs.listing.10
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Temporal
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: jobs.listing.10
+    timeout: 15000

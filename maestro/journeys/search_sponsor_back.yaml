@@ -1,0 +1,50 @@
+# SPON-01, SPON-03 (#455): Now › search "bloomberg" › the sponsor › Back keeps the search.
+#
+# Search opened from Now searches every kind (D-19); "bloomberg" finds Bloomberg among
+# the Sponsors (search.sponsor.bloomberg, below any session it finds). Its row pushes
+# the sponsor's page over search (D-17); Back leaves that one View, and search shows the
+# same query and the same row (D-193).
+appId: io.github.ndonkohenri.pyconus
+name: Now, search a sponsor, the sponsor, then Back to the search
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: app.search
+- extendedWaitUntil:
+    visible:
+      id: search.field
+    timeout: 15000
+- inputText: bloomberg
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: search.sponsor.bloomberg
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+
+# → the sponsor.
+- tapOn:
+    id: search.sponsor.bloomberg
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Bloomberg
+    timeout: 15000
+
+# Back: search, with the same query and row.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: search.sponsor.bloomberg
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title
+- assertVisible:
+    id: search.field
+    text: bloomberg

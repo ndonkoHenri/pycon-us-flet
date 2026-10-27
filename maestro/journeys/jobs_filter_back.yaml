@@ -1,0 +1,80 @@
+# SPON-06, SPON-07 (#455): More › Job listings › filter › a sponsor › Back keeps the filter.
+#
+# "temporal" keeps one listing, Temporal's (listing 10, "1 listing"), and hides
+# Bloomberg's (6), the first card unfiltered. Its header pushes the sponsor's page,
+# /more/jobs/sponsor/temporal (D-17); Back leaves that one View, and the page below it,
+# still mounted, shows the same filter and the same card.
+appId: io.github.ndonkohenri.pyconus
+name: More, Job listings, a filter, a sponsor, then Back to the filtered list
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# More › Job listings.
+- tapOn:
+    id: app.nav.more
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.jobs
+    direction: DOWN
+- tapOn:
+    id: more.jobs
+- extendedWaitUntil:
+    visible:
+      id: jobs.filter
+    timeout: 15000
+
+# The filter: one listing left. The field is typed until it holds the whole word, as
+# set_scene.yaml's fields are (F63).
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: jobs.filter
+      - eraseText: 20
+      - inputText: temporal
+      - assertVisible:
+          id: jobs.filter
+          text: temporal
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: jobs.count
+      text: 1 listing
+    timeout: 15000
+- assertVisible:
+    id: jobs.listing.10
+    text: "Temporal, .* sponsor"
+- assertNotVisible:
+    id: jobs.listing.6
+
+# → its sponsor.
+- tapOn:
+    id: jobs.listing.10
+- extendedWaitUntil:
+    visible:
+      id: sponsor.title
+      text: Temporal
+    timeout: 15000
+
+# Back: the same filter, the same card.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: jobs.listing.10
+    timeout: 15000
+- assertNotVisible:
+    id: sponsor.title
+- assertVisible:
+    id: jobs.filter
+    text: temporal
+- assertVisible:
+    id: jobs.count
+    text: 1 listing

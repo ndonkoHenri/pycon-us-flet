@@ -31,6 +31,11 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/filter_persists.yaml` | journeys | Hide AI: the Schedule says "Hidden: AI, Open space", the AI talk is gone; after a relaunch it still is, and the sheet still has AI off |
 | `journeys/jump_to_now.yaml` | journeys | The Schedule opens with the now slot at the top; after flings, Jump to now puts it back there |
 | `journeys/sponsors_back.yaml` | journeys | More › Sponsors › a logo card's sponsor (Capital One) › Back: the list shows the same card again, and the sponsor's page is gone (SPON-01, #496) |
+| `journeys/jobs_filter_back.yaml` | journeys | More › Job listings › filter "temporal" ("1 listing") › Temporal › Back: the same filter, count and card (SPON-06, SPON-07, #455) |
+| `journeys/spotlight_back.yaml` | journeys | Now › the sponsor spotlight › the sponsor it names (read from the card, `scripts/spotlight_name.js`) › Back to Now (SHELL-08, #455) |
+| `journeys/search_sponsor_back.yaml` | journeys | Now › search "bloomberg" › Bloomberg in Sponsors › Back: search keeps the query and the row (SPON-03, #455) |
+| `journeys/sponsors_offline_logos.yaml` | offline_logos | Offline with no logo cache: Now's spotlight, Sponsors and Job listings say "Offline" and show initials; screenshots to look at ([below](#offline-logos), #455) |
+| `journeys/sponsors_large_text.yaml` | large_text | The spotlight, Sponsors and Job listings journeys at the largest text, with no fresh start; a screenshot of each page to look at ([below](#large-text), #455) |
 | `journeys/sponsor_find_booth.yaml` | journeys | A sponsor (Bloomberg) › Find booth 613 › Back: the expo hall opens at the booth with its card, and Back returns to the sponsor (SPON-04, #409) |
 | `journeys/now_quick_back.yaml` | journeys | Now › each quick info button (Wi-Fi, Help & safety, Venue & hours) › Back: each page is pushed over Now, and Back returns to Now with the buttons (#419, D-338) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
@@ -183,6 +188,47 @@ them: `maestro --device <id> test -e LINK=<scheme>://<host> maestro/journeys/dee
 A simulator asks "Open in …?" before the first link it opens (F31); the subflow taps
 Open when it shows.
 
+### Offline logos
+
+`journeys/sponsors_offline_logos.yaml` checks that a fresh install with no network draws
+each sponsor's initials on its logo tile. The initials are drawn, not said (the name is
+said beside them), so no step can find them: the flow takes a screenshot of Now's
+spotlight, the Sponsors list (its top and its logo cards) and Job listings, in the run's
+`takeScreenshot/` folder (under `--test-output-dir`), and you look at them. On Android airplane mode does it. On
+iOS the simulator shares the Mac's network, so the app first refreshes from the year's
+snapshot with every logo pointed at a closed port, served from the Mac, then from a feed
+URL nothing answers at:
+
+```bash
+mkdir -p build/no-logo-feed
+sed -E 's#https://(pycon-assets\.s3\.amazonaws\.com|s3\.dualstack\.us-east-2\.amazonaws\.com)/#http://127.0.0.1:9/#g' \
+  src/pycon_us/data/2026/conference.json > build/no-logo-feed/conference-2026.json
+python3 -m http.server 8766 --bind 127.0.0.1 --directory build/no-logo-feed &
+maestro --device <udid> test --test-output-dir build/maestro/offline-logos \
+  maestro/journeys/sponsors_offline_logos.yaml
+```
+
+Its tag is `offline_logos`, not `journeys`, since on iOS it needs that server. `NO_LOGO_URL` names another URL for it. Without the server, the first refresh fails and
+the flow stops there.
+
+### Large text
+
+The fresh start's Developer steps assume the default text size: at the largest, About
+this app's version row and Developer's Apply fall below the fold. So
+`journeys/sponsors_large_text.yaml` (tag `large_text`) starts from the data the last flow
+left (no `clearState`): run a journey at the default size, set the largest text, then
+run it. It walks the spotlight, Sponsors and Job listings journeys with their Backs, and
+takes a screenshot of each page to look at for clipping and overlap (ux.md §9). The
+relaunch may show the bundled snapshot rather than the scene's feed, whose time the
+fake clock set in May, so logos may load.
+
+```bash
+# iOS: Bold Text is Settings › Accessibility › Display & Text Size › Bold Text.
+xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large   # or accessibility-large, about 200 %
+# Android: adb -s emulator-5570 shell settings put system font_scale 2.0
+maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/journeys/sponsors_large_text.yaml
+```
+
 ## Writing a flow
 
 - Find a control by its identifier, `id:` (`<screen>.<element>[.<key>]`, D-33), copied
@@ -273,3 +319,12 @@ both builds again, on a quiet host and with more trials, before trusting either 
 The flow and the driver read the same rest and controls on each build: `main` rests on
 12:30 PM and its flings end in 3:00 PM; #346's build keeps the 2:00 PM slot, and its
 flings end in 4:00 PM.
+
+**#455** (2026-10-27, `main` at `e5f2e0a`, Flet pin `15854a0ac`), an `ios-simulator`
+build on an iPhone 17 simulator (iOS 26.5), at a load average of 90 to 130:
+`sponsors_back`, `jobs_filter_back`, `spotlight_back` and `search_sponsor_back` passed
+(1 min 29 s to 1 min 38 s each); `sponsors_offline_logos` passed, every tile showing
+initials; `sponsors_large_text` passed with Bold Text at `accessibility-large` and at
+`accessibility-extra-extra-extra-large`. A second scene in one flow first failed:
+Developer's feed URL kept its old tail, since the tap put the caret mid-URL, so
+`set_scene.yaml` now taps and erases twice. Not yet run on Android.
