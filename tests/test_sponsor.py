@@ -136,6 +136,7 @@ async def test_find_booth_shows_the_booth_in_the_expo_hall(show: Show) -> None:
     """The tonal "Find booth 613" pushes the hall at booth 613 on the sponsor."""
     shown = await show("bloomberg")
     button = cast(ft.FilledTonalButton, shown.node("sponsor.find_booth").content)
+    assert button.style is not None
     assert (button.content, button.icon, button.style.padding) == (
         "Find booth 613",
         ft.Icons.STOREFRONT_OUTLINED,
