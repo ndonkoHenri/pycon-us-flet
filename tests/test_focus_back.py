@@ -23,14 +23,13 @@ from pycon_us.services.storage import Storage
 from pycon_us.ui import focus_back as module
 from pycon_us.ui.focus_back import focus_back
 from pycon_us.ui.links import open_link
+from tests.fake_page import FakePage, bound
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
 )
 
 WEB = "https://us.pycon.org/2026/"

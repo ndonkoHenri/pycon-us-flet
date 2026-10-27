@@ -29,15 +29,13 @@ from pycon_us.screens.map_rooms import RoomsPane, now_lines, room_row
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.theme import LIGHT_TOKENS
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 from tests.feeds import processed
 from tests.trees import descendants, texts

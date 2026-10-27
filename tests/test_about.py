@@ -21,7 +21,7 @@ from pycon_us.state import Conference
 from pycon_us.theme import DARK_SCHEME, LIGHT_SCHEME
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 from tests.test_theme import contrast_ratio
 
 type Show = Callable[..., Awaitable[Shown]]

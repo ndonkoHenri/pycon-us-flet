@@ -35,15 +35,13 @@ from pycon_us.state import Conference
 from pycon_us.ui import scaffold, widths
 from pycon_us.ui.navigation import navigation_rail
 from pycon_us.ui.scaffold import AppScaffold, Shown
+from tests.fake_page import FakePage, Hooks, bound
 from tests.fakes import (
-    FakePage,
-    Hooks,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
 )
 
 

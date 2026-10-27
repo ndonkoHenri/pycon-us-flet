@@ -20,7 +20,8 @@ from pycon_us.state import Conference
 from pycon_us.ui.buttons import ICON_PADDING
 from tests.fakes import MemoryClipboard
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 
 WIFI = load_year(2026).content.wifi
 VIEW = "/more/wifi"

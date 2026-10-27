@@ -31,8 +31,8 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.ui import rows as rows_module
 from pycon_us.ui import share as share_module
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
@@ -40,8 +40,6 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     MemoryShare,
-    bound,
-    phone_margin,
 )
 
 CONFERENCE_DATA = ft.Container()

@@ -29,7 +29,8 @@ from pycon_us.screens.tracks import track_count
 from pycon_us.state import Conference
 from pycon_us.year_keynotes import keynote_of
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 from tests.trees import descendants, texts
 
 YEAR = load_year(2026)

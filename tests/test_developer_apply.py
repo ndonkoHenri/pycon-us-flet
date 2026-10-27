@@ -31,7 +31,8 @@ from tests.developer_screen import (
     press,
     type_into,
 )
-from tests.fakes import FakePage, MemoryPrefs
+from tests.fake_page import FakePage
+from tests.fakes import MemoryPrefs
 
 real_time, page, svc, prefs, conference, render = (
     developer_screen.real_time,

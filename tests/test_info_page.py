@@ -25,15 +25,13 @@ from pycon_us.ui import info_page
 from pycon_us.ui.info_page import GUTTER, FeedBlock, InfoBody
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.widths import READING
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 from tests.feeds import processed
 

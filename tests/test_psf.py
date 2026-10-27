@@ -19,7 +19,7 @@ from pycon_us.state import Conference
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.year_links import PsfInfo, PsfLink
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 
 _PSF = load_year(2026).content.psf
 assert _PSF is not None

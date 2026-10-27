@@ -9,7 +9,7 @@ fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` 
 says.
 
 ``Schedule`` renders in a real Flet session under the store providers
-(``tests/sessions.py``'s ``showing()``), so the memoised path (D-153), the two renders
+(``tests/harness.py``'s ``showing()``), so the memoised path (D-153), the two renders
 (D-156), the tabs' echo and the jumps run as Flet runs them. Two seams stand in for the
 device: ``AppScaffold`` is the harness's ``Column`` of the app bar's actions, the body
 and the "Now" button (the View and its bar are tested with ``tests/chrome.py``), and
@@ -48,7 +48,7 @@ from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.theme import Tokens
 from pycon_us.ui import scrolling, status_strip
-from tests import sessions
+from tests import harness
 from tests.fakes import MemorySemantics
 from tests.feeds import processed
 from tests.sessions import find
@@ -79,7 +79,7 @@ TALK = "142"
 
 
 @dataclass
-class Shown(sessions.Shown):
+class Shown(harness.Shown):
     """The harness's ``Shown`` on the Schedule: its scrolls, jumps and minute ticks.
 
     It is ``tests/sessions.py``'s, with what the Schedule's stand-ins record.
@@ -262,7 +262,7 @@ async def shown(
     async def scroll_to(self: ft.ListView, **kwargs: Any) -> None:
         # Flet's _invoke_method reads it first: a list off the page raises.
         session = cast(Session, self.page.session)  # pyright: ignore[reportOptionalMemberAccess]
-        result = sessions.current(Shown)
+        result = harness.current(Shown)
         result.scrolls.append((self, kwargs))
         if result.hold is not None:
             await result.hold.wait()
@@ -290,7 +290,7 @@ async def shown(
         )
 
     def recorded_strip(*, auto_refresh: bool = False) -> status_strip.Strip:
-        sessions.current(Shown).strips.append(auto_refresh)
+        harness.current(Shown).strips.append(auto_refresh)
         # The real strip, but a minute tick (``Shown.at``) starts no feed refresh.
         return status_strip.use_strip(auto_refresh=False)
 
@@ -298,16 +298,16 @@ async def shown(
         return ft.Text("strip")
 
     def counted_slot(label: str, slot_rows: Any, *, above: bool) -> ft.Control:
-        sessions.current(Shown).slots.append(label)
+        harness.current(Shown).slots.append(label)
         return layout(label, slot_rows, above=above)
 
     async def run_every(_: Services, seconds: float, action: Any) -> None:
-        sessions.current(Shown).ticks.append(action)
+        harness.current(Shown).ticks.append(action)
 
     async def recorded_jump(
         list_ref: ft.Ref[ft.ListView], key: str, **kwargs: Any
     ) -> scrolling.Jump:
-        result = sessions.current(Shown)
+        result = harness.current(Shown)
         result.jumping += 1
         try:
             ended = await scrolling.jump_to_key(list_ref, key, **kwargs)
@@ -333,7 +333,7 @@ async def shown(
     def Opened() -> ft.Control:
         here, set_here = ft.use_state(True)
         _, set_renders = ft.use_state(0)
-        result = sessions.current(Shown)
+        result = harness.current(Shown)
         result.leave = lambda: set_here(False)
         result.rerender = lambda: set_renders(lambda n: n + 1)
         return screen.Schedule() if here else Elsewhere()
@@ -362,7 +362,7 @@ async def shown(
                 """
                 clock.set_test_now(now[0])
                 result = await stack.enter_async_context(
-                    sessions.showing(
+                    harness.showing(
                         Opened,
                         screen,
                         year=YEAR,

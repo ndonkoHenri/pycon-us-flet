@@ -28,15 +28,13 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 
 PACIFIC = ZoneInfo("America/Los_Angeles")

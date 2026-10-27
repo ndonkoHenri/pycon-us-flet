@@ -2,7 +2,7 @@
 
 A deep link's path is an internal route (D-21, D-269): cold, it is the session's start
 route; warm, a route change. ``open_at`` renders the app's ``ROUTES`` and screens with
-``tests/sessions.py``'s ``showing()`` (``view_path=None``: a real Router, rendered as
+``tests/harness.py``'s ``showing()`` (``view_path=None``: a real Router, rendered as
 the page's Views, as ``main.py`` renders it) over the 2026 feed, starting at a
 location. ``Shown.go()`` changes the route as Flutter does for a warm link or a
 ``page.navigate``, and ``Shown.back()`` presses Back as the system does:
@@ -31,7 +31,7 @@ from pycon_us.config import load_year
 from pycon_us.locations import parent_of
 from pycon_us.routes import ROUTES
 from pycon_us.state import Conference
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 
 YEAR = load_year(2026)
@@ -41,7 +41,7 @@ EXIT = "exit"
 """What ``Shown.back()`` returns when Back leaves the app (F29)."""
 
 
-class Shown(sessions.Shown):
+class Shown(harness.Shown):
     """The app's Views in a session, with Back and route changes as Flutter sends them."""
 
     @property
@@ -126,7 +126,7 @@ async def open_at(
 
         async def open_(location: str, **kwargs: Any) -> Shown:
             shown = await stack.enter_async_context(
-                sessions.showing(
+                harness.showing(
                     lambda: ft.Router(ROUTES, manage_views=True),
                     year=YEAR,
                     conference=Conference(data=DATA, source="bundled", version=1),

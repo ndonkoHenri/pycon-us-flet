@@ -2,7 +2,7 @@
 
 SCHED-21, SCHED-22, EVT-04, DATA-29, SHELL-10. The hub's sections and counts are plain
 functions over the recorded feeds; the screens run in a real Flet session under the
-store providers (``tests/sessions.py``'s ``showing()``). The slugs' loader rules are in
+store providers (``tests/harness.py``'s ``showing()``). The slugs' loader rules are in
 ``tests/test_config_tracks.py``; ``track_sessions()`` itself in
 ``tests/test_timeline_tracks.py``.
 How the pages look, wrap at 200 % and read to screen readers is checked on devices (the
@@ -32,7 +32,8 @@ from pycon_us.ui import day_groups
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.year_tracks import HUB_PAGES
 from tests.feeds import YEARS, processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 
 YEAR = load_year(2026)
 INFO = YEAR.conference

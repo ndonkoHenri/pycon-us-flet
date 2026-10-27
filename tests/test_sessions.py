@@ -1,4 +1,4 @@
-"""Tests for the screen harness itself: ``tests/sessions.py``'s ``showing()`` (#253).
+"""Tests for the screen harness itself: ``tests/harness.py``'s ``showing()`` (#253).
 
 A test may open several screens at once (the Tracks tests do, through an
 ``AsyncExitStack``). What each one records, its row bodies (D-153) and its titles, and
@@ -18,8 +18,8 @@ from pycon_us.config import load_year
 from pycon_us.favorites import use_favorites
 from pycon_us.state import Conference
 from tests.feeds import processed
+from tests.harness import Shown, showing
 from tests.row_sessions import LIST, TALK, Owner
-from tests.sessions import Shown, showing
 
 YEAR = load_year(2026)
 

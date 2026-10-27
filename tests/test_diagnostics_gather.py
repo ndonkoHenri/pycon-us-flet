@@ -30,7 +30,7 @@ from tests.diagnostics_facts import (
     fields,
     gathered,
 )
-from tests.fakes import FakePage, android_device, ios_device
+from tests.fake_page import FakePage, android_device, ios_device
 from tests.feeds import changed
 
 frozen_clock = diagnostics_facts.frozen_clock  # the fixtures, under this module's names

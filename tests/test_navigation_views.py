@@ -25,7 +25,7 @@ from tests.chrome import (
     safe_area,
     view_at,
 )
-from tests.fakes import FakePage, Hooks
+from tests.fake_page import FakePage, Hooks
 from tests.test_navigation import tagged
 
 # The harness's fixtures, under this module's names, where pytest looks them up.

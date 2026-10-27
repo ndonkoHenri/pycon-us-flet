@@ -21,7 +21,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.state import Conference
 from pycon_us.ui import location_card as card
 from pycon_us.year_map import Pin, Plan
-from tests import sessions
+from tests import harness
 from tests.timers import HeldSleeps
 from tests.trees import texts
 
@@ -42,7 +42,7 @@ def place(key: str) -> tuple[Plan, Pin]:
 
 
 @dataclass
-class Card(sessions.Shown):
+class Card(harness.Shown):
     """The harness's ``Shown`` on one ``LocationCard``."""
 
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
@@ -121,7 +121,7 @@ async def render(
             return Card(*args, sleeps=sleeps, renders=renders, **kwargs)
 
         return await stack.enter_async_context(
-            sessions.showing(
+            harness.showing(
                 Screen,
                 year=YEAR,
                 conference=Conference(),

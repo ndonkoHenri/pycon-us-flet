@@ -25,7 +25,8 @@ from pycon_us.state import Conference
 from pycon_us.ui.favorite import ALREADY_SAVED, NOT_SAVED, UNDO, added_feedback
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
-from tests.sessions import Shown, menu_text, settle, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import menu_text, settle, text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)

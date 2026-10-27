@@ -3,7 +3,7 @@
 ``test_room.py`` (the highlight), ``test_room_days.py`` (the day lists and "Now in this
 room") and ``test_room_location.py`` (an unknown room, a sprint-only room and the
 location card) run ``RoomDetail`` in a real Flet session, as session detail does in
-``test_session.py``: ``tests/sessions.py``'s ``showing()`` puts the store providers
+``test_session.py``: ``tests/harness.py``'s ``showing()`` puts the store providers
 above it and replaces ``AppScaffold`` by a column that keeps the title and the body, and
 the scroll to the row is a recorder, since no Flutter answers it here. The sessions are
 the recorded 2026 feed's, and the clock is fixed in conference time. The highlight's
@@ -35,7 +35,7 @@ from pycon_us.screens import room as screen
 from pycon_us.screens import room_days
 from pycon_us.state import Conference
 from pycon_us.ui import location_card
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 from tests.timers import HeldSleeps
 
@@ -73,8 +73,8 @@ class Scroll:
 
 
 @dataclass
-class Room(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on one ``RoomDetail``."""
+class Room(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``) on one ``RoomDetail``."""
 
     scrolls: list[Scroll] = field(default_factory=list)
     """The scrolls the room asked for, in order."""
@@ -162,7 +162,7 @@ async def render(
         ended: asyncio.Event,
     ) -> str:
         assert list_ref.current is not None  # the day list that shows the row
-        sessions.current(Room).scrolls.append(Scroll(key, duration))
+        harness.current(Room).scrolls.append(Scroll(key, duration))
         return "landed"
 
     monkeypatch.setattr(screen, "jump_to_key", scroll)
@@ -189,7 +189,7 @@ async def render(
             return screen.RoomDetail(slug)
 
         return await stack.enter_async_context(
-            sessions.showing(
+            harness.showing(
                 Opened,
                 screen,
                 year=YEAR,

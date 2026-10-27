@@ -31,7 +31,7 @@ from pycon_us.screens import schedule_changes_seen as seen
 from pycon_us.services.changes_file import read_batches
 from pycon_us.state import Conference
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 from tests.timers import HeldSleeps
 
 YEAR = load_year(2026)

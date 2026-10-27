@@ -24,7 +24,7 @@ from pycon_us.ui.links import (
     open_link,
 )
 from tests import link_rule
-from tests.fakes import FakePage, android_device
+from tests.fake_page import FakePage, android_device
 from tests.link_rule import (
     ADDRESS,
     EMAIL,

@@ -26,15 +26,13 @@ from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.ui import info_page, rows
 from pycon_us.year_info import SafetyContact
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 
 HOTLINE = SafetyContact(

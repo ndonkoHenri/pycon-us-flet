@@ -3,7 +3,7 @@
 ``test_my_schedule.py`` (the agenda and its overlaps), ``test_my_schedule_ended.py``
 (what has ended, removal and Undo) and ``test_my_schedule_states.py`` (the states and
 the dropped sessions' notice) run the screen in a real Flet session
-(``tests/sessions.py``'s ``showing()``), as the rows do in ``test_session_rows.py``: the
+(``tests/harness.py``'s ``showing()``), as the rows do in ``test_session_rows.py``: the
 store providers above it, a star tap as a dispatched click, Flet's own scheduler
 re-rendering what changed. ``AppScaffold`` is the harness's stand-in and the status
 strip a placeholder (both have their own tests), and the minute tick is a hook the test
@@ -30,7 +30,7 @@ from pycon_us.screens import my_schedule as screen
 from pycon_us.screens.my_schedule import MySchedule
 from pycon_us.state import Conference
 from pycon_us.ui import states
-from tests import sessions
+from tests import harness
 from tests.fakes import MemoryPrefs
 from tests.feeds import processed
 from tests.folds import Fold, as_fold, fold_named
@@ -84,8 +84,8 @@ def name(session_id: str) -> str:
 
 
 @dataclass
-class Shown(sessions.Shown):
-    """The harness's ``Shown`` (``tests/sessions.py``) on My schedule."""
+class Shown(harness.Shown):
+    """The harness's ``Shown`` (``tests/harness.py``) on My schedule."""
 
     strips: list[dict[str, Any]] = field(default_factory=list)
     """The arguments of each ``StatusStrip`` the screen placed."""
@@ -227,17 +227,17 @@ async def shown(
 
     def use_minute() -> int:
         minute, set_minute = ft.use_state(0)
-        sessions.current(Shown).minutes.append(set_minute)
+        harness.current(Shown).minutes.append(set_minute)
         return minute
 
     time_slot = screen.TimeSlot
 
     def counted_slot(label: str, *args: Any, **kwargs: Any) -> ft.Control:
-        sessions.current(Shown).slots.append(label)
+        harness.current(Shown).slots.append(label)
         return time_slot(label, *args, **kwargs)
 
     def strip(**kwargs: Any) -> ft.Control:
-        sessions.current(Shown).strips.append(kwargs)
+        harness.current(Shown).strips.append(kwargs)
         return ft.Text("strip")
 
     monkeypatch.setattr(screen, "TimeSlot", counted_slot)
@@ -246,7 +246,7 @@ async def shown(
     monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("skeleton"))
 
     try:
-        async with sessions.showing(
+        async with harness.showing(
             MySchedule,
             screen,
             year=YEAR,

@@ -20,7 +20,7 @@ from pycon_us.layout import (
     side_insets,
     use_layout,
 )
-from tests.fakes import FakePage, bound
+from tests.fake_page import FakePage, bound
 
 
 @pytest.mark.parametrize(

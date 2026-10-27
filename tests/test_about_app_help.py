@@ -22,7 +22,8 @@ from pycon_us.ui import share as share_module
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests import about_page
 from tests.about_page import States, answer_report_hooks, headings, identified, text_of
-from tests.fakes import FakePage, MemoryLauncher, MemoryPaths, MemoryShare
+from tests.fake_page import FakePage
+from tests.fakes import MemoryLauncher, MemoryPaths, MemoryShare
 
 real_time, offline, page, svc, prefs, render, conference = (
     about_page.real_time,

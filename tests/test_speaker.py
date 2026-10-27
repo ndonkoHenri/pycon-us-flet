@@ -1,7 +1,7 @@
 """Tests for speaker detail (``screens/speaker.py``; #99, SPKR-03, SESS-12).
 
 The screen runs in a real Flet session under the store providers
-(``tests/sessions.py``'s ``showing()``). The rows' co-speaker line is
+(``tests/harness.py``'s ``showing()``). The rows' co-speaker line is
 ``session_view(of_speaker=...)``'s, tested in ``tests/test_row_views.py``; the
 query, ``speaker_sessions()``, in ``tests/test_speakers.py``. How the page looks, wraps
 at 200 % and reads to screen readers, and the Back chain on both platforms, are checked
@@ -27,7 +27,8 @@ from pycon_us.state import Conference
 from pycon_us.ui import day_groups
 from pycon_us.ui.semantics import semantics_key
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)

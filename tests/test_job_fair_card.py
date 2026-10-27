@@ -20,10 +20,10 @@ from pycon_us.locations import parent_of
 from pycon_us.screens import jobs
 from pycon_us.state import Conference
 from pycon_us.ui import location_card
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
+from tests.harness import Shown
 from tests.session_detail import TALK, VIEW, Render, rendering
-from tests.sessions import Shown
 from tests.test_session_location import ROOM_104C, drop
 from tests.timers import HeldSleeps
 
@@ -139,7 +139,7 @@ async def show_jobs(
     """Provide an async function that shows Job listings with the given feed."""
     monkeypatch.setattr(jobs, "asyncio", HeldSleeps())  # the filter's debounce
     monkeypatch.setattr(location_card, "asyncio", HeldSleeps())
-    async with sessions.showing(
+    async with harness.showing(
         jobs.Jobs,
         jobs,
         year=load_year(2026),

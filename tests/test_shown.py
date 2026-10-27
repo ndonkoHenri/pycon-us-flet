@@ -24,7 +24,8 @@ from pycon_us.ui import scaffold
 from pycon_us.ui.scaffold import AppScaffold, Shown
 from tests import chrome
 from tests.chrome import body_of, view_at
-from tests.fakes import FakePage, Hooks, MemoryPrefs
+from tests.fake_page import FakePage, Hooks
+from tests.fakes import MemoryPrefs
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
 year, svc, page, conference, hooks = (

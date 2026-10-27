@@ -36,7 +36,8 @@ from pycon_us.state import Conference
 from pycon_us.ui import snack_bars
 from pycon_us.ui.snack_bars import SNACK_BAR_MS
 from tests.feeds import Edit, add, changed, move, processed, recorded, rename, settings
-from tests.sessions import Shown, menu_text, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import menu_text, text_of
 
 YEAR = load_year(2026)
 URL = "https://example.test/conference.json"

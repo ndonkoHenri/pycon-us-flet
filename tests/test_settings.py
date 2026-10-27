@@ -25,15 +25,13 @@ from pycon_us.screens import settings, settings_reminders
 from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
-    FakePage,
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
-    bound,
-    phone_margin,
 )
 
 DATA_SECTION = ft.Text("Data section")

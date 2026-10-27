@@ -22,7 +22,8 @@ from pycon_us.prefs import Prefs, read_accessibility
 from pycon_us.services import Services
 from pycon_us.ui.time_gutter import GutterProbe
 from tests import app_start
-from tests.fakes import FakePage, MemorySemantics, bound
+from tests.fake_page import FakePage, bound
+from tests.fakes import MemorySemantics
 
 semantics, fake_page = (app_start.semantics, app_start.fake_page)
 

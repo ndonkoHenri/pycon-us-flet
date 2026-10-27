@@ -1,7 +1,7 @@
 """Tests for My schedule's Export to calendar (.ics) (#426; SESS-05; ux.md §5.6, D-289).
 
 When the overflow is offered, what the file holds and how a tap goes, in ``MySchedule``
-as ``tests/sessions.py``'s ``showing()`` renders it, on Android, whose save dialog is a
+as ``tests/harness.py``'s ``showing()`` renders it, on Android, whose save dialog is a
 fake that records the file and can be held open. ``services.calendar``'s own routes,
 iOS's loopback included, are ``tests/test_calendar.py``'s.
 """
@@ -29,7 +29,8 @@ from pycon_us.state import Conference
 from pycon_us.ui import states
 from tests.fakes import MemoryFilePicker
 from tests.feeds import processed
-from tests.sessions import Shown, menu_text, showing
+from tests.harness import Shown, showing
+from tests.sessions import menu_text
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone

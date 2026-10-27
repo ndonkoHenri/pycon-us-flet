@@ -1,6 +1,6 @@
 """Tests for sponsor detail (``screens/sponsor.py``; SPON-03, SPON-05, #396).
 
-The screen runs in a real Flet session (``tests/sessions.py``'s ``showing()``) on the
+The screen runs in a real Flet session (``tests/harness.py``'s ``showing()``) on the
 recorded 2026 feed. The roles come from ``core/jobs.py``, tested in
 ``tests/test_jobs.py``; these tests read what the page makes of them. How it looks,
 wraps at 200 % and reads to TalkBack and VoiceOver is checked on devices (the PR).
@@ -23,7 +23,8 @@ from pycon_us.screens import sponsor as screen
 from pycon_us.state import Conference
 from pycon_us.ui.buttons import ICON_PADDING
 from tests.feeds import processed
-from tests.sessions import Shown, showing, text_of
+from tests.harness import Shown, showing
+from tests.sessions import text_of
 
 YEAR = load_year(2026)
 DATA = processed(2026)

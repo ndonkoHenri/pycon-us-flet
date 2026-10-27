@@ -3,7 +3,7 @@
 ``tests/test_session_rows.py`` and ``tests/test_session_rows_layout.py`` test the rows
 through it, taking its ``rendered`` fixture by assignment (``docs/testing-and-quality.md``
 §3.1), and ``tests/test_sessions.py`` puts its ``Owner`` under the screens it opens to
-test ``showing()`` itself. The session is ``tests/sessions.py``'s ``showing()``; the
+test ``showing()`` itself. The session is ``tests/harness.py``'s ``showing()``; the
 sessions are the recorded 2026 feed's.
 """
 
@@ -33,7 +33,7 @@ from pycon_us.ui.session_rows import (
 )
 from tests.fakes import MemoryHaptics, MemoryPrefs
 from tests.feeds import processed
-from tests.sessions import Shown, showing
+from tests.harness import Shown, showing
 
 YEAR = load_year(2026)
 

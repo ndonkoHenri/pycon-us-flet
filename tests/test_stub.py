@@ -20,7 +20,7 @@ from pycon_us import routes
 from pycon_us.services import Services
 from tests import chrome
 from tests.chrome import app_bar, body_of
-from tests.fakes import FakePage, Hooks
+from tests.fake_page import FakePage, Hooks
 from tests.trees import descendants, only, texts
 
 # The harness's fixtures, under this module's names, where pytest looks them up.

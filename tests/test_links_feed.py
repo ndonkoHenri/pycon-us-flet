@@ -19,7 +19,7 @@ from pycon_us.services import Services
 from pycon_us.theme import MARKDOWN_STYLE
 from pycon_us.ui.links import COULD_NOT_OPEN, feed_markdown, open_feed_link
 from tests import link_rule
-from tests.fakes import FakePage
+from tests.fake_page import FakePage
 from tests.link_rule import ADDRESS, launcher, said
 
 svc, page = link_rule.svc, link_rule.page

@@ -7,7 +7,7 @@ what a device would get. How tall a row is, how it wraps at 200 % and what TalkB
 reads are checked on devices (#81's PR); here, the semantics a screen reader is given.
 What a row and a notice are made of is tested in ``test_session_rows_layout.py``.
 
-The session is ``tests/sessions.py``'s ``showing()``, which reaches into Flet internals
+The session is ``tests/harness.py``'s ``showing()``, which reaches into Flet internals
 as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks through
 ``Session.dispatch_event(control._i, ...)``). A Flet pin bump (D-81) that renames one
 of them breaks that module, not the rows: look there first.

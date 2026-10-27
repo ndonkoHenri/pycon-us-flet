@@ -30,7 +30,7 @@ from pycon_us.screens import expo_list, expo_pane, plan
 from pycon_us.screens import map as screen
 from pycon_us.screens.expo import placed_booths
 from pycon_us.state import Conference
-from tests import sessions
+from tests import harness
 from tests.feeds import processed
 from tests.trees import descendants
 from tests.viewers import FakeViewer
@@ -133,7 +133,7 @@ def test_a_row_reads_as_its_booth_name_and_level() -> None:
 
 
 @dataclasses.dataclass
-class ListShown(sessions.Shown):
+class ListShown(harness.Shown):
     """The harness's ``Shown`` on the Expo pane, with the scrolls its List asked for."""
 
     scrolls: list[dict[str, Any]] = dataclasses.field(default_factory=list)
@@ -218,7 +218,7 @@ async def render(
             return made
 
         return await stack.enter_async_context(
-            sessions.showing(
+            harness.showing(
                 screen.Map,
                 screen,
                 year=YEAR,
@@ -344,7 +344,7 @@ async def test_a_pushed_hall_keeps_its_zoom_across_the_list(
     viewer = FakeViewer()
     viewer.install(monkeypatch)
     path = "/map/plan/expo"
-    async with sessions.showing(
+    async with harness.showing(
         plan.ExpoPlan,
         plan,
         year=YEAR,

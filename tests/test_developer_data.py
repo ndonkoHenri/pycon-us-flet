@@ -37,9 +37,7 @@ from tests.data_section import (
     subtitle,
     tap,
 )
-from tests.fakes import (
-    FakePage,
-)
+from tests.fake_page import FakePage
 from tests.feeds import recorded
 
 (

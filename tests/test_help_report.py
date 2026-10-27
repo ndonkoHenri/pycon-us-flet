@@ -27,7 +27,8 @@ from pycon_us.ui.links import OPENS_IN
 from pycon_us.ui.share import LOG_SHARED, WITH_LOG
 from tests import help_page
 from tests.about_page import States, answer_report_hooks, headings, identified, text_of
-from tests.fakes import FakePage, MemoryLauncher, MemoryPaths, MemoryShare
+from tests.fake_page import FakePage
+from tests.fakes import MemoryLauncher, MemoryPaths, MemoryShare
 from tests.help_page import click
 
 # The harness's fixtures, under this module's names, where pytest looks them up.
