@@ -3,8 +3,8 @@
 ``tests/test_session_rows.py`` and ``tests/test_session_rows_layout.py`` test the rows
 through it, taking its ``rendered`` fixture by assignment (``docs/testing-and-quality.md``
 §3.1), and ``tests/test_sessions.py`` puts its ``Owner`` under the screens it opens to
-test ``showing()`` itself. The session
-is ``tests/sessions.py``'s ``showing()``; the sessions are the recorded 2026 feed's.
+test ``showing()`` itself. The session is ``tests/sessions.py``'s ``showing()``; the
+sessions are the recorded 2026 feed's.
 """
 
 from collections.abc import AsyncIterator

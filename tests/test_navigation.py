@@ -2,8 +2,9 @@
 
 The bar's and the rail's own parts and the re-tap scroll, built outside a renderer
 with the fixtures of ``tests/chrome.py`` (#264); how they sit on ``AppScaffold``'s
-Views and what a tap does are in ``test_navigation_views.py``. What they look like, that a re-tap scrolls a real list and what TalkBack and
-VoiceOver read are checked on devices (the PR).
+Views and what a tap does are in ``test_navigation_views.py``. What they look like,
+that a re-tap scrolls a real list and what TalkBack and VoiceOver read are checked on
+devices (the PR).
 """
 
 import inspect
