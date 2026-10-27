@@ -143,7 +143,9 @@ def use_camera(
         if to.scale > AT_FIT:
             await zoom.restore(to)
 
-    ft.use_effect(place, [ready, bool(cover)], cleanup=_cancel)
+    # The card's height counts only for a booth to reveal: without one, a card measured
+    # mid-move would change the dependencies and cancel the move for good (F2).
+    ft.use_effect(place, [ready, reveal is not None and bool(cover)], cleanup=_cancel)
 
 
 def _cancel() -> None:

@@ -8,6 +8,7 @@ for the viewer as in ``test_expo_hall.py``. How the move looks, and what TalkBac
 VoiceOver say of the line, are checked on devices (the PR).
 """
 
+import asyncio
 from typing import Any, cast
 
 import flet as ft
@@ -17,7 +18,7 @@ from pycon_us.config import load_year
 from pycon_us.locations import booth_href, parent_of, query_of
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import expo_pane
-from pycon_us.screens.booth_card import covered
+from pycon_us.screens.booth_card import BAND, card_layout, covered
 from pycon_us.screens.expo_camera import FIT, booth_rect, in_view, shows
 from pycon_us.ui.zoom import Size, Transform, fitted, max_scale
 from pycon_us.year_map import Booth
@@ -134,6 +135,24 @@ def test_any_booth_lands_above_its_card_at_the_least_zoom(number: str) -> None:
         assert centre == pytest.approx((BOX[1] - cover) / 2)
 
 
+@pytest.mark.parametrize("box", [(360.0, 464.0), BOX], ids=["short", "iphone"])
+@pytest.mark.parametrize("body", [280.0, 1000.0])
+def test_a_tall_card_leaves_a_band_every_booth_lands_in(box: Size, body: float) -> None:
+    """A tall card puts the zoom buttons in a row, so each booth still shows above it.
+
+    Under the buttons' column, a 280 dp body in a 360 x 464 pane covered the whole
+    pane and booth 407 stayed under the card; the row gives back 112 dp (D-377).
+    """
+    row, _ = card_layout(box[1], body)
+    assert row
+    cover = covered(box[1], body)
+    assert box[1] - cover >= BAND
+    top = max_scale(NATURAL[0], fitted(box, NATURAL)[0])
+    for each in YEAR.map.booths:
+        to = in_view(each, box, NATURAL, cover=cover, top=top, start=FIT)
+        assert shows(booth_rect(each, box, NATURAL), to, box[0], box[1] - cover)
+
+
 def test_no_band_above_the_card_leaves_the_camera_alone() -> None:
     """A card and buttons as tall as the pane leave nothing to bring a booth into."""
     kept = Transform(2.0, -10.0, -10.0)
@@ -236,3 +255,26 @@ async def test_a_row_in_sight_or_a_tap_on_the_plan_leaves_the_camera(
     await shown.click(cast(ft.Container, shown.node("expo.booth.407").content))
     await lay_out(shown)
     assert viewer.calls == []
+
+
+async def test_a_card_measured_mid_restore_lets_the_kept_zoom_land(
+    render: test_expo_list.Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """List to Map with a booth selected: the card's measure doesn't cancel the move.
+
+    Flutter answers the viewer's calls later than the card's size arrives; the kept
+    zoom (D-312) still lands once it does, as no booth is to be revealed.
+    """
+    viewer = FakeViewer(hold=asyncio.Event())
+    viewer.install(monkeypatch)
+    kept = (2.0, -100.0, -100.0)
+    memory = ViewMemory(expo_view="list", expo_booth="726", map_zooms={"expo": kept})
+    shown: ListShown = await render(memory=memory)
+    await shown.show(expo_pane.MAP)
+    await lay_out(shown)  # the viewer's size, then the card's, the reset held
+    assert viewer.calls == [("reset", None)]
+    assert viewer.hold is not None
+    viewer.hold.set()
+    await shown.settle()
+    assert [name for name, _ in viewer.calls] == ["reset", "zoom", "pan"]
+    assert landed(viewer) == pytest.approx(Transform(*kept))

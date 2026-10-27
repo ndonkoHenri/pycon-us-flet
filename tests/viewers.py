@@ -5,6 +5,7 @@ Flutter does at the pin (F76: ``zoom()`` keeps the translation, ``pan()`` moves 
 plan's units) and records each call, for the floor viewer's and the expo's tests.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -24,6 +25,8 @@ class FakeViewer:
     """Each method called, with its argument, in order."""
     after_zoom: Callable[[], Awaitable[None]] | None = None
     """What Flutter does once a zoom lands, e.g. report the transform (a render)."""
+    hold: asyncio.Event | None = None
+    """When set, ``reset()`` waits for it: Flutter's answer held while the app goes on."""
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Put this fake's methods on ``ft.InteractiveViewer`` for the test."""
@@ -47,6 +50,8 @@ class FakeViewer:
             viewer: ft.InteractiveViewer, animation_duration: Any = None
         ) -> None:
             fake.calls.append(("reset", animation_duration))
+            if fake.hold is not None:
+                await fake.hold.wait()
             fake.scale, fake.x, fake.y = 1.0, 0.0, 0.0
 
         async def get_transform(
