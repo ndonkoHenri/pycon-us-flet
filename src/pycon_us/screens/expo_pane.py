@@ -11,7 +11,9 @@ brought into view above the card (D-377).
 
 ``…/plan/expo?booth=613`` (``ExpoPlan``'s ``link``) seeds the pane once, as a row's tap
 does (EXPO-05, D-164); a number the plan doesn't draw opens the List under a live line,
-"Booth 139 isn't on the map yet", until the user switches or picks.
+"Booth 139 isn't on the map yet", until the user switches or picks, filtered to that
+number from its top, so whatever was typed before, the booth's exhibitor is what it
+shows (#643).
 """
 
 from collections.abc import Collection
@@ -39,8 +41,10 @@ VIEWS = {MAP: ("Map", ft.Icons.MAP_OUTLINED), LIST_VIEW: ("List", ft.Icons.LIST)
 def seed(memory: ViewMemory, number: str, placed: Collection[str]) -> tuple[str, str]:
     """Open the pane at a link's booth: selected on the Map, or the List (EXPO-05).
 
-    A booth on the plan is selected and shown on the Map, as a List row's tap does;
-    any other number leaves the memory alone, for the List and its line.
+    A booth on the plan is selected and shown on the Map, as a List row's tap does.
+    Any other number is the List's: its filter becomes the number and its scroll its
+    top, so the List shows the booth's exhibitor whatever was typed before (#643);
+    the remembered view is left alone, as the line is not the user's pick.
 
     Args:
         memory: The process's ``ViewMemory``.
@@ -54,6 +58,9 @@ def seed(memory: ViewMemory, number: str, placed: Collection[str]) -> tuple[str,
     if not number:
         return "", ""
     if number not in placed:
+        # Not cleared: the exhibitor would sit under "Not on the map yet", at the end.
+        memory.expo_query = number
+        memory.expo_offset = 0.0
         return "", number
     memory.expo_booth = number
     memory.expo_view = MAP
