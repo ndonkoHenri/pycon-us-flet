@@ -26,7 +26,7 @@ import flet as ft
 from pycon_us.account import use_account
 from pycon_us.core.lead_sponsors import LeadSponsor, filter_sponsors
 from pycon_us.core.staff_tools import ToolKey, may_open, scans_for_sponsor
-from pycon_us.locations import parent_of
+from pycon_us.locations import is_top_view, parent_of
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
@@ -116,6 +116,13 @@ def SponsorList(*, owner: str) -> ft.Control:
     loaded, set_loaded = ft.use_state(Loaded("loading"))
     tries, set_tries = ft.use_state(0)  # Retry asks again
     chosen, set_chosen = ft.use_state("")  # the saved sponsor's id
+    mounted = ft.use_ref(True)  # cleared on unmount: a late save then does nothing
+
+    def unmount() -> None:
+        """Mark the page gone, so a save still running stays quiet."""
+        mounted.current = False
+
+    ft.use_effect(lambda: None, [], cleanup=unmount)
 
     @report_errors
     async def load() -> None:
@@ -143,6 +150,10 @@ def SponsorList(*, owner: str) -> ft.Control:
     @report_errors
     async def pick(sponsor: LeadSponsor) -> None:
         saved = await save_sponsor(svc.storage, sponsor)
+        # A slow save can end after Cancel or Back: then the user is elsewhere, and
+        # neither a SnackBar nor a jump back to the scanner is theirs.
+        if not (mounted.current and is_top_view(page.route, view_path)):
+            return
         say_if_unsaved(page, saved)
         if saved:  # else stay: the scanner reads the choice from storage (D-425)
             page.navigate(parent_of(view_path, svc.memory.search_base))

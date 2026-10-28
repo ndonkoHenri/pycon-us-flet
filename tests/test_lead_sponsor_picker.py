@@ -8,6 +8,7 @@ the choice and goes back, Cancel leaves it, and only staff who scan for a sponso
 it (architecture §12.4).
 """
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -222,6 +223,33 @@ async def test_cancel_goes_back_and_keeps_the_choice(show: Show) -> None:
     await shown.click(cancel)
     assert shown.went == ["/more/staff/lead"]
     assert (await shown.storage.get(STAFF_SPONSOR))["id"] == "1"
+
+
+async def test_a_save_that_ends_after_cancel_leaves_the_user_where_they_are(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A held save released after Cancel and a move to More neither navigates nor says."""
+    held = asyncio.Event()
+    started = asyncio.Event()
+    save = lead_sponsor.save_sponsor
+
+    async def slow_save(storage: Any, sponsor: LeadSponsor) -> bool:
+        """Save once ``held`` is set, as a slow write would."""
+        started.set()
+        await held.wait()
+        return await save(storage, sponsor)
+
+    monkeypatch.setattr(lead_sponsor, "save_sponsor", slow_save)
+    shown = await show()
+    picking = asyncio.create_task(tap(shown, "3"))
+    await started.wait()
+    (cancel,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Cancel"]
+    await shown.click(cancel)
+    shown.session.page.route = "/more"  # the user went on to More
+    held.set()
+    await picking
+    assert shown.went == ["/more/staff/lead"]  # Cancel's, and nothing after
+    assert not shown.snack_bars
 
 
 async def test_a_pick_that_can_t_be_saved_stays_and_says_so(show: Show) -> None:
