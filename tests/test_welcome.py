@@ -276,13 +276,12 @@ def test_every_text_and_the_button_stand_out_from_the_purple_at_7_to_1(
     assert contrast_ratio(INK, BOOT_COLOR) >= 7
 
 
-def test_a_build_that_bundles_e3_promises_no_reminders_until_they_are_live(
+def test_only_a_build_with_reminders_promises_them(
     render: Callable[[], ft.View], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E3 bundled but nothing scheduling yet (#447): no reminders row (D-287, #677)."""
-    monkeypatch.setattr(welcome.capabilities, "REMINDERS", True)
+    """The reminders row shows with E3, whose Settings section is live (D-287, D-401)."""
     assert REMINDERS_ROW[1] not in texts(render())
-    monkeypatch.setattr(welcome.capabilities, "REMINDERS_LIVE", True)
+    monkeypatch.setattr(welcome.capabilities, "REMINDERS", True)
     assert REMINDERS_ROW[1] in texts(render())
 
 

@@ -187,7 +187,7 @@ def use_reminder_banner(
             for store in (conference, favorites, prefs)
         ]
         if svc.reminders is not None:  # a change in system settings (D-396)
-            stops.append(svc.reminders.watch_enabled(check))
+            stops.append(svc.reminders.watch(check))
         try:
             await svc.run_every(TICK_SECONDS, check)
         finally:

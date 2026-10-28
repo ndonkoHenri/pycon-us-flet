@@ -27,7 +27,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.ui.focus_back import star_of
 from pycon_us.ui.reminder_primer import offer_on_first_favorite
-from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
+from pycon_us.ui.snack_bars import NOT_SAVED, SNACK_BAR_MS, keep_while_screen_reader
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,6 @@ REMOVED = "Removed from My schedule"
 ADDED = "Added to My schedule"
 """The SnackBar after an add, only while a screen reader is on (D-355): what TalkBack
 says once the star is filled, where its "on" could come too early (#342)."""
-
-NOT_SAVED = "Couldn't save your change"
-"""The SnackBar when an edit was shown but not written (D-120, D-172)."""
 
 ALREADY_SAVED = "All of them are already in My schedule"
 """The SnackBar after "Add all" when every session was saved already: nothing changed,

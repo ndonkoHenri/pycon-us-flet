@@ -232,7 +232,11 @@ class Scheduler:
         enabled: Whether the OS shows the app's notifications, as last read
             (``read_enabled()``): at the start and before each apply. False until
             read, or when the read fails. A read that changes it calls the
-            listeners of ``watch_enabled()``.
+            listeners of ``watch()``.
+        exact: Whether exact alarms are allowed, as last read (``exact_allowed()``):
+            before each apply and after ``request_exact()``. None until read, or
+            when the read fails. A read that changes it calls the listeners of
+            ``watch()``: Settings' Alarms & reminders card follows it (D-401).
     """
 
     notifications: Notifications
@@ -241,8 +245,9 @@ class Scheduler:
     tapped: str = ""
     navigate: Callable[[str], object] | None = None
     enabled: bool = False
+    exact: bool | None = None
     _wanted: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
-    _on_enabled: list[Callable[[], object]] = field(default_factory=list, repr=False)
+    _listeners: list[Callable[[], object]] = field(default_factory=list, repr=False)
 
     def on_tap(self, e: NotificationEvent) -> None:
         """E3's ``on_tap``: open the tapped reminder's route, its payload (D-21)."""
@@ -295,15 +300,15 @@ class Scheduler:
             enabled = False
         if bool(enabled) != self.enabled:
             self.enabled = bool(enabled)
-            for listener in list(self._on_enabled):
-                listener()
+            self._changed()
         return self.enabled
 
-    def watch_enabled(self, listener: Callable[[], object]) -> Callable[[], None]:
-        """Call ``listener`` whenever a read changes ``enabled``, as the Banner needs.
+    def watch(self, listener: Callable[[], object]) -> Callable[[], None]:
+        """Call ``listener`` whenever a read changes ``enabled`` or ``exact``.
 
         A change in system settings is seen at the next read, on resume or before an
-        apply, and no store changes with it (D-396).
+        apply, and no store changes with it: the Banner (D-396) and Settings'
+        Reminders section (D-401) listen.
 
         Args:
             listener: Called with no arguments after ``enabled`` changes.
@@ -311,8 +316,13 @@ class Scheduler:
         Returns:
             A function that stops the calls.
         """
-        self._on_enabled.append(listener)
-        return lambda: self._on_enabled.remove(listener)
+        self._listeners.append(listener)
+        return lambda: self._listeners.remove(listener)
+
+    def _changed(self) -> None:
+        """Call every listener of ``watch()``."""
+        for listener in list(self._listeners):
+            listener()
 
     def request(self) -> None:
         """Ask for the plan to be applied again; a newer request supersedes one in flight."""
@@ -348,7 +358,8 @@ class Scheduler:
 
         The plugin's answer counts, since it is the one that schedules. When
         ``flet-permission-handler``'s ``SCHEDULE_EXACT_ALARM`` status disagrees with it,
-        a warning says so (D-220). A failed check is logged and reads as False.
+        a warning says so (D-220). A failed check is logged and reads as False. The
+        answer is kept in ``exact`` (None when the check failed).
         """
         from flet_notifications import NotificationException
 
@@ -356,10 +367,34 @@ class Scheduler:
             allowed = bool(await self.notifications.can_schedule_exact_alarms())
         except (NotificationException, TimeoutError) as e:
             logger.warning("Reminders: exact alarms unknown, scheduling inexact: %s", e)
+            self._set_exact(None)
             return False
+        self._set_exact(allowed)
         if self.android and self.permissions is not None:
             await self._check_agreement(allowed)
         return allowed
+
+    def _set_exact(self, exact: bool | None) -> None:
+        """Keep the exact-alarm answer, telling the listeners when it changed."""
+        if exact != self.exact:
+            self.exact = exact
+            self._changed()
+
+    async def request_exact(self) -> None:
+        """Open Android's Alarms & reminders page for the app, then read its answer.
+
+        Settings' card calls it (D-221, D-401). E3's call returns once the user leaves
+        that page; the new answer is read into ``exact`` and the plan applied again,
+        exact when allowed. A failure is logged, never raised (D-120).
+        """
+        from flet_notifications import NotificationException
+
+        try:
+            await self.notifications.request_exact_alarm_permission()
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: the Alarms & reminders page failed: %s", e)
+        await self.exact_allowed()
+        self.request()
 
     async def apply(self, plan: Sequence[Reminder], *, exact: bool) -> bool:
         """Cancel every pending reminder, then schedule ``plan`` (D-59, D-222).

@@ -9,8 +9,10 @@ options that work exist: session reminders and the three kinds of conference mom
 import logging
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from datetime import timedelta
 from typing import Any, Literal, get_args
 
+from pycon_us.core.ics import ALARM
 from pycon_us.services.storage import REMINDERS
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,15 @@ class ReminderSettings:
             "open_space": self.open_space,
             "keynote": self.keynote,
         }[category]
+
+    @property
+    def calendar_alarm(self) -> timedelta:
+        """How long before a session a calendar export's alarm goes off (D-401).
+
+        The session reminders' lead while they are on, so the calendar and the app
+        agree; ``core.ics.ALARM``, 10 minutes, while they are off (SESS-05).
+        """
+        return timedelta(minutes=self.session_lead) if self.session_lead else ALARM
 
     def to_stored(self) -> dict[str, Any]:
         """Return the record as ``pycon.reminders`` keeps it: every field, by name."""

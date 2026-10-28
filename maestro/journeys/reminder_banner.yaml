@@ -1,5 +1,6 @@
-# The reminders interim (D-60; NEW-05, NOTIF-01; #458): the in-app Banner on the
-# fake clock, then Settings' sentence.
+# The in-app reminder Banner (D-60, D-396; NEW-05; #458) on the fake clock. Maestro
+# grants notifications, but session reminders stay off until the primer or Settings
+# turns them on (D-275), so the OS does not remind and the Banner shows.
 #
 # The fake clock starts at Friday 14:38, seven minutes before the 2:45 PM talks.
 # - Save session 25 ("pathlib: why and how to use it", Grand Ballroom B): the Banner
@@ -7,11 +8,10 @@
 #   the session over My schedule, and the Banner goes.
 # - Save session 126 (Grand Ballroom A, the same start): its own Banner; Dismiss sends
 #   it away.
-# - More › Settings › Reminders says reminders aren't available in this build; on iOS
-#   it adds that calendar exports include an alarm, which Android's import drops
-#   (D-272).
+# Settings' Reminders section is reminder_settings.yaml's (#449): a packaged build has
+# E3, so the interim's sentence, which this flow checked until then, never shows there.
 appId: io.github.ndonkohenri.pyconus
-name: The reminder Banner on the fake clock, and Settings' interim
+name: The reminder Banner on the fake clock
 tags:
   - journeys
   - reminders
@@ -94,31 +94,3 @@ onFlowComplete:
     timeout: 15000
 - runFlow: ../subflows/back.yaml
 
-# Settings' Reminders section: the interim's sentence, no switch.
-- tapOn:
-    id: app.nav.more
-- extendedWaitUntil:
-    visible:
-      id: more.title
-    timeout: 15000
-- scrollUntilVisible:
-    element:
-      id: more.settings
-    direction: DOWN
-- tapOn:
-    id: more.settings
-- scrollUntilVisible:
-    element:
-      id: settings.reminders.interim
-    direction: DOWN
-    timeout: 30000
-- runFlow:
-    when:
-      platform: iOS
-    commands:
-      - assertVisible: "Reminders aren't available in this build\\. Your next session appears on Now, and calendar exports include an alarm\\."
-- runFlow:
-    when:
-      platform: Android
-    commands:
-      - assertVisible: "Reminders aren't available in this build\\. Your next session appears on Now\\."
