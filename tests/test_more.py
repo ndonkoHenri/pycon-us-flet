@@ -330,6 +330,27 @@ def test_signed_in_the_first_row_is_the_account_and_not_a_button(
     assert cast(ft.Text, cast(ft.CircleAvatar, avatar.content).content).value == "RE"
 
 
+def test_an_expired_account_s_row_asks_to_sign_in_again(
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
+    account: Account,
+    page: FakePage,
+) -> None:
+    """A refused key: "Sign in again" over the email, opening Sign in (D-57, #686)."""
+    prefs.dev = {DEV_MOCK_API_URL: "http://10.0.2.2:8000"}
+    account.email, account.nickname = "all@example.com", "Robin Everything"
+    account.signed_in = account.expired = True
+    first = rows_of(render())[0]
+    tile = tile_of(first)
+    assert tile is not None and str(tile.title) == "Sign in again"
+    assert tile.subtitle == "all@example.com"
+    assert isinstance(first, ft.MergeSemantics)
+    assert isinstance(first.content, ft.Semantics)
+    assert first.content.identifier == "more.sign_in_again"
+    cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == ["/more/sign-in"]
+
+
 @pytest.mark.parametrize(
     ("nickname", "email", "letters"),
     [("Robin Everything", "all@example.com", "RE"), ("", "all@example.com", "A")],
