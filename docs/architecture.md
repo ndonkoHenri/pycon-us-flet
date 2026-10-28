@@ -1265,7 +1265,7 @@ Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outc
 | — | door admit; its `idem_key` exists | — | `already`: the queued check-in |
 | — | door admit otherwise | pending | `queued`: unique `idem_key` (code, sorted product ids and scan session, joined by `\|`); one row per check-in |
 | pending | sent | synced | result merged into the payload under `"result"`; `last_error` cleared |
-| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60` (`NETWORK_BACKOFF`), end the pass; when `maybe_sent`, `maybe_sent = 1` for good (D-410) |
+| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60` (`NETWORK_BACKOFF`), end the pass; when `maybe_sent`, `maybe_sent = 1` for good, by id (`OutboxDb.flag_maybe_sent()`), so an edit while it was sent keeps it (D-410) |
 | pending | `ApiError` | pending → failed | `tries += 1`, `last_error`, `next_at = now + 60`; failed at 10 (`RETRY_CAP`) counted failures |
 | failed | "Retry failed" | pending | `tries = 0`, `next_at = now`, `last_error` cleared |
 
@@ -1306,7 +1306,12 @@ class SyncWorker:
                 tried.add((row.id, row.revision))
                 try:
                     result = await send(self._api, row)
+                except asyncio.CancelledError:  # the server may have it (D-410)
+                    self._db.flag_maybe_sent(row.id)
+                    raise
                 except NetworkError as failure:  # flags the row when maybe_sent (D-410)
+                    if failure.maybe_sent:  # by id: an edit since keeps the flag
+                        self._db.flag_maybe_sent(row.id)
                     self._db.save(outbox.after_network_error(
                         row, self._now(), maybe_sent=failure.maybe_sent))
                     return str(failure), False
@@ -1324,7 +1329,7 @@ class SyncWorker:
 
 `due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1), and the pass reads the due rows again until none is left, so the edit, and a note whose lead synced in the pass, go at once. `send(api, row)` is a `match row.kind` over `lead_capture` (query from the payload's `badge_validator` and the row's `sponsor_id`), `lead_note` (the payload plus the row's `sponsor_id`) and `redeem` (the payload as it is): always the row's snapshot, never the sponsor picked now (STORE-11). `run(tick=60)` waits for `foreground`, returns once `closed` is set, clears the wake, drains (wrapped in `report_errors`), then waits for the wake or the tick. Outbox times are real epoch seconds (`time.time()`), like the signatures.
 
-`supervise(svc, account, staff, prefs)` keeps the one worker: it subscribes to `Account` and `Prefs` (where the mock URL is) and, on each change, compares `sync_target()` (the client and the owner while `Services.api` exists and the account is signed in and not `expired`, else None) with the running worker's; a different one cancels the old task before starting the next, so two never send at once, and None clears `Staff` when signed out. `use_sync_worker()`, called by `App` before the boot gate, runs it in one effect keyed on `prefs.loaded`, so unmount cancels it (F2) and `close()` ends it (D-147). `Services.sync_wake` is the worker's wake: `kick_sync()` (every enqueue and "Sync now"), `on_resume()`, `close()` and `ft.Connectivity`'s change to anything but `NONE` set it. Tests: `tests/test_sync.py` (order, a note after its lead, faults, the cap, D-57's exactly-once under `lost_response`, connection errors and skew, owners and sponsors, one pass at a time, cancellation), `tests/test_sync_faults.py` (D-57's duplicates: a lost answer flags exactly its row under both semantics, every duplicate the mock records is a flagged row, and a failure before the request left flags none; D-410) and `tests/test_sync_loop.py` (the loop, the supervisor, the triggers).
+`supervise(svc, account, staff, prefs)` keeps the one worker: it subscribes to `Account` and `Prefs` (where the mock URL is) and, on each change, compares `sync_target()` (the client and the owner while `Services.api` exists and the account is signed in and not `expired`, else None) with the running worker's; a different one cancels the old task before starting the next, so two never send at once, and None clears `Staff` when signed out. `use_sync_worker()`, called by `App` before the boot gate, runs it in one effect keyed on `prefs.loaded`, so unmount cancels it (F2) and `close()` ends it (D-147). `Services.sync_wake` is the worker's wake: `kick_sync()` (every enqueue and "Sync now"), `on_resume()`, `close()` and `ft.Connectivity`'s change to anything but `NONE` set it. Tests: `tests/test_sync.py` (order, a note after its lead, faults, the cap, D-57's exactly-once under `lost_response`, connection errors and skew, owners and sponsors, one pass at a time, cancellation), `tests/test_sync_faults.py` (D-57's duplicates: a lost answer flags exactly its row under both semantics, every duplicate the mock records is a flagged row, also after a rescan while it was sent or a cancel after the mock committed, and a failure before the request left flags none; D-410) and `tests/test_sync_loop.py` (the loop, the supervisor, the triggers).
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 

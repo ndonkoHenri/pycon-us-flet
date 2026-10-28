@@ -291,6 +291,8 @@ class OutboxDb:
         if row.id is None:
             raise ValueError("an outbox row is saved only once it is stored")
         sets = ", ".join(f"{name} = :{name}" for name in _COLUMNS.split(", "))
+        # A flag set by id since the row was read stays: nothing clears it (D-410).
+        sets = sets.replace("maybe_sent = :", "maybe_sent = maybe_sent OR :")
         bump = ", revision = revision + 1" if edit else ""
         cursor = connection.execute(
             f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
@@ -326,6 +328,22 @@ class OutboxDb:
             return saved
 
         return self._attempt("save a row", run) or False
+
+    def flag_maybe_sent(self, row_id: int) -> bool:
+        """Flag a row "may be recorded twice" whatever its revision (D-410).
+
+        A send that may have reached the server is a fact about the row, not about the
+        revision that was sent: an edit or a rescan while it was in flight drops the
+        send's outcome (``save()``), never this flag.
+
+        Args:
+            row_id: The stored row's id.
+
+        Returns:
+            Whether the flag landed; a failure is logged (D-120).
+        """
+        sql = "UPDATE outbox SET maybe_sent = 1 WHERE id = :id"
+        return self._execute("flag a row", sql, {"id": row_id})
 
     def due_rows(self, owner: str, now: float) -> list[Row]:
         """Return the owner's rows to send now, in send order (§12.1's query).

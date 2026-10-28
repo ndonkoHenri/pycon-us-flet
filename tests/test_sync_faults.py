@@ -7,6 +7,7 @@ mock records belongs to a flagged row; a failure before the request left flags n
 The mock counts what it applied, so "a duplicate" is the mock's own count.
 """
 
+import asyncio
 from collections import Counter
 from collections.abc import Callable
 
@@ -163,3 +164,53 @@ async def test_a_failure_before_the_mock_ran_records_once(
     assert {row.status for row in rig.rows()} == {Status.SYNCED}
     assert set(records(rig).values()) == {1}
     assert flagged(rig) == ({LEAD} if maybe_sent else set())
+
+
+async def test_a_lost_reply_to_a_row_rescanned_while_sent_still_flags_it(
+    rig: Rig,
+) -> None:
+    """A rescan during the send drops its outcome (D-56), never the flag (D-410).
+
+    The rescan makes a new revision, so the lost reply's outcome is not saved; the
+    resend is a second record, and the row still says it may be.
+    """
+    await queued(rig, "non_idempotent")
+
+    def rescan_then_lose(_: httpx.Request) -> None:
+        rig.lead("MOCK0001")
+        rig.state.faults.inject("lost_response")
+
+    rig.wire.before = first_send_of(LEAD, rescan_then_lose)
+    await drain_twice(rig)
+    assert {row.status for row in rig.rows()} == {Status.SYNCED}
+    assert records(rig)[LEAD] == 2
+    assert flagged(rig) == {LEAD}
+
+
+async def test_a_pass_cancelled_after_the_mock_committed_flags_its_row(
+    rig: Rig,
+) -> None:
+    """Cancelled while the reply is on its way, the row stays due, untried, flagged.
+
+    D-407 cancels the worker on an account or client change; the server may have had
+    the send, so the resend may be a second record, and the row says so.
+    """
+    await queued(rig, "non_idempotent")
+    held = asyncio.Event()
+
+    async def hold() -> None:
+        await held.wait()
+
+    rig.wire.then = hold
+    task = asyncio.create_task(rig.worker().drain())
+    while not records(rig):
+        await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    lead = next(row for row in rig.rows() if (row.kind.value, row.key) == LEAD)
+    assert (lead.status, lead.tries, lead.maybe_sent) == (Status.PENDING, 0, True)
+    await rig.worker().drain()
+    assert {row.status for row in rig.rows()} == {Status.SYNCED}
+    assert records(rig)[LEAD] == 2
+    assert flagged(rig) == {LEAD}

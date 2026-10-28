@@ -274,6 +274,21 @@ def test_a_note_edited_while_sent_keeps_the_edit(
     assert edited.row.payload["note"] == "Second"
 
 
+def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> None:
+    """``flag_maybe_sent`` ignores the revision, and no later save clears it (D-410)."""
+    queued(scan(db))
+    (sent,) = db.due_rows(OWNER, NOW)  # the worker reads the lead and sends it ...
+    rescan = scan(db)  # ... while it is scanned again: a new revision
+    assert rescan is not None and rescan.row is not None
+    rescanned = rescan.row
+    assert not db.save(outbox.after_network_error(sent, NOW, maybe_sent=True))
+    assert sent.id is not None and db.flag_maybe_sent(sent.id)
+    (stored,) = db.due_rows(OWNER, NOW)
+    assert (stored.revision, stored.maybe_sent) == (rescanned.revision, True)
+    assert db.save(outbox.after_success(rescanned, {"id": 1}))  # read unflagged
+    assert [row.maybe_sent for row in everything(db)] == [True]
+
+
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:
     """``enqueue`` refuses a row whose code isn't the one its rows were read for."""
     decide = partial(

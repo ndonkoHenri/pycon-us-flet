@@ -149,8 +149,10 @@ class SyncWorker:
         """Send the due rows in order and store each outcome; one pass at a time.
 
         A pass already under way (``Staff.syncing``) makes this one return at once:
-        that one is the pass. A cancelled pass stores nothing for the row in flight,
-        which stays due: each outcome is one transaction (``OutboxDb.save``).
+        that one is the pass. A cancelled pass stores no outcome for the row in flight,
+        which stays due, its tries unchanged: each outcome is one transaction
+        (``OutboxDb.save``). The server may have had that send, so the row is flagged
+        "may be recorded twice" (D-410).
         """
         staff = self._staff
         owner = self._account.owner
@@ -189,10 +191,17 @@ class SyncWorker:
                 if not self._may_send(owner):
                     return error, False
                 tried.add((row.id, row.revision))
+                assert row.id is not None  # a due row is a stored one
                 try:
                     result = await send(self._api, row)
+                except asyncio.CancelledError:
+                    # The server may have it already: flag it, leave it pending.
+                    self._db.flag_maybe_sent(row.id)
+                    raise
                 except NetworkError as failure:
-                    waiting = outbox.after_network_error(  # flagged if maybe sent
+                    if failure.maybe_sent:  # by id, so an edit since keeps it
+                        self._db.flag_maybe_sent(row.id)
+                    waiting = outbox.after_network_error(
                         row, self._now(), maybe_sent=failure.maybe_sent
                     )
                     self._db.save(waiting)
