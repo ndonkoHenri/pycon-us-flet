@@ -8,7 +8,8 @@ at once and saves them in ``pycon.dev``, so they hold across launches; Reset ret
 real time and the year's feed (D-187). The screen is always available when not embedded,
 and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
 at its top marks it (ux.md §5.13). Its Data section (Refresh now, Clear cached feed,
-Share log, Reset app) is ``developer_data.py``'s (D-198).
+Share log, Reset app) is ``developer_data.py``'s (D-198); its Reminders section, a test
+reminder per kind, is ``developer_reminders.py``'s (DEV-06, D-402).
 """
 
 from datetime import datetime, timedelta
@@ -22,6 +23,7 @@ from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
 from pycon_us.screens.developer_api import MockApiSection
 from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.screens.developer_data import DataActions
+from pycon_us.screens.developer_reminders import TestReminders
 from pycon_us.screens.developer_ui import option_field, said
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -228,6 +230,8 @@ def Developer() -> ft.View:
                 MockApiSection(),
                 SectionHeader("Data"),
                 DataActions(),
+                SectionHeader("Reminders"),
+                TestReminders(),
                 SectionHeader("Capabilities"),
                 padded(
                     ft.Text(
