@@ -28,6 +28,7 @@ directory", then "Not recorded yet". Nothing is sent: #760 swaps in recording.
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from functools import partial
 from typing import Literal
 
 import flet as ft
@@ -171,9 +172,6 @@ def CocTool(*, owner: str) -> ft.Control:
     def again() -> None:
         set_tries(tries + 1)
 
-    async def on_badge(badge: Badge) -> ScanResult:
-        return neutral_result(badge.code, current)
-
     if not online:
         paused = OFFLINE
     elif current.status == "refused":
@@ -182,7 +180,7 @@ def CocTool(*, owner: str) -> ft.Control:
         paused = None
     return ScanScreen(
         title=TITLE,
-        on_badge=on_badge,
+        on_badge=partial(look_up, current),
         context=status_line(
             current.status,
             words,
@@ -215,6 +213,16 @@ def status_words(directory: Directory) -> str:
             return NOT_LOADED
         case "refused":
             return NOT_AVAILABLE
+
+
+async def look_up(directory: Directory, badge: Badge) -> ScanResult:
+    """The interim ``on_badge``: ``neutral_result()`` for the badge's code; sends nothing.
+
+    Args:
+        directory: The directory as the screen holds it.
+        badge: The badge scanned or typed.
+    """
+    return neutral_result(badge.code, directory)
 
 
 def neutral_result(code: str, directory: Directory) -> ScanResult:
