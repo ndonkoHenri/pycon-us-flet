@@ -4,6 +4,7 @@ The hypothesis state machine that checks the invariants over any sequence of the
 is ``tests/test_outbox_machine.py`` (D-77).
 """
 
+from collections.abc import Iterable
 from dataclasses import replace
 
 import pytest
@@ -42,7 +43,7 @@ def scan(rows: list[Row], code: str = "A1", sponsor: str = "7", now: float = NOW
     )
 
 
-def note(rows: list[Row], text: str, code: str = "A1", now: float = NOW):
+def note(rows: Iterable[Row], text: str, code: str = "A1", now: float = NOW):
     """Save ``text`` as the note on ``code``, as ``OWNER`` scanning for sponsor 9."""
     return outbox.save_note(
         rows,
@@ -127,6 +128,13 @@ def test_new_note_takes_its_leads_sponsor() -> None:
             NOW,
         ),
     )
+
+
+def test_new_note_from_an_iterator_takes_its_leads_sponsor() -> None:
+    """Rows given as a one-pass iterator still find the lead after a sponsor switch."""
+    decision = note(iter([lead()]), "Hot")
+    assert decision.row is not None
+    assert (decision.row.sponsor_id, decision.row.sponsor_name) == ("7", "Acme")
 
 
 def test_note_without_a_lead_row_takes_the_current_sponsor() -> None:

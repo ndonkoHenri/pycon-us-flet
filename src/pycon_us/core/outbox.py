@@ -189,6 +189,7 @@ def save_note(
     """
     if not note.strip():
         return Enqueued(Outcome.IGNORED)
+    rows = tuple(rows)  # Searched twice: a one-pass iterator would miss the lead.
     payload = {"accessCode": code, "note": note}
     existing = _find(rows, owner, Kind.NOTE, code)
     if existing is not None:
