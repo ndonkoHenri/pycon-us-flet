@@ -155,7 +155,8 @@ async def test_the_form_has_its_identifiers_hints_and_keyboards(
     assert password.password and password.can_reveal_password
     assert password.autofill_hints == [ft.AutofillHint.PASSWORD]
     (group,) = shown.find(ft.AutofillGroup)
-    assert group.dispose_action is ft.AutofillGroupDisposeAction.COMMIT
+    # Nothing to save before a sign-in: leaving never offers to save the fields.
+    assert group.dispose_action is ft.AutofillGroupDisposeAction.CANCEL
     assert error_line(shown) == ""
 
 
@@ -170,6 +171,24 @@ async def test_each_seeded_account_signs_in_and_goes_back_with_a_snack_bar(
     [bar] = shown.snack_bars
     assert isinstance(bar.content, ft.Text)
     assert bar.content.value == f"Signed in as {seeded(state, role).nickname}"
+    assert shown.went == ["/more"]
+
+
+async def test_only_a_sign_in_lets_the_os_save_the_credentials(
+    show: Show, recorder: Recorder
+) -> None:
+    """A wrong password leaves the group cancelling; a success commits it, then leaves.
+
+    iOS offered to save a wrong password when the page was left after a failed try.
+    """
+    shown = await show(recorder)
+    await sign_in_as(shown, "all@example.com", "nope")
+    (group,) = shown.find(ft.AutofillGroup)
+    assert group.dispose_action is ft.AutofillGroupDisposeAction.CANCEL
+    await type_into(shown, "Password", "mock-all")
+    await shown.click(submit(shown))
+    (group,) = shown.find(ft.AutofillGroup)
+    assert group.dispose_action is ft.AutofillGroupDisposeAction.COMMIT
     assert shown.went == ["/more"]
 
 

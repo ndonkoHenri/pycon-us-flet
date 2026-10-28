@@ -1,13 +1,14 @@
 """Sign in (``/more/sign-in``): the one way into a mock account (AUTH-01, API-02, D-54).
 
 The form of ux.md §7.1: an email and a password in an ``AutofillGroup``, so the OS
-offers to fill and save them, and "Sign in", disabled with a ring while the request is
-in flight, so repeated taps send one request (AUTH-02; ``Account.sign_in`` is the
-single flight). The fields' text is read when the user signs in, from what Flutter last
-reported, not from a change event: Ionic's form missed what iOS autofilled. Every
-failure is said in its own words on one live-region line under the button, and the
-fields keep what was typed. A success goes back to where the user came from, with
-"Signed in as <nickname>".
+offers to fill them, and to save them once they signed someone in, never a wrong
+password; and "Sign in", disabled with a ring while the request is in flight, so
+repeated taps send one request (AUTH-02; ``Account.sign_in`` is the single flight).
+The fields' text is read when the user signs in, from what Flutter last reported, not
+from a change event: Ionic's form missed what iOS autofilled. Every failure is said in
+its own words on one live-region line under the button, and the fields keep what was
+typed. A success goes back to where the user came from, with "Signed in as
+<nickname>".
 
 It talks only to the local mock (D-51): with no mock API URL set it shows a state that
 says sign-in isn't available, never a form.
@@ -76,6 +77,22 @@ def SignInPage() -> ft.View:
     email = use_field_query()
     password = use_field_query()
     error, set_error = ft.use_state("")  # how the last try here failed, said
+    # Who was signed in here: the group may offer to save the fields now (COMMIT),
+    # and only then does the page go, from the effect, so leaving after a failed try
+    # never offers to save a wrong password (CANCEL until then).
+    signed_in, set_signed_in = ft.use_state("")
+
+    @report_errors
+    async def leave() -> None:
+        if not signed_in:
+            return
+        page.show_dialog(
+            ft.SnackBar(ft.Text(signed_in), behavior=ft.SnackBarBehavior.FLOATING)
+        )
+        if is_top_view(page.route, view_path):  # not if Back left it meanwhile
+            page.navigate(parent_of(view_path, svc.memory.search_base))
+
+    ft.use_effect(leave, [signed_in])
     # Hooks first, every render (D-70); then the branch.
     if not prefs.private_api_enabled:
         return AppScaffold(
@@ -119,14 +136,7 @@ def SignInPage() -> ft.View:
         if outcome is not SignIn.SIGNED_IN:
             set_error(ERRORS[outcome])
             return
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text(signed_in_as(account.nickname, account.email)),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
-        if is_top_view(page.route, view_path):  # not if Back left it meanwhile
-            page.navigate(parent_of(view_path, svc.memory.search_base))
+        set_signed_in(signed_in_as(account.nickname, account.email))  # then leave()
 
     busy = account.signing_in
     return AppScaffold(
@@ -141,7 +151,12 @@ def SignInPage() -> ft.View:
                 ),
                 padded(mock_line()),
                 ft.AutofillGroup(
-                    ft.Column(
+                    dispose_action=(
+                        ft.AutofillGroupDisposeAction.COMMIT
+                        if signed_in
+                        else ft.AutofillGroupDisposeAction.CANCEL
+                    ),
+                    content=ft.Column(
                         [
                             padded(
                                 named(
@@ -185,7 +200,7 @@ def SignInPage() -> ft.View:
                         ],
                         spacing=0,
                         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-                    )
+                    ),
                 ),
                 padded(
                     ft.Row(
