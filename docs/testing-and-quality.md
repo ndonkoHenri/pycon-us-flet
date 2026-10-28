@@ -371,15 +371,16 @@ Faults are raised by the transport or set on the mock, never by code in the app.
 
 ### 4.3 Outbox (D-56)
 
-A hypothesis `RuleBasedStateMachine` drives the pure state in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure, server failure, sponsor switch, sign-out request and "Retry failed". Invariants after every step:
+A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure, server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
 
-- no pending row is ever lost;
-- a row's owner, sponsor snapshot and idempotency key never change after enqueue;
-- network failures never increase `tries`; 10 counted failures make a row `failed`;
-- a note is never sent before its lead is synced;
-- synced rows are kept; at most one door row per (code, product, session).
+- no unsynced row is ever lost, an account switch included;
+- a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor;
+- only rows sent successfully are synced, and a synced row is never due again;
+- network failures never increase `tries`; a row is `failed` exactly at 10 counted failures;
+- a note is never due before its lead is synced, and its lead row is kept while it waits;
+- one lead and one note row per (owner, code); at most one door row per (code, products, session).
 
-The machine records each row's attribution at enqueue time and compares it in an `@invariant()`; `TestOutbox = OutboxMachine.TestCase` exposes it to pytest. The sqlite layer (`services/`) gets plain tests on a temporary file: rows survive closing and reopening the connection mid-sync; `PRAGMA user_version` migrations run from every earlier version; WAL mode is on.
+The machine records each row's attribution at enqueue time, and what it expects of `tries` and the status, and compares them in `@invariant()`s; `TestOutbox = OutboxMachine.TestCase` exposes it to pytest. Each row of architecture §12.2's table, and `due()`'s order, is a plain test in `tests/test_outbox.py`. The sqlite layer (`services/`) gets plain tests on a temporary file: rows survive closing and reopening the connection mid-sync; `PRAGMA user_version` migrations run from every earlier version; WAL mode is on.
 
 ## 5. UI flows with `flet test` (D-78)
 
