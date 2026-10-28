@@ -12,6 +12,9 @@ it (every submit drops it, and Android's keyboard with it: F274, U254), so a har
 scanner scans continuously; a code accepted in the last 4 s is cleared
 without a word (a held code); a second submit while the handler runs is dropped, its
 text kept; text that is not a badge says "Not a badge code" and stays for correction.
+A handler can take a few seconds (the Lead scanner waits for its send, D-426): a
+result that comes after the screen is left, or while another View is on top of it,
+is dropped, so it never buzzes or speaks over another page.
 
 **Beyond the panel** (#724, D-420): each result gives its haptics and, on iOS, an
 announcement (``ui/scan_feedback.py``); the screen stays awake while mounted and in
@@ -33,6 +36,7 @@ import flet as ft
 
 from pycon_us import capabilities
 from pycon_us.core.badges import NOT_A_BADGE, Badge, Cooldown, ScanResult, parse_badge
+from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -108,6 +112,8 @@ def ScanScreen(
             is open"), while one of the tool's dialogs or sheets is open: submits
             are dropped, their text kept. None scans.
     """
+    page = ft.context.page
+    view_path = ft.use_view_path()
     svc = use_services()
     prefs = use_prefs()
     staff = use_staff()
@@ -121,6 +127,14 @@ def ScanScreen(
     shown, set_shown = ft.use_state(no_result)
     why_paused = PAUSED_SHEET if sheet.is_open else paused
     was_paused = ft.use_ref(False)
+    mounted = ft.use_ref(True)  # cleared on unmount: a late result is then dropped
+
+    @report_errors
+    def unmount() -> None:
+        """Mark the screen gone, so a handler still running stays quiet."""
+        mounted.current = False
+
+    ft.use_effect(lambda: None, [], cleanup=unmount)
 
     @report_errors
     async def resume() -> None:
@@ -155,7 +169,9 @@ def ScanScreen(
             await query.clear()  # empties the field and puts the focus back in it
             if not cooldown.accept(badge.code, clock()):
                 return  # the same code again within 4 s: a held badge
-            await show(await on_badge(badge))
+            result = await on_badge(badge)
+            if mounted.current and is_top_view(page.route, view_path):
+                await show(result)
         finally:
             busy.current = False
 

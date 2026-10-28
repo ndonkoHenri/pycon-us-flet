@@ -4,7 +4,8 @@ The screen runs in a real Flet session (``tests/harness.py``) with an ``Account`
 store set as the flags say, and a mock URL set or not (D-51). Its guard re-checks
 ``may_open`` on every render (architecture §12.4); past it, the account's consent
 (LEAD-04, D-423) is asked once, on ``screens/lead_consent.py``'s page; its parse-only
-handler reads a seeded badge and records nothing until #39. One test's sessions share
+handler queues a seeded badge in the outbox and shows the row's state (D-426; the
+capture itself is ``tests/test_lead_capture.py``'s). One test's sessions share
 one SharedPreferences, so a second render is a relaunch. Door staff choose the sponsor
 they scan for (LEAD-05, LEAD-06): the picker opens once by itself, the screen waits
 until one is chosen, then heads it with a "For: ..." chip; a sponsor's account sees none.
@@ -20,23 +21,19 @@ import flet as ft
 import pytest
 from flet.components.component import Component
 
+from pycon_us import lead_capture
 from pycon_us.account import Account
 from pycon_us.config import YearData, load_year
-from pycon_us.core.badges import Badge, ScanOutcome
+from pycon_us.core import outbox
 from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.lead_capture import ALREADY, SAVED
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import lead_consent, lead_sponsor, staff_lead
-from pycon_us.screens.staff_lead import (
-    BADGE_READ,
-    NO_SPONSOR,
-    NOT_RECORDED,
-    TITLE,
-    LeadScanner,
-    badge_read,
-)
+from pycon_us.screens.staff_lead import NO_SPONSOR, TITLE, LeadScanner
 from pycon_us.services import Services
+from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen
@@ -47,9 +44,12 @@ from tests.api_clients import BASE_URL
 from tests.fakes import MemoryPrefs
 from tests.harness import Shown, showing
 from tests.mock_calls import state_at
+from tests.scan_rig import enter, panel
+from tests.sync_rig import outbox_db
 from tools.mock_api.badges import payload
 
 VIEW = "/more/staff/lead"
+db = outbox_db
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -105,9 +105,16 @@ async def show(
     async with AsyncExitStack() as stack:
 
         async def render(
-            account: Account, *, mock_url: bool = True, consent: bool = True
+            account: Account,
+            *,
+            mock_url: bool = True,
+            consent: bool = True,
+            outbox: OutboxDb | None = None,
         ) -> Shown:
-            """Render the route signed in as ``account``, with or without a mock URL."""
+            """Render the route signed in as ``account``, with or without a mock URL.
+
+            ``outbox`` is the services' outbox, where a scan is queued; none by default.
+            """
             if consent:
                 stored[SCANNER_CONSENT.key] = True
             prefs = Prefs(loaded=True)
@@ -127,6 +134,7 @@ async def show(
                     route=VIEW,
                     prefs=prefs,
                     account=account,
+                    outbox=outbox,
                 )
             )
 
@@ -180,38 +188,32 @@ async def test_signing_out_while_open_closes_the_scanner(show: Show) -> None:
     assert not is_open(shown)
 
 
-async def test_a_seeded_badge_reads_with_both_validators_and_is_not_recorded(
-    show: Show,
+async def test_a_seeded_badge_is_queued_and_the_repeat_is_already_in_leads(
+    show: Show, db: OutboxDb, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A mock sheet's payload shows "Badge read", the code and both validators."""
+    """A scan is queued for the account; within 4 s the same badge does nothing.
+
+    No worker runs here, so the wait ends with "Saved. Will sync."; once the row is
+    synced, the same badge after the cooldown says "Already in your leads" (D-426).
+    """
+    monkeypatch.setattr(lead_capture, "WAIT_SECONDS", 0.01)
+    now = [100.0]
+    monkeypatch.setattr(scan_screen, "clock", lambda: now[0])
     attendee = next(iter(state_at().attendees.values()))
-    shown = await show(signed_in(lead_retrieval=True))
-    (field,) = shown.find(ft.TextField)
-    text = payload(attendee)
-    shown.session.apply_patch(field._i, {"value": text})
-    await shown.event(field, "change", text)
-    await shown.event(field, "submit", text)
-    assert str(shown.node("scan.result").label) == "\n".join(
-        (
-            BADGE_READ,
-            attendee.access_code,
-            f"Door validator: {attendee.validator}",
-            f"Lead validator: {attendee.validator}",
-            NOT_RECORDED,
-            "Scan 1",
-        )
-    )
-
-
-async def test_badge_read_is_accepted_styled_and_names_empty_validators() -> None:
-    """The parse-only result is ACCEPTED; an empty validator reads "none"."""
-    result = await badge_read(Badge("CODE", "", "last"))
-    assert result.outcome is ScanOutcome.ACCEPTED
-    assert result.details == (
-        "Door validator: none",
-        "Lead validator: last",
-        NOT_RECORDED,
-    )
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    await enter(shown, payload(attendee))
+    code = attendee.access_code
+    assert panel(shown) == f"{SAVED}\n{code}\nScan 1"
+    (row,) = db.rows("a@example.com", list(outbox.Status)) or []
+    assert (row.key, row.sponsor_id) == (code, None)
+    assert row.payload == {"badge_validator": attendee.validator}
+    assert db.save(outbox.after_success(row, {"first_name": "Ada"}))
+    now[0] += 3.9
+    await enter(shown, payload(attendee))  # a held badge: cleared without a word
+    assert panel(shown) == f"{SAVED}\n{code}\nScan 1"
+    now[0] += 0.2
+    await enter(shown, payload(attendee))
+    assert panel(shown) == f"{ALREADY}\nAda\n{code}\nScan 2"
 
 
 async def test_opening_the_scanner_makes_it_now_s_card_s_tool(show: Show) -> None:
@@ -433,6 +435,21 @@ async def test_a_chosen_sponsor_shows_as_the_chip_and_scanning_runs(
     assert helper(shown) is None
     await shown.click(chip(shown))
     assert shown.went == [PICKER]
+
+
+async def test_a_staff_scan_is_queued_for_the_sponsor_chosen(
+    show: Show,
+    stored: dict[str, Any],
+    db: OutboxDb,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The row snapshots the chosen sponsor, its id and name (STORE-11)."""
+    monkeypatch.setattr(lead_capture, "WAIT_SECONDS", 0.01)
+    choose(stored, EXAMPLE)
+    shown = await show(signed_in(door_check=True), outbox=db)
+    await enter(shown, "MOCK0001:v4l1d01")
+    (row,) = db.rows("a@example.com", list(outbox.Status)) or []
+    assert (row.sponsor_id, row.sponsor_name) == (EXAMPLE.id, EXAMPLE.name)
 
 
 async def test_the_picker_opens_after_the_consent_is_given(show: Show) -> None:

@@ -318,6 +318,16 @@ class OutboxDb:
             "list rows", lambda: self._select(f"{sql} ORDER BY created_at, id", params)
         )
 
+    def row(self, row_id: int) -> Row | None:
+        """Return one row by id: how a lead scan's send ended (D-426).
+
+        Returns:
+            The row, or None when it is gone or the database fails (logged).
+        """
+        sql = "SELECT * FROM outbox WHERE id = ?"
+        found = self._attempt("read a row", lambda: self._select(sql, (row_id,)))
+        return found[0] if found else None
+
     def owners_with_unsynced(self) -> list[str] | None:
         """Return every owner with a pending or failed row, sorted.
 
