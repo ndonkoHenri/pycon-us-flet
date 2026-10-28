@@ -122,9 +122,10 @@ class MemoryHaptics(ft.HapticFeedback):
     """HapticFeedback that records the effects asked for instead of reaching a device."""
 
     def init(self) -> None:
-        """Start with no effect recorded and no error."""
+        """Start with no effect recorded, no error and no gate."""
         self.effects: list[str] = []
         self.error: Exception | None = None
+        self.gate: asyncio.Event | None = None
 
     async def _invoke_method(
         self,
@@ -132,10 +133,12 @@ class MemoryHaptics(ft.HapticFeedback):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Record the effect's method name, or raise ``error`` when given."""
+        """Record the effect's method name, then wait for ``gate``; or raise ``error``."""
         if self.error is not None:
             raise self.error
         self.effects.append(method_name)
+        if self.gate is not None:  # the pulse is under way until the gate opens
+            await self.gate.wait()
 
 
 class MemoryWakelock(ft.Wakelock):

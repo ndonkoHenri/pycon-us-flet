@@ -6,6 +6,7 @@ sync chip, queue sheet and pauses (``ui/scan_screen.py``), in a real Flet sessio
 the words spoken and the screen kept on are checked on devices (the PR).
 """
 
+import asyncio
 from typing import cast
 
 import flet as ft
@@ -18,7 +19,7 @@ from pycon_us.ui import scan_feedback
 from pycon_us.ui.scan_screen import PAUSED_SHEET, ScanScreen
 from tests import harness, scan_rig
 from tests.fakes import MemoryHaptics, MemorySemantics, MemoryWakelock
-from tests.scan_rig import Rig, Show, enter, entry, panel
+from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel
 from tests.trees import descendants
 
 rig, show = scan_rig.rig, scan_rig.show
@@ -85,6 +86,27 @@ async def test_each_outcome_gives_its_haptics(
     shown = await show()
     await enter(shown, "MOCK0001:v1")
     assert haptics(shown) == effects
+
+
+async def test_a_submit_during_a_result_s_feedback_is_dropped(
+    show: Show, rig: Rig
+) -> None:
+    """One scan at a time until its result is felt: no denial lands after the next."""
+    rig.result = ScanResult(ScanOutcome.DENIED, "Denied")
+    shown = await show()
+    pulses = cast(MemoryHaptics, shown.services.haptics)
+    pulses.gate = asyncio.Event()
+    first = asyncio.create_task(enter(shown, "MOCK0001:v1"))
+    while not pulses.effects:  # the denial's first pulse is under way
+        await asyncio.sleep(0)
+    await shown.settle()
+    rig.result = ACCEPTED
+    await asyncio.wait_for(enter(shown, "MOCK0002:v2"), timeout=5)
+    assert [badge.code for badge in rig.badges] == ["MOCK0001"]
+    assert entry(shown).value == "MOCK0002:v2"  # kept, to submit again
+    pulses.gate.set()
+    await first
+    assert pulses.effects == ["heavy_impact", "vibrate"]
 
 
 async def test_a_code_that_is_not_a_badge_gives_no_haptics(show: Show) -> None:

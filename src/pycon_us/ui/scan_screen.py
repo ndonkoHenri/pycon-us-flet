@@ -141,21 +141,21 @@ def ScanScreen(
     async def submit(e: ft.Event[ft.TextField]) -> None:
         if why_paused is not None or busy.current:
             return
-        raw = e.data if isinstance(e.data, str) else e.control.value or ""
-        badge = parse_badge(raw)
-        if badge is None:
-            await show(NOT_A_BADGE)
-            await query.focus()  # Enter took it out; the text stays to correct
-            return
-        await query.clear()  # empties the field and puts the focus back in it
-        if not cooldown.accept(badge.code, clock()):
-            return  # the same code again within 4 s: a held badge
+        # Held until the result is felt and said, so results reach staff in order.
         busy.current = True
         try:
-            result = await on_badge(badge)
+            raw = e.data if isinstance(e.data, str) else e.control.value or ""
+            badge = parse_badge(raw)
+            if badge is None:
+                await show(NOT_A_BADGE)
+                await query.focus()  # Enter took it out; the text stays to correct
+                return
+            await query.clear()  # empties the field and puts the focus back in it
+            if not cooldown.accept(badge.code, clock()):
+                return  # the same code again within 4 s: a held badge
+            await show(await on_badge(badge))
         finally:
             busy.current = False
-        await show(result)
 
     body: list[ft.Control] = []
     if context:
