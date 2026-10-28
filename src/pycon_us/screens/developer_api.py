@@ -67,12 +67,12 @@ async def use_url(svc: Services, prefs: Prefs, url: str | None) -> Outcome:
     Returns:
         The outcome line's state.
     """
-
-    async def keep() -> bool:
-        """Store the URL in ``pycon.dev``, from the options as they are now."""
-        return await prefs.save(svc.storage, dev=with_mock_api_url(prefs.dev, url))
-
-    saved = await svc.private_api.connect(url, svc.year.conference.year, keep)
+    saved = await svc.private_api.connect(
+        url,
+        svc.year.conference.year,
+        # Read under the lock: the options as the last change left them.
+        lambda: prefs.save(svc.storage, dev=with_mock_api_url(prefs.dev, url)),
+    )
     done = (
         "Saved: sign-in and the staff tools use the mock at this address."
         if url
