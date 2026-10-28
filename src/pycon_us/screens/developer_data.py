@@ -7,8 +7,8 @@ packaged app's ``console.log`` and the diagnostics on the share sheet (``ui/shar
 ``share_console_log()``, D-72, D-297); **Show welcome again**, which clears
 ``pycon.onboarded`` and opens Welcome, keeping everything else (SHELL-02, D-73); and
 **Reset app**, which deletes
-what the app keeps and resets every store in memory, so the app is as after a fresh
-install without a restart. The two that delete are confirmed first by an
+what the app keeps, staff data included (D-414), and resets every store in memory, so
+the app is as after a fresh install without a restart. The two that delete are confirmed first by an
 ``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
 rows (D-29, D-210). This module is what the actions do and say; how the screen draws
 them is ``ui/actions.py``'s (the rows, the outcome line) and ``developer_ui.py``'s (the
@@ -30,6 +30,8 @@ from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
 from pycon_us.services.errors import report_errors, show_details
+from pycon_us.staff import Staff, use_staff
+from pycon_us.staff_data import clear_staff_data, staff_counts
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line, refreshed
@@ -74,6 +76,7 @@ def DataActions() -> ft.Control:
     prefs = use_prefs()
     favorites = use_favorites()
     account = use_account()
+    staff = use_staff()
     tokens = use_tokens()
     use_minute()  # Refresh now's second line says the schedule's age
     info = svc.year.conference
@@ -132,7 +135,10 @@ def DataActions() -> ft.Control:
     @report_errors
     async def reset() -> None:
         set_asking(None)
-        complete = await reset_app(svc, conference, prefs, favorites, account)
+        # Rows the dialog said it couldn't read stay, even if they read now (D-414).
+        complete = await reset_app(
+            svc, conference, prefs, favorites, account, staff, keep_rows=rows is None
+        )
         # Where a fresh start goes (D-143): Welcome, since the reset cleared
         # onboarded (DEV-05, D-287). Not "/" itself: on the iOS simulator that left
         # the app on this View, locked.
@@ -149,12 +155,18 @@ def DataActions() -> ft.Control:
             )
         )
 
+    # Read when Reset app asks, and after each pass while it does (D-414).
+    rows = ft.use_memo(
+        lambda: staff_counts(svc.outbox) if asking == "reset" else None,
+        [asking, staff.revision],
+    )
     ft.use_dialog(
         confirmation(
             asking,
             saved=len(favorites.ids),
             packaged=packaged,
             snapshot_day=snapshot_day(info),
+            staff=rows,
             on_confirm=clear_cache if asking == "clear" else reset,
             on_cancel=cancel,
         )
@@ -206,8 +218,8 @@ def DataActions() -> ft.Control:
                 "developer.reset_app",
                 ft.Icons.RESTART_ALT,
                 "Reset app",
-                "Deletes your settings, saved sessions, the cached schedule and "
-                "the Developer options",
+                "Deletes your settings, saved sessions, the cached schedule, "
+                "the Developer options and staff data",
                 lambda: ask("reset"),
                 color=ft.Colors.ERROR,
             ),
@@ -228,12 +240,16 @@ async def reset_app(
     prefs: Prefs,
     favorites: Favorites,
     account: Account,
+    staff: Staff,
+    *,
+    keep_rows: bool = False,
 ) -> bool:
     """Delete what the app keeps and reset every store, as after a fresh install.
 
     DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
     year's favourites, the Developer options and their unlock, the mock account), the
-    mock account's key and secret, the feed cache and the change log (D-255). In
+    mock account's key and secret, the feed cache, the change log (D-255) and the
+    staff outbox's rows, every account's (``clear_staff_data()``, D-414). In
     memory, without a restart: real time and no error details, as Developer's own
     Reset sets them before the stores change (D-187), and no private-API client
     (D-51); the bundled snapshot, from the year's feed, with a running refresh
@@ -247,6 +263,8 @@ async def reset_app(
         prefs: The session's ``Prefs`` store.
         favorites: The session's ``Favorites`` store.
         account: The session's ``Account`` store.
+        staff: The session's ``Staff`` store.
+        keep_rows: Keep the staff outbox's rows: the confirmation couldn't read them.
 
     Returns:
         Whether everything stored was deleted; when not (logged), the session is reset
@@ -259,6 +277,9 @@ async def reset_app(
     await svc.private_api.connect(None, svc.year.conference.year)
     cleared = await svc.storage.clear_prefs()
     signed_out = await account.reset(svc.storage, svc.credentials)
+    staff_cleared = await clear_staff_data(
+        svc.outbox, svc.storage, staff, named=not keep_rows
+    )
     deleted = await conference.reset(svc.storage, svc.year)
     # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
     # Its own deletion: the reset deletes the log only when a feed URL was set
@@ -268,6 +289,6 @@ async def reset_app(
     favorites.reset()
     svc.memory.reset()
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
-    complete = cleared and signed_out and deleted and log_deleted
+    complete = cleared and signed_out and staff_cleared and deleted and log_deleted
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete

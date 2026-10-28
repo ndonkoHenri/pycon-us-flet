@@ -26,6 +26,7 @@ from pycon_us.screens.developer_ui import (
     snapshot_day,
 )
 from pycon_us.services import Services, api
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui.actions import KEPT, refreshed
 from tests import data_section
@@ -51,6 +52,7 @@ from tests.feeds import recorded
     conference,
     favorites,
     account,
+    staff,
     packaged,
     rendered,
     minutes,
@@ -65,6 +67,7 @@ from tests.feeds import recorded
     data_section.conference,
     data_section.favorites,
     data_section.account,
+    data_section.staff,
     data_section.packaged,
     data_section.rendered,
     data_section.minutes,
@@ -245,7 +248,7 @@ async def test_a_reset_during_an_asked_for_refresh_ends_the_tap_without_an_outco
     asked = asyncio.create_task(tap(render, "developer.refresh_now"))
     await asyncio.sleep(0)
     async with asyncio.timeout(5):
-        await reset_app(svc, conference, prefs, favorites, Account())
+        await reset_app(svc, conference, prefs, favorites, Account(), Staff())
     # The tap awaited the refresh that the reset cancelled: it ends cancelled too
     # (Conference.reset()), not with a claim that the schedule was updated.
     await asyncio.wait({asked})

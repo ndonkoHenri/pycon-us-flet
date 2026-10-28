@@ -38,7 +38,12 @@ from pycon_us.account_profile import (
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.credentials import CredentialStorage, Secrets
 from pycon_us.services.endpoints import AUTHENTICATE, CHECK_FEATURES
-from pycon_us.services.storage import ACCOUNT, SERVICE_ERRORS, Storage
+from pycon_us.services.storage import (
+    ACCOUNT,
+    SERVICE_ERRORS,
+    STAFF_PREFIX,
+    Storage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +234,11 @@ class Account:
         profile, secrets = Profile.parse(reply), secrets_of(reply)
         if profile is None or secrets is None:
             return SignIn.SERVER_ERROR
+        switch = profile.email.lower() != (self.owner if self.signed_in else None)
+        # An account switch: no staff choice of someone else's stays (D-414); one
+        # left behind refuses the sign-in, which changed nothing else yet.
+        if switch and not await storage.clear_prefs(STAFF_PREFIX):  # logged
+            return SignIn.NOT_SAVED
         # The old profile goes first, so no secrets are ever stored beside it.
         if not await storage.remove(ACCOUNT):  # logged; nothing was changed
             return SignIn.NOT_SAVED
@@ -244,10 +254,11 @@ class Account:
         return SignIn.SIGNED_IN
 
     async def sign_out(self, storage: Storage, credentials: CredentialStorage) -> bool:
-        """Remove the key, the secret and ``pycon.account``, then sign out.
+        """Remove the key, the secret, ``pycon.account`` and the staff keys; sign out.
 
         Every removal is awaited before the store changes. A sign-in under way
-        finishes first, so what it saves is removed too. Favourites stay (D-48).
+        finishes first, so what it saves is removed too. Favourites stay (D-48), and
+        so do the staff outbox's rows, under their owner (D-414).
 
         Args:
             storage: Where ``pycon.account`` is.
@@ -260,6 +271,7 @@ class Account:
         async with self._lock:
             removed = await credentials.remove()
             removed = await storage.remove(ACCOUNT) and removed
+            removed = await storage.clear_prefs(STAFF_PREFIX) and removed
             self._clear()
         logger.info("Signed out")
         return removed
