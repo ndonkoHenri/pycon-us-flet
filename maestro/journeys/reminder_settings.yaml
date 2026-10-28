@@ -1,13 +1,18 @@
 # NOTIF-01, STORE-10, NOTIF-10 (#449, D-401): Settings › Reminders, live in a packaged
 # build (E3), and My schedule's Reminder settings.
 #
-# A fresh install with every permission granted (subflows/launch_fresh.yaml), so the
-# OS allows notifications and the session switch shows no primer (D-395).
+# A fresh install (subflows/launch_fresh.yaml). On Android the OS then allows
+# notifications, so the session switch shows no primer (D-395); on the iOS simulator
+# E3 reads them as not allowed yet, so the switch shows the primer, which the flow
+# allows (#449's run: no OS prompt followed, and the card went).
 # - More › Settings: session reminders off, no lead, the three moments on.
 # - The switch on: the 5 · 10 · 15 min lead shows at 10; pick 15. On Android, where
-#   Alarms & reminders is off for a fresh install, its card shows; never on iOS.
-# - A relaunch: the switch still on, 15 still picked (each platform says a selected
-#   segment its own way: Android's `checked`, iOS's `selected`).
+#   Alarms & reminders is off for a fresh install, its card shows; never on iOS. (On
+#   an emulator where it was allowed, `pm clear` keeps it; reset it first with
+#   `adb shell cmd appops set --uid io.github.ndonkohenri.pyconus SCHEDULE_EXACT_ALARM default`.)
+# - A relaunch: the switch still on, 15 still picked. A segment says it is picked as
+#   `selected` on both platforms; the switch row is Android's `checked` and iOS's
+#   value "1".
 # - My schedule › More options › Reminder settings: Settings over My schedule; Back
 #   returns to My schedule.
 # - The switch off again, so a second run starts the same way.
@@ -29,9 +34,33 @@ tags:
     id: settings.reminders.keynote
 - takeScreenshot: reminders-01-off
 
-# On: the lead shows, at 10; then 15.
+# On: the lead shows, at 10; then 15. Where the OS has not allowed notifications yet
+# (the iOS simulator, whose notification permission Maestro does not grant), the
+# switch shows the primer (D-61): Allow, then the OS's Allow.
 - tapOn:
     id: settings.reminders.sessions
+- runFlow:
+    when:
+      visible:
+        id: reminder.primer.allow
+    commands:
+      - takeScreenshot: reminders-02-primer
+      - tapOn:
+          id: reminder.primer.allow
+      - extendedWaitUntil:
+          notVisible:
+            id: reminder.primer
+          timeout: 10000
+      - waitForAnimationToEnd
+      - runFlow:  # the OS's prompt, when it shows one
+          when:
+            visible: "Allow"
+          commands:
+            - tapOn: "Allow"
+- extendedWaitUntil:
+    notVisible:
+      id: settings.reminders.allow
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: settings.reminders.lead.15
@@ -70,10 +99,10 @@ tags:
           checked: true
       - assertVisible:
           id: settings.reminders.lead.15
-          checked: true
+          selected: true
       - assertVisible:
           id: settings.reminders.lead.10
-          checked: false
+          selected: false
 - runFlow:
     when:
       platform: iOS
@@ -90,6 +119,11 @@ tags:
 - takeScreenshot: reminders-03-relaunched
 
 # My schedule › Reminder settings › Back.
+- runFlow: ../subflows/back.yaml  # Settings is a pushed View: back to More's bar
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
 - runFlow:
     file: ../subflows/tab.yaml
     env:

@@ -229,7 +229,10 @@ def RemindersSection(slot: int) -> ft.Control:
         )
         for field, title, icon in MOMENT_ROWS
     ]
-    return ft.Column(rows, spacing=0)
+    # Stretched: a card and the lead picker span the list, as the rows do.
+    return ft.Column(
+        rows, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH
+    )
 
 
 async def save(page: ft.Page, svc: Services, prefs: Prefs, **changes: Any) -> None:
@@ -292,29 +295,33 @@ def lead_picker(
 
     Each segment is read as its label, a button and its state; its identifier is
     ``settings.reminders.lead.<minutes>``, merged into the segment's node as the
-    Expo's view switch's are. As wide as the list's content, so "15 min" fits at
-    200 % text.
+    Expo's view switch's are. As wide as the list's content (``expand`` in a
+    ``Row``), so "15 min" has the most room at 200 % text.
 
     Args:
         lead: The chosen lead, in minutes (not 0: the picker shows while on).
         on_change: Saves the picked lead.
     """
     return ft.Container(
-        ft.SegmentedButton(
-            segments=[
-                ft.Segment(
-                    value=str(minutes),
-                    label=ft.Semantics(
-                        identifier=f"{SCREEN}.lead.{minutes}",
-                        content=ft.Text(f"{minutes} min"),
-                    ),
-                )
-                for minutes in SESSION_LEADS
-                if minutes
-            ],
-            selected=[str(lead)],
-            on_change=on_change,
-            expand=True,
+        ft.Row(
+            [
+                ft.SegmentedButton(
+                    segments=[
+                        ft.Segment(
+                            value=str(minutes),
+                            label=ft.Semantics(
+                                identifier=f"{SCREEN}.lead.{minutes}",
+                                content=ft.Text(f"{minutes} min"),
+                            ),
+                        )
+                        for minutes in SESSION_LEADS
+                        if minutes
+                    ],
+                    selected=[str(lead)],
+                    on_change=on_change,
+                    expand=True,
+                ),
+            ]
         ),
         padding=ft.Padding.only(left=16, right=16, bottom=8),
     )
@@ -357,7 +364,6 @@ def notice_card(
                         ),
                     )
                 ],
-                alignment=ft.MainAxisAlignment.END,
                 wrap=True,  # the label wraps under at 200 % rather than clip
             )
         )
