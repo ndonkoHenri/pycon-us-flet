@@ -346,3 +346,21 @@ async def test_reset_forgets_every_saved_session_without_writing(
     assert notified.seen == ["ids"]  # the lists show it at once
     assert shared.values == {}  # nothing written back
     assert favorites.loaded is True  # the next star saves as usual
+
+
+async def test_replace_takes_a_list_in_once_and_saves_it(
+    store: Storage, shared: MemoryPrefs
+) -> None:
+    """``replace()`` assigns the account's list in one notification and saves it (D-406).
+
+    The same list again changes nothing and writes nothing.
+    """
+    favorites = await loaded(store)
+    await favorites.add_many(store, ["1", "2"])
+    notified = Notifications(favorites)
+    assert await favorites.replace(store, ["2", "3"])
+    assert favorites.ids == {"2", "3"} and notified.seen == ["ids"]
+    assert shared.values["pycon.2026.favorites"] == ["2", "3"]
+    shared.fail_writes = True
+    assert await favorites.replace(store, ["3", "2"])  # nothing to write
+    assert notified.seen == ["ids"]
