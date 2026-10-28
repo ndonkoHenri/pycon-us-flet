@@ -209,6 +209,23 @@ def hc_border(high_contrast: bool) -> ft.Border | None:
     return ft.Border.all(1, ft.Colors.OUTLINE) if high_contrast else None
 
 
+def hc_sheet_shape(high_contrast: bool) -> ft.OutlinedBorder | None:
+    """Return a bottom sheet's shape in high contrast, with a 1 dp ``outline`` edge.
+
+    M3's 28 dp top corners. The sheet is the surface in HC, as the page under its
+    scrim nearly is, so the edge draws it (D-306); elsewhere None, Material's own.
+
+    Args:
+        high_contrast: HC is on screen (``Tokens.high_contrast``).
+    """
+    if not high_contrast:
+        return None
+    return ft.RoundedRectangleBorder(
+        radius=ft.BorderRadius.only(top_left=28, top_right=28),
+        side=ft.BorderSide(1, ft.Colors.OUTLINE),
+    )
+
+
 def with_hc_components(theme: ft.Theme, *, dark: bool) -> ft.Theme:
     """Return ``theme`` with the high-contrast component themes (THEME-06, D-306).
 

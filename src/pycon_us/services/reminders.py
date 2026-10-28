@@ -13,6 +13,10 @@ holds a tap that comes before the app routes, the one that launched the app incl
 for ``routes.Start``, and navigates to a later one at once. It also knows whether the OS
 shows the app's notifications, which the in-app Banner's rule reads
 (``ui.reminder_banner``).
+
+``Scheduler.access()`` and ``Scheduler.request_permission()`` are the notification
+permission's status and request, which the primer uses (``ui/reminder_primer.py``;
+D-61, D-395).
 """
 
 import asyncio
@@ -20,7 +24,7 @@ import logging
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from zlib import crc32
 
 import flet as ft
@@ -48,6 +52,20 @@ clear of the conference keys, the open spaces (9000 + key) and the moments (D-59
 
 SESSION_VIEW = "/my-schedule"
 """The View a session reminder opens its session on: it is there because it is saved."""
+
+type Access = Literal["allowed", "askable", "blocked", "unknown"]
+"""Whether the OS shows the app's notifications (ux.md §4.8, D-395): it does; it may
+still ask; it won't ask again (only the system settings can change that); unknown."""
+
+_ACCESS: dict[str, Access] = {
+    "granted": "allowed",
+    "limited": "allowed",
+    "provisional": "allowed",
+    "denied": "askable",  # never asked, or the OS may ask again
+    "permanentlyDenied": "blocked",
+    "restricted": "blocked",
+}
+"""``flet-permission-handler``'s ``PermissionStatus`` values, mapped (ux.md §4.8)."""
 
 LAUNCH_WAIT = 3.0
 """Seconds the start waits at most for E3 to answer (``Scheduler.read_enabled()``),
@@ -412,6 +430,44 @@ class Scheduler:
             if exact
             else AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE,
         )
+
+    async def access(self) -> Access:
+        """Return whether the OS shows the app's notifications (ux.md §4.8, D-395).
+
+        On Android, ``flet-permission-handler``'s ``NOTIFICATION`` status, mapped by
+        ``_ACCESS``. On iOS that status always reads "denied": Flet's build template
+        turns on no permission_handler macro for notifications (F17, F245). So E3's
+        ``are_notifications_enabled()`` answers there, "allowed" or else "askable":
+        iOS does not tell "not asked yet" from "refused", and a request after a
+        refusal shows nothing and returns False. A failed read is logged and reads as
+        "unknown".
+        """
+        from flet_notifications import NotificationException
+        from flet_permission_handler import Permission
+
+        try:
+            if self.android and self.permissions is not None:
+                status = await self.permissions.get_status(Permission.NOTIFICATION)
+                return _ACCESS.get(status.value, "unknown") if status else "unknown"
+            enabled = await self.notifications.are_notifications_enabled()
+        except (NotificationException, RuntimeError, TimeoutError) as e:
+            logger.warning("Reminders: notification permission unread: %s", e)
+            return "unknown"
+        return "allowed" if enabled else "askable"
+
+    async def request_permission(self) -> bool:
+        """Ask the OS to show the app's notifications; return whether it allows them.
+
+        E3's request on both platforms (D-61, F17): Android 13+'s prompt, iOS's alerts
+        and sounds (the app sets no badge). A failure is logged and reads as False.
+        """
+        from flet_notifications import NotificationException
+
+        try:
+            return bool(await self.notifications.request_permissions(badge=False))
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: notification permission request failed: %s", e)
+            return False
 
     async def _check_agreement(self, allowed: bool) -> None:
         """Warn when the permission handler's exact-alarm status disagrees (D-220)."""

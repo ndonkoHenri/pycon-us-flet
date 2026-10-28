@@ -40,7 +40,8 @@ REMINDERS_LIVE = False
 schedules them since #447 (D-389), but Settings has no live controls until #449, whose
 PR sets this to ``REMINDERS``. Until then Settings keeps D-60's interim and Welcome
 promises no reminders (D-287), so a build that bundles E3 never promises what it can't
-do (#677's review)."""
+do (#677's review). The primer on the first favourite follows ``REMINDERS`` instead,
+since what it asks for is the OS permission the scheduled reminders need (D-395)."""
 
 SCANNER = available("flet_barcode_scanner")
 """The camera badge scanner, E1 (P3, D-65); otherwise manual and HID entry. The module

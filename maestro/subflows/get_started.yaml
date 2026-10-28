@@ -1,0 +1,32 @@
+# From a first launch to Now: wait for Welcome (or Now), then Get started. The app has
+# just been launched with its data cleared (launch_fresh.yaml, or a flow's own
+# launchApp with other permissions, as journeys/reminder_primer.yaml's).
+appId: io.github.ndonkohenri.pyconus
+---
+# A first launch unpacks the bundled Python, then shows Welcome (D-287, #504): Get
+# started goes to Now. `id:` is a regular expression, so this waits for either.
+- extendedWaitUntil:
+    visible:
+      id: "welcome\\.start|now\\.title"
+    timeout: 120000
+# Get started is tapped until Now shows, as tests/ui/helpers.py's start_app() does: a
+# tap during Welcome's arrival can be lost (#496).
+- runFlow:
+    when:
+      visible:
+        id: welcome.start
+    commands:
+      - retry:
+          maxRetries: 3
+          commands:
+            - tapOn:
+                id: welcome.start
+                optional: true
+            - extendedWaitUntil:
+                visible:
+                  id: now.title
+                timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: now.title
+    timeout: 30000

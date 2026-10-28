@@ -309,6 +309,8 @@ class MemoryNotifications:
         self.errors: dict[str, Exception] = {}  # method name -> what it raises
         self.failing_ids: set[int] = set()  # schedule() raises for these ids
         self.gate: asyncio.Event | None = None  # schedule() waits on it when given
+        self.grant = True  # what the user answers the OS's prompt
+        self.requests: list[dict[str, bool]] = []  # request_permissions()' arguments
         # are_notifications_enabled() waits on it when given, as E3 waits for its start
         self.initialized: asyncio.Event | None = None
 
@@ -317,6 +319,29 @@ class MemoryNotifications:
         self.calls.append(method)
         if method in self.errors:
             raise self.errors[method]
+
+    async def request_permissions(
+        self,
+        *,
+        alert: bool = True,
+        sound: bool = True,
+        badge: bool = True,
+        critical: bool = False,
+        provisional: bool = False,
+    ) -> bool:
+        """Record the request; the user answers ``grant``, which ``enabled`` becomes."""
+        self._call("request_permissions")
+        self.requests.append(
+            {
+                "alert": alert,
+                "sound": sound,
+                "badge": badge,
+                "critical": critical,
+                "provisional": provisional,
+            }
+        )
+        self.enabled = self.grant
+        return self.grant
 
     async def can_schedule_exact_alarms(self) -> bool:
         """Answer ``exact``."""
