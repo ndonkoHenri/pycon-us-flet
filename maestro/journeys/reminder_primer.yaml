@@ -30,7 +30,7 @@ onFlowComplete:
     clearState: true
     stopApp: true
     permissions:
-      notifications: deny
+      notifications: unset
 - runFlow: ../subflows/get_started.yaml
 - runFlow:
     file: ../subflows/set_scene.yaml
@@ -58,29 +58,28 @@ onFlowComplete:
       id: reminder.primer
     timeout: 10000
 
-# Allow: the OS's prompt follows, which the flow answers.
+# Allow: the OS's prompt follows ("Allow" / "Don't allow" on Android, "Allow" /
+# "Don't Allow" on iOS), which the flow answers as OS_ANSWER says.
 - runFlow:
     when:
       true: ${(PRIMER || 'allow') == 'allow'}
-      platform: Android
     commands:
       - extendedWaitUntil:
           visible:
-            id: com.android.permissioncontroller:id/permission_allow_button
+            text: "Allow"
           timeout: 15000
-      - tapOn:
-          id: ${(OS_ANSWER || 'allow') == 'allow' ? 'com.android.permissioncontroller:id/permission_allow_button' : 'com.android.permissioncontroller:id/permission_deny_button'}
-- runFlow:
-    when:
-      true: ${(PRIMER || 'allow') == 'allow'}
-      platform: iOS
-    commands:
-      - extendedWaitUntil:
-          visible:
-            text: ".*Would Like to Send You Notifications"
-          timeout: 15000
-      - tapOn:
-          text: ${(OS_ANSWER || 'allow') == 'allow' ? 'Allow' : "Don't Allow"}
+      - runFlow:
+          when:
+            true: ${(OS_ANSWER || 'allow') == 'allow'}
+          commands:
+            - tapOn:
+                text: "Allow"
+      - runFlow:
+          when:
+            true: ${(OS_ANSWER || 'allow') != 'allow'}
+          commands:
+            - tapOn:
+                text: "Don.t [Aa]llow"
 
 # The favourite stayed saved: Now shows it as your next session.
 - extendedWaitUntil:
