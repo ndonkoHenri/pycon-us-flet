@@ -109,6 +109,8 @@ class Account:
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
     # The flag refresh in flight, if any: at most one (API-03).
     _refresh: asyncio.Task[None] | None = field(default=None, repr=False)
+    # The flags in memory failed to save: the next answered refresh saves them (D-120).
+    _flags_unsaved: bool = field(default=False, repr=False)
 
     @property
     def owner(self) -> str:
@@ -291,7 +293,8 @@ class Account:
         so the boot gate never waits on the network (DATA-35). One call at a time: a
         call while one is in flight returns that one. An absent flag is False and
         ``is_speaker`` stays as sign-in gave it (STORE-05, AUTH-04). Only a change is
-        assigned and saved to ``pycon.account``, so the store notifies only then. No
+        assigned and saved to ``pycon.account``, so the store notifies only then; a
+        save that failed is tried again by the next answer (D-120). No
         answer keeps the flags as stored; a refused key (``ApiError.is_auth``) sets
         ``expired`` and keeps everything else (D-57). Nothing is written for a
         session closed meanwhile, nor when the account signed out or changed while
@@ -347,19 +350,27 @@ class Account:
             await self._save_flags(flags, storage)
 
     async def _save_flags(self, flags: dict[str, bool], storage: Storage) -> None:
-        """Assign and save the refreshed flags, when any changed."""
-        if all(getattr(self, FLAGS[name]) == on for name, on in flags.items()):
+        """Assign and save the refreshed flags, when any changed or the last save failed."""
+        changed = {
+            FLAGS[name]: on
+            for name, on in flags.items()
+            if getattr(self, FLAGS[name]) != on
+        }
+        if not changed and not self._flags_unsaved:
             return
-        for name, on in flags.items():
-            setattr(self, FLAGS[name], on)
+        for attribute, on in changed.items():
+            setattr(self, attribute, on)
         features = {name: getattr(self, attribute) for name, attribute in FLAGS.items()}
         profile = Profile(self.email, self.nickname, features)
-        if await storage.set(ACCOUNT, profile.stored()):  # a failure is logged
+        # A failure is logged; kept unsaved, the next answer saves it again.
+        self._flags_unsaved = not await storage.set(ACCOUNT, profile.stored())
+        if not self._flags_unsaved:
             logger.info("Role flags refreshed")
 
     def _apply(self, profile: Profile, secrets: Secrets) -> None:
         """Take the account in; ``signed_in`` last, once everything it covers is set."""
         self._secrets = secrets
+        self._flags_unsaved = False
         self.email = profile.email
         self.nickname = profile.nickname
         for name, attribute in FLAGS.items():
@@ -372,6 +383,7 @@ class Account:
         """Forget the account; ``signed_in`` first, so nothing reads a half-cleared one."""
         self.signed_in = False
         self._secrets = (None, None)
+        self._flags_unsaved = False
         self.email = ""
         self.nickname = ""
         for attribute in FLAGS.values():

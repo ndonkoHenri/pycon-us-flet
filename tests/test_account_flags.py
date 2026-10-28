@@ -272,3 +272,40 @@ async def test_a_closed_session_writes_nothing(
     assert task is not None
     await task
     assert store.lead_retrieval and stored_account(shared) == before
+
+
+def saved_features(shared: MemoryPrefs) -> dict[str, bool]:
+    """The flags ``pycon.account`` holds; the account must be saved."""
+    saved = stored_account(shared)
+    assert saved is not None
+    return saved["features"]
+
+
+async def test_a_failed_flag_save_is_saved_by_the_next_answer(
+    state: MockState,
+    held: Held,
+    shared: MemoryPrefs,
+    storage: Storage,
+    credentials: CredentialStorage,
+) -> None:
+    """A revoked role whose save failed is saved by the next refresh, once (D-120).
+
+    The store already matches the server then, so nothing notifies again, and a
+    restore offline no longer brings the role back.
+    """
+    store, api = await signed_in(held, storage, credentials)
+    account(state, "all").features["mask_violation"] = False
+    shared.fail_writes = True
+    await refreshed(store, api, held, storage)
+    assert not store.mask_violation and saved_features(shared) == EVERY_FLAG
+    shared.fail_writes = False
+    seen = changes(store)
+    await refreshed(store, api, held, storage)
+    assert seen.fields == []
+    assert saved_features(shared) == {**EVERY_FLAG, "mask_violation": False}
+    restored = Account()
+    await restored.restore(storage, credentials)
+    assert restored.signed_in and not restored.mask_violation
+    shared.values.clear()  # saved now: a further answer writes nothing
+    await refreshed(store, api, held, storage)
+    assert shared.values == {}
