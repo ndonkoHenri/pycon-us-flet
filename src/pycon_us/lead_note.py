@@ -2,9 +2,10 @@
 
 LEAD-10, LEAD-11. The note sheet (``ui/lead_note_sheet.py``) prefills from
 ``saved_note()``: the account's note row for the lead, pending, failed or synced, its
-text parsed (``core/lead_notes.parse``). Its Save calls ``store()``, which enqueues the
-composed text as the lead's one ``note`` row (``core/outbox.save_note``: a blank note
-is ignored, an edit is sent again, the row keeps its lead's sponsor), then
+text parsed (``core/lead_notes.parse``), or None when the outbox can't be read (the
+sheet then stays closed). Its Save calls ``store()``, which enqueues the composed text
+as the lead's one ``note`` row (``core/outbox.save_note``: a blank note is ignored,
+an edit is sent again, the row keeps its lead's sponsor), then
 ``confirm()``, which kicks the worker and says how it went: "Note saved" once the note
 has synced, "Note saved. Will sync." while it is queued. A note waits for its lead
 (D-56), so a note on a lead still queued is said at once, without a wait; otherwise
@@ -31,17 +32,25 @@ NOTHING_TO_SAVE = "Nothing to save"
 NOT_SAVED = "Couldn't save this note on this device."
 """The sheet's line when the outbox can't store the note (D-120); the sheet stays."""
 
+NOT_LOADED = "Couldn't open this lead's note on this device."
+"""The SnackBar when the outbox can't read the saved note: the sheet stays closed, and
+the next Add note or Open lead tries again (D-120)."""
 
-def lead_rows(db: OutboxDb | None, owner: str, code: str) -> list[Row]:
+
+def lead_rows(db: OutboxDb | None, owner: str, code: str) -> list[Row] | None:
     """Return the account's rows for one lead (its lead and note rows), oldest first.
 
     Args:
-        db: The outbox; None, or a failed read (logged), gives no rows.
+        db: The outbox.
         owner: The signed-in account's lower-cased email.
         code: The lead's access code.
+
+    Returns:
+        The rows, or None when there is no outbox or its read failed (logged): not
+        the same as a lead without rows.
     """
     rows = None if db is None else db.rows(owner, tuple(Status))
-    return [row for row in rows or () if row.key == code]
+    return None if rows is None else [row for row in rows if row.key == code]
 
 
 def find(rows: list[Row], kind: Kind) -> Row | None:
@@ -49,15 +58,22 @@ def find(rows: list[Row], kind: Kind) -> Row | None:
     return next((row for row in rows if row.kind is kind), None)
 
 
-def saved_note(db: OutboxDb | None, owner: str, code: str) -> LeadNote:
+def saved_note(db: OutboxDb | None, owner: str, code: str) -> LeadNote | None:
     """Return the note saved for a lead, parsed; an empty one when there is none.
 
     Args:
         db: The outbox.
         owner: The signed-in account's lower-cased email.
         code: The lead's access code.
+
+    Returns:
+        The note, or None when the outbox can't be read: the sheet then stays
+        closed, as a blank prefill saved over the note would lose it.
     """
-    row = find(lead_rows(db, owner, code), Kind.NOTE)
+    rows = lead_rows(db, owner, code)
+    if rows is None:
+        return None
+    row = find(rows, Kind.NOTE)
     text = None if row is None else row.payload.get("note")
     return parse(text) if isinstance(text, str) else LeadNote()
 
@@ -116,7 +132,7 @@ async def confirm(
         offline, or the wait ran out.
     """
     staff.update_counts(db.counts(row.owner))
-    lead = find(lead_rows(db, row.owner, row.key), Kind.LEAD)
+    lead = find(lead_rows(db, row.owner, row.key) or [], Kind.LEAD)
     if lead is None or lead.status is not Status.SYNCED:
         kick()  # the lead's own send may be due; the note follows it (D-56)
         return WILL_SYNC

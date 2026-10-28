@@ -194,10 +194,10 @@ async def test_a_note_the_outbox_can_t_store_says_so(rig: Rig) -> None:
     assert store(None, ADA.code, WARM, owner=owner, sponsor=None) is None
     rig.db.close()
     assert store(rig.db, ADA.code, WARM, owner=owner, sponsor=None) is None
-    assert saved_note(rig.db, owner, ADA.code) == LeadNote()
+    assert saved_note(rig.db, owner, ADA.code) is None  # unreadable, not empty
 
 
 def test_without_a_saved_note_the_sheet_starts_empty(db: OutboxDb) -> None:
-    """No row for the lead (or no outbox): an empty note."""
+    """No row for the lead: an empty note; no outbox to read: None, not empty."""
     assert saved_note(db, "a@example.com", "MOCK0001") == LeadNote()
-    assert lead_note.saved_note(None, "a@example.com", "MOCK0001") == LeadNote()
+    assert lead_note.saved_note(None, "a@example.com", "MOCK0001") is None

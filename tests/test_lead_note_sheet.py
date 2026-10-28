@@ -16,7 +16,7 @@ from flet.utils.object_model import patch_dataclass
 from pycon_us import lead_capture
 from pycon_us.core import outbox
 from pycon_us.core.lead_notes import Interest, LeadNote, compose
-from pycon_us.lead_note import NOTHING_TO_SAVE, WILL_SYNC
+from pycon_us.lead_note import NOT_LOADED, NOTHING_TO_SAVE, WILL_SYNC
 from pycon_us.screens.staff_lead import NOTE_OPEN
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.ui import scan_screen
@@ -267,6 +267,77 @@ async def test_a_note_the_outbox_can_t_store_keeps_the_sheet_and_says_so(
     assert in_sheet(shown, "lead.note.text").value == "Call back"
     problem = shown_problem(shown)
     assert problem == "Couldn't save this note on this device."
+
+
+async def burst(shown: Shown, control: ft.BaseControl, name: str, data: Any) -> None:
+    """Dispatch an event and let no render run after it: the next one comes at once."""
+    await shown.session.dispatch_event(control._i, name, data)
+
+
+async def test_an_interest_chosen_just_before_save_is_saved(
+    show: Show, db: OutboxDb
+) -> None:
+    """Warm then Save with no render between: the note keeps Warm and the text."""
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    await scan(shown)
+    await tap(shown, "lead.add_note")
+    await type_note(shown, "Call back")
+    (button,) = [
+        c for c in descendants(sheet(shown)) if isinstance(c, ft.SegmentedButton)
+    ]
+    reported(button, selected=["warm"])
+    await burst(shown, button, "change", ["warm"])
+    await burst(shown, in_sheet(shown, "lead.note.save"), "click", None)
+    await shown.settle()
+    (row,) = note_rows(db)
+    assert row.payload["note"] == "Interest: warm\nNotes: Call back"
+
+
+async def test_a_follow_up_chosen_just_before_save_is_saved(
+    show: Show, db: OutboxDb
+) -> None:
+    """Demo then Save with no render between: the note is Demo, not "Nothing to save"."""
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    await scan(shown)
+    await tap(shown, "lead.add_note")
+    chip = in_sheet(shown, "lead.note.follow_up.demo")
+    reported(chip, selected=True)
+    await burst(shown, chip, "select", True)
+    await burst(shown, in_sheet(shown, "lead.note.save"), "click", None)
+    await shown.settle()
+    (row,) = note_rows(db)
+    assert row.payload["note"] == "Follow-up: Demo"
+    assert snack(shown) == WILL_SYNC
+
+
+async def test_a_note_that_can_t_be_read_keeps_the_sheet_closed(
+    show: Show, db: OutboxDb, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed read: no blank sheet to save over the note; the next opening retries."""
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    await scan(shown)
+    await tap(shown, "lead.add_note")
+    await type_note(shown, "Keep these notes")
+    await shown.click(in_sheet(shown, "lead.note.save"))
+    read = db.rows
+    failing = [True]
+
+    def rows(*args: Any) -> list[outbox.Row] | None:
+        """Fail the first read after the save, as a database error does (logged)."""
+        if failing.pop() if failing else False:
+            return None
+        return read(*args)
+
+    monkeypatch.setattr(db, "rows", rows)
+    await tap(shown, "lead.add_note")
+    assert sheet(shown) is None
+    assert snack(shown) == NOT_LOADED
+    await tap(shown, "lead.add_note")
+    assert in_sheet(shown, "lead.note.text").value == "Keep these notes"
+    await choose_interest(shown, "hot")
+    await shown.click(in_sheet(shown, "lead.note.save"))
+    (row,) = note_rows(db)
+    assert row.payload["note"] == "Interest: hot\nNotes: Keep these notes"
 
 
 def shown_problem(shown: Shown) -> str:

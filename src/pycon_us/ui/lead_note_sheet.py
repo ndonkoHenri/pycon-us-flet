@@ -17,7 +17,9 @@ so Save stays in reach at 200 % text:
 draft, prefills it from the lead's saved note (``lead_note.saved_note()``), shows the
 sheet through ``ft.use_dialog`` and saves through ``lead_note.store()`` and
 ``confirm()``. Save closes the sheet and says "Note saved", "Note saved. Will sync."
-or "Nothing to save" in a SnackBar, unless the screen has gone meanwhile.
+or "Nothing to save" in a SnackBar, unless the screen has gone meanwhile. When the
+saved note can't be read, the sheet stays closed and a SnackBar says so: a blank
+prefill would save over it.
 """
 
 from collections.abc import Callable
@@ -295,7 +297,10 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
     staff = use_staff()
     prefs = use_prefs()
     tokens = use_tokens()
-    editing, set_editing = ft.use_state(not_editing)
+    editing, set_state = ft.use_state(not_editing)
+    # The draft as the handlers left it: a render may not have run between two
+    # events (use_state only schedules one), so Save reads this, not `editing`.
+    latest = ft.use_ref(editing)
     is_open = editing is not None
     field = ft.use_memo(ft.Ref[ft.TextField], [is_open])  # a fresh one each opening
     mounted = ft.use_ref(True)  # cleared on unmount: a late SnackBar is then dropped
@@ -307,9 +312,17 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
 
     ft.use_effect(lambda: None, [], cleanup=unmount)
 
+    def set_editing(value: Editing | None) -> None:
+        """Keep ``latest`` and the state together, so the next event sees it at once."""
+        latest.current = value
+        set_state(value)
+
     @report_errors
     def open_for(code: str, name: str | None) -> None:
         draft = lead_note.saved_note(svc.outbox, owner, code)
+        if draft is None:  # logged; a blank prefill would save over the note
+            page.show_dialog(snack_bar(lead_note.NOT_LOADED))
+            return
         set_editing(Editing(code, name, draft))
 
     @report_errors
@@ -320,23 +333,25 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
     def interest(e: ft.Event[ft.SegmentedButton]) -> None:
         chosen = e.control.selected
         value = Interest(chosen[0]) if chosen else None
-        set_editing(lambda last: redraft(last, interest=value))
+        set_editing(redraft(latest.current, interest=value))
 
     @report_errors
     def follow_up(label: str, selected: bool) -> None:
-        set_editing(lambda last: toggled(last, label, selected))
+        set_editing(toggled(latest.current, label, selected))
 
     @report_errors
     async def save() -> None:
-        if editing is None:
+        current = latest.current
+        if current is None:
             return
-        typed = field.current.value if field.current is not None else None
-        draft = replace(editing.draft, text=typed or "")
+        shown = field.current  # None before the sheet's first render: the prefill
+        typed = current.draft.text if shown is None else shown.value or ""
+        draft = replace(current.draft, text=typed)
         stored = lead_note.store(
-            svc.outbox, editing.code, draft, owner=owner, sponsor=sponsor
+            svc.outbox, current.code, draft, owner=owner, sponsor=sponsor
         )
         if stored is None or svc.outbox is None:  # logged (D-120); the text stays
-            set_editing(replace(editing, problem=lead_note.NOT_SAVED))
+            set_editing(replace(current, problem=lead_note.NOT_SAVED))
             return
         set_editing(None)  # scanning resumes while the note syncs
         words = lead_note.NOTHING_TO_SAVE
@@ -345,9 +360,7 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
                 svc.outbox, staff, svc.kick_sync, stored.row
             )
         if mounted.current and is_top_view(page.route, view_path):
-            page.show_dialog(
-                ft.SnackBar(ft.Text(words), behavior=ft.SnackBarBehavior.FLOATING)
-            )
+            page.show_dialog(snack_bar(words))
 
     text = ""  # the prefill on an opening's first render, then what Flutter reported
     if editing is not None:
@@ -366,6 +379,11 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
         else None
     )
     return NoteSheet(open_for, is_open)
+
+
+def snack_bar(words: str) -> ft.SnackBar:
+    """Return the floating SnackBar that says ``words``."""
+    return ft.SnackBar(ft.Text(words), behavior=ft.SnackBarBehavior.FLOATING)
 
 
 def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:
