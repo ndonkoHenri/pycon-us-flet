@@ -157,9 +157,16 @@ def keystore() -> MemoryKeystore:
 
 
 async def start(
-    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+    state: MockState,
+    shared: MemoryPrefs,
+    keystore: MemoryKeystore,
+    tmp_path: Path,
+    delay: float = 0.05,
 ) -> Rig:
-    """Start a session as ``bootstrap()`` does: load and restore, then run the sync."""
+    """Start a session as ``bootstrap()`` does: load and restore, then run the sync.
+
+    ``delay`` is the debounce: the tests' short one unless a test needs it long.
+    """
     storage = Storage(prefs=shared, directory=tmp_path, year=2026)
     credentials = CredentialStorage(secure=keystore)
     store = Account()
@@ -172,7 +179,7 @@ async def start(
     )
     private_api = PrivateApi()
     private_api.client = api
-    sync = FavoritesSync(delay=0.05)
+    sync = FavoritesSync(delay=delay)
     closed = asyncio.Event()
     rig = Rig(
         state,
@@ -441,3 +448,59 @@ async def test_a_removal_during_the_first_patch_is_not_merged_back(rig: Rig) -> 
     await settled(rig)
     assert rig.favorites.ids == {"1", "poster-detail-7"} == rig.server()
     assert rig.transport.methods() == ["GET", "PATCH", "PATCH"]
+
+
+# ------------------------------------------------------------------ flush (D-411)
+
+
+def private_api_of(rig: Rig) -> PrivateApi:
+    """A ``PrivateApi`` holding the rig's client, as ``Services.private_api`` does."""
+    private_api = PrivateApi()
+    private_api.client = rig.api
+    return private_api
+
+
+async def flush(rig: Rig) -> bool:
+    """Ask the rig's sync to send what waits now, as the Account page's Sign out does."""
+    return await rig.sync.flush(
+        private_api_of(rig), rig.storage, rig.favorites, rig.account, rig.closed
+    )
+
+
+async def test_flush_sends_a_waiting_edit_before_its_debounce(
+    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """A sign-out does not wait for the debounce: the edit reaches the account now."""
+    rig = await start(state, shared, keystore, tmp_path, delay=60)
+    try:
+        await synced(rig)
+        await rig.favorites.toggle(rig.storage, "x")
+        assert rig.account.favorites_dirty
+        assert await flush(rig)
+        assert "x" in rig.server() and not rig.account.favorites_dirty
+        assert rig.saved_state() == "clean"
+    finally:
+        rig.stop()
+
+
+async def test_flush_with_nothing_waiting_sends_nothing(rig: Rig) -> None:
+    """Synced, a sign-out's try is a no-op that says the account is up to date."""
+    await synced(rig)
+    assert await flush(rig)
+    assert rig.transport.sent == []
+
+
+async def test_a_flush_that_gets_no_answer_says_so_and_keeps_the_edit(
+    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """No answer: False, so the dialog says it; the edit stays dirty, saved."""
+    rig = await start(state, shared, keystore, tmp_path, delay=60)
+    try:
+        await synced(rig)
+        rig.state.faults.inject("connect", until_cleared=True)
+        await rig.favorites.toggle(rig.storage, "x")
+        assert not await flush(rig)
+        assert rig.account.favorites_dirty and rig.saved_state() == "dirty"
+        assert "x" in rig.favorites.ids
+    finally:
+        rig.stop()

@@ -82,6 +82,20 @@ def test_the_sprint_pages_are_year_data_and_optional() -> None:
     assert load_year(2025).conference.sprint_submit_url == ""
 
 
+def test_the_speaker_discord_page_is_year_data_and_optional() -> None:
+    """2026 names the public page Ionic opened for speakers; 2025 loads without it.
+
+    AUTH-10, D-411: a web page in the in-app browser, never an /api/v1 call (D-51).
+    """
+    conference = load_year(2026).conference
+    assert (
+        conference.speaker_discord_url
+        == "https://us.pycon.org/2026/speaker/join_discord/"
+    )
+    assert "/api/" not in conference.speaker_discord_url
+    assert load_year(2025).conference.speaker_discord_url == ""
+
+
 def test_the_sprints_follow_the_last_talk_day() -> None:
     """EVT-05: the feed has no sessions for them; the year's dates say when they are."""
     conference = load_year(2026).conference

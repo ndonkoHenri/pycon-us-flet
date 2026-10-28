@@ -118,6 +118,12 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
+            'speaker_discord_url = "https://',
+            'speaker_discord_url = "http://',
+            "2026/conference.toml: speaker_discord_url: expected an https:// URL with a host",
+        ),
+        (
+            "conference.toml",
             'key = "Keynote"',
             'key = "Talk"',
             "2026/conference.toml: tracks[1].key: duplicate track 'Talk'",

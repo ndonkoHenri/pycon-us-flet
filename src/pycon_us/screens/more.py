@@ -10,8 +10,7 @@ page (#395), Job listings with theirs (#399) and Expo hall, in a year with booth
 Help & safety (D-281), Venue & hours first (D-313), and **About** with About PyCon US (#414), About the PSF (D-283) and Social media
 (D-284); their other rows join with their P2 pages. The profile row comes first while
 a mock API URL is set (D-51, SHELL-12): "Sign in" signed out, else the account's
-avatar, nickname and email, not tappable until the Account page (#688) exists, so it
-is never dead, and "Sign in again" once the server refused the key (#686); it appears, disappears and changes live with ``Prefs`` and the
+avatar, nickname and email, which opens the Account page (#688), and "Sign in again" once the server refused the key (#686); it appears, disappears and changes live with ``Prefs`` and the
 ``Account`` store. Staff tools join under it with P3's tools (D-16).
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
 ``/more/plan/expo``, a pushed View like any page.
@@ -29,7 +28,6 @@ from pycon_us.services import use_services
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import AVATAR_RADIUS, LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
-from pycon_us.ui.semantics import named
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_map import EXPO_PLAN
 
@@ -94,6 +92,8 @@ SIGN_IN_AGAIN = MoreEntry(
     "Sign in again", "/more/sign-in", ft.Icons.ACCOUNT_CIRCLE_OUTLINED, "sign_in_again"
 )
 """The profile row once the server refused the account's key (D-57, #686)."""
+ACCOUNT = MoreEntry("Account", "/more/account", ft.Icons.ACCOUNT_CIRCLE_OUTLINED)
+"""The profile row signed in, which shows who rather than this title (#688)."""
 
 DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
@@ -166,10 +166,9 @@ def profile_row(account: Account) -> ft.Control:
     "Sign in again", above the account's email, once the server refused its key
     (``Account.expired``): it opens Sign in with the email filled in.
 
-    Signed in, one node read as the nickname and the email, with the identifier
-    ``more.account``; not a button until the Account page exists (#688), so it is
-    never a dead one (SHELL-09). The avatar's letters stay out of it, as a speaker
-    row's do.
+    Signed in, a row to the Account page (#688), one node read as the nickname and
+    the email, with the identifier ``more.account``. The avatar's letters stay out of
+    it, as a speaker row's do.
 
     Args:
         account: The session's ``Account`` store.
@@ -184,22 +183,34 @@ def profile_row(account: Account) -> ft.Control:
             subtitle=account.email,
             identifier=SIGN_IN_AGAIN.identifier,
         )
-    return named(
-        "more.account",
-        ft.ListTile(
-            # Excluded: the name says who it is; the letters would be read first.
-            leading=ft.Semantics(
-                exclude_semantics=True,
-                content=ft.CircleAvatar(
-                    content=ft.Text(account_initials(account.nickname, account.email)),
-                    bgcolor=ft.Colors.PRIMARY_CONTAINER,
-                    color=ft.Colors.ON_PRIMARY_CONTAINER,
-                    radius=AVATAR_RADIUS,
-                ),
-            ),
-            title=ft.Text(account.nickname or account.email),
-            subtitle=ft.Text(account.email) if account.nickname else None,
+    return LinkTile(
+        account.nickname or account.email,
+        ACCOUNT.location,
+        # Excluded: the name says who it is; the letters would be read first.
+        icon=ft.Semantics(
+            exclude_semantics=True,
+            content=account_avatar(account.nickname, account.email),
         ),
+        subtitle=account.email if account.nickname else None,
+        identifier=ACCOUNT.identifier,
+    )
+
+
+def account_avatar(
+    nickname: str, email: str, *, radius: int = AVATAR_RADIUS
+) -> ft.CircleAvatar:
+    """Return an account's initials avatar in ``primary_container``, as a speaker's.
+
+    Args:
+        nickname: The account's nickname, maybe empty.
+        email: The account's email.
+        radius: The circle's radius in dp: a row's 24, or the Account page's larger.
+    """
+    return ft.CircleAvatar(
+        content=ft.Text(account_initials(nickname, email)),
+        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+        color=ft.Colors.ON_PRIMARY_CONTAINER,
+        radius=radius,
     )
 
 
