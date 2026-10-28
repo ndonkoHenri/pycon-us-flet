@@ -136,11 +136,19 @@ def result_panel(
     )
 
 
-def spoken(result: ScanResult | None) -> str:
-    """Return the panel's words in reading order, for the live region that holds it."""
+def spoken(result: ScanResult | None, serial: int = 0) -> str:
+    """Return the panel's words in reading order, for the live region that holds it.
+
+    A result ends with its count, "Scan 2": a live region is said only when its
+    label changes, so the same result twice in a row is said twice.
+
+    Args:
+        result: The result on the panel, or None before the first scan.
+        serial: The result's count on this screen.
+    """
     if result is None:
         return f"{READY}\n{READY_BODY}"
-    return result.spoken
+    return f"{result.spoken}\nScan {serial}"
 
 
 def age_line(seconds: float) -> ft.Control:

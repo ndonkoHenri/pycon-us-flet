@@ -201,17 +201,18 @@ def ResultPanel(*, shown: Shown | None) -> ft.Control:
     ft.use_effect(tick, [at])
     age = max(now - at, 0) if at is not None else 0
     result = shown.result if shown is not None else None
+    serial = shown.serial if shown is not None else 0
     panel: list[ft.Control] = [
         ft.Semantics(
             identifier="scan.result",
             container=True,
             live_region=True,
-            label=spoken(result),
+            label=spoken(result, serial),
             exclude_semantics=True,  # the card's texts are its label, once
             content=ft.AnimatedSwitcher(
                 result_panel(
                     result,
-                    key=str(shown.serial if shown is not None else 0),
+                    key=str(serial),
                     tokens=tokens,
                     dimmed=age >= DIM_AFTER,
                 ),

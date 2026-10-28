@@ -171,7 +171,7 @@ async def test_a_badge_shows_its_result_and_leaves_the_field_empty_and_focused(
     shown = await show()
     await enter(shown, "MOCK0001:v4l1d01\n")
     assert rig.badges == [Badge("MOCK0001", "v4l1d01", "v4l1d01")]
-    assert panel(shown) == "Checked in\nAda Lovelace"
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
     assert entry(shown).value == ""
     assert rig.focused == 1
     assert f"Read {seconds_ago(0)}" in shown.texts()
@@ -187,12 +187,27 @@ async def test_the_same_code_within_the_cooldown_changes_nothing(
     rig.now += 3.9
     await enter(shown, "MOCK0001:v1")
     assert len(rig.badges) == 1
-    assert panel(shown) == "Checked in\nAda Lovelace"
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
     assert entry(shown).value == ""
     rig.now += 0.2
     await enter(shown, "MOCK0001:v1")
     assert len(rig.badges) == 2
-    assert panel(shown) == "Already checked in"
+    assert panel(shown) == "Already checked in\nScan 2"
+
+
+async def test_the_same_result_again_changes_what_the_live_region_says(
+    show: Show, rig: Rig
+) -> None:
+    """An equal result is said again: its count changes the live region's label."""
+    shown = await show()
+    await enter(shown, "MOCK0001:v1")
+    first = panel(shown)
+    rig.now += 4.1  # past the cooldown; the handler answers the same
+    await enter(shown, "MOCK0001:v1")
+    assert len(rig.badges) == 2
+    assert first == "Checked in\nAda Lovelace\nScan 1"
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 2"
+    assert "Read" not in panel(shown)  # the ticking age stays outside it
 
 
 async def test_a_different_code_shows_at_once(show: Show, rig: Rig) -> None:
@@ -202,7 +217,7 @@ async def test_a_different_code_shows_at_once(show: Show, rig: Rig) -> None:
     rig.result = ScanResult(ScanOutcome.ACCEPTED, "Checked in", "Grace Hopper")
     await enter(shown, "MOCK0002:v2")
     assert [b.code for b in rig.badges] == ["MOCK0001", "MOCK0002"]
-    assert panel(shown) == "Checked in\nGrace Hopper"
+    assert panel(shown) == "Checked in\nGrace Hopper\nScan 2"
 
 
 async def test_junk_says_not_a_badge_code_and_keeps_the_text(
@@ -212,7 +227,7 @@ async def test_junk_says_not_a_badge_code_and_keeps_the_text(
     shown = await show()
     await enter(shown, "MOCK0001")
     assert rig.badges == []
-    assert panel(shown) == NOT_A_BADGE.spoken
+    assert panel(shown) == f"{NOT_A_BADGE.spoken}\nScan 1"
     assert entry(shown).value == "MOCK0001"
     assert rig.focused == 1  # Enter took the focus; it is back for the correction
 
@@ -230,7 +245,7 @@ async def test_a_submit_while_the_handler_runs_is_dropped(show: Show, rig: Rig) 
     assert entry(shown).value == "MOCK0002:v2"
     rig.gate.set()
     await first
-    assert panel(shown) == "Checked in\nAda Lovelace"
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
 
 
 async def test_a_paused_screen_drops_a_submit(show: Show, rig: Rig) -> None:
@@ -268,7 +283,7 @@ async def test_a_result_dims_after_five_seconds_and_says_its_age(
     expected = fill_of(ScanOutcome.ACCEPTED, high_contrast=False, dimmed=dimmed)
     assert card.bgcolor == expected[1]
     assert (card.bgcolor == ft.Colors.SURFACE_CONTAINER_HIGHEST) is dimmed
-    assert panel(shown) == "Checked in\nAda Lovelace"
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
     assert f"Read {age} seconds ago" in shown.texts()
 
 
