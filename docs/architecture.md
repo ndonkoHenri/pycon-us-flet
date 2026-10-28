@@ -1385,7 +1385,18 @@ def plan(data: ConferenceData, favorites: Iterable[str], settings: ReminderSetti
     return sorted(reminders, key=lambda r: (r.at, r.id))[:MAX_PENDING]
 ```
 
-`apply(plan)` cancels every pending reminder (never the shown ones) and schedules the plan, exact on Android when the user allows it and inexact otherwise (D-221, D-222); it is idempotent and re-runs when favourites, settings or the feed change, and at every start and resume. Its scheduling calls (E3: `flet_notifications.Notifications.schedule()`, in the build since #446) live only here; without E3, as in the companion app, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids (8000–8049 the hand-written sign-ups, 8050–8099 the keynotes' moments, derived from the feed at each plan so a moved keynote moves its moment, D-274). Each moment opens its own page: a sign-up its page (`/more/lightning-talks`), a keynote its session (`/schedule/session/<id>`). Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
+`Scheduler.apply(plan, *, exact)` calls `cancel_all_pending()` (never `cancel_all()`, which clears the shown ones too) and then `Notifications.schedule(id, when=at, title, body, payload=route, schedule_mode=...)` for each reminder, `EXACT_ALLOW_WHILE_IDLE` when Android allows exact alarms and `INEXACT_ALLOW_WHILE_IDLE` otherwise (D-221, D-222, D-389). It is idempotent, logs its failures and never raises them (an exact alarm refused is scheduled inexact; D-120). The extension (`flet_notifications`, in the build since #446) is imported only here: `start(permissions)` builds the session's `Scheduler` in `Services.create()` (`Services.reminders`), or returns `None` without E3, as in the companion app, where the interim applies.
+
+```python
+# src/pycon_us/reminder_schedule.py (excerpt)
+def use_reminder_schedule(svc, conference, favorites, change_log, prefs) -> None:
+    """App's hook: apply at start, then at each watched change, until the session closes."""
+    ...  # subscribes to the four stores: WATCHED = {"version", "ids", "reminders", "batches"}
+    scheduler.request()                  # the start's apply, once prefs.loaded
+    await scheduler.keep_applied(planned, svc.closed)   # one apply at a time; the newest wins
+```
+
+`on_resume()` calls `svc.reminders.request()` too, which brings back what a force-stop or the OS cleared. `keep_applied()` re-reads `can_schedule_exact_alarms()` before each apply (on Android it warns when `flet_permission_handler`'s `SCHEDULE_EXACT_ALARM` disagrees, D-220) and plans at `clock.real_now()`, never the fake clock: the OS fires at real instants (D-389). `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids (8000–8049 the hand-written sign-ups, 8050–8099 the keynotes' moments, derived from the feed at each plan so a moved keynote moves its moment, D-274). Each moment opens its own page: a sign-up its page (`/more/lightning-talks`), a keynote its session (`/schedule/session/<id>`). Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
 
 ### 14.2 Interim while the app is open
 

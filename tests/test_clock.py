@@ -64,6 +64,15 @@ def test_test_override_wins_over_the_fake_clock() -> None:
     assert clock.now().date() == date(2026, 5, 15)  # the fake clock again
 
 
+def test_real_now_skips_the_fake_clock_but_not_a_test_override() -> None:
+    """``real_now()``, the reminders' time, stays real under the fake clock (D-389)."""
+    clock.start_fake_clock(datetime(2026, 5, 15, 16, 0, tzinfo=UTC))
+    assert abs(clock.real_now() - datetime.now(UTC)) < timedelta(seconds=5)
+    frozen = datetime(2026, 5, 16, 9, 0, tzinfo=UTC)
+    clock.set_test_now(frozen)
+    assert clock.real_now() == frozen
+
+
 def test_clearing_the_fake_clock_returns_to_real_time() -> None:
     """Clearing the fake clock brings ``now()`` back to within seconds of real time."""
     clock.start_fake_clock(datetime(2030, 1, 1, tzinfo=UTC))

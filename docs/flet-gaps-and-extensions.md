@@ -296,7 +296,7 @@ class LocalNotifications(ft.Service):
         await self._invoke_method("cancel_all_pending")
 ```
 
-`zoned_schedule` with `EXACT_ALLOW_WHILE_IDLE` while Android denies exact alarms raises the plugin's `exact_alarms_not_permitted` (S6); the caller checks `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` first (D-221).
+`zoned_schedule` with `EXACT_ALLOW_WHILE_IDLE` while Android denies exact alarms raises the plugin's `exact_alarms_not_permitted` (S6). At the pin, `schedule()` raises `NotificationPermissionException` for it; `apply()` reads `can_schedule_exact_alarms()` before each apply and checks that `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` agrees (D-221, D-389).
 
 **Semantics.**
 - **Time.** A one-shot reminder needs only an instant: Dart parses the ISO string and schedules `tz.TZDateTime.from(instant, tz.UTC)`, with no device time-zone lookup. DST is resolved in Python, where `at` is built in the conference zone (D-43). Repeating schedules, which would need an IANA zone, are out of scope.
@@ -305,71 +305,36 @@ class LocalNotifications(ft.Service):
 - **Exact when allowed** (D-221, amends D-59's inexact default). Android 14 gives an inexact alarm a window of 75 % of the time left and delivers it anywhere in it, at its end when nothing else wakes the device (S6: +90 s on 2 min, +180 s on 4 min, +80 s on 10 min, +370 s on 30 min). Outside forced Doze, exact alarms fired within seconds (+0.3 s to +5.4 s over three runs); in forced deep Doze an exact one came +59.3 s late (inexact: +90.1 s), so exact is sooner, not guaranteed on time. Android 14 denies exact alarms to new installs, so the app declares `SCHEDULE_EXACT_ALARM`, asks in context through `flet_permission_handler.Permission.SCHEDULE_EXACT_ALARM` (exists), and falls back to inexact with honest copy.
 - **Limit.** iOS keeps 64 pending requests and, on the simulator, dropped the **soonest** six of 70 (the first added), so `plan()` returns at most the next 60, soonest first (D-222). Android kept all 70.
 
-**App side** (`services/reminders.py`; `plan()` is pure and tested without Flet):
+**App side** (`services/reminders.py`, #447, D-389; `plan()` is pure and tested without Flet). The landed API differs from the sketch above: `schedule(id, *, when, title, body, payload, schedule_mode)` stands for `zoned_schedule`, `schedule_mode` (`AndroidScheduleMode.EXACT_ALLOW_WHILE_IDLE` or `INEXACT_ALLOW_WHILE_IDLE`) for the `exact` flag, and the exact-alarm state is the extension's own `can_schedule_exact_alarms()`; `cancel_all_pending()` and `get_pending()` kept their names.
 
 ```python
-"""Local reminders: schedule the plan with E3, or keep the interim (D-58..D-60)."""
-
-from dataclasses import dataclass
-from datetime import datetime
-
-from pycon_us import capabilities
-
-MAX_PENDING = 60  # iOS keeps 64 pending requests and drops the soonest beyond (D-222)
-
-_service = None  # the E3 service once start() built it; None means the interim (D-60)
-
-
-@dataclass(frozen=True)
-class Reminder:
-    """One planned notification."""
-
-    id: int
-    at: datetime  # aware, in the conference zone
-    title: str
-    body: str
-    route: str  # deep-link path opened on tap
-
-
-def start() -> bool:
-    """Build the E3 service when this build has it.
-
-    App calls this once, inside its page context. Only this module imports the
-    extension (§2.1). Returns False when the interim is all there is.
-    """
-    global _service
+# src/pycon_us/services/reminders.py (excerpt)
+def start(permissions: PermissionHandler | None) -> Scheduler | None:
+    """The session's Scheduler when the build has E3, else None: the interim (D-63)."""
     if not capabilities.REMINDERS:
-        _service = None
-        return False
-    import flet_notifications as fln
+        return None
+    from flet_notifications import Notifications
 
-    _service = fln.Notifications()
-    return True
+    return Scheduler(Notifications(), permissions, android=page.platform == ANDROID)
 
 
-async def apply(plan: list[Reminder], *, exact: bool) -> None:
-    """Cancel every pending reminder, then schedule the plan ("cancel all, reschedule").
+class Scheduler:
+    def request(self) -> None: ...      # a newer request supersedes an apply in flight
+    async def keep_applied(self, planner, closed) -> None: ...  # App's effect: one at a time
+    async def exact_allowed(self) -> bool: ...  # the plugin's; warns if the permission disagrees
 
-    `plan` is already capped at MAX_PENDING (D-222); `exact` is whether Android
-    allows exact alarms (D-221), and is ignored on iOS.
-    """
-    if _service is None:
-        return
-    import flet_notifications as fln
-
-    mode = (
-        fln.AndroidScheduleMode.EXACT_ALLOW_WHILE_IDLE
-        if exact
-        else fln.AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE
-    )
-    await _service.cancel_all_pending()  # never the shown ones (D-222)
-    for r in plan:
-        await _service.schedule(
-            r.id, when=r.at, title=r.title, body=r.body, payload=r.route, schedule_mode=mode
-        )
+    async def apply(self, plan: Sequence[Reminder], *, exact: bool) -> bool:
+        await self.notifications.cancel_all_pending()  # never the shown ones (D-222)
+        for r in plan:
+            if self._wanted.is_set():
+                return False  # superseded: the loop applies the newer plan
+            await self.notifications.schedule(
+                r.id, when=r.at, title=r.title, body=r.body, payload=r.route,
+                schedule_mode=EXACT_ALLOW_WHILE_IDLE if exact else INEXACT_ALLOW_WHILE_IDLE,
+            )  # each failure logged, never raised; an exact one refused goes inexact
 ```
 
-`apply(plan)` (D-59, D-222) re-runs whenever favourites, reminder settings or the feed change, so a moved session moves its reminder (S6: the same id rescheduled fired once, at the new time), and at every start and resume, which brings back alarms a force-stop cleared. App calls `reminders.start()` and `reminders.apply()` and never imports the extension.
+`Services.create()` calls `start()` (`Services.reminders`); `reminder_schedule.use_reminder_schedule()`, `App`'s hook, asks for an apply once the start has loaded and at each change of the favourites, the reminder settings, the feed or the change log, and `on_resume()` asks too, which brings back alarms a force-stop cleared (D-222; S6: the same id rescheduled fired once, at the new time). The plan is made at `clock.real_now()`, never the fake clock. App code never imports the extension elsewhere.
 
 **Platform setup.**
 
@@ -388,7 +353,7 @@ async def apply(plan: list[Reminder], *, exact: bool) -> None:
 
 **Tests.**
 - **Extension:** `zoned_schedule` at now + 70 s appears in `get_pending`, and `cancel` removes it; a naive `at` raises `ValueError`; the instant is exact across the 2027-03-14 US DST change; scheduling works on an API 34 emulator with exact alarms denied; exact scheduling with them denied raises `exact_alarms_not_permitted`; `cancel_all_pending` leaves a shown notification in place; on iOS a cold-start tap carries its payload (the delegate).
-- **App:** unit tests for the pure `plan()` (past instants skipped, the cap of 60 keeping the soonest, deterministic ids, lead times); `apply()` against a fake service set as `_service`; `start()` picks the interim when not embedded.
+- **App:** unit tests for the pure `plan()` (past instants skipped, the cap of 60 keeping the soonest, deterministic ids, lead times); the `Scheduler` against a fake service (`tests/test_reminder_scheduler.py`: cancel pending then schedule, exact only when allowed, idempotent, newer wins); the hook's triggers (`tests/test_reminder_schedule.py`); `start()` picks the interim when not embedded.
 
 **Upgrade** (§2.4, plus):
 1. *Done in #446*, after the pin PR #445: the dependency (pinned by `.flet-ref`, from `.flet-src`), `flet-permission-handler`, `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221); the receivers, the boot permission, the icon, desugaring and the iOS delegate came with the extension and the template (D-220). #447 then schedules with it.

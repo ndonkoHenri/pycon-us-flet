@@ -107,6 +107,7 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
     )
     # The Review SnackBar has its own tests (tests/test_changes_review.py).
     monkeypatch.setattr(app, "use_review_snack_bar", lambda *_: None)
+    monkeypatch.setattr(app, "use_reminder_schedule", lambda *_: None)
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
     assert banners == [open_]  # the slot is there before the gate, shown after it
@@ -147,6 +148,7 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     # The reminder Banner has its own tests; here it would read stand-in stores.
     monkeypatch.setattr(app, "use_reminder_banner", lambda *_, **__: None)
     monkeypatch.setattr(app, "use_review_snack_bar", lambda *_: None)
+    monkeypatch.setattr(app, "use_reminder_schedule", lambda *_: None)
     monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
