@@ -304,10 +304,13 @@ class MemoryNotifications:
         self.pending: dict[int, Scheduled] = {}
         self.calls: list[str] = []
         self.exact = True  # what can_schedule_exact_alarms() answers
+        self.enabled = True  # what are_notifications_enabled() answers
         self.refuse_exact = False  # an exact schedule raises, as without the access
         self.errors: dict[str, Exception] = {}  # method name -> what it raises
         self.failing_ids: set[int] = set()  # schedule() raises for these ids
         self.gate: asyncio.Event | None = None  # schedule() waits on it when given
+        # are_notifications_enabled() waits on it when given, as E3 waits for its start
+        self.initialized: asyncio.Event | None = None
 
     def _call(self, method: str) -> None:
         """Record the call to ``method``, and raise its error when a test set one."""
@@ -319,6 +322,13 @@ class MemoryNotifications:
         """Answer ``exact``."""
         self._call("can_schedule_exact_alarms")
         return self.exact
+
+    async def are_notifications_enabled(self) -> bool:
+        """Answer ``enabled``, once ``initialized`` is set when a test gives one."""
+        self._call("are_notifications_enabled")
+        if self.initialized is not None:
+            await self.initialized.wait()
+        return self.enabled
 
     async def cancel_all_pending(self) -> None:
         """Drop every pending reminder."""

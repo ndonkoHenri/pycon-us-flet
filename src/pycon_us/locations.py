@@ -151,6 +151,27 @@ def start_target(last_location: str, search_base: str, *, onboarded: bool) -> st
     return last_location
 
 
+def launch_target(
+    tap: str, last_location: str, search_base: str, *, onboarded: bool
+) -> str:
+    """Return where the start route ``/`` sends a session, a reminder tap first (D-396).
+
+    A tap on a reminder that started the app, or came before the boot gate opened,
+    opens its route, as a link does: Welcome waits for the next plain start (D-287)
+    and the last location for the next one (D-143). Without a tap, ``start_target()``.
+
+    Args:
+        tap: The tapped reminder's route (``Scheduler.take_tap()``); empty for none.
+        last_location: ``ViewMemory.last_location``; empty before any screen showed.
+        search_base: ``ViewMemory.search_base``.
+        onboarded: Welcome was seen (``Prefs.onboarded``).
+
+    Returns:
+        The location to navigate to.
+    """
+    return tap or start_target(last_location, search_base, onboarded=onboarded)
+
+
 def in_search(location: str) -> bool:
     """Return whether a location is ``/search`` or a detail pushed on it (D-19).
 

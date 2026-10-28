@@ -1,7 +1,8 @@
 """Tests for the reminder plan (``services/reminders.py``; #427, D-59, D-222, NEW-05).
 
 Every case runs at a fixed ``now`` over a recorded feed: the plan is pure, so what it
-returns is all there is to check until E3's ``apply()`` schedules it.
+returns is all there is to check until E3's ``apply()`` schedules it. The in-app
+Banner's ``due_session()`` (``ui/reminder_banner.py``) is pure too, and tested here.
 """
 
 from dataclasses import replace
@@ -15,15 +16,13 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services.reminders import (
-    BANNER_LEAD,
     MAX_PENDING,
     SYNTHETIC_BASE,
-    DueSession,
     Reminder,
-    due_session,
     plan,
     reminder_id,
 )
+from pycon_us.ui.reminder_banner import BANNER_LEAD, DueSession, due_session
 from pycon_us.year_moments import EventReminder, keynote_moments
 from tests.feeds import YEARS, changed, processed, remove, retime, settings
 
