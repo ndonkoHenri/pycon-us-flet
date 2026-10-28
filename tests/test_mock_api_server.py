@@ -286,6 +286,21 @@ def test_the_command_line_switches_faults_and_skew_on() -> None:
     assert every.faults.on == {"connect": True}
 
 
+def test_the_command_line_adds_made_up_attendees() -> None:
+    """``--attendees 3000`` serves 3,004 attendees; none by default."""
+    assert (
+        len(state_for(parser().parse_args(["--attendees", "3000"])).attendees) == 3004
+    )
+    assert len(state_for(parser().parse_args([])).attendees) == 4
+
+
+@pytest.mark.parametrize("count", ["-1", "many", "2.5"])
+def test_a_bad_attendee_count_is_a_usage_error(count: str) -> None:
+    """``--attendees`` takes a whole number, 0 or more."""
+    with pytest.raises(SystemExit):
+        parser().parse_args(["--attendees", count])
+
+
 def test_an_unknown_fault_is_a_usage_error() -> None:
     """``--fault`` accepts only the faults the mock models."""
     with pytest.raises(SystemExit):

@@ -1,7 +1,7 @@
 """The private API's calls as Ionic's ``pycon-api.ts`` makes them (D-52, D-53, API-12).
 
 Each ``Endpoint`` constant is one call: its method, path, timeout and whether it is
-signed or enveloped; ``ENDPOINTS`` lists every call the app makes, which
+signed or enveloped; ``ENDPOINTS`` lists every call the app ports, which
 ``tests/test_api_endpoints.py`` checks against ``tools/mock_api/README.md`` and the
 mock's routes. The query builders encode each query exactly as Ionic did, since the
 signature covers it byte for byte. ``services/api.py``'s ``ApiClient.request`` sends
@@ -66,8 +66,9 @@ ENDPOINTS = (
     INVENTORY, FETCH_PRODUCTS, REDEEM, COC_ATTENDEES, COC_SCAN, COC_REPORT,
     LEAD_SPONSORS, LEAD_CAPTURE, LEAD_NOTE,
 )  # fmt: skip
-"""Every call the app makes. Ionic's ``attendees_by_product/<id>/`` is never called, so
-it is not ported (API-05)."""
+"""Every call of the contract the app ports. Ionic's ``attendees_by_product/<id>/`` is
+never called, so it is not ported (API-05); ``COC_SCAN``, Ionic's per-frame GET, stays
+as API-08's contract but the app records every incident with ``COC_REPORT`` (D-430)."""
 
 
 def fetch_products_query(code: str, ids: Iterable[int | str], *, door: bool) -> str:
