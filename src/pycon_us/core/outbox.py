@@ -3,7 +3,7 @@
 The outbox keeps every lead scan, lead note and door check-in until the server has it
 (D-56): "never lose or misattribute a scan". The rules that keep that promise are pure
 and live here, so a hypothesis state machine proves them (D-77) before any sqlite
-(``services/storage.py``) or sending (``services/sync.py``) code exists. Every function
+(``services/outbox_db.py``) or sending (``services/sync.py``) code exists. Every function
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
 """

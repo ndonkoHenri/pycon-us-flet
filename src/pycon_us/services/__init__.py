@@ -16,6 +16,7 @@ import flet as ft
 from pycon_us import capabilities
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
+from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.presence import Presence
 from pycon_us.services.reminders import Scheduler
 from pycon_us.services.reminders import start as start_reminders
@@ -84,6 +85,9 @@ class Services:
         shown_versions: The feed versions this session has logged D-112's content line
             for; ``AppScaffold``'s ``Shown`` logs each version once, from the first
             screen that shows it (D-165).
+        outbox: The staff outbox's database (``services.outbox_db``, D-49), which
+            opens ``outbox.db`` on first use: only the staff tools use it, and D-51
+            hides them without a mock API URL. ``None`` in tests that don't need it.
     """
 
     year: YearData
@@ -105,6 +109,7 @@ class Services:
     foreground: asyncio.Event = field(default_factory=_set_event)
     presence: Presence = field(default_factory=Presence)
     shown_versions: set[int] = field(default_factory=set)
+    outbox: OutboxDb | None = None
 
     @classmethod
     def create(cls, memory: ViewMemory) -> Services:
@@ -125,9 +130,10 @@ class Services:
         """
         year = load_year()
         permissions = _permissions()
+        directory = data_dir()
         return cls(
             year=year,
-            storage=Storage(ft.SharedPreferences(), data_dir(), year.conference.year),
+            storage=Storage(ft.SharedPreferences(), directory, year.conference.year),
             memory=memory,
             semantics=ft.SemanticsService(),
             haptics=ft.HapticFeedback(),
@@ -135,6 +141,7 @@ class Services:
             clipboard=ft.Clipboard(),
             permissions=permissions,
             reminders=start_reminders(permissions),
+            outbox=OutboxDb(directory),
         )
 
     def close(self) -> None:
@@ -152,6 +159,8 @@ class Services:
         self.presence.close()  # and a focus that waits for a return (D-372)
         if self.reminders is not None:  # and the reminders' loop, which then returns
             self.reminders.request()
+        if self.outbox is not None:  # a late write is refused, not raised (D-120)
+            self.outbox.close()
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
         """Call ``action`` now, then every ``seconds`` while the app is in the foreground.
