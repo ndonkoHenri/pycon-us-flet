@@ -10,7 +10,7 @@ import logging
 import sqlite3
 import tempfile
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -193,8 +193,10 @@ def test_enqueue_stores_what_the_rules_decide(db: OutboxDb) -> None:
     first = queued(scan(db, now=NOW))
     again = scan(db, now=NOW + 5)
     assert again is not None and again.outcome is Outcome.UPDATED
-    assert db.rows(OWNER, [Status.PENDING]) == [replace(first, next_at=NOW + 5)]
-    assert db.save(outbox.after_success(replace(first, next_at=NOW + 5), {"ok": 1}))
+    stored = replace(first, next_at=NOW + 5, revision=1)  # an edit counts a revision
+    assert again.row == stored
+    assert db.rows(OWNER, [Status.PENDING]) == [stored]
+    assert db.save(outbox.after_success(stored, {"ok": 1}))
     already = scan(db)
     assert already is not None and already.outcome is Outcome.ALREADY
     assert db.counts(OWNER) == Counts(synced=1)
@@ -225,6 +227,31 @@ def test_a_note_is_never_due_before_its_lead_is_synced(db: OutboxDb) -> None:
     synced = outbox.after_success(refused, {"id": 1})
     assert db.save(synced)
     assert db.due_rows(OWNER, NOW) == [text]
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        lambda row: outbox.after_success(row, {"id": 1}),
+        lambda row: outbox.after_network_error(row, NOW),
+        lambda row: outbox.after_error(row, "Bad note", NOW),
+    ],
+    ids=["success", "network error", "api error"],
+)
+def test_a_note_edited_while_sent_keeps_the_edit(
+    db: OutboxDb, outcome: Callable[[Row], Row]
+) -> None:
+    """A send's outcome never overwrites a note edited after it was read (D-56)."""
+    lead = queued(scan(db))
+    assert db.save(outbox.after_success(lead, {"id": 1}))
+    queued(note(db, text="First"))
+    (sent,) = db.due_rows(OWNER, NOW)  # the worker reads the note and sends it ...
+    edited = note(db, text="Second")  # ... while the user saves a new text
+    assert edited is not None and edited.row is not None
+    assert edited.outcome is Outcome.UPDATED
+    assert not db.save(outcome(sent))  # the old send's outcome is dropped
+    assert db.due_rows(OWNER, NOW) == [edited.row]  # the edit is sent next
+    assert edited.row.payload["note"] == "Second"
 
 
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:

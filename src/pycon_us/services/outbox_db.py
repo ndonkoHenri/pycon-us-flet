@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS outbox (
     next_at      REAL NOT NULL,
     created_at   REAL NOT NULL,
     last_error   TEXT,
-    idem_key     TEXT
+    idem_key     TEXT,
+    revision     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS outbox_due ON outbox (owner, status, next_at);
 CREATE INDEX IF NOT EXISTS outbox_key ON outbox (owner, kind, key);
@@ -73,6 +74,7 @@ _COLUMNS = (
     "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
     "next_at, created_at, last_error, idem_key"
 )
+"""The columns an insert or a save writes; ``revision`` counts edits on its own."""
 _VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
 _VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key"
 
@@ -112,6 +114,7 @@ def _params(row: Row) -> dict[str, object]:
         "last_error": row.last_error,
         "idem_key": row.idem_key,
         "id": row.id,
+        "revision": row.revision,
     }
 
 
@@ -131,6 +134,7 @@ def _row(record: sqlite3.Row) -> Row:
         last_error=record["last_error"],
         idem_key=record["idem_key"],
         id=record["id"],
+        revision=record["revision"],
     )
 
 
@@ -256,27 +260,50 @@ class OutboxDb:
                         enqueued, row=replace(enqueued.row, id=cursor.lastrowid)
                     )
                 if enqueued.outcome is Outcome.UPDATED:
+                    # Read in this transaction, so its revision is the stored one.
                     self._update(connection, enqueued.row)
+                    edited = replace(enqueued.row, revision=enqueued.row.revision + 1)
+                    return replace(enqueued, row=edited)
                 return enqueued
 
         return self._attempt("enqueue", run)
 
     @staticmethod
-    def _update(connection: sqlite3.Connection, row: Row) -> None:
-        """Write a stored row's columns over the record with its id."""
+    def _update(connection: sqlite3.Connection, row: Row, *, edit: bool = True) -> bool:
+        """Write a row's columns over its record, if the record is still at its revision.
+
+        Args:
+            connection: The connection, in a write transaction.
+            row: A stored row, changed from the record at ``row.revision``.
+            edit: Whether this is an enqueue's edit, which counts a new revision; a
+                send's outcome or "Retry failed" leaves the revision as it is.
+
+        Returns:
+            Whether the record was written: False when an edit changed it since.
+        """
         if row.id is None:
             raise ValueError("an outbox row is saved only once it is stored")
         sets = ", ".join(f"{name} = :{name}" for name in _COLUMNS.split(", "))
-        connection.execute(f"UPDATE outbox SET {sets} WHERE id = :id", _params(row))
+        bump = ", revision = revision + 1" if edit else ""
+        cursor = connection.execute(
+            f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
+            _params(row),
+        )
+        return cursor.rowcount == 1
 
     def save(self, row: Row) -> bool:
         """Store a changed row over its record: a send's outcome or "Retry failed".
+
+        The record is written only while it is at the revision the row was read at: a
+        note edited while its old text was being sent keeps the new text, pending, and
+        the old send's outcome is dropped (D-56). The next pass sends the edit.
 
         Args:
             row: A stored row (with its id), as ``core.outbox`` changed it.
 
         Returns:
-            Whether it was saved; a failure is logged (D-120).
+            Whether it was saved: False when the database failed (logged, D-120) or an
+            enqueue edited the record since it was read (logged; the edit stays).
 
         Raises:
             ValueError: The row was never stored (no id): a bug.
@@ -286,8 +313,10 @@ class OutboxDb:
 
         def run() -> bool:
             with self._transaction() as connection:
-                self._update(connection, row)
-            return True
+                saved = self._update(connection, row, edit=False)
+            if not saved:
+                logger.info("Kept outbox row %s: it was edited while sent", row.id)
+            return saved
 
         return self._attempt("save a row", run) or False
 

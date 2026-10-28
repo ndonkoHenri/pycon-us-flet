@@ -1216,7 +1216,8 @@ CREATE TABLE IF NOT EXISTS outbox (
     next_at      REAL NOT NULL,
     created_at   REAL NOT NULL,                 -- = scanned_at
     last_error   TEXT,
-    idem_key     TEXT                           -- door: code|sorted product ids|scan session
+    idem_key     TEXT,                          -- door: code|sorted product ids|scan session
+    revision     INTEGER NOT NULL DEFAULT 0     -- +1 on each enqueue edit; a send saves only over its own
 );
 CREATE INDEX IF NOT EXISTS outbox_due ON outbox (owner, status, next_at);
 CREATE INDEX IF NOT EXISTS outbox_key ON outbox (owner, kind, key);
@@ -1230,7 +1231,7 @@ WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
 ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id;
 ```
 
-`OutboxDb` (#691) is the only way to the rows: `enqueue(code, decide)` runs a `core/outbox.py` decision (`scan_lead`, `save_note` or `admit` as a `functools.partial`) over every row of the access code and stores what it decides, in one transaction; `save(row)` writes a send's outcome or "Retry failed" over a stored row; `due_rows(owner, now)` is the query above, tested equal to `outbox.due()` on random row sets; `counts(owner)` (pending, failed, synced), `rows(owner, statuses)` for the queue sheet (oldest first), `owners_with_unsynced()`, `delete_synced(owner)` (`forget_synced()` in SQL, tested equal to it) and `clear(owner=None)`. The schema lives with its one user rather than in `services/storage.py`.
+`OutboxDb` (#691) is the only way to the rows: `enqueue(code, decide)` runs a `core/outbox.py` decision (`scan_lead`, `save_note` or `admit` as a `functools.partial`) over every row of the access code and stores what it decides, in one transaction; `save(row)` writes a send's outcome or "Retry failed" over a stored row, but only while the record is still at the `revision` the row was read at: an enqueue's edit (`UPDATED`) counts a new revision, so a note edited while `SyncWorker` sends its old text keeps the new text, pending, and the stale outcome is dropped (`save()` returns `False`, logged) for the next pass to send the edit (D-56); `due_rows(owner, now)` is the query above, tested equal to `outbox.due()` on random row sets; `counts(owner)` (pending, failed, synced), `rows(owner, statuses)` for the queue sheet (oldest first), `owners_with_unsynced()`, `delete_synced(owner)` (`forget_synced()` in SQL, tested equal to it) and `clear(owner=None)`. The schema lives with its one user rather than in `services/storage.py`.
 
 Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`, `OutboxDb.delete_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer) until synced or cleared with confirmation.
 
@@ -1293,7 +1294,7 @@ class SyncWorker:
             self._staff.syncing = False
 ```
 
-`run()` loops forever on `asyncio.wait_for(self._wake.wait(), timeout=60)` then `drain()`; an App effect starts it, so unmount cancels it (F2). `send()` is a `match row.kind` over `lead_capture`, `lead_note` and `redeem`. `ft.Connectivity(on_change=...)` kicks the worker when connectivity becomes anything but `NONE`; so do RESUME, every enqueue and "Sync now".
+`due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1). `run()` loops forever on `asyncio.wait_for(self._wake.wait(), timeout=60)` then `drain()`; an App effect starts it, so unmount cancels it (F2). `send()` is a `match row.kind` over `lead_capture`, `lead_note` and `redeem`. `ft.Connectivity(on_change=...)` kicks the worker when connectivity becomes anything but `NONE`; so do RESUME, every enqueue and "Sync now".
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 
