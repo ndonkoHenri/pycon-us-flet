@@ -9,8 +9,8 @@ stars sends one. One request at a time, in one loop: a pull asked for during a P
 runs after it, so it never reads a list older than the one just sent.
 
 What the server has is saved per year as a ``SyncState`` (``storage.favorites_sync``)
-before any request, so a kill never forgets an unsent edit or a first sync that has
-not happened. A failure keeps it for the next start or resume. Nothing is sent while
+as soon as it changes, even while a request is out, and before any request, so a kill
+never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume. Nothing is sent while
 signed out, expired, with no mock URL (D-51) or with favourites that could not be read
 (D-172); a sign-out stops the sync and forgets the state, and the local list stays
 (D-48). ``Favorites`` itself makes no request: it only notifies its edits.
@@ -66,6 +66,8 @@ class FavoritesSync:
         self._generation = 0  # sign-ins and sign-outs: an older reply is dropped
         self._signed_in = False
         self._adopting = False  # the next `ids` change is the sync's own
+        self._saving = asyncio.Lock()  # one state write at a time, in order
+        self._saves: set[asyncio.Task[None]] = set()  # held: the loop keeps tasks weakly
 
     def request(self) -> None:
         """Ask for a pull: at the start, on resume, at a sign-in, and to wake ``run``."""
@@ -103,10 +105,12 @@ class FavoritesSync:
         def on_favorites(_sender: object, name: str | None) -> None:
             if name == "ids":
                 self._on_edit(account)
+                self._save_soon(storage, closed)
 
         def on_account(_sender: object, name: str | None) -> None:
             if name == "signed_in" and account.signed_in != self._signed_in:
                 self._on_account(account)
+                self._save_soon(storage, closed)
 
         # Held here while the loop runs: the stores keep their listeners weakly.
         stops = (
@@ -120,6 +124,8 @@ class FavoritesSync:
                 if closed.is_set():
                     return
                 await self._save(storage)
+                if closed.is_set():
+                    return
                 work = self._take_work()
                 client = private_api.client
                 if work is None or client is None or not favorites.loaded:
@@ -127,7 +133,9 @@ class FavoritesSync:
                 if not account.signed_in or account.expired:
                     continue
                 try:
-                    await self._sync(client, storage, favorites, account, pull=work)
+                    await self._sync(
+                        client, storage, favorites, account, closed, pull=work
+                    )
                 except NetworkError:
                     logger.info("Favourites not synced: no answer; kept for later")
                 except ApiError as error:
@@ -164,10 +172,15 @@ class FavoritesSync:
         storage: Storage,
         favorites: Favorites,
         account: Account,
+        closed: asyncio.Event,
         *,
         pull: bool,
     ) -> None:
-        """Pull and reconcile, or PATCH the local list; settle the state when it held."""
+        """Pull and reconcile, or PATCH the local list; settle the state when it held.
+
+        After each await it goes on only while the same account is signed in, usable,
+        and the session open (``_current()``): a late reply adopts and sends nothing.
+        """
         generation = self._generation
         if not pull:
             edits = self._edits
@@ -178,10 +191,14 @@ class FavoritesSync:
         if ids is None:
             logger.warning("Favourites not synced: not a mobile_state reply")
             return
-        if generation != self._generation or not account.signed_in:
-            return  # signed out, or in again, while the pull was out
+        if not self._current(generation, account, closed):
+            return  # signed out, in again or closed while the pull was out
         edits = self._edits
         result = reconcile(favorites.ids, ids, self._state)
+        # The reconciled list is now the device's to send: an edit from here on is
+        # pushed as it is, never merged again with a list it removed something from.
+        self._state = SyncState.DIRTY
+        self._save_soon(storage, closed)
         if result.keep != favorites.ids:
             self._adopting = True  # `replace` assigns before its first await
             try:
@@ -189,9 +206,22 @@ class FavoritesSync:
             finally:
                 self._adopting = False
             logger.info("Favourites: took the account's list in")
+            if not self._current(generation, account, closed):
+                return  # the next account's sign-in pull does its own union
         if result.push:
             await self._push(api, result.keep)
         self._settle(generation, edits)
+
+    def _current(
+        self, generation: int, account: Account, closed: asyncio.Event
+    ) -> bool:
+        """Whether a sync started in ``generation`` may still change or send anything."""
+        return (
+            generation == self._generation
+            and account.signed_in
+            and not account.expired
+            and not closed.is_set()
+        )
 
     async def _push(self, api: ApiClient, ids: frozenset[str]) -> None:
         """Send the whole list, sorted: a PATCH replaces the server's (idempotent)."""
@@ -233,18 +263,35 @@ class FavoritesSync:
         """Say on the account whether the server lacks this device's list (#688)."""
         account.favorites_dirty = self._signed_in and self._state is not SyncState.CLEAN
 
-    async def _save(self, storage: Storage) -> None:
-        """Save the state when it changed; ``MERGE`` is the key's absence."""
-        state = self._state
-        if state is self._saved:
+    def _save_soon(self, storage: Storage, closed: asyncio.Event) -> None:
+        """Save a changed state now, without waiting for a request that is out.
+
+        An edit made while the loop awaits the network is then dirty on disk too,
+        so a kill before the reply never adopts the server's list over it.
+        """
+        if self._state is self._saved or closed.is_set():
             return
-        key = favorites_sync(storage.year)
-        if state is SyncState.MERGE:
-            saved = await storage.remove(key)
-        else:
-            saved = await storage.set(key, state.value)
-        if saved:  # a failure is logged by the storage, and tried again next time
-            self._saved = state
+        task = asyncio.create_task(self._save(storage))
+        self._saves.add(task)
+        task.add_done_callback(self._saves.discard)
+
+    async def _save(self, storage: Storage) -> None:
+        """Save the state when it changed; ``MERGE`` is the key's absence.
+
+        Writes take turns (``_saving``), so the loop's save before a request waits
+        for any that ``_save_soon()`` started, and the last state is what stays.
+        """
+        async with self._saving:
+            state = self._state
+            if state is self._saved:
+                return
+            key = favorites_sync(storage.year)
+            if state is SyncState.MERGE:
+                saved = await storage.remove(key)
+            else:
+                saved = await storage.set(key, state.value)
+            if saved:  # a failure is logged by the storage, and tried again next time
+                self._saved = state
 
 
 def use_favorites_sync(

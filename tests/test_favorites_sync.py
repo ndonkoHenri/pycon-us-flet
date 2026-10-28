@@ -10,6 +10,7 @@ import asyncio
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -69,6 +70,7 @@ class Rig:
     transport: Held
     api: ApiClient
     sync: FavoritesSync
+    closed: asyncio.Event
     task: asyncio.Task[None] | None = None
 
     def stop(self) -> None:
@@ -87,9 +89,9 @@ class Rig:
         )
         assert outcome is SignIn.SIGNED_IN
 
-    def server(self) -> frozenset[str]:
-        """The ``attendee`` account's favourites on the mock now."""
-        return frozenset(account(self.state, "attendee").favorites)
+    def server(self, role: str = "attendee") -> frozenset[str]:
+        """The seeded ``role`` account's favourites on the mock now."""
+        return frozenset(account(self.state, role).favorites)
 
     def saved_state(self) -> str | None:
         """The sync state as saved, None when absent (a first sync is due)."""
@@ -127,6 +129,27 @@ def shared() -> MemoryPrefs:
     return MemoryPrefs()
 
 
+class HeldPrefs(MemoryPrefs):
+    """In-memory SharedPreferences that can hold the writes of one key."""
+
+    def init(self) -> None:
+        """Start empty, holding nothing."""
+        super().init()
+        self.hold: str | None = None
+        self.release = asyncio.Event()
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Wait for ``release`` before a ``set`` of the held key, then answer it."""
+        if method_name == "set" and arguments and arguments["key"] == self.hold:
+            await self.release.wait()
+        return await super()._invoke_method(method_name, arguments, timeout)
+
+
 @pytest.fixture
 def keystore() -> MemoryKeystore:
     """An empty in-memory keystore, kept across a restart in a test."""
@@ -150,11 +173,21 @@ async def start(
     private_api = PrivateApi()
     private_api.client = api
     sync = FavoritesSync(delay=0.05)
+    closed = asyncio.Event()
     rig = Rig(
-        state, shared, storage, credentials, favorites, store, transport, api, sync
+        state,
+        shared,
+        storage,
+        credentials,
+        favorites,
+        store,
+        transport,
+        api,
+        sync,
+        closed,
     )
     rig.task = asyncio.create_task(
-        sync.run(private_api, storage, favorites, store, asyncio.Event())
+        sync.run(private_api, storage, favorites, store, closed)
     )
     await asyncio.sleep(0)
     return rig
@@ -334,3 +367,77 @@ async def test_an_expired_account_sends_nothing(rig: Rig) -> None:
     await quiet()
     assert rig.transport.sent == []
     assert rig.saved_state() == "dirty" and rig.account.favorites_dirty
+
+
+async def test_a_close_during_a_pull_adopts_and_saves_nothing(rig: Rig) -> None:
+    """A reply that arrives after the session closed changes nothing (D-147)."""
+    await synced(rig)
+    account(rig.state, "attendee").favorites = []
+    rig.transport.hold = "GET"
+    rig.transport.release.clear()
+    rig.sync.request()
+    await until(lambda: rig.transport.methods() == ["GET"])
+    rig.closed.set()
+    before = dict(rig.shared.values)
+    rig.transport.release.set()
+    assert rig.task is not None
+    await asyncio.wait_for(rig.task, 3.0)
+    assert rig.favorites.ids == SEEDED and rig.shared.values == before
+    assert rig.transport.methods() == ["GET"]
+
+
+async def test_an_account_switch_during_the_union_s_save_sends_nothing_stale(
+    state: MockState, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """A first sync whose save outlives its account never PATCHes the next account.
+
+    The next account's own sign-in pull takes the union, so its favourite stays.
+    """
+    shared = HeldPrefs()
+    rig = await start(state, shared, keystore, tmp_path)
+    account(state, "speaker").favorites = ["speaker-only"]
+    await rig.favorites.add_many(rig.storage, ["1"])
+    shared.hold = "pycon.2026.favorites"
+    await rig.sign_in()
+    await until(lambda: rig.favorites.ids == SEEDED | {"1"})  # assigned, not saved
+    await rig.account.sign_out(rig.storage, rig.credentials)
+    await rig.sign_in("speaker")
+    shared.release.set()
+    await until(lambda: "PATCH" in rig.transport.methods())
+    await settled(rig)
+    assert rig.server("speaker") == SEEDED | {"1", "speaker-only"}
+    assert rig.server() == SEEDED  # the attendee's PATCH was never sent
+    rig.stop()
+
+
+async def test_an_edit_during_a_pull_survives_a_kill(
+    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """A star tapped while a pull is out is saved dirty at once, so a kill keeps it."""
+    first = await start(state, shared, keystore, tmp_path)
+    await synced(first)
+    first.transport.hold = "GET"
+    first.transport.release.clear()
+    first.sync.request()
+    await until(lambda: first.transport.methods() == ["GET"])
+    await first.favorites.toggle(first.storage, "unsent")
+    await quiet()
+    first.stop()  # killed with the pull still out
+    second = await start(state, shared, keystore, tmp_path)
+    await settled(second)
+    assert "unsent" in second.favorites.ids and "unsent" in second.server()
+    second.stop()
+
+
+async def test_a_removal_during_the_first_patch_is_not_merged_back(rig: Rig) -> None:
+    """An id removed while the first sync's PATCH is out is sent removed, not unioned."""
+    await rig.favorites.add_many(rig.storage, ["1"])
+    rig.transport.hold = "PATCH"
+    rig.transport.release.clear()
+    await rig.sign_in()
+    await until(lambda: rig.transport.methods() == ["GET", "PATCH"])
+    await rig.favorites.toggle(rig.storage, "9001")  # a removal
+    rig.transport.release.set()
+    await settled(rig)
+    assert rig.favorites.ids == {"1", "poster-detail-7"} == rig.server()
+    assert rig.transport.methods() == ["GET", "PATCH", "PATCH"]
