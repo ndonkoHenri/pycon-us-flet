@@ -28,6 +28,11 @@ after a duplicate "Open lead" (``lead.open_lead``): both open ``ui/lead_note_she
 sheet for that lead, prefilled with its saved note (#742, LEAD-10). Scanning is paused
 while it is open ("Paused while the note is open"), and the focus goes back to the
 field when it closes.
+
+Under the field, "Leads (42)" (``lead.leads``, the account's lead rows, read again as
+the outbox changes) pushes ``staff_leads.py``'s list at ``…/staff/lead/leads`` (#743,
+D-428): a page of its own rather than a tab, so this screen stays as the four tools
+share it and a HID scanner never types into the list's search.
 """
 
 from collections.abc import Callable
@@ -41,9 +46,10 @@ from pycon_us.core.badges import ScanOutcome, ScanResult
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open, scans_for_sponsor
 from pycon_us.lead_capture import capture
+from pycon_us.lead_list import lead_count
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
-from pycon_us.screens import lead_sponsor
+from pycon_us.screens import lead_sponsor, staff_leads
 from pycon_us.screens.lead_consent import LeadConsent
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -126,6 +132,9 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     staff = use_staff()
     read, set_read = ft.use_state(not_read)  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once
+    count = ft.use_memo(  # "Leads (42)", read again as the outbox changes (D-69)
+        lambda: lead_count(svc.outbox, owner), [owner, staff.revision, svc.outbox]
+    )
 
     @report_errors
     async def read_keys() -> None:
@@ -147,6 +156,10 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         page.navigate(f"{view_path}/{lead_sponsor.SEGMENT}")
 
     @report_errors
+    def open_leads(_: ft.Event[ft.FilledTonalButton]) -> None:
+        page.navigate(f"{view_path}/{staff_leads.SEGMENT}")
+
+    @report_errors
     def ask() -> None:
         if needs_sponsor and not asked.current and is_top_view(page.route, view_path):
             asked.current = True
@@ -161,6 +174,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     sheet = use_note_sheet(owner=owner, sponsor=sponsor)
     paused = NOTE_OPEN if sheet.is_open else None
     note_actions = partial(lead_actions, open_note=sheet.open)
+    leads = leads_button(count, open_leads)
 
     if current is None:
         return Reading()
@@ -174,13 +188,14 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
             on_badge=on_badge,
             paused=paused,
             result_actions=note_actions,
+            actions=[leads],
         )
     if current.sponsor is None:
         return ScanScreen(
             title=TITLE,
             on_badge=on_badge,
             paused=NO_SPONSOR,
-            actions=[choose_button(open_picker)],
+            actions=[choose_button(open_picker), leads],
         )
     return ScanScreen(
         title=TITLE,
@@ -188,6 +203,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         context=sponsor_chip(current.sponsor, open_picker),
         paused=paused,
         result_actions=note_actions,
+        actions=[leads],
     )
 
 
@@ -253,6 +269,21 @@ def choose_button(on_click: ft.ControlEventHandler) -> ft.Control:
     )
 
 
+def leads_button(count: int | None, on_click: ft.ControlEventHandler) -> ft.Control:
+    """Return "Leads (42)", under the field, which opens the leads list (#743, D-428).
+
+    Args:
+        count: The account's leads; None when the outbox can't be read: "Leads".
+        on_click: Pushes the list.
+    """
+    return tool_button(
+        "lead.leads",
+        staff_leads.button_label(count),
+        ft.Icons.CONTACTS_OUTLINED,
+        on_click,
+    )
+
+
 def lead_actions(
     result: ScanResult, open_note: Callable[[str, str | None], None]
 ) -> list[ft.Control]:
@@ -312,6 +343,10 @@ def tool_button(
             ),
         ),
         alignment=ft.Alignment.CENTER_LEFT,
+        # Keyed: "Leads (42)" is built here and kept by ScanScreen's own re-renders,
+        # so a result's "Add note" landing in its place would otherwise take its id,
+        # two buttons with one (U163, #622); differing keys make it a new control.
+        key=identifier,
     )
 
 
