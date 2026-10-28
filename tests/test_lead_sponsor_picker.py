@@ -218,7 +218,7 @@ async def test_a_tap_saves_the_sponsor_and_goes_back(show: Show) -> None:
 async def test_cancel_goes_back_and_keeps_the_choice(show: Show) -> None:
     """Cancel is Back: the stored sponsor is left as it was."""
     shown = await show(chosen=LeadSponsor("1", "Example Corp"))
-    (cancel,) = [b for b in shown.find(ft.TextButton) if b.content == "Cancel"]
+    (cancel,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Cancel"]
     await shown.click(cancel)
     assert shown.went == ["/more/staff/lead"]
     assert (await shown.storage.get(STAFF_SPONSOR))["id"] == "1"

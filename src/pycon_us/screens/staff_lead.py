@@ -163,24 +163,49 @@ def sponsor_chip(sponsor: LeadSponsor, on_click: ft.ControlEventHandler) -> ft.C
     """Return the "For: Example Corp" chip that heads the scan screen (LEAD-06).
 
     One node, a button read "Scanning for Example Corp, change sponsor"; it opens the
-    picker. Start-aligned, so it keeps its own width, and its label wraps at large
-    text rather than run off the screen.
+    picker. Drawn as M3's outlined assist chip (8 dp corners, an ``outline_variant``
+    edge, a leading icon) but built from a ``Container``: Flutter's ``Chip`` keeps its
+    label on one line, which at the largest text cut "Example Corp" to "Example". Its
+    text takes only the room it needs (``expand_loose``) and wraps past the width;
+    the chip is at least 48 dp tall, its own target (ux.md §9).
 
     Args:
         sponsor: The sponsor chosen.
         on_click: Opens the picker.
     """
     return ft.Container(
-        named(
-            "lead.sponsor_chip",
-            ft.Chip(
-                label=ft.Text(
-                    f"For: {sponsor.name}",
-                    semantics_label=f"Scanning for {sponsor.name}, change sponsor",
+        ft.MergeSemantics(  # the phrase and the tap's action: one node
+            content=ft.Container(
+                ft.Semantics(
+                    label=f"Scanning for {sponsor.name}, change sponsor",
+                    identifier="lead.sponsor_chip",
+                    button=True,
+                    exclude_semantics=True,  # the phrase replaces the text
+                    content=ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.STOREFRONT_OUTLINED,
+                                size=18,
+                                color=ft.Colors.PRIMARY,
+                                apply_text_scaling=True,
+                            ),
+                            ft.Text(
+                                f"For: {sponsor.name}",
+                                theme_style=ft.TextThemeStyle.LABEL_LARGE,
+                                expand=True,
+                                expand_loose=True,
+                            ),
+                        ],
+                        spacing=8,
+                        tight=True,
+                    ),
                 ),
-                leading=ft.Icon(ft.Icons.STOREFRONT_OUTLINED),
+                ink=True,
                 on_click=on_click,
-            ),
+                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+                border_radius=8,
+                padding=ft.Padding.symmetric(horizontal=12, vertical=13),
+            )
         ),
         alignment=ft.Alignment.CENTER_LEFT,
     )

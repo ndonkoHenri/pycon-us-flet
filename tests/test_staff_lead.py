@@ -383,15 +383,21 @@ def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
     stored[STAFF_SPONSOR.key] = json.dumps(to_stored(sponsor))
 
 
-def chip_text(shown: Shown) -> ft.Text | None:
-    """The "For: ..." chip's text, or None without the chip."""
+def chip_text(shown: Shown) -> str | None:
+    """What the "For: ..." chip shows, or None without the chip."""
     nodes = shown.nodes("lead.sponsor_chip")
     if not nodes:
         return None
     (node,) = nodes
-    chip = node.content
-    assert isinstance(chip, ft.Chip) and isinstance(chip.label, ft.Text)
-    return chip.label
+    row = node.content
+    assert isinstance(row, ft.Row)
+    (text,) = [c for c in row.controls if isinstance(c, ft.Text)]
+    return str(text.value)
+
+
+def chip(shown: Shown) -> ft.Container:
+    """The chip's tappable container, around its one node."""
+    return cast(ft.Container, shown.node("lead.sponsor_chip").parent)
 
 
 def helper(shown: Shown) -> str | None:
@@ -421,11 +427,11 @@ async def test_a_chosen_sponsor_shows_as_the_chip_and_scanning_runs(
     choose(stored, EXAMPLE)
     shown = await show(signed_in(door_check=True))
     assert shown.went == []
-    text = chip_text(shown)
-    assert text is not None and text.value == "For: Example Corp"
-    assert text.semantics_label == "Scanning for Example Corp, change sponsor"
+    assert chip_text(shown) == "For: Example Corp"
+    node = shown.node("lead.sponsor_chip")
+    assert node.label == "Scanning for Example Corp, change sponsor" and node.button
     assert helper(shown) is None
-    await shown.click(cast(ft.Control, shown.node("lead.sponsor_chip").content))
+    await shown.click(chip(shown))
     assert shown.went == [PICKER]
 
 
@@ -457,8 +463,7 @@ async def test_back_from_the_picker_shows_the_sponsor_chosen(
     location[0] = VIEW  # a tap: back with Example Corp
     account.nickname = "Chosen"
     await shown.settle()
-    text = chip_text(shown)
-    assert text is not None and text.value == "For: Example Corp"
+    assert chip_text(shown) == "For: Example Corp"
     assert helper(shown) is None
 
 

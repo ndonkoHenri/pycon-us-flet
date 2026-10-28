@@ -8,8 +8,8 @@ else, and a deep link, sees "Not available for this account"): a search field
 (``lead.sponsor.<id>``): its logo (``logo_tile()``, the initials without one), its name
 and "Booth 101", the current one ticked. One node each, read "Example Corp, Booth 101,
 selected". A tap saves the choice (``STAFF_SPONSOR``) and goes back; a save that fails
-stays here and says so, since the scanner would not see it (D-120, D-425). Cancel in
-the app bar, and Back, leave the choice as it was.
+stays here and says so, since the scanner would not see it (D-120, D-425). Cancel (a close
+icon in the app bar) and Back leave the choice as it was.
 
 The list is asked for each time the page opens and never kept (``fetch_sponsors()``):
 a spinner meanwhile, "Couldn't load sponsors" with Retry offline or on an error (D-120),
@@ -150,7 +150,7 @@ def SponsorList(*, owner: str) -> ft.Control:
     on_pick = ft.use_callback(pick, [view_path])
 
     @report_errors
-    def cancel(_: ft.Event[ft.TextButton]) -> None:
+    def cancel(_: ft.Event[ft.IconButton]) -> None:
         page.navigate(parent_of(view_path, svc.memory.search_base))  # as Back
 
     @report_errors
@@ -214,16 +214,25 @@ def SponsorList(*, owner: str) -> ft.Control:
     return AppScaffold(
         title=TITLE,
         actions=[
+            # An icon, as M3's full-screen dialogs close: a text button's label grew
+            # with the text and squeezed the title to "Choose sp…" at 200 %.
             named(
                 "lead.sponsor.cancel",
-                ft.TextButton(CANCEL, on_click=cancel),
+                ft.IconButton(ft.Icons.CLOSE, tooltip=CANCEL, on_click=cancel),
             )
         ],
         body=ft.Column(
             [
                 # The field in a column of its own, so the list keeps its place as
                 # the states come and go (D-153).
-                capped(ft.Column(head, spacing=0), margin),
+                capped(
+                    ft.Column(
+                        head,
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                    margin,
+                ),
                 ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
             ],
             spacing=0,
