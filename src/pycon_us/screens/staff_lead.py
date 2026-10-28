@@ -56,12 +56,9 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SCANNER_CONSENT
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
-from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.lead_note_sheet import use_note_sheet
-from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
-from pycon_us.ui.semantics import named
-from pycon_us.ui.widths import LIST, sides, use_margin
+from pycon_us.ui.staff_picker import Reading, context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
 """The app bar's title, "Lead scanner", as the staff entry points name it."""
@@ -177,7 +174,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     leads = leads_button(count, open_leads)
 
     if current is None:
-        return Reading()
+        return Reading(title=TITLE)
     if not current.consent:
         return LeadConsent(
             title=TITLE, on_given=lambda: set_read(Read(owner, True, current.sponsor))
@@ -211,51 +208,18 @@ def sponsor_chip(sponsor: LeadSponsor, on_click: ft.ControlEventHandler) -> ft.C
     """Return the "For: Example Corp" chip that heads the scan screen (LEAD-06).
 
     One node, a button read "Scanning for Example Corp, change sponsor"; it opens the
-    picker. Drawn as M3's outlined assist chip (8 dp corners, an ``outline_variant``
-    edge, a leading icon) but built from a ``Container``: Flutter's ``Chip`` keeps its
-    label on one line, which at the largest text cut "Example Corp" to "Example". Its
-    text takes only the room it needs (``expand_loose``) and wraps past the width;
-    the chip is at least 48 dp tall, its own target (ux.md §9).
+    picker (``context_chip()``, whose text wraps at 200 %).
 
     Args:
         sponsor: The sponsor chosen.
         on_click: Opens the picker.
     """
-    return ft.Container(
-        ft.MergeSemantics(  # the phrase and the tap's action: one node
-            content=ft.Container(
-                ft.Semantics(
-                    label=f"Scanning for {sponsor.name}, change sponsor",
-                    identifier="lead.sponsor_chip",
-                    button=True,
-                    exclude_semantics=True,  # the phrase replaces the text
-                    content=ft.Row(
-                        [
-                            ft.Icon(
-                                ft.Icons.STOREFRONT_OUTLINED,
-                                size=18,
-                                color=ft.Colors.PRIMARY,
-                                apply_text_scaling=True,
-                            ),
-                            ft.Text(
-                                f"For: {sponsor.name}",
-                                theme_style=ft.TextThemeStyle.LABEL_LARGE,
-                                expand=True,
-                                expand_loose=True,
-                            ),
-                        ],
-                        spacing=8,
-                        tight=True,
-                    ),
-                ),
-                ink=True,
-                on_click=on_click,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                border_radius=8,
-                padding=ft.Padding.symmetric(horizontal=12, vertical=13),
-            )
-        ),
-        alignment=ft.Alignment.CENTER_LEFT,
+    return context_chip(
+        text=f"For: {sponsor.name}",
+        spoken=f"Scanning for {sponsor.name}, change sponsor",
+        icon=ft.Icons.STOREFRONT_OUTLINED,
+        identifier="lead.sponsor_chip",
+        on_click=on_click,
     )
 
 
@@ -318,49 +282,6 @@ def lead_actions(
             ]
         case _:
             return []
-
-
-def tool_button(
-    identifier: str, label: str, icon: ft.IconData, on_click: ft.ControlEventHandler
-) -> ft.Control:
-    """Return one of the tool's tonal buttons under the field, start-aligned.
-
-    Args:
-        identifier: For UI flows, e.g. ``lead.add_note``.
-        label: Its words.
-        icon: Its leading icon.
-        on_click: What it does.
-    """
-    return ft.Container(
-        named(
-            identifier,
-            ft.FilledTonalButton(
-                label,
-                icon=icon,
-                on_click=on_click,
-                style=ft.ButtonStyle(padding=LABEL_PADDING),
-                elevation=0,  # M3's tonal button lies flat (D-344)
-            ),
-        ),
-        alignment=ft.Alignment.CENTER_LEFT,
-        # Keyed: "Leads (42)" is built here and kept by ScanScreen's own re-renders,
-        # so a result's "Add note" landing in its place would otherwise take its id,
-        # two buttons with one (U163, #622); differing keys make it a new control.
-        key=identifier,
-    )
-
-
-@ft.component
-def Reading() -> ft.Control:
-    """The empty page under the title while the consent is read.
-
-    A component of its own: ``AppScaffold`` calls hooks, which in ``LeadTool``'s
-    loading branch only would change its hook order once the read ends (D-70).
-    """
-    margin = use_margin(LIST)  # its width class (D-305)
-    return AppScaffold(
-        title=TITLE, body=ft.ListView(expand=True, padding=sides(margin))
-    )
 
 
 def given(last: Read | None, owner: str) -> bool:

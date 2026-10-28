@@ -27,6 +27,8 @@ from pycon_us.screens.about import AboutPycon
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.screens.account import AccountPage
 from pycon_us.screens.developer import Developer
+from pycon_us.screens.door_session import SEGMENT as SESSION_PICKER
+from pycon_us.screens.door_session import SessionPicker
 from pycon_us.screens.help import Help
 from pycon_us.screens.jobs import Jobs
 from pycon_us.screens.keynotes import Keynotes
@@ -55,6 +57,7 @@ from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.staff_coc import CocScanner
+from pycon_us.screens.staff_door import DoorCheck
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.screens.staff_leads import SEGMENT as LEADS_LIST
 from pycon_us.screens.staff_leads import LeadsPage
@@ -231,6 +234,7 @@ ROUTES = [
             pushed(SPONSOR_PICKER, SponsorPicker),
             pushed(LEADS_LIST, LeadsPage),
         ),
+        pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
         pushed("staff/swag", SwagPickup),
         pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),
@@ -295,13 +299,14 @@ ROUTES = [
         ),
         # The staff tools (D-16): /more/staff is not a page, so Back returns to More.
         # The Lead scanner's sponsor picker (#740) and leads list (#743) are under it,
-        # so Back returns there.
+        # so Back returns there, as Door check's session picker is (#764, D-433).
         pushed(
             "staff/lead",
             LeadScanner,
             pushed(SPONSOR_PICKER, SponsorPicker),
             pushed(LEADS_LIST, LeadsPage),
         ),
+        pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
         pushed("staff/swag", SwagPickup),  # by deep link until #769's entries
         pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),

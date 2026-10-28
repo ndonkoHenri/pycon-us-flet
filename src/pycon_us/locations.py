@@ -43,6 +43,8 @@ PAGES = frozenset(
         "/now/staff/lead",
         "/now/staff/lead/sponsor",
         "/now/staff/lead/leads",
+        "/now/staff/door",
+        "/now/staff/door/session",
         "/now/staff/swag",
         "/now/staff/coc",
         "/my-schedule/settings",
@@ -73,6 +75,8 @@ PAGES = frozenset(
         LEAD_SCANNER,
         f"{LEAD_SCANNER}/sponsor",
         f"{LEAD_SCANNER}/leads",
+        "/more/staff/door",
+        "/more/staff/door/session",
         "/more/staff/swag",
         "/more/staff/coc",
     }

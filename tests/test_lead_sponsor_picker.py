@@ -36,7 +36,7 @@ from pycon_us.services import Services
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import STAFF_SPONSOR
 from pycon_us.state import Conference
-from pycon_us.ui import scan_screen
+from pycon_us.ui import scan_screen, staff_picker
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from pycon_us.ui.snack_bars import NOT_SAVED
 from tests import harness
@@ -45,26 +45,12 @@ from tests.fakes import MemoryPrefs
 from tests.harness import Shown, showing
 from tests.mock_calls import account as seeded
 from tests.mock_calls import state_at
+from tests.picker_rig import Switch, search
 from tools.mock_api.transport import mock_transport
 
 VIEW = "/more/staff/lead/sponsor"
 
 type Show = Callable[..., Awaitable[Shown]]
-
-
-class Switch(httpx.AsyncBaseTransport):
-    """The mock's transport, or no connection while ``offline`` is set."""
-
-    def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Answer through ``inner``, online."""
-        self.inner = inner
-        self.offline = False
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Raise ``ConnectError`` offline, else let ``inner`` answer."""
-        if self.offline:
-            raise httpx.ConnectError("offline", request=request)
-        return await self.inner.handle_async_request(request)
 
 
 def staff(
@@ -137,8 +123,8 @@ async def show(
             shown = await stack.enter_async_context(
                 showing(
                     SponsorPicker,
-                    lead_sponsor,
                     scan_screen,
+                    staff_picker,
                     year=load_year(2026),
                     conference=Conference(),
                     tmp_path=tmp_path,
@@ -168,13 +154,6 @@ def rows(shown: Shown) -> list[str]:
 async def tap(shown: Shown, ident: str) -> None:
     """Tap the row of the sponsor whose id is ``ident``."""
     await shown.click(cast(ft.Container, shown.node(f"lead.sponsor.{ident}").parent))
-
-
-async def search(shown: Shown, text: str) -> None:
-    """Type ``text`` in the search field, as Flutter reports it."""
-    (field,) = shown.find(ft.TextField)
-    shown.session.apply_patch(field._i, {"value": text})
-    await shown.event(field, "change", text)
 
 
 async def test_the_mock_s_sponsors_show_sorted_with_booth_and_choice(
@@ -309,3 +288,21 @@ async def test_only_staff_who_scan_for_a_sponsor_reach_it(
     shown = await show(account)
     assert NOT_AVAILABLE in shown.texts()
     assert not shown.nodes("lead.sponsor.search")
+
+
+def test_a_one_line_choice_row_is_a_48_dp_touch_target() -> None:
+    """A one-line row, "All sessions", is 48 dp: 12 dp above and below its 24 dp line."""
+
+    async def pick() -> None:
+        """Picks nothing: the row's size is what is pinned."""
+
+    row = staff_picker.choice_row(
+        identifier="door.session.all",
+        phrase="All sessions",
+        lines=[ft.Text("All sessions")],
+        selected=False,
+        on_click=pick,
+    )
+    container = cast(ft.Container, cast(ft.MergeSemantics, row).content)
+    padding = cast(ft.Padding, container.padding)
+    assert padding.top + 24 + padding.bottom >= 48

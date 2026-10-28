@@ -57,8 +57,14 @@ db = outbox_db
 
 A = "a@example.com"
 B = "b@example.com"
-LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key, STAFF_SWAG_CATEGORIES.key)
-"""Staff keys #39 and #41 add: the sponsor, the scanner consent, the swag categories."""
+LATER_KEYS = (
+    "pycon.staff_sponsor",
+    SCANNER_CONSENT.key,
+    STAFF_SWAG_CATEGORIES.key,
+    "pycon.staff_door_session",
+)
+"""Staff keys #39, #40 and #41 add: the sponsor, the scanner consent, the swag
+categories and the session Door check checks in for."""
 
 
 @pytest.fixture
