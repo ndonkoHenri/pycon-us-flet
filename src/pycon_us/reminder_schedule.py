@@ -12,7 +12,8 @@ the interim applies (D-60).
 stores, with the year's sign-up moments and the keynotes' moments of the current feed.
 
 ``use_reminder_taps()`` lets a tap on a reminder navigate once the boot gate is open;
-before, the ``Scheduler`` holds it for ``routes.Start`` (D-396).
+before, the ``Scheduler`` holds it for ``routes.Start``, or opens it itself when the
+app started elsewhere (D-396).
 """
 
 from datetime import datetime
@@ -24,6 +25,7 @@ from pycon_us import clock
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData
 from pycon_us.favorites import Favorites
+from pycon_us.locations import is_top_view
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
@@ -138,8 +140,9 @@ def use_reminder_taps(svc: Services, *, ready: bool) -> None:
     Call it on every render, before any early return. Until the gate opens there is
     no Router to navigate, so the ``Scheduler`` holds a tap, the one that launched the
     app included, and ``routes.Start`` opens it in place of its own target
-    (``locations.launch_target()``); from then on a tap navigates at once. Without E3
-    it does nothing.
+    (``locations.launch_target()``); from then on a tap navigates at once. A start
+    at another location (a link, or ``/search`` over ``Start``) never lets ``Start``
+    take the tap, so the gate opening opens it then. Without E3 it does nothing.
 
     Args:
         svc: The session's services: the ``Scheduler``, None without E3.
@@ -149,7 +152,16 @@ def use_reminder_taps(svc: Services, *, ready: bool) -> None:
 
     @report_errors
     def follow_gate() -> None:
-        if svc.reminders is not None:
-            svc.reminders.navigate = page.navigate if ready else None
+        scheduler = svc.reminders
+        if scheduler is None:
+            return
+        scheduler.navigate = page.navigate if ready else None
+        # Start takes the held tap only as the top View; anywhere else it would stay held.
+        if (
+            ready
+            and not is_top_view(page.route, "/")
+            and (route := scheduler.take_tap())
+        ):
+            page.navigate(route)
 
     ft.use_effect(follow_gate, [ready])

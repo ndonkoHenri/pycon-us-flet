@@ -213,7 +213,8 @@ class Scheduler:
             routes; None before, while taps are held.
         enabled: Whether the OS shows the app's notifications, as last read
             (``read_enabled()``): at the start and before each apply. False until
-            read, or when the read fails.
+            read, or when the read fails. A read that changes it calls the
+            listeners of ``watch_enabled()``.
     """
 
     notifications: Notifications
@@ -223,6 +224,7 @@ class Scheduler:
     navigate: Callable[[str], object] | None = None
     enabled: bool = False
     _wanted: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+    _on_enabled: list[Callable[[], object]] = field(default_factory=list, repr=False)
 
     def on_tap(self, e: NotificationEvent) -> None:
         """E3's ``on_tap``: open the tapped reminder's route, its payload (D-21)."""
@@ -273,8 +275,26 @@ class Scheduler:
         except (NotificationException, TimeoutError) as e:
             logger.warning("Reminders: whether notifications show is unknown: %s", e)
             enabled = False
-        self.enabled = bool(enabled)
+        if bool(enabled) != self.enabled:
+            self.enabled = bool(enabled)
+            for listener in list(self._on_enabled):
+                listener()
         return self.enabled
+
+    def watch_enabled(self, listener: Callable[[], object]) -> Callable[[], None]:
+        """Call ``listener`` whenever a read changes ``enabled``, as the Banner needs.
+
+        A change in system settings is seen at the next read, on resume or before an
+        apply, and no store changes with it (D-396).
+
+        Args:
+            listener: Called with no arguments after ``enabled`` changes.
+
+        Returns:
+            A function that stops the calls.
+        """
+        self._on_enabled.append(listener)
+        return lambda: self._on_enabled.remove(listener)
 
     def request(self) -> None:
         """Ask for the plan to be applied again; a newer request supersedes one in flight."""

@@ -56,7 +56,7 @@ class Shown:
 
     @property
     def scheduler(self) -> Scheduler:
-        """E3's ``Scheduler``, whose ``enabled`` a test sets as the OS would answer."""
+        """E3's ``Scheduler``, whose ``read_enabled()`` reads the fake OS's answer."""
         assert self.svc.reminders is not None
         return self.svc.reminders
 
@@ -244,10 +244,25 @@ async def test_no_banner_while_the_os_reminds_and_back_once_it_does_not(
     A change of the settings asks again at once, as the favourites' and the feed's do.
     """
     assert shown.banner is not None  # notifications not (yet) shown: the interim
-    shown.scheduler.enabled = True  # read at the start or before an apply
-    shown.favorites.notify()  # pyright: ignore[reportAttributeAccessIssue]
+    await shown.scheduler.read_enabled()  # the fake OS shows them, as on a resume
     await settle()
     assert shown.banner is None
     shown.prefs.reminders = ReminderSettings(session_lead=0)
+    await settle()
+    assert shown.banner is not None
+
+
+async def test_a_permission_read_alone_moves_the_banner_both_ways(shown: Shown) -> None:
+    """A read that changes ``Scheduler.enabled`` asks again at once, no store changing.
+
+    Back from system settings, the read on resume hides the Banner when notifications
+    are allowed and brings it back when they are denied, without the minute tick.
+    """
+    os = cast(MemoryNotifications, shown.scheduler.notifications)
+    await shown.scheduler.read_enabled()
+    await settle()
+    assert shown.banner is None
+    os.enabled = False  # denied in system settings
+    await shown.scheduler.read_enabled()
     await settle()
     assert shown.banner is not None

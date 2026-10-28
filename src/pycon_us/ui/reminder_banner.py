@@ -146,7 +146,8 @@ def use_reminder_banner(
     """Show the reminder Banner while a saved session is about to start (a hook, D-70).
 
     Call it on every render, before any early return. It subscribes to nothing that
-    re-renders its component: the stores' changes and the minute tick each ask
+    re-renders its component: the stores' changes, a read that changes
+    ``Scheduler.enabled`` and the minute tick each ask
     ``due_session()`` again, unless ``os_reminds()``, and only a different answer
     sets the state.
 
@@ -185,6 +186,8 @@ def use_reminder_banner(
             cast(ft.Observable, store).subscribe(on_change)
             for store in (conference, favorites, prefs)
         ]
+        if svc.reminders is not None:  # a change in system settings (D-396)
+            stops.append(svc.reminders.watch_enabled(check))
         try:
             await svc.run_every(TICK_SECONDS, check)
         finally:

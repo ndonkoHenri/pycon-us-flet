@@ -254,3 +254,35 @@ async def test_taps_navigate_only_while_the_gate_is_open(
         scheduler.open_tapped("/schedule/session/153")
         assert went == ["/schedule/session/153"]
         assert scheduler.tapped == "/my-schedule/session/142"  # Start's to take
+
+
+@pytest.mark.parametrize("start", ["/schedule", "/search"])
+async def test_a_tap_held_at_boot_opens_when_start_cannot_take_it(
+    year: YearData, tmp_path: Path, held: None, start: str
+) -> None:
+    """A start at a link, or ``/search`` over ``Start``, opens the held tap at the gate.
+
+    ``Start`` takes a held tap only as the top View, so elsewhere the gate opening
+    navigates to it and clears it; at ``/`` it stays for ``Start``.
+    """
+    state = showing(year, tmp_path, loaded=False)
+    scheduler = state.svc.reminders
+    assert scheduler is not None
+    gate: dict[str, Callable[[], None]] = {}
+
+    @ft.component
+    def Host() -> ft.Control:
+        """``App``'s part: the hook, with the gate as the test sets it."""
+        ready, set_ready = ft.use_state(False)
+        gate["open"] = lambda: set_ready(True)
+        use_reminder_taps(state.svc, ready=ready)
+        return ft.Column()
+
+    async with rendering(Host) as session:
+        went: list[str] = []
+        session.page.navigate = went.append  # pyright: ignore[reportAttributeAccessIssue]
+        session.page.route = start
+        scheduler.open_tapped("/my-schedule/session/142")
+        gate["open"]()
+        await settle()
+        assert (went, scheduler.tapped) == (["/my-schedule/session/142"], "")
