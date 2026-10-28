@@ -11,7 +11,9 @@ Help & safety (D-281), Venue & hours first (D-313), and **About** with About PyC
 (D-284); their other rows join with their P2 pages. The profile row comes first while
 a mock API URL is set (D-51, SHELL-12): "Sign in" signed out, else the account's
 avatar, nickname and email, which opens the Account page (#688), and "Sign in again" once the server refused the key (#686); it appears, disappears and changes live with ``Prefs`` and the
-``Account`` store. Staff tools join under it with P3's tools (D-16).
+``Account`` store. The Staff tools section follows it (``screens/staff_entry.py``,
+D-16, #725): a row per tool the account may open whose screen is built, the Lead
+scanner's with the outbox's "3 pending", live with the ``Account`` and ``Staff`` stores.
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
 ``/more/plan/expo``, a pushed View like any page.
 """
@@ -24,7 +26,9 @@ from pycon_us.account import Account, use_account
 from pycon_us.core.speakers import initials
 from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
+from pycon_us.screens.staff_entry import staff_section
 from pycon_us.services import use_services
+from pycon_us.staff import use_staff
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.rows import AVATAR_RADIUS, LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
@@ -119,6 +123,7 @@ def More() -> ft.View:
     svc = use_services()
     prefs = use_prefs()
     account = use_account()
+    staff = use_staff()  # the Lead scanner row's "3 pending"
     you = [SETTINGS, ABOUT_APP]
     if prefs.developer:
         you.append(DEVELOPER)
@@ -130,6 +135,7 @@ def More() -> ft.View:
         body=ft.ListView(
             [
                 *([profile_row(account)] if prefs.private_api_enabled else []),
+                *staff_section(account, staff, mock_url=prefs.private_api_enabled),
                 SectionHeader("Programme"),
                 *(link(entry) for entry in PROGRAMME),
                 SectionHeader("Expo & sponsors"),

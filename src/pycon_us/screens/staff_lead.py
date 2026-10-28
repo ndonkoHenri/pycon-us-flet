@@ -5,7 +5,9 @@ D-416). It re-checks its rule on every render (architecture §12.4): an account
 without ``lead_retrieval`` or ``door_check``, a signed-out session or no mock URL
 (D-51) sees "Not available for this account", so a deep link cannot bypass it. Until
 #39 brings lead capture, a badge is only read: "Badge read" with the code, both
-validators and "Not recorded yet"; nothing is sent or queued.
+validators and "Not recorded yet"; nothing is sent or queued. It is mounted at
+``/now/staff/lead`` too, for Now's Scan badges card, and records itself as the last
+tool opened, which that card opens next (D-421).
 """
 
 import flet as ft
@@ -14,6 +16,7 @@ from pycon_us.account import use_account
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
 from pycon_us.prefs import use_prefs
+from pycon_us.services import use_services
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
@@ -29,6 +32,7 @@ def LeadScanner() -> ft.Control:
     """The Lead scanner, or its "Not available" state for an account it refuses."""
     prefs = use_prefs()
     account = use_account()
+    memory = use_services().memory
     allowed = (
         prefs.private_api_enabled
         and account.signed_in
@@ -36,6 +40,7 @@ def LeadScanner() -> ft.Control:
     )
     if not allowed:
         return NotAvailable(title=TITLE)
+    memory.staff_tool = ToolKey.LEAD  # plain: Now's card reads it when it renders
     return ScanScreen(title=TITLE, on_badge=badge_read)
 
 
