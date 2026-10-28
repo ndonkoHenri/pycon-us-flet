@@ -63,7 +63,7 @@ scheme = "pyconus"
 host = "app"
 ```
 
-Reminder taps (E3) reuse the same paths, so a notification and a link both land on "root with the target pushed" (D-21). Landing itself needs nothing new; what was open when a warm link comes is U89 (#516): the app closes dialogs and sheets first (D-291).
+Reminder taps (E3) reuse the same paths, so a notification and a link both land on "root with the target pushed" (D-21); E3 hands over the launch tap before its first answer, given an `on_tap` set in the constructor (F246, D-396). Landing itself needs nothing new; what was open when a warm link comes is U89 (#516): the app closes dialogs and sheets first (D-291).
 
 ### 1.3 Cut or noted
 

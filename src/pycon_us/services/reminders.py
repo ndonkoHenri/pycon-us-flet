@@ -239,8 +239,10 @@ class Scheduler:
             logger.warning("Reminders: a tap without a route: %r", route)
             return
         if self.navigate is None:
+            logger.info("Reminders: a tap on %s, held for the start", route)
             self.tapped = route  # routes.Start opens it (locations.launch_target)
         else:
+            logger.info("Reminders: a tap on %s, opened", route)
             self.navigate(route)
 
     def take_tap(self) -> str:
@@ -424,13 +426,12 @@ def start(permissions: PermissionHandler | None) -> Scheduler | None:
         return None
     from flet_notifications import Notifications
 
-    notifications = Notifications()
+    # The handler goes in with the construction: a service registers with the page as
+    # it is built, and one set afterwards misses the tap that launched the app (F246).
+    notifications = Notifications(on_tap=lambda e: scheduler.on_tap(e))
     scheduler = Scheduler(
         notifications,
         permissions,
         android=ft.context.page.platform == ft.PagePlatform.ANDROID,
     )
-    # Before the service first reaches the client: E3 hands over the tap that launched
-    # the app only to a handler that is set by then.
-    notifications.on_tap = scheduler.on_tap
     return scheduler

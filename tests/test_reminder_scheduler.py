@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import cast
 from zoneinfo import ZoneInfo
 
+import flet_notifications
 import pytest
 from flet_notifications import (
     AndroidScheduleMode,
@@ -23,6 +24,7 @@ from flet_permission_handler import PermissionHandler, PermissionStatus
 
 from pycon_us import capabilities
 from pycon_us.services.reminders import Reminder, Scheduler, start
+from tests.fake_page import FakePage, bound
 from tests.fakes import MemoryNotifications, MemoryPermissions, Scheduled
 from tests.sessions import settle
 
@@ -343,3 +345,32 @@ async def test_each_apply_reads_whether_notifications_show_first(
     closed.set()
     sched.request()
     await asyncio.wait_for(loop, 1)
+
+
+class Built:
+    """Stands in for E3's ``Notifications``: records what its constructor was given."""
+
+    def __init__(self, **kwargs: object) -> None:
+        """Keep the keyword arguments, as the service's fields would be at registration."""
+        self.kwargs = kwargs
+
+
+def test_e3_gets_the_tap_handler_as_it_is_built(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``start()`` hands ``on_tap`` to the service's constructor (F246).
+
+    A service registers with the page as it is built, so a handler set afterwards
+    never reaches the client, and E3 drops the tap that launched the app. The
+    handler given is the ``Scheduler``'s.
+    """
+    monkeypatch.setattr(capabilities, "REMINDERS", True)
+    monkeypatch.setattr(flet_notifications, "Notifications", Built)
+    with bound(FakePage()):
+        sched = start(None)
+    assert sched is not None
+    built = cast(Built, sched.notifications)
+    handler = built.kwargs["on_tap"]
+    assert callable(handler)
+    handler(NotificationEvent(name="tap", control=None, id=142, payload=ROUTE))  # pyright: ignore[reportArgumentType]
+    assert sched.tapped == ROUTE

@@ -1,7 +1,8 @@
 """Tests for the reminder plan (``services/reminders.py``; #427, D-59, D-222, NEW-05).
 
 Every case runs at a fixed ``now`` over a recorded feed: the plan is pure, so what it
-returns is all there is to check until E3's ``apply()`` schedules it.
+returns is all there is to check until E3's ``apply()`` schedules it. The in-app
+Banner's ``due_session()`` (``ui/reminder_banner.py``) is pure too, and tested here.
 """
 
 from dataclasses import replace
