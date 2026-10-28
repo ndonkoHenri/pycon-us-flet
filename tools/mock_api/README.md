@@ -84,7 +84,8 @@ Details a port gets wrong:
   never through `httpx`'s `params=` (API-06).
 - **`coc_capture`** switches method on its options (222): a POST with a body when there are notes or `force`, else a
   GET with the query. The name-search page always sends `force: true` and adds `notes` only when non-empty (176-177,
-  227-229).
+  227-229). The Flet app sends only the POST, with `force: true`, from the name search and from a scan alike (D-430);
+  the mock still serves the GET, as the contract.
 - **`lead_capture`** adds `sponsor_id` only when a staff member scans on behalf of a sponsor (`storage`
   `staff-sponsor-id`, 297-301). A sponsor's own account sends none.
 - **`lead_note`** puts the access code in the path unencoded (349) and sends the note composed by the note modal,
@@ -223,6 +224,11 @@ time. Every name in it is made up, every email is at `example.com`, and every pa
   product bought (`products`, product id to quantity: two T-shirts for `MOCK0001`, two seats at a tutorial for
   `MOCK0003`, nothing for `MOCK0004`).
   The printable badge sheet (`badges.py`) is made from them.
+- **More attendees, generated:** `--attendees N` on the server (`MockState.from_seed(attendees=N)` in tests) adds N
+  made-up attendees after the four, `MOCK0005` onwards (validators `v4l1d05` onwards), from `crowd.py`: invented
+  names, some accented, emails at `example.com`, no products, and prior incidents by turns (0, 0, 0, 0, 1, 2, 3, 5).
+  The same N gives the same attendees. `--attendees 3000` serves 3,004 in the CoC directory, enough to try the name
+  search's 25-row cap on a device. The badge sheet prints the seeded four only.
 - `year` is the conference year the mock serves; requests for another year are 404.
 
 ### What the mock records
@@ -271,6 +277,7 @@ The client-level scenarios are in `tests/test_api_faults.py`; the server's handl
   account endpoints.
 - `state.py`: `MockState` (the seed, the capture semantics, the faults and the skew, and the records above), `Call`,
   and `Refused`, an error reply in the `{code, error}` envelope.
+- `crowd.py`: `crowd(count, first_id)`, the made-up attendees `--attendees` adds, as seed entries.
 - `faults.py`: `Faults`, the faults switched on, each one-shot or kept until cleared ([Faults](#faults-d-57)).
 - `parse.py`: reads JSON bodies, raw (`fetch_products`) and percent-decoded (CoC, lead capture) queries, and id lists.
 - `check_in.py`, `conduct.py`, `leads.py`: the staff endpoints for door and swag, Code of Conduct, and lead
@@ -307,6 +314,7 @@ uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the sam
 | `--fault NAME` | none | `connect`, `timeout`, `lost_response` or `revoked` for the next request it applies to ([Faults](#faults-d-57)); repeat it for several. |
 | `--every-request` | off | Keeps each `--fault` on for every request until the server stops. |
 | `--skew SECONDS` | `0` | Runs the mock's clock this far ahead of this machine's (behind when negative). |
+| `--attendees N` | `0` | Adds N made-up attendees after the seeded four, `MOCK0005` onwards ([Seed data](#seed-data-testsfixturesmock)). |
 
 To watch the client recover from a lost reply and a skewed clock, start
 `uv run python -m tools.mock_api.server --fault lost_response --skew 900` and sign in from the app. The log shows the
