@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from pycon_us.services import storage
+from pycon_us.services import data_files
 from pycon_us.services.storage import Storage
 from tests import memory_storage
 from tests.fakes import QueuedWrite
@@ -29,7 +29,7 @@ def test_data_dir_comes_from_the_environment(
 ) -> None:
     """``data_dir`` is ``FLET_APP_STORAGE_DATA``, created if it is missing."""
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "app" / "data"))
-    assert storage.data_dir() == tmp_path / "app" / "data"
+    assert data_files.data_dir() == tmp_path / "app" / "data"
     assert (tmp_path / "app" / "data").is_dir()
 
 
@@ -38,9 +38,9 @@ def test_data_dir_is_read_again_on_every_call(
 ) -> None:
     """D-108: iOS moves the data container on an update, so the path is never kept."""
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "before"))
-    storage.data_dir()
+    data_files.data_dir()
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "after"))
-    assert storage.data_dir() == tmp_path / "after"
+    assert data_files.data_dir() == tmp_path / "after"
 
 
 @pytest.mark.parametrize("value", [None, ""])
@@ -53,7 +53,7 @@ def test_data_dir_falls_back_to_the_flet_run_layout_under_the_working_directory(
     else:
         monkeypatch.setenv("FLET_APP_STORAGE_DATA", value)
     monkeypatch.chdir(tmp_path)
-    path = storage.data_dir()
+    path = data_files.data_dir()
     assert path.is_absolute()
     assert path.samefile(tmp_path / ".flet" / "storage" / "data")
 
@@ -106,7 +106,7 @@ async def test_writes_go_through_a_temp_file_and_os_replace(
         replaced.append((Path(src).name, Path(dst).name, Path(src).read_bytes()))
         real_replace(src, dst)
 
-    monkeypatch.setattr(storage.os, "replace", spy)
+    monkeypatch.setattr(data_files.os, "replace", spy)
     await store.write_feed(b"feed")
     assert replaced == [("feed-2026.json.tmp", "feed-2026.json", b"feed")]
 
@@ -123,7 +123,7 @@ async def test_a_failed_write_keeps_the_previous_cache_and_is_reported(
     def disk_full(fd: int) -> None:
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(storage.os, "fsync", disk_full)
+    monkeypatch.setattr(data_files.os, "fsync", disk_full)
     assert not await store.write_feed(b"newer")
     cached = await store.read_feed()
     assert cached is not None
@@ -167,7 +167,7 @@ async def test_no_temp_file_is_left_after_a_failed_write(
     def fail(*args: object) -> None:
         raise OSError(5, "Input/output error")
 
-    monkeypatch.setattr(storage.os, failing, fail)
+    monkeypatch.setattr(data_files.os, failing, fail)
     assert not await store.write_feed(b"feed")
     assert list(tmp_path.iterdir()) == []
 
@@ -183,10 +183,10 @@ def test_a_failed_cleanup_keeps_the_original_error(
     def read_only(self: Path, missing_ok: bool = False) -> None:
         raise PermissionError(13, "Permission denied")
 
-    monkeypatch.setattr(storage.os, "fsync", disk_full)
+    monkeypatch.setattr(data_files.os, "fsync", disk_full)
     monkeypatch.setattr(Path, "unlink", read_only)
     with pytest.raises(OSError, match="No space left"):
-        storage.write_atomic(tmp_path / "feed-2026.json", b"feed")
+        data_files.write_atomic(tmp_path / "feed-2026.json", b"feed")
 
 
 def test_overlapping_writers_take_turns(
@@ -208,11 +208,11 @@ def test_overlapping_writers_take_turns(
 
     def write(data: bytes) -> None:
         try:
-            storage.write_atomic(path, data)
+            data_files.write_atomic(path, data)
         except OSError as error:
             errors.append(error)
 
-    monkeypatch.setattr(storage.os, "fsync", slow_first_fsync)
+    monkeypatch.setattr(data_files.os, "fsync", slow_first_fsync)
     first = threading.Thread(target=write, args=(b"A" * 100_000,))
     first.start()
     assert first_is_syncing.wait(5)
@@ -236,7 +236,7 @@ def test_data_dir_raises_when_it_cannot_be_created(
     (tmp_path / "taken").write_bytes(b"")
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "taken"))
     with pytest.raises(OSError):
-        storage.data_dir()
+        data_files.data_dir()
 
 
 async def test_deleting_the_cache_says_whether_it_is_gone(
@@ -258,7 +258,7 @@ async def test_a_deletion_waits_for_a_write_in_progress(store: Storage) -> None:
     went first would see the file come back when the write lands.
     """
     await store.write_feed(b"feed")
-    with storage._write_lock:  # a write in progress
+    with data_files.write_lock:  # a write in progress
         deleting = asyncio.create_task(store.delete_feed("Reset app"))
         await asyncio.sleep(0.05)
         assert store.feed_path.exists()

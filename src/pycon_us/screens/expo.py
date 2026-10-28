@@ -41,7 +41,8 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.zoom import Size, Transform, use_zoom, zoom_buttons, zoom_layer
+from pycon_us.ui.zoom import use_zoom, zoom_buttons, zoom_layer
+from pycon_us.ui.zoom_geometry import Size, Transform
 from pycon_us.year_map import EXPO_PLAN, Booth, Plan
 
 SCREEN = "expo"
@@ -99,7 +100,7 @@ def booth_box(booth: Booth, shown: Size) -> tuple[float, float, float, float]:
 
     Args:
         booth: The booth, its rectangle in ratios of the plan.
-        shown: The plan's fitted size (``ui.zoom.fitted()``).
+        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
     """
     width, height = shown
     return booth.x * width, booth.y * height, booth.w * width, booth.h * height

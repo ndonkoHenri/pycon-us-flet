@@ -16,7 +16,8 @@ import flet as ft
 
 from pycon_us.memory import ViewMemory
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.zoom import AT_FIT, Size, Transform, Zoom, fitted
+from pycon_us.ui.zoom import AT_FIT, Zoom
+from pycon_us.ui.zoom_geometry import Size, Transform, fitted
 from pycon_us.year_map import Booth
 
 FIT = Transform(1.0, 0.0, 0.0)
@@ -43,7 +44,7 @@ def booth_rect(booth: Booth, box: Size, natural: Size) -> Rect:
 def shows(rect: Rect, at: Transform, width: float, free: float) -> bool:
     """Return whether a rectangle of the content is on screen, above ``free``.
 
-    A content point ``p`` shows at ``s p + t`` (``ui.zoom.refocus()``).
+    A content point ``p`` shows at ``s p + t`` (``ui.zoom_geometry.refocus()``).
 
     Args:
         rect: The rectangle, in the content's units.

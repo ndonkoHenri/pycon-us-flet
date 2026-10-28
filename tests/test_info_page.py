@@ -20,7 +20,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from pycon_us.theme import MARKDOWN_STYLE
+from pycon_us.theme_markdown import MARKDOWN_STYLE
 from pycon_us.ui import info_page
 from pycon_us.ui.info_page import GUTTER, FeedBlock, InfoBody
 from pycon_us.ui.states import EmptyState
