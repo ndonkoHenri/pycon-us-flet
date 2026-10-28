@@ -26,7 +26,7 @@ from pycon_us.services import storage as storage_module
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import Counts, OutboxDb
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import STAFF_PREFIX, Pref, Storage
+from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, Pref, Storage
 from pycon_us.services.sync import supervise
 from pycon_us.staff import Staff
 from pycon_us.staff_data import clear_staff_data, staff_counts, unsynced
@@ -51,7 +51,7 @@ db = outbox_db
 
 A = "a@example.com"
 B = "b@example.com"
-LATER_KEYS = ("pycon.staff_sponsor", "pycon.staff_consent")
+LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key)
 """Staff keys #39 adds: the chosen sponsor and the scanner consent."""
 
 

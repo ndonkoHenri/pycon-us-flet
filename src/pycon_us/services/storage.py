@@ -60,8 +60,8 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.staff_sponsor` and the scanner consent here, with the features that
-# use them (#39); the staff keys start with STAFF_PREFIX.
+# P3 adds `pycon.staff_sponsor` here with the sponsor picker (#740); the staff keys
+# start with STAFF_PREFIX.
 
 STAFF_PREFIX = "pycon.staff_"
 """Starts every staff key (the chosen sponsor, the scanner consent): what sign-out, an
@@ -90,6 +90,11 @@ START_SCREEN: Pref[str] = Pref("pycon.start_screen", "auto")
 """``auto``, ``now`` or ``lead``: where a lead-retrieval account opens the app (D-16).
 Not a staff key: a sign-out keeps it (#689)."""
 
+SCANNER_CONSENT: Pref[bool] = Pref("pycon.staff_scanner_consent", False)
+"""Whether this account agreed to scan only with consent (LEAD-04, STORE-06). A staff
+key: a sign-out, a sign-in as another account and Clear staff data remove it, so the
+Lead scanner asks again. In no store: the scanner reads it as it opens (D-423)."""
+
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -102,6 +107,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     REMINDERS,
     DEV,
     START_SCREEN,
+    SCANNER_CONSENT,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""
