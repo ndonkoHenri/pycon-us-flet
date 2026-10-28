@@ -15,7 +15,7 @@ import pytest
 
 from pycon_us.core.signing import auth_headers, canonical_body
 from tests.mock_calls import BASE, NOW, account, state_at
-from tools.mock_api.server import MockServer, banner
+from tools.mock_api.server import MockServer, banner, parser, state_for
 from tools.mock_api.state import MockState
 
 pytestmark = pytest.mark.loopback
@@ -212,3 +212,93 @@ def test_the_banner_on_loopback_says_phones_cannot_reach_it() -> None:
     text = banner("127.0.0.1", 8000, state_at(), ["192.168.1.20"])
     assert "192.168.1.20" not in text
     assert "use --host 0.0.0.0" in text
+
+
+def patch_favorites(state: MockState, served: httpx.Client) -> None:
+    """PATCH the attendee's favourites to ``["7"]``, signed, over the socket."""
+    path = f"{BASE}user/mobile_state/"
+    body = canonical_body({"favorites": ["7"]})
+    headers = signed(state, "attendee", "PATCH", path, body)
+    served.patch(path, content=body, headers=headers)
+
+
+def test_a_connect_fault_drops_the_connection_before_handle(
+    state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """``connect`` closes the connection unanswered and the PATCH is never applied."""
+    capfd.readouterr()
+    state.faults.inject("connect")
+    with pytest.raises(httpx.TransportError):
+        patch_favorites(state, served)
+    assert account(state, "attendee").favorites != ["7"]
+    [line] = log_lines(capfd)
+    assert line.endswith(f"PATCH {BASE}user/mobile_state/ - (connect fault, dropped)")
+
+
+def test_a_lost_response_applies_the_write_then_drops_the_reply(
+    state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """``lost_response`` runs ``handle``, logs its status, and sends no reply."""
+    capfd.readouterr()
+    state.faults.inject("lost_response")
+    with pytest.raises(httpx.TransportError):
+        patch_favorites(state, served)
+    assert account(state, "attendee").favorites == ["7"]
+    [line] = log_lines(capfd)
+    assert line.endswith("200 (lost_response fault, reply dropped)")
+
+
+def test_a_timeout_fault_holds_the_request_until_the_client_gives_up(
+    state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """``timeout`` never answers, so the client's own timeout ends the request."""
+    capfd.readouterr()
+    state.faults.inject("timeout")
+    path = f"{BASE}user/check_features/"
+    with pytest.raises(httpx.ReadTimeout):
+        served.get(path, headers=signed(state, "staff", "GET", path), timeout=0.3)
+    [line] = log_lines(capfd)
+    assert line.endswith(f"GET {path} - (timeout fault, held unanswered)")
+    reply = served.get(path, headers=signed(state, "staff", "GET", path))
+    assert reply.status_code == 200  # the one-shot fault is spent
+
+
+def test_a_skewed_mock_dates_its_replies_and_refuses_the_devices_time(
+    state: MockState, served: httpx.Client
+) -> None:
+    """``skew`` moves the ``Date`` header and the window, so a right clock is 403."""
+    state.skew = 900
+    path = f"{BASE}user/check_features/"
+    reply = served.get(path, headers=signed(state, "staff", "GET", path))
+    assert reply.status_code == 403  # signed at NOW, the device's clock
+    assert reply.headers["Date"] == formatdate(NOW + 900, usegmt=True)
+
+
+def test_the_command_line_switches_faults_and_skew_on() -> None:
+    """``--fault`` (repeatable), ``--every-request`` and ``--skew`` reach the state."""
+    args = parser().parse_args(
+        ["--fault", "lost_response", "--fault", "revoked", "--skew", "-900"]
+    )
+    state = state_for(args)
+    assert state.faults.on == {"lost_response": False, "revoked": False}
+    assert state.skew == -900
+    every = state_for(parser().parse_args(["--fault", "connect", "--every-request"]))
+    assert every.faults.on == {"connect": True}
+
+
+def test_an_unknown_fault_is_a_usage_error() -> None:
+    """``--fault`` accepts only the faults the mock models."""
+    with pytest.raises(SystemExit):
+        parser().parse_args(["--fault", "slow"])
+
+
+def test_the_banner_says_which_faults_are_on_and_the_skew() -> None:
+    """The banner names each fault with its reach, and the skew, only when set."""
+    state = state_at()
+    assert "Faults" not in banner("127.0.0.1", 8000, state, [])
+    state.faults.inject("lost_response")
+    state.faults.inject("revoked", until_cleared=True)
+    state.skew = 900
+    text = banner("127.0.0.1", 8000, state, [])
+    assert "lost_response (next request), revoked (every request)" in text
+    assert "Clock skewed +900 s" in text
