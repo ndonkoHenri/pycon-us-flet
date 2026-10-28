@@ -232,7 +232,7 @@ def only_chip(
         selected: The filter is on.
         on_select: Turns it on or off.
     """
-    return ft.Row(
+    row = ft.Row(
         [
             named(
                 "lead.leads.only_sponsor",
@@ -251,6 +251,8 @@ def only_chip(
         ],
         wrap=True,
     )
+    # The search field's 16 dp sides, so the chip lines up under it (ux.md §3.6).
+    return ft.Container(row, padding=ft.Padding.only(left=16, right=16, bottom=4))
 
 
 def LeadRow(
