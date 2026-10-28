@@ -24,8 +24,10 @@ prefill would save over it.
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from functools import partial
 
 import flet as ft
+from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us import lead_note
 from pycon_us.core.lead_notes import FOLLOW_UPS, Interest, LeadNote
@@ -300,7 +302,7 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
     editing, set_state = ft.use_state(not_editing)
     # The draft as the handlers left it: a render may not have run between two
     # events (use_state only schedules one), so Save reads this, not `editing`.
-    latest = ft.use_ref(editing)
+    latest: MutableRef[Editing | None] = ft.use_ref(editing)
     is_open = editing is not None
     field = ft.use_memo(ft.Ref[ft.TextField], [is_open])  # a fresh one each opening
     mounted = ft.use_ref(True)  # cleared on unmount: a late SnackBar is then dropped
@@ -312,10 +314,7 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
 
     ft.use_effect(lambda: None, [], cleanup=unmount)
 
-    def set_editing(value: Editing | None) -> None:
-        """Keep ``latest`` and the state together, so the next event sees it at once."""
-        latest.current = value
-        set_state(value)
+    set_editing = partial(keep, latest, set_state)
 
     @report_errors
     def open_for(code: str, name: str | None) -> None:
@@ -379,6 +378,16 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
         else None
     )
     return NoteSheet(open_for, is_open)
+
+
+def keep(
+    latest: MutableRef[Editing | None],
+    set_state: Callable[[Editing | None], None],
+    value: Editing | None,
+) -> None:
+    """Set the sheet's state and ``latest`` together, so the next event sees it at once."""
+    latest.current = value
+    set_state(value)
 
 
 def snack_bar(words: str) -> ft.SnackBar:
