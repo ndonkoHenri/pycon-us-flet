@@ -305,17 +305,16 @@ def status_line(
             )
         )
     elif status == "failed":
-        trail.append(
-            named(
-                "coc.directory.retry",
-                ft.TextButton(
-                    RETRY,
-                    on_click=on_again,
-                    disabled=not online,
-                    tooltip=None if online else OFFLINE,
-                ),
+        retry: ft.Control = ft.TextButton(RETRY, on_click=on_again, disabled=not online)
+        if not online:  # a disabled button's tooltip is not read: name it with why
+            retry = ft.Semantics(
+                label=RETRY + why,
+                button=True,
+                disabled=True,
+                exclude_semantics=True,
+                content=retry,
             )
-        )
+        trail.append(named("coc.directory.retry", retry))
     return ft.Row(
         [*lead, text, *trail],
         spacing=8,

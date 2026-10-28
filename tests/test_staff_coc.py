@@ -309,8 +309,12 @@ async def test_offline_retry_is_disabled_with_the_reason(
     monkeypatch.setattr(staff_coc, "use_online", lambda svc, *, watch: False)
     switch.offline = True
     shown = await show()
-    retry = button(shown, "coc.directory.retry")
-    assert retry.disabled and retry.tooltip == OFFLINE
+    node = shown.node("coc.directory.retry")
+    assert node.disabled  # read as disabled (named(), F42)
+    named = node.content
+    assert isinstance(named, ft.Semantics)  # a disabled button's tooltip isn't read
+    assert named.label == f"Retry. {OFFLINE}" and named.disabled
+    assert isinstance(named.content, ft.TextButton) and named.content.disabled
 
 
 async def test_a_known_code_shows_its_name_and_count_and_sends_nothing(
