@@ -227,6 +227,22 @@ def test_a_note_is_never_due_before_its_lead_is_synced(db: OutboxDb) -> None:
     assert db.due_rows(OWNER, NOW) == [text]
 
 
+def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:
+    """``enqueue`` refuses a row whose code isn't the one its rows were read for."""
+    decide = partial(
+        outbox.scan_lead,
+        owner=OWNER,
+        code="B2",
+        payload={},
+        sponsor_id=None,
+        sponsor_name=None,
+        now=NOW,
+    )
+    with pytest.raises(ValueError, match="not 'A1'"):
+        db.enqueue("A1", decide)
+    assert db.counts(OWNER) == Counts()
+
+
 def test_saving_a_row_never_stored_is_a_bug(db: OutboxDb) -> None:
     """Only stored rows are saved: a row without an id raises."""
     row = Row(Kind.LEAD, "A1", {}, OWNER, None, None, NOW, NOW)

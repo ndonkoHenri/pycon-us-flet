@@ -243,6 +243,10 @@ class OutboxDb:
                 enqueued = decide(rows)
                 if enqueued.row is None:
                     return enqueued
+                if enqueued.row.key != code:  # it was decided over the wrong rows
+                    raise ValueError(
+                        f"enqueued a row for {enqueued.row.key!r}, not {code!r}"
+                    )
                 if enqueued.outcome is Outcome.QUEUED:
                     params = _params(enqueued.row)
                     cursor = connection.execute(
