@@ -279,13 +279,14 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
        return, so a button that opened another app's window gets the focus back
        (``ui.focus_back``, D-372).
     2. The feed refreshes when the last refresh began 15 min ago or more (D-40).
-    3. The OS's accessibility flags are read again. The OS reports them as a snapshot,
+    3. E3's reminders are applied again, which brings back what the OS dropped
+       meanwhile (D-222, D-389); without E3 there is nothing to apply. Asked before
+       the await below, so a slow read never holds it back.
+    4. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
        applies without a restart (D-23, D-34, D-173). On Android such a change can
        reach Flutter only after this read, and then applies at the next resume:
        accepted until U17 (D-183). Components follow ``Prefs`` by themselves.
-    4. E3's reminders are applied again, which brings back what the OS dropped
-       meanwhile (D-222, D-389); without E3 there is nothing to apply.
 
     Args:
         svc: The session's services.
@@ -295,9 +296,9 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     svc.foreground.set()
     svc.presence.come_back()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
-    await read_accessibility(svc.semantics, prefs)
     if svc.reminders is not None:
         svc.reminders.request()
+    await read_accessibility(svc.semantics, prefs)
 
 
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:
