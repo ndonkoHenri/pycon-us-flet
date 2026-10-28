@@ -16,7 +16,8 @@ shows the app's notifications, which the in-app Banner's rule reads
 
 ``Scheduler.access()`` and ``Scheduler.request_permission()`` are the notification
 permission's status and request, which the primer uses (``ui/reminder_primer.py``;
-D-61, D-395).
+D-61, D-395). ``Scheduler.schedule_test()`` schedules Developer's test reminder
+(``screens/developer_reminders.py``; DEV-06, D-402).
 """
 
 import asyncio
@@ -66,6 +67,12 @@ _ACCESS: dict[str, Access] = {
     "restricted": "blocked",
 }
 """``flet-permission-handler``'s ``PermissionStatus`` values, mapped (ux.md §4.8)."""
+
+TEST_ID = 8999
+"""The Developer test reminder's notification id, outside the plan's ranges (D-59)."""
+
+type TestResult = Literal["exact", "inexact", "failed"]
+"""How ``Scheduler.schedule_test()`` scheduled the test reminder."""
 
 LAUNCH_WAIT = 3.0
 """Seconds the start waits at most for E3 to answer (``Scheduler.read_enabled()``),
@@ -413,10 +420,7 @@ class Scheduler:
             Whether the whole plan was handed to the OS: False when a newer request
             superseded it or a call failed.
         """
-        from flet_notifications import (
-            NotificationException,
-            NotificationPermissionException,
-        )
+        from flet_notifications import NotificationException
 
         if self._wanted.is_set():  # superseded before it began
             return False
@@ -431,16 +435,7 @@ class Scheduler:
                 logger.info("Reminders: apply superseded by a newer one")
                 return False
             try:
-                try:
-                    await self._schedule(reminder, exact=exact)
-                except NotificationPermissionException as e:
-                    if not exact:
-                        raise
-                    logger.warning(
-                        "Reminders: exact refused, scheduling inexact: %s", e
-                    )
-                    exact = False
-                    await self._schedule(reminder, exact=False)
+                exact = await self._schedule_best(reminder, exact=exact)
             except (NotificationException, TimeoutError) as e:
                 logger.warning("Reminders: %s not scheduled: %s", reminder.id, e)
                 complete = False
@@ -450,6 +445,48 @@ class Scheduler:
             "exact" if exact else "inexact",
         )
         return complete
+
+    async def schedule_test(self, build: Callable[[], Reminder]) -> TestResult:
+        """Schedule Developer's test reminder now, exact when allowed (DEV-06, D-402).
+
+        Outside the apply loop: the next apply's cancel removes it if it is still
+        pending, which a developer tool can live with. Whether the OS shows the app's
+        notifications is the caller's check (``access()``).
+
+        Args:
+            build: Returns the test reminder, ``TEST_ID``. It is called after the
+                exact-alarm check, so a slow check can't leave its time in the past,
+                which E3 refuses.
+
+        Returns:
+            How it was scheduled: ``"exact"``, ``"inexact"`` (Android refuses exact
+            alarms, so it may come late) or ``"failed"`` (logged).
+        """
+        from flet_notifications import NotificationException
+
+        try:
+            exact = await self.exact_allowed()
+            reminder = build()  # due from now, not from before the check
+            exact = await self._schedule_best(reminder, exact=exact)
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: the test reminder not scheduled: %s", e)
+            return "failed"
+        logger.info("Reminders: a test reminder to %s scheduled", reminder.route)
+        return "exact" if exact else "inexact"
+
+    async def _schedule_best(self, reminder: Reminder, *, exact: bool) -> bool:
+        """Schedule one reminder, inexact when Android refuses exact; return if exact."""
+        from flet_notifications import NotificationPermissionException
+
+        try:
+            await self._schedule(reminder, exact=exact)
+        except NotificationPermissionException as e:
+            if not exact:
+                raise
+            logger.warning("Reminders: exact refused, scheduling inexact: %s", e)
+            await self._schedule(reminder, exact=False)
+            return False
+        return exact
 
     async def _schedule(self, reminder: Reminder, *, exact: bool) -> None:
         """Hand one reminder to the OS; its route is the payload a tap opens (D-21)."""

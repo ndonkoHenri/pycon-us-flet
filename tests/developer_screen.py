@@ -126,8 +126,10 @@ def render(
     monkeypatch.setattr(developer, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(developer, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(developer, "use_margin", phone_margin)
-    # The Data and Mock API sections are components of their own, with their tests.
+    # The Data, Reminders and Mock API sections are components of their own, with
+    # their tests.
     monkeypatch.setattr(developer, "DataActions", lambda: ft.Container())
+    monkeypatch.setattr(developer, "TestReminders", lambda: ft.Container())
     monkeypatch.setattr(developer, "MockApiSection", lambda: ft.Container())
 
     def render() -> dict[str, Any]:
