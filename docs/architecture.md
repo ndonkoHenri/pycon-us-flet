@@ -210,7 +210,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/my-schedule/settings` | Settings again, from My schedule's Reminder settings: under My schedule, so Back returns there (D-207's pattern, D-401) | child | P2 | NEW-01, NOTIF-01 |
 | `/more/app/licences`, `/more/app/licences/<key>` | `Licences`, `LicencePage` (`screens/licences.py`): the list, under About this app, and one text, under the list (D-296) | child | P2 | INFO-03 |
 | `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social` | sponsors and info screens | child | P2 | SPON, MAP-09..11, INFO |
-| `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4) | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
+| `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4): `/more/sign-in` is `SignInPage` (`screens/sign_in.py`, #685), its form only while a mock URL is set | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
 | `<any of the above>/<kind>/<id>` | `Drill` → detail screen | recursive child | P1 | SESS-12, #279 |
 
 **Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`), `changes/<year>` (P2; Schedule changes, the year's change log, pushed on the View that opens it: Now's card, the Schedule's overflow, Settings › Data, or the "Schedule updated" SnackBar over any View, D-255).

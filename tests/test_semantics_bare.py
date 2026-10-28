@@ -32,6 +32,9 @@ ON_PURPOSE = {
     # D-230, D-233: inside a PopupMenuItem, whose own MergeSemantics takes the
     # identifier into the item's node (Flutter's popup_menu.dart); a uiautomator
     # dump shows it. Every overflow item is built there.
+    # D-214: a merge would take in the password's reveal button, which would stop
+    # being a button of its own (#685).
+    ("sign_in.py", "SignInPage", "'sign_in.password'"): "sign_in.password",
     ("menus.py", "menu_item", "identifier"): (
         "session.open_site, session.add_to_calendar, my_schedule.export,"
         " sprints.info, sprints.submit, track.add_all"

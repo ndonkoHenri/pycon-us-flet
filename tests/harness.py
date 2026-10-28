@@ -16,7 +16,7 @@ Flet pin bump (D-81) that renames one breaks these two modules, not the componen
 
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
@@ -26,6 +26,7 @@ import pytest
 from flet.controls.context import _context_page
 from flet.messaging.session import Session
 
+from pycon_us.account import Account
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData
 from pycon_us.core.row_views import SessionView
@@ -34,6 +35,7 @@ from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
+from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage
 from pycon_us.services.storage import favorites as favorites_key
 from pycon_us.state import Conference
@@ -243,6 +245,8 @@ async def showing[S: Shown = Shown](
     kind: Callable[..., S] = Shown,
     change_log: ChangeLog | None = None,
     layout: Layout | None = None,
+    account: Account | None = None,
+    private_api: PrivateApi | None = None,
 ) -> AsyncIterator[S]:
     """Render ``screen`` under the store providers; close the session on the way out.
 
@@ -271,9 +275,15 @@ async def showing[S: Shown = Shown](
             empty one by default.
         layout: The ``Layout`` store, for a test that turns the window; a phone's in
             portrait by default.
+        account: The ``Account`` store, for a screen that signs in or shows who is
+            signed in; a signed-out one by default.
+        private_api: The services' private-API holder, for a screen that talks to
+            the mock (its transport); one without a client by default.
     """
     _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path, memory)
+    if private_api is not None:
+        svc = replace(svc, private_api=private_api)
     if saved:
         await svc.storage.set(favorites_key(svc.storage.year), list(saved))
     if favorites is None:
@@ -302,7 +312,9 @@ async def showing[S: Shown = Shown](
 
     @ft.component
     def Root() -> ft.Control:
-        return provide(svc, conference, prefs, favorites, screen, change_log, layout)
+        return provide(
+            svc, conference, prefs, favorites, screen, change_log, layout, account
+        )
 
     try:
         async with rendering(Root, session, views=view_path is None):

@@ -37,6 +37,7 @@ from pycon_us.screens.schedule_changes import ScheduleChanges
 from pycon_us.screens.search import Search
 from pycon_us.screens.session import SessionDetail
 from pycon_us.screens.settings import Settings
+from pycon_us.screens.sign_in import SignInPage
 from pycon_us.screens.social import Social
 from pycon_us.screens.speaker import SpeakerDetail
 from pycon_us.screens.speakers import Speakers
@@ -256,6 +257,7 @@ ROUTES = [
         pushed("psf", AboutPsf),
         pushed("social", Social),
         pushed("venue", Venue),
+        pushed("sign-in", SignInPage),  # its state without a mock URL (D-51)
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
