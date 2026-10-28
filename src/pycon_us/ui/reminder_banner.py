@@ -34,7 +34,8 @@ from pycon_us.prefs import Prefs
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.reminders import SESSION_VIEW, Scheduler
+from pycon_us.services.reminder_plan import SESSION_VIEW
+from pycon_us.services.reminders import Scheduler
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import TICK_SECONDS

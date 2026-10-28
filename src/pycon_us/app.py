@@ -197,7 +197,7 @@ async def bootstrap(
     2. The year's favourites (D-48), so no star fills in after the first screen, and
        the year's change log, before any refresh records in it (D-255). Then the
        mock account, from local reads only (STORE-03), whether or not a mock URL is
-       set (D-398).
+       set (D-398), and its role flags' refresh, in the background (D-54).
     3. The feed cache, else the bundled snapshot (D-38, D-145). Then E3's first
        answer, ``Scheduler.read_enabled()``, at most ``LAUNCH_WAIT``: E3 answers only
        once it has handed over the tap that launched the app (F246), so ``Start``
@@ -235,6 +235,7 @@ async def bootstrap(
         await favorites.load(svc.storage)
         await change_log.load(svc.storage, svc.year.conference.zone)
         await account.restore(svc.storage, svc.credentials)
+        account.refresh_flags(svc.api, svc.storage, closed=svc.closed)  # not awaited
         await conference.load_local(svc.storage, svc.year)
         if svc.reminders is not None:
             await svc.reminders.read_enabled(LAUNCH_WAIT)
@@ -262,7 +263,7 @@ async def bootstrap(
         elif e.state == ft.AppLifecycleState.PAUSE:
             svc.foreground.clear()  # the 60 s ticks wait for the resume (D-40)
         elif e.state == ft.AppLifecycleState.RESUME:
-            await on_resume(svc, conference, prefs)
+            await on_resume(svc, conference, prefs, account)
 
     page.on_platform_brightness_change = on_brightness
     page.on_app_lifecycle_state_change = on_lifecycle
@@ -291,7 +292,9 @@ async def start_developer_options(
     show_details(prefs.developer_unlocked)
 
 
-async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None:
+async def on_resume(
+    svc: Services, conference: Conference, prefs: Prefs, account: Account
+) -> None:
     """Do what the app does each time it returns to the foreground: the one place for it.
 
     Each step is one consumer of the resume; a new one joins here.
@@ -304,7 +307,10 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     3. E3's reminders are applied again, which brings back what the OS dropped
        meanwhile (D-222, D-389); without E3 there is nothing to apply. Asked before
        the await below, so a slow read never holds it back.
-    4. The OS's accessibility flags are read again. The OS reports them as a snapshot,
+    4. The mock account's role flags are refreshed in the background, so a role
+       given or taken away while the app was away shows, and a revoked key asks
+       for a sign-in (D-54, D-57); signed out or with no mock URL, nothing is sent.
+    5. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
        applies without a restart (D-23, D-34, D-173). On Android such a change can
        reach Flutter only after this read, and then applies at the next resume:
@@ -314,12 +320,14 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
         svc: The session's services.
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
+        account: The session's ``Account`` store.
     """
     svc.foreground.set()
     svc.presence.come_back()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
     if svc.reminders is not None:
         svc.reminders.request()
+    account.refresh_flags(svc.api, svc.storage, closed=svc.closed)
     await read_accessibility(svc.semantics, prefs)
 
 

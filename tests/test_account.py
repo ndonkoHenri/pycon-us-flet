@@ -10,7 +10,8 @@ import logging
 import flet as ft
 import pytest
 
-from pycon_us.account import Account, Profile
+from pycon_us.account import Account
+from pycon_us.account_profile import Profile
 from pycon_us.services.credentials import API_KEY, API_SECRET, CredentialStorage
 from pycon_us.services.storage import ACCOUNT, Storage, favorites
 from tests import accounts

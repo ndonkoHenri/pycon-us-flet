@@ -12,7 +12,9 @@ fills only the shown day, the second the others (D-156).
 The day opens on today during the conference, else on the first day; the day picked and
 each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
 (D-18); a text-size or filter change puts each list back on the item at its top, by key
-(D-331, D-371, ``screens/schedule_place.py``). A detail pushed over the Schedule keeps it mounted, and so its place.
+(D-331, D-371, ``screens/schedule_place.py``); what the day lists hold, and their
+put-back, are ``screens/schedule_slots.py``'s. A detail pushed over the Schedule keeps
+it mounted, and so its place.
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
 (``now_place()``): by itself on the first display of each today in the process, be it
@@ -35,22 +37,15 @@ from typing import cast
 import flet as ft
 
 from pycon_us import clock
-from pycon_us.core.models import ConferenceData
 from pycon_us.core.queries import days
 from pycon_us.core.timefmt import day_heading, time_label, today, zone_note
-from pycon_us.core.timeline import NOW_KEY, NowPlace, Slot, now_place, timeline
+from pycon_us.core.timeline import now_place
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.changes_review import ScheduleOverflow
-from pycon_us.screens.schedule_days import (
-    TAB_MS,
-    DayList,
-    Empty,
-    day_tab,
-    now_button,
-)
+from pycon_us.screens.schedule_days import SCREEN, DayList, now_button
 from pycon_us.screens.schedule_filter import use_track_filter
-from pycon_us.screens.schedule_head import HEAD_KEY, Head, ScheduleHead
+from pycon_us.screens.schedule_head import Head, ScheduleHead
 from pycon_us.screens.schedule_layout import layout_probe
 from pycon_us.screens.schedule_now import (
     PENDING,
@@ -65,11 +60,21 @@ from pycon_us.screens.schedule_now import (
     spoken_place,
 )
 from pycon_us.screens.schedule_place import PlaceKeeper
+from pycon_us.screens.schedule_slots import (
+    default_day,
+    empty_reason,
+    filter_tracks,
+    list_ref,
+    slot_keys,
+    use_day_slots,
+    use_put_back,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS, THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.day_tabs import TAB_MS, day_tab
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, search_button
@@ -110,7 +115,7 @@ def Schedule() -> ft.View:
     picked, set_picked = ft.use_state(memory.schedule_day)
     # The default day is pinned at the first display, so midnight never moves it.
     opened_on = ft.use_memo(lambda: current, [data is None])
-    shown = picked if picked in all_days else _default_day(all_days, opened_on)
+    shown = picked if picked in all_days else default_day(all_days, opened_on)
     rest, set_rest = ft.use_state(False)  # the other days are rendered (D-156)
     jump, set_jump = ft.use_state(0)  # a "Now" tap from another day's tab
     in_view, set_in_view = ft.use_state(cast(InView, PENDING))  # opened() settles it
@@ -119,40 +124,27 @@ def Schedule() -> ft.View:
     signals = ft.use_memo(Signals, [])
     keeper = ft.use_memo(lambda: PlaceKeeper(memory), [])
     _, set_relaid = ft.use_state(0)  # a list built in full for its put-back (D-331)
+
+    @report_errors
+    def relay() -> None:
+        set_relaid(lambda n: n + 1)  # a list built in full is built lazy again
+
     excluded = prefs.excluded_tracks
-    slots = ft.use_memo(
-        lambda: (
-            {day: timeline(data, day, excluded) for day in all_days} if data else {}
-        ),
-        [conference.version, excluded],
-    )
-    day_ids = ft.use_memo(
-        lambda: {
-            day: frozenset(s.id for slot in day_slots for s in slot.sessions)
-            for day, day_slots in slots.items()
-        },
-        [slots],
-    )
+    day_slots = use_day_slots(data, all_days, excluded, conference.version)
+    slots, day_ids = day_slots.slots, day_slots.ids
     ids = tuple(data.sessions) if data else ()
     views = use_session_views(conference, ids, use_24h=use_24h)
     by_id = ft.use_memo(lambda: {v.session.id: v for v in views}, [views])
     changes = use_recent_changes()
     today_slots = slots.get(current, ())
     place = now_place(today_slots, now) if today_slots else None
-    by_key = ft.use_memo(
-        lambda: {
-            day: {slot.key: slot for slot in day_slots}
-            for day, day_slots in slots.items()
-        },
-        [slots],
-    )
     keeper.lay_out(
         conference.version,
         excluded,
-        _keys(slots, current, place, head=prefs.time_above),
-        by_key,
+        slot_keys(slots, current, place, head=prefs.time_above),
+        day_slots.by_key,
     )
-    tracks = ft.use_memo(lambda: _tracks(data, all_days), [conference.version])
+    tracks = ft.use_memo(lambda: filter_tracks(data, all_days), [conference.version])
     count = sum(
         len(slot.sessions) for day_slots in slots.values() for slot in day_slots
     )
@@ -173,7 +165,7 @@ def Schedule() -> ft.View:
         at = clock.now()
         target = now_place(today_slots, at)
         ended = await jump_to_key(
-            _ref(refs, current),
+            list_ref(refs, current),
             target.target,
             duration=prefs.motion_ms(JUMP_MS),
             ended=signals.ended,
@@ -221,8 +213,8 @@ def Schedule() -> ft.View:
         set_rest(True)
         if jumps:
             await jump_to_now(asked=False)
-        elif await keeper.restore(shown, _ref(refs, shown), signals.ended):
-            set_relaid(lambda n: n + 1)  # built lazy again
+        elif await keeper.restore(shown, list_ref(refs, shown), signals.ended):
+            relay()
 
     # Runs again once, when the first data arrives (no snapshot or cache, NEW-03).
     ft.use_effect(opened, [shown is None])
@@ -251,8 +243,8 @@ def Schedule() -> ft.View:
         set_picked(day)
         if jumps_by_itself(day, current, today_slots, memory):  # opened elsewhere
             await jump_to_now(asked=False)
-        elif await keeper.restore(day, _ref(refs, day), signals.ended):
-            set_relaid(lambda n: n + 1)  # built lazy again
+        elif await keeper.restore(day, list_ref(refs, day), signals.ended):
+            relay()
 
     @report_errors
     async def now_pressed() -> None:
@@ -266,57 +258,20 @@ def Schedule() -> ft.View:
 
     @report_errors
     async def scroll_to_top() -> None:
-        target = _ref(refs, shown).current if shown else None
+        target = list_ref(refs, shown).current if shown else None
         if target is not None:
             await target.scroll_to(offset=0, duration=prefs.motion_ms(RETAP_SCROLL_MS))
 
-    @report_errors
-    async def relaid(
-        *,
-        text: float | None = None,
-        width: float | None = None,
-        above: bool | None = None,
-    ) -> None:
-        if not keeper.relaid(text=text, width=width, above=above):
-            return
-        # The text size changed: every list with a stale place is built in full, so
-        # its item is built for the keyed jump (D-331), the shown one included, as
-        # text that shrank can leave its item far below the built range (#600). The
-        # shown list goes back now, by key, and is lazy again after; the others when
-        # they show again.
-        set_relaid(lambda n: n + 1)
-        if shown is not None and await keeper.put_back(
-            shown, _ref(refs, shown), signals.ended
-        ):
-            set_relaid(lambda n: n + 1)
-
-    @report_errors
-    async def text_measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
-        await relaid(text=e.width)
-
-    @report_errors
-    async def width_measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
-        await relaid(width=e.width)
-
-    @report_errors
-    async def time_moved() -> None:
-        await relaid(above=prefs.time_above)
-
-    # The time going above the rows at the largest sizes (D-216) relays them out too.
-    ft.use_effect(time_moved, [prefs.time_above])
-
-    @report_errors
-    async def refiltered() -> None:
-        # The filter changed: the shown list goes back to its place once Flutter has
-        # laid it out, built in full until then, and is lazy again after (D-371).
-        if shown is not None and await keeper.put_back_refiltered(
-            shown, _ref(refs, shown), signals.ended
-        ):
-            set_relaid(lambda n: n + 1)
-
-    # A chip applies at once (D-20), so this runs under the open sheet; a newer change
-    # cancels the run still waiting.
-    ft.use_effect(refiltered, [excluded])
+    # A text-size, width, time-position or filter change puts the list back (D-331).
+    text_measured, width_measured = use_put_back(
+        keeper,
+        shown,
+        refs,
+        signals.ended,
+        relay,
+        time_above=prefs.time_above,
+        excluded=excluded,
+    )
 
     on_measure = ft.use_callback(keeper.measured, [])
 
@@ -385,13 +340,13 @@ def Schedule() -> ft.View:
                 # back by key after a text-size or filter change (D-331, D-371).
                 full=day == current or keeper.pending(day) is not None,
                 clearance=bool(today_slots),
-                empty=_empty(data, day, slots[day]),
+                empty=empty_reason(data, day, slots[day]),
                 now=NowMark(place.line, time_label(now, info.zone, use_24h=use_24h))
                 if day == current and place is not None
                 else None,
                 # At the largest sizes it scrolls away with the slots (D-345).
                 head=head if prefs.time_above else None,
-                list_ref=_ref(refs, day),
+                list_ref=list_ref(refs, day),
                 on_scroll=on_scroll,
                 on_measure=on_measure,
                 on_clear_filters=track_filter.show_all,
@@ -411,7 +366,7 @@ def Schedule() -> ft.View:
                 capped(
                     ft.TabBar(
                         [
-                            day_tab(index, day, is_today=day == current)
+                            day_tab(index, day, is_today=day == current, screen=SCREEN)
                             for index, day in enumerate(all_days)
                         ],
                         # One-line labels in a scrollable bar: seven days fit no
@@ -456,61 +411,3 @@ def Schedule() -> ft.View:
         if today_slots and not at_now
         else None,
     )
-
-
-def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:
-    """Return the day list's ref, one per day for the screen's life (F38)."""
-    return refs.setdefault(day, ft.Ref[ft.ListView]())
-
-
-def _keys(
-    slots: dict[date, tuple[Slot, ...]],
-    current: date,
-    place: NowPlace | None,
-    *,
-    head: bool,
-) -> dict[date, tuple[str, ...]]:
-    """Return each day list's item keys in order: its slots, today's now line among them.
-
-    With ``head``, at the largest text sizes, each list starts with the head (D-345).
-    """
-    first = (HEAD_KEY,) if head else ()
-    keys = {
-        day: (*first, *(slot.key for slot in day_slots))
-        for day, day_slots in slots.items()
-    }
-    if place is not None:
-        today = keys[current]
-        line = place.line + len(first)
-        keys[current] = (*today[:line], NOW_KEY, *today[line:])
-    return keys
-
-
-def _default_day(all_days: tuple[date, ...], current: date) -> date | None:
-    """Return the day the Schedule opens on: today during the conference, else day 1."""
-    if current in all_days:
-        return current
-    return all_days[0] if all_days else None
-
-
-def _tracks(data: ConferenceData | None, all_days: tuple[date, ...]) -> frozenset[str]:
-    """Return the track keys of the sessions the Schedule can show, on any day.
-
-    The filter offers these and no other (D-20): a chip for a track without sessions
-    would change nothing.
-    """
-    if data is None:
-        return frozenset()
-    return frozenset(
-        s.track
-        for day in all_days
-        for slot in timeline(data, day, ())
-        for s in slot.sessions
-    )
-
-
-def _empty(data: ConferenceData, day: date, shown: tuple[Slot, ...]) -> Empty | None:
-    """Return why a day shows no slots: no sessions at all, or the filter (D-178)."""
-    if shown:
-        return None
-    return "filtered" if timeline(data, day, ()) else "sprint"

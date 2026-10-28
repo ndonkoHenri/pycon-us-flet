@@ -11,7 +11,7 @@ Help & safety (D-281), Venue & hours first (D-313), and **About** with About PyC
 (D-284); their other rows join with their P2 pages. The profile row comes first while
 a mock API URL is set (D-51, SHELL-12): "Sign in" signed out, else the account's
 avatar, nickname and email, not tappable until the Account page (#688) exists, so it
-is never dead; it appears, disappears and changes live with ``Prefs`` and the
+is never dead, and "Sign in again" once the server refused the key (#686); it appears, disappears and changes live with ``Prefs`` and the
 ``Account`` store. Staff tools join under it with P3's tools (D-16).
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
 ``/more/plan/expo``, a pushed View like any page.
@@ -90,6 +90,10 @@ SETTINGS = MoreEntry("Settings", "/more/settings", ft.Icons.SETTINGS_OUTLINED)
 ABOUT_APP = MoreEntry("About this app", "/more/app", ft.Icons.INFO_OUTLINE)
 SIGN_IN = MoreEntry("Sign in", "/more/sign-in", ft.Icons.ACCOUNT_CIRCLE_OUTLINED)
 """The profile row signed out, only while a mock API URL is set (D-51)."""
+SIGN_IN_AGAIN = MoreEntry(
+    "Sign in again", "/more/sign-in", ft.Icons.ACCOUNT_CIRCLE_OUTLINED, "sign_in_again"
+)
+"""The profile row once the server refused the account's key (D-57, #686)."""
 
 DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
@@ -159,6 +163,9 @@ def link(entry: MoreEntry) -> ft.Control:
 def profile_row(account: Account) -> ft.Control:
     """Return More's first row: "Sign in", or who is signed in (ux.md §2.2, SHELL-12).
 
+    "Sign in again", above the account's email, once the server refused its key
+    (``Account.expired``): it opens Sign in with the email filled in.
+
     Signed in, one node read as the nickname and the email, with the identifier
     ``more.account``; not a button until the Account page exists (#688), so it is
     never a dead one (SHELL-09). The avatar's letters stay out of it, as a speaker
@@ -169,6 +176,14 @@ def profile_row(account: Account) -> ft.Control:
     """
     if not account.signed_in:
         return link(SIGN_IN)
+    if account.expired:  # still the owner of what it recorded; a sign-in renews it
+        return LinkTile(
+            SIGN_IN_AGAIN.title,
+            SIGN_IN_AGAIN.location,
+            icon=SIGN_IN_AGAIN.icon,
+            subtitle=account.email,
+            identifier=SIGN_IN_AGAIN.identifier,
+        )
     return named(
         "more.account",
         ft.ListTile(

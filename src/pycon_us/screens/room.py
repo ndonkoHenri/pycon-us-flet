@@ -37,13 +37,14 @@ from pycon_us.locations import drill_href, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
-from pycon_us.screens.schedule_days import SPRINTS, TAB_MS, day_tab
+from pycon_us.screens.schedule_days import SPRINTS
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.day_tabs import TAB_MS, day_tab
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.location_card import room_card
 from pycon_us.ui.rows import LinkTile

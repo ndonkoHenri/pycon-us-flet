@@ -49,14 +49,8 @@ from pycon_us.state import use_conference
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
-from pycon_us.ui.zoom import (
-    RESET_VIEW,
-    Size,
-    centred_on,
-    use_zoom,
-    zoom_buttons,
-    zoom_layer,
-)
+from pycon_us.ui.zoom import RESET_VIEW, use_zoom, zoom_buttons, zoom_layer
+from pycon_us.ui.zoom_geometry import Size, centred_on
 from pycon_us.year_map import EXPO_PLAN, JOB_FAIR_PLAN, Pin, Plan
 
 SCREEN = "plan"
@@ -148,7 +142,7 @@ def pin_marker(
 
     Args:
         pin: The pin.
-        shown: The plan's fitted size (``ui.zoom.fitted()``).
+        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
         scale: The viewer's scale.
         ring: Whether the ring is out, mid-pulse.
         ring_ms: How long the ring takes out or back (``prefs.motion_ms()``).

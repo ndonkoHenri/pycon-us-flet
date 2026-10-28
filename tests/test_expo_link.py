@@ -20,7 +20,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.screens import expo_pane
 from pycon_us.screens.booth_card import BAND, card_layout, covered
 from pycon_us.screens.expo_camera import FIT, booth_rect, in_view, shows
-from pycon_us.ui.zoom import Size, Transform, fitted, max_scale
+from pycon_us.ui.zoom_geometry import Size, Transform, fitted, max_scale
 from pycon_us.year_map import Booth
 from tests import links, test_expo_list
 from tests.test_expo_list import ListShown

@@ -13,7 +13,7 @@ import pytest
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import plan_tables
 from pycon_us.state import Conference
-from pycon_us.ui import zoom
+from pycon_us.ui import zoom_geometry
 from tests import plan_view
 from tests.feeds import processed
 from tests.plan_view import BOX, YEAR, Plan, Render
@@ -82,7 +82,7 @@ async def test_an_area_is_placed_from_its_ratios_on_the_fitted_plan(
     """T1's area is its ``map.toml`` rectangle times the plan's fitted size."""
     plan = await show(plan_id="job-fair")
     await plan.lay_out()
-    width, height = zoom.fitted(BOX, (1700, 1438))
+    width, height = zoom_geometry.fitted(BOX, (1700, 1438))
     table = YEAR.map.table("T1")
     assert table is not None
     (area,) = [c for c in plan.find(ft.Container) if c.content is areas(plan)["T1"]]

@@ -15,7 +15,7 @@ NOTIF-05). Two kinds, with two id ranges (D-59, D-274):
 
 8999 is the Developer test reminder's (DEV-06), outside both ranges. A module of its own,
 as ``year_keynotes`` is, so ``config.py`` grows by little (D-66). It imports no Flet: the
-plan that turns these into reminders is ``services.reminders.plan()`` (P2-67).
+plan that turns these into reminders is ``services.reminder_plan.plan()`` (P2-67).
 """
 
 from collections.abc import Iterable

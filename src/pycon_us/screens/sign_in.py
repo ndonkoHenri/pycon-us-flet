@@ -8,7 +8,8 @@ The fields' text is read when the user signs in, from what Flutter last reported
 from a change event: Ionic's form missed what iOS autofilled. Every failure is said in
 its own words on one live-region line under the button, and the fields keep what was
 typed. A success goes back to where the user came from, with "Signed in as
-<nickname>".
+<nickname>". After the server refused the account's key ("Sign in again" on More), it
+says so and starts with the account's email filled in (#686).
 
 It talks only to the local mock (D-51): with no mock API URL set it shows a state that
 says sign-in isn't available, never a form.
@@ -32,6 +33,9 @@ from pycon_us.ui.widths import LIST, sides, use_margin
 
 INTRO = "Only needed for sponsor and staff tools, and to sync My schedule."
 """Why anyone would sign in (ux.md §7.1)."""
+
+EXPIRED = "Your sign-in has expired. Sign in again to keep using staff tools and sync."
+"""Why to sign in again, once the server refused the account's key (D-57, #686)."""
 
 MOCK_LINE = "Connected to the local mock server"
 """Where the email and password go: never the PSF's server (D-51)."""
@@ -74,7 +78,8 @@ def SignInPage() -> ft.View:
     account = use_account()
     tokens = use_tokens()
     margin = use_margin(LIST)  # its width class (D-305)
-    email = use_field_query()
+    # Back to the same account: the email the server refused the key of (#686).
+    email = use_field_query(account.email if account.expired else "")
     password = use_field_query()
     error, set_error = ft.use_state("")  # how the last try here failed, said
     # Who was signed in here: the group may offer to save the fields now (COMMIT),
@@ -145,7 +150,7 @@ def SignInPage() -> ft.View:
             [
                 padded(
                     ft.Text(
-                        INTRO,
+                        EXPIRED if account.expired else INTRO,
                         theme_style=ft.TextThemeStyle.BODY_LARGE,
                     )
                 ),
