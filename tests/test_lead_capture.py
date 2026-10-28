@@ -120,10 +120,14 @@ async def test_a_sponsor_s_scan_is_captured_with_the_name_then_already_in_leads(
     """Online: "Lead captured · Ada"; the same badge again: "Already in your leads"."""
     await rig.sign_in("sponsor")
     result = await scanner.scan()
-    assert result == ScanResult(ScanOutcome.ACCEPTED, CAPTURED, "Ada", ("MOCK0001",))
+    assert result == ScanResult(
+        ScanOutcome.ACCEPTED, CAPTURED, "Ada", ("MOCK0001",), "MOCK0001"
+    )
     assert rig.staff.synced == 1
     again = await scanner.scan()
-    assert again == ScanResult(ScanOutcome.DUPLICATE, ALREADY, "Ada", ("MOCK0001",))
+    assert again == ScanResult(
+        ScanOutcome.DUPLICATE, ALREADY, "Ada", ("MOCK0001",), "MOCK0001"
+    )
     assert captures(rig) == [(1, "MOCK0001")]  # the repeat sent nothing
 
 
@@ -150,7 +154,7 @@ async def test_offline_it_is_saved_and_syncs_once_to_its_first_sponsor(
     await rig.sign_in("staff")
     rig.state.faults.inject("connect", until_cleared=True)
     result = await scanner.scan(sponsor=EXAMPLE)
-    assert result == ScanResult(ScanOutcome.QUEUED, SAVED, "MOCK0001")
+    assert result == ScanResult(ScanOutcome.QUEUED, SAVED, "MOCK0001", code="MOCK0001")
     assert rig.staff.offline and rig.staff.pending == 1
     again = await scanner.scan(sponsor=SAMPLE)  # switched sponsor, still offline
     assert again.outcome is ScanOutcome.QUEUED
@@ -172,7 +176,11 @@ async def test_a_wrong_validator_is_not_captured_and_will_retry(
     assert (row.status, row.tries) == (Status.PENDING, 1)
     assert row.last_error
     assert result == ScanResult(
-        ScanOutcome.DENIED, NOT_CAPTURED, "MOCK0001", (row.last_error, WILL_RETRY)
+        ScanOutcome.DENIED,
+        NOT_CAPTURED,
+        "MOCK0001",
+        (row.last_error, WILL_RETRY),
+        "MOCK0001",
     )
     assert captures(rig) == []
 
@@ -204,12 +212,16 @@ async def test_a_lost_answer_says_may_be_recorded_twice_and_loses_nothing(
         rig.state.faults.inject("lost_response")
         result = await scanner.scan()
         assert result == ScanResult(
-            ScanOutcome.QUEUED, SAVED, "MOCK0001", (MAY_BE_TWICE,)
+            ScanOutcome.QUEUED, SAVED, "MOCK0001", (MAY_BE_TWICE,), "MOCK0001"
         )
         rig.clock.at += 60  # the backoff; then the resend lands
         again = await scanner.scan()
         assert again == ScanResult(
-            ScanOutcome.ACCEPTED, CAPTURED, "Ada", ("MOCK0001", MAY_BE_TWICE)
+            ScanOutcome.ACCEPTED,
+            CAPTURED,
+            "Ada",
+            ("MOCK0001", MAY_BE_TWICE),
+            "MOCK0001",
         )
         assert captures(rig) == [(1, "MOCK0001")] * 2  # both kept: none lost
     finally:
@@ -223,7 +235,7 @@ async def test_the_handler_never_sends_and_the_wait_ends(
     monkeypatch.setattr(lead_capture, "WAIT_SECONDS", 0.05)
     await rig.sign_in("sponsor")
     result = await Scanner(rig).scan(GRACE)
-    assert result == ScanResult(ScanOutcome.QUEUED, SAVED, "MOCK0002")
+    assert result == ScanResult(ScanOutcome.QUEUED, SAVED, "MOCK0002", code="MOCK0002")
     assert rig.sends() == []
     assert rig.staff.pending == 1  # the chip counts it at once
 
@@ -234,7 +246,7 @@ async def test_a_scan_the_outbox_can_t_store_says_so(rig: Rig) -> None:
     rig.db.close()
     result = await Scanner(rig).scan()
     assert result == ScanResult(
-        ScanOutcome.DENIED, NOT_CAPTURED, "MOCK0001", (NOT_SAVED,)
+        ScanOutcome.DENIED, NOT_CAPTURED, "MOCK0001", (NOT_SAVED,), "MOCK0001"
     )
     missing = await capture(
         None,

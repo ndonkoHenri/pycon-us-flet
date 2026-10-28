@@ -1,10 +1,13 @@
 """The shared scan screen every staff tool renders (LEAD-01, LEAD-09, LEAD-14; D-65).
 
 ux.md §7.2: the app bar's sync chip and ``KEYBOARD`` button, the camera area, the
-result panel and manual entry, then the tool's own actions. A tool gives ``ScanScreen`` its title, a
-context line (or a control there, as the Lead scanner's sponsor chip) and an async ``on_badge(badge) -> ScanResult``: the screen parses what was
-entered (``parse_badge``), applies the per-code cooldown, awaits one handler at a time
-and shows what it returned, so the tools only return data.
+result panel and manual entry, then the tool's own actions. A tool gives
+``ScanScreen`` its title, a context line (or a control there, as the Lead scanner's
+sponsor chip) and an async ``on_badge(badge) -> ScanResult``, and may add buttons
+for the result shown (``result_actions``, the Lead scanner's "Add note"): the
+screen parses what was entered (``parse_badge``), applies the per-code cooldown,
+awaits one handler at a time and shows what it returned, so the tools only return
+data.
 
 **Manual entry** takes the full ``code:validator`` payload, which USB and Bluetooth HID
 scanners also type before Enter. A submit clears the field and puts the focus back in
@@ -57,6 +60,9 @@ from pycon_us.ui.widths import LIST, sides, use_margin
 type OnBadge = Callable[[Badge], Awaitable[ScanResult]]
 """A tool's handler: what a parsed, accepted badge comes to."""
 
+type ResultActions = Callable[[ScanResult], list[ft.Control]]
+"""A tool's buttons for the result on the panel ("Add note"), gone with it."""
+
 ENTRY_LABEL = "Badge code"
 KEYBOARD_TOOLTIP = "Type a badge code"
 CAMERA_UNAVAILABLE = "Camera scanning isn't available in this build."
@@ -99,6 +105,7 @@ def ScanScreen(
     context: str | ft.Control | None = None,
     actions: list[ft.Control] | None = None,
     paused: str | None = None,
+    result_actions: ResultActions | None = None,
 ) -> ft.Control:
     """Return a staff tool's scan screen (ux.md §7.2).
 
@@ -111,6 +118,9 @@ def ScanScreen(
         paused: Why scanning is paused, under the field ("Paused while the note
             is open"), while one of the tool's dialogs or sheets is open: submits
             are dropped, their text kept. None scans.
+        result_actions: The tool's buttons for the result shown, under the field
+            before ``actions``: the Lead scanner's "Add note" (#742). They belong to
+            that result, so the next one (even "Not a badge code") replaces them.
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -175,6 +185,11 @@ def ScanScreen(
         finally:
             busy.current = False
 
+    for_result = (
+        result_actions(shown.result)
+        if result_actions is not None and shown is not None
+        else []
+    )
     body: list[ft.Control] = []
     if isinstance(context, ft.Control):
         body.append(padded(context))
@@ -210,6 +225,7 @@ def ScanScreen(
                 ),
             )
         ),
+        *(padded(action) for action in for_result),
         *(padded(action) for action in actions or ()),
     ]
     return AppScaffold(
