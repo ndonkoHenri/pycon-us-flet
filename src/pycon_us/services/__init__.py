@@ -2,7 +2,7 @@
 
 Each service is a small module with one job (docs/architecture.md). ``Services`` bundles
 what a session uses, built once by ``App`` and reached through ``use_services()``. Later
-phases add the API client, the sync worker and the scanner.
+phases add the scanner.
 """
 
 import asyncio
@@ -19,6 +19,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services.api import ApiClient, Credentials
 from pycon_us.services.credentials import CredentialStorage, secure_storage
 from pycon_us.services.data_files import data_dir
+from pycon_us.services.favorites_sync import FavoritesSync
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.presence import Presence
 from pycon_us.services.private_api import PrivateApi, signed_out
@@ -35,6 +36,22 @@ def _set_event() -> asyncio.Event:
     event = asyncio.Event()
     event.set()
     return event
+
+
+def kick_on_reconnect(
+    wake: asyncio.Event,
+) -> Callable[[ft.ConnectivityChangeEvent], None]:
+    """Return the ``Connectivity`` handler that wakes the sync loop on a reconnection.
+
+    Any connection but ``NONE`` sets ``wake``: the worker trusts its transport errors,
+    so a connection that reaches nothing only costs one pass (D-56, D-407).
+    """
+
+    def on_change(e: ft.ConnectivityChangeEvent) -> None:
+        if any(kind is not ft.ConnectivityType.NONE for kind in e.connectivity):
+            wake.set()
+
+    return on_change
 
 
 def _permissions() -> PermissionHandler | None:
@@ -97,6 +114,12 @@ class Services:
         outbox: The staff outbox's database (``services.outbox_db``, D-49), which
             opens ``outbox.db`` on first use: only the staff tools use it, and D-51
             hides them without a mock API URL. ``None`` in tests that don't need it.
+        favorites_sync: Keeps the favourites in step with the mock account while
+            signed in (``services.favorites_sync``, D-406); ``App`` runs it.
+        sync_wake: Set to ask the staff sync loop for a pass now (``kick_sync()``):
+            an enqueue, "Sync now", a resume and a reconnection (D-56).
+        connectivity: The platform's connectivity: a change to anything but
+            ``NONE`` sets ``sync_wake`` (``kick_on_reconnect()``).
     """
 
     year: YearData
@@ -123,6 +146,9 @@ class Services:
         default_factory=lambda: CredentialStorage(secure=None)
     )
     outbox: OutboxDb | None = None
+    favorites_sync: FavoritesSync = field(default_factory=FavoritesSync)
+    sync_wake: asyncio.Event = field(default_factory=asyncio.Event)
+    connectivity: ft.Connectivity | None = None
 
     @property
     def api(self) -> ApiClient | None:
@@ -153,6 +179,7 @@ class Services:
         year = load_year()
         permissions = _permissions()
         directory = data_dir()
+        sync_wake = asyncio.Event()
         return cls(
             year=year,
             storage=Storage(ft.SharedPreferences(), directory, year.conference.year),
@@ -166,6 +193,9 @@ class Services:
             private_api=PrivateApi(credentials=credentials),
             credentials=CredentialStorage(secure_storage()),
             outbox=OutboxDb(directory),
+            sync_wake=sync_wake,
+            # The handler at construction: one set later would need an update (F257).
+            connectivity=ft.Connectivity(on_change=kick_on_reconnect(sync_wake)),
         )
 
     def close(self) -> None:
@@ -181,10 +211,16 @@ class Services:
         # return: a session replaced in the background never resumes.
         self.foreground.set()
         self.presence.close()  # and a focus that waits for a return (D-372)
+        self.sync_wake.set()  # and the staff sync loop's wait (services.sync)
         if self.reminders is not None:  # and the reminders' loop, which then returns
             self.reminders.request()
+        self.favorites_sync.request()  # and the favourites sync's, which returns too
         if self.outbox is not None:  # a late write is refused, not raised (D-120)
             self.outbox.close()
+
+    def kick_sync(self) -> None:
+        """Ask the staff sync loop for a pass now; without one, the next one starts so."""
+        self.sync_wake.set()
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
         """Call ``action`` now, then every ``seconds`` while the app is in the foreground.
