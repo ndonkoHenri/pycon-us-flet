@@ -185,15 +185,20 @@ def account_body(
         rows += [
             padded(ft.Text(EXPIRED, theme_style=ft.TextThemeStyle.BODY_LARGE)),
             padded(
-                named(
-                    "account.sign_in_again",
-                    ft.FilledButton(
-                        "Sign in again",
-                        on_click=sign_in_again,
-                        style=ft.ButtonStyle(padding=ICON_PADDING),
-                        icon=ft.Icons.LOGIN,
-                        elevation=0,  # with a style (ui.buttons)
-                    ),
+                ft.Column(
+                    [
+                        named(
+                            "account.sign_in_again",
+                            ft.FilledButton(
+                                "Sign in again",
+                                on_click=sign_in_again,
+                                style=ft.ButtonStyle(padding=ICON_PADDING),
+                                icon=ft.Icons.LOGIN,
+                                elevation=0,  # with a style (ui.buttons)
+                            ),
+                        )
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
                 )
             ),
         ]
@@ -202,11 +207,13 @@ def account_body(
     url = svc.year.conference.speaker_discord_url
     if account.is_speaker and url:
         rows += [SectionHeader("Speakers"), discord(svc, url, online=online)]
+    # In a column, not a row: a row lets a button grow past the screen at the
+    # largest text, where a column's width makes its label wrap.
     rows.append(
         padded(
-            ft.Row(
+            ft.Column(
                 [sign_out_button(syncing=syncing, on_click=on_sign_out)],
-                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
             )
         )
     )
@@ -214,7 +221,11 @@ def account_body(
 
 
 def who(account: Account) -> ft.Control:
-    """Return the avatar beside the nickname and the email; the avatar is decorative."""
+    """Return the avatar over the nickname and the email; the avatar is decorative.
+
+    Stacked rather than side by side: beside the avatar, the largest text broke the
+    nickname inside its words.
+    """
     lines: list[ft.Control] = [
         ft.Text(
             account.nickname or account.email,
@@ -230,7 +241,7 @@ def who(account: Account) -> ft.Control:
             )
         )
     return padded(
-        ft.Row(
+        ft.Column(
             [
                 ft.Semantics(
                     exclude_semantics=True,
@@ -240,10 +251,10 @@ def who(account: Account) -> ft.Control:
                     identifier="account.who",
                     container=True,
                     content=ft.Column(lines, spacing=2, tight=True),
-                    expand=True,
                 ),
             ],
-            spacing=16,
+            spacing=12,
+            tight=True,
         )
     )
 
@@ -275,14 +286,34 @@ def access_chips(account: Account) -> ft.Control:
         label=f"Access: {', '.join(labels)}",
         exclude_semantics=True,
         content=ft.Row(
-            [
-                ft.Chip(label=ft.Text(label), leading=ft.Icon(icons[label]))
-                for label in labels
-            ],
+            [access_chip(label, icons[label]) for label in labels],
             wrap=True,
             spacing=8,
             run_spacing=8,
         ),
+    )
+
+
+def access_chip(label: str, icon: ft.IconData) -> ft.Control:
+    """Return one read-only chip: M3's chip shape, outlined, with its icon.
+
+    Drawn, not an ``ft.Chip``: Flutter shows a chip with no handler as disabled,
+    greyed out, and these say what the account can do, in full colour.
+    """
+    return ft.Container(
+        ft.Row(
+            [
+                ft.Icon(
+                    icon, size=18, color=ft.Colors.PRIMARY, apply_text_scaling=True
+                ),
+                ft.Text(label, theme_style=ft.TextThemeStyle.LABEL_LARGE),
+            ],
+            spacing=8,
+            tight=True,
+        ),
+        padding=ft.Padding.only(left=8, top=6, right=16, bottom=6),
+        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border_radius=8,
     )
 
 
@@ -323,7 +354,7 @@ def discord(svc: Services, url: str, *, online: bool) -> ft.Control:
         style=ft.ButtonStyle(padding=ICON_PADDING),
         elevation=0,  # with a style (ui.buttons)
     )
-    controls: list[ft.Control] = [ft.Row([external("account.discord", button)])]
+    controls: list[ft.Control] = [external("account.discord", button)]
     if not online:
         controls.append(
             ft.Text(
@@ -332,4 +363,11 @@ def discord(svc: Services, url: str, *, online: bool) -> ft.Control:
                 color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
-    return padded(ft.Column(controls, spacing=8, tight=True))
+    return padded(
+        ft.Column(
+            controls,
+            spacing=8,
+            tight=True,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
+        )
+    )
