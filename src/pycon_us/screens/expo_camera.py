@@ -145,12 +145,4 @@ def use_camera(
 
     # The card's height counts only for a booth to reveal: without one, a card measured
     # mid-move would change the dependencies and cancel the move for good (F2).
-    ft.use_effect(place, [ready, reveal is not None and bool(cover)], cleanup=_cancel)
-
-
-def _cancel() -> None:
-    """The effect's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
-
-    Without one, a move still running when the pane leaves would reach a viewer
-    that has left the page.
-    """
+    ft.use_effect(place, [ready, reveal is not None and bool(cover)])

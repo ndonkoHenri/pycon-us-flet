@@ -8,8 +8,9 @@ its memoised day lists get only the value (D-345, F150). ``zone_note_line()`` is
 Pacific Time (PDT)", while the device's clock differs from the conference's (D-35,
 D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
 ``use_minute()`` is that tick as a hook, for any other view that depends on
-``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` and
-``stop_ticks()`` are the ticking effects' state and cleanup (D-200).
+``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` is the
+ticking effects' state (D-200); they need no cleanup, since Flet cancels a running
+``async def`` setup on unmount (F2, D-387).
 ``schedule_line()`` says where the schedule on screen came from and its age, for the
 pages that say it whether or not it is fresh (D-292).
 """
@@ -184,7 +185,7 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
     async def keep_up() -> None:
         await svc.run_every(TICK_SECONDS, tick)
 
-    ft.use_effect(keep_up, [auto_refresh], cleanup=stop_ticks)
+    ft.use_effect(keep_up, [auto_refresh])
 
     @report_errors
     async def refresh() -> None:
@@ -385,15 +386,5 @@ def use_minute() -> int:
     async def keep_up() -> None:
         await svc.run_every(TICK_SECONDS, tick)
 
-    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    ft.use_effect(keep_up, [])
     return minute
-
-
-def stop_ticks() -> None:
-    """The ticking effects' cleanup (the strip's, ``use_minute()``'s): nothing to undo.
-
-    Flet cancels an effect's task on unmount only when the effect has a cleanup (F2),
-    and that cancel is what stops the ticks. A cleanup returned by a sync setup would
-    not do: the component's next render replaces it with ``use_effect``'s argument
-    (F39), and the strip re-renders every minute.
-    """

@@ -81,7 +81,7 @@ def use_seen_marks(
         if prefs.screen_reader:
             _mark(change_log, storage, closed, showing.current)
 
-    ft.use_effect(after_a_while, [shown, reader], cleanup=_stop_waiting)
+    ft.use_effect(after_a_while, [shown, reader])
     ft.on_unmounted(on_leaving)
 
 
@@ -94,13 +94,6 @@ def _mark(
     """Mark ``batches`` seen, unless none or the session has closed (D-147)."""
     if batches and not closed.is_set():
         change_log.mark_seen(storage, batches)
-
-
-def _stop_waiting() -> None:
-    """The wait's cleanup: nothing to undo, since Flet cancels the setup's task first.
-
-    It must exist: Flet cancels an effect's task on unmount only when it has a cleanup.
-    """
 
 
 def mark_all_menu(

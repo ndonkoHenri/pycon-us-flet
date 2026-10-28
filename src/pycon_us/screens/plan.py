@@ -116,8 +116,7 @@ def forget(memory: ViewMemory, view_path: str) -> None:
 
     It runs when the View leaves the stack (Back), so the next opening pulses again;
     a replaced session never runs it (F30), so the View its successor rebuilds finds
-    the entry and stays still (D-18). Its presence also makes Flet cancel a pulse
-    still running (F2).
+    the entry and stays still (D-18). Flet cancels a pulse still running first (F2).
 
     Args:
         memory: The process's ``ViewMemory``.

@@ -244,7 +244,7 @@ def use_field_query(initial: str = "") -> FieldQuery:
             # its text on the field here (one before the render did not).
             send_empty()
 
-    ft.use_effect(land, [clears], cleanup=_nothing_to_undo)
+    ft.use_effect(land, [clears])
 
     return FieldQuery(
         value=value,
@@ -254,15 +254,6 @@ def use_field_query(initial: str = "") -> FieldQuery:
         focus=focus,
         focusable=focusable,
     )
-
-
-def _nothing_to_undo() -> None:
-    """A Clear's effect's cleanup: nothing to undo.
-
-    Its presence is what makes Flet cancel a pending focus when the screen unmounts
-    (F2), and it is passed as ``cleanup=``, since a returned one would be lost at the
-    next render (F39).
-    """
 
 
 def found_count(line: str, *, identifier: str) -> ft.Control:

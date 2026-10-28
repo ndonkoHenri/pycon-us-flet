@@ -79,14 +79,16 @@ async def mounted_strip(
     return tick
 
 
-def test_the_ticks_stop_when_the_strip_unmounts(hooks: Hooks, page: FakePage) -> None:
-    """The strip's effect depends on ``auto_refresh``; ``stop_ticks`` cleans it up."""
+def test_the_ticks_depend_on_auto_refresh_alone(hooks: Hooks, page: FakePage) -> None:
+    """The strip's effect re-runs only for ``auto_refresh``, and has no cleanup.
+
+    None is needed: Flet cancels the running loop on unmount (F2, D-387), which
+    ``tests/test_flet_effects.py`` pins and ``tests/test_session.py`` sees on a screen.
+    """
     render_strip(auto_refresh=True)
     (_, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
     assert dependencies == [True]
-    # Flet cancels an effect's task on unmount only when it has a cleanup (F2), and a
-    # cleanup returned by a sync setup is lost at the next render (F39).
-    assert cleanup is status_strip.stop_ticks
+    assert cleanup is None
 
 
 async def test_a_tick_re_renders_the_strip_only_when_the_minute_changed(
@@ -130,7 +132,7 @@ async def test_use_minute_re_renders_its_component_only_when_the_minute_changes(
     assert status_strip.use_minute() == status_strip.current_minute()
     (setup, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
     assert dependencies == []
-    assert cleanup is status_strip.stop_ticks  # Flet cancels it on unmount (F2)
+    assert cleanup is None  # Flet cancels the loop on unmount (F2)
     await setup()
     ((seconds, tick),) = loops.started
     assert seconds == status_strip.TICK_SECONDS

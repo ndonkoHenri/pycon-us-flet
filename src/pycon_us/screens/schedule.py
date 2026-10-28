@@ -207,7 +207,7 @@ def Schedule() -> ft.View:
             set_said("")
 
     # A new landing restarts the wait: Flet cancels the previous run on a change.
-    ft.use_effect(fade, [said], cleanup=_cancel_on_unmount)
+    ft.use_effect(fade, [said])
 
     @report_errors
     async def opened() -> None:
@@ -225,7 +225,7 @@ def Schedule() -> ft.View:
             set_relaid(lambda n: n + 1)  # built lazy again
 
     # Runs again once, when the first data arrives (no snapshot or cache, NEW-03).
-    ft.use_effect(opened, [shown is None], cleanup=_cancel_on_unmount)
+    ft.use_effect(opened, [shown is None])
 
     @report_errors
     async def jump_after_switch() -> None:
@@ -237,7 +237,9 @@ def Schedule() -> ft.View:
             logger.info("Jump to now: the switch to today did not report back")
         await jump_to_now(asked=True)
 
-    ft.use_effect(jump_after_switch, [jump], cleanup=_cancel_on_unmount)
+    # A jump still waiting when the user switches tabs (D-142) is cancelled with the
+    # screen (F2), so it never scrolls a list that has left the page.
+    ft.use_effect(jump_after_switch, [jump])
 
     @report_errors
     async def changed(e: ft.Event[ft.Tabs]) -> None:
@@ -301,7 +303,7 @@ def Schedule() -> ft.View:
         await relaid(above=prefs.time_above)
 
     # The time going above the rows at the largest sizes (D-216) relays them out too.
-    ft.use_effect(time_moved, [prefs.time_above], cleanup=_cancel_on_unmount)
+    ft.use_effect(time_moved, [prefs.time_above])
 
     @report_errors
     async def refiltered() -> None:
@@ -314,7 +316,7 @@ def Schedule() -> ft.View:
 
     # A chip applies at once (D-20), so this runs under the open sheet; a newer change
     # cancels the run still waiting.
-    ft.use_effect(refiltered, [excluded], cleanup=_cancel_on_unmount)
+    ft.use_effect(refiltered, [excluded])
 
     on_measure = ft.use_callback(keeper.measured, [])
 
@@ -454,17 +456,6 @@ def Schedule() -> ft.View:
         if today_slots and not at_now
         else None,
     )
-
-
-def _cancel_on_unmount() -> None:
-    """The screen's effects' cleanup: nothing to undo, but it makes Flet cancel their task.
-
-    Flet cancels an effect's task on unmount only when the effect has a cleanup (F2,
-    F39), as the strip's ticks rely on (``ui/status_strip.stop_ticks``). Without one, a
-    jump still waiting when the user switches tabs (D-142) would scroll a list that has
-    left the page, and its error would reach whatever screen shows then; the landing
-    note's wait would set the state of a screen that has gone.
-    """
 
 
 def _ref(refs: dict[date, ft.Ref[ft.ListView]], day: date) -> ft.Ref[ft.ListView]:
