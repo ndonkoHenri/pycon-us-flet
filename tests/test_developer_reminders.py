@@ -196,7 +196,7 @@ async def test_a_slow_exact_alarm_check_still_leaves_it_5_s_ahead(
         """``datetime`` whose ``now()`` is the controlled time."""
 
         @classmethod
-        def now(cls, tz: Any = None) -> "RealClock":  # type: ignore[override]
+        def now(cls, tz: Any = None) -> RealClock:  # type: ignore[override]
             """Return the controlled time."""
             return cast(RealClock, now[0])
 
