@@ -1,7 +1,8 @@
 """Now (``/now``), the start screen: "what should I do next?" (SCHED-25, SCHED-26; D-14).
 
 From the top (ux.md §5.1): the status header (``now_header``), the status strip, which
-refreshes the feed every 15 min while Now shows (D-175), then by season:
+refreshes the feed every 15 min while Now shows (D-175), the Scan badges card for an
+account with a staff tool (``staff_entry``, D-421) in every season, then by season:
 
 - before the conference, the key dates and "Build your schedule";
 - on its days, **Your next session** (``now_card``: ``agenda.next_for_me()``'s saved
@@ -46,6 +47,7 @@ from pycon_us.screens.now_header import StatusHeader, header_copy
 from pycon_us.screens.now_quick import SEASONS, QuickInfo
 from pycon_us.screens.now_sections import SCREEN, sections
 from pycon_us.screens.now_spotlight import Spotlight
+from pycon_us.screens.staff_entry import ScanCard
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -110,10 +112,15 @@ def Now() -> ft.View:
     rows: list[ft.Control]
     if data is None and conference.problem is None:
         # The first fetch runs, or is about to (NEW-03); the strip says so.
-        rows = [StatusStrip(auto_refresh=True), SkeletonList("Loading schedule")]
+        rows = [
+            StatusStrip(auto_refresh=True),
+            ScanCard(),  # staff work needs no schedule
+            SkeletonList("Loading schedule"),
+        ]
     elif data is None:
         rows = [
             StatusStrip(auto_refresh=True),  # its bar shows a retry
+            ScanCard(),
             EmptyState(
                 "Can't load the schedule",
                 icon=ft.Icons.CLOUD_OFF_OUTLINED,
@@ -140,6 +147,7 @@ def Now() -> ft.View:
                 info.name, copy, dark=prefs.dark, high_contrast=tokens.high_contrast
             ),
             StatusStrip(auto_refresh=True),
+            ScanCard(),  # in every season: staff work before and during (ux §5.1)
             *sections(
                 copy.season,
                 answer,

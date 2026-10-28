@@ -94,6 +94,7 @@ class MemorySemantics(ft.SemanticsService):
         self.error: Exception | None = None
         self.reads = 0
         self.announced: list[str] = []
+        self.levels: list[ft.Assertiveness] = []  # each announcement's assertiveness
 
     async def _invoke_method(
         self,
@@ -107,6 +108,7 @@ class MemorySemantics(ft.SemanticsService):
         """
         if method_name == "announce_message":
             self.announced.append((arguments or {})["message"])
+            self.levels.append((arguments or {})["assertiveness"])
             return None
         if method_name != "get_accessibility_features":
             raise AssertionError(f"unexpected call {method_name}")
@@ -120,8 +122,32 @@ class MemoryHaptics(ft.HapticFeedback):
     """HapticFeedback that records the effects asked for instead of reaching a device."""
 
     def init(self) -> None:
-        """Start with no effect recorded and no error."""
+        """Start with no effect recorded, no error and no gate."""
         self.effects: list[str] = []
+        self.error: Exception | None = None
+        self.gate: asyncio.Event | None = None
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Record the effect's method name, then wait for ``gate``; or raise ``error``."""
+        if self.error is not None:
+            raise self.error
+        self.effects.append(method_name)
+        if self.gate is not None:  # the pulse is under way until the gate opens
+            await self.gate.wait()
+
+
+class MemoryWakelock(ft.Wakelock):
+    """Wakelock that records each call and holds the lock's state instead of a device's."""
+
+    def init(self) -> None:
+        """Start released, with no call recorded and no error."""
+        self.calls: list[str] = []
+        self.enabled = False
         self.error: Exception | None = None
 
     async def _invoke_method(
@@ -130,10 +156,17 @@ class MemoryHaptics(ft.HapticFeedback):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Record the effect's method name, or raise ``error`` when given."""
+        """Record ``enable`` or ``disable`` and follow it; answer ``is_enabled``.
+
+        ``error``, when given, is raised by every call, after it is recorded.
+        """
+        self.calls.append(method_name)
         if self.error is not None:
             raise self.error
-        self.effects.append(method_name)
+        if method_name == "is_enabled":
+            return self.enabled
+        self.enabled = method_name == "enable"
+        return None
 
 
 class MemoryLauncher(ft.UrlLauncher):

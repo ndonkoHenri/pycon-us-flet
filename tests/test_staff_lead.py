@@ -208,6 +208,14 @@ async def test_badge_read_is_accepted_styled_and_names_empty_validators() -> Non
     )
 
 
+async def test_opening_the_scanner_makes_it_now_s_card_s_tool(show: Show) -> None:
+    """An open scanner is the last tool opened (D-421); a refused one is not."""
+    refused = await show(signed_in())
+    assert refused.memory.staff_tool == ""
+    shown = await show(signed_in(lead_retrieval=True))
+    assert shown.memory.staff_tool == "lead"
+
+
 # ------------------------------------------------------------------ the consent (LEAD-04)
 
 

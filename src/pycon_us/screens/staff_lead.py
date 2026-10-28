@@ -3,7 +3,9 @@
 The first mount of ``ui/scan_screen.py``'s ``ScanScreen`` (LEAD-01, LEAD-09, LEAD-14;
 D-416). It re-checks its rule on every render (architecture §12.4): an account
 without ``lead_retrieval`` or ``door_check``, a signed-out session or no mock URL
-(D-51) sees "Not available for this account", so a deep link cannot bypass it.
+(D-51) sees "Not available for this account", so a deep link cannot bypass it. It is
+mounted at ``/now/staff/lead`` too, for Now's Scan badges card, and records itself as
+the last tool opened, which that card opens next (D-421).
 
 Past the rule, the account's consent (``SCANNER_CONSENT``, LEAD-04) is read from
 storage as the scanner opens, and until it is given ``lead_consent.py``'s page shows
@@ -39,6 +41,7 @@ def LeadScanner() -> ft.Control:
     """The Lead scanner, or its "Not available" state for an account it refuses."""
     prefs = use_prefs()
     account = use_account()
+    memory = use_services().memory
     allowed = (
         prefs.private_api_enabled
         and account.signed_in
@@ -46,6 +49,7 @@ def LeadScanner() -> ft.Control:
     )
     if not allowed:
         return NotAvailable(title=TITLE)
+    memory.staff_tool = ToolKey.LEAD  # plain: Now's card reads it when it renders
     return LeadTool(owner=account.owner)
 
 

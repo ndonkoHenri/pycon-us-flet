@@ -218,6 +218,8 @@ ROUTES = [
         pushed("wifi", Wifi),
         pushed("help", Help),
         pushed("venue", Venue),
+        # Its Scan badges card's tools (D-421): under Now, so Back returns there.
+        pushed("staff/lead", LeadScanner),
     ),
     pushed("schedule", Schedule),
     pushed(

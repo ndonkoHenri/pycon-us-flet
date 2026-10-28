@@ -1,7 +1,7 @@
 """The shared scan screen every staff tool renders (LEAD-01, LEAD-09, LEAD-14; D-65).
 
-ux.md §7.2: the app bar's ``KEYBOARD`` button, the camera area, the result panel and
-manual entry, then the tool's own actions. A tool gives ``ScanScreen`` its title, a
+ux.md §7.2: the app bar's sync chip and ``KEYBOARD`` button, the camera area, the
+result panel and manual entry, then the tool's own actions. A tool gives ``ScanScreen`` its title, a
 context line and an async ``on_badge(badge) -> ScanResult``: the screen parses what was
 entered (``parse_badge``), applies the per-code cooldown, awaits one handler at a time
 and shows what it returned, so the tools only return data.
@@ -12,9 +12,16 @@ so a hardware scanner scans continuously; a code accepted in the last 4 s is cle
 without a word (a held code); a second submit while the handler runs is dropped, its
 text kept; text that is not a badge says "Not a badge code" and stays for correction.
 
+**Beyond the panel** (#724, D-420): each result gives its haptics and, on iOS, an
+announcement (``ui/scan_feedback.py``); the screen stays awake while mounted and in
+the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet with the
+signed-in account's rows (``use_queue_sheet()``). Scanning **pauses** while the sheet
+is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
+dropped, its text kept, and the field says why; when the pause ends the focus goes
+back to the field.
+
 **The camera** is E1, absent at the Flet pin (``capabilities.SCANNER`` is False): the
-area says so and manual entry is primary; #726 brings the preview. Haptics, the wake
-lock, the sync chip and pausing under dialogs are #724's.
+area says so and manual entry is primary; #726 brings the preview.
 """
 
 from collections.abc import Awaitable, Callable
@@ -28,14 +35,18 @@ from pycon_us.core.badges import NOT_A_BADGE, Badge, Cooldown, ScanResult, parse
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.actions import padded
 from pycon_us.ui.fields import use_field_query
+from pycon_us.ui.queue_sheet import use_queue_sheet
 from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.scan_feedback import announce, buzz, use_wake_lock
 from pycon_us.ui.scan_result import DIM_AFTER, age_line, result_panel, spoken
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
+from pycon_us.ui.sync_chip import SyncChip
 from pycon_us.ui.widths import LIST, sides, use_margin
 
 type OnBadge = Callable[[Badge], Awaitable[ScanResult]]
@@ -44,6 +55,8 @@ type OnBadge = Callable[[Badge], Awaitable[ScanResult]]
 ENTRY_LABEL = "Badge code"
 KEYBOARD_TOOLTIP = "Type a badge code"
 CAMERA_UNAVAILABLE = "Camera scanning isn't available in this build."
+PAUSED_SHEET = "Paused while the sheet is open"
+"""The field's line while the queue sheet is open: a submit is dropped (#724)."""
 
 NOT_AVAILABLE = "Not available for this account"
 NOT_AVAILABLE_BODY = "Sign in on More with an account that has access to it."
@@ -80,7 +93,7 @@ def ScanScreen(
     on_badge: OnBadge,
     context: str | None = None,
     actions: list[ft.Control] | None = None,
-    paused: bool = False,
+    paused: str | None = None,
 ) -> ft.Control:
     """Return a staff tool's scan screen (ux.md §7.2).
 
@@ -89,38 +102,60 @@ def ScanScreen(
         on_badge: Turns a badge into the result to show; awaited one at a time.
         context: A line under the bar, e.g. "Decorators, Wed 9:00 AM".
         actions: The tool's own buttons, under the field ("Add note").
-        paused: Submits are dropped, the text kept (a dialog or sheet is open).
+        paused: Why scanning is paused, under the field ("Paused while the note
+            is open"), while one of the tool's dialogs or sheets is open: submits
+            are dropped, their text kept. None scans.
     """
+    svc = use_services()
+    prefs = use_prefs()
+    staff = use_staff()
+    tokens = use_tokens()
     margin = use_margin(LIST)  # its width class (D-305)
     query = use_field_query()
+    sheet = use_queue_sheet()  # the signed-in account's rows only (D-420)
+    use_wake_lock()
     cooldown = ft.use_memo(Cooldown, [])  # one per screen: its codes' last accepts
     busy = ft.use_ref(False)  # the handler runs: the single flight
     shown, set_shown = ft.use_state(no_result)
+    why_paused = PAUSED_SHEET if sheet.is_open else paused
+    was_paused = ft.use_ref(False)
 
     @report_errors
-    def show(result: ScanResult) -> None:
+    async def resume() -> None:
+        resumed = was_paused.current and why_paused is None
+        was_paused.current = why_paused is not None
+        if resumed:  # the sheet or dialog has closed: scanning goes on from the field
+            await query.focus()
+
+    ft.use_effect(resume, [why_paused is None])
+
+    @report_errors
+    async def show(result: ScanResult) -> None:
         at = clock()
         set_shown(lambda last: Shown(result, at, last.serial + 1 if last else 1))
+        await buzz(svc.haptics, result.outcome)
+        if prefs.announcements:  # iOS; elsewhere the panel's live region says it
+            await announce(svc.semantics, result)
 
     @report_errors
     async def submit(e: ft.Event[ft.TextField]) -> None:
-        if paused or busy.current:
+        if why_paused is not None or busy.current:
             return
-        raw = e.data if isinstance(e.data, str) else e.control.value or ""
-        badge = parse_badge(raw)
-        if badge is None:
-            show(NOT_A_BADGE)
-            await query.focus()  # Enter took it out; the text stays to correct
-            return
-        await query.clear()  # empties the field and puts the focus back in it
-        if not cooldown.accept(badge.code, clock()):
-            return  # the same code again within 4 s: a held badge
+        # Held until the result is felt and said, so results reach staff in order.
         busy.current = True
         try:
-            result = await on_badge(badge)
+            raw = e.data if isinstance(e.data, str) else e.control.value or ""
+            badge = parse_badge(raw)
+            if badge is None:
+                await show(NOT_A_BADGE)
+                await query.focus()  # Enter took it out; the text stays to correct
+                return
+            await query.clear()  # empties the field and puts the focus back in it
+            if not cooldown.accept(badge.code, clock()):
+                return  # the same code again within 4 s: a held badge
+            await show(await on_badge(badge))
         finally:
             busy.current = False
-        show(result)
 
     body: list[ft.Control] = []
     if context:
@@ -151,6 +186,7 @@ def ScanScreen(
                     enable_suggestions=False,
                     capitalization=ft.TextCapitalization.NONE,
                     can_request_focus=query.focusable,
+                    helper=why_paused,
                 ),
             )
         ),
@@ -159,12 +195,13 @@ def ScanScreen(
     return AppScaffold(
         title=title,
         actions=[
+            SyncChip(staff, tokens=tokens, on_click=sheet.open),
             named(  # one node, named by its tooltip (D-234)
                 "scan.keyboard",
                 ft.IconButton(
                     ft.Icons.KEYBOARD, tooltip=KEYBOARD_TOOLTIP, on_click=query.focus
                 ),
-            )
+            ),
         ],
         body=ft.ListView(body, expand=True, padding=sides(margin, top=8, bottom=16)),
     )
@@ -179,8 +216,9 @@ def no_result() -> Shown | None:
 def ResultPanel(*, shown: Shown | None) -> ft.Control:
     """Return the result panel and, under it, how old the result is.
 
-    The panel is one live region read as the result's words, so TalkBack and
-    VoiceOver say each new result; the age under it ticks every second outside it, so
+    The panel is one live region read as the result's words, so TalkBack says each
+    new result; where the platform takes announcements (iOS) the screen announces it
+    instead and the panel is no live region, so it is said once (D-420); the age under it ticks every second outside it, so
     only the result is said. Its own component, so the tick re-renders the panel
     alone. A result dims after ``DIM_AFTER`` s and stays until the next.
 
@@ -206,7 +244,7 @@ def ResultPanel(*, shown: Shown | None) -> ft.Control:
         ft.Semantics(
             identifier="scan.result",
             container=True,
-            live_region=True,
+            live_region=not prefs.announcements,
             label=spoken(result, serial),
             exclude_semantics=True,  # the card's texts are its label, once
             content=ft.AnimatedSwitcher(
