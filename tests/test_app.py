@@ -18,6 +18,7 @@ import pytest
 from flet_notifications import Notifications
 
 from pycon_us import app, clock
+from pycon_us.account import Account
 from pycon_us.app import NO_THEME_ANIMATION, bootstrap
 from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_batches import Batch
@@ -79,7 +80,13 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(
-        cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        conference,
+        prefs,
+        Favorites(),
+        ChangeLog(),
+        Account(),
     )
     # No theme flash and no empty first screen (SHELL-01): the stored theme is set before
     # the gate opens, still with no crossfade, and later changes crossfade again.
@@ -123,7 +130,13 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        favorites,
+        ChangeLog(),
+        Account(),
     )
     # No star fills in after the first screen (D-48).
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
@@ -137,9 +150,51 @@ async def test_the_year_s_change_log_is_loaded_at_start(
     await changes_file.write_batches(svc.storage, [batch])
     change_log = ChangeLog()
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), Prefs(), Favorites(), change_log
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        Prefs(),
+        Favorites(),
+        change_log,
+        Account(),
     )
     assert change_log.batches == (batch,)
+
+
+async def test_the_saved_account_is_restored_before_the_gate_opens(
+    fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
+) -> None:
+    """The start signs the saved account in again from local reads, with no mock URL.
+
+    STORE-03, SHELL-15; kept with no URL set, which only hides it (D-398).
+    """
+    shared.values["pycon.account"] = json.dumps(
+        {"email": "all@example.com", "nickname": "Robin", "features": {}}
+    )
+    await svc.credentials.write("mock-key-all", "mock-secret-all")
+    account, prefs = Account(), Prefs()
+    restored_at_open: list[bool] = []
+
+    def listener(_sender: object, name: str | None) -> None:
+        if name == "loaded":
+            restored_at_open.append(account.restored and account.signed_in)
+
+    assert isinstance(prefs, ft.Observable)
+    prefs.subscribe(listener)
+    await bootstrap(
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        Favorites(),
+        ChangeLog(),
+        account,
+    )
+    assert restored_at_open == [True]
+    assert svc.api is None and account.credentials() == (
+        "mock-key-all",
+        "mock-secret-all",
+    )
 
 
 @pytest.fixture
@@ -346,7 +401,13 @@ async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
     monkeypatch.setattr(Prefs, "load", broken)
     favorites, prefs = Favorites(), Prefs()
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        favorites,
+        ChangeLog(),
+        Account(),
     )
     assert prefs.loaded  # the gate opens (D-161)
     assert not favorites.loaded  # so My schedule says it can't open

@@ -14,6 +14,7 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
+from pycon_us.account import Account
 from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
@@ -28,6 +29,7 @@ from pycon_us.screens.developer_ui import (
     reset_losses,
 )
 from pycon_us.services import Services, api, changes_file, errors
+from pycon_us.services.storage import ACCOUNT
 from pycon_us.state import Conference
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests import data_section
@@ -54,6 +56,7 @@ from tests.feeds import recorded
     prefs,
     conference,
     favorites,
+    account,
     packaged,
     rendered,
     minutes,
@@ -67,6 +70,7 @@ from tests.feeds import recorded
     data_section.prefs,
     data_section.conference,
     data_section.favorites,
+    data_section.account,
     data_section.packaged,
     data_section.rendered,
     data_section.minutes,
@@ -214,14 +218,15 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     prefs: Prefs,
     conference: Conference,
     favorites: Favorites,
+    account: Account,
     page: FakePage,
     offline: list[str],
 ) -> None:
     """Confirming the reset leaves storage and every store as after a fresh install.
 
     The session has been used: settings (reminders too), favourites of two years, the
-    Developer options, a cache, a change log, a fake clock, a feed URL and remembered
-    places. Only another app's key is left; the device facts stay and Developer locks
+    Developer options, a cache, a change log, a fake clock, a feed URL, remembered
+    places and a signed-in mock account, whose key and secret go too (#684). Only another app's key is left; the device facts stay and Developer locks
     again. Then, as at a start, a quiet refresh of the year's feed runs, the app goes to
     Welcome, as a first start does (D-287), and says "App reset".
     """
@@ -253,6 +258,11 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     svc.memory.last_location = "/more/developer"
     svc.memory.schedule_offsets[date(2026, 5, 15)] = 1200.0
     svc.memory.jumped_on = date(2026, 5, 15)
+    await svc.credentials.write("mock-key-all", "mock-secret-all")
+    profile = {"email": "all@example.com", "nickname": "Robin", "features": {}}
+    await svc.storage.set(ACCOUNT, profile)
+    await account.restore(svc.storage, svc.credentials)
+    assert account.signed_in
 
     await tap(render, "developer.reset_app")
     render()
@@ -275,6 +285,8 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
     assert prefs.developer is False  # a packaged build: locked again
     assert prefs.os_dark is True and prefs.loaded is True  # device facts stay
     assert favorites.ids == frozenset()
+    assert not account.signed_in and account.credentials() == (None, None)
+    assert await svc.credentials.read() == (None, None)
     assert svc.memory == ViewMemory()
     assert conference.source == "bundled"
     assert conference._feed_url is None
@@ -297,7 +309,7 @@ async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
     ``reset_app()``'s own deletion can remove it.
     """
     await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
-    assert await reset_app(svc, conference, prefs, favorites) is True
+    assert await reset_app(svc, conference, prefs, favorites, Account()) is True
     assert not changes_file.changes_path(svc.storage).exists()
 
 
@@ -349,7 +361,7 @@ async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it
     running = conference.start_refresh(svc.storage, svc.year)
     await asyncio.sleep(0)
     async with asyncio.timeout(5):  # without the cancel it waits for the feed forever
-        assert await reset_app(svc, conference, prefs, favorites) is True
+        assert await reset_app(svc, conference, prefs, favorites, Account()) is True
     assert running.cancelled()
     release.set()
     await asyncio.sleep(0.05)

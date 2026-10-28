@@ -43,9 +43,9 @@ class MemoryPrefs(ft.SharedPreferences):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Answer ``get``, ``set``, ``get_keys`` and ``remove`` from ``values``.
+        """Answer ``get``, ``set``, ``get_keys``, ``contains_key`` and ``remove``.
 
-        A set answers False while ``fail_writes`` is set, a remove while
+        Every answer comes from ``values``. A set answers False while ``fail_writes`` is set, a remove while
         ``fail_removes`` is; ``error``, when given, is raised by every call.
         """
         assert arguments is not None
@@ -58,6 +58,8 @@ class MemoryPrefs(ft.SharedPreferences):
                 return False
             self.values[arguments["key"]] = arguments["value"]
             return True
+        if method_name == "contains_key":
+            return arguments["key"] in self.values
         if method_name == "get_keys":
             prefix = arguments["key_prefix"]
             return [key for key in self.values if key.startswith(prefix)]

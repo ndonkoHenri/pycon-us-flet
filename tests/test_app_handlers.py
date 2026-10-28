@@ -13,6 +13,7 @@ import flet as ft
 import pytest
 
 from pycon_us import app, clock
+from pycon_us.account import Account
 from pycon_us.app import bootstrap, on_resume
 from pycon_us.change_log import ChangeLog
 from pycon_us.favorites import Favorites
@@ -272,7 +273,13 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
     conference, prefs = Conference(), Prefs()
     start = asyncio.create_task(
         bootstrap(
-            cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+            cast(ft.Page, fake_page),
+            svc,
+            conference,
+            prefs,
+            Favorites(),
+            ChangeLog(),
+            Account(),
         )
     )
     await reading.wait()
