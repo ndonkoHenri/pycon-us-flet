@@ -108,7 +108,9 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     sponsor, set_sponsor = ft.use_state(no_sponsor)
     only, set_only = ft.use_state(False)
     mounted = ft.use_ref(True)  # cleared on unmount: a late read then does nothing
-    opener: MutableRef[Callable[[str, str | None], None]] = ft.use_ref(sheet.open)
+    opener: MutableRef[Callable[[str, str | None], None]] = ft.use_ref(
+        lambda: sheet.open  # a callable is use_ref's initialiser: wrapped, not called
+    )
     opener.current = sheet.open  # the latest, which the stable callback below calls
     found = ft.use_memo(
         lambda: leads(svc.outbox, owner), [owner, staff.revision, svc.outbox]

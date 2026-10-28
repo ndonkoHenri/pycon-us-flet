@@ -175,6 +175,8 @@ async def test_every_status_shows_newest_first_with_its_words(
     texts = shown.texts()
     assert any(t.startswith("Confirmed · may be recorded twice · ") for t in texts)
     assert shown.titles[-1] == "Leads"
+    # The opener's ref holds the sheet's open(), never calls it as an initialiser.
+    assert not shown.snack_bars
 
 
 async def test_search_narrows_by_name_or_code_and_says_when_nothing_matches(
