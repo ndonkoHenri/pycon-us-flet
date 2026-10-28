@@ -1227,26 +1227,32 @@ SELECT o.* FROM outbox o
 WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
   AND (o.kind <> 'note' OR EXISTS (SELECT 1 FROM outbox l WHERE l.owner = o.owner AND l.kind = 'lead'
                                    AND l.key = o.key AND l.status = 'synced'))
-ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at;
+ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id;
 ```
 
-Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted; their pending or failed rows stay (visible in Developer) until synced or cleared with confirmation.
+Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer) until synced or cleared with confirmation.
 
 ### 12.2 Transitions (`core/outbox.py`, pure; hypothesis state-machine tests)
 
+Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outcome, row)`: `queued` (insert the new row), `updated` (save the changed row), `already` (nothing to store; the row is the one that made it so) or `ignored`. The send transitions (`after_success()`, `after_network_error()`, `after_error()`) refuse a row that isn't pending, `retry_failed()` one that isn't failed. `due(rows, owner, now)` is the Python twin of §12.1's query, so the db's SQL is tested against it.
+
 | From | Event | To | Effect |
 |---|---|---|---|
-| — | lead scan; a synced row exists for (owner, code) | — | "Already in your leads", no new row |
-| — | lead scan; a pending row exists | pending | `next_at = now`, kick |
-| — | lead scan otherwise | pending | snapshot sponsor, kick |
-| — | note saved (non-empty) | pending | upsert one note per (owner, code) |
-| — | door admit | pending | unique `idem_key`; one row per check-in |
-| pending | sent | synced | result merged into the payload |
-| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60`, end the pass |
-| pending | `ApiError` | pending → failed | `tries += 1`, `last_error`; failed at 10 counted failures |
-| failed | "Retry failed" | pending | `tries = 0`, `next_at = now` |
+| — | lead scan; a synced row exists for (owner, code) | — | `already`: "Already in your leads", no new row |
+| — | lead scan; a pending row exists | pending | `next_at = now`, kick; its payload and sponsor stay |
+| failed | lead scan | pending | as "Retry failed": `tries = 0`, `next_at = now`; its sponsor stays |
+| — | lead scan otherwise | pending | `queued`: snapshot sponsor, kick |
+| — | note saved, empty or blank | — | `ignored` |
+| — | note saved (non-empty) | pending | `queued`: one note per (owner, code), body `{"accessCode", "note"}`, the sponsor snapshot of its lead row (the current sponsor without one) |
+| any | note saved again (non-empty) | pending | `updated`: the new text, `tries = 0`, `next_at = now` (a synced note was edited, so it is sent again) |
+| — | door admit; its `idem_key` exists | — | `already`: the queued check-in |
+| — | door admit otherwise | pending | `queued`: unique `idem_key` (code, sorted product ids and scan session, joined by `\|`); one row per check-in |
+| pending | sent | synced | result merged into the payload under `"result"`; `last_error` cleared |
+| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60` (`NETWORK_BACKOFF`), end the pass |
+| pending | `ApiError` | pending → failed | `tries += 1`, `last_error`, `next_at = now + 60`; failed at 10 (`RETRY_CAP`) counted failures |
+| failed | "Retry failed" | pending | `tries = 0`, `next_at = now`, `last_error` cleared |
 
-Invariants (property tests): no pending row lost; owner and sponsor fixed at enqueue; synced rows never re-sent; a note never precedes its lead. Swag pickup and CoC capture are **online-only** and say so before scanning.
+Invariants (`tests/test_outbox_machine.py`, a `RuleBasedStateMachine` with scans, notes, door admits, sends that succeed or fail either way, streaks of refusals, "Retry failed", sponsor and account switches and time passing): no unsynced row lost; owner, sponsor snapshot, kind, code, `idem_key` and `created_at` fixed at enqueue; only sent rows are synced, and a synced row is never due; a note is never due before its lead is synced, keeps its lead's sponsor, and its lead row is never forgotten while it waits; `tries` counts only `ApiError`s, and a row is failed exactly at 10; one lead and one note row per (owner, code), one door row per `idem_key`. The table's rows are `tests/test_outbox.py`. Swag pickup and CoC capture are **online-only** and say so before scanning.
 
 ### 12.3 `SyncWorker` (`services/sync.py`)
 
