@@ -208,7 +208,7 @@ async def test_the_status_follows_the_clock_on_the_minute_tick(
 async def test_leaving_the_detail_stops_its_minute_ticks(
     render: Render, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """F2, F39: only the effect's cleanup makes Flet cancel the loop on unmount."""
+    """F2: leaving the detail cancels its ticking loops, with no cleanup (D-387)."""
     loops: list[asyncio.Task[Any]] = []
 
     async def run_every(self: Services, seconds: float, action: Callable[[], object]):

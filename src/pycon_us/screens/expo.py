@@ -341,8 +341,8 @@ def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
             set_flash(False)
             await asyncio.sleep(pulse_ms / 1000)
 
-    # A new tap mid-pulse starts again: the cleanup makes Flet cancel the old (F2).
-    ft.use_effect(pulse_twice, [taps], cleanup=_cancel)
+    # A new tap mid-pulse starts again: Flet cancels the old (F2).
+    ft.use_effect(pulse_twice, [taps])
 
     layers: list[ft.Control] = []
     if ready:
@@ -394,11 +394,3 @@ def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
         fit=ft.StackFit.EXPAND,
         expand=True,
     )
-
-
-def _cancel() -> None:
-    """An effect's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
-
-    Without one, a pulse still running when the pane leaves would reach a viewer
-    that has left the page.
-    """

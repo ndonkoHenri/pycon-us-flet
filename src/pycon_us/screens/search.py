@@ -194,7 +194,7 @@ def Search() -> ft.View:
         await asyncio.sleep(DEBOUNCE_SECONDS)
         set_query(text)
 
-    ft.use_effect(settle, [text], cleanup=_stop_waiting)
+    ft.use_effect(settle, [text])
 
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> None:
@@ -324,15 +324,6 @@ def Search() -> ft.View:
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         ),
     )
-
-
-def _stop_waiting() -> None:
-    """The debounce effect's cleanup: nothing to undo.
-
-    Its presence is what makes Flet cancel a pending wait when the View unmounts (F2),
-    and it is passed as ``cleanup=``, since a returned one would be lost at the next
-    render (F39).
-    """
 
 
 def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Control:

@@ -39,7 +39,7 @@ from pycon_us.ui.badges import CHANGED, TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite
 from pycon_us.ui.row_lines import elapsed_bar, meta, overlap_line, secondary
 from pycon_us.ui.semantics import semantics_key
-from pycon_us.ui.status_strip import TICK_SECONDS, stop_ticks
+from pycon_us.ui.status_strip import TICK_SECONDS
 
 type Changes = Mapping[str, frozenset[ChangeKind]]
 """The sessions changed in the last 24 h, by id: what changed (``ChangeLog.recent()``)."""
@@ -136,7 +136,7 @@ def use_recent_changes() -> Changes:
     async def keep_up() -> None:
         await svc.run_every(TICK_SECONDS, tick)
 
-    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    ft.use_effect(keep_up, [])
     return marks
 
 
