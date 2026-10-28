@@ -9,13 +9,16 @@ extension (D-63), so the companion app and the tests use it as is.
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
+from typing import TYPE_CHECKING
 from zlib import crc32
 
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.timefmt import instant, time_label
 from pycon_us.locations import drill_href
-from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.year_moments import EventReminder
+
+if TYPE_CHECKING:  # annotations only: at run time it closes a cycle (#746)
+    from pycon_us.reminder_settings import ReminderSettings
 
 MAX_PENDING = 60
 """The most reminders a plan holds: iOS keeps 64 pending and drops the soonest beyond
