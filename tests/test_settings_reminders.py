@@ -7,6 +7,7 @@ each change shows how many plans it applied. How the section looks and reads is
 checked on devices (the PR).
 """
 
+import asyncio
 import dataclasses
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -37,8 +38,9 @@ from pycon_us.screens.settings_reminders import (
 )
 from pycon_us.services import Services, use_services
 from pycon_us.services.reminders import Access, Scheduler
-from pycon_us.services.storage import REMINDERS
+from pycon_us.services.storage import REMINDERS, Pref, Storage
 from pycon_us.state import Conference, use_conference
+from pycon_us.ui import focus_back
 from tests import harness
 from tests.fakes import MemoryNotifications, MemoryPermissions
 from tests.feeds import processed
@@ -405,6 +407,70 @@ async def test_ios_never_shows_the_exact_alarm_card(
     os.exact = False
     shown = await open_section(ON)
     assert card_text(shown) is None
+
+
+async def test_overlapping_switches_each_keep_the_others_change(
+    open_section: Open, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two moments switched off before the first write ends both stay off (#706's review).
+
+    Each write is slow, so the second tap's handler starts while the first still
+    awaits storage: built from the same record, the later save restored the first.
+    """
+    shown = await open_section(ReminderSettings(primer="accepted"))
+    write = Storage.set
+
+    async def slow_set(self: Storage, pref: Pref[Any], value: Any) -> bool:
+        await asyncio.sleep(0.02)
+        return await write(self, pref, value)
+
+    monkeypatch.setattr(Storage, "set", slow_set)
+    await asyncio.gather(
+        toggle(shown, "settings.reminders.keynote"),
+        toggle(shown, "settings.reminders.lightning"),
+    )
+    await asyncio.sleep(0.1)  # both writes done
+    await shown.settle()
+    expected = ReminderSettings(keynote=False, lightning=False, primer="accepted")
+    assert await stored(shown) == expected
+    assert shown.prefs.reminders == expected
+    assert not switch_of(shown, "settings.reminders.keynote").value
+    assert not switch_of(shown, "settings.reminders.lightning").value
+
+
+@pytest.mark.parametrize("card", ["blocked", "exact"])
+async def test_back_from_system_settings_the_button_gets_the_focus(
+    open_section: Open,
+    os: MemoryNotifications,
+    monkeypatch: pytest.MonkeyPatch,
+    card: str,
+) -> None:
+    """Back from system settings with nothing changed, its button is focused (D-372)."""
+    monkeypatch.setattr(focus_back, "SETTLE_SECONDS", 0)
+    monkeypatch.setattr(focus_back, "LEAVE_WITHIN", 1)  # the trip below leaves
+    focused: list[ft.OutlinedButton] = []
+
+    async def focus(self: ft.OutlinedButton) -> None:
+        focused.append(self)
+
+    monkeypatch.setattr(ft.OutlinedButton, "focus", focus)
+    if card == "blocked":
+        os.enabled = False
+        status = PermissionStatus.PERMANENTLY_DENIED
+    else:
+        os.exact = os.grant_exact = False  # left without allowing them
+        status = PermissionStatus.GRANTED
+    shown = await open_section(ON, android=True, permissions=MemoryPermissions(status))
+    click = asyncio.create_task(
+        shown.click(button(shown, f"settings.reminders.{card}"))
+    )
+    await asyncio.sleep(0.05)  # the system settings are up
+    shown.services.presence.leave()
+    await asyncio.sleep(0.05)
+    shown.services.presence.come_back()
+    await click
+    await shown.settle()
+    assert focused == [button(shown, f"settings.reminders.{card}")]
 
 
 def test_the_calendar_alarm_follows_the_lead() -> None:

@@ -32,6 +32,7 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.reminders import Access
 from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.focus_back import focus_back
 from pycon_us.ui.reminder_primer import PRIMER_LEAD, ask
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
@@ -166,20 +167,24 @@ def RemindersSection(slot: int) -> ft.Control:
         await save(page, svc, prefs, **changed)
 
     @report_errors
-    async def allow() -> None:
+    async def allow(_: ft.Event[ft.OutlinedButton]) -> None:
         await scheduler.request_permission()
         if prefs.reminders.primer != "accepted":  # asked: no primer after this one
             await save(page, svc, prefs, primer="accepted")
         set_heard(lambda n: n + 1)
 
+    # Both open the system settings, another app's window: back from it, the button
+    # gets the focus again (D-372), which Flutter's Navigator cannot restore.
     @report_errors
-    async def open_settings() -> None:
+    async def open_settings(e: ft.Event[ft.OutlinedButton]) -> None:
         if svc.permissions is not None:
-            await svc.permissions.open_app_settings()  # the resume re-reads (D-221)
+            async with focus_back(svc, e.control):
+                await svc.permissions.open_app_settings()  # the resume re-reads (D-221)
 
     @report_errors
-    async def open_alarms() -> None:
-        await scheduler.request_exact()
+    async def open_alarms(e: ft.Event[ft.OutlinedButton]) -> None:
+        async with focus_back(svc, e.control):
+            await scheduler.request_exact()
 
     rows: list[ft.Control] = [SectionHeader("Reminders")]  # level 2 (D-211)
     match card_for(access, settings, android=scheduler.android, exact=scheduler.exact):
@@ -238,7 +243,8 @@ def RemindersSection(slot: int) -> ft.Control:
 async def save(page: ft.Page, svc: Services, prefs: Prefs, **changes: Any) -> None:
     """Save the reminder settings with ``changes``, silently unless the write fails.
 
-    The scheduler re-plans on the change of ``Prefs.reminders`` (D-389); a failed
+    Through ``Prefs.change_reminders()``, so overlapping taps each keep the other's
+    change. The scheduler re-plans on the change of ``Prefs.reminders`` (D-389); a failed
     write keeps the change for the session and says so (D-120).
 
     Args:
@@ -247,8 +253,10 @@ async def save(page: ft.Page, svc: Services, prefs: Prefs, **changes: Any) -> No
         prefs: The session's ``Prefs``, whose ``reminders`` change.
         **changes: ``ReminderSettings`` fields and their new values.
     """
-    reminders = dataclasses.replace(prefs.reminders, **changes)
-    say_if_unsaved(page, await prefs.save(svc.storage, reminders=reminders))
+    saved = await prefs.change_reminders(
+        svc.storage, lambda current: dataclasses.replace(current, **changes)
+    )
+    say_if_unsaved(page, saved)
 
 
 def toggle_row(
@@ -331,7 +339,7 @@ def notice_card(
     identifier: str,
     text: str,
     action: str | None,
-    on_click: Callable[[], object],
+    on_click: Callable[[ft.Event[ft.OutlinedButton]], object],
 ) -> ft.Control:
     """Return a card that says what the OS needs, with the button that gets there.
 
@@ -342,7 +350,8 @@ def notice_card(
         identifier: For UI flows, e.g. ``settings.reminders.exact``.
         text: The card's sentence.
         action: The button's label; None for no button (no system settings to open).
-        on_click: The button's tap.
+        on_click: The button's tap; its event's control is the opener ``focus_back()``
+            focuses again (D-372).
     """
     column: list[ft.Control] = [
         ft.Semantics(

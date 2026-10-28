@@ -31,7 +31,7 @@ from weakref import WeakSet
 import flet as ft
 
 from pycon_us.prefs import Prefs
-from pycon_us.reminder_settings import SessionLead
+from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme_hc import hc_sheet_shape
@@ -152,16 +152,15 @@ async def _save(
 ) -> None:
     """Save the primer's answer, and the session reminders' lead when the OS allows.
 
-    Read from ``prefs`` after the OS's answer, so a change made meanwhile is kept: a
+    Read from ``prefs`` after the OS's answer, and through
+    ``Prefs.change_reminders()``, so a change made meanwhile is kept: a
     lead already on (the Settings switch that showed the primer) stays. A failed
     write keeps the answer for the session and says so (D-120).
     """
-    reminders = dataclasses.replace(
-        prefs.reminders, primer="accepted" if allow else "not_now"
+    saved = await prefs.change_reminders(
+        svc.storage, lambda current: answered(current, allow=allow, granted=granted)
     )
-    if granted and not reminders.session_lead:
-        reminders = dataclasses.replace(reminders, session_lead=PRIMER_LEAD)
-    if not await prefs.save(svc.storage, reminders=reminders):
+    if not saved:
         page.show_dialog(
             ft.SnackBar(
                 ft.Text(NOT_SAVED),
@@ -169,6 +168,24 @@ async def _save(
                 duration=SNACK_BAR_MS,
             )
         )
+
+
+def answered(
+    current: ReminderSettings, *, allow: bool, granted: bool
+) -> ReminderSettings:
+    """Return ``current`` with the primer's answer, and the lead when the OS allows.
+
+    A lead already on stays (the Settings switch that showed the primer).
+
+    Args:
+        current: The reminder settings when the answer is saved.
+        allow: The user tapped Allow.
+        granted: The OS allowed notifications.
+    """
+    reminders = dataclasses.replace(current, primer="accepted" if allow else "not_now")
+    if granted and not reminders.session_lead:
+        reminders = dataclasses.replace(reminders, session_lead=PRIMER_LEAD)
+    return reminders
 
 
 def primer_sheet(

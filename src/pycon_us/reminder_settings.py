@@ -45,7 +45,7 @@ _CHOICES: dict[str, tuple[object, ...]] = {
 class ReminderSettings:
     """The reminder settings (``pycon.reminders``), with their defaults (D-275).
 
-    Change one with ``dataclasses.replace()`` and ``Prefs.save(reminders=...)``.
+    Change one with ``Prefs.change_reminders()`` and ``dataclasses.replace()``.
 
     Attributes:
         session_lead: Minutes before each session in My schedule that its reminder
