@@ -13,6 +13,8 @@ so Save stays in reach at 200 % text:
 - **Notes**, a multi-line ``TextField`` of at most 4000 characters with its counter;
 - Cancel and **Save** (``lead.note.save``), and a line when the outbox can't store it.
 
+The Interest button and the Follow-up chips are built in ``ui/lead_note_fields.py``.
+
 ``use_note_sheet()`` is the Lead scanner's hook: it keeps the lead being noted and the
 draft, prefills it from the lead's saved note (``lead_note.saved_note()``), shows the
 sheet through ``ft.use_dialog`` and saves through ``lead_note.store()`` and
@@ -40,31 +42,12 @@ from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_sheet_shape
+from pycon_us.ui.lead_note_fields import follow_up_chip, interest_button
 from pycon_us.ui.queue_rows import heading, note
-from pycon_us.ui.semantics import named, semantics_key
+from pycon_us.ui.semantics import named
 
 MAX_LENGTH = 4000
 """The note's longest free text, in characters (ux.md §7.3)."""
-
-INTERESTS = {
-    Interest.HOT: ("Hot", ft.Icons.LOCAL_FIRE_DEPARTMENT_OUTLINED),
-    Interest.WARM: ("Warm", ft.Icons.WB_SUNNY_OUTLINED),
-    Interest.COLD: ("Cold", ft.Icons.AC_UNIT),
-}
-"""Each interest's label and icon: words and a symbol, never an emoji."""
-
-FOLLOW_UP_ICONS = {
-    "Send info": ft.Icons.MAIL_OUTLINE,
-    "Demo": ft.Icons.SLIDESHOW_OUTLINED,
-    "Newsletter": ft.Icons.NEWSPAPER_OUTLINED,
-    "Hiring": ft.Icons.WORK_OUTLINE,
-    "Partner": ft.Icons.HANDSHAKE_OUTLINED,
-}
-"""Each follow-up chip's leading icon; Flutter's check mark takes its place once
-selected (M3's filter chip)."""
-
-SHEET_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
-"""M3's bottom sheet colour, which the unselected chips paint, as the filter sheet's."""
 
 
 @dataclass(frozen=True)
@@ -88,62 +71,6 @@ class Editing:
 def title_of(editing: Editing) -> str:
     """Return the sheet's heading: "Note for Ada", or "Note for MOCK0001"."""
     return f"Note for {editing.name or editing.code}"
-
-
-def interest_button(
-    interest: Interest | None, on_change: ft.ControlEventHandler[ft.SegmentedButton]
-) -> ft.Control:
-    """Return Hot · Warm · Cold; none selected allowed, so a second tap clears it.
-
-    Each segment is read as its label, a button and its state; its identifier
-    (``lead.note.interest.<value>``) is merged into the segment's node, as the Expo's.
-    """
-    return ft.SegmentedButton(
-        segments=[
-            ft.Segment(
-                value=value.value,
-                icon=icon,
-                label=ft.Semantics(
-                    identifier=f"lead.note.interest.{value.value}",
-                    content=ft.Text(label),
-                ),
-            )
-            for value, (label, icon) in INTERESTS.items()
-        ],
-        selected=[] if interest is None else [interest.value],
-        allow_empty_selection=True,
-        on_change=on_change,
-    )
-
-
-def follow_up_chip(
-    label: str, selected: bool, on_toggle: Callable[[str, bool], object]
-) -> ft.Control:
-    """Return a follow-up's filter chip: its icon, or the check mark once selected.
-
-    One node with its identifier (``lead.note.follow_up.<key>``), read with its
-    label and whether it is selected (Flutter's chip says it).
-    """
-
-    @report_errors
-    def selected_now(e: ft.Event[ft.Chip]) -> None:
-        # Flutter flips the chip and sends its new state before the event (chip.dart).
-        on_toggle(label, bool(e.control.selected))
-
-    return named(
-        f"lead.note.follow_up.{semantics_key(label)}",
-        ft.Chip(
-            label=label,
-            # Selected, Flutter's check mark alone: over the icon it read as a box.
-            leading=None
-            if selected
-            else ft.Icon(FOLLOW_UP_ICONS[label], size=18, apply_text_scaling=True),
-            selected=selected,
-            show_checkmark=True,
-            bgcolor=SHEET_COLOR,  # a chip paints `surface` otherwise (filter sheet)
-            on_select=selected_now,
-        ),
-    )
 
 
 @dataclass(frozen=True)
