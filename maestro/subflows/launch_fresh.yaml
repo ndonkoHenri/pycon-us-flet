@@ -1,35 +1,10 @@
 # Launch the app as a fresh install starts: no settings, no favourites, no cache,
 # Developer options locked, real time and the year's feed (D-73). Maestro clears the
-# app's data first (`pm clear` on Android, the app's container on iOS).
+# app's data first (`pm clear` on Android, the app's container on iOS), and grants every
+# permission, notifications included, so a star shows no reminders primer (D-395).
 appId: io.github.ndonkohenri.pyconus
 ---
 - launchApp:
     clearState: true
     stopApp: true
-# A first launch unpacks the bundled Python, then shows Welcome (D-287, #504): Get
-# started goes to Now. `id:` is a regular expression, so this waits for either.
-- extendedWaitUntil:
-    visible:
-      id: "welcome\\.start|now\\.title"
-    timeout: 120000
-# Get started is tapped until Now shows, as tests/ui/helpers.py's start_app() does: a
-# tap during Welcome's arrival can be lost (#496).
-- runFlow:
-    when:
-      visible:
-        id: welcome.start
-    commands:
-      - retry:
-          maxRetries: 3
-          commands:
-            - tapOn:
-                id: welcome.start
-                optional: true
-            - extendedWaitUntil:
-                visible:
-                  id: now.title
-                timeout: 15000
-- extendedWaitUntil:
-    visible:
-      id: now.title
-    timeout: 30000
+- runFlow: get_started.yaml
