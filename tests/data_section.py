@@ -17,6 +17,7 @@ import pytest
 
 from pycon_us import clock
 from pycon_us import prefs as prefs_module
+from pycon_us.account import Account
 from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
@@ -118,6 +119,12 @@ def favorites() -> Favorites:
 
 
 @pytest.fixture
+def account() -> Account:
+    """A signed-out account, restored."""
+    return Account(restored=True)
+
+
+@pytest.fixture
 def packaged(monkeypatch: pytest.MonkeyPatch) -> Callable[[bool], None]:
     """Make the section see a packaged build, or not."""
 
@@ -177,6 +184,7 @@ def render(
     prefs: Prefs,
     conference: Conference,
     favorites: Favorites,
+    account: Account,
     packaged: Callable[[bool], None],
     page: FakePage,
     minutes: list[int],
@@ -188,6 +196,7 @@ def render(
     monkeypatch.setattr(developer_data, "use_conference", lambda: conference)
     monkeypatch.setattr(developer_data, "use_prefs", lambda: prefs)
     monkeypatch.setattr(developer_data, "use_favorites", lambda: favorites)
+    monkeypatch.setattr(developer_data, "use_account", lambda: account)
     monkeypatch.setattr(developer_data, "use_tokens", lambda: LIGHT_TOKENS)
     # The minute tick needs a renderer; its own tests are test_status_strip_ticks.py's.
     monkeypatch.setattr(developer_data, "use_minute", lambda: minutes.append(0) or 0)

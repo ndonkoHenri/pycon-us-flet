@@ -428,6 +428,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "flet-secure-storage"
+version = "0.1.0"
+source = { editable = ".flet-src/sdk/python/packages/flet-secure-storage" }
+dependencies = [
+    { name = "flet" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "flet", editable = ".flet-src/sdk/python/packages/flet" }]
+
+[[package]]
 name = "flet-web"
 version = "0.1.0"
 source = { editable = ".flet-src/sdk/python/packages/flet-web" }
@@ -855,6 +866,7 @@ dependencies = [
     { name = "flet" },
     { name = "flet-notifications" },
     { name = "flet-permission-handler" },
+    { name = "flet-secure-storage" },
     { name = "tzdata" },
 ]
 
@@ -877,6 +889,7 @@ requires-dist = [
     { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
     { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
     { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
+    { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
     { name = "tzdata", specifier = "==2026.5" },
 ]
 

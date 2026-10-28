@@ -43,9 +43,9 @@ class MemoryPrefs(ft.SharedPreferences):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Answer ``get``, ``set``, ``get_keys`` and ``remove`` from ``values``.
+        """Answer ``get``, ``set``, ``get_keys``, ``contains_key`` and ``remove``.
 
-        A set answers False while ``fail_writes`` is set, a remove while
+        Every answer comes from ``values``. A set answers False while ``fail_writes`` is set, a remove while
         ``fail_removes`` is; ``error``, when given, is raised by every call.
         """
         assert arguments is not None
@@ -58,6 +58,8 @@ class MemoryPrefs(ft.SharedPreferences):
                 return False
             self.values[arguments["key"]] = arguments["value"]
             return True
+        if method_name == "contains_key":
+            return arguments["key"] in self.values
         if method_name == "get_keys":
             prefix = arguments["key_prefix"]
             return [key for key in self.values if key.startswith(prefix)]
@@ -302,24 +304,21 @@ class MemoryNotifications:
         self.pending: dict[int, Scheduled] = {}
         self.calls: list[str] = []
         self.exact = True  # what can_schedule_exact_alarms() answers
+        self.enabled = True  # what are_notifications_enabled() answers
         self.refuse_exact = False  # an exact schedule raises, as without the access
         self.errors: dict[str, Exception] = {}  # method name -> what it raises
         self.failing_ids: set[int] = set()  # schedule() raises for these ids
         self.gate: asyncio.Event | None = None  # schedule() waits on it when given
-        self.enabled = False  # whether the OS shows notifications, not asked yet
         self.grant = True  # what the user answers the OS's prompt
         self.requests: list[dict[str, bool]] = []  # request_permissions()' arguments
+        # are_notifications_enabled() waits on it when given, as E3 waits for its start
+        self.initialized: asyncio.Event | None = None
 
     def _call(self, method: str) -> None:
         """Record the call to ``method``, and raise its error when a test set one."""
         self.calls.append(method)
         if method in self.errors:
             raise self.errors[method]
-
-    async def are_notifications_enabled(self) -> bool:
-        """Answer ``enabled``."""
-        self._call("are_notifications_enabled")
-        return self.enabled
 
     async def request_permissions(
         self,
@@ -348,6 +347,13 @@ class MemoryNotifications:
         """Answer ``exact``."""
         self._call("can_schedule_exact_alarms")
         return self.exact
+
+    async def are_notifications_enabled(self) -> bool:
+        """Answer ``enabled``, once ``initialized`` is set when a test gives one."""
+        self._call("are_notifications_enabled")
+        if self.initialized is not None:
+            await self.initialized.wait()
+        return self.enabled
 
     async def cancel_all_pending(self) -> None:
         """Drop every pending reminder."""

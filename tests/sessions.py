@@ -32,6 +32,7 @@ from flet.messaging.protocol import Message, configure_encode_object_for_msgpack
 from flet.messaging.session import Session
 from flet.pubsub.pubsub_hub import PubSubHub
 
+from pycon_us.account import Account, AccountCtx
 from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.config import YearData
 from pycon_us.favorites import Favorites, FavoritesCtx
@@ -172,10 +173,12 @@ def provide(
     body: Callable[[], ft.Control],
     change_log: ChangeLog | None = None,
     layout: Layout | None = None,
+    account: Account | None = None,
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
 
-    The change log is an empty one unless the test gives its own.
+    The change log is an empty one unless the test gives its own, and the account a
+    signed-out one.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar) unless the
     test gives its own, to turn, and the light tokens' provider comes last, right
@@ -189,11 +192,14 @@ def provide(
                 prefs,
                 lambda: FavoritesCtx(
                     favorites,
-                    lambda: ChangeLogCtx(
-                        ChangeLog() if change_log is None else change_log,
-                        lambda: LayoutCtx(
-                            Layout() if layout is None else layout,
-                            lambda: TokensCtx(LIGHT_TOKENS, body),
+                    lambda: AccountCtx(
+                        Account(restored=True) if account is None else account,
+                        lambda: ChangeLogCtx(
+                            ChangeLog() if change_log is None else change_log,
+                            lambda: LayoutCtx(
+                                Layout() if layout is None else layout,
+                                lambda: TokensCtx(LIGHT_TOKENS, body),
+                            ),
                         ),
                     ),
                 ),

@@ -14,7 +14,7 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, start_target
+from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, launch_target
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.about import AboutPycon
 from pycon_us.screens.about_app import AboutApp
@@ -88,9 +88,10 @@ def Drill() -> ft.View:
 
 @ft.component
 def Start() -> ft.View:
-    """``/``: send the session to Welcome, to Now, or back to where the user was.
+    """``/``: send the session to a tapped reminder, Welcome, Now or where the user was.
 
-    Welcome until Get started (D-287), then where the user was (D-143). A new
+    A reminder tap held while the app started comes first (D-396); then Welcome
+    until Get started (D-287), then where the user was (D-143). A new
     session in the same process (F26, F29) finds ``ViewMemory.last_location``
     and rebuilds that stack; a deep link or ``--route`` start never comes here, except
     one straight to ``/search``: with no opener to remember, the Router builds the
@@ -100,14 +101,17 @@ def Start() -> ft.View:
     key, so Now replaces it without a transition (D-142).
     """
     page = ft.context.page
-    memory = use_services().memory
+    svc = use_services()
+    memory = svc.memory
     prefs = use_prefs()
 
     @report_errors
     def go() -> None:
         if is_top_view(page.route, "/"):
+            scheduler = svc.reminders
             page.navigate(
-                start_target(
+                launch_target(
+                    scheduler.take_tap() if scheduler is not None else "",
                     memory.last_location,
                     memory.search_base,
                     onboarded=prefs.onboarded,

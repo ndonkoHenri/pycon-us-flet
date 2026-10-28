@@ -23,6 +23,7 @@ import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import clock
+from pycon_us.account import Account, use_account
 from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
@@ -72,6 +73,7 @@ def DataActions() -> ft.Control:
     conference = use_conference()
     prefs = use_prefs()
     favorites = use_favorites()
+    account = use_account()
     tokens = use_tokens()
     use_minute()  # Refresh now's second line says the schedule's age
     info = svc.year.conference
@@ -130,7 +132,7 @@ def DataActions() -> ft.Control:
     @report_errors
     async def reset() -> None:
         set_asking(None)
-        complete = await reset_app(svc, conference, prefs, favorites)
+        complete = await reset_app(svc, conference, prefs, favorites, account)
         # Where a fresh start goes (D-143): Welcome, since the reset cleared
         # onboarded (DEV-05, D-287). Not "/" itself: on the iOS simulator that left
         # the app on this View, locked.
@@ -221,24 +223,30 @@ def DataActions() -> ft.Control:
 
 
 async def reset_app(
-    svc: Services, conference: Conference, prefs: Prefs, favorites: Favorites
+    svc: Services,
+    conference: Conference,
+    prefs: Prefs,
+    favorites: Favorites,
+    account: Account,
 ) -> bool:
     """Delete what the app keeps and reset every store, as after a fresh install.
 
     DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
-    year's favourites, the Developer options and their unlock), the feed cache and the
-    change log (D-255). In memory, without a restart: real time and no error details,
-    as Developer's own Reset sets them before the stores change (D-187), and no
-    private-API client (D-51); the bundled
-    snapshot, from the year's feed, with a running refresh cancelled and an empty change
-    log (``Conference.reset()``, D-301); the settings, the saved sessions and the view
-    memory at their defaults. Then a refresh starts, as at a start (D-181: quiet).
+    year's favourites, the Developer options and their unlock, the mock account), the
+    mock account's key and secret, the feed cache and the change log (D-255). In
+    memory, without a restart: real time and no error details, as Developer's own
+    Reset sets them before the stores change (D-187), and no private-API client
+    (D-51); the bundled snapshot, from the year's feed, with a running refresh
+    cancelled and an empty change log (``Conference.reset()``, D-301); the settings,
+    the saved sessions and the view memory at their defaults, and signed out. Then a
+    refresh starts, as at a start (D-181: quiet).
 
     Args:
         svc: The session's services.
         conference: The session's ``Conference`` store.
         prefs: The session's ``Prefs`` store.
         favorites: The session's ``Favorites`` store.
+        account: The session's ``Account`` store.
 
     Returns:
         Whether everything stored was deleted; when not (logged), the session is reset
@@ -250,6 +258,7 @@ async def reset_app(
     # Off before the stores change too: no re-render shows a private-API feature (D-51).
     await svc.private_api.connect(None, svc.year.conference.year)
     cleared = await svc.storage.clear_prefs()
+    signed_out = await account.reset(svc.storage, svc.credentials)
     deleted = await conference.reset(svc.storage, svc.year)
     # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
     # Its own deletion: the reset deletes the log only when a feed URL was set
@@ -259,6 +268,6 @@ async def reset_app(
     favorites.reset()
     svc.memory.reset()
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
-    complete = cleared and deleted and log_deleted
+    complete = cleared and signed_out and deleted and log_deleted
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete

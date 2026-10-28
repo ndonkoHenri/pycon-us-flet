@@ -127,7 +127,9 @@ async def test_a_failed_request_reads_as_refused(
 @pytest.fixture
 def os() -> MemoryNotifications:
     """The OS: notifications not asked yet, and a user who allows them when asked."""
-    return MemoryNotifications()
+    os = MemoryNotifications()
+    os.enabled = False
+    return os
 
 
 @pytest.fixture

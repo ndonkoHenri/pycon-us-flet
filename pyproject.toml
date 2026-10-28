@@ -9,6 +9,7 @@ dependencies = [                      # bundled into the app by flet build: pin 
     "flet",                           # pinned by .flet-ref until 1.1.0 is on PyPI (D-81)
     "flet-notifications",             # E3 reminders (D-220): the monorepo's, pinned by .flet-ref
     "flet-permission-handler",        # permission status and settings (D-61): pinned by .flet-ref
+    "flet-secure-storage",            # the mock API key and secret (D-49): pinned by .flet-ref
     "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
 ]
 
@@ -86,11 +87,13 @@ flet-desktop = { path = ".flet-src/sdk/python/packages/flet-desktop", editable =
 flet-platform-assets = { path = ".flet-src/sdk/python/packages/flet-platform-assets", editable = true }
 flet-notifications = { path = ".flet-src/sdk/python/packages/flet-notifications", editable = true }
 flet-permission-handler = { path = ".flet-src/sdk/python/packages/flet-permission-handler", editable = true }
+flet-secure-storage = { path = ".flet-src/sdk/python/packages/flet-secure-storage", editable = true }
 
 [tool.flet.dev_packages]              # what flet build bundles instead of PyPI's packages
 flet = ".flet-src/sdk/python/packages/flet"
 flet-notifications = ".flet-src/sdk/python/packages/flet-notifications"  # PyPI's is an unrelated project
 flet-permission-handler = ".flet-src/sdk/python/packages/flet-permission-handler"
+flet-secure-storage = ".flet-src/sdk/python/packages/flet-secure-storage"
 
 # ------------------------------------------------------------------ tools
 [tool.ruff]

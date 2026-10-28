@@ -16,6 +16,7 @@ from typing import cast
 import flet as ft
 import pytest
 
+from pycon_us.account import Account
 from pycon_us.app import NO_THEME_ANIMATION, bootstrap
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData, load_year
@@ -112,7 +113,13 @@ async def started(fake_page: FakePage, svc: Services) -> tuple[Conference, Prefs
     """Run ``bootstrap()`` on new stores and return its Conference and Prefs."""
     conference, prefs = Conference(), Prefs()
     await bootstrap(
-        cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        conference,
+        prefs,
+        Favorites(),
+        ChangeLog(),
+        Account(),
     )
     return conference, prefs
 

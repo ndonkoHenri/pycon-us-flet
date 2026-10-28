@@ -149,7 +149,7 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     monkeypatch.setattr(app, "use_reminder_banner", lambda *_, **__: None)
     monkeypatch.setattr(app, "use_review_snack_bar", lambda *_: None)
     monkeypatch.setattr(app, "use_reminder_schedule", lambda *_: None)
-    monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda _: object()))
+    monkeypatch.setattr(app, "Services", SimpleNamespace(create=lambda *_: object()))
     with Renderer().with_context(), bound(fake_page):
         shown = inspect.unwrap(app.App)(ViewMemory())
         assert isinstance(shown, ft.Component) and shown.fn.__name__ == "Router"

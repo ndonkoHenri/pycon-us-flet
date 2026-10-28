@@ -36,9 +36,11 @@ async def test_no_answer_is_a_network_error_and_nothing_is_applied(
     """``connect`` and ``timeout`` give ``NetworkError`` before the mock records a lead."""
     client, _, state = await signed_in("sponsor")
     state.faults.inject(fault)
-    with pytest.raises(NetworkError, match=f"mock fault: {fault}"):
+    with pytest.raises(NetworkError, match=f"mock fault: {fault}") as raised:
         await capture_ada(client)
     assert state.leads == []
+    # Sign-in says a timeout apart from being offline (D-54, #684).
+    assert raised.value.timed_out is (fault == "timeout")
 
 
 async def test_a_lost_response_is_a_network_error_though_the_mock_applied_it() -> None:

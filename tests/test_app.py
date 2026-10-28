@@ -9,25 +9,29 @@ import asyncio
 import json
 import logging
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
 import flet as ft
 import pytest
+from flet_notifications import Notifications
 
-from pycon_us import clock
+from pycon_us import app, clock
+from pycon_us.account import Account
 from pycon_us.app import NO_THEME_ANIMATION, bootstrap
 from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api, changes_file, errors
+from pycon_us.services.reminders import Scheduler
 from pycon_us.state import Conference
 from pycon_us.theme_hc import HC_DARK
 from tests import app_start
 from tests.app_start import Network, finish_refresh, started
 from tests.fake_page import FakePage
-from tests.fakes import MemoryPrefs, MemorySemantics
+from tests.fakes import MemoryNotifications, MemoryPrefs, MemorySemantics
 from tests.feeds import changed, recorded
 
 year, shared, semantics, svc, fake_page, network = (
@@ -76,7 +80,13 @@ async def test_the_stored_theme_is_on_the_page_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(
-        cast(ft.Page, fake_page), svc, conference, prefs, Favorites(), ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        conference,
+        prefs,
+        Favorites(),
+        ChangeLog(),
+        Account(),
     )
     # No theme flash and no empty first screen (SHELL-01): the stored theme is set before
     # the gate opens, still with no crossfade, and later changes crossfade again.
@@ -120,7 +130,13 @@ async def test_the_year_s_favourites_are_loaded_before_the_gate_opens(
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        favorites,
+        ChangeLog(),
+        Account(),
     )
     # No star fills in after the first screen (D-48).
     assert ids_at_open == [frozenset({"42", "poster-detail-7"})]
@@ -134,9 +150,51 @@ async def test_the_year_s_change_log_is_loaded_at_start(
     await changes_file.write_batches(svc.storage, [batch])
     change_log = ChangeLog()
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), Prefs(), Favorites(), change_log
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        Prefs(),
+        Favorites(),
+        change_log,
+        Account(),
     )
     assert change_log.batches == (batch,)
+
+
+async def test_the_saved_account_is_restored_before_the_gate_opens(
+    fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
+) -> None:
+    """The start signs the saved account in again from local reads, with no mock URL.
+
+    STORE-03, SHELL-15; kept with no URL set, which only hides it (D-398).
+    """
+    shared.values["pycon.account"] = json.dumps(
+        {"email": "all@example.com", "nickname": "Robin", "features": {}}
+    )
+    await svc.credentials.write("mock-key-all", "mock-secret-all")
+    account, prefs = Account(), Prefs()
+    restored_at_open: list[bool] = []
+
+    def listener(_sender: object, name: str | None) -> None:
+        if name == "loaded":
+            restored_at_open.append(account.restored and account.signed_in)
+
+    assert isinstance(prefs, ft.Observable)
+    prefs.subscribe(listener)
+    await bootstrap(
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        Favorites(),
+        ChangeLog(),
+        account,
+    )
+    assert restored_at_open == [True]
+    assert svc.api is None and account.credentials() == (
+        "mock-key-all",
+        "mock-secret-all",
+    )
 
 
 @pytest.fixture
@@ -275,6 +333,54 @@ async def test_an_unexpected_start_error_is_logged_and_the_gate_still_opens(
     assert "RuntimeError: a bug" in caplog.text
 
 
+class LaunchedByTap(MemoryNotifications):
+    """E3 started by a tap on a reminder: it hands the tap over, then answers (F246)."""
+
+    def __init__(self, route: str) -> None:
+        """Hand over ``route``'s tap before the first answer, to ``scheduler``."""
+        super().__init__()
+        self.route = route
+        self.scheduler: Scheduler | None = None
+
+    async def are_notifications_enabled(self) -> bool:
+        """Deliver the launch tap first, as E3's start does, then answer."""
+        assert self.scheduler is not None
+        self.scheduler.open_tapped(self.route)
+        return await super().are_notifications_enabled()
+
+
+async def test_the_gate_waits_for_e3_so_a_launch_tap_is_held_for_start(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    """The start awaits E3's first answer, by which the launch tap is in (D-396).
+
+    So ``Start`` finds it when the gate opens, and the first screen is the session.
+    """
+    os = LaunchedByTap("/my-schedule/session/142")
+    scheduler = Scheduler(cast(Notifications, os))
+    os.scheduler = scheduler
+    _, prefs = await started(fake_page, replace(svc, reminders=scheduler))
+    assert prefs.loaded
+    assert scheduler.tapped == "/my-schedule/session/142"
+    assert scheduler.enabled
+
+
+async def test_an_e3_that_never_answers_delays_the_gate_by_launch_wait_at_most(
+    fake_page: FakePage,
+    svc: Services,
+    network: Network,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """E3 stuck in its start holds the gate ``LAUNCH_WAIT`` at most, then reads off."""
+    os = MemoryNotifications()
+    os.initialized = asyncio.Event()  # never set
+    monkeypatch.setattr(app, "LAUNCH_WAIT", 0.01)
+    scheduler = Scheduler(cast(Notifications, os))
+    _, prefs = await started(fake_page, replace(svc, reminders=scheduler))
+    assert prefs.loaded
+    assert not scheduler.enabled
+
+
 async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
     fake_page: FakePage,
     svc: Services,
@@ -295,7 +401,13 @@ async def test_a_start_that_breaks_before_the_favourites_never_writes_over_them(
     monkeypatch.setattr(Prefs, "load", broken)
     favorites, prefs = Favorites(), Prefs()
     await bootstrap(
-        cast(ft.Page, fake_page), svc, Conference(), prefs, favorites, ChangeLog()
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        prefs,
+        favorites,
+        ChangeLog(),
+        Account(),
     )
     assert prefs.loaded  # the gate opens (D-161)
     assert not favorites.loaded  # so My schedule says it can't open

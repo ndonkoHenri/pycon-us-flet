@@ -3,7 +3,7 @@
 The outbox keeps every lead scan, lead note and door check-in until the server has it
 (D-56): "never lose or misattribute a scan". The rules that keep that promise are pure
 and live here, so a hypothesis state machine proves them (D-77) before any sqlite
-(``services/storage.py``) or sending (``services/sync.py``) code exists. Every function
+(``services/outbox_db.py``) or sending (``services/sync.py``) code exists. Every function
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
 """
@@ -59,6 +59,9 @@ class Row:
         last_error: The last counted failure's message, for the queue sheet.
         idem_key: A door row's idempotency key, ``code|sorted product ids|session``.
         id: The sqlite row id; None until the row is first stored.
+        revision: How many times an enqueue changed the stored row. A send's outcome
+            is saved only over the revision it was read at, so a note edited while
+            its old text was in flight keeps the new text (D-56).
     """
 
     kind: Kind
@@ -74,6 +77,7 @@ class Row:
     last_error: str | None = None
     idem_key: str | None = None
     id: int | None = None
+    revision: int = 0
 
 
 class Outcome(StrEnum):
