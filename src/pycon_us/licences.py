@@ -98,6 +98,22 @@ GROUPS = (
                 APACHE,
                 package="flet",
             ),
+            Component(  # E3 reminders (D-220, #446)
+                "flet-notifications",
+                "Flet Notifications",
+                "Apache-2.0",
+                "Copyright Appveyor Systems Inc.",
+                APACHE,
+                package="flet-notifications",
+            ),
+            Component(  # permission status and settings (D-61, #446)
+                "flet-permission-handler",
+                "Flet Permission Handler",
+                "Apache-2.0",
+                "Copyright Appveyor Systems Inc.",
+                APACHE,
+                package="flet-permission-handler",
+            ),
             Component(
                 "flutter",
                 "Flutter",
