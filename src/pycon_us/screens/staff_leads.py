@@ -40,7 +40,7 @@ from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.fields import SearchField, use_field_query
-from pycon_us.ui.lead_note_sheet import SHEET_COLOR, use_note_sheet
+from pycon_us.ui.lead_note_sheet import use_note_sheet
 from pycon_us.ui.queue_rows import status_icon
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable
@@ -243,7 +243,6 @@ def only_chip(
                     ),
                     selected=selected,
                     show_checkmark=True,
-                    bgcolor=SHEET_COLOR,
                     on_select=on_select,
                 ),
             )
