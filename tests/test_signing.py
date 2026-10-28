@@ -78,17 +78,13 @@ def test_the_signature_matches_ionic(name: str) -> None:
     assert path == case["path"]
     assert body == case["body"].encode("utf-8")
     assert str(timestamp) == case["headers"]["X-API-Timestamp"]
-    # Ionic's join() turns a null secret into "", as signing with "" does.
-    secret = case["secret"] or ""
     assert (
-        sign(secret, timestamp, case["method"], path, body)
+        sign(case["secret"], timestamp, case["method"], path, body)
         == case["headers"]["X-API-Signature"]
     )
 
 
-@pytest.mark.parametrize(
-    "name", [name for name, case in CASES.items() if case["key"] is not None]
-)
+@pytest.mark.parametrize("name", list(CASES))
 def test_the_headers_match_ionic(name: str) -> None:
     """The headers helper gives Ionic's three headers from the key, secret and current time."""
     case = CASES[name]
@@ -101,6 +97,12 @@ def test_the_headers_match_ionic(name: str) -> None:
         body_of(case),
     )
     assert headers == case["headers"]
+
+
+def test_a_missing_secret_signs_as_an_empty_one() -> None:
+    """Signed out, a None secret signs as Ionic's join() renders null: as "", not "None"."""
+    args = (1747324800, "GET", "/2027/api/v1/user/check_features/")
+    assert sign(None, *args) == sign("", *args) != sign("None", *args)
 
 
 def test_the_query_order_changes_the_signature() -> None:

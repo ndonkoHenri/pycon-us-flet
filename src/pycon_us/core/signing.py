@@ -50,12 +50,17 @@ def js_round(x: float) -> int:
 
 
 def sign(
-    secret: str, timestamp: int, method: str, path_with_query: str, body: bytes = b""
+    secret: str | None,
+    timestamp: int,
+    method: str,
+    path_with_query: str,
+    body: bytes = b"",
 ) -> str:
     """Compute Ionic's request signature.
 
     Args:
-        secret: The account's API secret (Ionic signs a missing one as ``""``).
+        secret: The account's API secret, or None when signed out. Ionic's
+            ``join("")`` renders null as ``""``, so None signs as the empty string.
         timestamp: Seconds since the epoch, from `js_round`.
         method: The HTTP method, upper case as Ionic sends it.
         path_with_query: The path and query exactly as requested, encoded or not as
@@ -65,23 +70,24 @@ def sign(
     Returns:
         The lowercase hex SHA-1 of the parts joined with no separator.
     """
-    head = f"{secret}{timestamp}{method}{path_with_query}".encode()
+    head = f"{secret or ''}{timestamp}{method}{path_with_query}".encode()
     return hashlib.sha1(head + body).hexdigest()
 
 
 def auth_headers(
-    key: str,
-    secret: str,
+    key: str | None,
+    secret: str | None,
     now: float,
     method: str,
     path_with_query: str,
     body: bytes = b"",
-) -> dict[str, str]:
+) -> dict[str, str | None]:
     """Build the three headers of a signed request, as ``buildRequestAuthHeaders`` does.
 
     Args:
-        key: The account's API key.
-        secret: The account's API secret.
+        key: The account's API key, or None when signed out (passed through, as
+            Ionic does).
+        secret: The account's API secret, or None when signed out.
         now: The current time in seconds since the epoch (``time.time()``).
         method: The HTTP method, upper case.
         path_with_query: The path and query exactly as requested.
