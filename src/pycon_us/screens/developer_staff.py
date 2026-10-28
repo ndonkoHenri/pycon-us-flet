@@ -88,7 +88,7 @@ def StaffQueue() -> ft.Control:
     staff = use_staff()
     account = use_account()
     tokens = use_tokens()
-    open_sheet = use_queue_sheet(others=True)
+    open_sheet = use_queue_sheet(others=True).open
     shown = prefs.private_api_enabled and svc.outbox is not None
     owner = account.owner if account.signed_in else None
     waiting = ft.use_memo(

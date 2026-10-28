@@ -14,8 +14,9 @@ exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never fail
   while rows have failed; the rows (``queue_rows.row_tile()``), or "Everything is
   synced"; the confirmed rows in a fold; other accounts' rows under their own heading.
 - ``use_queue_sheet()`` is the hook a host calls: it keeps the sheet's state, shows it
-  through ``ft.use_dialog`` and returns what opens it. The scan screen (#37) opens it
-  from the sync chip, Developer › Data from its Staff queue row (D-412).
+  through ``ft.use_dialog`` and returns what opens it and whether it is open. The scan
+  screen opens it from the sync chip and pauses scanning while it is open (#724),
+  Developer › Data from its Staff queue row, with other accounts' rows (D-412, D-420).
 """
 
 import time
@@ -278,7 +279,20 @@ def kick_once(
     return True
 
 
-def use_queue_sheet(*, others: bool = False) -> Callable[[], None]:
+@dataclass(frozen=True)
+class QueueSheet:
+    """What a host gets from ``use_queue_sheet()``.
+
+    Attributes:
+        open: Opens the sheet (a chip's or a row's tap).
+        is_open: The sheet is open: the scan screen pauses scanning meanwhile.
+    """
+
+    open: Callable[[], None]
+    is_open: bool
+
+
+def use_queue_sheet(*, others: bool = False) -> QueueSheet:
     """Keep the queue sheet's state and show it while open; return what opens it.
 
     Call it on every render (D-70). While open, its rows are read again whenever the
@@ -349,4 +363,4 @@ def use_queue_sheet(*, others: bool = False) -> Callable[[], None]:
         if is_open
         else None
     )
-    return open_sheet
+    return QueueSheet(open_sheet, is_open)

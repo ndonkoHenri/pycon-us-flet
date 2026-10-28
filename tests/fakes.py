@@ -94,6 +94,7 @@ class MemorySemantics(ft.SemanticsService):
         self.error: Exception | None = None
         self.reads = 0
         self.announced: list[str] = []
+        self.levels: list[ft.Assertiveness] = []  # each announcement's assertiveness
 
     async def _invoke_method(
         self,
@@ -107,6 +108,7 @@ class MemorySemantics(ft.SemanticsService):
         """
         if method_name == "announce_message":
             self.announced.append((arguments or {})["message"])
+            self.levels.append((arguments or {})["assertiveness"])
             return None
         if method_name != "get_accessibility_features":
             raise AssertionError(f"unexpected call {method_name}")
@@ -134,6 +136,34 @@ class MemoryHaptics(ft.HapticFeedback):
         if self.error is not None:
             raise self.error
         self.effects.append(method_name)
+
+
+class MemoryWakelock(ft.Wakelock):
+    """Wakelock that records each call and holds the lock's state instead of a device's."""
+
+    def init(self) -> None:
+        """Start released, with no call recorded and no error."""
+        self.calls: list[str] = []
+        self.enabled = False
+        self.error: Exception | None = None
+
+    async def _invoke_method(
+        self,
+        method_name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Record ``enable`` or ``disable`` and follow it; answer ``is_enabled``.
+
+        ``error``, when given, is raised by every call, after it is recorded.
+        """
+        self.calls.append(method_name)
+        if self.error is not None:
+            raise self.error
+        if method_name == "is_enabled":
+            return self.enabled
+        self.enabled = method_name == "enable"
+        return None
 
 
 class MemoryLauncher(ft.UrlLauncher):
