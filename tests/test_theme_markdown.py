@@ -10,7 +10,7 @@ import itertools
 import flet as ft
 import pytest
 
-from pycon_us import theme
+from pycon_us import theme_markdown
 from tests.test_theme import AA_TEXT, contrast_ratio, resolved
 
 
@@ -22,7 +22,7 @@ def test_every_markdown_text_style_names_a_checked_colour() -> None:
     dark surface. The colours are roles whose contrast is tested above.
     """
     styles = {
-        field.name: getattr(theme.MARKDOWN_STYLE, field.name)
+        field.name: getattr(theme_markdown.MARKDOWN_STYLE, field.name)
         for field in dataclasses.fields(ft.MarkdownStyleSheet)
         if field.name.endswith("_text_style")
     }
@@ -44,7 +44,7 @@ def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> Non
     D-152: Markdown text does not inherit the theme's font (iOS showed SF Pro), and an
     unnamed decoration colour drew near-black lines on the dark surface.
     """
-    sheet = theme.MARKDOWN_STYLE
+    sheet = theme_markdown.MARKDOWN_STYLE
     for field in dataclasses.fields(ft.MarkdownStyleSheet):
         style = getattr(sheet, field.name)
         if not field.name.endswith("_text_style") or style is None:
@@ -60,7 +60,7 @@ def test_every_markdown_text_style_names_its_font_and_decoration_colour() -> Non
 
 def test_markdown_links_are_underlined_and_headings_stay_below_the_section() -> None:
     """Links are underlined, and headings are 18 then 16, below the section's title."""
-    sheet = theme.MARKDOWN_STYLE
+    sheet = theme_markdown.MARKDOWN_STYLE
     assert sheet.a_text_style is not None
     assert (
         sheet.a_text_style.decoration == ft.TextDecoration.UNDERLINE
@@ -78,7 +78,7 @@ def test_markdown_links_are_underlined_and_headings_stay_below_the_section() -> 
 
 def test_a_markdown_rule_is_a_one_dp_divider() -> None:
     """D-197: Flet's default rule is a 5 dp bar between a description's paragraphs."""
-    decoration = theme.MARKDOWN_STYLE.horizontal_rule_decoration
+    decoration = theme_markdown.MARKDOWN_STYLE.horizontal_rule_decoration
     assert decoration is not None and isinstance(decoration.border, ft.Border)
     top = decoration.border.top
     assert (top.width, top.color) == (1, ft.Colors.OUTLINE_VARIANT)
@@ -93,7 +93,7 @@ def test_markdown_text_reads_at_aa_on_every_background_the_sheet_draws(
     SESS-06: a description's text, links and code on the page, on a code span and in a
     block quote, in both schemes.
     """
-    sheet = theme.MARKDOWN_STYLE
+    sheet = theme_markdown.MARKDOWN_STYLE
     assert sheet.code_text_style is not None and sheet.blockquote_decoration is not None
     texts = {
         field.name: resolved(style.color, dark)

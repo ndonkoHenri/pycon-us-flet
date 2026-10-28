@@ -29,10 +29,10 @@ from pycon_us.screens.expo_pane import ExpoPane
 from pycon_us.screens.map_job_fair import JOB_FAIR, JobFairPane
 from pycon_us.screens.map_plans import FLOOR_PLANS, floor_plans, plans_pane
 from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
-from pycon_us.screens.schedule_days import TAB_HEIGHT, TAB_MS
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import THEME
+from pycon_us.ui.day_tabs import TAB_HEIGHT, TAB_MS
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.navigation import use_scroll_to_top

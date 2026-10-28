@@ -15,7 +15,7 @@ import pytest
 
 from pycon_us.core.change_batches import Batch, encode_batches
 from pycon_us.core.diff import Change, ChangeKind, Listing
-from pycon_us.services import storage
+from pycon_us.services import data_files
 from pycon_us.services.changes_file import (
     changes_path,
     delete_batches,
@@ -133,7 +133,7 @@ async def test_a_failed_write_returns_false_and_keeps_the_old_file(
         """Fail as a full disk does."""
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(storage.os, "fsync", disk_full)
+    monkeypatch.setattr(data_files.os, "fsync", disk_full)
     with caplog.at_level(logging.WARNING):
         assert await write_batches(store, batches(0, 1, 2)) is False
     assert await read_batches(store, PACIFIC) == batches(0)
@@ -163,7 +163,7 @@ async def test_a_failed_deletion_returns_false(
         """Fail as a deletion the system refuses would."""
         raise PermissionError(13, "Permission denied")
 
-    monkeypatch.setattr(storage, "_unlink", refuse)
+    monkeypatch.setattr(data_files, "unlink", refuse)
     with caplog.at_level(logging.WARNING):
         assert await delete_batches(store, "Reset app") is False
     assert "Could not delete changes-2026.json" in caplog.text

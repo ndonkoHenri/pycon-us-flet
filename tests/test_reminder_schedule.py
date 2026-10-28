@@ -32,7 +32,8 @@ from pycon_us.reminder_schedule import (
 )
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import Services
-from pycon_us.services.reminders import Scheduler, reminder_id
+from pycon_us.services.reminder_plan import reminder_id
+from pycon_us.services.reminders import Scheduler
 from pycon_us.state import Conference
 from tests.fakes import MemoryNotifications
 from tests.feeds import processed

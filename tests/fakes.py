@@ -21,7 +21,7 @@ from flet_notifications import (
 )
 from flet_permission_handler import Permission, PermissionStatus
 
-from pycon_us.services import storage
+from pycon_us.services import data_files
 
 
 class MemoryPrefs(ft.SharedPreferences):
@@ -256,20 +256,20 @@ class QueuedWrite:
     """
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Patch ``storage.write_atomic`` to hold each write until ``release()``.
+        """Patch ``data_files.write_atomic`` to hold each write until ``release()``.
 
         Each wait gives up after 5 s, so a test that never releases cannot hang.
         """
         self._queued = threading.Event()
         self._go = threading.Event()
-        write = storage.write_atomic
+        write = data_files.write_atomic
 
         def held(path: Path, data: bytes) -> None:
             self._queued.set()
             self._go.wait(5)
             write(path, data)
 
-        monkeypatch.setattr(storage, "write_atomic", held)
+        monkeypatch.setattr(data_files, "write_atomic", held)
 
     async def queued(self) -> None:
         """Wait until a write's worker is held."""
