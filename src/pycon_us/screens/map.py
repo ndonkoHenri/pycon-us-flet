@@ -146,7 +146,7 @@ def Map() -> ft.View:
 
     # A pane that shows again, after a pick or a return to the tab, is a new list
     # at its top: put it where its last scroll ended (D-18).
-    ft.use_effect(put_back, [tab], cleanup=_cancel_on_unmount)
+    ft.use_effect(put_back, [tab])
 
     @report_errors
     def scrolled(e: ft.OnScrollEvent) -> None:
@@ -276,11 +276,3 @@ def tour_menu(svc: Services, url: str) -> ft.Control:
             )
         ],
     )
-
-
-def _cancel_on_unmount() -> None:
-    """The scroll's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
-
-    Without one, a scroll still waiting when the user leaves would reach a list that
-    has left the page.
-    """

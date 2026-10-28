@@ -263,9 +263,9 @@ def _LocationCard(
         finally:  # a tab left mid-pulse cancels it: the ring goes back in
             set_ring(False)
 
-    # Runs again when the card's tab shows or hides. The cleanup's presence makes
-    # Flet cancel a pulse still running then, or on unmount (F2).
-    ft.use_effect(pulse_twice, [active], cleanup=lambda: None)
+    # Runs again when the card's tab shows or hides; Flet cancels a pulse still
+    # running then, or on unmount (F2).
+    ft.use_effect(pulse_twice, [active])
 
     @report_errors
     def go() -> None:

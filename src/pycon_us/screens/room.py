@@ -85,8 +85,8 @@ def forget(memory: ViewMemory, view_path: str, session_id: str | None) -> None:
 
     It runs when the View leaves the stack (Back), so the next room tile highlights
     again. A replaced session never runs it (F30), so the View its successor rebuilds
-    at the same location finds the entry and stays where it is (D-18). Its presence
-    also makes Flet cancel a highlight still running (F2).
+    at the same location finds the entry and stays where it is (D-18). Flet cancels
+    a highlight still running first (F2).
 
     Args:
         memory: The process's ``ViewMemory``.

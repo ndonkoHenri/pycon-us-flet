@@ -37,7 +37,7 @@ from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.location_card import job_fair_card, room_card
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.semantics import named
-from pycon_us.ui.status_strip import TICK_SECONDS, current_minute, stop_ticks
+from pycon_us.ui.status_strip import TICK_SECONDS, current_minute
 
 
 def room_href(view_path: str, room: Room, session_id: str) -> str:
@@ -251,8 +251,8 @@ def StatusLine(start: datetime, end: datetime) -> ft.Control:
     async def keep_up() -> None:
         await svc.run_every(TICK_SECONDS, tick)
 
-    # The cleanup is what makes Flet cancel the ticks on unmount (F2, F39).
-    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    # Flet cancels the ticks on unmount (F2).
+    ft.use_effect(keep_up, [])
     status = time_status(start, end, clock.now(), svc.year.conference.zone)
     if status is None:
         return ft.Text("", visible=False)

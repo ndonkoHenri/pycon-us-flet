@@ -26,7 +26,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.reminders import DueSession, due_session
 from pycon_us.state import Conference
 from pycon_us.ui.semantics import named
-from pycon_us.ui.status_strip import TICK_SECONDS, stop_ticks
+from pycon_us.ui.status_strip import TICK_SECONDS
 
 SCREEN = "reminder"
 """The Banner's name in the identifiers (decisions §M)."""
@@ -81,7 +81,7 @@ def use_reminder_banner(
             for stop in stops:
                 stop()
 
-    ft.use_effect(keep_up, [], cleanup=stop_ticks)
+    ft.use_effect(keep_up, [])
 
     @report_errors
     def dismiss() -> None:

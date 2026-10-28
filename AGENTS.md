@@ -66,8 +66,8 @@ that date motivates us but never justifies cutting corners.
   (never a link to it), then `uv sync --locked`; with other builds running it also builds with its own pub cache
   (`docs/development.md` §5.8; D-219, D-176). Never edit the main checkout's `.flet-src` or a clone.
 - Declarative style: `@ft.component`, hooks, `@ft.observable` stores, `ft.Router`. Follow the rules in
-  `docs/decisions.md` D-70 (async APIs only from `async def` handlers; `use_effect` setups are coroutine
-  functions with sync cleanups; one context per observable store; no conditional hooks).
+  `docs/decisions.md` D-70 (async APIs only from `async def` handlers; long-running `use_effect` work runs
+  in a coroutine setup, which Flet cancels on unmount; one context per observable store; no conditional hooks).
 - A missing Flet capability is an **upstream** task (see below), never a fork or a hack: ship the documented
   interim and upgrade when Flet releases the piece.
 
