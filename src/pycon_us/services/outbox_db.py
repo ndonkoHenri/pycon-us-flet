@@ -12,76 +12,25 @@ and returned, never raised (D-120), so the caller can say "Couldn't save the sca
 """
 
 import contextlib
-import json
 import logging
 import sqlite3
 from collections.abc import Callable, Collection, Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
+from pycon_us.core.outbox import Enqueued, Outcome, Row, Status
+from pycon_us.services.outbox_schema import (
+    COLUMNS,
+    DELETE_SYNCED_SQL,
+    DUE_SQL,
+    FILE_NAME,
+    VALUES,
+    migrate,
+    to_params,
+    to_row,
+)
 
 logger = logging.getLogger(__name__)
-
-FILE_NAME = "outbox.db"
-"""The database's file in the data directory (D-108)."""
-
-OUTBOX_V1 = """
-CREATE TABLE IF NOT EXISTS outbox (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind         TEXT NOT NULL CHECK (kind IN ('lead', 'note', 'door')),
-    key          TEXT NOT NULL,
-    payload_json TEXT NOT NULL,
-    owner        TEXT NOT NULL,
-    sponsor_id   TEXT,
-    sponsor_name TEXT,
-    status       TEXT NOT NULL DEFAULT 'pending'
-                 CHECK (status IN ('pending', 'synced', 'failed')),
-    tries        INTEGER NOT NULL DEFAULT 0,
-    next_at      REAL NOT NULL,
-    created_at   REAL NOT NULL,
-    last_error   TEXT,
-    idem_key     TEXT,
-    revision     INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS outbox_due ON outbox (owner, status, next_at);
-CREATE INDEX IF NOT EXISTS outbox_key ON outbox (owner, kind, key);
-CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key)
-    WHERE idem_key IS NOT NULL;
-"""
-"""The first schema (architecture §12.1): the table and its three indexes."""
-
-OUTBOX_V2 = """
-ALTER TABLE outbox ADD COLUMN maybe_sent INTEGER NOT NULL DEFAULT 0;
-"""
-"""``Row.maybe_sent``: a send got no answer after the server may have had it (D-410)."""
-
-MIGRATIONS = (OUTBOX_V1, OUTBOX_V2)
-"""Each schema change, in order: a file at ``user_version`` n runs the ones after n."""
-
-DUE_SQL = """
-SELECT o.* FROM outbox o
-WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
-  AND (o.kind <> 'note' OR EXISTS (SELECT 1 FROM outbox l WHERE l.owner = o.owner
-       AND l.kind = 'lead' AND l.key = o.key AND l.status = 'synced'))
-ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id
-"""
-"""The due rows in send order (§12.1); ``core.outbox.due()`` is its Python twin."""
-
-DELETE_SYNCED_SQL = """
-DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
-  AND NOT (kind = 'lead' AND EXISTS (SELECT 1 FROM outbox n WHERE n.owner = :owner
-           AND n.kind = 'note' AND n.key = outbox.key AND n.status <> 'synced'))
-"""
-"""``core.outbox.forget_synced()`` in SQL: a synced lead stays while its note waits."""
-
-_COLUMNS = (
-    "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
-    "next_at, created_at, last_error, idem_key, maybe_sent"
-)
-"""The columns an insert or a save writes; ``revision`` counts edits on its own."""
-_VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
-_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key, :maybe_sent"
 
 
 class DbClosed(Exception):
@@ -101,59 +50,6 @@ class Counts:
     pending: int = 0
     failed: int = 0
     synced: int = 0
-
-
-def _params(row: Row) -> dict[str, object]:
-    """Return a row's columns as named parameters, its payload as JSON."""
-    return {
-        "kind": row.kind.value,
-        "key": row.key,
-        "payload_json": json.dumps(dict(row.payload)),
-        "owner": row.owner,
-        "sponsor_id": row.sponsor_id,
-        "sponsor_name": row.sponsor_name,
-        "status": row.status.value,
-        "tries": row.tries,
-        "next_at": row.next_at,
-        "created_at": row.created_at,
-        "last_error": row.last_error,
-        "idem_key": row.idem_key,
-        "maybe_sent": int(row.maybe_sent),
-        "id": row.id,
-        "revision": row.revision,
-    }
-
-
-def _row(record: sqlite3.Row) -> Row:
-    """Return a stored record as the ``Row`` that ``core.outbox`` works with."""
-    return Row(
-        kind=Kind(record["kind"]),
-        key=record["key"],
-        payload=json.loads(record["payload_json"]),
-        owner=record["owner"],
-        sponsor_id=record["sponsor_id"],
-        sponsor_name=record["sponsor_name"],
-        next_at=record["next_at"],
-        created_at=record["created_at"],
-        status=Status(record["status"]),
-        tries=record["tries"],
-        last_error=record["last_error"],
-        idem_key=record["idem_key"],
-        id=record["id"],
-        revision=record["revision"],
-        maybe_sent=bool(record["maybe_sent"]),
-    )
-
-
-def _migrate(connection: sqlite3.Connection) -> None:
-    """Run the migrations the file hasn't had, each with its ``user_version``, atomically."""
-    (version,) = connection.execute("PRAGMA user_version").fetchone()
-    for number, script in enumerate(MIGRATIONS[version:], start=version + 1):
-        # executescript() runs in autocommit mode, so the script brings its own BEGIN:
-        # the schema and its version land together or not at all.
-        connection.executescript(
-            f"BEGIN IMMEDIATE;{script}PRAGMA user_version = {number}; COMMIT;"
-        )
 
 
 class OutboxDb:
@@ -188,7 +84,7 @@ class OutboxDb:
             try:
                 connection.row_factory = sqlite3.Row
                 connection.execute("PRAGMA journal_mode=WAL")
-                _migrate(connection)
+                migrate(connection)
             except sqlite3.Error:
                 connection.close()
                 raise
@@ -227,7 +123,7 @@ class OutboxDb:
 
     def _select(self, sql: str, params: dict[str, object] | tuple = ()) -> list[Row]:
         """Return the rows a query selects."""
-        return [_row(r) for r in self._connect().execute(sql, params).fetchall()]
+        return [to_row(r) for r in self._connect().execute(sql, params).fetchall()]
 
     def enqueue(
         self, code: str, decide: Callable[[list[Row]], Enqueued]
@@ -259,9 +155,9 @@ class OutboxDb:
                         f"enqueued a row for {enqueued.row.key!r}, not {code!r}"
                     )
                 if enqueued.outcome is Outcome.QUEUED:
-                    params = _params(enqueued.row)
+                    values = to_params(enqueued.row)
                     cursor = connection.execute(
-                        f"INSERT INTO outbox ({_COLUMNS}) VALUES ({_VALUES})", params
+                        f"INSERT INTO outbox ({COLUMNS}) VALUES ({VALUES})", values
                     )
                     return replace(
                         enqueued, row=replace(enqueued.row, id=cursor.lastrowid)
@@ -290,13 +186,13 @@ class OutboxDb:
         """
         if row.id is None:
             raise ValueError("an outbox row is saved only once it is stored")
-        sets = ", ".join(f"{name} = :{name}" for name in _COLUMNS.split(", "))
+        sets = ", ".join(f"{name} = :{name}" for name in COLUMNS.split(", "))
         # A flag set by id since the row was read stays: nothing clears it (D-410).
         sets = sets.replace("maybe_sent = :", "maybe_sent = maybe_sent OR :")
         bump = ", revision = revision + 1" if edit else ""
         cursor = connection.execute(
             f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
-            _params(row),
+            to_params(row),
         )
         return cursor.rowcount == 1
 
