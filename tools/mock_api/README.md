@@ -91,7 +91,11 @@ Details a port gets wrong:
   e.g. `"Interest: hot\nFollow-up: Send info\nNotes: …"` (`lead-note-modal/lead-note-modal.component.ts` 69-86). The
   app encodes the code (API-11), so the mock decodes that one path segment to find the attendee, and still checks the
   signature over the raw target.
-- **`mobile_state` PATCH** is fire-and-forget in Ionic (95-100); its reply is ignored.
+- **`mobile_state` PATCH** is fire-and-forget in Ionic (95-100); its reply is ignored. **Mock:** the list sent
+  replaces the stored one (no merge) and the reply is `{"favorites": [...]}`, the list now stored. Ids are kept as
+  strings (D-42): an integer id is stored as its decimal string, and any other item (a float, a boolean, `null`) is
+  400, so no id depends on how a float prints (`1.0` from Python's `json.dumps`, `1` from `JSON.stringify`). A string
+  UTF-8 can't encode (a lone surrogate such as `"\ud800"`) is 400 too, and the stored list stays as it was.
 
 ### Redeem payloads
 
@@ -135,10 +139,11 @@ the 2026 server keeps that envelope only for those endpoints, or Ionic would fin
   **Mock:** every error is `{"code": <status>, "error": "<message>"}`, the 2019 shape; the client's
   `ApiError.message` is the `error` (or `message`) string.
 - **Mock statuses:** 401 for a missing or unknown `X-API-Key` (or a key revoked by a fault); 403 for a missing or
-  malformed timestamp, a timestamp more than 600 s from the mock's clock, or a wrong signature; 404 for an unknown
-  route, year, product or attendee, a non-empty `badge_validator` that doesn't match the badge, and a note for a lead
-  this sponsor hasn't captured; 400 for a body that is not a JSON object. Every reply carries a `Date` header, which
-  the client uses to learn clock skew (D-53).
+  malformed timestamp (anything but ASCII digits with no sign or leading zero, the string Ionic sends), a timestamp more than 600 s from the mock's clock, or a wrong signature; 404 for an unknown
+  route (method and path, trailing slash included; checked before the signature), year, product or attendee, a non-empty `badge_validator` that doesn't match the badge, and a note for a lead
+  this sponsor hasn't captured; 400 for a body that is not a JSON object (`authenticate`'s included, in the `{code, error}` shape). Every reply
+  is JSON with a `Date` header from the mock's clock, which the client uses to learn clock skew (D-53). Replies are
+  serialised like request bodies (`core/signing.py`'s `canonical_body`) and carry no floats.
 
 ## Unknown
 
@@ -159,8 +164,10 @@ made so the client's behaviour can be tested both ways where it matters; none is
 
 ## Seed data (`tests/fixtures/mock/`)
 
-`MockState` loads one JSON file, `tests/fixtures/mock/seed.json`; the server sub-issue adds it. Every key, secret and
-password in it is fake and works only against the mock. Its shape:
+`MockState.from_seed()` loads one JSON file, `tests/fixtures/mock/seed.json`, into a fresh state each time. The
+accounts landed with the account endpoints (#663); sponsors, categories, products and attendees land with the staff
+endpoints. Every email is at `example.com`, and every password, key and secret is fake (`mock-<role>`,
+`mock-key-<role>`, `mock-secret-<role>`) and works only against the mock. Its shape:
 
 ```json
 {
@@ -181,16 +188,28 @@ password in it is fake and works only against the mock. Its shape:
 }
 ```
 
-- **Accounts:** one per role, each with its flags: `attendee` (no flags), `speaker` (`is_speaker`), `sponsor`
+- **Accounts:** one per role, each with its flags and its `favorites` (strings): `attendee` (no flags), `speaker` (`is_speaker`), `sponsor`
   (`lead_retrieval`, with the `sponsor_id` its leads go to), `staff` (`door_check_in`: door, swag, and lead scanning on
   behalf of a sponsor, as Ionic's `map.ts` 308-320 treats a door-check account without lead retrieval) and `coc`
-  (`mask_violation`). An absent flag is left out on purpose in one account, to exercise "absent means false".
+  (`mask_violation`), plus `all` with every flag. The `attendee` account sends only `lead_retrieval: false` and leaves
+  the other flags out, to exercise "absent means false". `role` is for the seed and the tests; no reply carries it.
 - **Sponsors:** a few, one with a JSON-quoted name (see [Unknown](#unknown)).
 - **Categories and products:** session categories and swag ones (names matching `/shirt|swag/i`), so both filters
   have something to keep.
 - **Attendees:** each with its badge `access_code:validator`, the fields the replies above return, and the quantity of
   each product bought (`products`, product id to quantity). The printable badge sheet (`badges.py`) is made from them.
 - `year` is the conference year the mock serves; requests for another year are 404.
+
+## Code
+
+- `handlers.py`: `MockState` and the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`.
+  It does no I/O and reads the time only from `MockState.now`, which tests replace with a fixed clock. It checks the
+  route, then the key, timestamp and signature (`hmac.compare_digest` against `core/signing.py`'s `sign` over the raw
+  target and body as received), then runs the endpoint.
+- `transport.py`: `mock_transport(state)`, an `httpx.MockTransport` over `handle` that passes `request.url.raw_path`
+  and `request.content` unchanged, for client tests.
+- Tests: `tests/test_mock_api.py` (routing, envelopes, the signature check and Ionic's vectors) and
+  `tests/test_mock_api_accounts.py` (the account endpoints, directly and through the transport).
 
 ## Running it
 
