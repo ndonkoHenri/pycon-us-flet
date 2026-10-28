@@ -12,12 +12,13 @@ import logging
 import flet as ft
 
 from pycon_us import clock
+from pycon_us.accessibility import read_accessibility
 from pycon_us.account import Account, AccountCtx
 from pycon_us.change_log import ChangeLog, ChangeLogCtx
 from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, PrefsCtx, read_accessibility, use_prefs
+from pycon_us.prefs import Prefs, PrefsCtx, use_prefs
 from pycon_us.reminder_schedule import use_reminder_schedule, use_reminder_taps
 from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar

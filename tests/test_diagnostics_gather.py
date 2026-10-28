@@ -17,8 +17,9 @@ import pytest
 import pycon_us
 from pycon_us import capabilities
 from pycon_us.config import YearData
+from pycon_us.dev_options import DEV_FAKE_NOW, DEV_FEED_URL
 from pycon_us.favorites import Favorites
-from pycon_us.prefs import DEV_FAKE_NOW, DEV_FEED_URL, Prefs
+from pycon_us.prefs import Prefs
 from pycon_us.services import diagnostics
 from pycon_us.services.storage import Storage
 from tests import diagnostics_facts

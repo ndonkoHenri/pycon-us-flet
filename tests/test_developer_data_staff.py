@@ -18,7 +18,8 @@ import pytest
 
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Status
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_data, developer_staff
 from pycon_us.screens.developer_staff import (
     STAFF_CLEARED,

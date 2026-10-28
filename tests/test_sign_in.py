@@ -18,8 +18,9 @@ import pytest
 
 from pycon_us.account import Account, SignIn
 from pycon_us.config import load_year
+from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.locations import LEAD_SCANNER
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.prefs import Prefs
 from pycon_us.screens import more, sign_in
 from pycon_us.screens.sign_in import ERRORS, EXPIRED, INTRO, UNAVAILABLE, SignInPage
 from pycon_us.services.private_api import PrivateApi
