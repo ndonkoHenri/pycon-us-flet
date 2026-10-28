@@ -25,9 +25,11 @@ from pycon_us.services.outbox_schema import (
     DUE_SQL,
     FILE_NAME,
     VALUES,
+    is_edit,
     migrate,
     to_params,
     to_row,
+    update,
 )
 
 logger = logging.getLogger(__name__)
@@ -164,8 +166,8 @@ class OutboxDb:
                     )
                 if enqueued.outcome is Outcome.UPDATED:
                     # Read in this transaction, so its revision is the stored one.
-                    edit = _is_edit(rows, enqueued.row)
-                    self._update(connection, enqueued.row, edit=edit)
+                    edit = is_edit(rows, enqueued.row)
+                    update(connection, enqueued.row, edit=edit)
                     edited = replace(
                         enqueued.row, revision=enqueued.row.revision + edit
                     )
@@ -173,31 +175,6 @@ class OutboxDb:
                 return enqueued
 
         return self._attempt("enqueue", run)
-
-    @staticmethod
-    def _update(connection: sqlite3.Connection, row: Row, *, edit: bool = True) -> bool:
-        """Write a row's columns over its record, if the record is still at its revision.
-
-        Args:
-            connection: The connection, in a write transaction.
-            row: A stored row, changed from the record at ``row.revision``.
-            edit: Whether this is an enqueue's edit, which counts a new revision; a
-                send's outcome or "Retry failed" leaves the revision as it is.
-
-        Returns:
-            Whether the record was written: False when an edit changed it since.
-        """
-        if row.id is None:
-            raise ValueError("an outbox row is saved only once it is stored")
-        sets = ", ".join(f"{name} = :{name}" for name in COLUMNS.split(", "))
-        # A flag set by id since the row was read stays: nothing clears it (D-410).
-        sets = sets.replace("maybe_sent = :", "maybe_sent = maybe_sent OR :")
-        bump = ", revision = revision + 1" if edit else ""
-        cursor = connection.execute(
-            f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
-            to_params(row),
-        )
-        return cursor.rowcount == 1
 
     def save(self, row: Row) -> bool:
         """Store a changed row over its record: a send's outcome or "Retry failed".
@@ -221,7 +198,7 @@ class OutboxDb:
 
         def run() -> bool:
             with self._transaction() as connection:
-                saved = self._update(connection, row, edit=False)
+                saved = update(connection, row, edit=False)
             if not saved:
                 logger.info("Kept outbox row %s: it was edited while sent", row.id)
             return saved
@@ -407,18 +384,3 @@ class OutboxDb:
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-
-
-def _is_edit(rows: list[Row], row: Row) -> bool:
-    """Whether an enqueue changed more of a stored row than when it is due (D-57).
-
-    A rescan of a pending lead only makes it due now: a send already under way still
-    sends what the row holds, so its outcome must save. Counting a revision would drop
-    a success and resend it, a second record that no lost answer explains.
-
-    Args:
-        rows: The code's rows, read in the enqueue's transaction.
-        row: The row the decision changed, with its stored id.
-    """
-    stored = next(r for r in rows if r.id == row.id)
-    return replace(row, next_at=stored.next_at) != stored
