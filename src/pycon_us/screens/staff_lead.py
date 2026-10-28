@@ -160,9 +160,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     )
     sheet = use_note_sheet(owner=owner, sponsor=sponsor)
     paused = NOTE_OPEN if sheet.is_open else None
-
-    def note_actions(result: ScanResult) -> list[ft.Control]:
-        return lead_actions(result, sheet.open)
+    note_actions = partial(lead_actions, open_note=sheet.open)
 
     if current is None:
         return Reading()

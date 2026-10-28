@@ -324,13 +324,7 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
 
     @report_errors
     def follow_up(label: str, selected: bool) -> None:
-        def toggled(last: Editing | None) -> Editing | None:
-            if last is None:
-                return None
-            kept = tuple(f for f in last.draft.follow_ups if f != label)
-            return redraft(last, follow_ups=(*kept, label) if selected else kept)
-
-        set_editing(toggled)
+        set_editing(lambda last: toggled(last, label, selected))
 
     @report_errors
     async def save() -> None:
@@ -372,6 +366,14 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
         else None
     )
     return NoteSheet(open_for, is_open)
+
+
+def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:
+    """Return ``last`` with a follow-up chosen or not; None stays None."""
+    if last is None:
+        return None
+    kept = tuple(f for f in last.draft.follow_ups if f != label)
+    return redraft(last, follow_ups=(*kept, label) if selected else kept)
 
 
 def redraft(last: Editing | None, **change: object) -> Editing | None:
