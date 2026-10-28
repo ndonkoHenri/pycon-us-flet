@@ -64,12 +64,20 @@ class Switch(httpx.AsyncBaseTransport):
         self.offline = False
         self.gate: asyncio.Event | None = None
         self.paths: list[str] = []
+        self.cancelled = 0
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the path; wait for ``gate``; then fail offline, else let ``inner`` answer."""
+        """Record the path; wait for ``gate``; then fail offline, else let ``inner`` answer.
+
+        A request cancelled while it waits is counted in ``cancelled``.
+        """
         self.paths.append(request.url.path)
         if self.gate is not None:
-            await self.gate.wait()
+            try:
+                await self.gate.wait()
+            except asyncio.CancelledError:
+                self.cancelled += 1
+                raise
         if self.offline:
             raise httpx.ConnectError("offline", request=request)
         return await self.inner.handle_async_request(request)
@@ -355,10 +363,33 @@ async def test_a_scan_before_the_directory_says_it_is_not_loaded(
 async def test_the_directory_is_dropped_on_leaving_and_never_stored(
     show: Show, switch: Switch, stored: dict[str, Any]
 ) -> None:
-    """Each mount fetches the directory anew, and nothing reaches storage (D-432)."""
-    first = await show()
-    await enter(first, "MOCK0003:x")
-    again = await show()  # the tool opened again: a new mount
-    assert status(again) == "4 attendees"
+    """Leaving the tool cancels its fetch and drops the directory; re-entry refetches.
+
+    In one session: losing ``mask_violation`` mid-fetch unmounts the tool and cancels
+    the request, so no late answer lands; regaining it fetches the changed mock anew;
+    a sign-out drops it again; nothing ever reaches storage (D-432, D-56).
+    """
+    account = coc()
+    switch.gate = asyncio.Event()
+    shown = await show(account, settle=False)
+    await shown.settle()
+    assert status(shown) == LOADING
+    account.mask_violation = False  # the flag revoked while the fetch waits
+    await shown.settle()
+    assert switch.cancelled == 1  # the effect was cancelled: its answer never lands
+    assert NOT_AVAILABLE in shown.texts()
+    assert not shown.nodes("coc.directory")
+    switch.inner = seeded_mock(attendees=3000)  # the server's list changed
+    switch.gate.set()
+    account.mask_violation = True  # back in the tool: a new mount
+    await shown.settle()
+    assert status(shown) == "3,004 attendees"
     assert switch.paths.count(ATTENDEES) == 2
+    account.signed_in = False  # Account.sign_out() clears the flags too
+    await shown.settle()
+    assert not shown.nodes("coc.directory")
+    account.signed_in = True
+    await shown.settle()
+    assert status(shown) == "3,004 attendees"
+    assert switch.paths.count(ATTENDEES) == 3  # fetched again, not kept
     assert stored == {}
