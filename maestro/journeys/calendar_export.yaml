@@ -46,6 +46,7 @@ onFlowComplete:
 # Save it and session 30 to My schedule.
 - tapOn:
     id: session.favorite
+- runFlow: ../subflows/primer_not_now.yaml
 - assertVisible:
     id: session.favorite
     checked: true

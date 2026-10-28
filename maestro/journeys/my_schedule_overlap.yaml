@@ -14,6 +14,7 @@ onFlowComplete:
 
 - tapOn:
     id: now.favorite.123
+- runFlow: ../subflows/primer_not_now.yaml
 - extendedWaitUntil:
     visible:
       id: now.next.session.123

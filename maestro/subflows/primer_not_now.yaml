@@ -1,0 +1,30 @@
+# Answer the reminders primer with Not now on iOS, right after a fresh install's first
+# star (D-395, #710). Every flow that stars a session runs this after its first star,
+# except reminder_primer.yaml, which tests the primer.
+#
+# launch_fresh.yaml grants every permission, but on the iOS simulator Maestro's grant
+# (its pinned applesimutils) does not reach notifications, so the app can still ask and
+# the first star shows the primer over the screen. On Android the grant covers
+# notifications, so there is nothing to ask and no primer. Not now asks the OS nothing,
+# and session reminders stay off, as they do on Android, where no primer shows (D-395).
+#
+# The wait is on the platform, not on the sheet being visible: the primer opens after
+# an async status read, so "answer it if it shows" could look before it opens and miss
+# it. If a later Maestro grants notifications on iOS too, this step fails at its wait,
+# which says that the step can go.
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: reminder.primer
+          timeout: 15000
+      - tapOn:
+          id: reminder.primer.not_now
+      - extendedWaitUntil:
+          notVisible:
+            id: reminder.primer
+          timeout: 10000

@@ -50,7 +50,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss (D-60, D-396, #458) |
 | `journeys/reminder_settings.yaml` | journeys, reminders | More › Settings › Reminders in a packaged build: session reminders off; on, the lead at 10, then 15, and on Android the Alarms & reminders card (never on iOS); after a relaunch still on at 15; My schedule › More options › Reminder settings opens Settings, and Back returns to My schedule; then off again (NOTIF-01, STORE-10, D-401, #449) |
-| `journeys/reminder_primer.yaml` | journeys, reminders | A fresh install launched with notifications `unset`: nothing asked at launch or on Welcome; the first star (Now, session 123) shows the reminders primer, which `PRIMER` answers (`allow` or `not_now`), then the OS prompt, which `OS_ANSWER` answers (`allow` or `deny`); the session stays saved, and a second star (Schedule, 30) shows no primer (D-61, D-395, #448). The other flows launch with every permission granted (`subflows/launch_fresh.yaml`), so no primer shows there |
+| `journeys/reminder_primer.yaml` | journeys, reminders | A fresh install launched with notifications `unset`: nothing asked at launch or on Welcome; the first star (Now, session 123) shows the reminders primer, which `PRIMER` answers (`allow` or `not_now`), then the OS prompt, which `OS_ANSWER` answers (`allow` or `deny`); the session stays saved, and a second star (Schedule, 30) shows no primer (D-61, D-395, #448). The other flows launch with every permission granted (`subflows/launch_fresh.yaml`), so no primer shows there on Android; on iOS it does ([below](#the-reminders-primer-on-ios)) |
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
 | `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` (an iPad, U95, #525) "Couldn't open the share sheet." (INFO-03, INFO-04, #461) |
 | `journeys/theme_relaunch.yaml` | journeys, theme | More › Settings starts on System with High contrast following the device ("Follows your device setting", off); Dark and High contrast on; after a relaunch Dark is still chosen and the switch on with no subtitle; then High contrast off (following the device again) and System, so a second run starts the same way. The rows' states are read each platform's way (`subflows/theme_state.yaml`): Android's `checked`, iOS's `selected` radio rows and the switch's value "1" or "0" (THEME-01, STORE-08, D-286, #512) |
@@ -65,6 +65,22 @@ nothing answers at, then Refresh now must say "Couldn't refresh: no answer from 
 `OFFLINE_URL` override them (`-e NOW="2026-05-16 10:00"`). On iOS Maestro cannot cut the
 simulator's network, so the launch's own refresh may publish the year's live feed, which
 lists the same sessions as the bundled snapshot.
+
+### The reminders primer on iOS
+
+A fresh install's first star shows the reminders primer while the OS can still ask
+(D-395). `launchApp`'s grant of every permission covers notifications on Android, so
+there it never shows. On the iOS simulator Maestro grants through its pinned
+`applesimutils` (`~/.maestro/deps/`), and `xcrun simctl privacy` has no notifications
+service; neither reaches notifications on iOS 26.5, so the app can still ask and the
+primer covers the screen after the first star (#710). So every flow that stars a
+session runs `subflows/primer_not_now.yaml` right after its first star: on iOS only, it
+waits for the primer and answers Not now, which asks the OS nothing and leaves session
+reminders off, the state Android starts in. It waits on the platform rather than on the
+sheet being visible, since the sheet opens after an async status read that a "tap it if
+it shows" step could look before. `reminder_primer.yaml` launches with notifications
+`unset` and tests the primer itself, so it never runs the step. If a later Maestro
+grants notifications on iOS, the step fails at its wait, which says it can go.
 
 ## Setup (once)
 
