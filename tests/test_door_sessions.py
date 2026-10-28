@@ -89,6 +89,23 @@ def test_100_generated_sessions_group_by_day_chronologically_undated_last() -> N
     assert [s.title for s in groups[-1][1]] == ["Feb 30 9:00 AM - Not a day", "TBA"]
 
 
+def test_a_date_only_name_keeps_its_day_and_the_undated_stay_last() -> None:
+    """A name that is only a date sorts and groups by its day; "TBA" stays last, once."""
+    products = (
+        Product(1, "Wed May 13 1:30 PM - Async", 1),
+        Product(2, "TBA", 1),
+        Product(3, "Wed May 13 9:00 AM", 1),
+    )
+    catalog = Catalog((Category(1, "Tutorials"),), products)
+    sessions = door_sessions(catalog, 1, YEAR)
+    assert [(s.id, s.title, s.when, s.time) for s in sessions] == [
+        (3, "Wed May 13 9:00 AM", "", "9:00 AM"),
+        (1, "Async", "Wed 1:30 PM", "1:30 PM"),
+        (2, "TBA", "", ""),
+    ]
+    assert [day for day, _ in by_day(sessions)] == [WEDNESDAY, None]
+
+
 def to_minutes(time: str) -> int:
     """Return a "1:30 PM" time as minutes after midnight, to compare."""
     clock, half = time.split()

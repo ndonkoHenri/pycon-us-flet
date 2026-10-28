@@ -34,7 +34,7 @@ class DoorSession:
 
     Attributes:
         id: The product's id.
-        title: Its title, "All about decorators"; the whole name when it has no date.
+        title: Its title, "All about decorators"; the whole name when it has none.
         when: Its day and time as the name gives them, "Wed 9:00 AM"; "" undated.
         day: The day it is on in the conference year, or None undated.
         time: Its start, "9:00 AM"; "" undated.
@@ -78,9 +78,8 @@ def door_sessions(
     sessions = []
     for product in sorted(products, key=lambda p: product_sort_key(p.name, year)):
         dated, start, *_ = product_sort_key(product.name, year)
-        parts = session_parts(product.name)
-        if dated == 0 and parts is not None:
-            title, when = parts
+        if dated == 0:  # a date-only name keeps its day; its name is its title
+            title, when = session_parts(product.name) or (product.name, "")
             time = f"{start.hour % 12 or 12}:{start.minute:02d} "
             time += "AM" if start.hour < 12 else "PM"
             sessions.append(DoorSession(product.id, title, when, start.date(), time))

@@ -288,3 +288,21 @@ async def test_only_staff_who_scan_for_a_sponsor_reach_it(
     shown = await show(account)
     assert NOT_AVAILABLE in shown.texts()
     assert not shown.nodes("lead.sponsor.search")
+
+
+def test_a_one_line_choice_row_is_a_48_dp_touch_target() -> None:
+    """A one-line row, "All sessions", is 48 dp: 12 dp above and below its 24 dp line."""
+
+    async def pick() -> None:
+        """Picks nothing: the row's size is what is pinned."""
+
+    row = staff_picker.choice_row(
+        identifier="door.session.all",
+        phrase="All sessions",
+        lines=[ft.Text("All sessions")],
+        selected=False,
+        on_click=pick,
+    )
+    container = cast(ft.Container, cast(ft.MergeSemantics, row).content)
+    padding = cast(ft.Padding, container.padding)
+    assert padding.top + 24 + padding.bottom >= 48

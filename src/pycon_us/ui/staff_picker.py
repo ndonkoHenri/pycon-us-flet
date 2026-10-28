@@ -38,6 +38,8 @@ CANCEL = "Cancel"
 CLEAR_SEARCH = "Clear search"
 RETRY = "Retry"
 NOT_LOADED_BODY = "Check your connection, then try again."
+ROW_PADDING = 12
+"""A choice row's top and bottom padding: with a 24 dp line, the 48 dp touch target."""
 
 type Status = Literal["loading", "failed", "loaded"]
 
@@ -309,7 +311,8 @@ def choice_row(
             ink=True,
             on_click=on_click,
             bgcolor=ft.Colors.SECONDARY_CONTAINER if selected else None,
-            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+            # 12 dp each side of a 24 dp line or tick: a one-line row is 48 dp (D-33).
+            padding=ft.Padding.symmetric(horizontal=16, vertical=ROW_PADDING),
         )
     )
 
