@@ -28,7 +28,8 @@ def chip_words(staff: Staff) -> str:
     """Return the outbox's state as the chip says it.
 
     The pending rows are "queued" while offline, as the scan's "Saved. Will sync when
-    online." says, and "pending" otherwise; failed rows are counted after them.
+    online." says, and "pending" otherwise; failed rows are counted after them. A pass
+    under way is the retry, so it says "Syncing" even after an offline last pass.
 
     Args:
         staff: The ``Staff`` store.
@@ -39,12 +40,14 @@ def chip_words(staff: Staff) -> str:
     """
     if not staff.pending and not staff.failed:
         return "Syncing…" if staff.syncing else "All synced"
+    # ``offline`` stays set until the retry's pass reports, so a running pass wins.
+    offline = staff.offline and not staff.syncing
     parts = []
     if staff.pending:
-        parts.append(f"{staff.pending} {'queued' if staff.offline else 'pending'}")
+        parts.append(f"{staff.pending} {'queued' if offline else 'pending'}")
     if staff.failed:
         parts.append(f"{staff.failed} failed")
-    lead = "Offline" if staff.offline else "Syncing" if staff.syncing else None
+    lead = "Offline" if offline else "Syncing" if staff.syncing else None
     return " · ".join([lead, *parts] if lead else parts)
 
 

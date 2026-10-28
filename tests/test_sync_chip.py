@@ -18,6 +18,7 @@ from pycon_us.ui.sync_chip import IDENTIFIER, SyncChip, chip_icon, chip_words
         ({"pending": 3}, "3 pending"),
         ({"pending": 3, "offline": True}, "Offline · 3 queued"),
         ({"pending": 3, "syncing": True}, "Syncing · 3 pending"),
+        ({"pending": 3, "offline": True, "syncing": True}, "Syncing · 3 pending"),
         ({"failed": 1}, "1 failed"),
         ({"pending": 3, "failed": 1}, "3 pending · 1 failed"),
         ({"pending": 2, "failed": 1, "offline": True}, "Offline · 2 queued · 1 failed"),
@@ -25,7 +26,10 @@ from pycon_us.ui.sync_chip import IDENTIFIER, SyncChip, chip_icon, chip_words
     ],
 )
 def test_the_chip_says_each_state_in_words(state: dict[str, Any], words: str) -> None:
-    """Counts, a pass under way and an offline last pass are words, not colour alone."""
+    """Counts, a pass under way and an offline last pass are words, not colour alone.
+
+    A retry under way says "Syncing" though the last pass left ``offline`` set.
+    """
     assert chip_words(Staff(**state)) == words
 
 
