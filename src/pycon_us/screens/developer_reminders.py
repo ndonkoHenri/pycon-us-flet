@@ -12,8 +12,11 @@ never the fake clock's: the OS fires it by its own clock. Its payload is the kin
 route, so a tap opens what that kind's reminders are about (D-402).
 """
 
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
+from typing import Any
 
 import flet as ft
 
@@ -174,24 +177,10 @@ def TestReminders() -> ft.Control:
             reminder = reminder_for(kind, datetime.now(UTC))
             set_outcome(scheduled(kind, await scheduler.schedule_test(reminder)))
 
-    def row(kind: Kind) -> ft.Control:
-        async def on_click() -> None:  # a coroutine function, which Flet awaits
-            await test(kind)
-
-        return action_row(
-            f"developer.test_reminder.{kind.key}",
-            kind.icon,
-            kind.title,
-            UNAVAILABLE
-            if scheduler is None
-            else f"Shows in 5 s; tapping it opens {kind.place}",
-            on_click,
-            disabled=scheduler is None,
-        )
-
     return ft.Column(
         [
-            *(row(kind) for kind in KINDS),
+            # A partial: a coroutine function of no arguments, which Flet awaits.
+            *(kind_row(kind, partial(test, kind), scheduler is None) for kind in KINDS),
             ft.Semantics(
                 identifier="developer.reminder_outcome",
                 live_region=True,
@@ -200,4 +189,24 @@ def TestReminders() -> ft.Control:
             ),
         ],
         spacing=0,
+    )
+
+
+def kind_row(
+    kind: Kind, on_click: Callable[[], Coroutine[Any, Any, None]], unavailable: bool
+) -> ft.Control:
+    """Return the row that tests ``kind``: what a tap on its reminder opens, or why not.
+
+    Args:
+        kind: The kind tested.
+        on_click: Schedules its test reminder.
+        unavailable: The build has no E3: the row is disabled and says so.
+    """
+    return action_row(
+        f"developer.test_reminder.{kind.key}",
+        kind.icon,
+        kind.title,
+        UNAVAILABLE if unavailable else f"Shows in 5 s; tapping it opens {kind.place}",
+        on_click,
+        disabled=unavailable,
     )
