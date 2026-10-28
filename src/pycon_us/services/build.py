@@ -15,6 +15,7 @@ import flet as ft
 from flet.utils import is_embedded
 
 from pycon_us import __version__
+from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ def use_build() -> Build:
     """
     build, set_build = ft.use_state(known_build)
 
+    @report_errors  # D-71: what SERVICE_ERRORS does not catch, e.g. a malformed answer
     async def read() -> None:
         set_build(await read_build(ft.context.page))
 

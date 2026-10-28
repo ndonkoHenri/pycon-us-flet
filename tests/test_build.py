@@ -16,9 +16,10 @@ import pycon_us
 from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
-from pycon_us.services import build
+from pycon_us.services import build, errors
 from pycon_us.services.build import UNPACKAGED, Build, known_build, read_build
 from pycon_us.services.diagnostics import diagnostics_text, gather_facts
+from pycon_us.services.errors import MESSAGE
 from pycon_us.state import Conference
 from tests.diagnostics_facts import fields
 from tests.fake_page import FakePage, Hooks, bound
@@ -116,6 +117,29 @@ async def test_the_hook_starts_with_what_is_known_then_sets_the_answer(
     assert dependencies == []  # once per mount
     await setup()
     assert hooks.state == Build("0.4.0", "812") and hooks.renders == 1
+
+
+@pytest.mark.usefixtures("packaged")
+async def test_the_hook_reports_an_unexpected_error_and_keeps_the_version(
+    monkeypatch: pytest.MonkeyPatch, page: FakePage, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An error ``SERVICE_ERRORS`` misses is logged and shown, and the version stays."""
+    hooks = Hooks()
+    monkeypatch.setattr(ft, "use_state", hooks.use_state)
+    monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
+    monkeypatch.setattr(errors, "is_embedded", lambda: True)
+    monkeypatch.setattr(errors, "_details", False)
+    # What from_dict() raises on an incomplete answer: not one of SERVICE_ERRORS.
+    page.package_error = TypeError("missing build_number")
+    assert build.use_build() == UNPACKAGED
+    [(setup, _)] = hooks.effects
+    with caplog.at_level(logging.ERROR):
+        await setup()  # does not raise
+    assert "Unexpected error in pycon_us.services.build" in caplog.text
+    [snack] = page.dialogs
+    assert isinstance(snack, ft.SnackBar) and isinstance(snack.content, ft.Text)
+    assert snack.content.value == MESSAGE
+    assert hooks.renders == 0
 
 
 @pytest.mark.usefixtures("packaged")
