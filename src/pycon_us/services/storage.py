@@ -293,8 +293,12 @@ class Storage:
         stored: Any = json.dumps(value) if isinstance(pref.default, dict) else value
         try:
             saved = await self.prefs.set(pref.key, stored)
-        except SERVICE_ERRORS:
-            logger.warning("Could not save preference %s", pref.key, exc_info=True)
+        except SERVICE_ERRORS as error:
+            # The class only: Flet's error repeats the call's arguments, the value
+            # among them, e.g. the account's email (D-72).
+            logger.warning(
+                "Could not save preference %s: %s", pref.key, type(error).__name__
+            )
             return False
         if not saved:
             logger.warning("Could not save preference %s", pref.key)

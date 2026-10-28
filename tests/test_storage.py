@@ -230,3 +230,17 @@ async def test_a_key_that_cannot_be_removed_alone_is_reported(
         assert await store.remove(storage.ACCOUNT) is False
     assert "Could not remove preference pycon.account" in caplog.text
     assert "secret@example.com" not in caplog.text
+
+
+async def test_a_failed_write_logs_neither_the_value_nor_the_error_s_message(
+    store: Storage, prefs: MemoryPrefs, caplog: pytest.LogCaptureFixture
+) -> None:
+    """D-72: Flet's timeout repeats the call's arguments, here the account's email."""
+    account = {"email": "all@example.com", "nickname": "Robin", "features": {}}
+    prefs.error = TimeoutError(
+        "Timeout waiting for invokeMethod set("
+        f"{{'key': 'pycon.account', 'value': {account!r}}}) call"
+    )
+    assert not await store.set(storage.ACCOUNT, account)
+    assert "pycon.account" in caplog.text and "TimeoutError" in caplog.text
+    assert "all@example.com" not in caplog.text

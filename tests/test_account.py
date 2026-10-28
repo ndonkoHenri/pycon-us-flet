@@ -234,7 +234,7 @@ async def test_reset_removes_the_credentials_and_signs_out(
     account = Account()
     await account.restore(storage, credentials)
     names = changes(account)
-    assert await account.reset(credentials) is True
+    assert await account.reset(storage, credentials) is True
     assert keystore.values == {}
     assert not account.signed_in and account.restored
     assert names.fields[0] == "signed_in"  # first: nothing reads a half-cleared account

@@ -8,12 +8,17 @@ before it turns False, so nothing reads a state that a relaunch would not find
 only when the ``pycon.account`` preference and both secrets are there, and any part
 without the rest is cleared (STORE-03).
 
+Sign-in, sign-out and Reset app take turns on one lock: a sign-out or a reset waits for
+a sign-in under way and then removes what it saved, so a late reply never signs the
+user back in (D-198).
+
 The account stays when Developer's mock API URL is cleared or changed (D-398): with no
 URL nothing private shows or is sent (D-51), and with one it reappears.
 """
 
+import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -147,6 +152,8 @@ class Account:
     error: SignIn | None = None
     # Never shown, so never notified: what the client signs with (D-52).
     _secrets: Secrets = (None, None)
+    # One account change at a time: sign-in, sign-out and reset take turns.
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
     @property
     def owner(self) -> str:
@@ -210,9 +217,12 @@ class Account:
         """Sign in with ``authenticate``, and save the account before saying so.
 
         One at a time (AUTH-02): a call while one is under way sends nothing. On
-        success the key, the secret and ``pycon.account`` are written first, and
-        only then do the fields change and ``signed_in`` turn True (STORE-04). A
-        write that fails removes what was written and leaves the user signed out.
+        success the old ``pycon.account`` is removed, then the key, the secret and
+        the new ``pycon.account`` are written, and only then do the fields change and
+        ``signed_in`` turn True (STORE-04). So an app killed between the writes never
+        leaves one account's profile beside another's secrets: ``restore`` clears
+        secrets without a profile. A write that fails removes what was written and
+        leaves the user signed out.
 
         Args:
             api: ``Services.api``, the client on the mock URL.
@@ -233,7 +243,10 @@ class Account:
         self.signing_in = True
         self.error = None
         try:
-            outcome = await self._sign_in(api, storage, credentials, email, password)
+            async with self._lock:  # a sign-out or reset under way finishes first
+                outcome = await self._sign_in(
+                    api, storage, credentials, email, password
+                )
         finally:
             self.signing_in = False
         if outcome is not SignIn.SIGNED_IN:
@@ -260,13 +273,16 @@ class Account:
         profile, secrets = Profile.parse(reply), _secrets_of(reply)
         if profile is None or secrets is None:
             return SignIn.SERVER_ERROR
+        # The old profile goes first, so no secrets are ever stored beside it.
+        if not await storage.remove(ACCOUNT):  # logged; nothing was changed
+            return SignIn.NOT_SAVED
+        self._clear()  # whoever was signed in before is gone from storage
         saved = await credentials.write(*secrets) and await storage.set(
             ACCOUNT, profile.stored()
         )
         if not saved:  # logged by the storage; nothing partial stays (STORE-03)
             await credentials.remove()
             await storage.remove(ACCOUNT)
-            self._clear()  # whoever was signed in before is gone from storage too
             return SignIn.NOT_SAVED
         self._apply(profile, secrets)
         return SignIn.SIGNED_IN
@@ -274,7 +290,8 @@ class Account:
     async def sign_out(self, storage: Storage, credentials: CredentialStorage) -> bool:
         """Remove the key, the secret and ``pycon.account``, then sign out.
 
-        Every removal is awaited before the store changes. Favourites stay (D-48).
+        Every removal is awaited before the store changes. A sign-in under way
+        finishes first, so what it saves is removed too. Favourites stay (D-48).
 
         Args:
             storage: Where ``pycon.account`` is.
@@ -284,27 +301,27 @@ class Account:
             Whether everything was removed; on False (logged) the session is signed
             out all the same, and a part left behind is cleared at the next start.
         """
-        removed = await credentials.remove()
-        removed = await storage.remove(ACCOUNT) and removed
-        self._clear()
+        async with self._lock:
+            removed = await credentials.remove()
+            removed = await storage.remove(ACCOUNT) and removed
+            self._clear()
         logger.info("Signed out")
         return removed
 
-    async def reset(self, credentials: CredentialStorage) -> bool:
+    async def reset(self, storage: Storage, credentials: CredentialStorage) -> bool:
         """Sign out as after a fresh install, for Reset app (DEV-05, D-198).
 
-        ``Storage.clear_prefs()`` has removed ``pycon.account`` already; this removes
-        the key and the secret, which are not preferences, then clears the fields.
+        A sign-out: ``Storage.clear_prefs()`` has removed ``pycon.account`` already,
+        but a sign-in that was under way may have saved it again since.
 
         Args:
+            storage: Where ``pycon.account`` is.
             credentials: Where the key and the secret are.
 
         Returns:
-            Whether they were removed; a failure is logged.
+            Whether everything was removed; a failure is logged.
         """
-        removed = await credentials.remove()
-        self._clear()
-        return removed
+        return await self.sign_out(storage, credentials)
 
     def _apply(self, profile: Profile, secrets: Secrets) -> None:
         """Take the account in; ``signed_in`` last, once everything it covers is set."""

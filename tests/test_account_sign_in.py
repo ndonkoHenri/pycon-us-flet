@@ -57,6 +57,21 @@ def client(transport: httpx.AsyncBaseTransport, store: Account) -> ApiClient:
     )
 
 
+class Held(Recorder):
+    """A transport to the mock that holds each request until ``release`` is set."""
+
+    def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
+        """Hold requests to ``inner``, which answers them once released."""
+        super().__init__(inner)
+        self.release = asyncio.Event()
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Record the request, wait for ``release``, then let the mock answer."""
+        self.sent.append(request)
+        await self.release.wait()
+        return await self.inner.handle_async_request(request)
+
+
 async def sign_in(
     store: Account,
     transport: httpx.AsyncBaseTransport,
@@ -227,25 +242,13 @@ async def test_one_sign_in_at_a_time(
     state: MockState, storage: Storage, credentials: CredentialStorage
 ) -> None:
     """A second sign-in while one waits for the server sends nothing (AUTH-02)."""
-    release = asyncio.Event()
-    inner = mock_transport(state)
-
-    class Held(Recorder):
-        """Holds each request until ``release`` is set."""
-
-        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-            """Record the request, wait, then let the mock answer."""
-            self.sent.append(request)
-            await release.wait()
-            return await inner.handle_async_request(request)
-
-    held = Held(inner)
+    held = Held(mock_transport(state))
     store = Account()
     first = asyncio.create_task(sign_in(store, held, storage, credentials))
     await asyncio.sleep(0.01)
     assert store.signing_in
     assert await sign_in(store, held, storage, credentials) is SignIn.BUSY
-    release.set()
+    held.release.set()
     assert await first is SignIn.SIGNED_IN
     assert len(held.sent) == 1 and not store.signing_in
 
@@ -284,3 +287,96 @@ async def test_the_account_outlives_a_mock_url_cleared_or_changed(
     assert changed is not None and changed is not first
     reply = await changed.request(CHECK_FEATURES)
     assert isinstance(reply, dict) and "features" in reply
+
+
+@pytest.mark.parametrize("ending", ["sign-out", "reset"])
+async def test_a_late_sign_in_reply_does_not_undo_a_sign_out_or_reset(
+    ending: str,
+    state: MockState,
+    shared: MemoryPrefs,
+    keystore: MemoryKeystore,
+    storage: Storage,
+    credentials: CredentialStorage,
+) -> None:
+    """A sign-out or Reset app waits for the sign-in under way, then removes it (D-198).
+
+    So a reply that arrives after the user signed out or reset leaves nothing stored,
+    and the store ends signed out.
+    """
+    held = Held(mock_transport(state))
+    store = Account()
+    pending = asyncio.create_task(sign_in(store, held, storage, credentials))
+    await asyncio.sleep(0.01)
+    if ending == "sign-out":
+        ended = asyncio.create_task(store.sign_out(storage, credentials))
+    else:  # as reset_app: the preferences first, then the account
+        await storage.clear_prefs()
+        ended = asyncio.create_task(store.reset(storage, credentials))
+    await asyncio.sleep(0.01)
+    held.release.set()
+    await pending
+    assert await ended is True
+    assert not store.signed_in and store.credentials() == (None, None)
+    assert keystore.values == {} and ACCOUNT.key not in shared.values
+
+
+@pytest.mark.parametrize("restore_failed", [False, True], ids=["restored", "unread"])
+async def test_a_sign_in_killed_mid_write_never_pairs_two_accounts(
+    restore_failed: bool,
+    recorder: Recorder,
+    shared: MemoryPrefs,
+    keystore: MemoryKeystore,
+    storage: Storage,
+    credentials: CredentialStorage,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The old profile goes before the new secrets come, so a relaunch is signed out.
+
+    ``all`` is saved, restored or not (a failed read keeps it stored); a sign-in as
+    ``attendee`` dies after its secrets are written but before its profile is.
+    """
+    accounts.save_account(
+        shared,
+        keystore,
+        profile={**accounts.ALL, "features": accounts.EVERY_FLAG},
+        api_key="mock-key-all",
+        api_secret="mock-secret-all",
+    )
+    store = Account()
+    shared.error = TimeoutError() if restore_failed else None
+    await store.restore(storage, credentials)
+    shared.error = None
+    assert store.signed_in is not restore_failed
+
+    async def killed(*_args: object) -> bool:
+        """Stand for the app dying while ``pycon.account`` is written."""
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(Storage, "set", killed)  # Storage is frozen
+    with pytest.raises(asyncio.CancelledError):
+        await sign_in(store, recorder, storage, credentials, "attendee")
+    assert keystore.values[API_KEY] == "mock-key-attendee"
+    relaunched = Account()
+    await relaunched.restore(storage, credentials)
+    assert not relaunched.signed_in and relaunched.email == ""
+    assert keystore.values == {} and ACCOUNT.key not in shared.values
+
+
+async def test_an_old_profile_that_cannot_be_removed_stops_the_sign_in(
+    recorder: Recorder,
+    shared: MemoryPrefs,
+    keystore: MemoryKeystore,
+    storage: Storage,
+    credentials: CredentialStorage,
+) -> None:
+    """Not saved, and the old account's secrets are not overwritten (STORE-03)."""
+    old = {**accounts.ALL, "features": {}}
+    accounts.save_account(
+        shared, keystore, profile=old, api_key="old-key", api_secret="old-secret"
+    )
+    shared.fail_removes = True
+    store = Account()
+    outcome = await sign_in(store, recorder, storage, credentials, "attendee")
+    assert outcome is SignIn.NOT_SAVED
+    assert keystore.values == {API_KEY: "old-key", API_SECRET: "old-secret"}
+    assert stored_account(shared) == old

@@ -258,7 +258,7 @@ async def reset_app(
     # Off before the stores change too: no re-render shows a private-API feature (D-51).
     await svc.private_api.connect(None, svc.year.conference.year)
     cleared = await svc.storage.clear_prefs()
-    signed_out = await account.reset(svc.credentials)
+    signed_out = await account.reset(svc.storage, svc.credentials)
     deleted = await conference.reset(svc.storage, svc.year)
     # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
     # Its own deletion: the reset deletes the log only when a feed URL was set
