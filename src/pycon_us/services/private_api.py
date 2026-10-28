@@ -20,6 +20,7 @@ from pycon_us.services.api import (
     CHECK_FEATURES,
     ApiClient,
     ApiError,
+    Credentials,
     NetworkError,
     refuse_private_psf,
 )
@@ -35,9 +36,10 @@ answer (``tools/mock_api``)."""
 
 
 def signed_out() -> tuple[None, None]:
-    """Return no key and no secret: the credentials until the Account store (#35).
+    """Return no key and no secret: the credentials of a ``PrivateApi`` given none.
 
     Signed out, a signed call goes without ``X-API-Key`` and the mock answers 401.
+    The app passes ``Account.credentials`` instead (#684).
     """
     return None, None
 
@@ -77,14 +79,21 @@ class PrivateApi:
         base_url: The mock's base URL the client uses, or None.
     """
 
-    def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        transport: httpx.AsyncBaseTransport | None = None,
+        credentials: Credentials = signed_out,
+    ) -> None:
         """Start with no client.
 
         Args:
             transport: The HTTP transport every client gets; tests pass the mock's,
                 the app leaves it None.
+            credentials: What every client signs with, read on each request: the
+                ``Account`` store's (``Account.credentials``), signed out by default.
         """
         self._transport = transport
+        self._credentials = credentials
         # One URL change at a time: Save and Clear are separate tasks (#668).
         self._changing = asyncio.Lock()
         self.client: ApiClient | None = None
@@ -126,7 +135,9 @@ class PrivateApi:
         if base_url is None:
             logger.info("Private-API features off: no mock API URL")
             return
-        self.client = ApiClient(base_url, year, signed_out, transport=self._transport)
+        self.client = ApiClient(
+            base_url, year, self._credentials, transport=self._transport
+        )
         # The address stays out of the log, as the feed URL's does (D-120).
         logger.info("Private-API features on: a mock API URL is set")
 
@@ -135,8 +146,8 @@ async def check_connection(client: ApiClient) -> tuple[str, bool]:
     """Send one signed call and say whether the mock answered as the private API does.
 
     ``check_features`` signed out reaches the mock's route and its key check, so the
-    mock's 401 "Unknown API key." means it is there, on the right year; once signed
-    in (#35) it answers 200 with ``{"features": {...}}``. Any other answer, another
+    mock's 401 "Unknown API key." means it is there, on the right year; signed in
+    (#684) it answers 200 with ``{"features": {...}}``. Any other answer, another
     401 or another body included, is another server (a wrong port, a proxy), and is
     said as the error; so is no answer.
 

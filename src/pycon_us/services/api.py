@@ -33,7 +33,30 @@ type Credentials = Callable[[], tuple[str | None, str | None]]
 
 
 class NetworkError(Exception):
-    """No answer: no connection, a DNS failure, a dropped connection or a timeout."""
+    """No answer: no connection, a DNS failure, a dropped connection or a timeout.
+
+    Attributes:
+        timed_out: Whether the wait ran out (``httpx.TimeoutException``), which
+            sign-in says apart from being offline (D-54).
+    """
+
+    def __init__(self, message: str, *, timed_out: bool = False) -> None:
+        """Create the error.
+
+        Args:
+            message: What happened, for the log.
+            timed_out: Whether the request timed out rather than found no server.
+        """
+        super().__init__(message)
+        self.timed_out = timed_out
+
+    @classmethod
+    def of(cls, error: httpx.TransportError) -> NetworkError:
+        """Return the error for ``httpx``'s, saying whether it was a timeout."""
+        return cls(
+            f"{type(error).__name__}: {error}",
+            timed_out=isinstance(error, httpx.TimeoutException),
+        )
 
 
 class ApiError(Exception):
@@ -98,7 +121,7 @@ async def fetch_feed(
             response.raise_for_status()
             return response.content
     except httpx.TransportError as error:
-        raise NetworkError(f"{type(error).__name__}: {error}") from error
+        raise NetworkError.of(error) from error
     except httpx.HTTPStatusError as error:
         status = error.response.status_code
         raise ApiError(status, error.response.reason_phrase) from error
@@ -434,6 +457,6 @@ class ApiClient:
         try:
             return await self._http.send(request)
         except httpx.TransportError as error:  # timeouts included
-            raise NetworkError(f"{type(error).__name__}: {error}") from error
+            raise NetworkError.of(error) from error
         except httpx.HTTPError as error:
             raise ApiError(None, f"{type(error).__name__}: {error}") from error

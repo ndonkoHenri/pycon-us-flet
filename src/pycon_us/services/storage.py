@@ -67,7 +67,7 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.account`, `pycon.staff_sponsor`, `pycon.start_screen` and
+# P3 adds `pycon.staff_sponsor`, `pycon.start_screen` and
 # `pycon.<year>.favorites_dirty` here, with the features that use them.
 
 THEME: Pref[str] = Pref("pycon.theme", "system")
@@ -88,6 +88,10 @@ REMINDERS: Pref[dict[str, Any]] = Pref("pycon.reminders", {})
 DEV: Pref[dict[str, Any]] = Pref("pycon.dev", {})
 """Developer options, merged over the store's defaults (D-73)."""
 
+ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
+"""The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
+Its key and secret are ``services/credentials.py``'s, never here."""
+
 APP_PREFS: tuple[Pref[Any], ...] = (
     THEME,
     HIGH_CONTRAST,
@@ -95,6 +99,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     EXCLUDED_TRACKS,
     REMINDERS,
     DEV,
+    ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""
 
@@ -294,6 +299,27 @@ class Storage:
         if not saved:
             logger.warning("Could not save preference %s", pref.key)
         return saved
+
+    async def remove(self, pref: Pref[Any]) -> bool:
+        """Remove a preference, so it reads as its default again.
+
+        Args:
+            pref: A key from the table.
+
+        Returns:
+            Whether the key is gone (or was never there); a failure is logged with
+            the key, never the value (D-120).
+        """
+        try:
+            # SharedPreferences answers False for an absent key too: ask first.
+            present = await self.prefs.contains_key(pref.key)
+            if present and not await self.prefs.remove(pref.key):
+                logger.warning("Could not remove preference %s", pref.key)
+                return False
+        except SERVICE_ERRORS:
+            logger.warning("Could not remove preference %s", pref.key, exc_info=True)
+            return False
+        return True
 
     @property
     def feed_path(self) -> Path:

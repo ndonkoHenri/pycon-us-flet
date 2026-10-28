@@ -16,9 +16,10 @@ import flet as ft
 from pycon_us import capabilities
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
-from pycon_us.services.api import ApiClient
+from pycon_us.services.api import ApiClient, Credentials
+from pycon_us.services.credentials import CredentialStorage, secure_storage
 from pycon_us.services.presence import Presence
-from pycon_us.services.private_api import PrivateApi
+from pycon_us.services.private_api import PrivateApi, signed_out
 from pycon_us.services.reminders import Scheduler
 from pycon_us.services.reminders import start as start_reminders
 from pycon_us.services.storage import Storage, data_dir
@@ -88,6 +89,9 @@ class Services:
             screen that shows it (D-165).
         private_api: Holds ``api``, rebuilt when Developer's mock API URL changes
             (``services.private_api``, D-51).
+        credentials: Where the mock account's key and secret are kept: the keystore
+            when the build has ``flet-secure-storage``, else memory for the session
+            (``services.credentials``, D-49, D-63).
     """
 
     year: YearData
@@ -110,6 +114,9 @@ class Services:
     presence: Presence = field(default_factory=Presence)
     shown_versions: set[int] = field(default_factory=set)
     private_api: PrivateApi = field(default_factory=PrivateApi)
+    credentials: CredentialStorage = field(
+        default_factory=lambda: CredentialStorage(secure=None)
+    )
 
     @property
     def api(self) -> ApiClient | None:
@@ -117,13 +124,17 @@ class Services:
         return self.private_api.client
 
     @classmethod
-    def create(cls, memory: ViewMemory) -> Services:
+    def create(
+        cls, memory: ViewMemory, credentials: Credentials = signed_out
+    ) -> Services:
         """Build the session's services; call it while rendering, in the page's context.
 
         A Flet service registers with the page that is current when it is constructed.
 
         Args:
             memory: The process's one ``ViewMemory``, from ``main.py``.
+            credentials: What the private-API client signs with: the ``Account``
+                store's ``credentials`` (#684).
 
         Returns:
             The services, with SharedPreferences and the data directory read afresh
@@ -145,6 +156,8 @@ class Services:
             clipboard=ft.Clipboard(),
             permissions=permissions,
             reminders=start_reminders(permissions),
+            private_api=PrivateApi(credentials=credentials),
+            credentials=CredentialStorage(secure_storage()),
         )
 
     def close(self) -> None:

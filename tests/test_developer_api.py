@@ -14,6 +14,7 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
+from pycon_us.account import Account
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_api
@@ -226,7 +227,7 @@ async def test_reset_app_leaves_no_client(
     await svc.private_api.connect(MOCK, 2026)
     conference = Conference()
     await conference.load_local(svc.storage, svc.year)
-    await reset_app(svc, conference, prefs, Favorites(loaded=True))
+    await reset_app(svc, conference, prefs, Favorites(loaded=True), Account())
     assert svc.api is None
     assert prefs.private_api_enabled is False
 
