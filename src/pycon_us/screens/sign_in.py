@@ -8,7 +8,8 @@ The fields' text is read when the user signs in, from what Flutter last reported
 from a change event: Ionic's form missed what iOS autofilled. Every failure is said in
 its own words on one live-region line under the button, and the fields keep what was
 typed. A success goes back to where the user came from, with "Signed in as
-<nickname>". After the server refused the account's key ("Sign in again" on More), it
+<nickname>"; a lead-retrieval account lands on the Lead scanner instead, Back to More,
+unless Settings' Start screen says Now (D-16, #689). After the server refused the account's key ("Sign in again" on More), it
 says so and starts with the account's email filled in (#686).
 
 It talks only to the local mock (D-51): with no mock API URL set it shows a state that
@@ -18,7 +19,7 @@ says sign-in isn't available, never a form.
 import flet as ft
 
 from pycon_us.account import SignIn, use_account
-from pycon_us.locations import is_top_view, parent_of
+from pycon_us.locations import LEAD_SCANNER, is_top_view, lands_on_lead, parent_of
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
@@ -94,7 +95,11 @@ def SignInPage() -> ft.View:
         page.show_dialog(
             ft.SnackBar(ft.Text(signed_in), behavior=ft.SnackBarBehavior.FLOATING)
         )
-        if is_top_view(page.route, view_path):  # not if Back left it meanwhile
+        if not is_top_view(page.route, view_path):  # Back left it meanwhile
+            return
+        if lands_on_lead(prefs, account):  # a sponsor's scanner, over More (D-16)
+            page.navigate(LEAD_SCANNER)
+        else:
             page.navigate(parent_of(view_path, svc.memory.search_base))
 
     ft.use_effect(leave, [signed_in])
