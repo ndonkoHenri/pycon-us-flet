@@ -1,0 +1,57 @@
+# Check Settings' Appearance and High contrast rows (#512, D-286).
+#
+# Each platform says a row's state its own way: on Android the radio rows and the
+# switch row are checked (resource-id's node, `checked`); on iOS a radio row is
+# selected (`selected`) and the switch row's value is "1" or "0", which Maestro
+# matches as its text.
+#
+# env:
+#   SELECTED  the Appearance row that is chosen: system, light or dark
+#   OTHER     another row, which is not
+#   HC        the switch: on or off
+#   HC_LABEL  the switch row's label as a regular expression: "High contrast", or
+#             "High contrast\\s+Follows your device setting" while it follows the device
+appId: io.github.ndonkohenri.pyconus
+---
+- extendedWaitUntil:
+    visible:
+      id: settings.high_contrast
+      text: ${HC_LABEL}
+    timeout: 15000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: settings.appearance.${SELECTED}
+          checked: true
+      - assertVisible:
+          id: settings.appearance.${OTHER}
+          checked: false
+      - runFlow:
+          when:
+            true: ${HC == 'on'}
+          commands:
+            - assertVisible:
+                id: settings.high_contrast
+                checked: true
+      - runFlow:
+          when:
+            true: ${HC != 'on'}
+          commands:
+            - assertVisible:
+                id: settings.high_contrast
+                checked: false
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible:
+          id: settings.appearance.${SELECTED}
+          selected: true
+      - assertVisible:
+          id: settings.appearance.${OTHER}
+          selected: false
+      - assertVisible:
+          id: settings.high_contrast
+          text: "${HC == 'on' ? '1' : '0'}"

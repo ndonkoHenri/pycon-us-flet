@@ -1,0 +1,73 @@
+# THEME-01, STORE-08 (#421, #512): More › Settings › Dark and High contrast, then a
+# relaunch: both are still set, and the switch no longer follows the device.
+#
+# Settings' rows are one node each with its identifier (D-286): the radio rows
+# settings.appearance.<value> and the switch row settings.high_contrast, whose label
+# carries "Follows your device setting" only while the setting is System. A choice
+# applies and is saved at once (D-120); the relaunch (subflows/relaunch.yaml) reads it
+# back. subflows/theme_state.yaml reads the rows' states, each platform's way. At the
+# end the flow switches High contrast off and chooses System, which store `system`
+# again (D-286), so the device ends as it started and a second run starts the same
+# way. The scene needs no clock or feed, so the flow starts with a plain fresh launch,
+# not start_offline.yaml.
+#
+# The OS's own flag (Increase Contrast, Android's Color contrast) is off on a fresh
+# device; a flow cannot set it (simctl ui increase_contrast, settings put secure
+# contrast_level), so its resume path stays out (#512).
+appId: io.github.ndonkohenri.pyconus
+name: Dark and High contrast, held after a relaunch
+tags:
+  - journeys
+  - theme
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow: ../subflows/theme_settings.yaml
+
+# A fresh start: System, and High contrast following the device, which has it off.
+- runFlow:
+    file: ../subflows/theme_state.yaml
+    env:
+      SELECTED: system
+      OTHER: dark
+      HC: "off"
+      HC_LABEL: "High contrast\\s+Follows your device setting"
+
+# Dark, then High contrast on: against the device's flag, so it holds (D-286).
+- tapOn:
+    id: settings.appearance.dark
+- tapOn:
+    id: settings.high_contrast
+- runFlow:
+    file: ../subflows/theme_state.yaml
+    env:
+      SELECTED: dark
+      OTHER: system
+      HC: "on"
+      HC_LABEL: "High contrast"
+- takeScreenshot: theme-01-dark-hc
+
+# The relaunch: both held, and the subtitle still gone.
+- runFlow: ../subflows/relaunch.yaml
+- runFlow: ../subflows/theme_settings.yaml
+- runFlow:
+    file: ../subflows/theme_state.yaml
+    env:
+      SELECTED: dark
+      OTHER: system
+      HC: "on"
+      HC_LABEL: "High contrast"
+- takeScreenshot: theme-02-relaunched
+
+# Back as it started: High contrast off (the device's value, so `system` again, with
+# the subtitle), then System.
+- tapOn:
+    id: settings.high_contrast
+- tapOn:
+    id: settings.appearance.system
+- runFlow:
+    file: ../subflows/theme_state.yaml
+    env:
+      SELECTED: system
+      OTHER: dark
+      HC: "off"
+      HC_LABEL: "High contrast\\s+Follows your device setting"
