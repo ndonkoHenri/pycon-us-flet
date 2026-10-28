@@ -15,7 +15,8 @@ from weakref import ref
 
 import flet as ft
 
-from pycon_us.prefs import Prefs, read_accessibility
+from pycon_us.accessibility import read_accessibility
+from pycon_us.prefs import Prefs
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 

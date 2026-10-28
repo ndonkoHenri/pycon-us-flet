@@ -5,6 +5,10 @@ settings with fixed values (Appearance, High contrast, Start screen) on load and
 reminder settings as their record (D-275), and keeps what the user chose in memory when
 a write fails (D-120). ``App`` reads it before the first screen (the boot gate), so
 neither the theme nor the filters flash.
+
+The keys of ``Prefs.dev`` and their helpers are ``dev_options``'s, and
+``accessibility.read_accessibility()`` writes the OS's flags in (split at D-66's ~400
+lines, #737).
 """
 
 import asyncio
@@ -13,11 +17,16 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, get_args
-from urllib.parse import urlsplit
 
 import flet as ft
 from flet.utils import is_embedded
 
+from pycon_us.dev_options import (
+    DEV_FAKE_NOW,
+    DEV_FEED_URL,
+    DEV_MOCK_API_URL,
+    DEV_UNLOCKED,
+)
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services.storage import (
     DEV,
@@ -25,7 +34,6 @@ from pycon_us.services.storage import (
     HIGH_CONTRAST,
     ONBOARDED,
     REMINDERS,
-    SERVICE_ERRORS,
     START_SCREEN,
     THEME,
     Pref,
@@ -63,18 +71,6 @@ _PERSISTED: dict[str, Pref[Any]] = {
     "start_screen": START_SCREEN,
 }
 """The persisted fields of ``Prefs`` and their keys in the storage table (decisions §M)."""
-
-DEV_UNLOCKED = "unlocked"
-"""``Prefs.dev`` key: True once 7 taps on About this app's version unlocked Developer."""
-
-DEV_FAKE_NOW = "fake_now"
-"""``Prefs.dev`` key: the fake clock's start, an ISO 8601 instant with its offset."""
-
-DEV_FEED_URL = "feed_url"
-"""``Prefs.dev`` key: the feed URL that refreshes use instead of the year's."""
-
-DEV_MOCK_API_URL = "mock_api_url"
-"""``Prefs.dev`` key: the mock API's base URL; set, the private-API features show (D-51)."""
 
 DEVELOPER_ALWAYS = not is_embedded()
 """Developer is always available when not embedded: the companion app and a desktop host
@@ -355,45 +351,6 @@ class Prefs:
             return await self.save(storage, reminders=change(self.reminders))
 
 
-def with_dev_options(
-    dev: dict[str, Any], *, fake_now: datetime | None, feed_url: str | None
-) -> dict[str, Any]:
-    """Return ``dev`` with the fake clock and the feed URL set; None removes one (D-187).
-
-    The other keys, the unlock among them, are kept. Pass the result to ``Prefs.save``.
-
-    Args:
-        dev: The current ``Prefs.dev``.
-        fake_now: The fake clock's start (aware), or None for real time.
-        feed_url: The feed URL, or None for the year's.
-    """
-    options = {k: v for k, v in dev.items() if k not in (DEV_FAKE_NOW, DEV_FEED_URL)}
-    if fake_now is not None:
-        options[DEV_FAKE_NOW] = fake_now.isoformat()
-    if feed_url is not None:
-        options[DEV_FEED_URL] = feed_url
-    return options
-
-
-def parse_feed_url(text: str) -> str | None:
-    """Return the feed URL the field names, or None when it is empty (the year's feed).
-
-    Args:
-        text: An ``http://`` or ``https://`` URL; plain HTTP for a test server on the
-            laptop (testing-and-quality.md §5.2).
-
-    Raises:
-        ValueError: The text is not such a URL; its message is the field's error.
-    """
-    text = text.strip()
-    if not text:
-        return None
-    parts = urlsplit(text)
-    if parts.scheme not in ("http", "https") or not parts.hostname:
-        raise ValueError("Use an http:// or https:// address")
-    return text
-
-
 def _stored(value: object) -> object:
     """Return a setting as SharedPreferences takes it: a list, not a tuple (F12)."""
     if isinstance(value, tuple):
@@ -410,33 +367,6 @@ def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:
             return choice
     logger.warning("Preference %s has an unknown value; using its default", pref.key)
     return choices[0]
-
-
-async def read_accessibility(semantics: ft.SemanticsService, prefs: Prefs) -> None:
-    """Copy the OS's accessibility flags into ``prefs`` (D-23, D-34, D-184).
-
-    High contrast, reduced motion, whether a screen reader is on and whether the
-    platform takes announcements. The platform reports a snapshot with no change
-    event (F13, U17), so this runs at start, on resume and while a screen reader
-    keeps a SnackBar (D-356). A failed read is logged and
-    keeps the previous values.
-
-    Args:
-        semantics: The session's ``SemanticsService``.
-        prefs: The store to update.
-    """
-    try:
-        features = await semantics.get_accessibility_features()
-    except SERVICE_ERRORS:
-        logger.warning("Could not read the accessibility features", exc_info=True)
-        return
-    reduce_motion = features.reduce_motion or features.disable_animations
-    if reduce_motion != prefs.reduce_motion:  # logged on change only: resumes are many
-        logger.info("Reduced motion is %s", "on" if reduce_motion else "off")
-    prefs.os_high_contrast = features.high_contrast
-    prefs.reduce_motion = reduce_motion
-    prefs.screen_reader = features.accessible_navigation
-    prefs.announcements = features.supports_announcements
 
 
 PrefsCtx: ft.ContextProvider[Prefs | None] = ft.create_context(None)

@@ -20,7 +20,8 @@ from flet.utils import is_embedded
 
 from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
-from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
+from pycon_us.dev_options import parse_feed_url, with_dev_options
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.developer_api import MockApiSection
 from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.screens.developer_data import DataActions

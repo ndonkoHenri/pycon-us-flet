@@ -18,6 +18,7 @@ import pytest
 from pycon_us import routes
 from pycon_us.account import Account
 from pycon_us.core.staff_tools import TOOLS, ToolKey, starts_on_lead
+from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.locations import (
     LEAD_SCANNER,
     PAGES,
@@ -28,7 +29,7 @@ from pycon_us.locations import (
     start_target,
 )
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import DEV_MOCK_API_URL, START_SCREENS, Prefs, StartScreen
+from pycon_us.prefs import START_SCREENS, Prefs, StartScreen
 from tests.fake_page import FakePage, bound
 
 FLAG_NAMES = ("lead_retrieval", "door_check", "mask_violation")
