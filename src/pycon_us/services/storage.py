@@ -67,8 +67,8 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.staff_sponsor`, `pycon.start_screen` and
-# `pycon.<year>.favorites_dirty` here, with the features that use them.
+# P3 adds `pycon.staff_sponsor` and `pycon.start_screen` here, with the features that
+# use them.
 
 THEME: Pref[str] = Pref("pycon.theme", "system")
 """``system``, ``light`` or ``dark`` (THEME-01)."""
@@ -114,6 +114,20 @@ def favorites(year: int) -> Pref[list[str]]:
         The ``pycon.<year>.favorites`` key, a ``list[str]`` that defaults to empty.
     """
     return Pref(f"pycon.{year}.favorites", [])
+
+
+def favorites_sync(year: int) -> Pref[str]:
+    """Return the key of what the account has of a year's favourites (D-55, D-406).
+
+    Args:
+        year: The conference year, as ``favorites(year)``'s.
+
+    Returns:
+        The ``pycon.<year>.favorites_sync`` key, a ``core.favorites_sync.SyncState``
+        value; absent, ``merge``: the next pull takes the union. A sign-in and a
+        sign-out remove it.
+    """
+    return Pref(f"pycon.{year}.favorites_sync", "merge")
 
 
 def fetched(year: int) -> Pref[bool]:

@@ -18,6 +18,7 @@ from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services.api import ApiClient, Credentials
 from pycon_us.services.credentials import CredentialStorage, secure_storage
+from pycon_us.services.favorites_sync import FavoritesSync
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.presence import Presence
 from pycon_us.services.private_api import PrivateApi, signed_out
@@ -96,6 +97,8 @@ class Services:
         outbox: The staff outbox's database (``services.outbox_db``, D-49), which
             opens ``outbox.db`` on first use: only the staff tools use it, and D-51
             hides them without a mock API URL. ``None`` in tests that don't need it.
+        favorites_sync: Keeps the favourites in step with the mock account while
+            signed in (``services.favorites_sync``, D-406); ``App`` runs it.
     """
 
     year: YearData
@@ -122,6 +125,7 @@ class Services:
         default_factory=lambda: CredentialStorage(secure=None)
     )
     outbox: OutboxDb | None = None
+    favorites_sync: FavoritesSync = field(default_factory=FavoritesSync)
 
     @property
     def api(self) -> ApiClient | None:
@@ -182,6 +186,7 @@ class Services:
         self.presence.close()  # and a focus that waits for a return (D-372)
         if self.reminders is not None:  # and the reminders' loop, which then returns
             self.reminders.request()
+        self.favorites_sync.request()  # and the favourites sync's, which returns too
         if self.outbox is not None:  # a late write is refused, not raised (D-120)
             self.outbox.close()
 
