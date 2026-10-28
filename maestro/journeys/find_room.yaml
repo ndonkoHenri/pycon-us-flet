@@ -1,0 +1,91 @@
+# P2-93's find a room, one of the P2 exit's three screen-reader flows (#462): offline,
+# Map › Rooms › Room 103ABC › its location card › the Concourse plan with the room
+# marked and named, zoomed in › Back › Back; then Floor plans › Concourse › Back.
+#
+# The rooms, the pins and the plans are bundled year data (map.toml, D-36), so the
+# flow runs with the feed unreachable (start_offline.yaml; airplane mode on Android).
+# The plan's image is one node that names the room it marks ("…, Room 103 marked").
+appId: io.github.ndonkohenri.pyconus
+name: Map, a room, its floor plan
+tags:
+  - journeys
+  - venue
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Map › Rooms › Room 103ABC.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: map
+      NAME: "Map.*Tab 4 of 5"
+- extendedWaitUntil:
+    visible:
+      id: map.tab.rooms
+    timeout: 15000
+- tapOn:
+    id: map.tab.rooms
+- scrollUntilVisible:
+    element:
+      id: map.room.room-103abc
+    direction: DOWN
+- tapOn:
+    id: map.room.room-103abc
+
+# Its location card opens the plan with the room marked.
+- extendedWaitUntil:
+    visible:
+      id: room.location
+    timeout: 15000
+- assertVisible:
+    id: room.location
+    text: "Show Room 103 on the Concourse level floor plan"
+- tapOn:
+    id: room.location
+- extendedWaitUntil:
+    visible:
+      id: plan.label
+    timeout: 15000
+- assertVisible: "Concourse level floor plan, Room 103 marked"
+- assertVisible:
+    id: plan.label
+    text: "Room 103\nConcourse level · Talk track / Security track"
+- assertVisible:
+    id: plan.zoom_out
+    enabled: false
+- tapOn:
+    id: plan.zoom_in
+- assertVisible:
+    id: plan.zoom_out
+    enabled: true
+
+# Back to the room, Back to the Map with its Rooms.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: room.location
+    timeout: 15000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: map.room.room-103abc
+    timeout: 15000
+
+# Floor plans › Concourse level › Back.
+- tapOn:
+    id: map.tab.floor-plans
+- tapOn:
+    id: map.plan.concourse
+- extendedWaitUntil:
+    visible:
+      id: plan.zoom_in
+    timeout: 15000
+- assertNotVisible:
+    id: plan.label
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: map.plan.concourse
+    timeout: 15000
