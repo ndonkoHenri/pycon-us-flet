@@ -173,6 +173,7 @@ made so the client's behaviour can be tested both ways where it matters; none is
 |---|---|
 | Is `lead_retrieval/capture` idempotent? A response lost after the server committed makes the client send it again. | Both, selected by `MockState(capture="idempotent" \| "non_idempotent")` (D-57). Idempotent: one lead per (sponsor, attendee); a repeat returns 200 with the same reply. Non-idempotent: every request adds a lead row, so a lost response yields a duplicate the tests detect. |
 | Is `redeem_products` idempotent for a repeated door payload (Ionic re-sends every 60 s until it gets an answer)? | The same switch. Idempotent: a product already redeemed with the same (attendee, quantity, `scanned_at`) is listed as redeemed again and nothing more is redeemed, so a repeated payload gets the first reply. Non-idempotent: a repeat redeems again while quantity is left, then reports `errors`. |
+| Is `lead_retrieval/<code>/note/` idempotent? The outbox resends a note whose reply was lost. | The same switch. Idempotent: a note that repeats the sponsor's last note for the lead records nothing; an edited note is recorded. Non-idempotent: every request adds a note row. |
 | What `force` means on `mask_violations/capture`, and whether the per-frame GET is de-duplicated. | POST with `force: true` always records an incident (with its `notes`). GET, and a POST without `force`: idempotent mode records at most one incident per attendee per 60 s and otherwise returns the current count; non-idempotent mode records one per request. |
 | The timestamp window. | 600 s either side of the mock's clock (**2019**; the current value is UNCONFIRMED). The clock is injectable, and `--skew SECONDS` shifts it. |
 | Status codes for a bad key versus a bad signature or timestamp, and for an invalid badge. | 401 unknown key; 403 bad signature or timestamp outside the window; 404 invalid badge (see [Errors](#errors)). The client treats 401 and 403 alike (`ApiError.is_auth`), so only the mock's own tests depend on the split. |
@@ -229,7 +230,7 @@ time. Every name in it is made up, every email is at `example.com`, and every pa
 The state keeps every write in order, so tests count how often a capture was applied under each semantics (D-57):
 `leads` (sponsor, access code, time), `notes` (sponsor, access code, note, time), `redemptions` (access code,
 product, quantity, `scanned_at`) and `incidents` (access code, notes, forced, time). Under `capture="idempotent"`
-the same lead capture or door payload twice leaves one row; under `"non_idempotent"`, two (a redemption only while
+the same lead capture, note or door payload twice leaves one row; under `"non_idempotent"`, two (a redemption only while
 quantity is left). An idempotent mock also keeps each redeem request's first reply in `redeem_replies` and
 answers a retry with it. Incident counts in replies are the seeded `violations` plus the recorded incidents.
 

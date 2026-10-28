@@ -103,7 +103,9 @@ def lead_note(call: Call) -> tuple[int, object]:
 
     Ionic puts the access code in the path unencoded; the app encodes it (API-11), so
     the mock decodes that one segment. The body is ``{"accessCode", "note"[,
-    "sponsor_id"]}``.
+    "sponsor_id"]}``. Under ``idempotent`` capture a note that repeats the sponsor's
+    last note for the lead records nothing; under ``non_idempotent`` every request
+    adds a note row (D-57).
 
     Returns:
         200 ``{code, data: {}}``; Ionic ignores it.
@@ -126,5 +128,10 @@ def lead_note(call: Call) -> tuple[int, object]:
         for lead in call.state.leads
     ):
         raise Refused(404, "No lead for this attendee.")
-    call.state.notes.append(LeadNote(sponsor.id, code, note, call.now))
+    notes = call.state.notes
+    last = [
+        n.note for n in notes if (n.sponsor_id, n.access_code) == (sponsor.id, code)
+    ]
+    if call.state.capture == "non_idempotent" or last[-1:] != [note]:
+        notes.append(LeadNote(sponsor.id, code, note, call.now))
     return 200, {"code": 200, "data": {}}
