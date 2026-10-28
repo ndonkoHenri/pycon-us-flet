@@ -7,7 +7,9 @@ a write fails (D-120). ``App`` reads it before the first screen (the boot gate),
 neither the theme nor the filters flash.
 """
 
+import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, get_args
@@ -125,6 +127,9 @@ class Prefs:
     time_above: bool = False
     time_measured: bool = False
     loaded: bool = False
+    _reminders_lock: asyncio.Lock = field(
+        default_factory=asyncio.Lock, init=False, repr=False
+    )
 
     @property
     def dark(self) -> bool:
@@ -302,6 +307,28 @@ class Prefs:
         for name, value in changes.items():
             setattr(self, name, value)
         return saved
+
+    async def change_reminders(
+        self,
+        storage: Storage,
+        change: Callable[[ReminderSettings], ReminderSettings],
+    ) -> bool:
+        """Save ``change`` of the reminder settings, one change at a time.
+
+        Every change of ``reminders`` goes through here. ``save()`` publishes only
+        after its write, so two changes built from the same record would each drop the
+        other's (#706's review: a moment switched off came back). The lock makes each
+        change read the record the previous one published.
+
+        Args:
+            storage: Where the settings are kept.
+            change: Returns the new settings from the current ones.
+
+        Returns:
+            Whether the write succeeded (``save()``).
+        """
+        async with self._reminders_lock:
+            return await self.save(storage, reminders=change(self.reminders))
 
 
 def with_dev_options(

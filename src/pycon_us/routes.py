@@ -207,7 +207,12 @@ ROUTES = [
         pushed("venue", Venue),
     ),
     pushed("schedule", Schedule),
-    pushed("my-schedule", MySchedule),
+    pushed(
+        "my-schedule",
+        MySchedule,
+        # Its Reminder settings, Settings again: under it, Back returns there (D-401).
+        pushed("settings", Settings),
+    ),
     pushed("map", Map),
     pushed(
         "more",

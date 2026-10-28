@@ -31,6 +31,7 @@ PAGES = frozenset(
         "/now/wifi",
         "/now/help",
         "/now/venue",
+        "/my-schedule/settings",
         "/more/speakers",
         "/more/tracks",
         *(f"/more/tracks/{segment}" for segment in HUB_PAGES),

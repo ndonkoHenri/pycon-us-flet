@@ -2,10 +2,11 @@
 
 - **The overflow** ("More options", D-289): Export to calendar (.ics), every saved
   session still in the schedule in one file, ``pycon-us-<year>-my-schedule.ics``, each
-  event with its alarm (SESS-05). It goes to the calendar by session detail's Add to
-  calendar route (``services.calendar``, D-272): iOS's "Add All" sheet, or Android's
-  save dialog and a SnackBar. With nothing saved there is nothing to export, so the
-  screen shows no overflow.
+  event with its alarm at the reminders' lead (SESS-05, D-401). It goes to the calendar
+  by session detail's Add to calendar route (``services.calendar``, D-272): iOS's "Add
+  All" sheet, or Android's save dialog and a SnackBar. Only with something to export.
+  Then Reminder settings, in a build with E3: Settings at ``/my-schedule/settings``,
+  so Back returns here (D-401). With neither item, the screen shows no overflow.
 - **The all-over notice** heads the list when every saved session has ended (D-191).
 - **The dropped notice** heads it when some saved sessions are no longer in the
   schedule (D-329): how many, that they come back if the feed lists them again, "See
@@ -25,6 +26,7 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import ChangeKind
 from pycon_us.core.ics import calendar_file
 from pycon_us.core.models import Session
+from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
@@ -37,6 +39,12 @@ SCREEN = "my_schedule"
 
 EXPORT = "Export to calendar (.ics)"
 """The overflow's export item (ux.md §5.6), the same words on both platforms (D-272)."""
+
+REMINDER_SETTINGS = "Reminder settings"
+"""The overflow's item that opens Settings over My schedule (D-401)."""
+
+SETTINGS = "/my-schedule/settings"
+"""Where Reminder settings goes: Settings under My schedule (D-401)."""
 
 ALL_OVER = "All your saved sessions are over"
 SEE_TODAY = "See what's on today"
@@ -58,40 +66,63 @@ def export_slug(year: int) -> str:
 
 
 @ft.component
-def ScheduleMenu(sessions: tuple[Session, ...]) -> ft.Control:
-    """The app bar's overflow ("More options"): Export to calendar (.ics).
+def ScheduleMenu(sessions: tuple[Session, ...], *, settings: bool) -> ft.Control:
+    """The app bar's overflow ("More options"): Export, then Reminder settings.
 
-    The item is disabled while the calendar's sheet or the save dialog is up, so a
+    Export is disabled while the calendar's sheet or the save dialog is up, so a
     second tap does not serve or save the file twice; in place, so the button and the
     item keep their nodes and the screen reader's focus comes back to the button when
     the menu closes (D-182, D-225). Its label wraps at 200 % text (``menu_item()``,
-    D-233). Whatever happens is said by ``add_to_calendar()``, on this View (D-210).
+    D-233). Whatever happens is said by ``add_to_calendar()``, on this View (D-210);
+    the export's alarms come at the reminders' lead (D-401).
 
     Args:
-        sessions: Every saved session still in the schedule (``Agenda.sessions``); at
-            least one, since the screen shows no overflow without.
+        sessions: Every saved session still in the schedule (``Agenda.sessions``):
+            Export only with one at least.
+        settings: Whether to offer Reminder settings: a build with E3 (D-401). The
+            caller shows the menu only with an item in it.
     """
+    page = ft.context.page
     svc = use_services()
+    prefs = use_prefs()
     exporting, set_exporting = ft.use_state(False)
 
     @report_errors
     async def export() -> None:
         year = svc.year.conference.year
-        data = calendar_file(sessions, year=year, now=clock.now())
+        alarm = prefs.reminders.calendar_alarm
+        data = calendar_file(sessions, year=year, now=clock.now(), alarm=alarm)
         set_exporting(True)
         try:
             await add_to_calendar(svc, export_slug(year), data)
         finally:
             set_exporting(False)
 
-    item = menu_item(
-        ft.Icons.EVENT_AVAILABLE_OUTLINED,  # session detail's Add to calendar's icon
-        EXPORT,
-        export,
-        identifier=f"{SCREEN}.export",
-        disabled=exporting,
-    )
-    return overflow_menu(f"{SCREEN}.overflow", [item])
+    @report_errors
+    def open_settings() -> None:
+        page.navigate(SETTINGS)
+
+    items: list[ft.PopupMenuItem] = []
+    if sessions:
+        items.append(
+            menu_item(
+                ft.Icons.EVENT_AVAILABLE_OUTLINED,  # session detail's Add to calendar's
+                EXPORT,
+                export,
+                identifier=f"{SCREEN}.export",
+                disabled=exporting,
+            )
+        )
+    if settings:
+        items.append(
+            menu_item(
+                ft.Icons.NOTIFICATIONS_OUTLINED,
+                REMINDER_SETTINGS,
+                open_settings,
+                identifier=f"{SCREEN}.reminder_settings",
+            )
+        )
+    return overflow_menu(f"{SCREEN}.overflow", items)
 
 
 def all_over(
