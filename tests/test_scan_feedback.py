@@ -160,6 +160,19 @@ async def test_with_announcements_a_result_is_announced_once_at_its_level(
     assert not shown.node("scan.result").live_region  # else it were said twice
 
 
+async def test_an_announcement_never_answered_doesn_t_stop_the_next_scan(
+    show: Show, rig: Rig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An announcement iOS never answers (VoiceOver on, F276) stops no scan."""
+    monkeypatch.setattr(scan_feedback, "ANNOUNCE_WAIT_S", 0.01)
+    shown = await show(prefs=ANNOUNCING)
+    semantics(shown).answers = False
+    await enter(shown, "MOCK0001:v1")
+    await enter(shown, "MOCK0002:v2")
+    assert [badge.code for badge in rig.badges] == ["MOCK0001", "MOCK0002"]
+    assert len(semantics(shown).announced) == 2
+
+
 async def test_the_wake_lock_is_held_while_mounted_and_in_the_foreground(
     show: Show,
 ) -> None:
