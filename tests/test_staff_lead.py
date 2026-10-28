@@ -2,22 +2,28 @@
 
 The screen runs in a real Flet session (``tests/harness.py``) with an ``Account``
 store set as the flags say, and a mock URL set or not (D-51). Its guard re-checks
-``may_open`` on every render (architecture §12.4); its parse-only handler reads a
-seeded badge and records nothing until #39.
+``may_open`` on every render (architecture §12.4); past it, the account's consent
+(LEAD-04, D-423) is asked once, on ``screens/lead_consent.py``'s page; its parse-only
+handler reads a seeded badge and records nothing until #39. One test's sessions share
+one SharedPreferences, so a second render is a relaunch.
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
+from typing import Any, cast
 
 import flet as ft
 import pytest
+from flet.components.component import Component
 
 from pycon_us.account import Account
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.core.badges import Badge, ScanOutcome
 from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
+from pycon_us.screens import lead_consent, staff_lead
 from pycon_us.screens.staff_lead import (
     BADGE_READ,
     NOT_RECORDED,
@@ -25,10 +31,15 @@ from pycon_us.screens.staff_lead import (
     LeadScanner,
     badge_read,
 )
+from pycon_us.services import Services
+from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
+from pycon_us.ui.snack_bars import NOT_SAVED
+from tests import harness
 from tests.api_clients import BASE_URL
+from tests.fakes import MemoryPrefs
 from tests.harness import Shown, showing
 from tests.mock_calls import state_at
 from tools.mock_api.badges import payload
@@ -56,23 +67,52 @@ def signed_in(
 
 
 @pytest.fixture
-async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return a function that renders the Lead scanner for an account and a URL."""
+def stored() -> dict[str, Any]:
+    """The SharedPreferences values every session of a test shares, as a device's."""
+    return {}
+
+
+@pytest.fixture
+async def show(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stored: dict[str, Any]
+) -> AsyncIterator[Show]:
+    """Return a function that renders the Lead scanner for an account and a URL.
+
+    Its sessions keep their preferences in ``stored``; ``consent`` stores the
+    account's consent first, as an earlier visit left it.
+    """
 
     async def focus(_: ft.TextField) -> None:
         """Stand in for the client's focus: nothing to do."""
 
     monkeypatch.setattr(ft.TextField, "focus", focus)
+    memory_services = harness.memory_services
+
+    def sharing(
+        year: YearData, directory: Path, memory: ViewMemory | None = None
+    ) -> Services:
+        """Return the memory services over the test's one ``stored``."""
+        svc = memory_services(year, directory, memory)
+        cast(MemoryPrefs, svc.storage.prefs).values = stored
+        return svc
+
+    monkeypatch.setattr(harness, "memory_services", sharing)
     async with AsyncExitStack() as stack:
 
-        async def render(account: Account, *, mock_url: bool = True) -> Shown:
+        async def render(
+            account: Account, *, mock_url: bool = True, consent: bool = True
+        ) -> Shown:
             """Render the route signed in as ``account``, with or without a mock URL."""
+            if consent:
+                stored[SCANNER_CONSENT.key] = True
             prefs = Prefs(loaded=True)
             if mock_url:
                 prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
             return await stack.enter_async_context(
                 showing(
                     LeadScanner,
+                    staff_lead,
+                    lead_consent,
                     scan_screen,
                     year=load_year(2026),
                     conference=Conference(),
@@ -175,3 +215,151 @@ async def test_opening_the_scanner_makes_it_now_s_card_s_tool(show: Show) -> Non
     assert refused.memory.staff_tool == ""
     shown = await show(signed_in(lead_retrieval=True))
     assert shown.memory.staff_tool == "lead"
+
+
+# ------------------------------------------------------------------ the consent (LEAD-04)
+
+
+def asks(shown: Shown) -> bool:
+    """Whether the consent page shows, rather than the scan screen (never both)."""
+    asking = bool(shown.nodes("lead.consent.check"))
+    assert asking != bool(shown.nodes("scan.entry"))
+    return asking
+
+
+def button(shown: Shown, identifier: str) -> ft.Control:
+    """The consent page's button under ``identifier``."""
+    control = shown.node(identifier).content
+    assert isinstance(control, ft.FilledButton | ft.OutlinedButton)
+    return control
+
+
+async def tick(shown: Shown, ticked: bool = True) -> None:
+    """Tick (or untick) the consent's checkbox, as Flutter reports a tap on its row."""
+    (box,) = shown.find(ft.Checkbox)
+    shown.session.apply_patch(box._i, {"value": ticked})
+    await shown.event(box, "change", None)
+
+
+async def give(shown: Shown) -> None:
+    """Tick the box and press Continue."""
+    await tick(shown)
+    await shown.click(button(shown, "lead.consent.continue"))
+
+
+async def test_the_consent_shows_until_it_is_given_then_the_scan_screen(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """Continue is disabled until the box is ticked; it saves and shows the scanner."""
+    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    assert asks(shown)
+    # Neither the field nor the result panel: a HID scanner's typing goes nowhere.
+    assert not shown.find(ft.TextField) and not shown.nodes("scan.result")
+    assert button(shown, "lead.consent.continue").disabled
+    assert shown.node("lead.consent.continue").disabled  # said so (D-214)
+    await tick(shown)
+    assert not button(shown, "lead.consent.continue").disabled
+    await tick(shown, False)
+    assert button(shown, "lead.consent.continue").disabled
+    await give(shown)
+    assert not asks(shown)
+    assert stored[SCANNER_CONSENT.key] is True
+    assert not shown.snack_bars
+
+
+async def test_a_given_consent_is_remembered_after_a_relaunch(show: Show) -> None:
+    """The next session opens straight onto the scan screen."""
+    await give(await show(signed_in(lead_retrieval=True), consent=False))
+    assert not asks(await show(signed_in(lead_retrieval=True), consent=False))
+
+
+async def test_cancel_goes_back_to_more_and_saves_nothing(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """Cancel goes where Back goes (``parent_of``), even with the box ticked."""
+    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    await tick(shown)
+    await shown.click(button(shown, "lead.consent.cancel"))
+    assert shown.went == ["/more"]
+    assert SCANNER_CONSENT.key not in stored
+
+
+async def test_the_staff_keys_going_asks_again(show: Show) -> None:
+    """A sign-out removes the staff keys (D-414); signed in again, it asks again."""
+    account = signed_in(lead_retrieval=True)
+    shown = await show(account, consent=False)
+    await give(shown)
+    account.signed_in = False  # Account.sign_out() clears the staff keys too
+    assert await shown.storage.clear_prefs(STAFF_PREFIX)
+    await shown.settle()
+    assert not is_open(shown)
+    account.signed_in = True
+    await shown.settle()
+    assert asks(shown)
+
+
+async def test_another_account_is_asked_for_its_own_consent(show: Show) -> None:
+    """A switch re-reads the consent: the previous account's never stands for it."""
+    account = signed_in(lead_retrieval=True)
+    shown = await show(account, consent=False)
+    await give(shown)
+    assert await shown.storage.clear_prefs(STAFF_PREFIX)  # as a switch's sign-in
+    account.email = "b@example.com"
+    await shown.settle()
+    assert asks(shown)
+
+
+async def test_an_expired_account_keeps_its_consent(show: Show) -> None:
+    """Signing in again as the same account keeps the staff keys (D-414): no new ask."""
+    account = signed_in(lead_retrieval=True)
+    shown = await show(account, consent=False)
+    await give(shown)
+    account.expired = True
+    await shown.settle()
+    assert not asks(shown)
+
+
+async def test_a_consent_that_can_t_be_saved_scans_and_says_so(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """The session scans with it (D-120); the SnackBar says the next start asks."""
+    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    cast(MemoryPrefs, shown.storage.prefs).fail_writes = True
+    await give(shown)
+    assert not asks(shown)
+    assert SCANNER_CONSENT.key not in stored
+    (bar,) = shown.snack_bars
+    assert isinstance(bar.content, ft.Text) and bar.content.value == NOT_SAVED
+
+
+async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each render runs all its component's hooks, read to consent to scanner (D-70).
+
+    The stand-in scaffold calls a hook, as the real one does: called from
+    ``LeadTool``'s loading branch only, it would leave a hook unused after the read.
+    """
+    stand_in = harness._scaffold
+
+    def scaffold(**kwargs: Any) -> ft.Control:
+        """Call a hook, as ``AppScaffold`` does, then stand in for it."""
+        ft.use_state(0)
+        return stand_in(**kwargs)
+
+    renders: list[tuple[str, int, int]] = []
+    run_effects = Component._run_render_effects
+
+    def record(component: Component) -> None:
+        """Record each render's hooks used and hooks held, then run its effects."""
+        state = component._state
+        renders.append((component.fn.__name__, state.hook_cursor, len(state.hooks)))
+        run_effects(component)
+
+    monkeypatch.setattr(harness, "_scaffold", scaffold)
+    monkeypatch.setattr(Component, "_run_render_effects", record)
+    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    await give(shown)
+    assert not asks(shown)
+    assert {name for name, *_ in renders} >= {"LeadTool", "LeadConsent", "ScanScreen"}
+    assert [render for render in renders if render[1] != render[2]] == []
