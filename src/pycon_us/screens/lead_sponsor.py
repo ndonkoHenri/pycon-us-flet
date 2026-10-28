@@ -118,6 +118,7 @@ def SponsorList(*, owner: str) -> ft.Control:
     chosen, set_chosen = ft.use_state("")  # the saved sponsor's id
     mounted = ft.use_ref(True)  # cleared on unmount: a late save then does nothing
 
+    @report_errors
     def unmount() -> None:
         """Mark the page gone, so a save still running stays quiet."""
         mounted.current = False
