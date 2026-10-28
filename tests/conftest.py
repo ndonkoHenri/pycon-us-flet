@@ -29,6 +29,14 @@ settings.register_profile("dev", settings.get_profile("default"), deadline=None)
 settings.load_profile("dev")
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the ``loopback`` marker, ``no_network``'s one opt-out."""
+    config.addinivalue_line(
+        "markers",
+        "loopback: let httpx reach 127.0.0.1 only, for a server the test runs itself",
+    )
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add ``--snapshot-update``, which rewrites snapshots instead of comparing."""
     parser.addoption(
@@ -49,23 +57,44 @@ def quick_focus_back(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def no_network(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
+def no_network(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> Iterator[list[str]]:
     """Refuse every real HTTP connection, and fail the test that tried one (#539).
 
     Tests never touch the network: a request reaches a server only through a test's
     ``httpx.MockTransport``. httpx's own transports, which a client without one uses
     (the app's feed refresh), raise ``ConnectError`` instead of connecting, so the code
     under test takes its offline path, and the test then fails at teardown naming the
-    URLs, even when the code swallowed the error. Yields the refused URLs.
+    URLs, even when the code swallowed the error. A test marked ``loopback`` may still
+    reach ``127.0.0.1``, where it runs a server of its own (the mock's, #666), and
+    nothing else. Yields the refused URLs.
     """
     refused: list[str] = []
+    loopback = request.node.get_closest_marker("loopback") is not None
+    connect = httpx.HTTPTransport.handle_request
+    connect_async = httpx.AsyncHTTPTransport.handle_async_request
 
-    def refuse(_transport: object, request: httpx.Request) -> httpx.Response:
-        refused.append(str(request.url))
+    def allowed(sent: httpx.Request) -> bool:
+        """Whether this request may connect: only a ``loopback`` test's, to 127.0.0.1."""
+        if loopback and sent.url.host == "127.0.0.1":
+            return True
+        refused.append(str(sent.url))
+        return False
+
+    def refuse(
+        transport: httpx.HTTPTransport, request: httpx.Request
+    ) -> httpx.Response:
+        if allowed(request):
+            return connect(transport, request)
         raise httpx.ConnectError("tests never open a real connection", request=request)
 
-    async def refuse_async(transport: object, request: httpx.Request) -> httpx.Response:
-        return refuse(transport, request)
+    async def refuse_async(
+        transport: httpx.AsyncHTTPTransport, request: httpx.Request
+    ) -> httpx.Response:
+        if allowed(request):
+            return await connect_async(transport, request)
+        raise httpx.ConnectError("tests never open a real connection", request=request)
 
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)
     monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", refuse_async)

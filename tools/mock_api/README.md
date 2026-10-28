@@ -248,13 +248,56 @@ answers a retry with it. Incident counts in replies are the seeded `violations` 
   retrieval, each behind its [role gate](#role-gates).
 - `transport.py`: `mock_transport(state)`, an `httpx.MockTransport` over `handle` that passes `request.url.raw_path`
   and `request.content` unchanged, for client tests.
+- `server.py`: `MockServer`, a stdlib `ThreadingHTTPServer` that passes the request target and body to `handle`
+  unchanged, with one lock around it, and writes `handle`'s reply back with `handle`'s headers only (its `Date` is the
+  mock's clock). See [Running it](#running-it).
+- `badges.py`: the printable badge sheet, one HTML page of inline SVG QR codes made with `segno` (D-391), a dev
+  dependency that is never bundled.
 - Tests: `tests/test_mock_api.py` (routing, envelopes, the signature check and Ionic's vectors),
   `tests/test_mock_api_accounts.py` (the account endpoints, directly and through the transport),
   `tests/test_mock_api_check_in.py` (the role gates, door and swag, both semantics) and
   `tests/test_mock_api_leads.py` (Code of Conduct and leads, both semantics), with helpers in
-  `tests/mock_calls.py`.
+  `tests/mock_calls.py`; `tests/test_mock_api_server.py` runs the server on `127.0.0.1` with an ephemeral port (its
+  tests are marked `loopback`, the `no_network` fixture's one opt-out, which lets httpx reach `127.0.0.1` and nothing
+  else), and `tests/test_mock_api_badges.py` checks the sheet.
 
 ## Running it
 
-To come with the server: [`docs/development.md`](../../docs/development.md) §6 has the planned command, faults and
-base URLs, and this section will document the final options.
+```bash
+uv run python -m tools.mock_api.server                  # this machine, its simulators and emulators
+uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the same Wi-Fi
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--host` | `127.0.0.1` | The IPv4 address to listen on. The default serves only this machine, which the iOS simulator and the Android emulator (`10.0.2.2`) reach too; `0.0.0.0` also serves the LAN. Nothing listens on a public interface unless asked. |
+| `--port` | `8000` | The port; `0` picks a free one, and the banner says which. |
+| `--capture` | `idempotent` | `idempotent` or `non_idempotent`: how a repeated lead capture, door payload or CoC scan is applied (D-57, [Unknown](#unknown)). |
+
+Faults (lost responses, revoked keys, a skewed clock) come with #667.
+
+- **On start** it prints the base URL for each kind of device (this machine and the iOS simulator, the Android
+  emulator, and with `--host 0.0.0.0` the machine's LAN address) and the seeded accounts' emails and passwords, all
+  fake. It never prints a key or a secret.
+- **State** is in memory: a restart is a clean slate. Ctrl-C stops it.
+- **The log** has one line per request, errors the server sends itself (a malformed request, an unsupported method)
+  included: the client's address, the method, the path without its query, and the status. The access code in
+  `lead_retrieval/<code>/note/` shows as `<code>`. It never logs a query, a header or a body, so no access code, key,
+  signature or password reaches it.
+- **It only answers.** Every reply comes from `handle`; the server never points at, proxies or copies a PSF host
+  (D-51).
+- **Base URLs** and the practical notes (firewall, Wi-Fi isolation, cleartext HTTP) are in
+  [`docs/development.md`](../../docs/development.md) §6.
+
+### The badge sheet
+
+```bash
+uv run python -m tools.mock_api.badges                        # writes build/mock-badges.html
+uv run python -m tools.mock_api.badges --out ~/badges.html
+```
+
+One card per seeded attendee: the QR code of its badge payload `<access code>:<validator>` (50 mm, error correction
+M or better), the attendee's full name, and the payload in text for manual entry. The page is self-contained (inline
+SVG, no scripts, no external files): open it in a browser and print it. Two columns of 88 mm cards inside 12 mm
+margins fit both A4 and Letter, all four attendees on one page (checked by printing to PDF on both sizes and decoding
+every code, #666). The library is `segno` (D-391), in the `dev` dependency group only.

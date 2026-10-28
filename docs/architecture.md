@@ -1180,9 +1180,9 @@ Ionic reads most replies bare and only three inside a `data` member (`{code, dat
 | `handlers.py` | the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`: routing (one table, `{}` for a path segment), envelopes, the signature check and the account endpoints |
 | `state.py` | `MockState` (in-memory accounts, sponsors, products, attendees, faults, injectable `now`, `capture="idempotent" \| "non_idempotent"`, and the leads, notes, redemptions and incidents it recorded, so tests count applications), loaded from the seed; `Call`, a checked request; `Refused`, an error reply |
 | `check_in.py`, `conduct.py`, `leads.py` | the staff endpoints (door and swag, Code of Conduct, lead retrieval), each gated by its role flag (403 otherwise); `parse.py` reads their bodies and queries the way Ionic builds them |
-| `server.py` | stdlib `ThreadingHTTPServer` over `handle` (`python -m tools.mock_api.server --host 0.0.0.0 --port 8000`; development.md §6), a lock around `handle`, faults from the command line |
+| `server.py` | stdlib `ThreadingHTTPServer` over `handle` (`python -m tools.mock_api.server [--host 0.0.0.0] [--port 8000] [--capture ...]`, loopback by default; development.md §6), a lock around `handle`, the target and body passed as received, a banner with each device's base URL and the fake accounts, one log line per request without its query or body; faults from the command line come with #667 |
 | `transport.py` | `mock_transport(state)`: `httpx.MockTransport` over the same `handle`, for client tests |
-| `badges.py` | prints a sheet of mock-badge QR codes (`code:validator`) for the P3 exit test (one dev-only QR library, e.g. `segno`; D-75) |
+| `badges.py` | writes a printable HTML sheet of mock-badge QR codes (`code:validator`, inline SVG from `segno`, a dev-only dependency; D-391) for the P3 exit test |
 | `README.md` | the contract: endpoints, envelopes and fields citing `pycon-api.ts` by line, plus what is **unknown** (server idempotency, the timestamp window) and how the mock models it |
 | `tests/fixtures/mock/` | seed data (`seed.json`): one account per role, sponsors (one JSON-quoted), door and swag categories and products, attendees with badges and prior Code of Conduct incidents (the Ionic signing vectors are in `tests/fixtures/ionic/signing.json`) |
 

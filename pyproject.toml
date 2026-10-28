@@ -27,6 +27,7 @@ dev = [                               # host only, never bundled; versions in uv
     "hypothesis",
     "ruff",
     "pyright",
+    "segno",                          # the mock-badge sheet's QR codes (D-391); never bundled
 ]
 
 # ------------------------------------------------------------------ flet build
