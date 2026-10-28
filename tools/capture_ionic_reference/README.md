@@ -1,4 +1,4 @@
-# Ionic reference capture
+# Ionic reference captures
 
 Runs the Ionic app's own `processData` (`ConferenceData` in `src/app/providers/conference-data.ts`) on the recorded
 feeds once, and commits what it made of them as facts in `tests/fixtures/ionic/<year>/` (D-77, SCHED-19, #66).
@@ -6,7 +6,10 @@ feeds once, and commits what it made of them as facts in `tests/fixtures/ionic/<
 `tests/ionic.py`; every difference is either fixed or listed in its `INTENDED_DIFFERENCES` with a decision or feature
 id, and shown by a named test.
 
-**CI never runs this tool, and contributors never need Node.** The tests only read the committed JSON.
+A second capture, `capture_signing.py`, records Ionic's request signatures
+([Signing vectors](#signing-vectors-testsfixturesionicsigningjson-d-52-662) below).
+
+**CI never runs these tools, and contributors never need Node.** The tests only read the committed JSON.
 
 ## Provenance of the committed capture
 
@@ -78,3 +81,46 @@ Then:
 3. Explain the fixture diff in the PR.
 
 Re-running without changes gives byte-identical files apart from `captured.date`.
+
+## Signing vectors (`tests/fixtures/ionic/signing.json`; D-52, #662)
+
+`capture_signing.py` runs Ionic's own `buildRequestAuthHeaders` (`PyConAPI` in `src/app/providers/pycon-api.ts`) on
+the made-up requests of `signing_driver.ts`, and commits each case with the headers Ionic computed.
+`tests/test_signing.py` checks that `core/signing.py` reproduces every one byte for byte. The same rules hold: CI
+never runs it, and the tests only read the committed JSON.
+
+| | |
+|---|---|
+| Ionic source | [PyCon/pycon-us-mobile](https://github.com/PyCon/pycon-us-mobile) at `2aa6df8a86890df2d243f9e165905957614ae47e` |
+| Copied unchanged | `src/app/providers/pycon-api.ts`, `tsconfig.json` |
+| npm package (version from Ionic's `package-lock.json`) | `sha1-uint8array` 0.10.7 (the range in `package.json` is `^0.10.5`; the lock file resolves 0.10.7) |
+| Bundler | esbuild 0.28.2, through `npx --yes esbuild@0.28.2` |
+| Runtime | Node v26.8.2, npm 11.19.1, macOS |
+| Captured | 2026-10-28 |
+
+The fixture repeats this under `captured`.
+
+How it runs, in a work directory outside the repository:
+
+1. It copies the two Ionic files above, unchanged, and this folder's `stubs.ts` (now also standing in for
+   `@capacitor/network`), `user-data.ts` and `environment.ts`, as the feed capture does.
+2. It installs `sha1-uint8array` at the version of Ionic's lock file: the one third-party code the signature runs
+   through.
+3. It bundles `signing_driver.ts` with esbuild and runs it under Node once. For each case the driver gives
+   `PyConAPI` a stand-in `Storage` holding a made-up key and secret (`test-key-0001`, `s3cr3t`; both null in the
+   signed-out case), fixes `Date.now()`, builds the path and body as Ionic's call sites do (`JSON.stringify`,
+   `encodeURIComponent` for lead capture, plain concatenation for `fetch_products`) and prints what
+   `buildRequestAuthHeaders` returned.
+
+Each case records its name, what it shows (`about`), the key, secret, `now_ms`, method, path (and the query's base,
+raw parameters and whether Ionic encodes them), the payload, the body string Ionic signed and the three headers.
+No real credential and no PSF endpoint is involved: nothing is sent anywhere.
+
+Re-run it when the Ionic reference moves or a case is added (Node 20 or later with npm):
+
+```sh
+uv run python tools/capture_ionic_reference/capture_signing.py --ionic excluded/pycon-us-mobile
+```
+
+then update the table above and run `uv run pytest tests/test_signing.py`. Re-running without changes gives a
+byte-identical file apart from `captured.date`.
