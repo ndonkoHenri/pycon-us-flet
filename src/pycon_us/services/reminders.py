@@ -36,9 +36,10 @@ if TYPE_CHECKING:  # imported only when the build has them (D-63)
 
 logger = logging.getLogger(__name__)
 
-type Access = Literal["allowed", "askable", "blocked", "unknown"]
+type Access = Literal["allowed", "askable", "refused", "blocked", "unknown"]
 """Whether the OS shows the app's notifications (ux.md §4.8, D-395): it does; it may
-still ask; it won't ask again (only the system settings can change that); unknown."""
+still ask; Android refused a request again and may not ask (F259); it won't ask again
+(only the system settings can change that); unknown."""
 
 _ACCESS: dict[str, Access] = {
     "granted": "allowed",
@@ -93,7 +94,7 @@ class Scheduler:
             when the read fails. A read that changes it calls the listeners of
             ``watch()``: Settings' Alarms & reminders card follows it (D-401).
         refused: Whether Android refused a request after the app had asked before,
-            which ``access()`` reads as "blocked" while the status says "denied"
+            which ``access()`` reads as "refused" while the status says "denied"
             (F259, U239).
     """
 
@@ -366,9 +367,11 @@ class Scheduler:
         refusal shows nothing and returns False. A failed read is logged and reads as
         "unknown".
 
-        Android's "denied" reads "blocked" once it has ``refused`` a request after an
+        Android's "denied" reads "refused" once it has ``refused`` a request after an
         earlier one: the handler says "permanently denied" only after two refusals of
         its prompt, never when the notifications are off in system settings (F259).
+        Not "blocked": the earlier request may have failed before any prompt, so the
+        OS may still ask (#716's review).
         """
         from flet_notifications import NotificationException
         from flet_permission_handler import Permission
@@ -377,7 +380,7 @@ class Scheduler:
             if self.android and self.permissions is not None:
                 status = await self.permissions.get_status(Permission.NOTIFICATION)
                 access = _ACCESS.get(status.value, "unknown") if status else "unknown"
-                return "blocked" if access == "askable" and self.refused else access
+                return "refused" if access == "askable" and self.refused else access
             enabled = await self.notifications.are_notifications_enabled()
         except (NotificationException, RuntimeError, TimeoutError) as e:
             logger.warning("Reminders: notification permission unread: %s", e)
@@ -391,9 +394,10 @@ class Scheduler:
         and sounds (the app sets no badge). A failure is logged and reads as False.
 
         Android shows its prompt twice, and a second refusal of it reads "permanently
-        denied". So a refusal after an earlier request that still reads "denied" is
-        Android answering without a prompt: the notifications are off in system
-        settings, and ``refused`` says so to ``access()`` (F259, U239).
+        denied". So a refusal after an earlier request that still reads "denied" may be
+        Android answering without a prompt, the notifications off in system settings;
+        or the first real refusal, when the earlier request failed or was cancelled
+        before a prompt. ``refused`` says so to ``access()`` (F259, U239).
 
         Args:
             asked: Whether the app has asked before in this install (the primer

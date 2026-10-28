@@ -113,15 +113,15 @@ async def test_the_request_asks_for_alerts_and_sounds_only() -> None:
 @pytest.mark.parametrize(
     ("asked", "android", "access"),
     [
-        (True, True, "blocked"),  # Android answered without its prompt (F259)
+        (True, True, "refused"),  # Android may have answered without a prompt (F259)
         (False, True, "askable"),  # Android shows its prompt twice
         (True, False, "askable"),  # iOS reads E3's answer, not the handler's
     ],
 )
-async def test_android_refusing_again_while_denied_reads_blocked(
+async def test_android_refusing_again_while_denied_reads_refused(
     asked: bool, android: bool, access: Access
 ) -> None:
-    """A refusal after an earlier ask, with the status still denied, is user-fixed."""
+    """A refusal after an earlier ask, with the status still denied, reads refused."""
     os = MemoryNotifications()
     os.enabled = os.grant = False
     permissions = MemoryPermissions(PermissionStatus.DENIED)
