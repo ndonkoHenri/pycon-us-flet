@@ -1111,48 +1111,33 @@ class ApiClient:
             self._skew = skew_from(response.headers.get("date"), self._skew)
             if response.status_code == 403 and endpoint.signed and attempt == 1 and abs(self._skew) > 300:
                 continue                                              # one retry, corrected timestamp
-            return unwrap(response)                                   # {code, data} → data; else ApiError
+            return unwrap(response, endpoint.enveloped)               # 2xx → body, or its "data"; else ApiError
         raise ApiError(403, "clock skew")
 ```
 
 - Two errors only (D-53): `NetworkError` (no answer: connection, DNS or timeout; never counted in the outbox) and `ApiError(status, message)` with `.is_auth` for 401/403. `self._http` is one `httpx.AsyncClient(base_url=..., transport=...)`; tests pass the mock's `httpx.MockTransport`.
 - Signing `url.raw_path` (exactly what httpx sends) rules out "re-encoded after signing" bugs; queries are still built the Ionic way (§10.4). `skew_from` parses the `Date` header (`email.utils.parsedate_to_datetime`). Callers trust these errors, not `ft.Connectivity`. `fetch_feed(url)` (P0) is an unsigned 10 s GET with the same errors.
 
-### 10.3 Signing (`core/signing.py`; D-52)
+### 10.3 Signing (`core/signing.py`; D-52; built in #662)
 
 ```python
-# src/pycon_us/core/signing.py
-"""Request signing, byte-compatible with Ionic's pycon-api.ts (buildRequestAuthHeaders)."""
-import hashlib
-import json
-import math
-from urllib.parse import quote
+# src/pycon_us/core/signing.py (signatures; docstrings and bodies in the module)
+JS_COMPONENT_SAFE = "!*'()~"         # encodeURIComponent keeps these besides A-Z a-z 0-9 - _ .
 
-JS_COMPONENT_SAFE = "!*'()"          # encodeURIComponent keeps A-Z a-z 0-9 - _ . ! ~ * ' ( )
-
-
-def canonical_body(obj: object) -> bytes:
-    """JSON.stringify: compact, insertion order, non-ASCII kept. Serialise once and send these bytes."""
-    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-
-
-def js_round(x: float) -> int:
-    """JavaScript Math.round (half up), not Python's banker's rounding."""
-    return math.floor(x + 0.5)
-
-
-def sign(secret: str, ts: int, method: str, path_with_query: str, body: bytes = b"") -> str:
-    """Hex SHA-1 (not HMAC) of secret + timestamp + METHOD + path + body, with no separators."""
-    base = secret.encode() + str(ts).encode() + method.upper().encode() + path_with_query.encode() + body
-    return hashlib.sha1(base).hexdigest()
-
-
-def enc(value: str) -> str:
-    """encodeURIComponent."""
-    return quote(value, safe=JS_COMPONENT_SAFE)
+def canonical_body(payload: object) -> bytes: ...
+    # JSON.stringify: json.dumps(separators=(",", ":"), ensure_ascii=False), UTF-8. Serialise once, send these bytes.
+def js_round(x: float) -> int: ...
+    # Math.round: halves go up, never to even. floor(x), plus 1 when x - floor(x) >= 0.5 (exact for any float,
+    # where floor(x + 0.5) is wrong just below a half).
+def sign(secret: str, timestamp: int, method: str, path_with_query: str, body: bytes = b"") -> str: ...
+    # hex SHA-1 (not HMAC) of secret + timestamp + METHOD + path_with_query + body, with no separators.
+def auth_headers(key: str, secret: str, now: float, method: str, path_with_query: str, body: bytes = b"") -> dict[str, str]: ...
+    # buildRequestAuthHeaders: X-API-Key, X-API-Signature, X-API-Timestamp (str(js_round(now))).
+def enc(value: str) -> str: ...
+    # encodeURIComponent: urllib.parse.quote(value, safe=JS_COMPONENT_SAFE).
 ```
 
-Headers `X-API-Key`, `X-API-Signature`, `X-API-Timestamp` (`str(ts)`; Ionic uses `Math.round(Date.now() / 1000)`). **Vectors** (`tests/test_signing.py`, secret `s3cr3t`, ts `1747324800`, recomputed with `hashlib`); D-52 adds vectors produced once by Ionic's own code (Unicode, escaping, query order, rounding) with their provenance, in `tests/fixtures/ionic/signing.json`:
+Headers `X-API-Key`, `X-API-Signature`, `X-API-Timestamp` (`str(ts)`; Ionic uses `Math.round(Date.now() / 1000)`). Only `hashlib`, `json`, `math` and `urllib` (D-75). Ionic's `[secret, ts, method, url, body].join("")` renders a null part (a signed-out secret) as `''`. **Vectors:** `tests/test_signing.py` checks the four below (secret `s3cr3t`, ts `1747324800`, recomputed with `hashlib`) and the 14 cases of `tests/fixtures/ionic/signing.json`, produced once by Ionic's own `buildRequestAuthHeaders` under Node (`tools/capture_ionic_reference/README.md`, testing-and-quality §4.1). The first two and the fourth below are also Ionic vectors there. `sha1-uint8array` 0.10.7 hashes a string as UTF-8, characters outside the BMP included, as `str.encode()` does.
 
 | Method | Path with query | Body | Signature |
 |---|---|---|---|
@@ -1161,22 +1146,24 @@ Headers `X-API-Key`, `X-API-Signature`, `X-API-Timestamp` (`str(ts)`; Ionic uses
 | POST | `/2027/api/v1/lead_retrieval/ABC123/note/` | `{"accessCode":"ABC123","note":"Interest: hot\nNotes: café"}` | `798ff969a24a536d3df9f504dcb16987f73dbd41` |
 | GET | `/2027/api/v1/check_in/fetch_products/?attendee_access_code=ABC123&category_pk_list=1,2&mode=redemption_mode` | — | `3b49566459ec1ee2a43bdae2a2d87835c9aada52` |
 
-### 10.4 Endpoints (data in `services/api.py`; under `/{year}/api/v1/`; envelopes `{code, data}` / `{code, error}`)
+### 10.4 Endpoints (data in `services/api.py`; under `/{year}/api/v1/`; the contract is `tools/mock_api/README.md`)
 
-| Name | Method and path | Body | Timeout | Notes |
-|---|---|---|---|---|
-| `authenticate` | POST `authenticate/` (**unsigned**) | `{email, password}` | 3 s | single flight |
-| `check_features` | GET `user/check_features/` | — | 2 s | absent flag = False |
-| `mobile_state` | GET / PATCH `user/mobile_state/` | — / `{favorites}` | 2 s | §10.5 |
-| `redeemable` | GET `check_in/redeemable/` | — | 2 s | categories split by `/shirt\|swag/i` |
-| `inventory` | GET `check_in/attendees_by_product_with_quantity/<id>/` | — | 20 s | per product, gathered |
-| `fetch_products` | GET `check_in/fetch_products/?…` | — | 10 s | query **not encoded** (Ionic); swag `category_pk_list` + `redemption_mode`, door `product_pk_list` + `door_check_mode` |
-| `redeem` | POST `check_in/redeem_products/` | `{attendee_access_code, badge_validator, scanned_at, "product-redeem-<id>", "product-<id>-quantity"}` | 10 s | door omits a missing validator, swag sends `""` |
-| `coc_attendees` | GET `mask_violations/attendees/` | — | 15 s | memory only |
-| `coc_capture` | GET `mask_violations/capture/?attendee_access_code=<enc>` / POST `mask_violations/capture/` | — / `{attendee_access_code, notes?, force: true}` | 5 s | POST when there are notes or `force` |
-| `lead_sponsors` | GET `lead_retrieval/sponsors/` | — | 5 s | strip quotes from names |
-| `lead_capture` | GET `lead_retrieval/capture/?attendee_access_code=<enc>&badge_validator=<enc>[&sponsor_id=<enc>]` | — | 2 s | outbox only |
-| `lead_note` | POST `lead_retrieval/<code>/note/` | `{accessCode, note[, sponsor_id]}` | 2 s | outbox only, after its capture |
+| Name | Method and path | Body | Timeout | Reply | Notes |
+|---|---|---|---|---|---|
+| `authenticate` | POST `authenticate/` (**unsigned**) | `{email, password}` | 3 s | bare | single flight |
+| `check_features` | GET `user/check_features/` | — | 2 s | bare | absent flag = False |
+| `mobile_state` | GET / PATCH `user/mobile_state/` | — / `{favorites}` | 2 s | bare / ignored | §10.5 |
+| `redeemable` | GET `check_in/redeemable/` | — | 2 s | bare | categories split by `/shirt\|swag/i` |
+| `inventory` | GET `check_in/attendees_by_product_with_quantity/<id>/` | — | 20 s | bare list | per product, gathered |
+| `fetch_products` | GET `check_in/fetch_products/?…` | — | 10 s | bare | query **not encoded** (Ionic); swag `category_pk_list` + `redemption_mode`, door `product_pk_list` + `door_check_mode` |
+| `redeem` | POST `check_in/redeem_products/` | `{attendee_access_code, badge_validator, scanned_at, "product-redeem-<id>", "product-<id>-quantity"}` | 10 s | bare | door omits a missing validator, swag sends `""` |
+| `coc_attendees` | GET `mask_violations/attendees/` | — | 15 s | `{code, data}` | memory only |
+| `coc_capture` | GET `mask_violations/capture/?attendee_access_code=<enc>` / POST `mask_violations/capture/` | — / `{attendee_access_code, notes?, force: true}` | 5 s | `{code, data}` | POST when there are notes or `force` |
+| `lead_sponsors` | GET `lead_retrieval/sponsors/` | — | 5 s | bare | strip quotes from names |
+| `lead_capture` | GET `lead_retrieval/capture/?attendee_access_code=<enc>&badge_validator=<enc>[&sponsor_id=<enc>]` | — | 2 s | `{code, data}` | outbox only |
+| `lead_note` | POST `lead_retrieval/<code>/note/` | `{accessCode, note[, sponsor_id]}` | 2 s | ignored | outbox only, after its capture |
+
+Ionic reads most replies bare and only three inside a `data` member (`{code, data}`, the 2019 envelope), so `Endpoint.enveloped` says which. Signed errors are `{code, error}` and `authenticate`'s carries `message`; the README cites each by line and lists what is unknown. Ionic also defines `check_in/attendees_by_product/<id>/` (2 s) but never calls it, so it is not ported (API-05).
 
 ### 10.5 Account and favourites sync (D-54, D-55)
 

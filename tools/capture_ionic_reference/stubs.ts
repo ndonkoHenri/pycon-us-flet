@@ -1,6 +1,7 @@
-// Minimal stand-ins for the Angular, RxJS and Ionic imports of Ionic's
-// conference-data.ts (#66). processData uses none of them: they exist only so the
-// copied file bundles unchanged. capture.py points each package name here with
+// Minimal stand-ins for the Angular, RxJS, Ionic and Capacitor imports of Ionic's
+// conference-data.ts (#66) and pycon-api.ts (#662). processData and
+// buildRequestAuthHeaders use none of them: they exist only so the copied files bundle
+// unchanged. capture.py and capture_signing.py point each package name here with
 // esbuild's --alias.
 
 export function Injectable(_options?: unknown) {
@@ -19,3 +20,9 @@ export function of(..._values: unknown[]): never {
 export const map = of;
 export const timeout = of;
 export const catchError = of;
+
+export const Network = {
+  getStatus(): never {
+    throw new Error('@capacitor/network is stubbed: only buildRequestAuthHeaders can run');
+  },
+};
