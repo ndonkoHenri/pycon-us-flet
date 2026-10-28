@@ -399,6 +399,10 @@ def tool_button(
             ),
         ),
         alignment=ft.Alignment.CENTER_LEFT,
+        # Keyed: "Leads (42)" is built here and kept by ScanScreen's own re-renders,
+        # so a result's "Add note" landing in its place would otherwise take its id,
+        # two buttons with one (U163, #622); differing keys make it a new control.
+        key=identifier,
     )
 
 

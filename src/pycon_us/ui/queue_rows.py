@@ -4,8 +4,9 @@
 of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbox row
 with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
-code, when it was scanned and a failed row's last error; ``sync_button()`` and
-``retry_button()``; ``title_row()`` with Close, ``heading()``, ``note()`` and ``empty_line()``.
+code, when it was scanned and a failed row's last error (``status_icon()``, the leads
+list's too, #743); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
+Close, ``heading()``, ``note()`` and ``empty_line()``.
 """
 
 from collections.abc import Callable
@@ -35,6 +36,22 @@ def ago(at: float, now: float) -> str:
     return ago_label(datetime.fromtimestamp(at, UTC), datetime.fromtimestamp(now, UTC))
 
 
+def status_icon(status: Status, tokens: Tokens) -> ft.Icon:
+    """Return a status's icon, decorative beside its words: queued, failed or confirmed.
+
+    Args:
+        status: The row's status.
+        tokens: The scheme's tokens: a confirmed row's cloud is in ``success``.
+    """
+    match status:
+        case Status.PENDING:
+            return ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED)
+        case Status.FAILED:
+            return ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR)
+        case Status.SYNCED:
+            return ft.Icon(ft.Icons.CLOUD_DONE_OUTLINED, color=tokens.success)
+
+
 def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
     """Return one row: its icon, kind and code, its status and age, its last error.
 
@@ -47,11 +64,7 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
         now: The current time (epoch seconds).
         tokens: The scheme's tokens.
     """
-    icon = {
-        Status.PENDING: ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED),
-        Status.FAILED: ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR),
-        Status.SYNCED: ft.Icon(ft.Icons.CLOUD_DONE_OUTLINED, color=tokens.success),
-    }[row.status]
+    icon = status_icon(row.status, tokens)
     lines: list[ft.Control] = [
         ft.Text(f"{status_text(row)} · {ago(row.created_at, now)}")
     ]

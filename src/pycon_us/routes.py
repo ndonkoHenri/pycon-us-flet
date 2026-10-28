@@ -58,6 +58,8 @@ from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.staff_door import DoorCheck
 from pycon_us.screens.staff_lead import LeadScanner
+from pycon_us.screens.staff_leads import SEGMENT as LEADS_LIST
+from pycon_us.screens.staff_leads import LeadsPage
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.venue import Venue
@@ -224,7 +226,12 @@ ROUTES = [
         pushed("help", Help),
         pushed("venue", Venue),
         # Its Scan badges card's tools (D-421): under Now, so Back returns there.
-        pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
+        pushed(
+            "staff/lead",
+            LeadScanner,
+            pushed(SPONSOR_PICKER, SponsorPicker),
+            pushed(LEADS_LIST, LeadsPage),
+        ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
     ),
     pushed("schedule", Schedule),
@@ -287,9 +294,14 @@ ROUTES = [
             pushed("sign-in", SignInPage),
         ),
         # The staff tools (D-16): /more/staff is not a page, so Back returns to More.
-        # The Lead scanner's sponsor picker is under it, so Back returns there (#740),
-        # as Door check's session picker is under Door check (#764, D-433).
-        pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
+        # The Lead scanner's sponsor picker (#740) and leads list (#743) are under it,
+        # so Back returns there, as Door check's session picker is (#764, D-433).
+        pushed(
+            "staff/lead",
+            LeadScanner,
+            pushed(SPONSOR_PICKER, SponsorPicker),
+            pushed(LEADS_LIST, LeadsPage),
+        ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
