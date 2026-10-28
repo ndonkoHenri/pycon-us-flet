@@ -3,11 +3,13 @@
 ``python -m tools.mock_api.server`` serves the same pure ``handle`` the tests drive
 through ``transport.py`` to the companion client, emulators, simulators and phones. Its
 state is in memory, so a restart is a clean slate. It answers only from ``handle``: it
-never points at, proxies or copies a PSF host (D-51). Options and base URLs are in
-``README.md`` ("Running it") and ``docs/development.md`` §6.
+never points at, proxies or copies a PSF host (D-51). ``--fault`` and ``--skew`` replay
+conference Wi-Fi on a device (D-57). Options and base URLs are in ``README.md``
+("Running it") and ``docs/development.md`` §6.
 """
 
 import argparse
+import contextlib
 import re
 import socket
 import threading
@@ -15,11 +17,23 @@ from collections.abc import Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import cast
 
-from tools.mock_api.handlers import handle
+from tools.mock_api.faults import FAULTS, Fault
 from tools.mock_api.state import CAPTURES, MockState
+from tools.mock_api.transport import handle_with_faults
 
 MAX_BODY = 1_000_000
 """The largest request body read, in bytes; no request the app sends comes near it."""
+
+HOLD = 60.0
+"""Seconds the ``timeout`` fault keeps a request unanswered at most, if the client
+doesn't hang up first; every Ionic timeout is shorter (20 s at most)."""
+
+DROPPED: dict[Fault, str] = {
+    "connect": "connect fault, dropped",
+    "timeout": "timeout fault, held unanswered",
+    "lost_response": "lost_response fault, reply dropped",
+}
+"""What the log says after the status for a request a fault took."""
 
 EMULATOR_HOST = "10.0.2.2"
 """The Android emulator's alias for the host machine's loopback."""
@@ -100,6 +114,11 @@ class MockRequestHandler(BaseHTTPRequestHandler):
         signature is checked over the bytes the client signed. The reply's headers are
         ``handle``'s alone: its ``Date`` comes from the mock's clock, which the client
         learns clock skew from (D-53), so the server adds no ``Date`` of its own.
+
+        A transport fault (D-57) sends no reply and closes the connection: ``connect``
+        at once, without running ``handle``; ``timeout`` once the client hangs up (or
+        after ``HOLD``), without running it; ``lost_response`` after ``handle`` has
+        run, so its writes stay.
         """
         server = cast(MockServer, self.server)
         length = self.headers.get("Content-Length", "0")
@@ -111,9 +130,14 @@ class MockRequestHandler(BaseHTTPRequestHandler):
             return
         body = self.rfile.read(int(length))
         with server.lock:
-            status, headers, reply = handle(
+            fault, answered = handle_with_faults(
                 server.state, self.command, self.path, dict(self.headers.items()), body
             )
+        if fault is not None:
+            self.drop(fault, answered[0] if answered else "-")
+            return
+        assert answered is not None  # no fault took it, so handle ran
+        status, headers, reply = answered
         # Logged before the reply is sent, so the line is there by the time the client
         # has its answer; send_response_only logs nothing itself.
         self.log_request(status)
@@ -125,6 +149,21 @@ class MockRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(reply)
 
     do_GET = do_POST = do_PATCH = do_PUT = do_DELETE = answer
+
+    def drop(self, fault: Fault, status: int | str) -> None:
+        """Log a request a fault took, then close its connection without a reply.
+
+        Args:
+            fault: The fault taken.
+            status: ``handle``'s status when it ran (``lost_response``), else ``-``.
+        """
+        self.log_request(f"{status} ({DROPPED[fault]})")
+        self.close_connection = True
+        if fault == "timeout":
+            # Wait for the client to give up: its read returns b"" once it hangs up.
+            self.connection.settimeout(HOLD)
+            with contextlib.suppress(OSError):  # HOLD passed first
+                self.rfile.read(1)
 
 
 def lan_addresses() -> list[str]:
@@ -176,6 +215,7 @@ def banner(host: str, port: int, state: MockState, lan: Sequence[str]) -> str:
             lines.append(f"  phones on the Wi-Fi          http://{address}:{port}")
     else:
         lines.append(f"  devices that reach {host}  http://{host}:{port}")
+    lines.extend(fault_lines(state))
     lines.append("Seeded accounts (fake; they work only against this mock):")
     email = max(len(account.email) for account in state.accounts)
     password = max(len(account.password) for account in state.accounts)
@@ -186,12 +226,29 @@ def banner(host: str, port: int, state: MockState, lan: Sequence[str]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Sequence[str] | None = None) -> None:
-    """Run the server until Ctrl-C.
+def fault_lines(state: MockState) -> list[str]:
+    """Say which faults are on and how far the clock is skewed, for the banner.
 
     Args:
-        argv: The command-line arguments; None reads ``sys.argv``.
+        state: The mock's state.
+
+    Returns:
+        One line for the faults and one for the skew, each only when there is one.
     """
+    lines = []
+    if state.faults.on:
+        faults = ", ".join(
+            f"{fault} ({'every request' if every else 'next request'})"
+            for fault, every in state.faults.on.items()
+        )
+        lines.append(f"Faults on (D-57): {faults}.")
+    if state.skew:
+        lines.append(f"Clock skewed {state.skew:+g} s from this machine's.")
+    return lines
+
+
+def parser() -> argparse.ArgumentParser:
+    """The command line's parser: where to listen, the semantics and the faults."""
     parser = argparse.ArgumentParser(
         prog="python -m tools.mock_api.server",
         description="Serve the mock PyCon API (fake data only) over HTTP.",
@@ -209,8 +266,45 @@ def main(argv: Sequence[str] | None = None) -> None:
         default="idempotent",
         help="how a repeated capture or redeem is applied (D-57; default idempotent)",
     )
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--fault",
+        action="append",
+        choices=FAULTS,
+        default=[],
+        help="a fault for the next request (repeat for several; D-57)",
+    )
+    parser.add_argument(
+        "--every-request",
+        action="store_true",
+        help="keep each --fault on for every request until the server stops",
+    )
+    parser.add_argument(
+        "--skew",
+        type=float,
+        default=0.0,
+        metavar="SECONDS",
+        help="run the mock's clock this far ahead (behind when negative; default 0)",
+    )
+    return parser
+
+
+def state_for(args: argparse.Namespace) -> MockState:
+    """A fresh seeded state with the command line's semantics, faults and skew."""
     state = MockState.from_seed(capture=args.capture)
+    for fault in args.fault:
+        state.faults.inject(fault, until_cleared=args.every_request)
+    state.skew = args.skew
+    return state
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    """Run the server until Ctrl-C.
+
+    Args:
+        argv: The command-line arguments; None reads ``sys.argv``.
+    """
+    args = parser().parse_args(argv)
+    state = state_for(args)
     with MockServer((args.host, args.port), state) as server:
         port = server.server_port
         print(banner(args.host, port, state, lan_addresses()), flush=True)

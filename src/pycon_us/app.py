@@ -17,6 +17,7 @@ from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, read_accessibility, use_prefs
+from pycon_us.reminder_schedule import use_reminder_schedule
 from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
@@ -89,6 +90,8 @@ def App(memory: ViewMemory):
     use_reminder_banner(svc, conference, favorites, ready=ready)
     # Each recorded batch's "Schedule updated · Review" (D-255, D-335), before the gate.
     use_review_snack_bar(svc, change_log, favorites, prefs)
+    # E3's reminders, applied once the start has loaded, and at every change (D-389).
+    use_reminder_schedule(svc, conference, favorites, change_log, prefs)
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
     # under the Schedule's first jump (D-216).
@@ -277,7 +280,10 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
        return, so a button that opened another app's window gets the focus back
        (``ui.focus_back``, D-372).
     2. The feed refreshes when the last refresh began 15 min ago or more (D-40).
-    3. The OS's accessibility flags are read again. The OS reports them as a snapshot,
+    3. E3's reminders are applied again, which brings back what the OS dropped
+       meanwhile (D-222, D-389); without E3 there is nothing to apply. Asked before
+       the await below, so a slow read never holds it back.
+    4. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
        applies without a restart (D-23, D-34, D-173). On Android such a change can
        reach Flutter only after this read, and then applies at the next resume:
@@ -291,6 +297,8 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     svc.foreground.set()
     svc.presence.come_back()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
+    if svc.reminders is not None:
+        svc.reminders.request()
     await read_accessibility(svc.semantics, prefs)
 
 

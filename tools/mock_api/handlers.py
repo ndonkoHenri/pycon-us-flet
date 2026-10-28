@@ -1,11 +1,12 @@
 """The mock API's pure request handler: routing, envelopes, signing, accounts (D-50).
 
 ``handle`` takes a request as plain values and returns a reply as plain values: it does
-no I/O and reads the time only from ``MockState.now``, so the tests drive it directly or
-through ``transport.py``, and the LAN server wraps the same function. This module holds
-the routing, the envelopes, the signature check and the account endpoints; the staff
-endpoints live in ``check_in.py``, ``conduct.py`` and ``leads.py``, and the state in
-``state.py`` (contract in ``README.md``).
+no I/O and reads the time only from ``MockState.now`` (plus its ``skew``), so the tests
+drive it directly or through ``transport.py``, and the LAN server wraps the same
+function. This module holds the routing, the envelopes, the signature check, the
+``revoked`` fault and the account endpoints; the staff endpoints live in
+``check_in.py``, ``conduct.py`` and ``leads.py``, and the state in ``state.py``
+(contract in ``README.md``).
 """
 
 import hmac
@@ -47,10 +48,11 @@ def handle(
         body: The body bytes exactly as sent.
 
     Returns:
-        The status, the headers (``Content-Type`` and a ``Date`` from ``state.now``,
-        which the client uses to learn clock skew, D-53) and the JSON body.
+        The status, the headers (``Content-Type`` and a ``Date`` from the mock's clock,
+        ``state.now`` plus ``state.skew``, which the client learns skew from, D-53) and
+        the JSON body.
     """
-    now = state.now()
+    now = state.now() + state.skew
     try:
         status, payload = route(state, now, method, raw_path, headers, body)
     except Refused as refused:
@@ -76,7 +78,7 @@ def route(
 
     Args:
         state: The mock's state.
-        now: The time of this request, from ``state.now``.
+        now: The time of this request, ``state.now()`` plus ``state.skew``.
         method: The HTTP method as sent.
         raw_path: The request target exactly as sent.
         headers: The request headers.
@@ -156,7 +158,8 @@ def verify(
         The account the key belongs to.
 
     Raises:
-        Refused: 401 for a missing or unknown key; 403 for a missing or malformed
+        Refused: 401 for a missing or unknown key, or while the ``revoked`` fault is
+            on (D-57); 403 for a missing or malformed
             timestamp, one more than ``WINDOW`` seconds from ``now``, or a wrong
             signature.
     """
@@ -165,6 +168,8 @@ def verify(
     account = next((a for a in state.accounts if a.key == key), None)
     if key is None or account is None:
         raise Refused(401, "Unknown API key.")
+    if state.faults.take("revoked"):
+        raise Refused(401, "API key revoked.")
     stamp = lower.get("x-api-timestamp", "")
     # Only the digits Ionic sends: "+5", " 5" or "05" would sign as another string.
     try:

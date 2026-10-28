@@ -622,14 +622,30 @@ uv run python -m tools.mock_api.server                  # this machine, its simu
 uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the same Wi-Fi
 ```
 
-The options (`--host`, default `127.0.0.1`; `--port`, default `8000`; `--capture idempotent|non_idempotent`) are in
-[`tools/mock_api/README.md`](../tools/mock_api/README.md) ("Running it").
+The options (`--host`, default `127.0.0.1`; `--port`, default `8000`; `--capture idempotent|non_idempotent`; the
+faults below) are in [`tools/mock_api/README.md`](../tools/mock_api/README.md) ("Running it").
 - **On start,** it prints the base URL for each kind of device (its LAN address with `--host 0.0.0.0`) and the seeded
   accounts' emails and passwords. There is one account per role, from `tests/fixtures/mock/`; the keys and secrets are
   fake and exist only for the mock, and the server never prints or logs them.
 - **State** is in memory, so a restart is a clean slate. This also suits demos.
-- **Faults (D-57)** other than the capture semantics (dropped connections, timeouts, "server committed, response
-  lost", expired auth, a skewed clock with `--skew SECONDS`) come with #667.
+- **Faults (D-57)** replay conference Wi-Fi on a device. `--fault NAME` switches one on for the next request it
+  applies to (repeat it for several; `--every-request` keeps them on until the server stops), and `--skew SECONDS`
+  runs the mock's clock ahead (behind when negative):
+
+  ```bash
+  uv run python -m tools.mock_api.server --fault lost_response --skew 900
+  ```
+
+  | `--fault` | The server | The app sees |
+  |---|---|---|
+  | `connect` | closes the connection unanswered; nothing applied | a network error |
+  | `timeout` | holds the request until the app gives up (60 s at most); nothing applied | a network error |
+  | `lost_response` | applies the request, then closes the connection without the reply | a network error, though the server holds the record |
+  | `revoked` | refuses a signed request with 401 (sign-in still works) | an auth error |
+
+  The banner lists the faults and the skew that are on, and the log marks each request a fault took, e.g.
+  `POST /2026/api/v1/authenticate/ 200 (lost_response fault, reply dropped)`. Tests switch the same faults on
+  `MockState` (`state.faults.inject(...)`, `state.skew`); the mock README's "Faults" says what each simulates.
 
 **Connect the app:** Developer screen › Mock API base URL.
 
