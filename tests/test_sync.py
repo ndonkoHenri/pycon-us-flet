@@ -208,6 +208,48 @@ async def test_a_sign_out_mid_pass_stops_it_before_the_next_row(rig: Rig) -> Non
     assert rig.state.redemptions == []
 
 
+async def test_a_pause_mid_pass_stops_it_before_the_next_row(rig: Rig) -> None:
+    """Paused during the first of two sends, the second waits for the resume (D-407)."""
+    await rig.sign_in("staff")
+    rig.lead(sponsor="2")
+    rig.door()
+    foreground = asyncio.Event()
+    foreground.set()
+
+    async def pause() -> None:
+        """Send the app to the background, as ``on_pause()`` does."""
+        foreground.clear()
+
+    rig.wire.then = pause  # right after the lead's reply
+    await rig.worker(foreground).drain()
+    assert rig.sends() == [(CAPTURE, key(rig, "staff"))]
+    assert [row.status for row in rig.rows()] == [Status.SYNCED, Status.PENDING]
+    foreground.set()
+    await rig.worker(foreground).drain()
+    assert [row.status for row in rig.rows()] == [Status.SYNCED, Status.SYNCED]
+
+
+async def test_a_skew_retry_keeps_its_key_through_an_account_switch(rig: Rig) -> None:
+    """The clock-corrected second attempt signs with the first one's key (D-56).
+
+    The account changes while the skew-refused capture is in flight; the retry still
+    carries the row owner's key, never the new account's.
+    """
+    await rig.sign_in("staff")
+    rig.lead(sponsor="2")
+    rig.state.skew = 900  # the client learnt none at sign-in: the capture is refused
+
+    async def switch() -> None:
+        """Sign out and in as another account while the 403 is on its way back."""
+        await rig.sign_out()
+        await rig.sign_in("all")
+
+    rig.wire.then = switch
+    await rig.worker().drain()
+    assert rig.sends() == [(CAPTURE, key(rig, "staff"))] * 2
+    assert len(rig.state.leads) == 1
+
+
 async def test_a_refused_key_stops_the_pass_uncounted_and_says_so(rig: Rig) -> None:
     """``revoked``: the row waits with its tries, and the account's flags are asked."""
     await rig.sign_in("sponsor")

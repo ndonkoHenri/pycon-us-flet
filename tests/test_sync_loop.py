@@ -214,6 +214,33 @@ async def test_no_worker_without_a_client_or_while_expired(
         await task
 
 
+@pytest.mark.parametrize("connected", [True, False], ids=["expired", "no-client"])
+async def test_a_sign_out_without_a_worker_still_clears_staff(
+    rig: Rig, svc: Services, connected: bool
+) -> None:
+    """Expired or without a mock URL, ``Staff`` keeps its state until the sign-out.
+
+    Neither has a worker, so the sign-out changes no target; it clears ``Staff`` all
+    the same (D-407).
+    """
+    if connected:
+        await svc.private_api.connect(BASE_URL, 2026)
+    await rig.sign_in("sponsor")
+    rig.account.expired = connected
+    rig.staff.pending, rig.staff.failed = 3, 1
+    rig.staff.last_error = "Timestamp outside the window."
+    task = asyncio.create_task(supervise(svc, rig.account, rig.staff))
+    await asyncio.sleep(0.01)
+    assert not workers()
+    assert (rig.staff.pending, rig.staff.failed) == (3, 1)
+    await rig.sign_out()
+    await until(lambda: rig.staff.pending == 0)
+    assert (rig.staff.failed, rig.staff.last_error) == (0, None)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
 def test_a_reconnection_wakes_the_loop_and_no_connection_does_not() -> None:
     """Any connectivity but ``NONE`` sets the wake; ``NONE`` alone leaves it."""
     wake = asyncio.Event()

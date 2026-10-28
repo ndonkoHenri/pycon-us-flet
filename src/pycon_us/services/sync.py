@@ -132,10 +132,15 @@ class SyncWorker:
         self._wake.set()
 
     def _may_send(self, owner: str) -> bool:
-        """Whether rows of ``owner`` may still be sent with this worker's client."""
+        """Whether rows of ``owner`` may still be sent with this worker's client.
+
+        Checked before each row: in the background (``foreground`` clear) a pass stops
+        and its rows stay due for the resume's kick (D-407).
+        """
         account = self._account
         return (
             not (self._closed is not None and self._closed.is_set())
+            and (self._foreground is None or self._foreground.is_set())
             and account.signed_in
             and not account.expired
             and account.owner == owner
@@ -167,8 +172,8 @@ class SyncWorker:
         pass goes in it too, and so does a row edited while it was sent; a row is
         never sent twice at the same revision in one pass, so a save that failed
         cannot loop. Before each row the account is checked again: a sign-out,
-        another account or ``expired`` stops the pass, so no row is ever sent with
-        another owner's key.
+        another account, ``expired`` or a pause stops the pass, so no row is ever
+        sent with another owner's key, nor in the background.
 
         Returns:
             The last failure's message (None without one), and whether the server
@@ -269,7 +274,8 @@ async def supervise(
 
     Every change of the account or the settings (where the mock URL is kept) checks
     the target again; a new target stops the old worker before the next starts, so
-    two never send at once. Signed out, ``Staff`` is cleared; signed in, it takes the
+    two never send at once. Signed out, ``Staff`` is cleared, whatever the target was
+    (an expired account or no client has none either); signed in, it takes the
     owner's counts at once. Returns when the session closes; cancelling it (the
     effect's unmount) stops the worker too.
 
@@ -296,6 +302,8 @@ async def supervise(
             if now != target:
                 await _stop(task)
                 target, task = now, _start(svc, account, staff, now)
+            if not account.signed_in:  # after the stop: a cancelled pass reports
+                staff.clear()
             await _first_set(changed, svc.closed)
     finally:
         await _stop(task)
@@ -309,13 +317,11 @@ def _start(
     staff: Staff,
     target: tuple[ApiClient, str] | None,
 ) -> asyncio.Task[None] | None:
-    """Start a worker's loop for ``target``; without one, clear ``Staff`` if signed out.
+    """Start a worker's loop for ``target``, or none without one.
 
     An expired account keeps its counts: its rows wait for the next sign-in.
     """
     if target is None or svc.outbox is None:
-        if not account.signed_in:
-            staff.clear()
         return None
     api, owner = target
     logger.info("Staff sync started")

@@ -7,6 +7,7 @@ write), and one clock the mock, the client and the worker share. ``Wire`` record
 request and lets a test hold one or act right after it.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from functools import partial
 
@@ -114,8 +115,12 @@ class Rig:
         """Sign the account out, as Account › Sign out does."""
         await self.account.sign_out(self._storage, self._credentials)
 
-    def worker(self) -> SyncWorker:
-        """A worker for this rig's client, counting refusals in ``refused``."""
+    def worker(self, foreground: asyncio.Event | None = None) -> SyncWorker:
+        """A worker for this rig's client, counting refusals in ``refused``.
+
+        Args:
+            foreground: The app's foreground event; None for always in the foreground.
+        """
 
         def refused() -> None:
             self.refused += 1
@@ -125,6 +130,7 @@ class Rig:
             self.api,
             self.account,
             self.staff,
+            foreground=foreground,
             on_refused=refused,
             now=self.clock,
         )
