@@ -1111,7 +1111,7 @@ class ApiClient:
             self._skew = skew_from(response.headers.get("date"), self._skew)
             if response.status_code == 403 and endpoint.signed and attempt == 1 and abs(self._skew) > 300:
                 continue                                              # one retry, corrected timestamp
-            return unwrap(response)                                   # {code, data} → data; else ApiError
+            return unwrap(response, endpoint.enveloped)               # 2xx → body, or its "data"; else ApiError
         raise ApiError(403, "clock skew")
 ```
 
@@ -1161,22 +1161,24 @@ Headers `X-API-Key`, `X-API-Signature`, `X-API-Timestamp` (`str(ts)`; Ionic uses
 | POST | `/2027/api/v1/lead_retrieval/ABC123/note/` | `{"accessCode":"ABC123","note":"Interest: hot\nNotes: café"}` | `798ff969a24a536d3df9f504dcb16987f73dbd41` |
 | GET | `/2027/api/v1/check_in/fetch_products/?attendee_access_code=ABC123&category_pk_list=1,2&mode=redemption_mode` | — | `3b49566459ec1ee2a43bdae2a2d87835c9aada52` |
 
-### 10.4 Endpoints (data in `services/api.py`; under `/{year}/api/v1/`; envelopes `{code, data}` / `{code, error}`)
+### 10.4 Endpoints (data in `services/api.py`; under `/{year}/api/v1/`; the contract is `tools/mock_api/README.md`)
 
-| Name | Method and path | Body | Timeout | Notes |
-|---|---|---|---|---|
-| `authenticate` | POST `authenticate/` (**unsigned**) | `{email, password}` | 3 s | single flight |
-| `check_features` | GET `user/check_features/` | — | 2 s | absent flag = False |
-| `mobile_state` | GET / PATCH `user/mobile_state/` | — / `{favorites}` | 2 s | §10.5 |
-| `redeemable` | GET `check_in/redeemable/` | — | 2 s | categories split by `/shirt\|swag/i` |
-| `inventory` | GET `check_in/attendees_by_product_with_quantity/<id>/` | — | 20 s | per product, gathered |
-| `fetch_products` | GET `check_in/fetch_products/?…` | — | 10 s | query **not encoded** (Ionic); swag `category_pk_list` + `redemption_mode`, door `product_pk_list` + `door_check_mode` |
-| `redeem` | POST `check_in/redeem_products/` | `{attendee_access_code, badge_validator, scanned_at, "product-redeem-<id>", "product-<id>-quantity"}` | 10 s | door omits a missing validator, swag sends `""` |
-| `coc_attendees` | GET `mask_violations/attendees/` | — | 15 s | memory only |
-| `coc_capture` | GET `mask_violations/capture/?attendee_access_code=<enc>` / POST `mask_violations/capture/` | — / `{attendee_access_code, notes?, force: true}` | 5 s | POST when there are notes or `force` |
-| `lead_sponsors` | GET `lead_retrieval/sponsors/` | — | 5 s | strip quotes from names |
-| `lead_capture` | GET `lead_retrieval/capture/?attendee_access_code=<enc>&badge_validator=<enc>[&sponsor_id=<enc>]` | — | 2 s | outbox only |
-| `lead_note` | POST `lead_retrieval/<code>/note/` | `{accessCode, note[, sponsor_id]}` | 2 s | outbox only, after its capture |
+| Name | Method and path | Body | Timeout | Reply | Notes |
+|---|---|---|---|---|---|
+| `authenticate` | POST `authenticate/` (**unsigned**) | `{email, password}` | 3 s | bare | single flight |
+| `check_features` | GET `user/check_features/` | — | 2 s | bare | absent flag = False |
+| `mobile_state` | GET / PATCH `user/mobile_state/` | — / `{favorites}` | 2 s | bare / ignored | §10.5 |
+| `redeemable` | GET `check_in/redeemable/` | — | 2 s | bare | categories split by `/shirt\|swag/i` |
+| `inventory` | GET `check_in/attendees_by_product_with_quantity/<id>/` | — | 20 s | bare list | per product, gathered |
+| `fetch_products` | GET `check_in/fetch_products/?…` | — | 10 s | bare | query **not encoded** (Ionic); swag `category_pk_list` + `redemption_mode`, door `product_pk_list` + `door_check_mode` |
+| `redeem` | POST `check_in/redeem_products/` | `{attendee_access_code, badge_validator, scanned_at, "product-redeem-<id>", "product-<id>-quantity"}` | 10 s | bare | door omits a missing validator, swag sends `""` |
+| `coc_attendees` | GET `mask_violations/attendees/` | — | 15 s | `{code, data}` | memory only |
+| `coc_capture` | GET `mask_violations/capture/?attendee_access_code=<enc>` / POST `mask_violations/capture/` | — / `{attendee_access_code, notes?, force: true}` | 5 s | `{code, data}` | POST when there are notes or `force` |
+| `lead_sponsors` | GET `lead_retrieval/sponsors/` | — | 5 s | bare | strip quotes from names |
+| `lead_capture` | GET `lead_retrieval/capture/?attendee_access_code=<enc>&badge_validator=<enc>[&sponsor_id=<enc>]` | — | 2 s | `{code, data}` | outbox only |
+| `lead_note` | POST `lead_retrieval/<code>/note/` | `{accessCode, note[, sponsor_id]}` | 2 s | ignored | outbox only, after its capture |
+
+Ionic reads most replies bare and only three inside a `data` member (`{code, data}`, the 2019 envelope), so `Endpoint.enveloped` says which. Signed errors are `{code, error}` and `authenticate`'s carries `message`; the README cites each by line and lists what is unknown. Ionic also defines `check_in/attendees_by_product/<id>/` (2 s) but never calls it, so it is not ported (API-05).
 
 ### 10.5 Account and favourites sync (D-54, D-55)
 
