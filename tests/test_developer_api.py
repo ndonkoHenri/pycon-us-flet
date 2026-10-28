@@ -128,7 +128,10 @@ def test_with_no_url_there_is_a_labelled_field_and_no_check(
     render: Callable[[], ft.Column], svc: Services
 ) -> None:
     """Without a URL: the field, Clear and Save, a hidden outcome, no check, no client."""
-    nodes = identified(render())
+    column = render()
+    # Full width, as the page's other rows: Clear and Save end-aligned (#668).
+    assert column.horizontal_alignment == ft.CrossAxisAlignment.STRETCH
+    nodes = identified(column)
     assert set(nodes) == {
         "developer.mock_api_url",
         "developer.mock_api_clear",

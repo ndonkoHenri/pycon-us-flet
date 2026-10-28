@@ -183,6 +183,9 @@ def MockApiSection() -> ft.Control:
             ),
         ],
         spacing=0,
+        # As the ListView lays out the page's other rows: full width, so the field
+        # spans the page and Clear and Save sit at the end, as Reset and Apply do.
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
     )
 
 
