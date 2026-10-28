@@ -132,9 +132,9 @@ def new_issue_url(source_url: str) -> str:
 def centre(page: ft.Page) -> ft.Offset | None:
     """Return the middle of the window, where the share sheet points from on a tablet.
 
-    At the pin an iPad still refuses it: Flet sends the point without a size, and
-    share_plus wants a rectangle that is not empty, so a share there fails and says so
-    (F115, U95).
+    Flet sends the point without a size; since the pin ``08b89cce5`` share_plus 13.3.1
+    turns that empty rectangle into a small one at the view's centre, so an iPad opens
+    the sheet (F263; before, it refused, F115).
     """
     if not page.width or not page.height:
         return None

@@ -1333,7 +1333,7 @@ class SyncWorker:
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 
-`staff_entries(flags)` (pure) drives the More "Staff tools" section and the Now card.
+`staff_entries(flags)` (pure, `core/staff_tools.py`, #722) drives the More "Staff tools" section and the Now card: the `StaffTool`s (key `lead`, `door`, `swag` or `coc`, title, `ft.Icons` name, route `/more/staff/<key>`) an account may open, in O-7's order. `flags` maps the `Account` attribute names `lead_retrieval`, `door_check` and `mask_violation` to booleans; an absent flag, or anything but `True`, is off (SHELL-11). `may_open(key, flags)` is a screen's re-check and `scans_for_sponsor(flags)` the picker's rule.
 
 | Entry | Rule |
 |---|---|
@@ -1348,8 +1348,8 @@ Each staff screen re-checks its rule ("Not available for this account"), so deep
 
 ### 12.5 Badges, admission and the scan surface
 
-- `parse_badge(raw)`: code = segment 0; validator = segment 1 for door and swag, the **last** segment for lead; CoC sends the code only (LEAD-03). `decide(code, products, inventory, kept_rows)` admits optimistically; an unknown badge falls back to `fetch_products` online, "Entry not permitted" offline (DOOR-04).
-- One `ScanScreen` for all four tools (D-65): the E1 preview when `capabilities.SCANNER`; a manual `TextField(on_submit=...)` for the `code:validator` payload, which HID scanners also type; one accepted result per code every 4 s; outcomes as colour, icon and word, with haptics and a `Semantics(live_region=True)` panel; the screen stays awake while mounted (an `async def` effect awaits `svc.wakelock.enable()`; its **sync** cleanup calls `ft.context.page.run_task(svc.wakelock.disable)`, rule 3); camera permission via `await svc.permissions.request(Permission.CAMERA)` after a primer.
+- `parse_badge(raw)` (`core/badges.py`, #722) returns a `Badge` (`code`, `door_validator`, `lead_validator`), or None for no `:` or an empty code after stripping whitespace ("Not a badge code"): code = segment 0; validator = segment 1 for door and swag, the **last** segment for lead; CoC sends the code only (LEAD-03). `decide(code, products, inventory, kept_rows)` admits optimistically; an unknown badge falls back to `fetch_products` online, "Entry not permitted" offline (DOOR-04).
+- One `ScanScreen` for all four tools (D-65): the E1 preview when `capabilities.SCANNER`; a manual `TextField(on_submit=...)` for the `code:validator` payload, which HID scanners also type; one accepted result per code every 4 s (`core/badges.py`'s `Cooldown`, whose `accept(code, now)` takes the time in); outcomes as colour, icon and word, with haptics and a `Semantics(live_region=True)` panel; the screen stays awake while mounted (an `async def` effect awaits `svc.wakelock.enable()`; its **sync** cleanup calls `ft.context.page.run_task(svc.wakelock.disable)`, rule 3); camera permission via `await svc.permissions.request(Permission.CAMERA)` after a primer.
 
 ---
 
