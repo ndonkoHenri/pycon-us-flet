@@ -151,8 +151,13 @@ def age_line(seconds: float) -> ft.Control:
     Args:
         seconds: The result's age.
     """
-    return ft.Text(
-        f"Read {seconds_ago(seconds)}",
-        theme_style=ft.TextThemeStyle.BODY_SMALL,
-        color=ft.Colors.ON_SURFACE_VARIANT,
+    # A node of its own: else its column takes the text, and a screen reader read
+    # the age before the result (seen on the iOS simulator, #723).
+    return ft.Semantics(
+        container=True,
+        content=ft.Text(
+            f"Read {seconds_ago(seconds)}",
+            theme_style=ft.TextThemeStyle.BODY_SMALL,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        ),
     )
