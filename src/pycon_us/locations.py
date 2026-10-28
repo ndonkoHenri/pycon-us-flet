@@ -45,6 +45,8 @@ PAGES = frozenset(
         "/now/staff/lead/leads",
         "/now/staff/door",
         "/now/staff/door/session",
+        "/now/staff/swag",
+        "/now/staff/coc",
         "/my-schedule/settings",
         "/more/speakers",
         "/more/tracks",
@@ -75,6 +77,8 @@ PAGES = frozenset(
         f"{LEAD_SCANNER}/leads",
         "/more/staff/door",
         "/more/staff/door/session",
+        "/more/staff/swag",
+        "/more/staff/coc",
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).

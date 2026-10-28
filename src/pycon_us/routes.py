@@ -56,10 +56,12 @@ from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
+from pycon_us.screens.staff_coc import CocScanner
 from pycon_us.screens.staff_door import DoorCheck
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.screens.staff_leads import SEGMENT as LEADS_LIST
 from pycon_us.screens.staff_leads import LeadsPage
+from pycon_us.screens.staff_swag import SwagPickup
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.venue import Venue
@@ -233,6 +235,8 @@ ROUTES = [
             pushed(LEADS_LIST, LeadsPage),
         ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
+        pushed("staff/swag", SwagPickup),
+        pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),
     pushed("schedule", Schedule),
     pushed(
@@ -303,6 +307,8 @@ ROUTES = [
             pushed(LEADS_LIST, LeadsPage),
         ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
+        pushed("staff/swag", SwagPickup),  # by deep link until #769's entries
+        pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

@@ -102,6 +102,10 @@ STAFF_DOOR_SESSION: Pref[dict[str, Any]] = Pref("pycon.staff_door_session", {})
 product_ids, label, all}`` (DOOR-02; ``core/door_sessions.py``); ``{}`` until one is
 chosen. A staff key (D-414), read as Door check opens and as it comes back on top, as
 the sponsor is (D-425, D-433)."""
+STAFF_SWAG_CATEGORIES: Pref[list[str]] = Pref("pycon.staff_swag_categories", [])
+"""The swag category ids Swag pickup hands out, as strings (SHIRT-01; #768): a
+SharedPreferences string list, as ``excluded_tracks``. A staff key (D-414), read as
+the screen opens, as the sponsor is (D-425); ids no longer in the catalog are ignored."""
 
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
@@ -118,6 +122,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     SCANNER_CONSENT,
     STAFF_SPONSOR,
     STAFF_DOOR_SESSION,
+    STAFF_SWAG_CATEGORIES,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""
