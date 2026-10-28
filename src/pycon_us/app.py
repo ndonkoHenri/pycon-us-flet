@@ -23,6 +23,7 @@ from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
+from pycon_us.services.favorites_sync import use_favorites_sync
 from pycon_us.services.reminders import LAUNCH_WAIT
 from pycon_us.services.sync import use_sync_worker
 from pycon_us.staff import Staff, StaffCtx
@@ -101,6 +102,8 @@ def App(memory: ViewMemory):
     use_reminder_schedule(svc, conference, favorites, change_log, prefs)
     # A reminder tap navigates once the gate is open; before, Start opens it (D-396).
     use_reminder_taps(svc, ready=ready)
+    # Favourites follow the mock account while signed in, from the start (D-406).
+    use_favorites_sync(svc, favorites, account, prefs)
     # The one staff sync loop, while signed in with a mock URL (D-56, D-407).
     use_sync_worker(svc, account, staff, prefs)
 
@@ -318,6 +321,7 @@ async def on_resume(
     4. The mock account's role flags are refreshed in the background, so a role
        given or taken away while the app was away shows, and a revoked key asks
        for a sign-in (D-54, D-57); signed out or with no mock URL, nothing is sent.
+       The favourites sync pulls, and sends an edit that failed before (D-406).
     5. The staff sync loop passes at once (``Services.kick_sync``, D-56).
     6. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
@@ -337,6 +341,7 @@ async def on_resume(
     if svc.reminders is not None:
         svc.reminders.request()
     account.refresh_flags(svc.api, svc.storage, closed=svc.closed)
+    svc.favorites_sync.request()
     svc.kick_sync()
     await read_accessibility(svc.semantics, prefs)
 

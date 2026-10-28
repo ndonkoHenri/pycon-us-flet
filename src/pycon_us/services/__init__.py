@@ -19,6 +19,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.services.api import ApiClient, Credentials
 from pycon_us.services.credentials import CredentialStorage, secure_storage
 from pycon_us.services.data_files import data_dir
+from pycon_us.services.favorites_sync import FavoritesSync
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.presence import Presence
 from pycon_us.services.private_api import PrivateApi, signed_out
@@ -113,6 +114,8 @@ class Services:
         outbox: The staff outbox's database (``services.outbox_db``, D-49), which
             opens ``outbox.db`` on first use: only the staff tools use it, and D-51
             hides them without a mock API URL. ``None`` in tests that don't need it.
+        favorites_sync: Keeps the favourites in step with the mock account while
+            signed in (``services.favorites_sync``, D-406); ``App`` runs it.
         sync_wake: Set to ask the staff sync loop for a pass now (``kick_sync()``):
             an enqueue, "Sync now", a resume and a reconnection (D-56).
         connectivity: The platform's connectivity: a change to anything but
@@ -143,6 +146,7 @@ class Services:
         default_factory=lambda: CredentialStorage(secure=None)
     )
     outbox: OutboxDb | None = None
+    favorites_sync: FavoritesSync = field(default_factory=FavoritesSync)
     sync_wake: asyncio.Event = field(default_factory=asyncio.Event)
     connectivity: ft.Connectivity | None = None
 
@@ -210,6 +214,7 @@ class Services:
         self.sync_wake.set()  # and the staff sync loop's wait (services.sync)
         if self.reminders is not None:  # and the reminders' loop, which then returns
             self.reminders.request()
+        self.favorites_sync.request()  # and the favourites sync's, which returns too
         if self.outbox is not None:  # a late write is refused, not raised (D-120)
             self.outbox.close()
 
