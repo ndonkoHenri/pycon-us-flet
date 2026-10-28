@@ -1,0 +1,424 @@
+"""The staff outbox's sqlite database, ``outbox.db`` in the data directory (D-49, D-56).
+
+``core/outbox.py`` decides what a scan, a send or a sign-out does to the rows; this module
+only stores them. One connection, opened on first use and used only from the asyncio
+loop thread: statements take milliseconds, so nothing goes to ``to_thread``, and
+sqlite's ``check_same_thread`` refuses any other thread (D-49). The file is in WAL
+mode and migrated by ``PRAGMA user_version``. S1 ran ``sqlite3`` in the packaged
+runtime on both platforms, and the file survived update installs (D-108).
+
+A database that cannot be opened, read or written is an expected failure: it is logged
+and returned, never raised (D-120), so the caller can say "Couldn't save the scan".
+"""
+
+import contextlib
+import json
+import logging
+import sqlite3
+from collections.abc import Callable, Collection, Iterator
+from dataclasses import dataclass, replace
+from pathlib import Path
+
+from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
+
+logger = logging.getLogger(__name__)
+
+FILE_NAME = "outbox.db"
+"""The database's file in the data directory (D-108)."""
+
+OUTBOX_V1 = """
+CREATE TABLE IF NOT EXISTS outbox (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind         TEXT NOT NULL CHECK (kind IN ('lead', 'note', 'door')),
+    key          TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    owner        TEXT NOT NULL,
+    sponsor_id   TEXT,
+    sponsor_name TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending', 'synced', 'failed')),
+    tries        INTEGER NOT NULL DEFAULT 0,
+    next_at      REAL NOT NULL,
+    created_at   REAL NOT NULL,
+    last_error   TEXT,
+    idem_key     TEXT,
+    revision     INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS outbox_due ON outbox (owner, status, next_at);
+CREATE INDEX IF NOT EXISTS outbox_key ON outbox (owner, kind, key);
+CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key)
+    WHERE idem_key IS NOT NULL;
+"""
+"""The first schema (architecture §12.1): the table and its three indexes."""
+
+MIGRATIONS = (OUTBOX_V1,)
+"""Each schema change, in order: a file at ``user_version`` n runs the ones after n."""
+
+DUE_SQL = """
+SELECT o.* FROM outbox o
+WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
+  AND (o.kind <> 'note' OR EXISTS (SELECT 1 FROM outbox l WHERE l.owner = o.owner
+       AND l.kind = 'lead' AND l.key = o.key AND l.status = 'synced'))
+ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id
+"""
+"""The due rows in send order (§12.1); ``core.outbox.due()`` is its Python twin."""
+
+DELETE_SYNCED_SQL = """
+DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
+  AND NOT (kind = 'lead' AND EXISTS (SELECT 1 FROM outbox n WHERE n.owner = :owner
+           AND n.kind = 'note' AND n.key = outbox.key AND n.status <> 'synced'))
+"""
+"""``core.outbox.forget_synced()`` in SQL: a synced lead stays while its note waits."""
+
+_COLUMNS = (
+    "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
+    "next_at, created_at, last_error, idem_key"
+)
+"""The columns an insert or a save writes; ``revision`` counts edits on its own."""
+_VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
+_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key"
+
+
+class DbClosed(Exception):
+    """The session closed the database; a late write is refused, not raised (D-120)."""
+
+
+@dataclass(frozen=True)
+class Counts:
+    """An owner's rows by status, for the sync chip and sign-out's question.
+
+    Attributes:
+        pending: Rows waiting to be sent.
+        failed: Rows given up on until "Retry failed".
+        synced: Rows the server has.
+    """
+
+    pending: int = 0
+    failed: int = 0
+    synced: int = 0
+
+
+def _params(row: Row) -> dict[str, object]:
+    """Return a row's columns as named parameters, its payload as JSON."""
+    return {
+        "kind": row.kind.value,
+        "key": row.key,
+        "payload_json": json.dumps(dict(row.payload)),
+        "owner": row.owner,
+        "sponsor_id": row.sponsor_id,
+        "sponsor_name": row.sponsor_name,
+        "status": row.status.value,
+        "tries": row.tries,
+        "next_at": row.next_at,
+        "created_at": row.created_at,
+        "last_error": row.last_error,
+        "idem_key": row.idem_key,
+        "id": row.id,
+        "revision": row.revision,
+    }
+
+
+def _row(record: sqlite3.Row) -> Row:
+    """Return a stored record as the ``Row`` that ``core.outbox`` works with."""
+    return Row(
+        kind=Kind(record["kind"]),
+        key=record["key"],
+        payload=json.loads(record["payload_json"]),
+        owner=record["owner"],
+        sponsor_id=record["sponsor_id"],
+        sponsor_name=record["sponsor_name"],
+        next_at=record["next_at"],
+        created_at=record["created_at"],
+        status=Status(record["status"]),
+        tries=record["tries"],
+        last_error=record["last_error"],
+        idem_key=record["idem_key"],
+        id=record["id"],
+        revision=record["revision"],
+    )
+
+
+def _migrate(connection: sqlite3.Connection) -> None:
+    """Run the migrations the file hasn't had, each with its ``user_version``, atomically."""
+    (version,) = connection.execute("PRAGMA user_version").fetchone()
+    for number, script in enumerate(MIGRATIONS[version:], start=version + 1):
+        # executescript() runs in autocommit mode, so the script brings its own BEGIN:
+        # the schema and its version land together or not at all.
+        connection.executescript(
+            f"BEGIN IMMEDIATE;{script}PRAGMA user_version = {number}; COMMIT;"
+        )
+
+
+class OutboxDb:
+    """The outbox rows in ``outbox.db``: every outbox read and write goes through here.
+
+    Built by ``Services.create()`` and closed by ``Services.close()``. The connection
+    opens on first use, from the loop thread that then owns it, so an install whose
+    staff tools never run (they are hidden without a mock API URL, D-51) never creates
+    the file. Every method is synchronous and runs on that thread (D-49).
+
+    Attributes:
+        path: The database file, ``outbox.db`` in the data directory.
+    """
+
+    def __init__(self, directory: Path) -> None:
+        """Point at ``outbox.db`` in ``directory``; nothing is opened yet.
+
+        Args:
+            directory: The durable data directory, from ``data_dir()`` (D-108).
+        """
+        self.path = directory / FILE_NAME
+        self._connection: sqlite3.Connection | None = None
+        self._closed = False
+
+    def _connect(self) -> sqlite3.Connection:
+        """Return the connection, opening and migrating the file on first use."""
+        if self._closed:
+            raise DbClosed
+        if self._connection is None:
+            # isolation_level=None: autocommit, so each transaction is an explicit BEGIN.
+            connection = sqlite3.connect(self.path, isolation_level=None)
+            try:
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA journal_mode=WAL")
+                _migrate(connection)
+            except sqlite3.Error:
+                connection.close()
+                raise
+            self._connection = connection
+        return self._connection
+
+    @contextlib.contextmanager
+    def _transaction(self) -> Iterator[sqlite3.Connection]:
+        """Run the block in one write transaction, rolled back when it fails."""
+        connection = self._connect()
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            yield connection
+            connection.execute("COMMIT")
+        except BaseException:
+            if connection.in_transaction:
+                with contextlib.suppress(sqlite3.Error):  # keep the original error
+                    connection.rollback()
+            raise
+
+    def _attempt[T](self, what: str, action: Callable[[], T]) -> T | None:
+        """Return ``action()``, or None when the database fails, logged (D-120).
+
+        A use from another thread (``sqlite3.ProgrammingError``) is a bug, not a storage
+        failure, so it is raised.
+        """
+        try:
+            return action()
+        except DbClosed:
+            logger.warning("Outbox closed; refused to %s", what)
+        except sqlite3.ProgrammingError:
+            raise
+        except sqlite3.Error, OSError:
+            logger.warning("Could not %s in the outbox", what, exc_info=True)
+        return None
+
+    def _select(self, sql: str, params: dict[str, object] | tuple = ()) -> list[Row]:
+        """Return the rows a query selects."""
+        return [_row(r) for r in self._connect().execute(sql, params).fetchall()]
+
+    def enqueue(
+        self, code: str, decide: Callable[[list[Row]], Enqueued]
+    ) -> Enqueued | None:
+        """Apply an enqueue decision of ``core.outbox`` and store its row, atomically.
+
+        ``decide`` is ``scan_lead``, ``save_note`` or ``admit`` with every argument but
+        the rows (a ``functools.partial``). It is given every row of the access code,
+        every owner's: all three decide from those alone, since a door row's
+        ``idem_key`` starts with its code.
+
+        Args:
+            code: The attendee's access code.
+            decide: The decision, given the code's rows.
+
+        Returns:
+            The decision, with the stored row and its id for ``QUEUED``; None when the
+            database failed (logged) and nothing was stored.
+        """
+
+        def run() -> Enqueued:
+            with self._transaction() as connection:
+                rows = self._select("SELECT * FROM outbox WHERE key = ?", (code,))
+                enqueued = decide(rows)
+                if enqueued.row is None:
+                    return enqueued
+                if enqueued.row.key != code:  # it was decided over the wrong rows
+                    raise ValueError(
+                        f"enqueued a row for {enqueued.row.key!r}, not {code!r}"
+                    )
+                if enqueued.outcome is Outcome.QUEUED:
+                    params = _params(enqueued.row)
+                    cursor = connection.execute(
+                        f"INSERT INTO outbox ({_COLUMNS}) VALUES ({_VALUES})", params
+                    )
+                    return replace(
+                        enqueued, row=replace(enqueued.row, id=cursor.lastrowid)
+                    )
+                if enqueued.outcome is Outcome.UPDATED:
+                    # Read in this transaction, so its revision is the stored one.
+                    self._update(connection, enqueued.row)
+                    edited = replace(enqueued.row, revision=enqueued.row.revision + 1)
+                    return replace(enqueued, row=edited)
+                return enqueued
+
+        return self._attempt("enqueue", run)
+
+    @staticmethod
+    def _update(connection: sqlite3.Connection, row: Row, *, edit: bool = True) -> bool:
+        """Write a row's columns over its record, if the record is still at its revision.
+
+        Args:
+            connection: The connection, in a write transaction.
+            row: A stored row, changed from the record at ``row.revision``.
+            edit: Whether this is an enqueue's edit, which counts a new revision; a
+                send's outcome or "Retry failed" leaves the revision as it is.
+
+        Returns:
+            Whether the record was written: False when an edit changed it since.
+        """
+        if row.id is None:
+            raise ValueError("an outbox row is saved only once it is stored")
+        sets = ", ".join(f"{name} = :{name}" for name in _COLUMNS.split(", "))
+        bump = ", revision = revision + 1" if edit else ""
+        cursor = connection.execute(
+            f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
+            _params(row),
+        )
+        return cursor.rowcount == 1
+
+    def save(self, row: Row) -> bool:
+        """Store a changed row over its record: a send's outcome or "Retry failed".
+
+        The record is written only while it is at the revision the row was read at: a
+        note edited while its old text was being sent keeps the new text, pending, and
+        the old send's outcome is dropped (D-56). The next pass sends the edit.
+
+        Args:
+            row: A stored row (with its id), as ``core.outbox`` changed it.
+
+        Returns:
+            Whether it was saved: False when the database failed (logged, D-120) or an
+            enqueue edited the record since it was read (logged; the edit stays).
+
+        Raises:
+            ValueError: The row was never stored (no id): a bug.
+        """
+        if row.id is None:
+            raise ValueError("an outbox row is saved only once it is stored")
+
+        def run() -> bool:
+            with self._transaction() as connection:
+                saved = self._update(connection, row, edit=False)
+            if not saved:
+                logger.info("Kept outbox row %s: it was edited while sent", row.id)
+            return saved
+
+        return self._attempt("save a row", run) or False
+
+    def due_rows(self, owner: str, now: float) -> list[Row]:
+        """Return the owner's rows to send now, in send order (§12.1's query).
+
+        Args:
+            owner: The signed-in account's lower-cased email.
+            now: The current time (epoch seconds).
+
+        Returns:
+            The rows, as ``core.outbox.due()`` orders them; none when the database
+            fails (logged): nothing is sent, and the next pass tries again.
+        """
+        params = {"owner": owner, "now": now}
+        return (
+            self._attempt("read due rows", lambda: self._select(DUE_SQL, params)) or []
+        )
+
+    def counts(self, owner: str) -> Counts | None:
+        """Return how many of the owner's rows are pending, failed and synced.
+
+        Returns:
+            The counts, or None when the database fails (logged): never zeros that
+            would let a sign-out drop unsynced rows without asking.
+        """
+
+        def run() -> Counts:
+            sql = "SELECT status, count(*) FROM outbox WHERE owner = ? GROUP BY status"
+            found = dict(self._connect().execute(sql, (owner,)).fetchall())
+            return Counts(
+                **{status.value: found.get(status.value, 0) for status in Status}
+            )
+
+        return self._attempt("count rows", run)
+
+    def rows(self, owner: str, statuses: Collection[Status]) -> list[Row] | None:
+        """Return the owner's rows in some statuses, oldest first: the queue sheet's.
+
+        Args:
+            owner: The account's lower-cased email.
+            statuses: The statuses to list.
+
+        Returns:
+            The rows by ``created_at`` then id, or None when the database fails (logged).
+        """
+        marks = ", ".join("?" * len(statuses))
+        sql = f"SELECT * FROM outbox WHERE owner = ? AND status IN ({marks})"
+        params = (owner, *(Status(status).value for status in statuses))
+        return self._attempt(
+            "list rows", lambda: self._select(f"{sql} ORDER BY created_at, id", params)
+        )
+
+    def owners_with_unsynced(self) -> list[str] | None:
+        """Return every owner with a pending or failed row, sorted.
+
+        Returns:
+            The owners, or None when the database fails (logged).
+        """
+        sql = (
+            "SELECT DISTINCT owner FROM outbox WHERE status <> 'synced' ORDER BY owner"
+        )
+        return self._attempt(
+            "list owners",
+            lambda: [owner for (owner,) in self._connect().execute(sql).fetchall()],
+        )
+
+    def delete_synced(self, owner: str) -> bool:
+        """Delete the owner's synced rows on an account switch (``forget_synced()``).
+
+        A synced lead whose note hasn't synced stays, as the note waits for it; pending
+        and failed rows stay, as does every other owner's row.
+
+        Returns:
+            Whether the rows are gone; a failure is logged (D-120).
+        """
+        return self._execute("delete synced rows", DELETE_SYNCED_SQL, {"owner": owner})
+
+    def clear(self, owner: str | None = None) -> bool:
+        """Delete every row of ``owner``, or every row ("Clear staff data", confirmed).
+
+        Returns:
+            Whether the rows are gone; a failure is logged (D-120).
+        """
+        if owner is None:
+            return self._execute("clear the outbox", "DELETE FROM outbox", {})
+        sql = "DELETE FROM outbox WHERE owner = :owner"
+        return self._execute("clear an owner's rows", sql, {"owner": owner})
+
+    def _execute(self, what: str, sql: str, params: dict[str, object]) -> bool:
+        """Run one write statement in its own transaction; whether it landed."""
+
+        def run() -> bool:
+            with self._transaction() as connection:
+                connection.execute(sql, params)
+            return True
+
+        return self._attempt(what, run) or False
+
+    def close(self) -> None:
+        """Close the connection for good: later calls are refused and logged, not raised."""
+        self._closed = True
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
