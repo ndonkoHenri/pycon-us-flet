@@ -2,7 +2,7 @@
 
 ux.md §7.2: the app bar's sync chip and ``KEYBOARD`` button, the camera area, the
 result panel and manual entry, then the tool's own actions. A tool gives ``ScanScreen`` its title, a
-context line and an async ``on_badge(badge) -> ScanResult``: the screen parses what was
+context line (or a control there, as the Lead scanner's sponsor chip) and an async ``on_badge(badge) -> ScanResult``: the screen parses what was
 entered (``parse_badge``), applies the per-code cooldown, awaits one handler at a time
 and shows what it returned, so the tools only return data.
 
@@ -92,7 +92,7 @@ def ScanScreen(
     *,
     title: str,
     on_badge: OnBadge,
-    context: str | None = None,
+    context: str | ft.Control | None = None,
     actions: list[ft.Control] | None = None,
     paused: str | None = None,
 ) -> ft.Control:
@@ -101,7 +101,8 @@ def ScanScreen(
     Args:
         title: The tool's name, the app bar's title.
         on_badge: Turns a badge into the result to show; awaited one at a time.
-        context: A line under the bar, e.g. "Decorators, Wed 9:00 AM".
+        context: A line under the bar, e.g. "Decorators, Wed 9:00 AM", or a control
+            in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06).
         actions: The tool's own buttons, under the field ("Add note").
         paused: Why scanning is paused, under the field ("Paused while the note
             is open"), while one of the tool's dialogs or sheets is open: submits
@@ -159,7 +160,9 @@ def ScanScreen(
             busy.current = False
 
     body: list[ft.Control] = []
-    if context:
+    if isinstance(context, ft.Control):
+        body.append(padded(context))
+    elif context:
         body.append(
             padded(
                 ft.Text(

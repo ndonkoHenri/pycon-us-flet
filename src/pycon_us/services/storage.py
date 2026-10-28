@@ -60,9 +60,6 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.staff_sponsor` here with the sponsor picker (#740); the staff keys
-# start with STAFF_PREFIX.
-
 STAFF_PREFIX = "pycon.staff_"
 """Starts every staff key (the chosen sponsor, the scanner consent): what sign-out, an
 account switch and Clear staff data remove with ``clear_prefs(STAFF_PREFIX)`` (D-414),
@@ -95,6 +92,11 @@ SCANNER_CONSENT: Pref[bool] = Pref("pycon.staff_scanner_consent", False)
 key: a sign-out, a sign-in as another account and Clear staff data remove it, so the
 Lead scanner asks again. In no store: the scanner reads it as it opens (D-423)."""
 
+STAFF_SPONSOR: Pref[dict[str, Any]] = Pref("pycon.staff_sponsor", {})
+"""The sponsor door staff scan leads for, ``{id, name, logo_url}`` (LEAD-05, STORE-11;
+``core/lead_sponsors.py``); ``{}`` until one is chosen. A staff key (D-414), read as
+the Lead scanner opens and as it comes back on top, as the consent is (D-425)."""
+
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -108,6 +110,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     DEV,
     START_SCREEN,
     SCANNER_CONSENT,
+    STAFF_SPONSOR,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""
