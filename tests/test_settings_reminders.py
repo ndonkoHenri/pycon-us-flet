@@ -369,6 +369,37 @@ async def test_android_blocked_sends_to_settings(open_section: Open) -> None:
     assert card_text(shown) == BLOCKED_TEXT
 
 
+@pytest.mark.parametrize(
+    ("settings", "card"),
+    [
+        (ON, BLOCKED_TEXT),  # asked before: Android answered without its prompt
+        (ReminderSettings(), ASK_TEXT),  # the first refusal: Android asks twice
+    ],
+)
+async def test_android_refusing_a_request_again_sends_to_settings(
+    open_section: Open,
+    os: MemoryNotifications,
+    settings: ReminderSettings,
+    card: str,
+) -> None:
+    """Off in system settings, the status stays denied: a refusal after an ask blocks.
+
+    Turned on there, the resume's read hides the card (#712, F259).
+    """
+    os.enabled = os.grant = False
+    permissions = MemoryPermissions(PermissionStatus.DENIED)
+    shown = await open_section(settings, android=True, permissions=permissions)
+    assert card_text(shown) == ASK_TEXT
+    await shown.click(button(shown, "settings.reminders.allow"))
+    assert card_text(shown) == card
+    os.enabled, permissions.status = True, PermissionStatus.GRANTED
+    scheduler = shown.services.reminders
+    assert scheduler is not None
+    scheduler.request()  # what app.on_resume() asks
+    await shown.settle()
+    assert card_text(shown) is None
+
+
 async def test_allowing_alarms_and_reminders_hides_its_card(
     open_section: Open, os: MemoryNotifications
 ) -> None:

@@ -168,8 +168,9 @@ def RemindersSection(slot: int) -> ft.Control:
 
     @report_errors
     async def allow(_: ft.Event[ft.OutlinedButton]) -> None:
-        await scheduler.request_permission()
-        if prefs.reminders.primer != "accepted":  # asked: no primer after this one
+        asked = prefs.reminders.primer == "accepted"  # before: Android asks twice
+        await scheduler.request_permission(asked=asked)
+        if not asked:  # asked now: no primer after this one
             await save(page, svc, prefs, primer="accepted")
         set_heard(lambda n: n + 1)
 
