@@ -44,7 +44,7 @@ REMINDERS_ROW = (
     ft.Icons.NOTIFICATIONS_OUTLINED,
     "Get reminders before the talks you saved",
 )
-"""The third row, only in a build that has reminders (``capabilities.REMINDERS``)."""
+"""The third row, only once the app offers reminders (``capabilities.REMINDERS_LIVE``)."""
 
 THANKS = "Thanks for coming. See you next year."
 """The line under the dates once the conference's last day is over."""
@@ -78,7 +78,7 @@ def welcome_copy(info: ConferenceInfo, day: date, *, reminders: bool) -> Welcome
         day: Today in the conference's zone (``timefmt.today()``); after
             ``info.last_day``, the last sprint day, the page thanks the reader, as
             Now's header does then.
-        reminders: The build can schedule reminders (``capabilities.REMINDERS``);
+        reminders: The app offers reminders (``capabilities.REMINDERS_LIVE``);
             without them, the page does not promise any.
     """
     return WelcomeCopy(
@@ -97,7 +97,7 @@ def Welcome() -> ft.View:
     prefs = use_prefs()
     info = svc.year.conference
     copy = welcome_copy(
-        info, today(clock.now(), info.zone), reminders=capabilities.REMINDERS
+        info, today(clock.now(), info.zone), reminders=capabilities.REMINDERS_LIVE
     )
 
     @report_errors

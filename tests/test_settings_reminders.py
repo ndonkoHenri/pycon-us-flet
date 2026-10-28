@@ -83,9 +83,18 @@ def test_the_sentences_say_what_ux_9_says() -> None:
     )
 
 
+def test_a_build_that_bundles_e3_keeps_the_interim_until_reminders_are_live(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """E3 bundled but nothing scheduling yet (#447): the interim still says so (#677)."""
+    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS", True)
+    _, _, tile = parts_of(reminders_section(ft.PagePlatform.ANDROID, slot=RADIO_WIDTH))
+    assert tile.title == NOT_AVAILABLE
+
+
 def test_a_build_with_reminders_gets_no_interim(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With E3 bundled there is no interim section: its live controls are P2-89's."""
-    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS", True)
+    """Once reminders are live there is no interim section: its live controls are P2-89's."""
+    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS_LIVE", True)
     assert reminders_section(ft.PagePlatform.IOS, slot=RADIO_WIDTH) is None
