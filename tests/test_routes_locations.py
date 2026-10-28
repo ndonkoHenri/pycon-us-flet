@@ -15,6 +15,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from pycon_us import routes
+from pycon_us.account import Account
 from pycon_us.locations import (
     DRILL_KINDS,
     WELCOME,
@@ -225,6 +226,7 @@ def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
         lambda: SimpleNamespace(memory=memory, reminders=None),
     )
     monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=onboarded))
+    monkeypatch.setattr(routes, "use_account", Account)  # signed out
     monkeypatch.setattr(
         ft, "use_effect", lambda setup, deps=None: effects.append(setup)
     )
@@ -284,6 +286,7 @@ def test_start_opens_the_held_tap_and_takes_it(monkeypatch: pytest.MonkeyPatch) 
         lambda: SimpleNamespace(memory=memory, reminders=reminders),
     )
     monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=False))
+    monkeypatch.setattr(routes, "use_account", Account)  # signed out
     monkeypatch.setattr(
         ft, "use_effect", lambda setup, deps=None: effects.append(setup)
     )

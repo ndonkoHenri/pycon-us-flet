@@ -13,7 +13,7 @@ import pytest
 from pycon_us.account import Account
 from pycon_us.account_profile import Profile
 from pycon_us.services.credentials import API_KEY, API_SECRET, CredentialStorage
-from pycon_us.services.storage import ACCOUNT, Storage, favorites
+from pycon_us.services.storage import ACCOUNT, START_SCREEN, Storage, favorites
 from tests import accounts
 from tests.accounts import ALL, EVERY_FLAG, changes, save_account, stored_account
 from tests.fakes import MemoryPrefs
@@ -168,7 +168,8 @@ async def test_sign_out_removes_everything_but_the_favourites_before_it_notifies
 ) -> None:
     """The key, the secret and the account are gone when ``signed_in`` turns False.
 
-    The favourites stay (D-48), and so does what the session set.
+    The favourites stay (D-48), and so do what the session set and the Start
+    screen setting, which is the device's, not the account's (#689).
     """
     save_account(
         shared,
@@ -178,6 +179,7 @@ async def test_sign_out_removes_everything_but_the_favourites_before_it_notifies
         api_secret=SECRET,
     )
     shared.values[favorites(2026).key] = ["9001"]
+    shared.values[START_SCREEN.key] = "now"
     account = Account()
     await account.restore(storage, credentials)
     seen: list[tuple[bool, bool]] = []
@@ -193,7 +195,7 @@ async def test_sign_out_removes_everything_but_the_favourites_before_it_notifies
     assert seen == [(False, False)]
     assert not account.signed_in and account.credentials() == (None, None)
     assert (account.email, account.nickname, account.lead_retrieval) == ("", "", False)
-    assert shared.values == {favorites(2026).key: ["9001"]}
+    assert shared.values == {favorites(2026).key: ["9001"], START_SCREEN.key: "now"}
 
 
 async def test_a_sign_out_that_cannot_remove_everything_says_so(

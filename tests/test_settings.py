@@ -1,4 +1,4 @@
-"""Tests for Settings: Appearance, its High contrast switch, Reminders, Data (#421, #429).
+"""Tests for Settings: Appearance, High contrast, Reminders, Start screen, Data (#421, #689).
 
 ``Settings`` runs outside a renderer, as ``More`` does in ``test_more.py``: its hooks and
 ``AppScaffold`` are replaced, and a fake page is bound as Flet binds a session's page.
@@ -18,10 +18,11 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
+from pycon_us.account import Account
 from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs
+from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
 from pycon_us.screens import settings
 from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services
@@ -70,8 +71,18 @@ def prefs() -> Prefs:
 
 
 @pytest.fixture
+def account() -> Account:
+    """A signed-out account, restored, as on a first launch."""
+    return Account(restored=True)
+
+
+@pytest.fixture
 def render(
-    monkeypatch: pytest.MonkeyPatch, svc: Services, prefs: Prefs, page: FakePage
+    monkeypatch: pytest.MonkeyPatch,
+    svc: Services,
+    prefs: Prefs,
+    account: Account,
+    page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
     """Render ``Settings`` once and return what it passed to ``AppScaffold``.
 
@@ -79,6 +90,7 @@ def render(
     """
     monkeypatch.setattr(settings, "use_services", lambda: svc)
     monkeypatch.setattr(settings, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(settings, "use_account", lambda: account)
     monkeypatch.setattr(settings, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(settings, "use_margin", phone_margin)
     monkeypatch.setattr(settings, "DataSection", lambda slot: DATA_SECTION)
@@ -338,3 +350,103 @@ async def test_a_switch_that_cannot_be_saved_stays_and_says_so(
     assert switch_of(render()).value is True
     assert snack_texts(page) == ["Couldn't save your change"]
     assert (await relaunched(svc)).high_contrast == "system"  # lost on relaunch
+
+
+# ------------------------------------------------------------------ Start screen (#689)
+
+
+def as_sponsor(prefs: Prefs, account: Account) -> None:
+    """Set a mock URL and sign ``account`` in with ``lead_retrieval``, as the sponsor."""
+    prefs.dev = {DEV_MOCK_API_URL: "http://127.0.0.1:8080"}
+    account.signed_in = account.lead_retrieval = True
+
+
+def start_section_of(scaffold: dict[str, Any]) -> tuple[str, ft.RadioGroup]:
+    """Return the Start screen section's heading text and its ``RadioGroup``."""
+    section = rows_of(scaffold)[4]
+    assert isinstance(section, ft.Column)
+    heading, choice = section.controls
+    assert isinstance(heading, ft.Semantics) and heading.heading_level == 2
+    assert isinstance(heading.content, ft.Container)
+    assert isinstance(heading.content.content, ft.Text)
+    assert isinstance(choice, ft.RadioGroup)
+    return str(heading.content.content.value), choice
+
+
+@pytest.mark.parametrize(
+    ("mock_url", "flags"),
+    [
+        (False, {"lead_retrieval": True}),  # no mock URL: no staff tools (D-51)
+        (True, {}),  # an attendee
+        (True, {"door_check": True}),  # door-check-only staff open on Now
+    ],
+)
+def test_the_start_screen_shows_only_for_a_lead_retrieval_account(
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
+    account: Account,
+    mock_url: bool,
+    flags: dict[str, bool],
+) -> None:
+    """Without ``lead_retrieval`` and a mock URL, Reminders is followed by Data."""
+    if mock_url:
+        prefs.dev = {DEV_MOCK_API_URL: "http://127.0.0.1:8080"}
+    account.signed_in = True
+    for name, on in flags.items():
+        setattr(account, name, on)
+    rows = rows_of(render())
+    assert len(rows) == 5 and rows[4] is DATA_SECTION
+
+
+def test_a_sponsor_sees_open_the_app_on_between_reminders_and_data(
+    render: Callable[[], dict[str, Any]], prefs: Prefs, account: Account
+) -> None:
+    """A level-2 "Open the app on" over Now and Lead scanner, before Data (ux.md §6.9).
+
+    The stored ``auto`` shows as Lead scanner, where it opens the app (D-16).
+    """
+    as_sponsor(prefs, account)
+    scaffold = render()
+    heading, choice = start_section_of(scaffold)
+    assert heading == "Open the app on"
+    assert rows_of(scaffold)[5] is DATA_SECTION
+    options = options_of(choice)
+    assert [(ident, value, tile.title) for ident, value, tile in options] == [
+        ("settings.start_screen.now", "now", "Now"),
+        ("settings.start_screen.lead", "lead", "Lead scanner"),
+    ]
+    assert all(tile.toggle_inputs for _, _, tile in options)
+    assert choice.value == "lead"
+
+
+async def test_choosing_now_is_saved_and_survives_a_relaunch(
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
+    account: Account,
+    page: FakePage,
+    svc: Services,
+) -> None:
+    """Now stores ``now``, shown at once; Lead scanner stores ``lead`` (D-120)."""
+    as_sponsor(prefs, account)
+    await choose(start_section_of(render())[1], "now")
+    assert prefs.start_screen == "now"
+    assert start_section_of(render())[1].value == "now"
+    assert (await relaunched(svc)).start_screen == "now"
+    await choose(start_section_of(render())[1], "lead")
+    assert (await relaunched(svc)).start_screen == "lead"
+    assert page.dialogs == []
+
+
+async def test_a_start_screen_that_cannot_be_saved_stays_and_says_so(
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
+    account: Account,
+    page: FakePage,
+    svc: Services,
+) -> None:
+    """A choice that cannot be saved holds for the session, and a SnackBar says so."""
+    as_sponsor(prefs, account)
+    cast(MemoryPrefs, svc.storage.prefs).fail_writes = True
+    await choose(start_section_of(render())[1], "now")
+    assert prefs.start_screen == "now"
+    assert snack_texts(page) == ["Couldn't save your change"]
