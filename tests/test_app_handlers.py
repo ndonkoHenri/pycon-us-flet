@@ -23,6 +23,7 @@ from pycon_us.change_log import ChangeLog
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs, read_accessibility
 from pycon_us.services import Services, api
+from pycon_us.services.favorites_sync import FavoritesSync
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from tests import app_start
@@ -97,6 +98,30 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
     semantics.features["supports_announcements"] = True  # iOS (F13)
     await on_resume(svc, conference, prefs, Account())
     assert prefs.screen_reader and prefs.announcements
+
+
+class AskedSync(FavoritesSync):
+    """A favourites sync that counts the pulls asked of it."""
+
+    def __init__(self) -> None:
+        """Start with no pull asked."""
+        super().__init__()
+        self.asked = 0
+
+    def request(self) -> None:
+        """Count the ask, then ask as the real sync does."""
+        self.asked += 1
+        super().request()
+
+
+async def test_a_resume_asks_the_favourites_sync_for_a_pull(
+    fake_page: FakePage, svc: Services, network: Network
+) -> None:
+    """A resume asks for one favourites pull, which also sends a failed edit (D-406)."""
+    conference, prefs = await started(fake_page, svc)
+    sync = AskedSync()
+    await on_resume(replace(svc, favorites_sync=sync), conference, prefs, Account())
+    assert sync.asked == 1
 
 
 async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(

@@ -1,7 +1,7 @@
 """The ``Account`` store: who is signed in to the mock API, and with which roles (P3).
 
 Sign-in, the role flags, favourites sync and the staff outbox all read this one store
-(D-54, D-69). Its writes are awaited before it says so: ``sign_in`` saves the key, the
+(D-54, D-69); ``services.favorites_sync`` writes ``favorites_dirty`` (D-406). Its writes are awaited before it says so: ``sign_in`` saves the key, the
 secret and the account before ``signed_in`` turns True, and ``sign_out`` removes them
 before it turns False, so nothing reads a state that a relaunch would not find
 (STORE-04, AUTH-02; Ionic flipped "logged in" first). ``restore`` is strict: signed in
@@ -90,6 +90,9 @@ class Account:
             403): still signed in, as the owner of what this device recorded, but
             no private call is made until a sign-in clears it. Not stored: the next
             start's refresh finds it again.
+        favorites_dirty: Whether this device's favourites have not reached the
+            account yet: an edit or the first sync after sign-in is waiting
+            (``services.favorites_sync``, D-406). The Account screen says so (#688).
     """
 
     restored: bool = False
@@ -103,6 +106,7 @@ class Account:
     is_speaker: bool = False
     error: SignIn | None = None
     expired: bool = False
+    favorites_dirty: bool = False
     # Never shown, so never notified: what the client signs with (D-52).
     _secrets: Secrets = (None, None)
     # One account change at a time: sign-in, sign-out and reset take turns.
@@ -390,6 +394,7 @@ class Account:
             setattr(self, attribute, False)
         self.error = None
         self.expired = False
+        self.favorites_dirty = False
 
 
 AccountCtx: ft.ContextProvider[Account | None] = ft.create_context(None)

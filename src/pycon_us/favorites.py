@@ -2,7 +2,8 @@
 
 Favourites are local-first: they need no account and are saved per conference year under
 ``pycon.<year>.favorites``, because ids are unique only within one year's feed, so a 2026
-favourite never marks a 2027 session (D-48). P3 syncs them with the mock account (D-55).
+favourite never marks a 2027 session (D-48). Signed in, ``services/favorites_sync.py``
+syncs them with the mock account (D-55, D-406); the store itself makes no request.
 
 **How a list uses it without re-rendering every row** (D-153, D-172): only the component
 that owns a list calls ``use_favorites()``, since a subscription re-renders its component
@@ -148,6 +149,26 @@ class Favorites:
             TypeError: ``session_ids`` is one string, not a collection of ids.
         """
         return await self._edit(storage, remove=_id_set(session_ids) & self.ids)
+
+    async def replace(self, storage: Storage, session_ids: Iterable[str]) -> bool:
+        """Take the account's list in, after a pull (D-55); there is no Undo for it.
+
+        Shown first and saved after, as every edit (D-172).
+
+        Args:
+            storage: Where the favourites are kept.
+            session_ids: The ids to keep, ``core.favorites_sync.reconcile()``'s.
+
+        Returns:
+            Whether they were written, or nothing needed writing; False also while no
+            read has succeeded, when nothing is written (``loaded``).
+
+        Raises:
+            TypeError: ``session_ids`` is one string, not a collection of ids.
+        """
+        ids = _id_set(session_ids)
+        change = await self._edit(storage, add=ids - self.ids, remove=self.ids - ids)
+        return change.saved
 
     async def undo(self, storage: Storage, change: Change) -> Change:
         """Take back an edit: remove what it added and save again what it removed.
