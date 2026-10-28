@@ -23,7 +23,8 @@ from pycon_us.core import outbox
 from pycon_us.core.outbox import Kind, Outcome, Row, Status
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
-from pycon_us.services.outbox_db import MIGRATIONS, Counts, OutboxDb
+from pycon_us.services.outbox_db import Counts, OutboxDb
+from pycon_us.services.outbox_schema import MIGRATIONS
 
 OWNER = "staff@example.com"
 OTHER = "other@example.com"
