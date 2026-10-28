@@ -56,7 +56,8 @@ FOLLOW_UP_ICONS = {
     "Hiring": ft.Icons.WORK_OUTLINE,
     "Partner": ft.Icons.HANDSHAKE_OUTLINED,
 }
-"""Each follow-up chip's leading icon; the check mark takes its place once selected."""
+"""Each follow-up chip's leading icon; Flutter's check mark takes its place once
+selected (M3's filter chip)."""
 
 SHEET_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
 """M3's bottom sheet colour, which the unselected chips paint, as the filter sheet's."""
@@ -129,7 +130,10 @@ def follow_up_chip(
         f"lead.note.follow_up.{semantics_key(label)}",
         ft.Chip(
             label=label,
-            leading=ft.Icon(FOLLOW_UP_ICONS[label], size=18, apply_text_scaling=True),
+            # Selected, Flutter's check mark alone: over the icon it read as a box.
+            leading=None
+            if selected
+            else ft.Icon(FOLLOW_UP_ICONS[label], size=18, apply_text_scaling=True),
             selected=selected,
             show_checkmark=True,
             bgcolor=SHEET_COLOR,  # a chip paints `surface` otherwise (filter sheet)
