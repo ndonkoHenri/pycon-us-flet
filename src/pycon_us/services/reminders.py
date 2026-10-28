@@ -36,9 +36,10 @@ if TYPE_CHECKING:  # imported only when the build has them (D-63)
 
 logger = logging.getLogger(__name__)
 
-type Access = Literal["allowed", "askable", "blocked", "unknown"]
+type Access = Literal["allowed", "askable", "refused", "blocked", "unknown"]
 """Whether the OS shows the app's notifications (ux.md §4.8, D-395): it does; it may
-still ask; it won't ask again (only the system settings can change that); unknown."""
+still ask; Android refused a request again and may not ask (F259); it won't ask again
+(only the system settings can change that); unknown."""
 
 _ACCESS: dict[str, Access] = {
     "granted": "allowed",
@@ -92,6 +93,9 @@ class Scheduler:
             before each apply and after ``request_exact()``. None until read, or
             when the read fails. A read that changes it calls the listeners of
             ``watch()``: Settings' Alarms & reminders card follows it (D-401).
+        refused: Whether Android refused a request after the app had asked before,
+            which ``access()`` reads as "refused" while the status says "denied"
+            (F259, U239).
     """
 
     notifications: Notifications
@@ -101,6 +105,7 @@ class Scheduler:
     navigate: Callable[[str], object] | None = None
     enabled: bool = False
     exact: bool | None = None
+    refused: bool = False
     _wanted: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     _listeners: list[Callable[[], object]] = field(default_factory=list, repr=False)
 
@@ -361,6 +366,12 @@ class Scheduler:
         iOS does not tell "not asked yet" from "refused", and a request after a
         refusal shows nothing and returns False. A failed read is logged and reads as
         "unknown".
+
+        Android's "denied" reads "refused" once it has ``refused`` a request after an
+        earlier one: the handler says "permanently denied" only after two refusals of
+        its prompt, never when the notifications are off in system settings (F259).
+        Not "blocked": the earlier request may have failed before any prompt, so the
+        OS may still ask (#716's review).
         """
         from flet_notifications import NotificationException
         from flet_permission_handler import Permission
@@ -368,26 +379,40 @@ class Scheduler:
         try:
             if self.android and self.permissions is not None:
                 status = await self.permissions.get_status(Permission.NOTIFICATION)
-                return _ACCESS.get(status.value, "unknown") if status else "unknown"
+                access = _ACCESS.get(status.value, "unknown") if status else "unknown"
+                return "refused" if access == "askable" and self.refused else access
             enabled = await self.notifications.are_notifications_enabled()
         except (NotificationException, RuntimeError, TimeoutError) as e:
             logger.warning("Reminders: notification permission unread: %s", e)
             return "unknown"
         return "allowed" if enabled else "askable"
 
-    async def request_permission(self) -> bool:
+    async def request_permission(self, *, asked: bool) -> bool:
         """Ask the OS to show the app's notifications; return whether it allows them.
 
         E3's request on both platforms (D-61, F17): Android 13+'s prompt, iOS's alerts
         and sounds (the app sets no badge). A failure is logged and reads as False.
+
+        Android shows its prompt twice, and a second refusal of it reads "permanently
+        denied". So a refusal after an earlier request that still reads "denied" may be
+        Android answering without a prompt, the notifications off in system settings;
+        or the first real refusal, when the earlier request failed or was cancelled
+        before a prompt. ``refused`` says so to ``access()`` (F259, U239).
+
+        Args:
+            asked: Whether the app has asked before in this install (the primer
+                ``accepted``).
         """
         from flet_notifications import NotificationException
 
         try:
-            return bool(await self.notifications.request_permissions(badge=False))
+            allowed = bool(await self.notifications.request_permissions(badge=False))
         except (NotificationException, TimeoutError) as e:
             logger.warning("Reminders: notification permission request failed: %s", e)
             return False
+        if self.android and asked and not allowed:
+            self.refused = True
+        return allowed
 
     async def _check_agreement(self, allowed: bool) -> None:
         """Warn when the permission handler's exact-alarm status disagrees (D-220)."""

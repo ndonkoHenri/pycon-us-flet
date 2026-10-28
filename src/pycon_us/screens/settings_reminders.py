@@ -2,8 +2,9 @@
 
 **Live** (``RemindersSection``, a build with E3: ``Services.reminders``; ux.md §6.9,
 D-401): a level-2 heading; a card while notifications need the user (``card_for()``):
-"Allow notifications" while the OS can still ask, "Open settings" once only the system
-settings can change it, and on Android, while session reminders are on, the Alarms &
+"Allow notifications" while the OS can still ask, both it and "Open settings" once
+Android refused a request again (it may still ask, or answer without a prompt: F259),
+"Open settings" once only the system settings can change it, and on Android, while session reminders are on, the Alarms &
 reminders card (D-221); the "Remind me before sessions in My schedule" switch, with
 the 5 · 10 · 15 min ``SegmentedButton`` only while it is on; and the three conference
 moments. Each row is a ``ListTile(toggle_inputs=True)`` that saves silently: the
@@ -65,14 +66,19 @@ MOMENT_ROWS: tuple[tuple[str, str, ft.IconData], ...] = (
 ASK_TEXT = "Reminders show only once you allow notifications."
 ASK_ACTION = "Allow notifications"
 BLOCKED_TEXT = "Notifications are off in system settings."
+REFUSED_TEXT = (
+    "Notifications aren't allowed. If Android shows no prompt, turn them on in system "
+    "settings."
+)
 EXACT_TEXT = (
     "For more timely reminders, allow Alarms & reminders. Without this permission, "
     "reminders may arrive late, including after a session starts."
 )
 OPEN_SETTINGS = "Open settings"
 
-type Card = Literal["ask", "blocked", "exact"]
-"""The card the section shows: notifications askable, blocked, or inexact alarms."""
+type Card = Literal["ask", "refused", "blocked", "exact"]
+"""The card the section shows: notifications askable, refused, blocked, or inexact
+alarms."""
 
 
 def card_for(
@@ -96,7 +102,8 @@ def card_for(
             read.
 
     Returns:
-        ``"ask"`` while the OS may still ask; ``"blocked"`` once only the system
+        ``"ask"`` while the OS may still ask; ``"refused"`` once Android refused a
+        request again while it may still ask (F259); ``"blocked"`` once only the system
         settings can allow notifications, which on iOS is also "askable" after the
         app has asked, since iOS shows its prompt once (F245); ``"exact"`` on Android
         while session reminders are on, notifications allowed and exact alarms not.
@@ -107,8 +114,8 @@ def card_for(
     if access == "askable":
         asked = settings.primer == "accepted"
         return "blocked" if asked and not android else "ask"
-    if access == "blocked":
-        return "blocked"
+    if access in ("refused", "blocked"):
+        return access
     if access == "allowed" and android and settings.session_lead and exact is False:
         return "exact"
     return None
@@ -168,8 +175,9 @@ def RemindersSection(slot: int) -> ft.Control:
 
     @report_errors
     async def allow(_: ft.Event[ft.OutlinedButton]) -> None:
-        await scheduler.request_permission()
-        if prefs.reminders.primer != "accepted":  # asked: no primer after this one
+        asked = prefs.reminders.primer == "accepted"  # before: Android asks twice
+        await scheduler.request_permission(asked=asked)
+        if not asked:  # asked now: no primer after this one
             await save(page, svc, prefs, primer="accepted")
         set_heard(lambda n: n + 1)
 
@@ -190,6 +198,16 @@ def RemindersSection(slot: int) -> ft.Control:
     match card_for(access, settings, android=scheduler.android, exact=scheduler.exact):
         case "ask":
             rows.append(notice_card(f"{SCREEN}.allow", ASK_TEXT, ASK_ACTION, allow))
+        case "refused":  # inferred, not confirmed: the OS may still ask (#716)
+            rows.append(
+                notice_card(
+                    f"{SCREEN}.refused",
+                    REFUSED_TEXT,
+                    ASK_ACTION,
+                    allow,
+                    settings_click=open_settings,
+                )
+            )
         case "blocked":
             action = OPEN_SETTINGS if svc.permissions is not None else None
             rows.append(
@@ -340,11 +358,14 @@ def notice_card(
     text: str,
     action: str | None,
     on_click: Callable[[ft.Event[ft.OutlinedButton]], object],
+    *,
+    settings_click: Callable[[ft.Event[ft.OutlinedButton]], object] | None = None,
 ) -> ft.Control:
-    """Return a card that says what the OS needs, with the button that gets there.
+    """Return a card that says what the OS needs, with the buttons that get there.
 
     The sentence is a live region, so a screen reader says a card that appears on
-    resume; the button is its own stop, ``<identifier>.action``.
+    resume; each button is its own stop, ``<identifier>.action`` and
+    ``<identifier>.settings``.
 
     Args:
         identifier: For UI flows, e.g. ``settings.reminders.exact``.
@@ -352,6 +373,8 @@ def notice_card(
         action: The button's label; None for no button (no system settings to open).
         on_click: The button's tap; its event's control is the opener ``focus_back()``
             focuses again (D-372).
+        settings_click: The tap of a second button, "Open settings", after the first;
+            None for none.
     """
     column: list[ft.Control] = [
         ft.Semantics(
@@ -360,20 +383,24 @@ def notice_card(
             content=ft.Text(text, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
         )
     ]
-    if action is not None:
+    buttons = [(f"{identifier}.action", action, on_click)] if action else []
+    if settings_click is not None:
+        buttons.append((f"{identifier}.settings", OPEN_SETTINGS, settings_click))
+    if buttons:
         column.append(
             ft.Row(
                 [
                     named(
-                        f"{identifier}.action",
+                        name,
                         ft.OutlinedButton(
-                            action,
+                            label,
                             style=ft.ButtonStyle(padding=LABEL_PADDING),
-                            on_click=on_click,
+                            on_click=click,
                         ),
                     )
+                    for name, label, click in buttons
                 ],
-                wrap=True,  # the label wraps under at 200 % rather than clip
+                wrap=True,  # the labels wrap under at 200 % rather than clip
             )
         )
     return ft.Container(

@@ -98,7 +98,7 @@ async def test_an_unread_status_is_unknown_and_logged(
 async def test_the_request_asks_for_alerts_and_sounds_only() -> None:
     """E3 asks on both platforms, without a badge the app never sets (F17)."""
     os = MemoryNotifications()
-    assert await scheduler(os).request_permission()
+    assert await scheduler(os).request_permission(asked=False)
     assert os.requests == [
         {
             "alert": True,
@@ -110,6 +110,38 @@ async def test_the_request_asks_for_alerts_and_sounds_only() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("asked", "android", "access"),
+    [
+        (True, True, "refused"),  # Android may have answered without a prompt (F259)
+        (False, True, "askable"),  # Android shows its prompt twice
+        (True, False, "askable"),  # iOS reads E3's answer, not the handler's
+    ],
+)
+async def test_android_refusing_again_while_denied_reads_refused(
+    asked: bool, android: bool, access: Access
+) -> None:
+    """A refusal after an earlier ask, with the status still denied, reads refused."""
+    os = MemoryNotifications()
+    os.enabled = os.grant = False
+    permissions = MemoryPermissions(PermissionStatus.DENIED)
+    shown = scheduler(os, permissions, android=android)
+    assert await shown.access() == "askable"
+    assert not await shown.request_permission(asked=asked)
+    assert await shown.access() == access
+    permissions.status = PermissionStatus.GRANTED  # turned on in system settings
+    assert await shown.access() == ("allowed" if android else "askable")
+
+
+async def test_a_failed_request_never_reads_blocked() -> None:
+    """A request the bridge fails is no answer from Android: the OS may still ask."""
+    os = MemoryNotifications()
+    os.errors["request_permissions"] = NotificationException("operation_failed")
+    shown = scheduler(os, MemoryPermissions(PermissionStatus.DENIED), android=True)
+    assert not await shown.request_permission(asked=True)
+    assert await shown.access() == "askable"
+
+
 async def test_a_failed_request_reads_as_refused(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -117,7 +149,7 @@ async def test_a_failed_request_reads_as_refused(
     os = MemoryNotifications()
     os.errors["request_permissions"] = NotificationException("operation_failed")
     with caplog.at_level(logging.WARNING, logger="pycon_us.services.reminders"):
-        assert not await scheduler(os).request_permission()
+        assert not await scheduler(os).request_permission(asked=False)
     assert "request failed" in caplog.text
 
 
