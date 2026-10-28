@@ -4,6 +4,7 @@
 behind ``tools/mock_api/transport.py``. How it looks is checked on devices (the PR).
 """
 
+import asyncio
 import inspect
 import json
 from collections.abc import Callable
@@ -228,3 +229,37 @@ async def test_reset_app_leaves_no_client(
     await reset_app(svc, conference, prefs, Favorites(loaded=True))
     assert svc.api is None
     assert prefs.private_api_enabled is False
+
+
+async def test_a_clear_during_a_save_s_write_ends_cleared(
+    svc: Services, prefs: Prefs
+) -> None:
+    """A Clear pressed while a Save is still storing its URL waits, then wins.
+
+    Unserialised, the Clear's write landed first and the Save's after it: no client,
+    but the URL stored and the private API on (#668, D-51).
+    """
+    storage = cast(MemoryPrefs, svc.storage.prefs)
+    writing, release = asyncio.Event(), asyncio.Event()
+    invoke = storage._invoke_method
+
+    async def held_first_set(
+        name: str, arguments: Any = None, timeout: Any = None
+    ) -> Any:
+        """Hold the first ``set`` until the test lets it; answer the rest at once."""
+        if name == "set" and not writing.is_set():
+            writing.set()
+            await release.wait()
+        return await invoke(name, arguments, timeout)
+
+    storage._invoke_method = held_first_set  # type: ignore[method-assign]
+    save = asyncio.create_task(developer_api.use_url(svc, prefs, MOCK))
+    await writing.wait()
+    clear = asyncio.create_task(developer_api.use_url(svc, prefs, None))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    release.set()
+    await asyncio.gather(save, clear)
+    assert svc.api is None
+    assert prefs.private_api_enabled is False
+    assert stored_dev(svc) == {"unlocked": True}

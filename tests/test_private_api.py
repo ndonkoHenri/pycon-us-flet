@@ -5,6 +5,7 @@ the Developer field and runs the connection check; the stored URL is ``Prefs``'.
 check runs against the mock itself, through ``tools/mock_api/transport.py``.
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -144,6 +145,35 @@ async def test_a_stored_psf_url_still_cannot_send_a_private_request(
     assert recorder.sent == []
 
 
+async def test_a_clear_during_a_save_leaves_no_client(recorder: Recorder) -> None:
+    """A Clear while a Save still closes the old client waits for it, then wins.
+
+    Unserialised, the Clear saw the Save's URL already in place with no client yet,
+    and the Save then built its client after the Clear: a live client, no URL (#668).
+    """
+    private_api = PrivateApi(recorder)
+    await private_api.connect(MOCK, 2026)
+    old = private_api.client
+    assert old is not None
+    closing, release = asyncio.Event(), asyncio.Event()
+    close = old.aclose
+
+    async def held_close() -> None:
+        """Close the old client only once the test lets it."""
+        closing.set()
+        await release.wait()
+        await close()
+
+    old.aclose = held_close  # type: ignore[method-assign]
+    save = asyncio.create_task(private_api.connect("http://localhost:8000", 2026))
+    await closing.wait()
+    clear = asyncio.create_task(private_api.connect(None, 2026))
+    await asyncio.sleep(0)
+    release.set()
+    await asyncio.gather(save, clear)
+    assert (private_api.client, private_api.base_url) == (None, None)
+
+
 # ------------------------------------------------------------------ the check
 
 
@@ -177,3 +207,32 @@ async def test_the_check_says_when_another_server_answers() -> None:
     assert text.startswith(
         "The server answered, but not as the mock does: 404 No route"
     )
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "said"),
+    [
+        (401, {"error": "Expired account"}, "401 Expired account"),
+        (200, {"unrelated": True}, "200"),
+        (200, {"features": "on"}, "200"),
+    ],
+)
+async def test_the_check_says_when_another_server_answers_alike(
+    status: int, body: object, said: str
+) -> None:
+    """Only the mock's signed-out 401 or a ``features`` reply is a connection.
+
+    Another 401 (an auth proxy) or another JSON body (a wrong port) is said as the
+    error, not as connected.
+    """
+    transport = replying(status, json.dumps(body).encode())
+    text, ok = await check_connection(await connected(transport))
+    assert not ok
+    assert text == f"The server answered, but not as the mock does: {said}"
+
+
+async def test_the_check_says_connected_on_a_features_reply() -> None:
+    """Signed in (#35), the mock's 200 ``{"features": {...}}`` is a connection."""
+    body = json.dumps({"features": {"lead_retrieval": False}}).encode()
+    transport = replying(200, body)
+    assert await check_connection(await connected(transport)) == (CONNECTED, True)

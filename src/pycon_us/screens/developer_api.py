@@ -56,7 +56,8 @@ async def use_url(svc: Services, prefs: Prefs, url: str | None) -> Outcome:
     """Put a mock API URL into effect, or none, keep it, and say what was done.
 
     The client is rebuilt before the save, so the re-render the save causes finds it
-    in place.
+    in place; both run under ``PrivateApi``'s lock, so a Save and a Clear pressed
+    together end with the client and the stored URL of the last one (#668).
 
     Args:
         svc: The session's services: ``private_api`` and the storage.
@@ -66,8 +67,12 @@ async def use_url(svc: Services, prefs: Prefs, url: str | None) -> Outcome:
     Returns:
         The outcome line's state.
     """
-    await svc.private_api.connect(url, svc.year.conference.year)
-    saved = await prefs.save(svc.storage, dev=with_mock_api_url(prefs.dev, url))
+
+    async def keep() -> bool:
+        """Store the URL in ``pycon.dev``, from the options as they are now."""
+        return await prefs.save(svc.storage, dev=with_mock_api_url(prefs.dev, url))
+
+    saved = await svc.private_api.connect(url, svc.year.conference.year, keep)
     done = (
         "Saved: sign-in and the staff tools use the mock at this address."
         if url
