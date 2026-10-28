@@ -2,26 +2,34 @@
 
 The hook renders in a real Flet session (``tests/sessions.py``) under a stand-in for
 ``App``, with ``ft.use_dialog`` recorded, the clock held and ``page.navigate``
-recorded. When the Banner shows is ``due_session()``'s, tested in
-``test_reminders.py``; here, what the hook does with it: when it asks, what it shows,
-and what Open and Dismiss do.
+recorded, and E3's ``Scheduler`` over ``tests/fakes.py``'s ``MemoryNotifications``,
+its notifications not shown until a test says so. When the Banner shows is
+``due_session()``'s, tested in ``test_reminders.py``; here, what the hook does with
+it: when it asks, what it shows, what Open and Dismiss do, and ``os_reminds()``'s
+rule, which hides it while the OS reminds (D-396).
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import cast
 from zoneinfo import ZoneInfo
 
 import flet as ft
 import pytest
+from flet_notifications import Notifications
 
 from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
+from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services import Services
+from pycon_us.services.reminders import Scheduler
 from pycon_us.state import Conference
-from pycon_us.ui.reminder_banner import use_reminder_banner
+from pycon_us.ui.reminder_banner import os_reminds, use_reminder_banner
+from tests.fakes import MemoryNotifications
 from tests.feeds import processed
 from tests.sessions import memory_services, rendering, settle
 
@@ -42,8 +50,15 @@ class Shown:
     svc: Services
     conference: Conference
     favorites: Favorites
+    prefs: Prefs
     dialogs: list[ft.DialogControl | None]
     went: list[str] = field(default_factory=list)
+
+    @property
+    def scheduler(self) -> Scheduler:
+        """E3's ``Scheduler``, whose ``read_enabled()`` reads the fake OS's answer."""
+        assert self.svc.reminders is not None
+        return self.svc.reminders
 
     @property
     def banner(self) -> ft.Banner | None:
@@ -71,13 +86,18 @@ async def shown(
     conference = Conference()
     conference.data = processed(2026)
     favorites = Favorites(ids=frozenset({TALK}), loaded=True)
-    state = Shown(memory_services(load_year(2026), tmp_path), conference, favorites, [])
+    svc = replace(
+        memory_services(load_year(2026), tmp_path),
+        reminders=Scheduler(cast(Notifications, MemoryNotifications())),
+    )
+    prefs = Prefs(reminders=ReminderSettings(session_lead=10), loaded=True)
+    state = Shown(svc, conference, favorites, prefs, [])
     monkeypatch.setattr(ft, "use_dialog", state.dialogs.append)
 
     @ft.component
     def Host() -> ft.Control:
         """``App``'s part: the hook, with the boot gate open."""
-        use_reminder_banner(state.svc, conference, favorites, ready=True)
+        use_reminder_banner(state.svc, conference, favorites, prefs, ready=True)
         return ft.Column()
 
     async with rendering(Host) as session:
@@ -189,3 +209,60 @@ async def test_nothing_changes_in_the_background(
     shown.favorites.ids = frozenset({TALK})
     await settle()
     assert shown.banner is None
+
+
+# ------------------------------------------------------------------ the OS reminds (D-396)
+
+
+@pytest.mark.parametrize(
+    ("e3", "enabled", "lead", "reminds"),
+    [
+        (True, True, 10, True),  # the OS shows the reminder: no Banner
+        (True, True, 5, True),
+        (True, False, 10, False),  # notifications denied: the Banner stays
+        (True, True, 0, False),  # session reminders off: the Banner stays
+        (False, False, 10, False),  # no E3, as in the companion app (D-60)
+    ],
+)
+def test_the_banner_gives_way_only_to_a_reminder_the_os_shows(
+    e3: bool, enabled: bool, lead: SessionLead, reminds: bool
+) -> None:
+    """``os_reminds()``: E3 schedules, notifications show and session reminders are on."""
+    scheduler = (
+        Scheduler(cast(Notifications, MemoryNotifications()), enabled=enabled)
+        if e3
+        else None
+    )
+    assert os_reminds(scheduler, ReminderSettings(session_lead=lead)) is reminds
+
+
+async def test_no_banner_while_the_os_reminds_and_back_once_it_does_not(
+    shown: Shown,
+) -> None:
+    """Notifications allowed hide it at the next check; reminders turned off bring it back.
+
+    A change of the settings asks again at once, as the favourites' and the feed's do.
+    """
+    assert shown.banner is not None  # notifications not (yet) shown: the interim
+    await shown.scheduler.read_enabled()  # the fake OS shows them, as on a resume
+    await settle()
+    assert shown.banner is None
+    shown.prefs.reminders = ReminderSettings(session_lead=0)
+    await settle()
+    assert shown.banner is not None
+
+
+async def test_a_permission_read_alone_moves_the_banner_both_ways(shown: Shown) -> None:
+    """A read that changes ``Scheduler.enabled`` asks again at once, no store changing.
+
+    Back from system settings, the read on resume hides the Banner when notifications
+    are allowed and brings it back when they are denied, without the minute tick.
+    """
+    os = cast(MemoryNotifications, shown.scheduler.notifications)
+    await shown.scheduler.read_enabled()
+    await settle()
+    assert shown.banner is None
+    os.enabled = False  # denied in system settings
+    await shown.scheduler.read_enabled()
+    await settle()
+    assert shown.banner is not None

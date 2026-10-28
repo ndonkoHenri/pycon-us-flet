@@ -20,6 +20,7 @@ from pycon_us.locations import (
     WELCOME,
     drill_href,
     is_top_view,
+    launch_target,
     parent_of,
     query_of,
     start_target,
@@ -218,7 +219,11 @@ def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
     """``Start`` reads ``Prefs.onboarded``: Welcome first, then where the user was."""
     memory = ViewMemory(last_location="/now/session/42")
     effects: list[Callable[[], None]] = []
-    monkeypatch.setattr(routes, "use_services", lambda: SimpleNamespace(memory=memory))
+    monkeypatch.setattr(
+        routes,
+        "use_services",
+        lambda: SimpleNamespace(memory=memory, reminders=None),
+    )
     monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=onboarded))
     monkeypatch.setattr(
         ft, "use_effect", lambda setup, deps=None: effects.append(setup)
@@ -230,3 +235,62 @@ def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
         (go,) = effects
         go()
     assert page.navigated == [target]
+
+
+TAP = "/my-schedule/session/142"
+"""A session reminder's route, its tap's target (D-396)."""
+
+
+@pytest.mark.parametrize(
+    ("tap", "last_location", "onboarded", "target"),
+    [
+        (TAP, "/now/session/42", True, TAP),  # the tap wins over where the user was
+        ("", "/now/session/42", True, "/now/session/42"),  # no tap: start_target()
+        (TAP, "", False, TAP),  # first run: Welcome waits for a plain start
+        ("", "", False, WELCOME),
+        (TAP, "/search?scope=places", True, TAP),  # over a last location in search
+        ("", "/search?scope=places", True, "/schedule/session/42"),
+    ],
+)
+def test_a_reminder_tap_wins_over_every_start_target(
+    tap: str, last_location: str, onboarded: bool, target: str
+) -> None:
+    """A tapped reminder opens its route whatever else the start would pick (D-396).
+
+    Without one, the start goes where ``start_target()`` says: Welcome, the last
+    location, or search's opener.
+    """
+    assert (
+        launch_target(tap, last_location, "/schedule/session/42", onboarded=onboarded)
+        == target
+    )
+
+
+def test_start_opens_the_held_tap_and_takes_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``Start`` takes the ``Scheduler``'s held tap and goes there, even on a first run."""
+    memory = ViewMemory(last_location="/now/session/42")
+    reminders = SimpleNamespace(tapped=TAP)
+
+    def take_tap() -> str:
+        """Hand over the held tap once, as ``Scheduler.take_tap()`` does."""
+        route, reminders.tapped = reminders.tapped, ""
+        return route
+
+    reminders.take_tap = take_tap
+    effects: list[Callable[[], None]] = []
+    monkeypatch.setattr(
+        routes,
+        "use_services",
+        lambda: SimpleNamespace(memory=memory, reminders=reminders),
+    )
+    monkeypatch.setattr(routes, "use_prefs", lambda: Prefs(onboarded=False))
+    monkeypatch.setattr(
+        ft, "use_effect", lambda setup, deps=None: effects.append(setup)
+    )
+    page = FakePage()
+    with bound(page):
+        inspect.unwrap(routes.Start)()
+        (go,) = effects
+        go()
+    assert page.navigated == [TAP]
+    assert reminders.tapped == ""
