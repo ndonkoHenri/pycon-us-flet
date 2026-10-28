@@ -7,7 +7,8 @@ exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never fail
   and failed rows, newest first, its latest confirmed rows, and, where the host asks
   (Developer, D-412), other accounts' unsynced rows, which wait for their own sign-in
   (architecture §12.1).
-- ``queue_sheet()`` lays it out in a modal ``BottomSheet`` with a drag handle: the
+- ``queue_sheet()`` lays it out in a modal ``BottomSheet`` with a drag handle and a
+  Close button: the
   state in words (``sync_chip.chip_words()``, a live region); **Sync now**, which kicks
   the worker and is disabled with a ring while a pass runs; **Retry failed**, only
   while rows have failed; the rows (``queue_rows.row_tile()``), or "Everything is
@@ -43,6 +44,7 @@ from pycon_us.ui.queue_rows import (
     retry_button,
     row_tile,
     sync_button,
+    title_row,
 )
 from pycon_us.ui.sync_chip import chip_words
 
@@ -180,7 +182,7 @@ def queue_sheet(
         on_sync_now: Kicks the worker.
         on_retry_failed: Makes the failed rows pending and kicks the worker.
         on_confirmed: Opens or closes the confirmed rows' fold.
-        on_close: A dismissal: a swipe, a tap outside, Back.
+        on_close: Close, and a dismissal: a swipe, Back.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
     """
     staff, now = state.staff, state.now
@@ -194,7 +196,7 @@ def queue_sheet(
     if staff.failed or any(row.status is Status.FAILED for row in queue.mine):
         actions.append(retry_button(on_retry_failed))
     body: list[ft.Control] = [
-        heading("Sync queue", 1),
+        title_row(on_close),
         ft.Semantics(
             identifier="staff.queue.summary",
             live_region=True,  # each pass's outcome is said

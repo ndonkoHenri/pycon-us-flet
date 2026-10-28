@@ -85,7 +85,9 @@ def StaffQueue() -> ft.Control:
     if not shown:
         return ft.Column([], visible=False)
     lines: list[ft.Control] = [
-        SyncChip(staff, tokens=tokens) if owner else ft.Text("Not signed in")
+        SyncChip(staff, tokens=tokens, on_click=open_sheet, in_row=True)
+        if owner
+        else ft.Text("Not signed in")
     ]
     extra = others_line(waiting)
     if extra is not None:

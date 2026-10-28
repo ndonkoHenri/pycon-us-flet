@@ -4,7 +4,7 @@ The rows are seeded into a real ``outbox.db`` in a temporary directory. How the 
 looks is checked on devices (the PR).
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -22,7 +22,7 @@ from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.fold import COLLAPSED
-from pycon_us.ui.queue_rows import EMPTY, RETRY_FAILED, SYNC_NOW
+from pycon_us.ui.queue_rows import CLOSE, EMPTY, RETRY_FAILED, SYNC_NOW
 from pycon_us.ui.queue_sheet import (
     CONFIRMED_SHOWN,
     UNREADABLE,
@@ -298,3 +298,22 @@ def test_sync_is_blocked_signed_out_expired_or_without_a_client(
     )
     account.expired = False
     assert sync_blocked(svc, account) is None
+
+
+def test_close_is_a_named_button_that_closes_the_sheet() -> None:
+    """The sheet is the screen's height, with no scrim to tap: Close is the way out."""
+    closed: list[int] = []
+    built = queue_sheet(
+        Queue(),
+        SheetState(Staff(), NOW),
+        tokens=LIGHT_TOKENS,
+        style=ft.Animation(0),
+        on_sync_now=lambda: None,
+        on_retry_failed=lambda: None,
+        on_confirmed=lambda _open: None,
+        on_close=lambda: closed.append(1),
+    )
+    button = identified(built)[CLOSE]
+    assert isinstance(button, ft.IconButton) and button.tooltip == "Close"
+    cast(Callable[[], None], button.on_click)()
+    assert closed == [1]

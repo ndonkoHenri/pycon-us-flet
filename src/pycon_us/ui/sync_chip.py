@@ -74,25 +74,28 @@ def SyncChip(
     staff: Staff,
     *,
     tokens: Tokens,
-    on_click: Callable[[], object] | None = None,
+    on_click: Callable[[], object],
+    in_row: bool = False,
 ) -> ft.Control:
-    """Return the sync chip: the icon and ``chip_words()``.
+    """Return the sync chip: the icon and ``chip_words()``; a tap opens the sheet.
 
-    With ``on_click`` it is a button of its own, one node named by its words and
-    carrying ``staff.sync_chip`` (``named()``). Without it the chip only shows the
-    state, inside a row that is the button (Developer's Staff queue row): there it
-    is its words alone, since a chip with no action read as a disabled one.
+    On its own (the scan screen's app bar) it is a button, one node named by its
+    words and carrying ``staff.sync_chip`` (``named()``). Inside a row that opens the
+    sheet too (Developer's Staff queue row) it is the row's words alone for a screen
+    reader: the row is the button. It keeps its action there all the same, since a
+    chip without one is drawn disabled, faded below a readable contrast (seen on the
+    iOS simulator, #694).
 
     Args:
         staff: The ``Staff`` store; the caller re-renders with it (``use_staff()``).
         tokens: The scheme's tokens.
-        on_click: Opens the queue sheet, wrapped in ``report_errors`` by the caller;
-            None inside a row that opens it.
+        on_click: Opens the queue sheet, wrapped in ``report_errors`` by the caller.
+        in_row: Whether a row around it is the button.
     """
     words = chip_words(staff)
     chip = ft.Chip(
         label=ft.Text(words), leading=chip_icon(staff, tokens), on_click=on_click
     )
-    if on_click is None:
+    if in_row:
         return ft.Semantics(label=words, exclude_semantics=True, content=chip)
     return named(IDENTIFIER, chip)

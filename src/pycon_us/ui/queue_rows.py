@@ -5,7 +5,7 @@ of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbo
 with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
 code, when it was scanned and a failed row's last error; ``sync_button()`` and
-``retry_button()``; ``heading()``, ``note()`` and ``empty_line()``.
+``retry_button()``; ``title_row()`` with Close, ``heading()``, ``note()`` and ``empty_line()``.
 """
 
 from collections.abc import Callable
@@ -21,6 +21,7 @@ from pycon_us.ui.semantics import named
 
 SYNC_NOW = "staff.queue.sync_now"
 RETRY_FAILED = "staff.queue.retry_failed"
+CLOSE = "staff.queue.close"
 
 KIND_WORDS = {Kind.LEAD: "Lead", Kind.NOTE: "Lead note", Kind.DOOR: "Check-in"}
 """What each row records, as its title says it."""
@@ -67,6 +68,28 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
             # The sheet's 16 dp gutters are the sides.
             content_padding=ft.Padding.symmetric(horizontal=0),
         ),
+    )
+
+
+def title_row(on_close: Callable[[], object]) -> ft.Control:
+    """Return the sheet's title, "Sync queue", with a Close button at its end.
+
+    The sheet is as tall as the screen, so no scrim is left to tap, and iOS has no
+    Back key: Close is the way out besides dragging the handle (seen on the iOS
+    simulator, #694). Its tooltip names it, merged into its node (``named()``).
+
+    Args:
+        on_close: Closes the sheet.
+    """
+    return ft.Row(
+        [
+            ft.Container(heading("Sync queue", 1), expand=True),
+            named(
+                CLOSE,
+                ft.IconButton(ft.Icons.CLOSE, tooltip="Close", on_click=on_close),
+            ),
+        ],
+        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
 

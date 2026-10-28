@@ -71,8 +71,11 @@ def test_a_chip_that_opens_the_sheet_is_one_node_with_its_identifier() -> None:
 
 
 def test_a_chip_inside_a_row_is_its_words_alone() -> None:
-    """Without an action it says its words and nothing else: no disabled chip to read."""
-    control = SyncChip(Staff(failed=1), tokens=LIGHT_TOKENS)
+    """Inside a row that is the button, it says its words alone, yet keeps its tap."""
+    control = SyncChip(
+        Staff(failed=1), tokens=LIGHT_TOKENS, on_click=print, in_row=True
+    )
     assert isinstance(control, ft.Semantics)
     assert (control.label, control.exclude_semantics) == ("1 failed", True)
-    assert isinstance(control.content, ft.Chip) and control.content.on_click is None
+    # Still an action: a chip without one is drawn disabled, too faint to read.
+    assert isinstance(control.content, ft.Chip) and control.content.on_click is print
