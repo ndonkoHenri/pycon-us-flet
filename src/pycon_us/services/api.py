@@ -263,6 +263,10 @@ def error_message(body: object) -> str | None:
     return None
 
 
+NOT_JSON = object()
+"""Stands for a reply that does not decode, unlike a JSON ``null``."""
+
+
 def unwrap(response: httpx.Response, enveloped: bool) -> object:
     """Turn a reply into what the caller reads, or an ``ApiError``.
 
@@ -271,21 +275,25 @@ def unwrap(response: httpx.Response, enveloped: bool) -> object:
         enveloped: Whether a success is ``{"code", "data"}`` and the ``data`` is wanted.
 
     Returns:
-        The decoded body, or its ``data`` when ``enveloped``.
+        The decoded body (JSON ``null`` included), or its ``data`` when ``enveloped``.
 
     Raises:
         ApiError: An error status (with the body's ``error`` or ``message`` when it has
-            one), a body that is not JSON, or an envelope without ``data``.
+            one), a ``{"code", "error"}`` envelope whatever the status, a body that is
+            not JSON, or an envelope without ``data``.
     """
     try:
         body = json.loads(response.content)
     except ValueError:  # not UTF-8, or not JSON
-        body = None
+        body = NOT_JSON
     status = response.status_code
     if not response.is_success:
         raise ApiError(status, error_message(body) or response.reason_phrase)
-    if body is None:
+    if body is NOT_JSON:
         raise ApiError(status, "The reply is not JSON.")
+    # An error envelope is a refusal even under HTTP 200 (#665).
+    if isinstance(body, dict) and "code" in body and isinstance(body.get("error"), str):
+        raise ApiError(status, body["error"])
     if not enveloped:
         return body
     if isinstance(body, dict) and "data" in body:

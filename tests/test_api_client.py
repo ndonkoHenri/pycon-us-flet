@@ -185,20 +185,45 @@ async def test_an_unknown_attendee_is_an_api_error_that_is_not_auth() -> None:
         (200, b"\xff\xfe", CHECK_FEATURES, "The reply is not JSON."),
         (200, b'{"code": 200}', COC_ATTENDEES, "The reply has no data."),
         (200, b'{"code": 500, "error": "Boom."}', COC_ATTENDEES, "Boom."),
+        (200, b'{"code": 500, "error": "Boom."}', CHECK_FEATURES, "Boom."),
+        (200, b'{"code": 500, "error": "Boom."}', LEAD_NOTE, "Boom."),
         (500, b'{"code": 500, "error": "Boom."}', CHECK_FEATURES, "Boom."),
         (302, b"", CHECK_FEATURES, "Found"),
     ],
     ids=["html-error", "html-ok", "not-utf8", "no-data", "error-envelope",
-         "error-status", "redirect-not-followed"],
+         "error-envelope-bare", "error-envelope-note", "error-status", "redirect-not-followed"],
 )  # fmt: skip
 async def test_an_unusable_reply_is_an_api_error(
     status: int, content: bytes, endpoint: Endpoint, message: str
 ) -> None:
-    """Non-JSON, an envelope without ``data`` or an error status give ``ApiError``."""
+    """Non-JSON, a missing ``data``, an error envelope or status give ``ApiError``."""
     client = client_for(replying(status, content, {"Location": "/elsewhere/"}))
     with pytest.raises(ApiError) as caught:
-        await client.request(endpoint)
+        await client.request(endpoint, *(["MOCK0001"] if endpoint is LEAD_NOTE else []))
     assert (caught.value.status, caught.value.message) == (status, message)
+
+
+class NullAfter(httpx.AsyncBaseTransport):
+    """A transport that lets ``inner`` handle a request, then replies JSON ``null``."""
+
+    def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
+        """Wrap ``inner``, whose replies are replaced."""
+        self.inner = inner
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Let ``inner`` commit the request, and answer ``null`` with HTTP 200."""
+        await self.inner.handle_async_request(request)
+        return httpx.Response(200, content=b"null")
+
+
+async def test_a_null_reply_to_a_committed_note_is_a_success() -> None:
+    """JSON ``null`` from a bare endpoint is returned, so the note isn't sent twice."""
+    client, recorder, state = await signed_in("sponsor")
+    await client.request(LEAD_CAPTURE, query=lead_capture_query("MOCK0001", "v4l1d01"))
+    recorder.inner = NullAfter(recorder.inner)
+    note = {"accessCode": "MOCK0001", "note": "Interest: warm"}
+    assert await client.request(LEAD_NOTE, "MOCK0001", payload=note) is None
+    assert len(state.notes) == 1
 
 
 async def test_a_bare_reply_is_returned_whole() -> None:
