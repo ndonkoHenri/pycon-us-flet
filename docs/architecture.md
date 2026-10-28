@@ -1076,47 +1076,50 @@ def write_atomic(path: Path, data: bytes) -> None:
 
 Private-API features (sign-in, account, favourites sync, staff tools) stay hidden unless a mock base URL is set in the Developer screen (`prefs.dev.mock_api_url`; the Android emulator reaches the laptop at `10.0.2.2`). The client refuses any `/api/v1` request to a `pycon.org` host whatever the configuration (unit test `test_client_refuses_psf_hosts`). Sign-in and Account say "Connected to the local mock server".
 
-### 10.2 Client (`services/api.py`)
+### 10.2 Client (`services/api.py`; built in #665)
 
 ```python
-# src/pycon_us/services/api.py (excerpt)
+# src/pycon_us/services/api.py (excerpt; docstrings in the module)
 def refuse_private_psf(url: httpx.URL) -> None:
     """Make calling the PSF's private API impossible, even by misconfiguration (D-51)."""
-    if (url.host == "pycon.org" or url.host.endswith(".pycon.org")) and "/api/v1/" in url.path:
-        raise PermissionError(f"refusing a private PSF endpoint: {url.host}{url.path}")
+    host = url.host.rstrip(".").lower()
+    psf = host == "pycon.org" or host.endswith(".pycon.org")
+    if psf and "/api/v1" in url.path.lower():
+        raise PermissionError(f"Refusing a private PSF endpoint: {host}{url.path}")
 
 
 class ApiClient:
-    """Signed requests to the mock PyCon API, byte-compatible with the Ionic client (D-52, D-53)."""
+    def __init__(self, base_url, year, credentials, *, transport=None, now=time.time): ...
 
-    async def request(self, endpoint: Endpoint, *args: str, query: str = "", payload: object = None) -> object:
-        path = f"/{self._year}/api/v1/{endpoint.path.format(*args)}" + (f"?{query}" if query else "")
-        body = canonical_body(payload) if payload is not None else b""
-        for attempt in (1, 2):
-            request = self._http.build_request(endpoint.method, path, content=body or None,
-                                               timeout=endpoint.timeout)
-            refuse_private_psf(request.url)
-            if body:
-                request.headers["Content-Type"] = "application/json"
-            if endpoint.signed:
-                key, secret = self._credentials()
-                ts = js_round(time.time() + self._skew)
-                sent_path = request.url.raw_path.decode("ascii")     # exactly the bytes on the wire
-                request.headers.update({"X-API-Key": key, "X-API-Timestamp": str(ts),
-                                        "X-API-Signature": sign(secret, ts, endpoint.method, sent_path, body)})
-            try:
-                response = await self._http.send(request)
-            except httpx.TransportError as error:                    # timeouts included
-                raise NetworkError(str(error)) from error
-            self._skew = skew_from(response.headers.get("date"), self._skew)
-            if response.status_code == 403 and endpoint.signed and attempt == 1 and abs(self._skew) > 300:
-                continue                                              # one retry, corrected timestamp
-            return unwrap(response, endpoint.enveloped)               # 2xx → body, or its "data"; else ApiError
-        raise ApiError(403, "clock skew")
+    async def request(self, endpoint: Endpoint, *args: str | int, query: str = "", payload: object = None) -> object:
+        path = endpoint.path.format(*(enc(str(arg)) for arg in args))      # a segment encoded (API-11)
+        target = f"/{self._year}/api/v1/{path}" + (f"?{query}" if query else "")
+        body = b"" if payload is None else canonical_body(payload)          # serialised once
+        response, skewed = await self._attempt(endpoint, target, body)
+        if endpoint.signed and response.status_code == 403 and skewed:
+            response, _ = await self._attempt(endpoint, target, body)        # one retry, clock corrected
+        return unwrap(response, endpoint.enveloped)    # 2xx → body, or its "data"; else ApiError
+
+    async def _attempt(self, endpoint, target, body) -> tuple[httpx.Response, bool]:
+        request = self._http.build_request(endpoint.method, target, content=body or None,
+                                           timeout=endpoint.timeout)
+        refuse_private_psf(request.url)                   # before credentials are read or anything is sent
+        if body:
+            request.headers["Content-Type"] = "application/json"
+        stamp = js_round(self._now() + self.skew)
+        if endpoint.signed:
+            self._sign(request, stamp, body)              # over request.url.raw_path: the bytes on the wire
+        response = await self._send(request)              # httpx.TransportError → NetworkError
+        server = server_time(response.headers.get("Date"))
+        if server is None:
+            return response, False
+        self.skew = server - self._now()
+        return response, abs(server - stamp) > SKEW_LIMIT  # 300 s
 ```
 
-- Two errors only (D-53): `NetworkError` (no answer: connection, DNS or timeout; never counted in the outbox) and `ApiError(status, message)` with `.is_auth` for 401/403. `self._http` is one `httpx.AsyncClient(base_url=..., transport=...)`; tests pass the mock's `httpx.MockTransport`.
-- Signing `url.raw_path` (exactly what httpx sends) rules out "re-encoded after signing" bugs; queries are still built the Ionic way (§10.4). `skew_from` parses the `Date` header (`email.utils.parsedate_to_datetime`). Callers trust these errors, not `ft.Connectivity`. `fetch_feed(url)` (P0) is an unsigned 10 s GET with the same errors.
+- Two errors only (D-53): `NetworkError` (no answer: connection, DNS or timeout; never counted in the outbox) and `ApiError(status, message)` with `.is_auth` for 401/403. `message` is the server's own `error` (signed calls) or `message` (`authenticate`), else the reason phrase; a `{code, error}` envelope (whatever the status), a 2xx that is not JSON, or an enveloped reply without `data`, is an `ApiError` too, while a bare endpoint's JSON `null` is a success (returned as `None`). `refuse_private_psf`'s `PermissionError` is neither: it is a refused misconfiguration, not an answer (the Developer screen can run the guard on a base URL before it builds the client).
+- `self._http` is one `httpx.AsyncClient(base_url=..., transport=...)`, redirects not followed (a redirected request would need a new signature); tests pass `tools/mock_api/transport.py`'s `mock_transport`. `credentials()` returns the key and secret (the Account store supplies them, P3-E2); signed out, the request goes without `X-API-Key` and the server answers 401.
+- Signing `url.raw_path` (exactly what httpx sends) rules out "re-encoded after signing" bugs; queries are still built the Ionic way by `fetch_products_query`, `coc_capture_query` and `lead_capture_query` (§10.4), never `params=`. The skew is learned from every reply's `Date` (`server_time`, `email.utils.parsedate_to_datetime`) and kept; a signed call refused with 403 while the timestamp it sent was more than `SKEW_LIMIT` from that `Date` is sent once more, and a refused retry is final. Callers trust these errors, not `ft.Connectivity`. `fetch_feed(url)` (P0) is an unsigned 10 s GET with the same errors.
 
 ### 10.3 Signing (`core/signing.py`; D-52; built in #662)
 
@@ -1163,7 +1166,7 @@ Headers `X-API-Key`, `X-API-Signature`, `X-API-Timestamp` (`str(ts)`; Ionic uses
 | `lead_capture` | GET `lead_retrieval/capture/?attendee_access_code=<enc>&badge_validator=<enc>[&sponsor_id=<enc>]` | — | 2 s | `{code, data}` | outbox only |
 | `lead_note` | POST `lead_retrieval/<code>/note/` | `{accessCode, note[, sponsor_id]}` | 2 s | ignored | outbox only, after its capture |
 
-Ionic reads most replies bare and only three inside a `data` member (`{code, data}`, the 2019 envelope), so `Endpoint.enveloped` says which. Signed errors are `{code, error}` and `authenticate`'s carries `message`; the README cites each by line and lists what is unknown. Ionic also defines `check_in/attendees_by_product/<id>/` (2 s) but never calls it, so it is not ported (API-05).
+Each row is an `Endpoint(name, method, path, timeout, signed=True, enveloped=False)` constant (`AUTHENTICATE` … `LEAD_NOTE`, all in `ENDPOINTS`; `coc_capture` is two, `COC_SCAN` and `COC_REPORT`, and `mobile_state` is `READ_MOBILE_STATE` and `WRITE_MOBILE_STATE`); `tests/test_api_endpoints.py` checks the table against the README's rows and the mock's routes. The timeout applies to connect, each read, the write and the pool. Ionic reads most replies bare and only three inside a `data` member (`{code, data}`, the 2019 envelope), so `Endpoint.enveloped` says which. Signed errors are `{code, error}` and `authenticate`'s carries `message`; the README cites each by line and lists what is unknown. Ionic also defines `check_in/attendees_by_product/<id>/` (2 s) but never calls it, so it is not ported (API-05).
 
 ### 10.5 Account and favourites sync (D-54, D-55)
 
