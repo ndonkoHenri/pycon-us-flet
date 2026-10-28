@@ -1,24 +1,21 @@
-"""The mock API's state and its pure request handler (D-50; contract in ``README.md``).
+"""The mock API's pure request handler: routing, envelopes, signing, accounts (D-50).
 
 ``handle`` takes a request as plain values and returns a reply as plain values: it does
 no I/O and reads the time only from ``MockState.now``, so the tests drive it directly or
 through ``transport.py``, and the LAN server wraps the same function. This module holds
 the routing, the envelopes, the signature check and the account endpoints; the staff
-endpoints follow in their own issue.
+endpoints live in ``check_in.py``, ``conduct.py`` and ``leads.py``, and the state in
+``state.py`` (contract in ``README.md``).
 """
 
 import hmac
-import json
-import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
 from email.utils import formatdate
-from pathlib import Path
 
 from pycon_us.core.signing import canonical_body, sign
-
-SEED = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mock" / "seed.json"
-"""The seed every ``MockState`` starts from: fake accounts only."""
+from tools.mock_api import check_in, conduct, leads
+from tools.mock_api.parse import json_object
+from tools.mock_api.state import Account, Call, MockState, Refused
 
 WINDOW = 600
 """Seconds a signed request's timestamp may be from the mock's clock (2019's value)."""
@@ -29,88 +26,8 @@ FLAGS = ("lead_retrieval", "door_check_in", "mask_violation")
 type Reply = tuple[int, dict[str, str], bytes]
 """A reply: the status, the headers and the body bytes."""
 
-
-@dataclass
-class Account:
-    """A seeded account, with what ``authenticate`` returns and the favourites it syncs.
-
-    Attributes:
-        role: What the account is for (``attendee``, ``speaker``, ``sponsor``,
-            ``staff``, ``coc`` or ``all``); only the seed and the tests read it.
-        email: The sign-in email.
-        password: The sign-in password (fake).
-        nickname: The name ``authenticate`` returns.
-        key: The API key the client sends as ``X-API-Key`` (fake).
-        secret: The API secret the client signs with (fake).
-        features: The role flags as the server sends them; a flag left out is absent
-            from every reply, which the client must read as False.
-        favorites: The session ids ``mobile_state`` keeps, always strings (D-42).
-        sponsor_id: The sponsor a lead-retrieval account's leads go to, or None.
-    """
-
-    role: str
-    email: str
-    password: str
-    nickname: str
-    key: str
-    secret: str
-    features: dict[str, bool]
-    favorites: list[str] = field(default_factory=list)
-    sponsor_id: int | None = None
-
-
-@dataclass
-class MockState:
-    """Everything the mock remembers between requests, in memory.
-
-    Attributes:
-        year: The conference year served; requests for another year are 404.
-        accounts: The accounts, looked up by email or by API key.
-        now: The mock's clock, in seconds since the epoch. Tests inject a fixed one;
-            the server can pass a skewed one.
-    """
-
-    year: int
-    accounts: list[Account]
-    now: Callable[[], float] = time.time
-
-    @classmethod
-    def from_seed(
-        cls, path: Path = SEED, now: Callable[[], float] = time.time
-    ) -> MockState:
-        """Load a fresh state from a seed file in the README's shape.
-
-        Args:
-            path: The seed JSON file.
-            now: The clock to use.
-
-        Returns:
-            A state that shares nothing with any other.
-        """
-        seed = json.loads(path.read_text(encoding="utf-8"))
-        accounts = [Account(**entry) for entry in seed["accounts"]]
-        return cls(year=seed["year"], accounts=accounts, now=now)
-
-
-class Refused(Exception):
-    """A request the mock answers with an error status.
-
-    Attributes:
-        status: The HTTP status.
-        body: The error body, ``{"code", "error"}`` unless an endpoint says otherwise.
-    """
-
-    def __init__(self, status: int, message: str, body: object = None) -> None:
-        """Create the refusal.
-
-        Args:
-            status: The HTTP status.
-            message: What went wrong.
-            body: The error body; None gives the 2019 shape ``{"code", "error"}``.
-        """
-        super().__init__(status, message)
-        self.status = status
-        self.body = {"code": status, "error": message} if body is None else body
+type Handler = Callable[[Call], tuple[int, object]]
+"""A signed endpoint: the checked request in, the status and the payload out."""
 
 
 def handle(
@@ -173,15 +90,44 @@ def route(
             or the endpoint refused the request.
     """
     prefix = f"/{state.year}/api/v1/"
-    path = raw_path.partition("?")[0]
+    path, _, query = raw_path.partition("?")
     endpoint = path.removeprefix(prefix) if path.startswith(prefix) else None
     if (method, endpoint) == ("POST", "authenticate/"):
         return authenticate(state, body)
-    handler = SIGNED.get((method, endpoint))
-    if handler is None:
+    found = find(method, endpoint)
+    if found is None:
         raise Refused(404, f"No route for {method} {path}.")
+    handler, segment = found
     account = verify(state, now, method, raw_path, headers, body)
-    return handler(account, body)
+    return handler(Call(state, account, now, query, segment, body))
+
+
+def find(method: str, endpoint: str | None) -> tuple[Handler, str] | None:
+    """Match a request to a signed route, ``{}`` standing for one non-empty segment.
+
+    Args:
+        method: The HTTP method as sent.
+        endpoint: The path under ``/<year>/api/v1/``, or None outside it.
+
+    Returns:
+        The endpoint and the segment ``{}`` matched (``""`` if none), or None.
+    """
+    if endpoint is None:
+        return None
+    parts = endpoint.split("/")
+    for (verb, pattern), handler in SIGNED.items():
+        shape = pattern.split("/")
+        if verb != method or len(shape) != len(parts):
+            continue
+        segment = ""
+        for want, got in zip(shape, parts, strict=True):
+            if want == "{}" and got:
+                segment = got
+            elif want != got:
+                break
+        else:
+            return handler, segment
+    return None
 
 
 def verify(
@@ -237,27 +183,6 @@ def verify(
     return account
 
 
-def json_object(body: bytes) -> dict[str, object]:
-    """Parse a request body that must be a JSON object.
-
-    Args:
-        body: The body bytes as sent.
-
-    Returns:
-        The object.
-
-    Raises:
-        Refused: 400 when the body is not UTF-8 JSON or not an object.
-    """
-    try:
-        payload = json.loads(body)
-    except ValueError:  # UnicodeDecodeError and JSONDecodeError are both ValueErrors
-        payload = None
-    if not isinstance(payload, dict):
-        raise Refused(400, "The body must be a JSON object.")
-    return payload
-
-
 def authenticate(state: MockState, body: bytes) -> tuple[int, object]:
     """Sign in with an email and a password (unsigned; ``login.ts`` 58-67).
 
@@ -289,34 +214,32 @@ def authenticate(state: MockState, body: bytes) -> tuple[int, object]:
     raise Refused(401, message, {"message": message})
 
 
-def check_features(account: Account, body: bytes) -> tuple[int, object]:
+def check_features(call: Call) -> tuple[int, object]:
     """Return the account's role flags, absent ones left out (``user-data.ts`` 61-66).
 
     Args:
-        account: The signed-in account.
-        body: Unused.
+        call: The signed request.
 
     Returns:
         200 ``{"features": {...}}``, bare.
     """
-    flags = {name: on for name, on in account.features.items() if name in FLAGS}
+    flags = {name: on for name, on in call.account.features.items() if name in FLAGS}
     return 200, {"features": flags}
 
 
-def read_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
+def read_mobile_state(call: Call) -> tuple[int, object]:
     """Return the account's favourites (``user-data.ts`` 76-85).
 
     Args:
-        account: The signed-in account.
-        body: Unused.
+        call: The signed request.
 
     Returns:
         200 ``{"favorites": [...]}``, bare, ids as strings.
     """
-    return 200, {"favorites": account.favorites}
+    return 200, {"favorites": call.account.favorites}
 
 
-def write_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
+def write_mobile_state(call: Call) -> tuple[int, object]:
     """Replace the account's favourites with the list sent (``pycon-api.ts`` 80-101).
 
     Ids are kept as strings (D-42); integer ids are accepted and stored as their
@@ -324,8 +247,7 @@ def write_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
     how a float prints (``1.0`` in Python, ``1`` in JavaScript).
 
     Args:
-        account: The signed-in account.
-        body: ``{"favorites": [...]}``.
+        call: The signed request, its body ``{"favorites": [...]}``.
 
     Returns:
         200 with the list now stored, bare (Ionic ignores it).
@@ -335,7 +257,7 @@ def write_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
             encodable as UTF-8: a JSON escape can carry a lone surrogate, which no
             reply could then serialise.
     """
-    favorites = json_object(body).get("favorites")
+    favorites = json_object(call.body).get("favorites")
     if not isinstance(favorites, list) or not all(
         type(item) in (str, int) for item in favorites
     ):
@@ -345,13 +267,25 @@ def write_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
         "".join(ids).encode()
     except UnicodeEncodeError:
         raise Refused(400, "favorites must be a list of ids.") from None
-    account.favorites = ids
-    return 200, {"favorites": account.favorites}
+    call.account.favorites = ids
+    return 200, {"favorites": ids}
 
 
-SIGNED: dict[tuple[str, str | None], Callable[[Account, bytes], tuple[int, object]]] = {
+SIGNED: dict[tuple[str, str], Handler] = {
     ("GET", "user/check_features/"): check_features,
     ("GET", "user/mobile_state/"): read_mobile_state,
     ("PATCH", "user/mobile_state/"): write_mobile_state,
+    ("GET", "check_in/redeemable/"): check_in.redeemable,
+    ("GET", "check_in/attendees_by_product_with_quantity/{}/"): check_in.inventory,
+    ("GET", "check_in/fetch_products/"): check_in.fetch_products,
+    ("POST", "check_in/redeem_products/"): check_in.redeem,
+    ("GET", "mask_violations/attendees/"): conduct.coc_attendees,
+    ("GET", "mask_violations/capture/"): conduct.coc_scan,
+    ("POST", "mask_violations/capture/"): conduct.coc_report,
+    ("GET", "lead_retrieval/sponsors/"): leads.lead_sponsors,
+    ("GET", "lead_retrieval/capture/"): leads.lead_capture,
+    ("POST", "lead_retrieval/{}/note/"): leads.lead_note,
 }
-"""The signed endpoints by method and path under ``/<year>/api/v1/``."""
+"""The signed endpoints by method and path under ``/<year>/api/v1/``; ``{}`` matches
+one non-empty segment (Ionic's never-called ``attendees_by_product/<id>/`` is not served,
+API-05)."""

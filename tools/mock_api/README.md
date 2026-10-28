@@ -121,14 +121,14 @@ the 2026 server keeps that envelope only for those endpoints, or Ionic would fin
 | `check_features` | `features.{lead_retrieval, door_check_in, mask_violation}` (an absent flag is `undefined`: treat as false) | bare | `user-data.ts` 61-66 |
 | `mobile_state` (read) | `favorites`: a list of session ids | bare | `user-data.ts` 76-85 |
 | `redeemable` | `redeemable_categories: [{id, name}]`, `redeemable_products: [{id, name, category}]`; door keeps categories not matching `/shirt\|swag/i`, swag the others | bare | `door-check.page.ts` 463-478; `t-shirt-redemption.page.ts` 311-326 |
-| `inventory` | a list `[{id (the access code), quantity, name?, dietary?, has_allergy?, allergy?}]` | bare list | `door-check.page.ts` 390-427 |
+| `inventory` | a list `[{id (the access code), quantity, name?, dietary?, has_allergy?, allergy?}]`; **Mock:** one row per attendee who bought the product, `quantity` the quantity bought (not what is left: the door keeps its own "already checked in"), every optional field sent | bare list | `door-check.page.ts` 390-427 |
 | `fetch_products` | `attendee_access_code`, `attendee_name`, `attendee_id`, `has_items_to_redeem`, `redeemable_products_by_category: {"<category name>": [{product_id, product_name, redeemable, purchased}]}`; door also `dietary`, `has_allergy`, `allergy` | bare | `t-shirt-redemption.page.ts` 119-130; `door-check.page.ts` 300-324 |
-| `redeem` | `errors: [{message}]` (shown joined by `; ` as "Partial redemption: …") and `redeemable_products_by_category` (what this call redeemed; empty means "Nothing was redeemed") | bare | `t-shirt-redemption.page.ts` 167-185; door stores the whole reply, 190-192 |
+| `redeem` | `errors: [{message}]` (shown joined by `; ` as "Partial redemption: …") and `redeemable_products_by_category` (what this call redeemed; empty means "Nothing was redeemed"). **Mock:** each product redeemed is listed in `fetch_products`'s item shape with `redeemable` what is left after it; a product not bought, already redeemed or asked for more than is left is an `errors` entry, and the others still go through | bare | `t-shirt-redemption.page.ts` 167-185; door stores the whole reply, 190-192 |
 | `coc_attendees` | `data: [{access_code, full_name, nickname, badge_name, violations}]` | `{code, data}` | `mask-violation.page.ts` 88-93 |
 | `coc_capture` | `data.{nickname, full_name, badge_name, email, violations}` | `{code, data}` | `mask-violation.page.ts` 55-67; `mask-violation.page.html` 90-109 |
 | `lead_sponsors` | `sponsors: [{id, name, booth_number?, logo_url?}]` | bare | `map.ts` 370, 392-396, 411 |
 | `lead_capture` | `data.first_name` (Ionic stores the whole reply) | `{code, data}` | `pycon-api.ts` 326-330; `map.ts` 91, 186-193 |
-| `lead_note` | nothing | any | `pycon-api.ts` 363-368 |
+| `lead_note` | nothing; **Mock:** `{"code": 200, "data": {}}` | any | `pycon-api.ts` 363-368 |
 
 ### Errors
 
@@ -139,11 +139,30 @@ the 2026 server keeps that envelope only for those endpoints, or Ionic would fin
   **Mock:** every error is `{"code": <status>, "error": "<message>"}`, the 2019 shape; the client's
   `ApiError.message` is the `error` (or `message`) string.
 - **Mock statuses:** 401 for a missing or unknown `X-API-Key` (or a key revoked by a fault); 403 for a missing or
-  malformed timestamp (anything but ASCII digits with no sign or leading zero, the string Ionic sends), a timestamp more than 600 s from the mock's clock, or a wrong signature; 404 for an unknown
-  route (method and path, trailing slash included; checked before the signature), year, product or attendee, a non-empty `badge_validator` that doesn't match the badge, and a note for a lead
-  this sponsor hasn't captured; 400 for a body that is not a JSON object (`authenticate`'s included, in the `{code, error}` shape). Every reply
+  malformed timestamp (anything but ASCII digits with no sign or leading zero, the string Ionic sends), a timestamp more than 600 s from the mock's clock, or a wrong signature; 403 also for an
+  account without the endpoint's role flag (see [Role gates](#role-gates)); 404 for an unknown
+  route (method and path, trailing slash included; checked before the signature), year, product, category, sponsor or attendee (access code), a `badge_validator` that doesn't match the badge
+  (lead capture checks it always, `redeem` only when non-empty), and a note for a lead
+  this sponsor hasn't captured; 400 for a body that is not a JSON object (`authenticate`'s included, in the `{code, error}` shape), a missing or malformed query parameter or body field, an
+  unknown `fetch_products` mode, a staff lead call without `sponsor_id`, and a note whose `accessCode` isn't the path's. An error message never echoes the request. Every reply
   is JSON with a `Date` header from the mock's clock, which the client uses to learn clock skew (D-53). Replies are
   serialised like request bodies (`core/signing.py`'s `canonical_body`) and carry no floats.
+
+### Role gates
+
+Ionic shows each tool by flag (`map.ts` 308-320 and the menu, research §0.6) and reads no error body, so a wrong role
+only logs. **Mock:** the server enforces the same gates and answers a wrong role `403 {"code": 403, "error": "This
+account's role can't use this endpoint."}`, after the signature check.
+
+| Endpoints | Flag |
+|---|---|
+| `check_in/*` (door and swag) | `door_check_in` |
+| `mask_violations/*` | `mask_violation` |
+| `lead_retrieval/*` | `lead_retrieval` or `door_check_in` |
+
+A lead goes to the sponsor the request names (`sponsor_id`, in the capture query or the note body, a string as Ionic
+stores it), else to the account's own sponsor. **Mock:** an account without `door_check_in` may name only its own
+sponsor (403 otherwise), and a call that names none from an account with no sponsor of its own is 400.
 
 ## Unknown
 
@@ -153,8 +172,8 @@ made so the client's behaviour can be tested both ways where it matters; none is
 | Open point | Mock |
 |---|---|
 | Is `lead_retrieval/capture` idempotent? A response lost after the server committed makes the client send it again. | Both, selected by `MockState(capture="idempotent" \| "non_idempotent")` (D-57). Idempotent: one lead per (sponsor, attendee); a repeat returns 200 with the same reply. Non-idempotent: every request adds a lead row, so a lost response yields a duplicate the tests detect. |
-| Is `redeem_products` idempotent for a repeated door payload (Ionic re-sends every 60 s until it gets an answer)? | The same switch. Idempotent: a repeat of (attendee, product, `scanned_at`) returns the first reply and redeems nothing more. Non-idempotent: a repeat redeems again while quantity is left, then reports `errors`. |
-| What `force` means on `mask_violations/capture`, and whether the per-frame GET is de-duplicated. | POST with `force: true` always records an incident (with its `notes`). GET: idempotent mode records at most one incident per attendee per 60 s and otherwise returns the current count; non-idempotent mode records one per request. |
+| Is `redeem_products` idempotent for a repeated door payload (Ionic re-sends every 60 s until it gets an answer)? | The same switch. Idempotent: a product already redeemed with the same (attendee, quantity, `scanned_at`) is listed as redeemed again and nothing more is redeemed, so a repeated payload gets the first reply. Non-idempotent: a repeat redeems again while quantity is left, then reports `errors`. |
+| What `force` means on `mask_violations/capture`, and whether the per-frame GET is de-duplicated. | POST with `force: true` always records an incident (with its `notes`). GET, and a POST without `force`: idempotent mode records at most one incident per attendee per 60 s and otherwise returns the current count; non-idempotent mode records one per request. |
 | The timestamp window. | 600 s either side of the mock's clock (**2019**; the current value is UNCONFIRMED). The clock is injectable, and `--skew SECONDS` shifts it. |
 | Status codes for a bad key versus a bad signature or timestamp, and for an invalid badge. | 401 unknown key; 403 bad signature or timestamp outside the window; 404 invalid badge (see [Errors](#errors)). The client treats 401 and 403 alike (`ApiError.is_auth`), so only the mock's own tests depend on the split. |
 | How the server rebuilds the signed path (Django's `get_full_path()` re-escapes the path). | The raw request target as received. Ionic's unencoded `fetch_products` query is safe only while access codes and ids are URL-safe; the mock's are. |
@@ -164,10 +183,9 @@ made so the client's behaviour can be tested both ways where it matters; none is
 
 ## Seed data (`tests/fixtures/mock/`)
 
-`MockState.from_seed()` loads one JSON file, `tests/fixtures/mock/seed.json`, into a fresh state each time. The
-accounts landed with the account endpoints (#663); sponsors, categories, products and attendees land with the staff
-endpoints. Every email is at `example.com`, and every password, key and secret is fake (`mock-<role>`,
-`mock-key-<role>`, `mock-secret-<role>`) and works only against the mock. Its shape:
+`MockState.from_seed(capture=...)` loads one JSON file, `tests/fixtures/mock/seed.json`, into a fresh state each
+time. Every name in it is made up, every email is at `example.com`, and every password, key and secret is fake
+(`mock-<role>`, `mock-key-<role>`, `mock-secret-<role>`) and works only against the mock. Its shape:
 
 ```json
 {
@@ -178,10 +196,10 @@ endpoints. Every email is at `example.com`, and every password, key and secret i
      "features": {"lead_retrieval": true, "door_check_in": false, "mask_violation": false, "is_speaker": false}}
   ],
   "sponsors": [{"id": 1, "name": "Example Corp", "booth_number": "101", "logo_url": null}],
-  "categories": [{"id": 1, "name": "Tutorials"}, {"id": 2, "name": "T-Shirt"}],
-  "products": [{"id": 10, "name": "Tutorial: Async in depth", "category": 1}],
+  "categories": [{"id": 1, "name": "Tutorials"}, {"id": 3, "name": "T-Shirt"}],
+  "products": [{"id": 10, "name": "Wed May 13 9:00 AM - All about decorators", "category": 1}],
   "attendees": [
-    {"access_code": "MOCK0001", "validator": "v4l1d01", "first_name": "Ada", "full_name": "Ada Example",
+    {"id": 1, "access_code": "MOCK0001", "validator": "v4l1d01", "first_name": "Ada", "full_name": "Ada Example",
      "nickname": "ada", "badge_name": "Ada", "email": "ada@example.com", "violations": 0,
      "dietary": "", "has_allergy": false, "allergy": "", "products": {"10": 1}}
   ]
@@ -193,23 +211,47 @@ endpoints. Every email is at `example.com`, and every password, key and secret i
   behalf of a sponsor, as Ionic's `map.ts` 308-320 treats a door-check account without lead retrieval) and `coc`
   (`mask_violation`), plus `all` with every flag. The `attendee` account sends only `lead_retrieval: false` and leaves
   the other flags out, to exercise "absent means false". `role` is for the seed and the tests; no reply carries it.
-- **Sponsors:** a few, one with a JSON-quoted name (see [Unknown](#unknown)).
-- **Categories and products:** session categories and swag ones (names matching `/shirt|swag/i`), so both filters
-  have something to keep.
-- **Attendees:** each with its badge `access_code:validator`, the fields the replies above return, and the quantity of
-  each product bought (`products`, product id to quantity). The printable badge sheet (`badges.py`) is made from them.
+- **Sponsors:** three: `Example Corp` (booth and logo), `"Quoted Labs"` with literal quotes (see [Unknown](#unknown);
+  no logo) and `Sample Systems` (neither; a missing booth or logo is left out of the reply). The `sponsor` and `all`
+  accounts belong to sponsor 1.
+- **Categories and products:** two session categories (`Tutorials`, `Summits`) and two swag ones (`T-Shirt`,
+  `Swag Bag`, matching `/shirt|swag/i`), so both filters have something to keep; tutorial names carry Ionic's
+  `Wed May 13 9:00 AM - …` prefix, which the door sorts by.
+- **Attendees:** four (`MOCK0001` to `MOCK0004`, validators `v4l1d01` to `v4l1d04`), each with its `id`, the fields the
+  replies above return, its prior Code of Conduct incidents (`violations`: 0, 1, 3, 0), and the quantity of each
+  product bought (`products`, product id to quantity: two T-shirts for `MOCK0001`, two seats at a tutorial for
+  `MOCK0003`, nothing for `MOCK0004`).
+  The printable badge sheet (`badges.py`) is made from them.
 - `year` is the conference year the mock serves; requests for another year are 404.
+
+### What the mock records
+
+The state keeps every write in order, so tests count how often a capture was applied under each semantics (D-57):
+`leads` (sponsor, access code, time), `notes` (sponsor, access code, note, time), `redemptions` (access code,
+product, quantity, `scanned_at`) and `incidents` (access code, notes, forced, time). Under `capture="idempotent"`
+the same lead capture or door payload twice leaves one row; under `"non_idempotent"`, two (a redemption only while
+quantity is left). Incident counts in replies are the seeded `violations` plus the recorded incidents.
 
 ## Code
 
-- `handlers.py`: `MockState` and the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`.
-  It does no I/O and reads the time only from `MockState.now`, which tests replace with a fixed clock. It checks the
-  route, then the key, timestamp and signature (`hmac.compare_digest` against `core/signing.py`'s `sign` over the raw
-  target and body as received), then runs the endpoint.
+- `handlers.py`: the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`. It does no
+  I/O and reads the time only from `MockState.now`, which tests replace with a fixed clock. It checks the route (the
+  `SIGNED` table, where `{}` matches one path segment), then the key, timestamp and signature
+  (`hmac.compare_digest` against `core/signing.py`'s `sign` over the raw target and body as received), then runs the
+  endpoint with a `Call` (the account, the time, the raw query, the path segment and the body). It also holds the
+  account endpoints.
+- `state.py`: `MockState` (the seed, the capture semantics and the records above), `Call`, and `Refused`, an error
+  reply in the `{code, error}` envelope.
+- `parse.py`: reads JSON bodies, raw (`fetch_products`) and percent-decoded (CoC, lead capture) queries, and id lists.
+- `check_in.py`, `conduct.py`, `leads.py`: the staff endpoints for door and swag, Code of Conduct, and lead
+  retrieval, each behind its [role gate](#role-gates).
 - `transport.py`: `mock_transport(state)`, an `httpx.MockTransport` over `handle` that passes `request.url.raw_path`
   and `request.content` unchanged, for client tests.
-- Tests: `tests/test_mock_api.py` (routing, envelopes, the signature check and Ionic's vectors) and
-  `tests/test_mock_api_accounts.py` (the account endpoints, directly and through the transport).
+- Tests: `tests/test_mock_api.py` (routing, envelopes, the signature check and Ionic's vectors),
+  `tests/test_mock_api_accounts.py` (the account endpoints, directly and through the transport),
+  `tests/test_mock_api_check_in.py` (the role gates, door and swag, both semantics) and
+  `tests/test_mock_api_leads.py` (Code of Conduct and leads, both semantics), with helpers in
+  `tests/mock_calls.py`.
 
 ## Running it
 

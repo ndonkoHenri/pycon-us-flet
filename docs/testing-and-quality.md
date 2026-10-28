@@ -338,7 +338,8 @@ The tests also pin the four `hashlib` vectors of architecture §10.3 and `js_rou
 # tools/mock_api/transport.py (excerpt)
 import httpx
 
-from tools.mock_api.handlers import MockState, handle
+from tools.mock_api.handlers import handle
+from tools.mock_api.state import MockState
 
 
 def mock_transport(state: MockState) -> httpx.MockTransport:
