@@ -1,11 +1,12 @@
 """Settings' Reminders section, in D-60's honest interim (NOTIF-01, P2-69).
 
 In a build without scheduled notifications (E3, ``flet-notifications``), and always in
-the companion app (D-63), the section is a level-2 heading and one sentence that says reminders aren't
-available in this build and what covers for them, with no switch that would do nothing
-(ux.md §6.9). On iOS the sentence adds that calendar exports carry an alarm; Android's
-calendar import drops it, so there it doesn't (D-272). A module of its own so that P2-89
-replaces its body with the live controls once ``capabilities.REMINDERS`` is true.
+the companion app (D-63), the section is a level-2 heading and one sentence that says
+reminders aren't available in this build and what covers for them, with no switch that
+would do nothing (ux.md §6.9). On iOS the sentence adds that calendar exports carry an
+alarm; Android's calendar import drops it, so there it doesn't (D-272). A module of its
+own so that P2-89 replaces its body with the live controls once
+``capabilities.REMINDERS`` is true.
 """
 
 import flet as ft
