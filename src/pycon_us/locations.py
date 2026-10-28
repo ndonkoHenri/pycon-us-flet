@@ -7,18 +7,27 @@ them without importing the route table, which imports the screens (D-164):
 ``routes.py`` holds the table itself, and a test keeps its pages and ``PAGES`` the same.
 """
 
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, quote, urlparse
 
 import flet as ft
 
+from pycon_us.core.staff_tools import starts_on_lead
 from pycon_us.year_map import EXPO_PLAN
 from pycon_us.year_tracks import HUB_PAGES
+
+if TYPE_CHECKING:  # read only: the stores' modules need not load with the helpers
+    from pycon_us.account import Account
+    from pycon_us.prefs import Prefs
 
 TAB_ROOTS = ("/now", "/schedule", "/my-schedule", "/map", "/more")
 """The five tab roots, in the bottom bar's order (D-13)."""
 
 WELCOME = "/welcome"
 """The first-run page, a root without a bar and without the drill (SHELL-02, D-287)."""
+
+LEAD_SCANNER = "/more/staff/lead"
+"""The Lead scanner, where a lead-retrieval account opens the app (D-16, #689)."""
 
 DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan", "changes")
 """The drill's segment pairs, ``<kind>/<id>``, one pushed View each (D-17, D-141)."""
@@ -56,7 +65,7 @@ PAGES = frozenset(
         "/more/sign-in",
         "/more/account",
         "/more/account/sign-in",
-        "/more/staff/lead",
+        LEAD_SCANNER,
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).
@@ -129,20 +138,24 @@ def parent_of(location: str, search_base: str = "/now") -> str:
     return "/" + "/".join(parent)
 
 
-def start_target(last_location: str, search_base: str, *, onboarded: bool) -> str:
-    """Return where the start route ``/`` sends a session (D-143, D-287).
+def start_target(
+    last_location: str, search_base: str, *, onboarded: bool, lead: bool = False
+) -> str:
+    """Return where the start route ``/`` sends a session (D-143, D-287, D-16).
 
     Welcome comes first, until Get started (``Prefs.onboarded``). Only a plain start
     reaches ``/``: a link or a ``--route`` start opens its own target, and Welcome
     waits for the next plain start. Then a new session in the same process returns
     to where the user was. A location under ``/search`` cannot be rebuilt over its
     opener (a fresh Router puts a global modal over ``/``), so it returns to the
-    opener instead.
+    opener instead. A cold start, with no location yet, opens Now, or the Lead
+    scanner for a lead-retrieval account (``lands_on_lead()``, #689).
 
     Args:
         last_location: ``ViewMemory.last_location``; empty before any screen showed.
         search_base: ``ViewMemory.search_base``.
         onboarded: Welcome was seen (``Prefs.onboarded``).
+        lead: A cold start opens the Lead scanner (``lands_on_lead()``).
 
     Returns:
         The location to navigate to.
@@ -150,14 +163,19 @@ def start_target(last_location: str, search_base: str, *, onboarded: bool) -> st
     if not onboarded:
         return WELCOME
     if not last_location:
-        return "/now"
+        return LEAD_SCANNER if lead else "/now"
     if in_search(last_location):
         return search_base
     return last_location
 
 
 def launch_target(
-    tap: str, last_location: str, search_base: str, *, onboarded: bool
+    tap: str,
+    last_location: str,
+    search_base: str,
+    *,
+    onboarded: bool,
+    lead: bool = False,
 ) -> str:
     """Return where the start route ``/`` sends a session, a reminder tap first (D-396).
 
@@ -170,11 +188,31 @@ def launch_target(
         last_location: ``ViewMemory.last_location``; empty before any screen showed.
         search_base: ``ViewMemory.search_base``.
         onboarded: Welcome was seen (``Prefs.onboarded``).
+        lead: A cold start opens the Lead scanner (``lands_on_lead()``).
 
     Returns:
         The location to navigate to.
     """
-    return tap or start_target(last_location, search_base, onboarded=onboarded)
+    return tap or start_target(
+        last_location, search_base, onboarded=onboarded, lead=lead
+    )
+
+
+def lands_on_lead(prefs: Prefs, account: Account) -> bool:
+    """Say whether a cold start or a sign-in lands on the Lead scanner (D-16, #689).
+
+    For a ``lead_retrieval`` account unless Settings' Start screen says Now
+    (``starts_on_lead()``), and only while a mock URL is set, since the scanner is
+    "Not available" without one (D-51). Read once the boot gate has opened, so the
+    stored account and setting are in (D-16): no landing race.
+
+    Args:
+        prefs: The loaded settings.
+        account: The restored account; signed out, its flags are all off.
+    """
+    return prefs.private_api_enabled and starts_on_lead(
+        account.role_flags, prefs.start_screen
+    )
 
 
 def in_search(location: str) -> bool:

@@ -15,6 +15,7 @@ import pytest
 from pycon_us.prefs import (
     APPEARANCES,
     HIGH_CONTRAST_SETTINGS,
+    START_SCREENS,
     Prefs,
 )
 from pycon_us.reminder_settings import ReminderSettings
@@ -54,6 +55,7 @@ async def test_a_first_launch_reads_every_default(store: Storage) -> None:
     assert prefs.excluded_tracks == ("Open Space",)  # hidden by default (D-20)
     assert prefs.reminders == ReminderSettings()  # session reminders off (D-275)
     assert prefs.dev == {}
+    assert prefs.start_screen == "auto"  # the Lead scanner for a sponsor (D-16)
 
 
 async def test_load_reads_what_was_stored(store: Storage, shared: MemoryPrefs) -> None:
@@ -66,9 +68,11 @@ async def test_load_reads_what_was_stored(store: Storage, shared: MemoryPrefs) -
             "pycon.excluded_tracks": ["Talk", "Tutorial"],
             "pycon.reminders": '{"session_lead": 10, "primer": "accepted"}',
             "pycon.dev": '{"feed_url": "http://127.0.0.1:8000/feed.json"}',
+            "pycon.start_screen": "now",
         }
     )
     prefs = await loaded(store)
+    assert prefs.start_screen == "now"
     assert (prefs.theme, prefs.high_contrast, prefs.onboarded) == ("dark", "on", True)
     assert prefs.excluded_tracks == ("Talk", "Tutorial")
     assert prefs.reminders == ReminderSettings(session_lead=10, primer="accepted")
@@ -110,24 +114,31 @@ async def test_a_reminder_record_that_is_no_object_reads_as_the_defaults(
 
 
 @pytest.mark.parametrize(
-    ("key", "field"),
-    [("pycon.theme", "theme"), ("pycon.high_contrast", "high_contrast")],
+    ("key", "field", "default"),
+    [
+        ("pycon.theme", "theme", "system"),
+        ("pycon.high_contrast", "high_contrast", "system"),
+        ("pycon.start_screen", "start_screen", "auto"),
+    ],
 )
 async def test_an_unknown_setting_value_reads_as_the_default_and_is_logged(
     key: str,
     field: str,
+    default: str,
     store: Storage,
     shared: MemoryPrefs,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """An unknown appearance or contrast value loads as "system", its key logged.
+    """An unknown appearance, contrast or start screen value loads as its default.
+
+    Its key is logged.
 
     The value itself is never logged (D-120).
     """
     shared.values[key] = "sepia"
     with caplog.at_level(logging.WARNING):
         prefs = await loaded(store)
-    assert getattr(prefs, field) == "system"
+    assert getattr(prefs, field) == default
     assert key in caplog.text
     assert "sepia" not in caplog.text  # the key is logged, never the value (D-120)
 
@@ -152,6 +163,8 @@ def test_the_first_value_of_each_setting_is_its_storage_default() -> None:
     assert APPEARANCES[0] == storage.THEME.default
     assert HIGH_CONTRAST_SETTINGS == ("system", "on", "off")
     assert HIGH_CONTRAST_SETTINGS[0] == storage.HIGH_CONTRAST.default
+    assert START_SCREENS == ("auto", "now", "lead")
+    assert START_SCREENS[0] == storage.START_SCREEN.default
 
 
 # ------------------------------------------------------------------ save
@@ -173,6 +186,7 @@ async def test_saved_settings_are_shown_and_survive_a_relaunch(
         excluded_tracks=(),
         reminders=ReminderSettings(session_lead=5, keynote=False, primer="accepted"),
         dev={"fake_now": "2026-05-15T09:00:00-07:00"},
+        start_screen="lead",
     )
     assert saved is True
     assert (prefs.theme, prefs.high_contrast, prefs.excluded_tracks) == (
@@ -190,6 +204,7 @@ async def test_saved_settings_are_shown_and_survive_a_relaunch(
         session_lead=5, keynote=False, primer="accepted"
     )
     assert relaunched.dev == {"fake_now": "2026-05-15T09:00:00-07:00"}
+    assert relaunched.start_screen == "lead"
 
 
 async def test_settings_left_out_are_neither_written_nor_changed(
@@ -267,12 +282,18 @@ async def test_one_failed_write_still_writes_the_others(
 
 
 @pytest.mark.parametrize(
-    "change", [{"theme": "sepia"}, {"high_contrast": "auto"}, {"theme": "Dark"}]
+    "change",
+    [
+        {"theme": "sepia"},
+        {"high_contrast": "auto"},
+        {"theme": "Dark"},
+        {"start_screen": "schedule"},
+    ],
 )
 async def test_save_rejects_an_unknown_setting_value_and_changes_nothing(
     change: dict[str, str], store: Storage, shared: MemoryPrefs
 ) -> None:
-    """A save with an unknown appearance or contrast raises and changes nothing."""
+    """A save with an unknown appearance, contrast or start screen raises, changes nothing."""
     prefs = await loaded(store)
     with pytest.raises(ValueError, match="must be one of"):
         await prefs.save(store, onboarded=True, **change)  # type: ignore[arg-type]

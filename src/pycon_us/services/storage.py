@@ -60,8 +60,8 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.staff_sponsor`, the scanner consent and `pycon.start_screen` here, with
-# the features that use them (#39); the staff keys start with STAFF_PREFIX.
+# P3 adds `pycon.staff_sponsor` and the scanner consent here, with the features that
+# use them (#39); the staff keys start with STAFF_PREFIX.
 
 STAFF_PREFIX = "pycon.staff_"
 """Starts every staff key (the chosen sponsor, the scanner consent): what sign-out, an
@@ -86,6 +86,10 @@ REMINDERS: Pref[dict[str, Any]] = Pref("pycon.reminders", {})
 DEV: Pref[dict[str, Any]] = Pref("pycon.dev", {})
 """Developer options, merged over the store's defaults (D-73)."""
 
+START_SCREEN: Pref[str] = Pref("pycon.start_screen", "auto")
+"""``auto``, ``now`` or ``lead``: where a lead-retrieval account opens the app (D-16).
+Not a staff key: a sign-out keeps it (#689)."""
+
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -97,6 +101,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     EXCLUDED_TRACKS,
     REMINDERS,
     DEV,
+    START_SCREEN,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""

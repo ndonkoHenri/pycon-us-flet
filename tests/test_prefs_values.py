@@ -172,6 +172,7 @@ def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> No
         excluded_tracks=(),
         reminders=ReminderSettings(session_lead=10, lightning=False, primer="accepted"),
         dev={"unlocked": True},
+        start_screen="now",
         os_dark=True,
         reduce_motion=True,
         screen_reader=True,
@@ -185,5 +186,6 @@ def test_reset_returns_every_setting_to_its_default_and_keeps_the_device() -> No
     )
     assert prefs.excluded_tracks == ("Open Space",)  # the default filter (D-20)
     assert (prefs.reminders, prefs.dev) == (ReminderSettings(), {})  # D-198
+    assert prefs.start_screen == "auto"  # Reset app is a fresh install's (D-198)
     assert prefs.os_dark and prefs.reduce_motion and prefs.screen_reader
     assert prefs.loaded is True
