@@ -69,6 +69,7 @@ class OutboxMachine(RuleBasedStateMachine):
         elif decision.outcome is Outcome.UPDATED:
             assert decision.row is not None and decision.row.id in self.rows
             row = decision.row
+            assert row.id is not None
             if counted_from_zero:
                 self.api_errors[row.id] = 0
         else:
@@ -186,13 +187,14 @@ class OutboxMachine(RuleBasedStateMachine):
         row = self.first_due()
         if row is None or row.id is None:
             return
+        row_id = row.id
         for _ in range(count):
             if row.status is not Status.PENDING:
                 break
             row = outbox.after_error(row, "500", self.now)
-            self.api_errors[row.id] += 1
+            self.api_errors[row_id] += 1
             self.now += outbox.NETWORK_BACKOFF
-        self.rows[row.id] = row
+        self.rows[row_id] = row
 
     @rule()
     def retry_failed(self) -> None:
