@@ -7,8 +7,9 @@ entered (``parse_badge``), applies the per-code cooldown, awaits one handler at 
 and shows what it returned, so the tools only return data.
 
 **Manual entry** takes the full ``code:validator`` payload, which USB and Bluetooth HID
-scanners also type before Enter. A submit clears the field and keeps the focus in it,
-so a hardware scanner scans continuously; a code accepted in the last 4 s is cleared
+scanners also type before Enter. A submit clears the field and puts the focus back in
+it (every submit drops it, and Android's keyboard with it: F274, U254), so a hardware
+scanner scans continuously; a code accepted in the last 4 s is cleared
 without a word (a held code); a second submit while the handler runs is dropped, its
 text kept; text that is not a badge says "Not a badge code" and stays for correction.
 
@@ -148,7 +149,7 @@ def ScanScreen(
             badge = parse_badge(raw)
             if badge is None:
                 await show(NOT_A_BADGE)
-                await query.focus()  # Enter took it out; the text stays to correct
+                await query.focus()  # Enter took it out (F274); the text stays
                 return
             await query.clear()  # empties the field and puts the focus back in it
             if not cooldown.accept(badge.code, clock()):
