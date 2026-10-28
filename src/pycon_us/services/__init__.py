@@ -2,7 +2,7 @@
 
 Each service is a small module with one job (docs/architecture.md). ``Services`` bundles
 what a session uses, built once by ``App`` and reached through ``use_services()``. Later
-phases add reminders, the API client, the sync worker and the scanner.
+phases add the API client, the sync worker and the scanner.
 """
 
 import asyncio
@@ -17,6 +17,8 @@ from pycon_us import capabilities
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services.presence import Presence
+from pycon_us.services.reminders import Scheduler
+from pycon_us.services.reminders import start as start_reminders
 from pycon_us.services.storage import Storage, data_dir
 
 if TYPE_CHECKING:  # imported only when the build has it (D-63)
@@ -69,6 +71,9 @@ class Services:
         permissions: ``flet-permission-handler``'s service: permission status, the
             app's settings page and the camera (D-61). ``None`` unless the build has it
             (``capabilities.PERMISSIONS``), so always ``None`` in the companion app.
+        reminders: E3's ``Scheduler``, which schedules the reminder plan (D-389).
+            ``None`` unless the build has E3 (``capabilities.REMINDERS``), so always
+            ``None`` in the companion app, which keeps the interim (D-60).
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
@@ -95,6 +100,7 @@ class Services:
     paths: ft.StoragePaths = field(default_factory=ft.StoragePaths)
     file_picker: ft.FilePicker = field(default_factory=ft.FilePicker)
     permissions: PermissionHandler | None = field(default_factory=_permissions)
+    reminders: Scheduler | None = None
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
     presence: Presence = field(default_factory=Presence)
@@ -118,6 +124,7 @@ class Services:
             OSError: The data directory cannot be created (a broken install, D-120).
         """
         year = load_year()
+        permissions = _permissions()
         return cls(
             year=year,
             storage=Storage(ft.SharedPreferences(), data_dir(), year.conference.year),
@@ -126,6 +133,8 @@ class Services:
             haptics=ft.HapticFeedback(),
             launcher=ft.UrlLauncher(),
             clipboard=ft.Clipboard(),
+            permissions=permissions,
+            reminders=start_reminders(permissions),
         )
 
     def close(self) -> None:
@@ -141,6 +150,8 @@ class Services:
         # return: a session replaced in the background never resumes.
         self.foreground.set()
         self.presence.close()  # and a focus that waits for a return (D-372)
+        if self.reminders is not None:  # and the reminders' loop, which then returns
+            self.reminders.request()
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
         """Call ``action`` now, then every ``seconds`` while the app is in the foreground.

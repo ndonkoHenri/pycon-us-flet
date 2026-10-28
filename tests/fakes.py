@@ -1,16 +1,25 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services.
 
-And ``QueuedWrite``, a feed cache write held in its worker thread. The page, its device
-and the hooks are ``tests/fake_page.py``'s (#623).
+And ``QueuedWrite``, a feed cache write held in its worker thread; and stand-ins for
+E3's ``Notifications`` and the permission handler, which take no page. The page, its
+device and the hooks are ``tests/fake_page.py``'s (#623).
 """
 
 import asyncio
 import threading
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import flet as ft
 import pytest
+from flet_notifications import (
+    AndroidScheduleMode,
+    NotificationException,
+    NotificationPermissionException,
+)
+from flet_permission_handler import Permission, PermissionStatus
 
 from pycon_us.services import storage
 
@@ -267,3 +276,84 @@ class QueuedWrite:
     def release(self) -> None:
         """Let the held worker take the lock and write."""
         self._go.set()
+
+
+@dataclass(frozen=True)
+class Scheduled:
+    """One reminder ``MemoryNotifications`` holds pending, as ``schedule()`` got it."""
+
+    when: datetime
+    title: str | None
+    body: str | None
+    payload: str | None
+    mode: AndroidScheduleMode
+
+
+class MemoryNotifications:
+    """E3's ``Notifications`` without a page or a platform: pending reminders in a dict.
+
+    Not a subclass: the service's methods check the page's platform before the
+    bridge. It answers the calls ``services.reminders.Scheduler`` makes, records them
+    in ``calls``, and fails as a test sets it.
+    """
+
+    def __init__(self) -> None:
+        """Start with nothing pending, exact alarms allowed and every call succeeding."""
+        self.pending: dict[int, Scheduled] = {}
+        self.calls: list[str] = []
+        self.exact = True  # what can_schedule_exact_alarms() answers
+        self.refuse_exact = False  # an exact schedule raises, as without the access
+        self.errors: dict[str, Exception] = {}  # method name -> what it raises
+        self.failing_ids: set[int] = set()  # schedule() raises for these ids
+        self.gate: asyncio.Event | None = None  # schedule() waits on it when given
+
+    def _call(self, method: str) -> None:
+        """Record the call to ``method``, and raise its error when a test set one."""
+        self.calls.append(method)
+        if method in self.errors:
+            raise self.errors[method]
+
+    async def can_schedule_exact_alarms(self) -> bool:
+        """Answer ``exact``."""
+        self._call("can_schedule_exact_alarms")
+        return self.exact
+
+    async def cancel_all_pending(self) -> None:
+        """Drop every pending reminder."""
+        self._call("cancel_all_pending")
+        self.pending.clear()
+
+    async def schedule(
+        self,
+        id: int,
+        *,
+        when: datetime,
+        title: str | None = None,
+        body: str | None = None,
+        payload: str | None = None,
+        schedule_mode: AndroidScheduleMode,
+    ) -> None:
+        """Hold the reminder as pending under ``id``, replacing one with the same id."""
+        self._call("schedule")
+        if self.gate is not None:
+            await self.gate.wait()
+        exact = schedule_mode != AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE
+        if self.refuse_exact and exact:
+            raise NotificationPermissionException("exact alarms are not permitted")
+        if id in self.failing_ids:
+            raise NotificationException(f"operation_failed: {id}")
+        self.pending[id] = Scheduled(when, title, body, payload, schedule_mode)
+
+
+class MemoryPermissions:
+    """``flet-permission-handler``'s service, answering one status for every permission."""
+
+    def __init__(self, status: PermissionStatus | None) -> None:
+        """Answer ``status``, and count the reads in ``reads``."""
+        self.status = status
+        self.reads = 0
+
+    async def get_status(self, permission: Permission) -> PermissionStatus | None:
+        """Return ``status`` for any ``permission``."""
+        self.reads += 1
+        return self.status

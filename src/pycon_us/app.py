@@ -17,6 +17,7 @@ from pycon_us.favorites import Favorites, FavoritesCtx
 from pycon_us.layout import LayoutCtx, follow_width, layout_for
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx, read_accessibility, use_prefs
+from pycon_us.reminder_schedule import use_reminder_schedule
 from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
@@ -90,6 +91,8 @@ def App(memory: ViewMemory):
     use_reminder_banner(svc, conference, favorites, ready=ready)
     # Each recorded batch's "Schedule updated · Review" (D-255, D-335), before the gate.
     use_review_snack_bar(svc, change_log, favorites, prefs)
+    # E3's reminders, applied once the start has loaded, and at every change (D-389).
+    use_reminder_schedule(svc, conference, favorites, change_log, prefs)
 
     # The boot gate: no theme or filter flash, and no slot layout that changes
     # under the Schedule's first jump (D-216).
@@ -281,6 +284,8 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
        applies without a restart (D-23, D-34, D-173). On Android such a change can
        reach Flutter only after this read, and then applies at the next resume:
        accepted until U17 (D-183). Components follow ``Prefs`` by themselves.
+    4. E3's reminders are applied again, which brings back what the OS dropped
+       meanwhile (D-222, D-389); without E3 there is nothing to apply.
 
     Args:
         svc: The session's services.
@@ -291,6 +296,8 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs) -> None
     svc.presence.come_back()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)
     await read_accessibility(svc.semantics, prefs)
+    if svc.reminders is not None:
+        svc.reminders.request()
 
 
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:
