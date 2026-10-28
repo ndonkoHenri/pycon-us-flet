@@ -285,12 +285,35 @@ def parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="run the mock's clock this far ahead (behind when negative; default 0)",
     )
+    parser.add_argument(
+        "--attendees",
+        type=attendee_count,
+        default=0,
+        metavar="N",
+        help="add N made-up attendees after the seeded four, MOCK0005 onwards "
+        "(a large CoC directory; default 0)",
+    )
     return parser
 
 
+def attendee_count(value: str) -> int:
+    """Read ``--attendees``: a whole number, 0 or more.
+
+    Raises:
+        argparse.ArgumentTypeError: For anything else, which argparse reports.
+    """
+    try:
+        count = int(value)
+    except ValueError:
+        count = -1
+    if count < 0:
+        raise argparse.ArgumentTypeError(f"not a count of attendees: {value!r}")
+    return count
+
+
 def state_for(args: argparse.Namespace) -> MockState:
-    """A fresh seeded state with the command line's semantics, faults and skew."""
-    state = MockState.from_seed(capture=args.capture)
+    """A fresh seeded state with the command line's semantics, attendees, faults and skew."""
+    state = MockState.from_seed(capture=args.capture, attendees=args.attendees)
     for fault in args.fault:
         state.faults.inject(fault, until_cleared=args.every_request)
     state.skew = args.skew

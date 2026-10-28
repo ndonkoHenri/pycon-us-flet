@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from tools.mock_api.crowd import crowd
 from tools.mock_api.faults import Faults
 
 SEED = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mock" / "seed.json"
@@ -227,6 +228,7 @@ class MockState:
         path: Path = SEED,
         now: Callable[[], float] = time.time,
         capture: Capture = "idempotent",
+        attendees: int = 0,
     ) -> MockState:
         """Load a fresh state from a seed file in the README's shape.
 
@@ -234,22 +236,26 @@ class MockState:
             path: The seed JSON file.
             now: The clock to use.
             capture: The capture semantics to serve.
+            attendees: How many made-up attendees to add after the seeded ones
+                (``crowd.py``, ``--attendees``).
 
         Returns:
             A state that shares nothing with any other.
         """
         seed = json.loads(path.read_text(encoding="utf-8"))
-        attendees = []
-        for entry in seed.get("attendees", []):
+        seeded = seed.get("attendees", [])
+        entries = seeded + crowd(attendees, first_id=len(seeded) + 1)
+        found = []
+        for entry in entries:
             bought = {int(pid): qty for pid, qty in entry.pop("products").items()}
-            attendees.append(Attendee(**entry, products=bought))
+            found.append(Attendee(**entry, products=bought))
         return cls(
             year=seed["year"],
             accounts=[Account(**entry) for entry in seed["accounts"]],
             sponsors=[Sponsor(**entry) for entry in seed.get("sponsors", [])],
             categories=[Category(**entry) for entry in seed.get("categories", [])],
             products={p["id"]: Product(**p) for p in seed.get("products", [])},
-            attendees={a.access_code: a for a in attendees},
+            attendees={a.access_code: a for a in found},
             capture=capture,
             now=now,
         )
