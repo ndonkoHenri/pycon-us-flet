@@ -153,6 +153,17 @@ def sheet(shown: Shown) -> ft.BottomSheet | None:
     return found[0] if found else None
 
 
+def chip(shown: Shown) -> ft.Container:
+    """The filter chip's tappable ``Container``, around its node's merge."""
+    return cast(ft.Container, shown.node("lead.leads.only_sponsor").parent)
+
+
+def count(shown: Shown) -> str:
+    """The live count line's words, "3 leads"."""
+    node = shown.node("lead.leads.count")
+    return str(next(t.value for t in descendants(node) if isinstance(t, ft.Text)))
+
+
 async def test_every_status_shows_newest_first_with_its_words(
     show: Show, db: OutboxDb
 ) -> None:
@@ -214,11 +225,66 @@ async def test_staff_filter_by_the_sponsor_id_they_scan_for(
     shown = await show(door_staff(), db, chosen=EXAMPLE)
     assert len(rows(shown)) == 2
     assert rows(shown)[1].endswith(", Example Corp")  # the sponsor, for staff
-    chip = cast(ft.Chip, shown.node("lead.leads.only_sponsor").content)
-    assert chip.label == "Only Example Corp" and not chip.selected
-    shown.session.apply_patch(chip._i, {"selected": True})
-    await shown.event(chip, "select", True)
+    node = shown.node("lead.leads.only_sponsor")
+    assert node.label == "Only Example Corp" and not node.selected
+    assert not shown.nodes("lead.leads.count")  # nothing narrows the list yet
+    await shown.event(chip(shown), "click")
+    node = shown.node("lead.leads.only_sponsor")
+    assert node.selected and node.button
     assert [p.split(", ")[0] for p in rows(shown)] == ["Ada"]
+    assert count(shown) == "1 lead"
+    await shown.event(chip(shown), "click")
+    assert not shown.node("lead.leads.only_sponsor").selected
+    assert len(rows(shown)) == 2
+
+
+async def test_the_filter_chip_wraps_a_long_sponsor_name(
+    show: Show, db: OutboxDb
+) -> None:
+    """The chip is a Container whose label wraps, not Flutter's one-line Chip (D-425).
+
+    ``ft.Chip`` keeps its label on one line, so a long name was cut at 200 % text.
+    """
+    add(db, "A1", 100.0, status=Status.SYNCED, name="Ada", sponsor=("1", "Long"))
+    long = LeadSponsor(
+        id="1",
+        name="The Very Long Example Corporation of North America",
+        booth="1",
+        logo_url=None,
+    )
+    shown = await show(door_staff(), db, chosen=long)
+    node = shown.node("lead.leads.only_sponsor")
+    assert not [c for c in descendants(node) if isinstance(c, ft.Chip)]
+    label = [
+        t
+        for t in descendants(node)
+        if isinstance(t, ft.Text) and t.value == f"Only {long.name}"
+    ]
+    assert len(label) == 1 and label[0].expand_loose  # takes its room, then wraps
+    assert label[0].max_lines is None  # no line cap: it wraps
+
+
+async def test_a_live_count_follows_each_search_that_finds_leads(
+    show: Show, db: OutboxDb
+) -> None:
+    """A search that finds some says how many in a live region; a miss has no count.
+
+    So a screen reader hears each matching query's result from the field (ux.md §9).
+    """
+    add(db, "MOCK0001", 100.0)
+    add(db, "MOCK0002", 150.0, status=Status.SYNCED, name="Adam")
+    add(db, "MOCK0003", 200.0, status=Status.SYNCED, name="Ada")
+    shown = await show(sponsor_account(), db)
+    assert not shown.nodes("lead.leads.count")
+    await search(shown, "mock")
+    assert count(shown) == "3 leads"
+    assert shown.node("lead.leads.count").live_region
+    await search(shown, "ada")
+    assert count(shown) == "2 leads"
+    await search(shown, "zzz")
+    assert not shown.nodes("lead.leads.count")
+    await search(shown, "")
+    assert not shown.nodes("lead.leads.count")
 
 
 async def test_a_sponsor_s_own_account_has_no_filter_chip(

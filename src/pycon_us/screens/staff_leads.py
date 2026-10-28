@@ -6,7 +6,8 @@ opened by its "Leads (42)" button, so the scan screen stays as the four tools sh
 (D-416) and a HID scanner never types into this page's search: a search field
 (``lead.leads.search``) matching the name or the code; for staff who scan for a sponsor
 (``scans_for_sponsor()``) with one chosen, a filter chip "Only Example Corp"
-(``lead.leads.only_sponsor``) that compares sponsor ids; then a lazy ``ListView`` of
+(``lead.leads.only_sponsor``) that compares sponsor ids; while either narrows the list
+and finds some, a live count line (``lead.leads.count``, "3 leads"); then a lazy ``ListView`` of
 every lead, newest first, with no cap. A row (``lead.leads.row.<code>``) is one stop
 read "Ada, Confirmed, 5 minutes ago, has a note": its status icon and words
 (``status_text()``, with ``WARNING_AMBER`` beside a flagged row's, D-410), the first
@@ -39,12 +40,11 @@ from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.theme import Tokens, use_tokens
-from pycon_us.ui.fields import SearchField, use_field_query
+from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.lead_note_sheet import use_note_sheet
 from pycon_us.ui.queue_rows import status_icon
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable
-from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
@@ -66,6 +66,11 @@ NOT_READ = "Couldn't read your leads on this device."
 def button_label(count: int | None) -> str:
     """Return the scanner's button: "Leads (42)", or "Leads" when the count is unknown."""
     return TITLE if count is None else f"{TITLE} ({count})"
+
+
+def count_line(count: int) -> str:
+    """Return the filter's count line, a live region: "1 lead", "3 leads"."""
+    return f"{count} lead" + ("" if count == 1 else "s")
 
 
 def only_label(sponsor: LeadSponsor) -> str:
@@ -139,9 +144,8 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     on_open = ft.use_callback(open_lead, [])
 
     @report_errors
-    def toggle(e: ft.Event[ft.Chip]) -> None:
-        # Flutter flips the chip and sends its new state before the event (chip.dart).
-        set_only(bool(e.control.selected))
+    def toggle(_: ft.Event[ft.Container]) -> None:
+        set_only(not only)
 
     head: list[ft.Control] = []
     items: list[ft.Control] = []
@@ -185,6 +189,10 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
             views, field.value, sponsor.id if sponsor is not None and only else None
         )
         items.extend(LeadRow(view, tokens, on_open) for view in kept)
+        if kept and (field.value.strip() or only):  # a filter applies, finds some
+            head.append(
+                found_count(count_line(len(kept)), identifier="lead.leads.count")
+            )
         if not kept:
             searched = bool(field.value.strip())
             items.append(
@@ -221,38 +229,67 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
 
 
 def only_chip(
-    sponsor: LeadSponsor, selected: bool, on_select: ft.ControlEventHandler[ft.Chip]
+    sponsor: LeadSponsor, selected: bool, on_toggle: ft.ControlEventHandler
 ) -> ft.Control:
     """Return the "Only Example Corp" filter chip, start-aligned (LEAD-06).
 
-    One stop, read with its label and whether it is selected (Flutter's chip says it).
+    One node, a button read "Only Example Corp" with whether it is selected. Drawn as
+    M3's filter chip (8 dp corners, a filter icon, the check mark and a
+    ``secondary_container`` fill once selected) but built from a ``Container``, as the
+    scanner's sponsor chip (D-425): Flutter's ``Chip`` keeps its label on one line and
+    cuts a long sponsor's name at 200 % text. Its text takes only the room it needs
+    (``expand_loose``) and wraps past the width; the chip is at least 48 dp tall, its
+    own target (ux.md §9). The edge stays when selected, so the state is never a fill
+    alone (D-306).
 
     Args:
         sponsor: The sponsor the account scans for now.
         selected: The filter is on.
-        on_select: Turns it on or off.
+        on_toggle: Turns it on or off.
     """
-    row = ft.Row(
-        [
-            named(
-                "lead.leads.only_sponsor",
-                ft.Chip(
-                    label=only_label(sponsor),
-                    leading=None
-                    if selected
-                    else ft.Icon(
-                        ft.Icons.FILTER_LIST, size=18, apply_text_scaling=True
-                    ),
+    label = only_label(sponsor)
+    return ft.Container(
+        ft.MergeSemantics(  # the label, the state and the tap's action: one node
+            content=ft.Container(
+                ft.Semantics(
+                    label=label,
+                    identifier="lead.leads.only_sponsor",
+                    button=True,
                     selected=selected,
-                    show_checkmark=True,
-                    on_select=on_select,
+                    exclude_semantics=True,  # the label replaces the text
+                    content=ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.CHECK if selected else ft.Icons.FILTER_LIST,
+                                size=18,
+                                color=ft.Colors.ON_SECONDARY_CONTAINER
+                                if selected
+                                else ft.Colors.PRIMARY,
+                                apply_text_scaling=True,
+                            ),
+                            ft.Text(
+                                label,
+                                theme_style=ft.TextThemeStyle.LABEL_LARGE,
+                                expand=True,
+                                expand_loose=True,
+                            ),
+                        ],
+                        spacing=8,
+                        tight=True,
+                    ),
                 ),
+                ink=True,
+                on_click=on_toggle,
+                bgcolor=ft.Colors.SECONDARY_CONTAINER if selected else None,
+                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+                border_radius=8,
+                padding=ft.Padding.symmetric(horizontal=12, vertical=13),
             )
-        ],
-        wrap=True,
+        ),
+        alignment=ft.Alignment.CENTER_LEFT,
+        # The search field's 16 dp sides, so the chip lines up under it (ux.md §3.6).
+        padding=ft.Padding.only(left=16, right=16, bottom=4),
     )
-    # The search field's 16 dp sides, so the chip lines up under it (ux.md §3.6).
-    return ft.Container(row, padding=ft.Padding.only(left=16, right=16, bottom=4))
 
 
 def LeadRow(
