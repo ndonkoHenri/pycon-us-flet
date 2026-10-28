@@ -18,6 +18,7 @@ import pytest
 
 from pycon_us.account import Account, SignIn
 from pycon_us.config import load_year
+from pycon_us.locations import LEAD_SCANNER
 from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
 from pycon_us.screens import more, sign_in
 from pycon_us.screens.sign_in import ERRORS, EXPIRED, INTRO, UNAVAILABLE, SignInPage
@@ -35,6 +36,9 @@ VIEW = "/more/sign-in"
 
 ROLES = ("attendee", "speaker", "sponsor", "staff", "coc", "all")
 """Every seeded account (``tests/fixtures/mock/seed.json``)."""
+
+LEADS = ("sponsor", "all")
+"""The seeded accounts with ``lead_retrieval``: a sign-in lands on the scanner (D-16)."""
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -164,14 +168,29 @@ async def test_the_form_has_its_identifiers_hints_and_keyboards(
 async def test_each_seeded_account_signs_in_and_goes_back_with_a_snack_bar(
     show: Show, recorder: Recorder, state: MockState, account: Account, role: str
 ) -> None:
-    """A success saves the account, says "Signed in as <nickname>" and pops to More."""
+    """A success saves the account, says "Signed in as <nickname>" and pops to More.
+
+    A lead-retrieval account lands on the Lead scanner instead, whose Back is More
+    (D-16, #689).
+    """
     shown = await show(recorder)
     await sign_in_as(shown, f"{role}@example.com", f"mock-{role}")
     assert account.signed_in and account.email == f"{role}@example.com"
     [bar] = shown.snack_bars
     assert isinstance(bar.content, ft.Text)
     assert bar.content.value == f"Signed in as {seeded(state, role).nickname}"
-    assert shown.went == ["/more"]
+    assert shown.went == [LEAD_SCANNER if role in LEADS else "/more"]
+
+
+@pytest.mark.parametrize("setting", ["now", "lead"])
+async def test_a_sponsor_lands_on_the_scanner_unless_the_setting_says_now(
+    show: Show, recorder: Recorder, setting: str
+) -> None:
+    """Open the app on Now sends the sponsor back where they came from (D-16)."""
+    prefs = Prefs(loaded=True, start_screen=setting)  # type: ignore[arg-type]
+    shown = await show(recorder, prefs=prefs)
+    await sign_in_as(shown, "sponsor@example.com", "mock-sponsor")
+    assert shown.went == ["/more" if setting == "now" else LEAD_SCANNER]
 
 
 async def test_only_a_sign_in_lets_the_os_save_the_credentials(
@@ -189,7 +208,7 @@ async def test_only_a_sign_in_lets_the_os_save_the_credentials(
     await shown.click(submit(shown))
     (group,) = shown.find(ft.AutofillGroup)
     assert group.dispose_action is ft.AutofillGroupDisposeAction.COMMIT
-    assert shown.went == ["/more"]
+    assert shown.went == [LEAD_SCANNER]  # the account has lead_retrieval (D-16)
 
 
 async def test_autofilled_fields_are_read_when_signing_in(

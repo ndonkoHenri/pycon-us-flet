@@ -1,4 +1,4 @@
-"""Settings (``/more/settings``): Appearance, Reminders and Data (THEME-01, P2-62).
+"""Settings (``/more/settings``): Appearance, Reminders, Start screen and Data (THEME-01).
 
 Two Material controls instead of Ionic's four-mode Cupertino sheet, both following the
 OS until the user chooses otherwise (D-23, ux.md §6.9): the System, Light and Dark
@@ -6,7 +6,8 @@ radio rows, which More held until this page existed (D-169), and a High contrast
 switch, which shows the OS flag until it is switched against it (D-286). A choice
 applies at once and is saved with ``Prefs.save()``; one that cannot be saved still
 applies for the session, and a SnackBar says so (D-120). Then Reminders, live in a build
-with E3 and in D-60's interim without (``settings_reminders.py``, D-401), and Data, the
+with E3 and in D-60's interim without (``settings_reminders.py``, D-401), "Open the app on" for a signed-in lead-retrieval
+account (Now or Lead scanner, D-16, #689), and Data, the
 schedule's source and age with Refresh now, and the zone the times are in
 (``settings_data.py``). More pushes it at ``/more/settings``, and My schedule's
 Reminder settings at ``/my-schedule/settings``, so Back returns to the opener (D-17,
@@ -17,7 +18,8 @@ from typing import cast
 
 import flet as ft
 
-from pycon_us.prefs import Appearance, use_prefs
+from pycon_us.account import use_account
+from pycon_us.prefs import Appearance, StartScreen, use_prefs
 from pycon_us.screens.settings_data import DataSection
 from pycon_us.screens.settings_reminders import RemindersSection, interim_section
 from pycon_us.services import use_services
@@ -33,6 +35,12 @@ APPEARANCE_LABELS: dict[Appearance, str] = {
     "dark": "Dark",
 }
 """Appearance's rows, in order, the default first (ux.md §6.9)."""
+
+START_SCREEN = "Open the app on"
+"""The Start screen section's heading (D-16)."""
+
+START_LABELS: dict[StartScreen, str] = {"now": "Now", "lead": "Lead scanner"}
+"""The Start screen's rows, in order: ``auto`` shows as Lead scanner, its meaning."""
 
 HIGH_CONTRAST = "High contrast"
 """The switch row's title."""
@@ -53,6 +61,7 @@ def Settings() -> ft.View:
     svc = use_services()
     margin = use_margin(LIST)  # its width class (D-305)
     prefs = use_prefs()
+    account = use_account()
 
     @report_errors
     async def choose_appearance(e: ft.Event[ft.RadioGroup]) -> None:
@@ -63,6 +72,11 @@ def Settings() -> ft.View:
     async def switch_high_contrast(e: ft.Event[ft.Switch]) -> None:
         setting = prefs.high_contrast_setting(bool(e.control.value))
         say_if_unsaved(page, await prefs.save(svc.storage, high_contrast=setting))
+
+    @report_errors
+    async def choose_start_screen(e: ft.Event[ft.RadioGroup]) -> None:
+        screen = cast(StartScreen, e.control.value)
+        say_if_unsaved(page, await prefs.save(svc.storage, start_screen=screen))
 
     rows: list[ft.Control] = [
         SectionHeader("Appearance"),  # level 2, a section of the page (D-211)
@@ -78,6 +92,9 @@ def Settings() -> ft.View:
         if svc.reminders is not None  # a build with E3 (D-401)
         else interim_section(page.platform, slot=RADIO_WIDTH)
     )
+    # A lead-retrieval account's only, with a mock URL, as the scanner (D-16, D-51).
+    if prefs.private_api_enabled and account.lead_retrieval:
+        rows.append(start_screen(prefs.start_screen, choose_start_screen))
     rows.append(DataSection(RADIO_WIDTH))
     return AppScaffold(
         title="Settings",
@@ -94,12 +111,52 @@ def appearance(
 ) -> ft.Control:
     """Return Appearance's radio rows: System, Light and Dark (D-23).
 
-    Each row is a ``ListTile`` whose whole row selects (``toggle_inputs``), one node
-    with its identifier, read as one radio button; the rows reflow at any text size,
-    where three segments in one row clipped "System" at 200 % on 360 dp (D-169).
-
     Args:
         selected: ``Prefs.theme``; the group is controlled (D-157).
+        on_change: Saves the choice.
+    """
+    return radio_rows("settings.appearance", APPEARANCE_LABELS, selected, on_change)
+
+
+def start_screen(
+    selected: StartScreen, on_change: ft.ControlEventHandler[ft.RadioGroup]
+) -> ft.Control:
+    """Return the Start screen section: its heading over Now and Lead scanner (D-16).
+
+    ``auto``, the stored default, shows as Lead scanner, where it opens the app; a
+    choice stores ``now`` or ``lead``, and a sign-out keeps it (#689).
+
+    Args:
+        selected: ``Prefs.start_screen``.
+        on_change: Saves the choice.
+    """
+    shown = "now" if selected == "now" else "lead"
+    return ft.Column(
+        [
+            SectionHeader(START_SCREEN),  # level 2, as Appearance (D-211)
+            radio_rows("settings.start_screen", START_LABELS, shown, on_change),
+        ],
+        spacing=0,
+    )
+
+
+def radio_rows[T: str](
+    name: str,
+    labels: dict[T, str],
+    selected: T,
+    on_change: ft.ControlEventHandler[ft.RadioGroup],
+) -> ft.Control:
+    """Return a controlled group of radio rows, one per value (D-169).
+
+    Each row is a ``ListTile`` whose whole row selects (``toggle_inputs``), one node
+    with its identifier, ``<name>.<value>``, read as one radio button; the rows reflow
+    at any text size, where three segments in one row clipped "System" at 200 % on
+    360 dp (D-169).
+
+    Args:
+        name: The identifiers' prefix, e.g. ``settings.appearance``.
+        labels: Each value's title, in order.
+        selected: The value the group shows (D-157).
         on_change: Saves the choice.
     """
     return ft.RadioGroup(
@@ -108,14 +165,14 @@ def appearance(
         content=ft.Column(
             [
                 named(
-                    f"settings.appearance.{value}",
+                    f"{name}.{value}",
                     ft.ListTile(
                         leading=ft.Radio(value=value),
                         title=text,
                         toggle_inputs=True,  # a tap anywhere on the row selects it
                     ),
                 )
-                for value, text in APPEARANCE_LABELS.items()
+                for value, text in labels.items()
             ],
             spacing=0,
         ),

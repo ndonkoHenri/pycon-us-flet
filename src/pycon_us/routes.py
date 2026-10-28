@@ -14,7 +14,14 @@ from urllib.parse import unquote
 
 import flet as ft
 
-from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, launch_target
+from pycon_us.account import use_account
+from pycon_us.locations import (
+    DRILL_KINDS,
+    WELCOME,
+    is_top_view,
+    lands_on_lead,
+    launch_target,
+)
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.about import AboutPycon
 from pycon_us.screens.about_app import AboutApp
@@ -94,7 +101,9 @@ def Start() -> ft.View:
     """``/``: send the session to a tapped reminder, Welcome, Now or where the user was.
 
     A reminder tap held while the app started comes first (D-396); then Welcome
-    until Get started (D-287), then where the user was (D-143). A new
+    until Get started (D-287), then where the user was (D-143); a cold start opens
+    Now, or the Lead scanner for a lead-retrieval account (D-16, #689), whose stored
+    sign-in the boot gate has already restored. A new
     session in the same process (F26, F29) finds ``ViewMemory.last_location``
     and rebuilds that stack; a deep link or ``--route`` start never comes here, except
     one straight to ``/search``: with no opener to remember, the Router builds the
@@ -107,6 +116,7 @@ def Start() -> ft.View:
     svc = use_services()
     memory = svc.memory
     prefs = use_prefs()
+    account = use_account()
 
     @report_errors
     def go() -> None:
@@ -118,6 +128,7 @@ def Start() -> ft.View:
                     memory.last_location,
                     memory.search_base,
                     onboarded=prefs.onboarded,
+                    lead=lands_on_lead(prefs, account),
                 )
             )
 

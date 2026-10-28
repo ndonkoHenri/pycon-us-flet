@@ -208,7 +208,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 
 | Path | Screen | Kind | Phase | Features |
 |---|---|---|---|---|
-| `/` | `Start`: boot View, then `/welcome` until Get started (D-287), else the last location of this process (D-143), `/now` or (P3) the staff start screen | index | P0 | SHELL-03 |
+| `/` | `Start`: boot View, then `/welcome` until Get started (D-287), else the last location of this process (D-143), `/now` on a cold start, or `/more/staff/lead` for a lead-retrieval account (D-16, #689) | index | P0 | SHELL-03 |
 | `/welcome` | `Welcome` (`screens/welcome.py`): a one-View root without a bar or the drill (ux.md §6.8) | root, no bar | P2 | SHELL-02, STORE-07 |
 | `/now`, `/schedule`, `/my-schedule`, `/map`, `/more` | tab roots (`Map` shows Rooms in P1, floors/expo/jobs in P2, `?tab=`) | root | P0–P2 | SCHED-25, SCHED-01..20, NEW-01, MAP-01, SHELL-09 |
 | `/search` | `Search` (`?scope=`), opened from Now, Schedule, Map and More | global modal | P1 | NEW-02 |
@@ -228,7 +228,7 @@ Example: `/schedule/session/42/speaker/17/session/99/room/room-102a?highlight=99
 
 ### 5.3 `routes.py` and `locations.py`
 
-`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-164): `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `WELCOME`, `DRILL_KINDS` and `PAGES`. `PAGES` lists every page path without a parameter, `/welcome` included, the one page without the drill; a test keeps it equal to the table's. `PAGES` takes the hub's pages from `year_tracks.HUB_PAGES` (D-228), which names the Tracks hub's pages of their own by their segment under `/more/tracks`, with the track each one is the page of (D-207); the year loader refuses a track slug that names one of them unless it is that track's page.
+`routes.py` imports every screen to build `ROUTES`, and screens build links, so the helpers screens import live in `locations.py` (D-164): `drill_href()`, `parent_of()`, `start_target()`, `lands_on_lead()`, `query_of()`, `is_top_view()`, `use_query()` and the constants `TAB_ROOTS`, `WELCOME`, `LEAD_SCANNER`, `DRILL_KINDS` and `PAGES`. `start_target(last_location, search_base, *, onboarded, lead=False)` returns Welcome until Get started (D-287), then the last location of a new session in the same process (D-143), then, on a cold start, `/now`, or `/more/staff/lead` when `lead` (#689, D-16). `Start` passes `lead=lands_on_lead(prefs, account)`: a mock URL is set and `starts_on_lead(account.role_flags, prefs.start_screen)` (`core/staff_tools.py`: `lead_retrieval` and a Start screen other than `now`). The boot gate has restored the account and loaded the setting before `Start` mounts (§4.3), so there is no landing race and no flash; a link, a reminder tap or a `--route` start opens its own target. Sign in uses the same rule for its landing. `PAGES` lists every page path without a parameter, `/welcome` included, the one page without the drill; a test keeps it equal to the table's. `PAGES` takes the hub's pages from `year_tracks.HUB_PAGES` (D-228), which names the Tracks hub's pages of their own by their segment under `/more/tracks`, with the track each one is the page of (D-207); the year loader refuses a track slug that names one of them unless it is that track's page.
 
 ```python
 # src/pycon_us/routes.py (excerpt)
@@ -1031,7 +1031,7 @@ As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (wit
 | Excluded tracks | SharedPreferences | `pycon.excluded_tracks` (`list[str]` of track keys; absent → `["Open Space"]`, an explicit `[]` kept) | no |
 | Reminder settings, developer options | SharedPreferences | `pycon.reminders` (a JSON object of every `ReminderSettings` field, merged over the defaults: a missing or badly typed key reads as its default, an unknown one is dropped, D-275), `pycon.dev` (JSON) | no |
 | Favourites | SharedPreferences | `pycon.<year>.favorites` (`list[str]`) | **no** (D-48) |
-| Account, staff keys, start screen, sync flag (P3) | SharedPreferences | `pycon.account` (JSON: `email`, `nickname`, `features` by their API names; #684), the staff keys under `STAFF_PREFIX` = `pycon.staff_` (`pycon.staff_sponsor` (JSON) and the scanner consent, #39; removed by `Storage.clear_prefs(STAFF_PREFIX)` at a sign-out, a sign-in as another account and Clear staff data, so a staff key added later goes with them, D-414), `pycon.start_screen`, `pycon.<year>.favorites_sync` (`merge`, `dirty`, `clean`; D-406) | yes, except start screen |
+| Account, staff keys, start screen, sync flag (P3) | SharedPreferences | `pycon.account` (JSON: `email`, `nickname`, `features` by their API names; #684), the staff keys under `STAFF_PREFIX` = `pycon.staff_` (`pycon.staff_sponsor` (JSON) and the scanner consent, #39; removed by `Storage.clear_prefs(STAFF_PREFIX)` at a sign-out, a sign-in as another account and Clear staff data, so a staff key added later goes with them, D-414), `pycon.start_screen` (`auto`/`now`/`lead`, D-16, #689; outside the staff prefix, so kept), `pycon.<year>.favorites_sync` (`merge`, `dirty`, `clean`; D-406) | yes, except start screen |
 | API key and secret (P3) | `flet_secure_storage.SecureStorage` (`KeychainAccessibility.FIRST_UNLOCK_THIS_DEVICE`), through `services/credentials.py`; memory for the session without the extension (D-63) | `pycon.api_key`, `pycon.api_secret` | yes |
 | Feed cache, change log | data dir | `feed-<year>.json` (raw bytes), `changes-<year>.json` | no |
 | Staff outbox (P3) | sqlite in data dir | `outbox.db` | see §12.1 |
@@ -1342,7 +1342,7 @@ class SyncWorker:
 | Door check, Swag pickup | `door_check` |
 | CoC capture | `mask_violation` |
 | "Scan on behalf of" sponsor picker | `door_check and not lead_retrieval` |
-| Default start screen "Lead scanner" (applied after the account is restored) | `lead_retrieval` |
+| Default start screen "Lead scanner" (applied after the account is restored; `starts_on_lead(flags, start_screen)`, #689) | `lead_retrieval`, unless Settings' Start screen is `now` |
 | Staff section and Now card | any entry above |
 
 Each staff screen re-checks its rule on every render ("Not available for this account", `ui/scan_screen.py`'s `NotAvailable`, `staff.not_available`), also when signed out or with no mock URL (D-51), so deep links cannot bypass it; the screens read the flags as `Account.role_flags`.

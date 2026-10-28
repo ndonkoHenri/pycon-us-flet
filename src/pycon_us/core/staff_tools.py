@@ -189,3 +189,18 @@ def queue_words(pending: int, failed: int) -> str:
     if failed:
         parts.append(f"{failed} failed")
     return " · ".join(parts)
+
+
+def starts_on_lead(flags: Mapping[str, object], start_screen: str) -> bool:
+    """Say whether the app opens on the Lead scanner for an account (D-16, #689).
+
+    Args:
+        flags: The account's role flags, as ``may_open()`` takes them.
+        start_screen: The Start screen setting (``Prefs.start_screen``): ``auto``,
+            ``now`` or ``lead``.
+
+    Returns:
+        ``lead_retrieval`` unless the setting is ``now``: a sponsor lands on the
+        scanner by default (#310), door-check-only staff and everyone else on Now.
+    """
+    return _on(flags, "lead_retrieval") and start_screen != "now"

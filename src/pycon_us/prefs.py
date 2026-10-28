@@ -1,7 +1,7 @@
 """The ``Prefs`` store: the user's settings and the device facts they depend on (D-69).
 
-It holds the six app-wide keys of the storage table (decisions §M), checks the two
-settings with fixed values (Appearance, High contrast) on load and on save, reads the
+It holds the app-wide settings of the storage table (decisions §M), checks the three
+settings with fixed values (Appearance, High contrast, Start screen) on load and on save, reads the
 reminder settings as their record (D-275), and keeps what the user chose in memory when
 a write fails (D-120). ``App`` reads it before the first screen (the boot gate), so
 neither the theme nor the filters flash.
@@ -26,6 +26,7 @@ from pycon_us.services.storage import (
     ONBOARDED,
     REMINDERS,
     SERVICE_ERRORS,
+    START_SCREEN,
     THEME,
     Pref,
     Storage,
@@ -45,6 +46,13 @@ APPEARANCES: tuple[Appearance, ...] = get_args(Appearance.__value__)
 HIGH_CONTRAST_SETTINGS: tuple[HighContrast, ...] = get_args(HighContrast.__value__)
 """High contrast's values; the first is the default, as in the storage table."""
 
+type StartScreen = Literal["auto", "now", "lead"]
+"""Where a lead-retrieval account opens the app (D-16): ``auto`` is the Lead scanner
+until the user picks one in Settings."""
+
+START_SCREENS: tuple[StartScreen, ...] = get_args(StartScreen.__value__)
+"""Start screen's values; the first is the default, as in the storage table."""
+
 _PERSISTED: dict[str, Pref[Any]] = {
     "theme": THEME,
     "high_contrast": HIGH_CONTRAST,
@@ -52,6 +60,7 @@ _PERSISTED: dict[str, Pref[Any]] = {
     "excluded_tracks": EXCLUDED_TRACKS,
     "reminders": REMINDERS,
     "dev": DEV,
+    "start_screen": START_SCREEN,
 }
 """The persisted fields of ``Prefs`` and their keys in the storage table (decisions §M)."""
 
@@ -92,6 +101,8 @@ class Prefs:
             by default Open Space, D-20).
         reminders: The reminder settings (``pycon.reminders``, D-275).
         dev: Developer options (``pycon.dev``, D-73).
+        start_screen: Where a lead-retrieval account opens the app
+            (``pycon.start_screen``, D-16); a sign-out keeps it (#689).
         os_dark: The OS is in dark mode; not persisted, kept current by ``App``.
         os_high_contrast: The OS asks for high contrast (iOS, Android 34+); not
             persisted, read at start and on resume (F13).
@@ -119,6 +130,7 @@ class Prefs:
     excluded_tracks: tuple[str, ...] = tuple(EXCLUDED_TRACKS.default)
     reminders: ReminderSettings = field(default_factory=ReminderSettings)
     dev: dict[str, Any] = field(default_factory=dict)
+    start_screen: StartScreen = "auto"
     os_dark: bool = False
     os_high_contrast: bool = False
     reduce_motion: bool = False
@@ -233,6 +245,9 @@ class Prefs:
         excluded_tracks = tuple(await storage.get(EXCLUDED_TRACKS))
         reminders = ReminderSettings.from_stored(await storage.get(REMINDERS))
         dev = await storage.get(DEV)
+        start_screen: StartScreen = _choice(
+            START_SCREEN, await storage.get(START_SCREEN), START_SCREENS
+        )
         # Assigned together, after the reads: one re-render, never a half-read state.
         self.theme = theme
         self.high_contrast = high_contrast
@@ -240,6 +255,7 @@ class Prefs:
         self.excluded_tracks = excluded_tracks
         self.reminders = reminders
         self.dev = dev
+        self.start_screen = start_screen
 
     def reset(self) -> None:
         """Return every persisted setting to its default, as after a fresh install.
@@ -263,6 +279,7 @@ class Prefs:
         excluded_tracks: tuple[str, ...] | None = None,
         reminders: ReminderSettings | None = None,
         dev: dict[str, Any] | None = None,
+        start_screen: StartScreen | None = None,
     ) -> bool:
         """Persist the given settings, then show them; arguments left None are unchanged.
 
@@ -278,12 +295,14 @@ class Prefs:
             excluded_tracks: The track keys to hide; ``()`` hides none.
             reminders: The new reminder settings.
             dev: The new developer options.
+            start_screen: The new Start screen.
 
         Returns:
             Whether every write succeeded; failures are logged by ``Storage``.
 
         Raises:
-            ValueError: ``theme`` or ``high_contrast`` is not one of its setting's values.
+            ValueError: ``theme``, ``high_contrast`` or ``start_screen`` is not one of
+                its setting's values.
         """
         if theme is not None and theme not in APPEARANCES:
             raise ValueError(f"theme must be one of {APPEARANCES}, not {theme!r}")
@@ -292,6 +311,10 @@ class Prefs:
                 f"high_contrast must be one of {HIGH_CONTRAST_SETTINGS}, "
                 f"not {high_contrast!r}"
             )
+        if start_screen is not None and start_screen not in START_SCREENS:
+            raise ValueError(
+                f"start_screen must be one of {START_SCREENS}, not {start_screen!r}"
+            )
         changes = {
             "theme": theme,
             "high_contrast": high_contrast,
@@ -299,6 +322,7 @@ class Prefs:
             "excluded_tracks": excluded_tracks,
             "reminders": reminders,
             "dev": dev,
+            "start_screen": start_screen,
         }
         changes = {name: value for name, value in changes.items() if value is not None}
         saved = True
