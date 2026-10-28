@@ -230,7 +230,8 @@ The state keeps every write in order, so tests count how often a capture was app
 `leads` (sponsor, access code, time), `notes` (sponsor, access code, note, time), `redemptions` (access code,
 product, quantity, `scanned_at`) and `incidents` (access code, notes, forced, time). Under `capture="idempotent"`
 the same lead capture or door payload twice leaves one row; under `"non_idempotent"`, two (a redemption only while
-quantity is left). Incident counts in replies are the seeded `violations` plus the recorded incidents.
+quantity is left). An idempotent mock also keeps each redeem request's first reply in `redeem_replies` and
+answers a retry with it. Incident counts in replies are the seeded `violations` plus the recorded incidents.
 
 ## Code
 

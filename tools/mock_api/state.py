@@ -191,6 +191,8 @@ class MockState:
         leads: Every lead recorded, in order.
         notes: Every lead note recorded, in order.
         redemptions: Every redemption recorded, in order.
+        redeem_replies: Under ``idempotent`` capture, the first reply to each redeem
+            request, keyed by (access code, ``scanned_at``, products and quantities).
         incidents: Every Code of Conduct incident recorded, in order.
     """
 
@@ -205,6 +207,7 @@ class MockState:
     leads: list[Lead] = field(default_factory=list)
     notes: list[LeadNote] = field(default_factory=list)
     redemptions: list[Redemption] = field(default_factory=list)
+    redeem_replies: dict[tuple[object, ...], object] = field(default_factory=dict)
     incidents: list[Incident] = field(default_factory=list)
 
     def __post_init__(self) -> None:

@@ -157,8 +157,10 @@ def redeem(call: Call) -> tuple[int, object]:
     The payload's ``product-redeem-<id>`` keys name the products (the id as a number
     from the door, as a string from swag) and ``product-<id>-quantity`` how many. A
     non-empty ``badge_validator`` is checked; the door omits a missing one and swag
-    sends ``""``. Under ``idempotent`` capture, a product already redeemed with the
-    same ``scanned_at`` is answered as redeemed again and recorded once (D-57).
+    sends ``""``. Under ``idempotent`` capture, a repeated request (same attendee,
+    ``scanned_at``, products and quantities) gets its first reply and records nothing,
+    and a product already redeemed with the same ``scanned_at`` is answered as
+    redeemed again and recorded once (D-57).
 
     Returns:
         200 ``{"errors": [{message}], "redeemable_products_by_category"}``, bare: the
@@ -176,9 +178,13 @@ def redeem(call: Call) -> tuple[int, object]:
         raise Refused(400, "badge_validator must be a string.")
     attendee = state.attendee(payload.get("attendee_access_code"), validator or None)
     scanned_at = text(payload, "scanned_at")
+    asked = requested(call, payload)
+    key = (attendee.access_code, scanned_at, tuple((p.id, q) for p, q in asked))
+    if state.capture == "idempotent" and key in state.redeem_replies:
+        return 200, state.redeem_replies[key]
     errors: list[dict[str, str]] = []
     done: list[Product] = []
-    for product, quantity in requested(call, payload):
+    for product, quantity in asked:
         repeat = Redemption(attendee.access_code, product.id, quantity, scanned_at)
         if state.capture == "idempotent" and repeat in state.redemptions:
             done.append(product)
@@ -194,10 +200,15 @@ def redeem(call: Call) -> tuple[int, object]:
         else:
             state.redemptions.append(repeat)
             done.append(product)
-    return 200, {
+    reply = {
         "errors": errors,
         "redeemable_products_by_category": grouped(call, attendee, done),
     }
+    if state.capture == "idempotent":
+        # The snapshot, not today's inventory: a retry after later redemptions still
+        # gets the answer the lost response carried (README, Open questions).
+        state.redeem_replies[key] = reply
+    return 200, reply
 
 
 def requested(call: Call, payload: dict[str, object]) -> list[tuple[Product, int]]:

@@ -367,6 +367,18 @@ def test_a_repeated_redemption_is_applied_once_when_idempotent() -> None:
     ]
 
 
+def test_a_retry_after_a_later_redemption_gets_its_first_reply() -> None:
+    """A retry of A after B replies as A first did, not with today's inventory."""
+    state = state_at("idempotent")
+    first = door_payload("MOCK0001", "2026-05-15T09:00:00.000Z", p30=1)
+    second = door_payload("MOCK0001", "2026-05-15T09:05:00.000Z", p30=1)
+    reply = call(state, "POST", "check_in/redeem_products/", "staff", first)
+    call(state, "POST", "check_in/redeem_products/", "staff", second)
+    again = call(state, "POST", "check_in/redeem_products/", "staff", first)
+    assert again == reply
+    assert len(state.redemptions) == 2
+
+
 def test_a_repeated_redemption_is_applied_twice_when_not_idempotent() -> None:
     """Under non-idempotent capture each request redeems while quantity is left."""
     state = state_at("non_idempotent")
