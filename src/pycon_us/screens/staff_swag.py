@@ -190,32 +190,31 @@ def SwagTool(*, owner: str) -> ft.Control:
     return ScanScreen(
         title=TITLE,
         on_badge=partial(look_up, svc.api, categories=categories),
-        context=category_area(loaded, current or frozenset(), toggle, retry),
+        context=category_area(loaded, current, toggle, retry),
         paused=paused,
     )
 
 
 def category_area(
     loaded: Loaded,
-    chosen: frozenset[int],
+    chosen: frozenset[int] | None,
     on_toggle: OnToggle,
     on_retry: ft.ControlEventHandler[ft.TextButton],
 ) -> ft.Control:
     """Return the chips, or the catalog's loading, failed or empty state.
 
+    The chips wait for the stored choice too: a tap before it is read would build on
+    nothing, and the read, coming after, would undo the tap (seen on the simulator).
+
     Args:
         loaded: Where the catalog's fetch is.
-        chosen: The ids chosen.
+        chosen: The ids chosen, or None until they are read.
         on_toggle: Called with a category and whether it is now selected.
         on_retry: Asks for the catalog again.
     """
     match loaded.status:
         case "loading":
-            return ft.Semantics(
-                label=LOADING,
-                identifier="swag.categories.loading",
-                content=ft.ProgressBar(),
-            )
+            return loading_line()
         case "failed":
             return ft.Row(
                 [
@@ -233,6 +232,8 @@ def category_area(
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             )
+        case _ if chosen is None:
+            return loading_line()
         case _ if not loaded.categories:
             return ft.Text(
                 NONE_AVAILABLE,
@@ -249,6 +250,15 @@ def category_area(
                 spacing=8,
                 run_spacing=8,
             )
+
+
+def loading_line() -> ft.Control:
+    """Return the progress line read "Loading categories"."""
+    return ft.Semantics(
+        label=LOADING,
+        identifier="swag.categories.loading",
+        content=ft.ProgressBar(),
+    )
 
 
 def category_chip(

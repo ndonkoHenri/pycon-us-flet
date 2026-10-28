@@ -333,6 +333,32 @@ async def test_the_catalog_shows_a_progress_line_while_it_loads(
     assert shown.nodes("swag.category.3")
 
 
+async def test_the_chips_wait_for_the_stored_choice(
+    show: Show, monkeypatch: pytest.MonkeyPatch, stored: dict[str, Any]
+) -> None:
+    """Until the choice is read, the progress line: a tap can't race the late read."""
+    stored[STAFF_SWAG_CATEGORIES.key] = ["4"]
+    held = asyncio.Event()
+    answer = MemoryPrefs._invoke_method
+
+    async def slow(
+        self: MemoryPrefs, method_name: str, *args: Any, **kwargs: Any
+    ) -> Any:
+        """Hold the choice's read until ``held`` is set, as a slow first read would."""
+        arguments = args[0] if args else kwargs.get("arguments")
+        if method_name == "get" and arguments == {"key": STAFF_SWAG_CATEGORIES.key}:
+            await held.wait()
+        return await answer(self, method_name, *args, **kwargs)
+
+    monkeypatch.setattr(MemoryPrefs, "_invoke_method", slow)
+    shown = await show()
+    assert shown.nodes("swag.categories.loading")
+    assert not shown.nodes("swag.category.")
+    held.set()
+    await shown.settle()
+    assert chip(shown, 4).selected and not chip(shown, 3).selected
+
+
 async def test_a_failed_save_says_so_and_keeps_the_choice_for_the_visit(
     show: Show,
 ) -> None:
