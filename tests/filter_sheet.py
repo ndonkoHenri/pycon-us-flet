@@ -104,7 +104,7 @@ def node(schedule: Shown, identifier: str) -> ft.Semantics:
     assert current is not None
     return next(
         c
-        for c in _descendants(current)
+        for c in descendants(current)
         if isinstance(c, ft.Semantics) and c.identifier == identifier
     )
 
@@ -132,7 +132,7 @@ def show_button(schedule: Shown) -> ft.FilledButton:
     """The sheet's Show button."""
     current = sheet(schedule)
     assert current is not None
-    return next(c for c in _descendants(current) if isinstance(c, ft.FilledButton))
+    return next(c for c in descendants(current) if isinstance(c, ft.FilledButton))
 
 
 def button_label(schedule: Shown) -> str:
@@ -142,12 +142,12 @@ def button_label(schedule: Shown) -> str:
     return str(content.value)
 
 
-def _descendants(control: Any) -> list[Any]:
+def descendants(control: Any) -> list[Any]:
     """Every control under ``control``, through ``content`` and ``controls``."""
     found = [control]
     for child in (getattr(control, "content", None), *getattr(control, "controls", ())):
         if isinstance(child, ft.BaseControl):
-            found.extend(_descendants(child))
+            found.extend(descendants(child))
     return found
 
 

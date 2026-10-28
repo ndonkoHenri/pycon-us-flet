@@ -22,6 +22,7 @@ import flet as ft
 from pycon_us.config import ConferenceInfo
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import EXCLUDED_TRACKS
+from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.semantics import named, semantics_key
 from pycon_us.year_tracks import TRACK_GROUPS
 
@@ -273,7 +274,7 @@ def filter_sheet(
         show_drag_handle=True,
         scrollable=True,  # the screen's height, so the chips have room at 200 % text
         use_safe_area=True,
-        shape=_hc_sheet_shape() if high_contrast else None,
+        shape=hc_sheet_shape(high_contrast),
         on_dismiss=lambda _: on_close(),
         # Its slide is motion: none under reduced motion (D-34, D-173).
         animation_style=ft.AnimationStyle.no_animation() if reduce_motion else None,
@@ -309,14 +310,6 @@ def _chip(
             bgcolor=SHEET_COLOR,
             on_select=selected,
         ),
-    )
-
-
-def _hc_sheet_shape() -> ft.OutlinedBorder:
-    """The sheet's shape in HC: M3's 28 dp top corners, with a 1 dp ``outline`` edge."""
-    return ft.RoundedRectangleBorder(
-        radius=ft.BorderRadius.only(top_left=28, top_right=28),
-        side=ft.BorderSide(1, ft.Colors.OUTLINE),
     )
 
 

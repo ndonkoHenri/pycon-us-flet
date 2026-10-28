@@ -1,0 +1,116 @@
+# The reminders primer on a fresh install (NOTIF-06, NOTIF-07; D-61, D-395, #448).
+#
+# The app launches with notifications not allowed (Maestro's other flows launch with
+# every permission granted, so no primer shows there). Nothing is asked at launch or on
+# Welcome. Saving the panel (session 123) on Now shows the primer once the star has
+# saved it; the flow answers it, then the OS's own prompt, and the session stays saved.
+# Saving a second session (The Bakery, 30, on the Schedule) shows no primer again.
+#
+# env (each has a default):
+#   PRIMER     the primer's answer: allow (default) or not_now
+#   OS_ANSWER  the OS prompt's answer after Allow: allow (default) or deny
+#
+# After Allow and the OS's Allow, session reminders are on at 10 minutes: the app's log
+# says "Reminders: a plan of N applied" again (Developer › Share log), and Settings
+# still shows the interim until #449 (D-395).
+appId: io.github.ndonkohenri.pyconus
+name: The first star shows the reminders primer, then the OS asks
+tags:
+  - journeys
+  - reminders
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setAirplaneMode: enabled
+- launchApp:
+    clearState: true
+    stopApp: true
+    permissions:
+      notifications: deny
+- runFlow: ../subflows/get_started.yaml
+- runFlow:
+    file: ../subflows/set_scene.yaml
+    env:
+      NOW: ${NOW || '2026-05-15 14:10'}
+      FEED_URL: ${OFFLINE_URL || 'http://127.0.0.1:9/conference-2026.json'}
+      OUTCOME: "Couldn't refresh: no answer from the feed\\. The app keeps the schedule it has\\."
+# Nothing was asked at launch, on Welcome or in Developer options.
+- assertNotVisible:
+    id: reminder.primer
+
+# The first star: the primer, over the screen, after the save.
+- tapOn:
+    id: now.favorite.123
+- extendedWaitUntil:
+    visible:
+      id: reminder.primer
+    timeout: 15000
+- assertVisible:
+    id: reminder.primer.not_now
+- tapOn:
+    id: reminder.primer.${PRIMER || 'allow'}
+- extendedWaitUntil:
+    notVisible:
+      id: reminder.primer
+    timeout: 10000
+
+# Allow: the OS's prompt follows, which the flow answers.
+- runFlow:
+    when:
+      true: ${(PRIMER || 'allow') == 'allow'}
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: com.android.permissioncontroller:id/permission_allow_button
+          timeout: 15000
+      - tapOn:
+          id: ${(OS_ANSWER || 'allow') == 'allow' ? 'com.android.permissioncontroller:id/permission_allow_button' : 'com.android.permissioncontroller:id/permission_deny_button'}
+- runFlow:
+    when:
+      true: ${(PRIMER || 'allow') == 'allow'}
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: ".*Would Like to Send You Notifications"
+          timeout: 15000
+      - tapOn:
+          text: ${(OS_ANSWER || 'allow') == 'allow' ? 'Allow' : "Don't Allow"}
+
+# The favourite stayed saved: Now shows it as your next session.
+- extendedWaitUntil:
+    visible:
+      id: now.next.session.123
+    timeout: 15000
+- assertVisible:
+    id: now.next.favorite.123
+    checked: true
+
+# A second first-time star shows no primer: the answer is remembered.
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.30
+    timeout: 15000
+# The Schedule jumps to the now slot as it opens (D-18), and a tap on a moving list
+# only stops it: let the jump end, and tap again if the star did not turn on.
+- waitForAnimationToEnd
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: schedule.favorite.30
+      - extendedWaitUntil:
+          visible:
+            id: schedule.favorite.30
+            checked: true
+          timeout: 10000
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: reminder.primer

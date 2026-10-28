@@ -25,6 +25,7 @@ from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.reminder_primer import offer_on_first_favorite
 from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
 
 logger = logging.getLogger(__name__)
@@ -181,7 +182,9 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
       Undo when the edit was a removal;
     - an add, with a screen reader on, shows "Added to My schedule" (D-355);
     - an edit that says nothing (an add or an Undo without a screen reader) closes
-      the favourites SnackBar still showing, as a new one replaces it (D-251).
+      the favourites SnackBar still showing, as a new one replaces it (D-251);
+    - an add that was saved shows the reminders primer, once, when it was never
+      answered (``ui.reminder_primer``, D-61, D-395).
 
     Args:
         favorites: The list owner's ``use_favorites()`` store.
@@ -200,6 +203,8 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
         if change.added:
             await selection_click(svc.haptics)
         _announce(page, favorites, svc, prefs, change, edit=edit)
+        if change.added and change.saved:  # a star's add only: never Undo or Add all
+            await offer_on_first_favorite(page, svc, prefs)
 
     return ft.use_callback(toggle, [])
 

@@ -29,11 +29,11 @@ from tests.filter_sheet import (
     INFO,
     STORED,
     Show,
-    _descendants,
     button_label,
     chip,
     chip_parts,
     click,
+    descendants,
     feed_tracks,
     filter_button,
     in_sheet,
@@ -67,13 +67,13 @@ async def test_the_sheet_offers_a_chip_per_feed_track_with_a_live_count(
     current = await open_sheet(schedule)
     assert current.show_drag_handle and current.scrollable and current.use_safe_area
     assert current.animation_style is None  # Flutter's slide, as motion is allowed
-    chips = [c for c in _descendants(current) if isinstance(c, ft.Chip)]
+    chips = [c for c in descendants(current) if isinstance(c, ft.Chip)]
     labels = [chip_parts(c.label)[1].value for c in chips]
     tracks = feed_tracks(conference)
     # F40: a heading needs its level. The title, then one per group the feed fills.
     levels = [
         c.heading_level
-        for c in _descendants(current)
+        for c in descendants(current)
         if isinstance(c, ft.Semantics) and c.header
     ]
     assert levels == [1, *[2] * len(filter_groups(INFO, tracks))] == [1, 2, 2, 2, 2]
@@ -123,7 +123,7 @@ async def test_reset_returns_to_the_default(
     current = await open_sheet(schedule)
     (reset,) = [
         c
-        for c in _descendants(current)
+        for c in descendants(current)
         if isinstance(c, ft.TextButton) and c.content == "Reset"
     ]
     assert reset.tooltip == "Reset to the default: hide Open space"
@@ -217,7 +217,7 @@ async def test_with_every_chip_off_the_button_is_disabled_and_says_why(
     # Flat: Flet's default elevation of 1 showed a shadow through the faint fill.
     assert button.elevation == 0
     assert "Select at least one type" in [
-        c.value for c in _descendants(current) if isinstance(c, ft.Text)
+        c.value for c in descendants(current) if isinstance(c, ft.Text)
     ]
 
 
