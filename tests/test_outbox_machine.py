@@ -2,8 +2,9 @@
 
 The machine plays the db and the ``SyncWorker`` with ``core/outbox.py``'s pure rules:
 scans, notes and door admissions, sends that succeed or fail with a ``NetworkError``
-(before the request left, or after: a lost answer) or an ``ApiError`` (one at a time or in streaks, to reach the cap), "Retry failed", sponsor
-and account switches, and time passing. It keeps its own record of what each row should
+(before the request left, or after: a lost answer) or an ``ApiError`` (one at a time or
+in streaks, to reach the cap), "Retry failed", sponsor and account switches, and time
+passing. It keeps its own record of what each row should
 be, independently of the rows, and checks the invariants after every step.
 """
 
@@ -273,7 +274,7 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @invariant()
     def flagged_exactly_after_a_lost_answer(self) -> None:
-        """A row says "may be recorded twice" from its first lost answer on, for good."""
+        """A row says "may be recorded twice" from its first lost answer on."""
         for row_id, row in self.rows.items():
             assert row.maybe_sent == (row_id in self.lost)
             assert (outbox.MAYBE_TWICE in outbox.status_text(row)) == row.maybe_sent

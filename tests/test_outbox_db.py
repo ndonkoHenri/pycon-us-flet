@@ -142,7 +142,7 @@ def test_rows_survive_close_and_reopen_without_migrating_again(tmp_path: Path) -
 def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
     tmp_path: Path,
 ) -> None:
-    """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file: its rows read unflagged (D-410)."""
+    """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file, its rows unflagged (D-410)."""
     with raw(tmp_path / "outbox.db") as v1:
         v1.executescript(f"{MIGRATIONS[0]}PRAGMA user_version = 1;")
         v1.execute(

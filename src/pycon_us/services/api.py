@@ -40,7 +40,7 @@ NOT_SENT = (
     httpx.UnsupportedProtocol,
 )
 """The transport errors raised before a request can have left: no connection was made
-(DNS failures are ``ConnectError``s). Every other one may come after the server got it."""
+(DNS failures are ``ConnectError``s). Any other may come after the server got it."""
 
 
 class NetworkError(Exception):

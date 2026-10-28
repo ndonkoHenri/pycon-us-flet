@@ -1,10 +1,11 @@
 """The private API's calls as Ionic's ``pycon-api.ts`` makes them (D-52, D-53, API-12).
 
-Each ``Endpoint`` constant is one call: its method, path, timeout and whether it is signed
-or enveloped; ``ENDPOINTS`` lists every call the app makes, which
-``tests/test_api_endpoints.py`` checks against ``tools/mock_api/README.md`` and the mock's
-routes. The query builders encode each query exactly as Ionic did, since the signature
-covers it byte for byte. ``services/api.py``'s ``ApiClient.request`` sends them.
+Each ``Endpoint`` constant is one call: its method, path, timeout and whether it is
+signed or enveloped; ``ENDPOINTS`` lists every call the app makes, which
+``tests/test_api_endpoints.py`` checks against ``tools/mock_api/README.md`` and the
+mock's routes. The query builders encode each query exactly as Ionic did, since the
+signature covers it byte for byte. ``services/api.py``'s ``ApiClient.request`` sends
+them.
 """
 
 from collections.abc import Iterable

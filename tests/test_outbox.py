@@ -195,7 +195,7 @@ def test_network_error_waits_without_counting() -> None:
 
 
 def test_a_lost_answer_flags_the_row_for_good() -> None:
-    """``maybe_sent`` flags the row; no later outcome or retry clears the flag (D-410)."""
+    """``maybe_sent`` flags the row; no later outcome or retry clears it (D-410)."""
     flagged = outbox.after_network_error(lead(), NOW, maybe_sent=True)
     assert flagged == lead(next_at=NOW + outbox.NETWORK_BACKOFF, maybe_sent=True)
     assert outbox.after_network_error(flagged, NOW).maybe_sent  # a refused connection

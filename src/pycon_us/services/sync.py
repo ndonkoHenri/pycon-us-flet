@@ -3,10 +3,11 @@
 ``SyncWorker`` sends the signed-in account's due rows in order (``OutboxDb.due_rows()``),
 each with its own sponsor snapshot (STORE-11), and stores each outcome through
 ``core/outbox.py``'s transitions: a ``NetworkError`` ends the pass and is never counted,
-and flags the row when the request may have reached the server (D-410); an ``ApiError`` is counted and the tenth makes the row ``failed``. A refused key (401)
-is the account's fault, not the row's: the row waits uncounted and the account's flags
-are asked again, which makes it ``expired`` (D-57, D-403). ``run()`` passes at once,
-then on every ``kick()`` and every 60 s, only while the app is in the foreground.
+and flags the row when the request may have reached the server (D-410); an ``ApiError``
+is counted and the tenth makes the row ``failed``. A refused key (401) is the account's
+fault, not the row's: the row waits uncounted and the account's flags are asked again,
+which makes it ``expired`` (D-57, D-403). ``run()`` passes at once, then on every
+``kick()`` and every 60 s, only while the app is in the foreground.
 
 ``supervise()``, which ``use_sync_worker()`` runs from an ``App`` effect, keeps exactly
 one worker per session (LEAD-12; Ionic started a loop per page visit): one while a
@@ -191,12 +192,10 @@ class SyncWorker:
                 try:
                     result = await send(self._api, row)
                 except NetworkError as failure:
-                    maybe_sent = failure.maybe_sent  # the resend may be a duplicate
-                    self._db.save(
-                        outbox.after_network_error(
-                            row, self._now(), maybe_sent=maybe_sent
-                        )
+                    waiting = outbox.after_network_error(  # flagged if maybe sent
+                        row, self._now(), maybe_sent=failure.maybe_sent
                     )
+                    self._db.save(waiting)
                     return str(failure), False
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # the key's fault: not counted
