@@ -40,7 +40,8 @@ from pycon_us.ui.badges import NEW_TRACK, SPANISH, TrackBadge, badge_row
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_add_all, use_favorite_toggle
 from pycon_us.ui.menus import menu_item, overflow_menu
-from pycon_us.ui.scaffold import AppScaffold, PageTitle
+from pycon_us.ui.page_title import PageTitle
+from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import (
     NOTICE_GROUP,
     changes_of,

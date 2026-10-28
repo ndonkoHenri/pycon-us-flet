@@ -51,8 +51,9 @@ from pycon_us.ui.links import (
     open_link,
 )
 from pycon_us.ui.logos import logo_tile
+from pycon_us.ui.page_title import PageTitle
 from pycon_us.ui.rows import LinkTile
-from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin

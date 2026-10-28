@@ -16,7 +16,7 @@ import pytest
 
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import plan as screen
-from pycon_us.ui import zoom
+from pycon_us.ui import zoom, zoom_geometry
 from tests import plan_view
 from tests.plan_view import BOX, VIEW, Plan, Render
 from tests.sessions import menu_text
@@ -33,9 +33,11 @@ async def test_a_pin_is_placed_on_its_room_and_named_by_the_plan(
     plan = await render("?pin=104c")
     assert plan.pins() == []  # not before the plan has a size
     await plan.lay_out()
-    shown = zoom.fitted(BOX, (2048, 1583))
+    shown = zoom_geometry.fitted(BOX, (2048, 1583))
     (pin,) = plan.pins()
-    assert (pin.left, pin.top) == zoom.centred_on(84.0, 27.0, shown, screen.PIN_BOX)
+    assert (pin.left, pin.top) == zoom_geometry.centred_on(
+        84.0, 27.0, shown, screen.PIN_BOX
+    )
     assert pin.scale == 1.0
     assert plan.image.semantics_label == "Concourse level floor plan, Room 104C marked"
     assert plan.image.src == "maps/2026/concourse.webp"
@@ -252,7 +254,9 @@ async def test_a_rotation_brings_the_zoom_down_to_the_new_maximum(
     landscape = (874.0, 330.0)
     await plan.lay_out(landscape)
     await plan.settle()
-    top = zoom.max_scale(2048, zoom.fitted(landscape, (2048, 1583))[0])
+    top = zoom_geometry.max_scale(
+        2048, zoom_geometry.fitted(landscape, (2048, 1583))[0]
+    )
     assert float(plan.zoom_layer.max_scale) == pytest.approx(top)
     assert plan.viewer.scale == pytest.approx(top)
     # The refocusing pan, then (this fake's pan clamps nothing) the pan into bounds.

@@ -23,7 +23,8 @@ from flet_notifications import (
 from flet_permission_handler import PermissionHandler, PermissionStatus
 
 from pycon_us import capabilities
-from pycon_us.services.reminders import Reminder, Scheduler, start
+from pycon_us.services.reminder_plan import Reminder
+from pycon_us.services.reminders import Scheduler, start
 from tests.fake_page import FakePage, bound
 from tests.fakes import MemoryNotifications, MemoryPermissions, Scheduled
 from tests.sessions import settle

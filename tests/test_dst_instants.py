@@ -33,7 +33,7 @@ from pycon_us.core.row_views import by_slot, session_view
 from pycon_us.core.timefmt import ENDED, HAPPENING_NOW, instant, time_status
 from pycon_us.core.timeline import Slot, now_place, schedule_order, timeline
 from pycon_us.reminder_settings import ReminderSettings
-from pycon_us.services.reminders import plan
+from pycon_us.services.reminder_plan import plan
 from pycon_us.ui.reminder_banner import due_session
 from pycon_us.year_moments import keynote_moments
 from tests.feeds import changed, processed, settings

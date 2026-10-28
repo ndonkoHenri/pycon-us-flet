@@ -33,8 +33,9 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.links import feed_markdown
+from pycon_us.ui.page_title import PageTitle
 from pycon_us.ui.rows import speaker_avatar
-from pycon_us.ui.scaffold import AppScaffold, PageTitle, SectionHeader
+from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import READING, sides, use_margin

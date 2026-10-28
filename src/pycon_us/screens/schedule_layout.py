@@ -185,7 +185,7 @@ class LayoutRecord:
         Args:
             version: The feed's version.
             excluded: The filter, ``Prefs.excluded_tracks``.
-            keys: Each day's items in order (``schedule._keys()``).
+            keys: Each day's items in order (``schedule_slots.slot_keys()``).
             slots: Each day's slots by key.
         """
         layout = (version, excluded)

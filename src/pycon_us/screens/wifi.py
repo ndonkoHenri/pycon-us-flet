@@ -48,7 +48,7 @@ VALUE_STYLE = ft.TextStyle(
     font_family="monospace",  # Android's alias; iOS has no such family
     font_family_fallback=["Menlo"],  # so iOS takes its system monospace font
 )
-"""A value's font, as the feed's code spans have it (``theme.MARKDOWN_STYLE``): in a
+"""A value's font, as the feed's code spans have it (``theme_markdown.MARKDOWN_STYLE``): in a
 monospace font ``l``, ``1`` and ``I``, or ``O`` and ``0``, never look alike."""
 
 
