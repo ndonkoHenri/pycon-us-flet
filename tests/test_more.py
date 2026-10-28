@@ -16,10 +16,11 @@ import flet as ft
 import pytest
 
 from pycon_us import prefs as prefs_module
+from pycon_us.account import Account
 from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import DEV_UNLOCKED, Prefs
+from pycon_us.prefs import DEV_MOCK_API_URL, DEV_UNLOCKED, Prefs
 from pycon_us.screens import more
 from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
@@ -63,13 +64,23 @@ def prefs() -> Prefs:
     return Prefs()
 
 
+@pytest.fixture
+def account() -> Account:
+    """A signed-out ``Account`` store, restored, as after a first launch."""
+    return Account(restored=True)
+
+
 async def retap() -> None:
     """The root's re-tap action, as ``use_scroll_to_top()`` would return it."""
 
 
 @pytest.fixture
 def render(
-    monkeypatch: pytest.MonkeyPatch, svc: Services, prefs: Prefs, page: FakePage
+    monkeypatch: pytest.MonkeyPatch,
+    svc: Services,
+    prefs: Prefs,
+    account: Account,
+    page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
     """Render ``More`` once and return what it passed to ``AppScaffold``.
 
@@ -78,6 +89,7 @@ def render(
     monkeypatch.setattr(more, "use_scroll_to_top", lambda: (ft.Ref(), retap))
     monkeypatch.setattr(more, "use_services", lambda: svc)
     monkeypatch.setattr(more, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(more, "use_account", lambda: account)
     monkeypatch.setattr(more, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(more, "use_margin", phone_margin)
     # The companion app's list, wherever pytest runs (FLET_PLATFORM may be set, F14)
@@ -277,3 +289,53 @@ def test_a_year_without_booths_has_no_expo_hall_row(
     titles = outline(rows_of(render()))
     assert "Expo hall" not in titles
     assert titles[titles.index("# Expo & sponsors") + 1] == "Sponsors"
+
+
+def test_with_a_mock_url_the_list_starts_with_sign_in(
+    render: Callable[[], dict[str, Any]], prefs: Prefs, page: FakePage
+) -> None:
+    """Signed out with a mock URL set, "Sign in" is first and opens its page (D-51)."""
+    prefs.dev = {DEV_MOCK_API_URL: "http://10.0.2.2:8000"}
+    first = rows_of(render())[0]
+    tile = tile_of(first)
+    assert tile is not None and str(tile.title) == "Sign in"
+    assert isinstance(first, ft.MergeSemantics)
+    assert isinstance(first.content, ft.Semantics)
+    assert first.content.identifier == "more.sign_in"
+    cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == ["/more/sign-in"]
+    assert parent_of("/more/sign-in") == "/more"  # Back, and the pop after success
+
+
+def test_signed_in_the_first_row_is_the_account_and_not_a_button(
+    render: Callable[[], dict[str, Any]], prefs: Prefs, account: Account
+) -> None:
+    """Initials, nickname and email, one node, no tap until the Account page (#688)."""
+    prefs.dev = {DEV_MOCK_API_URL: "http://10.0.2.2:8000"}
+    account.email, account.nickname = "all@example.com", "Robin Everything"
+    account.signed_in = True
+    first = rows_of(render())[0]
+    assert isinstance(first, ft.MergeSemantics)
+    assert isinstance(first.content, ft.Semantics)
+    assert first.content.identifier == "more.account"
+    tile = first.content.content
+    assert isinstance(tile, ft.ListTile) and tile.on_click is None  # never dead
+    assert isinstance(tile.title, ft.Text) and isinstance(tile.subtitle, ft.Text)
+    assert (tile.title.value, tile.subtitle.value) == (
+        "Robin Everything",
+        "all@example.com",
+    )
+    avatar = cast(ft.Semantics, tile.leading)
+    assert avatar.exclude_semantics  # the letters are not read before the name
+    assert cast(ft.Text, cast(ft.CircleAvatar, avatar.content).content).value == "RE"
+
+
+@pytest.mark.parametrize(
+    ("nickname", "email", "letters"),
+    [("Robin Everything", "all@example.com", "RE"), ("", "all@example.com", "A")],
+)
+def test_an_account_s_initials_fall_back_to_the_email(
+    nickname: str, email: str, letters: str
+) -> None:
+    """An account without a nickname still gets a letter in its avatar."""
+    assert more.account_initials(nickname, email) == letters
