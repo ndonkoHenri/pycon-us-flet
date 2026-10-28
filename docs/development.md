@@ -611,7 +611,8 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
 
 The private-API features (sign-in, favourites sync, role flags and the four staff tools) only ever talk to `tools/mock_api/`.
 - **The guard (D-51).** Those features stay hidden until a mock base URL is set in the Developer screen. The client also refuses any `/api/v1` request to a `*.pycon.org` host, and a unit test covers it.
-- **The contract** is in `tools/mock_api/README.md`, which cites Ionic's `pycon-api.ts`.
+- **The contract** is in [`tools/mock_api/README.md`](../tools/mock_api/README.md), which cites Ionic's `pycon-api.ts`
+  by line: endpoints, signing, reply shapes, errors, what is unknown with the mock's choice for each, and the seed data.
 
 **Run it:**
 
