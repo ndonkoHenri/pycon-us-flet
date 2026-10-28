@@ -23,6 +23,7 @@ from pycon_us.account import Account
 from pycon_us.core import outbox
 from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.lead_capture import ALREADY, SAVED
+from pycon_us.locations import parent_of
 from pycon_us.screens import lead_sponsor
 from pycon_us.screens.staff_lead import NO_SPONSOR, TITLE
 from pycon_us.services.outbox_db import OutboxDb
@@ -30,7 +31,7 @@ from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONS
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from pycon_us.ui.snack_bars import NOT_SAVED
-from tests import harness, lead_screen
+from tests import harness, lead_rows, lead_screen
 from tests.fakes import MemoryPrefs
 from tests.harness import Shown
 from tests.lead_screen import Show, signed_in
@@ -426,3 +427,22 @@ async def test_the_sponsor_goes_with_a_sign_out_and_a_switch(
     await shown.settle()
     assert chip_text(shown) is None
     assert helper(shown) == NO_SPONSOR
+
+
+# ------------------------------------------------------------------ the leads list (#743)
+
+
+async def test_leads_count_opens_the_list_and_follows_the_outbox(
+    show: Show, db: OutboxDb
+) -> None:
+    """The button counts the account's leads, not notes, and pushes the list (D-428)."""
+    lead_rows.add(db, "MOCK0001", 100.0)
+    lead_rows.note(db, "MOCK0001", "Notes: hi")
+    lead_rows.add(db, "MOCK0002", 200.0, owner="b@example.com")
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    button = cast(ft.FilledTonalButton, shown.node("lead.leads").content)
+    assert button.content == "Leads (1)"
+    await shown.click(button)
+    assert shown.went == ["/more/staff/lead/leads"]
+    assert parent_of("/more/staff/lead/leads") == "/more/staff/lead"
+    assert parent_of("/now/staff/lead/leads") == "/now/staff/lead"
