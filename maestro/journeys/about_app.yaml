@@ -5,10 +5,10 @@
 # app" offline on Android, "From the feed" on iOS, whose launch may reach the feed
 # (start_offline.yaml). Licences pushes /more/app/licences and a row its text (D-296).
 # Report a problem opens the share sheet with the log (D-297); a dismissed sheet says
-# nothing. On an iPad the sheet cannot open at the Flet pin (F115, U95, #525), and the
-# line under the row says so: run it there with SHARE_FAILS=true, which checks that
-# line instead of the sheet, so it fails once U95 lands and the sheet opens; then the
-# iPad runs without it. ORIENTATION turns the device first (subflows/orientation.yaml).
+# nothing. An iPad opens the sheet since the pin 08b89cce5 (F263, #462), so it runs
+# without SHARE_FAILS too; SHARE_FAILS=true checks the failure line instead, as an iPad
+# needed at 15854a0ac (F115). ORIENTATION turns the device first
+# (subflows/orientation.yaml).
 #
 # env:
 #   SHARE_FAILS  true expects "Couldn't open the share sheet."; anything else (the
