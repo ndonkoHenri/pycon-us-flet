@@ -54,7 +54,7 @@ def reset_losses(saved: int, *, packaged: bool) -> tuple[str, ...]:
         packaged: A packaged build, where Developer locks again; elsewhere it is
             always available (D-73).
     """
-    developer = "Developer options: the fake clock and the feed URL"
+    developer = "Developer options: the fake clock, the feed URL and the mock API URL"
     if packaged:
         developer += ", and Developer locks again"
     return (
@@ -274,3 +274,16 @@ def helper_text(text: str) -> ft.Text:
         theme_style=ft.TextThemeStyle.BODY_SMALL,
         color=ft.Colors.ON_SURFACE_VARIANT,
     )
+
+
+def said(done: str, saved: bool) -> tuple[str, bool]:
+    """Return the outcome line's state after Apply or Reset: what was done, and whether it lasts.
+
+    Args:
+        done: What was done, e.g. "Back to real time and the year's feed."
+        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120),
+            which the line says, beside a warning icon.
+    """
+    if not saved:
+        done += " Couldn't save your change: it ends when you close the app."
+    return done, saved
