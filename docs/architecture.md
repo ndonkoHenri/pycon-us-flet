@@ -1324,7 +1324,7 @@ def available(module: str) -> bool:
 
 SECURE_STORAGE = available("flet_secure_storage")
 PERMISSIONS = available("flet_permission_handler")
-REMINDERS = available("flet_local_notifications")    # E3 (flet-dev/flet#6948): module name is a placeholder
+REMINDERS = available("flet_notifications")          # E3: the monorepo's flet-notifications (flet-dev/flet#6999)
 SCANNER = available("flet_barcode_scanner")          # E1, not published yet: module name is a placeholder
 
 ALL = (                                              # each with its display name (D-271)
@@ -1340,7 +1340,7 @@ ALL = (                                              # each with its display nam
 | `REMINDERS` (E3) | `services/reminders.py` | "Not available in this build", Now's next-session card, in-app Banner, `.ics` with an alarm on iOS only (D-60, D-272) |
 | `SCANNER` (E1) | `services/scanner.py` | manual and HID entry (always available anyway) |
 | `SECURE_STORAGE` | `services/storage.py` | credentials kept in memory for the session |
-| `PERMISSIONS` | reminders, scanner | the extension's own permission request |
+| `PERMISSIONS` | `services/__init__.py` builds `Services.permissions`; reminders and the scanner use it | `Services.permissions` is `None`, and its users keep their own interim (the companion app, D-63) |
 
 `is_embedded()` is `FLET_PLATFORM is not None`, set by the build template, not by `flet run` (F14). The Developer screen shows these constants read-only through `ALL`, which the diagnostics text also lists (D-73, D-271); interims are exercised through `flet run` and the companion app, which is never embedded. `tests/test_capabilities.py` reloads the module with `FLET_PLATFORM` unset and every extension findable, and gets all four `False`; a unit test per owner module checks its interim when not embedded.
 
@@ -1379,7 +1379,7 @@ def plan(data: ConferenceData, favorites: Iterable[str], settings: ReminderSetti
     return sorted(reminders, key=lambda r: (r.at, r.id))[:MAX_PENDING]
 ```
 
-`apply(plan)` cancels every pending reminder (never the shown ones) and schedules the plan, exact on Android when the user allows it and inexact otherwise (D-221, D-222); it is idempotent and re-runs when favourites, settings or the feed change, and at every start and resume. Its scheduling calls *(not in Flet yet: E3, flet-dev/flet#6948 plus scheduling)* live only here; until E3 is pinned, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids (8000–8049 the hand-written sign-ups, 8050–8099 the keynotes' moments, derived from the feed at each plan so a moved keynote moves its moment, D-274). Each moment opens its own page: a sign-up its page (`/more/lightning-talks`), a keynote its session (`/schedule/session/<id>`). Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
+`apply(plan)` cancels every pending reminder (never the shown ones) and schedules the plan, exact on Android when the user allows it and inexact otherwise (D-221, D-222); it is idempotent and re-runs when favourites, settings or the feed change, and at every start and resume. Its scheduling calls (E3: `flet_notifications.Notifications.schedule()`, in the build since #446) live only here; without E3, as in the companion app, `apply` does nothing and the interim applies. `reminder_id()` is the numeric session id, or `1_000_000 + crc32(id) % 1_000_000` for synthetic ids; a test checks a year's plan for collisions with the 8000–8099 event ids (8000–8049 the hand-written sign-ups, 8050–8099 the keynotes' moments, derived from the feed at each plan so a moved keynote moves its moment, D-274). Each moment opens its own page: a sign-up its page (`/more/lightning-talks`), a keynote its session (`/schedule/session/<id>`). Taps open `route` (§5.6), cold start included. Spike S6 ([verdict](spikes/06-reminders.md)) showed killed-app delivery, reboot and taps working through the extension's own receivers and iOS delegate (D-220).
 
 ### 14.2 Interim while the app is open
 
@@ -1387,7 +1387,7 @@ def plan(data: ConferenceData, favorites: Iterable[str], settings: ReminderSetti
 
 ### 14.3 Permissions (D-61) and calendar (D-62, D-272)
 
-Permissions are asked in context after a one-sentence primer: notifications on the first favourite or the first reminder switch, the camera on the first staff scan, never at launch. After a denial, Settings shows a `Banner` with "Open settings" (`await svc.permissions.open_app_settings()`). Notification permission is requested through E3's `request_permission()` on both platforms; `flet-permission-handler` checks status, opens settings and handles the camera (D-61, F17).
+Permissions are asked in context after a one-sentence primer: notifications on the first favourite or the first reminder switch, the camera on the first staff scan, never at launch. After a denial, Settings shows a `Banner` with "Open settings" (`await svc.permissions.open_app_settings()`). Notification permission is requested through E3's `request_permissions()` on both platforms; `flet-permission-handler` checks status, opens settings and handles the camera (D-61, F17).
 
 `core/ics.py`'s `calendar_file(sessions, *, year, now, alarm=ALARM)` builds `.ics` bytes (UTC times from the start the app shows, a `UID` of `<year>-<id>@CALENDAR_DOMAIN` stable across refreshes, escaping, 75-octet folding between characters, a `VALARM` at the lead time, 10 min by default; D-268) for one session or all of My schedule in the Schedule's order (D-62). The share sheet reaches no calendar on either platform (P2-04, [`spikes/10-ics-share.md`](spikes/10-ics-share.md)), so `services/calendar.py`'s `add_to_calendar(svc, slug, data)` hands the bytes to the calendar by platform (D-272): on iOS a stdlib `ThreadingHTTPServer` on `127.0.0.1`, port 0, serves `/<slug>.ics` as `text/calendar` while `await svc.launcher.launch_url(url, mode=ft.LaunchMode.IN_APP_BROWSER_VIEW)` brings up iOS's calendar sheet (the call raises although the sheet shows, so a `threading.Event` set by the server's GET, read once the call returns or raises, is the success, F91; the server stops then, 60 s at most, off the event loop); on Android `await svc.file_picker.save_file(file_name=f"{slug}.ics", src_bytes=data)` saves it where the user picks and a SnackBar says to open it from the Files app, where Google Calendar imports it without the alarm. It says every outcome itself, on the View the user is on (D-210), and returns nothing, as `open_link()` and `share_text()` do; the server logs each request's method, path and status. Opening a local file in the app that handles its type *(not in Flet yet: U71)* makes Android one tap; native add-to-calendar *(not in Flet yet: E4)* comes later.
 

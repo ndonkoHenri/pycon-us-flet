@@ -9,13 +9,18 @@ import asyncio
 import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import flet as ft
 
+from pycon_us import capabilities
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services.presence import Presence
 from pycon_us.services.storage import Storage, data_dir
+
+if TYPE_CHECKING:  # imported only when the build has it (D-63)
+    from flet_permission_handler import PermissionHandler
 
 
 def _set_event() -> asyncio.Event:
@@ -23,6 +28,19 @@ def _set_event() -> asyncio.Event:
     event = asyncio.Event()
     event.set()
     return event
+
+
+def _permissions() -> PermissionHandler | None:
+    """Return a ``PermissionHandler`` when the build has the extension, else ``None``.
+
+    The extension is imported only then, so the companion app is never sent a control
+    its client may lack (D-63, F14).
+    """
+    if not capabilities.PERMISSIONS:
+        return None
+    from flet_permission_handler import PermissionHandler
+
+    return PermissionHandler()
 
 
 @dataclass(frozen=True, eq=False)
@@ -48,6 +66,9 @@ class Services:
             is (F14).
         file_picker: The system's save dialog: Add to calendar's file on Android
             (``services.calendar``, D-272).
+        permissions: ``flet-permission-handler``'s service: permission status, the
+            app's settings page and the camera (D-61). ``None`` unless the build has it
+            (``capabilities.PERMISSIONS``), so always ``None`` in the companion app.
         closed: Set by ``close()`` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
@@ -73,6 +94,7 @@ class Services:
     share: ft.Share = field(default_factory=ft.Share)
     paths: ft.StoragePaths = field(default_factory=ft.StoragePaths)
     file_picker: ft.FilePicker = field(default_factory=ft.FilePicker)
+    permissions: PermissionHandler | None = field(default_factory=_permissions)
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
     presence: Presence = field(default_factory=Presence)

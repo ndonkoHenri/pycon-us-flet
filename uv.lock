@@ -387,6 +387,32 @@ requires-dist = [
 ]
 
 [[package]]
+name = "flet-notifications"
+version = "0.1.0"
+source = { editable = ".flet-src/sdk/python/packages/flet-notifications" }
+dependencies = [
+    { name = "flet" },
+    { name = "tzdata" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
+    { name = "tzdata" },
+]
+
+[[package]]
+name = "flet-permission-handler"
+version = "0.1.0"
+source = { editable = ".flet-src/sdk/python/packages/flet-permission-handler" }
+dependencies = [
+    { name = "flet" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "flet", editable = ".flet-src/sdk/python/packages/flet" }]
+
+[[package]]
 name = "flet-platform-assets"
 version = "0.1.0"
 source = { editable = ".flet-src/sdk/python/packages/flet-platform-assets" }
@@ -827,6 +853,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "flet" },
+    { name = "flet-notifications" },
+    { name = "flet-permission-handler" },
     { name = "tzdata" },
 ]
 
@@ -846,6 +874,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
+    { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
+    { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
     { name = "tzdata", specifier = "==2026.5" },
 ]
 

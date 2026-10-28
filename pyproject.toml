@@ -7,6 +7,8 @@ license = "Apache-2.0"
 requires-python = ">=3.14,<3.15"      # flet build bundles CPython 3.14 (D-82, F19)
 dependencies = [                      # bundled into the app by flet build: pin exactly
     "flet",                           # pinned by .flet-ref until 1.1.0 is on PyPI (D-81)
+    "flet-notifications",             # E3 reminders (D-220): the monorepo's, pinned by .flet-ref
+    "flet-permission-handler",        # permission status and settings (D-61): pinned by .flet-ref
     "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
 ]
 
@@ -50,6 +52,10 @@ bgcolor_dark = "#680579"
 [tool.flet.flutter.pubspec.dependencies] # Roboto 400/500/700 (D-26, D-105); path from build/flutter/
 roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }
 
+[tool.flet.android.permission]        # NATIVE-06; the receivers and RECEIVE_BOOT_COMPLETED come with flet-notifications (D-220)
+"android.permission.POST_NOTIFICATIONS" = true     # Android 13+; the plugin merges it too, declared so the app says so
+"android.permission.SCHEDULE_EXACT_ALARM" = true   # exact reminders when the user allows them; never USE_EXACT_ALARM (D-221)
+
 [tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
 "org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
 
@@ -77,9 +83,13 @@ flet-cli = { path = ".flet-src/sdk/python/packages/flet-cli", editable = true }
 flet-web = { path = ".flet-src/sdk/python/packages/flet-web", editable = true }
 flet-desktop = { path = ".flet-src/sdk/python/packages/flet-desktop", editable = true }
 flet-platform-assets = { path = ".flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+flet-notifications = { path = ".flet-src/sdk/python/packages/flet-notifications", editable = true }
+flet-permission-handler = { path = ".flet-src/sdk/python/packages/flet-permission-handler", editable = true }
 
-[tool.flet.dev_packages]              # what flet build bundles instead of PyPI's flet
+[tool.flet.dev_packages]              # what flet build bundles instead of PyPI's packages
 flet = ".flet-src/sdk/python/packages/flet"
+flet-notifications = ".flet-src/sdk/python/packages/flet-notifications"  # PyPI's is an unrelated project
+flet-permission-handler = ".flet-src/sdk/python/packages/flet-permission-handler"
 
 # ------------------------------------------------------------------ tools
 [tool.ruff]

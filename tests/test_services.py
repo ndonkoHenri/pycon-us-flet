@@ -1,4 +1,4 @@
-"""Tests for ``Services.run_every``: the foreground-only ticks of D-40 (#82).
+"""Tests for ``Services``: ``run_every``'s ticks (D-40, #82) and ``permissions`` (#446).
 
 The loop runs on the test's event loop with intervals of milliseconds; ``foreground``
 and ``closed`` are driven as the lifecycle handler and ``page.on_close`` drive them.
@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from pycon_us import capabilities
 from pycon_us.config import load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
@@ -25,8 +26,7 @@ INTERVAL = 0.01
 """Seconds between two ticks in these tests."""
 
 
-@pytest.fixture
-def svc(tmp_path: Path) -> Services:
+def memory_services(tmp_path: Path) -> Services:
     """Return a session's services with the memory fakes, storing under ``tmp_path``."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
@@ -38,6 +38,12 @@ def svc(tmp_path: Path) -> Services:
         launcher=MemoryLauncher(),
         clipboard=MemoryClipboard(),
     )
+
+
+@pytest.fixture
+def svc(tmp_path: Path) -> Services:
+    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
+    return memory_services(tmp_path)
 
 
 class Ticks:
@@ -136,3 +142,18 @@ async def test_a_session_closed_in_the_background_ends_its_waiting_loop(
     svc.close()  # replaced while paused: it would never resume
     await asyncio.wait_for(task, timeout=30)  # generous: it returns at once
     assert ticks.count == 0
+
+
+def test_permissions_is_none_when_the_build_lacks_the_extension(svc: Services) -> None:
+    """Outside a packaged build, as in the companion app, no permission service exists."""
+    assert svc.permissions is None
+
+
+def test_permissions_is_the_extension_when_the_build_has_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With ``capabilities.PERMISSIONS``, the session gets a ``PermissionHandler`` (D-61)."""
+    from flet_permission_handler import PermissionHandler
+
+    monkeypatch.setattr(capabilities, "PERMISSIONS", True)
+    assert isinstance(memory_services(tmp_path).permissions, PermissionHandler)

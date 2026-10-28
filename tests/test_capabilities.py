@@ -77,3 +77,19 @@ def test_every_capability_follows_its_bundled_extension(reload_after: None) -> N
 def test_the_test_run_itself_is_not_embedded() -> None:
     """Imported by pytest, outside a packaged build, every constant is False."""
     assert not any(getattr(capabilities, name) for name in CONSTANTS)
+
+
+def test_the_bundled_extensions_are_found_by_their_module_names(
+    reload_after: None,
+) -> None:
+    """In a packaged build, the real modules turn Permissions and Reminders on (#446).
+
+    ``pyproject.toml`` bundles ``flet-permission-handler`` and the monorepo's
+    ``flet-notifications``, whose modules are ``flet_permission_handler`` and
+    ``flet_notifications``; ``uv sync`` installs both on the host too.
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("FLET_PLATFORM", "android")
+        importlib.reload(capabilities)
+        assert capabilities.PERMISSIONS
+        assert capabilities.REMINDERS
