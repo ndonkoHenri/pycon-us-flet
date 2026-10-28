@@ -51,9 +51,10 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss; Settings' Reminders sentence, with the alarm on iOS only (D-60, D-272, #458) |
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
 | `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` (an iPad, U95, #525) "Couldn't open the share sheet." (INFO-03, INFO-04, #461) |
+| `journeys/theme_relaunch.yaml` | journeys, theme | More › Settings starts on System with High contrast following the device ("Follows your device setting", off); Dark and High contrast on; after a relaunch Dark is still chosen and the switch on with no subtitle; then High contrast off (following the device again) and System, so a second run starts the same way. The rows' states are read each platform's way (`subflows/theme_state.yaml`): Android's `checked`, iOS's `selected` radio rows and the switch's value "1" or "0" (THEME-01, STORE-08, D-286, #512) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
-Every flow starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
+Every flow but `theme_relaunch` (which needs no clock or feed, and starts with `subflows/launch_fresh.yaml`) starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
 airplane mode on Android, Get started on the first-run Welcome (D-287), then Developer
 options set as `tests/ui/developer.py` does
 (More › About this app › the version row 7 times › Developer options): a fake clock at
@@ -394,6 +395,8 @@ Developer's feed URL kept its old tail, since the tap put the caret mid-URL, so
 **The expo flows (#454)**, on 2026-10-27, `main` at `e5f2e0a`, an `ios-simulator`
 build on an iPhone 17 simulator (iOS 26.5): the four `expo` journeys passed (1 min 24 s
 to 1 min 47 s each, 6 min 7 s in all). Not yet run on Android (#454's Android sweep).
+
+**The theme flow (#512)**, on 2026-10-28, `main` at `bb1c255`: `theme_relaunch` passed twice in a row on a release APK on `pycon_pixel6a_api36` (55 s, 56 s) and on an `ios-simulator` build on an iPhone 17 simulator (iOS 26.5; 49 s, 52 s). Each state check was also run against the wrong state and failed, so none passes by itself.
 
 ## Tablets and landscape (#461)
 

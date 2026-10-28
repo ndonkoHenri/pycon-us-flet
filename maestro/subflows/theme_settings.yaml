@@ -1,0 +1,22 @@
+# Open More › Settings from a tab root, and wait for its Appearance rows (#512).
+appId: io.github.ndonkohenri.pyconus
+---
+- runFlow:
+    file: tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.settings
+    direction: DOWN
+- tapOn:
+    id: more.settings
+- extendedWaitUntil:
+    visible:
+      id: settings.high_contrast
+    timeout: 15000
