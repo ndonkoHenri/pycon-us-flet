@@ -62,6 +62,9 @@ DEV_FAKE_NOW = "fake_now"
 DEV_FEED_URL = "feed_url"
 """``Prefs.dev`` key: the feed URL that refreshes use instead of the year's."""
 
+DEV_MOCK_API_URL = "mock_api_url"
+"""``Prefs.dev`` key: the mock API's base URL; set, the private-API features show (D-51)."""
+
 DEVELOPER_ALWAYS = not is_embedded()
 """Developer is always available when not embedded: the companion app and a desktop host
 (D-73). A packaged build needs the unlock."""
@@ -180,6 +183,17 @@ class Prefs:
         """The feed URL set in Developer, or None for the year's (``conference.toml``)."""
         value = self.dev.get(DEV_FEED_URL)
         return value if isinstance(value, str) and value else None
+
+    @property
+    def mock_api_url(self) -> str | None:
+        """The mock API's base URL set in Developer, or None: no private API (D-51)."""
+        value = self.dev.get(DEV_MOCK_API_URL)
+        return value if isinstance(value, str) and value else None
+
+    @property
+    def private_api_enabled(self) -> bool:
+        """Whether the private-API features show: only once a mock URL is set (D-51)."""
+        return self.mock_api_url is not None
 
     def motion_ms(self, ms: int) -> int:
         """Return how long an animation of ``ms`` milliseconds runs: 0 under reduced motion.
