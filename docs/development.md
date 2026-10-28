@@ -640,11 +640,13 @@ The options (`--host`, default `127.0.0.1`; `--port`, default `8000`; `--capture
 | iOS simulator, packaged build | `http://localhost:8000` (the simulator shares the laptop's network) | default |
 | Physical phone, packaged build | `http://<laptop LAN IP>:8000`, on the same Wi-Fi; the banner prints it | `0.0.0.0` |
 
-The server answered over `localhost` and over the laptop's LAN address on 2026-10-28 (#666); the packaged builds'
-rows are checked on the emulator and the simulator in #668.
+The server answered over `localhost` and over the laptop's LAN address on 2026-10-28 (#666). The packaged builds'
+rows were checked in #668 on 2026-10-28: a release APK on the Android 16 emulator reached `http://10.0.2.2:<port>`, and
+an `ios-simulator` build on an iPhone 17 simulator (iOS 26.5) reached `http://localhost:<port>`. In both, Developer's Check
+mock connection said "Connected to the local mock server.", in light and dark, and again after a relaunch.
 
 **Practical notes:**
-- **Cleartext HTTP.** The client is Python `httpx` on raw sockets. Android's cleartext policy and iOS App Transport Security govern the platform HTTP stacks, not these sockets, so no manifest change is expected. The iOS template allows arbitrary loads anyway. **UNVERIFIED on devices:** the first P3 device test confirms it, and the iOS local-network prompt question (§3.4) along with it.
+- **Cleartext HTTP.** The client is Python `httpx` on raw sockets. Android's cleartext policy and iOS App Transport Security govern the platform HTTP stacks, not these sockets, so no manifest or Info.plist change is needed. **Confirmed on 2026-10-28 (#668):** the release APK reached the mock over plain HTTP with no `usesCleartextTraffic` and no network-security config, and the simulator build did too, with no ATS error and no local-network prompt. A simulator shares the Mac's loopback, so a physical iPhone on the Wi-Fi may still ask for local-network access (§3.4); that check waits for the iPhone (#121).
 - **The laptop firewall.** macOS asks to allow incoming connections for Python the first time; allow it.
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
 - **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).

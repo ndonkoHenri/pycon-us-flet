@@ -24,10 +24,13 @@ from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line, p
 from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.semantics import named
 
-SAVE_IN_SIGHT = 304
+SAVE_IN_SIGHT = 480
 """How far below its text the URL field keeps in sight when it takes the focus, in dp:
-its helper, the Clear and Save row and the outcome line, sized as the feed URL's
-``developer.APPLY_IN_SIGHT`` is, for large text (#108)."""
+its helper, the Clear and Save row, the check row once a URL is saved and the outcome
+line, sized for large text as the feed URL's ``developer.APPLY_IN_SIGHT`` is (#108).
+More than that one: the helper is longer and the check row comes between. At 200 % on
+Android, 304 dp left Save's "Saved: …" under the keyboard (#668). At 100 % the list
+only scrolls a little further."""
 
 HELPER = (
     "Android emulator: http://10.0.2.2:8000. iOS simulator: http://localhost:8000. "
