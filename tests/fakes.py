@@ -310,6 +310,7 @@ class MemoryNotifications:
         self.failing_ids: set[int] = set()  # schedule() raises for these ids
         self.gate: asyncio.Event | None = None  # schedule() waits on it when given
         self.grant = True  # what the user answers the OS's prompt
+        self.grant_exact = True  # what the user sets on Alarms & reminders
         self.requests: list[dict[str, bool]] = []  # request_permissions()' arguments
         # are_notifications_enabled() waits on it when given, as E3 waits for its start
         self.initialized: asyncio.Event | None = None
@@ -342,6 +343,12 @@ class MemoryNotifications:
         )
         self.enabled = self.grant
         return self.grant
+
+    async def request_exact_alarm_permission(self) -> bool:
+        """Record the visit to Alarms & reminders; ``exact`` becomes ``grant_exact``."""
+        self._call("request_exact_alarm_permission")
+        self.exact = self.grant_exact
+        return self.exact
 
     async def can_schedule_exact_alarms(self) -> bool:
         """Answer ``exact``."""
@@ -389,6 +396,12 @@ class MemoryPermissions:
         """Answer ``status``, and count the reads in ``reads``."""
         self.status = status
         self.reads = 0
+        self.settings_opened = 0
+
+    async def open_app_settings(self) -> bool:
+        """Count a visit to the app's settings page in ``settings_opened``."""
+        self.settings_opened += 1
+        return True
 
     async def get_status(self, permission: Permission) -> PermissionStatus | None:
         """Return ``status`` for any ``permission``."""

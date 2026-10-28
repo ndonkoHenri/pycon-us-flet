@@ -8,10 +8,11 @@ words (D-33), while the clash can still change a plan. What has ended folds away
 into a tile under today's header (``agenda.fold_ended()``), re-folded every minute
 while the screen shows (D-40). A star tap removes the session at once, with Undo (ux.md
 §4.4). The Schedule's filters never apply (D-20): a saved open space always shows.
-With something saved, the app bar's overflow exports it all to the calendar, and the
-list is headed by a notice once all of it has ended, and by another while some saved
-sessions are no longer in the schedule, which links to Schedule changes or forgets them
-(D-329; ``screens.my_schedule_extras``).
+With something saved, the app bar's overflow exports it all to the calendar, and with
+E3 it opens Reminder settings (D-401); the list is headed by a notice once all of it
+has ended, and by another while some saved sessions are no longer in the schedule,
+which links to Schedule changes or forgets them (D-329;
+``screens.my_schedule_extras``).
 
 The list memoises its whole path (D-153): day sections given values that stay equal
 while nothing in the day changes, rows keyed by session id given views built once per
@@ -145,7 +146,7 @@ def MySchedule() -> ft.View:
         await forget(dropped)
 
     content: list[ft.Control]
-    actions: list[ft.Control] = []
+    exportable: tuple[Session, ...] = ()
     if not favorites.loaded:  # the read failed: not the same as nothing saved (D-172)
         content = [
             EmptyState(
@@ -199,9 +200,7 @@ def MySchedule() -> ft.View:
         expand = expand_style(prefs)
         now = clock.now()
         folded = fold_ended(agenda, now, info.zone)
-        # Only with something to export, ended sessions included (D-289); Export to
-        # calendar is the overflow's one item until Reminder settings (P2-89).
-        actions = [ScheduleMenu(agenda.sessions)]
+        exportable = agenda.sessions  # ended sessions included (D-289)
         # Some saved sessions gone, the rest still listed (D-329); always in the
         # list, quiet with none, so its live region exists before it speaks (F61).
         content = [
@@ -262,6 +261,11 @@ def MySchedule() -> ft.View:
                 SectionHeader(day_heading(later.day)),
                 day(later, folded.overlaps),
             ]
+    # Export only with something to export (D-289); Reminder settings with E3 (D-401).
+    settings = svc.reminders is not None
+    actions = (
+        [ScheduleMenu(exportable, settings=settings)] if exportable or settings else []
+    )
     return AppScaffold(
         title="My schedule",
         actions=actions,

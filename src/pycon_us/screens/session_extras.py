@@ -26,6 +26,7 @@ from pycon_us.core.ics import calendar_file, file_slug
 from pycon_us.core.models import Session
 from pycon_us.core.row_views import share_text
 from pycon_us.core.slugs import slugify_room
+from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
@@ -131,6 +132,7 @@ def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
             and that can be saved (D-186, D-31).
     """
     svc = use_services()
+    prefs = use_prefs()  # the export's alarm follows the reminders' lead (D-401)
     adding, set_adding = ft.use_state(False)
 
     @report_errors
@@ -140,7 +142,9 @@ def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
     @report_errors
     async def add() -> None:
         year = svc.year.conference.year
-        data = calendar_file([session], year=year, now=clock.now())
+        data = calendar_file(
+            [session], year=year, now=clock.now(), alarm=prefs.reminders.calendar_alarm
+        )
         set_adding(True)
         try:
             await add_to_calendar(svc, file_slug(session.name), data)

@@ -5,10 +5,12 @@ OS until the user chooses otherwise (D-23, ux.md §6.9): the System, Light and D
 radio rows, which More held until this page existed (D-169), and a High contrast
 switch, which shows the OS flag until it is switched against it (D-286). A choice
 applies at once and is saved with ``Prefs.save()``; one that cannot be saved still
-applies for the session, and a SnackBar says so (D-120). Then Reminders, in D-60's
-interim until E3 (``settings_reminders.py``), and Data, the schedule's source and age
-with Refresh now, and the zone the times are in (``settings_data.py``). More pushes it,
-so Back returns there (D-17).
+applies for the session, and a SnackBar says so (D-120). Then Reminders, live in a build
+with E3 and in D-60's interim without (``settings_reminders.py``, D-401), and Data, the
+schedule's source and age with Refresh now, and the zone the times are in
+(``settings_data.py``). More pushes it at ``/more/settings``, and My schedule's
+Reminder settings at ``/my-schedule/settings``, so Back returns to the opener (D-17,
+D-401).
 """
 
 from typing import cast
@@ -17,12 +19,12 @@ import flet as ft
 
 from pycon_us.prefs import Appearance, use_prefs
 from pycon_us.screens.settings_data import DataSection
-from pycon_us.screens.settings_reminders import reminders_section
+from pycon_us.screens.settings_reminders import RemindersSection, interim_section
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.favorite import NOT_SAVED
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
+from pycon_us.ui.snack_bars import say_if_unsaved
 from pycon_us.ui.widths import LIST, sides, use_margin
 
 APPEARANCE_LABELS: dict[Appearance, str] = {
@@ -71,9 +73,11 @@ def Settings() -> ft.View:
             on_change=switch_high_contrast,
         ),
     ]
-    reminders = reminders_section(page.platform, slot=RADIO_WIDTH)
-    if reminders is not None:
-        rows.append(reminders)
+    rows.append(
+        RemindersSection(RADIO_WIDTH)
+        if svc.reminders is not None  # a build with E3 (D-401)
+        else interim_section(page.platform, slot=RADIO_WIDTH)
+    )
     rows.append(DataSection(RADIO_WIDTH))
     return AppScaffold(
         title="Settings",
@@ -83,21 +87,6 @@ def Settings() -> ft.View:
             padding=sides(margin),
         ),
     )
-
-
-def say_if_unsaved(page: ft.Page, saved: bool) -> None:
-    """Show "Couldn't save your change" when a setting was applied but not saved (D-120).
-
-    The setting still applies for the session; the SnackBar says it ends on relaunch.
-
-    Args:
-        page: The session's page.
-        saved: What ``Prefs.save()`` returned.
-    """
-    if not saved:
-        page.show_dialog(
-            ft.SnackBar(ft.Text(NOT_SAVED), behavior=ft.SnackBarBehavior.FLOATING)
-        )
 
 
 def appearance(

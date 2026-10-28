@@ -7,6 +7,7 @@ iOS's loopback included, are ``tests/test_calendar.py``'s.
 """
 
 import asyncio
+import dataclasses
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
@@ -16,21 +17,31 @@ from typing import cast
 
 import flet as ft
 import pytest
+from flet_notifications import Notifications
 
 from pycon_us import clock
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
+from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.screens import my_schedule as screen
 from pycon_us.screens.my_schedule import MySchedule
-from pycon_us.screens.my_schedule_extras import EXPORT, export_slug
+from pycon_us.screens.my_schedule_extras import (
+    EXPORT,
+    REMINDER_SETTINGS,
+    SETTINGS,
+    export_slug,
+)
+from pycon_us.services import Services
 from pycon_us.services.calendar import NOT_OPENED, saved_text
+from pycon_us.services.reminders import Scheduler
 from pycon_us.state import Conference
 from pycon_us.ui import states
-from tests.fakes import MemoryFilePicker
+from tests import harness
+from tests.fakes import MemoryFilePicker, MemoryNotifications
 from tests.feeds import processed
 from tests.harness import Shown, showing
-from tests.sessions import menu_text
+from tests.sessions import memory_services, menu_text
 
 YEAR = load_year(2026)
 ZONE = YEAR.conference.zone
@@ -60,9 +71,31 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def on_android(
-            *saved: str, loaded: bool = True, data: bool = True
+            *saved: str,
+            loaded: bool = True,
+            data: bool = True,
+            e3: bool = False,
+            reminders: ReminderSettings | None = None,
         ) -> Shown:
-            """Show the screen with ``saved`` stored, and with or without the feed."""
+            """Show the screen with ``saved`` stored, and with or without the feed.
+
+            ``e3`` gives the services a ``Scheduler``, as a build with E3 has;
+            ``reminders`` are the stored reminder settings.
+            """
+            if e3:
+
+                def with_e3(
+                    year: YearData, directory: Path, memory: object = None
+                ) -> Services:
+                    """The services of a build with E3: a ``Scheduler`` over the fake."""
+                    svc = memory_services(year, directory)
+                    scheduler = Scheduler(cast(Notifications, MemoryNotifications()))
+                    return dataclasses.replace(svc, reminders=scheduler)
+
+                monkeypatch.setattr(harness, "memory_services", with_e3)
+            prefs = Prefs(loaded=True)
+            if reminders is not None:
+                prefs.reminders = reminders
             conference = (
                 Conference(data=processed(2026), source="bundled", version=1)
                 if data
@@ -77,7 +110,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path="",  # no Router
-                    prefs=Prefs(loaded=True),
+                    prefs=prefs,
                     favorites=None if loaded else Favorites(),  # not read yet
                     saved=saved,
                 )
@@ -234,3 +267,45 @@ async def test_a_failed_save_says_so_on_my_schedule(show: Show) -> None:
     await shown.click(export_item(shown))
     assert said(shown) == [NOT_OPENED]
     assert not export_item(shown).disabled
+
+
+# ------------------------------------------------------------------ with E3 (D-401)
+
+
+def items_of(shown: Shown) -> list[str | None]:
+    """The overflow's items, by identifier, in order."""
+    menu = cast(ft.PopupMenuButton, shown.node("my_schedule.overflow").content)
+    return [cast(ft.Semantics, item.content).identifier for item in menu.items]
+
+
+async def test_with_e3_reminder_settings_follows_the_export(show: Show) -> None:
+    """A build with E3 adds Reminder settings, after Export (ux.md §5.6)."""
+    shown = await show(TALK, e3=True)
+    assert items_of(shown) == ["my_schedule.export", "my_schedule.reminder_settings"]
+
+
+async def test_with_e3_and_nothing_saved_reminder_settings_is_still_offered(
+    show: Show,
+) -> None:
+    """Nothing to export, but the moments still remind: the overflow holds Settings."""
+    shown = await show(e3=True)
+    assert items_of(shown) == ["my_schedule.reminder_settings"]
+
+
+async def test_reminder_settings_opens_settings_over_my_schedule(show: Show) -> None:
+    """Its tap pushes ``/my-schedule/settings``, so Back returns to My schedule."""
+    shown = await show(e3=True)
+    menu = cast(ft.PopupMenuButton, shown.node("my_schedule.overflow").content)
+    (item,) = menu.items
+    assert menu_text(item).value == REMINDER_SETTINGS == "Reminder settings"
+    await shown.click(item)
+    assert shown.went == [SETTINGS] == ["/my-schedule/settings"]
+
+
+async def test_the_exports_alarm_follows_the_reminders_lead(show: Show) -> None:
+    """Session reminders at 15 min: each event's alarm comes 15 min before (D-401)."""
+    shown = await show(TALK, KEYNOTE, reminders=ReminderSettings(session_lead=15))
+    await shown.click(export_item(shown))
+    text = exported(shown)
+    assert text.count("TRIGGER:-PT15M") == 2
+    assert "TRIGGER:-PT10M" not in text

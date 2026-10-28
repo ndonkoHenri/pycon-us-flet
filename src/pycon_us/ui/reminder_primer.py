@@ -10,18 +10,18 @@ there is nothing to ask; when it won't ask again, or the status is unknown, Sett
 card is the place (#449). The primer is a ``BottomSheet`` with "Allow" and "Not now":
 
 - **Allow** closes the sheet, then asks the OS (E3's ``request_permissions()``, F17);
-  when the OS allows, session reminders come on at ``PRIMER_LEAD`` minutes, which the
-  scheduler applies as for any change of ``Prefs.reminders`` (D-389). Allow is
+  when the OS allows and session reminders are off, they come on at ``PRIMER_LEAD``
+  minutes, which the scheduler applies as for any change of ``Prefs.reminders``
+  (D-389); a lead the Settings switch already chose stays (D-401). Allow is
   remembered whatever the OS answers.
 - **Not now**, a tap outside the sheet, a drag down or Back remember "not now".
 
 Either way the favourite stays saved, and a star never shows the primer again. The
 sheet is a modal route, so Flutter gives the screen reader's focus back to the star
 when it closes (D-225); on Now, where the add moves the session into Your next
-session and replaces its star, the card's star gets it (``focus_back.refocus_star()``). It needs E3 (``Services.reminders``, ``capabilities.REMINDERS``)
-and nothing else: Settings and Welcome offer reminders only once
-``capabilities.REMINDERS_LIVE`` is on (#449), while the scheduler already schedules
-them in any build with E3 (D-395).
+session and replaces its star, the card's star gets it (``focus_back.refocus_star()``).
+It needs E3 (``Services.reminders``, ``capabilities.REMINDERS``), as Settings' live
+Reminders section does (D-395, D-401).
 """
 
 import dataclasses
@@ -31,14 +31,14 @@ from weakref import WeakSet
 import flet as ft
 
 from pycon_us.prefs import Prefs
-from pycon_us.reminder_settings import SessionLead
+from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.focus_back import Star, refocus_star
 from pycon_us.ui.semantics import named
-from pycon_us.ui.snack_bars import SNACK_BAR_MS
+from pycon_us.ui.snack_bars import NOT_SAVED, SNACK_BAR_MS
 
 SCREEN = "reminder.primer"
 """The primer's name in the identifiers (decisions §M): ``reminder.primer.allow``."""
@@ -58,9 +58,6 @@ NOT_NOW = "Not now"
 
 PRIMER_LEAD: SessionLead = 10
 """The session reminders' lead that Allow turns on once the OS allows (D-275)."""
-
-NOT_SAVED = "Couldn't save your change"
-"""The SnackBar when the answer applies for the session but was not written (D-120)."""
 
 type Handler = Callable[[], Awaitable[None]]
 """A button's or the sheet's handler; Flet calls one that takes no event without it."""
@@ -155,15 +152,15 @@ async def _save(
 ) -> None:
     """Save the primer's answer, and the session reminders' lead when the OS allows.
 
-    Read from ``prefs`` after the OS's answer, so a change made meanwhile is kept. A
-    failed write keeps the answer for the session and says so (D-120).
+    Read from ``prefs`` after the OS's answer, and through
+    ``Prefs.change_reminders()``, so a change made meanwhile is kept: a
+    lead already on (the Settings switch that showed the primer) stays. A failed
+    write keeps the answer for the session and says so (D-120).
     """
-    reminders = dataclasses.replace(
-        prefs.reminders, primer="accepted" if allow else "not_now"
+    saved = await prefs.change_reminders(
+        svc.storage, lambda current: answered(current, allow=allow, granted=granted)
     )
-    if granted:
-        reminders = dataclasses.replace(reminders, session_lead=PRIMER_LEAD)
-    if not await prefs.save(svc.storage, reminders=reminders):
+    if not saved:
         page.show_dialog(
             ft.SnackBar(
                 ft.Text(NOT_SAVED),
@@ -171,6 +168,24 @@ async def _save(
                 duration=SNACK_BAR_MS,
             )
         )
+
+
+def answered(
+    current: ReminderSettings, *, allow: bool, granted: bool
+) -> ReminderSettings:
+    """Return ``current`` with the primer's answer, and the lead when the OS allows.
+
+    A lead already on stays (the Settings switch that showed the primer).
+
+    Args:
+        current: The reminder settings when the answer is saved.
+        allow: The user tapped Allow.
+        granted: The OS allowed notifications.
+    """
+    reminders = dataclasses.replace(current, primer="accepted" if allow else "not_now")
+    if granted and not reminders.session_lead:
+        reminders = dataclasses.replace(reminders, session_lead=PRIMER_LEAD)
+    return reminders
 
 
 def primer_sheet(

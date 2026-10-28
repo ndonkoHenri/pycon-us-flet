@@ -8,6 +8,7 @@ are ``test_settings_data.py``'s; here it is a stand-in. Reminders' rows are
 ``test_settings_reminders.py``'s; here, only where the section sits.
 """
 
+import dataclasses
 import inspect
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -21,9 +22,10 @@ from pycon_us.config import load_year
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.screens import settings, settings_reminders
+from pycon_us.screens import settings
 from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services
+from pycon_us.services.reminders import Scheduler
 from pycon_us.services.storage import Storage
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
@@ -168,6 +170,12 @@ def test_settings_is_a_page_under_more_so_back_returns_there() -> None:
     assert parent_of("/more/settings") == "/more"
 
 
+def test_my_schedule_s_reminder_settings_is_settings_under_my_schedule() -> None:
+    """``/my-schedule/settings`` is Settings again, whose Back returns to My schedule (D-401)."""
+    assert "/my-schedule/settings" in PAGES
+    assert parent_of("/my-schedule/settings") == "/my-schedule"
+
+
 def test_the_page_is_titled_and_opens_with_appearance_as_a_section_heading(
     render: Callable[[], dict[str, Any]],
 ) -> None:
@@ -198,14 +206,19 @@ def test_reminders_sit_between_appearance_and_data_in_the_interim(
     assert heading.content.content.value == "Reminders"
 
 
-def test_a_build_with_reminders_shows_no_interim_section(
-    render: Callable[[], dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+def test_a_build_with_reminders_shows_the_live_section(
+    render: Callable[[], dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+    svc: Services,
 ) -> None:
-    """Once reminders are live the interim goes; its live controls are P2-89's."""
-    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS_LIVE", True)
+    """With E3 (a ``Scheduler``) the live section takes the interim's place (D-401)."""
+    live = ft.Text("Live section")
+    monkeypatch.setattr(settings, "RemindersSection", lambda slot: live)
+    with_e3 = dataclasses.replace(svc, reminders=cast(Scheduler, object()))
+    monkeypatch.setattr(settings, "use_services", lambda: with_e3)
     rows = rows_of(render())
-    assert len(rows) == 4
-    assert rows[3] is DATA_SECTION
+    assert rows[3] is live
+    assert rows[4] is DATA_SECTION
 
 
 def test_appearance_offers_three_radio_rows_whose_whole_row_selects(
