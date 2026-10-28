@@ -174,8 +174,10 @@ def TestReminders() -> ft.Control:
         elif muted(prefs.reminders, kind.key):
             set_outcome(muted_outcome(kind))
         else:
-            reminder = reminder_for(kind, datetime.now(UTC))
-            set_outcome(scheduled(kind, await scheduler.schedule_test(reminder)))
+            result = await scheduler.schedule_test(
+                lambda: reminder_for(kind, datetime.now(UTC))
+            )
+            set_outcome(scheduled(kind, result))
 
     return ft.Column(
         [

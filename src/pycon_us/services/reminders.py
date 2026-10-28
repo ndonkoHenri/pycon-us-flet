@@ -411,7 +411,7 @@ class Scheduler:
         )
         return complete
 
-    async def schedule_test(self, reminder: Reminder) -> TestResult:
+    async def schedule_test(self, build: Callable[[], Reminder]) -> TestResult:
         """Schedule Developer's test reminder now, exact when allowed (DEV-06, D-402).
 
         Outside the apply loop: the next apply's cancel removes it if it is still
@@ -419,7 +419,9 @@ class Scheduler:
         notifications is the caller's check (``access()``).
 
         Args:
-            reminder: The test reminder, ``TEST_ID``.
+            build: Returns the test reminder, ``TEST_ID``. It is called after the
+                exact-alarm check, so a slow check can't leave its time in the past,
+                which E3 refuses.
 
         Returns:
             How it was scheduled: ``"exact"``, ``"inexact"`` (Android refuses exact
@@ -428,9 +430,9 @@ class Scheduler:
         from flet_notifications import NotificationException
 
         try:
-            exact = await self._schedule_best(
-                reminder, exact=await self.exact_allowed()
-            )
+            exact = await self.exact_allowed()
+            reminder = build()  # due from now, not from before the check
+            exact = await self._schedule_best(reminder, exact=exact)
         except (NotificationException, TimeoutError) as e:
             logger.warning("Reminders: the test reminder not scheduled: %s", e)
             return "failed"

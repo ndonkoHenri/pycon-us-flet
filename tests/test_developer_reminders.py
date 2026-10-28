@@ -8,13 +8,17 @@ the rows' identifiers (#451, D-402). How the section looks is checked on devices
 
 import inspect
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet_notifications import AndroidScheduleMode, Notifications
+from flet_notifications import (
+    AndroidScheduleMode,
+    NotificationException,
+    Notifications,
+)
 from flet_permission_handler import PermissionHandler, PermissionStatus
 
 from pycon_us import clock
@@ -173,6 +177,48 @@ async def test_it_is_due_by_the_real_clock_not_the_fake_one(
         clock.start_fake_clock(None)
     delay = os.pending[TEST_ID].when - datetime.now(UTC)
     assert 0 < delay.total_seconds() <= 6
+
+
+async def test_a_slow_exact_alarm_check_still_leaves_it_5_s_ahead(
+    render: Callable[[], ft.Column],
+    os: MemoryNotifications,
+    scheduler: Scheduler,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Its time is taken after the exact-alarm check: a 6 s check doesn't make it past.
+
+    The real clock is controlled, the check moves it on 6 s, and the OS refuses a time
+    already past, as E3 does.
+    """
+    now = [datetime(2026, 5, 15, 9, 0, tzinfo=UTC)]
+
+    class RealClock(datetime):
+        """``datetime`` whose ``now()`` is the controlled time."""
+
+        @classmethod
+        def now(cls, tz: Any = None) -> "RealClock":  # type: ignore[override]
+            """Return the controlled time."""
+            return cast(RealClock, now[0])
+
+    async def slow_check() -> bool:
+        """Allow exact alarms after 6 s of the controlled clock."""
+        now[0] += timedelta(seconds=6)
+        return True
+
+    schedule = os.schedule
+
+    async def refuse_past(id: int, *, when: datetime, **kwargs: Any) -> None:
+        """Refuse a time already past, as E3 does; else schedule it."""
+        if when <= now[0]:
+            raise NotificationException("invalid_date: in the past")
+        await schedule(id, when=when, **kwargs)
+
+    monkeypatch.setattr(developer_reminders, "datetime", RealClock)
+    monkeypatch.setattr(scheduler, "exact_allowed", slow_check)
+    monkeypatch.setattr(os, "schedule", refuse_past)
+    await tap(render, "developer.test_reminder.keynote")
+    assert os.pending[TEST_ID].when - now[0] == timedelta(seconds=5)
+    assert str(outcome(render())).startswith("Scheduled: it shows in about 5 s.")
 
 
 async def test_without_exact_alarms_it_is_inexact_and_says_it_may_be_late(
