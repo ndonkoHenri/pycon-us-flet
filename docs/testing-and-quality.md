@@ -332,7 +332,7 @@ The tests also pin the four `hashlib` vectors of architecture §10.3 and `js_rou
 
 ### 4.2 Mock API tests (D-50, D-57)
 
-`MockState` holds the state seeded from `tests/fixtures/mock/`, and D-50's pure `handle(state, method, path, headers, body) -> (status, headers, body)` serves it. Tests call `handle` directly (signature and timestamp window, each endpoint's reply shape, bare or `{code, data}`, and the error bodies from `tools/mock_api/README.md`, role accounts) and through the real client, using `tools/mock_api/transport.py` (architecture §11):
+`MockState` holds the state seeded from `tests/fixtures/mock/seed.json`, and D-50's pure `handle(state, method, path, headers, body) -> (status, headers, body)` serves it. Tests call `handle` directly (signature and timestamp window, each endpoint's reply shape, bare or `{code, data}`, and the error bodies from `tools/mock_api/README.md`, role accounts) and through the real client, using `tools/mock_api/transport.py` (architecture §11):
 
 ```python
 # tools/mock_api/transport.py (excerpt)
@@ -346,7 +346,7 @@ def mock_transport(state: MockState) -> httpx.MockTransport:
 
     def respond(request: httpx.Request) -> httpx.Response:
         status, headers, body = handle(
-            state, request.method, request.url.raw_path.decode(), dict(request.headers), request.content
+            state, request.method, request.url.raw_path.decode("ascii"), request.headers, request.content
         )
         return httpx.Response(status, headers=headers, content=body)
 

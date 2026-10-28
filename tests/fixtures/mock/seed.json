@@ -1,0 +1,67 @@
+{
+  "year": 2026,
+  "accounts": [
+    {
+      "role": "attendee",
+      "email": "attendee@example.com",
+      "password": "mock-attendee",
+      "nickname": "Alex Attendee",
+      "key": "mock-key-attendee",
+      "secret": "mock-secret-attendee",
+      "favorites": ["9001", "poster-detail-7"],
+      "features": {"lead_retrieval": false}
+    },
+    {
+      "role": "speaker",
+      "email": "speaker@example.com",
+      "password": "mock-speaker",
+      "nickname": "Pat Speaker",
+      "key": "mock-key-speaker",
+      "secret": "mock-secret-speaker",
+      "favorites": [],
+      "features": {"lead_retrieval": false, "door_check_in": false, "mask_violation": false, "is_speaker": true}
+    },
+    {
+      "role": "sponsor",
+      "email": "sponsor@example.com",
+      "password": "mock-sponsor",
+      "nickname": "Sam Sponsor",
+      "key": "mock-key-sponsor",
+      "secret": "mock-secret-sponsor",
+      "sponsor_id": 1,
+      "favorites": [],
+      "features": {"lead_retrieval": true, "door_check_in": false, "mask_violation": false, "is_speaker": false}
+    },
+    {
+      "role": "staff",
+      "email": "staff@example.com",
+      "password": "mock-staff",
+      "nickname": "Dana Door",
+      "key": "mock-key-staff",
+      "secret": "mock-secret-staff",
+      "favorites": [],
+      "features": {"lead_retrieval": false, "door_check_in": true, "mask_violation": false, "is_speaker": false}
+    },
+    {
+      "role": "coc",
+      "email": "coc@example.com",
+      "password": "mock-coc",
+      "nickname": "Casey Conduct",
+      "key": "mock-key-coc",
+      "secret": "mock-secret-coc",
+      "favorites": [],
+      "features": {"lead_retrieval": false, "door_check_in": false, "mask_violation": true, "is_speaker": false}
+    },
+    {
+      "role": "all",
+      "email": "all@example.com",
+      "password": "mock-all",
+      "nickname": "Robin Everything",
+      "key": "mock-key-all",
+      "secret": "mock-secret-all",
+      "sponsor_id": 1,
+      "favorites": [],
+      "features": {"lead_retrieval": true, "door_check_in": true, "mask_violation": true, "is_speaker": true}
+    }
+  ]
+}
