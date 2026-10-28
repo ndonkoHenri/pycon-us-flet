@@ -15,6 +15,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
+from flet.components.component import Component
 
 from pycon_us.account import Account
 from pycon_us.config import YearData, load_year
@@ -329,3 +330,36 @@ async def test_a_consent_that_can_t_be_saved_scans_and_says_so(
     assert SCANNER_CONSENT.key not in stored
     (bar,) = shown.snack_bars
     assert isinstance(bar.content, ft.Text) and bar.content.value == NOT_SAVED
+
+
+async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each render runs all its component's hooks, read to consent to scanner (D-70).
+
+    The stand-in scaffold calls a hook, as the real one does: called from
+    ``LeadTool``'s loading branch only, it would leave a hook unused after the read.
+    """
+    stand_in = harness._scaffold
+
+    def scaffold(**kwargs: Any) -> ft.Control:
+        """Call a hook, as ``AppScaffold`` does, then stand in for it."""
+        ft.use_state(0)
+        return stand_in(**kwargs)
+
+    renders: list[tuple[str, int, int]] = []
+    run_effects = Component._run_render_effects
+
+    def record(component: Component) -> None:
+        """Record each render's hooks used and hooks held, then run its effects."""
+        state = component._state
+        renders.append((component.fn.__name__, state.hook_cursor, len(state.hooks)))
+        run_effects(component)
+
+    monkeypatch.setattr(harness, "_scaffold", scaffold)
+    monkeypatch.setattr(Component, "_run_render_effects", record)
+    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    await give(shown)
+    assert not asks(shown)
+    assert {name for name, *_ in renders} >= {"LeadTool", "LeadConsent", "ScanScreen"}
+    assert [render for render in renders if render[1] != render[2]] == []

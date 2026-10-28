@@ -65,7 +65,6 @@ def LeadTool(*, owner: str) -> ft.Control:
         owner: The signed-in account (``Account.owner``).
     """
     svc = use_services()
-    margin = use_margin(LIST)  # its width class (D-305), for the page while it reads
     # Whose consent was read, and what it said: None until the first read.
     read, set_read = ft.use_state(not_read)
 
@@ -76,12 +75,23 @@ def LeadTool(*, owner: str) -> ft.Control:
 
     ft.use_effect(read_consent, [owner])
     if read is None or read[0] != owner:
-        return AppScaffold(
-            title=TITLE, body=ft.ListView(expand=True, padding=sides(margin))
-        )
+        return Reading()
     if not read[1]:
         return LeadConsent(title=TITLE, on_given=lambda: set_read((owner, True)))
     return ScanScreen(title=TITLE, on_badge=badge_read)
+
+
+@ft.component
+def Reading() -> ft.Control:
+    """The empty page under the title while the consent is read.
+
+    A component of its own: ``AppScaffold`` calls hooks, which in ``LeadTool``'s
+    loading branch only would change its hook order once the read ends (D-70).
+    """
+    margin = use_margin(LIST)  # its width class (D-305)
+    return AppScaffold(
+        title=TITLE, body=ft.ListView(expand=True, padding=sides(margin))
+    )
 
 
 def not_read() -> tuple[str, bool] | None:
