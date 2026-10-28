@@ -25,8 +25,7 @@ the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet wi
 signed-in account's rows (``use_queue_sheet()``). Scanning **pauses** while the sheet
 is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
 dropped, its text kept, and the field says why; when the pause ends the focus goes
-back to the field, as it does when a page pushed over the screen (the Lead
-scanner's sponsor picker or leads list) goes back.
+back to the field.
 
 **The camera** is E1, absent at the Flet pin (``capabilities.SCANNER`` is False): the
 area says so and manual entry is primary; #726 brings the preview.
@@ -155,19 +154,6 @@ def ScanScreen(
             await query.focus()
 
     ft.use_effect(resume, [why_paused is None])
-    was_covered = ft.use_ref(False)
-
-    @report_errors
-    async def uncovered() -> None:
-        # Back from a page pushed over the screen (the sponsor picker, the leads
-        # list): the field left the route's focus history as it stopped being
-        # focusable (D-330), so it is given the focus again, for a HID scanner.
-        back = was_covered.current and query.focusable
-        was_covered.current = not query.focusable
-        if back and why_paused is None:
-            await query.focus()
-
-    ft.use_effect(uncovered, [query.focusable])
 
     @report_errors
     async def show(result: ScanResult) -> None:

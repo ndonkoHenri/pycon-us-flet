@@ -19,7 +19,6 @@ from pycon_us.core.badges import (
     ScanResult,
 )
 from pycon_us.core.timefmt import seconds_ago
-from pycon_us.staff import Staff
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.scan_result import (
     DIM_AFTER,
@@ -257,22 +256,3 @@ def test_high_contrast_picks_its_own_fills() -> None:
         fill_of(ScanOutcome.ACCEPTED, high_contrast=True, dimmed=False)
         == (HC_FILLS[ScanOutcome.ACCEPTED])
     )
-
-
-async def test_back_from_a_page_pushed_over_it_puts_the_focus_in_the_field(
-    show: Show, rig: Rig
-) -> None:
-    """Covered by the leads list or the picker, then back on top: focused again (D-428)."""
-    staff = Staff()
-    shown = await show(staff=staff)
-    page = shown.session.page
-    page.route = f"{scan_rig.VIEW}/leads"
-    staff.update_counts(None)  # a re-render while covered: the field can't focus
-    await shown.settle()
-    assert not entry(shown).can_request_focus
-    before = rig.focused
-    page.route = scan_rig.VIEW
-    staff.update_counts(None)
-    await shown.settle()
-    assert entry(shown).can_request_focus
-    assert rig.focused == before + 1
