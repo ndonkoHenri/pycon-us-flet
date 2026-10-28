@@ -8,7 +8,7 @@ are pinned with the check-in ones in ``tests/test_mock_api_check_in.py``.
 import pytest
 
 from tests.mock_calls import Clock, call, state_at
-from tools.mock_api.state import COC_DEDUPE, Incident, Lead, LeadNote
+from tools.mock_api.state import COC_DEDUPE, Capture, Incident, Lead, LeadNote
 
 ADA = "attendee_access_code=MOCK0001"
 ADA_BADGE = f"{ADA}&badge_validator=v4l1d01"
@@ -229,6 +229,25 @@ def test_a_note_is_recorded_for_a_captured_lead() -> None:
         {"code": 200, "data": {}},
     )
     assert state.notes == [LeadNote(1, "MOCK0001", note, state.now())]
+
+
+@pytest.mark.parametrize(
+    ("capture", "notes"),
+    [("idempotent", ["a", "b"]), ("non_idempotent", ["a", "a", "b"])],
+)
+def test_a_repeated_note_is_recorded_once_only_when_idempotent(
+    capture: Capture, notes: list[str]
+) -> None:
+    """The resend after a lost reply records nothing under ``idempotent``; an edit does."""
+    state = state_at(capture)
+    call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}", "sponsor")
+    for text in ("a", "a", "b"):
+        payload = {"accessCode": "MOCK0001", "note": text}
+        status, _ = call(
+            state, "POST", "lead_retrieval/MOCK0001/note/", "sponsor", payload
+        )
+        assert status == 200
+    assert [n.note for n in state.notes] == notes
 
 
 def test_staff_note_a_lead_for_the_sponsor_named_and_the_path_is_decoded() -> None:

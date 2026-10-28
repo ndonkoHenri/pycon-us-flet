@@ -123,7 +123,7 @@ def App(memory: ViewMemory):
 
 ### 4.2 `Services`
 
-`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `launcher` (`ft.UrlLauncher()`) and `clipboard` (`ft.Clipboard()`), which `ui/links.py`'s link rule uses (D-182), `share` (`ft.Share()`) and `paths` (`ft.StoragePaths()`), for the Developer screen's Share log (D-198), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175) and `presence` (`services/presence.py`'s `Presence`: `inactive` leaves and `resume` comes back, so `ui/focus_back.py`'s `focus_back()` can give a button the focus again after the browser or the share sheet it opened, D-372). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 also `ft.HapticFeedback()` (`haptics`) and session detail's Share (#92); P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`) and `file_picker` (`ft.FilePicker()`, Android's save in `services/calendar.py`, D-272); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51; #668: a property over `private_api`, `services/private_api.py`'s `PrivateApi`, a mutable holder in the frozen `Services`, which `bootstrap()`'s `start_developer_options()`, Developer's Mock API section and Reset app `connect()` to the URL or to none, closing the client they replace; every client signs with `Account.credentials`, #684), `credentials` (`services/credentials.py`'s `CredentialStorage`: the keystore through `flet-secure-storage` when `capabilities.SECURE_STORAGE`, else memory for the session; #684), `outbox` (`services/outbox_db.py`'s `OutboxDb`, §12.1: built by `create()` on the data directory but opened on first use, so an install whose staff tools never run, hidden without a mock URL, never creates `outbox.db`; `close()` closes it, and a late write is then refused and logged, D-120), `wakelock` (`ft.Wakelock()`, for the scan screen) and `ft.Connectivity(on_change=...)`.
+`Services` (`services/__init__.py`, with `ServicesCtx` and `use_services()`) is a `@dataclass(frozen=True, eq=False)` built once by `Services.create(memory)` in App's first render: `year` (the bundled `YearData`, §8), `storage` (`Storage(ft.SharedPreferences(), data_dir(), year)`, §9), `memory` (the process's one `ViewMemory`, created in `main.py` and passed to `App`, §5.3, §6.3), `semantics` (`ft.SemanticsService()`, for the accessibility flags), `launcher` (`ft.UrlLauncher()`) and `clipboard` (`ft.Clipboard()`), which `ui/links.py`'s link rule uses (D-182), `share` (`ft.Share()`) and `paths` (`ft.StoragePaths()`), for the Developer screen's Share log (D-198), `closed` (an `asyncio.Event` that `close()` sets when the session is replaced, D-147) `foreground` (an `asyncio.Event`, set while the app is in the foreground: the lifecycle handler clears it on `pause` and sets it on `resume`, D-175) and `presence` (`services/presence.py`'s `Presence`: `inactive` leaves and `resume` comes back, so `ui/focus_back.py`'s `focus_back()` can give a button the focus again after the browser or the share sheet it opened, D-372). `run_every(seconds, action)` is the one loop for D-40's ticks: it calls `action` at once and then every `seconds` while `foreground` is set, waits without work in the background (catching up at once on resume when a call fell due), and returns when `closed` is set; an effect's cleanup stops it sooner by cancelling its task. A Flet `Service` registers with the page when constructed, so screens never construct one. Each phase adds the services its screens use: P1 also `ft.HapticFeedback()` (`haptics`) and session detail's Share (#92); P2 `permissions: PermissionHandler | None` (the `flet_permission_handler` instance, built only when `capabilities.PERMISSIONS`; the capability-owning modules use it, e.g. `await svc.permissions.request(Permission.CAMERA)`) and `file_picker` (`ft.FilePicker()`, Android's save in `services/calendar.py`, D-272); P3 `api: ApiClient | None` (None unless a mock URL is set, D-51; #668: a property over `private_api`, `services/private_api.py`'s `PrivateApi`, a mutable holder in the frozen `Services`, which `bootstrap()`'s `start_developer_options()`, Developer's Mock API section and Reset app `connect()` to the URL or to none, closing the client they replace; every client signs with `Account.credentials`, #684), `credentials` (`services/credentials.py`'s `CredentialStorage`: the keystore through `flet-secure-storage` when `capabilities.SECURE_STORAGE`, else memory for the session; #684), `outbox` (`services/outbox_db.py`'s `OutboxDb`, §12.1: built by `create()` on the data directory but opened on first use, so an install whose staff tools never run, hidden without a mock URL, never creates `outbox.db`; `close()` closes it, and a late write is then refused and logged, D-120), `sync_wake` (an `asyncio.Event`; `kick_sync()` sets it, and so do `close()` and `on_resume()`) and `connectivity` (`ft.Connectivity(on_change=kick_on_reconnect(sync_wake))`, built by `create()` with its handler, F257: a change to anything but `NONE` sets `sync_wake`; #692, D-407), then `wakelock` (`ft.Wakelock()`, for the scan screen).
 
 ### 4.3 Bootstrap (DATA-35)
 
@@ -177,6 +177,7 @@ async def on_resume(svc: Services, conference: Conference, prefs: Prefs,
     if svc.reminders is not None:
         svc.reminders.request()                                          # D-389
     account.refresh_flags(svc.api, svc.storage, closed=svc.closed)       # D-403
+    svc.kick_sync()                                                      # D-407
     await read_accessibility(svc.semantics, prefs)                       # a snapshot (F13, U17)
 ```
 
@@ -459,7 +460,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo; `reset()`, without a write (D-198) | P1 |
 | `Layout` | `wide: bool` (the window is 600 dp wide or wider: the rail; D-277) | `set_width(width)`, which notifies only on a crossing of 600 dp (F5); `follow_width(page, layout)` sets `page.on_resize` | P2 |
 | `Account` | `restored`, `signed_in`, `signing_in` (the single flight), `email`, `nickname`, `lead_retrieval`, `door_check` (the API's `door_check_in`), `mask_violation`, `is_speaker` (absent flags False, STORE-05), `error` (the last sign-in's failure, a `SignIn`); `expired` (the server refused the key: still signed in as the owner, no private call until a sign-in clears it; not stored, D-403); `_secrets`, the key and secret (#684); later `scanner_consent` and `favorites_dirty`, with their features | `async restore(storage, credentials)`, strict: signed in only with `pycon.account` and both secrets, any part without the rest removed, a failed read removing nothing (STORE-03); `async sign_in(api, storage, credentials, email, password) -> SignIn` (`SIGNED_IN`, `BUSY`, `WRONG_CREDENTIALS`, `OFFLINE`, `TIMEOUT`, `SERVER_ERROR`, `NOT_SAVED`), which removes the old `pycon.account` and then writes the key, the secret and the new one before `signed_in` turns True (STORE-04), so a kill between the writes never pairs one account's profile with another's secrets; `async sign_out(storage, credentials) -> bool`, every removal before it notifies, favourites kept (D-48); `async reset(storage, credentials) -> bool`, a sign-out for Reset app (D-198); sign-in, sign-out and reset take turns on one `asyncio.Lock`, so a late sign-in reply never undoes a sign-out or reset; `credentials()`, what `ApiClient` signs with, Nones signed out; `owner`, the lower-cased email; `refresh_flags(api, storage, *, closed) -> Task \| None`, one `check_features` at a time in a kept task (`_refresh`), at start, on resume and on the Account screen's mount: an absent flag False, `is_speaker` untouched, a change saved to `pycon.account` and notified, no answer keeping the flags, a refused key setting `expired`, and nothing written for a closed session or once the account changed meanwhile (#686, D-403). Kept when the mock URL is cleared or changed (D-398) | P3 |
-| `Staff` | `sponsor`; `pending`, `failed`, `synced`; `syncing`; `last_sync_at`; `last_error`; `revision`; memory-only PII: `inventory`, `coc_directory` | `select_sponsor`, `update_counts`, `clear` | P3 |
+| `Staff` | `pending`, `failed`, `synced` (the signed-in account's rows by status); `syncing` (a pass under way, and what keeps a second from starting); `last_sync_at` (the end of the last pass the server answered throughout, epoch seconds); `last_error` (why the last pass stopped or a row was refused); `revision` (bumped whenever the rows change, so a list re-reads); later `sponsor` (#39) and memory-only PII: `inventory` (#40), `coc_directory` (#42) | `update_counts(counts)`, called after every change of the rows (a `None` from a failed read keeps the counts shown, D-120); `clear()`, signed out (#692); later `select_sponsor` | P3 |
 
 Year data is a frozen value in `Services.year`, and capabilities are constants: neither is a store.
 
@@ -1266,44 +1267,59 @@ Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outc
 
 Invariants (`tests/test_outbox_machine.py`, a `RuleBasedStateMachine` with scans, notes, door admits, sends that succeed or fail either way, streaks of refusals, "Retry failed", sponsor and account switches and time passing): no unsynced row lost; owner, sponsor snapshot, kind, code, `idem_key` and `created_at` fixed at enqueue; only sent rows are synced, and a synced row is never due; a note is never due before its lead is synced, keeps its lead's sponsor, and its lead row is never forgotten while it waits; `tries` counts only `ApiError`s, and a row is failed exactly at 10; one lead and one note row per (owner, code), one door row per `idem_key`. The table's rows are `tests/test_outbox.py`. Swag pickup and CoC capture are **online-only** and say so before scanning.
 
-### 12.3 `SyncWorker` (`services/sync.py`)
+### 12.3 `SyncWorker` (`services/sync.py`; #692, D-407)
 
 ```python
-# src/pycon_us/services/sync.py (excerpt)
+# src/pycon_us/services/sync.py (excerpt; docstrings in the module)
 class SyncWorker:
-    """The only sync loop for staff records: every 60 s, on reconnect, on resume and on "Sync now"."""
+    """Sends the signed-in account's due rows: the only sender of the outbox."""
 
-    def __init__(self, db: OutboxDb, api: ApiClient, account: Account, staff: Staff):
-        self._db, self._api, self._account, self._staff = db, api, account, staff
-        self._wake = asyncio.Event()
+    def __init__(self, db, api, account, staff, *, wake=None, foreground=None,
+                 closed=None, on_refused=lambda: None, now=time.time): ...
 
     def kick(self) -> None:
         self._wake.set()
 
-    @report_errors
     async def drain(self) -> None:
-        """Send due rows in order; stop at the first network failure."""
-        if not self._account.signed_in or self._staff.syncing:
+        staff, owner = self._staff, self._account.owner
+        if staff.syncing or not self._may_send(owner):  # one pass at a time
             return
-        self._staff.syncing = True
+        staff.syncing = True
+        outcome = (None, False)
         try:
-            owner = self._account.owner
-            for row in self._db.due_rows(owner, time.time()):
+            outcome = await self._send_due(owner)  # (last error, server reached)
+        finally:
+            if not self._closed.is_set():
+                self._report(owner, *outcome)  # counts, last_error, last_sync_at
+
+    async def _send_due(self, owner):
+        error, tried = None, set()
+        while rows := [r for r in self._db.due_rows(owner, self._now())
+                       if (r.id, r.revision) not in tried]:
+            for row in rows:
+                if not self._may_send(owner):  # signed out, switched, expired, closed
+                    return error, False
+                tried.add((row.id, row.revision))
                 try:
                     result = await send(self._api, row)
-                except NetworkError:
-                    self._db.save(outbox.after_network_error(row, time.time()))
-                    break
-                except ApiError as error:
-                    self._db.save(outbox.after_error(row, error.message, time.time()))
+                except NetworkError as failure:
+                    self._db.save(outbox.after_network_error(row, self._now()))
+                    return str(failure), False
+                except ApiError as failure:
+                    if failure.status == REFUSED_KEY:  # 401: not counted
+                        self._db.save(outbox.after_network_error(row, self._now()))
+                        self._on_refused()  # Account.refresh_flags() sets expired
+                        return str(failure), False
+                    error = str(failure)
+                    self._db.save(outbox.after_error(row, failure.message, self._now()))
                 else:
                     self._db.save(outbox.after_success(row, result))
-            self._staff.update_counts(self._db.counts(owner))
-        finally:
-            self._staff.syncing = False
+        return error, True
 ```
 
-`due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1). `run()` loops forever on `asyncio.wait_for(self._wake.wait(), timeout=60)` then `drain()`; an App effect starts it, so unmount cancels it (F2). `send()` is a `match row.kind` over `lead_capture`, `lead_note` and `redeem`. `ft.Connectivity(on_change=...)` kicks the worker when connectivity becomes anything but `NONE`; so do RESUME, every enqueue and "Sync now".
+`due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1), and the pass reads the due rows again until none is left, so the edit, and a note whose lead synced in the pass, go at once. `send(api, row)` is a `match row.kind` over `lead_capture` (query from the payload's `badge_validator` and the row's `sponsor_id`), `lead_note` (the payload plus the row's `sponsor_id`) and `redeem` (the payload as it is): always the row's snapshot, never the sponsor picked now (STORE-11). `run(tick=60)` waits for `foreground`, returns once `closed` is set, clears the wake, drains (wrapped in `report_errors`), then waits for the wake or the tick. Outbox times are real epoch seconds (`time.time()`), like the signatures.
+
+`supervise(svc, account, staff, prefs)` keeps the one worker: it subscribes to `Account` and `Prefs` (where the mock URL is) and, on each change, compares `sync_target()` (the client and the owner while `Services.api` exists and the account is signed in and not `expired`, else None) with the running worker's; a different one cancels the old task before starting the next, so two never send at once, and None clears `Staff` when signed out. `use_sync_worker()`, called by `App` before the boot gate, runs it in one effect keyed on `prefs.loaded`, so unmount cancels it (F2) and `close()` ends it (D-147). `Services.sync_wake` is the worker's wake: `kick_sync()` (every enqueue and "Sync now"), `on_resume()`, `close()` and `ft.Connectivity`'s change to anything but `NONE` set it. Tests: `tests/test_sync.py` (order, a note after its lead, faults, the cap, D-57's exactly-once under `lost_response`, connection errors and skew, owners and sponsors, one pass at a time, cancellation) and `tests/test_sync_loop.py` (the loop, the supervisor, the triggers).
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 
