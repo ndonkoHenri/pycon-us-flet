@@ -152,6 +152,7 @@ async def test_a_seeded_badge_reads_with_both_validators_and_is_not_recorded(
             f"Door validator: {attendee.validator}",
             f"Lead validator: {attendee.validator}",
             NOT_RECORDED,
+            "Scan 1",
         )
     )
 
