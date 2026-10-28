@@ -8,6 +8,7 @@ readers are checked on devices (the PR).
 """
 
 import asyncio
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AsyncExitStack
 from dataclasses import replace
@@ -505,3 +506,41 @@ async def test_other_accounts_rows_are_not_named(
     seed(db, "someone@example.com", Status.PENDING)
     await tap_sign_out(shown)
     assert title(shown) == SIGN_OUT_TITLE
+
+
+async def test_sync_now_sends_rows_in_a_backoff_at_once(
+    show: Show, account: Account, db: OutboxDb
+) -> None:
+    """A row waiting out a failed send's 60 s backoff is due again on Sync now.
+
+    Found on the Android emulator: the offline pass had put the first row in its
+    backoff, so Sync now sent the others and that one waited for the next tick.
+    """
+    shown = await show("sponsor")
+    seed(db, account.owner, Status.PENDING)
+    [row] = db.rows(account.owner, (Status.PENDING,)) or []
+    assert db.save(outbox.after_network_error(row, time.time()))  # due in 60 s
+    await tap_sign_out(shown)
+    await shown.click(sync_now(shown))
+    [row] = db.rows(account.owner, (Status.PENDING,)) or []
+    assert row.next_at <= time.time() and row.tries == 0
+
+
+async def test_sync_now_as_a_pass_starts_still_kicks_the_next(
+    show: Show, account: Account, db: OutboxDb, staff: Staff
+) -> None:
+    """A pass that started just before the tap read its rows first: a kick follows.
+
+    The tap can land as a tick's pass begins, before the button re-renders as busy.
+    """
+    shown = await show("sponsor")
+    seed(db, account.owner, Status.FAILED)
+    await tap_sign_out(shown)
+    button = sync_now(shown)  # enabled, as rendered
+    staff.syncing = True  # the pass begins; the button hasn't re-rendered yet
+    shown.services.sync_wake.clear()
+    await shown.click(button)
+    assert shown.services.sync_wake.is_set()
+    assert [row.status for row in db.rows(account.owner, tuple(Status)) or []] == [
+        Status.PENDING
+    ]

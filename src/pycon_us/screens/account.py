@@ -123,11 +123,16 @@ def AccountPage() -> ft.View:
 
     @report_errors
     def sync_now() -> None:
-        # Every unsynced row is tried, the failed ones too: the dialog counts them.
-        if staff.failed and svc.outbox is not None:
-            staff.retry_failed(svc.outbox, account.owner, time.time())
+        # Every unsynced row is sent now: the failed ones too, as the dialog counts
+        # them, and those in a backoff (D-414).
+        if svc.outbox is not None:
+            if staff.failed:
+                staff.retry_failed(svc.outbox, account.owner, time.time())
+            svc.outbox.due_now(account.owner, time.time())
         if kick_once(kicked, staff, svc.kick_sync):
             set_kicked_at(staff.revision)
+        else:  # a pass under way read its rows first: the next one, right after it
+            svc.kick_sync()
 
     @report_errors
     def cancel() -> None:

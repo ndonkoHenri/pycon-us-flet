@@ -281,3 +281,16 @@ async def test_a_switch_never_shows_or_sends_the_previous_owner_s_rows(
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
+
+
+def test_sync_now_makes_the_owner_s_pending_rows_due_now(db: OutboxDb) -> None:
+    """Rows in a backoff are due at once; failed, synced and others' rows keep theirs."""
+    mine = seed(db, "A1", A)
+    assert db.save(outbox.after_network_error(mine, 100.0))  # due at 160
+    other = seed(db, "B1", B)
+    assert db.save(outbox.after_network_error(other, 100.0))
+    assert db.due_now(A, 120.0)
+    assert [row.key for row in db.due_rows(A, 120.0)] == ["A1"]
+    assert db.due_rows(B, 120.0) == []
+    [row] = db.rows(A, (Status.PENDING,)) or []
+    assert (row.tries, row.revision) == (0, mine.revision)  # an outcome still saves

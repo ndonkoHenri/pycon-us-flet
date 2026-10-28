@@ -345,6 +345,26 @@ class OutboxDb:
         sql = "UPDATE outbox SET maybe_sent = 1 WHERE id = :id"
         return self._execute("flag a row", sql, {"id": row_id})
 
+    def due_now(self, owner: str, now: float) -> bool:
+        """Make the owner's pending rows due now: "Sync now" skips their backoff (D-414).
+
+        A row that waits out a 60 s backoff after a failed send would otherwise miss
+        the pass the tap asks for. Neither the tries nor the revision change, so a
+        pass under way saves its outcome as usual.
+
+        Args:
+            owner: The signed-in account's lower-cased email.
+            now: The current time (epoch seconds).
+
+        Returns:
+            Whether the rows were updated; a failure is logged (D-120).
+        """
+        sql = (
+            "UPDATE outbox SET next_at = :now WHERE owner = :owner "
+            "AND status = 'pending' AND next_at > :now"
+        )
+        return self._execute("make rows due", sql, {"owner": owner, "now": now})
+
     def due_rows(self, owner: str, now: float) -> list[Row]:
         """Return the owner's rows to send now, in send order (§12.1's query).
 

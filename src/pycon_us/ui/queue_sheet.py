@@ -317,6 +317,8 @@ def use_queue_sheet(*, others: bool = False) -> Callable[[], None]:
 
     @report_errors
     def sync_now() -> None:
+        if owner is not None and svc.outbox is not None:  # no backoff waits (D-414)
+            svc.outbox.due_now(owner, time.time())
         if kick_once(kicked, staff, svc.kick_sync):
             set_kicked_at(staff.revision)
 
