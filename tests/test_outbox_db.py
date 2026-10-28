@@ -214,7 +214,7 @@ def test_enqueue_stores_what_the_rules_decide(db: OutboxDb) -> None:
     first = queued(scan(db, now=NOW))
     again = scan(db, now=NOW + 5)
     assert again is not None and again.outcome is Outcome.UPDATED
-    stored = replace(first, next_at=NOW + 5, revision=1)  # an edit counts a revision
+    stored = replace(first, next_at=NOW + 5)  # due now: no new revision (D-57)
     assert again.row == stored
     assert db.rows(OWNER, [Status.PENDING]) == [stored]
     assert db.save(outbox.after_success(stored, {"ok": 1}))
@@ -277,17 +277,19 @@ def test_a_note_edited_while_sent_keeps_the_edit(
 
 def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> None:
     """``flag_maybe_sent`` ignores the revision, and no later save clears it (D-410)."""
-    queued(scan(db))
-    (sent,) = db.due_rows(OWNER, NOW)  # the worker reads the lead and sends it ...
-    rescan = scan(db)  # ... while it is scanned again: a new revision
-    assert rescan is not None and rescan.row is not None
-    rescanned = rescan.row
+    lead = queued(scan(db))
+    assert db.save(outbox.after_success(lead, {"id": 1}))
+    queued(note(db, text="First"))
+    (sent,) = db.due_rows(OWNER, NOW)  # the worker reads the note and sends it ...
+    edit = note(db, text="Second")  # ... while it is edited: a new revision
+    assert edit is not None and edit.row is not None
+    edited = edit.row
     assert not db.save(outbox.after_network_error(sent, NOW, maybe_sent=True))
     assert sent.id is not None and db.flag_maybe_sent(sent.id)
     (stored,) = db.due_rows(OWNER, NOW)
-    assert (stored.revision, stored.maybe_sent) == (rescanned.revision, True)
-    assert db.save(outbox.after_success(rescanned, {"id": 1}))  # read unflagged
-    assert [row.maybe_sent for row in everything(db)] == [True]
+    assert (stored.revision, stored.maybe_sent) == (edited.revision, True)
+    assert db.save(outbox.after_success(edited, {"id": 1}))  # read unflagged
+    assert [row.maybe_sent for row in everything(db)] == [False, True]
 
 
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:

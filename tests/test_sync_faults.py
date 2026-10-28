@@ -171,8 +171,8 @@ async def test_a_lost_reply_to_a_row_rescanned_while_sent_still_flags_it(
 ) -> None:
     """A rescan during the send drops its outcome (D-56), never the flag (D-410).
 
-    The rescan makes a new revision, so the lost reply's outcome is not saved; the
-    resend is a second record, and the row still says it may be.
+    The lost reply's outcome is saved over the rescan, which changed only when the
+    row is due; the resend is a second record, and the row says it may be.
     """
     await queued(rig, "non_idempotent")
 
@@ -185,6 +185,20 @@ async def test_a_lost_reply_to_a_row_rescanned_while_sent_still_flags_it(
     assert {row.status for row in rig.rows()} == {Status.SYNCED}
     assert records(rig)[LEAD] == 2
     assert flagged(rig) == {LEAD}
+
+
+async def test_a_rescan_while_sent_keeps_the_success_and_sends_once(rig: Rig) -> None:
+    """A rescan during a send that succeeds never resends the lead (D-57).
+
+    The rescan only makes the pending row due now, so the reply's outcome is saved:
+    the non-idempotent mock records one lead, and the synced row is not flagged.
+    """
+    await queued(rig, "non_idempotent")
+    rig.wire.before = first_send_of(LEAD, lambda _: rig.lead("MOCK0001"))
+    await drain_twice(rig)
+    assert {row.status for row in rig.rows()} == {Status.SYNCED}
+    assert records(rig)[LEAD] == 1
+    assert flagged(rig) == set()
 
 
 async def test_a_pass_cancelled_after_the_mock_committed_flags_its_row(
