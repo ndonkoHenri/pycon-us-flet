@@ -51,6 +51,10 @@ logger = logging.getLogger(__name__)
 REFUSED_KEY = 401
 """The status of a key the server no longer knows (the mock's ``revoked``)."""
 
+type Ended = tuple[str | None, bool, bool]
+"""How a pass ended: the last failure's message (None without one), whether the server
+answered every row tried, and whether it stopped on a ``NetworkError`` (offline)."""
+
 
 async def send(api: ApiClient, row: Row) -> object:
     """Send one outbox row with its own owner's key and its own sponsor snapshot.
@@ -159,14 +163,14 @@ class SyncWorker:
         if staff.syncing or not self._may_send(owner):
             return
         staff.syncing = True
-        outcome: tuple[str | None, bool] = (None, False)
+        outcome: Ended = (None, False, False)
         try:
             outcome = await self._send_due(owner)
         finally:
             if not (self._closed is not None and self._closed.is_set()):
                 self._report(owner, *outcome)
 
-    async def _send_due(self, owner: str) -> tuple[str | None, bool]:
+    async def _send_due(self, owner: str) -> Ended:
         """Send ``owner``'s due rows until none is left or the pass has to stop.
 
         The due rows are read again once sent, so a note whose lead synced in this
@@ -177,8 +181,7 @@ class SyncWorker:
         sent with another owner's key, nor in the background.
 
         Returns:
-            The last failure's message (None without one), and whether the server
-            answered every row tried.
+            How the pass ended (``Ended``).
         """
         error: str | None = None
         tried: set[tuple[int | None, int]] = set()
@@ -189,7 +192,7 @@ class SyncWorker:
         ]:
             for row in rows:
                 if not self._may_send(owner):
-                    return error, False
+                    return error, False, False
                 tried.add((row.id, row.revision))
                 assert row.id is not None  # a due row is a stored one
                 try:
@@ -205,23 +208,26 @@ class SyncWorker:
                         row, self._now(), maybe_sent=failure.maybe_sent
                     )
                     self._db.save(waiting)
-                    return str(failure), False
+                    return str(failure), False, True
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # the key's fault: not counted
                         self._db.save(outbox.after_network_error(row, self._now()))
                         self._on_refused()
-                        return str(failure), False
+                        return str(failure), False, False
                     error = str(failure)
                     self._db.save(outbox.after_error(row, failure.message, self._now()))
                 else:
                     self._db.save(outbox.after_success(row, result))
-        return error, True
+        return error, True, False
 
-    def _report(self, owner: str, error: str | None, reached: bool) -> None:
+    def _report(
+        self, owner: str, error: str | None, reached: bool, offline: bool
+    ) -> None:
         """Write the pass's outcome to ``Staff``: counts, error, time, not syncing."""
         staff = self._staff
         staff.update_counts(self._db.counts(owner))
         staff.last_error = error
+        staff.offline = offline
         if reached:
             staff.last_sync_at = self._now()
         staff.syncing = False

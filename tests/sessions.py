@@ -41,6 +41,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs, PrefsCtx
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.storage import Storage
+from pycon_us.staff import Staff, StaffCtx
 from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import LIGHT_TOKENS, TokensCtx
 from tests.fakes import (
@@ -177,8 +178,8 @@ def provide(
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
 
-    The change log is an empty one unless the test gives its own, and the account a
-    signed-out one.
+    The change log is an empty one unless the test gives its own, the account a
+    signed-out one and the staff outbox an empty one.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar) unless the
     test gives its own, to turn, and the light tokens' provider comes last, right
@@ -194,11 +195,14 @@ def provide(
                     favorites,
                     lambda: AccountCtx(
                         Account(restored=True) if account is None else account,
-                        lambda: ChangeLogCtx(
-                            ChangeLog() if change_log is None else change_log,
-                            lambda: LayoutCtx(
-                                Layout() if layout is None else layout,
-                                lambda: TokensCtx(LIGHT_TOKENS, body),
+                        lambda: StaffCtx(
+                            Staff(),
+                            lambda: ChangeLogCtx(
+                                ChangeLog() if change_log is None else change_log,
+                                lambda: LayoutCtx(
+                                    Layout() if layout is None else layout,
+                                    lambda: TokensCtx(LIGHT_TOKENS, body),
+                                ),
                             ),
                         ),
                     ),

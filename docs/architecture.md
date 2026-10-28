@@ -460,7 +460,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo; `replace(storage, ids) -> bool`, the account's list taken in without an Undo (P3, D-406); `reset()`, without a write (D-198) | P1 |
 | `Layout` | `wide: bool` (the window is 600 dp wide or wider: the rail; D-277) | `set_width(width)`, which notifies only on a crossing of 600 dp (F5); `follow_width(page, layout)` sets `page.on_resize` | P2 |
 | `Account` | `restored`, `signed_in`, `signing_in` (the single flight), `email`, `nickname`, `lead_retrieval`, `door_check` (the API's `door_check_in`), `mask_violation`, `is_speaker` (absent flags False, STORE-05), `error` (the last sign-in's failure, a `SignIn`); `expired` (the server refused the key: still signed in as the owner, no private call until a sign-in clears it; not stored, D-403); `_secrets`, the key and secret (#684); `favorites_dirty` (this device's favourites have not reached the account: an edit or the first sync is waiting; written by `services.favorites_sync`, D-406); later `scanner_consent`, with its feature | `async restore(storage, credentials)`, strict: signed in only with `pycon.account` and both secrets, any part without the rest removed, a failed read removing nothing (STORE-03); `async sign_in(api, storage, credentials, email, password) -> SignIn` (`SIGNED_IN`, `BUSY`, `WRONG_CREDENTIALS`, `OFFLINE`, `TIMEOUT`, `SERVER_ERROR`, `NOT_SAVED`), which removes the old `pycon.account` and then writes the key, the secret and the new one before `signed_in` turns True (STORE-04), so a kill between the writes never pairs one account's profile with another's secrets; `async sign_out(storage, credentials) -> bool`, every removal before it notifies, favourites kept (D-48); `async reset(storage, credentials) -> bool`, a sign-out for Reset app (D-198); sign-in, sign-out and reset take turns on one `asyncio.Lock`, so a late sign-in reply never undoes a sign-out or reset; `credentials()`, what `ApiClient` signs with, Nones signed out; `owner`, the lower-cased email; `refresh_flags(api, storage, *, closed) -> Task \| None`, one `check_features` at a time in a kept task (`_refresh`), at start, on resume and on the Account screen's mount: an absent flag False, `is_speaker` untouched, a change saved to `pycon.account` and notified, no answer keeping the flags, a refused key setting `expired`, and nothing written for a closed session or once the account changed meanwhile (#686, D-403). Kept when the mock URL is cleared or changed (D-398) | P3 |
-| `Staff` | `pending`, `failed`, `synced` (the signed-in account's rows by status); `syncing` (a pass under way, and what keeps a second from starting); `last_sync_at` (the end of the last pass the server answered throughout, epoch seconds); `last_error` (why the last pass stopped or a row was refused); `revision` (bumped whenever the rows change, so a list re-reads); later `sponsor` (#39) and memory-only PII: `inventory` (#40), `coc_directory` (#42) | `update_counts(counts)`, called after every change of the rows (a `None` from a failed read keeps the counts shown, D-120); `clear()`, signed out (#692); later `select_sponsor` | P3 |
+| `Staff` | `pending`, `failed`, `synced` (the signed-in account's rows by status); `syncing` (a pass under way, and what keeps a second from starting); `last_sync_at` (the end of the last pass the server answered throughout, epoch seconds); `last_error` (why the last pass stopped or a row was refused); `offline` (the last pass ended on a `NetworkError`: the sync chip's "Offline · 3 queued", #694); `revision` (bumped whenever the rows change, so a list re-reads); later `sponsor` (#39) and memory-only PII: `inventory` (#40), `coc_directory` (#42) | `update_counts(counts)`, called after every change of the rows (a `None` from a failed read keeps the counts shown, D-120); `clear()`, signed out (#692); `retry_failed(db, owner, now)`, the queue sheet's Retry failed, which saves each failed row as `outbox.retry_failed()` makes it and recounts (#694); later `select_sponsor` | P3 |
 
 Year data is a frozen value in `Services.year`, and capabilities are constants: neither is a store.
 
@@ -1247,7 +1247,7 @@ ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created
 
 `OutboxDb` (#691) is the only way to the rows: `enqueue(code, decide)` runs a `core/outbox.py` decision (`scan_lead`, `save_note` or `admit` as a `functools.partial`) over every row of the access code and stores what it decides, in one transaction; `save(row)` writes a send's outcome or "Retry failed" over a stored row, but only while the record is still at the `revision` the row was read at: an enqueue's edit (`UPDATED`) counts a new revision, so a note edited while `SyncWorker` sends its old text keeps the new text, pending, and the stale outcome is dropped (`save()` returns `False`, logged) for the next pass to send the edit (D-56); `due_rows(owner, now)` is the query above, tested equal to `outbox.due()` on random row sets; `counts(owner)` (pending, failed, synced), `rows(owner, statuses)` for the queue sheet (oldest first), `owners_with_unsynced()`, `delete_synced(owner)` (`forget_synced()` in SQL, tested equal to it) and `clear(owner=None)`. The schema lives with its one user rather than in `services/storage.py`.
 
-Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`, `OutboxDb.delete_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer) until synced or cleared with confirmation.
+Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`, `OutboxDb.delete_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer: the Staff queue row's sheet lists them under "Other accounts", D-412) until synced or cleared with confirmation.
 
 ### 12.2 Transitions (`core/outbox.py`, pure; hypothesis state-machine tests)
 
@@ -1289,12 +1289,12 @@ class SyncWorker:
         if staff.syncing or not self._may_send(owner):  # one pass at a time
             return
         staff.syncing = True
-        outcome = (None, False)
+        outcome = (None, False, False)
         try:
-            outcome = await self._send_due(owner)  # (last error, server reached)
+            outcome = await self._send_due(owner)  # (last error, reached, offline)
         finally:
             if not self._closed.is_set():
-                self._report(owner, *outcome)  # counts, last_error, last_sync_at
+                self._report(owner, *outcome)  # counts, last_error, last_sync_at, offline
 
     async def _send_due(self, owner):
         error, tried = None, set()
@@ -1302,7 +1302,7 @@ class SyncWorker:
                        if (r.id, r.revision) not in tried]:
             for row in rows:
                 if not self._may_send(owner):  # signed out, switched, expired, closed
-                    return error, False
+                    return error, False, False
                 tried.add((row.id, row.revision))
                 try:
                     result = await send(self._api, row)
@@ -1314,17 +1314,17 @@ class SyncWorker:
                         self._db.flag_maybe_sent(row.id)
                     self._db.save(outbox.after_network_error(
                         row, self._now(), maybe_sent=failure.maybe_sent))
-                    return str(failure), False
+                    return str(failure), False, True  # offline (#694)
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # 401: not counted
                         self._db.save(outbox.after_network_error(row, self._now()))
                         self._on_refused()  # Account.refresh_flags() sets expired
-                        return str(failure), False
+                        return str(failure), False, False
                     error = str(failure)
                     self._db.save(outbox.after_error(row, failure.message, self._now()))
                 else:
                     self._db.save(outbox.after_success(row, result))
-        return error, True
+        return error, True, False
 ```
 
 `due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1), and the pass reads the due rows again until none is left, so the edit, and a note whose lead synced in the pass, go at once. `send(api, row)` is a `match row.kind` over `lead_capture` (query from the payload's `badge_validator` and the row's `sponsor_id`), `lead_note` (the payload plus the row's `sponsor_id`) and `redeem` (the payload as it is): always the row's snapshot, never the sponsor picked now (STORE-11). `run(tick=60)` waits for `foreground`, returns once `closed` is set, clears the wake, drains (wrapped in `report_errors`), then waits for the wake or the tick. Outbox times are real epoch seconds (`time.time()`), like the signatures.
