@@ -97,6 +97,12 @@ STAFF_SPONSOR: Pref[dict[str, Any]] = Pref("pycon.staff_sponsor", {})
 ``core/lead_sponsors.py``); ``{}`` until one is chosen. A staff key (D-414), read as
 the Lead scanner opens and as it comes back on top, as the consent is (D-425)."""
 
+STAFF_DOOR_SESSION: Pref[dict[str, Any]] = Pref("pycon.staff_door_session", {})
+"""The session, or a category's sessions, Door check checks in for, ``{category_id,
+product_ids, label, all}`` (DOOR-02; ``core/door_sessions.py``); ``{}`` until one is
+chosen. A staff key (D-414), read as Door check opens and as it comes back on top, as
+the sponsor is (D-425, D-433)."""
+
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -111,6 +117,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     START_SCREEN,
     SCANNER_CONSENT,
     STAFF_SPONSOR,
+    STAFF_DOOR_SESSION,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""

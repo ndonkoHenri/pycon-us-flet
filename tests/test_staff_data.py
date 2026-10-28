@@ -51,8 +51,9 @@ db = outbox_db
 
 A = "a@example.com"
 B = "b@example.com"
-LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key)
-"""Staff keys #39 adds: the chosen sponsor and the scanner consent."""
+LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key, "pycon.staff_door_session")
+"""Staff keys #39 and #40 add: the chosen sponsor, the scanner consent and the session
+Door check checks in for."""
 
 
 @pytest.fixture

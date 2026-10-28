@@ -21,13 +21,13 @@ from pycon_us.config import YearData, load_year
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.screens import lead_consent, staff_lead
+from pycon_us.screens import lead_consent
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import SCANNER_CONSENT
 from pycon_us.state import Conference
-from pycon_us.ui import scan_screen
+from pycon_us.ui import scan_screen, staff_picker
 from tests import harness
 from tests.api_clients import BASE_URL
 from tests.fakes import MemoryPrefs
@@ -106,9 +106,9 @@ async def show(
             return await stack.enter_async_context(
                 showing(
                     LeadScanner,
-                    staff_lead,
                     lead_consent,
                     scan_screen,
+                    staff_picker,
                     year=load_year(2026),
                     conference=Conference(),
                     tmp_path=tmp_path,
