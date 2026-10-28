@@ -16,7 +16,7 @@ import pytest
 
 from pycon_us.core.links import feed_link
 from pycon_us.services import Services
-from pycon_us.theme import MARKDOWN_STYLE
+from pycon_us.theme_markdown import MARKDOWN_STYLE
 from pycon_us.ui.links import COULD_NOT_OPEN, feed_markdown, open_feed_link
 from tests import link_rule
 from tests.fake_page import FakePage

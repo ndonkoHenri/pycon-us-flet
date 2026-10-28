@@ -24,7 +24,8 @@ from pycon_us.prefs import use_prefs
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.reminders import TEST_ID, Access, Reminder, TestResult
+from pycon_us.services.reminder_plan import Reminder
+from pycon_us.services.reminders import TEST_ID, Access, TestResult
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line
 

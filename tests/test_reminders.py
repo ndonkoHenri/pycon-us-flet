@@ -15,7 +15,7 @@ from pycon_us.config import load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.reminder_settings import ReminderSettings, SessionLead
-from pycon_us.services.reminders import (
+from pycon_us.services.reminder_plan import (
     MAX_PENDING,
     SYNTHETIC_BASE,
     Reminder,

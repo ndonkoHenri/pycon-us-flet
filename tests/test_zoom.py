@@ -10,9 +10,9 @@ its room on screen is checked on the emulator and the simulator (the PR).
 import flet as ft
 import pytest
 
-from pycon_us.ui.zoom import (
+from pycon_us.ui.zoom import Zoom
+from pycon_us.ui.zoom_geometry import (
     Transform,
-    Zoom,
     centred_on,
     fitted,
     into_bounds,

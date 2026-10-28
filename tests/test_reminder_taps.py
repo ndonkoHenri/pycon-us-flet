@@ -15,7 +15,7 @@ import pytest
 
 from pycon_us.locations import DRILL_KINDS, PAGES
 from pycon_us.reminder_settings import ReminderSettings
-from pycon_us.services.reminders import MAX_PENDING, plan
+from pycon_us.services.reminder_plan import MAX_PENDING, plan
 from pycon_us.year_moments import keynote_moments
 from tests import links
 from tests.links import DATA, EXIT, YEAR, Open

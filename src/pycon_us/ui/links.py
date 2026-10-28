@@ -38,7 +38,7 @@ from pycon_us.core.links import feed_link
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
-from pycon_us.theme import MARKDOWN_STYLE
+from pycon_us.theme_markdown import MARKDOWN_STYLE
 from pycon_us.ui.focus_back import focus_back
 
 logger = logging.getLogger(__name__)
@@ -229,7 +229,7 @@ def feed_markdown(
     """Return a feed text (a description, a bio) as the app renders every one (D-116).
 
     Selectable Markdown with GitHub's extensions and the app's style sheet
-    (``theme.MARKDOWN_STYLE``), 16 dp from the screen's edges. A tapped link opens by
+    (``theme_markdown.MARKDOWN_STYLE``), 16 dp from the screen's edges. A tapped link opens by
     ``open_feed_link()``. Each link is a node of its own for screen readers, named by
     its text.
 

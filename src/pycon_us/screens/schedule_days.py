@@ -1,9 +1,8 @@
-"""What the Schedule shows for each day: its tab, its list and its slots, and "Now".
+"""What the Schedule shows for each day: its list, its slots, and "Now".
 
 ``screens/schedule.py`` owns the screen: the stores, the positions and the jumps. Here
-is what it places (D-31, D-153..D-156, D-192):
+is what it places (D-31, D-153..D-156); the day tabs are ``ui/day_tabs.py``'s (D-192):
 
-- ``day_tab()``, a day's one-line tab, read as its full date, today's with a dot;
 - ``DayList``, a ``TabBarView`` page, memoised and given only its day's slots and
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
 - ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
@@ -27,7 +26,7 @@ from typing import Literal
 import flet as ft
 
 from pycon_us.core.row_views import SessionView
-from pycon_us.core.timefmt import day_heading, day_tab_label, time_label, weekday_name
+from pycon_us.core.timefmt import time_label, weekday_name
 from pycon_us.core.timeline import Slot
 from pycon_us.screens.schedule_head import HEAD_KEY, Head, ListHead
 from pycon_us.screens.schedule_now import NowLine, NowMark
@@ -58,18 +57,6 @@ FAB_CLEARANCE = 88
 """Room under a list's last slot for the "Now" button: its 56 dp and 16 dp around it,
 so the last row's star is never under it (ux.md §2.4)."""
 
-TAB_HEIGHT = 56
-"""A day tab's height in dp, above Flutter's 46 for a text tab: the tab bar cannot grow
-with the text, and Flet cannot read the text scale (U16), so it is sized for the largest
-iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
-
-TAB_MS = 100
-"""How long a day switch made from Python slides (Flet's default for ``Tabs``); the
-Schedule's and a room's tabs (D-194)."""
-
-TODAY_DOT = 6
-"""The diameter of the dot that marks today's tab, in dp (ux.md §5.2)."""
-
 JUMP_TOOLTIP = "Jump to the current time"
 """What the "Now" button does: its tooltip, said after its label (ux.md §5.2)."""
 
@@ -81,43 +68,6 @@ type Scrolled = Callable[[date, ft.OnScrollEvent], None]
 
 type Reported = Callable[[date, str, float], None]
 """The Schedule's one height handler: an item's day, its key and its height (D-331)."""
-
-
-def day_tab(index: int, day: date, *, is_today: bool, screen: str = SCREEN) -> ft.Tab:
-    """Return a day's tab: "Fri 15", today with a dot, read "Friday, May 15, today".
-
-    The text's semantics label says the day in full; Flutter's tab bar puts its own
-    position label before it and adds the selection, so TalkBack reads "Tab 3 of 7,
-    Friday, May 15, today, selected" (D-192). Room detail's tabs are these too (D-194).
-
-    Args:
-        index: The tab's position, in its identifier ``<screen>.day_tab.<index>``.
-        day: The conference-local date.
-        is_today: Mark it as today, with a dot and ", today".
-        screen: The screen's name in the identifier: the Schedule's, or ``room``.
-    """
-    spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
-    label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)
-    if is_today:
-        # Beside the text, not a Badge over it: a badge's dot covered the last digit.
-        dot = ft.Container(
-            width=TODAY_DOT,
-            height=TODAY_DOT,
-            border_radius=TODAY_DOT / 2,
-            bgcolor=ft.Colors.PRIMARY,
-        )
-        # Centred on the label, so it stays beside the digits at every text size.
-        label = ft.Row(
-            [label, dot],
-            spacing=4,
-            tight=True,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-    return ft.Tab(
-        height=TAB_HEIGHT,
-        # Unlabelled: Flutter merges the identifier into the tab's node (D-166).
-        label=ft.Semantics(identifier=f"{screen}.day_tab.{index}", content=label),
-    )
 
 
 def DayList(

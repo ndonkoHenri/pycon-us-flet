@@ -34,11 +34,11 @@ from pycon_us.core.timefmt import time_label, today
 from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.schedule_days import TAB_MS, day_tab
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
+from pycon_us.ui.day_tabs import TAB_MS, day_tab
 from pycon_us.ui.favorite import ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.scaffold import AppScaffold

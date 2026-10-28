@@ -8,7 +8,7 @@ what the OS dropped (D-222, D-389). A newer ask supersedes an apply in flight
 (``services.reminders.Scheduler``). Without E3 (the companion app) it does nothing and
 the interim applies (D-60).
 
-``current_plan()`` is the plan at a given moment: ``services.reminders.plan()`` over the
+``current_plan()`` is the plan at a given moment: ``services.reminder_plan.plan()`` over the
 stores, with the year's sign-up moments and the keynotes' moments of the current feed.
 
 ``use_reminder_taps()`` lets a tap on a reminder navigate once the boot gate is open;
@@ -29,7 +29,7 @@ from pycon_us.locations import is_top_view
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.reminders import Reminder, plan
+from pycon_us.services.reminder_plan import Reminder, plan
 from pycon_us.state import Conference
 from pycon_us.year_moments import keynote_moments
 

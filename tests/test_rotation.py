@@ -18,7 +18,7 @@ from typing import Any
 import flet as ft
 import pytest
 
-from pycon_us.ui import zoom
+from pycon_us.ui import zoom_geometry
 from tests import links
 from tests.links import Open, Shown
 from tests.viewers import FakeViewer
@@ -149,7 +149,7 @@ class Viewer:
 def top(box: tuple[float, float]) -> float:
     """The Concourse plan's maximum zoom in a box (``ui.zoom``, D-312)."""
     natural = (2048.0, 1583.0)
-    return zoom.max_scale(natural[0], zoom.fitted(box, natural)[0])
+    return zoom_geometry.max_scale(natural[0], zoom_geometry.fitted(box, natural)[0])
 
 
 async def test_the_floor_viewer_re_renders_and_clamps_at_every_rotation(

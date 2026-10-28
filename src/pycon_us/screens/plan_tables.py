@@ -27,7 +27,7 @@ from pycon_us.core.expo import job_fair_tables
 from pycon_us.core.models import ConferenceData, Sponsor
 from pycon_us.locations import drill_href
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.zoom import Size
+from pycon_us.ui.zoom_geometry import Size
 from pycon_us.year_map import JOB_FAIR_PLAN, Table
 
 SCREEN = "plan"
@@ -111,7 +111,7 @@ def table_area(
 
     Args:
         table: The table.
-        shown: The plan's fitted size (``ui.zoom.fitted()``).
+        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
         sponsors: Its sponsors, for its words (``sponsors_at()``).
         on_select: Called with the table's number when it is tapped.
         selected: Whether it is the selected table.

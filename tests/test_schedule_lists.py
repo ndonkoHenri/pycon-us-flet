@@ -18,8 +18,8 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.prefs import Prefs
-from pycon_us.screens import schedule as screen
 from pycon_us.screens import schedule_days, schedule_head
+from pycon_us.screens.schedule_slots import slot_keys
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling, status_strip
 from tests import schedule_view
@@ -189,8 +189,8 @@ def test_at_the_largest_text_the_places_count_the_head_first() -> None:
     data = processed(2026)
     slots = {day: timeline(data, day, ()) for day in (THURSDAY, FRIDAY)}
     place = now_place(slots[FRIDAY], DURING)
-    plain = screen._keys(slots, FRIDAY, place, head=False)
-    headed = screen._keys(slots, FRIDAY, place, head=True)
+    plain = slot_keys(slots, FRIDAY, place, head=False)
+    headed = slot_keys(slots, FRIDAY, place, head=True)
     for day in slots:
         assert headed[day] == (schedule_head.HEAD_KEY, *plain[day])
     assert NOW_KEY in plain[FRIDAY]

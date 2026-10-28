@@ -37,7 +37,7 @@ from pycon_us.config import (
 )
 from pycon_us.core.feed import FeedError, process
 from pycon_us.core.models import ConferenceData
-from pycon_us.services.storage import write_atomic
+from pycon_us.services.data_files import write_atomic
 from pycon_us.year_info import check_credit_sponsors
 from pycon_us.year_keynotes import check_keynote_sessions
 from pycon_us.year_tracks import KEYNOTE_TRACKS

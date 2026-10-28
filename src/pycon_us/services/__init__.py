@@ -18,12 +18,13 @@ from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services.api import ApiClient, Credentials
 from pycon_us.services.credentials import CredentialStorage, secure_storage
+from pycon_us.services.data_files import data_dir
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.presence import Presence
 from pycon_us.services.private_api import PrivateApi, signed_out
 from pycon_us.services.reminders import Scheduler
 from pycon_us.services.reminders import start as start_reminders
-from pycon_us.services.storage import Storage, data_dir
+from pycon_us.services.storage import Storage
 
 if TYPE_CHECKING:  # imported only when the build has it (D-63)
     from flet_permission_handler import PermissionHandler

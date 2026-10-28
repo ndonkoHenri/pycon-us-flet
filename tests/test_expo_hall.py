@@ -26,7 +26,7 @@ from pycon_us.screens import expo, map_plans, plan
 from pycon_us.screens import map as screen
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
-from pycon_us.ui import zoom
+from pycon_us.ui import zoom_geometry
 from tests import harness, links
 from tests.feeds import processed
 from tests.timers import HeldSleeps
@@ -222,13 +222,13 @@ async def test_every_booth_centre_hits_its_own_booth(render: Render, at: str) ->
     shown = await render()
     await shown.lay_out()
     boxes = shown.boxes()
-    shown_size = zoom.fitted(BOX, (2048, 1448))
+    shown_size = zoom_geometry.fitted(BOX, (2048, 1448))
     offset = ((BOX[0] - shown_size[0]) / 2, (BOX[1] - shown_size[1]) / 2)
-    top = zoom.max_scale(2048, shown_size[0])
+    top = zoom_geometry.max_scale(2048, shown_size[0])
     t = (
-        zoom.Transform(1.0, 0.0, 0.0)
+        zoom_geometry.Transform(1.0, 0.0, 0.0)
         if at == "fit"
-        else zoom.Transform(top, -900, -600)
+        else zoom_geometry.Transform(top, -900, -600)
     )
     for item in YEAR.map.booths:
         left, top_edge, width, height = expo.booth_box(item, shown_size)
