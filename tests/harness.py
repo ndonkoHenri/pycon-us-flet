@@ -35,9 +35,11 @@ from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
+from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage
 from pycon_us.services.storage import favorites as favorites_key
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui import session_rows
 from tests.fakes import (
@@ -247,6 +249,8 @@ async def showing[S: Shown = Shown](
     layout: Layout | None = None,
     account: Account | None = None,
     private_api: PrivateApi | None = None,
+    staff: Staff | None = None,
+    outbox: OutboxDb | None = None,
 ) -> AsyncIterator[S]:
     """Render ``screen`` under the store providers; close the session on the way out.
 
@@ -279,11 +283,17 @@ async def showing[S: Shown = Shown](
             signed in; a signed-out one by default.
         private_api: The services' private-API holder, for a screen that talks to
             the mock (its transport); one without a client by default.
+        staff: The ``Staff`` store, for a screen that shows the staff outbox; a new
+            one by default.
+        outbox: The services' outbox, for a screen that reads its rows; none by
+            default.
     """
     _route(monkeypatch, modules)
     svc = memory_services(year, tmp_path, memory)
     if private_api is not None:
         svc = replace(svc, private_api=private_api)
+    if outbox is not None:
+        svc = replace(svc, outbox=outbox)
     if saved:
         await svc.storage.set(favorites_key(svc.storage.year), list(saved))
     if favorites is None:
@@ -313,7 +323,15 @@ async def showing[S: Shown = Shown](
     @ft.component
     def Root() -> ft.Control:
         return provide(
-            svc, conference, prefs, favorites, screen, change_log, layout, account
+            svc,
+            conference,
+            prefs,
+            favorites,
+            screen,
+            change_log,
+            layout,
+            account,
+            staff,
         )
 
     try:

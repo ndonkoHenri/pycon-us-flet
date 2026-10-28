@@ -60,8 +60,13 @@ class Pref[T]:
 PREFIX = "pycon."
 """Starts every key the app keeps in SharedPreferences, app-wide and per year."""
 
-# P3 adds `pycon.staff_sponsor` and `pycon.start_screen` here, with the features that
-# use them.
+# P3 adds `pycon.staff_sponsor`, the scanner consent and `pycon.start_screen` here, with
+# the features that use them (#39); the staff keys start with STAFF_PREFIX.
+
+STAFF_PREFIX = "pycon.staff_"
+"""Starts every staff key (the chosen sponsor, the scanner consent): what sign-out, an
+account switch and Clear staff data remove with ``clear_prefs(STAFF_PREFIX)`` (D-414),
+so a staff key added later is removed with the others."""
 
 THEME: Pref[str] = Pref("pycon.theme", "system")
 """``system``, ``light`` or ``dark`` (THEME-01)."""
@@ -327,18 +332,23 @@ class Storage:
             return False
         return True
 
-    async def clear_prefs(self) -> bool:
-        """Remove every key the app keeps in SharedPreferences: all of ``PREFIX``.
+    async def clear_prefs(self, prefix: str = PREFIX) -> bool:
+        """Remove every key the app keeps in SharedPreferences under ``prefix``.
 
-        Reset app (DEV-05, D-198): the settings, every year's favourites and the
-        Developer options. Keys outside ``PREFIX`` are not the app's and stay.
+        Reset app (DEV-05, D-198) removes all of ``PREFIX``: the settings, every year's
+        favourites and the Developer options; keys outside it are not the app's and
+        stay. Sign-out, an account switch and Clear staff data remove ``STAFF_PREFIX``'s
+        (D-414).
+
+        Args:
+            prefix: Where the keys to remove start; every app key by default.
 
         Returns:
             Whether every key is gone; a failure is logged with the key, never the
             value (D-120).
         """
         try:
-            keys = await self.prefs.get_keys(PREFIX)
+            keys = await self.prefs.get_keys(prefix)
         except SERVICE_ERRORS:
             logger.warning("Could not list the preferences", exc_info=True)
             return False

@@ -175,11 +175,12 @@ def provide(
     change_log: ChangeLog | None = None,
     layout: Layout | None = None,
     account: Account | None = None,
+    staff: Staff | None = None,
 ) -> ft.Control:
     """Return ``body`` under the store providers, in ``App``'s order.
 
     The change log is an empty one unless the test gives its own, the account a
-    signed-out one and the staff outbox an empty one.
+    signed-out one and the staff outbox's store an empty one.
 
     The layout is a phone's (``Layout()``: under 600 dp, the bottom bar) unless the
     test gives its own, to turn, and the light tokens' provider comes last, right
@@ -196,7 +197,7 @@ def provide(
                     lambda: AccountCtx(
                         Account(restored=True) if account is None else account,
                         lambda: StaffCtx(
-                            Staff(),
+                            Staff() if staff is None else staff,
                             lambda: ChangeLogCtx(
                                 ChangeLog() if change_log is None else change_log,
                                 lambda: LayoutCtx(

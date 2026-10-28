@@ -27,7 +27,9 @@ from pycon_us.screens.developer_data import (
     DataActions,
 )
 from pycon_us.services import Services, api, errors
+from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from tests.fake_page import FakePage, bound
@@ -76,9 +78,12 @@ def page() -> Iterator[FakePage]:
 
 
 @pytest.fixture
-def svc(tmp_path: Path) -> Services:
-    """The 2026 services over in-memory fakes and a temporary directory."""
-    return Services(
+def svc(tmp_path: Path) -> Iterator[Services]:
+    """The 2026 services over in-memory fakes and a temporary directory.
+
+    Their outbox is in the same directory, opened only by a test that uses it.
+    """
+    services = Services(
         year=load_year(2026),
         storage=Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026),
         memory=ViewMemory(),
@@ -88,7 +93,10 @@ def svc(tmp_path: Path) -> Services:
         clipboard=MemoryClipboard(),
         share=MemoryShare(),
         paths=MemoryPaths(),
+        outbox=OutboxDb(tmp_path),
     )
+    yield services
+    services.close()
 
 
 @pytest.fixture
@@ -122,6 +130,12 @@ def favorites() -> Favorites:
 def account() -> Account:
     """A signed-out account, restored."""
     return Account(restored=True)
+
+
+@pytest.fixture
+def staff() -> Staff:
+    """The session's ``Staff`` store, with no counts."""
+    return Staff()
 
 
 @pytest.fixture
@@ -185,12 +199,15 @@ def render(
     conference: Conference,
     favorites: Favorites,
     account: Account,
+    staff: Staff,
     packaged: Callable[[bool], None],
     page: FakePage,
     minutes: list[int],
 ) -> Callable[[], ft.Column]:
-    """Render ``DataActions`` and return its column."""
+    """Render ``DataActions`` and return its column; a memo is computed every render."""
     monkeypatch.setattr(ft, "use_state", rendered.use_state)
+    monkeypatch.setattr(ft, "use_memo", lambda compute, _deps: compute())
+    monkeypatch.setattr(developer_data, "use_staff", lambda: staff)
     monkeypatch.setattr(ft, "use_dialog", rendered.dialogs.append)
     monkeypatch.setattr(developer_data, "use_services", lambda: svc)
     monkeypatch.setattr(developer_data, "use_conference", lambda: conference)

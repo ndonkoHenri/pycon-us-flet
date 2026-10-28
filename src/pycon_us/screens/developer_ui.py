@@ -1,10 +1,11 @@
 """The Developer screen's drawing: its fields and its confirmations.
 
 ``option_field()`` is one option's text field, the fake clock's or the feed URL's; and
-``confirmation()`` returns the ``AlertDialog`` the Data section shows before an action
-that deletes something, naming what is lost (D-29), or None while none is open. What the
-actions do is ``developer_data.py``'s; apart so that each module stays under about 400
-lines (D-66).
+``confirmation()`` and ``staff_confirmation()`` return the ``AlertDialog`` the Data
+section shows before an action that deletes something, naming what is lost (D-29), with
+how many staff records have not synced (D-414). What the actions do is
+``developer_data.py``'s and ``developer_staff.py``'s; apart so that each module stays
+under about 400 lines (D-66).
 The action rows and the outcome line are ``ui/actions.py``'s, which Settings' Data
 section (#422) and About this app (#443) share.
 """
@@ -16,6 +17,8 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.timefmt import day_label, local_date
+from pycon_us.services.outbox_db import Counts
+from pycon_us.staff_data import unsynced
 from pycon_us.ui.actions import padded
 from pycon_us.ui.semantics import named
 
@@ -76,12 +79,67 @@ LOSS_ICONS = (
 """A decorative icon for each of ``reset_losses()``' lines, in order."""
 
 
+def records(counts: Counts) -> str:
+    """Return the staff records by state, e.g. "12 synced, 3 not synced yet"."""
+    return f"{counts.synced} synced, {unsynced(counts)} not synced yet"
+
+
+def delete_unsynced(count: int) -> str:
+    """Return the confirm button's words with unsynced records: "Delete 3 … too"."""
+    return f"Delete {count} unsynced record{'' if count == 1 else 's'} too"
+
+
+UNREADABLE = "Couldn't read the staff records on this device, so they stay."
+"""What a confirmation says when ``outbox.db`` can't be read: no count, no deletion."""
+
+
+def staff_confirmation(
+    counts: Counts | None,
+    *,
+    on_confirm: Callable[[], Any],
+    on_cancel: Callable[[], Any],
+) -> ft.AlertDialog:
+    """Return Clear staff data's confirmation, naming what is lost (DEV-03, D-414).
+
+    With unsynced records, the button says "Delete 3 unsynced records too", in
+    ``error`` as every destructive action's; when they can't be counted, it is
+    disabled: no path deletes a row without naming how many.
+
+    Args:
+        counts: Every account's records by status; None when they can't be read.
+        on_confirm: Clears the staff data.
+        on_cancel: Closes the dialog; also called when Back dismisses it.
+    """
+    waiting = 0 if counts is None else unsynced(counts)
+    rows = UNREADABLE if counts is None else f"The staff records: {records(counts)}"
+    if waiting:
+        rows += ". The ones not synced never reach the server"
+    return _dialog(
+        "developer.clear_staff_data",
+        ft.Icons.FOLDER_DELETE_OUTLINED,
+        "Clear staff data?",
+        [
+            _body(
+                "This deletes the staff tools' data on this device, every account's:"
+            ),
+            _loss(ft.Icons.CLOUD_OUTLINED, rows),
+            _loss(ft.Icons.VERIFIED_USER_OUTLINED, "The scanner consent"),
+            _loss(ft.Icons.STOREFRONT_OUTLINED, "The sponsor chosen to scan for"),
+        ],
+        confirm=delete_unsynced(waiting) if waiting else "Clear",
+        on_confirm=on_confirm,
+        on_cancel=on_cancel,
+        disabled=counts is None,
+    )
+
+
 def confirmation(
     asking: Asking,
     *,
     saved: int,
     packaged: bool,
     snapshot_day: str,
+    staff: Counts | None = None,
     on_confirm: Callable[[], Any],
     on_cancel: Callable[[], Any],
 ) -> ft.AlertDialog | None:
@@ -96,6 +154,8 @@ def confirmation(
         saved: How many sessions are saved in My schedule, for Reset app's list.
         packaged: A packaged build, where Reset app locks Developer again.
         snapshot_day: The day the bundled snapshot was fetched; "" if unknown.
+        staff: Every account's staff records, for Reset app's list (D-414): none
+            listed while there are none; None when they can't be read.
         on_confirm: Runs the action.
         on_cancel: Closes the dialog; also called when Back dismisses it.
     """
@@ -121,6 +181,12 @@ def confirmation(
             on_cancel=on_cancel,
         )
     losses = reset_losses(saved, packaged=packaged)
+    lines = [_loss(icon, text) for icon, text in zip(LOSS_ICONS, losses, strict=True)]
+    waiting = 0 if staff is None else unsynced(staff)
+    if staff is None:
+        lines.append(_loss(ft.Icons.CLOUD_OUTLINED, UNREADABLE))
+    elif waiting or staff.synced:
+        lines.append(_loss(ft.Icons.CLOUD_OUTLINED, f"Staff records: {records(staff)}"))
     return _dialog(
         "developer.reset_app",
         ft.Icons.RESTART_ALT,
@@ -130,10 +196,10 @@ def confirmation(
                 "This deletes what the app keeps on this device and starts it as if "
                 "it were just installed:"
             ),
-            *(_loss(icon, text) for icon, text in zip(LOSS_ICONS, losses, strict=True)),
+            *lines,
         ],
         icon_color=ft.Colors.ERROR,  # as the row that opens it
-        confirm="Reset app",
+        confirm=delete_unsynced(waiting) if waiting else "Reset app",
         on_confirm=on_confirm,
         on_cancel=on_cancel,
     )
@@ -149,11 +215,13 @@ def _dialog(
     confirm: str,
     on_confirm: Callable[[], Any],
     on_cancel: Callable[[], Any],
+    disabled: bool = False,
 ) -> ft.AlertDialog:
     """A destructive action's confirmation: Cancel, then the action, in ``error``.
 
     The icon is the row's, in the row's colour when it has one (``error`` for Reset
-    app), else the dialog's default (``secondary``).
+    app), else the dialog's default (``secondary``). ``disabled`` greys the action
+    out: what it would delete couldn't be named.
     """
     return ft.AlertDialog(
         modal=True,
@@ -168,7 +236,8 @@ def _dialog(
                 ft.TextButton(
                     confirm,
                     on_click=on_confirm,
-                    style=ft.ButtonStyle(color=ft.Colors.ERROR),
+                    disabled=disabled,
+                    style=None if disabled else ft.ButtonStyle(color=ft.Colors.ERROR),
                 ),
             ),
         ],

@@ -30,6 +30,7 @@ from pycon_us.screens.developer_ui import (
 )
 from pycon_us.services import Services, api, changes_file, errors
 from pycon_us.services.storage import ACCOUNT
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests import data_section
@@ -57,6 +58,7 @@ from tests.feeds import recorded
     conference,
     favorites,
     account,
+    staff,
     packaged,
     rendered,
     minutes,
@@ -71,6 +73,7 @@ from tests.feeds import recorded
     data_section.conference,
     data_section.favorites,
     data_section.account,
+    data_section.staff,
     data_section.packaged,
     data_section.rendered,
     data_section.minutes,
@@ -309,7 +312,9 @@ async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
     ``reset_app()``'s own deletion can remove it.
     """
     await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
-    assert await reset_app(svc, conference, prefs, favorites, Account()) is True
+    assert (
+        await reset_app(svc, conference, prefs, favorites, Account(), Staff()) is True
+    )
     assert not changes_file.changes_path(svc.storage).exists()
 
 
@@ -361,7 +366,10 @@ async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it
     running = conference.start_refresh(svc.storage, svc.year)
     await asyncio.sleep(0)
     async with asyncio.timeout(5):  # without the cancel it waits for the feed forever
-        assert await reset_app(svc, conference, prefs, favorites, Account()) is True
+        assert (
+            await reset_app(svc, conference, prefs, favorites, Account(), Staff())
+            is True
+        )
     assert running.cancelled()
     release.set()
     await asyncio.sleep(0.05)
