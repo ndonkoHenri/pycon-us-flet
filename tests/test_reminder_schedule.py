@@ -4,9 +4,10 @@
 (``tests/sessions.py``) under a stand-in for ``App``, with a ``Scheduler`` over
 ``tests/fakes.py``'s ``MemoryNotifications``: it applies once the start has loaded, at
 each change of a watched field and on resume, and not for other changes (D-222, D-389).
+Then ``use_reminder_taps()``: taps navigate only while the boot gate is open (D-396).
 """
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +25,11 @@ from pycon_us.config import YearData, load_year
 from pycon_us.core.change_batches import Batch
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs
-from pycon_us.reminder_schedule import current_plan, use_reminder_schedule
+from pycon_us.reminder_schedule import (
+    current_plan,
+    use_reminder_schedule,
+    use_reminder_taps,
+)
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import Services
 from pycon_us.services.reminders import Scheduler, reminder_id
@@ -220,3 +225,32 @@ async def test_without_e3_the_hook_does_nothing(
     async with rendering(Host):
         prefs.reminders = ReminderSettings(session_lead=5)
         await settle()
+
+
+async def test_taps_navigate_only_while_the_gate_is_open(
+    year: YearData, tmp_path: Path, held: None
+) -> None:
+    """Before the gate opens a tap is held for ``Start``; after, it navigates at once."""
+    state = showing(year, tmp_path, loaded=False)
+    scheduler = state.svc.reminders
+    assert scheduler is not None
+    gate: dict[str, Callable[[], None]] = {}
+
+    @ft.component
+    def Host() -> ft.Control:
+        """``App``'s part: the hook, with the gate as the test sets it."""
+        ready, set_ready = ft.use_state(False)
+        gate["open"] = lambda: set_ready(True)
+        use_reminder_taps(state.svc, ready=ready)
+        return ft.Column()
+
+    async with rendering(Host) as session:
+        went: list[str] = []
+        session.page.navigate = went.append  # pyright: ignore[reportAttributeAccessIssue]
+        scheduler.open_tapped("/my-schedule/session/142")
+        assert (scheduler.tapped, went) == ("/my-schedule/session/142", [])
+        gate["open"]()
+        await settle()
+        scheduler.open_tapped("/schedule/session/153")
+        assert went == ["/schedule/session/153"]
+        assert scheduler.tapped == "/my-schedule/session/142"  # Start's to take

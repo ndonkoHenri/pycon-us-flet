@@ -8,8 +8,11 @@ the session's ``Scheduler`` when the build has E3, and only this module imports 
 extension (D-63). Without it, as in the companion app, there is no ``Scheduler`` and the
 interim applies (D-60).
 
-``due_session()`` is the in-app Banner's question, as pure: which saved session starts
-within ``BANNER_LEAD`` minutes, while the app is open (D-60's interim; ux.md §6.9).
+A reminder's route is its payload, and a tap opens it (D-21, D-396): the ``Scheduler``
+holds a tap that comes before the app routes, the one that launched the app included,
+for ``routes.Start``, and navigates to a later one at once. It also knows whether the OS
+shows the app's notifications, which the in-app Banner's rule reads
+(``ui.reminder_banner``).
 """
 
 import asyncio
@@ -17,7 +20,6 @@ import logging
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
-from math import ceil
 from typing import TYPE_CHECKING
 from zlib import crc32
 
@@ -31,7 +33,7 @@ from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.year_moments import EventReminder
 
 if TYPE_CHECKING:  # imported only when the build has them (D-63)
-    from flet_notifications import Notifications
+    from flet_notifications import NotificationEvent, Notifications
     from flet_permission_handler import PermissionHandler
 
 logger = logging.getLogger(__name__)
@@ -44,11 +46,12 @@ SYNTHETIC_BASE = 1_000_000
 """Where the ids of sessions without a numeric id start: 1,000,000 + crc32 % 1,000,000,
 clear of the conference keys, the open spaces (9000 + key) and the moments (D-59)."""
 
-BANNER_LEAD = timedelta(minutes=10)
-"""How long before a saved session's shown start the in-app Banner appears (D-60)."""
-
 SESSION_VIEW = "/my-schedule"
 """The View a session reminder opens its session on: it is there because it is saved."""
+
+LAUNCH_WAIT = 3.0
+"""Seconds the start waits at most for E3 to answer (``Scheduler.read_enabled()``),
+which it does only once it has handed over the tap that launched the app (F246)."""
 
 
 @dataclass(frozen=True)
@@ -69,80 +72,6 @@ class Reminder:
     title: str
     body: str
     route: str
-
-
-@dataclass(frozen=True)
-class DueSession:
-    """A saved session the in-app Banner announces (``due_session()``).
-
-    Compared by value, so a tick that finds the same session at the same minute
-    changes no state and renders nothing.
-
-    Attributes:
-        id: The session's id (D-42).
-        name: The session's name.
-        minutes: Whole minutes until its shown start, rounded up: 1 to 10.
-        location: Where it is (``display_location``); empty when the feed says nowhere.
-        route: What Open lands on: the session over My schedule.
-    """
-
-    id: str
-    name: str
-    minutes: int
-    location: str
-    route: str
-
-    @property
-    def text(self) -> str:
-        """The Banner's words: "Typing deep dive starts in 9 min · Room 103ABC"."""
-        text = f"{self.name} starts in {self.minutes} min"
-        return f"{text} · {self.location}" if self.location else text
-
-
-def due_session(
-    data: ConferenceData,
-    favorites: Iterable[str],
-    now: datetime,
-    dismissed: Iterable[str] = (),
-) -> DueSession | None:
-    """Return the saved session starting within ``BANNER_LEAD``, if any (D-60).
-
-    A session counts from ``BANNER_LEAD`` before the start the app shows until that
-    start: an unsaved session, one no longer in the feed, one that has started and one
-    the user dismissed or opened from the Banner never do. Of several, the soonest
-    wins, then the lowest id, so the same inputs always give the same answer.
-
-    Args:
-        data: The processed feed.
-        favorites: The saved session ids (My schedule).
-        now: The current time (``clock.now()``); aware.
-        dismissed: The ids the Banner was dismissed or opened for, this app session.
-
-    Returns:
-        The session to announce, with its minutes to go, or None.
-    """
-    skipped = set(dismissed)
-    due = [
-        session
-        for session_id in favorites
-        if session_id not in skipped
-        and (session := data.sessions.get(session_id)) is not None
-        and instant(session.display_start) - BANNER_LEAD
-        <= instant(now)
-        < instant(session.display_start)
-    ]
-    if not due:
-        return None
-    session = min(due, key=lambda s: (instant(s.display_start), s.id))
-    return DueSession(
-        id=session.id,
-        name=session.name,
-        minutes=ceil(
-            (instant(session.display_start) - instant(now)) / timedelta(minutes=1)
-        ),
-        location=session.display_location,
-        route=drill_href(SESSION_VIEW, "session", session.id),
-    )
 
 
 def reminder_id(session_id: str) -> int:
@@ -268,18 +197,82 @@ class Scheduler:
     alarms are allowed and applies a fresh plan. A request made while an apply runs
     stops that apply before its next call, and the loop applies the newer plan.
 
+    It also takes the taps on the reminders (``on_tap``, D-396): one that comes before
+    the app routes is held in ``tapped`` for ``routes.Start``; once ``navigate`` is
+    set, a tap opens its route at once, over whatever is open (D-291).
+
     Attributes:
         notifications: The session's ``flet_notifications.Notifications``.
         permissions: ``flet-permission-handler``'s service, for D-220's check that its
             exact-alarm status agrees with the plugin's; None without it.
         android: Whether the app runs on Android, the one platform that restricts
             exact alarms.
+        tapped: The route of a reminder tapped before the app routed, the one that
+            launched it included; empty once ``take_tap()`` has taken it.
+        navigate: ``page.navigate`` once the boot gate is open and the Router
+            routes; None before, while taps are held.
+        enabled: Whether the OS shows the app's notifications, as last read
+            (``read_enabled()``): at the start and before each apply. False until
+            read, or when the read fails.
     """
 
     notifications: Notifications
     permissions: PermissionHandler | None = None
     android: bool = False
+    tapped: str = ""
+    navigate: Callable[[str], object] | None = None
+    enabled: bool = False
     _wanted: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+
+    def on_tap(self, e: NotificationEvent) -> None:
+        """E3's ``on_tap``: open the tapped reminder's route, its payload (D-21)."""
+        self.open_tapped(e.payload)
+
+    def open_tapped(self, route: str | None) -> None:
+        """Open a tapped reminder's route now, or hold it until the app routes.
+
+        Args:
+            route: The notification's payload: a route from ``plan()``. A payload
+                that is no route (empty, or not from ``/``) opens nothing.
+        """
+        if not route or not route.startswith("/"):
+            logger.warning("Reminders: a tap without a route: %r", route)
+            return
+        if self.navigate is None:
+            self.tapped = route  # routes.Start opens it (locations.launch_target)
+        else:
+            self.navigate(route)
+
+    def take_tap(self) -> str:
+        """Return the held tap's route, or empty, and hold it no longer."""
+        route, self.tapped = self.tapped, ""
+        return route
+
+    async def read_enabled(self, timeout: float | None = None) -> bool:
+        """Read whether the OS shows the app's notifications into ``enabled``.
+
+        E3 answers a call only once it has initialized, which hands over the tap that
+        launched the app first (F246), so the start awaits this before it opens the
+        boot gate: a launch tap is then held for ``routes.Start``. A failed read, or
+        one slower than ``timeout``, is logged and reads as False.
+
+        Args:
+            timeout: Seconds to wait at most; None waits as long as E3 takes.
+
+        Returns:
+            The new ``enabled``.
+        """
+        from flet_notifications import NotificationException
+
+        try:
+            enabled = await asyncio.wait_for(
+                self.notifications.are_notifications_enabled(), timeout
+            )
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: whether notifications show is unknown: %s", e)
+            enabled = False
+        self.enabled = bool(enabled)
+        return self.enabled
 
     def request(self) -> None:
         """Ask for the plan to be applied again; a newer request supersedes one in flight."""
@@ -304,6 +297,7 @@ class Scheduler:
             if closed.is_set():
                 return
             self._wanted.clear()
+            await self.read_enabled()  # for the Banner's rule (D-396)
             exact = await self.exact_allowed()  # re-read before each apply (D-221)
             reminders = planner()
             if reminders is not None:
@@ -430,8 +424,13 @@ def start(permissions: PermissionHandler | None) -> Scheduler | None:
         return None
     from flet_notifications import Notifications
 
-    return Scheduler(
-        Notifications(),
+    notifications = Notifications()
+    scheduler = Scheduler(
+        notifications,
         permissions,
         android=ft.context.page.platform == ft.PagePlatform.ANDROID,
     )
+    # Before the service first reaches the client: E3 hands over the tap that launched
+    # the app only to a handler that is set by then.
+    notifications.on_tap = scheduler.on_tap
+    return scheduler

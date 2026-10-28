@@ -15,15 +15,13 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
 from pycon_us.reminder_settings import ReminderSettings, SessionLead
 from pycon_us.services.reminders import (
-    BANNER_LEAD,
     MAX_PENDING,
     SYNTHETIC_BASE,
-    DueSession,
     Reminder,
-    due_session,
     plan,
     reminder_id,
 )
+from pycon_us.ui.reminder_banner import BANNER_LEAD, DueSession, due_session
 from pycon_us.year_moments import EventReminder, keynote_moments
 from tests.feeds import YEARS, changed, processed, remove, retime, settings
 

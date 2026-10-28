@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from flet_notifications import (
     AndroidScheduleMode,
+    NotificationEvent,
     NotificationException,
     Notifications,
 )
@@ -207,7 +208,12 @@ async def test_a_newer_request_supersedes_the_apply_in_flight(
     sched.request()
     loop = asyncio.create_task(sched.keep_applied(lambda: next(plans), closed))
     await settle()
-    assert os.calls == ["can_schedule_exact_alarms", "cancel_all_pending", "schedule"]
+    assert os.calls == [
+        "are_notifications_enabled",
+        "can_schedule_exact_alarms",
+        "cancel_all_pending",
+        "schedule",
+    ]
     sched.request()  # a favourite changed meanwhile
     os.gate.set()
     await settle()
@@ -251,3 +257,89 @@ def test_the_companion_keeps_the_interim() -> None:
     """Without E3 in the build, as in the companion app, there is no Scheduler (D-63)."""
     assert not capabilities.REMINDERS  # pytest is not an embedded build
     assert start(None) is None
+
+
+# ------------------------------------------------------------------ taps (#450, D-396)
+
+
+ROUTE = "/my-schedule/session/142"
+"""A session reminder's payload: its route."""
+
+
+def test_a_tap_before_the_app_routes_is_held_for_start(os: MemoryNotifications) -> None:
+    """Without ``navigate`` (the boot gate shut), a tap's route waits in ``tapped``."""
+    sched = scheduler(os)
+    sched.on_tap(NotificationEvent(name="tap", control=None, id=142, payload=ROUTE))  # pyright: ignore[reportArgumentType]
+    assert sched.tapped == ROUTE
+    assert sched.take_tap() == ROUTE
+    assert sched.take_tap() == ""  # taken once
+
+
+def test_a_tap_once_the_app_routes_navigates_at_once(os: MemoryNotifications) -> None:
+    """With ``navigate`` set, a tap opens its route and holds nothing."""
+    went: list[str] = []
+    sched = scheduler(os)
+    sched.navigate = went.append
+    sched.open_tapped(ROUTE)
+    assert went == [ROUTE]
+    assert sched.tapped == ""
+
+
+@pytest.mark.parametrize("payload", [None, "", "session/142", "https://example.com"])
+def test_a_payload_that_is_no_route_opens_nothing(
+    os: MemoryNotifications, payload: str | None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A tap whose payload is not a path from ``/`` is logged and goes nowhere."""
+    went: list[str] = []
+    sched = scheduler(os)
+    sched.open_tapped(payload)
+    sched.navigate = went.append
+    sched.open_tapped(payload)
+    assert (sched.tapped, went) == ("", [])
+    assert "a tap without a route" in caplog.text
+
+
+async def test_reading_whether_notifications_show(os: MemoryNotifications) -> None:
+    """``read_enabled()`` keeps the OS's answer in ``enabled``."""
+    sched = scheduler(os)
+    assert not sched.enabled  # unknown until read
+    assert await sched.read_enabled()
+    assert sched.enabled
+    os.enabled = False
+    assert not await sched.read_enabled()
+    assert not sched.enabled
+
+
+async def test_a_failed_or_slow_read_reads_as_off(
+    os: MemoryNotifications, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failed read, or one past its timeout, is logged and reads as False."""
+    sched = scheduler(os)
+    sched.enabled = True
+    os.errors["are_notifications_enabled"] = NotificationException("not initialized")
+    assert not await sched.read_enabled()
+    os.errors.clear()
+    os.initialized = asyncio.Event()  # E3 that never answers
+    assert not await sched.read_enabled(0.01)
+    assert caplog.text.count("whether notifications show is unknown") == 2
+
+
+async def test_each_apply_reads_whether_notifications_show_first(
+    os: MemoryNotifications,
+) -> None:
+    """The loop re-reads ``enabled`` before each apply, so a resume sees a new answer."""
+    closed = asyncio.Event()
+    sched = scheduler(os)
+    os.enabled = False
+    sched.request()
+    loop = asyncio.create_task(sched.keep_applied(list, closed))
+    await settle()
+    assert os.calls[0] == "are_notifications_enabled"
+    assert not sched.enabled
+    os.enabled = True  # allowed in the system settings meanwhile
+    sched.request()
+    await settle()
+    assert sched.enabled
+    closed.set()
+    sched.request()
+    await asyncio.wait_for(loop, 1)

@@ -10,6 +10,9 @@ the interim applies (D-60).
 
 ``current_plan()`` is the plan at a given moment: ``services.reminders.plan()`` over the
 stores, with the year's sign-up moments and the keynotes' moments of the current feed.
+
+``use_reminder_taps()`` lets a tap on a reminder navigate once the boot gate is open;
+before, the ``Scheduler`` holds it for ``routes.Start`` (D-396).
 """
 
 from datetime import datetime
@@ -127,3 +130,26 @@ def use_reminder_schedule(
                 stop()
 
     ft.use_effect(keep_applied, [prefs.loaded])
+
+
+def use_reminder_taps(svc: Services, *, ready: bool) -> None:
+    """Let reminder taps navigate while the boot gate is open (a hook, D-70, D-396).
+
+    Call it on every render, before any early return. Until the gate opens there is
+    no Router to navigate, so the ``Scheduler`` holds a tap, the one that launched the
+    app included, and ``routes.Start`` opens it in place of its own target
+    (``locations.launch_target()``); from then on a tap navigates at once. Without E3
+    it does nothing.
+
+    Args:
+        svc: The session's services: the ``Scheduler``, None without E3.
+        ready: Whether the boot gate is open.
+    """
+    page = ft.context.page
+
+    @report_errors
+    def follow_gate() -> None:
+        if svc.reminders is not None:
+            svc.reminders.navigate = page.navigate if ready else None
+
+    ft.use_effect(follow_gate, [ready])
