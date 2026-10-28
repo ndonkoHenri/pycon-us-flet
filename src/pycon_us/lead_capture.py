@@ -11,7 +11,7 @@ pass, so the wait is driven by the worker's reports, never by polling (LEAD-09).
 
 import asyncio
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from functools import partial
 from typing import cast
 
@@ -19,6 +19,7 @@ import flet as ft
 
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.lead_sponsors import LeadSponsor
+from pycon_us.core.lead_views import first_name
 from pycon_us.core.outbox import Outcome, Row, Status, scan_lead
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff
@@ -177,15 +178,6 @@ def named(outcome: ScanOutcome, word: str, row: Row) -> ScanResult:
     if name is None:
         return ScanResult(outcome, word, row.key, flag(row), row.key)
     return ScanResult(outcome, word, name, (row.key, *flag(row)), row.key)
-
-
-def first_name(row: Row) -> str | None:
-    """Return the first name the capture's answer stored (``{first_name}``), if any."""
-    result = row.payload.get("result")
-    name = result.get("first_name") if isinstance(result, Mapping) else None
-    if not isinstance(name, str) or not name.strip():
-        return None
-    return name.strip()
 
 
 def flag(row: Row) -> tuple[str, ...]:
