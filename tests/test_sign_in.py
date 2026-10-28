@@ -20,7 +20,7 @@ from pycon_us.account import Account, SignIn
 from pycon_us.config import load_year
 from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
 from pycon_us.screens import more, sign_in
-from pycon_us.screens.sign_in import ERRORS, UNAVAILABLE, SignInPage
+from pycon_us.screens.sign_in import ERRORS, EXPIRED, INTRO, UNAVAILABLE, SignInPage
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from tests.api_clients import BASE_URL, Recorder, replying
@@ -336,3 +336,34 @@ async def test_more_s_profile_row_follows_the_url_and_the_account_live(
     prefs.dev = {}  # cleared: the row goes, the account would stay (D-398)
     await shown.settle()
     assert not shown.nodes("more.sign_in")
+
+
+async def test_a_revoked_key_turns_the_row_into_sign_in_again_live(
+    show: Show, state: MockState, recorder: Recorder, account: Account
+) -> None:
+    """A refresh refused by the server swaps who is signed in for "Sign in again"."""
+    shown = await show(recorder, screen=more.More, view_path="/more")
+    api = shown.services.api
+    assert api is not None
+    await account.sign_in(
+        api, shown.storage, shown.services.credentials, "all@example.com", "mock-all"
+    )
+    state.faults.inject("revoked")
+    refresh = account.refresh_flags(api, shown.storage)
+    assert refresh is not None
+    await refresh
+    await shown.settle()
+    assert shown.nodes("more.sign_in_again") and not shown.nodes("more.account")
+
+
+async def test_after_a_revoked_key_sign_in_starts_with_the_email(
+    show: Show, recorder: Recorder, account: Account
+) -> None:
+    """Sign in says why and fills the email in; signing in clears ``expired``."""
+    account.email, account.signed_in, account.expired = "all@example.com", True, True
+    shown = await show(recorder)
+    assert field(shown, "Email").value == "all@example.com"
+    assert EXPIRED in shown.texts() and INTRO not in shown.texts()
+    await type_into(shown, "Password", "mock-all")
+    await shown.click(submit(shown))
+    assert account.signed_in and not account.expired

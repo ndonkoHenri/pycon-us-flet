@@ -10,7 +10,12 @@ without the rest is cleared (STORE-03).
 
 Sign-in, sign-out and Reset app take turns on one lock: a sign-out or a reset waits for
 a sign-in under way and then removes what it saved, so a late reply never signs the
-user back in (D-198).
+user back in (D-198). A flag refresh writes under the same lock.
+
+The role flags follow the server: ``refresh_flags`` asks ``check_features`` at the
+start, on resume and when the Account screen mounts (D-54, API-03), one call at a
+time. A refused key makes the account ``expired``: still signed in, so what it owns
+keeps its owner, but private calls stop until the user signs in again (D-57).
 
 The account stays when Developer's mock API URL is cleared or changed (D-398): with no
 URL nothing private shows or is sent (D-51), and with one it reappears.
@@ -20,23 +25,27 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
 
 import flet as ft
 
-from pycon_us.services.api import AUTHENTICATE, ApiClient, ApiError, NetworkError
+from pycon_us.account_profile import (
+    FLAGS,
+    Profile,
+    log_unexpected,
+    refreshed_flags,
+    secrets_of,
+)
+from pycon_us.services.api import (
+    AUTHENTICATE,
+    CHECK_FEATURES,
+    ApiClient,
+    ApiError,
+    NetworkError,
+)
 from pycon_us.services.credentials import CredentialStorage, Secrets
 from pycon_us.services.storage import ACCOUNT, SERVICE_ERRORS, Storage
 
 logger = logging.getLogger(__name__)
-
-FLAGS = {
-    "lead_retrieval": "lead_retrieval",
-    "door_check_in": "door_check",
-    "mask_violation": "mask_violation",
-    "is_speaker": "is_speaker",
-}
-"""Each role flag's name in the API's ``features`` and its field in the store."""
 
 
 class SignIn(StrEnum):
@@ -58,67 +67,6 @@ class SignIn(StrEnum):
     """Signed in on the server, but the account could not be saved (D-120)."""
 
 
-@dataclass(frozen=True)
-class Profile:
-    """What ``pycon.account`` keeps: the account without its key and secret.
-
-    Attributes:
-        email: The account's email, as the server sent it.
-        nickname: The name the app greets the user by.
-        features: The role flags by their API name; an absent one is False.
-    """
-
-    email: str
-    nickname: str
-    features: dict[str, bool]
-
-    @classmethod
-    def parse(cls, value: object) -> Profile | None:
-        """Read a stored or received account, or None when it isn't one.
-
-        Args:
-            value: ``pycon.account``'s JSON object, or ``authenticate``'s reply.
-
-        Returns:
-            The profile; flags that are absent or not booleans read as False
-            (STORE-05).
-        """
-        if not isinstance(value, dict):
-            return None
-        email, nickname = value.get("email"), value.get("nickname")
-        features = value.get("features")
-        if not (isinstance(email, str) and email and isinstance(nickname, str)):
-            return None
-        if not isinstance(features, dict):
-            return None
-        return cls(
-            email, nickname, {name: features.get(name) is True for name in FLAGS}
-        )
-
-    def stored(self) -> dict[str, Any]:
-        """Return the JSON object ``pycon.account`` holds."""
-        return {
-            "email": self.email,
-            "nickname": self.nickname,
-            "features": self.features,
-        }
-
-
-def _secrets_of(reply: object) -> tuple[str, str] | None:
-    """Return ``authenticate``'s key and secret, or None when either is missing."""
-    if not isinstance(reply, dict):
-        return None
-    api_key, api_secret = reply.get("key"), reply.get("secret")
-    if (
-        isinstance(api_key, str)
-        and api_key
-        and isinstance(api_secret, str)
-        and api_secret
-    ):
-        return api_key, api_secret
-    return None
-
-
 # eq=False: a store is one object, compared by identity (F5), as Favorites.
 @ft.observable
 @dataclass(eq=False)
@@ -138,6 +86,10 @@ class Account:
         mask_violation: May record Code of Conduct reports.
         is_speaker: Is a speaker.
         error: How the last sign-in failed, None after a success or a sign-out.
+        expired: The server refused the key (``check_features`` answered 401 or
+            403): still signed in, as the owner of what this device recorded, but
+            no private call is made until a sign-in clears it. Not stored: the next
+            start's refresh finds it again.
     """
 
     restored: bool = False
@@ -150,10 +102,13 @@ class Account:
     mask_violation: bool = False
     is_speaker: bool = False
     error: SignIn | None = None
+    expired: bool = False
     # Never shown, so never notified: what the client signs with (D-52).
     _secrets: Secrets = (None, None)
     # One account change at a time: sign-in, sign-out and reset take turns.
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+    # The flag refresh in flight, if any: at most one (API-03).
+    _refresh: asyncio.Task[None] | None = field(default=None, repr=False)
 
     @property
     def owner(self) -> str:
@@ -270,7 +225,7 @@ class Account:
             return SignIn.TIMEOUT if error.timed_out else SignIn.OFFLINE
         except ApiError as error:
             return SignIn.WRONG_CREDENTIALS if error.is_auth else SignIn.SERVER_ERROR
-        profile, secrets = Profile.parse(reply), _secrets_of(reply)
+        profile, secrets = Profile.parse(reply), secrets_of(reply)
         if profile is None or secrets is None:
             return SignIn.SERVER_ERROR
         # The old profile goes first, so no secrets are ever stored beside it.
@@ -323,6 +278,85 @@ class Account:
         """
         return await self.sign_out(storage, credentials)
 
+    def refresh_flags(
+        self,
+        api: ApiClient | None,
+        storage: Storage,
+        *,
+        closed: asyncio.Event | None = None,
+    ) -> asyncio.Task[None] | None:
+        """Ask ``check_features`` in the background and take its flags in (D-54, API-03).
+
+        At start, on resume and when the Account screen mounts; nothing waits on it,
+        so the boot gate never waits on the network (DATA-35). One call at a time: a
+        call while one is in flight returns that one. An absent flag is False and
+        ``is_speaker`` stays as sign-in gave it (STORE-05, AUTH-04). Only a change is
+        assigned and saved to ``pycon.account``, so the store notifies only then. No
+        answer keeps the flags as stored; a refused key (``ApiError.is_auth``) sets
+        ``expired`` and keeps everything else (D-57). Nothing is written for a
+        session closed meanwhile, nor when the account signed out or changed while
+        the call was out.
+
+        Args:
+            api: ``Services.api``, None while no mock URL is set.
+            storage: Where ``pycon.account`` is.
+            closed: ``Services.closed``: a replaced session writes nothing (D-147).
+
+        Returns:
+            The refresh in flight, the one already running included, or None when
+            there is nothing to ask: signed out, expired or no client.
+        """
+        if api is None or not self.signed_in or self.expired:
+            return None
+        if self._refresh is None or self._refresh.done():
+            self._refresh = asyncio.create_task(
+                self._refresh_flags(api, storage, closed)
+            )
+            self._refresh.add_done_callback(log_unexpected)
+        return self._refresh
+
+    async def _refresh_flags(
+        self, api: ApiClient, storage: Storage, closed: asyncio.Event | None
+    ) -> None:
+        secrets = self._secrets
+        flags: dict[str, bool] | None = None
+        try:
+            flags = refreshed_flags(await api.request(CHECK_FEATURES))
+        except NetworkError:
+            logger.info("Role flags not refreshed: no answer; kept as stored")
+            return
+        except ApiError as error:
+            if not error.is_auth:
+                logger.warning("Role flags not refreshed: %s", error.status)
+                return
+        else:
+            if flags is None:
+                logger.warning("Role flags not refreshed: not a features reply")
+                return
+        async with self._lock:  # a sign-in, sign-out or reset under way goes first
+            if closed is not None and closed.is_set():
+                return  # its store belongs to a destroyed session (F30)
+            # The same tuple, not equal values: a sign-in meanwhile, with the same
+            # key or not, gave its own answer, which this older one must not undo.
+            if not self.signed_in or self._secrets is not secrets:
+                return
+            if flags is None:
+                logger.warning("The API key was refused: the account needs a sign-in")
+                self.expired = True
+                return
+            await self._save_flags(flags, storage)
+
+    async def _save_flags(self, flags: dict[str, bool], storage: Storage) -> None:
+        """Assign and save the refreshed flags, when any changed."""
+        if all(getattr(self, FLAGS[name]) == on for name, on in flags.items()):
+            return
+        for name, on in flags.items():
+            setattr(self, FLAGS[name], on)
+        features = {name: getattr(self, attribute) for name, attribute in FLAGS.items()}
+        profile = Profile(self.email, self.nickname, features)
+        if await storage.set(ACCOUNT, profile.stored()):  # a failure is logged
+            logger.info("Role flags refreshed")
+
     def _apply(self, profile: Profile, secrets: Secrets) -> None:
         """Take the account in; ``signed_in`` last, once everything it covers is set."""
         self._secrets = secrets
@@ -331,6 +365,7 @@ class Account:
         for name, attribute in FLAGS.items():
             setattr(self, attribute, profile.features[name])
         self.error = None
+        self.expired = False
         self.signed_in = True
 
     def _clear(self) -> None:
@@ -342,6 +377,7 @@ class Account:
         for attribute in FLAGS.values():
             setattr(self, attribute, False)
         self.error = None
+        self.expired = False
 
 
 AccountCtx: ft.ContextProvider[Account | None] = ft.create_context(None)
