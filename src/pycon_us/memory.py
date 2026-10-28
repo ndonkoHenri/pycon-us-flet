@@ -73,6 +73,9 @@ class ViewMemory:
         spotlight: The slug of the sponsor Now's spotlight thanks: picked once for
             the process, so a relaunch after Back on Now (F29) shows the same one,
             and picked again only when it leaves the feed (D-298).
+        staff_tool: The key of the last staff tool opened in this process
+            (``core.staff_tools.ToolKey``), which Now's Scan badges card opens;
+            empty before any (D-421).
         rng: Where the spotlight's pick comes from; a test gives a seeded one. It is
             left out of comparisons, as two ``Random``s are never equal.
     """
@@ -98,6 +101,7 @@ class ViewMemory:
     plan_pins: dict[str, str] = field(default_factory=dict)
     plan_tables: dict[str, str] = field(default_factory=dict)
     spotlight: str = ""
+    staff_tool: str = ""
     rng: Random = field(default_factory=Random, compare=False)
 
     def reset(self) -> None:

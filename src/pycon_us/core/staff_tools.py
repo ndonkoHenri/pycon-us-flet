@@ -7,7 +7,7 @@ docs/architecture.md §12.4, pinned by an exhaustive truth-table test. The flags
 leave one out).
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -31,24 +31,64 @@ class StaffTool:
         icon: The name of its Material icon in ``ft.Icons`` (``core/`` imports no Flet),
             resolved by the screen with ``getattr(ft.Icons, tool.icon)``.
         route: Its route, ``/more/staff/<key>``.
+        purpose: What it is for, More's row's second line (ux.md §2.2).
     """
 
     key: ToolKey
     title: str
     icon: str
     route: str
+    purpose: str
+
+    @property
+    def now_route(self) -> str:
+        """Its route under Now, ``/now/staff/<key>``: the Scan badges card's (D-421).
+
+        Under Now, so Back from the tool returns to Now, as ``/my-schedule/settings``
+        returns to My schedule (D-207's pattern, D-401).
+        """
+        return f"/now/staff/{self.key}"
 
 
 TOOLS = tuple(
-    StaffTool(key, title, icon, f"/more/staff/{key}")
-    for key, title, icon in (
-        (ToolKey.LEAD, "Lead scanner", "QR_CODE_SCANNER"),
-        (ToolKey.DOOR, "Door check", "HOW_TO_REG_OUTLINED"),
-        (ToolKey.SWAG, "Swag pickup", "REDEEM_OUTLINED"),
-        (ToolKey.COC, "CoC incident", "REPORT_OUTLINED"),
+    StaffTool(key, title, icon, f"/more/staff/{key}", purpose)
+    for key, title, icon, purpose in (
+        (
+            ToolKey.LEAD,
+            "Lead scanner",
+            "QR_CODE_SCANNER",
+            "Capture leads at your booth",
+        ),
+        (
+            ToolKey.DOOR,
+            "Door check",
+            "HOW_TO_REG_OUTLINED",
+            "Check in attendees at the door",
+        ),
+        (ToolKey.SWAG, "Swag pickup", "REDEEM_OUTLINED", "Hand out swag at pickup"),
+        (
+            ToolKey.COC,
+            "CoC incident",
+            "REPORT_OUTLINED",
+            "Report a Code of Conduct incident",
+        ),
     )
 )
 """Every staff tool, in O-7's order: lead, door, swag, CoC."""
+
+BUILT_TOOLS = (ToolKey.LEAD,)
+"""The tools whose screen is in the route table: only they get an entry (D-169).
+
+Each tool's PR adds its key with its screen (#40 door, #41 swag, #42 CoC), so no row
+is dead; ``staff_entries()`` stays the whole gating table.
+"""
+
+QUEUED_TOOLS = (ToolKey.LEAD,)
+"""The tools whose entry says the outbox's counts ("3 pending", D-421).
+
+The outbox is per account, not per tool, and holds only leads until #40 adds door
+rows, so the counts go on the Lead scanner's entry alone.
+"""
 
 
 def _on(flags: Mapping[str, object], name: str) -> bool:
@@ -102,3 +142,50 @@ def scans_for_sponsor(flags: Mapping[str, object]) -> bool:
         behalf; a sponsor's own account scans for itself.
     """
     return _on(flags, "door_check") and not _on(flags, "lead_retrieval")
+
+
+def built_entries(flags: Mapping[str, object]) -> tuple[StaffTool, ...]:
+    """Return the entries More and Now show: ``staff_entries()`` with a screen built.
+
+    Args:
+        flags: The account's role flags, as ``may_open()`` takes them.
+
+    Returns:
+        The allowed tools in ``BUILT_TOOLS``, in O-7's order; empty when none, and
+        then neither the Staff tools section nor the Scan badges card shows.
+    """
+    return tuple(tool for tool in staff_entries(flags) if tool.key in BUILT_TOOLS)
+
+
+def card_tool(entries: Sequence[StaffTool], last: str) -> StaffTool | None:
+    """Return the tool Now's Scan badges card opens (D-421).
+
+    Args:
+        entries: The account's entries, ``built_entries()``.
+        last: The key of the last tool opened in this process
+            (``ViewMemory.staff_tool``), or empty.
+
+    Returns:
+        The last tool opened while the account may still open it, else the first
+        entry; None without entries.
+    """
+    for tool in entries:
+        if tool.key == last:
+            return tool
+    return entries[0] if entries else None
+
+
+def queue_words(pending: int, failed: int) -> str:
+    """Return an entry's outbox counts in words, or empty when nothing waits.
+
+    Args:
+        pending: The account's rows waiting to be sent (``Staff.pending``).
+        failed: Its rows given up on until "Retry failed" (``Staff.failed``).
+
+    Returns:
+        E.g. "3 pending", "1 failed" or "3 pending · 1 failed".
+    """
+    parts = [f"{pending} pending"] if pending else []
+    if failed:
+        parts.append(f"{failed} failed")
+    return " · ".join(parts)

@@ -24,6 +24,7 @@ import pytest
 from flet.components.component import Component
 
 from pycon_us import clock
+from pycon_us.account import Account
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import load_year
 from pycon_us.core.models import ConferenceData
@@ -31,6 +32,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import now as screen
 from pycon_us.services import Services
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui import status_strip
 from tests import harness
@@ -209,13 +211,16 @@ async def render(
             memory: ViewMemory | None = None,
             change_log: ChangeLog | None = None,
             prefs: Prefs | None = None,
+            account: Account | None = None,
+            staff: Staff | None = None,
         ) -> Shown:
             """Render Now at ``now``, with ``saved`` in My schedule.
 
             With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
             ``memory`` is the process's view memory, when a test keeps one;
             ``change_log`` the session's, when a test records batches; ``prefs``
-            the settings, large text say, when a test sets them.
+            the settings, large text say, when a test sets them; ``account`` and
+            ``staff`` the stores, for the Scan badges card.
             """
             held = [now]
             ticker = ticks or Ticks()
@@ -246,6 +251,8 @@ async def render(
                     memory=memory,
                     change_log=change_log,
                     prefs=prefs,
+                    account=account,
+                    staff=staff,
                     kind=partial(Shown, clock=held, ticks=ticker),
                 )
             )

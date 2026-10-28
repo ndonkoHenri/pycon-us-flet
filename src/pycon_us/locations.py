@@ -31,6 +31,7 @@ PAGES = frozenset(
         "/now/wifi",
         "/now/help",
         "/now/venue",
+        "/now/staff/lead",
         "/my-schedule/settings",
         "/more/speakers",
         "/more/tracks",
