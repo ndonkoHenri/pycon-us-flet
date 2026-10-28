@@ -8,7 +8,14 @@ are pinned with the check-in ones in ``tests/test_mock_api_check_in.py``.
 import pytest
 
 from tests.mock_calls import Clock, call, state_at
-from tools.mock_api.state import COC_DEDUPE, Capture, Incident, Lead, LeadNote
+from tools.mock_api.state import (
+    COC_DEDUPE,
+    Capture,
+    Incident,
+    Lead,
+    LeadNote,
+    MockState,
+)
 
 ADA = "attendee_access_code=MOCK0001"
 ADA_BADGE = f"{ADA}&badge_validator=v4l1d01"
@@ -34,6 +41,33 @@ def test_the_coc_directory_lists_every_attendee_in_the_envelope() -> None:
         "violations": 3,
     }
     assert len(body["data"]) == len(state.attendees)
+
+
+def test_made_up_attendees_follow_the_seeded_four_in_the_directory() -> None:
+    """``attendees=3000`` serves 3,004: ``MOCK0005`` onwards, fake, with a spread."""
+    state = MockState.from_seed(now=Clock(), attendees=3000)
+    status, body = call(state, "GET", "mask_violations/attendees/", "coc")
+    assert status == 200 and isinstance(body, dict)
+    data = body["data"]
+    assert len(data) == len({row["access_code"] for row in data}) == 3004
+    assert [row["access_code"] for row in data[3:6]] == [
+        "MOCK0004",
+        "MOCK0005",
+        "MOCK0006",
+    ]
+    assert data[-1]["access_code"] == "MOCK3004"
+    assert {row["violations"] for row in data[4:]} == {0, 1, 2, 3, 5}
+    made_up = list(state.attendees.values())[4:]
+    assert all(a.email.endswith("@example.com") and not a.products for a in made_up)
+    assert state.attendee("MOCK0005", "v4l1d05").full_name  # a badge that scans
+
+
+def test_the_same_count_makes_the_same_attendees() -> None:
+    """Generated, not random: two states with one count serve one directory."""
+    first = MockState.from_seed(now=Clock(), attendees=50)
+    second = MockState.from_seed(now=Clock(), attendees=50)
+    assert first.attendees == second.attendees
+    assert len(MockState.from_seed(now=Clock()).attendees) == 4
 
 
 def test_a_badge_scan_records_an_incident_and_returns_the_count() -> None:
