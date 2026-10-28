@@ -169,11 +169,16 @@ def test_reset_lists_exactly_what_is_lost() -> None:
         "Your saved sessions in My schedule: 3",
         "The cached schedule: the app shows the bundled one until it refreshes",
         "Schedule changes: what recent refreshes changed",
-        "Developer options: the fake clock and the feed URL, and Developer locks again",
+        (
+            "Developer options: the fake clock, the feed URL and the mock API URL, "
+            "and Developer locks again"
+        ),
     )
     losses = reset_losses(0, packaged=False)  # Developer is always there (D-73)
     assert losses[1] == "Your saved sessions in My schedule: none"
-    assert losses[4] == "Developer options: the fake clock and the feed URL"
+    assert losses[4] == (
+        "Developer options: the fake clock, the feed URL and the mock API URL"
+    )
 
 
 async def test_reset_app_asks_first_and_its_dialog_lists_the_losses(

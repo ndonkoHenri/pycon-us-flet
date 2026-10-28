@@ -22,7 +22,6 @@ from pycon_us.routes import ROUTES
 from pycon_us.screens.changes_review import use_review_snack_bar
 from pycon_us.services import Services, ServicesCtx
 from pycon_us.services.errors import report_errors, show_details
-from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, ConferenceCtx
 from pycon_us.theme import (
     BOOT_COLOR,
@@ -211,7 +210,7 @@ async def bootstrap(
     page.on_close = svc.close
     try:
         await prefs.load(svc.storage)
-        await start_developer_options(prefs, conference, svc.storage)
+        await start_developer_options(prefs, conference, svc)
         await read_accessibility(svc.semantics, prefs)
         prefs.os_dark = page.platform_brightness == ft.Brightness.DARK
         apply_theme(page, prefs)
@@ -249,23 +248,25 @@ async def bootstrap(
 
 
 async def start_developer_options(
-    prefs: Prefs, conference: Conference, storage: Storage
+    prefs: Prefs, conference: Conference, svc: Services
 ) -> None:
     """Put the stored Developer options into effect for this session (D-73, D-187).
 
     The fake clock runs from its stored start again, so each start of the app begins
-    at the same simulated moment; the feed URL serves the refreshes; and an unlock
-    shows the exception text in ``report_errors``' message.
+    at the same simulated moment; the feed URL serves the refreshes; a mock API URL
+    builds ``Services.api`` (D-51); and an unlock shows the exception text in
+    ``report_errors``' message.
 
     Args:
         prefs: The loaded settings.
         conference: The session's ``Conference`` store.
-        storage: Where the feed cache lives (``Conference.set_feed_url``).
+        svc: The session's services: the feed cache's storage and the API client.
     """
     clock.start_fake_clock(prefs.fake_now)
     if prefs.fake_now is not None:
         logger.info("Fake clock on: it starts at %s", prefs.fake_now.isoformat())
-    await conference.set_feed_url(prefs.feed_url, storage)
+    await conference.set_feed_url(prefs.feed_url, svc.storage)
+    await svc.private_api.connect(prefs.mock_api_url, svc.year.conference.year)
     show_details(prefs.developer_unlocked)
 
 
