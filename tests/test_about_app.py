@@ -19,6 +19,8 @@ from pycon_us import prefs as prefs_module
 from pycon_us.prefs import Prefs
 from pycon_us.screens.about_app import UNLOCK_TAPS
 from pycon_us.services import Services, errors
+from pycon_us.services import build as build_module
+from pycon_us.services.build import Build
 from tests import about_page
 from tests.about_page import (
     CONFERENCE_DATA,
@@ -54,6 +56,18 @@ def test_the_page_says_which_build_this_is(
         ("Flet", "source build"),  # while the source pin lasts (development.md §2.2)
         ("Licences", None),
     ]
+
+
+async def test_a_packaged_build_shows_its_number_and_still_unlocks(
+    monkeypatch: pytest.MonkeyPatch,
+    render: Callable[[], dict[str, Any]],
+    prefs: Prefs,
+) -> None:
+    """A packaged build's row says "0.4.0 (812)", and 7 taps on it still unlock (D-386)."""
+    monkeypatch.setattr(build_module, "_packaged", Build("0.4.0", "812"))
+    assert tiles(render())["Version"].subtitle == "0.4.0 (812)"
+    await tap_version(render, UNLOCK_TAPS)
+    assert prefs.developer
 
 
 def test_the_page_s_sections_are_its_data_its_build_its_links_and_help(

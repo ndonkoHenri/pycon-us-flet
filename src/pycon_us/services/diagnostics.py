@@ -23,12 +23,13 @@ from zoneinfo import ZoneInfo
 import flet as ft
 from flet.utils import is_embedded
 
-from pycon_us import FLET_VERSION, __version__, capabilities, clock
+from pycon_us import FLET_VERSION, capabilities, clock
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites
 from pycon_us.feed_refresh import Source
 from pycon_us.prefs import Prefs
+from pycon_us.services.build import read_build
 from pycon_us.services.errors import EMAIL, REDACTED_EMAIL
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference
@@ -63,7 +64,9 @@ class Facts:
     """What the diagnostics text says, read once by ``gather_facts()``.
 
     Attributes:
-        app_version: ``pycon_us.__version__`` (D-83).
+        app_version: The app's version: ``pycon_us.__version__`` (D-83), or a
+            packaged build's own (D-386).
+        build_number: A packaged build's number, or None (D-386).
         python: The Python version, e.g. ``3.14.0``.
         flet: The Flet version, ``FLET_VERSION`` while the app builds from source.
         platform: The page's platform, e.g. ``android``.
@@ -91,6 +94,7 @@ class Facts:
     """
 
     app_version: str
+    build_number: str | None
     python: str
     flet: str
     platform: str
@@ -114,7 +118,7 @@ class Facts:
 
 
 def diagnostics_text(facts: Facts) -> str:
-    """Return the diagnostics text: one ``Name: value`` line per fact, 18 lines.
+    """Return the diagnostics text: one ``Name: value`` line per fact, 19 lines.
 
     Times are ISO 8601 in the conference's zone, with their offset, and the device's
     offset has an ASCII sign too ("UTC-07:00"). Every value is
@@ -142,6 +146,7 @@ def diagnostics_text(facts: Facts) -> str:
         fake_clock = f"from {moment(facts.fake_clock_from)}, now {moment(facts.now)}"
     lines = (
         ("App", facts.app_version),
+        ("Build", facts.build_number or "none"),
         ("Python", facts.python),
         ("Flet", facts.flet),
         ("Device", facts.device or "unknown"),
@@ -173,8 +178,9 @@ async def gather_facts(
 ) -> Facts:
     """Read the facts the diagnostics text says, from the platform, the stores and the build.
 
-    Asks the platform for the device (``page.get_device_info()``); when that fails, the
-    text says "unknown" there and the rest is still read. Call it from an ``async``
+    Asks the platform for the device (``page.get_device_info()``) and, in a packaged
+    build, for its build (``read_build()``); when one fails, the text says "unknown" or
+    "none" there and the rest is still read. Call it from an ``async``
     handler (D-70).
 
     Args:
@@ -185,9 +191,11 @@ async def gather_facts(
         favorites: The saved sessions, counted.
     """
     device, os_name = await _device_facts(page)
+    build = await read_build(page)
     written_at = datetime.now(UTC)
     return Facts(
-        app_version=__version__,
+        app_version=build.version,
+        build_number=build.number,
         python=platform.python_version(),
         flet=FLET_VERSION,
         platform=page.platform.value if page.platform else "unknown",
