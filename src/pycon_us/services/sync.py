@@ -3,10 +3,11 @@
 ``SyncWorker`` sends the signed-in account's due rows in order (``OutboxDb.due_rows()``),
 each with its own sponsor snapshot (STORE-11), and stores each outcome through
 ``core/outbox.py``'s transitions: a ``NetworkError`` ends the pass and is never counted,
-an ``ApiError`` is counted and the tenth makes the row ``failed``. A refused key (401)
-is the account's fault, not the row's: the row waits uncounted and the account's flags
-are asked again, which makes it ``expired`` (D-57, D-403). ``run()`` passes at once,
-then on every ``kick()`` and every 60 s, only while the app is in the foreground.
+and flags the row when the request may have reached the server (D-410); an ``ApiError``
+is counted and the tenth makes the row ``failed``. A refused key (401) is the account's
+fault, not the row's: the row waits uncounted and the account's flags are asked again,
+which makes it ``expired`` (D-57, D-403). ``run()`` passes at once, then on every
+``kick()`` and every 60 s, only while the app is in the foreground.
 
 ``supervise()``, which ``use_sync_worker()`` runs from an ``App`` effect, keeps exactly
 one worker per session (LEAD-12; Ionic started a loop per page visit): one while a
@@ -29,13 +30,11 @@ import flet as ft
 
 from pycon_us.core import outbox
 from pycon_us.core.outbox import NETWORK_BACKOFF, Kind, Row
-from pycon_us.services.api import (
+from pycon_us.services.api import ApiClient, ApiError, NetworkError
+from pycon_us.services.endpoints import (
     LEAD_CAPTURE,
     LEAD_NOTE,
     REDEEM,
-    ApiClient,
-    ApiError,
-    NetworkError,
     lead_capture_query,
 )
 from pycon_us.services.errors import report_errors
@@ -150,8 +149,10 @@ class SyncWorker:
         """Send the due rows in order and store each outcome; one pass at a time.
 
         A pass already under way (``Staff.syncing``) makes this one return at once:
-        that one is the pass. A cancelled pass stores nothing for the row in flight,
-        which stays due: each outcome is one transaction (``OutboxDb.save``).
+        that one is the pass. A cancelled pass stores no outcome for the row in flight,
+        which stays due, its tries unchanged: each outcome is one transaction
+        (``OutboxDb.save``). The server may have had that send, so the row is flagged
+        "may be recorded twice" (D-410).
         """
         staff = self._staff
         owner = self._account.owner
@@ -190,10 +191,20 @@ class SyncWorker:
                 if not self._may_send(owner):
                     return error, False
                 tried.add((row.id, row.revision))
+                assert row.id is not None  # a due row is a stored one
                 try:
                     result = await send(self._api, row)
+                except asyncio.CancelledError:
+                    # The server may have it already: flag it, leave it pending.
+                    self._db.flag_maybe_sent(row.id)
+                    raise
                 except NetworkError as failure:
-                    self._db.save(outbox.after_network_error(row, self._now()))
+                    if failure.maybe_sent:  # by id, so an edit since keeps it
+                        self._db.flag_maybe_sent(row.id)
+                    waiting = outbox.after_network_error(
+                        row, self._now(), maybe_sent=failure.maybe_sent
+                    )
+                    self._db.save(waiting)
                     return str(failure), False
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # the key's fault: not counted

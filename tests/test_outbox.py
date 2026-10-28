@@ -194,6 +194,33 @@ def test_network_error_waits_without_counting() -> None:
     )
 
 
+def test_a_lost_answer_flags_the_row_for_good() -> None:
+    """``maybe_sent`` flags the row; no later outcome or retry clears it (D-410)."""
+    flagged = outbox.after_network_error(lead(), NOW, maybe_sent=True)
+    assert flagged == lead(next_at=NOW + outbox.NETWORK_BACKOFF, maybe_sent=True)
+    assert outbox.after_network_error(flagged, NOW).maybe_sent  # a refused connection
+    assert outbox.after_success(flagged, {}).maybe_sent
+    failed = replace(outbox.after_error(flagged, "500", NOW), status=Status.FAILED)
+    assert outbox.retry_failed(failed, NOW).maybe_sent
+
+
+@pytest.mark.parametrize(
+    ("status", "maybe_sent", "words"),
+    [
+        (Status.PENDING, False, "Queued"),
+        (Status.SYNCED, False, "Confirmed"),
+        (Status.FAILED, False, "Failed"),
+        (Status.SYNCED, True, "Confirmed · may be recorded twice"),
+        (Status.PENDING, True, "Queued · may be recorded twice"),
+    ],
+)
+def test_status_text_says_a_flagged_row_may_be_recorded_twice(
+    status: Status, maybe_sent: bool, words: str
+) -> None:
+    """The queue sheet's words: the status, and "may be recorded twice" when flagged."""
+    assert outbox.status_text(lead(status=status, maybe_sent=maybe_sent)) == words
+
+
 def test_api_error_counts_and_fails_at_the_cap() -> None:
     """Each ``ApiError`` counts; the tenth makes the row failed, not before."""
     row = lead()

@@ -6,8 +6,6 @@ every lead, note and redemption it applied, so "exactly once" is the mock's own 
 """
 
 import asyncio
-from collections.abc import Iterator
-from pathlib import Path
 
 import httpx
 import pytest
@@ -18,7 +16,7 @@ from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from tests import accounts
 from tests.mock_calls import account
-from tests.sync_rig import Rig
+from tests.sync_rig import Rig, outbox_db
 
 shared, storage, keystore, credentials = (
     accounts.shared,
@@ -26,20 +24,11 @@ shared, storage, keystore, credentials = (
     accounts.keystore,
     accounts.credentials,
 )
+db = outbox_db
 
 CAPTURE = "lead_retrieval/capture/"
 NOTE = "lead_retrieval/MOCK0001/note/"
 REDEEM = "check_in/redeem_products/"
-
-
-@pytest.fixture
-def db(tmp_path: Path) -> Iterator[OutboxDb]:
-    """Yield an outbox in its own directory (not the storage's), closed afterwards."""
-    directory = tmp_path / "outbox"
-    directory.mkdir()
-    database = OutboxDb(directory)
-    yield database
-    database.close()
 
 
 @pytest.fixture

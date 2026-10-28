@@ -25,13 +25,8 @@ from typing import TYPE_CHECKING, cast
 import flet as ft
 
 from pycon_us.core.favorites_sync import SyncState, reconcile, server_ids
-from pycon_us.services.api import (
-    READ_MOBILE_STATE,
-    WRITE_MOBILE_STATE,
-    ApiClient,
-    ApiError,
-    NetworkError,
-)
+from pycon_us.services.api import ApiClient, ApiError, NetworkError
+from pycon_us.services.endpoints import READ_MOBILE_STATE, WRITE_MOBILE_STATE
 from pycon_us.services.errors import report_errors
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage, favorites_sync

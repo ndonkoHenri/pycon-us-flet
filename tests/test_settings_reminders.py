@@ -16,7 +16,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
-from flet_notifications import Notifications
+from flet_notifications import NotificationException, Notifications
 from flet_permission_handler import PermissionHandler, PermissionStatus
 
 from pycon_us.change_log import use_change_log
@@ -31,6 +31,7 @@ from pycon_us.screens.settings_reminders import (
     BLOCKED_TEXT,
     EXACT_TEXT,
     NOT_AVAILABLE,
+    REFUSED_TEXT,
     WITH_ALARM,
     RemindersSection,
     card_for,
@@ -135,6 +136,7 @@ ALL_OFF = ReminderSettings(lightning=False, open_space=False, keynote=False)
         ("askable", ALL_OFF, True, None, None),  # nothing to allow
         ("askable", ON, True, True, "ask"),  # Android may ask again after one no
         ("askable", ON, False, True, "blocked"),  # iOS asks once (F245)
+        ("refused", ON, True, True, "refused"),  # Android may still ask (F259)
         ("blocked", ON, True, True, "blocked"),
         ("blocked", ReminderSettings(), False, True, "blocked"),
         ("allowed", ON, True, False, "exact"),
@@ -274,7 +276,7 @@ async def stored(shown: harness.Shown) -> ReminderSettings:
 
 def card_text(shown: harness.Shown) -> str | None:
     """The card's sentence, or None when no card shows."""
-    for kind in ("allow", "blocked", "exact"):
+    for kind in ("allow", "refused", "blocked", "exact"):
         if shown.nodes(f"settings.reminders.{kind}"):
             text = shown.node(f"settings.reminders.{kind}").content
             assert isinstance(text, ft.Text)
@@ -367,6 +369,37 @@ async def test_android_blocked_sends_to_settings(open_section: Open) -> None:
     permissions = MemoryPermissions(PermissionStatus.PERMANENTLY_DENIED)
     shown = await open_section(ON, android=True, permissions=permissions)
     assert card_text(shown) == BLOCKED_TEXT
+
+
+@pytest.mark.parametrize(
+    ("settings", "card"),
+    [
+        (ON, REFUSED_TEXT),  # asked before: Android may have answered without a prompt
+        (ReminderSettings(), ASK_TEXT),  # the first refusal: Android asks twice
+    ],
+)
+async def test_android_refusing_a_request_again_offers_settings(
+    open_section: Open,
+    os: MemoryNotifications,
+    settings: ReminderSettings,
+    card: str,
+) -> None:
+    """Off in system settings, the status stays denied: a later refusal offers settings.
+
+    Turned on there, the resume's read hides the card (#712, F259).
+    """
+    os.enabled = os.grant = False
+    permissions = MemoryPermissions(PermissionStatus.DENIED)
+    shown = await open_section(settings, android=True, permissions=permissions)
+    assert card_text(shown) == ASK_TEXT
+    await shown.click(button(shown, "settings.reminders.allow"))
+    assert card_text(shown) == card
+    os.enabled, permissions.status = True, PermissionStatus.GRANTED
+    scheduler = shown.services.reminders
+    assert scheduler is not None
+    scheduler.request()  # what app.on_resume() asks
+    await shown.settle()
+    assert card_text(shown) is None
 
 
 async def test_allowing_alarms_and_reminders_hides_its_card(
@@ -478,3 +511,28 @@ def test_the_calendar_alarm_follows_the_lead() -> None:
     assert ReminderSettings().calendar_alarm.total_seconds() == 600
     assert ReminderSettings(session_lead=5).calendar_alarm.total_seconds() == 300
     assert ReminderSettings(session_lead=15).calendar_alarm.total_seconds() == 900
+
+
+async def test_a_first_real_refusal_after_a_failed_request_still_offers_allow(
+    open_section: Open, os: MemoryNotifications
+) -> None:
+    """After a failed request then a first refusal, Allow stays beside Open settings.
+
+    The failed request recorded the ask but showed no prompt, so the OS may still ask
+    (#716's review).
+    """
+    os.errors["request_permissions"] = NotificationException("operation_failed")
+    os.enabled = os.grant = False
+    permissions = MemoryPermissions(PermissionStatus.DENIED)
+    shown = await open_section(
+        ReminderSettings(), android=True, permissions=permissions
+    )
+    await shown.click(button(shown, "settings.reminders.allow"))  # fails, no prompt
+    assert (await stored(shown)).primer == "accepted"
+    del os.errors["request_permissions"]
+    await shown.click(button(shown, "settings.reminders.allow"))  # the first "no"
+    assert card_text(shown) == REFUSED_TEXT
+    assert shown.nodes("settings.reminders.refused.settings")
+    os.grant, permissions.status = True, PermissionStatus.GRANTED  # Android asks again
+    await shown.click(button(shown, "settings.reminders.refused"))
+    assert card_text(shown) is None

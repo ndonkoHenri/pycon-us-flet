@@ -9,7 +9,8 @@ from collections.abc import Callable
 
 import httpx
 
-from pycon_us.services.api import AUTHENTICATE, ApiClient
+from pycon_us.services.api import ApiClient
+from pycon_us.services.endpoints import AUTHENTICATE
 from tests.mock_calls import NOW, Clock, state_at
 from tools.mock_api.state import MockState
 from tools.mock_api.transport import mock_transport

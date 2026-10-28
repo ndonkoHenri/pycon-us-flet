@@ -51,7 +51,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key)
 """
 """The first schema (architecture §12.1): the table and its three indexes."""
 
-MIGRATIONS = (OUTBOX_V1,)
+OUTBOX_V2 = """
+ALTER TABLE outbox ADD COLUMN maybe_sent INTEGER NOT NULL DEFAULT 0;
+"""
+"""``Row.maybe_sent``: a send got no answer after the server may have had it (D-410)."""
+
+MIGRATIONS = (OUTBOX_V1, OUTBOX_V2)
 """Each schema change, in order: a file at ``user_version`` n runs the ones after n."""
 
 DUE_SQL = """
@@ -72,11 +77,11 @@ DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
 
 _COLUMNS = (
     "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
-    "next_at, created_at, last_error, idem_key"
+    "next_at, created_at, last_error, idem_key, maybe_sent"
 )
 """The columns an insert or a save writes; ``revision`` counts edits on its own."""
 _VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
-_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key"
+_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key, :maybe_sent"
 
 
 class DbClosed(Exception):
@@ -113,6 +118,7 @@ def _params(row: Row) -> dict[str, object]:
         "created_at": row.created_at,
         "last_error": row.last_error,
         "idem_key": row.idem_key,
+        "maybe_sent": int(row.maybe_sent),
         "id": row.id,
         "revision": row.revision,
     }
@@ -135,6 +141,7 @@ def _row(record: sqlite3.Row) -> Row:
         idem_key=record["idem_key"],
         id=record["id"],
         revision=record["revision"],
+        maybe_sent=bool(record["maybe_sent"]),
     )
 
 
@@ -284,6 +291,8 @@ class OutboxDb:
         if row.id is None:
             raise ValueError("an outbox row is saved only once it is stored")
         sets = ", ".join(f"{name} = :{name}" for name in _COLUMNS.split(", "))
+        # A flag set by id since the row was read stays: nothing clears it (D-410).
+        sets = sets.replace("maybe_sent = :", "maybe_sent = maybe_sent OR :")
         bump = ", revision = revision + 1" if edit else ""
         cursor = connection.execute(
             f"UPDATE outbox SET {sets}{bump} WHERE id = :id AND revision = :revision",
@@ -319,6 +328,22 @@ class OutboxDb:
             return saved
 
         return self._attempt("save a row", run) or False
+
+    def flag_maybe_sent(self, row_id: int) -> bool:
+        """Flag a row "may be recorded twice" whatever its revision (D-410).
+
+        A send that may have reached the server is a fact about the row, not about the
+        revision that was sent: an edit or a rescan while it was in flight drops the
+        send's outcome (``save()``), never this flag.
+
+        Args:
+            row_id: The stored row's id.
+
+        Returns:
+            Whether the flag landed; a failure is logged (D-120).
+        """
+        sql = "UPDATE outbox SET maybe_sent = 1 WHERE id = :id"
+        return self._execute("flag a row", sql, {"id": row_id})
 
     def due_rows(self, owner: str, now: float) -> list[Row]:
         """Return the owner's rows to send now, in send order (§12.1's query).

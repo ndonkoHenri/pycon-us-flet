@@ -13,8 +13,9 @@ import httpx
 import pytest
 
 from pycon_us.account import Account, SignIn
-from pycon_us.services.api import CHECK_FEATURES, ApiClient, ApiError
+from pycon_us.services.api import ApiClient, ApiError
 from pycon_us.services.credentials import API_KEY, API_SECRET, CredentialStorage
+from pycon_us.services.endpoints import CHECK_FEATURES
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import ACCOUNT, Storage
 from tests import accounts

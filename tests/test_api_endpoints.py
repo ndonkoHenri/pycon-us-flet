@@ -12,7 +12,8 @@ from typing import Any
 
 import pytest
 
-from pycon_us.services.api import (
+from pycon_us.services.api import server_time
+from pycon_us.services.endpoints import (
     CHECK_FEATURES,
     ENDPOINTS,
     FETCH_PRODUCTS,
@@ -23,7 +24,6 @@ from pycon_us.services.api import (
     Endpoint,
     fetch_products_query,
     lead_capture_query,
-    server_time,
 )
 from tests.api_clients import Login, client_for, replying
 from tools.mock_api.handlers import SIGNED

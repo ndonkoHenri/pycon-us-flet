@@ -6,6 +6,8 @@ and live here, so a hypothesis state machine proves them (D-77) before any sqlit
 (``services/outbox_db.py``) or sending (``services/sync.py``) code exists. Every function
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
+``status_text()`` says a row's status, flagged "may be recorded twice" after a send
+whose answer was lost (D-57, D-410).
 """
 
 from collections.abc import Iterable, Mapping
@@ -62,6 +64,9 @@ class Row:
         revision: How many times an enqueue changed the stored row. A send's outcome
             is saved only over the revision it was read at, so a note edited while
             its old text was in flight keeps the new text (D-56).
+        maybe_sent: Whether a send got no answer after the server may have had the
+            request (``NetworkError.maybe_sent``), so a resend may record it twice
+            (D-57, D-410). Once set, never cleared: a later success keeps it.
     """
 
     kind: Kind
@@ -78,6 +83,29 @@ class Row:
     idem_key: str | None = None
     id: int | None = None
     revision: int = 0
+    maybe_sent: bool = False
+
+
+STATUS_WORDS = {
+    Status.PENDING: "Queued",
+    Status.SYNCED: "Confirmed",
+    Status.FAILED: "Failed",
+}
+"""Each status as the queue sheet and the tools' lists say it (ux.md §7.2)."""
+
+MAYBE_TWICE = "may be recorded twice"
+"""What a flagged row adds to its status (``Row.maybe_sent``, D-410): only "may", since
+an idempotent server records it once and the app cannot tell which it talks to."""
+
+
+def status_text(row: Row) -> str:
+    """Return a row's status in words: "Confirmed · may be recorded twice" when flagged.
+
+    The one place the words are kept, for the queue sheet and the tools' lists (#694,
+    #39, #40), which show a flagged row with an icon beside them.
+    """
+    words = STATUS_WORDS[row.status]
+    return f"{words} · {MAYBE_TWICE}" if row.maybe_sent else words
 
 
 class Outcome(StrEnum):
@@ -293,21 +321,25 @@ def after_success(row: Row, result: object) -> Row:
     return replace(row, status=Status.SYNCED, payload=payload, last_error=None)
 
 
-def after_network_error(row: Row, now: float) -> Row:
+def after_network_error(row: Row, now: float, *, maybe_sent: bool = False) -> Row:
     """Return a row whose send got no answer: still pending, its tries unchanged.
 
     A ``NetworkError`` is the connection's fault, not the row's, so it is never counted;
-    the row waits a tick and the worker ends its pass.
+    the row waits a tick and the worker ends its pass. One that may have reached the
+    server flags the row for good: the resend may be a second record (D-410).
 
     Args:
         row: The pending row that was sent.
         now: The current time (epoch seconds).
+        maybe_sent: Whether the request may have reached the server
+            (``NetworkError.maybe_sent``); False for a refused key, which answered.
 
     Returns:
         The row, due again in ``NETWORK_BACKOFF`` seconds.
     """
     _pending(row)
-    return replace(row, next_at=now + NETWORK_BACKOFF)
+    flagged = row.maybe_sent or maybe_sent
+    return replace(row, next_at=now + NETWORK_BACKOFF, maybe_sent=flagged)
 
 
 def after_error(row: Row, message: str, now: float) -> Row:

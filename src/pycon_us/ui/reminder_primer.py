@@ -118,7 +118,8 @@ async def ask(
             if close:
                 sheet.open = False
                 sheet.update()
-            granted = allow and await scheduler.request_permission()
+            # The primer shows until it is accepted: its request is the first (D-61).
+            granted = allow and await scheduler.request_permission(asked=False)
             await _save(page, svc, prefs, allow=allow, granted=granted)
         finally:
             _ASKING.discard(page)

@@ -31,6 +31,7 @@ onFlowComplete:
     direction: DOWN
 - tapOn:
     id: now.favorite.123
+- runFlow: ../subflows/primer_not_now.yaml
 - scrollUntilVisible:
     element:
       id: now.next.session.123

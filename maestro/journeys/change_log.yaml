@@ -63,6 +63,7 @@ env:
 # Save the panel happening now: Now shows it as your next session.
 - tapOn:
     id: now.favorite.123
+- runFlow: ../subflows/primer_not_now.yaml
 - extendedWaitUntil:
     visible:
       id: now.next.session.123
@@ -76,6 +77,11 @@ env:
       SIDE: swap
 - assertTrue: ${output.side == 'new'}
 - runFlow: ../subflows/open_developer.yaml
+# Refresh now is below the fold on a phone since the Mock API section (#704).
+- scrollUntilVisible:
+    element:
+      id: developer.refresh_now
+    direction: DOWN
 - tapOn:
     id: developer.refresh_now
 # Review at once: without a screen reader the SnackBar goes after 4 s (D-184).
@@ -144,7 +150,7 @@ env:
 - runFlow: ../subflows/back.yaml
 - extendedWaitUntil:
     visible:
-      id: developer.apply
+      id: developer.refresh_now
     timeout: 15000
 - runFlow: ../subflows/back.yaml
 - extendedWaitUntil:

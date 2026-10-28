@@ -8,10 +8,12 @@ request and lets a test hold one or act right after it.
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from functools import partial
+from pathlib import Path
 
 import httpx
+import pytest
 
 from pycon_us.account import Account, SignIn
 from pycon_us.core import outbox
@@ -29,6 +31,19 @@ from tools.mock_api.transport import mock_transport
 
 SENDS = ("lead_retrieval/", "check_in/")
 """The paths of the outbox's sends, so sign-ins are left out of what was sent."""
+
+
+@pytest.fixture
+def outbox_db(tmp_path: Path) -> Iterator[OutboxDb]:
+    """Yield an outbox in its own directory (not the storage's), closed afterwards.
+
+    A test module takes it as its ``db`` fixture with ``db = outbox_db``.
+    """
+    directory = tmp_path / "outbox"
+    directory.mkdir()
+    database = OutboxDb(directory)
+    yield database
+    database.close()
 
 
 class Wire(Recorder):
@@ -168,11 +183,13 @@ class Rig:
         )
         assert self.db.enqueue(code, decide) is not None
 
-    def door(self, code: str = "MOCK0001", product: int = 10) -> None:
+    def door(
+        self, code: str = "MOCK0001", product: int = 10, validator: str = "v4l1d01"
+    ) -> None:
         """Queue the signed-in account's check-in of ``code`` to ``product``."""
         payload = {
             "attendee_access_code": code,
-            "badge_validator": "v4l1d01",
+            "badge_validator": validator,
             "scanned_at": "2026-05-13T09:00:00.000Z",
             f"product-redeem-{product}": product,
             f"product-{product}-quantity": 1,

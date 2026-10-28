@@ -18,6 +18,7 @@ onFlowComplete:
 # spoken name stays "Save to My schedule", its state says saved, D-184).
 - tapOn:
     id: now.favorite.123
+- runFlow: ../subflows/primer_not_now.yaml
 - extendedWaitUntil:
     visible:
       id: now.next.session.123

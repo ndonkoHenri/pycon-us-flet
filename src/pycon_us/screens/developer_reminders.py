@@ -124,6 +124,7 @@ def reminder_for(kind: Kind, now: datetime) -> Reminder:
 
 DENIED: dict[Access, str] = {
     "askable": "Not scheduled: this app's notifications aren't allowed yet.",
+    "refused": "Not scheduled: Android refused this app's notifications.",
     "blocked": "Not scheduled: this app's notifications are off in system settings.",
     "unknown": "Not scheduled: couldn't read whether notifications are allowed.",
 }
