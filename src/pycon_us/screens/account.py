@@ -11,14 +11,19 @@ under it so a sign-in comes back here.
 
 Sign out first tries once to send My schedule's unsent changes
 (``FavoritesSync.flush()``), then asks: "Sign out? Your saved sessions stay on this
-device.", with a line when the changes could not be sent (D-411). Signing out awaits
-every removal (``Account.sign_out``), then returns to More with "Signed out"; the
-favourites and every setting stay (D-48). Ionic signed out at once and wiped the local
+device.", with a line when the changes could not be sent (D-411); with the account's
+unsynced staff rows, "3 scans haven't synced. Sign out anyway?", with Sync now, and
+the rows stay under their owner (D-414). Signing out awaits every removal
+(``Account.sign_out``), then returns to More with "Signed out"; the favourites and
+every setting stay (D-48). Ionic signed out at once and wiped the local
 favourites. It talks only to the local mock (D-51): with no mock URL, or signed out,
 the page shows a state instead.
 """
 
+import time
+
 import flet as ft
+from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us.account import Account, use_account
 from pycon_us.favorites import use_favorites
@@ -34,10 +39,13 @@ from pycon_us.screens.more import account_avatar
 from pycon_us.screens.sign_in import EXPIRED, mock_line
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.staff import use_staff
+from pycon_us.staff_data import unsynced
 from pycon_us.ui.actions import padded
 from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
 from pycon_us.ui.online import use_online
+from pycon_us.ui.queue_sheet import kick_once, sync_blocked
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
@@ -85,10 +93,13 @@ def AccountPage() -> ft.View:
     prefs = use_prefs()
     account = use_account()
     favorites = use_favorites()
+    staff = use_staff()  # the dialog's count follows each pass (D-414)
     margin = use_margin(LIST)  # its width class (D-305)
     # None while closed, else whether My schedule had synced when it opened.
     asking, set_asking = ft.use_state(not_asking)
     syncing, set_syncing = ft.use_state(False)  # Sign out's try before it asks
+    kicked: MutableRef[int | None] = ft.use_ref(None)  # the dialog's Sync now
+    _, set_kicked_at = ft.use_state(-1)  # a re-render, so its ring shows at once
     online = use_online(svc, watch=account.is_speaker)
 
     @report_errors
@@ -106,7 +117,17 @@ def AccountPage() -> ft.View:
             )
         finally:
             set_syncing(False)
+        if svc.outbox is not None:  # the rows as they are now, not the last pass's
+            staff.update_counts(svc.outbox.counts(account.owner))
         set_asking(synced)
+
+    @report_errors
+    def sync_now() -> None:
+        # Every unsynced row is tried, the failed ones too: the dialog counts them.
+        if staff.failed and svc.outbox is not None:
+            staff.retry_failed(svc.outbox, account.owner, time.time())
+        if kick_once(kicked, staff, svc.kick_sync):
+            set_kicked_at(staff.revision)
 
     @report_errors
     def cancel() -> None:
@@ -128,7 +149,15 @@ def AccountPage() -> ft.View:
     ft.use_dialog(
         None
         if asking is None
-        else sign_out_dialog(synced=asking, on_confirm=sign_out, on_cancel=cancel)
+        else sign_out_dialog(
+            synced=asking,
+            unsynced=unsynced(staff) if account.signed_in else 0,
+            syncing=staff.syncing or kicked.current == staff.revision,
+            blocked=sync_blocked(svc, account),
+            on_confirm=sign_out,
+            on_cancel=cancel,
+            on_sync_now=sync_now,
+        )
     )
     # Hooks first, every render (D-70); then the branch.
     if not (prefs.private_api_enabled and account.signed_in):

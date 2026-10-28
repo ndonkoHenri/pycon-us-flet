@@ -22,6 +22,7 @@ from pycon_us.screens.developer_api import MockApiSection
 from pycon_us.screens.developer_data import reset_app
 from pycon_us.services import Services
 from pycon_us.services.private_api import CONNECTED, PrivateApi
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
 from tests import data_section
@@ -227,7 +228,7 @@ async def test_reset_app_leaves_no_client(
     await svc.private_api.connect(MOCK, 2026)
     conference = Conference()
     await conference.load_local(svc.storage, svc.year)
-    await reset_app(svc, conference, prefs, Favorites(loaded=True), Account())
+    await reset_app(svc, conference, prefs, Favorites(loaded=True), Account(), Staff())
     assert svc.api is None
     assert prefs.private_api_enabled is False
 

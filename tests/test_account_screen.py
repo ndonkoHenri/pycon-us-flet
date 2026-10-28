@@ -2,13 +2,16 @@
 
 The page runs in a real Flet session (``tests/harness.py``) over the seeded mock behind
 ``tools/mock_api/transport.py``, signed in through the real ``Account`` store, with the
-favourites sync's loop running as ``App`` runs it. How it looks, the in-app browser
-and the screen readers are checked on devices (the PR).
+favourites sync's loop running as ``App`` runs it, and a real ``outbox.db`` for the
+staff rows sign-out names (D-414). How it looks, the in-app browser and the screen
+readers are checked on devices (the PR).
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AsyncExitStack
+from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import cast
 
@@ -17,6 +20,8 @@ import pytest
 
 from pycon_us.account import Account, SignIn
 from pycon_us.config import load_year
+from pycon_us.core import outbox
+from pycon_us.core.outbox import Status
 from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
 from pycon_us.screens import account as account_screen
 from pycon_us.screens.account import (
@@ -28,12 +33,22 @@ from pycon_us.screens.account import (
     AccountPage,
     access_of,
 )
-from pycon_us.screens.account_sign_out import SIGN_OUT_BODY, SIGNED_OUT, UNSYNCED
+from pycon_us.screens.account_sign_out import (
+    SCANS_STAY,
+    SIGN_OUT_BODY,
+    SIGN_OUT_TITLE,
+    SIGNED_OUT,
+    UNSYNCED,
+    scans_line,
+)
 from pycon_us.screens.sign_in import EXPIRED
 from pycon_us.services.credentials import CredentialStorage
+from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import ACCOUNT, THEME, Storage
+from pycon_us.staff import Staff
 from pycon_us.state import Conference
+from pycon_us.ui.queue_sheet import sync_blocked
 from tests.api_clients import BASE_URL, Recorder
 from tests.fakes import MemoryPrefs
 from tests.harness import Shown, showing
@@ -67,11 +82,29 @@ def account() -> Account:
 
 
 @pytest.fixture
+def staff() -> Staff:
+    """The session's ``Staff`` store, with no counts."""
+    return Staff()
+
+
+@pytest.fixture
+def db(tmp_path: Path) -> Iterator[OutboxDb]:
+    """Yield the session's outbox, empty, in its own directory; closed afterwards."""
+    directory = tmp_path / "outbox"
+    directory.mkdir()
+    database = OutboxDb(directory)
+    yield database
+    database.close()
+
+
+@pytest.fixture
 async def show(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     account: Account,
     recorder: Recorder,
+    staff: Staff,
+    db: OutboxDb,
 ) -> AsyncIterator[Show]:
     """Return a function that renders the page with the mock URL set, signed in.
 
@@ -99,6 +132,8 @@ async def show(
                     prefs=prefs,
                     account=account,
                     private_api=private_api,
+                    staff=staff,
+                    outbox=db,
                     **kwargs,  # pyright: ignore[reportArgumentType]
                 )
             )
@@ -333,3 +368,140 @@ async def test_signed_out_the_page_shows_a_state(show: Show) -> None:
     shown = await show(None)
     assert SIGNED_OUT_STATE in shown.texts()
     assert not shown.nodes("account.sign_out")
+
+
+# ------------------------------------------------------------------ unsynced staff rows
+
+
+def seed(db: OutboxDb, owner: str, *statuses: Status) -> None:
+    """Store one lead row of ``owner``'s in each of ``statuses``."""
+    for number, status in enumerate(statuses):
+        code = f"MOCK{number:04}"
+        decide = partial(
+            outbox.scan_lead,
+            owner=owner,
+            code=code,
+            payload={"badge_validator": "v"},
+            sponsor_id=None,
+            sponsor_name=None,
+            now=1.0,
+        )
+        enqueued = db.enqueue(code, decide)
+        assert enqueued is not None and enqueued.row is not None
+        if status is not Status.PENDING:
+            assert db.save(replace(enqueued.row, status=status))
+
+
+def title(shown: Shown) -> str:
+    """The open dialog's title."""
+    found = dialog(shown)
+    assert found is not None and isinstance(found.title, ft.Text)
+    return str(found.title.value)
+
+
+def label(control: ft.Control) -> str:
+    """A text button's words."""
+    assert isinstance(control, ft.TextButton)
+    return str(control.content)
+
+
+def sync_now(shown: Shown) -> ft.Control:
+    """The open dialog's Sync now button."""
+    found = dialog(shown)
+    assert found is not None and isinstance(found.content, ft.Column)
+    for merged in found.content.controls:
+        if isinstance(merged, ft.MergeSemantics):
+            node = merged.content
+            assert isinstance(node, ft.Semantics)
+            if node.identifier == "account.sign_out.sync_now":
+                assert isinstance(node.content, ft.Control)
+                return node.content
+    raise AssertionError("no Sync now")
+
+
+async def test_unsynced_rows_are_named_and_kept_by_signing_out_anyway(
+    show: Show, account: Account, db: OutboxDb
+) -> None:
+    """3 unsynced rows: the dialog says so; signing out anyway keeps them (D-414).
+
+    Pending and failed rows count; synced ones don't.
+    """
+    shown = await show("sponsor")
+    owner = account.owner
+    seed(db, owner, Status.PENDING, Status.PENDING, Status.FAILED, Status.SYNCED)
+    await tap_sign_out(shown)
+    assert title(shown) == scans_line(3) == "3 scans haven't synced. Sign out anyway?"
+    assert dialog_texts(shown) == [SCANS_STAY, SIGN_OUT_BODY]
+    confirm = action(shown, "account.sign_out.confirm")
+    assert label(confirm) == "Sign out anyway (3 unsynced)"
+    assert not sync_now(shown).disabled
+    await shown.click(confirm)
+    assert not account.signed_in
+    counts = db.counts(owner)
+    assert counts is not None and (counts.pending, counts.failed) == (2, 1)
+
+
+async def test_sync_now_sends_every_row_and_the_dialog_follows_the_count(
+    show: Show, account: Account, db: OutboxDb, staff: Staff
+) -> None:
+    """Sync now retries the failed rows and kicks the worker; the dialog stays open.
+
+    Once the pass has sent them, it is the plain dialog again.
+    """
+    shown = await show("sponsor")
+    owner = account.owner
+    seed(db, owner, Status.PENDING, Status.FAILED)
+    await tap_sign_out(shown)
+    assert title(shown) == scans_line(2)
+    shown.services.sync_wake.clear()
+    await shown.click(sync_now(shown))
+    await settled(shown)
+    assert shown.services.sync_wake.is_set()
+    assert [row.status for row in db.rows(owner, tuple(Status)) or []] == [
+        Status.PENDING,
+        Status.PENDING,
+    ]
+    assert sync_now(shown).disabled  # asked, until the pass reports
+    for row in db.rows(owner, (Status.PENDING,)) or []:  # the pass, as the worker
+        assert db.save(outbox.after_success(row, {}))
+    staff.update_counts(db.counts(owner))
+    await settled(shown)
+    assert title(shown) == SIGN_OUT_TITLE
+    assert dialog_texts(shown) == [SIGN_OUT_BODY]
+    assert label(action(shown, "account.sign_out.confirm")) == "Sign out"
+
+
+async def test_unsynced_scans_and_my_schedule_are_both_named(
+    show: Show, state: MockState, account: Account, db: OutboxDb
+) -> None:
+    """With no answer, D-411's line joins the scans' (D-414)."""
+    shown = await show("sponsor")
+    seed(db, account.owner, Status.PENDING)
+    state.faults.inject("connect", until_cleared=True)
+    await shown.favorites.toggle(shown.storage, "new-1")
+    await tap_sign_out(shown)
+    assert title(shown) == scans_line(1) == "1 scan hasn't synced. Sign out anyway?"
+    assert dialog_texts(shown) == [SCANS_STAY, SIGN_OUT_BODY, UNSYNCED]
+
+
+async def test_sync_now_says_why_it_can_t_send(
+    show: Show, account: Account, db: OutboxDb
+) -> None:
+    """An expired account has no worker: Sync now is disabled, with the reason."""
+    shown = await show("sponsor")
+    seed(db, account.owner, Status.PENDING)
+    account.expired = True
+    await shown.settle()
+    await tap_sign_out(shown)
+    assert sync_now(shown).disabled
+    assert sync_blocked(shown.services, account) in dialog_texts(shown)
+
+
+async def test_other_accounts_rows_are_not_named(
+    show: Show, account: Account, db: OutboxDb
+) -> None:
+    """Only the signed-in account's rows count: another's wait for its own sign-in."""
+    shown = await show("sponsor")
+    seed(db, "someone@example.com", Status.PENDING)
+    await tap_sign_out(shown)
+    assert title(shown) == SIGN_OUT_TITLE

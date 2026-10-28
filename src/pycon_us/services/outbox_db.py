@@ -361,8 +361,12 @@ class OutboxDb:
             self._attempt("read due rows", lambda: self._select(DUE_SQL, params)) or []
         )
 
-    def counts(self, owner: str) -> Counts | None:
+    def counts(self, owner: str | None) -> Counts | None:
         """Return how many of the owner's rows are pending, failed and synced.
+
+        Args:
+            owner: The account's lower-cased email; None for every account's rows
+                (Clear staff data and Reset app, D-414).
 
         Returns:
             The counts, or None when the database fails (logged): never zeros that
@@ -370,8 +374,11 @@ class OutboxDb:
         """
 
         def run() -> Counts:
-            sql = "SELECT status, count(*) FROM outbox WHERE owner = ? GROUP BY status"
-            found = dict(self._connect().execute(sql, (owner,)).fetchall())
+            where, params = (
+                ("WHERE owner = ?", (owner,)) if owner is not None else ("", ())
+            )
+            sql = f"SELECT status, count(*) FROM outbox {where} GROUP BY status"
+            found = dict(self._connect().execute(sql, params).fetchall())
             return Counts(
                 **{status.value: found.get(status.value, 0) for status in Status}
             )
@@ -401,12 +408,14 @@ class OutboxDb:
         Returns:
             The owners, or None when the database fails (logged).
         """
-        sql = (
-            "SELECT DISTINCT owner FROM outbox WHERE status <> 'synced' ORDER BY owner"
-        )
+        return self._owners("WHERE status <> 'synced'", ())
+
+    def _owners(self, where: str, params: tuple[str, ...]) -> list[str] | None:
+        """Return the owners of the rows ``where`` selects, sorted."""
+        sql = f"SELECT DISTINCT owner FROM outbox {where} ORDER BY owner"
         return self._attempt(
             "list owners",
-            lambda: [owner for (owner,) in self._connect().execute(sql).fetchall()],
+            lambda: [o for (o,) in self._connect().execute(sql, params).fetchall()],
         )
 
     def delete_synced(self, owner: str) -> bool:
@@ -419,6 +428,28 @@ class OutboxDb:
             Whether the rows are gone; a failure is logged (D-120).
         """
         return self._execute("delete synced rows", DELETE_SYNCED_SQL, {"owner": owner})
+
+    def forget_other_accounts(self, owner: str) -> bool:
+        """Delete every other owner's synced rows, as an account switch does (D-414).
+
+        Each other owner's rows go as ``delete_synced()`` deletes them: a synced lead
+        whose note hasn't synced stays, as do the pending and failed rows. The worker
+        runs it at each start of a signed-in account's sync (``services.sync``): an
+        earlier account's synced rows are then ones the new account must not see, and
+        the next start finds none left.
+
+        Args:
+            owner: The signed-in account's lower-cased email, whose rows stay.
+
+        Returns:
+            Whether every deletion landed; a failure is logged (D-120), and the next
+            start tries again.
+        """
+        owners = self._owners("WHERE owner <> ?", (owner,))
+        if owners is None:
+            return False
+        deleted = [self.delete_synced(other) for other in owners]  # each one tried
+        return all(deleted)
 
     def clear(self, owner: str | None = None) -> bool:
         """Delete every row of ``owner``, or every row ("Clear staff data", confirmed).

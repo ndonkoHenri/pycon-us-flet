@@ -136,7 +136,11 @@ def note(text: str, *, identifier: str | None = None) -> ft.Control:
 
 
 def sync_button(
-    *, busy: bool, disabled: bool, on_click: Callable[[], object]
+    *,
+    busy: bool,
+    disabled: bool,
+    on_click: Callable[[], object],
+    identifier: str = SYNC_NOW,
 ) -> ft.Control:
     """Return Sync now: disabled with a ring and "Syncing…" while a pass runs.
 
@@ -147,6 +151,7 @@ def sync_button(
         busy: A pass runs (``Staff.syncing``).
         disabled: It can't send now, or was tapped and its pass hasn't reported.
         on_click: Kicks the worker.
+        identifier: Its identifier: the sheet's, or sign-out's dialog's (D-414).
     """
     label: ft.Control = (
         ft.Row(
@@ -161,7 +166,7 @@ def sync_button(
         else ft.Text("Sync now")
     )
     return named(
-        SYNC_NOW,
+        identifier,
         ft.FilledButton(
             content=label,
             on_click=on_click,

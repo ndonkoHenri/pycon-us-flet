@@ -336,11 +336,14 @@ def _start(
 ) -> asyncio.Task[None] | None:
     """Start a worker's loop for ``target``, or none without one.
 
-    An expired account keeps its counts: its rows wait for the next sign-in.
+    An expired account keeps its counts: its rows wait for the next sign-in. Every
+    other account's synced rows are deleted first, as an account switch does (D-414).
     """
     if target is None or svc.outbox is None:
         return None
     api, owner = target
+    # An account switch; a failure is logged, and the next start tries again.
+    svc.outbox.forget_other_accounts(owner)
     logger.info("Staff sync started")
     worker = SyncWorker(
         svc.outbox,
