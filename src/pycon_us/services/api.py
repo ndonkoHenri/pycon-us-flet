@@ -373,7 +373,9 @@ class ApiClient:
         The body is serialised once and the signature covers ``request.url.raw_path``,
         exactly the target sent. A signed call refused with 403 while its timestamp was
         more than ``SKEW_LIMIT`` from the server's ``Date`` is sent once more with the
-        corrected clock, which later calls keep using.
+        corrected clock, which later calls keep using. The credentials are read once,
+        so both attempts carry the same key even if the account changes in between
+        (D-56: a row only ever goes with its own owner's key).
 
         Args:
             endpoint: The call.
@@ -397,13 +399,19 @@ class ApiClient:
         path = endpoint.path.format(*(enc(str(arg)) for arg in args))
         target = f"/{self._year}/api/v1/{path}" + (f"?{query}" if query else "")
         body = b"" if payload is None else canonical_body(payload)
-        response, skewed = await self._attempt(endpoint, target, body)
+        credentials = self._credentials()
+        response, skewed = await self._attempt(endpoint, target, body, credentials)
         if endpoint.signed and response.status_code == 403 and skewed:
-            response, _ = await self._attempt(endpoint, target, body)  # clock corrected
+            # Clock corrected; the same key, whatever the account is now.
+            response, _ = await self._attempt(endpoint, target, body, credentials)
         return unwrap(response, endpoint.enveloped)
 
     async def _attempt(
-        self, endpoint: Endpoint, target: str, body: bytes
+        self,
+        endpoint: Endpoint,
+        target: str,
+        body: bytes,
+        credentials: tuple[str | None, str | None],
     ) -> tuple[httpx.Response, bool]:
         """Build, check, sign and send one request, and learn the skew from its reply.
 
@@ -411,6 +419,7 @@ class ApiClient:
             endpoint: The call.
             target: The path and query to send.
             body: The body bytes, empty for none.
+            credentials: The key and secret to sign with, read once per call.
 
         Returns:
             The reply, and whether the timestamp sent was more than ``SKEW_LIMIT`` from
@@ -424,7 +433,7 @@ class ApiClient:
             request.headers["Content-Type"] = "application/json"
         stamp = js_round(self._now() + self.skew)
         if endpoint.signed:
-            self._sign(request, stamp, body)
+            self._sign(request, stamp, body, credentials)
         response = await self._send(request)
         server = server_time(response.headers.get("Date"))
         if server is None:
@@ -432,13 +441,19 @@ class ApiClient:
         self.skew = server - self._now()
         return response, abs(server - stamp) > SKEW_LIMIT
 
-    def _sign(self, request: httpx.Request, stamp: int, body: bytes) -> None:
+    def _sign(
+        self,
+        request: httpx.Request,
+        stamp: int,
+        body: bytes,
+        credentials: tuple[str | None, str | None],
+    ) -> None:
         """Add the ``X-API-*`` headers, signed over the target exactly as it is sent.
 
         Signed out (no key), the request goes without ``X-API-Key`` and the server
         answers 401.
         """
-        key, secret = self._credentials()
+        key, secret = credentials
         target = request.url.raw_path.decode("ascii")
         request.headers["X-API-Timestamp"] = str(stamp)
         request.headers["X-API-Signature"] = sign(
