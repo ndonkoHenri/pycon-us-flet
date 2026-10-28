@@ -91,7 +91,10 @@ async def test_a_note_waits_while_its_lead_has_not_synced(rig: Rig) -> None:
 async def test_no_connection_ends_the_pass_uncounted_and_retries_after_60_s(
     rig: Rig,
 ) -> None:
-    """``connect``: tries unchanged, the next row unsent, both sent a tick later."""
+    """``connect``: tries unchanged, the next row unsent, both sent a tick later.
+
+    The pass that found no answer leaves the chip offline; one that reaches clears it.
+    """
     await rig.sign_in("staff")
     rig.lead(sponsor="2")
     rig.door()
@@ -102,9 +105,11 @@ async def test_no_connection_ends_the_pass_uncounted_and_retries_after_60_s(
     assert [row.tries for row in rig.rows()] == [0, 0]
     assert rig.staff.last_error == "ConnectError: mock fault: connect"
     assert rig.staff.last_sync_at is None
+    assert rig.staff.offline
     rig.clock.at += NETWORK_BACKOFF / 2
     await worker.drain()  # the lead isn't due yet; the door row is, and goes
     assert [row.status for row in rig.rows()] == [Status.PENDING, Status.SYNCED]
+    assert not rig.staff.offline
     rig.clock.at += NETWORK_BACKOFF / 2
     await worker.drain()
     assert {row.status for row in rig.rows()} == {Status.SYNCED}
@@ -126,6 +131,31 @@ async def test_ten_refusals_make_a_row_failed(rig: Rig) -> None:
     assert rig.staff.last_error == "404 Wrong badge validator."
     await worker.drain()  # a failed row waits for "Retry failed"
     assert len(rig.sends()) == RETRY_CAP
+    assert not rig.staff.offline  # the server answered: refused, not offline
+
+
+async def test_retry_failed_makes_a_failed_row_due_again_from_scratch(rig: Rig) -> None:
+    """Retry failed (#694) makes a failed row pending from scratch, and recounts.
+
+    No counted tries, due now, the counts and the revision updated; the next pass
+    sends it, and a refusal starts counting again from one.
+    """
+    await rig.sign_in("sponsor")
+    rig.lead(validator="wrong")
+    worker = rig.worker()
+    for _ in range(RETRY_CAP):
+        await worker.drain()
+        rig.clock.at += NETWORK_BACKOFF
+    revision = rig.staff.revision
+    assert rig.staff.retry_failed(rig.db, rig.account.owner, rig.clock.at) == 1
+    (row,) = rig.rows()
+    assert (row.status, row.tries, row.last_error) == (Status.PENDING, 0, None)
+    assert (rig.staff.pending, rig.staff.failed) == (1, 0)
+    assert rig.staff.revision == revision + 1
+    await worker.drain()
+    assert len(rig.sends()) == RETRY_CAP + 1
+    (row,) = rig.rows()
+    assert (row.status, row.tries) == (Status.PENDING, 1)
 
 
 async def test_every_record_is_applied_once_despite_lost_replies_and_skew(

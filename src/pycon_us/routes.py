@@ -18,6 +18,7 @@ from pycon_us.locations import DRILL_KINDS, WELCOME, is_top_view, launch_target
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.about import AboutPycon
 from pycon_us.screens.about_app import AboutApp
+from pycon_us.screens.account import AccountPage
 from pycon_us.screens.developer import Developer
 from pycon_us.screens.help import Help
 from pycon_us.screens.jobs import Jobs
@@ -258,6 +259,13 @@ ROUTES = [
         pushed("social", Social),
         pushed("venue", Venue),
         pushed("sign-in", SignInPage),  # its state without a mock URL (D-51)
+        pushed(
+            "account",
+            AccountPage,
+            # Its "Sign in again" after a refused key: under it, a sign-in returns
+            # there (D-207's pattern).
+            pushed("sign-in", SignInPage),
+        ),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

@@ -28,7 +28,13 @@ def test_a_failed_count_keeps_the_counts_shown_but_still_bumps() -> None:
 def test_clear_forgets_counts_and_the_last_pass_and_notifies() -> None:
     """Signed out, nothing of the last account's outbox shows."""
     store = Staff(
-        pending=1, failed=2, synced=3, syncing=True, last_sync_at=9.0, last_error="x"
+        pending=1,
+        failed=2,
+        synced=3,
+        syncing=True,
+        last_sync_at=9.0,
+        last_error="x",
+        offline=True,
     )
     listener = Changes()
     assert isinstance(store, ft.Observable)
@@ -41,7 +47,8 @@ def test_clear_forgets_counts_and_the_last_pass_and_notifies() -> None:
         store.syncing,
         store.last_sync_at,
         store.last_error,
-    ) == (0, 0, 0, False, None, None)
+        store.offline,
+    ) == (0, 0, 0, False, None, None, False)
     assert "revision" in listener.fields
 
 

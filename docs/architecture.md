@@ -218,7 +218,7 @@ The bar has five fixed destinations, the same for every user: **Now · Schedule 
 | `/my-schedule/settings` | Settings again, from My schedule's Reminder settings: under My schedule, so Back returns there (D-207's pattern, D-401) | child | P2 | NEW-01, NOTIF-01 |
 | `/more/app/licences`, `/more/app/licences/<key>` | `Licences`, `LicencePage` (`screens/licences.py`): the list, under About this app, and one text, under the list (D-296) | child | P2 | INFO-03 |
 | `/more/sponsors`, `jobs`, `venue`, `wifi`, `help`, `about`, `psf`, `social` | sponsors and info screens | child | P2 | SPON, MAP-09..11, INFO |
-| `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4): `/more/sign-in` is `SignInPage` (`screens/sign_in.py`, #685), its form only while a mock URL is set | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
+| `/more/sign-in`, `account`, `staff/<tool>` (`lead`, `door`, `swag`, `coc`) | account and staff tools (guarded, §12.4): `/more/sign-in` is `SignInPage` (`screens/sign_in.py`, #685), its form only while a mock URL is set; `/more/account` is `AccountPage` (`screens/account.py`, its Sign out in `screens/account_sign_out.py`, #688), with its "Sign in again" at `/more/account/sign-in` | child | P3 | AUTH, LEAD, DOOR, SHIRT, MASK |
 | `<any of the above>/<kind>/<id>` | `Drill` → detail screen | recursive child | P1 | SESS-12, #279 |
 
 **Drill kinds:** `session/<id>` (P1; ids URL-quoted, e.g. `break--2026-05-13T12%3A30%3A00-07%3A00`), `speaker/<id>` (P1), `room/<slug>` (P1; `?highlight=<session id>`), `sponsor/<slug>` (P2), `plan/<plan id>` (P2; floor plans, expo, job fair; `?pin=<room key>`, `?booth=<n>`), `changes/<year>` (P2; Schedule changes, the year's change log, pushed on the View that opens it: Now's card, the Schedule's overflow, Settings › Data, or the "Schedule updated" SnackBar over any View, D-255).
@@ -460,7 +460,7 @@ All are `@ft.observable @dataclass(eq=False)`, each in its own module with its c
 | `Favorites` | `ids: frozenset[str]` (saved sorted as `list[str]`, F12; D-172); `loaded: bool` (read; until then edits are not saved) | `load(storage)`; `toggle`, `add_many`, `remove_many` and `undo`, each taking `storage` and returning a `Change(added, removed, saved)` for its Undo; `replace(storage, ids) -> bool`, the account's list taken in without an Undo (P3, D-406); `reset()`, without a write (D-198) | P1 |
 | `Layout` | `wide: bool` (the window is 600 dp wide or wider: the rail; D-277) | `set_width(width)`, which notifies only on a crossing of 600 dp (F5); `follow_width(page, layout)` sets `page.on_resize` | P2 |
 | `Account` | `restored`, `signed_in`, `signing_in` (the single flight), `email`, `nickname`, `lead_retrieval`, `door_check` (the API's `door_check_in`), `mask_violation`, `is_speaker` (absent flags False, STORE-05), `error` (the last sign-in's failure, a `SignIn`); `expired` (the server refused the key: still signed in as the owner, no private call until a sign-in clears it; not stored, D-403); `_secrets`, the key and secret (#684); `favorites_dirty` (this device's favourites have not reached the account: an edit or the first sync is waiting; written by `services.favorites_sync`, D-406); later `scanner_consent`, with its feature | `async restore(storage, credentials)`, strict: signed in only with `pycon.account` and both secrets, any part without the rest removed, a failed read removing nothing (STORE-03); `async sign_in(api, storage, credentials, email, password) -> SignIn` (`SIGNED_IN`, `BUSY`, `WRONG_CREDENTIALS`, `OFFLINE`, `TIMEOUT`, `SERVER_ERROR`, `NOT_SAVED`), which removes the old `pycon.account` and then writes the key, the secret and the new one before `signed_in` turns True (STORE-04), so a kill between the writes never pairs one account's profile with another's secrets; `async sign_out(storage, credentials) -> bool`, every removal before it notifies, favourites kept (D-48); `async reset(storage, credentials) -> bool`, a sign-out for Reset app (D-198); sign-in, sign-out and reset take turns on one `asyncio.Lock`, so a late sign-in reply never undoes a sign-out or reset; `credentials()`, what `ApiClient` signs with, Nones signed out; `owner`, the lower-cased email; `refresh_flags(api, storage, *, closed) -> Task \| None`, one `check_features` at a time in a kept task (`_refresh`), at start, on resume and on the Account screen's mount: an absent flag False, `is_speaker` untouched, a change saved to `pycon.account` and notified, no answer keeping the flags, a refused key setting `expired`, and nothing written for a closed session or once the account changed meanwhile (#686, D-403). Kept when the mock URL is cleared or changed (D-398) | P3 |
-| `Staff` | `pending`, `failed`, `synced` (the signed-in account's rows by status); `syncing` (a pass under way, and what keeps a second from starting); `last_sync_at` (the end of the last pass the server answered throughout, epoch seconds); `last_error` (why the last pass stopped or a row was refused); `revision` (bumped whenever the rows change, so a list re-reads); later `sponsor` (#39) and memory-only PII: `inventory` (#40), `coc_directory` (#42) | `update_counts(counts)`, called after every change of the rows (a `None` from a failed read keeps the counts shown, D-120); `clear()`, signed out (#692); later `select_sponsor` | P3 |
+| `Staff` | `pending`, `failed`, `synced` (the signed-in account's rows by status); `syncing` (a pass under way, and what keeps a second from starting); `last_sync_at` (the end of the last pass the server answered throughout, epoch seconds); `last_error` (why the last pass stopped or a row was refused); `offline` (the last pass ended on a `NetworkError`: the sync chip's "Offline · 3 queued", #694); `revision` (bumped whenever the rows change, so a list re-reads); later `sponsor` (#39) and memory-only PII: `inventory` (#40), `coc_directory` (#42) | `update_counts(counts)`, called after every change of the rows (a `None` from a failed read keeps the counts shown, D-120); `clear()`, signed out (#692); `retry_failed(db, owner, now)`, the queue sheet's Retry failed, which saves each failed row as `outbox.retry_failed()` makes it and recounts (#694); later `select_sponsor` | P3 |
 
 Year data is a frozen value in `Services.year`, and capabilities are constants: neither is a store.
 
@@ -1182,8 +1182,8 @@ Each row is an `Endpoint(name, method, path, timeout, signed=True, enveloped=Fal
 
 - **Sign-in:** `AutofillGroup` with hints, an in-flight guard, distinct errors for a wrong password (`is_auth`) and for offline or timeout. Credentials reach SecureStorage *before* `signed_in` flips; then the first sync. Sign-in's reply carries the flags, `is_speaker` among them.
 - **Role flags (D-54, D-403):** `Account.refresh_flags()` asks `check_features` at start (not awaited), on resume and on the Account screen's mount, one call at a time; absent flags read False and `is_speaker` stays as sign-in gave it. No answer keeps the stored flags. A refused key (`ApiError.is_auth`, the mock's `revoked`) sets `Account.expired`: the account stays signed in, so unsynced rows keep their owner and nothing is deleted, and More's profile row says "Sign in again" (`more.sign_in_again`), which opens Sign in with the email filled in; a sign-in clears it.
-- **Favourites (D-55, D-406):** `services/favorites_sync.py`'s `FavoritesSync` is `Services.favorites_sync`; `App` runs it once the start has loaded (`use_favorites_sync()`), and `on_resume()` asks it for a pull. One loop, one request at a time: a pull asked for during a PATCH runs after it. It pulls at start, on resume and at sign-in, and `core/favorites_sync.py`'s pure `reconcile()` decides by the saved state, `pycon.<year>.favorites_sync`: `merge` (the first sync after a sign-in, absent by default) keeps the **union**, `dirty` keeps the local list, `clean` adopts the server's, `[]` included (a removal made elsewhere); whatever differs from the server's list is pushed (ints from the server become strings). Each local edit makes `clean` `dirty`, saved before any request, and schedules a debounced (1 s), idempotent full-list PATCH, which makes it `clean` unless the list or the account changed meanwhile; a failure keeps it for the next start or resume. `Account.favorites_dirty` says whether it is waiting (#688). Nothing is sent signed out, `expired`, with no client or with favourites that could not be read; a sign-in or a sign-out sets `merge` (the key removed), and the local list stays (D-48).
-- **Sign-out:** with unsynced rows, an `AlertDialog` offers "Sync now" or "Sign out anyway (N unsynced)". Credentials, flags, consent and sponsor go; favourites, theme, filters and reminders stay.
+- **Favourites (D-55, D-406):** `services/favorites_sync.py`'s `FavoritesSync` is `Services.favorites_sync`; `App` runs it once the start has loaded (`use_favorites_sync()`), and `on_resume()` asks it for a pull. One loop, one request at a time: a pull asked for during a PATCH runs after it. It pulls at start, on resume and at sign-in, and `core/favorites_sync.py`'s pure `reconcile()` decides by the saved state, `pycon.<year>.favorites_sync`: `merge` (the first sync after a sign-in, absent by default) keeps the **union**, `dirty` keeps the local list, `clean` adopts the server's, `[]` included (a removal made elsewhere); whatever differs from the server's list is pushed (ints from the server become strings). Each local edit makes `clean` `dirty`, saved before any request, and schedules a debounced (1 s), idempotent full-list PATCH, which makes it `clean` unless the list or the account changed meanwhile; a failure keeps it for the next start or resume. `Account.favorites_dirty` says whether it is waiting, on the Account page (#688); `flush()` sends it at once before a sign-out (D-411). Nothing is sent signed out, `expired`, with no client or with favourites that could not be read; a sign-in or a sign-out sets `merge` (the key removed), and the local list stays (D-48).
+- **Sign-out (#688, D-411):** the Account page's Sign out first awaits `FavoritesSync.flush()`, one try to send My schedule's unsent changes (it waits for a request the loop has out, on one `_sending` lock, then sends the PATCH, or a first sync's pull and PATCH), then asks in an `AlertDialog`, which names the changes only when that try failed. `Account.sign_out()` then awaits every removal: the key, the secret and `pycon.account`; the sync forgets its state (`merge`); favourites, theme, filters, reminders, onboarding and the start screen stay. With unsynced staff rows the dialog will offer "Sync now" or "Sign out anyway (N unsynced)", and the staff data purge comes with it (#38).
 
 ---
 
@@ -1247,7 +1247,7 @@ ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created
 
 `OutboxDb` (#691) is the only way to the rows: `enqueue(code, decide)` runs a `core/outbox.py` decision (`scan_lead`, `save_note` or `admit` as a `functools.partial`) over every row of the access code and stores what it decides, in one transaction; `save(row)` writes a send's outcome or "Retry failed" over a stored row, but only while the record is still at the `revision` the row was read at: an enqueue's edit (`UPDATED`) counts a new revision, so a note edited while `SyncWorker` sends its old text keeps the new text, pending, and the stale outcome is dropped (`save()` returns `False`, logged) for the next pass to send the edit (D-56); `due_rows(owner, now)` is the query above, tested equal to `outbox.due()` on random row sets; `counts(owner)` (pending, failed, synced), `rows(owner, statuses)` for the queue sheet (oldest first), `owners_with_unsynced()`, `delete_synced(owner)` (`forget_synced()` in SQL, tested equal to it) and `clear(owner=None)`. The schema lives with its one user rather than in `services/storage.py`.
 
-Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`, `OutboxDb.delete_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer) until synced or cleared with confirmation.
+Synced rows are kept: lead dedupe and door "Already checked in" read them. On an account switch, the previous owner's synced rows are deleted (`outbox.forget_synced()`, `OutboxDb.delete_synced()`), except a synced lead whose note hasn't synced, which the note waits for; their pending or failed rows stay (visible in Developer: the Staff queue row's sheet lists them under "Other accounts", D-412) until synced or cleared with confirmation.
 
 ### 12.2 Transitions (`core/outbox.py`, pure; hypothesis state-machine tests)
 
@@ -1289,12 +1289,12 @@ class SyncWorker:
         if staff.syncing or not self._may_send(owner):  # one pass at a time
             return
         staff.syncing = True
-        outcome = (None, False)
+        outcome = (None, False, False)
         try:
-            outcome = await self._send_due(owner)  # (last error, server reached)
+            outcome = await self._send_due(owner)  # (last error, reached, offline)
         finally:
             if not self._closed.is_set():
-                self._report(owner, *outcome)  # counts, last_error, last_sync_at
+                self._report(owner, *outcome)  # counts, last_error, last_sync_at, offline
 
     async def _send_due(self, owner):
         error, tried = None, set()
@@ -1302,7 +1302,7 @@ class SyncWorker:
                        if (r.id, r.revision) not in tried]:
             for row in rows:
                 if not self._may_send(owner):  # signed out, switched, expired, closed
-                    return error, False
+                    return error, False, False
                 tried.add((row.id, row.revision))
                 try:
                     result = await send(self._api, row)
@@ -1314,17 +1314,17 @@ class SyncWorker:
                         self._db.flag_maybe_sent(row.id)
                     self._db.save(outbox.after_network_error(
                         row, self._now(), maybe_sent=failure.maybe_sent))
-                    return str(failure), False
+                    return str(failure), False, True  # offline (#694)
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # 401: not counted
                         self._db.save(outbox.after_network_error(row, self._now()))
                         self._on_refused()  # Account.refresh_flags() sets expired
-                        return str(failure), False
+                        return str(failure), False, False
                     error = str(failure)
                     self._db.save(outbox.after_error(row, failure.message, self._now()))
                 else:
                     self._db.save(outbox.after_success(row, result))
-        return error, True
+        return error, True, False
 ```
 
 `due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1), and the pass reads the due rows again until none is left, so the edit, and a note whose lead synced in the pass, go at once. `send(api, row)` is a `match row.kind` over `lead_capture` (query from the payload's `badge_validator` and the row's `sponsor_id`), `lead_note` (the payload plus the row's `sponsor_id`) and `redeem` (the payload as it is): always the row's snapshot, never the sponsor picked now (STORE-11). `run(tick=60)` waits for `foreground`, returns once `closed` is set, clears the wake, drains (wrapped in `report_errors`), then waits for the wake or the tick. Outbox times are real epoch seconds (`time.time()`), like the signatures.
@@ -1333,7 +1333,7 @@ class SyncWorker:
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 
-`staff_entries(flags)` (pure) drives the More "Staff tools" section and the Now card.
+`staff_entries(flags)` (pure, `core/staff_tools.py`, #722) drives the More "Staff tools" section and the Now card: the `StaffTool`s (key `lead`, `door`, `swag` or `coc`, title, `ft.Icons` name, route `/more/staff/<key>`) an account may open, in O-7's order. `flags` maps the `Account` attribute names `lead_retrieval`, `door_check` and `mask_violation` to booleans; an absent flag, or anything but `True`, is off (SHELL-11). `may_open(key, flags)` is a screen's re-check and `scans_for_sponsor(flags)` the picker's rule.
 
 | Entry | Rule |
 |---|---|
@@ -1348,8 +1348,8 @@ Each staff screen re-checks its rule ("Not available for this account"), so deep
 
 ### 12.5 Badges, admission and the scan surface
 
-- `parse_badge(raw)`: code = segment 0; validator = segment 1 for door and swag, the **last** segment for lead; CoC sends the code only (LEAD-03). `decide(code, products, inventory, kept_rows)` admits optimistically; an unknown badge falls back to `fetch_products` online, "Entry not permitted" offline (DOOR-04).
-- One `ScanScreen` for all four tools (D-65): the E1 preview when `capabilities.SCANNER`; a manual `TextField(on_submit=...)` for the `code:validator` payload, which HID scanners also type; one accepted result per code every 4 s; outcomes as colour, icon and word, with haptics and a `Semantics(live_region=True)` panel; the screen stays awake while mounted (an `async def` effect awaits `svc.wakelock.enable()`; its **sync** cleanup calls `ft.context.page.run_task(svc.wakelock.disable)`, rule 3); camera permission via `await svc.permissions.request(Permission.CAMERA)` after a primer.
+- `parse_badge(raw)` (`core/badges.py`, #722) returns a `Badge` (`code`, `door_validator`, `lead_validator`), or None for no `:` or an empty code after stripping whitespace ("Not a badge code"): code = segment 0; validator = segment 1 for door and swag, the **last** segment for lead; CoC sends the code only (LEAD-03). `decide(code, products, inventory, kept_rows)` admits optimistically; an unknown badge falls back to `fetch_products` online, "Entry not permitted" offline (DOOR-04).
+- One `ScanScreen` for all four tools (D-65): the E1 preview when `capabilities.SCANNER`; a manual `TextField(on_submit=...)` for the `code:validator` payload, which HID scanners also type; one accepted result per code every 4 s (`core/badges.py`'s `Cooldown`, whose `accept(code, now)` takes the time in); outcomes as colour, icon and word, with haptics and a `Semantics(live_region=True)` panel; the screen stays awake while mounted (an `async def` effect awaits `svc.wakelock.enable()`; its **sync** cleanup calls `ft.context.page.run_task(svc.wakelock.disable)`, rule 3); camera permission via `await svc.permissions.request(Permission.CAMERA)` after a primer.
 
 ---
 

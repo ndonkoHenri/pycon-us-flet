@@ -12,7 +12,8 @@ What the server has is saved per year as a ``SyncState`` (``storage.favorites_sy
 as soon as it changes, even while a request is out, and before any request, so a kill
 never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume. Nothing is sent while
 signed out, expired, with no mock URL (D-51) or with favourites that could not be read
-(D-172); a sign-out stops the sync and forgets the state, and the local list stays
+(D-172). The Account page's Sign out first tries once to send what waits (``flush()``,
+D-411); a sign-out stops the sync and forgets the state, and the local list stays
 (D-48). ``Favorites`` itself makes no request: it only notifies its edits.
 """
 
@@ -62,6 +63,7 @@ class FavoritesSync:
         self._signed_in = False
         self._adopting = False  # the next `ids` change is the sync's own
         self._saving = asyncio.Lock()  # one state write at a time, in order
+        self._sending = asyncio.Lock()  # one request at a time: the loop's or flush()'s
         # Held: the event loop keeps its tasks weakly.
         self._saves: set[asyncio.Task[None]] = set()
 
@@ -123,25 +125,82 @@ class FavoritesSync:
                 if closed.is_set():
                     return
                 work = self._take_work()
-                client = private_api.client
-                if work is None or client is None or not favorites.loaded:
+                if work is None:
                     continue
-                if not account.signed_in or account.expired:
-                    continue
-                try:
-                    await self._sync(
+                async with self._sending:  # a sign-out's flush() waits, or goes first
+                    # Read only now: while flush() held the lock the session may have
+                    # closed, or Developer replaced the client and closed this one.
+                    if closed.is_set():
+                        return
+                    client = private_api.client
+                    if client is None or not favorites.loaded:
+                        continue
+                    if not account.signed_in or account.expired:
+                        continue
+                    if not work and self._state is not SyncState.DIRTY:
+                        continue  # flush() sent it meanwhile
+                    await self._attempt(
                         client, storage, favorites, account, closed, pull=work
                     )
-                except NetworkError:
-                    logger.info("Favourites not synced: no answer; kept for later")
-                except ApiError as error:
-                    logger.warning("Favourites not synced: %s", error.status)
-                if not closed.is_set():
-                    self._publish(account)
-                    await self._save(storage)
         finally:
             for stop in stops:
                 stop()
+
+    async def flush(
+        self,
+        private_api: PrivateApi,
+        storage: Storage,
+        favorites: Favorites,
+        account: Account,
+        closed: asyncio.Event,
+    ) -> bool:
+        """Try once, now, to give the account this device's list, before a sign-out.
+
+        The Account page's Sign out calls it before its dialog, which says so when it
+        failed (D-411). It waits for a request the loop has out, then sends what is
+        still waiting: the PATCH, or a first sync's pull and PATCH, on the endpoints'
+        own timeouts. Nothing is sent when nothing waits or nothing may be sent.
+
+        Args:
+            private_api: ``Services.private_api``.
+            storage: Where the favourites and the sync state are kept.
+            favorites: The session's ``Favorites``.
+            account: The session's ``Account``.
+            closed: ``Services.closed``.
+
+        Returns:
+            Whether the account has this device's list: True when nothing waits.
+        """
+        async with self._sending:
+            if not account.favorites_dirty:
+                return True
+            client = private_api.client
+            if client is None or not favorites.loaded or account.expired:
+                return False
+            pull = self._state is SyncState.MERGE  # a first sync reads before it sends
+            await self._attempt(client, storage, favorites, account, closed, pull=pull)
+            return not account.favorites_dirty
+
+    async def _attempt(
+        self,
+        api: ApiClient,
+        storage: Storage,
+        favorites: Favorites,
+        account: Account,
+        closed: asyncio.Event,
+        *,
+        pull: bool,
+    ) -> None:
+        """Sync once, keeping a failure for later, then publish and save the state."""
+        try:
+            await self._sync(api, storage, favorites, account, closed, pull=pull)
+        except NetworkError:
+            logger.info("Favourites not synced: no answer; kept for later")
+        except ApiError as error:
+            logger.warning("Favourites not synced: %s", error.status)
+        if not closed.is_set():
+            self._publish(account)
+            await self._save(storage)
 
     async def _next(self) -> None:
         """Wait for a request, a change or the debounced PATCH's time, whichever is first."""

@@ -329,7 +329,10 @@ async def test_more_s_profile_row_follows_the_url_and_the_account_live(
     )
     await shown.settle()
     assert shown.nodes("more.account") and not shown.nodes("more.sign_in")
-    assert {"Robin Everything", "all@example.com", "RE"} <= set(shown.texts())
+    assert "RE" in shown.texts()
+    assert ("Robin Everything", "all@example.com") in {
+        (tile.title, tile.subtitle) for tile in shown.find(ft.ListTile)
+    }
     await account.sign_out(shown.storage, shown.services.credentials)
     await shown.settle()
     assert shown.nodes("more.sign_in") and not shown.nodes("more.account")

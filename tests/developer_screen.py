@@ -129,6 +129,7 @@ def render(
     # The Data, Reminders and Mock API sections are components of their own, with
     # their tests.
     monkeypatch.setattr(developer, "DataActions", lambda: ft.Container())
+    monkeypatch.setattr(developer, "StaffQueue", lambda: ft.Container())
     monkeypatch.setattr(developer, "TestReminders", lambda: ft.Container())
     monkeypatch.setattr(developer, "MockApiSection", lambda: ft.Container())
 

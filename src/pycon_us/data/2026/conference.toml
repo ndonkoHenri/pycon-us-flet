@@ -29,6 +29,11 @@ registration_url = "https://us.pycon.org/2026/accounts/dashboard/"
 # us.pycon.org (2026-10-13).
 sprints_url = "https://us.pycon.org/2026/events/dev-sprints/"
 sprint_submit_url = "https://us.pycon.org/2026/sprints/project/submit/"
+# The public page a speaker joins the speakers' Discord from, which the Account page
+# opens for a speaker account in the in-app browser (AUTH-10, D-411): a web page that
+# uses the browser's us.pycon.org session, never an /api/v1 call (D-51). Optional.
+# Source: Ionic's account.ts, openSpeakerDiscord().
+speaker_discord_url = "https://us.pycon.org/2026/speaker/join_discord/"
 # When the bundled snapshot, conference.json, was fetched (D-38, NEW-03). Written by
 # tools/update_snapshot.py; the status strip (P1) shows the data's age from it.
 snapshot_captured_at = 2026-10-11T17:56:49-07:00

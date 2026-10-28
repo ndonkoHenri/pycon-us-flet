@@ -307,10 +307,13 @@ def test_with_a_mock_url_the_list_starts_with_sign_in(
     assert parent_of("/more/sign-in") == "/more"  # Back, and the pop after success
 
 
-def test_signed_in_the_first_row_is_the_account_and_not_a_button(
-    render: Callable[[], dict[str, Any]], prefs: Prefs, account: Account
+def test_signed_in_the_first_row_is_the_account_and_opens_its_page(
+    render: Callable[[], dict[str, Any]],
+    page: FakePage,
+    prefs: Prefs,
+    account: Account,
 ) -> None:
-    """Initials, nickname and email, one node, no tap until the Account page (#688)."""
+    """Initials, nickname and email, one node, which opens the Account page (#688)."""
     prefs.dev = {DEV_MOCK_API_URL: "http://10.0.2.2:8000"}
     account.email, account.nickname = "all@example.com", "Robin Everything"
     account.signed_in = True
@@ -319,12 +322,10 @@ def test_signed_in_the_first_row_is_the_account_and_not_a_button(
     assert isinstance(first.content, ft.Semantics)
     assert first.content.identifier == "more.account"
     tile = first.content.content
-    assert isinstance(tile, ft.ListTile) and tile.on_click is None  # never dead
-    assert isinstance(tile.title, ft.Text) and isinstance(tile.subtitle, ft.Text)
-    assert (tile.title.value, tile.subtitle.value) == (
-        "Robin Everything",
-        "all@example.com",
-    )
+    assert isinstance(tile, ft.ListTile)
+    cast(Callable[[], None], tile.on_click)()
+    assert page.navigated == ["/more/account"]
+    assert (tile.title, tile.subtitle) == ("Robin Everything", "all@example.com")
     avatar = cast(ft.Semantics, tile.leading)
     assert avatar.exclude_semantics  # the letters are not read before the name
     assert cast(ft.Text, cast(ft.CircleAvatar, avatar.content).content).value == "RE"
