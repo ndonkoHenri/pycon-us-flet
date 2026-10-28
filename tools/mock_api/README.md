@@ -280,8 +280,10 @@ Faults (lost responses, revoked keys, a skewed clock) come with #667.
   emulator, and with `--host 0.0.0.0` the machine's LAN address) and the seeded accounts' emails and passwords, all
   fake. It never prints a key or a secret.
 - **State** is in memory: a restart is a clean slate. Ctrl-C stops it.
-- **The log** has one line per request: the client's address, the method, the path without its query, and the status.
-  It never logs a query, a header or a body, so no access code, key, signature or password reaches it.
+- **The log** has one line per request, errors the server sends itself (a malformed request, an unsupported method)
+  included: the client's address, the method, the path without its query, and the status. The access code in
+  `lead_retrieval/<code>/note/` shows as `<code>`. It never logs a query, a header or a body, so no access code, key,
+  signature or password reaches it.
 - **It only answers.** Every reply comes from `handle`; the server never points at, proxies or copies a PSF host
   (D-51).
 - **Base URLs** and the practical notes (firewall, Wi-Fi isolation, cleartext HTTP) are in

@@ -8,6 +8,7 @@ never points at, proxies or copies a PSF host (D-51). Options and base URLs are 
 """
 
 import argparse
+import re
 import socket
 import threading
 from collections.abc import Sequence
@@ -22,6 +23,22 @@ MAX_BODY = 1_000_000
 
 EMULATOR_HOST = "10.0.2.2"
 """The Android emulator's alias for the host machine's loopback."""
+
+ACCESS_CODE_IN_PATH = re.compile(r"(/lead_retrieval/)[^/]+(/note/)")
+"""The one path that carries an attendee's access code as a segment."""
+
+
+def loggable(path: str) -> str:
+    """Return ``path`` as the log may show it: no query, and no access code.
+
+    Args:
+        path: The request target as received.
+
+    Returns:
+        The path without its query, with the code in ``lead_retrieval/<code>/note/``
+        replaced by ``<code>``.
+    """
+    return ACCESS_CODE_IN_PATH.sub(r"\1<code>\2", path.partition("?")[0])
 
 
 class MockServer(ThreadingHTTPServer):
@@ -50,7 +67,31 @@ class MockServer(ThreadingHTTPServer):
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
-    """Hands one HTTP request to ``handle`` and writes its reply back unchanged."""
+    """Hands one HTTP request to ``handle`` and writes its reply back unchanged.
+
+    Every response, ``handle``'s or an error the server sends itself, logs exactly one
+    line through ``log_request``; the inherited request-line and error logging, which
+    would show the query, is replaced.
+    """
+
+    def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
+        """Log one line: the method, the path without query or access code, the status.
+
+        Args:
+            code: The response status.
+            size: Unused; the inherited signature's response size.
+        """
+        method = getattr(self, "command", None) or "-"
+        path = loggable(getattr(self, "path", "") or "-")
+        self.log_message("%s %s %s", method, path, code)
+
+    def log_error(self, format: str, *args: object) -> None:
+        """Log nothing: the error's response logs its own line (``log_request``).
+
+        Args:
+            format: Unused; the inherited message format.
+            *args: Unused; its arguments.
+        """
 
     def answer(self) -> None:
         """Answer the request with ``handle``'s reply, and log one line about it.
@@ -73,10 +114,9 @@ class MockRequestHandler(BaseHTTPRequestHandler):
             status, headers, reply = handle(
                 server.state, self.command, self.path, dict(self.headers.items()), body
             )
-        # The path without its query, and never the headers or the body: no access code,
-        # key, signature or password reaches the log. Logged before the reply is sent,
-        # so the line is there by the time the client has its answer.
-        self.log_message("%s %s %d", self.command, self.path.partition("?")[0], status)
+        # Logged before the reply is sent, so the line is there by the time the client
+        # has its answer; send_response_only logs nothing itself.
+        self.log_request(status)
         self.send_response_only(status)
         for name, value in headers.items():
             self.send_header(name, value)

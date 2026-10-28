@@ -51,6 +51,20 @@ def signed(
     return {name: str(value) for name, value in headers.items()}
 
 
+def raw_request(served: httpx.Client, request: str) -> bytes:
+    """Send ``request`` as raw bytes (httpx won't send a malformed one); return the status."""
+    port = served.base_url.port
+    assert port is not None
+    with socket.create_connection(("127.0.0.1", port)) as raw:
+        raw.sendall(request.encode())
+        return raw.makefile("rb").readline().split()[1]
+
+
+def log_lines(capfd: pytest.CaptureFixture[str]) -> list[str]:
+    """The server's log lines written since the last read."""
+    return capfd.readouterr().err.splitlines()
+
+
 def test_a_signed_request_is_answered_over_the_socket(
     state: MockState, served: httpx.Client
 ) -> None:
@@ -110,15 +124,12 @@ def test_the_reply_has_one_date_the_mocks(served: httpx.Client) -> None:
 
 def test_a_malformed_length_is_refused_before_handle(served: httpx.Client) -> None:
     """A ``Content-Length`` that is not plain digits is 400, and no endpoint runs."""
-    port = served.base_url.port
-    assert port is not None
-    with socket.create_connection(("127.0.0.1", port)) as raw:  # httpx won't send it
-        raw.sendall(
-            f"PATCH {BASE}user/mobile_state/ HTTP/1.1\r\nHost: 127.0.0.1\r\n"
-            "Content-Length: +2\r\n\r\n{}".encode()
-        )
-        status_line = raw.makefile("rb").readline()
-    assert status_line.split()[1] == b"400"
+    status = raw_request(
+        served,
+        f"PATCH {BASE}user/mobile_state/ HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+        "Content-Length: +2\r\n\r\n{}",
+    )
+    assert status == b"400"
 
 
 def test_the_log_names_the_call_but_no_query_body_or_secret(
@@ -134,6 +145,51 @@ def test_the_log_names_the_call_but_no_query_body_or_secret(
     assert f"GET {BASE}lead_retrieval/capture/ 400" in log  # staff names no sponsor
     for secret in ("mock-staff", "MOCK0001", "mock-key-staff", "mock-secret-staff"):
         assert secret not in log
+
+
+def test_a_lead_note_logs_one_line_without_the_access_code(
+    state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """The code in ``lead_retrieval/<code>/note/`` is logged as ``<code>``, once."""
+    capfd.readouterr()
+    path = f"{BASE}lead_retrieval/MOCK0001/note/"
+    body = canonical_body({"note": "met at the booth"})
+    served.post(
+        path, content=body, headers=signed(state, "sponsor", "POST", path, body)
+    )
+    [line] = log_lines(capfd)
+    assert f"POST {BASE}lead_retrieval/<code>/note/ " in line
+    assert "MOCK0001" not in line
+
+
+def test_a_malformed_length_logs_one_line_without_the_query(
+    served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """The server's own 400 logs one sanitised line, not the request line or a message."""
+    capfd.readouterr()
+    status = raw_request(
+        served,
+        f"POST {BASE}mask_violations/capture/?attendee_access_code=MOCK0001 HTTP/1.1"
+        "\r\nHost: 127.0.0.1\r\nContent-Length: +2\r\n\r\n{}",
+    )
+    assert status == b"400"
+    [line] = log_lines(capfd)
+    assert line.endswith(f"POST {BASE}mask_violations/capture/ 400")
+
+
+def test_an_unsupported_method_logs_one_line_without_the_query(
+    served: httpx.Client, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """The server's own 501 for an unknown method logs one sanitised line."""
+    capfd.readouterr()
+    status = raw_request(
+        served,
+        f"OPTIONS {BASE}mask_violations/capture/?attendee_access_code=MOCK0001 "
+        "HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+    )
+    assert status == b"501"
+    [line] = log_lines(capfd)
+    assert line.endswith(f"OPTIONS {BASE}mask_violations/capture/ 501")
 
 
 def test_the_banner_gives_every_device_its_url_and_every_account() -> None:
