@@ -67,7 +67,8 @@ class FavoritesSync:
         self._signed_in = False
         self._adopting = False  # the next `ids` change is the sync's own
         self._saving = asyncio.Lock()  # one state write at a time, in order
-        self._saves: set[asyncio.Task[None]] = set()  # held: the loop keeps tasks weakly
+        # Held: the event loop keeps its tasks weakly.
+        self._saves: set[asyncio.Task[None]] = set()
 
     def request(self) -> None:
         """Ask for a pull: at the start, on resume, at a sign-in, and to wake ``run``."""
