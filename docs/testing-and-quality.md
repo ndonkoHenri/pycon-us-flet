@@ -320,12 +320,15 @@ Deliberate differences live in one dict, `INTENDED_DIFFERENCES` (D-121 nested po
 
 ### 4.1 Signing vectors (D-52)
 
-`tests/fixtures/ionic/signing.json` holds vectors produced once by Ionic's own `buildRequestAuthHeaders` (`providers/pycon-api.ts`) under Node, with provenance (commit, Node version, date). Client and mock share `core/signing.py`, so only outside vectors catch a shared mistake. Cases:
+`tests/fixtures/ionic/signing.json` holds vectors produced once by Ionic's own `buildRequestAuthHeaders` (`providers/pycon-api.ts`, copied unchanged) under Node, with a stubbed `Storage` (made-up key and secret) and a fixed `Date.now()`, and its provenance (Ionic commit, `sha1-uint8array` 0.10.7 from Ionic's lock file, esbuild, Node, npm, date). `tools/capture_ionic_reference/capture_signing.py` makes it; its README says how. Client and mock share `core/signing.py`, so only outside vectors catch a shared mistake. `tests/test_signing.py` rebuilds each case's path and body with `enc` and `canonical_body`, then checks the timestamp, the signature and the three headers. Cases, each named:
 
-- an empty-body GET with a query (lead capture: `encodeURIComponent`-encoded) and one whose query Ionic leaves unencoded (`fetch_products`);
-- a JSON body with non-ASCII text, quotes and slashes (serialised once with `separators=(",", ":")`, `ensure_ascii=False`);
-- timestamps on both sides of `x.5` seconds (`Math.round(Date.now() / 1000)`);
-- the same request with query parameters in a different order (different signature expected).
+- an empty-body GET; a query `encodeURIComponent`-encoded (lead capture, with every character `encodeURIComponent` keeps or escapes) and one Ionic leaves unencoded (`fetch_products`, its comma kept);
+- the same lead-capture query with its parameters in another order (a different signature);
+- JSON bodies with non-ASCII text (an emoji outside the BMP included), quotes, backslashes, slashes, `\n`, `\t`, a control character and U+2028; a boolean; insertion-ordered dynamic keys (`product-redeem-<id>`, numbers unquoted);
+- timestamps at x.499, x.500 (x even and odd) and x.501 seconds (`Math.round(Date.now() / 1000)`, where Python's `round` goes to even);
+- signed out: Storage returns null for the key and secret, and `join` renders `''`.
+
+The tests also pin the four `hashlib` vectors of architecture §10.3 and `js_round` against `Math.round` at and just below halves. Node never runs in CI or `tools/check.sh`.
 
 ### 4.2 Mock API tests (D-50, D-57)
 

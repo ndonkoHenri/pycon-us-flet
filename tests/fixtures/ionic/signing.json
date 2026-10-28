@@ -1,0 +1,309 @@
+{
+ "captured": {
+  "ionic": "PyCon/pycon-us-mobile@2aa6df8a86890df2d243f9e165905957614ae47e",
+  "node": "v26.8.2",
+  "npm": "11.19.1",
+  "esbuild": "0.28.2",
+  "packages": {
+   "sha1-uint8array": "0.10.7"
+  },
+  "date": "2026-10-28"
+ },
+ "cases": [
+  {
+   "name": "get-empty-body",
+   "about": "A GET with no query and an empty body (fetchPreferences).",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "GET",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "77946e44677e7f97445336dd9de5f0a0b58dc016",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "get-query-encoded",
+   "about": "Lead capture (syncScan): every query value goes through encodeURIComponent.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "GET",
+   "path": "/2027/api/v1/lead_retrieval/capture/?attendee_access_code=ABC123&badge_validator=v%2Fa%2Bl%3Di%20d%26%C3%A4!*'()~-_.&sponsor_id=42",
+   "query": {
+    "base": "/2027/api/v1/lead_retrieval/capture/",
+    "params": [
+     [
+      "attendee_access_code",
+      "ABC123"
+     ],
+     [
+      "badge_validator",
+      "v/a+l=i d&ä!*'()~-_."
+     ],
+     [
+      "sponsor_id",
+      "42"
+     ]
+    ],
+    "encoded": true
+   },
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "408b0ea0a33299a1127abb65af206ddb50c81e8b",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "get-query-encoded-reordered",
+   "about": "The same lead-capture query with its parameters in another order: another signature.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "GET",
+   "path": "/2027/api/v1/lead_retrieval/capture/?sponsor_id=42&attendee_access_code=ABC123&badge_validator=v%2Fa%2Bl%3Di%20d%26%C3%A4!*'()~-_.",
+   "query": {
+    "base": "/2027/api/v1/lead_retrieval/capture/",
+    "params": [
+     [
+      "sponsor_id",
+      "42"
+     ],
+     [
+      "attendee_access_code",
+      "ABC123"
+     ],
+     [
+      "badge_validator",
+      "v/a+l=i d&ä!*'()~-_."
+     ]
+    ],
+    "encoded": true
+   },
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "de2eb236e62392da163a49af65af82f9cd96d987",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "get-query-unencoded",
+   "about": "fetch_products (fetchAttendeeProducts): values concatenated as they are, the comma kept.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "GET",
+   "path": "/2027/api/v1/check_in/fetch_products/?attendee_access_code=ABC123&category_pk_list=1,2&mode=redemption_mode",
+   "query": {
+    "base": "/2027/api/v1/check_in/fetch_products/",
+    "params": [
+     [
+      "attendee_access_code",
+      "ABC123"
+     ],
+     [
+      "category_pk_list",
+      "1,2"
+     ],
+     [
+      "mode",
+      "redemption_mode"
+     ]
+    ],
+    "encoded": false
+   },
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "3b49566459ec1ee2a43bdae2a2d87835c9aada52",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "patch-favorites",
+   "about": "patchUserData: a compact JSON body.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "PATCH",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "payload": {
+    "favorites": [
+     "123",
+     "poster-detail-7"
+    ]
+   },
+   "body": "{\"favorites\":[\"123\",\"poster-detail-7\"]}",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "59b274bd80705949c06a5fd31abfe5f54307dc26",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "post-note-non-ascii",
+   "about": "syncNote: non-ASCII text (accents, CJK, an emoji outside the BMP) and a newline, kept as UTF-8.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "POST",
+   "path": "/2027/api/v1/lead_retrieval/ABC123/note/",
+   "payload": {
+    "accessCode": "ABC123",
+    "note": "Interest: hot\nNotes: café, naïve, 東京 🐍",
+    "sponsor_id": "42"
+   },
+   "body": "{\"accessCode\":\"ABC123\",\"note\":\"Interest: hot\\nNotes: café, naïve, 東京 🐍\",\"sponsor_id\":\"42\"}",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "9c12be306a7f296b3494196f14a24bf22167571f",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "post-escapes",
+   "about": "Quotes, backslashes, slashes, a tab, a control character and U+2028 in a JSON body.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "POST",
+   "path": "/2027/api/v1/lead_retrieval/ABC123/note/",
+   "payload": {
+    "accessCode": "ABC123",
+    "note": "She said \"hi\" \\ C:\\temp\\ a/b </end>\t\u0001 ."
+   },
+   "body": "{\"accessCode\":\"ABC123\",\"note\":\"She said \\\"hi\\\" \\\\ C:\\\\temp\\\\ a/b </end>\\t\\u0001 .\"}",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "ce0548ef57625c61a4477f23b8d824a5768c9c41",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "post-redeem-dynamic-keys",
+   "about": "redeemProducts: product-redeem-<id> keys in insertion order (7, 3, 12), numbers unquoted.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "POST",
+   "path": "/2027/api/v1/check_in/redeem_products/",
+   "payload": {
+    "attendee_access_code": "ABC123",
+    "badge_validator": "f00d",
+    "scanned_at": "2027-05-15T16:00:00.000Z",
+    "product-redeem-7": 7,
+    "product-7-quantity": 1,
+    "product-redeem-3": 3,
+    "product-3-quantity": 2,
+    "product-redeem-12": 12,
+    "product-12-quantity": 1
+   },
+   "body": "{\"attendee_access_code\":\"ABC123\",\"badge_validator\":\"f00d\",\"scanned_at\":\"2027-05-15T16:00:00.000Z\",\"product-redeem-7\":7,\"product-7-quantity\":1,\"product-redeem-3\":3,\"product-3-quantity\":2,\"product-redeem-12\":12,\"product-12-quantity\":1}",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "8b3f46a09d06d07efa97d0e36e839e1408851493",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "post-mask-violation-force",
+   "about": "captureMaskViolation with notes and force: a boolean in the body.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800000,
+   "method": "POST",
+   "path": "/2027/api/v1/mask_violations/capture/",
+   "payload": {
+    "attendee_access_code": "ABC123",
+    "notes": "Second warning",
+    "force": true
+   },
+   "body": "{\"attendee_access_code\":\"ABC123\",\"notes\":\"Second warning\",\"force\":true}",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "31a5afe9a71cf7425b3fd2581d6387f62ba1d6a9",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "round-below-half",
+   "about": "Date.now() at x.499 s: Math.round goes down.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800499,
+   "method": "GET",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "77946e44677e7f97445336dd9de5f0a0b58dc016",
+    "X-API-Timestamp": "1747324800"
+   }
+  },
+  {
+   "name": "round-half-even",
+   "about": "Date.now() at x.500 s with x even: Math.round goes up, where banker's rounding goes down.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800500,
+   "method": "GET",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "8fea360b082f237f939eaa0761d0247bfa1c27ce",
+    "X-API-Timestamp": "1747324801"
+   }
+  },
+  {
+   "name": "round-half-odd",
+   "about": "Date.now() at x.500 s with x odd: Math.round goes up, as banker's rounding does.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324801500,
+   "method": "GET",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "0033d0c8a3d98247d82be3199bf7fa25ee2445c9",
+    "X-API-Timestamp": "1747324802"
+   }
+  },
+  {
+   "name": "round-above-half",
+   "about": "Date.now() at x.501 s: Math.round goes up.",
+   "key": "test-key-0001",
+   "secret": "s3cr3t",
+   "now_ms": 1747324800501,
+   "method": "GET",
+   "path": "/2027/api/v1/user/mobile_state/",
+   "body": "",
+   "headers": {
+    "X-API-Key": "test-key-0001",
+    "X-API-Signature": "8fea360b082f237f939eaa0761d0247bfa1c27ce",
+    "X-API-Timestamp": "1747324801"
+   }
+  },
+  {
+   "name": "null-credentials",
+   "about": "Signed out: Storage returns null for key and secret; join() renders null as an empty string.",
+   "key": null,
+   "secret": null,
+   "now_ms": 1747324800000,
+   "method": "GET",
+   "path": "/2027/api/v1/user/check_features/",
+   "body": "",
+   "headers": {
+    "X-API-Key": null,
+    "X-API-Signature": "0510ee3fd285f482d8677ab11193999f267563d4",
+    "X-API-Timestamp": "1747324800"
+   }
+  }
+ ]
+}
