@@ -221,11 +221,16 @@ def verify(
         raise Refused(401, "Unknown API key.")
     stamp = lower.get("x-api-timestamp", "")
     # Only the digits Ionic sends: "+5", " 5" or "05" would sign as another string.
-    if not (stamp.isascii() and stamp.isdigit() and str(int(stamp)) == stamp):
+    try:
+        timestamp = int(stamp) if stamp.isascii() and stamp.isdigit() else None
+    except ValueError:  # over int()'s digit limit (sys.get_int_max_str_digits)
+        timestamp = None
+    if timestamp is None or str(timestamp) != stamp:
         raise Refused(403, "Missing or malformed timestamp.")
-    if abs(int(stamp) - now) > WINDOW:
+    # Compared, not subtracted: int - float overflows for an int past float's range.
+    if not now - WINDOW <= timestamp <= now + WINDOW:
         raise Refused(403, "Timestamp outside the window.")
-    expected = sign(account.secret, int(stamp), method, raw_path, body)
+    expected = sign(account.secret, timestamp, method, raw_path, body)
     given = lower.get("x-api-signature", "")
     if not hmac.compare_digest(given.encode(), expected.encode()):
         raise Refused(403, "Wrong signature.")
@@ -326,14 +331,21 @@ def write_mobile_state(account: Account, body: bytes) -> tuple[int, object]:
         200 with the list now stored, bare (Ionic ignores it).
 
     Raises:
-        Refused: 400 unless ``favorites`` is a list of strings and integers.
+        Refused: 400 unless ``favorites`` is a list of strings and integers, each
+            encodable as UTF-8: a JSON escape can carry a lone surrogate, which no
+            reply could then serialise.
     """
     favorites = json_object(body).get("favorites")
     if not isinstance(favorites, list) or not all(
         type(item) in (str, int) for item in favorites
     ):
         raise Refused(400, "favorites must be a list of ids.")
-    account.favorites = [str(item) for item in favorites]
+    ids = [str(item) for item in favorites]
+    try:
+        "".join(ids).encode()
+    except UnicodeEncodeError:
+        raise Refused(400, "favorites must be a list of ids.") from None
+    account.favorites = ids
     return 200, {"favorites": account.favorites}
 
 

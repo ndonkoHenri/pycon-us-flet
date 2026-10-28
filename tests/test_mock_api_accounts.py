@@ -184,6 +184,26 @@ def test_a_patch_without_a_list_of_ids_is_400(payload: object) -> None:
     assert account(state, "attendee").favorites == ["9001", "poster-detail-7"]
 
 
+def test_a_patch_with_a_lone_surrogate_is_400_and_keeps_the_list() -> None:
+    """An id JSON can escape but UTF-8 can't encode is 400; later GETs still work."""
+    state = state_at()
+    who = account(state, "attendee")
+    path = f"{BASE}user/mobile_state/"
+    body = b'{"favorites":["\\ud800"]}'
+    signed = auth_headers(who.key, who.secret, NOW, "PATCH", path, body)
+    headers = {name: str(value) for name, value in signed.items()}
+    status, _, reply = handle(state, "PATCH", path, headers, body)
+    assert (status, json.loads(reply)) == (
+        400,
+        {"code": 400, "error": "favorites must be a list of ids."},
+    )
+    assert who.favorites == ["9001", "poster-detail-7"]
+    assert call(state, "GET", "user/mobile_state/", role="attendee") == (
+        200,
+        {"favorites": ["9001", "poster-detail-7"]},
+    )
+
+
 def test_each_state_starts_from_the_seed() -> None:
     """A PATCH on one state leaves a state loaded afterwards untouched."""
     first = state_at()

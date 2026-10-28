@@ -145,6 +145,26 @@ def test_a_malformed_timestamp_is_403(stamp: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("stamp", "error"),
+    [
+        ("9" * 309, "Timestamp outside the window."),
+        ("9" * 4301, "Missing or malformed timestamp."),
+    ],
+    ids=["past-float", "past-int-limit"],
+)
+def test_a_huge_timestamp_is_403_not_an_error(stamp: str, error: str) -> None:
+    """A timestamp too big for a float, or for ``int()``, still gets the dated 403."""
+    state = state_at()
+    path = f"{BASE}user/check_features/"
+    headers = signed(account(state, "attendee"), "GET", path) | {
+        "X-API-Timestamp": stamp
+    }
+    reply = handle(state, "GET", path, headers, b"")
+    assert reply_json(reply) == (403, {"code": 403, "error": error})
+    assert parsedate_to_datetime(reply[1]["Date"]).timestamp() == NOW
+
+
+@pytest.mark.parametrize(
     ("offset", "status"),
     [(-WINDOW - 1, 403), (-WINDOW, 200), (0, 200), (WINDOW, 200), (WINDOW + 1, 403)],
 )

@@ -94,7 +94,8 @@ Details a port gets wrong:
 - **`mobile_state` PATCH** is fire-and-forget in Ionic (95-100); its reply is ignored. **Mock:** the list sent
   replaces the stored one (no merge) and the reply is `{"favorites": [...]}`, the list now stored. Ids are kept as
   strings (D-42): an integer id is stored as its decimal string, and any other item (a float, a boolean, `null`) is
-  400, so no id depends on how a float prints (`1.0` from Python's `json.dumps`, `1` from `JSON.stringify`).
+  400, so no id depends on how a float prints (`1.0` from Python's `json.dumps`, `1` from `JSON.stringify`). A string
+  UTF-8 can't encode (a lone surrogate such as `"\ud800"`) is 400 too, and the stored list stays as it was.
 
 ### Redeem payloads
 
