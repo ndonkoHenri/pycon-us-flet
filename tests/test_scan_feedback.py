@@ -44,7 +44,9 @@ def wakelock(shown: harness.Shown) -> MemoryWakelock:
 
 async def click_node(shown: harness.Shown, identifier: str) -> None:
     """Click the control that the ``Semantics`` with ``identifier`` wraps."""
-    await shown.click(shown.node(identifier).content)
+    content = shown.node(identifier).content
+    assert content is not None
+    await shown.click(content)
 
 
 def sheet(shown: harness.Shown) -> ft.BottomSheet | None:
