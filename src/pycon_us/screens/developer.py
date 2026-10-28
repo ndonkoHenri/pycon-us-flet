@@ -2,7 +2,8 @@
 
 The fake clock, in conference time, with a date picker and a time picker
 (``developer_clock.py``); the time zone; the feed URL; and the capability flags,
-read-only (``capabilities.py``, D-63). Apply puts the clock and the feed URL into effect
+read-only (``capabilities.py``, D-63); the mock API URL is ``developer_api.py``'s
+(D-51). Apply puts the clock and the feed URL into effect
 at once and saves them in ``pycon.dev``, so they hold across launches; Reset returns to
 real time and the year's feed (D-187). The screen is always available when not embedded,
 and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
@@ -18,9 +19,10 @@ from flet.utils import is_embedded
 from pycon_us import capabilities, clock
 from pycon_us.core.timefmt import utc_offset_label
 from pycon_us.prefs import parse_feed_url, use_prefs, with_dev_options
+from pycon_us.screens.developer_api import MockApiSection
 from pycon_us.screens.developer_clock import clock_picker
 from pycon_us.screens.developer_data import DataActions
-from pycon_us.screens.developer_ui import option_field
+from pycon_us.screens.developer_ui import option_field, said
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -222,6 +224,8 @@ def Developer() -> ft.View:
                     visible=bool(outcome[0]),
                     content=outcome_line(*outcome, tokens=tokens),
                 ),
+                SectionHeader("Mock API"),
+                MockApiSection(),
                 SectionHeader("Data"),
                 DataActions(),
                 SectionHeader("Capabilities"),
@@ -285,19 +289,6 @@ def capabilities_note() -> str:
     if is_embedded():
         return "Read-only: the extensions this packaged build bundles."
     return "Not a packaged build: every capability uses its interim."
-
-
-def said(done: str, saved: bool) -> tuple[str, bool]:
-    """Return the outcome line's state after Apply or Reset: what was done, and whether it lasts.
-
-    Args:
-        done: What was done, e.g. "Back to real time and the year's feed."
-        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120),
-            which the line says, beside a warning icon.
-    """
-    if not saved:
-        done += " Couldn't save your change: it ends when you close the app."
-    return done, saved
 
 
 def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> str:

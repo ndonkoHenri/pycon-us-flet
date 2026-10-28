@@ -157,16 +157,22 @@ async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
     real_time: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A stored fake time, error details and feed URL apply before the gate opens."""
+    """A stored fake time, error details, feed URL and mock API URL apply before the gate.
+
+    The mock API URL builds the private-API client on it (D-51).
+    """
     monkeypatch.setattr(errors, "_details", False)
     shared.values["pycon.dev"] = json.dumps(
         {
             "unlocked": True,
             "fake_now": "2026-05-15T09:00:00-07:00",
             "feed_url": "http://127.0.0.1:8000/conference-2026.json",
+            "mock_api_url": "http://10.0.2.2:8000",
         }
     )
     await started(fake_page, svc)
+    assert svc.private_api.base_url == "http://10.0.2.2:8000"
+    assert svc.api is not None
     # Each start runs the fake clock from its stored start again (D-187).
     start = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
     assert timedelta(0) <= clock.now() - start < timedelta(seconds=5)
@@ -178,10 +184,11 @@ async def test_the_stored_developer_options_take_effect_before_the_gate_opens(
 async def test_without_developer_options_the_app_runs_on_real_time_and_its_feed(
     fake_page: FakePage, svc: Services, network: Network, real_time: None
 ) -> None:
-    """With no developer options, the clock is real and the year's feed is fetched."""
+    """With no developer options: real time, the year's feed and no private-API client."""
     clock.start_fake_clock(datetime(2030, 1, 1, tzinfo=UTC))  # left by a session before
     await started(fake_page, svc)
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
+    assert svc.api is None  # no code path can reach the private API (D-51)
     await asyncio.sleep(0)
     assert network.urls == ["https://us.pycon.org/2026/schedule/conference.json"]
 

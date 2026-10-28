@@ -16,7 +16,9 @@ import flet as ft
 from pycon_us import capabilities
 from pycon_us.config import YearData, load_year
 from pycon_us.memory import ViewMemory
+from pycon_us.services.api import ApiClient
 from pycon_us.services.presence import Presence
+from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.reminders import Scheduler
 from pycon_us.services.reminders import start as start_reminders
 from pycon_us.services.storage import Storage, data_dir
@@ -84,6 +86,8 @@ class Services:
         shown_versions: The feed versions this session has logged D-112's content line
             for; ``AppScaffold``'s ``Shown`` logs each version once, from the first
             screen that shows it (D-165).
+        private_api: Holds ``api``, rebuilt when Developer's mock API URL changes
+            (``services.private_api``, D-51).
     """
 
     year: YearData
@@ -105,6 +109,12 @@ class Services:
     foreground: asyncio.Event = field(default_factory=_set_event)
     presence: Presence = field(default_factory=Presence)
     shown_versions: set[int] = field(default_factory=set)
+    private_api: PrivateApi = field(default_factory=PrivateApi)
+
+    @property
+    def api(self) -> ApiClient | None:
+        """The private-API client: None unless a mock API URL is set (D-51)."""
+        return self.private_api.client
 
     @classmethod
     def create(cls, memory: ViewMemory) -> Services:
