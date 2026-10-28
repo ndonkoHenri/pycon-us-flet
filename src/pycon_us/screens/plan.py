@@ -4,7 +4,7 @@ A pushed View (ux.md §6.1): the app bar names the plan and its overflow resets 
 view; the plan fills the body in ``ui/zoom.py``'s zoom layer, from the fitted plan to
 one image pixel per logical pixel (D-312), with a double tap for 2x or back to fit
 where nothing on it is tappable. The zoom buttons sit bottom-right, the single-pointer
-way to zoom (WCAG 2.5.1).
+way to zoom (WCAG 2.5.1), read after the label card (#729).
 
 On the ``job-fair`` plan each printed table is a tap area, and ``?table=T8`` selects
 one with its card (``screens/plan_tables.py``, #464): no double tap there (D-312).
@@ -307,6 +307,10 @@ def PlanViewer(plan_id: str) -> ft.View:
     # card wraps rather than slide under the buttons. Their row's empty space takes no
     # gestures, which reach the plan under it: no Container there, since Flet always
     # decorates one and a decorated box takes every pointer inside it.
+    # The buttons are one semantics container: screen readers order a node's
+    # children by position, and Zoom in, above a shorter card, came before it (#729).
+    # As one node beside the card, the column sorts after it, left to right, and
+    # reads its three buttons together.
     card = [label_card(plan, pin)] if pin is not None else []
     if selected:
         card.append(
@@ -320,7 +324,7 @@ def PlanViewer(plan_id: str) -> ft.View:
     controls = ft.Row(
         [
             ft.Column(card, expand=True, tight=True, spacing=8),
-            zoom_buttons(zoom, SCREEN),
+            ft.Semantics(container=True, content=zoom_buttons(zoom, SCREEN)),
         ],
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.END,

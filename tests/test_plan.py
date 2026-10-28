@@ -20,7 +20,7 @@ from pycon_us.ui import zoom, zoom_geometry
 from tests import plan_view
 from tests.plan_view import BOX, VIEW, Plan, Render
 from tests.sessions import menu_text
-from tests.trees import texts
+from tests.trees import descendants, texts
 from tests.viewers import FakeViewer
 
 render = plan_view.render
@@ -311,6 +311,27 @@ async def test_the_card_and_buttons_take_no_gestures_beside_them(
     card = row.controls[0]
     assert isinstance(card, ft.Column)
     assert len(card.controls) == (1 if query else 0)
+
+
+async def test_the_label_card_is_read_before_the_zoom_buttons(render: Render) -> None:
+    """The buttons are one semantics node after the card, so it reads first (#729).
+
+    Flutter orders a node's children by position: loose buttons put Zoom in, above
+    the shorter card, first. One container beside the card sorts after it.
+    """
+    plan = await render("?pin=104c")
+    await plan.lay_out()
+    (body,) = [s for s in plan.find(ft.Stack) if s.fit == ft.StackFit.EXPAND]
+    card, buttons = cast(ft.Row, body.controls[1]).controls
+    assert plan.node("plan.label") in descendants(card)
+    assert isinstance(buttons, ft.Semantics)
+    assert buttons.container
+    identifiers = [
+        node.identifier
+        for node in descendants(buttons)
+        if isinstance(node, ft.Semantics) and node.identifier
+    ]
+    assert identifiers == ["plan.zoom_in", "plan.zoom_out", "plan.reset"]
 
 
 @pytest.mark.parametrize(("reduce_motion", "ms"), [(False, 250), (True, None)])
