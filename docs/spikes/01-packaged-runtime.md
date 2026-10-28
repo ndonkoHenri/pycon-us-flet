@@ -108,6 +108,8 @@ The total is 56 ms, against 183 ms without `.pyc`. On the simulator the total wa
 
 A force-stop during a network refresh never left a broken cache. Every launch's read parsed, because the write is a temp file plus `os.replace`.
 
+**Re-check after the pin bump to `08b89cce5` (#673), for the outbox (#691, 2026-10-28).** The bump changed the bundled Python, so roadmap §6 asks for S1's `sqlite3` result again. The reproducer, built at the new pin with `flet build ios-simulator` (a scratch copy whose `record_launch()` also opened `outbox.db` with `isolation_level=None`, set `PRAGMA journal_mode=WAL` and ran a `BEGIN IMMEDIATE` script that created a table, inserted a row and set `user_version`, as `services/outbox_db.py` does), ran on a fresh iPhone 17 simulator (iOS 26.5). It logged `mode=wal rows=1 user_version=1 sqlite=3.51.0 python=3.14.10`, and `rows=2` after `simctl terminate` and `launch`; `outbox.db`, `-wal` and `-shm` were in `Library/Application Support/data`. Android was not re-run: the change is the Python build, and S1's two platforms agreed.
+
 ### `is_embedded()`
 
 | Runtime | Result |
