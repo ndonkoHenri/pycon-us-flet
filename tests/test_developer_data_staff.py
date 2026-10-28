@@ -19,7 +19,7 @@ import pytest
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Status
 from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
-from pycon_us.screens import developer_staff
+from pycon_us.screens import developer_data, developer_staff
 from pycon_us.screens.developer_staff import (
     STAFF_CLEARED,
     ClearStaffData,
@@ -323,4 +323,36 @@ async def test_reset_app_deletes_the_staff_records_after_naming_them(
     assert lines(dialog)[-1] == "Staff records: 1 synced, 1 not synced yet"
     await press(dialog, "developer.reset_app.confirm")
     assert svc.outbox.counts(None) == Counts()
+    assert "pycon.staff_sponsor" not in stored
+
+
+async def test_reset_app_keeps_the_rows_its_confirmation_could_not_read(
+    monkeypatch: pytest.MonkeyPatch,
+    render: Callable[[], ft.Column],
+    rendered: Rendered,
+    svc: Services,
+    stored: dict[str, Any],
+    offline: list[str],
+) -> None:
+    """Rows the dialog said stay are kept, though they read again by the confirm.
+
+    The rest of the reset goes ahead, the staff keys included (D-414).
+    """
+    assert svc.outbox is not None
+    seed(svc.outbox, A, Status.PENDING)
+    stored["pycon.staff_sponsor"] = "{}"
+    readable = False
+    counts = developer_data.staff_counts
+    monkeypatch.setattr(
+        developer_data, "staff_counts", lambda db: counts(db) if readable else None
+    )
+    await tap(render, "developer.reset_app")
+    render()
+    dialog = rendered.dialog
+    assert dialog is not None
+    assert lines(dialog)[-1] == UNREADABLE
+    readable = True  # the outbox reads again before the confirm
+    render()
+    await press(dialog, "developer.reset_app.confirm")
+    assert svc.outbox.counts(None) == Counts(pending=1)
     assert "pycon.staff_sponsor" not in stored

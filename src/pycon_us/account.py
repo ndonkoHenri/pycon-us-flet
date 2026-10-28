@@ -234,12 +234,14 @@ class Account:
         profile, secrets = Profile.parse(reply), secrets_of(reply)
         if profile is None or secrets is None:
             return SignIn.SERVER_ERROR
+        switch = profile.email.lower() != (self.owner if self.signed_in else None)
+        # An account switch: no staff choice of someone else's stays (D-414); one
+        # left behind refuses the sign-in, which changed nothing else yet.
+        if switch and not await storage.clear_prefs(STAFF_PREFIX):  # logged
+            return SignIn.NOT_SAVED
         # The old profile goes first, so no secrets are ever stored beside it.
         if not await storage.remove(ACCOUNT):  # logged; nothing was changed
             return SignIn.NOT_SAVED
-        if profile.email.lower() != (self.owner if self.signed_in else None):
-            # An account switch: no staff choice of someone else's stays (D-414).
-            await storage.clear_prefs(STAFF_PREFIX)  # a failure is logged
         self._clear()  # whoever was signed in before is gone from storage
         saved = await credentials.write(*secrets) and await storage.set(
             ACCOUNT, profile.stored()

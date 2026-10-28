@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from pycon_us.account import SignIn
 from pycon_us.config import load_year
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Row, Status
@@ -237,6 +238,35 @@ async def test_a_sign_in_as_someone_else_removes_the_staff_keys(
     assert (set(LATER_KEYS) <= set(shared.values)) is kept
 
 
+async def test_a_switch_that_can_t_remove_the_staff_keys_is_not_saved(
+    rig: Rig,
+    storage: Storage,
+    credentials: CredentialStorage,
+    shared: MemoryPrefs,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The previous account stays signed in, and its keys stay with it (D-414).
+
+    Only the staff keys' removal fails: the new account never inherits them.
+    """
+    await rig.sign_in("sponsor")
+    for key in LATER_KEYS:
+        shared.values[key] = "x"
+    clear_prefs = Storage.clear_prefs
+
+    async def refuse_staff(self: Storage, prefix: str = storage_module.PREFIX) -> bool:
+        """Fail the staff keys' removal, as a failed commit does; others go."""
+        return prefix != STAFF_PREFIX and await clear_prefs(self, prefix)
+
+    monkeypatch.setattr(Storage, "clear_prefs", refuse_staff)
+    outcome = await rig.account.sign_in(
+        rig.api, storage, credentials, "all@example.com", "mock-all"
+    )
+    assert outcome is SignIn.NOT_SAVED
+    assert rig.account.owner == "sponsor@example.com"
+    assert set(LATER_KEYS) <= set(shared.values)
+
+
 async def until(condition: Callable[[], bool]) -> None:
     """Let the loop run until ``condition`` holds, failing after a second."""
     async with asyncio.timeout(1):
@@ -294,3 +324,21 @@ def test_sync_now_makes_the_owner_s_pending_rows_due_now(db: OutboxDb) -> None:
     assert db.due_rows(B, 120.0) == []
     [row] = db.rows(A, (Status.PENDING,)) or []
     assert (row.tries, row.revision) == (0, mine.revision)  # an outcome still saves
+
+
+async def test_clear_staff_data_during_a_send_stops_the_pass_s_later_rows(
+    rig: Rig, storage: Storage
+) -> None:
+    """Rows deleted while the pass sends its first one are never sent (D-414)."""
+    await rig.sign_in("sponsor")
+    for code in ("MOCK0001", "MOCK0002", "MOCK0003"):
+        rig.lead(code)
+
+    async def clear() -> None:
+        """Clear staff data right after the first send's reply."""
+        assert await clear_staff_data(rig.db, storage, rig.staff)
+
+    rig.wire.then = clear
+    await rig.worker().drain()
+    assert len(rig.sends()) == 1
+    assert rig.db.counts(None) == Counts()

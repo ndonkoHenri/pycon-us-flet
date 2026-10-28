@@ -47,24 +47,29 @@ def staff_counts(db: OutboxDb | None) -> Counts | None:
     return db.counts(None)
 
 
-async def clear_staff_data(db: OutboxDb | None, storage: Storage, staff: Staff) -> bool:
+async def clear_staff_data(
+    db: OutboxDb | None, storage: Storage, staff: Staff, *, named: bool = True
+) -> bool:
     """Delete every account's rows and every staff key, then zero ``Staff``'s counts.
 
     The caller has confirmed it, naming how many rows have not synced (DEV-03); rows
-    that can't be counted now are not deleted, as no confirmation named them. The
-    sync's own state (a pass under way, the last error) stays: a pass under way
-    finds its rows gone and saves nothing.
+    that can't be counted now, or that the confirmation couldn't count (``named``),
+    are not deleted, as no confirmation named them. The sync's own state (a pass
+    under way, the last error) stays: a pass under way finds its rows gone, so it
+    sends none of them and saves nothing.
 
     Args:
         db: The outbox, or None where the session has none.
         storage: Where the staff keys are.
         staff: The ``Staff`` store, whose counts drop to zero.
+        named: Whether the confirmation named the rows; False when it said it
+            couldn't read them, so they stay (Reset app's, D-414).
 
     Returns:
         Whether everything was deleted; a failure is logged (D-120).
     """
     # Unreadable rows stay: their confirmation could not say how many (D-414).
-    counted = staff_counts(db) is not None
+    counted = named and staff_counts(db) is not None
     rows = counted and (db is None or not db.path.exists() or db.clear())
     keys = await storage.clear_prefs(STAFF_PREFIX)
     staff.update_counts(Counts() if rows else None)

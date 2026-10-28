@@ -135,7 +135,10 @@ def DataActions() -> ft.Control:
     @report_errors
     async def reset() -> None:
         set_asking(None)
-        complete = await reset_app(svc, conference, prefs, favorites, account, staff)
+        # Rows the dialog said it couldn't read stay, even if they read now (D-414).
+        complete = await reset_app(
+            svc, conference, prefs, favorites, account, staff, keep_rows=rows is None
+        )
         # Where a fresh start goes (D-143): Welcome, since the reset cleared
         # onboarded (DEV-05, D-287). Not "/" itself: on the iOS simulator that left
         # the app on this View, locked.
@@ -238,6 +241,8 @@ async def reset_app(
     favorites: Favorites,
     account: Account,
     staff: Staff,
+    *,
+    keep_rows: bool = False,
 ) -> bool:
     """Delete what the app keeps and reset every store, as after a fresh install.
 
@@ -259,6 +264,7 @@ async def reset_app(
         favorites: The session's ``Favorites`` store.
         account: The session's ``Account`` store.
         staff: The session's ``Staff`` store.
+        keep_rows: Keep the staff outbox's rows: the confirmation couldn't read them.
 
     Returns:
         Whether everything stored was deleted; when not (logged), the session is reset
@@ -271,7 +277,9 @@ async def reset_app(
     await svc.private_api.connect(None, svc.year.conference.year)
     cleared = await svc.storage.clear_prefs()
     signed_out = await account.reset(svc.storage, svc.credentials)
-    staff_cleared = await clear_staff_data(svc.outbox, svc.storage, staff)
+    staff_cleared = await clear_staff_data(
+        svc.outbox, svc.storage, staff, named=not keep_rows
+    )
     deleted = await conference.reset(svc.storage, svc.year)
     # After the reset, which cancels a refresh: the deletion waits for its writes (D-255).
     # Its own deletion: the reset deletes the log only when a feed URL was set

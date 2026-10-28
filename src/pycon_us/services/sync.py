@@ -173,8 +173,9 @@ class SyncWorker:
     async def _send_due(self, owner: str) -> Ended:
         """Send ``owner``'s due rows until none is left or the pass has to stop.
 
-        The due rows are read again once sent, so a note whose lead synced in this
-        pass goes in it too, and so does a row edited while it was sent; a row is
+        The due rows are read again before each send, so a note whose lead synced in
+        this pass goes in it too, and so does a row edited while it was sent, and a
+        row that Clear staff data deleted meanwhile is never sent (D-414); a row is
         never sent twice at the same revision in one pass, so a save that failed
         cannot loop. Before each row the account is checked again: a sign-out,
         another account, ``expired`` or a pause stops the pass, so no row is ever
@@ -185,39 +186,41 @@ class SyncWorker:
         """
         error: str | None = None
         tried: set[tuple[int | None, int]] = set()
-        while rows := [
-            row
-            for row in self._db.due_rows(owner, self._now())
-            if (row.id, row.revision) not in tried
-        ]:
-            for row in rows:
-                if not self._may_send(owner):
-                    return error, False, False
-                tried.add((row.id, row.revision))
-                assert row.id is not None  # a due row is a stored one
-                try:
-                    result = await send(self._api, row)
-                except asyncio.CancelledError:
-                    # The server may have it already: flag it, leave it pending.
+        while row := next(
+            (
+                row
+                for row in self._db.due_rows(owner, self._now())
+                if (row.id, row.revision) not in tried
+            ),
+            None,
+        ):
+            if not self._may_send(owner):
+                return error, False, False
+            tried.add((row.id, row.revision))
+            assert row.id is not None  # a due row is a stored one
+            try:
+                result = await send(self._api, row)
+            except asyncio.CancelledError:
+                # The server may have it already: flag it, leave it pending.
+                self._db.flag_maybe_sent(row.id)
+                raise
+            except NetworkError as failure:
+                if failure.maybe_sent:  # by id, so an edit since keeps it
                     self._db.flag_maybe_sent(row.id)
-                    raise
-                except NetworkError as failure:
-                    if failure.maybe_sent:  # by id, so an edit since keeps it
-                        self._db.flag_maybe_sent(row.id)
-                    waiting = outbox.after_network_error(
-                        row, self._now(), maybe_sent=failure.maybe_sent
-                    )
-                    self._db.save(waiting)
-                    return str(failure), False, True
-                except ApiError as failure:
-                    if failure.status == REFUSED_KEY:  # the key's fault: not counted
-                        self._db.save(outbox.after_network_error(row, self._now()))
-                        self._on_refused()
-                        return str(failure), False, False
-                    error = str(failure)
-                    self._db.save(outbox.after_error(row, failure.message, self._now()))
-                else:
-                    self._db.save(outbox.after_success(row, result))
+                waiting = outbox.after_network_error(
+                    row, self._now(), maybe_sent=failure.maybe_sent
+                )
+                self._db.save(waiting)
+                return str(failure), False, True
+            except ApiError as failure:
+                if failure.status == REFUSED_KEY:  # the key's fault: not counted
+                    self._db.save(outbox.after_network_error(row, self._now()))
+                    self._on_refused()
+                    return str(failure), False, False
+                error = str(failure)
+                self._db.save(outbox.after_error(row, failure.message, self._now()))
+            else:
+                self._db.save(outbox.after_success(row, result))
         return error, True, False
 
     def _report(
