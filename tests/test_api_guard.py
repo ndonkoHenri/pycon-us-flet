@@ -8,7 +8,8 @@ while a host that only looks like it goes through.
 import httpx
 import pytest
 
-from pycon_us.services.api import ENDPOINTS, Endpoint, refuse_private_psf
+from pycon_us.services.api import refuse_private_psf
+from pycon_us.services.endpoints import ENDPOINTS, Endpoint
 from tests.api_clients import client_for, replying
 
 PSF_BASES = [

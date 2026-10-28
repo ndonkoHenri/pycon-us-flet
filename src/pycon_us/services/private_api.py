@@ -17,13 +17,13 @@ from urllib.parse import urlsplit
 import httpx
 
 from pycon_us.services.api import (
-    CHECK_FEATURES,
     ApiClient,
     ApiError,
     Credentials,
     NetworkError,
     refuse_private_psf,
 )
+from pycon_us.services.endpoints import CHECK_FEATURES
 
 logger = logging.getLogger(__name__)
 

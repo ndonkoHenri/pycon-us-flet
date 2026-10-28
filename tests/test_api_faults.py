@@ -7,14 +7,8 @@ write; the outbox's own scenarios build on these in #38.
 
 import pytest
 
-from pycon_us.services.api import (
-    CHECK_FEATURES,
-    LEAD_CAPTURE,
-    ApiClient,
-    ApiError,
-    NetworkError,
-    lead_capture_query,
-)
+from pycon_us.services.api import ApiClient, ApiError, NetworkError
+from pycon_us.services.endpoints import CHECK_FEATURES, LEAD_CAPTURE, lead_capture_query
 from tests.api_clients import signed_in
 from tests.mock_calls import NOW, state_at
 from tools.mock_api.faults import Fault, Faults

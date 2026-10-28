@@ -29,13 +29,11 @@ import flet as ft
 
 from pycon_us.core import outbox
 from pycon_us.core.outbox import NETWORK_BACKOFF, Kind, Row
-from pycon_us.services.api import (
+from pycon_us.services.api import ApiClient, ApiError, NetworkError
+from pycon_us.services.endpoints import (
     LEAD_CAPTURE,
     LEAD_NOTE,
     REDEEM,
-    ApiClient,
-    ApiError,
-    NetworkError,
     lead_capture_query,
 )
 from pycon_us.services.errors import report_errors
