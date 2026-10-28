@@ -26,7 +26,13 @@ from pycon_us.services import storage as storage_module
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import Counts, OutboxDb
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, Pref, Storage
+from pycon_us.services.storage import (
+    SCANNER_CONSENT,
+    STAFF_PREFIX,
+    STAFF_SWAG_CATEGORIES,
+    Pref,
+    Storage,
+)
 from pycon_us.services.sync import supervise
 from pycon_us.staff import Staff
 from pycon_us.staff_data import clear_staff_data, staff_counts, unsynced
@@ -51,8 +57,8 @@ db = outbox_db
 
 A = "a@example.com"
 B = "b@example.com"
-LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key)
-"""Staff keys #39 adds: the chosen sponsor and the scanner consent."""
+LATER_KEYS = ("pycon.staff_sponsor", SCANNER_CONSENT.key, STAFF_SWAG_CATEGORIES.key)
+"""Staff keys #39 and #41 add: the sponsor, the scanner consent, the swag categories."""
 
 
 @pytest.fixture
@@ -109,7 +115,7 @@ def test_every_staff_key_of_the_table_starts_with_the_staff_prefix() -> None:
     """A key about staff tools is named under ``STAFF_PREFIX``, so it is cleared too."""
     keys = [pref.key for pref in table()]
     assert len(keys) > 8  # the walk found the table, per-year keys included
-    words = ("staff", "sponsor", "consent", "scan", "lead", "door")
+    words = ("staff", "sponsor", "consent", "scan", "lead", "door", "swag")
     for key in keys:
         if any(word in key for word in words):
             assert key.startswith(STAFF_PREFIX), key

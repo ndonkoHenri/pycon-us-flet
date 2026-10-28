@@ -58,6 +58,7 @@ from pycon_us.screens.staff_coc import CocScanner
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.screens.staff_leads import SEGMENT as LEADS_LIST
 from pycon_us.screens.staff_leads import LeadsPage
+from pycon_us.screens.staff_swag import SwagPickup
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.venue import Venue
@@ -230,6 +231,7 @@ ROUTES = [
             pushed(SPONSOR_PICKER, SponsorPicker),
             pushed(LEADS_LIST, LeadsPage),
         ),
+        pushed("staff/swag", SwagPickup),
         pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),
     pushed("schedule", Schedule),
@@ -300,6 +302,7 @@ ROUTES = [
             pushed(SPONSOR_PICKER, SponsorPicker),
             pushed(LEADS_LIST, LeadsPage),
         ),
+        pushed("staff/swag", SwagPickup),  # by deep link until #769's entries
         pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
     ),
     UNKNOWN,  # last: it matches anything (D-270)
