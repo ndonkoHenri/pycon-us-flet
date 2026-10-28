@@ -169,6 +169,31 @@ def ago_label(then: datetime, now: datetime) -> str:
     return _ago(minutes // (24 * 60), "day")
 
 
+def seconds_ago(seconds: float) -> str:
+    """Return how long ago something on screen happened, to the second under a minute.
+
+    The scan screen's result line ("Read 12 seconds ago", ux.md §7.2), where a scan a
+    few seconds old must read differently from the one before it: "just now" under a
+    second, then whole seconds, then ``ago_label()``'s minutes, hours and days. Words,
+    not "12 s", so screen readers say them.
+
+    Args:
+        seconds: How long ago, from a clock that never goes back; a negative value is
+            "just now".
+    """
+    whole = int(max(seconds, 0))
+    if whole < 1:
+        return "just now"
+    if whole < 60:
+        return _ago(whole, "second")
+    minutes = whole // 60
+    if minutes < 60:
+        return _ago(minutes, "minute")
+    if minutes < 24 * 60:
+        return _ago(minutes // 60, "hour")
+    return _ago(minutes // (24 * 60), "day")
+
+
 @dataclass(frozen=True)
 class TimeStatus:
     """Where a session stands at an instant, as session detail says it (SESS-01).

@@ -1,4 +1,4 @@
-"""What a scanned badge says, and the per-code scan cooldown (LEAD-03, LEAD-01; D-65).
+"""What a scanned badge says, the per-code scan cooldown and a scan's result (D-65).
 
 A badge's QR code, and what a HID scanner or manual entry types, is ``code:validator``
 (``tools/mock_api/badges.py`` prints it), possibly with more ``:`` segments.
@@ -7,9 +7,13 @@ the access code is segment 0; Door check and Swag pickup send segment 1 as
 ``badge_validator``; the Lead scanner sends the **last** segment; CoC sends the code
 only. ``Cooldown`` accepts one result per code every 4 s, since a held code is reported
 about 3.6 times a second (D-293). Both are pure: the caller passes the time in.
+``ScanResult`` is what a tool's handler returns for the scan screen's result panel
+(LEAD-01, LEAD-09; ``ui/scan_screen.py``), data only: the panel picks the colour and
+icon from its ``ScanOutcome``.
 """
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 COOLDOWN_SECONDS = 4.0
 """How long a code just accepted is ignored when scanned again (D-65)."""
@@ -81,3 +85,45 @@ class Cooldown:
             return False
         self._accepted[code] = now
         return True
+
+
+class ScanOutcome(StrEnum):
+    """How a scan ended, which sets the result panel's colour and icon (ux.md §7.2)."""
+
+    ACCEPTED = "accepted"
+    DUPLICATE = "duplicate"
+    DENIED = "denied"
+    QUEUED = "queued"
+    """Saved offline, to sync when online."""
+    INVALID = "invalid"
+    """Not a badge code: the text stays in the field for correction."""
+
+
+@dataclass(frozen=True)
+class ScanResult:
+    """What the result panel shows after a scan: the tool's answer, as data.
+
+    Attributes:
+        outcome: How the scan ended.
+        word: The outcome in words, first and largest: "Checked in", "Badge read".
+        title: The attendee's name, or the code when the tool has no name.
+        details: Lines under the title, in order: a reason, validators, a note.
+    """
+
+    outcome: ScanOutcome
+    word: str
+    title: str = ""
+    details: tuple[str, ...] = ()
+
+    @property
+    def spoken(self) -> str:
+        """The panel's words in reading order, one per line, for its live region."""
+        return "\n".join(
+            line for line in (self.word, self.title, *self.details) if line
+        )
+
+
+NOT_A_BADGE = ScanResult(
+    ScanOutcome.INVALID, "Not a badge code", details=("Check the code and try again.",)
+)
+"""The result of an entry ``parse_badge()`` refuses."""

@@ -116,6 +116,15 @@ class Account:
         """Who owns what this device records, e.g. a staff scan: the email, lower-cased."""
         return self.email.lower()
 
+    @property
+    def role_flags(self) -> dict[str, bool]:
+        """The staff role flags as ``core/staff_tools.py``'s ``may_open()`` takes them."""
+        return {
+            "lead_retrieval": self.lead_retrieval,
+            "door_check": self.door_check,
+            "mask_violation": self.mask_violation,
+        }
+
     def credentials(self) -> Secrets:
         """Return the key and the secret the ``ApiClient`` signs with; Nones signed out.
 

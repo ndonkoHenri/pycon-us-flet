@@ -82,6 +82,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         # Its rows open the same pages over it (D-207's pattern).
         ("/more/about/help", ["More", "AboutPycon", "Help"]),
         ("/more/about/venue", ["More", "AboutPycon", "Venue"]),
+        ("/more/staff/lead", ["More", "LeadScanner"]),
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (
@@ -138,7 +139,7 @@ def test_each_drill_level_reads_its_own_pair(
         "/now/bogus/1",
         "/now/session",
         "/now/session/42/nope",
-        "/more/staff/lead",
+        "/more/staff/door",  # a tool not built yet (#40)
         "/more/tracks/python/x",
         "/search/nope",
         "/welcome/session/42",  # Welcome has no drill: nothing opens over it

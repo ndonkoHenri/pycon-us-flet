@@ -280,6 +280,25 @@ def test_ago_label_says_just_now_for_a_time_after_now() -> None:
     assert timefmt.ago_label(now + timedelta(hours=3), now) == "just now"
 
 
+@pytest.mark.parametrize(
+    ("seconds", "label"),
+    [
+        (-2, "just now"),
+        (0.9, "just now"),
+        (1, "1 second ago"),
+        (12.7, "12 seconds ago"),
+        (59.9, "59 seconds ago"),
+        (60, "1 minute ago"),
+        (3599, "59 minutes ago"),
+        (7200, "2 hours ago"),
+        (2 * 86400, "2 days ago"),
+    ],
+)
+def test_seconds_ago_counts_seconds_under_a_minute(seconds: float, label: str) -> None:
+    """The scan screen's age: whole seconds under a minute, then ``ago_label``'s units."""
+    assert timefmt.seconds_ago(seconds) == label
+
+
 def test_ago_label_refuses_naive_datetimes() -> None:
     """``ago_label()`` raises ``ValueError`` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):

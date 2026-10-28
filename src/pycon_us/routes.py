@@ -45,6 +45,7 @@ from pycon_us.screens.speakers import Speakers
 from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
+from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.venue import Venue
@@ -266,6 +267,8 @@ ROUTES = [
             # there (D-207's pattern).
             pushed("sign-in", SignInPage),
         ),
+        # The staff tools (D-16): /more/staff is not a page, so Back returns to More.
+        pushed("staff/lead", LeadScanner),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
