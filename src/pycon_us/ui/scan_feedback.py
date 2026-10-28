@@ -8,7 +8,8 @@ ux.md §7.2's haptics and spoken columns, and a screen that stays awake (#724):
 - ``announce()`` says it where the platform takes announcements (``Prefs.announcements``,
   iOS): politely, assertively for a duplicate or a denial. There the result panel is no
   live region, so the result is said once; elsewhere (Android, where Flutter reports
-  no announcements, F13) the panel's live region says it (D-241, D-420).
+  no announcements, F13) the panel's live region says it (D-241, D-420). Its answer
+  is awaited at most ``ANNOUNCE_WAIT_S``: iOS never gives one under VoiceOver (F276).
 - ``use_wake_lock()`` keeps the screen on while the calling screen is mounted and
   the app is in the foreground, and lets it sleep again in the background and on
   unmount.
@@ -50,6 +51,11 @@ ASSERTIVE = frozenset({ScanOutcome.DUPLICATE, ScanOutcome.DENIED})
 GAP_S = 0.15
 """Seconds between two effects, so a duplicate's two pulses are felt as two."""
 
+ANNOUNCE_WAIT_S = 0.5
+"""How long an announcement is awaited. iOS never answers one while its accessibility
+bridge runs (VoiceOver on, or a UI test), so Flet's call would wait forever and hold
+the scan screen's single flight: every later scan was dropped (F276, U256)."""
+
 
 async def buzz(haptics: ft.HapticFeedback, outcome: ScanOutcome) -> None:
     """Give an outcome's haptics (``HAPTICS``).
@@ -83,8 +89,12 @@ async def announce(semantics: ft.SemanticsService, result: ScanResult) -> None:
         if result.outcome in ASSERTIVE
         else ft.Assertiveness.POLITE
     )
+    said = semantics.announce_message(result.spoken, assertiveness=assertiveness)
     try:
-        await semantics.announce_message(result.spoken, assertiveness=assertiveness)
+        # Sent at once; only the answer, which iOS may never give, is waited for.
+        await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
+    except TimeoutError:
+        logger.debug("No answer to the scan's announcement (F276)")
     except SERVICE_ERRORS:  # the panel shows it all the same
         logger.warning("Could not announce the scan's result", exc_info=True)
 

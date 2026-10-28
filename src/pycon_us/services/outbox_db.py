@@ -164,8 +164,11 @@ class OutboxDb:
                     )
                 if enqueued.outcome is Outcome.UPDATED:
                     # Read in this transaction, so its revision is the stored one.
-                    self._update(connection, enqueued.row)
-                    edited = replace(enqueued.row, revision=enqueued.row.revision + 1)
+                    edit = _is_edit(rows, enqueued.row)
+                    self._update(connection, enqueued.row, edit=edit)
+                    edited = replace(
+                        enqueued.row, revision=enqueued.row.revision + edit
+                    )
                     return replace(enqueued, row=edited)
                 return enqueued
 
@@ -229,8 +232,8 @@ class OutboxDb:
         """Flag a row "may be recorded twice" whatever its revision (D-410).
 
         A send that may have reached the server is a fact about the row, not about the
-        revision that was sent: an edit or a rescan while it was in flight drops the
-        send's outcome (``save()``), never this flag.
+        revision that was sent: an edit while it was in flight drops the send's
+        outcome (``save()``), never this flag.
 
         Args:
             row_id: The stored row's id.
@@ -318,6 +321,16 @@ class OutboxDb:
             "list rows", lambda: self._select(f"{sql} ORDER BY created_at, id", params)
         )
 
+    def row(self, row_id: int) -> Row | None:
+        """Return one row by id: how a lead scan's send ended (D-426).
+
+        Returns:
+            The row, or None when it is gone or the database fails (logged).
+        """
+        sql = "SELECT * FROM outbox WHERE id = ?"
+        found = self._attempt("read a row", lambda: self._select(sql, (row_id,)))
+        return found[0] if found else None
+
     def owners_with_unsynced(self) -> list[str] | None:
         """Return every owner with a pending or failed row, sorted.
 
@@ -394,3 +407,18 @@ class OutboxDb:
         if self._connection is not None:
             self._connection.close()
             self._connection = None
+
+
+def _is_edit(rows: list[Row], row: Row) -> bool:
+    """Whether an enqueue changed more of a stored row than when it is due (D-57).
+
+    A rescan of a pending lead only makes it due now: a send already under way still
+    sends what the row holds, so its outcome must save. Counting a revision would drop
+    a success and resend it, a second record that no lost answer explains.
+
+    Args:
+        rows: The code's rows, read in the enqueue's transaction.
+        row: The row the decision changed, with its stored id.
+    """
+    stored = next(r for r in rows if r.id == row.id)
+    return replace(row, next_at=stored.next_at) != stored

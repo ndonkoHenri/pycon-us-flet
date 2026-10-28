@@ -149,6 +149,21 @@ async def test_a_submit_while_the_handler_runs_is_dropped(show: Show, rig: Rig) 
     assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
 
 
+async def test_a_result_that_comes_under_another_view_is_dropped(
+    show: Show, rig: Rig
+) -> None:
+    """A slow handler's result after a push (the sponsor picker) stays quiet (D-426)."""
+    shown = await show()
+    rig.gate = asyncio.Event()
+    first = asyncio.create_task(enter(shown, "MOCK0001:v1"))
+    while not rig.badges:  # the handler is running, held by the gate
+        await asyncio.sleep(0)
+    shown.session.page.route = f"{scan_rig.VIEW}/sponsor"  # a View pushed on top
+    rig.gate.set()
+    await first
+    assert panel(shown) == spoken(None)
+
+
 async def test_a_paused_screen_drops_a_submit(show: Show, rig: Rig) -> None:
     """While the tool pauses it (its dialog is open, #724), nothing is handled."""
     rig.paused = "Paused while the note is open"
