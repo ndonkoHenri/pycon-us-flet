@@ -2,7 +2,8 @@
 
 The app's name and what it is, "Not an official PSF app." (D-36); **Conference data**:
 the conference and where the schedule on screen came from, with its age (D-292); **This
-build**: the version, Python and Flet (D-187); **Links**: Flet's website and, once the
+build**: the version, with its build number in a packaged build (D-386), Python and
+Flet (D-187); **Links**: Flet's website and, once the
 repository is public, its source code (D-88, D-292); **Help us fix it**: Report a
 problem, which shares the app's log and diagnostics, and once the repository is public
 opens a new issue beside a Share log row (INFO-04, D-297). Seven taps on the version row
@@ -16,10 +17,11 @@ from urllib.parse import urlsplit
 
 import flet as ft
 
-from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL, __version__
+from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL
 from pycon_us.prefs import DEV_UNLOCKED, use_prefs
 from pycon_us.screens import licences
 from pycon_us.services import use_services
+from pycon_us.services.build import use_build
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
@@ -51,6 +53,7 @@ def AboutApp() -> ft.View:
     prefs = use_prefs()
     taps = ft.use_ref(0)  # a ref: counting re-renders nothing
     unsaved, set_unsaved = ft.use_state(False)
+    build = use_build()  # "0.4.0 (812)" in a packaged build (D-386)
 
     @report_errors
     async def count_tap() -> None:
@@ -70,7 +73,7 @@ def AboutApp() -> ft.View:
         SectionHeader("This build"),
         named(
             "about_app.version",
-            ft.ListTile(title="Version", subtitle=__version__, on_click=count_tap),
+            ft.ListTile(title="Version", subtitle=build.label, on_click=count_tap),
         ),
         ft.ListTile(title="Python", subtitle=platform.python_version()),
         ft.ListTile(title="Flet", subtitle=FLET_VERSION),

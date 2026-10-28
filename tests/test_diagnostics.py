@@ -30,7 +30,7 @@ frozen_clock = diagnostics_facts.frozen_clock  # the fixture, under this module'
 
 
 def test_each_line_names_one_fact_in_a_fixed_order() -> None:
-    """The text is 18 ``Name: value`` lines, under the issue's 20, one per fact."""
+    """The text is 19 ``Name: value`` lines, under the issue's 20, one per fact."""
     text = diagnostics_text(FACTS)
     assert tuple(fields(text)) == NAMES
     assert len(text.splitlines()) == len(NAMES) <= 20
@@ -41,6 +41,7 @@ def test_the_whole_text_of_a_packaged_run() -> None:
     assert diagnostics_text(FACTS).split("\n") == (
         [
             "App: 0.1.0",
+            "Build: 812",
             "Python: 3.14.0",
             "Flet: source build",
             "Device: Google Pixel 9, emulator",
@@ -152,6 +153,7 @@ def test_facts_has_exactly_the_reviewed_fields() -> None:
     """
     assert [field.name for field in dataclasses.fields(Facts)] == [
         "app_version",
+        "build_number",
         "python",
         "flet",
         "platform",

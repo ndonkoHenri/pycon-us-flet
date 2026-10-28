@@ -61,6 +61,7 @@ async def test_gathering_reads_the_build_and_the_year(
     """The app, Python and Flet versions, the year, its zone and the capabilities."""
     lines = fields(await gathered(year, await bundled(storage, year)))
     assert lines["App"] == pycon_us.__version__
+    assert lines["Build"] == "none"  # not a packaged build under pytest (D-386)
     assert lines["Python"] == platform.python_version()
     assert lines["Flet"] == pycon_us.FLET_VERSION
     assert lines["Year"] == "2026"

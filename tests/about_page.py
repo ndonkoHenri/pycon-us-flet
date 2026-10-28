@@ -27,6 +27,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import about_app
 from pycon_us.screens.about_app import AboutApp
 from pycon_us.services import Services, api, errors
+from pycon_us.services.build import known_build
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.ui import rows as rows_module
@@ -107,7 +108,8 @@ def render(
     """Render ``AboutApp`` and return what it passed to ``AppScaffold``.
 
     The tap count is one ref, and the unsaved flag one state, that live as long as the
-    page, as Flet's do.
+    page, as Flet's do. The build is what is known without asking (``known_build()``):
+    ``use_build()``'s own tests are ``test_build.py``'s.
     """
     ref = MutableRef(0)
     unsaved: list[bool] = [False]  # the one use_state: whether the unlock was saved
@@ -119,6 +121,7 @@ def render(
     monkeypatch.setattr(ft, "use_state", use_state)
     monkeypatch.setattr(about_app, "use_services", lambda: svc)
     monkeypatch.setattr(about_app, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(about_app, "use_build", known_build)
     monkeypatch.setattr(about_app, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(about_app, "use_margin", phone_margin)
     monkeypatch.setattr(about_app, "ConferenceData", lambda: CONFERENCE_DATA)

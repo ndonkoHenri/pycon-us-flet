@@ -47,6 +47,9 @@ class FakePage:
         self.platform = ft.PagePlatform.IOS
         self.device: ft.DeviceInfo | None = None
         self.device_error: Exception | None = None
+        self.package: ft.PackageInfo | None = None
+        self.package_error: Exception | None = None
+        self.package_reads = 0
         self.controls: dict[int, ft.BaseControl] = {}
 
     def get_control(self, id: int) -> ft.BaseControl | None:
@@ -58,6 +61,14 @@ class FakePage:
         if self.device_error is not None:
             raise self.device_error
         return self.device
+
+    async def get_package_info(self) -> ft.PackageInfo:
+        """Return ``package``, or raise ``package_error``, counting the reads."""
+        self.package_reads += 1
+        if self.package_error is not None:
+            raise self.package_error
+        assert self.package is not None, "the test sets the package info first"
+        return self.package
 
     def show_dialog(self, dialog: ft.DialogControl) -> None:
         """Record ``dialog`` in ``dialogs`` instead of showing it."""

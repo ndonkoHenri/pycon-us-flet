@@ -37,6 +37,7 @@ ADDRESS = "jane.doe@example.org"
 
 NAMES = (
     "App",
+    "Build",
     "Python",
     "Flet",
     "Device",
@@ -59,6 +60,7 @@ NAMES = (
 
 FACTS = Facts(
     app_version="0.1.0",
+    build_number="812",
     python="3.14.0",
     flet="source build",
     platform="android",
