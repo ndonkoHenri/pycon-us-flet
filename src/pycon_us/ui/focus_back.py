@@ -11,18 +11,25 @@ come back (``services.presence``), and ``SETTLE_SECONDS`` later, it calls the op
 Android), and TalkBack moves its focus there (F192). Only buttons have ``focus()`` at
 the pin: a row (``ListTile``) and an overflow menu (``PopupMenuButton``) have none, so
 their windows still return to no node until U182.
+
+``star_of()`` and ``refocus_star()`` serve the reminders primer (D-395): its sheet is
+a route, but on Now the first star's add moves the session into Your next session,
+so the star that opened it is replaced by the card's and Flutter has no node to give
+the focus back to (D-225's "what keeps it working"); the card's star gets it instead.
 """
 
 import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 import flet as ft
 
 from pycon_us.services import Services
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.semantics import semantics_key
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +100,74 @@ async def focus_back(
     except SERVICE_ERRORS as error:
         # No answer from Flutter, or detached meanwhile: nothing to say.
         logger.info("Could not give the focus back: %s", type(error).__name__)
+
+
+@dataclass(frozen=True)
+class Star:
+    """The star a session's add was tapped on, found before a render can replace it."""
+
+    control: ft.IconButton
+    session_id: str
+
+
+def star_of(page: ft.Page, session_id: str) -> Star | None:
+    """Return the session's star mounted on the top View, or None (D-30's star).
+
+    Found by its identifier, ``<screen>.favorite.<key>`` (``FavoriteButton``): on Now
+    a session's star is ``now.favorite.<key>`` in a section and
+    ``now.next.favorite.<key>`` in the card, and a screen shows a session once. A
+    View covered by another can show the same session (the Schedule under search):
+    the top View is the one mounted last, since a View only ever goes on top.
+
+    Args:
+        page: The session's page.
+        session_id: The session whose star to find.
+    """
+    suffix = f".favorite.{semantics_key(session_id)}"
+    found = [
+        (_view_order(control), button)
+        for control in list(page.session.index.values())
+        if isinstance(control, ft.Semantics)
+        and str(control.identifier or "").endswith(suffix)
+        and isinstance(button := control.content, ft.IconButton)
+    ]
+    if not found:
+        return None
+    _, button = max(found, key=lambda pair: pair[0])
+    return Star(button, session_id)
+
+
+def _view_order(control: ft.BaseControl) -> int:
+    """The id of the ``View`` that holds ``control``, which grows with each new View.
+
+    -1 outside a View (a test's tree): then any of the controls found will do.
+    """
+    parent = control.parent
+    while parent is not None and not isinstance(parent, ft.View):
+        parent = parent.parent
+    return -1 if parent is None else parent._i
+
+
+async def refocus_star(svc: Services, page: ft.Page, star: Star) -> None:
+    """Give the focus to the star that replaced ``star``, once a sheet it opened closed.
+
+    While ``star`` is mounted, nothing: Flutter's ``Navigator`` gives its node the
+    focus back by itself, and a second focus would race it (D-225). When a render
+    removed it (Now's first add, D-395), ``SETTLE_SECONDS`` later, after Flutter's own
+    refocus has found no node, it focuses the session's star mounted then, if any.
+
+    Args:
+        svc: The session's services: whether the session has closed (D-147).
+        page: The session's page.
+        star: The star that was tapped, from ``star_of()`` before the add.
+    """
+    if page.get_control(star.control._i) is not None:
+        return
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(svc.closed.wait(), SETTLE_SECONDS)
+    if svc.closed.is_set() or (current := star_of(page, star.session_id)) is None:
+        return
+    try:
+        await current.control.focus()
+    except SERVICE_ERRORS as error:
+        logger.info("Could not focus the star: %s", type(error).__name__)

@@ -9,9 +9,9 @@ now", and nothing shows without E3, when the OS has answered, or after Undo.
 
 import dataclasses
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import flet as ft
 import pytest
@@ -23,8 +23,9 @@ from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import Services
 from pycon_us.services.reminders import Access, Scheduler
 from pycon_us.services.storage import REMINDERS
+from pycon_us.ui import focus_back
 from pycon_us.ui.reminder_primer import NOT_SAVED, PRIMER, PRIMER_LEAD
-from tests import harness, row_sessions
+from tests import harness, now_view, row_sessions
 from tests.fakes import MemoryNotifications, MemoryPermissions
 from tests.filter_sheet import descendants
 from tests.row_sessions import Rendered, rendering
@@ -297,3 +298,88 @@ async def test_the_companion_app_shows_no_primer(
         await rendered.tap_star(row_sessions.TALK)
         assert sheets(rendered) == []
         assert rendered.prefs.reminders == ReminderSettings()
+
+
+# ------------------------------------------------------------------ the focus after it
+
+
+@pytest.fixture
+def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.IconButton]:
+    """Record each ``IconButton.focus()`` call's button, at once after the answer."""
+    calls: list[ft.IconButton] = []
+
+    async def focus(self: ft.IconButton) -> None:
+        calls.append(self)
+
+    monkeypatch.setattr(ft.IconButton, "focus", focus)
+    monkeypatch.setattr(focus_back, "SETTLE_SECONDS", 0)
+    return calls
+
+
+@pytest.fixture
+def now_with_e3(monkeypatch: pytest.MonkeyPatch, os: MemoryNotifications) -> None:
+    """Make ``render`` show Now in a build with E3 (iOS's status path)."""
+
+    def with_e3(year: YearData, directory: Path, memory: object = None) -> Services:
+        svc = memory_services(year, directory)
+        return dataclasses.replace(svc, reminders=scheduler(os))
+
+    monkeypatch.setattr(harness, "memory_services", with_e3)
+
+
+render = now_view.render
+
+
+@pytest.mark.parametrize("button", ["not_now", "allow"])
+async def test_on_now_the_cards_star_gets_the_focus_back(
+    now_with_e3: None,
+    render: Callable[..., Any],
+    focused: list[ft.IconButton],
+    button: str,
+) -> None:
+    """The add moves the session into Your next session: its new star is focused.
+
+    Up next's star is gone once the card shows the session, so Flutter has no node
+    to give the focus back to (D-225); the card's star gets it once answered.
+    """
+    shown = await render(now_view.may(15, 11, 10))  # 27, at 11:30, is Up next's
+    star = shown.node("now.favorite.27").content
+    assert isinstance(star, ft.IconButton)
+    await shown.click(star)
+    assert shown.listed("now.next.session.") == ["27"]
+    # Unmounted: no node for Flutter's refocus.
+    assert shown.session.page.get_control(star._i) is None
+    sheet = primer(cast(Rendered, shown))
+    control = in_sheet(sheet, f"reminder.primer.{button}")
+    await shown.click(control)
+    assert focused == [shown.node("now.next.favorite.27").content]
+
+
+async def test_a_star_still_mounted_is_left_to_flutter(
+    shown: Rendered, focused: list[ft.IconButton]
+) -> None:
+    """A star that stayed (a Schedule row) gets the focus from Flutter, not twice."""
+    await shown.tap_star(row_sessions.TALK)
+    await answer(shown, "not_now")
+    assert focused == []
+
+
+async def test_a_sheet_taller_than_the_screen_scrolls_to_its_buttons(
+    shown: Rendered,
+) -> None:
+    """At 200 % text in landscape the primer scrolls, so both buttons stay reachable.
+
+    The sheet may take the screen's height (``scrollable``), not 9/16 of it, and its
+    column scrolls inside a row of intrinsic height, so it is no taller than its
+    content when that fits (ux.md §9).
+    """
+    await shown.tap_star(row_sessions.TALK)
+    sheet = primer(shown)
+    assert sheet.scrollable
+    assert isinstance(sheet.content, ft.Container)
+    row = sheet.content.content
+    assert isinstance(row, ft.Row) and row.intrinsic_height
+    [column] = row.controls
+    assert isinstance(column, ft.Column)
+    assert column.scroll == ft.ScrollMode.AUTO
+    assert in_sheet(sheet, "reminder.primer.allow") in descendants(column)

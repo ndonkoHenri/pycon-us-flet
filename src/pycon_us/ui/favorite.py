@@ -25,6 +25,7 @@ from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.focus_back import star_of
 from pycon_us.ui.reminder_primer import offer_on_first_favorite
 from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
 
@@ -199,12 +200,16 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     @report_errors
     async def toggle(session_id: str) -> None:
         edit = _begin(page)
+        # Before the add: on Now its render replaces the star (focus_back, D-395).
+        star = (
+            star_of(page, session_id) if prefs.reminders.primer == "unasked" else None
+        )
         change = await favorites.toggle(svc.storage, session_id)
         if change.added:
             await selection_click(svc.haptics)
         _announce(page, favorites, svc, prefs, change, edit=edit)
         if change.added and change.saved:  # a star's add only: never Undo or Add all
-            await offer_on_first_favorite(page, svc, prefs)
+            await offer_on_first_favorite(page, svc, prefs, star=star)
 
     return ft.use_callback(toggle, [])
 

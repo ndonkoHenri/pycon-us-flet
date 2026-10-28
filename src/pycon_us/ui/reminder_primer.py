@@ -17,7 +17,8 @@ card is the place (#449). The primer is a ``BottomSheet`` with "Allow" and "Not 
 
 Either way the favourite stays saved, and a star never shows the primer again. The
 sheet is a modal route, so Flutter gives the screen reader's focus back to the star
-when it closes (D-225). It needs E3 (``Services.reminders``, ``capabilities.REMINDERS``)
+when it closes (D-225); on Now, where the add moves the session into Your next
+session and replaces its star, the card's star gets it (``focus_back.refocus_star()``). It needs E3 (``Services.reminders``, ``capabilities.REMINDERS``)
 and nothing else: Settings and Welcome offer reminders only once
 ``capabilities.REMINDERS_LIVE`` is on (#449), while the scheduler already schedules
 them in any build with E3 (D-395).
@@ -35,6 +36,7 @@ from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.focus_back import Star, refocus_star
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import SNACK_BAR_MS
 
@@ -67,19 +69,24 @@ _ASKING: WeakSet[ft.Page] = WeakSet()
 """The pages whose primer is being asked or shown: two quick stars show one sheet."""
 
 
-async def offer_on_first_favorite(page: ft.Page, svc: Services, prefs: Prefs) -> None:
+async def offer_on_first_favorite(
+    page: ft.Page, svc: Services, prefs: Prefs, *, star: Star | None = None
+) -> None:
     """Show the primer after a star saved a session, if it was never answered (D-61).
 
     Args:
         page: The session's page.
         svc: The session's services: ``reminders``, None without E3.
         prefs: The session's ``Prefs``: the primer's answer so far.
+        star: The star tapped, found before the add (``focus_back.star_of()``).
     """
     if prefs.reminders.primer == "unasked":
-        await ask(page, svc, prefs)
+        await ask(page, svc, prefs, star=star)
 
 
-async def ask(page: ft.Page, svc: Services, prefs: Prefs) -> None:
+async def ask(
+    page: ft.Page, svc: Services, prefs: Prefs, *, star: Star | None = None
+) -> None:
     """Show the primer when the OS can still ask for notifications (ux.md §4.8).
 
     It returns once the sheet shows, or at once when there is nothing to ask: no E3
@@ -91,6 +98,9 @@ async def ask(page: ft.Page, svc: Services, prefs: Prefs) -> None:
         page: The session's page.
         svc: The session's services: ``reminders``, None without E3.
         prefs: The session's ``Prefs``, where the answer is saved.
+        star: The star that opened it, which gets the focus back once answered when
+            a render replaced it (``focus_back.refocus_star()``, D-225); None when
+            no star did.
     """
     scheduler = svc.reminders
     if scheduler is None or page in _ASKING:
@@ -115,6 +125,8 @@ async def ask(page: ft.Page, svc: Services, prefs: Prefs) -> None:
             await _save(page, svc, prefs, allow=allow, granted=granted)
         finally:
             _ASKING.discard(page)
+        if star is not None:  # after the OS's prompt too: the app is back by then
+            await refocus_star(svc, page, star)
 
     @report_errors
     async def allow() -> None:
@@ -172,8 +184,9 @@ def primer_sheet(
     """Return the primer: a decorative bell, ``PRIMER``, then "Not now" and "Allow".
 
     The buttons wrap under each other at the largest text rather than clip, Allow
-    last, where M3 puts a sheet's confirming action. The sentence is a node of its
-    own (``reminder.primer``), read first.
+    last, where M3 puts a sheet's confirming action; a sheet taller than the screen
+    (200 % text in landscape) scrolls. The sentence is a node of its own
+    (``reminder.primer``), read first.
 
     Args:
         on_allow: Allow's tap.
@@ -183,51 +196,58 @@ def primer_sheet(
         high_contrast: HC is on screen: a 1 dp ``outline`` edge (D-306).
         reduce_motion: The OS asks for less motion: the sheet does not slide (D-173).
     """
+    content = ft.Column(
+        [
+            # Decorative: an Icon without a label has no semantics node.
+            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE_OUTLINED, color=ft.Colors.PRIMARY),
+            ft.Semantics(
+                identifier=SCREEN,
+                content=ft.Text(
+                    PRIMER,
+                    theme_style=ft.TextThemeStyle.BODY_LARGE,
+                    text_align=ft.TextAlign.CENTER,  # under the bell
+                ),
+            ),
+            ft.Row(
+                [
+                    named(
+                        f"{SCREEN}.not_now",
+                        ft.TextButton(NOT_NOW, on_click=on_not_now),
+                    ),
+                    named(
+                        f"{SCREEN}.allow",
+                        ft.FilledButton(
+                            ALLOW,
+                            style=ft.ButtonStyle(padding=LABEL_PADDING),
+                            elevation=0,  # M3's filled button lies flat
+                            on_click=on_allow,
+                        ),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.END,
+                wrap=True,
+                spacing=8,
+                run_spacing=8,
+            ),
+        ],
+        spacing=16,
+        tight=True,
+        # Taller than the sheet may be (200 % text in landscape), it scrolls, so
+        # both buttons stay reachable (ux.md §9).
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6); the buttons clear the home bar
             padding=ft.Padding.only(left=16, right=16, bottom=16),
-            content=ft.Column(
-                [
-                    # Decorative: an Icon without a label has no semantics node.
-                    ft.Icon(
-                        ft.Icons.NOTIFICATIONS_ACTIVE_OUTLINED, color=ft.Colors.PRIMARY
-                    ),
-                    ft.Semantics(
-                        identifier=SCREEN,
-                        content=ft.Text(
-                            PRIMER,
-                            theme_style=ft.TextThemeStyle.BODY_LARGE,
-                            text_align=ft.TextAlign.CENTER,  # under the bell
-                        ),
-                    ),
-                    ft.Row(
-                        [
-                            named(
-                                f"{SCREEN}.not_now",
-                                ft.TextButton(NOT_NOW, on_click=on_not_now),
-                            ),
-                            named(
-                                f"{SCREEN}.allow",
-                                ft.FilledButton(
-                                    ALLOW,
-                                    style=ft.ButtonStyle(padding=LABEL_PADDING),
-                                    elevation=0,  # M3's filled button lies flat
-                                    on_click=on_allow,
-                                ),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.END,
-                        wrap=True,
-                        spacing=8,
-                        run_spacing=8,
-                    ),
-                ],
-                spacing=16,
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-            ),
+            # A scrolling Column takes all the height it is given (Flet's
+            # scrollable_control.dart, #6450): the intrinsic height gives it its
+            # content's, up to the sheet's limit, so the sheet stays as short.
+            content=ft.Row([content], intrinsic_height=True),
         ),
         show_drag_handle=True,
+        scrollable=True,  # up to the screen's height, not 9/16 of it, at large text
         use_safe_area=True,
         shape=hc_sheet_shape(high_contrast),
         on_dismiss=on_dismiss,
