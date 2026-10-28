@@ -139,6 +139,26 @@ def test_rows_survive_close_and_reopen_without_migrating_again(tmp_path: Path) -
     second.close()
 
 
+def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
+    tmp_path: Path,
+) -> None:
+    """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file, its rows unflagged (D-410)."""
+    with raw(tmp_path / "outbox.db") as v1:
+        v1.executescript(f"{MIGRATIONS[0]}PRAGMA user_version = 1;")
+        v1.execute(
+            "INSERT INTO outbox (kind, key, payload_json, owner, next_at, created_at)"
+            " VALUES ('lead', 'A1', '{}', ?, ?, ?)",
+            (OWNER, NOW, NOW),
+        )
+    database = OutboxDb(tmp_path)
+    (row,) = database.rows(OWNER, [Status.PENDING]) or []
+    assert (row.key, row.maybe_sent) == ("A1", False)
+    flagged = outbox.after_network_error(row, NOW, maybe_sent=True)
+    assert database.save(flagged)
+    assert database.rows(OWNER, [Status.PENDING]) == [flagged]
+    database.close()
+
+
 def test_the_connection_refuses_any_thread_but_the_one_that_opened_it(
     db: OutboxDb,
 ) -> None:
@@ -252,6 +272,21 @@ def test_a_note_edited_while_sent_keeps_the_edit(
     assert not db.save(outcome(sent))  # the old send's outcome is dropped
     assert db.due_rows(OWNER, NOW) == [edited.row]  # the edit is sent next
     assert edited.row.payload["note"] == "Second"
+
+
+def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> None:
+    """``flag_maybe_sent`` ignores the revision, and no later save clears it (D-410)."""
+    queued(scan(db))
+    (sent,) = db.due_rows(OWNER, NOW)  # the worker reads the lead and sends it ...
+    rescan = scan(db)  # ... while it is scanned again: a new revision
+    assert rescan is not None and rescan.row is not None
+    rescanned = rescan.row
+    assert not db.save(outbox.after_network_error(sent, NOW, maybe_sent=True))
+    assert sent.id is not None and db.flag_maybe_sent(sent.id)
+    (stored,) = db.due_rows(OWNER, NOW)
+    assert (stored.revision, stored.maybe_sent) == (rescanned.revision, True)
+    assert db.save(outbox.after_success(rescanned, {"id": 1}))  # read unflagged
+    assert [row.maybe_sent for row in everything(db)] == [True]
 
 
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:

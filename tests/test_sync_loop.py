@@ -7,8 +7,7 @@ and checks that exactly one worker sends while one should, and none otherwise.
 
 import asyncio
 import contextlib
-from collections.abc import Callable, Iterator
-from pathlib import Path
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import cast
 
@@ -27,7 +26,7 @@ from pycon_us.services.sync import SyncWorker, supervise
 from tests import accounts
 from tests.api_clients import BASE_URL
 from tests.fakes import MemoryClipboard, MemoryHaptics, MemoryLauncher, MemorySemantics
-from tests.sync_rig import Rig
+from tests.sync_rig import Rig, outbox_db
 
 shared, storage, keystore, credentials = (
     accounts.shared,
@@ -35,16 +34,7 @@ shared, storage, keystore, credentials = (
     accounts.keystore,
     accounts.credentials,
 )
-
-
-@pytest.fixture
-def db(tmp_path: Path) -> Iterator[OutboxDb]:
-    """Yield an outbox in its own directory, closed afterwards."""
-    directory = tmp_path / "outbox"
-    directory.mkdir()
-    database = OutboxDb(directory)
-    yield database
-    database.close()
+db = outbox_db
 
 
 @pytest.fixture

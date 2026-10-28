@@ -10,7 +10,8 @@ from typing import Any
 import httpx
 import pytest
 
-from pycon_us.services.api import (
+from pycon_us.services.api import ApiError, NetworkError
+from pycon_us.services.endpoints import (
     AUTHENTICATE,
     CHECK_FEATURES,
     COC_ATTENDEES,
@@ -26,9 +27,7 @@ from pycon_us.services.api import (
     REDEEM,
     REDEEMABLE,
     WRITE_MOBILE_STATE,
-    ApiError,
     Endpoint,
-    NetworkError,
     coc_capture_query,
     fetch_products_query,
     lead_capture_query,

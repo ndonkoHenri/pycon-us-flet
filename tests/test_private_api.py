@@ -13,7 +13,8 @@ import httpx
 import pytest
 
 from pycon_us.prefs import Prefs
-from pycon_us.services.api import CHECK_FEATURES, ApiClient
+from pycon_us.services.api import ApiClient
+from pycon_us.services.endpoints import CHECK_FEATURES
 from pycon_us.services.private_api import (
     CONNECTED,
     PrivateApi,

@@ -5,16 +5,11 @@ Each scenario switches a fault on ``MockState`` and calls the real ``ApiClient``
 write; the outbox's own scenarios build on these in #38.
 """
 
+import httpx
 import pytest
 
-from pycon_us.services.api import (
-    CHECK_FEATURES,
-    LEAD_CAPTURE,
-    ApiClient,
-    ApiError,
-    NetworkError,
-    lead_capture_query,
-)
+from pycon_us.services.api import ApiClient, ApiError, NetworkError
+from pycon_us.services.endpoints import CHECK_FEATURES, LEAD_CAPTURE, lead_capture_query
 from tests.api_clients import signed_in
 from tests.mock_calls import NOW, state_at
 from tools.mock_api.faults import Fault, Faults
@@ -41,15 +36,40 @@ async def test_no_answer_is_a_network_error_and_nothing_is_applied(
     assert state.leads == []
     # Sign-in says a timeout apart from being offline (D-54, #684).
     assert raised.value.timed_out is (fault == "timeout")
+    # A read timeout may come after the server had it, though this mock had not (D-410).
+    assert raised.value.maybe_sent is (fault == "timeout")
 
 
 async def test_a_lost_response_is_a_network_error_though_the_mock_applied_it() -> None:
     """The mock commits the lead, then the reply is lost: the client can't tell."""
     client, _, state = await signed_in("sponsor")
     state.faults.inject("lost_response")
-    with pytest.raises(NetworkError, match="lost_response"):
+    with pytest.raises(NetworkError, match="lost_response") as raised:
         await capture_ada(client)
     assert [lead.access_code for lead in state.leads] == ["MOCK0001"]
+    assert raised.value.maybe_sent  # so the outbox flags the row (D-410)
+
+
+@pytest.mark.parametrize(
+    ("error", "maybe_sent"),
+    [
+        (httpx.ConnectError, False),  # DNS failures too
+        (httpx.ConnectTimeout, False),
+        (httpx.PoolTimeout, False),
+        (httpx.ProxyError, False),
+        (httpx.UnsupportedProtocol, False),
+        (httpx.ReadError, True),
+        (httpx.ReadTimeout, True),
+        (httpx.WriteError, True),
+        (httpx.WriteTimeout, True),
+        (httpx.RemoteProtocolError, True),
+    ],
+)
+def test_only_a_request_that_never_left_is_surely_not_sent(
+    error: type[httpx.TransportError], maybe_sent: bool
+) -> None:
+    """``maybe_sent`` is False only for errors raised before a connection existed."""
+    assert NetworkError.of(error("down")).maybe_sent is maybe_sent
 
 
 @pytest.mark.parametrize(
