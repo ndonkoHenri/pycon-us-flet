@@ -19,6 +19,7 @@ import pytest
 from flet_notifications import Notifications
 
 from pycon_us import clock
+from pycon_us.account import Account
 from pycon_us.app import on_resume
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData, load_year
@@ -183,7 +184,7 @@ async def test_a_resume_applies_again(shown: Shown) -> None:
     """``on_resume()`` asks for an apply, which brings back what the OS dropped."""
     shown.os.pending.clear()  # as a force-stop or the OS clears them
     shown.conference._started_at = clock.now()  # no refresh is due
-    await on_resume(shown.svc, shown.conference, shown.prefs)
+    await on_resume(shown.svc, shown.conference, shown.prefs, Account())
     await settle()
     assert shown.applies == 2
     assert reminder_id(TALK) in shown.os.pending

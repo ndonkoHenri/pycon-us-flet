@@ -4,12 +4,16 @@
 """
 
 import asyncio
+import json
 import logging
+import time
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
 import flet as ft
+import httpx
 import pytest
 
 from pycon_us import app, clock
@@ -19,11 +23,15 @@ from pycon_us.change_log import ChangeLog
 from pycon_us.favorites import Favorites
 from pycon_us.prefs import Prefs, read_accessibility
 from pycon_us.services import Services, api
+from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from tests import app_start
+from tests.api_clients import BASE_URL, Recorder
 from tests.app_start import Network, finish_refresh, started
 from tests.fake_page import FakePage, bound
-from tests.fakes import MemorySemantics
+from tests.fakes import MemoryPrefs, MemorySemantics
+from tests.mock_calls import Clock, state_at
+from tools.mock_api.transport import mock_transport
 
 year, shared, semantics, svc, fake_page, network = (
     app_start.year,
@@ -87,7 +95,7 @@ async def test_a_screen_reader_turned_on_away_from_the_app_is_seen_on_resume(
     assert not prefs.screen_reader and not prefs.announcements
     semantics.features["accessible_navigation"] = True  # TalkBack or VoiceOver
     semantics.features["supports_announcements"] = True  # iOS (F13)
-    await on_resume(svc, conference, prefs)
+    await on_resume(svc, conference, prefs, Account())
     assert prefs.screen_reader and prefs.announcements
 
 
@@ -103,7 +111,7 @@ async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
     conference, prefs = await started(fake_page, svc)
     semantics.error = TimeoutError()  # the Flutter side does not answer
     with caplog.at_level(logging.WARNING, logger="pycon_us.prefs"):
-        await on_resume(svc, conference, prefs)
+        await on_resume(svc, conference, prefs, Account())
     assert semantics.reads == 2
     # The last good snapshot stands; nothing falls back to the defaults (F13).
     assert prefs.os_high_contrast and prefs.reduce_motion
@@ -292,3 +300,77 @@ async def test_a_session_closed_during_the_start_stops_there_without_an_error(
     assert fake_page.on_app_lifecycle_state_change is None
     assert "Start failed" not in caplog.text
     assert "closed during the start" in caplog.text
+
+
+# ------------------------------------------------------------------ role flags
+
+
+class Silent(Recorder):
+    """A mock server that never answers: each request is kept and waits for ever."""
+
+    def __init__(self) -> None:
+        """Answer nothing, with nothing sent yet."""
+        super().__init__(httpx.MockTransport(lambda _: httpx.Response(500)))
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Record the request, then wait until the test cancels it."""
+        self.sent.append(request)
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+
+async def signed_in_start(
+    fake_page: FakePage,
+    svc: Services,
+    shared: MemoryPrefs,
+    transport: httpx.AsyncBaseTransport,
+) -> tuple[Account, Services]:
+    """Start with the seeded ``all`` account saved and a mock URL on ``transport``."""
+    shared.values["pycon.account"] = json.dumps(
+        {"email": "all@example.com", "nickname": "Robin", "features": {}}
+    )
+    shared.values["pycon.dev"] = json.dumps({"mock_api_url": BASE_URL})
+    await svc.credentials.write("mock-key-all", "mock-secret-all")
+    account = Account()
+    svc = replace(svc, private_api=PrivateApi(transport, account.credentials))
+    await bootstrap(
+        cast(ft.Page, fake_page),
+        svc,
+        Conference(),
+        Prefs(),
+        Favorites(),
+        ChangeLog(),
+        account,
+    )
+    return account, svc
+
+
+async def test_the_start_refreshes_the_flags_without_waiting_for_them(
+    fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
+) -> None:
+    """A server that never answers still lets the gate open (DATA-35, D-54)."""
+    silent = Silent()
+    account, _ = await signed_in_start(fake_page, svc, shared, silent)
+    assert fake_page.on_app_lifecycle_state_change is not None  # the start ended
+    await asyncio.sleep(0.01)
+    assert [r.url.path for r in silent.sent] == ["/2026/api/v1/user/check_features/"]
+    assert account._refresh is not None and not account._refresh.done()
+    account._refresh.cancel()
+
+
+async def test_a_resume_refreshes_the_flags_and_a_revoked_key_asks_for_a_sign_in(
+    fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
+) -> None:
+    """Each resume asks ``check_features``; a refused key expires the account (D-57)."""
+    state = state_at(clock=Clock(time.time()))
+    recorder = Recorder(mock_transport(state))
+    account, svc = await signed_in_start(fake_page, svc, shared, recorder)
+    assert account._refresh is not None
+    await account._refresh
+    assert account.door_check and not account.expired  # the server's flags
+    state.faults.inject("revoked", until_cleared=True)
+    resume = lifecycle(fake_page, ft.AppLifecycleState.RESUME)
+    await fake_page.on_app_lifecycle_state_change(resume)
+    await account._refresh
+    assert account.expired and account.signed_in
+    assert len(recorder.sent) == 2
