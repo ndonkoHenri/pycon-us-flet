@@ -55,6 +55,7 @@ from pycon_us.screens.sponsor import SponsorDetail
 from pycon_us.screens.sponsors import Sponsors
 from pycon_us.screens.sprints import Sprints
 from pycon_us.screens.staff_lead import LeadScanner
+from pycon_us.screens.staff_swag import SwagPickup
 from pycon_us.screens.track import TrackPage
 from pycon_us.screens.tracks import Tracks
 from pycon_us.screens.venue import Venue
@@ -222,6 +223,7 @@ ROUTES = [
         pushed("venue", Venue),
         # Its Scan badges card's tools (D-421): under Now, so Back returns there.
         pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
+        pushed("staff/swag", SwagPickup),
     ),
     pushed("schedule", Schedule),
     pushed(
@@ -285,6 +287,7 @@ ROUTES = [
         # The staff tools (D-16): /more/staff is not a page, so Back returns to More.
         # The Lead scanner's sponsor picker is under it, so Back returns there (#740).
         pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
+        pushed("staff/swag", SwagPickup),  # by deep link until #769's entries
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

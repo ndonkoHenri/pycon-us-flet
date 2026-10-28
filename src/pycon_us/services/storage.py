@@ -97,6 +97,11 @@ STAFF_SPONSOR: Pref[dict[str, Any]] = Pref("pycon.staff_sponsor", {})
 ``core/lead_sponsors.py``); ``{}`` until one is chosen. A staff key (D-414), read as
 the Lead scanner opens and as it comes back on top, as the consent is (D-425)."""
 
+STAFF_SWAG_CATEGORIES: Pref[list[str]] = Pref("pycon.staff_swag_categories", [])
+"""The swag category ids Swag pickup hands out, as strings (SHIRT-01; #768): a
+SharedPreferences string list, as ``excluded_tracks``. A staff key (D-414), read as
+the screen opens, as the sponsor is (D-425); ids no longer in the catalog are ignored."""
+
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -111,6 +116,7 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     START_SCREEN,
     SCANNER_CONSENT,
     STAFF_SPONSOR,
+    STAFF_SWAG_CATEGORIES,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""

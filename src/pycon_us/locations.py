@@ -42,6 +42,7 @@ PAGES = frozenset(
         "/now/venue",
         "/now/staff/lead",
         "/now/staff/lead/sponsor",
+        "/now/staff/swag",
         "/my-schedule/settings",
         "/more/speakers",
         "/more/tracks",
@@ -69,6 +70,7 @@ PAGES = frozenset(
         "/more/account/sign-in",
         LEAD_SCANNER,
         f"{LEAD_SCANNER}/sponsor",
+        "/more/staff/swag",
     }
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).
