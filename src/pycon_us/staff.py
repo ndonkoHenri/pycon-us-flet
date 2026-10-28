@@ -4,7 +4,7 @@ The rows live in ``outbox.db`` (``services/outbox_db.py``); this store holds wha
 sync chip, the queue sheet and sign-out's question show about them: how many of the
 signed-in account's rows are pending, failed and synced, whether a sync pass is under
 way and how the last one ended. ``services/sync.py``'s ``SyncWorker`` writes it after
-each pass, and whatever else changes the rows (an enqueue, "Retry failed") calls
+each pass, and whatever else changes the rows (an enqueue, ``retry_failed()``) calls
 ``update_counts()`` after its write. ``revision`` counts those calls, so a list of rows
 re-reads the database when it changes (D-69). The sponsor picked to scan for, the door
 inventory and the Code of Conduct directory join it with #39, #40 and #42.
@@ -14,7 +14,9 @@ from dataclasses import dataclass
 
 import flet as ft
 
-from pycon_us.services.outbox_db import Counts
+from pycon_us.core import outbox
+from pycon_us.core.outbox import Status
+from pycon_us.services.outbox_db import Counts, OutboxDb
 
 
 # eq=False: a store is one object, compared by identity (F5), as Account.
@@ -33,6 +35,8 @@ class Staff:
             tried ended (epoch seconds), or None before the first.
         last_error: Why the last pass stopped or a row was refused, or None when the
             last pass went through.
+        offline: Whether the last pass ended without an answer (a ``NetworkError``):
+            the sync chip then says "Offline · 3 queued" (#694).
         revision: Bumped each time the rows change, so a list of them re-reads.
     """
 
@@ -42,6 +46,7 @@ class Staff:
     syncing: bool = False
     last_sync_at: float | None = None
     last_error: str | None = None
+    offline: bool = False
     revision: int = 0
 
     def update_counts(self, counts: Counts | None) -> None:
@@ -64,7 +69,28 @@ class Staff:
         self.syncing = False
         self.last_sync_at = None
         self.last_error = None
+        self.offline = False
         self.revision += 1
+
+    def retry_failed(self, db: OutboxDb, owner: str, now: float) -> int:
+        """Make the owner's failed rows pending again ("Retry failed"), then recount.
+
+        Each row is saved as ``outbox.retry_failed()`` makes it: no counted failures,
+        due now, its "may be recorded twice" flag kept (D-410). The caller then kicks
+        the worker (``Services.kick_sync()``).
+
+        Args:
+            db: The outbox.
+            owner: The signed-in account's lower-cased email.
+            now: The current time (epoch seconds).
+
+        Returns:
+            How many rows are pending again; 0 when the database failed (logged).
+        """
+        rows = db.rows(owner, (Status.FAILED,)) or []
+        retried = sum(db.save(outbox.retry_failed(row, now)) for row in rows)
+        self.update_counts(db.counts(owner))
+        return retried
 
 
 StaffCtx: ft.ContextProvider[Staff | None] = ft.create_context(None)
