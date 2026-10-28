@@ -246,9 +246,9 @@ leaves the others for later requests.
 
 | Fault | What happens | What it simulates | The client sees |
 |---|---|---|---|
-| `connect` | `transport.py` raises `httpx.ConnectError` before `handle` runs; the server closes the connection without a reply. Nothing is applied. | No route to the server, or a refused connection | `NetworkError` |
-| `timeout` | `transport.py` raises `httpx.ReadTimeout` before `handle` runs; the server holds the request unanswered until the client hangs up (60 s at most, longer than any Ionic timeout). Nothing is applied. | A request that gets no answer within the endpoint's timeout | `NetworkError` |
-| `lost_response` | `handle` runs and its writes stay; then `transport.py` raises `httpx.ReadError`, and the server closes the connection without the reply. | The server committed, the reply was lost: the client can't tell, and sends it again | `NetworkError`, while the mock holds the record; a resend gives one record under `idempotent` capture and two under `non_idempotent` (the duplicate the outbox must detect and show) |
+| `connect` | `transport.py` raises `httpx.ConnectError` before `handle` runs; the server closes the connection without a reply. Nothing is applied. | No route to the server, or a refused connection | `NetworkError` with `maybe_sent` False |
+| `timeout` | `transport.py` raises `httpx.ReadTimeout` before `handle` runs; the server holds the request unanswered until the client hangs up (60 s at most, longer than any Ionic timeout). Nothing is applied. | A request that gets no answer within the endpoint's timeout | `NetworkError` with `maybe_sent` True: on a real network the server may have had it |
+| `lost_response` | `handle` runs and its writes stay; then `transport.py` raises `httpx.ReadError`, and the server closes the connection without the reply. | The server committed, the reply was lost: the client can't tell, and sends it again | `NetworkError`, while the mock holds the record; a resend gives one record under `idempotent` capture and two under `non_idempotent`. `maybe_sent` is True, so the outbox flags the row "may be recorded twice" (D-410) |
 | `revoked` | `handle` refuses a signed request whose key it knows with `401 {"code": 401, "error": "API key revoked."}`. Sign-in is unsigned, so it is never refused. | An expired or revoked key (any account's) | `ApiError` with `is_auth` |
 
 **Skew.** `state.skew` (`--skew SECONDS` on the server) runs the mock's clock that many seconds ahead of

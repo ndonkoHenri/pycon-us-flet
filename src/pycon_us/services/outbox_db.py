@@ -51,7 +51,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key)
 """
 """The first schema (architecture §12.1): the table and its three indexes."""
 
-MIGRATIONS = (OUTBOX_V1,)
+OUTBOX_V2 = """
+ALTER TABLE outbox ADD COLUMN maybe_sent INTEGER NOT NULL DEFAULT 0;
+"""
+"""``Row.maybe_sent``: a send got no answer after the server may have had it (D-410)."""
+
+MIGRATIONS = (OUTBOX_V1, OUTBOX_V2)
 """Each schema change, in order: a file at ``user_version`` n runs the ones after n."""
 
 DUE_SQL = """
@@ -72,11 +77,11 @@ DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
 
 _COLUMNS = (
     "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
-    "next_at, created_at, last_error, idem_key"
+    "next_at, created_at, last_error, idem_key, maybe_sent"
 )
 """The columns an insert or a save writes; ``revision`` counts edits on its own."""
 _VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
-_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key"
+_VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key, :maybe_sent"
 
 
 class DbClosed(Exception):
@@ -113,6 +118,7 @@ def _params(row: Row) -> dict[str, object]:
         "created_at": row.created_at,
         "last_error": row.last_error,
         "idem_key": row.idem_key,
+        "maybe_sent": int(row.maybe_sent),
         "id": row.id,
         "revision": row.revision,
     }
@@ -135,6 +141,7 @@ def _row(record: sqlite3.Row) -> Row:
         idem_key=record["idem_key"],
         id=record["id"],
         revision=record["revision"],
+        maybe_sent=bool(record["maybe_sent"]),
     )
 
 

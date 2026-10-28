@@ -360,23 +360,25 @@ Faults are raised by the transport or set on the mock, never by code in the app.
 
 | Fault | How | Expected client behaviour |
 |---|---|---|
-| Connection refused (`connect`) | transport raises `httpx.ConnectError` before `handle` | `NetworkError`; outbox tries not counted |
-| Timeout (`timeout`) | transport raises `httpx.ReadTimeout` before `handle`; per-endpoint timeouts match Ionic's table (API-12) | `NetworkError` |
-| Server committed, response lost (`lost_response`) | transport calls `handle`, then raises `httpx.ReadError` | row stays pending; the retry must not duplicate (below) |
+| Connection refused (`connect`) | transport raises `httpx.ConnectError` before `handle` | `NetworkError` with `maybe_sent` False; outbox tries not counted, row not flagged |
+| Connect timeout (a test's `Wire.before` raises `httpx.ConnectTimeout`) | the request never leaves | as `connect`: not flagged |
+| Timeout (`timeout`) | transport raises `httpx.ReadTimeout` before `handle`; per-endpoint timeouts match Ionic's table (API-12) | `NetworkError` with `maybe_sent` True: a read timeout can come after the server had it, so the row is flagged though this mock recorded nothing |
+| Server committed, response lost (`lost_response`) | transport calls `handle`, then raises `httpx.ReadError` | `NetworkError` with `maybe_sent` True; row stays pending and is flagged "may be recorded twice" for good (D-410); the retry must not duplicate under idempotent semantics (below) |
 | Expired auth (`revoked`) | mock answers 401 for every signed call | `ApiError.is_auth`; sign-in prompt; queue kept |
 | Skewed clock (`MockState.skew`) | mock clock offset, 900 s in the tests | skew learned from `Date`, one retry, then success |
 | Account or sponsor switch with rows pending | changed between syncs | rows keep owner and sponsor snapshot |
 
-**Both capture semantics.** Sync tests are parametrised over `MockState(capture="idempotent")` and `"non_idempotent"`. Idempotent: every record is stored exactly once. Non-idempotent: a lost response plus a retry can create a second server record, which no client can prevent, so the test asserts what the client guarantees: never lost, never misattributed, one local synced row, and every duplicate traced to an ambiguous failure in the mock's log (§14).
+**Both capture semantics.** Sync tests are parametrised over `MockState(capture="idempotent")` and `"non_idempotent"`. Idempotent: every record is stored exactly once. Non-idempotent: a lost response plus a retry can create a second server record, which no client can prevent, so the test asserts what the client guarantees: never lost, never misattributed, one local synced row, and every duplicate traced to an ambiguous failure in the mock's log (§14). `tests/test_sync_faults.py` (#693, D-410) is that check: a lost answer on a lead capture or a door redemption under each semantics flags exactly that row ("Confirmed · may be recorded twice", idempotent included, since the client cannot tell), every row the mock recorded twice is a flagged one, and `connect` or a connect timeout flags nothing and records each row once.
 
 ### 4.3 Outbox (D-56)
 
-A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure, server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
+A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure (before the request left, or a lost answer), server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
 
 - no unsynced row is ever lost, an account switch included;
 - a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor;
 - only rows sent successfully are synced, and a synced row is never due again;
 - network failures never increase `tries`; a row is `failed` exactly at 10 counted failures;
+- a row is flagged `maybe_sent` ("may be recorded twice") exactly from its first lost answer on, whatever follows (D-410);
 - a note is never due before its lead is synced, and its lead row is kept while it waits;
 - one lead and one note row per (owner, code); at most one door row per (code, products, session).
 

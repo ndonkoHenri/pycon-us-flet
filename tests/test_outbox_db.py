@@ -139,6 +139,26 @@ def test_rows_survive_close_and_reopen_without_migrating_again(tmp_path: Path) -
     second.close()
 
 
+def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
+    tmp_path: Path,
+) -> None:
+    """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file: its rows read unflagged (D-410)."""
+    with raw(tmp_path / "outbox.db") as v1:
+        v1.executescript(f"{MIGRATIONS[0]}PRAGMA user_version = 1;")
+        v1.execute(
+            "INSERT INTO outbox (kind, key, payload_json, owner, next_at, created_at)"
+            " VALUES ('lead', 'A1', '{}', ?, ?, ?)",
+            (OWNER, NOW, NOW),
+        )
+    database = OutboxDb(tmp_path)
+    (row,) = database.rows(OWNER, [Status.PENDING]) or []
+    assert (row.key, row.maybe_sent) == ("A1", False)
+    flagged = outbox.after_network_error(row, NOW, maybe_sent=True)
+    assert database.save(flagged)
+    assert database.rows(OWNER, [Status.PENDING]) == [flagged]
+    database.close()
+
+
 def test_the_connection_refuses_any_thread_but_the_one_that_opened_it(
     db: OutboxDb,
 ) -> None:

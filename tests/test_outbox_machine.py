@@ -1,8 +1,8 @@
 """A hypothesis state machine over the outbox's rules (D-56, D-77; testing §4.3).
 
 The machine plays the db and the ``SyncWorker`` with ``core/outbox.py``'s pure rules:
-scans, notes and door admissions, sends that succeed or fail with a ``NetworkError`` or
-an ``ApiError`` (one at a time or in streaks, to reach the cap), "Retry failed", sponsor
+scans, notes and door admissions, sends that succeed or fail with a ``NetworkError``
+(before the request left, or after: a lost answer) or an ``ApiError`` (one at a time or in streaks, to reach the cap), "Retry failed", sponsor
 and account switches, and time passing. It keeps its own record of what each row should
 be, independently of the rows, and checks the invariants after every step.
 """
@@ -19,7 +19,7 @@ from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
 OWNERS = ("a@example.com", "b@example.com")
 CODES = st.sampled_from(("A", "B", "C"))
 SPONSORS = st.sampled_from((("1", "One"), ("2", "Two"), (None, None)))
-SENDS = st.sampled_from(("ok", "network", "api"))
+SENDS = st.sampled_from(("ok", "network", "lost", "api"))
 NOTES = st.sampled_from(("", "  ", "Hot", "Cold"))
 PRODUCTS = st.lists(st.sampled_from((1, 2, 3)), min_size=1, max_size=3, unique=True)
 
@@ -52,6 +52,7 @@ class OutboxMachine(RuleBasedStateMachine):
         self.unsynced: set[int] = set()
         self.synced: set[int] = set()
         self.api_errors: dict[int, int] = {}
+        self.lost: set[int] = set()
 
     def store(self, decision: Enqueued, *, counted_from_zero: bool) -> None:
         """Apply an enqueue's decision as the db would, and record what to expect.
@@ -175,8 +176,13 @@ class OutboxMachine(RuleBasedStateMachine):
             self.rows[row.id] = outbox.after_success(row, {"ok": True})
             self.unsynced.discard(row.id)
             self.synced.add(row.id)
-        elif outcome == "network":
-            self.rows[row.id] = outbox.after_network_error(row, self.now)
+        elif outcome in ("network", "lost"):
+            lost = outcome == "lost"  # the request may have reached the server
+            self.rows[row.id] = outbox.after_network_error(
+                row, self.now, maybe_sent=lost
+            )
+            if lost:
+                self.lost.add(row.id)
         else:
             self.rows[row.id] = outbox.after_error(row, "500", self.now)
             self.api_errors[row.id] += 1
@@ -264,6 +270,13 @@ class OutboxMachine(RuleBasedStateMachine):
         for row_id, row in self.rows.items():
             assert row.tries == self.api_errors[row_id] <= outbox.RETRY_CAP
             assert (row.status is Status.FAILED) == (row.tries == outbox.RETRY_CAP)
+
+    @invariant()
+    def flagged_exactly_after_a_lost_answer(self) -> None:
+        """A row says "may be recorded twice" from its first lost answer on, for good."""
+        for row_id, row in self.rows.items():
+            assert row.maybe_sent == (row_id in self.lost)
+            assert (outbox.MAYBE_TWICE in outbox.status_text(row)) == row.maybe_sent
 
     @invariant()
     def one_row_per_lead_note_and_check_in(self) -> None:

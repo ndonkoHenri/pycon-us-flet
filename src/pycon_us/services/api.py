@@ -32,30 +32,50 @@ type Credentials = Callable[[], tuple[str | None, str | None]]
 """Returns the signed-in account's API key and secret, or Nones when signed out."""
 
 
+NOT_SENT = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.PoolTimeout,
+    httpx.ProxyError,
+    httpx.UnsupportedProtocol,
+)
+"""The transport errors raised before a request can have left: no connection was made
+(DNS failures are ``ConnectError``s). Every other one may come after the server got it."""
+
+
 class NetworkError(Exception):
     """No answer: no connection, a DNS failure, a dropped connection or a timeout.
 
     Attributes:
         timed_out: Whether the wait ran out (``httpx.TimeoutException``), which
             sign-in says apart from being offline (D-54).
+        maybe_sent: Whether the request may have reached the server, which may then
+            have applied it though no answer came back (a read error or timeout, a
+            dropped connection); False only when it surely never left (``NOT_SENT``).
+            The outbox flags such a row "may be recorded twice" (D-57, D-410).
     """
 
-    def __init__(self, message: str, *, timed_out: bool = False) -> None:
+    def __init__(
+        self, message: str, *, timed_out: bool = False, maybe_sent: bool = False
+    ) -> None:
         """Create the error.
 
         Args:
             message: What happened, for the log.
             timed_out: Whether the request timed out rather than found no server.
+            maybe_sent: Whether the request may have reached the server.
         """
         super().__init__(message)
         self.timed_out = timed_out
+        self.maybe_sent = maybe_sent
 
     @classmethod
     def of(cls, error: httpx.TransportError) -> NetworkError:
-        """Return the error for ``httpx``'s, saying whether it was a timeout."""
+        """Return the error for ``httpx``'s: a timeout or not, maybe sent or not."""
         return cls(
             f"{type(error).__name__}: {error}",
             timed_out=isinstance(error, httpx.TimeoutException),
+            maybe_sent=not isinstance(error, NOT_SENT),
         )
 
 

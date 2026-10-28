@@ -1128,7 +1128,7 @@ class ApiClient:
 ```
 
 - Two errors only (D-53): `NetworkError` (no answer: connection, DNS or timeout; never counted in the outbox) and `ApiError(status, message)` with `.is_auth` for 401/403. `message` is the server's own `error` (signed calls) or `message` (`authenticate`), else the reason phrase; a `{code, error}` envelope (whatever the status), a 2xx that is not JSON, or an enveloped reply without `data`, is an `ApiError` too, while a bare endpoint's JSON `null` is a success (returned as `None`). `refuse_private_psf`'s `PermissionError` is neither: it is a refused misconfiguration, not an answer (the Developer screen can run the guard on a base URL before it builds the client).
-- `self._http` is one `httpx.AsyncClient(base_url=..., transport=...)`, redirects not followed (a redirected request would need a new signature); tests pass `tools/mock_api/transport.py`'s `mock_transport`. `credentials()` returns the key and secret: `Account.credentials`, which `PrivateApi` hands every client it builds (#684); signed out, the request goes without `X-API-Key` and the server answers 401. `NetworkError.timed_out` says whether no answer was a timeout (`httpx.TimeoutException`), which sign-in says apart from being offline (D-54, #684).
+- `self._http` is one `httpx.AsyncClient(base_url=..., transport=...)`, redirects not followed (a redirected request would need a new signature); tests pass `tools/mock_api/transport.py`'s `mock_transport`. `credentials()` returns the key and secret: `Account.credentials`, which `PrivateApi` hands every client it builds (#684); signed out, the request goes without `X-API-Key` and the server answers 401. `NetworkError.timed_out` says whether no answer was a timeout (`httpx.TimeoutException`), which sign-in says apart from being offline (D-54, #684). `NetworkError.maybe_sent` says whether the request may have reached the server (D-410, #693): False only for the errors raised before a connection existed (`NOT_SENT`: `ConnectError`, DNS failures included, `ConnectTimeout`, `PoolTimeout`, `ProxyError`, `UnsupportedProtocol`), True for the rest (a read or write error or timeout, a protocol error), after which the server may have applied it; the outbox flags such a row (§12.2).
 - Signing `url.raw_path` (exactly what httpx sends) rules out "re-encoded after signing" bugs; queries are still built the Ionic way by `services/endpoints.py`'s `fetch_products_query`, `coc_capture_query` and `lead_capture_query` (§10.4), never `params=`. The skew is learned from every reply's `Date` (`server_time`, `email.utils.parsedate_to_datetime`) and kept; a signed call refused with 403 while the timestamp it sent was more than `SKEW_LIMIT` from that `Date` is sent once more, and a refused retry is final. Callers trust these errors, not `ft.Connectivity`. `fetch_feed(url)` (P0) is an unsigned 10 s GET with the same errors.
 
 ### 10.3 Signing (`core/signing.py`; D-52; built in #662)
@@ -1205,13 +1205,13 @@ Each row is an `Endpoint(name, method, path, timeout, signed=True, enveloped=Fal
 
 `transport.py` wraps `handle` in `httpx.MockTransport`: a `connect` fault raises `httpx.ConnectError` and a `timeout` fault `httpx.ReadTimeout` before `handle` runs; a `lost_response` fault runs `handle` (the server commits) and then raises `httpx.ReadError`. The server drops the connection for the same faults (holding it unanswered for `timeout`). `handle` itself answers 401 under `revoked`, and dates its replies and checks the window with `MockState.skew` added to its clock. Signatures are checked against `request.url.raw_path`, exactly as sent. The scenarios through the real client are `tests/test_api_faults.py` (#667).
 
-**Scenarios (D-57):** connection refused (tries not counted); committed-but-lost response (no duplicate lead); revoked key (sign-in prompt, rows wait); clock skewed by 900 s (one corrected retry); account or sponsor switch mid-queue (rows keep their snapshot); `MockState(capture="idempotent" | "non_idempotent")`, since client dedupe cannot prove server exactly-once.
+**Scenarios (D-57):** connection refused (tries not counted, nothing flagged); committed-but-lost response (no duplicate lead under idempotent semantics; under non-idempotent ones the resend is a second record, and its row is flagged "may be recorded twice", D-410; `tests/test_sync_faults.py`); revoked key (sign-in prompt, rows wait); clock skewed by 900 s (one corrected retry); account or sponsor switch mid-queue (rows keep their snapshot); `MockState(capture="idempotent" | "non_idempotent")`, since client dedupe cannot prove server exactly-once.
 
 ---
 
 ## 12. Staff tools: outbox, sync and scanning (P3; D-56, D-65)
 
-### 12.1 Outbox (`OUTBOX_V1` in `services/outbox_db.py`)
+### 12.1 Outbox (`OUTBOX_V1` and `OUTBOX_V2` in `services/outbox_db.py`)
 
 ```sql
 CREATE TABLE IF NOT EXISTS outbox (
@@ -1234,6 +1234,9 @@ CREATE INDEX IF NOT EXISTS outbox_due ON outbox (owner, status, next_at);
 CREATE INDEX IF NOT EXISTS outbox_key ON outbox (owner, kind, key);
 CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key) WHERE idem_key IS NOT NULL;
 
+-- OUTBOX_V2 (#693, D-410): a send got no answer after the server may have had it; never cleared
+ALTER TABLE outbox ADD COLUMN maybe_sent INTEGER NOT NULL DEFAULT 0;
+
 -- due rows: a note waits until its lead is synced
 SELECT o.* FROM outbox o
 WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
@@ -1248,7 +1251,7 @@ Synced rows are kept: lead dedupe and door "Already checked in" read them. On an
 
 ### 12.2 Transitions (`core/outbox.py`, pure; hypothesis state-machine tests)
 
-Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outcome, row)`: `queued` (insert the new row), `updated` (save the changed row), `already` (nothing to store; the row is the one that made it so) or `ignored`. The send transitions (`after_success()`, `after_network_error()`, `after_error()`) refuse a row that isn't pending, `retry_failed()` one that isn't failed. `due(rows, owner, now)` is the Python twin of §12.1's query, so the db's SQL is tested against it.
+Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outcome, row)`: `queued` (insert the new row), `updated` (save the changed row), `already` (nothing to store; the row is the one that made it so) or `ignored`. The send transitions (`after_success()`, `after_network_error()`, `after_error()`) refuse a row that isn't pending, `retry_failed()` one that isn't failed. `due(rows, owner, now)` is the Python twin of §12.1's query, so the db's SQL is tested against it. `status_text(row)` is a row's status in the queue sheet's words (`STATUS_WORDS`: Queued, Confirmed, Failed), followed by " · may be recorded twice" (`MAYBE_TWICE`) once the row is flagged (`Row.maybe_sent`): a send that ended in a `NetworkError` with `maybe_sent` sets it, and no later outcome, edit or "Retry failed" clears it, so a row that then syncs reads "Confirmed · may be recorded twice" (D-57, D-410). The client cannot see the server's records, so this is how a duplicate is detected and shown; the queue sheet and the tools' lists (#694, #39, #40) show it with an icon beside the words.
 
 | From | Event | To | Effect |
 |---|---|---|---|
@@ -1262,11 +1265,11 @@ Each enqueue (`scan_lead()`, `save_note()`, `admit()`) returns an `Enqueued(outc
 | — | door admit; its `idem_key` exists | — | `already`: the queued check-in |
 | — | door admit otherwise | pending | `queued`: unique `idem_key` (code, sorted product ids and scan session, joined by `\|`); one row per check-in |
 | pending | sent | synced | result merged into the payload under `"result"`; `last_error` cleared |
-| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60` (`NETWORK_BACKOFF`), end the pass |
+| pending | `NetworkError` | pending | tries unchanged, `next_at = now + 60` (`NETWORK_BACKOFF`), end the pass; when `maybe_sent`, `maybe_sent = 1` for good (D-410) |
 | pending | `ApiError` | pending → failed | `tries += 1`, `last_error`, `next_at = now + 60`; failed at 10 (`RETRY_CAP`) counted failures |
 | failed | "Retry failed" | pending | `tries = 0`, `next_at = now`, `last_error` cleared |
 
-Invariants (`tests/test_outbox_machine.py`, a `RuleBasedStateMachine` with scans, notes, door admits, sends that succeed or fail either way, streaks of refusals, "Retry failed", sponsor and account switches and time passing): no unsynced row lost; owner, sponsor snapshot, kind, code, `idem_key` and `created_at` fixed at enqueue; only sent rows are synced, and a synced row is never due; a note is never due before its lead is synced, keeps its lead's sponsor, and its lead row is never forgotten while it waits; `tries` counts only `ApiError`s, and a row is failed exactly at 10; one lead and one note row per (owner, code), one door row per `idem_key`. The table's rows are `tests/test_outbox.py`. Swag pickup and CoC capture are **online-only** and say so before scanning.
+Invariants (`tests/test_outbox_machine.py`, a `RuleBasedStateMachine` with scans, notes, door admits, sends that succeed or fail either way (a `NetworkError` before the request left, or after it: a lost answer), streaks of refusals, "Retry failed", sponsor and account switches and time passing): no unsynced row lost; owner, sponsor snapshot, kind, code, `idem_key` and `created_at` fixed at enqueue; only sent rows are synced, and a synced row is never due; a note is never due before its lead is synced, keeps its lead's sponsor, and its lead row is never forgotten while it waits; `tries` counts only `ApiError`s, and a row is failed exactly at 10; a row is flagged `maybe_sent` exactly from its first lost answer on (D-410); one lead and one note row per (owner, code), one door row per `idem_key`. The table's rows are `tests/test_outbox.py`. Swag pickup and CoC capture are **online-only** and say so before scanning.
 
 ### 12.3 `SyncWorker` (`services/sync.py`; #692, D-407)
 
@@ -1303,8 +1306,9 @@ class SyncWorker:
                 tried.add((row.id, row.revision))
                 try:
                     result = await send(self._api, row)
-                except NetworkError as failure:
-                    self._db.save(outbox.after_network_error(row, self._now()))
+                except NetworkError as failure:  # flags the row when maybe_sent (D-410)
+                    self._db.save(outbox.after_network_error(
+                        row, self._now(), maybe_sent=failure.maybe_sent))
                     return str(failure), False
                 except ApiError as failure:
                     if failure.status == REFUSED_KEY:  # 401: not counted
@@ -1320,7 +1324,7 @@ class SyncWorker:
 
 `due_rows()` gives each row its `revision`, so the worker needs nothing more: a `save()` refused because the row was edited during its send leaves the edit due (§12.1), and the pass reads the due rows again until none is left, so the edit, and a note whose lead synced in the pass, go at once. `send(api, row)` is a `match row.kind` over `lead_capture` (query from the payload's `badge_validator` and the row's `sponsor_id`), `lead_note` (the payload plus the row's `sponsor_id`) and `redeem` (the payload as it is): always the row's snapshot, never the sponsor picked now (STORE-11). `run(tick=60)` waits for `foreground`, returns once `closed` is set, clears the wake, drains (wrapped in `report_errors`), then waits for the wake or the tick. Outbox times are real epoch seconds (`time.time()`), like the signatures.
 
-`supervise(svc, account, staff, prefs)` keeps the one worker: it subscribes to `Account` and `Prefs` (where the mock URL is) and, on each change, compares `sync_target()` (the client and the owner while `Services.api` exists and the account is signed in and not `expired`, else None) with the running worker's; a different one cancels the old task before starting the next, so two never send at once, and None clears `Staff` when signed out. `use_sync_worker()`, called by `App` before the boot gate, runs it in one effect keyed on `prefs.loaded`, so unmount cancels it (F2) and `close()` ends it (D-147). `Services.sync_wake` is the worker's wake: `kick_sync()` (every enqueue and "Sync now"), `on_resume()`, `close()` and `ft.Connectivity`'s change to anything but `NONE` set it. Tests: `tests/test_sync.py` (order, a note after its lead, faults, the cap, D-57's exactly-once under `lost_response`, connection errors and skew, owners and sponsors, one pass at a time, cancellation) and `tests/test_sync_loop.py` (the loop, the supervisor, the triggers).
+`supervise(svc, account, staff, prefs)` keeps the one worker: it subscribes to `Account` and `Prefs` (where the mock URL is) and, on each change, compares `sync_target()` (the client and the owner while `Services.api` exists and the account is signed in and not `expired`, else None) with the running worker's; a different one cancels the old task before starting the next, so two never send at once, and None clears `Staff` when signed out. `use_sync_worker()`, called by `App` before the boot gate, runs it in one effect keyed on `prefs.loaded`, so unmount cancels it (F2) and `close()` ends it (D-147). `Services.sync_wake` is the worker's wake: `kick_sync()` (every enqueue and "Sync now"), `on_resume()`, `close()` and `ft.Connectivity`'s change to anything but `NONE` set it. Tests: `tests/test_sync.py` (order, a note after its lead, faults, the cap, D-57's exactly-once under `lost_response`, connection errors and skew, owners and sponsors, one pass at a time, cancellation), `tests/test_sync_faults.py` (D-57's duplicates: a lost answer flags exactly its row under both semantics, every duplicate the mock records is a flagged row, and a failure before the request left flags none; D-410) and `tests/test_sync_loop.py` (the loop, the supervisor, the triggers).
 
 ### 12.4 Staff gating (D-16, D-54; exhaustive truth-table test)
 
