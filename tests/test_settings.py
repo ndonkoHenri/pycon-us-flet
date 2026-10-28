@@ -201,8 +201,8 @@ def test_reminders_sit_between_appearance_and_data_in_the_interim(
 def test_a_build_with_reminders_shows_no_interim_section(
     render: Callable[[], dict[str, Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With E3 bundled the interim goes; its live controls are P2-89's."""
-    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS", True)
+    """Once reminders are live the interim goes; its live controls are P2-89's."""
+    monkeypatch.setattr(settings_reminders.capabilities, "REMINDERS_LIVE", True)
     rows = rows_of(render())
     assert len(rows) == 4
     assert rows[3] is DATA_SECTION

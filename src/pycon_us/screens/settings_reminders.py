@@ -1,11 +1,13 @@
 """Settings' Reminders section, in D-60's honest interim (NOTIF-01, P2-69).
 
-Until scheduled notifications (E3) are in the pinned Flet, and always in the companion
-app (D-63), the section is a level-2 heading and one sentence that says reminders aren't
-available in this build and what covers for them, with no switch that would do nothing
-(ux.md §6.9). On iOS the sentence adds that calendar exports carry an alarm; Android's
-calendar import drops it, so there it doesn't (D-272). A module of its own so that P2-89
-replaces its body with the live controls once ``capabilities.REMINDERS`` is true.
+In a build without scheduled notifications (E3, ``flet-notifications``), and always in
+the companion app (D-63), the section is a level-2 heading and one sentence that says
+reminders aren't available in this build and what covers for them, with no switch that
+would do nothing (ux.md §6.9). On iOS the sentence adds that calendar exports carry an
+alarm; Android's calendar import drops it, so there it doesn't (D-272). A module of its
+own so that P2-89 replaces its body with the live controls once
+``capabilities.REMINDERS_LIVE`` is true: a build that bundles E3 keeps the interim until
+then, since nothing schedules reminders before #447.
 """
 
 import flet as ft
@@ -28,15 +30,15 @@ def reminders_section(
 ) -> ft.Control | None:
     """Return the Reminders section: its heading and the interim's sentence.
 
-    ``None`` in a build that has E3 (``capabilities.REMINDERS``): its live controls are
-    P2-89's, and until they exist the page shows no section rather than a wrong one.
+    ``None`` once the app offers reminders (``capabilities.REMINDERS_LIVE``): its live
+    controls are P2-89's, and that PR replaces this.
 
     Args:
         platform: The page's platform: iOS's sentence mentions the calendar's alarm.
         slot: The width the icon is centred in: Settings' radio width, so the
             sentence starts where Appearance's titles do (#503's review).
     """
-    if capabilities.REMINDERS:
+    if capabilities.REMINDERS_LIVE:
         return None
     text = WITH_ALARM if platform == ft.PagePlatform.IOS else NOT_AVAILABLE
     return ft.Column(
