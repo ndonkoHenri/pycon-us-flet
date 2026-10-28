@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from tools.mock_api.faults import Faults
+
 SEED = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mock" / "seed.json"
 """The seed every ``MockState`` starts from: fake data only."""
 
@@ -180,8 +182,7 @@ class MockState:
     Attributes:
         year: The conference year served; requests for another year are 404.
         accounts: The accounts, looked up by email or by API key.
-        now: The mock's clock, in seconds since the epoch. Tests inject a fixed one;
-            the server can pass a skewed one.
+        now: The mock's clock, in seconds since the epoch. Tests inject a fixed one.
         sponsors: The sponsors leads go to.
         categories: The product categories.
         products: The products, by id.
@@ -194,6 +195,9 @@ class MockState:
         redeem_replies: Under ``idempotent`` capture, the first reply to each redeem
             request, keyed by (access code, ``scanned_at``, products and quantities).
         incidents: Every Code of Conduct incident recorded, in order.
+        faults: The faults switched on (D-57; ``faults.py``).
+        skew: Seconds the mock's clock runs ahead of ``now`` (behind when negative),
+            so a device whose clock is right looks skewed to it (D-57, ``--skew``).
     """
 
     year: int
@@ -209,6 +213,8 @@ class MockState:
     redemptions: list[Redemption] = field(default_factory=list)
     redeem_replies: dict[tuple[object, ...], object] = field(default_factory=dict)
     incidents: list[Incident] = field(default_factory=list)
+    faults: Faults = field(default_factory=Faults)
+    skew: float = 0.0
 
     def __post_init__(self) -> None:
         """Refuse a capture semantics the mock doesn't model."""
@@ -328,7 +334,7 @@ class Call:
     Attributes:
         state: The mock's state; endpoints that write change it.
         account: The account the key belongs to.
-        now: The time of this request, from ``state.now``.
+        now: The time of this request, ``state.now()`` plus ``state.skew``.
         query: The query after ``?``, exactly as sent (``""`` when there is none).
         segment: The route's variable path segment as sent, or ``""``.
         body: The body bytes as sent.

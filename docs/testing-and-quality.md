@@ -356,15 +356,15 @@ def mock_transport(state: MockState) -> httpx.MockTransport:
 
 The client's own tests (#665) go through the same transport: `tests/test_api_client.py` round-trips every endpoint (the mock checks each signature over the bytes sent), the two errors and `is_auth`, and the skew retry (the mock's clock moved 900 s after sign-in: one corrected retry, remembered for later calls; a refused retry is final; an unsigned call or a 403 without a `Date` is never retried); `tests/test_api_endpoints.py` checks the endpoint table against the README's rows and the mock's routes, each request's timeout, and that the client sends Ionic's own target, body and headers for eight of the §4.1 vectors (the `fetch_products` path among them); `tests/test_api_guard.py` is the PSF guard (§3).
 
-Faults are raised by the transport or set on the mock, never by code in the app:
+Faults are raised by the transport or set on the mock, never by code in the app. A test switches one on with `state.faults.inject(name)`, for the next request or with `until_cleared=True` until `state.faults.clear()`; `tests/test_api_faults.py` holds the client-level scenarios (#667), and the server takes the same faults from `--fault` (development.md §6):
 
 | Fault | How | Expected client behaviour |
 |---|---|---|
-| Connection refused | transport raises `httpx.ConnectError` before `handle` | `NetworkError`; outbox tries not counted |
-| Timeout | transport raises `httpx.ReadTimeout`; per-endpoint timeouts match Ionic's table (API-12) | `NetworkError` |
-| Server committed, response lost | transport calls `handle`, then raises `httpx.ReadError` | row stays pending; the retry must not duplicate (below) |
-| Expired auth | mock answers 401/403 for the key | `ApiError.is_auth`; sign-in prompt; queue kept |
-| Skewed clock | mock clock offset of ±10 min | skew learned from `Date`, one retry, then success |
+| Connection refused (`connect`) | transport raises `httpx.ConnectError` before `handle` | `NetworkError`; outbox tries not counted |
+| Timeout (`timeout`) | transport raises `httpx.ReadTimeout` before `handle`; per-endpoint timeouts match Ionic's table (API-12) | `NetworkError` |
+| Server committed, response lost (`lost_response`) | transport calls `handle`, then raises `httpx.ReadError` | row stays pending; the retry must not duplicate (below) |
+| Expired auth (`revoked`) | mock answers 401 for every signed call | `ApiError.is_auth`; sign-in prompt; queue kept |
+| Skewed clock (`MockState.skew`) | mock clock offset, 900 s in the tests | skew learned from `Date`, one retry, then success |
 | Account or sponsor switch with rows pending | changed between syncs | rows keep owner and sponsor snapshot |
 
 **Both capture semantics.** Sync tests are parametrised over `MockState(capture="idempotent")` and `"non_idempotent"`. Idempotent: every record is stored exactly once. Non-idempotent: a lost response plus a retry can create a second server record, which no client can prevent, so the test asserts what the client guarantees: never lost, never misattributed, one local synced row, and every duplicate traced to an ambiguous failure in the mock's log (§14).

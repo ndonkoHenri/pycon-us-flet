@@ -233,24 +233,53 @@ the same lead capture or door payload twice leaves one row; under `"non_idempote
 quantity is left). An idempotent mock also keeps each redeem request's first reply in `redeem_replies` and
 answers a retry with it. Incident counts in replies are the seeded `violations` plus the recorded incidents.
 
+## Faults (D-57)
+
+Conference Wi-Fi drops requests, loses replies after the server has committed, and phones' clocks drift. The mock
+replays each on demand, so the client (and later the outbox, #38) can be tested against it. A test switches a fault
+on with `state.faults.inject(name)` and off with `state.faults.clear(name)` (`clear()` switches every fault off); the
+server takes `--fault NAME` (see [Running it](#running-it)). A fault is **one-shot** by default: the next request
+it applies to takes it and turns it off. With `until_cleared=True` (`--every-request` on the server) it hits every
+request until it is cleared. A request takes at most one transport fault, the first on in the table's order, and
+leaves the others for later requests.
+
+| Fault | What happens | What it simulates | The client sees |
+|---|---|---|---|
+| `connect` | `transport.py` raises `httpx.ConnectError` before `handle` runs; the server closes the connection without a reply. Nothing is applied. | No route to the server, or a refused connection | `NetworkError` |
+| `timeout` | `transport.py` raises `httpx.ReadTimeout` before `handle` runs; the server holds the request unanswered until the client hangs up (60 s at most, longer than any Ionic timeout). Nothing is applied. | A request that gets no answer within the endpoint's timeout | `NetworkError` |
+| `lost_response` | `handle` runs and its writes stay; then `transport.py` raises `httpx.ReadError`, and the server closes the connection without the reply. | The server committed, the reply was lost: the client can't tell, and sends it again | `NetworkError`, while the mock holds the record; a resend gives one record under `idempotent` capture and two under `non_idempotent` (the duplicate the outbox must detect and show) |
+| `revoked` | `handle` refuses a signed request whose key it knows with `401 {"code": 401, "error": "API key revoked."}`. Sign-in is unsigned, so it is never refused. | An expired or revoked key (any account's) | `ApiError` with `is_auth` |
+
+**Skew.** `state.skew` (`--skew SECONDS` on the server) runs the mock's clock that many seconds ahead of
+`state.now`, behind when negative. Replies' `Date` and the timestamp window both use it, so a device whose clock is
+right looks skewed by as much: past 600 s its signed calls are 403 until the client corrects its clock from a reply's
+`Date` (D-53). The client learns the skew from every reply, sign-in included, so after a sign-in its first signed
+call is already corrected; a skew set after sign-in costs exactly one retry.
+
+The client-level scenarios are in `tests/test_api_faults.py`; the server's handling of each fault is in
+`tests/test_mock_api_server.py`.
+
 ## Code
 
 - `handlers.py`: the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`. It does no
-  I/O and reads the time only from `MockState.now`, which tests replace with a fixed clock. It checks the route (the
-  `SIGNED` table, where `{}` matches one path segment), then the key, timestamp and signature
+  I/O and reads the time only from `MockState.now` plus its `skew`; tests replace `now` with a fixed clock. It checks
+  the route (the `SIGNED` table, where `{}` matches one path segment), then the key (and the `revoked` fault),
+  timestamp and signature
   (`hmac.compare_digest` against `core/signing.py`'s `sign` over the raw target and body as received), then runs the
   endpoint with a `Call` (the account, the time, the raw query, the path segment and the body). It also holds the
   account endpoints.
-- `state.py`: `MockState` (the seed, the capture semantics and the records above), `Call`, and `Refused`, an error
-  reply in the `{code, error}` envelope.
+- `state.py`: `MockState` (the seed, the capture semantics, the faults and the skew, and the records above), `Call`,
+  and `Refused`, an error reply in the `{code, error}` envelope.
+- `faults.py`: `Faults`, the faults switched on, each one-shot or kept until cleared ([Faults](#faults-d-57)).
 - `parse.py`: reads JSON bodies, raw (`fetch_products`) and percent-decoded (CoC, lead capture) queries, and id lists.
 - `check_in.py`, `conduct.py`, `leads.py`: the staff endpoints for door and swag, Code of Conduct, and lead
   retrieval, each behind its [role gate](#role-gates).
-- `transport.py`: `mock_transport(state)`, an `httpx.MockTransport` over `handle` that passes `request.url.raw_path`
-  and `request.content` unchanged, for client tests.
-- `server.py`: `MockServer`, a stdlib `ThreadingHTTPServer` that passes the request target and body to `handle`
-  unchanged, with one lock around it, and writes `handle`'s reply back with `handle`'s headers only (its `Date` is the
-  mock's clock). See [Running it](#running-it).
+- `transport.py`: `handle_with_faults`, which takes the transport faults around `handle` for both front ends, and
+  `mock_transport(state)`, an `httpx.MockTransport` over it that passes `request.url.raw_path` and `request.content`
+  unchanged and raises each fault as `httpx` would, for client tests.
+- `server.py`: `MockServer`, a stdlib `ThreadingHTTPServer` that passes the request target and body to
+  `handle_with_faults` unchanged, with one lock around it, and writes `handle`'s reply back with `handle`'s headers
+  only (its `Date` is the mock's clock), or drops it as a fault says. See [Running it](#running-it).
 - `badges.py`: the printable badge sheet, one HTML page of inline SVG QR codes made with `segno` (D-391), a dev
   dependency that is never bundled.
 - Tests: `tests/test_mock_api.py` (routing, envelopes, the signature check and Ionic's vectors),
@@ -259,7 +288,8 @@ answers a retry with it. Incident counts in replies are the seeded `violations` 
   `tests/test_mock_api_leads.py` (Code of Conduct and leads, both semantics), with helpers in
   `tests/mock_calls.py`; `tests/test_mock_api_server.py` runs the server on `127.0.0.1` with an ephemeral port (its
   tests are marked `loopback`, the `no_network` fixture's one opt-out, which lets httpx reach `127.0.0.1` and nothing
-  else), and `tests/test_mock_api_badges.py` checks the sheet.
+  else), and `tests/test_mock_api_badges.py` checks the sheet. The fault scenarios through the real client are in
+  `tests/test_api_faults.py`.
 
 ## Running it
 
@@ -273,15 +303,28 @@ uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the sam
 | `--host` | `127.0.0.1` | The IPv4 address to listen on. The default serves only this machine, which the iOS simulator and the Android emulator (`10.0.2.2`) reach too; `0.0.0.0` also serves the LAN. Nothing listens on a public interface unless asked. |
 | `--port` | `8000` | The port; `0` picks a free one, and the banner says which. |
 | `--capture` | `idempotent` | `idempotent` or `non_idempotent`: how a repeated lead capture, door payload or CoC scan is applied (D-57, [Unknown](#unknown)). |
+| `--fault NAME` | none | `connect`, `timeout`, `lost_response` or `revoked` for the next request it applies to ([Faults](#faults-d-57)); repeat it for several. |
+| `--every-request` | off | Keeps each `--fault` on for every request until the server stops. |
+| `--skew SECONDS` | `0` | Runs the mock's clock this far ahead of this machine's (behind when negative). |
 
-Faults (lost responses, revoked keys, a skewed clock) come with #667.
+To watch the client recover from a lost reply and a skewed clock, start
+`uv run python -m tools.mock_api.server --fault lost_response --skew 900` and sign in from the app. The log shows the
+first request applied and its reply dropped, then the app's retry, answered (the client learns the skew from that
+reply's `Date`):
+
+```text
+127.0.0.1 - - [28/Oct/2026 03:41:16] POST /2026/api/v1/authenticate/ 200 (lost_response fault, reply dropped)
+127.0.0.1 - - [28/Oct/2026 03:41:16] POST /2026/api/v1/authenticate/ 200
+127.0.0.1 - - [28/Oct/2026 03:41:16] GET /2026/api/v1/user/check_features/ 200
+```
 
 - **On start** it prints the base URL for each kind of device (this machine and the iOS simulator, the Android
-  emulator, and with `--host 0.0.0.0` the machine's LAN address) and the seeded accounts' emails and passwords, all
-  fake. It never prints a key or a secret.
+  emulator, and with `--host 0.0.0.0` the machine's LAN address), the faults and skew that are on, and the seeded
+  accounts' emails and passwords, all fake. It never prints a key or a secret.
 - **State** is in memory: a restart is a clean slate. Ctrl-C stops it.
 - **The log** has one line per request, errors the server sends itself (a malformed request, an unsupported method)
-  included: the client's address, the method, the path without its query, and the status. The access code in
+  included: the client's address, the method, the path without its query, and the status (`-` when a fault took the
+  request before `handle`), followed by the fault when one took it. The access code in
   `lead_retrieval/<code>/note/` shows as `<code>`. It never logs a query, a header or a body, so no access code, key,
   signature or password reaches it.
 - **It only answers.** Every reply comes from `handle`; the server never points at, proxies or copies a PSF host
