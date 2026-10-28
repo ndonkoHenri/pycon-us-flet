@@ -23,7 +23,8 @@ from pycon_us.account import Account, SignIn
 from pycon_us.config import load_year
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Status
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.prefs import Prefs
 from pycon_us.screens import account as account_screen
 from pycon_us.screens.account import (
     DISCORD_OFFLINE,

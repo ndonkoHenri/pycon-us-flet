@@ -15,10 +15,11 @@ import pytest
 from flet.components.component import Renderer
 
 from pycon_us import app
+from pycon_us.accessibility import read_accessibility
 from pycon_us.app import apply_theme
 from pycon_us.layout import Layout
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import Prefs, read_accessibility
+from pycon_us.prefs import Prefs
 from pycon_us.services import Services
 from pycon_us.ui.time_gutter import GutterProbe
 from tests import app_start

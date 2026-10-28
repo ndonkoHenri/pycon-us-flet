@@ -11,9 +11,14 @@ import pytest
 
 from pycon_us.account_profile import FLAGS
 from pycon_us.core.staff_tools import (
+    BUILT_TOOLS,
+    QUEUED_TOOLS,
     TOOLS,
     ToolKey,
+    built_entries,
+    card_tool,
     may_open,
+    queue_words,
     scans_for_sponsor,
     staff_entries,
 )
@@ -68,6 +73,8 @@ def test_the_tools_are_in_o7_order_with_their_routes() -> None:
     assert [tool.key for tool in TOOLS] == ["lead", "door", "swag", "coc"]
     for tool in TOOLS:
         assert tool.route == f"/more/staff/{tool.key}"
+        assert tool.now_route == f"/now/staff/{tool.key}"  # Now's card (D-421)
+        assert tool.purpose  # More's row's second line
         assert getattr(ft.Icons, tool.icon) is not None
     assert [tool.title for tool in TOOLS] == [
         "Lead scanner",
@@ -80,3 +87,37 @@ def test_the_tools_are_in_o7_order_with_their_routes() -> None:
 def test_the_flags_are_the_account_stores() -> None:
     """The gating reads the ``Account`` attributes that the server's flags fill."""
     assert set(FLAGS.values()) >= {"lead_retrieval", "door_check", "mask_violation"}
+
+
+def test_only_built_tools_are_entries_until_their_screens_land() -> None:
+    """Of all four tools, only the Lead scanner has a screen yet (D-169, #723)."""
+    every = {"lead_retrieval": True, "door_check": True, "mask_violation": True}
+    assert BUILT_TOOLS == QUEUED_TOOLS == (LEAD,)
+    assert [tool.key for tool in built_entries(every)] == [LEAD]
+    assert built_entries({"mask_violation": True}) == ()  # CoC waits for #42
+
+
+def test_the_card_opens_the_last_tool_while_allowed_else_the_first() -> None:
+    """The remembered key wins while listed; else the first entry; none, None."""
+    lead, door, swag, _ = TOOLS
+    entries = (lead, door, swag)
+    assert card_tool(entries, "") is lead
+    assert card_tool(entries, "swag") is swag
+    assert card_tool(entries, "coc") is lead  # no longer this account's
+    assert card_tool((), "lead") is None
+
+
+@pytest.mark.parametrize(
+    ("pending", "failed", "words"),
+    [
+        (0, 0, ""),
+        (3, 0, "3 pending"),
+        (0, 1, "1 failed"),
+        (3, 1, "3 pending · 1 failed"),
+    ],
+)
+def test_queue_words_say_the_counts_and_nothing_when_none_wait(
+    pending: int, failed: int, words: str
+) -> None:
+    """Pending, then failed, joined by " · "; nothing waiting says nothing."""
+    assert queue_words(pending, failed) == words

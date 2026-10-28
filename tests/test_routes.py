@@ -83,6 +83,7 @@ def test_a_drill_chain_builds_one_view_per_level_with_its_own_params() -> None:
         ("/more/about/help", ["More", "AboutPycon", "Help"]),
         ("/more/about/venue", ["More", "AboutPycon", "Venue"]),
         ("/more/staff/lead", ["More", "LeadScanner"]),
+        ("/now/staff/lead", ["Now", "LeadScanner"]),  # Now's card (D-421)
         ("/search", ["Search"]),
         ("/search/speaker/17/session/42", ["Search", "Drill", "Drill"]),
         (

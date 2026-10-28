@@ -20,9 +20,10 @@ import pytest
 
 from pycon_us.account import Account
 from pycon_us.config import load_year
+from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.prefs import Prefs
 from pycon_us.screens import settings
 from pycon_us.screens.settings import FOLLOWS_DEVICE, RADIO_WIDTH, Settings
 from pycon_us.services import Services

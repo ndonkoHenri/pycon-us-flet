@@ -17,11 +17,12 @@ import httpx
 import pytest
 
 from pycon_us import app, clock
+from pycon_us.accessibility import read_accessibility
 from pycon_us.account import Account
 from pycon_us.app import bootstrap, on_resume
 from pycon_us.change_log import ChangeLog
 from pycon_us.favorites import Favorites
-from pycon_us.prefs import Prefs, read_accessibility
+from pycon_us.prefs import Prefs
 from pycon_us.services import Services, api
 from pycon_us.services.favorites_sync import FavoritesSync
 from pycon_us.services.private_api import PrivateApi
@@ -135,7 +136,7 @@ async def test_a_failed_read_on_resume_keeps_the_flags_and_the_crossfade(
     semantics.features.update(high_contrast=True, reduce_motion=True)
     conference, prefs = await started(fake_page, svc)
     semantics.error = TimeoutError()  # the Flutter side does not answer
-    with caplog.at_level(logging.WARNING, logger="pycon_us.prefs"):
+    with caplog.at_level(logging.WARNING, logger="pycon_us.accessibility"):
         await on_resume(svc, conference, prefs, Account())
     assert semantics.reads == 2
     # The last good snapshot stands; nothing falls back to the defaults (F13).
@@ -150,7 +151,7 @@ async def test_a_change_of_reduced_motion_is_logged_once(
     """Reduced motion turning on is logged once, not again on an unchanged read."""
     prefs = Prefs()
     semantics.features["disable_animations"] = True
-    with caplog.at_level(logging.INFO, logger="pycon_us.prefs"):
+    with caplog.at_level(logging.INFO, logger="pycon_us.accessibility"):
         await read_accessibility(semantics, prefs)
         await read_accessibility(semantics, prefs)  # unchanged: resumes are many
     assert [r.getMessage() for r in caplog.records] == ["Reduced motion is on"]

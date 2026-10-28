@@ -11,12 +11,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from pycon_us import prefs as prefs_module
-from pycon_us.prefs import (
-    HIGH_CONTRAST_SETTINGS,
-    Prefs,
-    parse_feed_url,
-    with_dev_options,
-)
+from pycon_us.dev_options import parse_feed_url, with_dev_options
+from pycon_us.prefs import HIGH_CONTRAST_SETTINGS, Prefs
 from pycon_us.reminder_settings import ReminderSettings
 
 # ------------------------------------------------------------------ resolved values

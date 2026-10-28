@@ -18,13 +18,15 @@ import pytest
 from pycon_us import prefs as prefs_module
 from pycon_us.account import Account
 from pycon_us.config import load_year
+from pycon_us.dev_options import DEV_MOCK_API_URL, DEV_UNLOCKED
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import DEV_MOCK_API_URL, DEV_UNLOCKED, Prefs
+from pycon_us.prefs import Prefs
 from pycon_us.screens import more
 from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from pycon_us.staff import Staff
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
     MemoryClipboard,
@@ -70,6 +72,12 @@ def account() -> Account:
     return Account(restored=True)
 
 
+@pytest.fixture
+def staff() -> Staff:
+    """An empty ``Staff`` store: nothing queued."""
+    return Staff()
+
+
 async def retap() -> None:
     """The root's re-tap action, as ``use_scroll_to_top()`` would return it."""
 
@@ -80,6 +88,7 @@ def render(
     svc: Services,
     prefs: Prefs,
     account: Account,
+    staff: Staff,
     page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
     """Render ``More`` once and return what it passed to ``AppScaffold``.
@@ -90,6 +99,7 @@ def render(
     monkeypatch.setattr(more, "use_services", lambda: svc)
     monkeypatch.setattr(more, "use_prefs", lambda: prefs)
     monkeypatch.setattr(more, "use_account", lambda: account)
+    monkeypatch.setattr(more, "use_staff", lambda: staff)
     monkeypatch.setattr(more, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(more, "use_margin", phone_margin)
     # The companion app's list, wherever pytest runs (FLET_PLATFORM may be set, F14)

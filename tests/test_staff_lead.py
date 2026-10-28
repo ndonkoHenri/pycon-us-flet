@@ -16,7 +16,8 @@ import pytest
 from pycon_us.account import Account
 from pycon_us.config import load_year
 from pycon_us.core.badges import Badge, ScanOutcome
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.prefs import Prefs
 from pycon_us.screens.staff_lead import (
     BADGE_READ,
     NOT_RECORDED,
@@ -166,3 +167,11 @@ async def test_badge_read_is_accepted_styled_and_names_empty_validators() -> Non
         "Lead validator: last",
         NOT_RECORDED,
     )
+
+
+async def test_opening_the_scanner_makes_it_now_s_card_s_tool(show: Show) -> None:
+    """An open scanner is the last tool opened (D-421); a refused one is not."""
+    refused = await show(signed_in())
+    assert refused.memory.staff_tool == ""
+    shown = await show(signed_in(lead_retrieval=True))
+    assert shown.memory.staff_tool == "lead"

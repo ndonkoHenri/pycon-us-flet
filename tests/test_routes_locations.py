@@ -59,6 +59,7 @@ from tests.route_levels import drill_params, view_levels
         ("/more/jobs/sponsor/bloomberg", "/more/jobs"),  # Back to the list (#399)
         ("/more/jobs", "/more"),
         ("/more/staff/lead", "/more"),  # /more/staff is not a page
+        ("/now/staff/lead", "/now"),  # from Now's card, to Now (D-421)
         ("/more/app/licences/flet", "/more/app/licences"),  # a text, to the list
         ("/more/app/licences", "/more/app"),  # the list, to About this app (D-296)
         ("/more/about/help", "/more/about"),  # from About PyCon US, to it (#414)
