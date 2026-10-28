@@ -30,6 +30,8 @@ from pycon_us.screens.developer import Developer
 from pycon_us.screens.help import Help
 from pycon_us.screens.jobs import Jobs
 from pycon_us.screens.keynotes import Keynotes
+from pycon_us.screens.lead_sponsor import SEGMENT as SPONSOR_PICKER
+from pycon_us.screens.lead_sponsor import SponsorPicker
 from pycon_us.screens.licences import LicencePage, Licences
 from pycon_us.screens.lightning_talks import LightningTalks
 from pycon_us.screens.map import Map
@@ -219,7 +221,7 @@ ROUTES = [
         pushed("help", Help),
         pushed("venue", Venue),
         # Its Scan badges card's tools (D-421): under Now, so Back returns there.
-        pushed("staff/lead", LeadScanner),
+        pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
     ),
     pushed("schedule", Schedule),
     pushed(
@@ -281,7 +283,8 @@ ROUTES = [
             pushed("sign-in", SignInPage),
         ),
         # The staff tools (D-16): /more/staff is not a page, so Back returns to More.
-        pushed("staff/lead", LeadScanner),
+        # The Lead scanner's sponsor picker is under it, so Back returns there (#740).
+        pushed("staff/lead", LeadScanner, pushed(SPONSOR_PICKER, SponsorPicker)),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

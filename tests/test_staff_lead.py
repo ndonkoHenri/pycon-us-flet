@@ -5,9 +5,12 @@ store set as the flags say, and a mock URL set or not (D-51). Its guard re-check
 ``may_open`` on every render (architecture §12.4); past it, the account's consent
 (LEAD-04, D-423) is asked once, on ``screens/lead_consent.py``'s page; its parse-only
 handler reads a seeded badge and records nothing until #39. One test's sessions share
-one SharedPreferences, so a second render is a relaunch.
+one SharedPreferences, so a second render is a relaunch. Door staff choose the sponsor
+they scan for (LEAD-05, LEAD-06): the picker opens once by itself, the screen waits
+until one is chosen, then heads it with a "For: ..." chip; a sponsor's account sees none.
 """
 
+import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -20,19 +23,21 @@ from flet.components.component import Component
 from pycon_us.account import Account
 from pycon_us.config import YearData, load_year
 from pycon_us.core.badges import Badge, ScanOutcome
+from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.screens import lead_consent, staff_lead
+from pycon_us.screens import lead_consent, lead_sponsor, staff_lead
 from pycon_us.screens.staff_lead import (
     BADGE_READ,
+    NO_SPONSOR,
     NOT_RECORDED,
     TITLE,
     LeadScanner,
     badge_read,
 )
 from pycon_us.services import Services
-from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX
+from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
@@ -332,13 +337,15 @@ async def test_a_consent_that_can_t_be_saved_scans_and_says_so(
     assert isinstance(bar.content, ft.Text) and bar.content.value == NOT_SAVED
 
 
+@pytest.mark.parametrize("flags", [{"lead_retrieval": True}, {"door_check": True}])
 async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
-    show: Show, monkeypatch: pytest.MonkeyPatch
+    show: Show, monkeypatch: pytest.MonkeyPatch, flags: dict[str, bool]
 ) -> None:
     """Each render runs all its component's hooks, read to consent to scanner (D-70).
 
     The stand-in scaffold calls a hook, as the real one does: called from
     ``LeadTool``'s loading branch only, it would leave a hook unused after the read.
+    Door staff end on the paused scan screen, with no sponsor chosen yet.
     """
     stand_in = harness._scaffold
 
@@ -358,8 +365,139 @@ async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
 
     monkeypatch.setattr(harness, "_scaffold", scaffold)
     monkeypatch.setattr(Component, "_run_render_effects", record)
-    shown = await show(signed_in(lead_retrieval=True), consent=False)
+    shown = await show(signed_in(**flags), consent=False)
     await give(shown)
     assert not asks(shown)
     assert {name for name, *_ in renders} >= {"LeadTool", "LeadConsent", "ScanScreen"}
     assert [render for render in renders if render[1] != render[2]] == []
+
+
+# ------------------------------------------------------------------ the sponsor (LEAD-05, LEAD-06)
+
+PICKER = f"{VIEW}/{lead_sponsor.SEGMENT}"
+EXAMPLE = LeadSponsor("1", "Example Corp")
+
+
+def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
+    """Store ``sponsor`` as the chosen one, as the picker saves it."""
+    stored[STAFF_SPONSOR.key] = json.dumps(to_stored(sponsor))
+
+
+def chip_text(shown: Shown) -> ft.Text | None:
+    """The "For: ..." chip's text, or None without the chip."""
+    nodes = shown.nodes("lead.sponsor_chip")
+    if not nodes:
+        return None
+    (node,) = nodes
+    chip = node.content
+    assert isinstance(chip, ft.Chip) and isinstance(chip.label, ft.Text)
+    return chip.label
+
+
+def helper(shown: Shown) -> str | None:
+    """The scan field's helper line: why scanning is paused, or None."""
+    (field,) = shown.find(ft.TextField)
+    return cast(str | None, field.helper)
+
+
+async def test_staff_without_a_sponsor_get_the_picker_once_and_a_paused_screen(
+    show: Show,
+) -> None:
+    """The picker opens by itself once; the screen says why it waits, with a button."""
+    shown = await show(signed_in(door_check=True))
+    assert shown.went == [PICKER]
+    assert helper(shown) == NO_SPONSOR
+    assert chip_text(shown) is None
+    await shown.settle()
+    assert shown.went == [PICKER]  # once
+    await shown.click(cast(ft.Control, shown.node("lead.sponsor.choose").content))
+    assert shown.went == [PICKER, PICKER]
+
+
+async def test_a_chosen_sponsor_shows_as_the_chip_and_scanning_runs(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """The chip says "For: Example Corp", read as a button to change it; no picker."""
+    choose(stored, EXAMPLE)
+    shown = await show(signed_in(door_check=True))
+    assert shown.went == []
+    text = chip_text(shown)
+    assert text is not None and text.value == "For: Example Corp"
+    assert text.semantics_label == "Scanning for Example Corp, change sponsor"
+    assert helper(shown) is None
+    await shown.click(cast(ft.Control, shown.node("lead.sponsor_chip").content))
+    assert shown.went == [PICKER]
+
+
+async def test_the_picker_opens_after_the_consent_is_given(show: Show) -> None:
+    """Consent first (LEAD-04), then the picker, never over the consent page."""
+    shown = await show(signed_in(door_check=True), consent=False)
+    assert shown.went == []
+    await give(shown)
+    assert shown.went == [PICKER]
+
+
+async def test_back_from_the_picker_shows_the_sponsor_chosen(
+    show: Show, stored: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The keys are read again when the location changes (D-425); Cancel leaves none."""
+    location = [PICKER]
+    monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
+    account = signed_in(door_check=True)
+    shown = await show(account)
+    location[0] = VIEW  # Cancel: back with nothing chosen
+    account.nickname = "Back"  # a render, as the Router's on a location change
+    await shown.settle()
+    assert helper(shown) == NO_SPONSOR
+    assert shown.went == [PICKER]  # not asked again
+    location[0] = PICKER
+    account.nickname = "Picker"
+    await shown.settle()
+    choose(stored, EXAMPLE)
+    location[0] = VIEW  # a tap: back with Example Corp
+    account.nickname = "Chosen"
+    await shown.settle()
+    text = chip_text(shown)
+    assert text is not None and text.value == "For: Example Corp"
+    assert helper(shown) is None
+
+
+async def test_a_sponsor_s_own_account_sees_no_chip_and_no_picker(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """``lead_retrieval`` scans for its own sponsor: no chip, no pause, no picker."""
+    choose(stored, EXAMPLE)  # left by an earlier staff session, say
+    for flags in (
+        {"lead_retrieval": True},
+        {"lead_retrieval": True, "door_check": True},
+    ):
+        shown = await show(signed_in(**flags))
+        assert shown.went == []
+        assert chip_text(shown) is None
+        assert helper(shown) is None
+        assert not shown.nodes("lead.sponsor.choose")
+
+
+async def test_the_sponsor_goes_with_a_sign_out_and_a_switch(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """The staff keys' removal (D-414) takes the sponsor; the screen pauses again."""
+    choose(stored, EXAMPLE)
+    account = signed_in(door_check=True)
+    shown = await show(account)
+    assert chip_text(shown) is not None
+    account.signed_in = False  # Account.sign_out() clears the staff keys too
+    assert await shown.storage.clear_prefs(STAFF_PREFIX)
+    await shown.settle()
+    stored[SCANNER_CONSENT.key] = True  # given again
+    account.signed_in = True
+    await shown.settle()
+    assert chip_text(shown) is None
+    assert helper(shown) == NO_SPONSOR
+    choose(stored, EXAMPLE)
+    assert await shown.storage.clear_prefs(STAFF_PREFIX)  # as a switch's sign-in
+    stored[SCANNER_CONSENT.key] = True
+    account.email = "b@example.com"
+    await shown.settle()
+    assert chip_text(shown) is None
+    assert helper(shown) == NO_SPONSOR
