@@ -112,7 +112,7 @@ def Jobs() -> ft.View:
         await asyncio.sleep(DEBOUNCE_SECONDS)
         set_query(text)
 
-    ft.use_effect(settle, [text], cleanup=_stop_waiting)
+    ft.use_effect(settle, [text])
 
     @report_errors
     async def clear() -> None:
@@ -214,15 +214,6 @@ def Jobs() -> ft.View:
 def count_line(count: int) -> str:
     """Return the filter's count line: "1 listing", "3 listings"."""
     return f"{count} listing" + ("" if count == 1 else "s")
-
-
-def _stop_waiting() -> None:
-    """The debounce effect's cleanup: nothing to undo.
-
-    Its presence is what makes Flet cancel a pending wait when the View unmounts (F2),
-    and it is passed as ``cleanup=``, since a returned one would be lost at the next
-    render (F39).
-    """
 
 
 def ListingCard(listing: JobListing, slug: str | None) -> ft.Control:

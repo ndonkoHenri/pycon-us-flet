@@ -147,7 +147,7 @@ def ExpoList(on_pick: OnPick) -> ft.Control:
             await list_ref.current.scroll_to(offset=memory.expo_offset, duration=0)
 
     # The List that shows again is a new list at its top: put it where it was (D-18).
-    ft.use_effect(put_back, [], cleanup=_cancel)
+    ft.use_effect(put_back, [])
 
     ordered = by_names if named_order else by_booth
     rows = filter_rows(ordered, field.value)
@@ -312,11 +312,3 @@ def _ListRow(row: ExpoRow, on_pick: OnPick) -> ft.Control:
             padding=ft.Padding.symmetric(horizontal=16, vertical=8),
         )
     )
-
-
-def _cancel() -> None:
-    """The scroll's cleanup: nothing to undo, but it makes Flet cancel its task (F2).
-
-    Without one, a scroll still waiting when the List leaves would reach a list that
-    has left the page.
-    """

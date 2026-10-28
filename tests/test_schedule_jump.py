@@ -195,7 +195,7 @@ async def test_a_jump_still_waiting_stops_when_the_user_leaves_the_tab(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """D-70 rule 3, F2: the effect's cleanup is what makes Flet cancel its task."""
+    """F2, D-387: Flet cancels the effect's waiting task when the screen unmounts."""
     round_trip = asyncio.Event()
     get = Storage.get
 
