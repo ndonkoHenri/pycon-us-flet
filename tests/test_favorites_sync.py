@@ -71,6 +71,7 @@ class Rig:
     api: ApiClient
     sync: FavoritesSync
     closed: asyncio.Event
+    private_api: PrivateApi
     task: asyncio.Task[None] | None = None
 
     def stop(self) -> None:
@@ -192,6 +193,7 @@ async def start(
         api,
         sync,
         closed,
+        private_api,
     )
     rig.task = asyncio.create_task(
         sync.run(private_api, storage, favorites, store, closed)
@@ -502,5 +504,74 @@ async def test_a_flush_that_gets_no_answer_says_so_and_keeps_the_edit(
         assert not await flush(rig)
         assert rig.account.favorites_dirty and rig.saved_state() == "dirty"
         assert "x" in rig.favorites.ids
+    finally:
+        rig.stop()
+
+
+async def flush_held(rig: Rig) -> asyncio.Task[bool]:
+    """Start a sign-out's flush of a new edit and hold its PATCH, with a pull queued.
+
+    The loop is left waiting for the request lock that the flush holds.
+    """
+    await synced(rig)
+    rig.transport.hold = "PATCH"
+    rig.transport.release.clear()
+    await rig.favorites.toggle(rig.storage, "x")
+    task = asyncio.create_task(
+        rig.sync.flush(
+            rig.private_api, rig.storage, rig.favorites, rig.account, rig.closed
+        )
+    )
+    await until(lambda: rig.transport.methods() == ["PATCH"])
+    rig.sync.request()
+    await quiet()
+    return task
+
+
+async def test_a_pull_behind_a_flush_uses_the_client_that_replaced_the_closed_one(
+    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """A URL changed during a flush: the queued pull uses the new client, and lives on.
+
+    Read before the wait, the closed client would raise and end the sync for good.
+    """
+    rig = await start(state, shared, keystore, tmp_path, delay=60)
+    try:
+        flushing = await flush_held(rig)
+        replacement = Held(mock_transport(state))
+        rig.private_api.client = ApiClient(
+            BASE_URL,
+            2026,
+            rig.account.credentials,
+            transport=replacement,
+            now=lambda: NOW,
+        )
+        await rig.api.aclose()
+        rig.transport.release.set()
+        assert await flushing
+        await until(lambda: replacement.methods() == ["GET"])
+        await rig.favorites.toggle(rig.storage, "y")
+        assert await rig.sync.flush(
+            rig.private_api, rig.storage, rig.favorites, rig.account, rig.closed
+        )
+        assert rig.task is not None and not rig.task.done()
+        assert {"x", "y"} <= rig.server()
+    finally:
+        rig.stop()
+
+
+async def test_a_pull_behind_a_flush_is_not_sent_once_the_session_closed(
+    state: MockState, shared: MemoryPrefs, keystore: MemoryKeystore, tmp_path: Path
+) -> None:
+    """A session closed while the loop waits for a flush sends nothing more (D-147)."""
+    rig = await start(state, shared, keystore, tmp_path, delay=60)
+    try:
+        flushing = await flush_held(rig)
+        rig.closed.set()
+        rig.transport.release.set()
+        await flushing
+        assert rig.task is not None
+        await asyncio.wait_for(rig.task, 3.0)
+        assert rig.transport.methods() == ["PATCH"]
     finally:
         rig.stop()

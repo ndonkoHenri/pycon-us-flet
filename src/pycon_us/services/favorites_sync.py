@@ -125,10 +125,16 @@ class FavoritesSync:
                 if closed.is_set():
                     return
                 work = self._take_work()
-                client = private_api.client
-                if work is None or client is None or not favorites.loaded:
+                if work is None:
                     continue
                 async with self._sending:  # a sign-out's flush() waits, or goes first
+                    # Read only now: while flush() held the lock the session may have
+                    # closed, or Developer replaced the client and closed this one.
+                    if closed.is_set():
+                        return
+                    client = private_api.client
+                    if client is None or not favorites.loaded:
+                        continue
                     if not account.signed_in or account.expired:
                         continue
                     if not work and self._state is not SyncState.DIRTY:
