@@ -14,7 +14,8 @@ from typing import Any
 
 import flet as ft
 
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs, use_prefs
+from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import option_field, said
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors

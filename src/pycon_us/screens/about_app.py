@@ -18,7 +18,8 @@ from urllib.parse import urlsplit
 import flet as ft
 
 from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL
-from pycon_us.prefs import DEV_UNLOCKED, use_prefs
+from pycon_us.dev_options import DEV_UNLOCKED
+from pycon_us.prefs import use_prefs
 from pycon_us.screens import licences
 from pycon_us.services import use_services
 from pycon_us.services.build import use_build
