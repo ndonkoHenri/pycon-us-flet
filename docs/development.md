@@ -618,29 +618,37 @@ The private-API features (sign-in, favourites sync, role flags and the four staf
 **Run it:**
 
 ```bash
-uv run python -m tools.mock_api.server --host 0.0.0.0 --port 8000
+uv run python -m tools.mock_api.server                  # this machine, its simulators and emulators
+uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the same Wi-Fi
 ```
 
-The final options are documented in `tools/mock_api/README.md`. The planned interface:
-- **On start,** it prints its LAN URL and the seeded accounts. There is one per role, from `tests/fixtures/mock/`; the keys and secrets are fake and exist only for the mock.
+The options (`--host`, default `127.0.0.1`; `--port`, default `8000`; `--capture idempotent|non_idempotent`) are in
+[`tools/mock_api/README.md`](../tools/mock_api/README.md) ("Running it").
+- **On start,** it prints the base URL for each kind of device (its LAN address with `--host 0.0.0.0`) and the seeded
+  accounts' emails and passwords. There is one account per role, from `tests/fixtures/mock/`; the keys and secrets are
+  fake and exist only for the mock, and the server never prints or logs them.
 - **State** is in memory, so a restart is a clean slate. This also suits demos.
-- **Faults (D-57)** are selected by flag: dropped connections, timeouts, "server committed, response lost", expired auth, a skewed clock (`--skew SECONDS`), and idempotent or non-idempotent capture semantics.
+- **Faults (D-57)** other than the capture semantics (dropped connections, timeouts, "server committed, response
+  lost", expired auth, a skewed clock with `--skew SECONDS`) come with #667.
 
 **Connect the app:** Developer screen › Mock API base URL.
 
-| Where the app runs | Base URL |
-|---|---|
-| Companion client (Python on the laptop) | `http://localhost:8000` |
-| Android emulator, packaged build | `http://10.0.2.2:8000` |
-| iOS simulator, packaged build | `http://localhost:8000` |
-| Physical phone, packaged build | `http://<laptop LAN IP>:8000`, on the same Wi-Fi |
+| Where the app runs | Base URL | `--host` |
+|---|---|---|
+| Companion client (Python on the laptop) | `http://localhost:8000` | default |
+| Android emulator, packaged build | `http://10.0.2.2:8000` (the emulator's alias for the laptop's loopback) | default |
+| iOS simulator, packaged build | `http://localhost:8000` (the simulator shares the laptop's network) | default |
+| Physical phone, packaged build | `http://<laptop LAN IP>:8000`, on the same Wi-Fi; the banner prints it | `0.0.0.0` |
+
+The server answered over `localhost` and over the laptop's LAN address on 2026-10-28 (#666); the packaged builds'
+rows are checked on the emulator and the simulator in #668.
 
 **Practical notes:**
 - **Cleartext HTTP.** The client is Python `httpx` on raw sockets. Android's cleartext policy and iOS App Transport Security govern the platform HTTP stacks, not these sockets, so no manifest change is expected. The iOS template allows arbitrary loads anyway. **UNVERIFIED on devices:** the first P3 device test confirms it, and the iOS local-network prompt question (§3.4) along with it.
 - **The laptop firewall.** macOS asks to allow incoming connections for Python the first time; allow it.
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
-- **Tests** never start the server. The same pure `handle()` sits behind `httpx.MockTransport` (D-50), so the CI tests cover signing, faults and both semantics without a network.
-- **Badges.** The printable sheet of mock-badge QR codes for the P3 exit test is described in the mock README.
+- **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).
+- **Badges.** `uv run python -m tools.mock_api.badges` writes `build/mock-badges.html`, the printable sheet of mock-badge QR codes for the P3 exit test (one card per seeded attendee, A4 or Letter; `segno`, D-391). The mock README says more.
 - **Stage demos** may need an in-app backend instead of the LAN mock. That is open decision O-8, decided at the P3 exit.
 
 ---

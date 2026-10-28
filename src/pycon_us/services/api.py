@@ -1,14 +1,35 @@
-"""HTTP: the public feed fetch (DATA-01; D-05, D-53).
+"""HTTP: the public feed fetch and the signed client of the private API (D-05, D-53).
 
-P0 has one request, an unsigned GET of the year's public feed. P3 adds the signed client
-for the local mock of the private API here, with the same two errors, so callers only ever
-branch on "no answer" (``NetworkError``) or "a bad answer" (``ApiError``).
+``fetch_feed`` is P0's one request, an unsigned GET of the year's public feed.
+``ApiClient`` is the only way the app talks to the private API, which it only ever
+reaches on the local mock (D-06): ``ApiClient.request`` refuses the PSF's hosts before
+sending (D-51), signs the exact bytes it sends (D-52) and corrects its clock once from
+the server's ``Date`` (D-53). Both raise the same two errors, so callers only ever
+branch on "no answer" (``NetworkError``) or "a bad answer" (``ApiError``). The endpoints
+and their timeouts follow Ionic's ``pycon-api.ts``, cited in ``tools/mock_api/README.md``.
 """
+
+import json
+import time
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from datetime import UTC
+from email.utils import parsedate_to_datetime
 
 import httpx
 
+from pycon_us.core.signing import canonical_body, enc, js_round, sign
+
 FEED_TIMEOUT = 10.0
 """Seconds to wait for the feed (connect, each read, the pool), as Ionic did (API-12)."""
+
+SKEW_LIMIT = 300.0
+"""Seconds between a refused request's timestamp and the server's ``Date`` past which
+the refusal is blamed on the clock and retried once, corrected (half of the 600 s window
+the 2019 server allowed)."""
+
+type Credentials = Callable[[], tuple[str | None, str | None]]
+"""Returns the signed-in account's API key and secret, or Nones when signed out."""
 
 
 class NetworkError(Exception):
@@ -21,7 +42,8 @@ class ApiError(Exception):
     Attributes:
         status: The HTTP status, or None when the response could not be read at all
             (e.g. too many redirects or an undecodable body).
-        message: What went wrong, for the log.
+        message: What went wrong: the server's own ``error`` or ``message`` when it sent
+            one, for the log.
     """
 
     def __init__(self, status: int | None, message: str) -> None:
@@ -38,6 +60,16 @@ class ApiError(Exception):
     def __str__(self) -> str:
         """Return the status and the message."""
         return self.message if self.status is None else f"{self.status} {self.message}"
+
+    @property
+    def is_auth(self) -> bool:
+        """Whether the server refused the credentials or the role (401 or 403).
+
+        The mock answers 401 for an unknown key and 403 for a bad signature, a stale
+        timestamp or a wrong role; Ionic never told them apart, so callers treat both
+        alike (``tools/mock_api/README.md``, Unknown).
+        """
+        return self.status in (401, 403)
 
 
 async def fetch_feed(
@@ -72,3 +104,336 @@ async def fetch_feed(
         raise ApiError(status, error.response.reason_phrase) from error
     except httpx.HTTPError as error:  # too many redirects, an undecodable body
         raise ApiError(None, f"{type(error).__name__}: {error}") from error
+
+
+@dataclass(frozen=True)
+class Endpoint:
+    """One call of the private API, as Ionic's ``pycon-api.ts`` makes it.
+
+    Attributes:
+        name: The call's name in ``tools/mock_api/README.md``.
+        method: The HTTP method, upper case.
+        path: The path under ``/<year>/api/v1/``; each ``{}`` is one path segment that
+            ``ApiClient.request`` fills from its arguments.
+        timeout: Ionic's timeout in seconds (here for connect, each read and the pool).
+        signed: Whether the request carries the ``X-API-*`` headers; only
+            ``authenticate`` doesn't.
+        enveloped: Whether a reply is ``{"code", "data"}`` and the caller wants the
+            ``data``; Ionic reads every other reply bare.
+    """
+
+    name: str
+    method: str
+    path: str
+    timeout: float
+    signed: bool = True
+    enveloped: bool = False
+
+
+AUTHENTICATE = Endpoint("authenticate", "POST", "authenticate/", 3, signed=False)
+CHECK_FEATURES = Endpoint("check_features", "GET", "user/check_features/", 2)
+READ_MOBILE_STATE = Endpoint("mobile_state", "GET", "user/mobile_state/", 2)
+WRITE_MOBILE_STATE = Endpoint("mobile_state", "PATCH", "user/mobile_state/", 2)
+REDEEMABLE = Endpoint("redeemable", "GET", "check_in/redeemable/", 2)
+INVENTORY = Endpoint(
+    "inventory", "GET", "check_in/attendees_by_product_with_quantity/{}/", 20
+)
+FETCH_PRODUCTS = Endpoint("fetch_products", "GET", "check_in/fetch_products/", 10)
+REDEEM = Endpoint("redeem", "POST", "check_in/redeem_products/", 10)
+COC_ATTENDEES = Endpoint(
+    "coc_attendees", "GET", "mask_violations/attendees/", 15, enveloped=True
+)
+COC_SCAN = Endpoint("coc_capture", "GET", "mask_violations/capture/", 5, enveloped=True)
+COC_REPORT = Endpoint(
+    "coc_capture", "POST", "mask_violations/capture/", 5, enveloped=True
+)
+LEAD_SPONSORS = Endpoint("lead_sponsors", "GET", "lead_retrieval/sponsors/", 5)
+LEAD_CAPTURE = Endpoint(
+    "lead_capture", "GET", "lead_retrieval/capture/", 2, enveloped=True
+)
+LEAD_NOTE = Endpoint("lead_note", "POST", "lead_retrieval/{}/note/", 2)
+
+ENDPOINTS = (
+    AUTHENTICATE, CHECK_FEATURES, READ_MOBILE_STATE, WRITE_MOBILE_STATE, REDEEMABLE,
+    INVENTORY, FETCH_PRODUCTS, REDEEM, COC_ATTENDEES, COC_SCAN, COC_REPORT,
+    LEAD_SPONSORS, LEAD_CAPTURE, LEAD_NOTE,
+)  # fmt: skip
+"""Every call the app makes. Ionic's ``attendees_by_product/<id>/`` is never called, so
+it is not ported (API-05)."""
+
+
+def fetch_products_query(code: str, ids: Iterable[int | str], *, door: bool) -> str:
+    """Build ``fetch_products``' query as Ionic does, encoding nothing (153, 169).
+
+    Args:
+        code: The attendee's access code, interpolated raw.
+        ids: The door's product ids, or the swag page's category ids.
+        door: True for the door (``product_pk_list``, ``door_check_mode``), False for
+            swag pickup (``category_pk_list``, ``redemption_mode``).
+
+    Returns:
+        The query, without its ``?``.
+    """
+    name, mode = (
+        ("product_pk_list", "door_check_mode")
+        if door
+        else ("category_pk_list", "redemption_mode")
+    )
+    joined = ",".join(str(i) for i in ids)
+    return f"attendee_access_code={code}&{name}={joined}&mode={mode}"
+
+
+def coc_capture_query(code: str) -> str:
+    """Build the Code of Conduct scan's query, encoded as Ionic does (224).
+
+    Args:
+        code: The attendee's access code.
+
+    Returns:
+        The query, without its ``?``.
+    """
+    return f"attendee_access_code={enc(code)}"
+
+
+def lead_capture_query(code: str, validator: str, sponsor_id: str | None = None) -> str:
+    """Build the lead capture's query, every value encoded as Ionic does (298-301).
+
+    Args:
+        code: The attendee's access code.
+        validator: The badge's validator.
+        sponsor_id: The sponsor a staff member scans for, or None from a sponsor's own
+            account, which sends none.
+
+    Returns:
+        The query, without its ``?``.
+    """
+    query = f"attendee_access_code={enc(code)}&badge_validator={enc(validator)}"
+    return query if sponsor_id is None else f"{query}&sponsor_id={enc(sponsor_id)}"
+
+
+def refuse_private_psf(url: httpx.URL) -> None:
+    """Make calling the PSF's private API impossible, even by misconfiguration (D-51).
+
+    Args:
+        url: The full URL a request is about to be sent to.
+
+    Raises:
+        PermissionError: The URL is an ``/api/v1`` path on ``pycon.org`` or one of its
+            subdomains, whatever the letter case or a trailing dot. It is a refused
+            misconfiguration, not an answer, so it is neither of the two API errors.
+    """
+    host = url.host.rstrip(".").lower()
+    psf = host == "pycon.org" or host.endswith(".pycon.org")
+    if psf and "/api/v1" in url.path.lower():
+        raise PermissionError(f"Refusing a private PSF endpoint: {host}{url.path}")
+
+
+def server_time(date: str | None) -> float | None:
+    """Read a reply's ``Date`` header as seconds since the epoch.
+
+    Args:
+        date: The header's value, or None when there is none.
+
+    Returns:
+        The server's time, or None when the header is missing or unreadable.
+    """
+    if not date:
+        return None
+    try:
+        when = parsedate_to_datetime(date)
+    except TypeError, ValueError:
+        return None
+    # "-0000" means UTC with no zone named; timestamp() would read a naive time as local.
+    return (when if when.tzinfo else when.replace(tzinfo=UTC)).timestamp()
+
+
+def error_message(body: object) -> str | None:
+    """The server's own words for an error: ``error`` (signed calls), else ``message``.
+
+    Args:
+        body: A decoded reply.
+
+    Returns:
+        The message, or None when the body carries none.
+    """
+    if isinstance(body, dict):
+        for name in ("error", "message"):
+            if isinstance(body.get(name), str):
+                return body[name]
+    return None
+
+
+NOT_JSON = object()
+"""Stands for a reply that does not decode, unlike a JSON ``null``."""
+
+
+def unwrap(response: httpx.Response, enveloped: bool) -> object:
+    """Turn a reply into what the caller reads, or an ``ApiError``.
+
+    Args:
+        response: The reply, read in full.
+        enveloped: Whether a success is ``{"code", "data"}`` and the ``data`` is wanted.
+
+    Returns:
+        The decoded body (JSON ``null`` included), or its ``data`` when ``enveloped``.
+
+    Raises:
+        ApiError: An error status (with the body's ``error`` or ``message`` when it has
+            one), a ``{"code", "error"}`` envelope whatever the status, a body that is
+            not JSON, or an envelope without ``data``.
+    """
+    try:
+        body = json.loads(response.content)
+    except ValueError:  # not UTF-8, or not JSON
+        body = NOT_JSON
+    status = response.status_code
+    if not response.is_success:
+        raise ApiError(status, error_message(body) or response.reason_phrase)
+    if body is NOT_JSON:
+        raise ApiError(status, "The reply is not JSON.")
+    # An error envelope is a refusal even under HTTP 200 (#665).
+    if isinstance(body, dict) and "code" in body and isinstance(body.get("error"), str):
+        raise ApiError(status, body["error"])
+    if not enveloped:
+        return body
+    if isinstance(body, dict) and "data" in body:
+        return body["data"]
+    raise ApiError(status, error_message(body) or "The reply has no data.")
+
+
+class ApiClient:
+    """Signed requests to the private API, byte-compatible with Ionic (D-52, D-53).
+
+    Every private-API call in the app goes through `request`. Redirects are never
+    followed: a redirected request would need a new signature.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        year: int,
+        credentials: Credentials,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        now: Callable[[], float] = time.time,
+    ) -> None:
+        """Create the client.
+
+        Args:
+            base_url: The server's scheme, host, port and any path prefix.
+            year: The conference year, the first segment of every path.
+            credentials: Returns the key and secret to sign with, read on each request.
+            transport: The HTTP transport; tests pass ``mock_transport``, the app
+                leaves it None.
+            now: The device clock in seconds since the epoch; tests fix it.
+        """
+        self._http = httpx.AsyncClient(base_url=base_url, transport=transport)
+        self._year = year
+        self._credentials = credentials
+        self._now = now
+        self.skew = 0.0
+        """The server's clock minus the device's, from the last ``Date`` read."""
+
+    async def aclose(self) -> None:
+        """Close the client's connections."""
+        await self._http.aclose()
+
+    async def request(
+        self,
+        endpoint: Endpoint,
+        *args: str | int,
+        query: str = "",
+        payload: object = None,
+    ) -> object:
+        """Send one call and return its reply.
+
+        The body is serialised once and the signature covers ``request.url.raw_path``,
+        exactly the target sent. A signed call refused with 403 while its timestamp was
+        more than ``SKEW_LIMIT`` from the server's ``Date`` is sent once more with the
+        corrected clock, which later calls keep using.
+
+        Args:
+            endpoint: The call.
+            *args: The path's ``{}`` segments in order, percent-encoded here (API-11).
+            query: The query from this module's helpers, built the Ionic way; never
+                ``httpx``'s ``params=``, which would encode it its own way.
+            payload: The JSON body, or None for none.
+
+        Returns:
+            The decoded reply, or its ``data`` for an enveloped endpoint.
+
+        Raises:
+            NetworkError: No answer arrived (``httpx.TransportError``, timeouts
+                included).
+            ApiError: The server refused the call, or its reply could not be read.
+            PermissionError: The URL is the PSF's private API (`refuse_private_psf`).
+            TypeError: ``args`` doesn't fill the path's segments.
+        """
+        if endpoint.path.count("{}") != len(args):
+            raise TypeError(f"{endpoint.name} takes {endpoint.path.count('{}')} args")
+        path = endpoint.path.format(*(enc(str(arg)) for arg in args))
+        target = f"/{self._year}/api/v1/{path}" + (f"?{query}" if query else "")
+        body = b"" if payload is None else canonical_body(payload)
+        response, skewed = await self._attempt(endpoint, target, body)
+        if endpoint.signed and response.status_code == 403 and skewed:
+            response, _ = await self._attempt(endpoint, target, body)  # clock corrected
+        return unwrap(response, endpoint.enveloped)
+
+    async def _attempt(
+        self, endpoint: Endpoint, target: str, body: bytes
+    ) -> tuple[httpx.Response, bool]:
+        """Build, check, sign and send one request, and learn the skew from its reply.
+
+        Args:
+            endpoint: The call.
+            target: The path and query to send.
+            body: The body bytes, empty for none.
+
+        Returns:
+            The reply, and whether the timestamp sent was more than ``SKEW_LIMIT`` from
+            the reply's ``Date``.
+        """
+        request = self._http.build_request(
+            endpoint.method, target, content=body or None, timeout=endpoint.timeout
+        )
+        refuse_private_psf(request.url)
+        if body:
+            request.headers["Content-Type"] = "application/json"
+        stamp = js_round(self._now() + self.skew)
+        if endpoint.signed:
+            self._sign(request, stamp, body)
+        response = await self._send(request)
+        server = server_time(response.headers.get("Date"))
+        if server is None:
+            return response, False
+        self.skew = server - self._now()
+        return response, abs(server - stamp) > SKEW_LIMIT
+
+    def _sign(self, request: httpx.Request, stamp: int, body: bytes) -> None:
+        """Add the ``X-API-*`` headers, signed over the target exactly as it is sent.
+
+        Signed out (no key), the request goes without ``X-API-Key`` and the server
+        answers 401.
+        """
+        key, secret = self._credentials()
+        target = request.url.raw_path.decode("ascii")
+        request.headers["X-API-Timestamp"] = str(stamp)
+        request.headers["X-API-Signature"] = sign(
+            secret, stamp, request.method, target, body
+        )
+        if key is not None:
+            request.headers["X-API-Key"] = key
+
+    async def _send(self, request: httpx.Request) -> httpx.Response:
+        """Send a request and read its reply, raising the module's two errors.
+
+        Raises:
+            NetworkError: No answer arrived.
+            ApiError: The reply could not be read (e.g. an undecodable body).
+        """
+        try:
+            return await self._http.send(request)
+        except httpx.TransportError as error:  # timeouts included
+            raise NetworkError(f"{type(error).__name__}: {error}") from error
+        except httpx.HTTPError as error:
+            raise ApiError(None, f"{type(error).__name__}: {error}") from error
