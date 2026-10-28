@@ -29,6 +29,7 @@ from pycon_us.screens.developer_staff import (
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui.queue_sheet import QueueSheet
 
 OWNER = "staff@example.com"
 OTHER = "door@example.com"
@@ -109,7 +110,7 @@ def render(
         monkeypatch.setattr(
             developer_staff,
             "use_queue_sheet",
-            lambda **_: lambda: opened.append(1),
+            lambda **_: QueueSheet(lambda: opened.append(1), is_open=False),
         )
         monkeypatch.setattr(ft, "use_memo", lambda fn, _deps: fn())
         return inspect.unwrap(StaffQueue)(), opened

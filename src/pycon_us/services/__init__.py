@@ -81,13 +81,15 @@ class Services:
         memory: The process's one ``ViewMemory`` (D-143).
         semantics: The platform's accessibility services; ``App`` reads the OS flags
             through it (F13).
-        haptics: The platform's haptic feedback: the star's selection click (D-30).
+        haptics: The platform's haptic feedback: the star's selection click (D-30)
+            and the scan screen's outcomes (ux.md §7.2).
         launcher: Opens web pages, apps, ``tel:`` and ``mailto:`` links, by the link
             rule in ``ui.links`` (INFO-14).
         clipboard: Copy for phone numbers and email addresses (``ui.links``).
         share: The platform's share sheet: the Developer screen's Share log (D-72).
         paths: The platform's storage paths: where the packaged app's ``console.log``
             is (F14).
+        wakelock: Keeps the screen on while the scan screen is open (D-65, #724).
         file_picker: The system's save dialog: Add to calendar's file on Android
             (``services.calendar``, D-272).
         permissions: ``flet-permission-handler``'s service: permission status, the
@@ -100,6 +102,8 @@ class Services:
         foreground: Set while the app is in the foreground: the lifecycle handler
             clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
             loops wait for it, so nothing ticks in the background (D-40).
+        background: Its opposite, set from ``pause`` to ``resume``, for work that
+            stops on the way out: the scan screen lets go of the wake lock (#724).
         presence: Whether the app's window is in front, from ``inactive`` to
             ``resume``: ``ui.focus_back`` waits on it for the return from another
             app's window (D-372).
@@ -134,11 +138,13 @@ class Services:
     # the page like the rest.
     share: ft.Share = field(default_factory=ft.Share)
     paths: ft.StoragePaths = field(default_factory=ft.StoragePaths)
+    wakelock: ft.Wakelock = field(default_factory=ft.Wakelock)
     file_picker: ft.FilePicker = field(default_factory=ft.FilePicker)
     permissions: PermissionHandler | None = field(default_factory=_permissions)
     reminders: Scheduler | None = None
     closed: asyncio.Event = field(default_factory=asyncio.Event)
     foreground: asyncio.Event = field(default_factory=_set_event)
+    background: asyncio.Event = field(default_factory=asyncio.Event)
     presence: Presence = field(default_factory=Presence)
     shown_versions: set[int] = field(default_factory=set)
     private_api: PrivateApi = field(default_factory=PrivateApi)
@@ -210,6 +216,7 @@ class Services:
         # Wakes the run_every() loops that wait for a resume, so they see `closed` and
         # return: a session replaced in the background never resumes.
         self.foreground.set()
+        self.background.set()  # and the scan screen's wake lock, which lets go
         self.presence.close()  # and a focus that waits for a return (D-372)
         self.sync_wake.set()  # and the staff sync loop's wait (services.sync)
         if self.reminders is not None:  # and the reminders' loop, which then returns

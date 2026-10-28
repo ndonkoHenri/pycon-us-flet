@@ -52,6 +52,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
     MemoryShare,
+    MemoryWakelock,
 )
 
 _ENCODE = configure_encode_object_for_msgpack(ft.BaseControl)
@@ -163,6 +164,7 @@ def memory_services(
         clipboard=MemoryClipboard(),
         share=MemoryShare(),
         file_picker=MemoryFilePicker(),
+        wakelock=MemoryWakelock(),
     )
 
 

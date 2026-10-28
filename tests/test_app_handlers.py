@@ -180,17 +180,23 @@ STARTED_AT = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """Going to the background clears ``svc.foreground``; only a resume sets it."""
+    """Going to the background clears ``svc.foreground`` and sets ``background``.
+
+    Only a resume turns them back, so the ticks run and the scan screen's wake lock is
+    held again (#724).
+    """
     await started(fake_page, svc)
     handler = fake_page.on_app_lifecycle_state_change
     for state in ("inactive", "hide", "pause"):  # going to the background (D-147)
         await handler(lifecycle(fake_page, ft.AppLifecycleState(state)))
     assert not svc.foreground.is_set()  # Services.run_every waits (D-40)
+    assert svc.background.is_set()  # the scan screen lets go of the wake lock
     for state in ("restart", "show"):
         await handler(lifecycle(fake_page, ft.AppLifecycleState(state)))
     assert not svc.foreground.is_set()
     await handler(lifecycle(fake_page, ft.AppLifecycleState.RESUME))
     assert svc.foreground.is_set()
+    assert not svc.background.is_set()
 
 
 async def test_inactive_and_resume_mark_a_trip_away_from_the_app(

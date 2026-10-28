@@ -274,6 +274,7 @@ async def bootstrap(
             svc.presence.leave()  # another window in front, or on its way (D-372)
         elif e.state == ft.AppLifecycleState.PAUSE:
             svc.foreground.clear()  # the 60 s ticks wait for the resume (D-40)
+            svc.background.set()  # the scan screen lets go of the wake lock (#724)
         elif e.state == ft.AppLifecycleState.RESUME:
             await on_resume(svc, conference, prefs, account)
 
@@ -312,7 +313,8 @@ async def on_resume(
     Each step is one consumer of the resume; a new one joins here.
 
     1. The 60 s ticks run again (``Services.run_every``), and catch up at once when
-       one fell due in the background (D-40); ``Services.presence`` notes the
+       one fell due in the background (D-40), and the scan screen takes its wake lock
+       again (``Services.background``, #724); ``Services.presence`` notes the
        return, so a button that opened another app's window gets the focus back
        (``ui.focus_back``, D-372).
     2. The feed refreshes when the last refresh began 15 min ago or more (D-40).
@@ -336,6 +338,7 @@ async def on_resume(
         prefs: The session's ``Prefs`` store.
         account: The session's ``Account`` store.
     """
+    svc.background.clear()
     svc.foreground.set()
     svc.presence.come_back()
     conference.start_refresh_if_due(svc.storage, svc.year, closed=svc.closed)

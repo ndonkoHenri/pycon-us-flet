@@ -5,6 +5,7 @@ and ``closed`` are driven as the lifecycle handler and ``page.on_close`` drive t
 """
 
 import asyncio
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -14,12 +15,14 @@ from pycon_us.config import load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from pycon_us.ui.scan_feedback import keep_awake
 from tests.fakes import (
     MemoryClipboard,
     MemoryHaptics,
     MemoryLauncher,
     MemoryPrefs,
     MemorySemantics,
+    MemoryWakelock,
 )
 
 INTERVAL = 0.01
@@ -77,9 +80,22 @@ async def stopped(task: asyncio.Task[None]) -> None:
 
 
 def test_a_session_starts_in_the_foreground(svc: Services) -> None:
-    """New services start in the foreground and not closed."""
+    """New services start in the foreground, not in the background, and not closed."""
     assert svc.foreground.is_set()
+    assert not svc.background.is_set()
     assert not svc.closed.is_set()
+
+
+async def test_a_closed_session_ends_the_wake_lock_s_loop(svc: Services) -> None:
+    """``keep_awake()`` lets go and returns once the session closes (D-147, #724)."""
+    lock = MemoryWakelock()
+    svc = replace(svc, wakelock=lock)
+    task = asyncio.create_task(keep_awake(svc))
+    await asyncio.sleep(0)
+    assert lock.enabled
+    svc.close()  # wakes its wait for the background
+    await asyncio.wait_for(task, timeout=30)  # generous: it returns at once
+    assert lock.calls == ["enable", "disable"]
 
 
 async def test_it_calls_at_once_then_after_each_interval(svc: Services) -> None:
