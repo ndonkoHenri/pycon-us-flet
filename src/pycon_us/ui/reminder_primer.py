@@ -116,12 +116,15 @@ async def ask(page: ft.Page, svc: Services, prefs: Prefs) -> None:
         finally:
             _ASKING.discard(page)
 
+    @report_errors
     async def allow() -> None:
         await answer(True, close=True)
 
+    @report_errors
     async def not_now() -> None:
         await answer(False, close=True)
 
+    @report_errors
     async def dismissed() -> None:
         await answer(False, close=False)
 
