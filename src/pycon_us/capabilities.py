@@ -37,7 +37,7 @@ otherwise the interim (D-60)."""
 
 REMINDERS_LIVE = False
 """Whether screens offer reminders: not yet, even where ``REMINDERS`` is true. The app
-does not schedule them until #447 and Settings has no live controls until #449, whose
+schedules them since #447 (D-389), but Settings has no live controls until #449, whose
 PR sets this to ``REMINDERS``. Until then Settings keeps D-60's interim and Welcome
 promises no reminders (D-287), so a build that bundles E3 never promises what it can't
 do (#677's review)."""

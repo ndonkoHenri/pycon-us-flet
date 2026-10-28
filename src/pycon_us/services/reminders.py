@@ -2,25 +2,39 @@
 
 ``plan()`` turns the feed, My schedule, the reminder settings and the conference
 moments into the reminders to schedule, soonest first and at most ``MAX_PENDING``. It is
-pure: E3's ``apply()`` will schedule it, cancelling only what is pending, at every start
-and resume and whenever its inputs change (D-222). ``apply()`` comes with E3, when it
-can run (D-66).
+pure. ``Scheduler.apply()`` schedules it with E3, cancelling only what is pending, at
+every start and resume and whenever its inputs change (D-222, D-389); ``start()`` builds
+the session's ``Scheduler`` when the build has E3, and only this module imports the
+extension (D-63). Without it, as in the companion app, there is no ``Scheduler`` and the
+interim applies (D-60).
 
 ``due_session()`` is the in-app Banner's question, as pure: which saved session starts
 within ``BANNER_LEAD`` minutes, while the app is open (D-60's interim; ux.md §6.9).
 """
 
-from collections.abc import Iterable
-from dataclasses import dataclass
+import asyncio
+import logging
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
 from math import ceil
+from typing import TYPE_CHECKING
 from zlib import crc32
 
+import flet as ft
+
+from pycon_us import capabilities
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.timefmt import instant, time_label
 from pycon_us.locations import drill_href
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.year_moments import EventReminder
+
+if TYPE_CHECKING:  # imported only when the build has them (D-63)
+    from flet_notifications import Notifications
+    from flet_permission_handler import PermissionHandler
+
+logger = logging.getLogger(__name__)
 
 MAX_PENDING = 60
 """The most reminders a plan holds: iOS keeps 64 pending and drops the soonest beyond
@@ -243,3 +257,181 @@ def _starts(session: Session, zone: tzinfo, *, use_24h: bool) -> str:
     if session.display_location:
         text += f" · {session.display_location}"
     return text
+
+
+@dataclass(eq=False)
+class Scheduler:
+    """E3's scheduling for one session: one apply at a time, the newest wins (D-389).
+
+    ``request()`` asks for the plan to be applied again; ``keep_applied()``, the loop
+    of ``reminder_schedule.use_reminder_schedule()``'s effect, then reads whether exact
+    alarms are allowed and applies a fresh plan. A request made while an apply runs
+    stops that apply before its next call, and the loop applies the newer plan.
+
+    Attributes:
+        notifications: The session's ``flet_notifications.Notifications``.
+        permissions: ``flet-permission-handler``'s service, for D-220's check that its
+            exact-alarm status agrees with the plugin's; None without it.
+        android: Whether the app runs on Android, the one platform that restricts
+            exact alarms.
+    """
+
+    notifications: Notifications
+    permissions: PermissionHandler | None = None
+    android: bool = False
+    _wanted: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+
+    def request(self) -> None:
+        """Ask for the plan to be applied again; a newer request supersedes one in flight."""
+        self._wanted.set()
+
+    async def keep_applied(
+        self, planner: Callable[[], Sequence[Reminder] | None], closed: asyncio.Event
+    ) -> None:
+        """Apply ``planner()``'s plan at each request, until the session closes.
+
+        ``Services.close()`` makes a request, so a replaced session's loop wakes and
+        returns (D-147).
+
+        Args:
+            planner: Returns the plan for this moment, called after each request; or
+                None when it could not plan (an error it reported), and then nothing
+                is cancelled.
+            closed: The session's ``Services.closed``.
+        """
+        while True:
+            await self._wanted.wait()
+            if closed.is_set():
+                return
+            self._wanted.clear()
+            exact = await self.exact_allowed()  # re-read before each apply (D-221)
+            reminders = planner()
+            if reminders is not None:
+                await self.apply(reminders, exact=exact)
+
+    async def exact_allowed(self) -> bool:
+        """Return whether Android allows exact alarms now; True elsewhere (D-221).
+
+        The plugin's answer counts, since it is the one that schedules. When
+        ``flet-permission-handler``'s ``SCHEDULE_EXACT_ALARM`` status disagrees with it,
+        a warning says so (D-220). A failed check is logged and reads as False.
+        """
+        from flet_notifications import NotificationException
+
+        try:
+            allowed = bool(await self.notifications.can_schedule_exact_alarms())
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: exact alarms unknown, scheduling inexact: %s", e)
+            return False
+        if self.android and self.permissions is not None:
+            await self._check_agreement(allowed)
+        return allowed
+
+    async def apply(self, plan: Sequence[Reminder], *, exact: bool) -> bool:
+        """Cancel every pending reminder, then schedule ``plan`` (D-59, D-222).
+
+        ``cancel_all_pending()`` leaves the reminders already shown, which
+        ``cancel_all()`` would clear. Each reminder keeps its id, so a moved session's
+        reminder moves. A failure is logged, never raised (D-120): a failed cancel
+        still schedules, a failed reminder still schedules the rest, and an exact
+        alarm Android refuses is scheduled inexact, as is the rest of the plan.
+
+        Args:
+            plan: The reminders, from ``plan()``: at most ``MAX_PENDING``.
+            exact: Whether Android allows exact alarms (``exact_allowed()``).
+
+        Returns:
+            Whether the whole plan was handed to the OS: False when a newer request
+            superseded it or a call failed.
+        """
+        from flet_notifications import (
+            NotificationException,
+            NotificationPermissionException,
+        )
+
+        if self._wanted.is_set():  # superseded before it began
+            return False
+        complete = True
+        try:
+            await self.notifications.cancel_all_pending()
+        except (NotificationException, TimeoutError) as e:
+            logger.warning("Reminders: cancelling the pending ones failed: %s", e)
+            complete = False
+        for reminder in plan:
+            if self._wanted.is_set():  # a newer request: the loop applies its plan
+                logger.info("Reminders: apply superseded by a newer one")
+                return False
+            try:
+                try:
+                    await self._schedule(reminder, exact=exact)
+                except NotificationPermissionException as e:
+                    if not exact:
+                        raise
+                    logger.warning(
+                        "Reminders: exact refused, scheduling inexact: %s", e
+                    )
+                    exact = False
+                    await self._schedule(reminder, exact=False)
+            except (NotificationException, TimeoutError) as e:
+                logger.warning("Reminders: %s not scheduled: %s", reminder.id, e)
+                complete = False
+        logger.info(
+            "Reminders: a plan of %d applied, %s",
+            len(plan),
+            "exact" if exact else "inexact",
+        )
+        return complete
+
+    async def _schedule(self, reminder: Reminder, *, exact: bool) -> None:
+        """Hand one reminder to the OS; its route is the payload a tap opens (D-21)."""
+        from flet_notifications import AndroidScheduleMode
+
+        await self.notifications.schedule(
+            reminder.id,
+            when=reminder.at,  # aware: the instant is kept (D-43)
+            title=reminder.title,
+            body=reminder.body,
+            payload=reminder.route,
+            schedule_mode=AndroidScheduleMode.EXACT_ALLOW_WHILE_IDLE
+            if exact
+            else AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE,
+        )
+
+    async def _check_agreement(self, allowed: bool) -> None:
+        """Warn when the permission handler's exact-alarm status disagrees (D-220)."""
+        from flet_permission_handler import Permission, PermissionStatus
+
+        assert self.permissions is not None
+        try:
+            status = await self.permissions.get_status(Permission.SCHEDULE_EXACT_ALARM)
+        except (RuntimeError, TimeoutError) as e:
+            logger.warning("Reminders: exact-alarm status unread: %s", e)
+            return
+        if (status == PermissionStatus.GRANTED) != allowed:
+            logger.warning(
+                "Reminders: exact alarms %s by the plugin, %s by the permission handler",
+                "allowed" if allowed else "refused",
+                status.value if status is not None else "unknown",
+            )
+
+
+def start(permissions: PermissionHandler | None) -> Scheduler | None:
+    """Return the session's ``Scheduler`` when the build has E3, else None (D-63).
+
+    Call it while rendering, in the page's context: the ``Notifications`` service
+    registers with the page that is current when it is built. The extension is
+    imported only here, so the companion app is never sent a control its client may
+    lack, and keeps the interim (D-60, F14).
+
+    Args:
+        permissions: The session's ``flet-permission-handler`` service, or None.
+    """
+    if not capabilities.REMINDERS:
+        return None
+    from flet_notifications import Notifications
+
+    return Scheduler(
+        Notifications(),
+        permissions,
+        android=ft.context.page.platform == ft.PagePlatform.ANDROID,
+    )

@@ -1,7 +1,8 @@
 """The one source of "now" (D-43, DATA-12).
 
 ``now()`` answers, in order: a test override, then the Developer screen's fake clock, then
-real time. Only screens and stores call it; ``core`` functions take ``now`` as an argument,
+real time. ``real_now()`` skips the fake clock, for what the OS times, such as reminders
+(D-389). Only screens and stores call them; ``core`` functions take ``now`` as an argument,
 so they stay pure and testable with fixed instants. The fake clock's text form, as the
 Developer screen writes and reads it, is here too (D-187).
 """
@@ -22,6 +23,15 @@ def now() -> datetime:
         return _test_now
     real = datetime.now(UTC)
     return real if _fake_offset is None else real + _fake_offset
+
+
+def real_now() -> datetime:
+    """Return the real instant, aware UTC: a test override, never the fake clock.
+
+    The OS fires scheduled reminders at real instants, so the reminder plan is made
+    at real time even while the Developer fake clock runs (D-389).
+    """
+    return datetime.now(UTC) if _test_now is None else _test_now
 
 
 def start_fake_clock(at: datetime | None) -> None:
