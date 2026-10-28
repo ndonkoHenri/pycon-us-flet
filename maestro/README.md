@@ -53,7 +53,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/reminder_settings.yaml` | journeys, reminders | More › Settings › Reminders in a packaged build: session reminders off; on, the lead at 10, then 15, and on Android the Alarms & reminders card (never on iOS); after a relaunch still on at 15; My schedule › More options › Reminder settings opens Settings, and Back returns to My schedule; then off again (NOTIF-01, STORE-10, D-401, #449) |
 | `journeys/reminder_primer.yaml` | journeys, reminders | A fresh install launched with notifications `unset`: nothing asked at launch or on Welcome; the first star (Now, session 123) shows the reminders primer, which `PRIMER` answers (`allow` or `not_now`), then the OS prompt, which `OS_ANSWER` answers (`allow` or `deny`); the session stays saved, and a second star (Schedule, 30) shows no primer (D-61, D-395, #448). The other flows launch with every permission granted (`subflows/launch_fresh.yaml`), so no primer shows there on Android; on iOS it does ([below](#the-reminders-primer-on-ios)) |
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
-| `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` (an iPad, U95, #525) "Couldn't open the share sheet." (INFO-03, INFO-04, #461) |
+| `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` "Couldn't open the share sheet." (an iPad needed it until the pin `08b89cce5`, F115, F263) (INFO-03, INFO-04, #461) |
 | `journeys/theme_relaunch.yaml` | journeys, theme | More › Settings starts on System with High contrast following the device ("Follows your device setting", off); Dark and High contrast on; after a relaunch Dark is still chosen and the switch on with no subtitle; then High contrast off (following the device again) and System, so a second run starts the same way. The rows' states are read each platform's way (`subflows/theme_state.yaml`): Android's `checked`, iOS's `selected` radio rows and the switch's value "1" or "0" (THEME-01, STORE-08, D-286, #512) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
@@ -435,11 +435,11 @@ maestro --device emulator-5578 test --include-tags=tablet maestro               
 maestro --device emulator-5578 test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro  # portrait
 adb -s emulator-5578 shell cmd uimode night yes   # dark; `no` for light
 
-# iOS: an iPad of your own, where the sheet cannot open at this pin (U95), so
-# SHARE_FAILS=true expects about_app's failure line; then an iPhone 17 in landscape.
+# iOS: an iPad of your own, where the sheet opens since the pin 08b89cce5 (F263; at
+# 15854a0ac it needed SHARE_FAILS=true, F115); then an iPhone 17 in landscape.
 xcrun simctl create "<issue>-ipadpro11" "iPad Pro 11-inch (M5)" com.apple.CoreSimulator.SimRuntime.iOS-26-5
-maestro --device <udid> test -e SHARE_FAILS=true --include-tags=tablet maestro
-maestro --device <udid> test -e SHARE_FAILS=true -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
+maestro --device <udid> test --include-tags=tablet maestro
+maestro --device <udid> test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
 maestro --device <iphone-udid> test -e ORIENTATION=LANDSCAPE --include-tags=tablet maestro
 xcrun simctl ui <udid> appearance dark   # or light
 ```
@@ -456,7 +456,8 @@ What the flows met on the way, now handled in the shared subflows:
 - On a phone in landscape About this app's version row is below the fold:
   `open_developer.yaml` waits for the push (More's row gone), then scrolls.
 - On an iPad in landscape Report a problem rests on the list's end, and the line under
-  it comes in below the fold: with `SHARE_FAILS=true`, `about_app` scrolls to it.
+  it comes in below the fold: with `SHARE_FAILS=true`, `about_app` scrolls to it. Since
+  the pin `08b89cce5` an iPad opens the sheet (F263), so it runs without it.
 - Each run says which outcome it expects (`SHARE_FAILS`), so a share error where the
   sheet should open fails: elsewhere the flow waits for the sheet itself (Android's
   chooser list, `resolver_list`; iOS's `ShareSheet.RemoteContainerView`), and after
@@ -518,3 +519,21 @@ A simulator cannot be put in airplane mode, so on iOS the launch's own refresh m
 reach the year's live feed before Developer points the app at a feed that never
 answers; a cold start with no network is checked on Android. The three pages need no
 feed: they are bundled year data (`content.toml`).
+
+## The P2 exit's device run (#462)
+
+On 2026-10-28, `main` at `9ae2d49`, Flet pin `08b89cce5`: an `ios-simulator` build and a
+release APK (arm64), each matching `build/python-app`, at load averages of 4 to 43.
+Results and screenshots are on #347.
+
+| Device | Run | Result |
+|---|---|---|
+| iPhone 17, iOS 26.5 | `--include-tags=venue,expo` (`find_room` included) | 8 of 8 passed, 17 min 37 s |
+| same | `change_log`, `reminder_primer` (`PRIMER=allow OS_ANSWER=deny`), `deep_links`, `theme_relaunch` | 4 of 4 passed, 7 min 57 s |
+| iPad Pro 11-inch (M5), iOS 26.5 | `rail_tabs`, `find_room`; `about_app` without `SHARE_FAILS` | passed; the share sheet opens (F263) |
+| `pycon_pixel6a_api36`, Android 16 | `--include-tags=venue,expo`, each a cold start in airplane mode | 8 of 8 passed, 19 min 52 s |
+| same | `change_log`, `reminder_primer` (`OS_ANSWER=deny`), `deep_links`, `theme_relaunch` | 4 of 4 passed, 8 min 32 s |
+
+At the largest text (iOS's `accessibility-extra-extra-extra-large`) the flows still
+cannot set their scene (Developer options' rows are below the fold); the three
+screen-reader flows' pages were walked there after a run at the default size.
