@@ -7,7 +7,8 @@ the signature is checked over the same bytes the client signed. Faults come late
 
 import httpx
 
-from tools.mock_api.handlers import MockState, handle
+from tools.mock_api.handlers import handle
+from tools.mock_api.state import MockState
 
 
 def mock_transport(state: MockState) -> httpx.MockTransport:

@@ -1177,14 +1177,16 @@ Ionic reads most replies bare and only three inside a `data` member (`{code, dat
 
 | Part | What it is |
 |---|---|
-| `handlers.py` | `MockState` (in-memory accounts, sponsors, products, attendees, records, faults, injectable `now`) and a pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)` |
+| `handlers.py` | the pure `handle(state, method, raw_path, headers, body) -> (status, headers, body)`: routing (one table, `{}` for a path segment), envelopes, the signature check and the account endpoints |
+| `state.py` | `MockState` (in-memory accounts, sponsors, products, attendees, faults, injectable `now`, `capture="idempotent" \| "non_idempotent"`, and the leads, notes, redemptions and incidents it recorded, so tests count applications), loaded from the seed; `Call`, a checked request; `Refused`, an error reply |
+| `check_in.py`, `conduct.py`, `leads.py` | the staff endpoints (door and swag, Code of Conduct, lead retrieval), each gated by its role flag (403 otherwise); `parse.py` reads their bodies and queries the way Ionic builds them |
 | `server.py` | stdlib `ThreadingHTTPServer` over `handle` (`python -m tools.mock_api.server --host 0.0.0.0 --port 8000`; development.md §6), a lock around `handle`, faults from the command line |
 | `transport.py` | `mock_transport(state)`: `httpx.MockTransport` over the same `handle`, for client tests |
 | `badges.py` | prints a sheet of mock-badge QR codes (`code:validator`) for the P3 exit test (one dev-only QR library, e.g. `segno`; D-75) |
 | `README.md` | the contract: endpoints, envelopes and fields citing `pycon-api.ts` by line, plus what is **unknown** (server idempotency, the timestamp window) and how the mock models it |
-| `tests/fixtures/mock/` | seed data: one account per role, sponsors, products, attendees with badges (the Ionic signing vectors are in `tests/fixtures/ionic/signing.json`) |
+| `tests/fixtures/mock/` | seed data (`seed.json`): one account per role, sponsors (one JSON-quoted), door and swag categories and products, attendees with badges and prior Code of Conduct incidents (the Ionic signing vectors are in `tests/fixtures/ionic/signing.json`) |
 
-`handle` checks the route, then for signed routes: unknown key → 401; timestamp outside the window (600 s per the 2019 API docs, UNCONFIRMED) or wrong signature (`hmac.compare_digest` against `sign(secret, ts, method, raw_path, body)`) → 403. The mock never proxies or points at PSF hosts, and nothing test-only lives in the app.
+`handle` checks the route, then for signed routes: unknown key → 401; timestamp outside the window (600 s per the 2019 API docs, UNCONFIRMED) or wrong signature (`hmac.compare_digest` against `sign(secret, ts, method, raw_path, body)`) → 403; then the endpoint: an account without its role flag → 403, an unknown access code or a wrong validator → 404. The mock never proxies or points at PSF hosts, and nothing test-only lives in the app.
 
 `transport.py` wraps `handle` in `httpx.MockTransport`: a `connect` fault raises `httpx.ConnectError` before `handle` runs; a `lost-response` fault runs `handle` (the server commits) and then raises `httpx.ReadError`. Signatures are checked against `request.url.raw_path`, exactly as sent.
 

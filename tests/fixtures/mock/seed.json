@@ -63,5 +63,42 @@
       "favorites": [],
       "features": {"lead_retrieval": true, "door_check_in": true, "mask_violation": true, "is_speaker": true}
     }
+  ],
+  "sponsors": [
+    {"id": 1, "name": "Example Corp", "booth_number": "101", "logo_url": "https://example.com/logos/example-corp.png"},
+    {"id": 2, "name": "\"Quoted Labs\"", "booth_number": "214"},
+    {"id": 3, "name": "Sample Systems"}
+  ],
+  "categories": [
+    {"id": 1, "name": "Tutorials"},
+    {"id": 2, "name": "Summits"},
+    {"id": 3, "name": "T-Shirt"},
+    {"id": 4, "name": "Swag Bag"}
+  ],
+  "products": [
+    {"id": 10, "name": "Wed May 13 9:00 AM - All about decorators", "category": 1},
+    {"id": 11, "name": "Wed May 13 1:30 PM - Async in depth", "category": 1},
+    {"id": 20, "name": "Thu May 14 10:00 AM - Example Summit", "category": 2},
+    {"id": 30, "name": "T-Shirt (M)", "category": 3},
+    {"id": 31, "name": "T-Shirt (L)", "category": 3},
+    {"id": 40, "name": "Swag Bag", "category": 4}
+  ],
+  "attendees": [
+    {"id": 1, "access_code": "MOCK0001", "validator": "v4l1d01", "first_name": "Ada",
+     "full_name": "Ada Example", "nickname": "ada", "badge_name": "Ada", "email": "ada@example.com",
+     "violations": 0, "dietary": "vegetarian", "has_allergy": false, "allergy": "",
+     "products": {"10": 1, "30": 2, "40": 1}},
+    {"id": 2, "access_code": "MOCK0002", "validator": "v4l1d02", "first_name": "Grace",
+     "full_name": "Grace Sample", "nickname": "gsample", "badge_name": "Grace S.", "email": "grace@example.com",
+     "violations": 1, "dietary": "", "has_allergy": true, "allergy": "peanuts",
+     "products": {"11": 1, "31": 1}},
+    {"id": 3, "access_code": "MOCK0003", "validator": "v4l1d03", "first_name": "Linus",
+     "full_name": "Linus Placeholder", "nickname": "linus", "badge_name": "Linus", "email": "linus@example.com",
+     "violations": 3, "dietary": "vegan", "has_allergy": true, "allergy": "",
+     "products": {"10": 2, "20": 1, "40": 1}},
+    {"id": 4, "access_code": "MOCK0004", "validator": "v4l1d04", "first_name": "Margaret",
+     "full_name": "Margaret Test", "nickname": "mtest", "badge_name": "Maggie", "email": "margaret@example.com",
+     "violations": 0, "dietary": "", "has_allergy": false, "allergy": "",
+     "products": {}}
   ]
 }
