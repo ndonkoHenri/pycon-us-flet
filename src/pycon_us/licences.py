@@ -114,6 +114,14 @@ GROUPS = (
                 APACHE,
                 package="flet-permission-handler",
             ),
+            Component(  # the mock API key and secret (D-49, #684)
+                "flet-secure-storage",
+                "Flet Secure Storage",
+                "Apache-2.0",
+                "Copyright Appveyor Systems Inc.",
+                APACHE,
+                package="flet-secure-storage",
+            ),
             Component(
                 "flutter",
                 "Flutter",

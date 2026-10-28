@@ -82,14 +82,16 @@ def test_the_test_run_itself_is_not_embedded() -> None:
 def test_the_bundled_extensions_are_found_by_their_module_names(
     reload_after: None,
 ) -> None:
-    """In a packaged build, the real modules turn Permissions and Reminders on (#446).
+    """In a packaged build, the real modules turn their capabilities on (#446, #684).
 
-    ``pyproject.toml`` bundles ``flet-permission-handler`` and the monorepo's
-    ``flet-notifications``, whose modules are ``flet_permission_handler`` and
-    ``flet_notifications``; ``uv sync`` installs both on the host too.
+    ``pyproject.toml`` bundles ``flet-permission-handler``, the monorepo's
+    ``flet-notifications`` and ``flet-secure-storage``, whose modules are
+    ``flet_permission_handler``, ``flet_notifications`` and ``flet_secure_storage``;
+    ``uv sync`` installs them on the host too.
     """
     with pytest.MonkeyPatch.context() as patch:
         patch.setenv("FLET_PLATFORM", "android")
         importlib.reload(capabilities)
         assert capabilities.PERMISSIONS
         assert capabilities.REMINDERS
+        assert capabilities.SECURE_STORAGE
