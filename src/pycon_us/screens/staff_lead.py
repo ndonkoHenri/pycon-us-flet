@@ -22,14 +22,22 @@ itself once, and the scan screen is paused ("Choose a sponsor to start scanning"
 with a "Choose sponsor" button; with one, a "For: Example Corp" chip
 (``lead.sponsor_chip``) heads the screen and opens the picker. A sponsor's own account
 sees neither.
+
+After a capture (or a queued scan) the result has "Add note" (``lead.add_note``), and
+after a duplicate "Open lead" (``lead.open_lead``): both open ``ui/lead_note_sheet.py``'s
+sheet for that lead, prefilled with its saved note (#742, LEAD-10). Scanning is paused
+while it is open ("Paused while the note is open"), and the focus goes back to the
+field when it closes.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 
 import flet as ft
 
 from pycon_us.account import use_account
+from pycon_us.core.badges import ScanOutcome, ScanResult
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open, scans_for_sponsor
 from pycon_us.lead_capture import capture
@@ -43,6 +51,7 @@ from pycon_us.services.storage import SCANNER_CONSENT
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.lead_note_sheet import use_note_sheet
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
 from pycon_us.ui.semantics import named
@@ -53,6 +62,13 @@ TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
 
 NO_SPONSOR = "Choose a sponsor to start scanning"
 """Why the scan screen is paused for staff with no sponsor chosen (LEAD-05)."""
+
+NOTE_OPEN = "Paused while the note is open"
+"""Why the scan screen is paused while the note sheet is open (#742)."""
+
+ADD_NOTE = "Add note"
+OPEN_LEAD = "Open lead"
+"""The result's button: on a lead captured or queued, and on a duplicate (LEAD-07)."""
 
 
 @dataclass(frozen=True)
@@ -142,6 +158,11 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     on_badge = partial(
         capture, svc.outbox, staff, svc.kick_sync, owner=owner, sponsor=sponsor
     )
+    sheet = use_note_sheet(owner=owner, sponsor=sponsor)
+    paused = NOTE_OPEN if sheet.is_open else None
+
+    def note_actions(result: ScanResult) -> list[ft.Control]:
+        return lead_actions(result, sheet.open)
 
     if current is None:
         return Reading()
@@ -150,7 +171,12 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
             title=TITLE, on_given=lambda: set_read(Read(owner, True, current.sponsor))
         )
     if not for_sponsor:
-        return ScanScreen(title=TITLE, on_badge=on_badge)
+        return ScanScreen(
+            title=TITLE,
+            on_badge=on_badge,
+            paused=paused,
+            result_actions=note_actions,
+        )
     if current.sponsor is None:
         return ScanScreen(
             title=TITLE,
@@ -162,6 +188,8 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         title=TITLE,
         on_badge=on_badge,
         context=sponsor_chip(current.sponsor, open_picker),
+        paused=paused,
+        result_actions=note_actions,
     )
 
 
@@ -219,12 +247,67 @@ def sponsor_chip(sponsor: LeadSponsor, on_click: ft.ControlEventHandler) -> ft.C
 
 def choose_button(on_click: ft.ControlEventHandler) -> ft.Control:
     """Return "Choose sponsor", under the paused field while none is chosen."""
+    return tool_button(
+        "lead.sponsor.choose",
+        lead_sponsor.TITLE,
+        ft.Icons.STOREFRONT_OUTLINED,
+        on_click,
+    )
+
+
+def lead_actions(
+    result: ScanResult, open_note: Callable[[str, str | None], None]
+) -> list[ft.Control]:
+    """Return the result's button: "Add note" on a lead, "Open lead" on a duplicate.
+
+    A lead captured or queued gets "Add note"; "Already in your leads" gets "Open
+    lead", the same sheet with the note saved for it. A refused or unsaved scan, and
+    "Not a badge code", get none.
+
+    Args:
+        result: The result on the panel.
+        open_note: Opens the note sheet for a code and the name, if any.
+    """
+    if not result.code:
+        return []
+    name = result.title if result.title != result.code else None
+
+    @report_errors
+    def opened(_: ft.Event[ft.FilledTonalButton]) -> None:
+        open_note(result.code, name)
+
+    match result.outcome:
+        case ScanOutcome.ACCEPTED | ScanOutcome.QUEUED:
+            return [
+                tool_button(
+                    "lead.add_note", ADD_NOTE, ft.Icons.NOTE_ADD_OUTLINED, opened
+                )
+            ]
+        case ScanOutcome.DUPLICATE:
+            return [
+                tool_button("lead.open_lead", OPEN_LEAD, ft.Icons.EDIT_NOTE, opened)
+            ]
+        case _:
+            return []
+
+
+def tool_button(
+    identifier: str, label: str, icon: ft.IconData, on_click: ft.ControlEventHandler
+) -> ft.Control:
+    """Return one of the tool's tonal buttons under the field, start-aligned.
+
+    Args:
+        identifier: For UI flows, e.g. ``lead.add_note``.
+        label: Its words.
+        icon: Its leading icon.
+        on_click: What it does.
+    """
     return ft.Container(
         named(
-            "lead.sponsor.choose",
+            identifier,
             ft.FilledTonalButton(
-                lead_sponsor.TITLE,
-                icon=ft.Icons.STOREFRONT_OUTLINED,
+                label,
+                icon=icon,
                 on_click=on_click,
                 style=ft.ButtonStyle(padding=LABEL_PADDING),
                 elevation=0,  # M3's tonal button lies flat (D-344)

@@ -108,12 +108,15 @@ class ScanResult:
         word: The outcome in words, first and largest: "Checked in", "Badge read".
         title: The attendee's name, or the code when the tool has no name.
         details: Lines under the title, in order: a reason, validators, a note.
+        code: The access code the result is about, so a tool can act on it ("Add
+            note", #742); empty when there is none (not a badge).
     """
 
     outcome: ScanOutcome
     word: str
     title: str = ""
     details: tuple[str, ...] = ()
+    code: str = ""
 
     @property
     def spoken(self) -> str:

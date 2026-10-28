@@ -77,7 +77,9 @@ async def capture(
     )
     enqueued = None if db is None else db.enqueue(badge.code, decide)
     if db is None or enqueued is None or enqueued.row is None:  # logged (D-120)
-        return ScanResult(ScanOutcome.DENIED, NOT_CAPTURED, badge.code, (NOT_SAVED,))
+        return ScanResult(
+            ScanOutcome.DENIED, NOT_CAPTURED, badge.code, (NOT_SAVED,), badge.code
+        )
     row = enqueued.row
     if enqueued.outcome is Outcome.ALREADY:
         return named(ScanOutcome.DUPLICATE, ALREADY, row)
@@ -157,13 +159,13 @@ def result_of(before: Row, after: Row | None) -> ScanResult:
         after.status is Status.PENDING and after.tries == before.tries
     ):
         flags = () if after is None else flag(after)
-        return ScanResult(ScanOutcome.QUEUED, SAVED, before.key, flags)
+        return ScanResult(ScanOutcome.QUEUED, SAVED, before.key, flags, before.key)
     if after.status is Status.SYNCED:
         return named(ScanOutcome.ACCEPTED, CAPTURED, after)
     message = (after.last_error,) if after.last_error else ()
     then = RETRY_FROM_QUEUE if after.status is Status.FAILED else WILL_RETRY
     details = (*message, then, *flag(after))
-    return ScanResult(ScanOutcome.DENIED, NOT_CAPTURED, after.key, details)
+    return ScanResult(ScanOutcome.DENIED, NOT_CAPTURED, after.key, details, after.key)
 
 
 def named(outcome: ScanOutcome, word: str, row: Row) -> ScanResult:
@@ -173,8 +175,8 @@ def named(outcome: ScanOutcome, word: str, row: Row) -> ScanResult:
     """
     name = first_name(row)
     if name is None:
-        return ScanResult(outcome, word, row.key, flag(row))
-    return ScanResult(outcome, word, name, (row.key, *flag(row)))
+        return ScanResult(outcome, word, row.key, flag(row), row.key)
+    return ScanResult(outcome, word, name, (row.key, *flag(row)), row.key)
 
 
 def first_name(row: Row) -> str | None:
