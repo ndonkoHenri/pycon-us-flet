@@ -30,6 +30,11 @@ back to the field. It goes back there too when Back pops a page pushed over the
 screen (the leads list, a picker), so a HID scanner's next scan lands in it (#775,
 D-438).
 
+**A result from elsewhere** (#761): a tool that gets a result outside ``on_badge``
+(the CoC name search records without a scan) hands it over as ``posted``, a
+``Posted`` whose serial it bumps for each one; the screen shows it as a scan's, with
+its haptics and announcement, unless the screen has gone or is not on top.
+
 **The camera** is E1, absent at the Flet pin (``capabilities.SCANNER`` is False): the
 area says so and manual entry is primary; #726 brings the preview.
 """
@@ -100,6 +105,24 @@ class Shown:
     serial: int
 
 
+@dataclass(frozen=True)
+class Posted:
+    """A result a tool got outside ``on_badge``, for the panel (#761).
+
+    Attributes:
+        result: What to show.
+        serial: Bumped by the tool for each one, so an equal result shows again.
+    """
+
+    result: ScanResult
+    serial: int
+
+
+def post(last: Posted | None, result: ScanResult) -> Posted:
+    """Return the next ``Posted`` after ``last``: a tool's ``set_state`` update."""
+    return Posted(result, last.serial + 1 if last is not None else 1)
+
+
 @ft.component
 def ScanScreen(
     *,
@@ -109,6 +132,7 @@ def ScanScreen(
     actions: list[ft.Control] | None = None,
     paused: str | None = None,
     result_actions: ResultActions | None = None,
+    posted: Posted | None = None,
 ) -> ft.Control:
     """Return a staff tool's scan screen (ux.md §7.2).
 
@@ -124,6 +148,8 @@ def ScanScreen(
         result_actions: The tool's buttons for the result shown, under the field
             before ``actions``: the Lead scanner's "Add note" (#742). They belong to
             that result, so the next one (even "Not a badge code") replaces them.
+        posted: The latest result the tool got outside ``on_badge`` (the CoC name
+            search's record), shown once per serial as a scan's would be.
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -167,6 +193,17 @@ def ScanScreen(
         await buzz(svc.haptics, result.outcome)
         if prefs.announcements:  # iOS; elsewhere the panel's live region says it
             await announce(svc.semantics, result)
+
+    @report_errors
+    async def show_posted() -> None:
+        if (
+            posted is not None
+            and mounted.current
+            and is_top_view(page.route, view_path)
+        ):
+            await show(posted.result)
+
+    ft.use_effect(show_posted, [posted])
 
     @report_errors
     async def submit(e: ft.Event[ft.TextField]) -> None:

@@ -26,6 +26,12 @@ lacks is reviewed all the same (D-434). The handler awaits the dialog, so scanni
 paused while it is open ("Paused while the review is open") and resumes in the field
 after it closes; the panel then says "Incident recorded" with the reply's count, or
 "Not recorded". Each record's count updates the directory's row.
+
+**Find by name** (``ui/coc_search.py``, #761; MASK-02, D-439) opens the name search
+over the loaded directory, disabled with its reason before it has loaded or offline;
+scanning is paused while it is open ("Paused while the search is open"). A row's tap
+opens the same review, and its result reaches the panel as ``ScanScreen``'s
+``posted``, since no badge was scanned.
 """
 
 import asyncio
@@ -49,9 +55,17 @@ from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.ui.coc_review import use_review
+from pycon_us.ui.coc_search import SEARCH_OPEN, use_find
+from pycon_us.ui.coc_search_sheet import find_button
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
-from pycon_us.ui.scan_screen import NOT_AVAILABLE, NotAvailable, ScanScreen
+from pycon_us.ui.scan_screen import (
+    NOT_AVAILABLE,
+    NotAvailable,
+    Posted,
+    ScanScreen,
+    post,
+)
 from pycon_us.ui.semantics import named
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.COC)
@@ -181,8 +195,20 @@ def CocTool(*, owner: str) -> ft.Control:
             set_directory(lambda last: with_count(last, code, incidents))
 
     review = use_review(on_recorded=counted)
+    posted, set_posted = ft.use_state(not_posted)
+
+    @report_errors
+    async def picked(attendee: Attendee) -> None:
+        """Review the attendee found by name; its result goes to the panel."""
+        result = await review.open(attendee.code, attendee)
+        if mounted.current:
+            set_posted(lambda last: post(last, result))
+
+    finder = use_find(attendees=current.by_code, on_pick=picked)
     if review.is_open:
         paused = REVIEW_OPEN
+    elif finder.is_open:
+        paused = SEARCH_OPEN
     elif not online:
         paused = OFFLINE
     elif current.status == "refused":
@@ -199,8 +225,28 @@ def CocTool(*, owner: str) -> ft.Control:
             online=online,
             live=not prefs.announcements,
         ),
+        actions=[find_button(find_reason(current, words, online), finder.open)],
         paused=paused,
+        posted=posted,
     )
+
+
+def not_posted() -> Posted | None:
+    """Return None: nothing recorded by name yet (a typed default)."""
+    return None
+
+
+def find_reason(directory: Directory, words: str, online: bool) -> str | None:
+    """Return why Find by name is disabled now, or None once it can search.
+
+    Args:
+        directory: Where the fetch is: the search needs it loaded.
+        words: The status line's words, the reason while it isn't.
+        online: Whether the device has a connection (D-56).
+    """
+    if not online:
+        return OFFLINE
+    return None if directory.status == "loaded" else words
 
 
 def not_fetched() -> Directory | None:
