@@ -76,12 +76,17 @@ async def close_sheet(shown: harness.Shown) -> None:
         (ScanOutcome.DUPLICATE, ["medium_impact", "medium_impact"]),
         (ScanOutcome.DENIED, ["heavy_impact", "vibrate"]),
         (ScanOutcome.QUEUED, ["light_impact"]),
+        (ScanOutcome.RECORDED, ["light_impact"]),
+        (ScanOutcome.NOT_RECORDED, []),
     ],
 )
 async def test_each_outcome_gives_its_haptics(
     show: Show, rig: Rig, outcome: ScanOutcome, effects: list[str]
 ) -> None:
-    """ux.md §7.2's column: light, medium twice, heavy then vibrate, light."""
+    """ux.md §7.2's column: light, medium twice, heavy then vibrate, light, light, none.
+
+    The last two are CoC's incident recorded and not recorded (#760).
+    """
     rig.result = ScanResult(outcome, "Word")
     shown = await show()
     await enter(shown, "MOCK0001:v1")
@@ -144,6 +149,7 @@ async def test_without_announcements_the_live_region_alone_says_it(
     [
         (ScanOutcome.ACCEPTED, ft.Assertiveness.POLITE),
         (ScanOutcome.QUEUED, ft.Assertiveness.POLITE),
+        (ScanOutcome.RECORDED, ft.Assertiveness.POLITE),
         (ScanOutcome.DUPLICATE, ft.Assertiveness.ASSERTIVE),
         (ScanOutcome.DENIED, ft.Assertiveness.ASSERTIVE),
     ],

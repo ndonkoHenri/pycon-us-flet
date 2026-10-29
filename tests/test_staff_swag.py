@@ -221,17 +221,16 @@ async def test_the_chips_show_none_chosen_and_scanning_is_paused(
 async def test_a_choice_is_stored_scans_and_survives_a_relaunch(
     show: Show, stored: dict[str, Any]
 ) -> None:
-    """Both chips chosen: stored as ids, Ada ready, Margaret nothing; kept next time."""
+    """Both chips chosen: stored as ids, Margaret nothing; kept next time.
+
+    Items left open the hand-out sheet: ``tests/test_swag_sheet.py``.
+    """
     shown = await show()
     await tap(shown, 3)
     await tap(shown, 4)
     assert stored[STAFF_SWAG_CATEGORIES.key] == ["3", "4"]
     assert chip(shown, 3).selected and chip(shown, 4).selected
     assert helper(shown) is None
-    await enter(shown, "MOCK0001:v4l1d01")
-    said = panel(shown)
-    assert said.startswith(f"{READY}\nAda Example")
-    assert "2× T-Shirt (M)" in said and "1× Swag Bag" in said
     await enter(shown, "MOCK0004:v4l1d04")
     assert panel(shown).startswith(f"{NOTHING}\nMargaret Test")
     await tap(shown, 4)  # unchosen again
@@ -267,8 +266,8 @@ async def test_offline_pauses_with_the_reason_and_resumes(
     assert READY not in panel(shown)
     await online.flip(shown, True)
     assert helper(shown) is None
-    await enter(shown, "MOCK0001:v4l1d01")
-    assert panel(shown).startswith(READY)
+    await enter(shown, "MOCK0004:v4l1d04")
+    assert panel(shown).startswith(NOTHING)
 
 
 async def test_a_lookup_without_an_answer_says_no_connection(

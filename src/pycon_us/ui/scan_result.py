@@ -3,7 +3,9 @@
 ux.md §7.2's table: accepted is white on green with ``CHECK_CIRCLE``, a duplicate dark
 on amber with ``HISTORY``, a denial white on red with ``BLOCK``; queued offline and a
 code that is not a badge are neutral, with ``CLOUD_UPLOAD_OUTLINED`` and
-``ERROR_OUTLINE``. The fills are fixed colours, the same in light and dark, each label
+``ERROR_OUTLINE``; CoC's incident recorded and not recorded are neutral too, with
+``TASK_ALT`` and ``REMOVE_CIRCLE_OUTLINE`` (#760: a safety record is never a
+check-in's green). The fills are fixed colours, the same in light and dark, each label
 at 4.5:1 or better on its fill; high contrast darkens the green and the red for 7:1
 (``tests/test_scan_screen.py``). Colour is never the only signal: the word and the
 icon say the outcome (ux.md §9). The panel stays until the next scan and dims after
@@ -41,6 +43,8 @@ ICONS: dict[ScanOutcome, ft.IconData] = {
     ScanOutcome.DENIED: ft.Icons.BLOCK,
     ScanOutcome.QUEUED: ft.Icons.CLOUD_UPLOAD_OUTLINED,
     ScanOutcome.INVALID: ft.Icons.ERROR_OUTLINE,
+    ScanOutcome.RECORDED: ft.Icons.TASK_ALT,
+    ScanOutcome.NOT_RECORDED: ft.Icons.REMOVE_CIRCLE_OUTLINE,
 }
 """Each outcome's icon (ux.md §7.2)."""
 

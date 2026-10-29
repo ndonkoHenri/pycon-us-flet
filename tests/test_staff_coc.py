@@ -5,7 +5,7 @@ transport, signed with a seeded account's key, so the directory is what the mock
 ``handle()`` answers. The tool re-checks its rule on every render (architecture
 §12.4); its status line goes loading, "4 attendees" with Reload, "Couldn't load the
 attendee list" with Retry, or "Not available" on a 403; offline pauses scanning; a
-scan shows what the directory says and sends nothing; and the directory lives in the
+scan opens the review dialog (its tests: ``tests/test_coc_review.py``); and the directory lives in the
 screen alone: nothing is stored, and a remount fetches it again (D-56, D-432).
 """
 
@@ -323,41 +323,6 @@ async def test_offline_retry_is_disabled_with_the_reason(
     assert isinstance(named, ft.Semantics)  # a disabled button's tooltip isn't read
     assert named.label == f"Retry. {OFFLINE}" and named.disabled
     assert isinstance(named.content, ft.TextButton) and named.content.disabled
-
-
-async def test_a_known_code_shows_its_name_and_count_and_sends_nothing(
-    show: Show, switch: Switch
-) -> None:
-    """``MOCK0003:x``: Linus Placeholder, 3 incidents, "Not recorded yet"; no record."""
-    shown = await show()
-    await enter(shown, "MOCK0003:x")
-    assert panel(shown) == (
-        "Badge read\nLinus Placeholder\n3 incidents on record\nNot recorded yet\nScan 1"
-    )
-    assert switch.paths == [ATTENDEES]  # the directory, and nothing else
-
-
-async def test_an_unknown_code_says_it_is_not_in_the_directory(
-    show: Show, switch: Switch
-) -> None:
-    """A code the directory lacks: the code, "Not in the attendee directory"."""
-    shown = await show()
-    await enter(shown, "NOPE0001:x")
-    assert panel(shown) == (
-        "Badge read\nNOPE0001\nNot in the attendee directory\nNot recorded yet\nScan 1"
-    )
-    assert switch.paths == [ATTENDEES]
-
-
-async def test_a_scan_before_the_directory_says_it_is_not_loaded(
-    show: Show, switch: Switch
-) -> None:
-    """A failed fetch: a scan names the code and "Attendee directory not loaded"."""
-    switch.offline = True
-    shown = await show()
-    await enter(shown, "MOCK0003:x")
-    assert "Attendee directory not loaded" in panel(shown)
-    assert "Linus" not in panel(shown)
 
 
 async def test_the_directory_is_dropped_on_leaving_and_never_stored(

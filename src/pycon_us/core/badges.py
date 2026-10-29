@@ -97,6 +97,10 @@ class ScanOutcome(StrEnum):
     """Saved offline, to sync when online."""
     INVALID = "invalid"
     """Not a badge code: the text stays in the field for correction."""
+    RECORDED = "recorded"
+    """An incident recorded (CoC, MASK-04): neutral, never a check-in's green."""
+    NOT_RECORDED = "not_recorded"
+    """A review closed without recording (CoC's Cancel or Back): neutral, silent."""
 
 
 @dataclass(frozen=True)
