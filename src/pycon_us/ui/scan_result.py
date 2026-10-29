@@ -18,9 +18,13 @@ the name, in a row that wraps: a warning (an allergy) first, larger, with
 ``WARNING_AMBER`` and the card's colours swapped; the others outlined, with
 ``RESTAURANT_OUTLINED``. They take the card's own colours, so they read on every fill
 at its contrast (#767).
+
+``Shown`` is the result on the panel, and ``Posted`` one a tool got outside a scan,
+handed to the screen for it (#761).
 """
 
 import math
+from dataclasses import dataclass
 
 import flet as ft
 
@@ -267,3 +271,44 @@ def age_line(seconds: float, clear_after: float | None = None) -> ft.Control:
             color=ft.Colors.ON_SURFACE_VARIANT,
         ),
     )
+
+
+@dataclass(frozen=True)
+class Shown:
+    """The result on the panel.
+
+    Attributes:
+        result: What the handler, or the parse, returned.
+        at: When it came, in ``scan_screen.clock()`` seconds.
+        serial: Counts the results, so each one is a new card, even an equal one.
+    """
+
+    result: ScanResult
+    at: float
+    serial: int
+
+
+@dataclass(eq=False)
+class Posted:
+    """A result a tool got outside ``on_badge``, for the panel (#761).
+
+    Handed over once: the screen takes it (``take()``), so the tool's state keeps no
+    copy after a clear (#762). Compared by identity: each one is new.
+
+    Attributes:
+        result: What to show, until the screen takes it.
+        serial: Bumped by the tool for each one.
+    """
+
+    result: ScanResult | None
+    serial: int
+
+    def take(self) -> ScanResult | None:
+        """Return the result and forget it: the panel holds it from then on."""
+        result, self.result = self.result, None
+        return result
+
+
+def post(last: Posted | None, result: ScanResult) -> Posted:
+    """Return the next ``Posted`` after ``last``: a tool's ``set_state`` update."""
+    return Posted(result, last.serial + 1 if last is not None else 1)

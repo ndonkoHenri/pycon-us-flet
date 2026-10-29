@@ -13,7 +13,7 @@ from datetime import timedelta
 from typing import Any, Literal, get_args
 
 from pycon_us.core.ics import ALARM
-from pycon_us.services.storage import REMINDERS
+from pycon_us.services.pref_keys import REMINDERS
 
 logger = logging.getLogger(__name__)
 

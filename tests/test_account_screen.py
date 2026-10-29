@@ -46,8 +46,9 @@ from pycon_us.screens.account_sign_out import (
 from pycon_us.screens.sign_in import EXPIRED
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import OutboxDb
+from pycon_us.services.pref_keys import ACCOUNT, THEME
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import ACCOUNT, THEME, Storage
+from pycon_us.services.storage import Storage
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui.queue_sheet import sync_blocked

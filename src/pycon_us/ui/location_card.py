@@ -26,7 +26,7 @@ from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
+from pycon_us.services.pref_keys import THEME
 from pycon_us.year_map import JOB_FAIR_PLAN, MapData, Pin, Plan
 
 THUMB_DP = 112

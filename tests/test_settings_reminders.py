@@ -38,8 +38,9 @@ from pycon_us.screens.settings_reminders import (
     interim_section,
 )
 from pycon_us.services import Services, use_services
+from pycon_us.services.pref_keys import REMINDERS, Pref
 from pycon_us.services.reminders import Access, Scheduler
-from pycon_us.services.storage import REMINDERS, Pref, Storage
+from pycon_us.services.storage import Storage
 from pycon_us.state import Conference, use_conference
 from pycon_us.ui import focus_back
 from tests import harness

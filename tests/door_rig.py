@@ -28,8 +28,8 @@ from pycon_us.screens.door_session import SessionPicker
 from pycon_us.screens.staff_door import DoorCheck
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
+from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import STAFF_DOOR_SESSION
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
 from tests import harness

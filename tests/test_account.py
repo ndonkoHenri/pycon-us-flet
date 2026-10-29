@@ -13,7 +13,8 @@ import pytest
 from pycon_us.account import Account
 from pycon_us.account_profile import Profile
 from pycon_us.services.credentials import API_KEY, API_SECRET, CredentialStorage
-from pycon_us.services.storage import ACCOUNT, START_SCREEN, Storage, favorites
+from pycon_us.services.pref_keys import ACCOUNT, START_SCREEN, favorites
+from pycon_us.services.storage import Storage
 from tests import accounts
 from tests.accounts import ALL, EVERY_FLAG, changes, save_account, stored_account
 from tests.fakes import MemoryPrefs

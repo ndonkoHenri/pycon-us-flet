@@ -30,7 +30,7 @@ from pycon_us.screens import staff_leads
 from pycon_us.screens.staff_leads import NO_LEADS, NO_MATCH, NOT_READ, LeadsPage
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.storage import STAFF_SPONSOR
+from pycon_us.services.pref_keys import STAFF_SPONSOR
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen

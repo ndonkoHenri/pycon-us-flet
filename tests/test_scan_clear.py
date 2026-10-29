@@ -13,8 +13,7 @@ import flet as ft
 import pytest
 
 from pycon_us.core.badges import ScanOutcome, ScanResult
-from pycon_us.ui.scan_result import READY, READY_BODY, age_line
-from pycon_us.ui.scan_screen import post
+from pycon_us.ui.scan_result import READY, READY_BODY, age_line, post
 from tests import harness, scan_rig
 from tests.scan_rig import Rig, Show, Timer, enter, panel, pause, resume
 

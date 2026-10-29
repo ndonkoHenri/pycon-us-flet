@@ -18,7 +18,7 @@ import flet as ft
 from pycon_us.staff import Staff
 from pycon_us.theme import Tokens
 from pycon_us.ui.semantics import named
-from pycon_us.ui.staff_picker import context_chip
+from pycon_us.ui.tool_controls import context_chip
 
 IDENTIFIER = "staff.sync_chip"
 """The chip's semantics identifier, where it is a button of its own (D-33)."""

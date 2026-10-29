@@ -28,7 +28,7 @@ from pycon_us.dev_options import (
     DEV_UNLOCKED,
 )
 from pycon_us.reminder_settings import ReminderSettings
-from pycon_us.services.storage import (
+from pycon_us.services.pref_keys import (
     DEV,
     EXCLUDED_TRACKS,
     HIGH_CONTRAST,
@@ -37,8 +37,8 @@ from pycon_us.services.storage import (
     START_SCREEN,
     THEME,
     Pref,
-    Storage,
 )
+from pycon_us.services.storage import Storage
 
 logger = logging.getLogger(__name__)
 

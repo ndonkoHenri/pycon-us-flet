@@ -16,27 +16,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from pycon_us.core.queries import fold
-
 _SWAG = re.compile("shirt|swag", re.IGNORECASE)
 """Ionic's split: a category whose name matches is Swag pickup's, any other the door's."""
-
-_WHEN = re.compile(
-    r"^(?:(\w{3,9})\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})"
-    r"\s+(\d{1,2}):(\d{2})\s+(AM|PM)\b",
-    re.IGNORECASE | re.ASCII,
-)
-"""Ionic's session date (``door-check.page.ts`` 92), "Wed May 13 9:00 AM", weekday
-optional; ASCII ``\\w`` and ``\\d`` as in JavaScript."""
-
-_SEPARATOR = re.compile(r"^\s*[-\u2013\u2014:]?\s*")
-"""What stands between a session's date and its title, " - " in the seed."""
-
-_MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov",
-           "dec")  # fmt: skip
-
-_NEVER = datetime.min.replace(tzinfo=UTC)
-"""The start an undated product's sort key holds, so every key compares."""
 
 
 @dataclass(frozen=True)
@@ -58,7 +39,8 @@ class Product:
 
     Attributes:
         id: Its id, what the door's ``fetch_products`` and ``redeem`` take.
-        name: Its name; a session's starts with its date (``product_sort_key()``).
+        name: Its name; a session's starts with its date
+            (``door_sessions.product_sort_key()``).
         category: Its category's id.
     """
 
@@ -133,64 +115,6 @@ def _part(catalog: Catalog, *, swag: bool) -> Catalog:
     categories = tuple(c for c in catalog.categories if is_swag(c.name) == swag)
     kept = {c.id for c in categories}
     return Catalog(categories, tuple(p for p in catalog.products if p.category in kept))
-
-
-def product_sort_key(name: str, year: int) -> tuple[int, datetime, str, str]:
-    """Return a key that sorts products chronologically by the date in their name (DOOR-02).
-
-    Ionic's pattern (``door-check.page.ts`` 91-103), in ``year`` rather than its
-    hard-coded 2026: a session sorts by its start; a name without a valid date (a shirt
-    size, "Feb 30") sorts after every dated one. Ties go by folded name, then the name.
-
-    Args:
-        name: The product's name, such as "Wed May 13 9:00 AM - All about decorators".
-        year: The conference year (``config.YEAR``).
-
-    Returns:
-        The sort key.
-    """
-    start = _start(name, year)
-    tie = (fold(name), name)
-    return (0, start, *tie) if start is not None else (1, _NEVER, *tie)
-
-
-def _start(name: str, year: int) -> datetime | None:
-    """Return the start a product's name gives in ``year``, or None without a valid one."""
-    match = _WHEN.match(name)
-    if match is None:
-        return None
-    _, month, day, hour, minute, half = match.groups()
-    if not 1 <= int(hour) <= 12:
-        return None
-    hour_24 = int(hour) % 12 + (12 if half.upper() == "PM" else 0)
-    month_number = _MONTHS.index(month.lower()) + 1
-    try:  # A wall-clock time, made aware only to compare, as Ionic's Date.UTC.
-        return datetime(year, month_number, int(day), hour_24, int(minute), tzinfo=UTC)
-    except ValueError:
-        return None
-
-
-def session_parts(name: str) -> tuple[str, str] | None:
-    """Split a session product's name into its title and its day and time.
-
-    "Wed May 13 9:00 AM - All about decorators" is ("All about decorators",
-    "Wed 9:00 AM"); without a weekday the date stays ("May 13 9:00 AM").
-
-    Args:
-        name: The product's name.
-
-    Returns:
-        The title and when it is, or None for a name without a date or a title.
-    """
-    match = _WHEN.match(name)
-    if match is None:
-        return None
-    weekday, month, day, hour, minute, half = match.groups()
-    title = _SEPARATOR.sub("", name[match.end() :], count=1).strip()
-    if not title:
-        return None
-    day_part = weekday or f"{month} {day}"
-    return title, f"{day_part} {hour}:{minute} {half.upper()}"
 
 
 @dataclass(frozen=True)

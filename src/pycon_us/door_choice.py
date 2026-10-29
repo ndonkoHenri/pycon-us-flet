@@ -11,7 +11,8 @@ from pycon_us.check_in_api import fetch_catalog
 from pycon_us.core.check_in import Catalog, door_catalog
 from pycon_us.core.door_sessions import DoorChoice, from_stored, to_stored
 from pycon_us.services.api import ApiClient
-from pycon_us.services.storage import STAFF_DOOR_SESSION, Storage
+from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
+from pycon_us.services.storage import Storage
 
 
 async def fetch_door_catalog(api: ApiClient) -> Catalog:

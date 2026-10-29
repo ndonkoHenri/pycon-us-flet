@@ -21,7 +21,7 @@ import flet as ft
 
 from pycon_us.config import ConferenceInfo
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import EXCLUDED_TRACKS
+from pycon_us.services.pref_keys import EXCLUDED_TRACKS
 from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.semantics import named, semantics_key
 from pycon_us.year_tracks import TRACK_GROUPS

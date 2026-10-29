@@ -25,14 +25,14 @@ from pycon_us.services import Services
 from pycon_us.services import storage as storage_module
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import Counts, OutboxDb
-from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import (
+from pycon_us.services.pref_keys import (
     SCANNER_CONSENT,
     STAFF_PREFIX,
     STAFF_SWAG_CATEGORIES,
     Pref,
-    Storage,
 )
+from pycon_us.services.private_api import PrivateApi
+from pycon_us.services.storage import Storage
 from pycon_us.services.sync import supervise
 from pycon_us.staff import Staff
 from pycon_us.staff_data import clear_staff_data, staff_counts, unsynced

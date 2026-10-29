@@ -33,8 +33,8 @@ from pycon_us.screens.staff_swag import (
     SwagPickup,
 )
 from pycon_us.services import Services
+from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import STAFF_SWAG_CATEGORIES
 from pycon_us.state import Conference
 from pycon_us.swag import NO_CONNECTION, NOTHING, READY
 from pycon_us.ui import scan_screen

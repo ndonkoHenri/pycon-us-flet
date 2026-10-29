@@ -31,7 +31,7 @@ from pycon_us.screens.expo import placed_booths
 from pycon_us.screens.sponsors import TILE_PLATE, SponsorRow
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
+from pycon_us.services.pref_keys import THEME
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query

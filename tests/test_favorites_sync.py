@@ -20,8 +20,9 @@ from pycon_us.favorites import Favorites
 from pycon_us.services.api import ApiClient
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.favorites_sync import FavoritesSync
+from pycon_us.services.pref_keys import favorites_sync
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import Storage, favorites_sync
+from pycon_us.services.storage import Storage
 from tests.api_clients import BASE_URL, Recorder
 from tests.fakes import MemoryPrefs
 from tests.keystore import MemoryKeystore

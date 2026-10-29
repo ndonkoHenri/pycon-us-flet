@@ -53,12 +53,14 @@ from pycon_us.screens import lead_sponsor, staff_leads
 from pycon_us.screens.lead_consent import LeadConsent
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SCANNER_CONSENT
+from pycon_us.services.pref_keys import SCANNER_CONSENT
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.ui.lead_note_sheet import use_note_sheet
-from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, Shown
-from pycon_us.ui.staff_picker import Reading, context_chip, tool_button
+from pycon_us.ui.scan_result import Shown
+from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
+from pycon_us.ui.staff_picker import Reading
+from pycon_us.ui.tool_controls import context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
 """The app bar's title, "Lead scanner", as the staff entry points name it."""

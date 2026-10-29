@@ -31,7 +31,7 @@ from pycon_us.screens.map_plans import FLOOR_PLANS, floor_plans, plans_pane
 from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
+from pycon_us.services.pref_keys import THEME
 from pycon_us.ui.day_tabs import TAB_HEIGHT, TAB_MS
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu

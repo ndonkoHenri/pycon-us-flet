@@ -66,13 +66,8 @@ from pycon_us.ui.coc_search_sheet import find_button
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_clear import use_on_background
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
-from pycon_us.ui.scan_screen import (
-    NOT_AVAILABLE,
-    NotAvailable,
-    Posted,
-    ScanScreen,
-    post,
-)
+from pycon_us.ui.scan_result import Posted, post
+from pycon_us.ui.scan_screen import NOT_AVAILABLE, NotAvailable, ScanScreen
 from pycon_us.ui.semantics import named
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.COC)

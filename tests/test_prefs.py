@@ -19,7 +19,7 @@ from pycon_us.prefs import (
     Prefs,
 )
 from pycon_us.reminder_settings import ReminderSettings
-from pycon_us.services import storage
+from pycon_us.services import pref_keys
 from pycon_us.services.storage import Storage
 from tests.fakes import MemoryPrefs
 
@@ -160,11 +160,11 @@ async def test_load_leaves_the_boot_gate_to_its_caller(store: Storage) -> None:
 def test_the_first_value_of_each_setting_is_its_storage_default() -> None:
     """The appearance and contrast choices start with "system", their stored default."""
     assert APPEARANCES == ("system", "light", "dark")
-    assert APPEARANCES[0] == storage.THEME.default
+    assert APPEARANCES[0] == pref_keys.THEME.default
     assert HIGH_CONTRAST_SETTINGS == ("system", "on", "off")
-    assert HIGH_CONTRAST_SETTINGS[0] == storage.HIGH_CONTRAST.default
+    assert HIGH_CONTRAST_SETTINGS[0] == pref_keys.HIGH_CONTRAST.default
     assert START_SCREENS == ("auto", "now", "lead")
-    assert START_SCREENS[0] == storage.START_SCREEN.default
+    assert START_SCREENS[0] == pref_keys.START_SCREEN.default
 
 
 # ------------------------------------------------------------------ save

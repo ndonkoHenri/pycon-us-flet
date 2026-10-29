@@ -36,9 +36,9 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
+from pycon_us.services.pref_keys import favorites as favorites_key
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage
-from pycon_us.services.storage import favorites as favorites_key
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui import session_rows

@@ -15,7 +15,8 @@ from pycon_us.core.lead_sponsors import (
 )
 from pycon_us.services.api import ApiClient, ApiError
 from pycon_us.services.endpoints import LEAD_SPONSORS
-from pycon_us.services.storage import STAFF_SPONSOR, Storage
+from pycon_us.services.pref_keys import STAFF_SPONSOR
+from pycon_us.services.storage import Storage
 
 
 async def fetch_sponsors(api: ApiClient) -> tuple[LeadSponsor, ...]:

@@ -21,7 +21,8 @@ zeros without opening a file that was never created.
 import logging
 
 from pycon_us.services.outbox_db import Counts, OutboxDb
-from pycon_us.services.storage import STAFF_PREFIX, Storage
+from pycon_us.services.pref_keys import STAFF_PREFIX
+from pycon_us.services.storage import Storage
 from pycon_us.staff import Staff
 
 logger = logging.getLogger(__name__)

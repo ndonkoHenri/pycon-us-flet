@@ -27,11 +27,10 @@ from pycon_us.core.check_in import (
     parse_attendee_products,
     parse_catalog,
     parse_redeem_reply,
-    product_sort_key,
     redeem_payload,
-    session_parts,
     swag_catalog,
 )
+from pycon_us.core.door_sessions import product_sort_key, session_parts
 from pycon_us.core.signing import canonical_body
 from pycon_us.services.api import ApiError
 from tests.api_clients import client_for, replying, signed_in

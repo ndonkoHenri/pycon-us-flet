@@ -44,7 +44,7 @@ from pycon_us.screens.plan_tables import (
 from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME
+from pycon_us.services.pref_keys import THEME
 from pycon_us.state import use_conference
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold

@@ -28,10 +28,11 @@ from pycon_us.ui.scan_result import (
     HC_FILLS,
     ICONS,
     READY,
+    Shown,
     fill_of,
     spoken,
 )
-from pycon_us.ui.scan_screen import ResultPanel, ScanScreen, Shown
+from pycon_us.ui.scan_screen import ResultPanel, ScanScreen
 from tests import scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel
 from tests.test_high_contrast import AAA_TEXT

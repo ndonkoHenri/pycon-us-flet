@@ -38,12 +38,8 @@ from pycon_us.account_profile import (
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.credentials import CredentialStorage, Secrets
 from pycon_us.services.endpoints import AUTHENTICATE, CHECK_FEATURES
-from pycon_us.services.storage import (
-    ACCOUNT,
-    SERVICE_ERRORS,
-    STAFF_PREFIX,
-    Storage,
-)
+from pycon_us.services.pref_keys import ACCOUNT, STAFF_PREFIX
+from pycon_us.services.storage import SERVICE_ERRORS, Storage
 
 logger = logging.getLogger(__name__)
 

@@ -27,7 +27,8 @@ from pycon_us.core.models import ConferenceData
 from pycon_us.favorites import Favorites
 from pycon_us.feed_refresh import Source
 from pycon_us.services import changes_file
-from pycon_us.services.storage import Storage, fetched
+from pycon_us.services.pref_keys import fetched
+from pycon_us.services.storage import Storage
 
 logger = logging.getLogger(__name__)
 
