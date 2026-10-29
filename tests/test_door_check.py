@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from pycon_us import door_check
-from pycon_us.core.admission import Inventory, redeem_errors
+from pycon_us.core.admission import Attendee, Inventory, headcount, redeem_errors
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult, Tag
 from pycon_us.core.check_in import AttendeeProducts
 from pycon_us.core.outbox import Kind, Status
@@ -76,6 +76,7 @@ class Door:
         self.inventory = Inventory()
         self.session = session
         self.kicks = 0
+        self.looked_up: dict[str, Attendee] = {}
 
     async def load(self) -> None:
         """Load the products' attendee list from the mock, as the screen does."""
@@ -100,6 +101,7 @@ class Door:
             session=self.session,
             product_ids=self.products,
             inventory=self.inventory,
+            looked_up=self.looked_up,
             clock=self.rig.clock,
         )
 
@@ -220,6 +222,63 @@ async def test_an_unknown_badge_is_checked_in_from_the_lookup(rig: Rig) -> None:
     )
     assert redeems(rig) == 0  # a lookup, no send
     assert (await visit.scan()).word == ALREADY  # the kept row, no second lookup
+
+
+def count_lookups(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Count the door lookups: each call's code is appended to the returned list."""
+    calls: list[str] = []
+    fetch = door_check.fetch_attendee_products
+
+    async def counted(
+        api: ApiClient, code: str, ids: Iterable[int], *, door: bool
+    ) -> AttendeeProducts:
+        """Record the lookup, then answer as the mock does."""
+        calls.append(code)
+        return await fetch(api, code, ids, door=door)
+
+    monkeypatch.setattr(door_check, "fetch_attendee_products", counted)
+    return calls
+
+
+async def test_an_off_list_rescan_keeps_the_lookups_allergy(
+    rig: Rig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The list failed to load: Grace's rescan still shows her name and allergy.
+
+    The lookup's attendee is kept in memory, so the rescan asks nothing, queues
+    nothing and leaves the headcount at 1 (DOOR-05, D-442).
+    """
+    lookups = count_lookups(monkeypatch)
+    visit = Door(rig, (ASYNC,))  # the list never loaded
+    assert (await visit.scan(GRACE)).word == CHECKED_IN
+    again = await visit.scan(GRACE)
+    assert (again.outcome, again.word, again.title, again.tags) == (
+        ScanOutcome.DUPLICATE,
+        ALREADY,
+        "Grace Sample",
+        (Tag("Allergy: peanuts", warning=True),),
+    )
+    assert "Allergy: peanuts." in again.spoken
+    assert lookups == ["MOCK0002"]
+    assert len(rig.rows()) == 1
+    assert headcount(rig.rows(), (ASYNC,)) == 1
+
+
+async def test_an_off_list_rescan_after_a_relaunch_asks_for_the_details(
+    rig: Rig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A kept row with nothing in memory: the lookup names Grace, nothing is queued."""
+    await Door(rig, (ASYNC,)).scan(GRACE)
+    lookups = count_lookups(monkeypatch)
+    relaunched = Door(rig, (ASYNC,), session="v2")
+    again = await relaunched.scan(GRACE)
+    assert (again.word, again.title, again.tags) == (
+        ALREADY,
+        "Grace Sample",
+        (Tag("Allergy: peanuts", warning=True),),
+    )
+    assert lookups == ["MOCK0002"]
+    assert (len(rig.rows()), relaunched.kicks) == (1, 0)
 
 
 async def test_overlapping_lookups_of_two_visits_check_in_once(
@@ -366,6 +425,7 @@ async def test_a_check_in_the_outbox_can_t_store_says_so(rig: Rig) -> None:
         session="v1",
         product_ids=(DECORATORS,),
         inventory=visit.inventory,
+        looked_up={},
     )
     assert missing == result
     assert visit.kicks == 0

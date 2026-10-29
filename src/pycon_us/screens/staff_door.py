@@ -114,6 +114,7 @@ def DoorTool(*, owner: str) -> ft.Control:
     read, set_read = ft.use_state(not_read)  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once per visit
     visit = ft.use_memo(lambda: uuid4().hex, [])  # the scan session of a row's key
+    looked_up = ft.use_memo(dict, [owner])  # the lookup's attendees, memory only (D-56)
 
     @report_errors
     async def read_key() -> None:
@@ -161,6 +162,7 @@ def DoorTool(*, owner: str) -> ft.Control:
         session=visit,
         product_ids=current.choice.product_ids,
         inventory=preload.inventory,
+        looked_up=looked_up,
     )
     return ScanScreen(
         title=TITLE,
