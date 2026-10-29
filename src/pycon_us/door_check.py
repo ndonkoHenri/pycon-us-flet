@@ -9,15 +9,20 @@ admission is a ``door`` row (``core/outbox.admit()``, one per check-in), which t
 (D-426) the door doesn't wait for the worker: the person is admitted now, and the sync
 chip and the queue sheet say how the row syncs. A reply whose ``errors`` say a product
 was already redeemed still syncs the row, and the queue sheet shows it (D-441).
+"Checked in" and "Already checked in" carry the attendee's allergy and dietary chips,
+from the list or the lookup (``core/admission.tags()``, DOOR-05, #767). An attendee a
+lookup found is kept in ``looked_up``, the screen's memory only (D-56), so a rescan of a
+badge outside the list still shows them; a row kept from before (a relaunch) asks the
+server for the details, and a failed ask shows the code.
 """
 
 import logging
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, MutableMapping
 from functools import partial
 
 from pycon_us.check_in_api import fetch_attendee_products
-from pycon_us.core.admission import Inventory, decide
+from pycon_us.core.admission import Attendee, Inventory, decide, tags
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.check_in import AttendeeProducts, Item, redeem_payload
 from pycon_us.core.outbox import Outcome, admit
@@ -59,6 +64,7 @@ async def check_in(
     session: str,
     product_ids: Iterable[int],
     inventory: Inventory,
+    looked_up: MutableMapping[str, Attendee],
     clock: Callable[[], float] = time.time,
 ) -> ScanResult:
     """Decide a door scan, queue the admission, and say how it went, at once.
@@ -75,6 +81,8 @@ async def check_in(
         session: The scan session, the screen visit's id: part of a row's key.
         product_ids: The chosen session's products.
         inventory: The attendee list as loaded.
+        looked_up: The attendees the lookup found this visit, by code; a successful
+            lookup adds one. Held in memory only, never written anywhere (D-56).
         clock: The time of the scan, epoch seconds as the worker's (D-407).
 
     Returns:
@@ -86,24 +94,27 @@ async def check_in(
         return not_saved(code)
     ids = tuple(dict.fromkeys(product_ids))
     admission = decide(inventory, code, ids, kept)
-    attendee = inventory.attendees.get(code)
-    name = attendee.name if attendee is not None else ""
+    attendee = inventory.attendees.get(code) or looked_up.get(code)
     if admission.already:
-        return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+        if attendee is None:  # off the list, checked in before this visit
+            attendee = await details(api, code, ids)
+        return already(attendee)
+    attendee = attendee or Attendee(code)  # replaced by the lookup's when off the list
     if admission.known:
         quantities = admission.quantities
     else:
         looked = await look_up(api, code, ids)
         if isinstance(looked, ScanResult):
             return looked
-        quantities, name = looked
+        quantities, attendee = looked
+        looked_up[code] = attendee
         # Another visit may have admitted the badge while this one awaited the lookup;
         # read again, with no await from here to the enqueue (#784 review).
         kept = db.door_rows(owner, code)
         if kept is None:
             return not_saved(code)
         if decide(inventory, code, ids, kept).already:
-            return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+            return already(attendee)
     now = clock()
     payload = redeem_payload(
         code, badge.door_validator, now, dict(quantities), swag=False
@@ -123,15 +134,15 @@ async def check_in(
     if enqueued is None or enqueued.row is None:  # logged (D-120)
         return not_saved(code)
     if enqueued.outcome is Outcome.ALREADY:  # the same check-in, already queued
-        return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+        return already(attendee)
     staff.update_counts(db.counts(owner))
     kick()
-    return checked_in(code, name, quantities, offline=staff.offline)
+    return checked_in(attendee, quantities, offline=staff.offline)
 
 
 async def look_up(
     api: ApiClient | None, code: str, product_ids: tuple[int, ...]
-) -> tuple[Quantities, str] | ScanResult:
+) -> tuple[Quantities, Attendee] | ScanResult:
     """Ask the server what a badge outside the list can redeem of the session.
 
     Args:
@@ -140,8 +151,8 @@ async def look_up(
         product_ids: The session's products.
 
     Returns:
-        What to admit and the attendee's name, or the result to show instead:
-        "Already checked in" when they bought some and none is left, "Not
+        What to admit and the attendee with their details, or the result to show
+        instead: "Already checked in" when they bought some and none is left, "Not
         registered" when they bought none or the server doesn't know them, "Can't
         check this badge" without an answer.
     """
@@ -158,14 +169,40 @@ async def look_up(
         return ScanResult(ScanOutcome.DENIED, CANT_CHECK, code, (LOOKUP_FAILED,), code)
     items = [item for item in items_of(found) if item.product_id in product_ids]
     quantities = tuple((i.product_id, i.redeemable) for i in items if i.redeemable > 0)
+    attendee = attendee_of(code, found)
     if quantities:
-        return quantities, found.name
+        return quantities, attendee
     if any(item.purchased > 0 for item in items):
-        title = found.name or code
-        return ScanResult(
-            ScanOutcome.DUPLICATE, ALREADY, title, (ANOTHER_DEVICE,), code
-        )
+        return already(attendee, (ANOTHER_DEVICE,))
     return not_registered(code)
+
+
+async def details(
+    api: ApiClient | None, code: str, product_ids: tuple[int, ...]
+) -> Attendee:
+    """Ask the server who a badge outside the list is, for "Already checked in".
+
+    Nothing is admitted or queued: the lookup only names the attendee and their
+    chips. Without an answer, the attendee is just the code.
+    """
+    try:
+        if api is None:
+            raise NetworkError("no API client")
+        found = await fetch_attendee_products(api, code, product_ids, door=True)
+    except ApiError, NetworkError:
+        return Attendee(code)
+    return attendee_of(code, found)
+
+
+def attendee_of(code: str, found: AttendeeProducts) -> Attendee:
+    """Return the attendee a lookup's reply describes, with their details."""
+    return Attendee(
+        code,
+        found.name,
+        found.dietary or "",
+        found.has_allergy is True,
+        found.allergy or "",
+    )
 
 
 def items_of(found: AttendeeProducts) -> list[Item]:
@@ -174,18 +211,39 @@ def items_of(found: AttendeeProducts) -> list[Item]:
 
 
 def checked_in(
-    code: str, name: str, quantities: Quantities, *, offline: bool
+    attendee: Attendee, quantities: Quantities, *, offline: bool
 ) -> ScanResult:
     """Return "Checked in" with the name (or the code), "Admits 2" when over one.
 
     The word stays "Checked in" offline, where "Saved. Will sync." is added: the
-    person is admitted either way.
+    person is admitted either way. The attendee's dietary and allergy chips come
+    with it (DOOR-05).
     """
     most = max(quantity for _, quantity in quantities)
     details = (f"Admits {most}",) if most > 1 else ()
     if offline:
         details = (*details, SAVED)
-    return ScanResult(ScanOutcome.ACCEPTED, CHECKED_IN, name or code, details, code)
+    code = attendee.code
+    return ScanResult(
+        ScanOutcome.ACCEPTED,
+        CHECKED_IN,
+        attendee.name or code,
+        details,
+        code,
+        tags(attendee),
+    )
+
+
+def already(attendee: Attendee, details: tuple[str, ...] = ()) -> ScanResult:
+    """Return "Already checked in" with the name (or the code) and the chips.
+
+    The allergy still shows on a second pass: it matters every time (DOOR-05).
+    """
+    code = attendee.code
+    title = attendee.name or code
+    return ScanResult(
+        ScanOutcome.DUPLICATE, ALREADY, title, details, code, tags(attendee)
+    )
 
 
 def not_registered(code: str) -> ScanResult:

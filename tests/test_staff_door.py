@@ -50,6 +50,7 @@ from tests.trees import texts
 stored, switch, show = door_rig.stored, door_rig.switch, door_rig.show
 
 WEDNESDAY = "h2 Wednesday, May 13"
+PEANUTS = "Allergy: peanuts."
 READY_ONE = "Ready, works offline, 1 attendee"
 """Async in depth's list: Grace alone bought it."""
 
@@ -350,13 +351,13 @@ async def test_a_rescan_within_4_s_is_dropped_and_after_it_is_already(
     shown = await show(VIEW, chosen=ASYNC)
     assert preload_line(shown) == READY_ONE
     await enter(shown, "MOCK0002:v4l1d02")
-    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\nScan 1"
+    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\n{PEANUTS}\nScan 1"
     now[0] += 3
     await enter(shown, "MOCK0002:v4l1d02")
     assert panel(shown).endswith("Scan 1")  # the cooldown dropped it
     now[0] += 2
     await enter(shown, "MOCK0002:v4l1d02")
-    assert panel(shown) == f"{ALREADY}\nGrace Sample\nScan 2"
+    assert panel(shown) == f"{ALREADY}\nGrace Sample\n{PEANUTS}\nScan 2"
     outbox = shown.services.outbox
     assert outbox is not None
     assert len(outbox.door_rows("staff@example.com", "MOCK0002") or []) == 1

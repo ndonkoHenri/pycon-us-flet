@@ -212,7 +212,7 @@ async def test_a_scan_checks_in_from_the_list_or_the_lookup(show: Show) -> None:
     """On the list: "Checked in" with the name, queued; off it: the lookup refuses."""
     shown = await show(VIEW, chosen=TUTORIALS)
     await enter(shown, "MOCK0002:v4l1d02")
-    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\nScan 1"
+    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\nAllergy: peanuts.\nScan 1"
     await enter(shown, "MOCK0004:v4l1d04")
     assert panel(shown) == f"{NOT_REGISTERED}\nMOCK0004\nScan 2"
     outbox = shown.services.outbox
