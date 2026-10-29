@@ -3,14 +3,14 @@
 The tool runs in a real Flet session over the mock's transport, as in
 ``tests/test_staff_coc.py``, whose fixtures these share, with the clear's timer held
 (``tests/scan_rig.py``). A result clears 15 s after the reply shows it, never counted
-from the request; the background clears it and closes the name search, while an open
-review keeps its notes; "Show email" reveals the reply's email outside the live region
+from the request; the background clears it and closes the name search, and a reply
+that lands there shows nothing, while an open review keeps its notes; "Show email" reveals the reply's email outside the live region
 until "Hide email", the next result or the clear; and no log line holds it (D-72).
 """
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 
 import flet as ft
 import pytest
@@ -20,6 +20,7 @@ from pycon_us.services.errors import LOG_DATE_FORMAT, LOG_FORMAT, RedactingForma
 from pycon_us.ui.coc_email import HIDE_EMAIL, SHOW_EMAIL
 from pycon_us.ui.scan_result import READY, READY_BODY
 from tests import scan_rig, test_coc_review, test_coc_search, test_staff_coc
+from tests.fakes import MemoryHaptics
 from tests.harness import Shown
 from tests.scan_rig import Timer, panel, pause, resume
 from tests.test_coc_review import dialog, notes_text, scan, start, tap, type_notes
@@ -201,3 +202,52 @@ async def test_no_log_line_holds_the_email_or_the_code(
         assert EMAIL not in text and "MOCK0004" not in text
         assert "margaret" not in text.lower() and NOTES not in text
     assert EMAIL not in str(shown.storage.prefs.values)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def effects(shown: Shown) -> list[str]:
+    """The haptic effects the screen has asked for so far."""
+    return list(cast(MemoryHaptics, shown.services.haptics).effects)
+
+
+async def test_a_badge_reply_in_the_background_shows_nothing(
+    show: Show, switch: Switch, mock: Any, timer: Timer, focused: list[int]
+) -> None:
+    """Recorded while paused: the incident is kept, but no result comes back on resume."""
+    shown = await show()
+    scanning = await scan(shown)
+    switch.gate = asyncio.Event()  # the capture call waits: a slow reply
+    recording = await start(shown, "coc.review.record")
+    await pause(shown)
+    felt = effects(shown)
+    switch.gate.set()
+    await asyncio.wait_for(recording, 2)
+    await asyncio.wait_for(scanning, 2)
+    await resume(shown)
+    assert len(mock.incidents) == 1  # recorded all the same
+    assert panel(shown) == READY_PANEL
+    assert not shown.nodes("coc.show_email")
+    assert effects(shown) == felt and timer.waits == []
+
+
+async def test_a_name_search_reply_in_the_background_shows_nothing(
+    show: Show, switch: Switch, mock: Any, timer: Timer, focused: list[int]
+) -> None:
+    """The name search's record lands while paused: no result comes back on resume."""
+    shown = await show()
+    await open_find(shown)
+    await search_for(shown, "mar test")
+    task = await tap_row(shown, 0)
+    await type_notes(shown, NOTES)
+    switch.gate = asyncio.Event()
+    recording = await start(shown, "coc.review.record")
+    await pause(shown)
+    felt = effects(shown)
+    switch.gate.set()
+    await asyncio.wait_for(recording, 2)
+    await asyncio.wait_for(task, 2)
+    await shown.settle()
+    await resume(shown)
+    assert [i.notes for i in mock.incidents] == [NOTES]
+    assert panel(shown) == READY_PANEL
+    assert not shown.nodes("coc.show_email")
+    assert effects(shown) == felt and timer.waits == []

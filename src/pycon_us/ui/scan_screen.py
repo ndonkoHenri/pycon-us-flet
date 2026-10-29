@@ -217,6 +217,8 @@ def ScanScreen(
 
     @report_errors
     async def show(result: ScanResult) -> None:
+        if clear_in_background and svc.background.is_set():
+            return  # a reply that lands in the background would undo its clear (#762)
         serial = count.current = (count.current or 0) + 1
         set_shown(Shown(result, clock(), serial))
         await buzz(svc.haptics, result.outcome)
