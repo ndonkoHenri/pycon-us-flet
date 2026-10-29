@@ -255,11 +255,13 @@ def use_swag_sheet() -> SwagSheet:
     pending: MutableRef[asyncio.Future[ScanResult | None] | None] = ft.use_ref(None)
     mounted = ft.use_ref(True)  # cleared on unmount: a late answer then sets nothing
 
+    @report_errors
     def set_handing(value: Handing | None) -> None:
         latest.current = value
         if mounted.current:
             set_state(value)
 
+    @report_errors
     def settle(result: ScanResult | None) -> None:
         """Hand ``result`` to the waiting ``offer`` call, if one waits."""
         waiting, pending.current = pending.current, None
@@ -275,6 +277,7 @@ def use_swag_sheet() -> SwagSheet:
 
     ft.use_effect(lambda: None, [], cleanup=unmount)
 
+    @report_errors  # a failure reads as a cancel: the lookup stays on the panel
     async def offer(given: swag.Offer) -> ScanResult | None:
         settle(None)  # one sheet at a time: the scan screen awaits one handler
         waiting = asyncio.get_running_loop().create_future()
@@ -296,9 +299,12 @@ def use_swag_sheet() -> SwagSheet:
         if current is None or current.sending or not current.quantities:
             return  # the single flight: a second tap sends nothing
         set_handing(replace(current, sending=True))
-        result = await swag.hand_out(svc.api, current.offer, current.quantities)
-        set_handing(None)
-        settle(result)
+        result = None  # an unexpected failure still ends the scan (reported)
+        try:
+            result = await swag.hand_out(svc.api, current.offer, current.quantities)
+        finally:
+            set_handing(None)
+            settle(result)
 
     @report_errors
     def cancel() -> None:
