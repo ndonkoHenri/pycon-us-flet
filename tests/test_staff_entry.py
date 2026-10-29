@@ -131,8 +131,7 @@ def second_line(node: ft.Semantics) -> tuple[str, str]:
 async def test_more_lists_the_built_tools_of_each_mock_account(
     show_more: ShowMore, role: str
 ) -> None:
-    """The Lead scanner for sponsor, staff and all; Swag pickup for staff and all; CoC
-    for coc and all; else none."""
+    """Each seeded role gets exactly its built tools' rows on More (``BUILT_ROWS``)."""
     shown = await show_more(seeded(role))
     expected = BUILT_ROWS[role]
     assert staff_rows(shown) == expected
