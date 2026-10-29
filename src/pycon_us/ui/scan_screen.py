@@ -25,7 +25,9 @@ the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet wi
 signed-in account's rows (``use_queue_sheet()``). Scanning **pauses** while the sheet
 is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
 dropped, its text kept, and the field says why; when the pause ends the focus goes
-back to the field.
+back to the field. It goes back there too when Back pops a page pushed over the
+screen (the leads list, a picker), so a HID scanner's next scan lands in it (#775,
+D-438).
 
 **The camera** is E1, absent at the Flet pin (``capabilities.SCANNER`` is False): the
 area says so and manual entry is primary; #726 brings the preview.
@@ -136,7 +138,9 @@ def ScanScreen(
     busy = ft.use_ref(False)  # the handler runs: the single flight
     shown, set_shown = ft.use_state(no_result)
     why_paused = PAUSED_SHEET if sheet.is_open else paused
-    was_paused = ft.use_ref(False)
+    # Scanning goes on from the field: no pause, and no View pushed on top (D-438).
+    ready = why_paused is None and query.focusable
+    was_held = ft.use_ref(False)
     mounted = ft.use_ref(True)  # cleared on unmount: a late result is then dropped
 
     @report_errors
@@ -148,12 +152,12 @@ def ScanScreen(
 
     @report_errors
     async def resume() -> None:
-        resumed = was_paused.current and why_paused is None
-        was_paused.current = why_paused is not None
-        if resumed:  # the sheet or dialog has closed: scanning goes on from the field
+        resumed = was_held.current and ready
+        was_held.current = not ready
+        if resumed:  # a sheet or dialog closed, or Back came: scan from the field
             await query.focus()
 
-    ft.use_effect(resume, [why_paused is None])
+    ft.use_effect(resume, [ready])
 
     @report_errors
     async def show(result: ScanResult) -> None:
@@ -220,7 +224,9 @@ def ScanScreen(
                     autocorrect=False,
                     enable_suggestions=False,
                     capitalization=ft.TextCapitalization.NONE,
-                    can_request_focus=query.focusable,
+                    # Never off, unlike a SearchField's (D-330): Flutter applies it
+                    # a frame after the patch, so the focus asked for on Back would
+                    # come first and be dropped (F288, D-438).
                     helper=why_paused,
                 ),
             )
