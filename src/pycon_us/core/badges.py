@@ -9,7 +9,8 @@ only. ``Cooldown`` accepts one result per code every 4 s, since a held code is r
 about 3.6 times a second (D-293). Both are pure: the caller passes the time in.
 ``ScanResult`` is what a tool's handler returns for the scan screen's result panel
 (LEAD-01, LEAD-09; ``ui/scan_screen.py``), data only: the panel picks the colour and
-icon from its ``ScanOutcome``.
+icon from its ``ScanOutcome``, and draws its ``Tag`` list (Door check's dietary needs
+and allergy, DOOR-05) as chips.
 """
 
 from dataclasses import dataclass, field
@@ -104,6 +105,20 @@ class ScanOutcome(StrEnum):
 
 
 @dataclass(frozen=True)
+class Tag:
+    """A short fact about the attendee, a chip under the name: "Vegetarian" (DOOR-05).
+
+    Attributes:
+        text: The words on the chip, "Allergy: peanuts".
+        warning: Something staff must not miss (an allergy): the chip is larger, comes
+            first and carries a warning icon; its words say it, never colour alone.
+    """
+
+    text: str
+    warning: bool = False
+
+
+@dataclass(frozen=True)
 class ScanResult:
     """What the result panel shows after a scan: the tool's answer, as data.
 
@@ -111,9 +126,12 @@ class ScanResult:
         outcome: How the scan ended.
         word: The outcome in words, first and largest: "Checked in", "Badge read".
         title: The attendee's name, or the code when the tool has no name.
-        details: Lines under the title, in order: a reason, validators, a note.
+        details: Lines under the title and its tags, in order: a reason, validators,
+            a note.
         code: The access code the result is about, so a tool can act on it ("Add
             note", #742); empty when there is none (not a badge).
+        tags: Chips right under the title, warnings first: Door check's "Allergy:
+            peanuts" and "Vegetarian" (DOOR-05); the other tools give none.
         email: The attendee's email, for a tool that reveals it on request (CoC's
             "Show email", MASK-05); empty without one. Never in ``spoken`` or the
             repr, so neither a live region nor a log line holds it (D-72).
@@ -124,13 +142,18 @@ class ScanResult:
     title: str = ""
     details: tuple[str, ...] = ()
     code: str = ""
+    tags: tuple[Tag, ...] = ()
     email: str = field(default="", repr=False)
 
     @property
     def spoken(self) -> str:
-        """The panel's words in reading order, one per line, for its live region."""
+        """The panel's words in reading order, one per line, for its live region.
+
+        The tags are one line after the title, as drawn: "Allergy: peanuts. Vegetarian."
+        """
+        tags = " ".join(f"{tag.text}." for tag in self.tags)
         return "\n".join(
-            line for line in (self.word, self.title, *self.details) if line
+            line for line in (self.word, self.title, tags, *self.details) if line
         )
 
 

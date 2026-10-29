@@ -12,13 +12,19 @@ icon say the outcome (ux.md §9). The panel stays until the next scan, or until 
 clears it (#762), and dims after ``DIM_AFTER`` seconds: its fill gives way to the
 neutral one, so a new result stands out, while its icon and words stay; the line under
 it says how old it is, and when it clears.
+
+A result's **tags** (Door check's dietary needs and allergy, DOOR-05) are chips under
+the name, in a row that wraps: a warning (an allergy) first, larger, with
+``WARNING_AMBER`` and the card's colours swapped; the others outlined, with
+``RESTAURANT_OUTLINED``. They take the card's own colours, so they read on every fill
+at its contrast (#767).
 """
 
 import math
 
 import flet as ft
 
-from pycon_us.core.badges import ScanOutcome, ScanResult
+from pycon_us.core.badges import ScanOutcome, ScanResult, Tag
 from pycon_us.core.timefmt import seconds_ago
 from pycon_us.theme import Tokens
 from pycon_us.theme_hc import hc_border
@@ -117,6 +123,8 @@ def result_panel(
                 color=label,
             )
         )
+    if result.tags:
+        lines.append(tag_row(result.tags, label=label, fill=fill))
     lines += [
         ft.Text(line, theme_style=ft.TextThemeStyle.BODY_MEDIUM, color=label)
         for line in result.details
@@ -140,6 +148,82 @@ def result_panel(
         padding=16,
         border_radius=12,
         border=hc_border(tokens.high_contrast),
+    )
+
+
+def tag_colors(
+    tag: Tag, *, label: ft.ColorValue, fill: ft.ColorValue
+) -> tuple[ft.ColorValue, ft.ColorValue | None]:
+    """Return a chip's (text, background) on a card of ``label`` on ``fill``.
+
+    A plain chip is the card's label colour on the card, inside an edge of the same
+    colour. A warning swaps them, the fill's colour on a label-coloured chip, so it
+    stands out on every fill at the card's own contrast: AA on the table's fills and
+    on the neutral one, 7:1 in high contrast.
+    """
+    return (fill, label) if tag.warning else (label, None)
+
+
+def tag_chip(tag: Tag, *, label: ft.ColorValue, fill: ft.ColorValue) -> ft.Control:
+    """Return one tag as a chip: ``WARNING_AMBER`` and larger for a warning.
+
+    A 1 dp edge in the label's colour sets every chip apart, high contrast included
+    (D-306); the words wrap at large text (``expand_loose``). No semantics of its own:
+    the panel's label says the tags (``ScanResult.spoken``).
+    """
+    text, background = tag_colors(tag, label=label, fill=fill)
+    if tag.warning:
+        icon, size, style = ft.Icons.WARNING_AMBER, 20, ft.TextThemeStyle.LABEL_LARGE
+    else:
+        icon, size, style = (
+            ft.Icons.RESTAURANT_OUTLINED,
+            16,
+            ft.TextThemeStyle.LABEL_MEDIUM,
+        )
+    return ft.Container(
+        ft.Row(
+            [
+                ft.Icon(icon, size=size, color=text, apply_text_scaling=True),
+                ft.Text(
+                    tag.text,
+                    theme_style=style,
+                    weight=ft.FontWeight.W_700 if tag.warning else None,
+                    color=text,
+                    expand=True,
+                    expand_loose=True,
+                ),
+            ],
+            spacing=6,
+            tight=True,
+        ),
+        bgcolor=background,
+        border=ft.Border.all(1, label),
+        border_radius=8,
+        padding=ft.Padding.symmetric(
+            horizontal=10 if tag.warning else 8, vertical=6 if tag.warning else 4
+        ),
+    )
+
+
+def tag_row(
+    tags: tuple[Tag, ...], *, label: ft.ColorValue, fill: ft.ColorValue
+) -> ft.Control:
+    """Return a result's tags as a wrapping row of chips, warnings first (DOOR-05).
+
+    Args:
+        tags: The result's tags.
+        label: The card's text colour.
+        fill: The card's fill.
+    """
+    ordered = sorted(tags, key=lambda tag: not tag.warning)  # stable: keeps the rest
+    return ft.Container(
+        ft.Row(
+            [tag_chip(tag, label=label, fill=fill) for tag in ordered],
+            wrap=True,
+            spacing=8,
+            run_spacing=8,
+        ),
+        padding=ft.Padding.only(top=6, bottom=4),
     )
 
 
