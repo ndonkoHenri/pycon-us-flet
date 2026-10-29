@@ -97,6 +97,13 @@ async def check_in(
         if isinstance(looked, ScanResult):
             return looked
         quantities, name = looked
+        # Another visit may have admitted the badge while this one awaited the lookup;
+        # read again, with no await from here to the enqueue (#784 review).
+        kept = db.door_rows(owner, code)
+        if kept is None:
+            return not_saved(code)
+        if decide(inventory, code, ids, kept).already:
+            return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
     now = clock()
     payload = redeem_payload(
         code, badge.door_validator, now, dict(quantities), swag=False

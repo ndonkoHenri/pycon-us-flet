@@ -7,13 +7,16 @@ The mock checks every signature and records every redemption, so "redeemed once"
 its own count (#766; DOOR-04, DOOR-07, STORE-12, API-07; D-56, D-57, D-410, D-441).
 """
 
+import asyncio
 from collections.abc import Iterable
 from pathlib import Path
 
 import pytest
 
+from pycon_us import door_check
 from pycon_us.core.admission import Inventory, redeem_errors
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
+from pycon_us.core.check_in import AttendeeProducts
 from pycon_us.core.outbox import Kind, Status
 from pycon_us.door_check import (
     ALREADY,
@@ -28,6 +31,7 @@ from pycon_us.door_check import (
     check_in,
 )
 from pycon_us.door_inventory import load_inventory
+from pycon_us.services.api import ApiClient
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
@@ -215,6 +219,37 @@ async def test_an_unknown_badge_is_checked_in_from_the_lookup(rig: Rig) -> None:
     )
     assert redeems(rig) == 0  # a lookup, no send
     assert (await visit.scan()).word == ALREADY  # the kept row, no second lookup
+
+
+async def test_overlapping_lookups_of_two_visits_check_in_once(
+    rig: Rig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two visits whose lookups overlap admit the badge once: one row, one kick.
+
+    The first visit left while its lookup was pending (Flet doesn't cancel the
+    handler); the second scanned the badge before either lookup answered.
+    """
+    started = 0
+    both = asyncio.Event()
+    fetch = door_check.fetch_attendee_products
+
+    async def gated(
+        api: ApiClient, code: str, ids: Iterable[int], *, door: bool
+    ) -> AttendeeProducts:
+        """Hold each lookup until both have started, then answer as the mock does."""
+        nonlocal started
+        started += 1
+        if started == 2:
+            both.set()
+        await both.wait()
+        return await fetch(api, code, ids, door=door)
+
+    monkeypatch.setattr(door_check, "fetch_attendee_products", gated)
+    before, after = (Door(rig, (DECORATORS,), session=s) for s in ("v1", "v2"))
+    results = await asyncio.gather(before.scan(), after.scan())
+    assert sorted(result.word for result in results) == [ALREADY, CHECKED_IN]
+    assert len(rig.rows()) == 1
+    assert before.kicks + after.kicks == 1
 
 
 async def test_an_unknown_badge_with_none_left_was_checked_in_elsewhere(
