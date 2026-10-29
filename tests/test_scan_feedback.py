@@ -235,8 +235,10 @@ async def test_the_app_bar_s_chip_says_the_queue(show: Show) -> None:
 
 
 async def test_at_large_text_the_chip_heads_the_body_and_wraps(show: Show) -> None:
-    """At large text the chip leaves the bar, its words free to wrap, and still opens
-    the sheet (#752): a ``Chip`` kept one line and clipped "All synced"."""
+    """At large text the chip heads the body, its words free to wrap (#752).
+
+    A ``Chip`` kept one line and clipped "All synced"; the chip still opens the sheet.
+    """
     shown = await show(
         prefs=Prefs(loaded=True, time_above=True), staff=Staff(pending=3)
     )
