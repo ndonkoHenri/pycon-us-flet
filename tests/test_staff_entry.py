@@ -40,12 +40,17 @@ SEED = Path(__file__).parent / "fixtures" / "mock" / "seed.json"
 ROLES = ("attendee", "speaker", "sponsor", "staff", "coc", "all")
 """The seeded mock accounts, by role."""
 
-LEAD_ONLY = {"sponsor", "staff", "all"}
-"""The roles with a built tool: the Lead scanner (``lead_retrieval or door_check``);
-``coc``'s only tool waits for its screen (#42, D-169)."""
-
-SWAG = {"staff", "all"}
-"""The roles that get Swag pickup too (``door_check``, #769)."""
+BUILT_ROWS = {
+    "attendee": [],
+    "speaker": [],
+    "sponsor": ["more.staff.lead"],
+    "staff": ["more.staff.lead", "more.staff.swag"],
+    "coc": ["more.staff.coc"],
+    "all": ["more.staff.coc", "more.staff.lead", "more.staff.swag"],  # sorted
+}
+"""Each role's rows of built tools: the Lead scanner (``lead_retrieval or door_check``),
+Swag pickup (``door_check``, #769) and CoC incident (``mask_violation``, #760); Door
+check waits for its admission (D-169)."""
 
 
 def seeded(role: str) -> Account:
@@ -126,10 +131,9 @@ def second_line(node: ft.Semantics) -> tuple[str, str]:
 async def test_more_lists_the_built_tools_of_each_mock_account(
     show_more: ShowMore, role: str
 ) -> None:
-    """Sponsor, staff and all get the Lead scanner; staff and all Swag pickup too."""
+    """Each seeded role gets exactly its built tools' rows on More (``BUILT_ROWS``)."""
     shown = await show_more(seeded(role))
-    expected = ["more.staff.lead"] if role in LEAD_ONLY else []
-    expected += ["more.staff.swag"] if role in SWAG else []
+    expected = BUILT_ROWS[role]
     assert staff_rows(shown) == expected
     assert ("Staff tools" in shown.texts()) is bool(expected)
 
@@ -150,14 +154,15 @@ async def test_the_lead_scanner_row_says_its_purpose_and_opens_its_route(
 async def test_the_section_comes_right_under_the_profile_row(
     show_more: ShowMore,
 ) -> None:
-    """The profile row, then "Staff tools" and its rows, then Programme (ux.md §2.2)."""
+    """The profile row, then "Staff tools" and its rows in O-7's order (ux.md §2.2)."""
     shown = await show_more(seeded("all"))
     (body,) = shown.find(ft.ListView)
-    assert outline(list(body.controls[:5])) == [
+    assert outline(list(body.controls[:6])) == [
         "Robin Everything",  # the profile row, signed in
         "# Staff tools",
         "Lead scanner",
         "Swag pickup",
+        "CoC incident",
         "# Programme",
     ]
 
@@ -225,9 +230,9 @@ async def test_now_shows_the_scan_card_under_the_strip_in_every_season(
 async def test_the_card_shows_for_the_accounts_with_a_built_tool(
     render: Callable[..., Any], role: str
 ) -> None:
-    """The sponsor, staff and all accounts get the card; the others don't."""
+    """The sponsor, staff, coc and all accounts get the card; the others don't."""
     shown = await render(may(15, 11, 10), prefs=mock_prefs(), account=seeded(role))
-    assert shown.has(CARD) is (role in LEAD_ONLY)
+    assert shown.has(CARD) is bool(BUILT_ROWS[role])
 
 
 async def test_no_card_without_a_mock_url(render: Callable[..., Any]) -> None:
@@ -273,9 +278,9 @@ async def test_the_card_opens_the_last_tool_opened_while_it_is_allowed(
     render: Callable[..., Any],
 ) -> None:
     """A remembered tool the account may not open falls back to the first entry."""
-    memory = ViewMemory(staff_tool="coc")  # not built, and not this account's
+    memory = ViewMemory(staff_tool="coc")  # built, but not this account's
     shown = await render(
-        may(15, 11, 10), prefs=mock_prefs(), account=seeded("all"), memory=memory
+        may(15, 11, 10), prefs=mock_prefs(), account=seeded("sponsor"), memory=memory
     )
     await shown.click(tile(shown.node(CARD)))
     assert shown.went == ["/now/staff/lead"]
