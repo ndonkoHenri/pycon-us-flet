@@ -4,8 +4,7 @@ A mount of ``ui/scan_screen.py``'s ``ScanScreen`` (SHIRT-01, SHIRT-02, SHIRT-04'
 offline half; D-416). It re-checks its rule on every render (architecture §12.4): an
 account without ``door_check``, a signed-out session or no mock URL (D-51) sees "Not
 available for this account". It is mounted at ``/now/staff/swag`` too and records
-itself as the last tool opened (D-421); until #769 adds its entries, a deep link is
-the only way in.
+itself as the last tool opened (D-421); More and Now list it (``BUILT_TOOLS``, #769).
 
 The **categories** head the screen, in the context slot rather than a pushed page:
 swag has a handful. A wrapping row of filter chips from ``swag_catalog()`` of the
@@ -18,7 +17,9 @@ ids no longer in the catalog are ignored.
 Swag pickup is **online only** (D-56): while ``use_online()`` says offline (checked
 every 5 s), and while no category is chosen, scanning is paused with the reason under
 the field, so a HID scanner's submit is dropped and its text kept (D-420). A badge is
-looked up by ``swag.look_up()``; #769 brings the hand-out sheet and the redeem.
+looked up by ``swag.look_up()``; items left open ``ui/swag_sheet.py``'s hand-out sheet,
+pre-ticked, and the panel says how the hand-out went (#769). Scanning is paused while
+the sheet is open ("Paused while the hand-out is open").
 """
 
 import logging
@@ -44,6 +45,7 @@ from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import say_if_unsaved
+from pycon_us.ui.swag_sheet import use_swag_sheet
 
 type OnToggle = Callable[[Category, bool], Awaitable[None]]
 """Saves a category chosen (True) or no longer chosen (False)."""
@@ -55,7 +57,8 @@ TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.SWAG)
 
 CHOOSE = "Choose what to hand out"
 OFFLINE = "Swag pickup needs a connection"
-"""Why scanning is paused: no category chosen, or no connection (D-56)."""
+HAND_OUT_OPEN = "Paused while the hand-out is open"
+"""Why scanning is paused: no category chosen, no connection (D-56), or the sheet."""
 
 LOADING = "Loading categories"
 NOT_LOADED = "Couldn't load categories"
@@ -185,11 +188,20 @@ def SwagTool(*, owner: str) -> ft.Control:
     def retry() -> None:
         set_tries(lambda n: n + 1)
 
+    sheet = use_swag_sheet()
     categories = tuple(c for c in loaded.categories if c.id in (current or ()))
-    paused = OFFLINE if not online else CHOOSE if not categories else None
+    paused = (
+        HAND_OUT_OPEN
+        if sheet.is_open
+        else OFFLINE
+        if not online
+        else CHOOSE
+        if not categories
+        else None
+    )
     return ScanScreen(
         title=TITLE,
-        on_badge=partial(look_up, svc.api, categories=categories),
+        on_badge=partial(look_up, svc.api, categories=categories, offer=sheet.offer),
         context=category_area(loaded, current, toggle, retry),
         paused=paused,
     )
