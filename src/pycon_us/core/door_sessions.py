@@ -3,10 +3,10 @@
 The picker (``screens/door_session.py``) lists a door category's products as sessions
 (DOOR-02): in ``product_sort_key()``'s order, by the date that starts each name (Ionic's
 pattern; ``session_parts()`` splits it from the title), under a heading per day, the
-undated ones last; a search keeps the sessions whose title or day and time hold every word (D-46).
-The choice is a ``DoorChoice``: one session, or all of a category's, with the label the
-scan screen's chip shows. ``pycon.staff_door_session`` keeps it (``to_stored()``,
-``from_stored()``), a staff key (D-414, D-433).
+undated ones last; a search keeps the sessions whose title or day and time hold every
+word (D-46). The choice is a ``DoorChoice``: one session, or all of a category's, with
+the label the scan screen's chip shows. ``pycon.staff_door_session`` keeps it
+(``to_stored()``, ``from_stored()``), a staff key (D-414, D-433).
 """
 
 import re

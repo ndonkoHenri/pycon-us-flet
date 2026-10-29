@@ -32,8 +32,9 @@ D-438).
 
 **A result from elsewhere** (#761): a tool that gets a result outside ``on_badge``
 (the CoC name search records without a scan) hands it over as ``posted``, a
-``Posted`` (``ui/scan_result.py``, with ``Shown``) whose serial it bumps for each one; the screen shows it as a scan's, with
-its haptics and announcement, unless the screen has gone or is not on top.
+``Posted`` (``ui/scan_result.py``, with ``Shown``) whose serial it bumps for each
+one; the screen shows it as a scan's, with its haptics and announcement, unless the
+screen has gone or is not on top.
 
 **Clearing** (#762, MASK-05): a tool may have its result cleared ``clear_after`` seconds
 after it shows, and when the app goes to the background (``ui/scan_clear.py``); the
