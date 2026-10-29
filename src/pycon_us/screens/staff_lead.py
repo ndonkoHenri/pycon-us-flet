@@ -42,7 +42,7 @@ from functools import partial
 import flet as ft
 
 from pycon_us.account import use_account
-from pycon_us.core.badges import ScanOutcome, ScanResult
+from pycon_us.core.badges import ScanOutcome
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open, scans_for_sponsor
 from pycon_us.lead_capture import capture
@@ -57,7 +57,7 @@ from pycon_us.services.storage import SCANNER_CONSENT
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.ui.lead_note_sheet import use_note_sheet
-from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
+from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, Shown
 from pycon_us.ui.staff_picker import Reading, context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
@@ -249,7 +249,7 @@ def leads_button(count: int | None, on_click: ft.ControlEventHandler) -> ft.Cont
 
 
 def lead_actions(
-    result: ScanResult, open_note: Callable[[str, str | None], None]
+    shown: Shown, open_note: Callable[[str, str | None], None]
 ) -> list[ft.Control]:
     """Return the result's button: "Add note" on a lead, "Open lead" on a duplicate.
 
@@ -258,9 +258,10 @@ def lead_actions(
     "Not a badge code", get none.
 
     Args:
-        result: The result on the panel.
+        shown: The result on the panel.
         open_note: Opens the note sheet for a code and the name, if any.
     """
+    result = shown.result
     if not result.code:
         return []
     name = result.title if result.title != result.code else None

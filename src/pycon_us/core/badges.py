@@ -132,6 +132,9 @@ class ScanResult:
             note", #742); empty when there is none (not a badge).
         tags: Chips right under the title, warnings first: Door check's "Allergy:
             peanuts" and "Vegetarian" (DOOR-05); the other tools give none.
+        email: The attendee's email, for a tool that reveals it on request (CoC's
+            "Show email", MASK-05); empty without one. Never in ``spoken`` or the
+            repr, so neither a live region nor a log line holds it (D-72).
     """
 
     outcome: ScanOutcome
@@ -140,6 +143,7 @@ class ScanResult:
     details: tuple[str, ...] = ()
     code: str = ""
     tags: tuple[Tag, ...] = ()
+    email: str = field(default="", repr=False)
 
     @property
     def spoken(self) -> str:

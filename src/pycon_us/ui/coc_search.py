@@ -41,10 +41,13 @@ class Finder:
 
     Attributes:
         open: Opens the search.
+        close: Closes it, forgetting the query: the tool's clear in the background
+            (#762).
         is_open: The search is open: the scan screen pauses scanning meanwhile.
     """
 
     open: Callable[[], None]
+    close: Callable[[], None]
     is_open: bool
 
 
@@ -176,7 +179,7 @@ def use_find(
         if finding is not None
         else None
     )
-    return Finder(open_find, finding is not None)
+    return Finder(open_find, close, finding is not None)
 
 
 def keep(

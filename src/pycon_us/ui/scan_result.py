@@ -8,9 +8,10 @@ code that is not a badge are neutral, with ``CLOUD_UPLOAD_OUTLINED`` and
 check-in's green). The fills are fixed colours, the same in light and dark, each label
 at 4.5:1 or better on its fill; high contrast darkens the green and the red for 7:1
 (``tests/test_scan_screen.py``). Colour is never the only signal: the word and the
-icon say the outcome (ux.md §9). The panel stays until the next scan and dims after
-``DIM_AFTER`` seconds: its fill gives way to the neutral one, so a new result stands
-out, while its icon and words stay; the line under it says how old it is.
+icon say the outcome (ux.md §9). The panel stays until the next scan, or until a tool
+clears it (#762), and dims after ``DIM_AFTER`` seconds: its fill gives way to the
+neutral one, so a new result stands out, while its icon and words stay; the line under
+it says how old it is, and when it clears.
 
 A result's **tags** (Door check's dietary needs and allergy, DOOR-05) are chips under
 the name, in a row that wraps: a warning (an allergy) first, larger, with
@@ -18,6 +19,8 @@ the name, in a row that wraps: a warning (an allergy) first, larger, with
 ``RESTAURANT_OUTLINED``. They take the card's own colours, so they read on every fill
 at its contrast (#767).
 """
+
+import math
 
 import flet as ft
 
@@ -239,20 +242,27 @@ def spoken(result: ScanResult | None, serial: int = 0) -> str:
     return f"{result.spoken}\nScan {serial}"
 
 
-def age_line(seconds: float) -> ft.Control:
+def age_line(seconds: float, clear_after: float | None = None) -> ft.Control:
     """Return how long ago the shown result came, "Read 12 seconds ago".
 
     Outside the live region: it changes every second, and only the result is said.
+    A result that clears says when, in words, never by colour or motion alone:
+    "Read 3 seconds ago. Clears in 12 seconds" (#762).
 
     Args:
         seconds: The result's age.
+        clear_after: The seconds a result stays, or None when it stays.
     """
+    words = f"Read {seconds_ago(seconds)}"
+    if clear_after is not None:
+        left = max(math.ceil(clear_after - seconds), 0)
+        words += f". Clears in {left} second" + ("" if left == 1 else "s")
     # A node of its own: else its column takes the text, and a screen reader read
     # the age before the result (seen on the iOS simulator, #723).
     return ft.Semantics(
         container=True,
         content=ft.Text(
-            f"Read {seconds_ago(seconds)}",
+            words,
             theme_style=ft.TextThemeStyle.BODY_SMALL,
             color=ft.Colors.ON_SURFACE_VARIANT,
         ),
