@@ -7,8 +7,12 @@ recorded" with the reply's name and count (``ScanOutcome.RECORDED``, neutral, D-
 or "Not recorded" on Cancel or Back. An error keeps the dialog and its notes: the
 server's refusal, "No connection. Nothing was recorded.", or, when the call may have
 reached the server (D-410), "The incident may have been recorded…" with Record anyway;
-nothing is ever re-sent on its own. Cancel while the call is out closes the dialog
-with "Not confirmed": the call ends on its own, and a success still updates the count.
+nothing is ever re-sent on its own. Once a call may have landed, that stays said
+until a reply: a later "No connection" keeps the D-410 line and Record anyway. Cancel
+while the call is out, or after one that may have landed, closes the dialog with "Not
+confirmed": the call ends on its own, and a success still updates the count. Each
+opening's Cancel and dismissal answer only that opening, so a late dismissal of an
+earlier dialog never closes the next.
 
 **Privacy (D-72):** the notes live only in the dialog's field. They are sent once,
 never stored, never logged, and gone when it closes.
@@ -72,13 +76,14 @@ def recorded_result(review: Review, recorded: Recorded) -> ScanResult:
 def closed_result(review: Review) -> ScanResult:
     """Return the panel's result for a review closed without a reply.
 
-    "Not recorded" and the name; while the call was out, "Not confirmed" and the
-    D-410 line, since the incident may land all the same.
+    "Not recorded" and the name; while the call was out, or after one that may have
+    reached the server, "Not confirmed" and the D-410 line, since the incident may
+    be on record all the same.
 
     Args:
         review: The review as it was closed.
     """
-    if review.sending:
+    if review.sending or review.maybe_sent:
         return ScanResult(
             ScanOutcome.NOT_RECORDED,
             NOT_CONFIRMED,
@@ -164,9 +169,14 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
     ft.use_effect(lambda: None, [], cleanup=unmount)
 
     @report_errors
-    def cancel() -> None:
+    def cancel(opened: asyncio.Future[ScanResult] | None) -> None:
+        """Close the review ``opened`` answers, unless another opening replaced it.
+
+        Flutter reports a dialog's dismissal once its route has closed, so an earlier
+        dialog's may arrive after the next review opened: that one must stay.
+        """
         current = latest.current
-        if current is not None:
+        if current is not None and waiting.current is opened:
             finish(closed_result(current))
 
     @report_errors
@@ -185,6 +195,8 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
             recorded = await conduct.record(svc.api, current.code, notes)
         except (ApiError, NetworkError) as error:  # nothing logged (D-72)
             problem, maybe = problem_of(error)
+            if current.maybe_sent:  # an earlier call may have landed: still so (D-410)
+                problem, maybe = MAYBE_RECORDED, True
             if mounted.current and waiting.current is future:
                 set_review(
                     replace(sending, sending=False, problem=problem, maybe_sent=maybe)
@@ -217,7 +229,7 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
             review,
             field,
             text,
-            DialogActions(record, cancel),
+            DialogActions(record, partial(cancel, waiting.current)),
             tokens=tokens,
             live=not prefs.announcements,
         )

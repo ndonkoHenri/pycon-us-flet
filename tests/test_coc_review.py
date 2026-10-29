@@ -293,6 +293,29 @@ async def test_cancel_and_back_record_nothing(
     assert helper(shown) is None and focused[0] > before
 
 
+async def test_a_late_dismissal_of_the_last_dialog_leaves_the_next_open(
+    show: Show, mock: MockState, clock: list[float]
+) -> None:
+    """A cancelled dialog's late dismissal leaves the next review open.
+
+    Flutter reports it once Grace's route has closed, after Linus's review opened;
+    only Linus's own Cancel closes his.
+    """
+    shown = await show()
+    task = await scan(shown)
+    grace = cast(ft.AlertDialog, dialog(shown))
+    await tap(shown, "coc.review.cancel")
+    await asyncio.wait_for(task, 2)
+    clock[0] += 5
+    task = await scan(shown, "MOCK0003:x")
+    assert texts(shown)[1].startswith("Linus")
+    await shown.event(grace, "dismiss")  # Grace's route has finished closing
+    assert dialog(shown) is not None and not task.done()
+    await tap(shown, "coc.review.cancel")
+    await asyncio.wait_for(task, 2)
+    assert panel(shown).startswith("Not recorded\nLinus")
+
+
 async def test_a_held_badge_and_a_submit_while_open_open_one_review(
     show: Show, mock: MockState, switch: Switch, clock: list[float]
 ) -> None:
@@ -344,6 +367,30 @@ async def test_a_lost_reply_may_be_recorded_and_offers_record_anyway(
     await asyncio.wait_for(task, 2)
     assert len(mock.incidents) == 2
     assert panel(shown).startswith("Incident recorded\nGrace Sample\n3 on record")
+
+
+@pytest.mark.parametrize("then", ["no connection", "cancel"])
+async def test_after_a_lost_reply_nothing_says_it_was_not_recorded(
+    show: Show, mock: MockState, then: str
+) -> None:
+    """After a lost reply (D-410), nothing says the incident was not recorded.
+
+    A later "no connection" keeps "may have been recorded" and Record anyway, and
+    Cancel says "Not confirmed", never "Not recorded".
+    """
+    shown = await show()
+    task = await scan(shown)
+    mock.faults.inject("lost_response")
+    await tap(shown, "coc.review.record")
+    if then == "no connection":
+        mock.faults.inject("connect")
+        await tap(shown, "coc.review.record")
+        assert problem(shown) == MAYBE_RECORDED
+        assert RECORD_ANYWAY in texts(shown) and RECORD not in texts(shown)
+    await tap(shown, "coc.review.cancel")
+    await asyncio.wait_for(task, 2)
+    assert len(mock.incidents) == 1
+    assert panel(shown).startswith(f"Not confirmed\nGrace Sample\n{MAYBE_RECORDED}")
 
 
 async def test_no_connection_records_nothing_and_keeps_the_notes(
