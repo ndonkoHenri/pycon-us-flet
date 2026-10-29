@@ -4,8 +4,7 @@ A mount of ``ui/scan_screen.py``'s ``ScanScreen`` (D-416; DOOR-01, DOOR-02; #764
 re-checks ``may_open(DOOR)`` with a signed-in account and a mock URL on every render
 (architecture §12.4), else "Not available for this account", so a deep link cannot
 bypass it. It is mounted at ``/now/staff/door`` too and records itself as the last tool
-opened (D-421); the entries in More and Now come with check-in itself (#766), so for now
-it is reached by deep link only (D-169).
+opened (D-421); More's row and Now's card open it, with the outbox's counts (#766).
 
 What it checks in for is chosen on ``door_session.py``'s picker, pushed at
 ``…/staff/door/session``, as the Lead scanner's sponsor (D-425, D-433). The choice
@@ -19,20 +18,22 @@ with a "Choose session" button; with one, a chip "Async in depth · Wed 1:30 PM"
 Once a session is chosen, its attendee list loads (``door_preload.py``, DOOR-03):
 scanning is paused with "Loading attendee list… 2 of 5", then the line under the chip
 says "Ready, works offline · 3 attendees", or "Badges will be checked online" with
-Retry, and scanning starts. Until admission comes (#766), a scan only says whether the
-badge is on the list ("Badge read") and checks nobody in.
+Retry, and scanning starts. A scan is ``door_check.check_in()``: decided on the device,
+queued as a ``door`` row of this visit (a uuid made on mount) and synced in the
+background (DOOR-04, DOOR-07, D-441).
 """
 
 from dataclasses import dataclass
 from functools import partial
+from uuid import uuid4
 
 import flet as ft
 
 from pycon_us.account import use_account
-from pycon_us.core.admission import Inventory
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.door_sessions import SEPARATOR, DoorChoice
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
+from pycon_us.door_check import NOT_CHECKED_IN, check_in
 from pycon_us.door_choice import read_door_session
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
@@ -46,6 +47,7 @@ from pycon_us.screens.door_preload import (
 )
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
+from pycon_us.staff import use_staff
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
 from pycon_us.ui.staff_picker import Reading, context_chip, tool_button
 
@@ -54,12 +56,6 @@ TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.DOOR)
 
 NO_SESSION = "Choose a session to start checking in"
 """Why scanning is paused with no session chosen (DOOR-02)."""
-
-BADGE_READ = "Badge read"
-ON_LIST = "On the attendee list"
-NOT_ON_LIST = "Not on the attendee list"
-NOT_CHECKED_IN = "Not checked in yet"
-"""The interim result's words until admission comes (#766), as CoC's "Badge read"."""
 
 
 @dataclass(frozen=True)
@@ -111,8 +107,10 @@ def DoorTool(*, owner: str) -> ft.Control:
     location = ft.use_route_location()  # changes as the picker opens and goes back
     svc = use_services()
     prefs = use_prefs()
+    staff = use_staff()
     read, set_read = ft.use_state(not_read)  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once per visit
+    visit = ft.use_memo(lambda: uuid4().hex, [])  # the scan session of a row's key
 
     @report_errors
     async def read_key() -> None:
@@ -144,13 +142,24 @@ def DoorTool(*, owner: str) -> ft.Control:
     if current.choice is None:
         return ScanScreen(
             title=TITLE,
-            on_badge=partial(look_up, Inventory()),
+            on_badge=no_session,
             paused=NO_SESSION,
             actions=[choose_button(open_picker)],
         )
+    on_badge = partial(
+        check_in,
+        svc.outbox,
+        staff,
+        svc.kick_sync,
+        svc.api,
+        owner=owner,
+        session=visit,
+        product_ids=current.choice.product_ids,
+        inventory=preload.inventory,
+    )
     return ScanScreen(
         title=TITLE,
-        on_badge=partial(look_up, preload.inventory),
+        on_badge=on_badge,
         context=ft.Column(
             [
                 session_chip(current.choice, open_picker),
@@ -164,27 +173,13 @@ def DoorTool(*, owner: str) -> ft.Control:
     )
 
 
-async def look_up(inventory: Inventory, badge: Badge) -> ScanResult:
-    """The interim ``on_badge``: whether the badge is on the list; checks nobody in.
+async def no_session(badge: Badge) -> ScanResult:
+    """The ``on_badge`` with no session chosen: scanning is paused, so never called.
 
-    "Badge read" with the name (or the code) and "On the attendee list", or the code
-    and "Not on the attendee list", then "Not checked in yet". #766 swaps in admission.
-
-    Args:
-        inventory: The attendee list as loaded.
-        badge: The badge scanned or typed.
+    Should a submit get through, nobody is checked in and the pause's words say why.
     """
-    attendee = inventory.attendees.get(badge.code)
-    if attendee is not None:
-        title, first = attendee.name or badge.code, ON_LIST
-    else:
-        title, first = badge.code, NOT_ON_LIST
     return ScanResult(
-        ScanOutcome.ACCEPTED,
-        BADGE_READ,
-        title,
-        (first, NOT_CHECKED_IN),
-        code=badge.code,
+        ScanOutcome.DENIED, NOT_CHECKED_IN, badge.code, (NO_SESSION,), badge.code
     )
 
 

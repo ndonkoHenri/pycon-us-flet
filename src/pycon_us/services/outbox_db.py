@@ -298,6 +298,17 @@ class OutboxDb:
             "list rows", lambda: self._select(f"{sql} ORDER BY created_at, id", params)
         )
 
+    def door_rows(self, owner: str, code: str) -> list[Row] | None:
+        """Return the owner's door rows for an access code, every status (STORE-12).
+
+        Door check's "Already checked in" reads them (``core.admission.decide()``).
+
+        Returns:
+            The rows, or None when the database fails (logged).
+        """
+        sql = "SELECT * FROM outbox WHERE owner = ? AND kind = 'door' AND key = ?"
+        return self._attempt("read check-ins", lambda: self._select(sql, (owner, code)))
+
     def row(self, row_id: int) -> Row | None:
         """Return one row by id: how a lead scan's send ended (D-426).
 

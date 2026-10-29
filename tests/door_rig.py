@@ -5,7 +5,7 @@ Shared by ``tests/test_staff_door.py`` (the route and the picker) and
 its picker in a real Flet session (``tests/harness.py``), signed with the seeded staff
 account's key, so what the screens fetch is what the mock's ``handle()`` answers; a
 ``Switch`` takes the transport offline. One test's sessions share one
-SharedPreferences, so a second render is a relaunch.
+SharedPreferences and one outbox, so a second render is a relaunch.
 """
 
 import json
@@ -87,8 +87,9 @@ async def show(
     """Return a function that renders Door check, or its picker, for an account.
 
     ``view`` picks the page (``VIEW`` or ``PICKER``); ``chosen`` stores a choice first,
-    as an earlier pick left it; ``transport`` replaces ``switch``; ``outbox`` gives
-    the services one; ``prefs`` replaces the default settings.
+    as an earlier pick left it; ``transport`` replaces ``switch``; ``outbox``
+    replaces the test's own (``tmp_path / "outbox"``, shared by its renders); ``prefs``
+    replaces the default settings.
     """
 
     async def focus(_: ft.TextField) -> None:
@@ -107,7 +108,11 @@ async def show(
 
     monkeypatch.setattr(harness, "memory_services", sharing)
     who = seeded(state_at(), "staff")
+    directory = tmp_path / "outbox"
+    directory.mkdir()
+    shared = OutboxDb(directory)
     async with AsyncExitStack() as stack:
+        stack.callback(shared.close)
 
         async def render(
             view: str,
@@ -141,7 +146,7 @@ async def show(
                     prefs=prefs,
                     account=account or staff(),
                     private_api=private_api,
-                    outbox=outbox,
+                    outbox=shared if outbox is None else outbox,
                 )
             )
             stack.push_async_callback(private_api.connect, None, 2026)

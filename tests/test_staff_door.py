@@ -7,7 +7,8 @@ transport, signed with the seeded staff account's key, so the catalog is what th
 one SharedPreferences, so a second render is a relaunch. The picker lists the door's
 categories, then a category's sessions by day, saves a tap and goes back; Door check is
 paused until a session is chosen, opens the picker once by itself, then heads the
-screen with the session's chip. Only ``door_check`` accounts reach either.
+screen with the session's chip, and a scan checks in (#766). Only ``door_check``
+accounts reach either.
 """
 
 import json
@@ -21,10 +22,12 @@ from flet.components.component import Component
 
 from pycon_us.account import Account
 from pycon_us.core.door_sessions import to_stored
+from pycon_us.door_check import ALREADY, CHECKED_IN
 from pycon_us.screens.door_session import ALL_SESSIONS, NONE_AVAILABLE, NOT_LOADED
 from pycon_us.screens.door_session import TITLE as PICKER_TITLE
 from pycon_us.screens.staff_door import NO_SESSION, TITLE
 from pycon_us.services.storage import STAFF_DOOR_SESSION, STAFF_PREFIX
+from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from tests import door_rig, harness
 from tests.door_rig import (
@@ -41,6 +44,7 @@ from tests.door_rig import (
 )
 from tests.harness import Shown
 from tests.picker_rig import Switch, search
+from tests.scan_rig import enter, panel
 from tests.trees import texts
 
 stored, switch, show = door_rig.stored, door_rig.switch, door_rig.show
@@ -332,3 +336,27 @@ async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
     names = {name for name, *_ in renders}
     assert names >= {"DoorTool", "Reading", "ScanScreen", "SessionList"}
     assert [render for render in renders if render[1] != render[2]] == []
+
+
+# ------------------------------------------------------------------ check-in
+
+
+async def test_a_rescan_within_4_s_is_dropped_and_after_it_is_already(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A held badge within 4 s shows nothing new; after, "Already checked in" (#766)."""
+    now = [100.0]
+    monkeypatch.setattr(scan_screen, "clock", lambda: now[0])
+    shown = await show(VIEW, chosen=ASYNC)
+    assert preload_line(shown) == READY_ONE
+    await enter(shown, "MOCK0002:v4l1d02")
+    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\nScan 1"
+    now[0] += 3
+    await enter(shown, "MOCK0002:v4l1d02")
+    assert panel(shown).endswith("Scan 1")  # the cooldown dropped it
+    now[0] += 2
+    await enter(shown, "MOCK0002:v4l1d02")
+    assert panel(shown) == f"{ALREADY}\nGrace Sample\nScan 2"
+    outbox = shown.services.outbox
+    assert outbox is not None
+    assert len(outbox.door_rows("staff@example.com", "MOCK0002") or []) == 1
