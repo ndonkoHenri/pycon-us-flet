@@ -25,7 +25,7 @@ from pycon_us.screens import lead_consent
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.storage import SCANNER_CONSENT
+from pycon_us.services.pref_keys import SCANNER_CONSENT
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
 from tests import harness

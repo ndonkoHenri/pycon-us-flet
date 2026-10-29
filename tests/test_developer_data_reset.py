@@ -29,7 +29,7 @@ from pycon_us.screens.developer_ui import (
     reset_losses,
 )
 from pycon_us.services import Services, api, changes_file, errors
-from pycon_us.services.storage import ACCOUNT
+from pycon_us.services.pref_keys import ACCOUNT
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG

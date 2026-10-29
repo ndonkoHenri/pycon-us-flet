@@ -24,7 +24,8 @@ from pycon_us.locations import TAB_ROOTS, is_top_view, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import THEME, Storage
+from pycon_us.services.pref_keys import THEME
+from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.modals import use_modals_close_on_route_change

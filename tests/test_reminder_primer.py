@@ -21,8 +21,8 @@ from flet_permission_handler import PermissionHandler, PermissionStatus
 from pycon_us.config import YearData
 from pycon_us.reminder_settings import ReminderSettings
 from pycon_us.services import Services
+from pycon_us.services.pref_keys import REMINDERS
 from pycon_us.services.reminders import Access, Scheduler
-from pycon_us.services.storage import REMINDERS
 from pycon_us.ui import focus_back
 from pycon_us.ui.reminder_primer import NOT_SAVED, PRIMER, PRIMER_LEAD
 from tests import harness, now_view, row_sessions

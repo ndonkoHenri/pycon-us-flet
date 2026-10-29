@@ -18,7 +18,8 @@ import pytest
 from pycon_us import clock
 from pycon_us.config import YearData
 from pycon_us.core.diff import ChangeKind
-from pycon_us.services.storage import Pref, Storage
+from pycon_us.services.pref_keys import Pref
+from pycon_us.services.storage import Storage
 from tests import change_log_feeds
 from tests.change_log_feeds import (
     NOW,

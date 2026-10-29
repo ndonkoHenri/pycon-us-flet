@@ -52,7 +52,8 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
-from pycon_us.ui.staff_picker import Reading, context_chip, tool_button
+from pycon_us.ui.staff_picker import Reading
+from pycon_us.ui.tool_controls import context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.DOOR)
 """The app bar's title, "Door check", as the staff entry points name it."""

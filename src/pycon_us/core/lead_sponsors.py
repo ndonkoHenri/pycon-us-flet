@@ -6,7 +6,7 @@ logo_url?}]}``. Ionic stripped one ``"`` from each end of a name (``/^"|"$/``,
 to find the chosen sponsor (LEAD-05, LEAD-06). Here a sponsor is found by its id, kept
 as a string because the capture query and the outbox's ``sponsor_id`` carry it so
 (STORE-11); the name is only shown. The chosen one is kept as ``{id, name, logo_url}``
-under ``pycon.staff_sponsor`` (``services/storage.py``'s ``STAFF_SPONSOR``).
+under ``pycon.staff_sponsor`` (``services/pref_keys.py``'s ``STAFF_SPONSOR``).
 """
 
 import re

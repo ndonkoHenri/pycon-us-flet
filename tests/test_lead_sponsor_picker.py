@@ -33,8 +33,8 @@ from pycon_us.screens.lead_sponsor import (
     SponsorPicker,
 )
 from pycon_us.services import Services
+from pycon_us.services.pref_keys import STAFF_SPONSOR
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import STAFF_SPONSOR
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
 from pycon_us.ui.scan_screen import NOT_AVAILABLE

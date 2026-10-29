@@ -19,7 +19,8 @@ import pytest
 from pycon_us.core.timeline import now_place, timeline
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import schedule as screen
-from pycon_us.services.storage import THEME, Storage
+from pycon_us.services.pref_keys import THEME
+from pycon_us.services.storage import Storage
 from pycon_us.ui import scrolling
 from tests import schedule_view
 from tests.feeds import processed

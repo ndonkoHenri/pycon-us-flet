@@ -39,7 +39,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import STAFF_SWAG_CATEGORIES
+from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
 from pycon_us.swag import look_up
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen

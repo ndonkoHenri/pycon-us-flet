@@ -29,7 +29,8 @@ from pycon_us.screens.developer_staff import (
 from pycon_us.screens.developer_ui import UNREADABLE, confirmation, staff_confirmation
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import Counts, OutboxDb
-from pycon_us.services.storage import STAFF_PREFIX, Storage
+from pycon_us.services.pref_keys import STAFF_PREFIX
+from pycon_us.services.storage import Storage
 from pycon_us.staff import Staff
 from pycon_us.theme import LIGHT_TOKENS
 from tests import data_section

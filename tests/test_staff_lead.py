@@ -27,7 +27,7 @@ from pycon_us.locations import parent_of
 from pycon_us.screens import lead_sponsor
 from pycon_us.screens.staff_lead import NO_SPONSOR, TITLE
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.storage import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
+from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from pycon_us.ui.snack_bars import NOT_SAVED

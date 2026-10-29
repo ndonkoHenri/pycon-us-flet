@@ -20,7 +20,8 @@ from dataclasses import dataclass
 
 import flet as ft
 
-from pycon_us.services.storage import SERVICE_ERRORS, Storage, favorites
+from pycon_us.services.pref_keys import favorites
+from pycon_us.services.storage import SERVICE_ERRORS, Storage
 
 logger = logging.getLogger(__name__)
 

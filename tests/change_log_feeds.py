@@ -21,7 +21,8 @@ from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.services import changes_file
-from pycon_us.services.storage import Storage, fetched
+from pycon_us.services.pref_keys import fetched
+from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from tests.fakes import MemoryPrefs
 from tests.feeds import Edit

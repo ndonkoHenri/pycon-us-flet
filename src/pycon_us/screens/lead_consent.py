@@ -15,7 +15,7 @@ import flet as ft
 from pycon_us.locations import parent_of
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SCANNER_CONSENT
+from pycon_us.services.pref_keys import SCANNER_CONSENT
 from pycon_us.ui.actions import padded
 from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.scaffold import AppScaffold

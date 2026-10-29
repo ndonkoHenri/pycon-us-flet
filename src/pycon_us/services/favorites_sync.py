@@ -8,7 +8,7 @@ dirty and schedules one full-list PATCH a second later (``DEBOUNCE``); a quick r
 stars sends one. One request at a time, in one loop: a pull asked for during a PATCH
 runs after it, so it never reads a list older than the one just sent.
 
-What the server has is saved per year as a ``SyncState`` (``storage.favorites_sync``)
+What the server has is saved per year as a ``SyncState`` (``pref_keys.favorites_sync``)
 as soon as it changes, even while a request is out, and before any request, so a kill
 never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume. Nothing is sent while
 signed out, expired, with no mock URL (D-51) or with favourites that could not be read
@@ -28,8 +28,9 @@ from pycon_us.core.favorites_sync import SyncState, reconcile, server_ids
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.endpoints import READ_MOBILE_STATE, WRITE_MOBILE_STATE
 from pycon_us.services.errors import report_errors
+from pycon_us.services.pref_keys import favorites_sync
 from pycon_us.services.private_api import PrivateApi
-from pycon_us.services.storage import Storage, favorites_sync
+from pycon_us.services.storage import Storage
 
 if TYPE_CHECKING:  # the stores import the services package: names for types only
     from pycon_us.account import Account

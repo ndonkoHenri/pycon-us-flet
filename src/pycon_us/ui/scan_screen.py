@@ -32,8 +32,9 @@ D-438).
 
 **A result from elsewhere** (#761): a tool that gets a result outside ``on_badge``
 (the CoC name search records without a scan) hands it over as ``posted``, a
-``Posted`` whose serial it bumps for each one; the screen shows it as a scan's, with
-its haptics and announcement, unless the screen has gone or is not on top.
+``Posted`` (``ui/scan_result.py``, with ``Shown``) whose serial it bumps for each
+one; the screen shows it as a scan's, with its haptics and announcement, unless the
+screen has gone or is not on top.
 
 **Clearing** (#762, MASK-05): a tool may have its result cleared ``clear_after`` seconds
 after it shows, and when the app goes to the background (``ui/scan_clear.py``); the
@@ -41,7 +42,6 @@ CoC tool does both. The camera area is ``ui/scan_camera.py`` (E1, #726).
 """
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from time import monotonic
 
 import flet as ft
@@ -61,7 +61,14 @@ from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_camera import CameraUnavailable
 from pycon_us.ui.scan_clear import use_clear_after, use_on_background
 from pycon_us.ui.scan_feedback import announce, buzz, use_wake_lock
-from pycon_us.ui.scan_result import DIM_AFTER, age_line, result_panel, spoken
+from pycon_us.ui.scan_result import (
+    DIM_AFTER,
+    Posted,
+    Shown,
+    age_line,
+    result_panel,
+    spoken,
+)
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.sync_chip import SyncChip
@@ -92,47 +99,6 @@ SWITCH_MS = 200
 def clock() -> float:
     """Return the time the cooldown and the result's age count in: never goes back."""
     return monotonic()
-
-
-@dataclass(frozen=True)
-class Shown:
-    """The result on the panel.
-
-    Attributes:
-        result: What the handler, or the parse, returned.
-        at: When it came, in ``clock()`` seconds.
-        serial: Counts the results, so each one is a new card, even an equal one.
-    """
-
-    result: ScanResult
-    at: float
-    serial: int
-
-
-@dataclass(eq=False)
-class Posted:
-    """A result a tool got outside ``on_badge``, for the panel (#761).
-
-    Handed over once: the screen takes it (``take()``), so the tool's state keeps no
-    copy after a clear (#762). Compared by identity: each one is new.
-
-    Attributes:
-        result: What to show, until the screen takes it.
-        serial: Bumped by the tool for each one.
-    """
-
-    result: ScanResult | None
-    serial: int
-
-    def take(self) -> ScanResult | None:
-        """Return the result and forget it: the panel holds it from then on."""
-        result, self.result = self.result, None
-        return result
-
-
-def post(last: Posted | None, result: ScanResult) -> Posted:
-    """Return the next ``Posted`` after ``last``: a tool's ``set_state`` update."""
-    return Posted(result, last.serial + 1 if last is not None else 1)
 
 
 @ft.component

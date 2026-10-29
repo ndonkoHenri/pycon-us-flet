@@ -27,7 +27,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import staff_door
 from pycon_us.screens.door_preload import ONLINE, RETRY
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.storage import STAFF_DOOR_SESSION
+from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
 from tests import door_rig
 from tests.door_rig import ASYNC, VIEW, Show, helper, preload_line, staff
 from tests.fakes import MemorySemantics

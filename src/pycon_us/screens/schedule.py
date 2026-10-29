@@ -71,7 +71,8 @@ from pycon_us.screens.schedule_slots import (
 )
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS, THEME
+from pycon_us.services.pref_keys import THEME
+from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.day_tabs import TAB_MS, day_tab

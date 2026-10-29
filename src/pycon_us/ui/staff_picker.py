@@ -1,4 +1,4 @@
-"""What the staff tools' "scan for X" pickers share, and the chip and buttons that open them.
+"""What the staff tools' "scan for X" pickers share, and the page a tool shows while it reads.
 
 The Lead scanner's sponsor picker (``screens/lead_sponsor.py``, D-425) and Door check's
 session picker (``screens/door_session.py``, D-433) are one pattern: a pushed page that
@@ -9,8 +9,8 @@ and a tap that saves the choice and goes back (``use_pick()``), staying with "Co
 save your change" when the save fails, since the tool reads the choice from storage.
 
 On the tool's scan screen, the choice heads the screen as an outlined chip that reopens
-the picker (``context_chip()``), and with none the screen is paused with a tonal button
-(``tool_button()``); ``Reading`` is the empty page while the tool reads its keys.
+the picker, and with none the screen is paused with a tonal button (both
+``ui/tool_controls.py``'s); ``Reading`` is the empty page while the tool reads its keys.
 """
 
 import logging
@@ -25,7 +25,6 @@ from pycon_us.services import use_services
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
-from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import say_if_unsaved
@@ -314,101 +313,6 @@ def choice_row(
             # 12 dp each side of a 24 dp line or tick: a one-line row is 48 dp (D-33).
             padding=ft.Padding.symmetric(horizontal=16, vertical=ROW_PADDING),
         )
-    )
-
-
-def context_chip(
-    *,
-    text: str,
-    spoken: str,
-    icon: ft.IconData | ft.Control,
-    identifier: str,
-    on_click: ft.ControlEventHandler,
-) -> ft.Control:
-    """Return the chip that heads a tool's scan screen and reopens its picker.
-
-    One node, a button read as ``spoken``. Drawn as M3's outlined assist chip (8 dp
-    corners, an ``outline_variant`` edge, a leading icon) but built from a
-    ``Container``: Flutter's ``Chip`` keeps its label on one line, which at the
-    largest text cut "Example Corp" to "Example". Its text takes only the room it
-    needs (``expand_loose``) and wraps past the width; the chip is at least 48 dp tall,
-    its own target (ux.md §9).
-
-    Args:
-        text: What it shows, "For: Example Corp".
-        spoken: What a screen reader says, "Scanning for Example Corp, change sponsor".
-        icon: Its leading icon, drawn in ``primary``; or a control in its place (the
-            sync chip's own icon or ring at large text, #752).
-        identifier: For UI flows, ``lead.sponsor_chip``.
-        on_click: Opens the picker.
-    """
-    return ft.Container(
-        ft.MergeSemantics(  # the phrase and the tap's action: one node
-            content=ft.Container(
-                ft.Semantics(
-                    label=spoken,
-                    identifier=identifier,
-                    button=True,
-                    exclude_semantics=True,  # the phrase replaces the text
-                    content=ft.Row(
-                        [
-                            icon
-                            if isinstance(icon, ft.Control)
-                            else ft.Icon(
-                                icon,
-                                size=18,
-                                color=ft.Colors.PRIMARY,
-                                apply_text_scaling=True,
-                            ),
-                            ft.Text(
-                                text,
-                                theme_style=ft.TextThemeStyle.LABEL_LARGE,
-                                expand=True,
-                                expand_loose=True,
-                            ),
-                        ],
-                        spacing=8,
-                        tight=True,
-                    ),
-                ),
-                ink=True,
-                on_click=on_click,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                border_radius=8,
-                padding=ft.Padding.symmetric(horizontal=12, vertical=13),
-            )
-        ),
-        alignment=ft.Alignment.CENTER_LEFT,
-    )
-
-
-def tool_button(
-    identifier: str, label: str, icon: ft.IconData, on_click: ft.ControlEventHandler
-) -> ft.Control:
-    """Return one of a tool's tonal buttons under the field, start-aligned.
-
-    Args:
-        identifier: For UI flows, e.g. ``lead.add_note``.
-        label: Its words.
-        icon: Its leading icon.
-        on_click: What it does.
-    """
-    return ft.Container(
-        named(
-            identifier,
-            ft.FilledTonalButton(
-                label,
-                icon=icon,
-                on_click=on_click,
-                style=ft.ButtonStyle(padding=LABEL_PADDING),
-                elevation=0,  # M3's tonal button lies flat (D-344)
-            ),
-        ),
-        alignment=ft.Alignment.CENTER_LEFT,
-        # Keyed: "Leads (42)" is built here and kept by ScanScreen's own re-renders,
-        # so a result's "Add note" landing in its place would otherwise take its id,
-        # two buttons with one (U163, #622); differing keys make it a new control.
-        key=identifier,
     )
 
 

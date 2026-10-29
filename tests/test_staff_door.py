@@ -26,7 +26,7 @@ from pycon_us.door_check import ALREADY, CHECKED_IN
 from pycon_us.screens.door_session import ALL_SESSIONS, NONE_AVAILABLE, NOT_LOADED
 from pycon_us.screens.door_session import TITLE as PICKER_TITLE
 from pycon_us.screens.staff_door import NO_SESSION, TITLE
-from pycon_us.services.storage import STAFF_DOOR_SESSION, STAFF_PREFIX
+from pycon_us.services.pref_keys import STAFF_DOOR_SESSION, STAFF_PREFIX
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from tests import door_rig, harness

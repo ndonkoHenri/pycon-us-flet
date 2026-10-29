@@ -14,8 +14,8 @@ from collections.abc import Callable
 import flet as ft
 
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.scan_screen import Shown
-from pycon_us.ui.staff_picker import tool_button
+from pycon_us.ui.scan_result import Shown
+from pycon_us.ui.tool_controls import tool_button
 
 SHOW_EMAIL = "Show email"
 HIDE_EMAIL = "Hide email"
