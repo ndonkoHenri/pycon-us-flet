@@ -9,7 +9,8 @@ closes the sheet and hands the attendee to the tool, which opens the review dial
 
 ``use_find()`` is the tool's hook. Each opening carries a token: Flutter reports a
 sheet's dismissal after its exit animation, so a late one for an earlier sheet closes
-nothing. **Privacy (D-56, D-72):** the query and the rows live in the hook's state
+nothing. Clear lands as ``use_field_query()``'s does (D-243): keys reported before
+Flutter has the empty text are dropped, so a stale query never comes back. **Privacy (D-56, D-72):** the query and the rows live in the hook's state
 while the sheet is open, never stored or logged, and go when it closes.
 """
 
@@ -66,6 +67,8 @@ def use_find(
     finding, set_state = ft.use_state(not_finding)
     latest: MutableRef[Finding | None] = ft.use_ref(finding)
     mounted = ft.use_ref(True)  # cleared on unmount: a late pause then sets nothing
+    landing = ft.use_ref(False)  # a Clear's empty text is on its way: reports are stale
+    overwritten = ft.use_ref(False)  # a stale report came in meanwhile
     opening = finding.opening if finding is not None else None
     clears = finding.clears if finding is not None else 0
     # A fresh field each opening and each Clear: its first render sends "" (D-243).
@@ -94,16 +97,30 @@ def use_find(
     ft.use_effect(settle, [opening, typed])
 
     @report_errors
-    async def refocus() -> None:
-        # Clear goes away once used: the focus goes back in the field (D-182).
-        if clears and ref.current is not None:
-            await ref.current.focus()
+    def send_empty() -> None:
+        current = latest.current
+        if current is not None:
+            landing.current, overwritten.current = True, False
+            set_finding(replace(current, typed="", query="", clears=current.clears + 1))
 
-    ft.use_effect(refocus, [clears])
+    @report_errors
+    async def land() -> None:
+        # use_field_query()'s Clear landing (D-243): Flutter answers the focus once it
+        # has the empty text this render sent, so reports until then are stale. The
+        # focus also serves D-182: Clear goes away once used.
+        if not clears or ref.current is None:
+            return
+        await ref.current.focus()  # a newer Clear or a close cancels it here
+        landing.current = False
+        if overwritten.current and ref.current.value:
+            send_empty()  # a report after the render left its text on the field
+
+    ft.use_effect(land, [clears])
 
     @report_errors
     def open_find() -> None:
         if latest.current is None:
+            landing.current = False  # a landing the last sheet's close cut short
             set_finding(Finding())
 
     @report_errors
@@ -119,14 +136,14 @@ def use_find(
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> None:
         current = latest.current
-        if current is not None:
+        if landing.current:
+            overwritten.current = True  # Flutter puts the empty text over it
+        elif current is not None:
             set_finding(replace(current, typed=e.control.value or ""))
 
     @report_errors
     async def clear(*_: object) -> None:
-        current = latest.current
-        if current is not None:
-            set_finding(replace(current, typed="", query="", clears=current.clears + 1))
+        send_empty()
 
     @report_errors
     async def pick(attendee: Attendee) -> None:

@@ -119,7 +119,8 @@ def attendee_row(
     """Return one result: the name, "Badge: Maggie", the count with its level's icon.
 
     One node, a button read as ``phrase()``; at least 48 dp tall (D-33). Its
-    identifier is its place in the list, never the access code (D-72).
+    identifier is its place in the list, never the access code (D-72); its key is
+    the attendee object's, so a tap from a row new results replaced is dropped.
 
     Args:
         index: Its place in the rows, from 0.
@@ -157,7 +158,10 @@ def attendee_row(
             ink=True,
             on_click=pick,
             padding=ft.Padding.symmetric(horizontal=16, vertical=ROW_PADDING),
-        )
+        ),
+        # The attendee's, not the place's: new results never take over a row, so a
+        # tap sent from the row they replaced reaches no one (opaque, D-72).
+        key=str(id(attendee)),
     )
 
 

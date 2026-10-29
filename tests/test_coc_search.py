@@ -343,3 +343,97 @@ async def test_the_rows_wait_for_typing_to_pause(
     await asyncio.sleep(0.1)
     await shown.settle()
     assert rows(shown) == ["Linus Placeholder, badge Linus, 3 incidents on record"]
+
+
+@pytest.fixture
+def answer(monkeypatch: pytest.MonkeyPatch) -> asyncio.Event:
+    """Flutter's answer to a focus request: at once, unless a test clears it (D-243)."""
+    given = asyncio.Event()
+    given.set()
+
+    async def focus(_: ft.TextField) -> None:
+        await given.wait()
+
+    monkeypatch.setattr(ft.TextField, "focus", focus)
+    return given
+
+
+def search_field(shown: Shown) -> ft.TextField:
+    """The open sheet's search field."""
+    (node,) = [n for n in in_sheet(shown, "coc.search") if n.identifier == "coc.search"]
+    return cast(ft.TextField, node.content)
+
+
+def clear_button(shown: Shown) -> ft.IconButton:
+    """The search field's Clear button, shown while it holds text."""
+    return next(
+        c
+        for c in walk(sheet(shown))
+        if isinstance(c, ft.IconButton) and c.tooltip == "Clear search"
+    )
+
+
+async def report(shown: Shown, text: str) -> None:
+    """Flutter's report of ``text`` in the search field, its event not run out."""
+    field = search_field(shown)
+    patch_dataclass(field, {"value": text})
+    await shown.session.dispatch_event(field._i, "change", text)
+
+
+async def test_a_key_reported_after_clear_renders_is_dropped_with_the_field(
+    show: Show, answer: asyncio.Event
+) -> None:
+    """D-243: a key typed on the old text before Clear landed never brings it back.
+
+    Its report comes in after the render that sent the empty text and before
+    Flutter answers the focus that followed: dropped, and the empty text sent again.
+    """
+    shown = await show()
+    await open_find(shown)
+    answer.set()
+    await search_for(shown, "lin")
+    answer.clear()  # Flutter has not had the empty text yet
+    await shown.click(clear_button(shown))
+    await search_for(shown, "linus")  # typed on the old text, in flight
+    answer.set()
+    await shown.settle()
+    assert search_field(shown).value == ""
+    assert rows(shown) == [] and BEFORE in sheet_texts(shown)
+    await search_for(shown, "ada")  # once landed, keys count again
+    assert rows(shown)[0].startswith("Ada Example")
+
+
+async def test_keys_reported_before_clear_renders_are_dropped(
+    show: Show, answer: asyncio.Event
+) -> None:
+    """D-243: keys whose reports beat Clear's re-render are dropped, as Flutter does."""
+    shown = await show()
+    await open_find(shown)
+    answer.set()
+    await search_for(shown, "lin")
+    answer.clear()
+    await shown.session.dispatch_event(clear_button(shown)._i, "click", None)
+    await report(shown, "linu")
+    await report(shown, "linus")
+    answer.set()
+    await shown.settle()
+    assert search_field(shown).value == ""
+    assert rows(shown) == [] and BEFORE in sheet_texts(shown)
+
+
+async def test_a_tap_on_a_row_the_results_replaced_is_dropped(show: Show) -> None:
+    """A tap sent from Linus's row, delayed past new results, never opens Ada's review."""
+    shown = await show()
+    await open_find(shown)
+    await search_for(shown, "linus")
+    node = in_sheet(shown, "coc.search.row.0")[0]
+    linus = next(
+        c
+        for c in walk(sheet(shown))
+        if isinstance(c, ft.Container) and c.content is node
+    )
+    await search_for(shown, "ada")  # Ada's row now sits where Linus's was
+    task = asyncio.create_task(shown.click(linus))  # a pick waits on its review
+    await shown.settle()
+    assert dialog(shown) is None and sheet(shown) is not None
+    await asyncio.wait_for(task, 2)
