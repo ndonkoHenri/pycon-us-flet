@@ -90,11 +90,11 @@ def test_the_flags_are_the_account_stores() -> None:
 
 
 def test_only_built_tools_are_entries_until_their_screens_land() -> None:
-    """The Lead scanner and CoC have entries; only the scanner queues (D-169, #760)."""
+    """Lead, Swag pickup and CoC have entries; only the scanner queues (D-169, #760)."""
     every = {"lead_retrieval": True, "door_check": True, "mask_violation": True}
-    assert BUILT_TOOLS == (LEAD, COC)
-    assert QUEUED_TOOLS == (LEAD,)  # CoC is online only (D-56)
-    assert [tool.key for tool in built_entries(every)] == [LEAD, COC]
+    assert BUILT_TOOLS == (LEAD, SWAG, COC)
+    assert QUEUED_TOOLS == (LEAD,)  # swag has no rows and CoC is online only (D-56)
+    assert [tool.key for tool in built_entries(every)] == [LEAD, SWAG, COC]
     assert [tool.key for tool in built_entries({"mask_violation": True})] == [COC]
 
 

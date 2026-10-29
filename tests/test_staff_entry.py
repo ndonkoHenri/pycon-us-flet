@@ -44,13 +44,13 @@ BUILT_ROWS = {
     "attendee": [],
     "speaker": [],
     "sponsor": ["more.staff.lead"],
-    "staff": ["more.staff.lead"],
+    "staff": ["more.staff.lead", "more.staff.swag"],
     "coc": ["more.staff.coc"],
-    "all": ["more.staff.coc", "more.staff.lead"],  # sorted
+    "all": ["more.staff.coc", "more.staff.lead", "more.staff.swag"],  # sorted
 }
-"""Each role's rows of built tools: the Lead scanner (``lead_retrieval or door_check``)
-and CoC incident (``mask_violation``, #760); Door check and Swag pickup wait for their
-screens (D-169)."""
+"""Each role's rows of built tools: the Lead scanner (``lead_retrieval or door_check``),
+Swag pickup (``door_check``, #769) and CoC incident (``mask_violation``, #760); Door
+check waits for its admission (D-169)."""
 
 
 def seeded(role: str) -> Account:
@@ -131,7 +131,8 @@ def second_line(node: ft.Semantics) -> tuple[str, str]:
 async def test_more_lists_the_built_tools_of_each_mock_account(
     show_more: ShowMore, role: str
 ) -> None:
-    """The Lead scanner for sponsor, staff and all; CoC for coc and all; else none."""
+    """The Lead scanner for sponsor, staff and all; Swag pickup for staff and all; CoC
+    for coc and all; else none."""
     shown = await show_more(seeded(role))
     expected = BUILT_ROWS[role]
     assert staff_rows(shown) == expected
@@ -157,11 +158,13 @@ async def test_the_section_comes_right_under_the_profile_row(
     """The profile row, then "Staff tools" and its rows in O-7's order (ux.md §2.2)."""
     shown = await show_more(seeded("all"))
     (body,) = shown.find(ft.ListView)
-    assert outline(list(body.controls[:4])) == [
+    assert outline(list(body.controls[:6])) == [
         "Robin Everything",  # the profile row, signed in
         "# Staff tools",
         "Lead scanner",
+        "Swag pickup",
         "CoC incident",
+        "# Programme",
     ]
 
 
@@ -282,6 +285,34 @@ async def test_the_card_opens_the_last_tool_opened_while_it_is_allowed(
     )
     await shown.click(tile(shown.node(CARD)))
     assert shown.went == ["/now/staff/lead"]
+
+
+async def test_the_swag_pickup_row_says_its_purpose_and_opens_its_route(
+    show_more: ShowMore,
+) -> None:
+    """Staff get "Swag pickup", which pushes ``/more/staff/swag``; a sponsor doesn't."""
+    shown = await show_more(seeded("staff"))
+    node = shown.node("more.staff.swag")
+    assert tile(node).title == "Swag pickup"
+    assert second_line(node) == ("Hand out swag at pickup",) * 2  # no counts (D-56)
+    await shown.click(tile(node))
+    assert shown.went == ["/more/staff/swag"]
+    assert not (await show_more(seeded("sponsor"))).nodes("more.staff.swag")
+
+
+async def test_the_card_opens_swag_pickup_when_it_was_the_last_tool(
+    render: Callable[..., Any],
+) -> None:
+    """Staff who last opened Swag pickup get it from Now's card, under Now (D-421)."""
+    shown = await render(
+        may(15, 11, 10),
+        prefs=mock_prefs(),
+        account=seeded("staff"),
+        memory=ViewMemory(staff_tool="swag"),
+    )
+    assert second_line(shown.node(CARD))[0] == "Swag pickup"
+    await shown.click(tile(shown.node(CARD)))
+    assert shown.went == ["/now/staff/swag"]
 
 
 def test_every_built_tool_has_its_route_under_more_and_under_now() -> None:
