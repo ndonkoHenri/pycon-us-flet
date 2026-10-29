@@ -90,21 +90,29 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
     )
 
 
-def title_row(on_close: Callable[[], object]) -> ft.Control:
+def title_row(
+    on_close: Callable[[], object],
+    *,
+    title: str = "Sync queue",
+    identifier: str = CLOSE,
+) -> ft.Control:
     """Return the sheet's title, "Sync queue", with a Close button at its end.
 
     The sheet is as tall as the screen, so no scrim is left to tap, and iOS has no
     Back key: Close is the way out besides dragging the handle (seen on the iOS
-    simulator, #694). Its tooltip names it, merged into its node (``named()``).
+    simulator, #694). Its tooltip names it, merged into its node (``named()``). The
+    CoC name search's sheet has the same head (#761).
 
     Args:
         on_close: Closes the sheet.
+        title: The sheet's level-1 heading.
+        identifier: The Close button's identifier.
     """
     return ft.Row(
         [
-            ft.Container(heading("Sync queue", 1), expand=True),
+            ft.Container(heading(title, 1), expand=True),
             named(
-                CLOSE,
+                identifier,
                 ft.IconButton(ft.Icons.CLOSE, tooltip="Close", on_click=on_close),
             ),
         ],

@@ -199,25 +199,38 @@ def count_line(incidents: int, tokens: Tokens) -> ft.Control:
         tokens: The scheme's tokens: a notice is in ``warning``, a high count in
             ``error``, none in ``on_surface_variant``.
     """
+    return ft.Semantics(
+        identifier="coc.review.count",
+        container=True,
+        label=count_words(incidents),
+        exclude_semantics=True,  # the icon is decorative: the words say it
+        content=count_row(incidents, tokens),
+    )
+
+
+def count_row(incidents: int, tokens: Tokens) -> ft.Row:
+    """Return the count's look: its level's icon and the words, in the level's colour.
+
+    The review's count line and the name search's rows (#761) share it, so a level
+    looks the same everywhere (MASK-02). The caller makes it one node.
+
+    Args:
+        incidents: The incidents on record.
+        tokens: The scheme's tokens: a notice is in ``warning``, a high count in
+            ``error``, none in ``on_surface_variant``.
+    """
     level = count_level(incidents)
     color = {
         Level.NONE: ft.Colors.ON_SURFACE_VARIANT,
         Level.NOTICE: tokens.warning,
         Level.HIGH: ft.Colors.ERROR,
     }[level]
-    words = count_words(incidents)
-    return ft.Semantics(
-        identifier="coc.review.count",
-        container=True,
-        label=words,
-        exclude_semantics=True,  # the icon is decorative: the words say it
-        content=ft.Row(
-            [
-                ft.Icon(LEVEL_ICONS[level], color=color, apply_text_scaling=True),
-                ft.Text(words, color=color, expand=True),
-            ],
-            spacing=8,
-        ),
+    return ft.Row(
+        [
+            ft.Icon(LEVEL_ICONS[level], color=color, apply_text_scaling=True),
+            ft.Text(count_words(incidents), color=color, expand=True),
+        ],
+        spacing=8,
     )
 
 
