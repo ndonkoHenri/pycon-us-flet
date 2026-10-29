@@ -21,7 +21,9 @@ import pytest
 
 from pycon_us.core.door_sessions import DoorChoice, to_stored
 from pycon_us.core.outbox import Status
+from pycon_us.door_choice import read_door_session
 from pycon_us.prefs import Prefs
+from pycon_us.screens import staff_door
 from pycon_us.screens.door_preload import ONLINE, RETRY
 from pycon_us.screens.staff_door import BADGE_READ, NOT_CHECKED_IN, NOT_ON_LIST, ON_LIST
 from pycon_us.services.outbox_db import OutboxDb
@@ -158,6 +160,37 @@ async def test_changing_the_session_mid_load_cancels_it(
     await gate.let(shown, 11, 20)
     assert "11" not in gate.answered  # the first call may go twice: the clock skew
     assert preload_line(shown) == "Ready, works offline, 1 attendee"  # Linus
+
+
+async def test_scanning_waits_while_the_choice_is_read_again(
+    show: Show, stored: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Back from the picker, no badge is checked against the old list meanwhile."""
+    location = [VIEW]
+    monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
+    account = staff()
+    shown = await show(VIEW, account, chosen=TUTORIALS)
+    assert preload_line(shown) == READY_THREE
+    held = asyncio.Event()
+
+    async def slow_read(storage: Any) -> DoorChoice | None:
+        """Read the choice only once the test lets it through."""
+        await held.wait()
+        return await read_door_session(storage)
+
+    monkeypatch.setattr(staff_door, "read_door_session", slow_read)
+    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(SUMMIT))
+    location[0] = f"{VIEW}?picked"  # back from the picker: the key is read again
+    account.nickname = "Picked"  # re-renders the tool, as the route change does
+    await shown.settle()
+    assert helper(shown) == LOADING
+    await enter(shown, "MOCK0002:v4l1d02")  # Grace: on Tutorials' list, not Summit's
+    assert BADGE_READ not in panel(shown)  # dropped: nothing was looked up
+    held.set()
+    await shown.settle()
+    assert preload_line(shown) == "Ready, works offline, 1 attendee"  # Linus
+    await enter(shown, "MOCK0002:v4l1d02")
+    assert NOT_ON_LIST in panel(shown)
 
 
 async def test_leaving_mid_load_cancels_it_quietly(

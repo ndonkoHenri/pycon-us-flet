@@ -10,7 +10,8 @@ it is reached by deep link only (D-169).
 What it checks in for is chosen on ``door_session.py``'s picker, pushed at
 ``…/staff/door/session``, as the Lead scanner's sponsor (D-425, D-433). The choice
 (``STAFF_DOOR_SESSION``) is read as the screen opens and again whenever the location
-changes, so it is current when the picker goes back. With none, the picker opens by
+changes, so it is current when the picker goes back; until that read lands, scanning
+waits, so no badge is checked against the previous session's list. With none, the picker opens by
 itself once per visit and scanning is paused ("Choose a session to start checking in")
 with a "Choose session" button; with one, a chip "Async in depth · Wed 1:30 PM"
 (``door.session_chip``) heads the screen and reopens the picker.
@@ -36,7 +37,13 @@ from pycon_us.door_choice import read_door_session
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.screens import door_session
-from pycon_us.screens.door_preload import status_line, status_words, use_preload
+from pycon_us.screens.door_preload import (
+    LOADING,
+    Preload,
+    status_line,
+    status_words,
+    use_preload,
+)
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
@@ -61,10 +68,13 @@ class Read:
 
     Attributes:
         owner: The account it was read for; another's never stands (D-423).
+        location: The route location it was read at; until the read at the current
+            one lands, the choice may be stale, so scanning waits.
         choice: The session, or sessions, chosen, or None.
     """
 
     owner: str
+    location: str
     choice: DoorChoice | None
 
 
@@ -106,11 +116,14 @@ def DoorTool(*, owner: str) -> ft.Control:
 
     @report_errors
     async def read_key() -> None:
-        set_read(Read(owner, await read_door_session(svc.storage)))
+        set_read(Read(owner, location, await read_door_session(svc.storage)))
 
     ft.use_effect(read_key, [owner, location])
     current = read if read is not None and read.owner == owner else None
     needs_session = current is not None and current.choice is None
+    # Back from the picker, the old choice shows until the new read lands; scanning
+    # waits, so no badge is checked against the old session's list meanwhile.
+    rereading = current is not None and current.location != location
 
     @report_errors
     def open_picker() -> None:
@@ -147,7 +160,7 @@ def DoorTool(*, owner: str) -> ft.Control:
             ],
             spacing=8,
         ),
-        paused=status_words(preload) if preload.loaded is None else None,
+        paused=LOADING if rereading else paused_words(preload),
     )
 
 
@@ -173,6 +186,15 @@ async def look_up(inventory: Inventory, badge: Badge) -> ScanResult:
         (first, NOT_CHECKED_IN),
         code=badge.code,
     )
+
+
+def paused_words(preload: Preload) -> str | None:
+    """Return why scanning waits for the list ("Loading attendee list…"), or None.
+
+    Args:
+        preload: Where the load is.
+    """
+    return status_words(preload) if preload.loaded is None else None
 
 
 def session_chip(choice: DoorChoice, on_click: ft.ControlEventHandler) -> ft.Control:
