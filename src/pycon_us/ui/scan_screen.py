@@ -22,7 +22,8 @@ is dropped, so it never buzzes or speaks over another page.
 **Beyond the panel** (#724, D-420): each result gives its haptics and, on iOS, an
 announcement (``ui/scan_feedback.py``); the screen stays awake while mounted and in
 the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet with the
-signed-in account's rows (``use_queue_sheet()``). Scanning **pauses** while the sheet
+signed-in account's rows (``use_queue_sheet()``); at large text it heads the body
+rather than the bar, so its words wrap (#752). Scanning **pauses** while the sheet
 is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
 dropped, its text kept, and the field says why; when the pause ends the focus goes
 back to the field. It goes back there too when Back pops a page pushed over the
@@ -194,7 +195,12 @@ def ScanScreen(
         if result_actions is not None and shown is not None
         else []
     )
-    body: list[ft.Control] = []
+    chip = SyncChip(
+        staff, tokens=tokens, on_click=sheet.open, large_text=prefs.time_above
+    )
+    # At large text the chip leaves the bar for the body, where its words wrap and
+    # the title keeps its room (#752).
+    body: list[ft.Control] = [padded(chip)] if prefs.time_above else []
     if isinstance(context, ft.Control):
         body.append(padded(context))
     elif context:
@@ -237,7 +243,7 @@ def ScanScreen(
     return AppScaffold(
         title=title,
         actions=[
-            SyncChip(staff, tokens=tokens, on_click=sheet.open),
+            *([] if prefs.time_above else [chip]),
             named(  # one node, named by its tooltip (D-234)
                 "scan.keyboard",
                 ft.IconButton(

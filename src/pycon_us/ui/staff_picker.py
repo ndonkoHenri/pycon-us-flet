@@ -321,7 +321,7 @@ def context_chip(
     *,
     text: str,
     spoken: str,
-    icon: ft.IconData,
+    icon: ft.IconData | ft.Control,
     identifier: str,
     on_click: ft.ControlEventHandler,
 ) -> ft.Control:
@@ -337,7 +337,8 @@ def context_chip(
     Args:
         text: What it shows, "For: Example Corp".
         spoken: What a screen reader says, "Scanning for Example Corp, change sponsor".
-        icon: Its leading icon.
+        icon: Its leading icon, drawn in ``primary``; or a control in its place (the
+            sync chip's own icon or ring at large text, #752).
         identifier: For UI flows, ``lead.sponsor_chip``.
         on_click: Opens the picker.
     """
@@ -351,7 +352,9 @@ def context_chip(
                     exclude_semantics=True,  # the phrase replaces the text
                     content=ft.Row(
                         [
-                            ft.Icon(
+                            icon
+                            if isinstance(icon, ft.Control)
+                            else ft.Icon(
                                 icon,
                                 size=18,
                                 color=ft.Colors.PRIMARY,
