@@ -9,6 +9,8 @@ admission is a ``door`` row (``core/outbox.admit()``, one per check-in), which t
 (D-426) the door doesn't wait for the worker: the person is admitted now, and the sync
 chip and the queue sheet say how the row syncs. A reply whose ``errors`` say a product
 was already redeemed still syncs the row, and the queue sheet shows it (D-441).
+"Checked in" and "Already checked in" carry the attendee's allergy and dietary chips,
+from the list or the lookup (``core/admission.tags()``, DOOR-05, #767).
 """
 
 import logging
@@ -17,7 +19,7 @@ from collections.abc import Callable, Iterable
 from functools import partial
 
 from pycon_us.check_in_api import fetch_attendee_products
-from pycon_us.core.admission import Inventory, decide
+from pycon_us.core.admission import Attendee, Inventory, decide, tags
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.check_in import AttendeeProducts, Item, redeem_payload
 from pycon_us.core.outbox import Outcome, admit
@@ -86,24 +88,23 @@ async def check_in(
         return not_saved(code)
     ids = tuple(dict.fromkeys(product_ids))
     admission = decide(inventory, code, ids, kept)
-    attendee = inventory.attendees.get(code)
-    name = attendee.name if attendee is not None else ""
+    attendee = inventory.attendees.get(code, Attendee(code))
     if admission.already:
-        return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+        return already(attendee)
     if admission.known:
         quantities = admission.quantities
     else:
         looked = await look_up(api, code, ids)
         if isinstance(looked, ScanResult):
             return looked
-        quantities, name = looked
+        quantities, attendee = looked
         # Another visit may have admitted the badge while this one awaited the lookup;
         # read again, with no await from here to the enqueue (#784 review).
         kept = db.door_rows(owner, code)
         if kept is None:
             return not_saved(code)
         if decide(inventory, code, ids, kept).already:
-            return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+            return already(attendee)
     now = clock()
     payload = redeem_payload(
         code, badge.door_validator, now, dict(quantities), swag=False
@@ -123,15 +124,15 @@ async def check_in(
     if enqueued is None or enqueued.row is None:  # logged (D-120)
         return not_saved(code)
     if enqueued.outcome is Outcome.ALREADY:  # the same check-in, already queued
-        return ScanResult(ScanOutcome.DUPLICATE, ALREADY, name or code, (), code)
+        return already(attendee)
     staff.update_counts(db.counts(owner))
     kick()
-    return checked_in(code, name, quantities, offline=staff.offline)
+    return checked_in(attendee, quantities, offline=staff.offline)
 
 
 async def look_up(
     api: ApiClient | None, code: str, product_ids: tuple[int, ...]
-) -> tuple[Quantities, str] | ScanResult:
+) -> tuple[Quantities, Attendee] | ScanResult:
     """Ask the server what a badge outside the list can redeem of the session.
 
     Args:
@@ -140,8 +141,8 @@ async def look_up(
         product_ids: The session's products.
 
     Returns:
-        What to admit and the attendee's name, or the result to show instead:
-        "Already checked in" when they bought some and none is left, "Not
+        What to admit and the attendee with their details, or the result to show
+        instead: "Already checked in" when they bought some and none is left, "Not
         registered" when they bought none or the server doesn't know them, "Can't
         check this badge" without an answer.
     """
@@ -158,13 +159,17 @@ async def look_up(
         return ScanResult(ScanOutcome.DENIED, CANT_CHECK, code, (LOOKUP_FAILED,), code)
     items = [item for item in items_of(found) if item.product_id in product_ids]
     quantities = tuple((i.product_id, i.redeemable) for i in items if i.redeemable > 0)
+    attendee = Attendee(
+        code,
+        found.name,
+        found.dietary or "",
+        found.has_allergy is True,
+        found.allergy or "",
+    )
     if quantities:
-        return quantities, found.name
+        return quantities, attendee
     if any(item.purchased > 0 for item in items):
-        title = found.name or code
-        return ScanResult(
-            ScanOutcome.DUPLICATE, ALREADY, title, (ANOTHER_DEVICE,), code
-        )
+        return already(attendee, (ANOTHER_DEVICE,))
     return not_registered(code)
 
 
@@ -174,18 +179,39 @@ def items_of(found: AttendeeProducts) -> list[Item]:
 
 
 def checked_in(
-    code: str, name: str, quantities: Quantities, *, offline: bool
+    attendee: Attendee, quantities: Quantities, *, offline: bool
 ) -> ScanResult:
     """Return "Checked in" with the name (or the code), "Admits 2" when over one.
 
     The word stays "Checked in" offline, where "Saved. Will sync." is added: the
-    person is admitted either way.
+    person is admitted either way. The attendee's dietary and allergy chips come
+    with it (DOOR-05).
     """
     most = max(quantity for _, quantity in quantities)
     details = (f"Admits {most}",) if most > 1 else ()
     if offline:
         details = (*details, SAVED)
-    return ScanResult(ScanOutcome.ACCEPTED, CHECKED_IN, name or code, details, code)
+    code = attendee.code
+    return ScanResult(
+        ScanOutcome.ACCEPTED,
+        CHECKED_IN,
+        attendee.name or code,
+        details,
+        code,
+        tags(attendee),
+    )
+
+
+def already(attendee: Attendee, details: tuple[str, ...] = ()) -> ScanResult:
+    """Return "Already checked in" with the name (or the code) and the chips.
+
+    The allergy still shows on a second pass: it matters every time (DOOR-05).
+    """
+    code = attendee.code
+    title = attendee.name or code
+    return ScanResult(
+        ScanOutcome.DUPLICATE, ALREADY, title, details, code, tags(attendee)
+    )
 
 
 def not_registered(code: str) -> ScanResult:

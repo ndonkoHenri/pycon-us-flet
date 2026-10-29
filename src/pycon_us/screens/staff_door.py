@@ -20,7 +20,9 @@ scanning is paused with "Loading attendee list… 2 of 5", then the line under t
 says "Ready, works offline · 3 attendees", or "Badges will be checked online" with
 Retry, and scanning starts. A scan is ``door_check.check_in()``: decided on the device,
 queued as a ``door`` row of this visit (a uuid made on mount) and synced in the
-background (DOOR-04, DOOR-07, D-441).
+background (DOOR-04, DOOR-07, D-441). Under the chip, "42 checked in"
+(``door_headcount.py``) counts the account's check-ins for the session on this device,
+from the outbox (DOOR-06, D-442).
 """
 
 from dataclasses import dataclass
@@ -38,6 +40,7 @@ from pycon_us.door_choice import read_door_session
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.screens import door_session
+from pycon_us.screens.door_headcount import headcount_line, use_headcount
 from pycon_us.screens.door_preload import (
     LOADING,
     Preload,
@@ -134,8 +137,10 @@ def DoorTool(*, owner: str) -> ft.Control:
             open_picker()
 
     ft.use_effect(ask, [needs_session])
-    loading = use_preload(owner, current.choice if current is not None else None)
+    choice = current.choice if current is not None else None
+    loading = use_preload(owner, choice)
     preload = loading.preload
+    count = use_headcount(owner, choice.product_ids if choice is not None else ())
 
     if current is None:
         return Reading(title=TITLE)
@@ -163,6 +168,7 @@ def DoorTool(*, owner: str) -> ft.Control:
         context=ft.Column(
             [
                 session_chip(current.choice, open_picker),
+                headcount_line(count),
                 status_line(
                     preload, on_retry=loading.retry, live=not prefs.announcements
                 ),

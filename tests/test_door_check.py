@@ -15,7 +15,7 @@ import pytest
 
 from pycon_us import door_check
 from pycon_us.core.admission import Inventory, redeem_errors
-from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
+from pycon_us.core.badges import Badge, ScanOutcome, ScanResult, Tag
 from pycon_us.core.check_in import AttendeeProducts
 from pycon_us.core.outbox import Kind, Status
 from pycon_us.door_check import (
@@ -54,6 +54,7 @@ MARGARET = Badge("MOCK0004", "v4l1d04", "v4l1d04")
 DECORATORS = 10
 ASYNC = 11
 SUMMIT = 20
+VEGETARIAN = (Tag("Vegetarian"),)
 ALREADY_REDEEMED = "Wed May 13 9:00 AM - All about decorators was already redeemed."
 
 
@@ -139,7 +140,7 @@ async def test_a_known_badge_is_checked_in_at_once_and_syncs_once(rig: Rig) -> N
     visit = await door(rig)
     result = await visit.scan()
     assert result == ScanResult(
-        ScanOutcome.ACCEPTED, CHECKED_IN, "Ada Example", (), "MOCK0001"
+        ScanOutcome.ACCEPTED, CHECKED_IN, "Ada Example", (), "MOCK0001", VEGETARIAN
     )
     assert redeems(rig) == 0  # the handler never sends a row itself (D-407)
     assert (visit.kicks, rig.staff.pending) == (1, 1)
@@ -184,7 +185,7 @@ async def test_a_rescan_says_already_checked_in_and_queues_nothing(rig: Rig) -> 
     await visit.scan()
     pending = await visit.scan()
     assert pending == ScanResult(
-        ScanOutcome.DUPLICATE, ALREADY, "Ada Example", (), "MOCK0001"
+        ScanOutcome.DUPLICATE, ALREADY, "Ada Example", (), "MOCK0001", VEGETARIAN
     )
     await rig.worker().drain()
     later = Door(rig, visit.products, session="v2")
@@ -259,7 +260,12 @@ async def test_an_unknown_badge_with_none_left_was_checked_in_elsewhere(
     other_device(rig)
     result = await Door(rig, (DECORATORS,)).scan()
     assert result == ScanResult(
-        ScanOutcome.DUPLICATE, ALREADY, "Ada Example", (ANOTHER_DEVICE,), "MOCK0001"
+        ScanOutcome.DUPLICATE,
+        ALREADY,
+        "Ada Example",
+        (ANOTHER_DEVICE,),
+        "MOCK0001",
+        VEGETARIAN,
     )
     assert rig.rows() == []
 

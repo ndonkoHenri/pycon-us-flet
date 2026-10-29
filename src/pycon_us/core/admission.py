@@ -12,7 +12,9 @@ list is a ``TypeError``, which the fetch turns into a failed product (D-120).
 (STORE-12): whether the badge is on the list, with what it bought of the session's
 products, and whether one of those products was checked in already. ``admitted()``
 reads the products a door row covers, and ``redeem_errors()`` what the server refused
-in a synced row's reply, which the queue sheet shows (D-441).
+in a synced row's reply, which the queue sheet shows (D-441). ``tags()`` turns an
+attendee's dietary needs and allergy into the result's chips (DOOR-05), and
+``headcount()`` counts the session's check-ins from the same rows (DOOR-06, D-442).
 
 The inventory holds names, dietary needs and allergies: it lives in Door check's
 component state only and is never written anywhere (D-56). Everything here is pure.
@@ -22,6 +24,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
+from pycon_us.core.badges import Tag
 from pycon_us.core.check_in import parse_redeem_reply
 from pycon_us.core.outbox import Kind, Row, Status
 
@@ -162,6 +165,37 @@ def redeem_errors(row: Row) -> tuple[str, ...]:
         return parse_redeem_reply(row.payload.get("result")).errors
     except TypeError:
         return ()
+
+
+def headcount(rows: Iterable[Row], product_ids: Iterable[int]) -> int:
+    """Return how many attendees this account checked in for a session (D-442).
+
+    The distinct codes among the door rows, any status, that admitted one of the
+    session's products: the same rows "Already checked in" reads (STORE-12), so a
+    duplicate never adds one, and the count outlives a restart.
+
+    Args:
+        rows: The account's outbox rows; other kinds are ignored.
+        product_ids: The session's products.
+    """
+    ids = frozenset(product_ids)
+    return len({row.key for row in rows if not admitted(row).isdisjoint(ids)})
+
+
+def tags(attendee: Attendee) -> tuple[Tag, ...]:
+    """Return an attendee's chips: the allergy first, as a warning, then the diet.
+
+    "Allergy: peanuts", or "Allergy" when none is named; the dietary need with a
+    capital first letter, "Vegetarian". An allergy named without the flag still
+    shows: it is safer said than missed.
+    """
+    found: list[Tag] = []
+    if attendee.has_allergy or attendee.allergy:
+        named = f": {attendee.allergy}" if attendee.allergy else ""
+        found.append(Tag(f"Allergy{named}", warning=True))
+    if attendee.dietary:
+        found.append(Tag(attendee.dietary[0].upper() + attendee.dietary[1:]))
+    return tuple(found)
 
 
 def attendee_count(inventory: Inventory) -> int:
