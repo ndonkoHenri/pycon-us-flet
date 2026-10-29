@@ -8,7 +8,8 @@ Steps (each prints ``S7-DRIVE`` lines):
 
 - ``launch``: force-stop, start the app (``am start -W``), wait 8 s.
 - ``tap <text>``: tap the node whose text or description starts with ``<text>``.
-- ``mem <label>``: ``dumpsys meminfo`` of the app: the App Summary and TOTAL PSS/RSS.
+- ``mem <label>``: ``dumpsys meminfo`` of the app: the App Summary, Unknown's PSS
+  and TOTAL PSS/RSS.
 - ``booths``: every ``booth.*`` node's bounds, in tree order (TalkBack's order).
 - ``tapall [limit]``: tap the centre of every booth node on screen and report
   which booth the app logged for each (tap accuracy).
@@ -27,6 +28,7 @@ import itertools
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -113,6 +115,9 @@ def mem(label: str) -> None:
         rows[key.replace(" ", "")] = int(match[1]) // 1024 if match else None
     pss = re.search(r"TOTAL PSS:\s+(\d+)", out)
     rss = re.search(r"TOTAL RSS:\s+(\d+)", out)
+    # The emulator reports Graphics 0, so a decoded plan shows up here and in the
+    # Native Heap: Unknown's PSS (the first column of the detailed table).
+    unknown = re.search(r"^\s+Unknown\s+(\d+)", out, re.MULTILINE)
     gl = re.search(r"^\s+GL mtrack\s+(\d+)", out, re.MULTILINE)
     egl = re.search(r"^\s+EGL mtrack\s+(\d+)", out, re.MULTILINE)
     say(
@@ -123,6 +128,7 @@ def mem(label: str) -> None:
         gl_mb=int(gl[1]) // 1024 if gl else 0,
         egl_mb=int(egl[1]) // 1024 if egl else 0,
         **{f"{k}_mb": v for k, v in rows.items()},
+        Unknown_mb=int(unknown[1]) // 1024 if unknown else None,
     )
 
 
@@ -202,21 +208,23 @@ def pans(n: int, moves: list[tuple[int, int, int, int]] | None = None) -> None:
 def frames(seconds: float) -> None:
     """Print the app layer's frame intervals from SurfaceFlinger while panning."""
     layers = adb("shell", "dumpsys", "SurfaceFlinger", "--list").splitlines()
-    layer = next(
-        (
-            name
-            for name in layers
-            if "SurfaceView" in name and PKG in name and "BLAST" not in name
-        ),
-        None,
-    )
+    # On Android 14 Flutter's frames land on the SurfaceView's BLAST layer; the
+    # plain SurfaceView layer and its "Background for" layer report only zeros.
+    surfaces = [
+        name for name in layers if name.startswith("SurfaceView[") and PKG in name
+    ]
+    layer = next((name for name in surfaces if "(BLAST)" in name), None)
+    layer = layer or next(iter(surfaces), None)
     layer = layer or next((name for name in layers if PKG in name), "")
     adb("shell", "dumpsys", "SurfaceFlinger", "--latency-clear")
     moves = pan_moves()
     end = time.time() + seconds
     while time.time() < end:
         pans(4, moves)
-    out = adb("shell", "dumpsys", "SurfaceFlinger", "--latency", layer).split()
+    # adb shell hands its arguments to the device's shell: quote the brackets.
+    out = adb(
+        "shell", "dumpsys", "SurfaceFlinger", "--latency", shlex.quote(layer)
+    ).split()
     stamps = [
         int(out[i + 1])
         for i in range(1, len(out) - 2, 3)
