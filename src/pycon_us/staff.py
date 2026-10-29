@@ -6,8 +6,8 @@ signed-in account's rows are pending, failed and synced, whether a sync pass is 
 way and how the last one ended. ``services/sync.py``'s ``SyncWorker`` writes it after
 each pass, and whatever else changes the rows (an enqueue, ``retry_failed()``) calls
 ``update_counts()`` after its write. ``revision`` counts those calls, so a list of rows
-re-reads the database when it changes (D-69). The sponsor picked to scan for, the door
-inventory and the Code of Conduct directory join it with #39, #40 and #42.
+re-reads the database when it changes (D-69). The door's attendee list and the Code of
+Conduct directory are not here: each lives in its screen's state only (#765, D-432).
 """
 
 from dataclasses import dataclass
