@@ -21,8 +21,7 @@ from pycon_us.config import load_year
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Row, Status
 from pycon_us.memory import ViewMemory
-from pycon_us.services import Services
-from pycon_us.services import storage as storage_module
+from pycon_us.services import Services, pref_keys
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import Counts, OutboxDb
 from pycon_us.services.pref_keys import (
@@ -104,10 +103,10 @@ def statuses(db: OutboxDb, owner: str) -> list[Status]:
 def table() -> list[Pref[object]]:
     """Every key of the storage table: its constants and its per-year keys (2026)."""
     found: list[Pref[object]] = []
-    for value in vars(storage_module).values():
+    for value in vars(pref_keys).values():
         if isinstance(value, Pref):
             found.append(value)
-        elif inspect.isfunction(value) and value.__module__ == storage_module.__name__:
+        elif inspect.isfunction(value) and value.__module__ == pref_keys.__name__:
             returns = inspect.signature(value).return_annotation
             if typing.get_origin(returns) is Pref:
                 found.append(value(2026))
@@ -266,7 +265,7 @@ async def test_a_switch_that_can_t_remove_the_staff_keys_is_not_saved(
         shared.values[key] = "x"
     clear_prefs = Storage.clear_prefs
 
-    async def refuse_staff(self: Storage, prefix: str = storage_module.PREFIX) -> bool:
+    async def refuse_staff(self: Storage, prefix: str = pref_keys.PREFIX) -> bool:
         """Fail the staff keys' removal, as a failed commit does; others go."""
         return prefix != STAFF_PREFIX and await clear_prefs(self, prefix)
 
