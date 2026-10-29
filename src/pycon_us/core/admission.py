@@ -1,4 +1,4 @@
-"""Door check's attendee list and, with #766, its admission decision (DOOR-03, DOOR-04).
+"""Door check's attendee list and its admission decision (DOOR-03, DOOR-04, #765, #766).
 
 Before scanning, the door downloads who bought each chosen session
 (``attendees_by_product_with_quantity/<id>/``, API-05), so it can admit offline.
@@ -8,12 +8,25 @@ attendee's details are sticky, so a later row without them keeps the earlier one
 malformed row is left out, so one bad row never hides the others; a reply that isn't a
 list is a ``TypeError``, which the fetch turns into a failed product (D-120).
 
+``decide()`` is a scan's decision against that list and the account's own door rows
+(STORE-12): whether the badge is on the list, with what it bought of the session's
+products, and whether one of those products was checked in already. ``admitted()``
+reads the products a door row covers, and ``redeem_errors()`` what the server refused
+in a synced row's reply, which the queue sheet shows (D-441).
+
 The inventory holds names, dietary needs and allergies: it lives in Door check's
 component state only and is never written anywhere (D-56). Everything here is pure.
 """
 
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+
+from pycon_us.core.check_in import parse_redeem_reply
+from pycon_us.core.outbox import Kind, Row, Status
+
+_PRODUCT_KEY = re.compile(r"product-redeem-(\d+)")
+"""A redeem payload's ``product-redeem-<id>`` key: one per product admitted."""
 
 
 @dataclass(frozen=True)
@@ -81,6 +94,74 @@ def merge(inventory: Inventory, product_id: int, reply: object) -> Inventory:
         bought[product_id] = bought.get(product_id, 0) + quantity
         attendees[code] = _details(attendees.get(code, Attendee(code)), row)
     return Inventory(quantities, attendees)
+
+
+@dataclass(frozen=True)
+class Admission:
+    """What a door scan decided before anything is queued (DOOR-04).
+
+    Attributes:
+        known: The code is on the list for one of the session's products.
+        quantities: What it bought of them, ``(product id, quantity)`` in the
+            session's order; empty when not known.
+        already: One of the account's door rows for the code (pending, synced or
+            failed) covers one of the session's products: "Already checked in".
+    """
+
+    known: bool
+    quantities: tuple[tuple[int, int], ...]
+    already: bool
+
+
+def decide(
+    inventory: Inventory, code: str, product_ids: Iterable[int], kept: Iterable[Row]
+) -> Admission:
+    """Decide a door scan against the list and the account's door rows (DOOR-04).
+
+    "Already" is Ionic's per-product overlap (``staff-tools-auth.md`` §10 item 14),
+    read from the kept rows rather than a key of its own (STORE-12): a product of this
+    session was checked in before, by this account, in any visit.
+
+    Args:
+        inventory: The attendee list as loaded.
+        code: The badge's access code.
+        product_ids: The session's products, the door choice's.
+        kept: The account's door rows for the code, every status.
+
+    Returns:
+        The decision.
+    """
+    ids = tuple(dict.fromkeys(product_ids))
+    bought = inventory.quantities.get(code, {})
+    quantities = tuple((pid, bought[pid]) for pid in ids if bought.get(pid, 0) > 0)
+    covered = {pid for row in kept if row.key == code for pid in admitted(row)}
+    return Admission(bool(quantities), quantities, not covered.isdisjoint(ids))
+
+
+def admitted(row: Row) -> frozenset[int]:
+    """Return the products a door row checked in, from its payload's keys.
+
+    Another kind of row covers none.
+    """
+    if row.kind is not Kind.DOOR:
+        return frozenset()
+    found = (_PRODUCT_KEY.fullmatch(key) for key in row.payload)
+    return frozenset(int(match[1]) for match in found if match)
+
+
+def redeem_errors(row: Row) -> tuple[str, ...]:
+    """Return what the server refused in a synced door row's reply, else nothing.
+
+    A 200 reply with ``errors`` (already redeemed, not bought, over quantity) still
+    syncs the row, and its messages are kept for the queue sheet (D-441). A row of
+    another kind or status, or a reply that can't be read, has none.
+    """
+    if row.kind is not Kind.DOOR or row.status is not Status.SYNCED:
+        return ()
+    try:
+        return parse_redeem_reply(row.payload.get("result")).errors
+    except TypeError:
+        return ()
 
 
 def attendee_count(inventory: Inventory) -> int:

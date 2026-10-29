@@ -20,12 +20,12 @@ import httpx
 import pytest
 
 from pycon_us.core.door_sessions import DoorChoice, to_stored
-from pycon_us.core.outbox import Status
+from pycon_us.core.outbox import Kind, Status
+from pycon_us.door_check import CHECKED_IN, NOT_REGISTERED
 from pycon_us.door_choice import read_door_session
 from pycon_us.prefs import Prefs
 from pycon_us.screens import staff_door
 from pycon_us.screens.door_preload import ONLINE, RETRY
-from pycon_us.screens.staff_door import BADGE_READ, NOT_CHECKED_IN, NOT_ON_LIST, ON_LIST
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import STAFF_DOOR_SESSION
 from tests import door_rig
@@ -185,12 +185,12 @@ async def test_scanning_waits_while_the_choice_is_read_again(
     await shown.settle()
     assert helper(shown) == LOADING
     await enter(shown, "MOCK0002:v4l1d02")  # Grace: on Tutorials' list, not Summit's
-    assert BADGE_READ not in panel(shown)  # dropped: nothing was looked up
+    assert CHECKED_IN not in panel(shown)  # dropped: nobody was checked in
     held.set()
     await shown.settle()
     assert preload_line(shown) == "Ready, works offline, 1 attendee"  # Linus
     await enter(shown, "MOCK0002:v4l1d02")
-    assert NOT_ON_LIST in panel(shown)
+    assert NOT_REGISTERED in panel(shown)
 
 
 async def test_leaving_mid_load_cancels_it_quietly(
@@ -208,31 +208,34 @@ async def test_leaving_mid_load_cancels_it_quietly(
     assert caplog.records == []
 
 
-async def test_a_scan_says_whether_the_badge_is_on_the_list(show: Show) -> None:
-    """Until admission (#766), "Badge read" with the name, or the code, and no check-in."""
+async def test_a_scan_checks_in_from_the_list_or_the_lookup(show: Show) -> None:
+    """On the list: "Checked in" with the name, queued; off it: the lookup refuses."""
     shown = await show(VIEW, chosen=TUTORIALS)
     await enter(shown, "MOCK0002:v4l1d02")
-    assert (
-        panel(shown)
-        == f"{BADGE_READ}\nGrace Sample\n{ON_LIST}\n{NOT_CHECKED_IN}\nScan 1"
-    )
+    assert panel(shown) == f"{CHECKED_IN}\nGrace Sample\nScan 1"
     await enter(shown, "MOCK0004:v4l1d04")
-    assert (
-        panel(shown)
-        == f"{BADGE_READ}\nMOCK0004\n{NOT_ON_LIST}\n{NOT_CHECKED_IN}\nScan 2"
-    )
+    assert panel(shown) == f"{NOT_REGISTERED}\nMOCK0004\nScan 2"
+    outbox = shown.services.outbox
+    assert outbox is not None
+    (row,) = outbox.rows("staff@example.com", list(Status)) or []
+    assert (row.kind, row.key, row.status) == (Kind.DOOR, "MOCK0002", Status.PENDING)
 
 
 async def test_the_list_is_never_written(
     show: Show, stored: dict[str, Any], tmp_path: Path
 ) -> None:
-    """No pref, no file and no outbox row holds anything of the list (D-56)."""
+    """No pref, no file and no outbox row holds the list: a check-in keeps the code.
+
+    The row is the redeem body (code, validator, time, products), never the name
+    or the dietary needs (D-56).
+    """
     database = OutboxDb(tmp_path)
     shown = await show(VIEW, chosen=TUTORIALS, outbox=database)
     assert preload_line(shown) == READY_THREE
     await enter(shown, "MOCK0002:v4l1d02")
     assert set(stored) == {STAFF_DOOR_SESSION.key}
-    assert database.rows("staff@example.com", list(Status)) == []
+    (row,) = database.rows("staff@example.com", list(Status)) or []
+    assert row.key == "MOCK0002"
     database.close()
     for path in tmp_path.rglob("*"):
         if path.is_file():

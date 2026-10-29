@@ -76,18 +76,18 @@ TOOLS = tuple(
 )
 """Every staff tool, in O-7's order: lead, door, swag, CoC."""
 
-BUILT_TOOLS = (ToolKey.LEAD,)
+BUILT_TOOLS = (ToolKey.LEAD, ToolKey.DOOR)
 """The tools whose screen is in the route table: only they get an entry (D-169).
 
 Each tool's PR adds its key with its screen (#40 door, #41 swag, #42 CoC), so no row
 is dead; ``staff_entries()`` stays the whole gating table.
 """
 
-QUEUED_TOOLS = (ToolKey.LEAD,)
+QUEUED_TOOLS = (ToolKey.LEAD, ToolKey.DOOR)
 """The tools whose entry says the outbox's counts ("3 pending", D-421).
 
-The outbox is per account, not per tool, and holds only leads until #40 adds door
-rows, so the counts go on the Lead scanner's entry alone.
+The outbox is per account, not per tool, and holds leads, notes and door check-ins
+(#766), so the counts go on the Lead scanner's and Door check's entries.
 """
 
 

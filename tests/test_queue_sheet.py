@@ -200,6 +200,35 @@ def test_a_flagged_row_says_it_may_be_recorded_twice_beside_an_icon(
     assert cast(ft.Icon, tile.trailing).icon == ft.Icons.WARNING_AMBER
 
 
+def test_a_check_in_the_server_refused_says_already_redeemed(db: OutboxDb) -> None:
+    """A 200 reply with ``errors`` syncs the row; the sheet says so and why (D-441)."""
+    decide = partial(
+        outbox.admit,
+        owner=OWNER,
+        code="MOCK0001",
+        product_ids=[10],
+        session="v1",
+        payload={"product-redeem-10": 10, "product-10-quantity": 1},
+        sponsor_id=None,
+        sponsor_name=None,
+        now=NOW,
+    )
+    enqueued = db.enqueue("MOCK0001", decide)
+    assert enqueued is not None and enqueued.row is not None
+    message = "All about decorators was already redeemed."
+    reply = {"errors": [{"message": message}], "redeemable_products_by_category": {}}
+    row = outbox.after_success(enqueued.row, reply)
+    assert db.save(row)
+    built = sheet(read_queue(db, OWNER, others=False), confirmed_open=True)
+    tile = identified(built)[f"staff.queue.row.{row.id}"]
+    assert words(tile) == [
+        "Check-in · MOCK0001",
+        "Confirmed · Already redeemed · just now",
+        message,
+    ]
+    assert cast(ft.Icon, tile.trailing).icon == ft.Icons.WARNING_AMBER
+
+
 def test_with_nothing_waiting_the_sheet_says_everything_is_synced(
     db: OutboxDb,
 ) -> None:

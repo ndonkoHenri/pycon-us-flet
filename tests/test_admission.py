@@ -1,16 +1,31 @@
 """Tests for the door's attendee list: ``core/admission.py`` and ``door_inventory.py``.
 
 ``merge()`` sums quantities per code and product, keeps an attendee's details sticky
-and leaves out malformed rows (DOOR-03, API-05). ``load_inventory()`` runs one
+and leaves out malformed rows (DOOR-03, API-05). ``decide()`` reads a scan against the
+list and the account's door rows; ``admitted()`` and ``redeem_errors()`` read a row
+(DOOR-04, STORE-12, D-441). ``load_inventory()`` runs one
 ``INVENTORY`` call per product against the mock's own transport, signed with the
 seeded staff account's key, and reports each one that finishes; a 404 or a timeout
 fails that product alone (D-120).
 """
 
+from dataclasses import replace
+
 import httpx
 import pytest
 
-from pycon_us.core.admission import Attendee, Inventory, attendee_count, merge
+from pycon_us.core import outbox
+from pycon_us.core.admission import (
+    Admission,
+    Attendee,
+    Inventory,
+    admitted,
+    attendee_count,
+    decide,
+    merge,
+    redeem_errors,
+)
+from pycon_us.core.outbox import Kind, Row, Status
 from pycon_us.door_inventory import Loaded, load_inventory
 from pycon_us.services.api import ApiClient
 from tests.api_clients import Login, client_for
@@ -186,3 +201,71 @@ async def test_a_repeated_id_is_asked_once() -> None:
     )
     assert loaded.inventory.quantities["MOCK0003"] == {10: 2}
     assert progress == [(1, 1)]
+
+
+# ------------------------------------------------------------------ decide()
+
+TUTORIALS = merge(merge(Inventory(), 10, [ADA, LINUS]), 11, [GRACE])
+
+
+def door_row(code: str, *products: int, status: Status = Status.PENDING) -> Row:
+    """A door row checking ``code`` in to ``products``, one each, in a status."""
+    payload: dict[str, object] = {"attendee_access_code": code}
+    for product in products:
+        payload[f"product-redeem-{product}"] = product
+        payload[f"product-{product}-quantity"] = 1
+    enqueued = outbox.admit(
+        [],
+        owner="staff@example.com",
+        code=code,
+        product_ids=products,
+        session="v1",
+        payload=payload,
+        sponsor_id=None,
+        sponsor_name=None,
+        now=0.0,
+    )
+    assert enqueued.row is not None
+    return replace(enqueued.row, status=status)
+
+
+def test_a_code_on_the_list_is_known_with_what_it_bought_of_the_session() -> None:
+    """Linus bought two of product 10: known, ``((10, 2),)``; not already."""
+    assert decide(TUTORIALS, "MOCK0003", (10, 11), []) == Admission(
+        True, ((10, 2),), False
+    )
+    assert decide(TUTORIALS, "MOCK0003", (11,), []) == Admission(False, (), False)
+    assert decide(TUTORIALS, "NOPE", (10, 11), []) == Admission(False, (), False)
+
+
+@pytest.mark.parametrize("status", list(Status))
+def test_a_kept_row_covering_a_session_product_is_already(status: Status) -> None:
+    """Pending, synced or failed, a row for one of the products is "already"."""
+    kept = [door_row("MOCK0001", 10, status=status)]
+    assert decide(TUTORIALS, "MOCK0001", (10, 11), kept).already
+    assert not decide(TUTORIALS, "MOCK0001", (20,), kept).already  # another session
+
+
+def test_another_code_s_or_kind_s_rows_never_make_it_already() -> None:
+    """Only the code's own door rows count: a lead row covers no product."""
+    lead = Row(Kind.LEAD, "MOCK0001", {"product-redeem-10": 10}, "o", None, None, 0, 0)
+    kept = [door_row("MOCK0003", 10), lead]
+    assert not decide(TUTORIALS, "MOCK0001", (10,), kept).already
+    assert admitted(lead) == frozenset()
+
+
+def test_admitted_reads_a_row_s_products_from_its_payload() -> None:
+    """Every ``product-redeem-<id>`` key, and no quantity key."""
+    assert admitted(door_row("MOCK0001", 10, 11)) == {10, 11}
+
+
+def test_redeem_errors_are_a_synced_check_in_s_server_messages() -> None:
+    """A synced door row's reply errors (D-441); none pending or unreadable."""
+    message = "All about decorators was already redeemed."
+    reply = {"errors": [{"message": message}], "redeemable_products_by_category": {}}
+    row = door_row("MOCK0001", 10)
+    assert redeem_errors(outbox.after_success(row, reply)) == (message,)
+    assert redeem_errors(row) == ()
+    assert redeem_errors(outbox.after_success(row, {"errors": []})) == ()
+    clean = {"errors": [], "redeemable_products_by_category": {}}
+    assert redeem_errors(outbox.after_success(row, clean)) == ()

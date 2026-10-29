@@ -41,8 +41,11 @@ ROLES = ("attendee", "speaker", "sponsor", "staff", "coc", "all")
 """The seeded mock accounts, by role."""
 
 LEAD_ONLY = {"sponsor", "staff", "all"}
-"""The roles with a built tool: the Lead scanner (``lead_retrieval or door_check``);
-``coc``'s only tool waits for its screen (#42, D-169)."""
+"""The roles with the Lead scanner (``lead_retrieval or door_check``); ``coc``'s only
+tool waits for its screen (#42, D-169)."""
+
+DOOR_TOO = {"staff", "all"}
+"""The roles with Door check too (``door_check``, #766)."""
 
 
 def seeded(role: str) -> Account:
@@ -123,9 +126,10 @@ def second_line(node: ft.Semantics) -> tuple[str, str]:
 async def test_more_lists_the_built_tools_of_each_mock_account(
     show_more: ShowMore, role: str
 ) -> None:
-    """The sponsor, staff and all accounts get the Lead scanner row; the others none."""
+    """Sponsor, staff and all get the Lead scanner; staff and all Door check too."""
     shown = await show_more(seeded(role))
-    expected = ["more.staff.lead"] if role in LEAD_ONLY else []
+    door = ["more.staff.door"] if role in DOOR_TOO else []
+    expected = door + (["more.staff.lead"] if role in LEAD_ONLY else [])
     assert staff_rows(shown) == expected
     assert ("Staff tools" in shown.texts()) is bool(expected)
 
@@ -153,7 +157,7 @@ async def test_the_section_comes_right_under_the_profile_row(
         "Robin Everything",  # the profile row, signed in
         "# Staff tools",
         "Lead scanner",
-        "# Programme",
+        "Door check",
     ]
 
 
@@ -180,6 +184,21 @@ async def test_the_lead_scanner_row_says_the_outbox_counts_until_they_sync(
     assert second_line(shown.node("more.staff.lead"))[0] == (
         "Capture leads at your booth"
     )
+
+
+async def test_door_check_s_row_says_the_counts_and_opens_its_route(
+    show_more: ShowMore,
+) -> None:
+    """Door staff's row reads "3 pending" while check-ins wait, and opens Door check."""
+    shown = await show_more(seeded("staff"), staff=Staff(pending=3))
+    node = shown.node("more.staff.door")
+    assert tile(node).title == "Door check"
+    assert second_line(node) == (
+        "Check in attendees at the door · 3 pending",
+        "Check in attendees at the door, 3 pending",
+    )
+    await shown.click(tile(node))
+    assert shown.went == ["/more/staff/door"]
 
 
 async def test_the_section_follows_sign_out_sign_in_and_a_flag_change(

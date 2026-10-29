@@ -5,7 +5,8 @@ of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbo
 with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
 code, when it was scanned and a failed row's last error (``status_icon()``, the leads
-list's too, #743); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
+list's too, #743); a check-in the server answered with ``errors`` reads "Confirmed ·
+Already redeemed", flagged too, with the server's messages (D-441); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
 Close, ``heading()``, ``note()`` and ``empty_line()``.
 """
 
@@ -14,6 +15,7 @@ from datetime import UTC, datetime
 
 import flet as ft
 
+from pycon_us.core.admission import redeem_errors
 from pycon_us.core.outbox import Kind, Row, Status, status_text
 from pycon_us.core.timefmt import ago_label
 from pycon_us.theme import Tokens
@@ -26,6 +28,9 @@ CLOSE = "staff.queue.close"
 
 KIND_WORDS = {Kind.LEAD: "Lead", Kind.NOTE: "Lead note", Kind.DOOR: "Check-in"}
 """What each row records, as its title says it."""
+
+ALREADY_REDEEMED = "Already redeemed"
+"""What a synced check-in's status adds when the server's reply had errors (D-441)."""
 
 EMPTY = "Everything is synced"
 """The sheet's line when none of the account's rows waits."""
@@ -65,11 +70,12 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
         tokens: The scheme's tokens.
     """
     icon = status_icon(row.status, tokens)
-    lines: list[ft.Control] = [
-        ft.Text(f"{status_text(row)} · {ago(row.created_at, now)}")
-    ]
-    if row.status is Status.FAILED and row.last_error:
-        lines.append(ft.Text(row.last_error, color=ft.Colors.ON_SURFACE_VARIANT))
+    refused = redeem_errors(row)  # the person is in; resending can't change it
+    status = f"{status_text(row)} · {ALREADY_REDEEMED}" if refused else status_text(row)
+    lines: list[ft.Control] = [ft.Text(f"{status} · {ago(row.created_at, now)}")]
+    reason = "; ".join(refused) if refused else row.last_error
+    if reason and (refused or row.status is Status.FAILED):
+        lines.append(ft.Text(reason, color=ft.Colors.ON_SURFACE_VARIANT))
     flag = ft.Icon(ft.Icons.WARNING_AMBER, color=tokens.warning)
     return named(
         f"staff.queue.row.{row.id}",
@@ -77,7 +83,7 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
             leading=icon,
             title=ft.Text(f"{KIND_WORDS[row.kind]} · {row.key}"),
             subtitle=ft.Column(lines, spacing=2, tight=True),
-            trailing=flag if row.maybe_sent else None,
+            trailing=flag if row.maybe_sent or refused else None,
             # The sheet's 16 dp gutters are the sides.
             content_padding=ft.Padding.symmetric(horizontal=0),
         ),
