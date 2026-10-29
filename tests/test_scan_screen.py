@@ -21,6 +21,7 @@ from pycon_us.core.badges import (
 )
 from pycon_us.core.timefmt import seconds_ago
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui.scan_camera import CAMERA_UNAVAILABLE
 from pycon_us.ui.scan_result import (
     DIM_AFTER,
     FILLS,
@@ -30,12 +31,7 @@ from pycon_us.ui.scan_result import (
     fill_of,
     spoken,
 )
-from pycon_us.ui.scan_screen import (
-    CAMERA_UNAVAILABLE,
-    ResultPanel,
-    ScanScreen,
-    Shown,
-)
+from pycon_us.ui.scan_screen import ResultPanel, ScanScreen, Shown
 from tests import scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel
 from tests.test_high_contrast import AAA_TEXT

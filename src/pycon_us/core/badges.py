@@ -114,6 +114,9 @@ class ScanResult:
         details: Lines under the title, in order: a reason, validators, a note.
         code: The access code the result is about, so a tool can act on it ("Add
             note", #742); empty when there is none (not a badge).
+        email: The attendee's email, for a tool that reveals it on request (CoC's
+            "Show email", MASK-05); empty without one. Never in ``spoken`` or the
+            repr, so neither a live region nor a log line holds it (D-72).
     """
 
     outcome: ScanOutcome
@@ -121,6 +124,7 @@ class ScanResult:
     title: str = ""
     details: tuple[str, ...] = ()
     code: str = ""
+    email: str = field(default="", repr=False)
 
     @property
     def spoken(self) -> str:

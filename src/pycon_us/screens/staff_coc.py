@@ -32,6 +32,11 @@ over the loaded directory, disabled with its reason before it has loaded or offl
 scanning is paused while it is open ("Paused while the search is open"). A row's tap
 opens the same review, and its result reaches the panel as ``ScanScreen``'s
 ``posted``, since no badge was scanned.
+
+**Clearing** (#762, MASK-05, O-7): a result clears 15 s after it shows and when the
+app goes to the background, which also closes the search with its query; an open
+review stays, with its notes (losing a half-written report is worse, and the dialog
+shows no email). "Show email" reveals a recorded result's email (``ui/coc_email.py``).
 """
 
 import asyncio
@@ -54,10 +59,12 @@ from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.coc_email import email_actions, email_note
 from pycon_us.ui.coc_review import use_review
 from pycon_us.ui.coc_search import SEARCH_OPEN, use_find
 from pycon_us.ui.coc_search_sheet import find_button
 from pycon_us.ui.online import use_online
+from pycon_us.ui.scan_clear import use_on_background
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
 from pycon_us.ui.scan_screen import (
     NOT_AVAILABLE,
@@ -80,6 +87,9 @@ OFFLINE = "CoC capture needs a connection"
 
 REVIEW_OPEN = "Paused while the review is open"
 """Why scanning is paused while the review dialog is open (MASK-04)."""
+
+CLEAR_AFTER = 15
+"""Seconds a result stays on the panel once it shows (O-7, MASK-05)."""
 
 FORBIDDEN = 403
 """The mock's answer for an account without ``mask_violation``."""
@@ -205,6 +215,8 @@ def CocTool(*, owner: str) -> ft.Control:
             set_posted(lambda last: post(last, result))
 
     finder = use_find(attendees=current.by_code, on_pick=picked)
+    use_on_background(finder.close)  # the query goes too; an open review stays
+    revealed, set_revealed = ft.use_state(0)  # whose email shows: a result's serial
     if review.is_open:
         paused = REVIEW_OPEN
     elif finder.is_open:
@@ -227,7 +239,11 @@ def CocTool(*, owner: str) -> ft.Control:
         ),
         actions=[find_button(find_reason(current, words, online), finder.open)],
         paused=paused,
+        result_actions=partial(email_actions, revealed=revealed, reveal=set_revealed),
+        result_note=partial(email_note, revealed=revealed),
         posted=posted,
+        clear_after=CLEAR_AFTER,
+        clear_in_background=True,
     )
 
 

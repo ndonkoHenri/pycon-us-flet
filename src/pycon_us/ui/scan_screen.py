@@ -35,8 +35,9 @@ D-438).
 ``Posted`` whose serial it bumps for each one; the screen shows it as a scan's, with
 its haptics and announcement, unless the screen has gone or is not on top.
 
-**The camera** is E1, absent at the Flet pin (``capabilities.SCANNER`` is False): the
-area says so and manual entry is primary; #726 brings the preview.
+**Clearing** (#762, MASK-05): a tool may have its result cleared ``clear_after`` seconds
+after it shows, and when the app goes to the background (``ui/scan_clear.py``); the
+CoC tool does both. The camera area is ``ui/scan_camera.py`` (E1, #726).
 """
 
 from collections.abc import Awaitable, Callable
@@ -53,11 +54,12 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
-from pycon_us.theme_hc import hc_border
 from pycon_us.ui.actions import padded
 from pycon_us.ui.fields import use_field_query
 from pycon_us.ui.queue_sheet import use_queue_sheet
 from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.scan_camera import CameraUnavailable
+from pycon_us.ui.scan_clear import use_clear_after, use_on_background
 from pycon_us.ui.scan_feedback import announce, buzz, use_wake_lock
 from pycon_us.ui.scan_result import DIM_AFTER, age_line, result_panel, spoken
 from pycon_us.ui.semantics import named
@@ -68,12 +70,14 @@ from pycon_us.ui.widths import LIST, sides, use_margin
 type OnBadge = Callable[[Badge], Awaitable[ScanResult]]
 """A tool's handler: what a parsed, accepted badge comes to."""
 
-type ResultActions = Callable[[ScanResult], list[ft.Control]]
+type ResultActions = Callable[[Shown], list[ft.Control]]
 """A tool's buttons for the result on the panel ("Add note"), gone with it."""
+
+type ResultNote = Callable[[Shown], ft.Control | None]
+"""A tool's line under the panel for the result on it (CoC's revealed email)."""
 
 ENTRY_LABEL = "Badge code"
 KEYBOARD_TOOLTIP = "Type a badge code"
-CAMERA_UNAVAILABLE = "Camera scanning isn't available in this build."
 PAUSED_SHEET = "Paused while the sheet is open"
 """The field's line while the queue sheet is open: a submit is dropped (#724)."""
 
@@ -105,17 +109,25 @@ class Shown:
     serial: int
 
 
-@dataclass(frozen=True)
+@dataclass(eq=False)
 class Posted:
     """A result a tool got outside ``on_badge``, for the panel (#761).
 
+    Handed over once: the screen takes it (``take()``), so the tool's state keeps no
+    copy after a clear (#762). Compared by identity: each one is new.
+
     Attributes:
-        result: What to show.
-        serial: Bumped by the tool for each one, so an equal result shows again.
+        result: What to show, until the screen takes it.
+        serial: Bumped by the tool for each one.
     """
 
-    result: ScanResult
+    result: ScanResult | None
     serial: int
+
+    def take(self) -> ScanResult | None:
+        """Return the result and forget it: the panel holds it from then on."""
+        result, self.result = self.result, None
+        return result
 
 
 def post(last: Posted | None, result: ScanResult) -> Posted:
@@ -132,7 +144,10 @@ def ScanScreen(
     actions: list[ft.Control] | None = None,
     paused: str | None = None,
     result_actions: ResultActions | None = None,
+    result_note: ResultNote | None = None,
     posted: Posted | None = None,
+    clear_after: float | None = None,
+    clear_in_background: bool = False,
 ) -> ft.Control:
     """Return a staff tool's scan screen (ux.md §7.2).
 
@@ -148,8 +163,13 @@ def ScanScreen(
         result_actions: The tool's buttons for the result shown, under the field
             before ``actions``: the Lead scanner's "Add note" (#742). They belong to
             that result, so the next one (even "Not a badge code") replaces them.
+        result_note: The tool's line for the result shown, under the panel and
+            outside its live region, so it is said only when focused (#762).
         posted: The latest result the tool got outside ``on_badge`` (the CoC name
             search's record), shown once per serial as a scan's would be.
+        clear_after: Seconds after it shows that a result clears, or None to keep
+            it until the next (``ui/scan_clear.py``).
+        clear_in_background: Clear the result when the app goes to the background.
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -164,6 +184,7 @@ def ScanScreen(
     cooldown = ft.use_memo(Cooldown, [])  # one per screen: its codes' last accepts
     busy = ft.use_ref(False)  # the handler runs: the single flight
     shown, set_shown = ft.use_state(no_result)
+    count = ft.use_ref(0)  # the results so far: no serial comes twice, even cleared
     why_paused = PAUSED_SHEET if sheet.is_open else paused
     # Scanning goes on from the field: no pause, and no View pushed on top (D-438).
     ready = why_paused is None and query.focusable
@@ -187,21 +208,26 @@ def ScanScreen(
     ft.use_effect(resume, [ready])
 
     @report_errors
+    def drop(serial: int | None = None) -> None:
+        """Drop the result shown from state: ``serial``'s only, or any (#762)."""
+        set_shown(lambda last: None if last and serial in (None, last.serial) else last)
+
+    use_clear_after(shown.serial if shown else 0, clear_after, drop)
+    use_on_background(drop if clear_in_background else None)
+
+    @report_errors
     async def show(result: ScanResult) -> None:
-        at = clock()
-        set_shown(lambda last: Shown(result, at, last.serial + 1 if last else 1))
+        serial = count.current = (count.current or 0) + 1
+        set_shown(Shown(result, clock(), serial))
         await buzz(svc.haptics, result.outcome)
         if prefs.announcements:  # iOS; elsewhere the panel's live region says it
             await announce(svc.semantics, result)
 
     @report_errors
     async def show_posted() -> None:
-        if (
-            posted is not None
-            and mounted.current
-            and is_top_view(page.route, view_path)
-        ):
-            await show(posted.result)
+        result = posted.take() if posted is not None else None
+        if result and mounted.current and is_top_view(page.route, view_path):
+            await show(result)
 
     ft.use_effect(show_posted, [posted])
 
@@ -228,10 +254,11 @@ def ScanScreen(
             busy.current = False
 
     for_result = (
-        result_actions(shown.result)
+        result_actions(shown)
         if result_actions is not None and shown is not None
         else []
     )
+    note = result_note(shown) if result_note is not None and shown else None
     chip = SyncChip(
         staff, tokens=tokens, on_click=sheet.open, large_text=prefs.time_above
     )
@@ -253,7 +280,8 @@ def ScanScreen(
     if not capabilities.SCANNER:  # the E1 preview takes this place (#726)
         body.append(padded(CameraUnavailable()))
     body += [
-        padded(ResultPanel(shown=shown)),
+        padded(ResultPanel(shown=shown, clear_after=clear_after)),
+        *([padded(note)] if note is not None else []),
         padded(
             named(
                 "scan.entry",
@@ -298,17 +326,20 @@ def no_result() -> Shown | None:
 
 
 @ft.component
-def ResultPanel(*, shown: Shown | None) -> ft.Control:
+def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.Control:
     """Return the result panel and, under it, how old the result is.
 
     The panel is one live region read as the result's words, so TalkBack says each
     new result; where the platform takes announcements (iOS) the screen announces it
-    instead and the panel is no live region, so it is said once (D-420); the age under it ticks every second outside it, so
-    only the result is said. Its own component, so the tick re-renders the panel
-    alone. A result dims after ``DIM_AFTER`` s and stays until the next.
+    instead and the panel is no live region, so it is said once (D-420); the age under
+    it ticks every second outside it, so only the result is said. Its own component,
+    so the tick re-renders the panel alone. A result dims after ``DIM_AFTER`` s and
+    stays until the next, or until it clears. "Ready to scan" is no live region, so a
+    clear is not said (#762).
 
     Args:
-        shown: The result on the panel, or None before the first scan.
+        shown: The result on the panel, or None before the first scan or after a clear.
+        clear_after: The seconds a result stays, which the age line counts down.
     """
     svc = use_services()
     prefs = use_prefs()
@@ -329,7 +360,7 @@ def ResultPanel(*, shown: Shown | None) -> ft.Control:
         ft.Semantics(
             identifier="scan.result",
             container=True,
-            live_region=not prefs.announcements,
+            live_region=not prefs.announcements and shown is not None,
             label=spoken(result, serial),
             exclude_semantics=True,  # the card's texts are its label, once
             content=ft.AnimatedSwitcher(
@@ -345,40 +376,8 @@ def ResultPanel(*, shown: Shown | None) -> ft.Control:
         )
     ]
     if shown is not None:
-        panel.append(age_line(age))
+        panel.append(age_line(age, clear_after))
     return ft.Column(panel, spacing=4, tight=True)
-
-
-@ft.component
-def CameraUnavailable() -> ft.Control:
-    """Return the camera area's interim: the build has no camera scanner (E1, D-63)."""
-    tokens = use_tokens()
-    return ft.Container(
-        ft.Row(
-            [
-                ft.Icon(
-                    ft.Icons.NO_PHOTOGRAPHY_OUTLINED,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                    apply_text_scaling=True,
-                ),
-                ft.Semantics(
-                    identifier="scan.camera_unavailable",
-                    container=True,
-                    content=ft.Text(
-                        CAMERA_UNAVAILABLE,
-                        theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    ),
-                    expand=True,
-                ),
-            ],
-            spacing=12,
-        ),
-        bgcolor=ft.Colors.SURFACE_CONTAINER,
-        padding=16,
-        border_radius=12,
-        border=hc_border(tokens.high_contrast),
-    )
 
 
 @ft.component

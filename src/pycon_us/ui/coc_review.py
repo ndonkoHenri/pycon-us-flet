@@ -59,6 +59,8 @@ NOT_CONFIRMED = "Not confirmed"
 def recorded_result(review: Review, recorded: Recorded) -> ScanResult:
     """Return the panel's "Incident recorded", the name and "2 on record" (MASK-05).
 
+    The reply's email rides along, hidden: the tool's "Show email" reveals it (#762).
+
     Args:
         review: The review the incident was recorded from.
         recorded: The reply: its name first, else the review's; its count when sent.
@@ -70,6 +72,7 @@ def recorded_result(review: Review, recorded: Recorded) -> ScanResult:
         recorded.name or review.name,
         details,
         code=review.code,
+        email=recorded.email or "",
     )
 
 
