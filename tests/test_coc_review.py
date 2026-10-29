@@ -1,4 +1,4 @@
-"""Tests for the CoC review dialog, ``ui/coc_review.py``, on the CoC tool (#760).
+"""Tests for the CoC review, ``ui/coc_review.py`` and its dialog, on the CoC tool (#760).
 
 The tool runs in a real Flet session over the mock's transport, as in
 ``tests/test_staff_coc.py``, whose fixtures these share. A scan opens the review and
@@ -23,9 +23,8 @@ from pycon_us.core.badges import ScanOutcome
 from pycon_us.prefs import Prefs
 from pycon_us.screens.staff_coc import REVIEW_OPEN
 from pycon_us.ui import coc_review, scan_screen
-from pycon_us.ui.coc_review import (
-    MAYBE_RECORDED,
-    NO_CONNECTION,
+from pycon_us.ui.coc_review import MAYBE_RECORDED, NO_CONNECTION
+from pycon_us.ui.coc_review_dialog import (
     NOT_LISTED,
     RECORD,
     RECORD_ANYWAY,

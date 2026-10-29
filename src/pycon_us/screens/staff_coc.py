@@ -30,7 +30,9 @@ after it closes; the panel then says "Incident recorded" with the reply's count,
 
 import asyncio
 import contextlib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
+from functools import partial
 from typing import Literal
 
 import flet as ft
@@ -179,11 +181,6 @@ def CocTool(*, owner: str) -> ft.Control:
             set_directory(lambda last: with_count(last, code, incidents))
 
     review = use_review(on_recorded=counted)
-
-    async def scanned(badge: Badge) -> ScanResult:
-        """Open the review for the badge and return how it ended (``on_badge``)."""
-        return await review.open(badge.code, current.by_code.get(badge.code))
-
     if review.is_open:
         paused = REVIEW_OPEN
     elif not online:
@@ -194,7 +191,7 @@ def CocTool(*, owner: str) -> ft.Control:
         paused = None
     return ScanScreen(
         title=TITLE,
-        on_badge=scanned,
+        on_badge=partial(review_badge, review.open, current),
         context=status_line(
             current.status,
             words,
@@ -227,6 +224,21 @@ def status_words(directory: Directory) -> str:
             return NOT_LOADED
         case "refused":
             return NOT_AVAILABLE
+
+
+async def review_badge(
+    open_review: Callable[[str, Attendee | None], Awaitable[ScanResult]],
+    directory: Directory,
+    badge: Badge,
+) -> ScanResult:
+    """The tool's ``on_badge``: open the review for the badge, return how it ended.
+
+    Args:
+        open_review: ``use_review()``'s ``open``.
+        directory: The directory as the screen holds it: the badge's row, if any.
+        badge: The badge scanned or typed.
+    """
+    return await open_review(badge.code, directory.by_code.get(badge.code))
 
 
 def with_count(
