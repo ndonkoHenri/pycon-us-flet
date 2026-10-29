@@ -4,7 +4,7 @@ ux.md §7.2's haptics and spoken columns, and a screen that stays awake (#724):
 
 - ``buzz()`` gives an outcome's haptics (``HAPTICS``): accepted and queued a light
   impact, a duplicate two medium ones, a denial a heavy one then a vibration, a code
-  that is not a badge none.
+  that is not a badge none; CoC's incident recorded a light impact, not recorded none.
 - ``announce()`` says it where the platform takes announcements (``Prefs.announcements``,
   iOS): politely, assertively for a duplicate or a denial. There the result panel is no
   live region, so the result is said once; elsewhere (Android, where Flutter reports
@@ -42,6 +42,8 @@ HAPTICS: dict[ScanOutcome, tuple[Effect, ...]] = {
     ScanOutcome.DENIED: (ft.HapticFeedback.heavy_impact, ft.HapticFeedback.vibrate),
     ScanOutcome.QUEUED: (ft.HapticFeedback.light_impact,),
     ScanOutcome.INVALID: (),
+    ScanOutcome.RECORDED: (ft.HapticFeedback.light_impact,),
+    ScanOutcome.NOT_RECORDED: (),
 }
 """Each outcome's effects, in order (ux.md §7.2)."""
 

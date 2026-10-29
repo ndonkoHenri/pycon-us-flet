@@ -211,6 +211,8 @@ async def test_a_result_dims_after_five_seconds_and_says_its_age(
         (ScanOutcome.DENIED, ft.Icons.BLOCK),
         (ScanOutcome.QUEUED, ft.Icons.CLOUD_UPLOAD_OUTLINED),
         (ScanOutcome.INVALID, ft.Icons.ERROR_OUTLINE),
+        (ScanOutcome.RECORDED, ft.Icons.TASK_ALT),
+        (ScanOutcome.NOT_RECORDED, ft.Icons.REMOVE_CIRCLE_OUTLINE),
     ],
 )
 def test_each_outcome_has_its_icon_and_says_its_words(

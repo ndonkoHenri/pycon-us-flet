@@ -90,11 +90,12 @@ def test_the_flags_are_the_account_stores() -> None:
 
 
 def test_only_built_tools_are_entries_until_their_screens_land() -> None:
-    """Of all four tools, only the Lead scanner has a screen yet (D-169, #723)."""
+    """The Lead scanner and CoC have entries; only the scanner queues (D-169, #760)."""
     every = {"lead_retrieval": True, "door_check": True, "mask_violation": True}
-    assert BUILT_TOOLS == QUEUED_TOOLS == (LEAD,)
-    assert [tool.key for tool in built_entries(every)] == [LEAD]
-    assert built_entries({"mask_violation": True}) == ()  # CoC waits for #42
+    assert BUILT_TOOLS == (LEAD, COC)
+    assert QUEUED_TOOLS == (LEAD,)  # CoC is online only (D-56)
+    assert [tool.key for tool in built_entries(every)] == [LEAD, COC]
+    assert [tool.key for tool in built_entries({"mask_violation": True})] == [COC]
 
 
 def test_the_card_opens_the_last_tool_while_allowed_else_the_first() -> None:

@@ -4,8 +4,8 @@ The shared scan screen (``ui/scan_screen.py``, D-416) headed by the state of the
 attendee directory (MASK-01, #759). The route re-checks its rule on every render
 (architecture §12.4): an account without ``mask_violation``, a signed-out session or
 no mock URL (D-51) sees "Not available for this account". It is mounted at
-``/now/staff/coc`` too and records itself as the last tool opened (D-421); its entry
-waits for #760, so More and Now list it only then.
+``/now/staff/coc`` too and records itself as the last tool opened (D-421), and More
+and Now list it (``BUILT_TOOLS``, #760).
 
 **The directory** is fetched as the screen mounts (``conduct.fetch_directory()``) and
 kept in ``CocTool``'s state only: never in a store, never in storage, never in a log
@@ -20,23 +20,25 @@ a live region (on iOS, an announcement), so the count and the error are said onc
 paused with "CoC capture needs a connection", and Retry and Reload are disabled with
 that reason.
 
-**The scan, for now:** a badge is looked up in the directory and a neutral result
-shows the name and the incidents on record, or the code and "Not in the attendee
-directory", then "Not recorded yet". Nothing is sent: #760 swaps in recording.
+**A scan** opens the review dialog (``ui/coc_review.py``, #760; MASK-04) for the
+badge's code with its directory row, or without one: a code the loaded directory
+lacks is reviewed all the same (D-434). The handler awaits the dialog, so scanning is
+paused while it is open ("Paused while the review is open") and resumes in the field
+after it closes; the panel then says "Incident recorded" with the reply's count, or
+"Not recorded". Each record's count updates the directory's row.
 """
 
 import asyncio
 import contextlib
-from dataclasses import dataclass
-from functools import partial
+from dataclasses import dataclass, replace
 from typing import Literal
 
 import flet as ft
 
 from pycon_us.account import use_account
 from pycon_us.conduct import fetch_directory
-from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
-from pycon_us.core.conduct import Attendee, count_words, display_name
+from pycon_us.core.badges import Badge, ScanResult
+from pycon_us.core.conduct import Attendee
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
@@ -44,6 +46,7 @@ from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.coc_review import use_review
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
 from pycon_us.ui.scan_screen import NOT_AVAILABLE, NotAvailable, ScanScreen
@@ -59,11 +62,8 @@ RELOAD = "Reload attendee directory"
 OFFLINE = "CoC capture needs a connection"
 """Why scanning is paused, and Retry and Reload disabled, while offline (D-56)."""
 
-BADGE_READ = "Badge read"
-NOT_RECORDED = "Not recorded yet"
-UNKNOWN = "Not in the attendee directory"
-NO_DIRECTORY = "Attendee directory not loaded"
-"""The interim result's words until #760 records (D-416's "Badge read")."""
+REVIEW_OPEN = "Paused while the review is open"
+"""Why scanning is paused while the review dialog is open (MASK-04)."""
 
 FORBIDDEN = 403
 """The mock's answer for an account without ``mask_violation``."""
@@ -172,7 +172,21 @@ def CocTool(*, owner: str) -> ft.Control:
     def again() -> None:
         set_tries(tries + 1)
 
-    if not online:
+    @report_errors
+    def counted(code: str, incidents: int | None) -> None:
+        """Set the directory's row for ``code`` to the count a record answered."""
+        if incidents is not None:
+            set_directory(lambda last: with_count(last, code, incidents))
+
+    review = use_review(on_recorded=counted)
+
+    async def scanned(badge: Badge) -> ScanResult:
+        """Open the review for the badge and return how it ended (``on_badge``)."""
+        return await review.open(badge.code, current.by_code.get(badge.code))
+
+    if review.is_open:
+        paused = REVIEW_OPEN
+    elif not online:
         paused = OFFLINE
     elif current.status == "refused":
         paused = NOT_AVAILABLE
@@ -180,7 +194,7 @@ def CocTool(*, owner: str) -> ft.Control:
         paused = None
     return ScanScreen(
         title=TITLE,
-        on_badge=partial(look_up, current),
+        on_badge=scanned,
         context=status_line(
             current.status,
             words,
@@ -215,38 +229,23 @@ def status_words(directory: Directory) -> str:
             return NOT_AVAILABLE
 
 
-async def look_up(directory: Directory, badge: Badge) -> ScanResult:
-    """The interim ``on_badge``: ``neutral_result()`` for the badge's code; sends nothing.
+def with_count(
+    directory: Directory | None, code: str, incidents: int
+) -> Directory | None:
+    """Return ``directory`` with ``code``'s row at the count a record answered.
+
+    A code it lacks stays out: the next Reload brings it (D-432, D-434).
 
     Args:
-        directory: The directory as the screen holds it.
-        badge: The badge scanned or typed.
+        directory: The directory as the screen holds it, or None before a fetch.
+        code: The access code the incident was recorded for.
+        incidents: The count the reply gave.
     """
-    return neutral_result(badge.code, directory)
-
-
-def neutral_result(code: str, directory: Directory) -> ScanResult:
-    """Return the interim result of a scan: what the directory says, nothing sent.
-
-    Accepted-styled "Badge read", as D-416's parse-only handler was, until #760
-    records: the name and the incidents in words for a known code; the code and
-    "Not in the attendee directory" for another; the code and "Attendee directory
-    not loaded" before it is.
-
-    Args:
-        code: The badge's access code.
-        directory: The directory as the screen holds it.
-    """
-    attendee = directory.by_code.get(code)
-    if attendee is not None:
-        title, first = display_name(attendee), count_words(attendee.incidents)
-    elif directory.status == "loaded":
-        title, first = code, UNKNOWN
-    else:
-        title, first = code, NO_DIRECTORY
-    return ScanResult(
-        ScanOutcome.ACCEPTED, BADGE_READ, title, (first, NOT_RECORDED), code=code
-    )
+    if directory is None or code not in directory.by_code:
+        return directory
+    by_code = dict(directory.by_code)
+    by_code[code] = replace(by_code[code], incidents=incidents)
+    return replace(directory, by_code=by_code)
 
 
 def status_line(
