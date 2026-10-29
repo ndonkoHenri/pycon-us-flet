@@ -7,6 +7,7 @@ readers are checked on devices (the PR).
 """
 
 import asyncio
+from collections.abc import Callable
 
 import flet as ft
 import pytest
@@ -32,6 +33,7 @@ from pycon_us.ui.scan_result import (
 from pycon_us.ui.scan_screen import (
     CAMERA_UNAVAILABLE,
     ResultPanel,
+    ScanScreen,
     Shown,
 )
 from tests import scan_rig
@@ -162,6 +164,38 @@ async def test_a_result_that_comes_under_another_view_is_dropped(
     rig.gate.set()
     await first
     assert panel(shown) == spoken(None)
+
+
+async def test_back_from_a_pushed_page_puts_the_focus_back_in_the_field(
+    show: Show, rig: Rig
+) -> None:
+    """Back from the leads list or a picker leaves the field focused (#775, D-438).
+
+    The field never loses ``can_request_focus``: Flutter applies it a frame after the
+    patch, so a focus asked for as it turns back on would be dropped (F288).
+    """
+    renders: list[Callable[[int], None]] = []
+
+    @ft.component
+    def Scan() -> ft.Control:
+        _, set_count = ft.use_state(0)  # a render, as the Router's on a pop
+        renders.append(set_count)
+        return ScanScreen(title="Lead scanner", on_badge=rig.on_badge)
+
+    shown = await show(Scan)
+    assert rig.focused == 0  # autofocus serves the first View
+    shown.session.page.route = f"{scan_rig.VIEW}/leads"  # a View pushed on top
+    renders[-1](1)
+    await shown.settle()
+    assert entry(shown).can_request_focus is not False
+    assert rig.focused == 0
+    shown.session.page.route = scan_rig.VIEW  # Back
+    renders[-1](2)
+    await shown.settle()
+    assert rig.focused == 1  # a HID scanner's next code lands in the field
+    renders[-1](3)  # another render on top changes nothing
+    await shown.settle()
+    assert rig.focused == 1
 
 
 async def test_a_paused_screen_drops_a_submit(show: Show, rig: Rig) -> None:
