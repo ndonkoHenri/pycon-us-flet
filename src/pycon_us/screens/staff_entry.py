@@ -5,7 +5,8 @@ More's profile row and a **Scan badges** card on Now (SHELL-06, SHELL-07, SHELL-
 ux.md §2.2, §5.1 item 4, §7.1). Both list ``built_entries()`` of the ``Account``
 store's flags, only while a mock API URL is set and the account is signed in (D-51),
 so they come and go live with a sign-in, a sign-out or a flag refresh. The Lead
-scanner's entry says the outbox's counts ("3 pending", ``QUEUED_TOOLS``). The card
+scanner's and Door check's entries say the outbox's counts ("3 pending",
+``QUEUED_TOOLS``). The card
 opens the last tool opened in this process, else the first entry (D-421), under Now,
 so Back returns there.
 """

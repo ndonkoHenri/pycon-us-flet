@@ -44,13 +44,13 @@ BUILT_ROWS = {
     "attendee": [],
     "speaker": [],
     "sponsor": ["more.staff.lead"],
-    "staff": ["more.staff.lead", "more.staff.swag"],
+    "staff": ["more.staff.door", "more.staff.lead", "more.staff.swag"],  # sorted
     "coc": ["more.staff.coc"],
-    "all": ["more.staff.coc", "more.staff.lead", "more.staff.swag"],  # sorted
+    "all": ["more.staff.coc", "more.staff.door", "more.staff.lead", "more.staff.swag"],
 }
-"""Each role's rows of built tools: the Lead scanner (``lead_retrieval or door_check``),
-Swag pickup (``door_check``, #769) and CoC incident (``mask_violation``, #760); Door
-check waits for its admission (D-169)."""
+"""Each role's rows of built tools, sorted: the Lead scanner (``lead_retrieval or
+door_check``), Door check (``door_check``, #766), Swag pickup (``door_check``, #769)
+and CoC incident (``mask_violation``, #760)."""
 
 
 def seeded(role: str) -> Account:
@@ -157,10 +157,11 @@ async def test_the_section_comes_right_under_the_profile_row(
     """The profile row, then "Staff tools" and its rows in O-7's order (ux.md §2.2)."""
     shown = await show_more(seeded("all"))
     (body,) = shown.find(ft.ListView)
-    assert outline(list(body.controls[:6])) == [
+    assert outline(list(body.controls[:7])) == [
         "Robin Everything",  # the profile row, signed in
         "# Staff tools",
         "Lead scanner",
+        "Door check",
         "Swag pickup",
         "CoC incident",
         "# Programme",
@@ -190,6 +191,21 @@ async def test_the_lead_scanner_row_says_the_outbox_counts_until_they_sync(
     assert second_line(shown.node("more.staff.lead"))[0] == (
         "Capture leads at your booth"
     )
+
+
+async def test_door_check_s_row_says_the_counts_and_opens_its_route(
+    show_more: ShowMore,
+) -> None:
+    """Door staff's row reads "3 pending" while check-ins wait, and opens Door check."""
+    shown = await show_more(seeded("staff"), staff=Staff(pending=3))
+    node = shown.node("more.staff.door")
+    assert tile(node).title == "Door check"
+    assert second_line(node) == (
+        "Check in attendees at the door · 3 pending",
+        "Check in attendees at the door, 3 pending",
+    )
+    await shown.click(tile(node))
+    assert shown.went == ["/more/staff/door"]
 
 
 async def test_the_section_follows_sign_out_sign_in_and_a_flag_change(
