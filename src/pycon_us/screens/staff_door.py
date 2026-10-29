@@ -13,16 +13,22 @@ What it checks in for is chosen on ``door_session.py``'s picker, pushed at
 changes, so it is current when the picker goes back. With none, the picker opens by
 itself once per visit and scanning is paused ("Choose a session to start checking in")
 with a "Choose session" button; with one, a chip "Async in depth · Wed 1:30 PM"
-(``door.session_chip``) heads the screen and reopens the picker. Until the attendee list
-loads (#765), a chosen session leaves scanning paused with "Loading attendee list…", so
-a scan never does nothing.
+(``door.session_chip``) heads the screen and reopens the picker.
+
+Once a session is chosen, its attendee list loads (``door_preload.py``, DOOR-03):
+scanning is paused with "Loading attendee list… 2 of 5", then the line under the chip
+says "Ready, works offline · 3 attendees", or "Badges will be checked online" with
+Retry, and scanning starts. Until admission comes (#766), a scan only says whether the
+badge is on the list ("Badge read") and checks nobody in.
 """
 
 from dataclasses import dataclass
+from functools import partial
 
 import flet as ft
 
 from pycon_us.account import use_account
+from pycon_us.core.admission import Inventory
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.door_sessions import SEPARATOR, DoorChoice
 from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
@@ -30,6 +36,7 @@ from pycon_us.door_choice import read_door_session
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.screens import door_session
+from pycon_us.screens.door_preload import status_line, status_words, use_preload
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
@@ -41,11 +48,11 @@ TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.DOOR)
 NO_SESSION = "Choose a session to start checking in"
 """Why scanning is paused with no session chosen (DOOR-02)."""
 
-LOADING_LIST = "Loading attendee list\N{HORIZONTAL ELLIPSIS}"
-"""Why scanning is paused with a session chosen, until the list loads (#765)."""
-
-NOT_READY = "Not checked in"
-"""A scan's word should one arrive before the list: never, while paused."""
+BADGE_READ = "Badge read"
+ON_LIST = "On the attendee list"
+NOT_ON_LIST = "Not on the attendee list"
+NOT_CHECKED_IN = "Not checked in yet"
+"""The interim result's words until admission comes (#766), as CoC's "Badge read"."""
 
 
 @dataclass(frozen=True)
@@ -83,6 +90,8 @@ def DoorTool(*, owner: str) -> ft.Control:
     """The scan screen, paused until a session is chosen and its list loaded.
 
     Until the key is read, an empty page under the title; the read takes a moment.
+    The list loads in ``use_preload()``, called on every render (D-70); scanning is
+    paused while it loads, and its line sits under the session chip.
 
     Args:
         owner: The signed-in account (``Account.owner``).
@@ -91,6 +100,7 @@ def DoorTool(*, owner: str) -> ft.Control:
     view_path = ft.use_view_path()
     location = ft.use_route_location()  # changes as the picker opens and goes back
     svc = use_services()
+    prefs = use_prefs()
     read, set_read = ft.use_state(not_read)  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once per visit
 
@@ -113,38 +123,54 @@ def DoorTool(*, owner: str) -> ft.Control:
             open_picker()
 
     ft.use_effect(ask, [needs_session])
+    loading = use_preload(owner, current.choice if current is not None else None)
+    preload = loading.preload
 
     if current is None:
         return Reading(title=TITLE)
     if current.choice is None:
         return ScanScreen(
             title=TITLE,
-            on_badge=not_ready,
+            on_badge=partial(look_up, Inventory()),
             paused=NO_SESSION,
             actions=[choose_button(open_picker)],
         )
     return ScanScreen(
         title=TITLE,
-        on_badge=not_ready,
-        context=session_chip(current.choice, open_picker),
-        paused=LOADING_LIST,
+        on_badge=partial(look_up, preload.inventory),
+        context=ft.Column(
+            [
+                session_chip(current.choice, open_picker),
+                status_line(
+                    preload, on_retry=loading.retry, live=not prefs.announcements
+                ),
+            ],
+            spacing=8,
+        ),
+        paused=status_words(preload) if preload.loaded is None else None,
     )
 
 
-async def not_ready(badge: Badge) -> ScanResult:
-    """Answer a scan made before the attendee list loads: never, while it is paused.
+async def look_up(inventory: Inventory, badge: Badge) -> ScanResult:
+    """The interim ``on_badge``: whether the badge is on the list; checks nobody in.
 
-    Admission comes with #766; until then the screen stays paused, so this only keeps
-    a scan from passing for a check-in should the pause ever be lifted early.
+    "Badge read" with the name (or the code) and "On the attendee list", or the code
+    and "Not on the attendee list", then "Not checked in yet". #766 swaps in admission.
 
     Args:
-        badge: The badge scanned.
+        inventory: The attendee list as loaded.
+        badge: The badge scanned or typed.
     """
+    attendee = inventory.attendees.get(badge.code)
+    if attendee is not None:
+        title, first = attendee.name or badge.code, ON_LIST
+    else:
+        title, first = badge.code, NOT_ON_LIST
     return ScanResult(
-        ScanOutcome.DENIED,
-        NOT_READY,
-        badge.code,
-        (LOADING_LIST,),
+        ScanOutcome.ACCEPTED,
+        BADGE_READ,
+        title,
+        (first, NOT_CHECKED_IN),
         code=badge.code,
     )
 
