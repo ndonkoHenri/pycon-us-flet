@@ -234,6 +234,28 @@ async def test_the_app_bar_s_chip_says_the_queue(show: Show) -> None:
     assert isinstance(chip.label, ft.Text) and chip.label.value == "3 pending"
 
 
+async def test_at_large_text_the_chip_heads_the_body_and_wraps(show: Show) -> None:
+    """At large text the chip leaves the bar, its words free to wrap, and still opens
+    the sheet (#752): a ``Chip`` kept one line and clipped "All synced"."""
+    shown = await show(
+        prefs=Prefs(loaded=True, time_above=True), staff=Staff(pending=3)
+    )
+    node = shown.node("staff.sync_chip")
+    (body,) = shown.find(ft.ListView)
+    assert node in descendants(body)
+    assert (node.label, node.button) == ("3 pending", True)
+    assert not [c for c in descendants(node) if isinstance(c, ft.Chip)]
+    (words,) = [c for c in descendants(node) if isinstance(c, ft.Text)]
+    assert (words.value, words.expand_loose) == ("3 pending", True)
+    (tap,) = [
+        c
+        for c in shown.find(ft.Container)
+        if c.on_click is not None and node in descendants(c)
+    ]
+    await shown.click(tap)
+    assert sheet(shown) is not None
+
+
 async def test_the_queue_sheet_pauses_scanning_and_gives_the_focus_back(
     show: Show, rig: Rig
 ) -> None:
