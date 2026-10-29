@@ -18,11 +18,18 @@ note sheet (``ui/lead_note_sheet.py``):
 lookup's ``Offer`` and waits until it closes: Hand out sends ``swag.hand_out()`` once
 (a ring and "Handing out…" meanwhile; a second tap sends nothing) and returns its
 result for the panel; Cancel, Back or a swipe returns None and sends nothing.
+
+Two client events need care. Flutter reports a sheet's dismissal after its exit
+animation, which may be after the next attendee's sheet opened: each opening carries a
+token, and a dismissal for another one is ignored. And the pinned Flet reads
+``dismissible`` only as the sheet opens, so ``False`` while sending can't lock a sheet
+already open: a scrim tap or Back while sending closes it on the client, but the
+hand-out stays in progress (and scanning paused) until its answer settles it (#782).
 """
 
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -53,11 +60,14 @@ class Handing:
         offer: The lookup's offer.
         ticked: The product ids ticked; only items left can be.
         sending: Hand out was tapped and its answer hasn't come.
+        opening: This opening's token, kept as the ticks change: a dismissal carries
+            it, so a late one for an earlier sheet closes nothing.
     """
 
     offer: swag.Offer
     ticked: frozenset[int]
     sending: bool = False
+    opening: object = field(default_factory=object, compare=False)
 
     @property
     def quantities(self) -> dict[int, int]:
@@ -77,12 +87,15 @@ class SheetActions:
     Attributes:
         toggle: An item's checkbox, with its product id and new state.
         hand_out: Hand out.
-        cancel: Cancel, and a dismissal: a swipe, Back, a tap on the scrim.
+        cancel: Cancel.
+        dismissed: A dismissal (a swipe, Back, a tap on the scrim), with the token
+            of the opening it closed.
     """
 
     toggle: Callable[[int, bool], object]
     hand_out: Callable[[], object]
     cancel: Callable[[], object]
+    dismissed: Callable[[object], object]
 
 
 def swag_sheet(
@@ -141,9 +154,9 @@ def swag_sheet(
         show_drag_handle=True,
         scrollable=True,  # up to the screen's height: Hand out stays in reach at 200 %
         use_safe_area=True,
-        dismissible=not handing.sending,  # the answer closes it
+        dismissible=not handing.sending,  # read only as it opens, at the pin (#782)
         shape=hc_sheet_shape(high_contrast),
-        on_dismiss=lambda _: actions.cancel(),
+        on_dismiss=lambda _: actions.dismissed(handing.opening),
         animation_style=ft.AnimationStyle.no_animation() if reduce_motion else None,
     )
 
@@ -244,8 +257,9 @@ def use_swag_sheet() -> SwagSheet:
 
     Call it on every render (D-70). The handlers read the ticks from a ref, since a
     render may not run between two events (#756). The ``offer`` call waits on a
-    future the sheet's closing resolves; an unmount resolves it with None, so the
-    scan screen's handler never hangs.
+    future the sheet's closing resolves; an unmount resolves it with None, and an
+    offer after it (a lookup that answered late) returns None at once, so the scan
+    screen's handler never hangs.
     """
     svc = use_services()
     prefs = use_prefs()
@@ -279,6 +293,8 @@ def use_swag_sheet() -> SwagSheet:
 
     @report_errors  # a failure reads as a cancel: the lookup stays on the panel
     async def offer(given: swag.Offer) -> ScanResult | None:
+        if not mounted.current:
+            return None  # nothing would render the sheet, nor settle its future
         settle(None)  # one sheet at a time: the scan screen awaits one handler
         waiting = asyncio.get_running_loop().create_future()
         pending.current = waiting
@@ -309,16 +325,21 @@ def use_swag_sheet() -> SwagSheet:
     @report_errors
     def cancel() -> None:
         current = latest.current
-        if current is None:
-            return
+        if current is None or current.sending:
+            return  # a hand-out on its way keeps the pause and settles with its answer
         set_handing(None)
-        if not current.sending:  # a hand-out on its way settles it with its answer
-            settle(None)
+        settle(None)
+
+    @report_errors
+    def dismissed(opening: object) -> None:
+        current = latest.current
+        if current is not None and current.opening is opening:
+            cancel()  # else a late dismissal of a sheet already closed
 
     ft.use_dialog(
         swag_sheet(
             handing,
-            SheetActions(toggle, hand_out, cancel),
+            SheetActions(toggle, hand_out, cancel, dismissed),
             high_contrast=tokens.high_contrast,
             reduce_motion=prefs.reduce_motion,
         )
