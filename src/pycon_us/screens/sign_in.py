@@ -175,6 +175,10 @@ def SignInPage() -> ft.View:
                                         ref=email.ref,
                                         value=email.value,
                                         on_change=email.changed,
+                                        # Next, not Done: the password comes
+                                        # next. Flutter moves the focus there
+                                        # itself; to_password makes sure of it.
+                                        text_input_action=ft.TextInputAction.NEXT,
                                         on_submit=to_password,
                                         label="Email",
                                         keyboard_type=ft.KeyboardType.EMAIL,

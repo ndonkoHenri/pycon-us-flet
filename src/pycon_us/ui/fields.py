@@ -64,7 +64,9 @@ def SearchField(
         autofocus: Focus the field, and open the keyboard, when the View shows.
         focusable: Whether the field can take the focus: ``FieldQuery.focusable``,
             False while another View covers the field's (D-330).
-        on_submit: Called when the keyboard's action key is pressed.
+        on_submit: Called when the keyboard's action key is pressed. With it, that
+            key is Search, since it searches at once (U30, D-193); without it the
+            field filters as the user types, and the key keeps the default Done.
         keyboard_type: The keyboard to show.
         high_contrast: HC is on screen (``Tokens.high_contrast``): the pill's fill is
             the surface there, so a 1 dp ``outline`` ring draws its edge (D-306).
@@ -88,6 +90,7 @@ def SearchField(
                 value=value,
                 on_change=on_change,
                 on_submit=on_submit,
+                text_input_action=ft.TextInputAction.SEARCH if on_submit else None,
                 autofocus=autofocus,
                 can_request_focus=focusable,
                 keyboard_type=keyboard_type,

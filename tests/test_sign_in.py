@@ -157,6 +157,9 @@ async def test_the_form_has_its_identifiers_hints_and_keyboards(
     email, password = field(shown, "Email"), field(shown, "Password")
     assert email.keyboard_type is ft.KeyboardType.EMAIL
     assert email.autofill_hints == [ft.AutofillHint.EMAIL]
+    # Next on the email, then the password's default Done, which signs in.
+    assert email.text_input_action is ft.TextInputAction.NEXT
+    assert password.text_input_action is None
     assert password.password and password.can_reveal_password
     assert password.autofill_hints == [ft.AutofillHint.PASSWORD]
     (group,) = shown.find(ft.AutofillGroup)

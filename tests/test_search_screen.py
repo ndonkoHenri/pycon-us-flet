@@ -161,7 +161,8 @@ async def test_typing_searches_once_the_typing_pauses_not_per_keystroke(
 
 
 async def test_the_keyboard_s_action_key_searches_at_once(opened: Shown) -> None:
-    """The keyboard's submit searches at once, without the debounce."""
+    """The keyboard's action key is Search and searches at once, without the debounce."""
+    assert opened.field.text_input_action is ft.TextInputAction.SEARCH  # U30
     await opened.type("typing")
     await opened.event(opened.field, "submit", "typing")
     assert opened.searches == [("typing", "sessions")]
