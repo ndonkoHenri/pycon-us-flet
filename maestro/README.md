@@ -45,7 +45,9 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/wifi_copy.yaml` | journeys, venue | More › Wi-Fi shows the network and the password with the feed unreachable, and Copy password copies it: "Password copied" on iOS, no failure on Android, whose own overlay confirms a copy (INFO-08, #456) |
 | `journeys/help_report.yaml` | journeys, venue | More › Help & safety opens on Report a concern, its email row and its Copy on screen before any scroll; Copy says "Email address copied" on iOS; the places and the Code of Conduct follow (INFO-07, #456) |
 | `journeys/venue_open_now.yaml` | journeys, venue | On a conference morning (Friday 09:30, `NOW` overrides it) More › Venue & hours says Registration, the information desk and Swag pickup are open now, each until its closing time (MAP-09, #456) |
-| `journeys/find_room.yaml` | journeys, venue | Offline (bundled `map.toml`), Map › Rooms › Room 103ABC › its location card › the Concourse plan, its image named "…, Room 103 marked" and the room's label, Zoom in enabling Zoom out › Back › Back to Rooms; Floor plans › Concourse (no label) › Back (P2-93's find a room, one of the exit's three screen-reader flows, #462) |
+| `journeys/find_room.yaml` | journeys, venue, map | Offline (bundled `map.toml`), Map › Rooms › Room 103ABC › its location card › the Concourse plan, its image named "…, Room 103 marked" and the room's label, Zoom in enabling Zoom out › Back › Back to Rooms; Floor plans › Concourse (no label) › Zoom in › Back (P2-93's find a room, one of the exit's three screen-reader flows, #462, #453) |
+| `journeys/room_from_search.yaml` | journeys, venue, map | Offline, Map › Search, on Places, "104C" › Room 104C › its location card › the Concourse plan, "…, Room 104C marked" and its label › Back (the room) › Back (search, with "104C" and the row) › Back (the Map) (P2-93, #453) |
+| `journeys/session_room_plan.yaml` | journeys, venue, map | Offline, Now › the panel (session 123, Grand Ballroom B) › its location card "Show Grand Ballroom B on the Upper level floor plan" › the plan, "…, Grand Ballroom B marked", Zoom in enabling Zoom out › Back to the session and its card (P2-93, #453) |
 | `journeys/deep_links.yaml` | journeys, deep_links | Links land with the root below (D-291): cold, a session over the Schedule, Back to it; warm, an unknown speaker over Now, Back to Now; an unknown path, "This page isn't in the app", Back to Now; the filter sheet open when a link to Now comes closes, and Now shows. `LINK` sets the scheme and host ([below](#deep-links)) |
 | `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s on iOS, still new on Android until the list is left (a screen reader's rule, F72); My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
@@ -538,3 +540,54 @@ Results and screenshots are on #347.
 At the largest text (iOS's `accessibility-extra-extra-extra-large`) the flows still
 cannot set their scene (Developer options' rows are below the fold); the three
 screen-reader flows' pages were walked there after a run at the default size.
+
+## The map journeys (#453)
+
+P2-93's three map journeys, `--include-tags=map`, on 2026-10-30, `main` at `4cd9ae28`
+plus the flows, Flet pin `08b89cce5`: a release APK (arm64) and an `ios-simulator`
+build, each matching `build/python-app` (the APK's `.pyc` bytes aside, rebuilt by the
+iOS build after it), at load averages of 6 to 74.
+
+| Device | Run | Result |
+|---|---|---|
+| iPhone 17, iOS 26.5 | `--include-tags=map` | 3 of 3 passed, 6 min 31 s (2 min 14 s, 2 min 18 s, 1 min 59 s) |
+| `pycon_pixel6a_api36`, Android 16 | `--include-tags=map`, each a cold start in airplane mode | 3 of 3 passed, 7 min 28 s (2 min 43 s, 2 min 32 s, 2 min 14 s) |
+
+At a load average of 74 the first iOS run stopped before any flow: the XCTest driver
+did not start in time. `MAESTRO_DRIVER_STARTUP_TIMEOUT=240000` (ms) gave it the time.
+
+Offline: a fresh install of the APK, in airplane mode from its first launch, and a fresh
+install on the simulator whose feed URL was set before its first launch
+([above](#offline-on-a-fresh-ios-install)): each opened on the bundled schedule
+("Offline · schedule from …"), and Map › Floor plans showed every thumbnail, and each of
+the five plans (Campus, Concourse, Upper, Arena, Seaside) drew in full.
+
+TalkBack drives through the emulator's own touchscreen, not `adb shell input`, which
+TalkBack lets through to the app as plain taps. The console's `event mouse <x> <y> 0 1`
+(down or move) and `… 0 0` (up), sent over one socket to the console port with its
+auth token, at about 12 ms between moves, are a swipe TalkBack recognises
+(`GESTURE_SWIPE_RIGHT`, "NEXT"), and two quick taps its double tap;
+[`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §7.3 has the
+`sendevent` way and how to read what TalkBack said. Do not dump the screen
+(`uiautomator dump`) between gestures: here, after each dump the app's nodes had new
+ids, and TalkBack's next swipe started again from the screen's first item; read the
+spoken words from logcat instead.
+
+
+TalkBack on `pycon_pixel6a_api36`, from the Map's title: 14 swipes right (Search, More
+options, the four tabs, "Concourse level, Heading", then each room row, "Room 101A,
+5 sessions" …) reach "Room 103ABC, 26 sessions", and a double tap opens it with
+TalkBack on Back. Five swipes on (the title, the three day tabs) is "Show Room 103 on
+the Concourse level floor plan"; its double tap opens the plan, read Back, "Concourse level,
+Heading", More options, "Concourse level floor plan, Room 103 marked", the label "Room
+103, Concourse level · Talk track / Security track", "Zoom in, Button", "Zoom out,
+Button, disabled", "Reset view, Button, disabled". A double tap on Zoom in zooms the
+plan, and Zoom out and Reset view then read enabled. TalkBack says nothing of the zoom
+itself.
+
+At the largest text, after a run at the default size (no fresh start), the three
+journeys' pages were walked on Android at `font_scale 2.0` and on iOS at
+`accessibility-extra-extra-extra-large` with Bold Text: every step works and nothing
+clips, but the floor viewer's label card covers the marked room at iOS's largest
+(#793), Search's preset Places chip is off screen (#794), and the location card
+narrows to its content (#795).

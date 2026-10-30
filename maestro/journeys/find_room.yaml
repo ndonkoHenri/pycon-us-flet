@@ -1,6 +1,8 @@
 # P2-93's find a room, one of the P2 exit's three screen-reader flows (#462): offline,
 # Map › Rooms › Room 103ABC › its location card › the Concourse plan with the room
-# marked and named, zoomed in › Back › Back; then Floor plans › Concourse › Back.
+# marked and named, zoomed in › Back › Back; then Floor plans › Concourse › zoom › Back
+# (P2-93's first journey). The other two are room_from_search.yaml and
+# session_room_plan.yaml.
 #
 # The rooms, the pins and the plans are bundled year data (map.toml, D-36), so the
 # flow runs with the feed unreachable (start_offline.yaml; airplane mode on Android).
@@ -10,6 +12,7 @@ name: Map, a room, its floor plan
 tags:
   - journeys
   - venue
+  - map
 onFlowComplete:
   - runFlow: ../subflows/online.yaml
 ---
@@ -84,6 +87,15 @@ onFlowComplete:
     timeout: 15000
 - assertNotVisible:
     id: plan.label
+- assertVisible: "Concourse level floor plan"
+- assertVisible:
+    id: plan.zoom_out
+    enabled: false
+- tapOn:
+    id: plan.zoom_in
+- assertVisible:
+    id: plan.zoom_out
+    enabled: true
 - runFlow: ../subflows/back.yaml
 - extendedWaitUntil:
     visible:
