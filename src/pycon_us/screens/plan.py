@@ -329,6 +329,8 @@ def PlanViewer(plan_id: str) -> ft.View:
     return AppScaffold(
         title=plan.title,
         actions=[menu],
+        # The plan never scrolls under the bar; the label card's words do (D-447).
+        still_bar=True,
         body=ft.Stack(
             [
                 # A double tap only where nothing on the plan is tappable: it

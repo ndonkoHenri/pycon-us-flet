@@ -192,6 +192,20 @@ def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
     assert safe.adaptive is not True
 
 
+def test_a_still_bar_keeps_its_colour_when_the_body_scrolls(
+    hooks: Hooks, page: FakePage
+) -> None:
+    """``still_bar``: the surface and no scrolled-under elevation, which would tint it.
+
+    By default the bar is left to the theme, which colours it when the page scrolls
+    under it; a still bar is for a body that scrolls only inside a box (D-447).
+    """
+    default = app_bar(view_at(hooks, page, "/now"))
+    assert (default.bgcolor, default.elevation_on_scroll) == (None, None)
+    still = app_bar(view_at(hooks, page, "/now", still_bar=True))
+    assert (still.bgcolor, still.elevation_on_scroll) == (ft.Colors.SURFACE, 0)
+
+
 def test_the_gutter_probe_sits_under_the_body_taking_no_space(
     hooks: Hooks, page: FakePage
 ) -> None:

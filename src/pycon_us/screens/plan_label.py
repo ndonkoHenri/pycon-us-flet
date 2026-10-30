@@ -78,8 +78,9 @@ def label_card(
     """Return the label card: the pin's name over its plan and what happens there.
 
     Outside the zoom layer, so it reads the same at any zoom; one node for screen
-    readers ("Room 104C, Concourse level · Talk track"), ``plan.label``. Its words
-    keep their own height, measured by an inner ``Column``, and scroll in a card
+    readers ("Room 104C, Concourse level · Talk track"), ``plan.label``, labelled
+    with its words rather than merging them, so the node never scrolls (D-447). Its
+    words keep their own height, measured by an inner ``Column``, and scroll in a card
     ``room`` high (``label_room()``) only when they are taller than that
     (``scrolls()``), as the booth card's body does (D-370).
 
@@ -109,4 +110,10 @@ def label_card(
         margin=0,
         max_height=room if bound else None,
     )
-    return named(f"{SCREEN}.label", card)
+    # The words as the node's own label, their semantics left out: merged in, the
+    # scrolling Column made the identifier's node a scrollable one, which iOS shows
+    # as a scroll view without the identifier (D-447).
+    words_node = ft.Semantics(
+        label=f"{pin.label}\n{where}", exclude_semantics=True, content=card
+    )
+    return named(f"{SCREEN}.label", words_node)

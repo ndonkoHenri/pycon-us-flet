@@ -68,7 +68,7 @@ def test_no_bound_before_the_viewer_is_laid_out() -> None:
 
 def card_parts(plan: plan_view.Plan) -> tuple[ft.Card, ft.Column, ft.Column]:
     """The label card, the ``Column`` that bounds its words and the one that measures them."""
-    card = cast(ft.Card, plan.node("plan.label").content)
+    card = cast(ft.Card, cast(ft.Semantics, plan.node("plan.label").content).content)
     words = cast(ft.Container, card.content).content
     assert isinstance(words, ft.Column)
     (lines,) = words.controls
@@ -113,3 +113,35 @@ def test_the_words_scroll_only_past_the_room(measured: float, expected: bool) ->
     """Words and their 12 dp padding above and below scroll only past the room."""
     assert screen.scrolls(100.0, measured) is expected
     assert screen.scrolls(None, measured) is False
+
+
+@pytest.mark.parametrize("measured", [44.0, 1000.0])
+async def test_the_card_is_one_node_labelled_by_its_words(
+    render: Render, measured: float
+) -> None:
+    """The identifier's node takes the words as its label and leaves their nodes out.
+
+    Merged in, the scrolling ``Column`` made the identifier's node a scrollable one,
+    which iOS shows as a scroll view without the identifier (#800, D-447): so the
+    words are a label, the same whether the card scrolls or not.
+    """
+    plan = await render("?pin=103abc")
+    await plan.lay_out()
+    _, _, lines = card_parts(plan)
+    await plan.event(lines, "size_change", {"w": 300.0, "h": measured})
+    words = cast(ft.Semantics, plan.node("plan.label").content)
+    assert words.label == "Room 103\nConcourse level · Talk track / Security track"
+    assert words.exclude_semantics is True
+    assert card_parts(plan)[1].scroll == (
+        ft.ScrollMode.AUTO if measured > 100 else None
+    )
+
+
+async def test_the_viewers_app_bar_stays_still(render: Render) -> None:
+    """The plan never scrolls under the bar: the card's words do, so it keeps its colour.
+
+    Flutter's ``AppBar`` takes any scroll in the body at depth 0 for the page's; the
+    card's tinted it on iOS at the largest text (#800, D-447).
+    """
+    plan = await render("?pin=103abc")
+    assert plan.still_bars and all(plan.still_bars)
