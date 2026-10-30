@@ -14,8 +14,9 @@ one with its card (``screens/plan_tables.py``, #464): no double tap there (D-312
 ``map.toml``: a dot on the plan, placed from its percentages, the same size on screen
 at every zoom, which pulses twice when the View opens and then stays still (D-34),
 still from the start under reduced motion (D-173). The label card under the plan,
-outside the zoom layer, names it at any zoom. ``ViewMemory.plan_pins`` keeps a View
-rebuilt in a new session (D-143) from pulsing again (D-18). An unknown pin, or one on
+outside the zoom layer, names it at any zoom, and never grows over the pin
+(``screens/plan_label.py``, #793). ``ViewMemory.plan_pins`` keeps a View rebuilt in a
+new session (D-143) from pulsing again (D-18). An unknown pin, or one on
 another plan, shows no pin; an unknown plan shows its not-found state, whose way out
 is the Map's Floor plans tab (D-186, ux.md §4.6).
 
@@ -35,6 +36,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.screens.expo_pane import ExpoPane
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
+from pycon_us.screens.plan_label import EDGE, PIN_BOX, label_card, label_room
 from pycon_us.screens.plan_tables import (
     TABLE_PARAM,
     sponsors_at,
@@ -48,7 +50,6 @@ from pycon_us.services.pref_keys import THEME
 from pycon_us.state import use_conference
 from pycon_us.ui.menus import menu_item, overflow_menu
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.semantics import named
 from pycon_us.ui.zoom import RESET_VIEW, use_zoom, zoom_buttons, zoom_layer
 from pycon_us.ui.zoom_geometry import Size, centred_on
 from pycon_us.year_map import EXPO_PLAN, JOB_FAIR_PLAN, Pin, Plan
@@ -58,9 +59,6 @@ SCREEN = "plan"
 
 NOT_FOUND = "This floor plan isn't in this year's maps"
 OPEN_MAP = "Open the map"
-
-PIN_BOX = 48
-"""The pin's box, centred on its point: room for the ring at its widest."""
 
 DOT_DP = 20
 """The pin's dot, ``primary`` with an ``on_primary`` rim, so it shows on any plan."""
@@ -177,32 +175,6 @@ def pin_marker(
     )
 
 
-def label_card(plan: Plan, pin: Pin) -> ft.Control:
-    """Return the label card: the pin's name over its plan and what happens there.
-
-    Outside the zoom layer, so it reads the same at any zoom; one node for screen
-    readers ("Room 104C, Concourse level · Talk track"), ``plan.label``.
-
-    Args:
-        plan: The plan shown.
-        pin: The pin on it.
-    """
-    where = " · ".join(part for part in (plan.title, pin.sublabel) if part)
-    lines = ft.Column(
-        [
-            ft.Text(pin.label, theme_style=ft.TextThemeStyle.TITLE_SMALL),
-            ft.Text(where, theme_style=ft.TextThemeStyle.BODY_MEDIUM),
-        ],
-        spacing=2,
-        tight=True,
-    )
-    card = ft.Card(
-        ft.Container(lines, padding=ft.Padding.symmetric(horizontal=16, vertical=12)),
-        margin=0,
-    )
-    return named(f"{SCREEN}.label", card)
-
-
 @ft.component
 def PlanViewer(plan_id: str) -> ft.View:
     """One floor plan, zoomable, with the pin ``?pin=`` names.
@@ -237,6 +209,14 @@ def PlanViewer(plan_id: str) -> ft.View:
         lambda: memory.plan_tables.get(view_path) or query.get(TABLE_PARAM, "")
     )
     selected = table if on_job_fair else ""
+    # The label's words' own height: they scroll only past the room under the pin.
+    label_height, set_label_height = ft.use_state(0.0)
+
+    @report_errors
+    def label_measured(e: ft.LayoutSizeChangeEvent) -> None:
+        set_label_height(e.height)
+
+    on_label_size = ft.use_callback(label_measured, [])
     ring_ms = prefs.motion_ms(PULSE_MS)
 
     @report_errors
@@ -311,7 +291,10 @@ def PlanViewer(plan_id: str) -> ft.View:
     # children by position, and Zoom in, above a shorter card, came before it (#729).
     # As one node beside the card, the column sorts after it, left to right, and
     # reads its three buttons together.
-    card = [label_card(plan, pin)] if pin is not None else []
+    card = []
+    if pin is not None:
+        room = label_room(zoom.box, zoom.shown, pin)
+        card.append(label_card(plan, pin, room, label_height, on_label_size))
     if selected:
         card.append(
             table_card(
@@ -328,9 +311,9 @@ def PlanViewer(plan_id: str) -> ft.View:
         ],
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.END,
-        left=16,
-        right=16,
-        bottom=16,
+        left=EDGE,
+        right=EDGE,
+        bottom=EDGE,
     )
     menu = overflow_menu(
         f"{SCREEN}.overflow",
