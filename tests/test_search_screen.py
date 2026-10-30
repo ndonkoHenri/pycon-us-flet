@@ -74,7 +74,8 @@ async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) ->
     """The field opens empty and focused, with no autocorrect or suggestions."""
     text_field = opened.field
     assert text_field.autofocus  # the keyboard is up as search opens (ux.md §4.3)
-    assert text_field.keyboard_type == ft.KeyboardType.WEB_SEARCH
+    # The plain keyboard: iOS's web search one shows Go, not Search (D-450).
+    assert text_field.keyboard_type == ft.KeyboardType.TEXT
     assert text_field.autocorrect is False  # "asyncio", names
     assert text_field.enable_suggestions is False
     assert text_field.value == ""  # a fresh search

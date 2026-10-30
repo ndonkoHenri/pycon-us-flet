@@ -288,7 +288,6 @@ def Search() -> ft.View:
                                 identifier=f"{SCREEN}.field",
                                 autofocus=True,
                                 on_submit=submitted,
-                                keyboard_type=ft.KeyboardType.WEB_SEARCH,
                                 high_contrast=tokens.high_contrast,
                             ),
                             ScopeChips(scope, picked),
