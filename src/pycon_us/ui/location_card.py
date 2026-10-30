@@ -14,7 +14,8 @@ node that says where it leads ("Show Room 104A on the Concourse level floor plan
 thumbnail excluded. Help & safety and Venue & hours show a venue spot's card by its pin
 key (``spot_card()``); the job fair's pane shows its plan's (``job_fair_card()``). At
 large text (``Prefs.time_above``, D-216) the words go under the thumbnail rather than
-squeeze beside it; nothing has a fixed height but the image.
+squeeze beside it, and the card keeps the list's width (#795); nothing has a fixed
+height but the image.
 Apart from ``ui/rows.py`` so that it stays under about 400 lines (D-66).
 """
 
@@ -284,7 +285,9 @@ def _LocationCard(
     lines = ft.Column(_lines(plan, pin), spacing=2, tight=True)
     body: ft.Control
     if prefs.time_above:  # large text: the words under the thumbnail
-        body = ft.Column([thumb, lines], spacing=12, tight=True)
+        # A Row fills its width, as the default size's does, so the card spans the
+        # list rather than shrink to its words (#795); the thumbnail keeps its size.
+        body = ft.Column([ft.Row([thumb]), lines], spacing=12, tight=True)
     else:
         lines.expand = True
         body = ft.Row(
