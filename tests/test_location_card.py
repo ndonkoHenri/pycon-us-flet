@@ -245,6 +245,20 @@ async def test_at_large_text_the_words_go_under_the_thumbnail(
     assert isinstance(body, ft.Column if large_text else ft.Row)
 
 
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_the_card_spans_the_width_at_every_text_size(
+    render: Render, large_text: bool
+) -> None:
+    """The thumbnail sits in a ``Row`` that fills the width, so the card is as wide
+    as the list at large text too, not its words' width (#795)."""
+    shown = await render(large_text=large_text)
+    body = shown.node(IDENTIFIER).content
+    row = cast(ft.Row, body.controls[0] if large_text else body)
+    assert isinstance(row, ft.Row) and not row.tight
+    (thumb,) = [c for c in row.controls if isinstance(c, ft.Stack)]
+    assert (thumb.width, thumb.height) == card.thumb_size(place("info-desk")[0])
+
+
 async def test_a_pin_already_pulsed_on_the_view_stays_still(render: Render) -> None:
     """A card whose pin is in ``seen`` (another day's list) never pulses."""
     shown = await render(seen={"info-desk"})
