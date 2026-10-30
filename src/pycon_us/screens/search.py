@@ -30,6 +30,7 @@ from pycon_us.favorites import use_favorites
 from pycon_us.locations import in_search, is_top_view, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.screens.search_results import SCREEN, ResultList, summary
+from pycon_us.screens.search_scopes import ScopeChips
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -37,7 +38,6 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
 from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
 from pycon_us.ui.status_strip import StatusStrip
@@ -64,15 +64,6 @@ CLEAR = "Clear search"
 
 COVERS = "Search covers all days and ignores your filters."
 """What search looks at, said before typing and on a miss (ux.md §4.6, D-20)."""
-
-SCOPE_LABELS = {
-    "all": "All",
-    "sessions": "Sessions",
-    "speakers": "Speakers",
-    "places": "Places",
-    "sponsors": "Sponsors",
-}
-"""Each scope's chip, in ``SCOPES``' order (D-19)."""
 
 IDLE_TITLES = {
     "all": "Find sessions, speakers and places",
@@ -300,7 +291,7 @@ def Search() -> ft.View:
                                 keyboard_type=ft.KeyboardType.WEB_SEARCH,
                                 high_contrast=tokens.high_contrast,
                             ),
-                            _scope_chips(scope, picked),
+                            ScopeChips(scope, picked),
                             *([count] if count else []),
                         ],
                         spacing=0,
@@ -323,47 +314,4 @@ def Search() -> ft.View:
             expand=True,
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         ),
-    )
-
-
-def _scope_chips(scope: str, on_pick: ft.ControlEventHandler[ft.Chip]) -> ft.Control:
-    """Return the scope chips, one per scope, the current one selected with its check.
-
-    One row that scrolls sideways when it is wider than the screen (large text):
-    wrapped, the chips took three rows at the largest text, and with the keyboard up
-    the field and the chips no longer fitted above it. The row's ends are spacers, so
-    the first chip starts at the 16 dp gutter and the last can scroll clear of the
-    edge. Each chip is one node for screen readers, read as its label, "selected" when
-    it is, and a button.
-
-    Args:
-        scope: The current scope.
-        on_pick: Switches to the tapped chip's scope (its ``data``), keeping the query.
-    """
-    return ft.Container(
-        ft.Row(
-            [
-                ft.Container(width=8),  # with the 8 dp spacing: the 16 dp gutter
-                *(
-                    named(
-                        f"{SCREEN}.scope.{key}",
-                        ft.Chip(
-                            label=label,
-                            selected=key == scope,
-                            show_checkmark=True,  # not colour alone (D-33)
-                            data=key,
-                            # A click, not on_select: Flutter would toggle the
-                            # chip itself, so a tap on the selected one showed no
-                            # scope selected; here ``selected`` is only ours.
-                            on_click=on_pick,
-                        ),
-                    )
-                    for key, label in SCOPE_LABELS.items()
-                ),
-                ft.Container(width=8),
-            ],
-            spacing=8,
-            scroll=ft.ScrollMode.AUTO,
-        ),
-        padding=ft.Padding.symmetric(vertical=4),
     )

@@ -69,7 +69,7 @@ def anchored(key: str, content: ft.Control) -> ft.Control:
 
 
 async def jump_to_key(
-    list_ref: ft.Ref[ft.ListView],
+    list_ref: ft.Ref[ft.ScrollableControl],
     key: str,
     *,
     duration: int,
@@ -77,6 +77,9 @@ async def jump_to_key(
     tries: int = JUMP_TRIES,
 ) -> Jump:
     """Scroll a list so the item with this ``ScrollKey`` is at the top (D-155).
+
+    Any scrollable will do: Search's scope row, a ``Row``, puts the item at its start
+    (``screens/search_scopes.py``, #794).
 
     The list's ``on_scroll`` handler sets ``ended`` at each scroll's end, which is how
     the jump knows it landed: Flutter answers ``scroll_to`` before the scroll runs, and
@@ -99,7 +102,7 @@ async def jump_to_key(
     Any other error propagates.
 
     Args:
-        list_ref: The list's ref.
+        list_ref: The list's (or another scrollable's) ref.
         key: The item's ``ScrollKey`` value, e.g. a ``Slot.key``.
         duration: The scroll's length in milliseconds, already through
             ``prefs.motion_ms()``.
