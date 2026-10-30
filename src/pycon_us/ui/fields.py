@@ -36,7 +36,6 @@ def SearchField(
     autofocus: bool = False,
     focusable: bool = True,
     on_submit: ft.ControlEventHandler[ft.TextField] | None = None,
-    keyboard_type: ft.KeyboardType = ft.KeyboardType.TEXT,
     high_contrast: bool = False,
 ) -> ft.Control:
     """Return a pill-shaped search or filter field with its Clear button.
@@ -64,8 +63,11 @@ def SearchField(
         autofocus: Focus the field, and open the keyboard, when the View shows.
         focusable: Whether the field can take the focus: ``FieldQuery.focusable``,
             False while another View covers the field's (D-330).
-        on_submit: Called when the keyboard's action key is pressed.
-        keyboard_type: The keyboard to show.
+        on_submit: Called when the keyboard's action key is pressed. With it, that
+            key is Search, since it searches at once (U30, D-193); without it the
+            field filters as the user types, and the key keeps the default Done.
+            The keyboard is always the plain text one: iOS's web search keyboard
+            puts its own Go key in place of Search (D-450).
         high_contrast: HC is on screen (``Tokens.high_contrast``): the pill's fill is
             the surface there, so a 1 dp ``outline`` ring draws its edge (D-306).
     """
@@ -88,9 +90,9 @@ def SearchField(
                 value=value,
                 on_change=on_change,
                 on_submit=on_submit,
+                text_input_action=ft.TextInputAction.SEARCH if on_submit else None,
                 autofocus=autofocus,
                 can_request_focus=focusable,
-                keyboard_type=keyboard_type,
                 hint_text=hint,
                 # While empty the hint wraps at the largest text instead of clipping;
                 # with text it is hidden but still laid out, and two lines kept a

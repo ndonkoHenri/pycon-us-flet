@@ -74,7 +74,8 @@ async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) ->
     """The field opens empty and focused, with no autocorrect or suggestions."""
     text_field = opened.field
     assert text_field.autofocus  # the keyboard is up as search opens (ux.md §4.3)
-    assert text_field.keyboard_type == ft.KeyboardType.WEB_SEARCH
+    # The plain keyboard: iOS's web search one shows Go, not Search (D-450).
+    assert text_field.keyboard_type == ft.KeyboardType.TEXT
     assert text_field.autocorrect is False  # "asyncio", names
     assert text_field.enable_suggestions is False
     assert text_field.value == ""  # a fresh search
@@ -161,7 +162,8 @@ async def test_typing_searches_once_the_typing_pauses_not_per_keystroke(
 
 
 async def test_the_keyboard_s_action_key_searches_at_once(opened: Shown) -> None:
-    """The keyboard's submit searches at once, without the debounce."""
+    """The keyboard's action key is Search and searches at once, without the debounce."""
+    assert opened.field.text_input_action is ft.TextInputAction.SEARCH  # U30
     await opened.type("typing")
     await opened.event(opened.field, "submit", "typing")
     assert opened.searches == [("typing", "sessions")]

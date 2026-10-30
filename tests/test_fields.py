@@ -321,6 +321,37 @@ async def test_the_field_starts_with_the_initial_text(
         assert len(shown.clear_buttons()) == 1
 
 
+def field_of(control: ft.Control) -> ft.TextField:
+    """Return the ``TextField`` inside a ``SearchField``'s pill."""
+    stack = cast(ft.Stack, cast(ft.Container, control).content)
+    merge = cast(ft.MergeSemantics, stack.controls[0])
+    return cast(ft.TextField, cast(ft.Semantics, merge.content).content)
+
+
+@pytest.mark.parametrize(
+    ("on_submit", "action"),
+    [(lambda e: None, ft.TextInputAction.SEARCH), (None, None)],
+    ids=["searches", "filters"],
+)
+def test_the_action_key_is_search_only_on_a_field_that_submits(
+    on_submit: ft.ControlEventHandler[ft.TextField] | None,
+    action: ft.TextInputAction | None,
+) -> None:
+    """U30: a field that searches on its action key shows Search; a filter keeps Done."""
+    pill = SearchField(
+        value="",
+        on_change=lambda e: None,
+        on_clear=lambda: None,
+        ref=ft.Ref[ft.TextField](),
+        hint="Search",
+        label="Search",
+        clear_tooltip=CLEAR,
+        identifier="probe.field",
+        on_submit=on_submit,
+    )
+    assert field_of(pill).text_input_action is action
+
+
 def test_the_count_is_a_live_region_with_its_identifier() -> None:
     """ux.md §9: a screen reader hears what typing found without leaving the field."""
     count = cast(ft.Semantics, found_count("5 speakers", identifier="speakers.count"))
