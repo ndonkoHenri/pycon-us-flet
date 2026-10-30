@@ -10,14 +10,16 @@ on devices (the PR).
 """
 
 import asyncio
+from typing import cast
 
 import flet as ft
 import pytest
 
 from pycon_us.core.search import SearchResults, search
 from pycon_us.screens import search as screen
-from pycon_us.screens import search_results
+from pycon_us.screens import search_results, search_scopes
 from pycon_us.state import Conference
+from pycon_us.ui.scrolling import JUMP_MS
 from pycon_us.ui.semantics import semantics_key
 from tests import search_view
 from tests.search_view import DATA, INDEX, YEAR, Render, Shown, session_ids
@@ -182,7 +184,7 @@ async def test_a_keystroke_before_the_pause_re_renders_no_result_row(
 
 async def test_the_opener_s_scope_is_selected_with_its_check(opened: Shown) -> None:
     """The five scope chips show a check, and the opener's alone is selected."""
-    chips = {scope: opened.chip(scope) for scope in screen.SCOPE_LABELS}
+    chips = {scope: opened.chip(scope) for scope in search_scopes.SCOPE_LABELS}
     assert [chip.label for chip in chips.values()] == [
         "All",
         "Sessions",
@@ -221,10 +223,12 @@ async def test_a_tap_on_the_selected_chip_keeps_its_scope_and_searches_nothing(
     await opened.type("grand")
     await opened.pause()
     opened.searches.clear()
-    before = {scope: opened.chip(scope).selected for scope in screen.SCOPE_LABELS}
+    before = {
+        scope: opened.chip(scope).selected for scope in search_scopes.SCOPE_LABELS
+    }
     assert all(opened.chip(scope).on_select is None for scope in before)
     await opened.event(opened.chip("sessions"), "click")
-    after = {scope: opened.chip(scope).selected for scope in screen.SCOPE_LABELS}
+    after = {scope: opened.chip(scope).selected for scope in search_scopes.SCOPE_LABELS}
     assert after == before
     assert [scope for scope, on in after.items() if on] == ["sessions"]
     assert opened.searches == []
@@ -240,6 +244,44 @@ async def test_the_hint_says_what_the_scope_searches(opened: Shown) -> None:
     assert opened.field.hint_text == "Search rooms and places"
     await opened.event(opened.chip("sponsors"), "click")
     assert opened.field.hint_text == "Search sponsors"
+
+
+async def test_the_preset_scope_s_chip_is_scrolled_into_sight_at_once(
+    render: Render,
+) -> None:
+    """Opened from the Map, the row jumps to Places with no animation (#794)."""
+    shown = await render(Conference(data=DATA, source="bundled", version=1))
+    await shown.go("/search?scope=places")
+    assert shown.jumps == [("search.scope_anchor.places", 0)]
+
+
+async def test_a_pick_slides_the_row_to_the_picked_chip(opened: Shown) -> None:
+    """A chip picked off the row's edge slides into sight; the opening jumped (#794)."""
+    assert opened.jumps == [("search.scope_anchor.sessions", 0)]
+    await opened.event(opened.chip("sponsors"), "click")
+    await opened.settle()
+    assert opened.jumps[1:] == [("search.scope_anchor.sponsors", JUMP_MS)]
+    await opened.event(opened.chip("sponsors"), "click")  # the selected one
+    await opened.settle()
+    assert len(opened.jumps) == 2  # no change of scope, no scroll
+
+
+async def test_each_chip_has_an_anchor_before_it_and_reads_in_order(
+    opened: Shown,
+) -> None:
+    """The keys sit on empty gaps, so the chips read in order, one node each (D-242)."""
+    (row,) = [r for r in opened.find(ft.Row) if r.scroll is not None]
+    items = cast(list[ft.Row], row.controls[:-1])
+    anchors = [cast(ft.Container, item.controls[0]) for item in items]
+    assert [str(a.key) for a in anchors] == [
+        search_scopes.anchor_key(scope) for scope in search_scopes.SCOPE_LABELS
+    ]
+    assert all(a.content is None for a in anchors)  # nothing to read
+    assert [a.width for a in anchors] == [16, 8, 8, 8, 8]  # the gutter, then gaps
+    nodes = [cast(ft.MergeSemantics, item.controls[1]).content for item in items]
+    assert [cast(ft.Semantics, n).identifier for n in nodes] == [
+        f"search.scope.{scope}" for scope in search_scopes.SCOPE_LABELS
+    ]
 
 
 async def test_an_unknown_scope_opens_on_all(render: Render) -> None:

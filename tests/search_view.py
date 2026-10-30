@@ -31,6 +31,7 @@ import pytest
 from pycon_us.config import load_year
 from pycon_us.core.search import SearchResults, search, search_index
 from pycon_us.screens import search as screen
+from pycon_us.screens import search_scopes
 from pycon_us.services import use_services
 from pycon_us.state import Conference
 from pycon_us.ui import scaffold
@@ -74,14 +75,16 @@ ROUTES = [
 class Shown(harness.Shown):
     """The harness's ``Shown`` (``tests/harness.py``) on the app's Views.
 
-    It also records what the search screen asked for: its searches, the focus and its
-    sleeps.
+    It also records what the search screen asked for: its searches, the focus, its
+    scope row's jumps and its sleeps.
     """
 
     searches: list[tuple[str, str]] = field(default_factory=list)
     """Each ``search(index, query, scope)`` the screen ran, as (query, scope)."""
     focused: list[ft.TextField] = field(default_factory=list)
     """The fields asked to take the focus; no Flutter answers here."""
+    jumps: list[tuple[str, int]] = field(default_factory=list)
+    """Each keyed jump of the scope row (``search_scopes``), as (key, duration)."""
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
     """The screen's sleeps: the debounce waits until ``pause()`` releases it."""
 
@@ -211,7 +214,12 @@ async def render(
     async def focus(self: ft.TextField) -> None:
         harness.current(Shown).focused.append(self)
 
+    async def jump(_row: Any, key: str, *, duration: int, **_: Any) -> str:
+        harness.current(Shown).jumps.append((key, duration))
+        return "landed"
+
     monkeypatch.setattr(screen, "search", counted_search)
+    monkeypatch.setattr(search_scopes, "jump_to_key", jump)
     monkeypatch.setattr(ft.TextField, "focus", focus)
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the search module's only
