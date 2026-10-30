@@ -19,6 +19,7 @@ from pycon_us.core.search import SearchResults, search
 from pycon_us.screens import search as screen
 from pycon_us.screens import search_results, search_scopes
 from pycon_us.state import Conference
+from pycon_us.ui import scrolling
 from pycon_us.ui.scrolling import JUMP_MS
 from pycon_us.ui.semantics import semantics_key
 from tests import search_view
@@ -264,6 +265,39 @@ async def test_a_pick_slides_the_row_to_the_picked_chip(opened: Shown) -> None:
     await opened.event(opened.chip("sponsors"), "click")  # the selected one
     await opened.settle()
     assert len(opened.jumps) == 2  # no change of scope, no scroll
+
+
+async def test_a_drag_of_the_row_stops_a_waiting_jump(
+    render: Render, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A drag stops the opening jump's retries, which would snap the row back (#794).
+
+    On All the anchor is already in place, so the real ``jump_to_key()`` gets no
+    scroll end and would ask again after ``LANDING_S``.
+    """
+    shown = await render(Conference(data=DATA, source="bundled", version=1))
+    asks: list[object] = []
+
+    async def scroll_to(self: ft.Row, **kwargs: object) -> None:
+        asks.append(kwargs["scroll_key"])  # the row stays still: no scroll end
+
+    monkeypatch.setattr(search_scopes, "jump_to_key", scrolling.jump_to_key)
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.05)
+    monkeypatch.setattr(ft.Row, "scroll_to", scroll_to)
+    await shown.go("/search?scope=all")
+    assert len(asks) == 1
+    (row,) = [r for r in shown.find(ft.Row) if r.scroll is not None]
+    drag = {
+        "event_type": "user",
+        "direction": "forward",
+        "pixels": 0.0,
+        "min_scroll_extent": 0.0,
+        "max_scroll_extent": 300.0,
+        "viewport_dimension": 400.0,
+    }
+    await shown.event(row, "scroll", drag)
+    await asyncio.sleep(0.2)  # past every retry the jump had left
+    assert len(asks) == 1
 
 
 async def test_each_chip_has_an_anchor_before_it_and_reads_in_order(
