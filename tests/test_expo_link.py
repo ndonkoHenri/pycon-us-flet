@@ -18,8 +18,8 @@ from pycon_us.config import load_year
 from pycon_us.locations import booth_href, parent_of, query_of
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import expo_pane
-from pycon_us.screens.booth_card import BAND, card_layout, covered
 from pycon_us.screens.expo_camera import FIT, booth_rect, in_view, shows
+from pycon_us.screens.expo_layout import BAND, card_layout, covered, over_plan
 from pycon_us.ui.zoom_geometry import Size, Transform, fitted, max_scale
 from pycon_us.year_map import Booth
 from tests import links, test_expo_list
@@ -38,6 +38,9 @@ BODY = 100.0
 
 TOP = max_scale(NATURAL[0], fitted(BOX, NATURAL)[0])
 
+CROWDED = over_plan(BOX, fitted(BOX, NATURAL))
+"""Whether the zoom buttons' column reaches over the plan there: on a phone, yes."""
+
 open_at = links.open_at  # the fixtures, under this module's names
 render = test_expo_list.render
 
@@ -47,9 +50,9 @@ def booth(number: str) -> Booth:
     return next(each for each in YEAR.map.booths if each.number == number)
 
 
-def free(box: Size = BOX, body: float = BODY) -> float:
-    """How far down the viewer is in sight above a card of ``body``'s height."""
-    return box[1] - covered(box[1], body)
+def free(body: float = BODY) -> float:
+    """How far down the hall is in sight above a card of ``body``'s height."""
+    return BOX[1] - covered(BOX[1], body, crowded=CROWDED)
 
 
 async def lay_out(shown: Any, body: float = BODY) -> None:
@@ -117,7 +120,7 @@ def test_a_link_to_a_booth_off_the_plan_filters_the_list_to_it() -> None:
 def test_a_booth_in_sight_keeps_the_camera_where_it_was() -> None:
     """In sight at the start, the start; else in sight at fit, the fitted plan."""
     high = booth("342")
-    cover = covered(BOX[1], BODY)
+    cover = covered(BOX[1], BODY, crowded=CROWDED)
     kept = Transform(1.5, -60.0, -100.0)  # the pane's last zoom, 342 in it
     assert in_view(high, BOX, NATURAL, cover=cover, top=TOP, start=kept) == kept
     out = Transform(TOP, 0.0, 0.0)  # the top-left corner, far from 342
@@ -128,7 +131,7 @@ def test_a_booth_in_sight_keeps_the_camera_where_it_was() -> None:
 @pytest.mark.parametrize("number", [each.number for each in YEAR.map.booths])
 def test_any_booth_lands_above_its_card_at_the_least_zoom(number: str) -> None:
     """Every 2026 booth shows above a card, the translation in the viewer's bounds."""
-    cover = covered(BOX[1], BODY)
+    cover = covered(BOX[1], BODY, crowded=CROWDED)
     rect = booth_rect(booth(number), BOX, NATURAL)
     to = in_view(booth(number), BOX, NATURAL, cover=cover, top=TOP, start=FIT)
     assert shows(rect, to, BOX[0], BOX[1] - cover)
@@ -266,7 +269,12 @@ async def test_a_row_brings_its_booth_into_view_above_its_card(
     await lay_out(shown)
     assert [name for name, _ in viewer.calls] == ["reset", "zoom", "pan"]
     expected = in_view(
-        booth("407"), BOX, NATURAL, cover=covered(BOX[1], BODY), top=TOP, start=FIT
+        booth("407"),
+        BOX,
+        NATURAL,
+        cover=covered(BOX[1], BODY, crowded=CROWDED),
+        top=TOP,
+        start=FIT,
     )
     assert (viewer.scale, viewer.x, viewer.y) == pytest.approx(
         (expected.scale, expected.x, expected.y)

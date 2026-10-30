@@ -80,7 +80,7 @@ def in_view(
         box: The viewer's size; laid out, so not zero.
         natural: The plan image's size, in pixels.
         cover: How much of the pane, from its bottom, the card and the zoom buttons
-            take (``booth_card.covered()``).
+            take (``expo_layout.covered()``).
         top: The viewer's maximum zoom.
         start: Where the camera would go without the booth: the pane's last zoom.
     """
@@ -119,7 +119,7 @@ def use_camera(
         memory: The process's ``ViewMemory``, whose ``map_zooms`` keeps the zoom.
         zoom_key: The pane's slug in ``map_zooms``; empty for a View that keeps none.
         reveal: The booth a List row or a link picked, selected now; None otherwise.
-        cover: ``booth_card.covered()`` for the selected booth's card; 0 until its
+        cover: ``expo_layout.covered()`` for the selected booth's card; 0 until its
             body is measured.
     """
     placed: list[bool] = ft.use_memo(list, [])  # one for the hall's life
