@@ -105,6 +105,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 | UI flows while another build may run (parallel agents) | from a worktree with its own Flet clone, prefix with its own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-219, D-176) |
 | Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
 | Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
+| Feature matrix check (after editing `docs/feature-matrix.md`; `tests/test_check_matrix.py` runs it in pytest) | `uv run python -m tools.check_matrix` (add `--breakdown` for the fuller counts) |
 | A feed shifted to now, for real-time device checks (§9.1) | `uv run python -m tools.shifted_feed <session id> --in 5m [--move 15m]` |
 
 ## 3. Unit tests
