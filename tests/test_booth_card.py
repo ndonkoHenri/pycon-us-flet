@@ -13,7 +13,7 @@ import pytest
 
 from pycon_us.core.expo import ExpoBooth
 from pycon_us.prefs import Prefs
-from pycon_us.screens import booth_card, expo
+from pycon_us.screens import booth_card, expo, expo_layout
 from tests import links, test_expo_hall
 from tests.feeds import processed
 from tests.test_expo_hall import BOX, ExpoShown, Render
@@ -159,11 +159,11 @@ def zoom_in_top(pane: float, body: float) -> float:
     padding, the body's box (or its content and top padding when it fits), the gap
     and the buttons. Below 0, the Stack clips the button.
     """
-    row, box = booth_card.card_layout(pane, body)
-    shown = box if box is not None else body + booth_card.BODY_TOP
-    buttons = booth_card.ROW_DP if row else booth_card.COLUMN_DP
-    edge = booth_card.EDGE
-    return pane - edge - sum(booth_card.CARD_PADDING) - shown - edge - buttons
+    row, box = expo_layout.card_layout(pane, body)
+    shown = box if box is not None else body + expo_layout.BODY_TOP
+    buttons = expo_layout.ROW_DP if row else expo_layout.COLUMN_DP
+    edge = expo_layout.EDGE
+    return pane - edge - sum(expo_layout.CARD_PADDING) - shown - edge - buttons
 
 
 @pytest.mark.parametrize("pane", [200.0, 300.0, 360.0, 463.0, 464.0, 560.0, 900.0])
@@ -175,12 +175,12 @@ def test_the_zoom_buttons_stay_in_the_pane(pane: float, body: float) -> None:
     a half-pane box under it; the buttons go in a row there, and the box takes what
     is left when that is less than half the pane.
     """
-    assert zoom_in_top(pane, body) >= booth_card.EDGE
-    row, box = booth_card.card_layout(pane, body)
-    if pane < booth_card.ROW_UNDER:
+    assert zoom_in_top(pane, body) >= expo_layout.EDGE
+    row, box = expo_layout.card_layout(pane, body)
+    if pane < expo_layout.ROW_UNDER:
         assert row
     elif not row:  # the column, unless it leaves the plan too thin a band (D-377)
-        assert pane - booth_card.covered(pane, body) >= booth_card.BAND
+        assert pane - expo_layout.covered(pane, body) >= expo_layout.BAND
     if box is not None:
         assert box <= pane / 2
 

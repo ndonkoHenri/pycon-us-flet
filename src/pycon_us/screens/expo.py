@@ -35,8 +35,9 @@ from pycon_us.core.expo import ExpoBooth, expo_booths
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.slugs import room_sort_key
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.booth_card import BoothCard, card_layout, covered, hiring_line
+from pycon_us.screens.booth_card import BoothCard, hiring_line
 from pycon_us.screens.expo_camera import use_camera
+from pycon_us.screens.expo_layout import card_layout, covered, over_plan
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -324,12 +325,13 @@ def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
 
     item = next((each for each in booths if each.booth.number == selected), None)
     measured = body_size[1] if body_size[0] == selected else 0.0
+    crowded = over_plan(zoom.box, zoom.shown)  # a phone in portrait (D-443)
     use_camera(
         zoom,
         memory,
         zoom_key=zoom_key,
         reveal=item.booth if item is not None and reveal == selected else None,
-        cover=covered(zoom.box[1], measured) if measured else 0.0,
+        cover=covered(zoom.box[1], measured, crowded=crowded) if measured else 0.0,
     )
 
     @report_errors
@@ -358,7 +360,7 @@ def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
                 pulse_ms=pulse_ms,
             )
         )
-    row, box = card_layout(zoom.box[1], measured)
+    row, box = card_layout(zoom.box[1], measured, crowded=crowded)
     bottom: list[ft.Control] = [
         ft.Row(
             [zoom_buttons(zoom, SCREEN, row=row)], alignment=ft.MainAxisAlignment.END
