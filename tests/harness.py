@@ -68,6 +68,8 @@ class Shown:
     """The session ids whose row bodies (sessions and notices) ran, in order."""
     retaps: list[Callable[[], object] | None] = field(default_factory=list)
     """The re-tap action ``AppScaffold`` was given on each render, in order."""
+    still_bars: list[bool] = field(default_factory=list)
+    """``AppScaffold``'s ``still_bar`` on each render, in order (D-447)."""
     change_log: ChangeLog = field(default_factory=ChangeLog)
     """The ``ChangeLog`` store the screen was given: empty unless the test filled it."""
     layout: Layout = field(default_factory=Layout)
@@ -174,15 +176,17 @@ def _scaffold(
     actions: list[ft.Control] | None = None,
     on_retap: Callable[[], object] | None = None,
     fab: ft.FloatingActionButton | None = None,
+    still_bar: bool = False,
 ) -> ft.Control:
     """Stand in for ``AppScaffold``: the actions in a row, the body, the button under.
 
-    The row holds the actions as an app bar does; the title and the re-tap action are
-    recorded in the ``Shown`` of the screen that rendered it.
+    The row holds the actions as an app bar does; the title, the re-tap action and
+    ``still_bar`` are recorded in the ``Shown`` of the screen that rendered it.
     """
     if shown := _shown_now():
         shown.titles.append(title)
         shown.retaps.append(on_retap)
+        shown.still_bars.append(still_bar)
     return ft.Column(
         [ft.Row(actions or []), body, *([fab] if fab else [])], expand=True
     )

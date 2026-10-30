@@ -51,6 +51,7 @@ def AppScaffold(
     on_retap: Retap | None = None,
     fab: ft.FloatingActionButton | None = None,
     unknown: bool = False,
+    still_bar: bool = False,
 ) -> ft.View:
     """Return a screen's View: the app bar, the bottom bar, the Back rules and the body.
 
@@ -91,6 +92,11 @@ def AppScaffold(
         unknown: The View of a location no route has (``routes.NotFound``): its
             arrow, the Back key and the predictive gesture go to Now, as a root's
             Back does, and it is never where a new session returns (D-143, D-270).
+        still_bar: Keep the app bar's colour whatever scrolls in the body: for a
+            screen whose page never scrolls under the bar, only a box inside it, such
+            as the floor viewer's label card. Flutter's ``AppBar`` takes any scroll
+            in the body at depth 0 for the page's, and Flet has no
+            ``notification_predicate`` to say otherwise (F297, D-447).
 
     Returns:
         The View for this route level.
@@ -177,6 +183,10 @@ def AppScaffold(
             automatically_imply_leading=False,
             leading=None if is_root else back_arrow,
             actions=actions or [],
+            # The surface it has unscrolled, and no scrolled-under elevation, whose
+            # surface tint would colour it (F297, D-447).
+            bgcolor=ft.Colors.SURFACE if still_bar else None,
+            elevation_on_scroll=0 if still_bar else None,
         ),
         # On roots only: on pushed Views the bar moved with the page (D-144). From
         # 600 dp the rail beside the body takes its place (D-277).
