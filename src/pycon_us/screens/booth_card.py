@@ -21,7 +21,9 @@ clears the selection. A body taller than half the pane (many exhibitors, the lar
 text) scrolls in a box half the pane high, Close pinned beside it, so the zoom buttons
 and most of the plan stay in sight (D-370). In a pane too short for that under the
 buttons' column (landscape), the buttons go in a row and the box is what is left;
-so they do under a tall card that would leave the plan too thin a band (``card_layout()``). The card is a memoised component given
+so they do under a tall card that would leave the plan too thin a band, and where
+their column would reach over the fitted plan, as on a phone in portrait (the
+arithmetic is ``screens/expo_layout.py``'s, D-443). The card is a memoised component given
 values only (D-153, F150): the body's measured height lives in ``ExpoHall``, above it.
 """
 
@@ -37,7 +39,6 @@ from pycon_us.screens.map_job_fair import roles_phrase
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.semantics import named
-from pycon_us.ui.zoom import BUTTON_DP
 
 SCREEN = "expo"
 """The screen's name in the card's identifiers: ``expo.card``, ``expo.card.close``."""
@@ -56,90 +57,6 @@ LEAD = 56
 
 ROW_LOGO = 40
 """A shared booth's row logo, in dp: with 4 dp above and below, a 48 dp row."""
-
-EDGE = 16
-"""The bottom column's inset from the pane's edges, and its gap between buttons and card."""
-
-CARD_PADDING = (8, 16)
-"""The card's padding above and below its body, in dp."""
-
-BODY_TOP = 8
-"""The body's own padding above its measured content, inside the scroll box, in dp."""
-
-COLUMN_DP = 3 * BUTTON_DP + 2 * 8
-"""The zoom buttons' height in their column (``zoom_buttons()``): 160 dp."""
-
-ROW_DP = BUTTON_DP
-"""The zoom buttons' height in a row: 48 dp."""
-
-# Around the body box: the insets above and below the column, the gap, the card's padding.
-_AROUND = 3 * EDGE + sum(CARD_PADDING)
-
-ROW_UNDER = 2 * (COLUMN_DP + _AROUND)
-"""A pane shorter than this, in dp, puts the zoom buttons in a row (D-370).
-
-At this height half the pane is exactly what the buttons' column leaves the body.
-"""
-
-
-BAND = COLUMN_DP - ROW_DP
-"""The least plan the column leaves above a tall card before the buttons go in a row.
-
-112 dp, what the row gives back: a booth brought into view needs a band to land in
-(D-377), and at the fitted plan a 2026 booth is under 42 dp high.
-"""
-
-
-def card_layout(pane: float, measured: float) -> tuple[bool, float | None]:
-    """Return whether the zoom buttons go in a row, and the card body's scroll box.
-
-    The box is half the pane, or less when the buttons, the gap, the card's padding
-    and the pane's insets leave less, so the zoom buttons always stay in the pane
-    (D-370): a Stack clips what goes past its top. The buttons go in a row in a short
-    pane, and also when a tall card under their column would leave less than
-    ``BAND`` of the plan above it (D-377).
-
-    Args:
-        pane: The pane's height (the viewer's measured height); 0 before it is known.
-        measured: The body's measured content height; 0 before it is known.
-
-    Returns:
-        ``(row, box)``: ``row`` puts the buttons in a row; ``box`` is None while the
-        body, with its own top padding, fits.
-    """
-    row = 0 < pane < ROW_UNDER or (
-        pane > 0 and measured > 0 and pane - _cover(pane, measured, row=False) < BAND
-    )
-    return row, _box(pane, measured, row=row)
-
-
-def covered(pane: float, measured: float) -> float:
-    """Return how much of the pane, from its bottom, the card and the zoom buttons take.
-
-    The bottom column as ``card_layout()`` lays it out, with an inset above it too:
-    what lies higher is in sight (D-377).
-
-    Args:
-        pane: The pane's height (the viewer's measured height).
-        measured: The card body's measured content height.
-    """
-    row, _ = card_layout(pane, measured)
-    return _cover(pane, measured, row=row)
-
-
-def _box(pane: float, measured: float, *, row: bool) -> float | None:
-    """Return the card body's scroll box with the buttons laid out so, None if it fits."""
-    room = pane - (ROW_DP if row else COLUMN_DP) - _AROUND
-    box = max(0.0, min(pane / 2, room))
-    return box if pane and measured + BODY_TOP > box else None
-
-
-def _cover(pane: float, measured: float, *, row: bool) -> float:
-    """Return what the bottom column covers with the buttons laid out so, in dp."""
-    box = _box(pane, measured, row=row)
-    body = box if box is not None else BODY_TOP + measured
-    return _AROUND + max(body, BUTTON_DP) + (ROW_DP if row else COLUMN_DP)
-
 
 type OnBodySize = Callable[[ft.LayoutSizeChangeEvent], None]
 """``ExpoHall``'s handler for the card body's measured size."""
