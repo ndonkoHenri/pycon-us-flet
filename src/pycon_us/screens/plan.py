@@ -209,6 +209,14 @@ def PlanViewer(plan_id: str) -> ft.View:
         lambda: memory.plan_tables.get(view_path) or query.get(TABLE_PARAM, "")
     )
     selected = table if on_job_fair else ""
+    # The label's words' own height: they scroll only past the room under the pin.
+    label_height, set_label_height = ft.use_state(0.0)
+
+    @report_errors
+    def label_measured(e: ft.LayoutSizeChangeEvent) -> None:
+        set_label_height(e.height)
+
+    on_label_size = ft.use_callback(label_measured, [])
     ring_ms = prefs.motion_ms(PULSE_MS)
 
     @report_errors
@@ -285,7 +293,8 @@ def PlanViewer(plan_id: str) -> ft.View:
     # reads its three buttons together.
     card = []
     if pin is not None:
-        card.append(label_card(plan, pin, label_room(zoom.box, zoom.shown, pin)))
+        room = label_room(zoom.box, zoom.shown, pin)
+        card.append(label_card(plan, pin, room, label_height, on_label_size))
     if selected:
         card.append(
             table_card(

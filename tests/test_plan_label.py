@@ -66,15 +66,50 @@ def test_no_bound_before_the_viewer_is_laid_out() -> None:
     assert screen.label_room((0.0, 0.0), (0.0, 0.0), pin) is None
 
 
-async def test_the_card_scrolls_in_the_room_under_its_pin(render: Render) -> None:
-    """``?pin=103abc``: the card is bound by ``label_room()`` and its words scroll."""
-    plan = await render("?pin=103abc")
+def card_parts(plan: plan_view.Plan) -> tuple[ft.Card, ft.Column, ft.Column]:
+    """The label card, the ``Column`` that bounds its words and the one that measures them."""
     card = cast(ft.Card, plan.node("plan.label").content)
-    assert card.max_height is None  # not before the viewer is laid out
-    await plan.lay_out()
-    (pin,) = [p for p in PINS if p.key == "103abc"]
-    card = cast(ft.Card, plan.node("plan.label").content)
-    assert card.max_height == screen.label_room(BOX, fitted(BOX, (2048, 1583)), pin)
     words = cast(ft.Container, card.content).content
     assert isinstance(words, ft.Column)
-    assert words.scroll == ft.ScrollMode.AUTO
+    (lines,) = words.controls
+    assert isinstance(lines, ft.Column) and lines.on_size_change
+    return card, words, lines
+
+
+async def test_a_short_card_keeps_its_own_height(render: Render) -> None:
+    """``?pin=103abc`` at the default size: no bound and no scroll, so no stretch.
+
+    A scrolling ``Column`` takes the whole of its bound in Flet (its content's least
+    height is the bound), so a card that always scrolled stood ``label_room()`` tall
+    with two short lines in it, over the plan (D-444, PR #798's review).
+    """
+    plan = await render("?pin=103abc")
+    await plan.lay_out()
+    _, _, lines = card_parts(plan)
+    await plan.event(lines, "size_change", {"w": 300.0, "h": 44.0})
+    card, words, _ = card_parts(plan)
+    assert (card.max_height, words.scroll) == (None, None)
+
+
+async def test_a_tall_card_scrolls_in_the_room_under_its_pin(render: Render) -> None:
+    """``?pin=103abc`` at the largest text: the card is ``label_room()`` high and scrolls."""
+    plan = await render("?pin=103abc")
+    card, words, _ = card_parts(plan)
+    assert (card.max_height, words.scroll) == (None, None)  # not before layout
+    await plan.lay_out()
+    (pin,) = [p for p in PINS if p.key == "103abc"]
+    room = screen.label_room(BOX, fitted(BOX, (2048, 1583)), pin)
+    assert room is not None
+    _, _, lines = card_parts(plan)
+    await plan.event(lines, "size_change", {"w": 300.0, "h": room})
+    card, words, _ = card_parts(plan)
+    assert (card.max_height, words.scroll) == (room, ft.ScrollMode.AUTO)
+
+
+@pytest.mark.parametrize(
+    ("measured", "expected"), [(48.0, False), (76.0, False), (76.5, True)]
+)
+def test_the_words_scroll_only_past_the_room(measured: float, expected: bool) -> None:
+    """Words and their 12 dp padding above and below scroll only past the room."""
+    assert screen.scrolls(100.0, measured) is expected
+    assert screen.scrolls(None, measured) is False
