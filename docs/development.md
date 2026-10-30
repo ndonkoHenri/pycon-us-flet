@@ -44,6 +44,7 @@
 | Run the Maestro device journeys on a packaged build | `maestro --device emulator-5570 test --include-tags=journeys maestro` (or `--device <udid>`) | §5.9 |
 | Set up a second worktree of this repo | Clone the main checkout's `.flet-src` into it (`cp -cR`, never a link), then `uv sync --locked` | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
+| Check the feature matrix after editing it (ids, vocabulary, counts; also run by `tests/test_check_matrix.py`) | `uv run python -m tools.check_matrix` (`--breakdown` for the fuller counts) | — |
 | Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---

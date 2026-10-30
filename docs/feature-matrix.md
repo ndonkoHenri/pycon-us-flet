@@ -4,7 +4,7 @@
 
 It lists all **263** features catalogued from the Ionic app ([`research/feature-catalog.json`](research/feature-catalog.json), which also holds each feature's Ionic source and gotchas) plus our **9** additions `NEW-01`..`NEW-09`, each id **exactly once**. Ids are an inventory for traceability, not a contract: there is no "one test per id" rule and no parity gate (D-04). Issues cite the ids they cover (D-91). The plan is in [PLAN.md](../PLAN.md); the UX spec in [ux.md](ux.md); Flet gaps in [flet-gaps-and-extensions.md](flet-gaps-and-extensions.md).
 
-`tools/check_matrix.py` (P0, [decisions §M](decisions.md#m-naming-binding)) checks that every catalog id and every `NEW-` id appears exactly once, uses the vocabulary below, and that the counts tables below are current; run it after editing. It also prints fuller breakdowns (by exact disposition, by section and phase) on demand, so they are not kept by hand here.
+`tools/check_matrix.py` (P0, [decisions §M](decisions.md#m-naming-binding)) checks that every catalog id and every `NEW-` id appears exactly once, uses the vocabulary below, that each row sits in its id's section and each section's row count is right, and that the counts tables below are current; run it after editing (`uv run python -m tools.check_matrix`), and it prints a stale counts table as it should be. `tests/test_check_matrix.py` runs it, so the local checks (`tools/check.sh`) fail on a stale matrix (#802). `--breakdown` also prints fuller breakdowns (by exact disposition, by section and phase), so they are not kept by hand here.
 
 ## Legend
 
