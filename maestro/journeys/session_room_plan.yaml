@@ -1,0 +1,56 @@
+# P2-93's third journey: a session › its room's location card › the floor plan with
+# the room marked, zoomed in › Back to the session.
+#
+# At Friday 14:10 Now lists the panel (session 123) as happening now; it is in Grand
+# Ballroom B alone, on the Upper level plan, so session detail shows the room's card
+# (D-349). Offline (start_offline.yaml): the pins and plans are bundled (map.toml).
+appId: io.github.ndonkohenri.pyconus
+name: A session, its room's floor plan, Back
+tags:
+  - journeys
+  - venue
+  - map
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+- tapOn:
+    id: now.session.123
+- extendedWaitUntil:
+    visible:
+      id: session.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: session.location
+    direction: DOWN
+- assertVisible:
+    id: session.location
+    text: "Show Grand Ballroom B on the Upper level floor plan"
+- tapOn:
+    id: session.location
+- extendedWaitUntil:
+    visible:
+      id: plan.label
+    timeout: 15000
+- assertVisible: "Upper level floor plan, Grand Ballroom B marked"
+- assertVisible:
+    id: plan.zoom_out
+    enabled: false
+- tapOn:
+    id: plan.zoom_in
+- assertVisible:
+    id: plan.zoom_out
+    enabled: true
+
+# Back: the session, with its card; the plan is gone.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: session.location
+    timeout: 15000
+- assertNotVisible:
+    id: plan.label
+- assertVisible:
+    id: session.title

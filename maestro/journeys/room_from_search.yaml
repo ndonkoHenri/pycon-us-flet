@@ -1,0 +1,87 @@
+# P2-93's second journey: search Places for "104C" › Room 104C › its location card ›
+# the Concourse plan with the room marked › Back ×3, each Back leaving one View (the
+# plan, the room, search), back to the Map.
+#
+# Offline (start_offline.yaml): the rooms, the pins and the plans are bundled year data
+# (map.toml, D-36). Search opened from the Map starts on its Places scope (D-19).
+appId: io.github.ndonkohenri.pyconus
+name: Search a room, its floor plan, Back three times
+tags:
+  - journeys
+  - venue
+  - map
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+
+# Map › Search, on Places.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: map
+      NAME: "Map.*Tab 4 of 5"
+- extendedWaitUntil:
+    visible:
+      id: map.tab.rooms
+    timeout: 15000
+- tapOn:
+    id: app.search
+- extendedWaitUntil:
+    visible:
+      id: search.field
+    timeout: 15000
+- assertVisible:
+    id: search.scope.places
+    selected: true
+- inputText: 104C
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: search.room.room-104c
+    timeout: 15000
+
+# Room 104C › its location card › the plan, the room marked and named.
+- tapOn:
+    id: search.room.room-104c
+- extendedWaitUntil:
+    visible:
+      id: room.location
+    timeout: 15000
+- assertVisible:
+    id: room.location
+    text: "Show Room 104C on the Concourse level floor plan"
+- tapOn:
+    id: room.location
+- extendedWaitUntil:
+    visible:
+      id: plan.label
+    timeout: 15000
+- assertVisible: "Concourse level floor plan, Room 104C marked"
+- assertVisible:
+    id: plan.label
+    text: "Room 104C\nConcourse level · Education Summit / Charlas / Open spaces"
+
+# Back: the room. Back: search, with the query and the row. Back: the Map.
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: room.location
+    timeout: 15000
+- assertNotVisible:
+    id: plan.label
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: search.room.room-104c
+    timeout: 15000
+- assertVisible:
+    id: search.field
+    text: 104C
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: map.tab.rooms
+    timeout: 15000
+- assertNotVisible:
+    id: search.field
