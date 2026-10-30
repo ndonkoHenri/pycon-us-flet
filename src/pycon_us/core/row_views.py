@@ -330,8 +330,9 @@ def _sentence(text: str) -> str:
 def elapsed_phrase(elapsed: int) -> str:
     """Return the sentence that ends the phrase of a row that is on.
 
-    "60 percent elapsed." In the phrase, not on the bar: merged into the row, its value
-    would be a bare "60", and Flet sends ``semantics_value`` as a number, "60.0".
+    "60 percent elapsed." In the phrase, not on the bar: merged into the row, the bar's
+    value would be read as a bare "60". Flet sent ``semantics_value`` as a number, "60.0",
+    until the pin ``22a6dcb16`` (#210); the phrase still says what the number means.
 
     Args:
         elapsed: The share of the session that has passed, in whole percent.
