@@ -107,7 +107,15 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
 ```
 
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
-1. In the bump's own worktree, move its `.flet-src` to the new SHA (`git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>`; an APFS clone has its own `.git` since D-451, so this moves nothing else) and write the SHA to `.flet-ref`. **Right after the merge**, whoever merged moves the main checkout's `.flet-src` the same way, then runs `uv sync --locked` and `rm -rf build` there, and checks the pin (above); every other worktree then replaces its clone (§5.8). Nobody waits on the owner for this (D-451).
+1. In the bump's own worktree, move its `.flet-src` to the new SHA and write the SHA to `.flet-ref`. **Right after the merge**, whoever merged moves the main checkout's `.flet-src` the same way, then runs `uv sync --locked` and `rm -rf build` there, and checks the pin (above); every other worktree then replaces its clone (§5.8). Nobody waits on the owner for this (D-451).
+   ```bash
+   # A clone with its own .git folder only (D-451). A link, or a .git FILE (a copy made before D-451), would
+   # move someone else's checkout: replace it (§5.8) instead.
+   test ! -L .flet-src && test -d .flet-src/.git || { echo "replace .flet-src first (§5.8)"; exit 1; }
+   git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
+   # The flet package's wheel build folder survives a checkout, and its stale files would ship (§5.8).
+   rm -rf .flet-src/sdk/python/packages/flet/build
+   ```
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
@@ -394,7 +402,7 @@ cd .flet-src/client && flutter run -d emulator-5554    # or -d <simulator udid>
 - `-w` also opens a browser tab; `BROWSER=true` stops that.
 - An "Exception in ASGI application" traceback ending in "Web root path not found: …/flet_web/web" on any HTTP `GET /` (a browser tab, `curl`) is harmless: a source checkout has no built web client, and the native client uses only the WebSocket.
 - Stopping `flet run` can leave the app's Python child listening on port 8550, and the next `flet run -p 8550` then cannot bind. `lsof -nP -iTCP:8550 -sTCP:LISTEN` names the process; kill it.
-- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src checkout -- <path>`. In a worktree of your own Flet repo, never restore all of `client/`, which would discard your edits. In a worktree's clone (§5.8), copy the three files back from the main checkout's `.flet-src` with `cp` instead: git commands that write would act on the main checkout's Flet worktree.
+- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src restore --source=HEAD --worktree -- <path>`, in the main checkout and in a worktree's clone alike: each has its own `.git` folder (D-451), and copying them from the main checkout would bring another pin's files during a bump. A clone with a `.git` file (made before D-451) takes no git write: replace it first (§5.8). Never restore all of `client/`.
 - Stop with `q` in terminal 2 and Ctrl+C in terminal 1.
 
 What is different in the companion client:
