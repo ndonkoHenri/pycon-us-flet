@@ -91,27 +91,32 @@ Run from a checkout, flet-cli instead finds `sdk/python/templates/build` and the
 **The setup.**
 - `.flet-ref` (committed) holds one line: the pinned 40-character `flet-dev/flet` commit SHA. It is the single pin for development, CI and builds.
 - `.flet-src` (git-ignored) is a checkout of `flet-dev/flet` at that SHA:
-  - For contributors, a clone.
-  - For the owner, a `git worktree` of his Flet repo. His main checkout stays free for upstream work, and the app always builds from the pin.
+  - In the main checkout (and for contributors), a clone of its own, never a `git worktree` of someone's Flet repo (D-451): the agents keep it at the pin and move it after every bump, without waiting on anyone, and nobody's Flet work shares its git metadata. Until 2026-10-31 the owner's was a worktree of his Flet repo, which only he could move, so it stayed at the old pin after #808.
   - In a second worktree of this repo (an agent's, for example), an APFS clone of the main checkout's `.flet-src`, never a link to it: every build writes a wheel build folder inside the Flet checkout, so linked worktrees broke each other's builds (§5.8, D-219).
 - `pyproject.toml` points uv at the packages in `.flet-src` (`[tool.uv.sources]`) and tells `flet build` to bundle the same `flet` (`[tool.flet.dev_packages]`, §3.1).
 
 ```bash
-# Contributors: a fresh clone at the pin.
+# The main checkout (and contributors): a fresh clone at the pin (about 10 s).
 git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
 
-# Owner: a worktree of an existing Flet checkout.
-git -C ../../flet worktree add --detach "$PWD/.flet-src" "$(cat .flet-ref)"
-
 # Check the pin before building anything for testers: HEAD, then the files (about 9 s).
-# A worktree's clone (§5.8) reports the main checkout's HEAD, so HEAD alone can pass on stale files.
+# A worktree's APFS clone (§5.8) keeps the HEAD it was copied at, so HEAD alone can pass on stale files.
 test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
   && git --no-optional-locks -C .flet-src diff --quiet HEAD && echo "Flet pin OK"
 ```
 
 **Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
-1. Check out the new SHA in the main checkout's `.flet-src`, and write it to `.flet-ref`. Every other worktree then replaces its clone (§5.8). The main checkout is the owner's: an agent bumping from its own worktree makes its `.flet-src` a fresh `git clone --filter=blob:none` of flet-dev/flet at the new SHA (the contributors' lines above; about 10 s, #445), never a checkout in the APFS clone, whose `.git` names the owner's Flet worktree (§5.8). The owner moves the main checkout when the bump merges.
+1. In the bump's own worktree, move its `.flet-src` to the new SHA and write the SHA to `.flet-ref`. **Right after the merge**, whoever merged moves the main checkout's `.flet-src` the same way, then runs `uv sync --locked` and `rm -rf build` there, and checks the pin (above); every other worktree then replaces its clone (§5.8). Nobody waits on the owner for this (D-451).
+   ```bash
+   # A clone with its own .git folder only (D-451). A link, or a .git FILE (a copy made before D-451), would
+   # move someone else's checkout: replace it (§5.8) instead.
+   test ! -L .flet-src && test -d .flet-src/.git || { echo "replace .flet-src first (§5.8)"; exit 1; }
+   git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
+   # Each bundled package's wheel build folder (flet's and the extensions', [tool.flet.dev_packages]) survives a
+   # checkout, and its stale files would ship (§5.8). No Flet package tracks a top-level build/ folder.
+   rm -rf .flet-src/sdk/python/packages/*/build
+   ```
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
@@ -398,7 +403,7 @@ cd .flet-src/client && flutter run -d emulator-5554    # or -d <simulator udid>
 - `-w` also opens a browser tab; `BROWSER=true` stops that.
 - An "Exception in ASGI application" traceback ending in "Web root path not found: …/flet_web/web" on any HTTP `GET /` (a browser tab, `curl`) is harmless: a source checkout has no built web client, and the native client uses only the WebSocket.
 - Stopping `flet run` can leave the app's Python child listening on port 8550, and the next `flet run -p 8550` then cannot bind. `lsof -nP -iTCP:8550 -sTCP:LISTEN` names the process; kill it.
-- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src checkout -- <path>`. In a worktree of your own Flet repo, never restore all of `client/`, which would discard your edits. In a worktree's clone (§5.8), copy the three files back from the main checkout's `.flet-src` with `cp` instead: git commands that write would act on the main checkout's Flet worktree.
+- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src restore --source=HEAD --worktree -- <path>`, in the main checkout and in a worktree's clone alike: each has its own `.git` folder (D-451), and copying them from the main checkout would bring another pin's files during a bump. A clone with a `.git` file (made before D-451) takes no git write: replace it first (§5.8). Never restore all of `client/`.
 - Stop with `q` in terminal 2 and Ctrl+C in terminal 1.
 
 What is different in the companion client:
@@ -538,7 +543,8 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/
 
 **The Flet clone.**
 - It took 2 s for the 178 MB checkout (8,400 files). It leaves out the `flet` package's `build/` folder, which the main checkout's own builds left there, for the reasons above.
-- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits it or a clone (D-213). Cloned from a `git worktree` of a Flet repo (the owner's setup, §2.2), the clone keeps the `.git` file, which names that same Flet worktree: git reads work in the clone (`rev-parse`, `diff`), but a command that writes there (`checkout`, `reset`) would move the main checkout's `.flet-src`. So a clone's HEAD is the main checkout's, and the pin check (§2.2) compares the clone's files too: after a bump in the main checkout, HEAD alone would pass on a clone still at the old pin.
+- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits Flet's files in it or a clone (D-213). It is a plain clone with its own `.git` folder (D-451), so a worktree's APFS clone carries a `.git` of its own too, and a checkout there moves only that clone. The pin check (§2.2) still compares the clone's files: a clone copied before a bump keeps the old HEAD and files until it is replaced.
+- Before D-451 the main checkout's `.flet-src` was a `git worktree` of the owner's Flet repo, whose `.git` file each clone kept, so a checkout in a clone moved the owner's Flet worktree. A clone made from that setup still has the `.git` file (`test -f .flet-src/.git`): replace it, never run a git write in it.
 - After a pin bump (§2.2), replace the clone: `rm -rf .flet-src`, then the Flet lines again.
 - If the wheel step fails with `[Errno 17]` or `[Errno 66]` after an interrupted build, delete your clone's leftovers, `rm -rf .flet-src/sdk/python/packages/flet/build`, and build again. Never clean the main checkout's `.flet-src` from a worktree.
 - `rm -rf build` and `flet clean` leave the clone alone: it lives outside `build/`.
