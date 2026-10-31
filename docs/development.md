@@ -113,8 +113,9 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
    # move someone else's checkout: replace it (§5.8) instead.
    test ! -L .flet-src && test -d .flet-src/.git || { echo "replace .flet-src first (§5.8)"; exit 1; }
    git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
-   # The flet package's wheel build folder survives a checkout, and its stale files would ship (§5.8).
-   rm -rf .flet-src/sdk/python/packages/flet/build
+   # Each bundled package's wheel build folder (flet's and the extensions', [tool.flet.dev_packages]) survives a
+   # checkout, and its stale files would ship (§5.8). No Flet package tracks a top-level build/ folder.
+   rm -rf .flet-src/sdk/python/packages/*/build
    ```
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
