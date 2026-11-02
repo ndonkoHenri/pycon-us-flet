@@ -121,7 +121,7 @@ maintainers, not for you:
 | [Reviews and merging](AGENTS.md#reviews-and-merging): the merge gate, second opinions, agents merging their own PRs | Maintainers do this. You get a review and a merge, or a reason. |
 | [Project board](AGENTS.md#project-board), and settling decisions in `docs/decisions.md` | Maintainers do this. |
 | [Screenshots](AGENTS.md#pull-requests) on the `pr-assets` branch | It needs write access. Use the PR instead. |
-| [`.flet-src` per worktree](AGENTS.md#working-with-flet) and a pub cache of your own | Only for parallel builds. One clone needs neither. |
+| [`.flet-src` per worktree](AGENTS.md#working-with-flet) and a pub cache of your own | Only for parallel builds. One clone needs just the `.flet-src` that §5.1 sets up, and no pub cache of its own. |
 
 The rest applies to everyone.
 
