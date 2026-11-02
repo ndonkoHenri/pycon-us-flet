@@ -49,7 +49,6 @@ from pycon_us.screens.session_extras import (
     ShareButton,
     open_space_extras,
 )
-from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -63,6 +62,7 @@ from pycon_us.ui.rows import LinkTile, SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice, use_recent_changes
+from pycon_us.ui.states import not_found
 from pycon_us.ui.when_where import WhenAndWhere
 from pycon_us.ui.widths import READING, sides, use_margin
 from pycon_us.year_keynotes import keynote_of

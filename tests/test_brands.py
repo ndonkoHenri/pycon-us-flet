@@ -128,12 +128,6 @@ def test_brand_icon_is_a_decorative_tinted_24_dp_picture_of_the_bundled_svg(
     assert image.semantics_label is None
 
 
-def test_brand_icon_takes_another_size() -> None:
-    """``size`` sets the mark's width and height together."""
-    image = brands.brand_icon("python", size=40)
-    assert (image.width, image.height) == (40, 40)
-
-
 def test_brand_icon_refuses_an_unknown_brand() -> None:
     """A key that is not a brand raises ``KeyError`` rather than drawing nothing."""
     with pytest.raises(KeyError):

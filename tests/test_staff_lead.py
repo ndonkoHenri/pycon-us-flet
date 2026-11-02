@@ -73,7 +73,7 @@ async def test_the_route_opens_only_for_the_lead_rule(
 
 async def test_a_signed_out_session_is_refused(show: Show) -> None:
     """Signed out, a deep link to the scanner shows the state, not the screen."""
-    assert not is_open(await show(Account(restored=True)))
+    assert not is_open(await show(Account()))
 
 
 async def test_without_a_mock_url_the_route_is_refused(show: Show) -> None:

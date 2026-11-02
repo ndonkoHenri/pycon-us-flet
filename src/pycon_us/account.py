@@ -70,7 +70,6 @@ class Account:
     """The mock account this device is signed in to, if any (architecture §6.1).
 
     Attributes:
-        restored: Whether ``restore`` has run; until then ``signed_in`` means nothing.
         signed_in: Whether an account and both secrets are saved and in effect.
         signing_in: Whether a sign-in is under way: the screen's progress and the
             single flight (AUTH-02).
@@ -91,7 +90,6 @@ class Account:
             (``services.favorites_sync``, D-406). The Account screen says so (#688).
     """
 
-    restored: bool = False
     signed_in: bool = False
     signing_in: bool = False
     email: str = ""
@@ -146,12 +144,6 @@ class Account:
             storage: Where ``pycon.account`` is.
             credentials: Where the key and the secret are.
         """
-        try:
-            await self._restore(storage, credentials)
-        finally:
-            self.restored = True
-
-    async def _restore(self, storage: Storage, credentials: CredentialStorage) -> None:
         try:
             stored = await storage.read(ACCOUNT)
         except SERVICE_ERRORS:

@@ -53,7 +53,6 @@ def every_flag_set() -> list[dict[str, bool]]:
 def sponsor(**changes: object) -> Account:
     """A signed-in account with ``lead_retrieval`` only, as the seeded sponsor."""
     fields: dict[str, object] = {
-        "restored": True,
         "signed_in": True,
         "lead_retrieval": True,
     }
@@ -137,7 +136,7 @@ def test_the_lead_scanner_is_the_staff_tool_s_page_under_more() -> None:
         ({}, sponsor(), "auto", False),  # no mock URL: the scanner isn't there (D-51)
         (MOCK, sponsor(lead_retrieval=False, door_check=True), "auto", False),
         (MOCK, sponsor(lead_retrieval=False), "lead", False),  # an attendee
-        (MOCK, Account(restored=True), "lead", False),  # signed out
+        (MOCK, Account(), "lead", False),  # signed out
     ],
 )
 def test_a_cold_start_or_sign_in_lands_on_the_scanner_only_for_a_sponsor(

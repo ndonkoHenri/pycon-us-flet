@@ -89,7 +89,7 @@ async def ask(
     It returns once the sheet shows, or at once when there is nothing to ask: no E3
     (the companion app, D-60), a primer already up, or an OS that allows notifications
     already, won't ask again, or did not say. The sheet's answer is handled by its
-    buttons and its dismissal (``_answer()``).
+    buttons and its dismissal (``answer()``).
 
     Args:
         page: The session's page.

@@ -208,7 +208,6 @@ def test_a_door_lookup_reads_the_attendee_and_the_door_fields() -> None:
     assert parse_attendee_products(reply) == AttendeeProducts(
         "MOCK0002",
         "Grace Sample",
-        2,
         (("Tutorials", (Item(11, "Wed May 13 1:30 PM - Async in depth", 1, 1),)),),
         dietary="",
         has_allergy=True,
@@ -234,7 +233,6 @@ def test_a_malformed_item_or_empty_category_is_left_out() -> None:
     good = {"product_id": 1, "product_name": "Talk", "redeemable": 0, "purchased": 1}
     reply = {
         "attendee_access_code": "MOCK0001",
-        "attendee_id": True,
         "redeemable_products_by_category": {
             "B": [good, {**good, "redeemable": -1}, {**good, "purchased": 1.0}, "x"],
             "A": [{**good, "product_name": ""}],
@@ -244,7 +242,7 @@ def test_a_malformed_item_or_empty_category_is_left_out() -> None:
         "has_allergy": "yes",
     }
     assert parse_attendee_products(reply) == AttendeeProducts(
-        "MOCK0001", "", None, (("B", (Item(1, "Talk", 0, 1),)),)
+        "MOCK0001", "", (("B", (Item(1, "Talk", 0, 1),)),)
     )
 
 

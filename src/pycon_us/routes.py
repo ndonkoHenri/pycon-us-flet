@@ -313,7 +313,7 @@ ROUTES = [
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]
-"""Every route of P0 and P1's More pages; later phases add theirs (architecture §5.2).
+"""Every route of the app (architecture §5.2).
 
 ``/search`` is a global modal (D-19): the Router builds it over the last non-modal
 location, and our ``page.on_view_pop`` returns each Back one step.

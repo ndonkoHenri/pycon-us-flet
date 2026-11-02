@@ -54,11 +54,10 @@ and CoC incident (``mask_violation``, #760)."""
 
 
 def seeded(role: str) -> Account:
-    """A restored ``Account`` signed in as the mock's seeded account of ``role``."""
+    """An ``Account`` signed in as the mock's seeded account of ``role``."""
     (seed,) = [a for a in json.loads(SEED.read_text())["accounts"] if a["role"] == role]
     flags = {FLAGS[name]: value for name, value in seed["features"].items()}
     return Account(
-        restored=True,
         signed_in=True,
         email=seed["email"],
         nickname=seed["nickname"],
@@ -173,7 +172,7 @@ async def test_no_mock_url_or_signed_out_shows_no_staff_rows(
 ) -> None:
     """Without a mock URL (D-51), or signed out, nothing is listed."""
     assert staff_rows(await show_more(seeded("all"), mock_url=False)) == []
-    assert staff_rows(await show_more(Account(restored=True))) == []
+    assert staff_rows(await show_more(Account())) == []
 
 
 async def test_the_lead_scanner_row_says_the_outbox_counts_until_they_sync(

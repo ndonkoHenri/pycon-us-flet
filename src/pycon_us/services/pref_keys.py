@@ -1,8 +1,8 @@
 """The SharedPreferences key table (STORE-01; decisions §M, D-49, D-108).
 
 Every small value the app keeps is a ``Pref`` here, prefixed ``pycon.``, with its type
-and default: the app-wide keys in ``APP_PREFS``, the per-year ones built by the functions
-below it (D-48, D-466). ``services/storage.py``'s ``Storage`` reads and writes them.
+and default: the app-wide keys as constants, the per-year ones built by the functions
+below them (D-48, D-466). ``services/storage.py``'s ``Storage`` reads and writes them.
 """
 
 from dataclasses import dataclass
@@ -65,19 +65,6 @@ Lead scanner asks again. In no store: the scanner reads it as it opens (D-423)."
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
-
-APP_PREFS: tuple[Pref[Any], ...] = (
-    THEME,
-    HIGH_CONTRAST,
-    ONBOARDED,
-    EXCLUDED_TRACKS,
-    REMINDERS,
-    DEV,
-    START_SCREEN,
-    SCANNER_CONSENT,
-    ACCOUNT,
-)
-"""Every app-wide key; per-year keys are built by the functions below."""
 
 
 def favorites(year: int) -> Pref[list[str]]:

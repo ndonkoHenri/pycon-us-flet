@@ -30,7 +30,7 @@ def test_without_the_extension_there_is_no_keystore() -> None:
     """Outside a packaged build (the companion app, pytest) no ``SecureStorage`` is made."""
     assert capabilities.SECURE_STORAGE is False
     assert secure_storage() is None
-    assert CredentialStorage().persistent is False
+    assert CredentialStorage().secure is None
 
 
 def test_a_packaged_build_keeps_them_after_the_first_unlock_on_this_device_only(
@@ -67,7 +67,6 @@ async def test_the_keystore_holds_both_under_their_own_keys(
 ) -> None:
     """Write, read and remove go to ``pycon.api_key`` and ``pycon.api_secret``."""
     stored = CredentialStorage(secure=keystore)
-    assert stored.persistent
     assert await stored.write("mock-key-all", "mock-secret-all") is True
     assert keystore.values == {API_KEY: "mock-key-all", API_SECRET: "mock-secret-all"}
     assert await stored.read() == ("mock-key-all", "mock-secret-all")
