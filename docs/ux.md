@@ -214,7 +214,7 @@ Material Icons only: `_OUTLINED` when unselected or decorative, filled when sele
 - No ambient motion: pins and highlights pulse at most twice; nothing rotates or auto-advances; FAB labels never collapse on a timer.
 - **Reduced motion (D-173):** `await ft.SemanticsService().get_accessibility_features()` at start and in `app.on_resume()` (no change event, **GAP** U17), so a change in the OS settings applies on the next resume, without a restart (on Android a change made while the app is in the background can take one more resume until U17, D-183; until then, scrolls keep their full length). With `disable_animations` (Android's Remove animations) or `reduce_motion` (iOS Reduce Motion), durations are 0, `Shimmer` becomes static placeholders, scrolls jump, and pins are still. Scheme changes keep Flutter's 200 ms crossfade: an opacity change, not motion (D-173). Every custom animation asks `prefs.motion_ms(ms)`, which returns `ms` or 0 (the flag is `Prefs.reduce_motion`, not persisted). Page transitions stay the platform's: Android's setting already makes them instant in Flutter, and on iOS the slide keeps the edge swipe. Progress indicators keep moving while work runs.
 
-### 3.9 Shared components (decisions §M names, grouped in `ui/`: `scaffold.py`, `status_strip.py`, `rows.py`, `session_rows.py`, `row_lines.py`, `time_gutter.py`, `badges.py`, `favorite.py`, `states.py`)
+### 3.9 Shared components (grouped in `ui/`: `scaffold.py`, `status_strip.py`, `rows.py`, `session_rows.py`, `row_lines.py`, `time_gutter.py`, `badges.py`, `favorite.py`, `states.py`)
 
 | Component | Flet building blocks | Spec | Accessibility |
 |---|---|---|---|

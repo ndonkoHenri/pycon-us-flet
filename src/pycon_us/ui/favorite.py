@@ -1,4 +1,4 @@
-"""The star and what a favourites edit says (decisions §M): saving to My schedule.
+"""The star and what a favourites edit says: saving to My schedule.
 
 ``FavoriteButton`` is the one favourite control (D-30): a 48 dp star on every session
 row and in session detail. A list owner gets the one handler its stars share from
