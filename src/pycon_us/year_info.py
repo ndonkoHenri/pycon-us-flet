@@ -5,17 +5,16 @@ Social) say what the year's ``content.toml`` holds for them (D-45, INFO-05): eac
 table is a dataclass here, built through ``year_schema.build()`` as a field of
 ``config.Content``, and ``check_info()``, which ``config`` runs on every load, checks its
 rules. A module of its own, as the Open spaces and Lightning talks pages' is
-(``year_pages``, D-205), so ``config.py`` stays under D-66's ~400 lines while the six
-pages' tables arrive.
+(``year_pages``, D-205), so ``config.py`` stays under D-66's ~400 lines.
 
-So far Wi-Fi has its table, ``[wifi]`` (``WifiInfo``, D-280), Help & safety its two,
+Wi-Fi has its table, ``[wifi]`` (``WifiInfo``, D-280), Help & safety its two,
 and Venue & hours its ``[[venue_hours]]`` (D-282), whose dataclasses are
 ``core.hours``' since the open-now rule reads them, as feed processing reads
 ``core.rules``' display-time overrides. The pages of links, About the PSF's ``[psf]``
 (D-283) and Social's ``[social]`` (D-284), have theirs in ``year_links``, split from
-this module at D-66's ~400 lines (#532); ``check_info()`` runs their checks too. The
-other pages' issues add theirs, with their rules, to this module. Until a page has its table, or for a year that has none,
-the page shows the feed's own block for it (``ui.info_page``).
+this module at D-66's ~400 lines (#532); ``check_info()`` runs their checks too. For a
+year without a page's table, the page shows the feed's own block for it
+(``ui.info_page``).
 
 The sponsor credits (D-337): ``[sponsor_credits]`` (``SponsorCredits``), the sponsor
 who provides the Wi-Fi and the one who provides the quiet room, each by its slug with the

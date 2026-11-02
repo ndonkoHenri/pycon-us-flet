@@ -23,7 +23,7 @@ prefs, store = memory_storage.prefs, memory_storage.store
 
 
 ALL_PREFS = [
-    *pref_keys.APP_PREFS,
+    *(value for value in vars(pref_keys).values() if isinstance(value, Pref)),
     pref_keys.favorites(2026),
     pref_keys.staff_sponsor(2026),
     pref_keys.staff_door_session(2026),
@@ -36,14 +36,6 @@ def test_every_key_is_prefixed_and_listed_once() -> None:
     keys = [pref.key for pref in ALL_PREFS]
     assert all(key.startswith("pycon.") for key in keys)
     assert len(keys) == len(set(keys))
-
-
-def test_app_prefs_lists_every_app_wide_key_in_the_module() -> None:
-    """``APP_PREFS`` holds exactly the module's ``Pref`` constants."""
-    module_prefs = {
-        id(value) for value in vars(pref_keys).values() if isinstance(value, Pref)
-    }
-    assert module_prefs == {id(pref) for pref in pref_keys.APP_PREFS}
 
 
 @pytest.mark.parametrize("pref", ALL_PREFS, ids=lambda pref: pref.key)

@@ -94,25 +94,24 @@ def calendar_file(
     return "".join(_fold(line) + "\r\n" for line in lines).encode()
 
 
-def file_slug(name: str, *, fallback: str = "session") -> str:
+def file_slug(name: str) -> str:
     """Return a calendar file's name without ``.ics``, from what it holds: its title.
 
     Lower-case ASCII words joined by ``-``, accents dropped (``Café`` is ``cafe``), cut
     after a whole word at ``FILE_SLUG_CHARS``, so the Files app and Android's
     SnackBar show a name a person recognises:
     ``python-for-humans-designing-python-code``
-    (D-272). A name with no such word (all in another script) gives ``fallback``.
+    (D-272). A name with no such word (all in another script) gives ``session``.
 
     Args:
-        name: The session's name, or what an export holds.
-        fallback: The slug when ``name`` gives none.
+        name: The session's name.
     """
     folded = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     slug = _NOT_SLUG.sub("-", folded.lower()).strip("-")
     if len(slug) > FILE_SLUG_CHARS:
         cut = slug[: FILE_SLUG_CHARS + 1]
         slug = cut.rsplit("-", 1)[0] if "-" in cut else slug[:FILE_SLUG_CHARS]
-    return slug or fallback
+    return slug or "session"
 
 
 def _event(

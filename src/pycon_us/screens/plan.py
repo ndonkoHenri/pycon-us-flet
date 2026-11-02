@@ -43,13 +43,13 @@ from pycon_us.screens.plan_tables import (
     table_area,
     table_card,
 )
-from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import THEME
 from pycon_us.state import use_conference
 from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.states import not_found
 from pycon_us.ui.zoom import RESET_VIEW, use_zoom, zoom_buttons, zoom_layer
 from pycon_us.ui.zoom_geometry import Size, centred_on
 from pycon_us.year_map import EXPO_PLAN, JOB_FAIR_PLAN, Pin, Plan

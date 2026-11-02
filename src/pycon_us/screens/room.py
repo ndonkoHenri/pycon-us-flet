@@ -38,7 +38,6 @@ from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.room_days import SCREEN, day_list, row_key
 from pycon_us.screens.schedule_days import SPRINTS
-from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import THEME
@@ -51,7 +50,7 @@ from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
-from pycon_us.ui.states import EmptyState
+from pycon_us.ui.states import EmptyState, not_found
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 from pycon_us.year_map import MapData

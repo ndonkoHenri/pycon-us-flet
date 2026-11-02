@@ -105,7 +105,8 @@ class ReminderSettings:
         """Return whether the conference moments of ``category`` are on.
 
         Args:
-            category: One of ``year_moments.CATEGORIES``.
+            category: ``"lightning"``, ``"open_space"`` or ``"keynote"``, as
+                ``year_moments.EventReminder.category``.
 
         Raises:
             KeyError: ``category`` is not one of them.

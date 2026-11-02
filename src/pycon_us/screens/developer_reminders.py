@@ -41,7 +41,8 @@ class Kind:
     """A kind of reminder the app sends, as its test row shows it.
 
     Attributes:
-        key: ``"session"``, or one of ``year_moments.CATEGORIES``.
+        key: ``"session"``, or a moment's category, as
+            ``year_moments.EventReminder.category``.
         name: Its name in the outcome's words, e.g. "Lightning talk reminders".
         title: The row's title, a verb first.
         icon: The row's icon: the page the kind opens, as More draws it.

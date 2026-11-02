@@ -128,8 +128,8 @@ def favorites() -> Favorites:
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out account, restored."""
-    return Account(restored=True)
+    """A signed-out account."""
+    return Account()
 
 
 @pytest.fixture

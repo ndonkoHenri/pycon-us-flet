@@ -31,7 +31,6 @@ import flet as ft
 from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -48,7 +47,7 @@ from pycon_us.ui.session_rows import (
     use_recent_changes,
     use_session_views,
 )
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList, not_found
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import Track
 
