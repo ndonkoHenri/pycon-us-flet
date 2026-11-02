@@ -679,7 +679,7 @@ Built in P0-10..P0-12: `Speaker` (`id`, `name`, `photo_url`, `bio`), `Session` (
 
 ### 7.5 Queries (`core/queries.py`, `timeline.py`, `agenda.py`, `search.py`)
 
-One module per family (D-185): `queries.py` holds `days()`, `fold()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202); `sponsors.py` a sponsor by its slug (D-261); `jobs.py` a job listing's roles and a sponsor's listings (D-278); `expo.py` the expo's booths and the job fair's tables (D-254). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
+One module per family (D-185): `queries.py` holds `days()`, `fold()`, `matching()` and `speaker_order()`; `timeline.py` the schedule queries, the one `Slot`, `DaySessions` and `schedule_order`; `agenda.py` Now & Next and My schedule; `search.py` the index and the matching; `rooms.py` the Map's rooms list (D-188); `speakers.py` the Speakers list (D-189); `sprints.py` the Sprints page (D-202); `sponsors.py` a sponsor by its slug (D-261); `jobs.py` a job listing's roles and a sponsor's listings (D-278); `expo.py` the expo's booths and the job fair's tables (D-254). Every query that returns sessions returns the model's own `Session` objects, which compare by identity, never ids.
 
 | Query | Rule | Features |
 |---|---|---|
