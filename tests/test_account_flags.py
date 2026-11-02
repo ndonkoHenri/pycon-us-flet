@@ -79,7 +79,7 @@ async def signed_in(
 
     The transport is released for the sign-in and held again after it.
     """
-    store = Account(restored=True)
+    store = Account()
     api = client(held, store)
     held.release.set()
     outcome = await store.sign_in(
@@ -226,7 +226,7 @@ async def test_signed_out_or_without_a_client_nothing_is_sent(
     held: Held, storage: Storage, credentials: CredentialStorage
 ) -> None:
     """No account or no mock URL (D-51): no refresh starts."""
-    store = Account(restored=True)
+    store = Account()
     assert store.refresh_flags(client(held, store), storage) is None
     signed, _ = await signed_in(held, storage, credentials)
     assert signed.refresh_flags(None, storage) is None

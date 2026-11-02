@@ -27,6 +27,9 @@ ICONS_DIR = Path(__file__).resolve().parents[2] / "assets" / "icons" / "brands"
 where they are (decisions §M's ``src/assets/icons/``).
 """
 
+MARK_SIZE = 24
+"""A mark's width and height in dp: an icon's size."""
+
 BRAND_SURFACES: tuple[str, ...] = (ft.Colors.SURFACE,)
 """The surfaces a mark is drawn on: the page, beside a link row.
 
@@ -63,8 +66,8 @@ def _svg(key: str) -> bytes:
     return (ICONS_DIR / f"{key}.svg").read_bytes()
 
 
-def brand_icon(key: str, size: int = 24) -> ft.Image:
-    """Return brand ``key``'s mark, tinted, ``size`` dp square, for beside a link.
+def brand_icon(key: str) -> ft.Image:
+    """Return brand ``key``'s mark, tinted, ``MARK_SIZE`` dp square, for beside a link.
 
     The mark is decorative: the link beside it names the brand, so a screen reader
     skips the picture. It goes to Flutter as the SVG's bytes rather than its asset
@@ -75,7 +78,6 @@ def brand_icon(key: str, size: int = 24) -> ft.Image:
 
     Args:
         key: A key of ``BRANDS``, e.g. ``"mastodon"``.
-        size: The mark's width and height in dp; 24, an icon's size, by default.
 
     Returns:
         The mark as an ``Image``.
@@ -86,8 +88,8 @@ def brand_icon(key: str, size: int = 24) -> ft.Image:
     tint = BRANDS[key]  # first, so an unknown key reads no file
     return ft.Image(
         src=_svg(key),
-        width=size,
-        height=size,
+        width=MARK_SIZE,
+        height=MARK_SIZE,
         color=tint,
         exclude_from_semantics=True,
     )

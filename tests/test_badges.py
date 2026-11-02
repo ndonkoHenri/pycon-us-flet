@@ -22,7 +22,6 @@ from pycon_us.ui.badges import (
     TrackBadge,
     badge_row,
     badge_specs,
-    session_badges,
 )
 from tests.feeds import processed
 
@@ -54,6 +53,14 @@ def label(badge: ft.Control) -> str:
     """The text a badge shows, checking it is a container around a Text."""
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
     return str(badge.content.value)
+
+
+def session_badges(
+    session: Session, info: ConferenceInfo, tokens: theme.Tokens
+) -> list[ft.Control]:
+    """A session's badges drawn as a row draws them: its specs as ``TrackBadge``s."""
+    specs = badge_specs(session, info, tokens)
+    return [TrackBadge(text, colors) for text, colors in specs]
 
 
 def labels(session: Session, info: ConferenceInfo, dark: bool = False) -> list[str]:

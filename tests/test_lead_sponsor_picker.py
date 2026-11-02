@@ -61,7 +61,6 @@ def staff(
 ) -> Account:
     """A signed-in ``Account`` with only the given flags; door staff by default."""
     return Account(
-        restored=True,
         signed_in=True,
         email="staff@example.com",
         door_check=door_check,
@@ -277,7 +276,7 @@ async def test_an_empty_list_says_none_are_available(show: Show) -> None:
         staff(door_check=False, lead_retrieval=True),
         staff(lead_retrieval=True),
         staff(door_check=False, mask_violation=True),
-        Account(restored=True),
+        Account(),
     ],
     ids=["sponsor", "sponsor and door", "coc", "signed out"],
 )

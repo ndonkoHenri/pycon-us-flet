@@ -5,9 +5,8 @@
 # emulator, against 0 of 18 on main (d1f80f3): #346's row D. Maestro cannot fling that
 # soon: one command follows another about 0.85 s later, so this flow flings 0.8 to 1.0 s
 # after the tap, a window where main and #346's build both ran 20 of 20 in full. It does
-# not reach row D's window: tools/fling_after_sheet.py does, tapping and flinging through
-# adb in one command (maestro/README.md). This flow is the same trial at Maestro's pace,
-# on both platforms: install one build, run the flow, install the other, run it again.
+# not reach row D's window. This flow is the same trial at Maestro's pace, on both
+# platforms: install one build, run the flow, install the other, run it again.
 #
 # env:
 #   TRIALS  how many flings after the sheet; default 10, at most about 35: the fake

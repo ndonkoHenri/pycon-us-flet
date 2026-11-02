@@ -702,9 +702,6 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
   `regression`, or one flow's file). Each flow starts the app afresh, so a run replaces
   the app's data on that device: never use the owner's `emulator-5554` or a shared
   simulator.
-- **#346's row D** (a fling 0.33 to 0.6 s after the filter sheet, sooner than Maestro can
-  go): `uv run python -m tools.fling_after_sheet --serial <emulator>`, an `adb` driver
-  that runs Maestro only for its setup (the README's "Row D through adb").
 - The flows need no `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
   (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
   `--debug-output build/maestro/<name>` names a folder.
@@ -783,6 +780,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
 - **Before you mark a PR ready**, run the full `tools/check.sh` and list it in the PR.
 - **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main` with its own copy of `.flet-src` (D-219), merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
+  - The scratch worktree lives in `~/Library/Caches/gate.XXXXXX` and is removed when the gate ends. Not in `$TMPDIR`: macOS's `dirhelper` sweeps that daily at 03:35, removing files older than 3 days, and uv's clones keep their old timestamps, so a sweep during a gate can take files from its fresh `.venv` and fail tests falsely (inferred from a gate log, since `dirhelper` logged nothing; #898). `$HOME` and `$TMPDIR` are on the same volume, so `cp -c` and uv's clones still work. A gate killed outright (SIGKILL, a power loss) can't remove its scratch, and nothing sweeps that folder, so each gate first removes any `gate.XXXXXX` there untouched for a day; a younger one may be another gate's, running now.
   - A PR that doesn't merge cleanly stops it: merge `main` into that PR's branch first.
   - When a check fails, it prints the end of the log, keeps the log and posts nothing.
   - When the checks pass, it posts one comment on each PR: "Local checks passed (D-273): `main` <sha> + #<pr>@<sha> … → tree `<sha>`", the steps and pytest's summary line, then `$GATE_SIGNATURE` in a paragraph of its own when that is set (agents set their signature line, AGENTS.md rule 6). It prints the merged tree's sha last, the only line on its standard output.

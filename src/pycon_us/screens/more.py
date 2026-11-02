@@ -1,18 +1,16 @@
 """More (``/more``): one flat, sectioned list instead of Ionic's drawer (D-15, ux.md §2.2).
 
-A section shows once its pages exist, so no row is dead. In P0 that is **Programme**,
-whose pages are stubs until P1, and **You**: Settings (P2, THEME-01), which took over
-the Appearance rows that stood in for it here (D-169, D-286), then About this app and
-Developer, which is always there when not embedded and, in a packaged build, once
-unlocked in About this app (D-73, D-187). **Expo & sponsors** came with the Sponsors
-page (#395), Job listings with theirs (#399) and Expo hall, in a year with booths, with
-``?booth=`` (#405), **At the venue** with Wi-Fi (D-280) and
-Help & safety (D-281), Venue & hours first (D-313), and **About** with About PyCon US (#414), About the PSF (D-283) and Social media
-(D-284); their other rows join with their P2 pages. The profile row comes first while
-a mock API URL is set (D-51, SHELL-12): "Sign in" signed out, else the account's
-avatar, nickname and email, which opens the Account page (#688), and "Sign in again" once the server refused the key (#686); it appears, disappears and changes live with ``Prefs`` and the
-``Account`` store. The Staff tools section follows it (``screens/staff_entry.py``,
-D-16, #725): a row per tool the account may open whose screen is built, the Lead
+The sections are **Programme**; **Expo & sponsors**, whose Expo hall needs a year with
+booths (#405); **At the venue** (D-280, D-281, D-313); **About** (#414, D-283, D-284);
+and **You**: Settings (THEME-01, D-169, D-286), About this app and Developer, which is
+always there when not embedded and, in a packaged build, once unlocked in About this
+app (D-73, D-187).
+
+The profile row comes first while a mock API URL is set (D-51, SHELL-12): "Sign in"
+signed out, else the account's avatar, nickname and email, which opens the Account page
+(#688), and "Sign in again" once the server refused the key (#686); it appears,
+disappears and changes live with ``Prefs`` and the ``Account`` store. The Staff tools
+section follows it (``screens/staff_entry.py``, D-16, #725): a row per tool the account may open whose screen is built, the Lead
 scanner's with the outbox's "3 pending", live with the ``Account`` and ``Staff`` stores.
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
 ``/more/plan/expo``, a pushed View like any page.
@@ -102,17 +100,6 @@ ACCOUNT = MoreEntry("Account", "/more/account", ft.Icons.ACCOUNT_CIRCLE_OUTLINED
 DEVELOPER = MoreEntry(
     "Developer options", "/more/developer", ft.Icons.DEVELOPER_MODE_OUTLINED
 )
-
-MORE_PAGES = (
-    *PROGRAMME,
-    *EXPO_AND_SPONSORS,
-    *AT_THE_VENUE,
-    *ABOUT,
-    SETTINGS,
-    ABOUT_APP,
-    DEVELOPER,
-)
-"""Every page the list links to; later phases add theirs with their sections."""
 
 
 @ft.component
