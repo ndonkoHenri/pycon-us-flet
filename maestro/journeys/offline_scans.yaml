@@ -1,0 +1,83 @@
+# F8: run only through tools.offline_scans, which preserves and verifies mock state.
+# Both platforms cut the host listener: this is not the real airplane test (#827).
+appId: io.github.ndonkohenri.confcompanion
+name: Two offline leads sync exactly once
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: sponsor@example.com
+      PASSWORD: mock-sponsor
+- extendedWaitUntil:
+    visible:
+      id: lead.consent.check
+    timeout: 15000
+- tapOn:
+    id: lead.consent.check
+- tapOn:
+    id: lead.consent.continue
+- extendedWaitUntil:
+    visible:
+      id: scan.keyboard
+    timeout: 15000
+- runScript:
+    file: ../scripts/mock_listener.js
+    env:
+      ACTION: offline
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Saved\\. Will sync\\.*MOCK0001.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0002:v4l1d02
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Saved\\. Will sync\\.*MOCK0002.*"
+    timeout: 15000
+- pressKey: Enter
+- tapOn:
+    id: lead.leads
+- extendedWaitUntil:
+    visible:
+      id: lead.leads.row.MOCK0001
+      text: ".*Queued.*"
+    timeout: 15000
+- assertVisible:
+    id: lead.leads.row.MOCK0002
+    text: ".*Queued.*"
+- runScript:
+    file: ../scripts/mock_listener.js
+    env:
+      ACTION: online
+# The scanner's queue sheet offers Sync now; its confirmed rows are then checked
+# on the leads page, where both codes have stable identifiers.
+- runFlow: ../subflows/back.yaml
+- tapOn:
+    id: staff.sync_chip
+- tapOn:
+    id: staff.queue.sync_now
+- tapOn:
+    id: staff.queue.close
+- tapOn:
+    id: lead.leads
+- extendedWaitUntil:
+    visible:
+      id: lead.leads.row.MOCK0001
+      text: ".*Confirmed.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: lead.leads.row.MOCK0002
+      text: ".*Confirmed.*"
+    timeout: 30000

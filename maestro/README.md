@@ -346,7 +346,7 @@ Two subflows are the scanner's:
   nothing, and the wait would fail on the old result. A different code goes at once.
 
 "Not a badge code" comes last in each flow, since its text stays in the field. Offline
-scans are #826's.
+scans use the dedicated F8 wrapper below.
 
 `tests/test_staff_flows.py` checks the words and identifiers of `lead_capture`,
 `door_check` and `swag_pickup` against the app's code and the mock's seed, so a rewording
@@ -455,3 +455,19 @@ xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.nd
 
 Then launch it without `clearState` (which would drop the value): its refresh finds no
 feed, and Settings › Refresh now says "Bundled with the app" (#454).
+
+## Offline captures (F8)
+
+Run `uv run python -m tools.offline_scans --device <id> --platform android` (or
+`--platform ios`). Build and install the packaged app first. The wrapper owns mock
+port 8470 and laptop-only control port 8471 (`--port`, `--control-port` override them).
+Do not start another mock on those ports. It runs `journeys/offline_scans.yaml`, which
+signs in, cuts the mock listener, scans two codes, checks both Queued rows, restores
+the listener and uses Sync now, then checks both Confirmed rows. The wrapper retains
+the mock state across the cut and checks exactly one capture per code for sponsor 1
+(Example Corp), failing on duplicates even when the UI says Confirmed. It uses
+non-idempotent capture semantics so duplicate requests cannot hide behind deduplication.
+Both listeners close on success or failure. This is a host connection cut on both
+platforms; real Android airplane mode and killing/relaunching with queued scans are
+#827's separate checks. `now_next.yaml` completes F6 alongside `star_undo.yaml`;
+`session_room_plan.yaml` is F7.

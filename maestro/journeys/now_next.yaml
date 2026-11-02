@@ -1,0 +1,37 @@
+# F6's later and ended cases, alongside star_undo's happening-now case.
+appId: io.github.ndonkohenri.confcompanion
+name: A saved session 25 minutes away, then ended
+tags:
+  - journeys
+onFlowComplete:
+  - runFlow: ../subflows/online.yaml
+---
+- runFlow: ../subflows/start_offline.yaml
+- tapOn:
+    id: now.favorite.123
+- runFlow: ../subflows/primer_not_now.yaml
+- runFlow:
+    file: ../subflows/set_scene.yaml
+    env:
+      NOW: '2026-05-15 13:20'
+      FEED_URL: 'http://127.0.0.1:9/conference-2026.json'
+      OUTCOME: "Couldn't refresh: no answer from the feed\\. The app keeps the schedule it has\\."
+- extendedWaitUntil:
+    visible:
+      id: now.next.session.123
+    timeout: 15000
+- assertVisible:
+    id: now.next.favorite.123
+    checked: true
+- assertNotVisible:
+    id: now.session.123
+- runFlow:
+    file: ../subflows/set_scene.yaml
+    env:
+      NOW: '2026-05-15 14:31'
+      FEED_URL: 'http://127.0.0.1:9/conference-2026.json'
+      OUTCOME: "Couldn't refresh: no answer from the feed\\. The app keeps the schedule it has\\."
+- assertNotVisible:
+    id: now.next.session.123
+- assertNotVisible:
+    id: now.session.123
