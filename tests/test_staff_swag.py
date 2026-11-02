@@ -9,6 +9,7 @@ when the connection returns, and the rule.
 """
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -339,6 +340,16 @@ async def test_a_failed_catalog_says_so_and_retry_loads_it(
     await shown.click(cast(ft.TextButton, shown.node("swag.categories.retry").content))
     assert NOT_LOADED not in shown.texts()
     assert shown.nodes("swag.category.3")
+
+
+async def test_a_failed_catalog_logs_what_failed_and_no_more(
+    show: Show, switch: Switch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The log names the list and the error's type, never the error's text (D-72)."""
+    switch.offline = True
+    with caplog.at_level(logging.INFO, logger="pycon_us"):
+        await show()
+    assert "Swag categories not loaded: NetworkError" in caplog.messages
 
 
 async def test_a_failed_catalog_reloads_when_the_connection_returns(
