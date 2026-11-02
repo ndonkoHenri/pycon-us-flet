@@ -143,9 +143,9 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
-            'long = "Talk"',
+            'plural = "Talks"',
             "",
-            "2026/conference.toml: tracks[0].long: missing key",
+            "2026/conference.toml: tracks[0].plural: missing key",
         ),
         (
             "conference.toml",
