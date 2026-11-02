@@ -105,6 +105,7 @@ def clock() -> float:
 def ScanScreen(
     *,
     title: str,
+    source: str,
     on_badge: OnBadge,
     context: str | ft.Control | None = None,
     actions: list[ft.Control] | None = None,
@@ -119,6 +120,7 @@ def ScanScreen(
 
     Args:
         title: The tool's name, the app bar's title.
+        source: The tool's ``__name__``, for View source (D-461).
         on_badge: Turns a badge into the result to show; awaited one at a time.
         context: A line under the bar, e.g. "Decorators, Wed 9:00 AM", or a control
             in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06).
@@ -275,6 +277,7 @@ def ScanScreen(
     ]
     return AppScaffold(
         title=title,
+        source=source,
         actions=[
             *([] if prefs.time_above else [chip]),
             named(  # one node, named by its tooltip (D-234)
@@ -349,7 +352,7 @@ def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.
 
 
 @ft.component
-def NotAvailable(*, title: str) -> ft.Control:
+def NotAvailable(*, title: str, source: str) -> ft.Control:
     """Return a tool screen for an account its rule refuses (architecture §12.4).
 
     Signed out, without the tool's flag, or with no mock URL (D-51): a deep link to
@@ -357,10 +360,12 @@ def NotAvailable(*, title: str) -> ft.Control:
 
     Args:
         title: The tool's name, the app bar's title.
+        source: The tool's ``__name__``, for View source (D-461).
     """
     margin = use_margin(LIST)  # its width class (D-305)
     return AppScaffold(
         title=title,
+        source=source,
         body=ft.ListView(
             [
                 EmptyState(

@@ -187,7 +187,7 @@ async def test_a_contrast_change_keeps_the_body_mounted(
         tokens, set_ = ft.use_state(LIGHT_TOKENS)
         set_tokens.append(set_)
         shown["tokens"] = tokens
-        return AppScaffold(title="Schedule", body=Body())
+        return AppScaffold(title="Schedule", source=None, body=Body())
 
     monkeypatch.setattr(ft, "use_view_path", lambda: location)
     monkeypatch.setattr(scaffold, "use_services", lambda: svc)

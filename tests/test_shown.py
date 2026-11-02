@@ -130,7 +130,7 @@ def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
     hooks.view_path = page.route = "/more"
 
     with Renderer().with_context():  # what calling a component needs, as in a render
-        view = AppScaffold(title="More", body=body)
+        view = AppScaffold(title="More", source=None, body=body)
 
     shown = body_of(view)
     assert isinstance(shown, ft.Component)

@@ -209,7 +209,8 @@ GROUPS = (
                 "simple-icons",
                 "Simple Icons",
                 "CC0-1.0",
-                "The brand marks: public domain; each mark is its owner's trademark",
+                "The set is CC0, which doesn't mean every icon in it is; "
+                "each mark is its owner's trademark",
                 "simple-icons.txt",
             ),
         ),

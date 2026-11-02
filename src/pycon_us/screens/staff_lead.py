@@ -103,7 +103,7 @@ def LeadScanner() -> ft.Control:
         and may_open(ToolKey.LEAD, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.LEAD  # plain: Now's card reads it when it renders
     return LeadTool(
         owner=account.owner, for_sponsor=scans_for_sponsor(account.role_flags)
@@ -176,7 +176,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     leads = leads_button(count, open_leads)
 
     if current is None:
-        return Reading(title=TITLE)
+        return Reading(title=TITLE, source=__name__)
     if not current.consent:
         return LeadConsent(
             title=TITLE, on_given=lambda: set_read(Read(owner, True, current.sponsor))
@@ -184,6 +184,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     if not for_sponsor:
         return ScanScreen(
             title=TITLE,
+            source=__name__,
             on_badge=on_badge,
             paused=paused,
             result_actions=note_actions,
@@ -192,12 +193,14 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     if current.sponsor is None:
         return ScanScreen(
             title=TITLE,
+            source=__name__,
             on_badge=on_badge,
             paused=NO_SPONSOR,
             actions=[choose_button(open_picker), leads],
         )
     return ScanScreen(
         title=TITLE,
+        source=__name__,
         on_badge=on_badge,
         context=sponsor_chip(current.sponsor, open_picker),
         paused=paused,

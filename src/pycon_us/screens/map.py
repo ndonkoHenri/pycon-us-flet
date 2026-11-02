@@ -34,7 +34,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import THEME
 from pycon_us.ui.day_tabs import TAB_HEIGHT, TAB_MS
 from pycon_us.ui.links import open_link
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.navigation import use_scroll_to_top
 from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.widths import LIST, capped, use_margin
@@ -176,8 +176,9 @@ def Map() -> ft.View:
     else:
         pane = RoomsPane(list_ref, scrolled)
     actions = [search_button(memory, "places")]
-    if svc.year.map.tour_url:
-        actions.append(tour_menu(svc, svc.year.map.tour_url))
+    tour = svc.year.map.tour_url
+    if tour:
+        actions.append(tour_menu(svc, tour))
     body = pane
     if len(panes) > 1:
         body = map_tabs(
@@ -190,7 +191,13 @@ def Map() -> ft.View:
         )
     # The Expo pane has no list to scroll: a re-tap there does nothing (D-166).
     retap = None if tab == EXPO else scroll_to_top
-    return AppScaffold(title="Map", actions=actions, body=body, on_retap=retap)
+    return AppScaffold(
+        title="Map",
+        source=None if tour else __name__,  # one overflow on the bar (D-461)
+        actions=actions,
+        body=body,
+        on_retap=retap,
+    )
 
 
 def map_tabs(
@@ -273,6 +280,7 @@ def tour_menu(svc: Services, url: str) -> ft.Control:
                 open_tour,
                 identifier=f"{SCREEN}.tour",
                 link=True,
-            )
+            ),
+            *view_source_items(svc, __name__),
         ],
     )

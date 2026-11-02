@@ -208,7 +208,12 @@ async def test_leaving_the_scan_screen_lets_the_screen_sleep(
         if not scanning:
             return ft.Text("Left")
         return ft.Column(
-            [ScanScreen(title="Lead scanner", on_badge=rig.on_badge), leave]
+            [
+                ScanScreen(
+                    title="Lead scanner", source=__name__, on_badge=rig.on_badge
+                ),
+                leave,
+            ]
         )
 
     shown = await show(Host)

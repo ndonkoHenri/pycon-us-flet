@@ -198,6 +198,7 @@ def Jobs() -> ft.View:
         head = ft.Column([])  # an empty column keeps the list's place in the body
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.Column(
             [
                 capped(head, margin),  # between the list's margins (D-305)

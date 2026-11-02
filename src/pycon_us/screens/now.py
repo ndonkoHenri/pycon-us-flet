@@ -180,6 +180,7 @@ def Now() -> ft.View:
             rows.append(Spotlight(sponsor, view_path, large_text=prefs.time_above))
     return AppScaffold(
         title="Now",
+        source=__name__,
         actions=[search_button(svc.memory, "all")],
         body=ft.ListView(
             rows, expand=True, ref=list_ref, padding=sides(margin, bottom=16)
