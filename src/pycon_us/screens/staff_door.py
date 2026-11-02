@@ -27,6 +27,7 @@ from the outbox (DOOR-06, D-442).
 
 from dataclasses import dataclass
 from functools import partial
+from typing import cast
 from uuid import uuid4
 
 import flet as ft
@@ -107,7 +108,7 @@ def DoorTool(*, owner: str) -> ft.Control:
     svc = use_services()
     prefs = use_prefs()
     staff = use_staff()
-    read, set_read = ft.use_state(not_read)  # None until the first read
+    read, set_read = ft.use_state(cast(Read | None, None))  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once per visit
     visit = ft.use_memo(lambda: uuid4().hex, [])  # the scan session of a row's key
     looked_up = ft.use_memo(dict, [owner])  # the lookup's attendees, memory only (D-56)
@@ -223,8 +224,3 @@ def choose_button(on_click: ft.ControlEventHandler) -> ft.Control:
     return tool_button(
         "door.session.choose", door_session.TITLE, ft.Icons.EVENT_OUTLINED, on_click
     )
-
-
-def not_read() -> Read | None:
-    """Return None: the key not read yet, ``DoorTool``'s first state (typed)."""
-    return None

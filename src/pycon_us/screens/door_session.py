@@ -19,6 +19,7 @@ available" for none, "No sessions match “x”" with Clear search.
 """
 
 from collections.abc import Awaitable, Callable
+from typing import cast
 
 import flet as ft
 
@@ -93,16 +94,6 @@ def SessionPicker() -> ft.Control:
     return SessionList(owner=account.owner)
 
 
-def no_choice() -> DoorChoice | None:
-    """Return None: nothing chosen, or not read yet (``SessionList``'s first state)."""
-    return None
-
-
-def no_category() -> int | None:
-    """Return None: no category chosen (``SessionList``'s first state, typed)."""
-    return None
-
-
 @ft.component
 def SessionList(*, owner: str) -> ft.Control:
     """The category chips and the chosen category's sessions, or the list's state.
@@ -118,8 +109,8 @@ def SessionList(*, owner: str) -> ft.Control:
     field = use_field_query()
     loaded, retry = use_fetch(fetch_door_catalog, what="Sessions")
     picking = use_pick(save_door_session)
-    chosen, set_chosen = ft.use_state(no_choice)
-    category, set_category = ft.use_state(no_category)
+    chosen, set_chosen = ft.use_state(cast(DoorChoice | None, None))
+    category, set_category = ft.use_state(cast(int | None, None))
 
     @report_errors
     async def read_chosen() -> None:

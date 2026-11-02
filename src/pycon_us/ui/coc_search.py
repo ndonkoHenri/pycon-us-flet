@@ -17,16 +17,16 @@ while the sheet is open, never stored or logged, and go when it closes.
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
-from functools import partial
+from typing import cast
 
 import flet as ft
-from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us.core.conduct import Attendee, Matches, search
 from pycon_us.prefs import use_prefs
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.coc_search_sheet import Finding, SheetActions, find_sheet
+from pycon_us.ui.hooks import use_latest_state
 
 SEARCH_OPEN = "Paused while the search is open"
 """Why scanning is paused while the sheet is open: a HID submit is dropped."""
@@ -67,23 +67,13 @@ def use_find(
     """
     prefs = use_prefs()
     tokens = use_tokens()
-    finding, set_state = ft.use_state(not_finding)
-    latest: MutableRef[Finding | None] = ft.use_ref(finding)
-    mounted = ft.use_ref(True)  # cleared on unmount: a late pause then sets nothing
+    finding, latest, set_finding = use_latest_state(cast(Finding | None, None))
     landing = ft.use_ref(False)  # a Clear's empty text is on its way: reports are stale
     overwritten = ft.use_ref(False)  # a stale report came in meanwhile
     opening = finding.opening if finding is not None else None
     clears = finding.clears if finding is not None else 0
     # A fresh field each opening and each Clear: its first render sends "" (D-243).
     ref = ft.use_memo(ft.Ref[ft.TextField], [opening, clears])
-    set_finding = partial(keep, latest, set_state)
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the tool gone, so a pending pause sets nothing."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
 
     typed = finding.typed if finding is not None else ""
 
@@ -94,7 +84,7 @@ def use_find(
             return
         await asyncio.sleep(DEBOUNCE_SECONDS)
         current = latest.current
-        if mounted.current and current is not None and current.opening is opening:
+        if current is not None and current.opening is opening:
             set_finding(replace(current, query=typed))
 
     ft.use_effect(settle, [opening, typed])
@@ -180,18 +170,3 @@ def use_find(
         else None
     )
     return Finder(open_find, close, finding is not None)
-
-
-def keep(
-    latest: MutableRef[Finding | None],
-    set_state: Callable[[Finding | None], None],
-    value: Finding | None,
-) -> None:
-    """Set the search and ``latest`` together, so the next event sees it at once."""
-    latest.current = value
-    set_state(value)
-
-
-def not_finding() -> Finding | None:
-    """Return None: no search open, the hook's first state (a typed default)."""
-    return None
