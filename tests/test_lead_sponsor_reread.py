@@ -9,14 +9,12 @@ read at a gate in a real Flet session (``tests/harness.py``), around the real
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 import flet as ft
 import pytest
 
 from pycon_us import lead_capture
-from pycon_us.account import Account
 from pycon_us.core import outbox
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.screens import lead_sponsor, staff_lead, staff_leads
@@ -25,8 +23,8 @@ from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from pycon_us.staff_sponsor import read_sponsor
 from tests import lead_screen
-from tests.harness import Shown
 from tests.lead_screen import Show, chip_text, choose, helper, signed_in
+from tests.picker_rig import Go, going
 from tests.scan_rig import enter
 from tests.sync_rig import outbox_db
 
@@ -38,8 +36,6 @@ NEW = LeadSponsor("2", "New Corp")
 OWNER = "a@example.com"
 db = outbox_db
 stored, show = lead_screen.stored, lead_screen.show
-
-type Go = Callable[[Shown, Account, str], Awaitable[None]]
 
 
 @pytest.fixture
@@ -59,21 +55,8 @@ def gate(monkeypatch: pytest.MonkeyPatch) -> asyncio.Event:
 
 @pytest.fixture
 def go(monkeypatch: pytest.MonkeyPatch) -> Go:
-    """Return a function that changes the location and the route from the scanner's.
-
-    A change of the account stands for the render the Router makes on a location
-    change.
-    """
-    location = [VIEW]
-    monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
-
-    async def to(shown: Shown, account: Account, where: str) -> None:
-        """Move to ``where`` and let the render and its effects run."""
-        location[0] = shown.session.page.route = where
-        account.nickname = where
-        await shown.settle()
-
-    return to
+    """Return a function that changes the location and the route from the scanner's."""
+    return going(monkeypatch, VIEW)
 
 
 @pytest.fixture
