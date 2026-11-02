@@ -176,6 +176,9 @@ dev = [                               # host only, never bundled; versions in uv
     "hypothesis",
     "ruff",
     "pyright",
+    "segno",                          # the mock-badge sheet's QR codes (D-391); never bundled
+    "icalendar",                      # reads core/ics.py's files back (D-268); never bundled
+    "ical",                           # the stricter reader of the same files (D-268); never bundled
 ]
 
 # ------------------------------------------------------------------ flet build

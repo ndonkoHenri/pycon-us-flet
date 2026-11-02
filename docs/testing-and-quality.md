@@ -77,6 +77,9 @@ dev = [                      # host only; flet-* come from .flet-src via [tool.u
     "hypothesis",
     "ruff",
     "pyright",
+    "segno",                 # the mock-badge sheet's QR codes (D-391); never bundled
+    "icalendar",             # reads core/ics.py's files back (D-268); never bundled
+    "ical",                  # the stricter reader of the same files (D-268); never bundled
 ]
 
 [tool.pytest.ini_options]
