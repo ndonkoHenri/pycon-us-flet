@@ -9,7 +9,7 @@
 #                LANDSCAPE in portrait. Phones and iPads are natural in portrait.
 #
 # Maestro's setOrientation takes no variable, so each value is its own branch.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

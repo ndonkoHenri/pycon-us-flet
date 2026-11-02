@@ -10,7 +10,7 @@
 #   lands on Now.
 #
 # LINK sets the scheme and host (subflows/open_link.yaml).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Deep links, cold and warm, an unknown id and an unknown path
 tags:
   - journeys

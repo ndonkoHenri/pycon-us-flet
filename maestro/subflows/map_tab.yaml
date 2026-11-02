@@ -7,7 +7,7 @@
 #
 # env:
 #   TAB  the pane's slug: floor-plans, expo or job-fair.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - tapOn:
     id: app.nav.map

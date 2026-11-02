@@ -4,7 +4,7 @@
 # pushes the expo hall on the sponsor at the booth, its card naming the exhibitor
 # (/more/sponsors/sponsor/bloomberg/plan/expo?booth=613, EXPO-05); Back leaves that
 # one View, and the sponsor's page shows again.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: A sponsor, Find booth, then Back to the sponsor
 tags:
   - journeys

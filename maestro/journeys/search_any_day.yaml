@@ -6,7 +6,7 @@
 #   its session.
 # Mirrors F3 (tests/ui/test_search_keeps_query.py), which a flet test flow could only
 # check one scope at a time, near the top, with the keyboard up (D-223).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Search finds a session, a speaker and a room on another day
 tags:
   - journeys

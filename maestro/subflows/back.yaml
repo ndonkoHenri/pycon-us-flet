@@ -2,7 +2,7 @@
 # Android: the system Back (KEYCODE_BACK), which pops one View (#279).
 # iOS: the app bar's back arrow, a button named "Back" by its tooltip (D-234). It has no
 # identifier: see maestro/README.md, "Identifiers".
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

@@ -5,7 +5,7 @@
 # a peak) the flow scrolls down to them. Each tap pushes /now/<page>; Back leaves that
 # one View. A page is open once any of its own identifiers shows (Maestro's id: is a
 # regular expression).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Now, each quick info page, then Back to Now
 tags:
   - journeys

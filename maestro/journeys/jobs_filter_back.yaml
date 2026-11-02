@@ -4,7 +4,7 @@
 # Bloomberg's (6), the first card unfiltered. Its header pushes the sponsor's page,
 # /more/jobs/sponsor/temporal (D-17); Back leaves that one View, and the page below it,
 # still mounted, shows the same filter and the same card.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: More, Job listings, a filter, a sponsor, then Back to the filtered list
 tags:
   - journeys

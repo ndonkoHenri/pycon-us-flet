@@ -10,7 +10,7 @@
 # assert them: it takes a screenshot of each page to look at (maestro/README.md).
 #
 # env (iOS): NO_LOGO_URL, default http://127.0.0.1:8766/conference-2026.json.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Offline with no logo cache, Now, Sponsors and Job listings show initials
 tags:
   - offline_logos

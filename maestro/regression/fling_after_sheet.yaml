@@ -28,7 +28,7 @@
 # start on the now slot. The flow prints each control and trial
 # (maestro/README.md says where) and fails unless every trial moved and every tap
 # reached the button.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: A fling right after the filter sheet closes runs in full
 tags:
   - regression

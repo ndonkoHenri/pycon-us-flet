@@ -12,7 +12,7 @@
 # an async status read, so "answer it if it shows" could look before it opens and miss
 # it. If a later Maestro grants notifications on iOS too, this step fails at its wait,
 # which says that the step can go.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:
