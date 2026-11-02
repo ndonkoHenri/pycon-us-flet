@@ -172,7 +172,7 @@ async def test_the_sheet_opens_empty_focused_and_pauses_scanning(show: Show) -> 
     assert cast(ft.TextField, node.content).autofocus
     assert helper(shown) == SEARCH_OPEN
     await enter(shown, "MOCK0002:x")  # a HID scanner typing while it is open
-    assert badge_field(shown).value == "MOCK0002:x"  # dropped, its text kept
+    assert badge_field(shown).value == ""  # dropped with its text (D-471)
     assert dialog(shown) is None and sheet(shown) is not None
 
 
