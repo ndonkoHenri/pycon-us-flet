@@ -96,6 +96,7 @@ class MemorySemantics(ft.SemanticsService):
         self.announced: list[str] = []
         self.levels: list[ft.Assertiveness] = []  # each announcement's assertiveness
         self.answers = True  # False: iOS under VoiceOver, which never answers (F276)
+        self.announce_error: Exception | None = None  # raised once recorded
 
     async def _invoke_method(
         self,
@@ -110,6 +111,8 @@ class MemorySemantics(ft.SemanticsService):
         if method_name == "announce_message":
             self.announced.append((arguments or {})["message"])
             self.levels.append((arguments or {})["assertiveness"])
+            if self.announce_error is not None:
+                raise self.announce_error
             if not self.answers:
                 await asyncio.Event().wait()  # no reply, ever
             return None

@@ -16,6 +16,7 @@ from pycon_us.core.badges import NOT_A_BADGE, ScanOutcome, ScanResult
 from pycon_us.prefs import Prefs
 from pycon_us.staff import Staff
 from pycon_us.ui import scan_feedback
+from pycon_us.ui import semantics as ui_semantics
 from pycon_us.ui.scan_screen import PAUSED_SHEET, ScanScreen
 from tests import harness, scan_rig
 from tests.fakes import MemoryHaptics, MemorySemantics, MemoryWakelock
@@ -170,7 +171,7 @@ async def test_an_announcement_never_answered_doesn_t_stop_the_next_scan(
     show: Show, rig: Rig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An announcement iOS never answers (VoiceOver on, F276) stops no scan."""
-    monkeypatch.setattr(scan_feedback, "ANNOUNCE_WAIT_S", 0.01)
+    monkeypatch.setattr(ui_semantics, "ANNOUNCE_WAIT_S", 0.01)
     shown = await show(prefs=ANNOUNCING)
     semantics(shown).answers = False
     await enter(shown, "MOCK0001:v1")

@@ -39,8 +39,6 @@ review stays, with its notes (losing a half-written report is worse, and the dia
 shows no email). "Show email" reveals a recorded result's email (``ui/coc_email.py``).
 """
 
-import asyncio
-import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from functools import partial
@@ -58,17 +56,15 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.ui.coc_email import email_actions, email_note
 from pycon_us.ui.coc_review import use_review
 from pycon_us.ui.coc_search import SEARCH_OPEN, use_find
 from pycon_us.ui.coc_search_sheet import find_button
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_clear import use_on_background
-from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
 from pycon_us.ui.scan_result import Posted, post
 from pycon_us.ui.scan_screen import NOT_AVAILABLE, NotAvailable, ScanScreen
-from pycon_us.ui.semantics import named
+from pycon_us.ui.semantics import announce, named
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.COC)
 """The app bar's title, "CoC incident", as the staff entry points name it."""
@@ -181,11 +177,7 @@ def CocTool(*, owner: str) -> ft.Control:
         if not (prefs.announcements and current.status != "loading"):
             return
         if mounted.current and is_top_view(page.route, view_path):
-            # Sent at once; only the answer, which iOS may never give, is waited for
-            # (F276). A failure leaves the line, which shows it all the same.
-            with contextlib.suppress(*SERVICE_ERRORS):
-                said = svc.semantics.announce_message(words)
-                await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
+            await announce(svc.semantics, words)
 
     ft.use_effect(say, [words])
 

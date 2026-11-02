@@ -1,4 +1,4 @@
-"""Semantics helpers shared by screens: ``named()``, ``merged()`` and ``semantics_key()``.
+"""Semantics helpers shared by screens: identifiers, merged buttons and announcements.
 
 UI flows find a control by its semantics identifier (``<screen>.<element>[.<key>]``,
 D-33). D-190 settled how to attach one to a button or a row: merged, so that the
@@ -7,13 +7,55 @@ disabled (D-214). ``merged()`` makes a button with a tooltip one node named by t
 tooltip, where it needs no identifier (F55, D-234). ``semantics_key()`` turns an id
 into the identifier's key (decisions §M; D-200): it is ``core.slugs``', which has no
 Flet, so the year-data loader can use it too (D-283), and is re-exported here.
+``announce()`` says words through the platform's announcements, with its wait capped
+(D-420, F276).
 """
+
+import asyncio
+import logging
 
 import flet as ft
 
 from pycon_us.core.slugs import semantics_key
+from pycon_us.services.storage import SERVICE_ERRORS
 
-__all__ = ["merged", "named", "semantics_key"]
+__all__ = ["ANNOUNCE_WAIT_S", "announce", "merged", "named", "semantics_key"]
+
+logger = logging.getLogger(__name__)
+
+ANNOUNCE_WAIT_S = 0.5
+"""How long an announcement is awaited. iOS never answers one while its accessibility
+bridge runs (VoiceOver on, or a UI test), so Flet's call would wait forever and hold
+its caller: on the scan screen, the single flight dropped every later scan (F276, U256)."""
+
+
+async def announce(
+    semantics: ft.SemanticsService,
+    words: str,
+    *,
+    assertiveness: ft.Assertiveness = ft.Assertiveness.POLITE,
+) -> None:
+    """Say ``words`` through the platform's announcements, waiting at most the cap.
+
+    The message is sent at once; only the answer, which iOS may never give, is waited
+    for (D-420, F276). A failure is logged, never raised: what is said is on the screen
+    all the same. A log names the error's class only, since its message can repeat the
+    words and the Code of Conduct tools' must never reach a log (D-72).
+
+    Call it only where ``Prefs.announcements`` is true.
+
+    Args:
+        semantics: ``Services.semantics``.
+        words: What to say.
+        assertiveness: How urgently to say it.
+    """
+    said = semantics.announce_message(words, assertiveness=assertiveness)
+    try:
+        await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
+    except TimeoutError:
+        logger.debug("No answer to an announcement (F276)")
+    except SERVICE_ERRORS as error:
+        logger.warning("Could not announce: %s", type(error).__name__)
 
 
 def named(identifier: str, control: ft.Control) -> ft.Control:

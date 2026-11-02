@@ -60,7 +60,7 @@ from pycon_us.ui.queue_sheet import use_queue_sheet
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_camera import CameraUnavailable
 from pycon_us.ui.scan_clear import use_clear_after, use_on_background
-from pycon_us.ui.scan_feedback import announce, buzz, use_wake_lock
+from pycon_us.ui.scan_feedback import announce_result, buzz, use_wake_lock
 from pycon_us.ui.scan_result import (
     DIM_AFTER,
     Posted,
@@ -191,7 +191,7 @@ def ScanScreen(
         set_shown(Shown(result, clock(), serial))
         await buzz(svc.haptics, result.outcome)
         if prefs.announcements:  # iOS; elsewhere the panel's live region says it
-            await announce(svc.semantics, result)
+            await announce_result(svc.semantics, result)
 
     @report_errors
     async def show_posted() -> None:
