@@ -354,6 +354,22 @@ async def test_a_map_without_a_tour_gets_the_scaffold_s(
     )
 
 
+async def test_an_unknown_plan_gets_the_scaffold_s(
+    open_at: Open, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A plan that isn't there has no viewer's menu: only the scaffold's overflow.
+
+    The one state of the ``ALWAYS_OWN_MENU`` screens that must keep ``__name__``, which
+    the source scan below allows to be None for the whole module.
+    """
+    source_url_set(monkeypatch)
+    shown = await open_at("/map/plan/not-a-plan")
+    assert shown.has("plan.not_found")
+    await assert_one_overflow_ending_in_view_source(
+        shown, "app.overflow", plan.__name__
+    )
+
+
 def test_a_sprints_year_without_links_has_a_menu_only_once_public(
     svc: Services, monkeypatch: pytest.MonkeyPatch
 ) -> None:
