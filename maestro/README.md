@@ -247,10 +247,13 @@ fake clock set in May, so logos may load.
 At iOS's `accessibility-large`, about 200 %, a fresh start does work:
 `open_developer.yaml` and `set_scene.yaml` scroll to each row before they tap it. At
 `accessibility-extra-extra-extra-large` the flows still cannot set their scene, so a
-flow's pages are walked there after a run at the default size.
+flow's pages are walked there after a run at the default size. On a phone at that size a
+scan screen opens scrolled to its badge field, so what heads the screen is above the fold:
+a flow scrolls UP to it (#828).
 
 ```bash
-# iOS: Bold Text is Settings › Accessibility › Display & Text Size › Bold Text.
+# iOS: Bold Text is Settings › Accessibility › Display & Text Size › Bold Text, or, before a
+# relaunch: xcrun simctl spawn <udid> defaults write com.apple.Accessibility EnhancedTextLegibilityEnabled -bool true
 xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large   # or accessibility-large, about 200 %
 # Android: adb -s emulator-5570 shell settings put system font_scale 2.0
 maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/journeys/sponsors_large_text.yaml
