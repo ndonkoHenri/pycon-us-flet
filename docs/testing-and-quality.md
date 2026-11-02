@@ -493,9 +493,9 @@ About eight journeys, added in the phase that builds them. Each runs on the Andr
 | F3 | `test_search_finds_and_keeps_query` (`test_search_keeps_query.py`) | P1 | From the Schedule's Search, a speaker's name typed without its accent ("muller" for "Müller": the first such word in the recorded feed that finds exactly one session and that speaker) finds the session in the Sessions scope the Schedule gives search, and the Speakers chip keeps the query and finds the speaker; the speaker → Back returns to search with the query, the Speakers scope and the speaker's row | NEW-02, D-19, D-46, D-193 |
 | F4 | `test_favourite_with_undo` (`test_favourite_undo.py`) | P1 | §5.3: star a Schedule row; My schedule lists it; unstar it there: "Removed from My schedule"; Undo brings the row back | D-30, NEW-01 |
 | F5 | `test_drill_back_one_step` (`test_drill_back.py`) | P1 | A session near a day's top whose speaker has another session → the speaker (`session.speaker.<key>`) → that session (`speaker.session.<key>`); each back arrow returns one View (titles and names); the Schedule keeps the day; on Android the Back key on the Schedule root goes to Now | SESS-12, SHELL-16, D-17, D-142 (#279) |
-| F6 | `test_now_shows_next_session` | P1 | Fake clock during the conference with a saved session 25 min later: `now.next_session` shows it; a session that ended is not "happening now" | SCHED-25, D-14 |
-| F7 | `test_room_pin_from_session` | P2 | Session → "Show on map" → floor plan with `map.pin.<room-slug>`; Back returns to the session | ROOM-04, MAP-05, DATA-32 |
-| F8 | `test_offline_scans_sync_once` | P3 | Mock lead account (in-process mock, URL set in Developer); stop the mock; two manual entries show Queued; restart; Sync now → Confirmed; the mock holds one capture per code with the scan-time sponsor | LEAD-07, API-10, D-56, D-65 |
+| F6 | Maestro `star_undo.yaml`, `now_next.yaml` | P1 | Save a happening-now session; move the fake clock to 25 minutes before it starts: it is your next session; after it ends it is neither next nor happening now | SCHED-25, D-14 |
+| F7 | Maestro `session_room_plan.yaml` | P2 | Session → its location card → floor plan with the room marked; zoom and Back return to the session | ROOM-04, MAP-05, DATA-32 |
+| F8 | Maestro `offline_scans.yaml`, run by `tools.offline_scans` | P3 | Sign in to a host mock; the wrapper closes its listener on both platforms without losing state; two manual codes show Queued; restore the listener; Sync now → Confirmed. The wrapper verifies exactly one capture per code for the scan-time sponsor using non-idempotent mock state. Android airplane mode and kill/relaunch are separate checks (#827); iOS cannot cut its network through Maestro | LEAD-07, API-10, D-56, D-65 |
 
 Scroll position (#313, Jump to now) cannot be read through a `Finder`. A Maestro flow reads it (§5.5): `jump_to_now.yaml` checks where Jump to now lands.
 
@@ -521,7 +521,9 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | Flow | Tags | Criterion |
 |---|---|---|
 | `drill_back` | journeys, smoke | Now → session → speaker → session; each Back pops one step (criteria 1, 2; #279) |
-| `star_undo` | journeys, smoke | Star, unstar with Undo; Now shows a saved session happening now as your next session (criteria 1, 2; part of F6) |
+| `star_undo` | journeys, smoke | Star, unstar with Undo; Now shows a saved session happening now as your next session (criteria 1, 2; F6) |
+| `now_next` | journeys | A saved session 25 minutes later is next; after its end it is neither next nor happening now (F6) |
+| `offline_scans` | wrapper only | Two queued leads become Confirmed; the wrapper checks exactly one capture each for the scan-time sponsor (F8) |
 | `my_schedule_overlap` | journeys | My schedule shows overlaps (criterion 1) |
 | `search_any_day` | journeys | Search finds a session, a speaker and a room on another day (criterion 1) |
 | `filter_persists` | journeys | A hidden track is said on the Schedule and survives a relaunch (criterion 1) |
@@ -846,9 +848,9 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 | Phase | Automated (the checks pass, §12) | UI flows | Device, accessibility, performance |
 |---|---|---|---|
 | **P0** | Feed rules, invariants, snapshot (2025, 2026); Ionic reference captured; two-zone fixture; capabilities, storage keys, version, `core` purity; light/dark contrast | The shell flow (`test_shell_starts`) passes with `flet test` on an emulator and a simulator (PLAN P0 exit 3) | Checklist 1, 2, 6, 7, 11 on an Android emulator and an iOS simulator, 1 and 2 also on the iPhone; S1–S5 verdicts in `docs/spikes/`; D-80 targets confirmed or revised (D-102) |
-| **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F6 on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
-| **P2** | + diff (`PyCon/pycon-us-mobile#312`), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + F7 | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
-| **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + F8 | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
+| **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F5 plus Maestro F6 (`star_undo`, `now_next`) on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
+| **P2** | + diff (`PyCon/pycon-us-mobile#312`), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + Maestro F7 (`session_room_plan`) | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
+| **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + Maestro F8 (`offline_scans` through `tools.offline_scans`) | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
 | **P4** | All green; goldens added | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
 
 ## 12. Checks and CI wiring (D-84, D-273)
