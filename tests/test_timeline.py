@@ -19,6 +19,7 @@ import pytest
 import pycon_us.core.timeline as timeline_module
 from pycon_us.config import load_year
 from pycon_us.core import agenda, queries, search
+from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.queries import days
 from pycon_us.core.timeline import (
@@ -31,7 +32,7 @@ from pycon_us.core.timeline import (
     track_sessions,
 )
 from pycon_us.prefs import Prefs
-from tests.feeds import YEARS, processed
+from tests.feeds import YEARS, processed, recorded, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
@@ -218,7 +219,8 @@ def test_a_filter_that_hides_nothing_that_day_returns_the_whole_day() -> None:
 
 def test_a_new_feed_version_gets_its_own_results() -> None:
     """The memo is per feed: a refreshed model never shows the old model's rows."""
-    old, new, friday = processed(2026), processed(2026), date(2026, 5, 15)
+    old, new = processed(2026), process(recorded(2026), settings(2026))
+    friday = date(2026, 5, 15)
     before, after = timeline(old, friday, ()), timeline(new, friday, ())
     assert before is not after
     assert [[s.id for s in slot.sessions] for slot in before] == [
@@ -229,7 +231,7 @@ def test_a_new_feed_version_gets_its_own_results() -> None:
 
 def test_the_memo_does_not_keep_a_replaced_feed_alive() -> None:
     """The timeline and track memos let a dropped feed be garbage-collected."""
-    data = processed(2026)
+    data = process(recorded(2026), settings(2026))
     timeline(data, date(2026, 5, 15), ["Open Space"])
     track_sessions(data, "Talk")
     gone = weakref.ref(data)

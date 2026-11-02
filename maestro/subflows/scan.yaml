@@ -1,0 +1,8 @@
+# Scan a badge the way a USB or Bluetooth HID scanner does: the code's text, then Enter,
+# with no tap on the field, so the screen must have kept the focus in it (ui/scan_screen.py).
+# CODE is the whole payload, "MOCK0001:v4l1d01". A flow's first scan on a screen taps
+# scan.keyboard first, as a person typing a code would.
+appId: io.github.ndonkohenri.confcompanion
+---
+- inputText: ${CODE}
+- pressKey: Enter

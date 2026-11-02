@@ -48,6 +48,7 @@ def feed(year: int) -> dict[str, Any]:
     return json.loads((FIXTURES / "feeds" / f"conference-{year}.json").read_text())
 
 
+@cache
 def site_url(year: int) -> str:
     """The year's conference site, which relative links resolve against."""
     return load_year(year).conference.site_url

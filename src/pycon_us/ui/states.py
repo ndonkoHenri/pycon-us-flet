@@ -6,18 +6,17 @@ out, as its button or, where no button can help, in its sentence (§4.6). ``not_
 is the one of a detail whose id is not in the feed.
 ``SkeletonList`` is shown only while there is no data at all and the first fetch runs
 (NEW-03): with data, the screen shows it and the status strip says how old it is
-(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch for every
-screen that shows the feed.
+(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch, with its
+retry, for every screen that shows the feed.
 """
-
-from collections.abc import Callable
-from typing import Any
 
 import flet as ft
 
 from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import use_prefs
+from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
+from pycon_us.state import Conference
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING
@@ -185,35 +184,47 @@ def not_found(
 
 
 def NoDataState(
-    problem: Problem | None,
-    *,
-    on_retry: Callable[[], Any],
-    retrying: bool,
+    conference: Conference,
+    svc: Services,
     identifier: str,
+    *,
+    title: str = "Can't load the schedule",
+    loading: str = "Loading schedule",
 ) -> ft.Control:
     """Return what a screen that shows the feed shows without any data (NEW-03).
 
-    The skeleton while the first fetch runs, before it has failed; then "Can't load
-    the schedule" with "Try again", its body by why the fetch failed (ux.md §4.1,
-    §4.6). The state stays during a retry, its button disabled: swapping it for the
-    skeleton would remove the focused button and lose a screen reader's place.
+    The skeleton while the first fetch runs, before it has failed; then ``title`` with
+    "Try again", its body by why the fetch failed (ux.md §4.1, §4.6). The state stays
+    during a retry, its button disabled: swapping it for the skeleton would remove the
+    focused button and lose a screen reader's place. The button is disabled only while
+    a refresh the user asked for runs (D-181), never during a quiet one, which a tap
+    joins.
+
+    A plain function, not a component: the caller already subscribes to the store, and
+    a boundary here would add a second subscription for nothing.
 
     Args:
-        problem: Why the last fetch failed (``Conference.problem``), None before one has.
-        on_retry: What "Try again" does: the user's refresh, ``Conference.refresh()``.
-        retrying: A refresh the user asked for runs (``status() == "refreshing"``,
-            D-181): the button is disabled, never during a quiet one, which a tap joins.
+        conference: The feed's store, whose ``problem`` picks the state.
+        svc: The session's services, which "Try again" refreshes with.
         identifier: The failed state's semantics identifier, ``<screen>.no_data``.
+        title: The failed state's title, naming what could not load.
+        loading: What the skeleton says to screen readers.
     """
+    problem = conference.problem
     if problem is None:
-        return SkeletonList()
+        return SkeletonList(loading)
+
+    @report_errors
+    async def retry() -> None:
+        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
+
     return EmptyState(
-        "Can't load the schedule",
+        title,
         icon=ft.Icons.CLOUD_OFF_OUTLINED,
         body=NO_DATA_BODY[problem],
         action="Try again",
-        on_action=on_retry,
-        disabled=retrying,
+        on_action=retry,
+        disabled=conference.status(svc.year.conference) == "refreshing",
         identifier=identifier,
     )
 

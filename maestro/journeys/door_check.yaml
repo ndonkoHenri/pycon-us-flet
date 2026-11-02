@@ -1,0 +1,140 @@
+# DOOR-04 (#825): Door check against the local mock, as staff@example.com.
+#
+# 1. The session picker opens by itself: Tutorials › All about decorators. Back on the
+#    scan screen the list has loaded: two attendees, and none checked in yet.
+# 2. A typed code (Ada's) says "Checked in" with her name and "Vegetarian"; a second code
+#    sent as a HID scanner does (no tap on the field), Linus's, "Admits 2".
+# 3. Ada again, past the 4 s cooldown: "Already checked in", her chip still there, and
+#    the count stays at two.
+# 4. A real badge not on the list (Margaret's) goes online: "Not registered for this
+#    session". Text with no colon: "Not a badge code", and the text stays.
+# 5. The sync chip comes to "All synced", whatever the mock answered (D-441).
+#
+# Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
+# and fake data only.
+# Each run asks the mock to redeem product 10 for Ada and Linus. The first run records
+# it. A rerun passes: the app's own rows went with `clearState`, the door decides on the
+# device from what was bought, and the mock's "already redeemed" answer syncs the row all
+# the same; it records nothing more.
+appId: io.github.ndonkohenri.confcompanion
+name: Door check, checked in, already checked in, not registered, not a badge
+tags:
+  - staff
+  - door
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: staff@example.com
+      PASSWORD: mock-staff
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.staff.door
+    direction: DOWN
+- tapOn:
+    id: more.staff.door
+
+# 1. The picker, then the list.
+- extendedWaitUntil:
+    visible:
+      id: door.category.1
+    timeout: 15000
+- tapOn:
+    id: door.category.1
+- extendedWaitUntil:
+    visible:
+      id: door.session.10
+    timeout: 15000
+- tapOn:
+    id: door.session.10
+- extendedWaitUntil:
+    visible:
+      id: door.session_chip
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: door.preload
+      text: "Ready, works offline, 2 attendees"
+    timeout: 30000
+- assertVisible:
+    id: door.headcount
+    text: "0 checked in for this session"
+
+# 2. Manual entry, then a HID-style scan.
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Checked in.*Ada Example.*Vegetarian.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0003:v4l1d03
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Checked in.*Linus Placeholder.*Admits 2.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: door.headcount
+      text: "2 checked in for this session"
+    timeout: 5000
+
+# 3. Already checked in.
+- runFlow: ../subflows/past_cooldown.yaml
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Already checked in.*Ada Example.*Vegetarian.*"
+    timeout: 15000
+- assertVisible:
+    id: door.headcount
+    text: "2 checked in for this session"
+
+# 4. Not on the list; not a badge.
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0004:v4l1d04
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not registered for this session.*MOCK0004.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: not-a-badge
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not a badge code.*"
+    timeout: 15000
+- assertVisible:
+    text: not-a-badge  # the field keeps it for correction
+- assertVisible:
+    id: door.headcount
+    text: "2 checked in for this session"
+
+# 5. Both rows sent and answered.
+- extendedWaitUntil:
+    visible:
+      id: staff.sync_chip
+      text: "All synced"
+    timeout: 30000

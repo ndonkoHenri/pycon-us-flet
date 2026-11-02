@@ -39,7 +39,7 @@ from pycon_us.theme import Tokens, use_tokens
 from pycon_us.theme_badges import BadgeColors
 from pycon_us.ui.badges import NEW_TRACK, TrackBadge
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import HUB_PAGES, Track
 
@@ -180,23 +180,15 @@ def Tracks() -> ft.View:
         [conference.version],
     )
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     items: list[ft.Control]
-    if data is None and conference.problem is None:
-        items = [SkeletonList(label="Loading tracks")]  # the first fetch runs (NEW-03)
-    elif data is None:
+    if data is None:
         items = [
-            EmptyState(
-                "Can't load the tracks",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,  # in place, so focus stays (D-182)
-                identifier=f"{SCREEN}.no_data",
+            NoDataState(
+                conference,
+                svc,
+                f"{SCREEN}.no_data",
+                title="Can't load the tracks",
+                loading="Loading tracks",
             )
         ]
     elif not groups:

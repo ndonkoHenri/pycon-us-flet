@@ -119,21 +119,10 @@ def Jobs() -> ft.View:
         set_query("")  # at once, not after the pause
         await field.clear()  # the Clear went: the focus goes back to the field
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     pinned: list[ft.Control] = [StatusStrip()]
     items: list[ft.Control] = []
     if data is None:
-        items.append(
-            NoDataState(
-                conference.problem,
-                on_retry=refresh,
-                retrying=conference.status(svc.year.conference) == "refreshing",
-                identifier=f"{SCREEN}.no_data",
-            )
-        )
+        items.append(NoDataState(conference, svc, f"{SCREEN}.no_data"))
     elif not data.job_listings:
         items.append(
             EmptyState(

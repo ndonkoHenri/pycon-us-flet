@@ -1,22 +1,35 @@
-"""Tests for the shared states: ``EmptyState`` and ``SkeletonList`` (#83; ux.md §3.9, §4).
+"""Tests for the shared states: ``EmptyState``, ``NoDataState`` and ``SkeletonList``.
 
 The builders run outside a renderer: ``SkeletonList``'s body runs unwrapped with the
 ``Prefs`` the test gives it. How they look, and what TalkBack and VoiceOver read, is
-checked on devices (the PR).
+checked on devices (the PR). ``test_no_data_screens.py`` holds ``NoDataState`` on each
+screen (#83, #902; ux.md §3.9, §4).
 """
 
 import inspect
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import cast
 
 import flet as ft
 import pytest
 
+from pycon_us.config import load_year
+from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import Prefs
+from pycon_us.services import Services
+from pycon_us.state import Conference
 from pycon_us.theme import HC_DARK_TOKENS, LIGHT_TOKENS, Tokens
 from pycon_us.ui import states
 from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING
-from pycon_us.ui.states import SKELETON_ROWS, EmptyState, SkeletonList
+from pycon_us.ui.states import (
+    NO_DATA_BODY,
+    SKELETON_ROWS,
+    EmptyState,
+    NoDataState,
+    SkeletonList,
+)
+from tests.sessions import memory_services
 from tests.trees import descendants, only, texts
 
 
@@ -178,6 +191,96 @@ def test_an_empty_state_has_no_fixed_height_so_it_reflows_at_200_percent() -> No
         on_action=never,
     )
     assert all(getattr(node, "height", None) is None for node in descendants(state))
+
+
+# ------------------------------------------------------------------ NoDataState
+
+
+@pytest.fixture
+def svc(tmp_path: Path) -> Services:
+    """Return a session's services with the memory fakes."""
+    return memory_services(load_year(2026), tmp_path)
+
+
+def conference_with(problem: Problem, *, asked: bool = False) -> Conference:
+    """Return a store whose fetch failed, and a refresh runs: asked for, or quiet."""
+    conference = Conference(problem=problem)
+    conference.refreshing, conference._asked = True, asked
+    return conference
+
+
+def test_no_data_shows_the_skeleton_until_a_fetch_has_failed(
+    svc: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Before a failure: the skeleton, saying what loads, and no button (NEW-03)."""
+    # A text of its label: a component needs a renderer.
+    monkeypatch.setattr(states, "SkeletonList", lambda label: ft.Text(label))
+    conference = Conference()
+    assert texts(NoDataState(conference, svc, "x.no_data")) == ["Loading schedule"]
+    named = NoDataState(conference, svc, "x.no_data", loading="Loading rooms")
+    assert texts(named) == ["Loading rooms"]
+
+
+@pytest.mark.parametrize(("problem", "body"), NO_DATA_BODY.items())
+def test_a_failed_fetch_says_what_failed_why_and_offers_try_again(
+    svc: Services, problem: Problem, body: str
+) -> None:
+    """The title by the screen, the body by the problem, one button; ``identifier``'s."""
+    state = NoDataState(Conference(problem=problem), svc, "x.no_data", title="Can't")
+    assert texts(state) == ["Can't", body]
+    assert only(state, ft.Icon).icon == ft.Icons.CLOUD_OFF_OUTLINED
+    assert only(state, ft.FilledTonalButton).content == "Try again"
+    (region,) = [
+        n
+        for n in descendants(state)
+        if isinstance(n, ft.Semantics) and n.identifier == "x.no_data"
+    ]
+    assert region.live_region
+
+
+def test_the_title_says_the_schedule_unless_the_screen_names_something_else(
+    svc: Services,
+) -> None:
+    """Most screens show the schedule, and say so."""
+    state = NoDataState(Conference(problem="offline"), svc, "x.no_data")
+    assert texts(state)[0] == "Can't load the schedule"
+
+
+def test_a_quiet_refresh_leaves_try_again_enabled(svc: Services) -> None:
+    """D-181: a refresh the app started greys nothing out, so a tap joins it."""
+    state = NoDataState(conference_with("offline"), svc, "x.no_data")
+    assert not only(state, ft.FilledTonalButton).disabled
+
+
+def test_the_user_s_refresh_keeps_the_state_with_its_button_disabled(
+    svc: Services,
+) -> None:
+    """The state doesn't go back to the skeleton: focus stays on the button (D-182)."""
+    conference = conference_with("offline", asked=True)
+    state = NoDataState(conference, svc, "x.no_data")
+    assert texts(state)[1] == NO_DATA_BODY["offline"]
+    assert only(state, ft.FilledTonalButton).disabled
+
+
+async def test_try_again_is_the_user_s_refresh_and_reports_what_escapes(
+    svc: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """It refreshes with the session's services; an unexpected error isn't fatal."""
+    calls: list[tuple[object, ...]] = []
+
+    async def refresh(_: Conference, *args: object, closed: object) -> None:
+        """Record the arguments, then fail as nothing expected does."""
+        calls.append((*args, closed))
+        raise RuntimeError("unexpected")
+
+    # On the class: assigning to the store would notify, also when the patch is undone.
+    monkeypatch.setattr(Conference, "refresh", refresh)
+    state = NoDataState(Conference(problem="offline"), svc, "x.no_data")
+    tap = cast(
+        Callable[[], Awaitable[None]], only(state, ft.FilledTonalButton).on_click
+    )
+    await tap()  # returns: report_errors caught it
+    assert calls == [(svc.storage, svc.year, svc.closed)]
 
 
 # ------------------------------------------------------------------ SkeletonList

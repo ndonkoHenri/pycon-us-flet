@@ -40,7 +40,7 @@ from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 FILTER_HINT = "Filter projects"
@@ -74,27 +74,19 @@ def Sprints() -> ft.View:
     listed = ft.use_memo(lambda: projects(data) if data else (), [conference.version])
 
     @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
-    @report_errors
     async def submit(e: ft.Event[ft.Button]) -> None:
         await open_link(svc, info.sprint_submit_url, opener=e.control)
 
     pinned: list[ft.Control] = []
     items: list[ft.Control]
-    if data is None and conference.problem is None:
-        items = [SkeletonList(label="Loading sprint projects")]  # NEW-03
-    elif data is None:
+    if data is None:
         items = [
-            EmptyState(
-                "Can't load the sprints",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,  # in place, so focus stays (D-182)
-                identifier=f"{SCREEN}.no_data",
+            NoDataState(
+                conference,
+                svc,
+                f"{SCREEN}.no_data",
+                title="Can't load the sprints",
+                loading="Loading sprint projects",
             )
         ]
     elif not listed:

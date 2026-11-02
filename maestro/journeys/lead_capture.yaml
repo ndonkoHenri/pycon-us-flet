@@ -1,0 +1,144 @@
+# LEAD-01, LEAD-04 (#825): the Lead scanner against the local mock, as sponsor@example.com.
+#
+# 1. Sign-in lands on the scanner's consent page: Continue stays disabled until the box
+#    is ticked.
+# 2. A typed code (Ada's) says "Lead captured" with her first name and offers Add note; a
+#    second code sent as a HID scanner does (no tap on the field) is captured too.
+# 3. Ada again, past the 4 s cooldown: "Already in your leads", with Open lead; still
+#    two leads. Text with no colon: "Not a badge code", and the text stays.
+# 4. Back to More and in again: no consent page this time (asked once per account).
+#
+# Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
+# and fake data only.
+# Each run leaves Ada's and Grace's leads for Example Corp in the mock's memory. A rerun
+# passes: the app's own rows went with `clearState`, and an idempotent mock (the default)
+# answers a repeated capture the same and keeps one lead each. Under
+# `--capture non_idempotent` each run adds two lead rows.
+appId: io.github.ndonkohenri.confcompanion
+name: Lead scanner, consent, captured, already scanned, not a badge
+tags:
+  - staff
+  - lead
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: sponsor@example.com
+      PASSWORD: mock-sponsor
+
+# 1. A sponsor's account lands on its scanner (D-16), on the consent page.
+- extendedWaitUntil:
+    visible:
+      id: lead.consent.check
+    timeout: 15000
+- assertVisible:
+    id: lead.consent.continue
+    enabled: false
+- tapOn:
+    id: lead.consent.check
+- extendedWaitUntil:
+    visible:
+      id: lead.consent.continue
+      enabled: true
+    timeout: 5000
+- tapOn:
+    id: lead.consent.continue
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Ready to scan.*"
+    timeout: 15000
+- assertVisible:
+    id: lead.leads
+    text: "Leads \\(0\\)"
+
+# 2. Manual entry, then a HID-style scan.
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Lead captured.*Ada.*MOCK0001.*"
+    timeout: 15000
+- assertVisible:
+    id: lead.add_note
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0002:v4l1d02
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Lead captured.*Grace.*MOCK0002.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: lead.leads
+      text: "Leads \\(2\\)"
+    timeout: 5000
+
+# 3. Already scanned; not a badge.
+- runFlow: ../subflows/past_cooldown.yaml
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Already in your leads.*Ada.*MOCK0001.*"
+    timeout: 15000
+- assertVisible:
+    id: lead.open_lead
+- assertNotVisible:
+    id: lead.add_note
+- assertVisible:
+    id: lead.leads
+    text: "Leads \\(2\\)"
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: not-a-badge
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not a badge code.*"
+    timeout: 15000
+- assertVisible:
+    text: not-a-badge  # the field keeps it for correction
+- assertNotVisible:
+    id: lead.open_lead
+
+# 4. Asked once per account: the scan screen opens at once.
+- runFlow: ../subflows/back.yaml
+- runFlow:  # the first Back only closed the keyboard
+    when:
+      notVisible:
+        id: more.title
+    commands:
+      - runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.staff.lead
+    direction: DOWN
+- tapOn:
+    id: more.staff.lead
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Ready to scan.*"
+    timeout: 15000
+- assertNotVisible:
+    id: lead.consent.check
+- assertVisible:
+    id: lead.leads
+    text: "Leads \\(2\\)"

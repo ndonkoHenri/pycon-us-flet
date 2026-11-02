@@ -87,17 +87,8 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     prefs = use_prefs()
     data = conference.data
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     if data is None:
-        no_data = NoDataState(
-            conference.problem,
-            on_retry=refresh,
-            retrying=conference.status(svc.year.conference) == "refreshing",
-            identifier=f"{SCREEN}.no_data",
-        )
+        no_data = NoDataState(conference, svc, f"{SCREEN}.no_data")
         # No name to show yet: the bar names the page, its level-1 heading (D-211).
         return AppScaffold(
             title="Sponsor",

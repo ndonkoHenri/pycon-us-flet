@@ -12,7 +12,7 @@ from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.timeline import posters, schedule_order, track_sessions
 from pycon_us.prefs import Prefs
-from tests.feeds import YEARS, changed, processed, settings
+from tests.feeds import YEARS, changed, processed, recorded, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
@@ -99,7 +99,7 @@ def test_a_posters_row_s_posters_are_memoised_per_feed() -> None:
     data = processed(2026)
     row = posters_row(data)
     assert posters(data, row) is posters(data, row)
-    other = processed(2026)
+    other = process(recorded(2026), settings(2026))
     assert posters(other, posters_row(other)) is not posters(data, row)
 
 
@@ -122,4 +122,5 @@ def test_a_track_page_is_memoised_per_feed() -> None:
     """A track page is one object per feed, another for a new feed."""
     data = processed(2026)
     assert track_sessions(data, "Talk") is track_sessions(data, "Talk")
-    assert track_sessions(data, "Talk") is not track_sessions(processed(2026), "Talk")
+    other = process(recorded(2026), settings(2026))
+    assert track_sessions(data, "Talk") is not track_sessions(other, "Talk")

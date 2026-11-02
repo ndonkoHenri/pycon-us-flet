@@ -14,7 +14,7 @@ from pycon_us.config import load_year
 from pycon_us.core.expo import Expo, expo_booths, job_fair_tables
 from pycon_us.core.feed import process
 from pycon_us.core.models import ConferenceData
-from tests.feeds import changed, processed, settings
+from tests.feeds import changed, processed, recorded, settings
 
 BOOTHS = load_year(2026).map.booths
 """2026's booths, from ``map.toml``."""
@@ -128,7 +128,7 @@ def test_the_expo_is_built_once_per_feed() -> None:
     data = processed(2026)
     expo = expo_booths(data, BOOTHS)
     assert expo_booths(data, BOOTHS) is expo
-    assert expo_booths(processed(2026), BOOTHS) is not expo
+    assert expo_booths(process(recorded(2026), settings(2026)), BOOTHS) is not expo
 
 
 # ------------------------------------------------------------------ the job fair
@@ -194,4 +194,4 @@ def test_the_tables_are_built_once_per_feed() -> None:
     data = processed(2026)
     tables = job_fair_tables(data)
     assert job_fair_tables(data) is tables
-    assert job_fair_tables(processed(2026)) is not tables
+    assert job_fair_tables(process(recorded(2026), settings(2026))) is not tables

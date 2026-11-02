@@ -29,6 +29,7 @@ from pycon_us.screens.map_rooms import RoomsPane, now_lines, room_row
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui import states
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
     MemoryClipboard,
@@ -82,7 +83,13 @@ class FakeConference(SimpleNamespace):
 
     def __init__(self, data: ConferenceData | None, problem: str | None = None):
         """Hold ``data`` and ``problem``, not refreshing, with no refresh counted."""
-        super().__init__(data=data, problem=problem, refreshing=False, refreshes=0)
+        super().__init__(
+            data=data, problem=problem, refreshing=False, asked=False, refreshes=0
+        )
+
+    def status(self, _info: object) -> str:
+        """Say ``refreshing`` only while a refresh the user asked for runs (D-181)."""
+        return "refreshing" if self.refreshing and self.asked else "fresh"
 
     async def refresh(self, *args: object, **kwargs: object) -> None:
         """Count a refresh, as the Try again button asks for one."""
@@ -116,7 +123,7 @@ def render(
     monkeypatch.setattr(map_screen, "use_margin", phone_margin)
     # Stand-ins for the components, which need a renderer; their own tests check them.
     monkeypatch.setattr(map_screen, "StatusStrip", lambda: STRIP)
-    monkeypatch.setattr(map_screen, "SkeletonList", lambda label: ft.Text(label))
+    monkeypatch.setattr(states, "SkeletonList", lambda label: ft.Text(label))
     monkeypatch.setattr(ft, "use_view_path", lambda: "/map")
 
     def render(conference: FakeConference, now: datetime = DURING) -> ft.ListView:
@@ -386,7 +393,7 @@ def test_a_retry_keeps_the_state_with_its_button_disabled(
 ) -> None:
     """While a retry runs, the empty state stays and its button is disabled."""
     conference = FakeConference(None, problem="offline")
-    conference.refreshing = True
+    conference.refreshing = conference.asked = True
     rows = rows_of(render(conference))
     empty_state(rows, "map.no_data")  # still there: a screen reader keeps its place
     assert button_of(rows).disabled

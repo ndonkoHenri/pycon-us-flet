@@ -23,7 +23,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.widths import LIST, sides, use_margin
 
@@ -53,29 +53,20 @@ def RoomsPane(
     use_minute()  # "Now:" keeps up with the clock while the list shows
 
     @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
-    @report_errors
     def open_schedule() -> None:
         page.navigate("/schedule")
 
     data = conference.data
     rows: list[ft.Control]
-    if data is None and conference.problem is None:
-        # The first fetch runs, or is about to (NEW-03); the strip says so.
-        rows = [StatusStrip(), SkeletonList("Loading rooms")]
-    elif data is None:
+    if data is None:
         rows = [
-            StatusStrip(),  # its bar shows a retry; the button below stays in place
-            EmptyState(
-                "Can't load the rooms",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,
-                identifier="map.no_data",
+            StatusStrip(),  # its bar shows the first fetch and a retry
+            NoDataState(
+                conference,
+                svc,
+                "map.no_data",
+                title="Can't load the rooms",
+                loading="Loading rooms",
             ),
         ]
     elif not data.rooms:

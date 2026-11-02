@@ -33,7 +33,7 @@ from pycon_us.ui.location_card import job_fair_card
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
 from pycon_us.ui.semantics import named
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_map import JOB_FAIR_PLAN, MapData
@@ -94,27 +94,19 @@ def JobFairPane(
     svc = use_services()
     conference = use_conference()
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     data = conference.data
     rows: list[ft.Control] = []
     if data is None:
         rows.append(StatusStrip())  # its bar shows a retry while there is no feed
     rows.extend(plan_rows(svc.year.map))
-    if data is None and conference.problem is None:
-        rows.append(SkeletonList("Loading tables"))
-    elif data is None:
+    if data is None:
         rows.append(
-            EmptyState(
-                "Can't load the tables",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,
-                identifier=f"{SCREEN}.job_fair.no_data",
+            NoDataState(
+                conference,
+                svc,
+                f"{SCREEN}.job_fair.no_data",
+                title="Can't load the tables",
+                loading="Loading tables",
             )
         )
     elif tables := job_fair_tables(data):

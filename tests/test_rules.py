@@ -15,7 +15,7 @@ import pytest
 
 from pycon_us.core.feed import process
 from pycon_us.core.rules import track
-from tests.feeds import changed, document, processed, settings
+from tests.feeds import changed, document, processed, recorded, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
@@ -345,7 +345,7 @@ def test_a_session_id_already_taken_is_skipped() -> None:
 def test_dropped_slots_are_counted_in_the_log(caplog: pytest.LogCaptureFixture) -> None:
     """Processing logs how many slots it dropped, counted by reason."""
     with caplog.at_level(logging.INFO, logger="pycon_us.core.feed"):
-        processed(2026)
+        process(recorded(2026), settings(2026))
     message, _ = caplog.messages  # then "Feed processed in N ms: ..."
     assert message == (
         "Dropped 484 available-open-space, 7 open-space-duplicate, 49 collapsed,"
