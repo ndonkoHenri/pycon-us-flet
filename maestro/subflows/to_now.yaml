@@ -1,6 +1,6 @@
 # Put today's Schedule back on the now slot: tap the Now button when it shows (D-192).
 # Under Maestro on Android it always shows (F72); tapped on the now slot, the list stays.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

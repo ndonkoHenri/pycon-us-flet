@@ -1,7 +1,7 @@
 # Turn the network back on after a flow: every flow that runs start_offline.yaml runs
 # this in its onFlowComplete, which runs whether the flow passed or failed. Android only;
 # Maestro cannot cut an iOS simulator's network.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

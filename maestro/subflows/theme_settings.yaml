@@ -1,5 +1,5 @@
 # Open More › Settings from a tab root, and wait for its Appearance rows (#512).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     file: tab.yaml

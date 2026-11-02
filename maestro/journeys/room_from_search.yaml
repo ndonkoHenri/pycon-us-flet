@@ -4,7 +4,7 @@
 #
 # Offline (start_offline.yaml): the rooms, the pins and the plans are bundled year data
 # (map.toml, D-36). Search opened from the Map starts on its Places scope (D-19).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Search a room, its floor plan, Back three times
 tags:
   - journeys

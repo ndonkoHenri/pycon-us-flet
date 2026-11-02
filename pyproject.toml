@@ -35,15 +35,16 @@ dev = [                               # host only, never bundled; versions in uv
 
 # ------------------------------------------------------------------ flet build
 [tool.flet]
-product = "Conf Companion"            # display name: neutral placeholder until O-4 (D-36)
-bundle_id = "io.github.ndonkohenri.pyconus"   # placeholder until O-4, both platforms
+product = "Conf Companion"            # display name, neutral: no PSF mark (D-36, D-452)
+bundle_id = "io.github.ndonkohenri.confcompanion"   # both platforms (D-452)
+icon_background = "#680579"           # behind src/assets/icon.svg where a platform needs an opaque icon (D-452)
 
 [tool.flet.app]
 path = "src"                          # entry point src/main.py
 
-[tool.flet.deep_linking]              # pyconus://app/<route path> on both platforms (D-269)
-scheme = "pyconus"                    # placeholder until O-4 (#15); lowercase, never http(s) or file
-host = "app"                          # placeholder until O-4; iOS registers only the scheme
+[tool.flet.deep_linking]              # confcompanion://app/<route path> on both platforms (D-269, D-452)
+scheme = "confcompanion"              # lowercase, never http(s) or file
+host = "app"                          # iOS registers only the scheme
 
 [tool.flet.splash]                    # SHELL-01: the same purple as BootView, so no flash
 color = "#680579"

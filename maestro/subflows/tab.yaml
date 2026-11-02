@@ -8,7 +8,7 @@
 #         its name, as a screen reader reads it
 #
 # The bar's identifier comes first; the name only where no identifier shows (#456).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

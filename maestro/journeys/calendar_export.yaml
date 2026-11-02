@@ -10,7 +10,7 @@
 #
 # What lands in the calendar (the times in UTC, the alarm of each event, the UIDs)
 # the flow cannot read; #458's check read it from the simulator's calendar store.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Add a session and My schedule to the calendar
 tags:
   - journeys

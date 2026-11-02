@@ -165,10 +165,14 @@ that date motivates us but never justifies cutting corners.
   3. **A second opinion, when required.** It is required when the PR changes more than 400 lines (not counting
      lockfiles, fixtures, generated files or data snapshots), changes the architecture (module structure, state,
      routing, the data core, signing, the outbox, build or CI), or edits `docs/decisions.md`. The reviewer is a
-     **different model** from the author (Claude Fable, or Codex run read-only) and reviews the final diff; re-run
+     **different model** from the author (a Claude model, or Codex run read-only) and reviews the final diff; re-run
      it after substantive changes. Each finding is fixed, or rejected in a PR comment with the reason and
      evidence. If you still disagree on something that matters (correctness, data loss, security), ask the other
      reviewer model; if it's a product question, use `needs-decision`.
+     **When the reviewer is capped** (D-458), re-read the final diff, merge after the gate, and say so in a signed
+     PR comment that starts `Second opinion owed` and names the reviewer. Run the review later, on what is current
+     then, and record the reviewer and the result in a signed comment on that PR. Any Claude model or Codex is
+     welcome while its limit allows.
   4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
      acknowledged; every owner comment has a reply.
   5. **No unsettled `needs-decision` question** affects the PR.
