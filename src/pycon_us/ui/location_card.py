@@ -161,7 +161,7 @@ def LocationCard(
         seen=seen,
         active=active,
         key=key,  # pyright: ignore[reportCallIssue]
-    )  # pyright: ignore[reportCallIssue]
+    )
 
 
 def room_card(

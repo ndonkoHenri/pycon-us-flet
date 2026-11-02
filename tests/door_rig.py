@@ -60,7 +60,6 @@ def staff(
 ) -> Account:
     """A signed-in ``Account`` with only the given flags; door staff by default."""
     return Account(
-        restored=True,
         signed_in=True,
         email="staff@example.com",
         door_check=door_check,

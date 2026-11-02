@@ -46,7 +46,7 @@ async def test_a_saved_account_with_both_secrets_is_restored(
     )
     account = Account()
     await account.restore(storage, credentials)
-    assert account.restored and account.signed_in
+    assert account.signed_in
     assert (account.email, account.nickname) == (ALL["email"], ALL["nickname"])
     assert account.lead_retrieval and account.door_check
     assert account.mask_violation and account.is_speaker
@@ -84,7 +84,7 @@ async def test_nothing_saved_restores_signed_out_and_writes_nothing(
     """A fresh install is signed out, and the restore removes nothing."""
     account = Account()
     await account.restore(storage, credentials)
-    assert account.restored and not account.signed_in
+    assert not account.signed_in
     assert account.credentials() == (None, None)
     assert keystore.journal == []
 
@@ -125,7 +125,7 @@ async def test_every_partial_state_is_cleared_and_signed_out(
     )
     account = Account()
     await account.restore(storage, credentials)
-    assert account.restored and not account.signed_in
+    assert not account.signed_in
     assert ACCOUNT.key not in shared.values
     assert keystore.values == {}
 
@@ -154,7 +154,7 @@ async def test_a_failed_read_signs_out_for_the_session_and_removes_nothing(
     account = Account()
     with caplog.at_level(logging.WARNING):
         await account.restore(storage, credentials)
-    assert account.restored and not account.signed_in
+    assert not account.signed_in
     shared.error = None
     assert ACCOUNT.key in shared.values
     assert keystore.values == {API_KEY: KEY, API_SECRET: SECRET}
@@ -240,7 +240,7 @@ async def test_reset_removes_the_credentials_and_signs_out(
     names = changes(account)
     assert await account.reset(storage, credentials) is True
     assert keystore.values == {}
-    assert not account.signed_in and account.restored
+    assert not account.signed_in
     assert names.fields[0] == "signed_in"  # first: nothing reads a half-cleared account
 
 

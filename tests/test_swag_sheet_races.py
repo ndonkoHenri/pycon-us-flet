@@ -127,7 +127,7 @@ async def test_an_offer_after_unmount_returns_none_at_once(tmp_path: Path) -> No
     offer = swag.Offer(
         badge(1),
         0.0,
-        AttendeeProducts("MOCK0001", "Ada", 1, (("T-Shirt", (Item(30, "T", 2, 2),)),)),
+        AttendeeProducts("MOCK0001", "Ada", (("T-Shirt", (Item(30, "T", 2, 2),)),)),
     )
     async with rendering(Root):
         setters[-1](False)

@@ -177,7 +177,7 @@ async def test_the_saved_account_is_restored_before_the_gate_opens(
 
     def listener(_sender: object, name: str | None) -> None:
         if name == "loaded":
-            restored_at_open.append(account.restored and account.signed_in)
+            restored_at_open.append(account.signed_in)
 
     assert isinstance(prefs, ft.Observable)
     prefs.subscribe(listener)

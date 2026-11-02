@@ -197,7 +197,7 @@ def provide(
                 lambda: FavoritesCtx(
                     favorites,
                     lambda: AccountCtx(
-                        Account(restored=True) if account is None else account,
+                        Account() if account is None else account,
                         lambda: StaffCtx(
                             Staff() if staff is None else staff,
                             lambda: ChangeLogCtx(

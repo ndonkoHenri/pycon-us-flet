@@ -45,9 +45,8 @@ def signed_in(
     door_check: bool = False,
     mask_violation: bool = False,
 ) -> Account:
-    """A restored, signed-in ``Account`` with only the given role flags on."""
+    """A signed-in ``Account`` with only the given role flags on."""
     return Account(
-        restored=True,
         signed_in=True,
         email="a@example.com",
         lead_retrieval=lead_retrieval,

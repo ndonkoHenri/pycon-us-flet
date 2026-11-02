@@ -91,7 +91,6 @@ def coc(
 ) -> Account:
     """A signed-in ``Account`` with only the given role flags; CoC staff by default."""
     return Account(
-        restored=True,
         signed_in=True,
         email="coc@example.com",
         mask_violation=mask_violation,
@@ -217,7 +216,7 @@ def button(shown: Shown, identifier: str) -> ft.IconButton | ft.TextButton:
     [
         (coc(mask_violation=False), True),
         (coc(mask_violation=False, door_check=True, lead_retrieval=True), True),
-        (Account(restored=True), True),
+        (Account(), True),
         (coc(), False),
     ],
     ids=["no flag", "door and lead only", "signed out", "no mock URL"],
