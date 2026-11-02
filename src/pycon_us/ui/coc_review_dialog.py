@@ -31,7 +31,7 @@ from pycon_us.core.conduct import (
     display_name,
 )
 from pycon_us.theme import Tokens
-from pycon_us.ui.buttons import busy_label
+from pycon_us.ui.buttons import LABEL_PADDING, busy_label
 from pycon_us.ui.queue_rows import heading
 from pycon_us.ui.semantics import named
 
@@ -245,9 +245,11 @@ def record_button(review: Review, on_click: Callable[[], object]) -> ft.FilledBu
         on_click: Records.
     """
     return ft.FilledButton(
-        content=busy_label(RECORDING)
+        content=busy_label(RECORDING, wrap=True)
         if review.sending
         else ft.Text(RECORD_ANYWAY if review.maybe_sent else RECORD),
         on_click=on_click,
         disabled=review.sending,
+        style=ft.ButtonStyle(padding=LABEL_PADDING),
+        elevation=0,
     )

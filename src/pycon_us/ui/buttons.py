@@ -32,16 +32,19 @@ one-line button 40 dp tall at 100 % (the 20 dp icon and its 20 dp).
 """
 
 
-def busy_label(words: str) -> ft.Control:
+def busy_label(words: str, *, wrap: bool = False) -> ft.Control:
     """Return a button's label while its work is in flight: a small ring and ``words``.
 
     The words change with the ring, so a screen reader says the busy state too.
 
     Args:
         words: What the button is doing: "Signing in…".
+        wrap: Let a narrow action put its ring and label on separate lines.
     """
     return ft.Row(
         [ft.ProgressRing(width=16, height=16, stroke_width=2), ft.Text(words)],
         spacing=8,
         tight=True,
+        wrap=wrap,
+        alignment=ft.MainAxisAlignment.CENTER if wrap else ft.MainAxisAlignment.START,
     )
