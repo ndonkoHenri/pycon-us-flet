@@ -1,6 +1,6 @@
 [project]
 name = "pycon-us"
-version = "0.1.0"                     # == pycon_us.__version__ (unit test, D-83)
+version = "0.4.0"                     # == pycon_us.__version__ (unit test, D-83)
 description = "A conference companion for PyCon US on Android and iOS, built with Python and Flet. Not an official PSF app."
 readme = "README.md"
 license = "Apache-2.0"

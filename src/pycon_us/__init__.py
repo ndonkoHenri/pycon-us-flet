@@ -5,7 +5,7 @@ docstring says what it is for, and ``docs/decisions.md`` section M holds the
 names.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.4.0"
 
 APP_NAME = "Conf Companion"
 """The display name, neutral and with no PSF mark (D-36, D-452), equal to ``[tool.flet] product``."""
