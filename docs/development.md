@@ -1086,9 +1086,11 @@ export_options = { manageAppVersionAndBuildNumber = false }   # Xcode must not r
 
 | Signing state | Outcome |
 |---|---|
-| No `provisioning_profile` for the chosen method (today, until #121) | flet-cli's warning panel, a build with `--no-codesign`, and only `build/ipa/pycon-us.xcarchive` (about 240 MB; the `.app` inside is about 77 MB). No `.ipa`. |
+| No `provisioning_profile` for the chosen method (today, until #121) | flet-cli's warning panel, a build with `--no-codesign`, and only `build/ipa/pycon-us.xcarchive` (242 MB on disk at `22a6dcb16`; the `.app` inside is 83 MB, the dSYMs 158 MB). No `.ipa`. |
 | A profile named but not installed on the Mac | flet-cli's pre-check stops within seconds, before Xcode: "Provisioning profile '…' is not installed", followed by the installed profiles. It also checks expiry, the team and the bundle id (`CLI/commands/build.py:297-389`). |
 | A matching profile installed | A signed **`build/ipa/pycon_us.ipa`** (underscore, unlike the other artifacts; 44.8 MB in S5), `Apple Distribution` authority, `codesign --verify --deep --strict` clean. |
+
+**Checked at `22a6dcb16` (#817, 2026-11-02).** An unsigned `PUB_CACHE=$PWD/build/pub-cache LANG=en_US.UTF-8 uv run flet build ipa --yes` of the real app, from a fresh worktree, Xcode 27.2 (27B52, iphoneos27.2 SDK), Flutter 3.47.7, Python 3.14.10, took 11 min 30 s (packaging 5 min, `xcodebuild archive` 6 min) while another worktree built Android, and ended with no warnings or errors. `Info.plist` of the archive reads arm64, `io.github.ndonkohenri.confcompanion`, `0.1.0` (1), `MinimumOSVersion` 15.0, URL scheme `confcompanion`; `codesign -dv` says "not signed at all". The `.app` holds the `permission_handler_apple`, `flutter_local_notifications` and `flutter_secure_storage_darwin` bundles, `Python.framework` with the 50-odd extension frameworks, and `serious_python_darwin_serious_python_darwin.bundle/app/pycon_us` and `site-packages/` with `flet_notifications`, `flet_permission_handler` and `flet_secure_storage`. It has no `NS…UsageDescription` key, and `src/` asks for no permission that needs one. Not run on hardware (#121).
 
 Either way, the chosen table reaches the generated project: `CODE_SIGN_IDENTITY` and `DEVELOPMENT_TEAM` in the Runner's build settings, and `method`, `teamID`, `signingCertificate` and `manageAppVersionAndBuildNumber` in `build/flutter/ios/exportOptions.plist`. Simulator builds are signed ad hoc whatever the table says.
 
