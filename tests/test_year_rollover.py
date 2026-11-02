@@ -247,8 +247,10 @@ def outboxes(directory: Path) -> Iterator[tuple[OutboxDb, OutboxDb]]:
     new.close()
 
 
-def scan(db: OutboxDb, code: str) -> None:
-    """Enqueue a lead scan of ``code`` for ``OWNER``, not sent yet."""
+def scan(
+    db: OutboxDb, code: str, sponsor: tuple[str, str] = ("7", "Old Sponsor")
+) -> outbox.Enqueued:
+    """Enqueue a lead scan of ``code`` for ``OWNER`` and ``sponsor``, not sent yet."""
     enqueued = db.enqueue(
         code,
         lambda rows: outbox.scan_lead(
@@ -256,12 +258,26 @@ def scan(db: OutboxDb, code: str) -> None:
             owner=OWNER,
             code=code,
             payload={"badge_validator": "v"},
-            sponsor_id="7",
-            sponsor_name="Old Sponsor",
+            sponsor_id=sponsor[0],
+            sponsor_name=sponsor[1],
             now=1.0,
         ),
     )
     assert enqueued is not None and enqueued.row is not None
+    return enqueued
+
+
+def synced(db: OutboxDb, enqueued: outbox.Enqueued) -> None:
+    """Store a scan's row as sent, as a pass of the worker would."""
+    assert enqueued.row is not None
+    assert db.save(outbox.after_success(stored(db, enqueued.row.key), {"ok": True}))
+
+
+def stored(db: OutboxDb, code: str) -> outbox.Row:
+    """Return ``code``'s only row in ``db``, with its id."""
+    rows = [row for row in db.rows(OWNER, tuple(Status)) or [] if row.key == code]
+    assert len(rows) == 1
+    return rows[0]
 
 
 def test_a_scan_of_2026_is_neither_sent_nor_listed_in_2027(
@@ -287,6 +303,55 @@ def test_the_same_badge_scanned_in_each_year_is_two_rows(
     scan(new, "MOCK0001")
     assert len(old.rows(OWNER, tuple(Status)) or []) == 1
     assert len(new.rows(OWNER, tuple(Status)) or []) == 1
+
+
+@pytest.mark.parametrize(
+    "sponsor", [("7", "Old Sponsor"), ("8", "New Sponsor")], ids=["same", "another"]
+)
+def test_a_lead_synced_in_2026_is_no_repeat_and_no_other_sponsor_in_2027(
+    outboxes: tuple[OutboxDb, OutboxDb], sponsor: tuple[str, str]
+) -> None:
+    """D-459's key stays in the year: not ``ALREADY``, and no "Also in your leads for"."""
+    old, new = outboxes
+    synced(old, scan(old, "MOCK0001"))
+    enqueued = scan(new, "MOCK0001", sponsor)
+    assert enqueued.outcome is outbox.Outcome.QUEUED
+    assert enqueued.others == ()
+
+
+def test_a_note_in_2027_does_not_follow_a_lead_synced_in_2026(
+    outboxes: tuple[OutboxDb, OutboxDb],
+) -> None:
+    """D-459's note waits for its sponsor's lead, and last year's file doesn't hold it."""
+    old, new = outboxes
+    synced(old, scan(old, "MOCK0001"))
+    noted = new.enqueue(
+        "MOCK0001",
+        lambda rows: outbox.save_note(
+            rows,
+            owner=OWNER,
+            code="MOCK0001",
+            note="Hot",
+            sponsor_id="7",
+            sponsor_name="Old Sponsor",
+            now=1.0,
+        ),
+    )
+    assert noted is not None and noted.outcome is outbox.Outcome.QUEUED
+    assert new.due_rows(OWNER, 2.0) == []
+
+
+def test_a_lost_answer_in_2026_says_nothing_of_the_same_lead_in_2027(
+    outboxes: tuple[OutboxDb, OutboxDb],
+) -> None:
+    """D-410's flag, which #885 sets on an unreadable 200 too, stays on 2026's row."""
+    old, new = outboxes
+    scan(old, "MOCK0001")
+    row_id = stored(old, "MOCK0001").id
+    assert row_id is not None and old.flag_maybe_sent(row_id)
+    scan(new, "MOCK0001")
+    assert stored(old, "MOCK0001").maybe_sent
+    assert not stored(new, "MOCK0001").maybe_sent
 
 
 async def test_only_other_years_files_go_at_a_reset(

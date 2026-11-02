@@ -21,7 +21,7 @@ from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.lead_note import NOT_LOADED, NOTHING_TO_SAVE, WILL_SYNC
 from pycon_us.screens.staff_lead import NOTE_OPEN
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import STAFF_SPONSOR
+from pycon_us.services.pref_keys import staff_sponsor
 from pycon_us.ui import scan_screen
 from tests import lead_screen
 from tests.filter_sheet import descendants
@@ -184,11 +184,11 @@ async def test_add_note_goes_to_the_sponsor_scanned_for_not_the_one_chosen_since
     location = [lead_screen.VIEW]
     monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
     example = LeadSponsor("1", "Example Corp")
-    stored[STAFF_SPONSOR.key] = json.dumps(to_stored(example))
+    stored[staff_sponsor(2026).key] = json.dumps(to_stored(example))
     account = signed_in(door_check=True)
     shown = await show(account, outbox=db)
     await scan(shown)
-    stored[STAFF_SPONSOR.key] = json.dumps(
+    stored[staff_sponsor(2026).key] = json.dumps(
         to_stored(LeadSponsor("3", "Sample Systems"))
     )
     location[0] = f"{lead_screen.VIEW}/sponsor"  # the picker, then back
