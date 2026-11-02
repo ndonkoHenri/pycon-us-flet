@@ -2,9 +2,9 @@
 
 The flow takes the links' scheme and host from one env value, ``LINK``, with a default
 for runs that give none. That default must be the app's own: the one common
-``[tool.flet.deep_linking]`` table in ``pyproject.toml`` (D-269). When O-4 (#15)
-renames the scheme or the host there, this check fails, so the default is changed with
-it instead of the flow failing on a device with links the app no longer registers.
+``[tool.flet.deep_linking]`` table in ``pyproject.toml`` (D-269, D-452). If the scheme
+or the host is renamed there, this check fails, so the default is changed with it
+instead of the flow failing on a device with links the app no longer registers.
 """
 
 import re
@@ -37,7 +37,7 @@ def app_link() -> str:
 def test_the_flow_s_default_link_is_the_app_s_scheme_and_host() -> None:
     """D-269: the flow's default ``LINK`` equals ``[tool.flet.deep_linking]``.
 
-    A renamed scheme or host in ``pyproject.toml`` (#15) fails here, not on a device.
+    A renamed scheme or host in ``pyproject.toml`` fails here, not on a device.
     """
     assert flow_default() == app_link()
 
