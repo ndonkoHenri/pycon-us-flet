@@ -288,10 +288,6 @@ def Schedule() -> ft.View:
 
     on_scroll = ft.use_callback(scrolled, [])
 
-    @report_errors
-    async def try_again() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     if data is None or shown is None:
         return AppScaffold(
             title="Schedule",
@@ -303,12 +299,7 @@ def Schedule() -> ft.View:
             body=ft.ListView(
                 [
                     strip_view(strip, tokens),
-                    NoDataState(
-                        conference.problem,
-                        on_retry=try_again,
-                        retrying=conference.status(info) == "refreshing",
-                        identifier="schedule.no_data",
-                    ),
+                    NoDataState(conference, svc, "schedule.no_data"),
                 ],
                 expand=True,
                 padding=sides(margin),

@@ -17,7 +17,6 @@ from pycon_us.core.timeline import keynote_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.screens.keynote_card import SCREEN, KeynoteCard
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.favorite import use_favorite_toggle
@@ -45,7 +44,6 @@ def Keynotes() -> ft.View:
     favorites = use_favorites()
     on_toggle = use_favorite_toggle(favorites)
     tokens = use_tokens()
-    info = svc.year.conference
     keynotes = svc.year.content.keynotes
     data = conference.data
     # Once per feed version (and memoised per feed by the query itself, D-178).
@@ -64,20 +62,9 @@ def Keynotes() -> ft.View:
         use_24h=bool(page.media and page.media.always_use_24_hour_format),
     )
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     items: list[ft.Control]
     if data is None:
-        items = [
-            NoDataState(
-                conference.problem,
-                on_retry=refresh,
-                retrying=conference.status(info) == "refreshing",
-                identifier=f"{SCREEN}.no_data",
-            )
-        ]
+        items = [NoDataState(conference, svc, f"{SCREEN}.no_data")]
     elif not views:
         items = [
             EmptyState(

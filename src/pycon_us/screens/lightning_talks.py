@@ -88,10 +88,6 @@ def LightningTalks() -> ft.View:
     # The badge every row would repeat; one object, so the day items still skip.
     omit = ft.use_memo(lambda: frozenset({info.track_name(TRACK)}), [])
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     items: list[ft.Control] = []
     if copy is not None:
         items += [
@@ -111,14 +107,7 @@ def LightningTalks() -> ft.View:
             ),
         ]
     if data is None:
-        items.append(
-            NoDataState(
-                conference.problem,
-                on_retry=refresh,
-                retrying=conference.status(info) == "refreshing",
-                identifier=f"{SCREEN}.no_data",
-            )
-        )
+        items.append(NoDataState(conference, svc, f"{SCREEN}.no_data"))
     elif not days:
         items.append(
             EmptyState(

@@ -39,7 +39,7 @@ from pycon_us.ui.favorite import selection_click, use_favorite_toggle
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.status_strip import StatusStrip
 from pycon_us.ui.widths import LIST, capped, use_margin
 
@@ -220,26 +220,12 @@ def Search() -> ft.View:
         # rather than nowhere.
         await field.focus()
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     state: ft.Control | None = None
-    if data is None and conference.problem is None:
-        state = ft.Column([StatusStrip(), SkeletonList("Loading schedule")], spacing=0)
-    elif data is None:
+    if data is None:
         state = ft.Column(
             [
-                StatusStrip(),  # its bar shows a retry; the button stays in place
-                EmptyState(
-                    "Can't load the schedule",
-                    icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                    body=NO_DATA_BODY[conference.problem or "offline"],
-                    action="Try again",
-                    on_action=refresh,
-                    disabled=conference.refreshing,  # in place, so focus stays
-                    identifier=f"{SCREEN}.no_data",
-                ),
+                StatusStrip(),  # its bar shows the first fetch and a retry
+                NoDataState(conference, svc, f"{SCREEN}.no_data"),
             ],
             spacing=0,
         )

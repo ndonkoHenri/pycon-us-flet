@@ -26,7 +26,6 @@ from pycon_us.core.speakers import has_bio, speaker_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.day_groups import DayGroup
@@ -85,17 +84,8 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
     views = ft.use_memo(lambda: {v.session.id: v for v in all_views}, [all_views])
     changes = use_recent_changes()
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     if data is None:
-        no_data = NoDataState(
-            conference.problem,
-            on_retry=refresh,
-            retrying=conference.status(svc.year.conference) == "refreshing",
-            identifier=f"{SCREEN}.no_data",
-        )
+        no_data = NoDataState(conference, svc, f"{SCREEN}.no_data")
         # No name to show in the page yet: the bar names it, the page's level-1
         # heading, as "Not found" does below (D-211).
         return AppScaffold(

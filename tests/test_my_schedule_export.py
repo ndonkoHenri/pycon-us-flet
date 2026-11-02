@@ -67,7 +67,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     """
     clock.set_test_now(THURSDAY)
     monkeypatch.setattr(screen, "StatusStrip", lambda **_: ft.Text("strip"))
-    monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("skeleton"))
+    monkeypatch.setattr(states, "SkeletonList", lambda _: ft.Text("skeleton"))
     async with AsyncExitStack() as stack:
 
         async def on_android(

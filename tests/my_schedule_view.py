@@ -243,7 +243,7 @@ async def shown(
     monkeypatch.setattr(screen, "TimeSlot", counted_slot)
     monkeypatch.setattr(screen, "use_minute", use_minute)
     monkeypatch.setattr(screen, "StatusStrip", strip)
-    monkeypatch.setattr(states, "SkeletonList", lambda: ft.Text("skeleton"))
+    monkeypatch.setattr(states, "SkeletonList", lambda _: ft.Text("skeleton"))
 
     try:
         async with harness.showing(

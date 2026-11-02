@@ -28,13 +28,12 @@ from pycon_us.core.speakers import (
     letter_groups,
 )
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import EmptyState, NoDataState
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "speakers"
@@ -66,24 +65,16 @@ def Speakers() -> ft.View:
         lambda: search_index(data) if data else None, [conference.version]
     )
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     rows: list[ft.Control]
     count: ft.Control | None = None
-    if data is None and conference.problem is None:
-        rows = [SkeletonList(label="Loading speakers")]  # the first fetch runs (NEW-03)
-    elif data is None or index is None:
+    if index is None:  # no data: the index exists whenever the data does
         rows = [
-            EmptyState(
-                "Can't load the speakers",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,  # in place, so focus stays (D-182)
-                identifier=f"{SCREEN}.no_data",
+            NoDataState(
+                conference,
+                svc,
+                f"{SCREEN}.no_data",
+                title="Can't load the speakers",
+                loading="Loading speakers",
             )
         ]
     elif not entries:

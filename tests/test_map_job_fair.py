@@ -30,6 +30,7 @@ from pycon_us.screens.map_job_fair import (
 )
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
+from pycon_us.ui import states
 from pycon_us.year_map import MapData
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
@@ -87,7 +88,13 @@ class FakeConference(SimpleNamespace):
 
     def __init__(self, data: ConferenceData | None, problem: str | None = None):
         """Hold ``data`` and ``problem``, not refreshing, with no refresh counted."""
-        super().__init__(data=data, problem=problem, refreshing=False, refreshes=0)
+        super().__init__(
+            data=data, problem=problem, refreshing=False, asked=False, refreshes=0
+        )
+
+    def status(self, _info: object) -> str:
+        """Say ``refreshing`` only while a refresh the user asked for runs (D-181)."""
+        return "refreshing" if self.refreshing and self.asked else "fresh"
 
     async def refresh(self, *args: object, **kwargs: object) -> None:
         """Count a refresh, as the Try again button asks for one."""
@@ -107,7 +114,7 @@ def render(monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage) -> Re
     monkeypatch.setattr(pane_module, "use_services", lambda: svc)
     monkeypatch.setattr(pane_module, "use_margin", phone_margin)
     monkeypatch.setattr(pane_module, "StatusStrip", lambda: STRIP)
-    monkeypatch.setattr(pane_module, "SkeletonList", lambda label: ft.Text(label))
+    monkeypatch.setattr(states, "SkeletonList", lambda label: ft.Text(label))
 
     def card(data: MapData, *, identifier: str) -> ft.Control | None:
         assert identifier == "map.job_fair.location"
