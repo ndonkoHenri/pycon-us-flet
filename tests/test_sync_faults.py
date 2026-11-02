@@ -2,9 +2,10 @@
 
 Under non-idempotent semantics, a reply lost after the mock committed makes the resend
 a second record, which no client can prevent. The outbox flags every row whose send
-may have reached the server (``NetworkError.maybe_sent``, D-410), so each duplicate the
-mock records belongs to a flagged row; a failure before the request left flags nothing.
-The mock counts what it applied, so "a duplicate" is the mock's own count.
+may have reached the server (``NetworkError.maybe_sent``, ``ApiError.unreadable``, D-410),
+so each duplicate the mock records belongs to a flagged row; a failure before the request
+left flags nothing, nor does a refusal. The mock counts what it applied, so "a duplicate"
+is the mock's own count.
 """
 
 import asyncio
@@ -20,6 +21,7 @@ from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from tests import accounts
+from tests.api_clients import ReplyReplaced, replying
 from tests.sync_rig import Rig, outbox_db
 from tools.mock_api.faults import Fault
 from tools.mock_api.state import Capture
@@ -130,6 +132,71 @@ async def test_a_lost_reply_flags_exactly_its_row_and_any_duplicate_is_flagged(
     words = {(r.kind.value, r.key): outbox.status_text(r) for r in rig.rows()}
     assert words.pop(target) == "Confirmed · may be recorded twice"
     assert set(words.values()) == {"Confirmed"}
+
+
+@pytest.mark.parametrize(
+    ("target", "body"),
+    [
+        (LEAD, b"<html>ok</html>"),
+        (LEAD, b'{"code": 200}'),
+        (DOOR, b"<html>ok</html>"),
+    ],
+    ids=["lead-not-json", "lead-no-envelope", "door-not-json"],
+)
+@pytest.mark.parametrize(
+    ("capture", "copies"), [("non_idempotent", 2), ("idempotent", 1)]
+)
+async def test_an_unreadable_reply_flags_its_row_and_any_duplicate_is_flagged(
+    rig: Rig, target: tuple[str, str], body: bytes, capture: Capture, copies: int
+) -> None:
+    """The mock commits, the reply can't be read, the resend lands: flagged, counted.
+
+    An answer came, so the failure counts towards the cap (a server that always answers
+    so must not be resent to for ever), and the pass goes on (#874). Like a lost reply,
+    it may have been applied, so the resend may be a second record, and the row says so.
+    """
+    rig.state.capture = capture
+    await rig.sign_in("all")
+    if target == LEAD:
+        rig.lead(target[1])
+    else:
+        rig.door(target[1], validator="v4l1d03")
+    committing = rig.wire.inner
+    rig.wire.inner = ReplyReplaced(committing, body)
+    worker = rig.worker()
+    await worker.drain()
+    (row,) = rig.rows()
+    assert (row.status, row.tries, row.maybe_sent) == (Status.PENDING, 1, True)
+    assert outbox.status_text(row) == "Queued · may be recorded twice"
+    assert row.last_error
+    assert records(rig)[target] == 1
+    assert rig.staff.offline is False
+    rig.wire.inner = committing
+    rig.clock.at += NETWORK_BACKOFF
+    await worker.drain()
+    (row,) = rig.rows()
+    assert (row.status, row.maybe_sent) == (Status.SYNCED, True)
+    assert records(rig)[target] == copies
+    assert outbox.status_text(row) == "Confirmed · may be recorded twice"
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [
+        (200, b'{"code": 500, "error": "Boom."}'),
+        (500, b'{"code": 500, "error": "Boom."}'),
+        (502, b"<html>bad gateway</html>"),
+    ],
+    ids=["error-envelope-under-200", "error-status", "error-status-not-json"],
+)
+async def test_a_refusal_counts_without_a_flag(
+    rig: Rig, status: int, body: bytes
+) -> None:
+    """A real refusal, under any status, is counted and says nothing of duplicates."""
+    await queued(rig, "non_idempotent")
+    rig.wire.inner = replying(status, body)
+    await rig.worker().drain()
+    assert {(row.tries, row.maybe_sent) for row in rig.rows()} == {(1, False)}
 
 
 def connect_timeout(request: httpx.Request) -> None:

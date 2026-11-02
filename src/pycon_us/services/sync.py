@@ -4,9 +4,10 @@
 each with its own sponsor snapshot (STORE-11), and stores each outcome through
 ``core/outbox.py``'s transitions: a ``NetworkError`` ends the pass and is never counted,
 and flags the row when the request may have reached the server (D-410); an ``ApiError``
-is counted and the tenth makes the row ``failed``. A refused key (401) is the account's
-fault, not the row's: the row waits uncounted and the account's flags are asked again,
-which makes it ``expired`` (D-57, D-403). ``run()`` passes at once, then on every
+is counted and the tenth makes the row ``failed``, and one whose reply could not be read
+flags the row too, since the server may have applied it. A refused key (401) is the
+account's fault, not the row's: the row waits uncounted and the account's flags are asked
+again, which makes it ``expired`` (D-57, D-403). ``run()`` passes at once, then on every
 ``kick()`` and every 60 s, only while the app is in the foreground.
 
 ``supervise()``, which ``use_sync_worker()`` runs from an ``App`` effect, keeps exactly
@@ -218,7 +219,12 @@ class SyncWorker:
                     self._on_refused()
                     return str(failure), False, False
                 error = str(failure)
-                self._db.save(outbox.after_error(row, failure.message, self._now()))
+                if failure.unreadable:  # by id, so an edit since keeps it
+                    self._db.flag_maybe_sent(row.id)
+                counted = outbox.after_error(
+                    row, failure.message, self._now(), maybe_sent=failure.unreadable
+                )
+                self._db.save(counted)
             else:
                 self._db.save(outbox.after_success(row, result))
         return error, True, False
