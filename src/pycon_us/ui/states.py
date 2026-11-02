@@ -6,8 +6,8 @@ out, as its button or, where no button can help, in its sentence (§4.6). ``not_
 is the one of a detail whose id is not in the feed.
 ``SkeletonList`` is shown only while there is no data at all and the first fetch runs
 (NEW-03): with data, the screen shows it and the status strip says how old it is
-(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch for every
-screen that shows the feed.
+(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch, with its
+retry, for every screen that shows the feed.
 """
 
 import flet as ft
