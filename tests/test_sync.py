@@ -88,6 +88,38 @@ async def test_a_note_waits_while_its_lead_has_not_synced(rig: Rig) -> None:
     assert rig.state.notes == []
 
 
+async def test_each_sponsor_s_lead_and_note_on_one_attendee_go_to_that_sponsor(
+    rig: Rig,
+) -> None:
+    """Two sponsors, one attendee: two captures and two notes, each its own (D-459)."""
+    await rig.sign_in("staff")
+    rig.lead(sponsor="1")
+    rig.lead(sponsor="2")
+    rig.note("For one", sponsor="1")
+    rig.note("For two", sponsor="2")
+    await rig.worker().drain()
+    assert [lead.sponsor_id for lead in rig.state.leads] == [1, 2]
+    assert [(n.sponsor_id, n.note) for n in rig.state.notes] == [
+        (1, "For one"),
+        (2, "For two"),
+    ]
+    assert {row.status for row in rig.rows()} == {Status.SYNCED}
+
+
+async def test_a_note_waits_for_its_own_sponsor_s_lead_not_another_s(rig: Rig) -> None:
+    """One sponsor's synced lead releases its note only; the refused one's note waits."""
+    await rig.sign_in("staff")
+    rig.lead(sponsor="1")
+    rig.lead(validator="wrong", sponsor="2")
+    rig.note("For one", sponsor="1")
+    rig.note("For two", sponsor="2")
+    await rig.worker().drain()
+    assert [(n.sponsor_id, n.note) for n in rig.state.notes] == [(1, "For one")]
+    assert [
+        (row.kind, row.sponsor_id) for row in rig.rows() if row.status is Status.PENDING
+    ] == [(Kind.LEAD, "2"), (Kind.NOTE, "2")]
+
+
 async def test_no_connection_ends_the_pass_uncounted_and_retries_after_60_s(
     rig: Rig,
 ) -> None:

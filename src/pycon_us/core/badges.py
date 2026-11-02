@@ -16,6 +16,8 @@ and allergy, DOOR-05) as chips.
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from pycon_us.core.lead_sponsors import LeadSponsor
+
 COOLDOWN_SECONDS = 4.0
 """How long a code just accepted is ignored when scanned again (D-65)."""
 
@@ -135,6 +137,8 @@ class ScanResult:
         email: The attendee's email, for a tool that reveals it on request (CoC's
             "Show email", MASK-05); empty without one. Never in ``spoken`` or the
             repr, so neither a live region nor a log line holds it (D-72).
+        sponsor: The sponsor a staff account's lead was scanned for, so "Add note" goes
+            to that lead whatever is chosen since (D-459); None otherwise.
     """
 
     outcome: ScanOutcome
@@ -144,6 +148,7 @@ class ScanResult:
     code: str = ""
     tags: tuple[Tag, ...] = ()
     email: str = field(default="", repr=False)
+    sponsor: LeadSponsor | None = None
 
     @property
     def spoken(self) -> str:

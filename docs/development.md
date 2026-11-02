@@ -67,7 +67,7 @@
 | iOS minimum | 15.0, fixed by the template | `TPL/ios/Runner.xcodeproj/project.pbxproj:348` |
 | Android release signing without a keystore | Signed with the **debug key**: it installs, but cannot go to Play | `TPL/android/app/build.gradle.kts:103-119` |
 | `flet build ipa` and signing | No profile configured: `--no-codesign` and only an `.xcarchive`. A profile configured but not installed: flet-cli stops within seconds, before Xcode. Installed: a signed `.ipa` (§8.2). | `CLI/commands/build.py:195-204, 297-389` |
-| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`. | `CLI/commands/build_base.py:2698-2741` |
+| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`; what those pull in is whatever pip resolves that day (§7.6). | `CLI/commands/build_base.py:2738-2780` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
 | Deep links on mobile | Each key (`scheme`, `host`) from `[tool.flet.<android\|ios>.deep_linking]`, else from the common `[tool.flet.deep_linking]` (`flet-dev/flet#6953`, in the pin since `68a4b326c`). The template registers a link only when both resolve: on Android an intent filter for the scheme and host, on iOS a `CFBundleURLTypes` entry for the scheme alone (the host is its `CFBundleURLName`). The host never reaches Python: Flet keeps only the link's path, query and fragment for `page.route`. | `CLI/commands/build_base.py:1449-1454, 3067-3089`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; `TPL/ios/Runner/Info.plist:53-69`; D-269 |
 | Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1175-1184, 1290-1293` |
@@ -913,6 +913,90 @@ iOS builds run on the owner's Mac (D-84). Signing material never enters CI (D-86
 - **Android Play uploads** would need the keystore (base64) and the `FLET_ANDROID_SIGNING_*` values as secrets.
 - **Without environments on a private Free repo,** all of these would be plain repository secrets, readable by any workflow on any branch. That is one more reason to keep signing local.
 
+### 7.6 Sweep for secrets and vulnerabilities (#847)
+
+Everything in the repository becomes visible when it goes public, including every PR's `refs/pull/*` head, which no one can delete, and the `pr-assets` images. So this sweep runs twice: once while the repo is private, and again right before the flip (#852 needs the second result clean). The results go on #847. It's local and free, and it changes nothing on GitHub.
+
+**Tools,** once: `brew install gitleaks trufflehog osv-scanner tesseract`. The scratch folder `build/` is git-ignored; delete `build/sweep` when you're done.
+
+**Secrets in history.** A mirror clone is the only checkout that holds all the branches and `refs/pull/*`. The scan reads a dump of it because that also covers commit messages and deleted lines, which `gitleaks git` skips (and an agent's isolated worktree refuses `gitleaks git`). `--redact` keeps values out of the report and `--no-verification` keeps candidates on this machine: **never** let a scanner try one against a live service.
+
+```sh
+mkdir -p build/sweep/api
+git clone --mirror https://github.com/ndonkoHenri/pycon-us-flet.git build/sweep/mirror.git
+git -C build/sweep/mirror.git log --all --full-history -p -U0 --diff-merges=cc --format='commit %H%n%an <%ae>%n%cn <%ce>%n%B' > build/sweep/history.patch
+gitleaks dir build/sweep/history.patch --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-history.json
+trufflehog filesystem build/sweep/history.patch --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-history.jsonl
+```
+
+A hit's `StartLine` is a line of the dump. To find its commit: `awk -v n=<line> 'NR<=n && /^commit /{c=$0} NR==n{print c; exit}' build/sweep/history.patch`.
+
+The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
+
+**Secrets in what people wrote** (issues, PRs, comments, reviews):
+
+```sh
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues?state=all&per_page=100' --paginate > build/sweep/api/issues.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues/comments?per_page=100' --paginate > build/sweep/api/issue-comments.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/pulls/comments?per_page=100' --paginate > build/sweep/api/review-comments.json
+gh api graphql --paginate -f query='query($endCursor:String){repository(owner:"ndonkoHenri",name:"pycon-us-flet"){pullRequests(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{number reviews(first:50){nodes{body}}}}}}' > build/sweep/api/pr-reviews.json
+gitleaks dir build/sweep/api --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-github.json
+trufflehog filesystem build/sweep/api --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-github.jsonl
+```
+
+**Personal data in the `pr-assets` images.** Read their text, scan it, and look through what's new since the last sweep (#847 names that commit; `git -C build/sweep/mirror.git diff --name-only <commit> pr-assets`):
+
+```sh
+mkdir -p build/sweep/pr-assets
+git -C build/sweep/mirror.git archive --format=tar pr-assets -o ../pr-assets.tar
+tar -xf build/sweep/pr-assets.tar -C build/sweep/pr-assets
+find build/sweep/pr-assets \( -name '*.png' -o -name '*.jpg' \) -print0 | OMP_THREAD_LIMIT=1 xargs -0 -P 8 -I{} tesseract {} {} --psm 11
+gitleaks dir build/sweep/pr-assets --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-images.json
+grep -rhoE --include='*.txt' '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' build/sweep/pr-assets | sort | uniq -c | sort -rn
+```
+
+Only `example.com` and `example.org` sample accounts, the conference's public addresses and Mastodon handles should show. OCR misses what small text and pictures hold, so looking is still part of it.
+
+**Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
+
+**Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else. The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
+
+```sh
+uv export --locked --format requirements-txt --no-hashes --no-emit-workspace --no-editable -q -o build/sweep/req-all.txt
+grep -vE '^\./\.flet-src' build/sweep/req-all.txt > build/sweep/req.txt
+uvx pip-audit -r build/sweep/req.txt --no-deps --disable-pip
+osv-scanner -L uv.lock
+```
+
+Fix a hit here with `uv lock --upgrade-package <name>`, and run `tools/check.sh`. That changes nothing on a phone.
+
+**Python dependencies on phones.** `flet build` never reads `uv.lock` (§2). pip resolves `[project].dependencies` and everything they pull in when the build runs, wheels only, from PyPI and `pypi.flet.dev`, once per architecture. So only a build can say what ships, and the next build can ship something else. An iOS build of 2026-11-02 differed from the lock on three packages: `msgpack` 1.1.2 (lock: 1.2.3), `anyio` 4.16.0 (4.15.1) and `oauthlib` 4.0.1 (4.0.0).
+
+So audit builds, not the lock. On the day of the sweep, delete `build/site-packages`, make an Android build, and run this right after it. Then do the same with an iOS build, since each build replaces that folder:
+
+```sh
+for arch in build/site-packages/*/; do
+  echo "$arch"
+  find "$arch" -maxdepth 1 -name '*.dist-info' -exec basename {} .dist-info \; | sed -E 's/-([^-]+)$/==\1/' | grep -vE '^flet(_|==)' > build/sweep/req-phone.txt
+  uvx pip-audit -r build/sweep/req-phone.txt --no-deps --disable-pip
+done
+```
+
+The result covers those builds only. `uv tree --locked --no-default-groups` lists the names that may ship, but its versions are the lock's.
+
+Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.5`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
+
+**Dart dependencies.** The pin's client has a lockfile, and a real build has the set that ships, with the extensions (§5.3):
+
+```sh
+osv-scanner -L .flet-src/client/pubspec.lock
+osv-scanner -L build/flutter/pubspec.lock
+```
+
+The OSV database covers few Dart packages, so "no issues found" there says less than it does for Python. A vulnerable Dart package is a Flet matter: an `upstream` issue here (D-213).
+
+**Not covered:** the Android and iOS native dependencies (Gradle, CocoaPods) of a build; commits that a force-push left unreachable from any ref (GitHub keeps them for a while, and no one can list them); old versions of edited comments; and the logs of past Actions runs, which hold no repository secrets since there are none (D-86).
+
 ---
 
 ## 8. Signing and distribution (D-85, prov. O-5)
@@ -1049,6 +1133,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Privacy | A privacy-policy URL (both stores require one). App Privacy: "Data Not Collected", since there are no analytics, no crash service and favourites stay on the device (D-08, D-72). The Play Data safety form. |
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
 | Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
+| Secrets and vulnerabilities | Run the sweep in §7.6 again right before the flip (#847, #852). |
 | Signing in CI | Optional at that point: move the keys to CI secrets (§7.5), superseding D-86 by decision. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 

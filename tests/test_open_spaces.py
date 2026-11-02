@@ -16,7 +16,7 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.core.row_views import SessionView
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
@@ -33,6 +33,16 @@ PACIFIC = YEAR.conference.zone
 VIEW = "/more/open-spaces"
 SATURDAY = datetime(2026, 5, 16, 10, 0, tzinfo=PACIFIC)
 OCTOBER = datetime(2026, 10, 13, 12, 0, tzinfo=PACIFIC)
+PROPOSE_URL = "https://example.org/2026/signup/open-space/"
+assert YEAR.content.open_spaces is not None
+WITH_SIGN_UP = replace(
+    YEAR,
+    content=replace(
+        YEAR.content,
+        open_spaces=replace(YEAR.content.open_spaces, propose_url=PROPOSE_URL),
+    ),
+)
+"""2026 as if its site still had the sign-up, which went with the live site (#824)."""
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -47,6 +57,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             year: int = 2026,
             conference: Conference | None = None,
             now: datetime = OCTOBER,
+            year_data: YearData | None = None,
         ) -> Shown:
             clock.set_test_now(now)
             if conference is None:
@@ -57,7 +68,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                 showing(
                     screen.OpenSpaces,
                     screen,
-                    year=load_year(year),
+                    year=year_data or load_year(year),
                     conference=conference,
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
@@ -225,17 +236,13 @@ async def test_propose_opens_the_years_sign_up_in_the_in_app_browser(
     show: Show,
 ) -> None:
     """EVT-02, INFO-14: a link, said to leave the app."""
-    page = await show()
+    page = await show(year_data=WITH_SIGN_UP)
     node = page.node("open_spaces.propose")
     assert node.link
     labelled = cast(ft.Semantics, node.content)
     assert labelled.label == "Propose an open space\nOpens in browser"
     await page.click(cast(ft.Control, labelled.content))
-    copy = YEAR.content.open_spaces
-    assert copy is not None
-    assert page.launcher.launched == [
-        (copy.propose_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
-    ]
+    assert page.launcher.launched == [(PROPOSE_URL, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
     assert page.titles[-1] == "Open spaces"
 
 
@@ -256,21 +263,24 @@ async def test_a_feed_without_open_spaces_offers_to_propose_one(show: Show) -> N
     """ux.md §4.6: before the conference the feed has none."""
     sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Open Space"}
     data = replace(DATA, sessions=sessions)
-    page = await show(conference=Conference(data=data, version=1))
+    page = await show(
+        conference=Conference(data=data, version=1), year_data=WITH_SIGN_UP
+    )
     assert page.node("open_spaces.none").live_region
     assert page.find(ft.Tabs) == []
     (button,) = page.find(ft.FilledTonalButton)
     assert text_of(button) == "Propose one"
     await page.click(button)
-    assert (
-        page.launcher.launched[0][0] == "https://us.pycon.org/2026/signup/open-space/"
-    )
+    assert page.launcher.launched[0][0] == PROPOSE_URL
 
 
 async def test_propose_one_is_a_link_said_to_leave_the_app(show: Show) -> None:
     """ux.md §4.7: the same sign-up as "+", so the same icon, words and link flag."""
     sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Open Space"}
-    page = await show(conference=Conference(data=replace(DATA, sessions=sessions)))
+    page = await show(
+        conference=Conference(data=replace(DATA, sessions=sessions)),
+        year_data=WITH_SIGN_UP,
+    )
     node = page.node("open_spaces.propose_one")
     assert node.link
     (button,) = page.find(ft.FilledTonalButton)
@@ -289,11 +299,27 @@ async def test_a_year_without_a_sign_up_offers_no_button(show: Show) -> None:
     assert page.find(ft.FilledTonalButton) == []
 
 
+async def test_2026_has_no_propose_since_its_sign_up_is_gone(show: Show) -> None:
+    """The sign-up went with the live site: no "+", no "Propose one", no dead link (#824).
+
+    The page keeps its intro, which says sign-ups have closed.
+    """
+    page = await show()
+    assert page.nodes("open_spaces.propose") == []
+    assert page.nodes("open_spaces.session.")
+    sessions = {k: s for k, s in DATA.sessions.items() if s.track != "Open Space"}
+    none = await show(conference=Conference(data=replace(DATA, sessions=sessions)))
+    assert none.node("open_spaces.none").live_region
+    assert none.find(ft.FilledTonalButton) == []
+
+
 async def test_without_data_it_loads_then_offers_to_try_again(show: Show) -> None:
     """ux.md §4.1: the skeleton until the first fetch has failed, then the way out."""
     loading = await show(conference=Conference())
     assert "Loading schedule" in [n.label for n in loading.find(ft.Semantics)]
-    failed = await show(conference=Conference(problem="offline"))
+    failed = await show(
+        conference=Conference(problem="offline"), year_data=WITH_SIGN_UP
+    )
     assert failed.node("open_spaces.no_data").live_region
     assert failed.nodes("open_spaces.propose")  # the year still says where
 

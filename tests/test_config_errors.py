@@ -1,5 +1,6 @@
 """Tests for the year-data loader's errors: a malformed or missing file names what is wrong (D-45)."""
 
+import re
 import shutil
 from pathlib import Path
 
@@ -100,8 +101,8 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
-            'registration_url = "https://',
-            'registration_url = "http://',
+            'site_url = "',
+            'registration_url = "http://example.org/"\nsite_url = "',
             "2026/conference.toml: registration_url: expected an https:// URL with a host",
         ),
         (
@@ -112,14 +113,14 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "conference.toml",
-            'sprint_submit_url = "https://us.pycon.org',
-            'sprint_submit_url = "https://',
+            'site_url = "',
+            'sprint_submit_url = "https://"\nsite_url = "',
             "2026/conference.toml: sprint_submit_url: expected an https:// URL",
         ),
         (
             "conference.toml",
-            'speaker_discord_url = "https://',
-            'speaker_discord_url = "http://',
+            'site_url = "',
+            'speaker_discord_url = "http://example.org/"\nsite_url = "',
             "2026/conference.toml: speaker_discord_url: expected an https:// URL with a host",
         ),
         (
@@ -163,12 +164,6 @@ def edit(path: Path, old: str, new: str) -> None:
             "snapshot_captured_at = ",
             "snapshot_captured_at = 2026-10-12\n# ",
             "2026/conference.toml: snapshot_captured_at: expected a date and time, got datetime.date(2026, 10, 12)",
-        ),
-        (
-            "conference.toml",
-            "-07:00\n",
-            "\n",
-            "2026/conference.toml: snapshot_captured_at: expected a time with a UTC offset",
         ),
         (
             "content.toml",
@@ -268,8 +263,8 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "content.toml",
-            'propose_url = "https://',
-            'propose_url = "http://',
+            'intro = "Hour-long sessions',
+            'propose_url = "http://example.org/"\nintro = "Hour-long sessions',
             "2026/content.toml: open_spaces.propose_url: expected an https:// URL",
         ),
         (
@@ -286,8 +281,8 @@ def edit(path: Path, old: str, new: str) -> None:
         ),
         (
             "content.toml",
-            'signup_url = "https://',
-            'signup_url = "mailto:',
+            'heading = "What\'s a lightning talk?"',
+            'signup_url = "mailto:a@example.org"\nheading = "What\'s a lightning talk?"',
             "2026/content.toml: lightning_talks.signup_url: expected an https:// URL",
         ),
         (
@@ -321,6 +316,21 @@ def test_malformed_file_names_file_key_and_problem(
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)
     assert str(error.value).startswith(message)
+
+
+def test_a_capture_time_without_an_offset_is_refused(data_dir: Path) -> None:
+    """``snapshot_captured_at`` must say its offset; refreshes write -07:00 or -08:00."""
+    file = data_dir / "2026" / "conference.toml"
+    text = file.read_text(encoding="utf-8")
+    file.write_text(
+        re.sub(r"(?m)^(snapshot_captured_at = .*)-0\d:00$", r"\1", text),
+        encoding="utf-8",
+    )
+    with pytest.raises(YearDataError) as error:
+        load_year(2026, data_dir)
+    assert str(error.value).startswith(
+        "2026/conference.toml: snapshot_captured_at: expected a time with a UTC offset"
+    )
 
 
 def test_lightning_talks_need_a_doubt_to_fold(data_dir: Path) -> None:

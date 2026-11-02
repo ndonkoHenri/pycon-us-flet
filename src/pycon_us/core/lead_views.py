@@ -5,7 +5,8 @@ the lines of its row on ``screens/staff_leads.py``'s page: the attendee's first 
 from the stored answer, else the access code (a pending lead has no answer, so it
 shows only its code, PII-light); its status in ``status_text()``'s words (D-410); how
 long ago it was scanned; the sponsor it was scanned for (a staff account's snapshot,
-STORE-11); and whether it has a note. ``filter_leads()`` searches the name and the
+STORE-11), so two sponsors' leads on one attendee are two rows (D-459); and whether it
+has a note. ``filter_leads()`` searches the name and the
 code and keeps one sponsor's leads by **id**, never by name: Ionic compared names,
 which two sponsors whose names differ only by quotes share.
 """
@@ -49,6 +50,18 @@ class LeadView:
     def title(self) -> str:
         """Return the row's title: the first name, or the code without one."""
         return self.name or self.code
+
+    @property
+    def key(self) -> str:
+        """Return what tells the row apart: the code, with a staff lead's sponsor id."""
+        return (
+            self.code if self.sponsor_id is None else f"{self.code}.{self.sponsor_id}"
+        )
+
+
+def for_line(sponsor_name: str) -> str:
+    """Return which sponsor a lead is for, in words: "For Example Corp" (D-459)."""
+    return f"For {sponsor_name}"
 
 
 def first_name(row: Row) -> str | None:

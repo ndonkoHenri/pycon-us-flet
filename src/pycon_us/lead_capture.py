@@ -1,10 +1,11 @@
 """A lead scan through the outbox, with its result at once (#741; LEAD-07, LEAD-09).
 
 ``capture()`` is the Lead scanner's ``on_badge``. It enqueues the scan as a ``lead``
-row (``core/outbox.py``'s ``scan_lead``, one row per owner and code), so it survives
-airplane mode and a kill (D-56); the row keeps the sponsor it was scanned for
-(STORE-11). It then kicks the ``SyncWorker``, which stays the only sender (D-407),
-waits up to ``WAIT_SECONDS`` for the worker's pass to take the row, and reads the row
+row (``core/outbox.py``'s ``scan_lead``, one row per owner, code and sponsor, D-459), so
+it survives airplane mode and a kill (D-56); the row keeps the sponsor it was scanned
+for (STORE-11), and a staff account's result says which sponsor that is, and any other
+it has the attendee in its leads for. It then kicks the ``SyncWorker``, which stays the
+only sender (D-407), waits up to ``WAIT_SECONDS`` for the worker's pass to take the row, and reads the row
 back by id: its state is the result (D-426). A ``Staff`` change marks each step of a
 pass, so the wait is driven by the worker's reports, never by polling (LEAD-09).
 """
@@ -12,14 +13,15 @@ pass, so the wait is driven by the worker's reports, never by polling (LEAD-09).
 import asyncio
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from functools import partial
 from typing import cast
 
 import flet as ft
 
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
-from pycon_us.core.lead_sponsors import LeadSponsor
-from pycon_us.core.lead_views import first_name
+from pycon_us.core.lead_sponsors import LeadSponsor, snapshot
+from pycon_us.core.lead_views import first_name, for_line
 from pycon_us.core.outbox import Outcome, Row, Status, scan_lead
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff
@@ -39,6 +41,9 @@ RETRY_FROM_QUEUE = "Retry it from the sync queue."
 NOT_SAVED = "Couldn't save this scan on this device."
 MAY_BE_TWICE = "May be recorded twice"
 """Detail lines: a refusal's next step, a failed save (D-120), a lost answer (D-410)."""
+
+ALSO_FOR = "Also in your leads for"
+"""A detail line's start, before the other sponsors a staff lead is for (D-459)."""
 
 
 async def capture(
@@ -84,9 +89,32 @@ async def capture(
         )
     row = enqueued.row
     if enqueued.outcome is Outcome.ALREADY:
-        return named(ScanOutcome.DUPLICATE, ALREADY, row)
-    staff.update_counts(db.counts(owner))
-    return result_of(row, await sent(db, staff, kick, row))
+        result = named(ScanOutcome.DUPLICATE, ALREADY, row)
+    else:
+        staff.update_counts(db.counts(owner))
+        result = result_of(row, await sent(db, staff, kick, row))
+    return attributed(result, row, enqueued.others)
+
+
+def attributed(result: ScanResult, row: Row, others: tuple[str, ...]) -> ScanResult:
+    """Return a result that says who its lead is for, and who else has it (D-459).
+
+    A staff account's result gets "For Example Corp" first, then "Also in your leads
+    for Sample Systems" when the attendee is a lead for another sponsor too, so a
+    scan for the wrong sponsor shows at once. A sponsor's own lead has neither.
+
+    Args:
+        result: The scan's result.
+        row: The lead row it is about.
+        others: The other sponsors' names (``Enqueued.others``).
+    """
+    lines = (for_line(row.sponsor_name),) if row.sponsor_name else ()
+    also = (f"{ALSO_FOR} {', '.join(others)}",) if others else ()
+    return replace(
+        result,
+        details=(*lines, *also, *result.details),
+        sponsor=snapshot(row.sponsor_id, row.sponsor_name),
+    )
 
 
 async def sent(

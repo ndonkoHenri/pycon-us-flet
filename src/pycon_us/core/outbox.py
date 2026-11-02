@@ -7,7 +7,9 @@ and live here, so a hypothesis state machine proves them (D-77) before any sqlit
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
 ``status_text()`` says a row's status, flagged "may be recorded twice" after a send
-whose answer was lost or could not be read (D-57, D-410).
+whose answer was lost or could not be read (D-57, D-410). A lead belongs to a
+sponsor, so an account keeps one lead row and one note row per (owner, code, sponsor
+id); a sponsor's own account has one sponsor id, None (D-459).
 """
 
 from collections.abc import Iterable, Mapping
@@ -130,16 +132,22 @@ class Enqueued:
         outcome: What happened.
         row: The row to insert (``QUEUED``) or save (``UPDATED``), or the existing row
             that made the scan a no-op (``ALREADY``); None for an ignored note.
+        others: A lead scan's: the names of the other sponsors this account has the
+            attendee in its leads for, so the result can say so (D-459).
     """
 
     outcome: Outcome
     row: Row | None = None
+    others: tuple[str, ...] = ()
 
 
-def _find(rows: Iterable[Row], owner: str, kind: Kind, key: str) -> Row | None:
-    """Return the owner's row of a kind for an access code, if there is one."""
+def _find(
+    rows: Iterable[Row], owner: str, kind: Kind, key: str, sponsor_id: str | None
+) -> Row | None:
+    """Return the owner's row of a kind for an access code and a sponsor, if any."""
+    wanted = (owner, kind, key, sponsor_id)
     return next(
-        (r for r in rows if r.owner == owner and r.kind == kind and r.key == key), None
+        (r for r in rows if (r.owner, r.kind, r.key, r.sponsor_id) == wanted), None
     )
 
 
@@ -158,11 +166,13 @@ def scan_lead(
     sponsor_name: str | None,
     now: float,
 ) -> Enqueued:
-    """Decide what a lead scan does: one lead row per (owner, code).
+    """Decide what a lead scan does: one lead row per (owner, code, sponsor) (D-459).
 
-    A synced row means the lead is already in your leads; a pending row is made due
-    now; a failed one is pending again, as "Retry failed" would make it. Either keeps
-    its first payload and sponsor snapshot. Otherwise a new row snapshots the sponsor.
+    A lead belongs to its sponsor, so only this sponsor's row counts. A synced row
+    means the lead is already in your leads; a pending row is made due now; a failed
+    one is pending again, as "Retry failed" would make it. Either keeps its first
+    payload. Otherwise a new row snapshots the sponsor, even if the attendee is a lead
+    for another sponsor: that lead's row stays as it is, and ``others`` names it.
 
     Args:
         rows: The outbox rows (any owner's; only ``owner``'s count).
@@ -175,19 +185,29 @@ def scan_lead(
 
     Returns:
         ``ALREADY`` with the synced row, ``UPDATED`` with the existing row requeued, or
-        ``QUEUED`` with a new row.
+        ``QUEUED`` with a new row; each with ``others``.
     """
-    existing = _find(rows, owner, Kind.LEAD, code)
+    rows = tuple(rows)  # Searched twice: a one-pass iterator would miss the row.
+    others = tuple(
+        r.sponsor_name
+        for r in rows
+        if r.owner == owner
+        and r.kind is Kind.LEAD
+        and r.key == code
+        and r.sponsor_id != sponsor_id
+        and r.sponsor_name
+    )
+    existing = _find(rows, owner, Kind.LEAD, code, sponsor_id)
     if existing is None:
         row = Row(
             Kind.LEAD, code, dict(payload), owner, sponsor_id, sponsor_name, now, now
         )
-        return Enqueued(Outcome.QUEUED, row)
+        return Enqueued(Outcome.QUEUED, row, others)
     if existing.status is Status.SYNCED:
-        return Enqueued(Outcome.ALREADY, existing)
+        return Enqueued(Outcome.ALREADY, existing, others)
     if existing.status is Status.FAILED:
-        return Enqueued(Outcome.UPDATED, _requeue(existing, now))
-    return Enqueued(Outcome.UPDATED, replace(existing, next_at=now))
+        return Enqueued(Outcome.UPDATED, _requeue(existing, now), others)
+    return Enqueued(Outcome.UPDATED, replace(existing, next_at=now), others)
 
 
 def save_note(
@@ -200,20 +220,20 @@ def save_note(
     sponsor_name: str | None,
     now: float,
 ) -> Enqueued:
-    """Decide what saving a lead note does: one note row per (owner, code).
+    """Decide what saving a lead note does: one note row per (owner, code, sponsor).
 
     An empty or blank note is ignored. An existing note row takes the new text and is
     pending from scratch, whatever its status: a synced note was edited, so it is sent
-    again. A new row takes its lead's sponsor snapshot when the lead row exists, so a
-    sponsor switch between the scan and the note cannot send the note elsewhere;
-    otherwise the current sponsor's.
+    again. A new row snapshots the sponsor of the lead it is for, which the caller
+    takes from that lead's row or result, never from the sponsor chosen now, so a
+    switch between the scan and the note cannot send the note elsewhere (D-459).
 
     Args:
         rows: The outbox rows (any owner's; only ``owner``'s count).
         owner: The signed-in account's lower-cased email.
         code: The lead's access code.
         note: The note's text.
-        sponsor_id: The sponsor the app scans for now.
+        sponsor_id: The sponsor of the lead the note is for.
         sponsor_name: That sponsor's name.
         now: The current time (epoch seconds).
 
@@ -222,16 +242,12 @@ def save_note(
     """
     if not note.strip():
         return Enqueued(Outcome.IGNORED)
-    rows = tuple(rows)  # Searched twice: a one-pass iterator would miss the lead.
     payload = {"accessCode": code, "note": note}
-    existing = _find(rows, owner, Kind.NOTE, code)
+    existing = _find(rows, owner, Kind.NOTE, code, sponsor_id)
     if existing is not None:
         return Enqueued(
             Outcome.UPDATED, _requeue(replace(existing, payload=payload), now)
         )
-    lead = _find(rows, owner, Kind.LEAD, code)
-    if lead is not None:
-        sponsor_id, sponsor_name = lead.sponsor_id, lead.sponsor_name
     row = Row(Kind.NOTE, code, payload, owner, sponsor_id, sponsor_name, now, now)
     return Enqueued(Outcome.QUEUED, row)
 
@@ -396,7 +412,8 @@ def due(rows: Iterable[Row], owner: str, now: float) -> list[Row]:
     """Return the owner's rows to send now, in the order to send them.
 
     Pending rows whose ``next_at`` has come: leads, then door check-ins, then notes,
-    each by ``created_at`` (then id). A note waits until its lead is synced.
+    each by ``created_at`` (then id). A note waits until its lead, the same sponsor's,
+    is synced (D-459).
 
     Args:
         rows: The outbox rows (any owner's).
@@ -408,14 +425,16 @@ def due(rows: Iterable[Row], owner: str, now: float) -> list[Row]:
     """
     mine = [r for r in rows if r.owner == owner]
     synced_leads = {
-        r.key for r in mine if r.kind is Kind.LEAD and r.status is Status.SYNCED
+        (r.key, r.sponsor_id)
+        for r in mine
+        if r.kind is Kind.LEAD and r.status is Status.SYNCED
     }
     ready = [
         r
         for r in mine
         if r.status is Status.PENDING
         and r.next_at <= now
-        and (r.kind is not Kind.NOTE or r.key in synced_leads)
+        and (r.kind is not Kind.NOTE or (r.key, r.sponsor_id) in synced_leads)
     ]
     return sorted(ready, key=lambda r: (SEND_ORDER[r.kind], r.created_at, r.id or 0))
 
@@ -424,9 +443,10 @@ def forget_synced(rows: Iterable[Row], owner: str) -> list[Row]:
     """Return the rows kept when ``owner`` signs out for another account.
 
     Their synced rows go (the next account must not see "Already in your leads" for
-    someone else's leads), except a synced lead whose note hasn't synced: the note
-    waits for it, and would wait forever. Their pending and failed rows stay until
-    synced or cleared with confirmation, as does every other owner's row.
+    someone else's leads), except a synced lead whose note, the same sponsor's, hasn't
+    synced: the note waits for it, and would wait forever. Their pending and failed
+    rows stay until synced or cleared with confirmation, as does every other owner's
+    row.
 
     Args:
         rows: The outbox rows.
@@ -437,7 +457,7 @@ def forget_synced(rows: Iterable[Row], owner: str) -> list[Row]:
     """
     rows = list(rows)
     waiting = {
-        r.key
+        (r.key, r.sponsor_id)
         for r in rows
         if r.owner == owner and r.kind is Kind.NOTE and r.status is not Status.SYNCED
     }
@@ -446,5 +466,5 @@ def forget_synced(rows: Iterable[Row], owner: str) -> list[Row]:
         for r in rows
         if r.owner != owner
         or r.status is not Status.SYNCED
-        or (r.kind is Kind.LEAD and r.key in waiting)
+        or (r.kind is Kind.LEAD and (r.key, r.sponsor_id) in waiting)
     ]
