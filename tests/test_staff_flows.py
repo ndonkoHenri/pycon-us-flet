@@ -10,6 +10,7 @@ Maestro matches them, whole.
 
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import flet as ft
@@ -64,7 +65,7 @@ SWAG_CATEGORIES = tuple(
 """``swag.category.3`` and ``.4``, the categories ``swag_pickup`` chooses."""
 
 FIELD_TEXT = "not-a-badge"
-"""What the flows send as not a badge: the field keeps it, and they assert that."""
+"""What the flows send as not a badge: the panel shows it as the title (D-473)."""
 
 TEXT = re.compile(r'^[ -]*text: (?:"(.*)"|(.*?))(?:\s+#.*)?$', re.MULTILINE)
 """A ``text:`` line, quoted or bare, with or without a comment after it."""
@@ -241,8 +242,7 @@ def test_lead_capture_expects_the_app_s_words() -> None:
             panel(named(ScanOutcome.ACCEPTED, CAPTURED, lead_row(ADA))),
             panel(named(ScanOutcome.ACCEPTED, CAPTURED, lead_row(GRACE))),
             panel(named(ScanOutcome.DUPLICATE, ALREADY, lead_row(ADA))),
-            panel(NOT_A_BADGE),
-            FIELD_TEXT,
+            panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
         ],
     )
 
@@ -264,8 +264,7 @@ def test_door_check_expects_the_app_s_words() -> None:
             panel(checked_in(attendee(LINUS), admitted(LINUS), offline=False)),
             panel(already(attendee(ADA))),
             panel(not_registered(MARGARET)),
-            panel(NOT_A_BADGE),
-            FIELD_TEXT,
+            panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
             chip_words(Staff()),
         ],
     )
@@ -290,8 +289,7 @@ def test_swag_pickup_expects_the_app_s_words() -> None:
             panel(redeemed(RedeemReply((), tuple(handed)), offer(ADA), handed)),
             panel(result_of(products(ADA, left=False), SWAG_CATEGORIES)),
             panel(result_of(products(MARGARET, left=False), SWAG_CATEGORIES)),
-            panel(NOT_A_BADGE),
-            FIELD_TEXT,
+            panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
         ],
     )
 

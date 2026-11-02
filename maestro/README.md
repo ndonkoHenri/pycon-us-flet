@@ -348,7 +348,8 @@ Two subflows are the scanner's:
   A code accepted in the last 4 s is cleared without a word, so a rescan any sooner shows
   nothing, and the wait would fail on the old result. A different code goes at once.
 
-"Not a badge code" comes last in each flow, since its text stays in the field. Offline
+"Not a badge code" comes last in each flow, with the text it read in the panel and an
+"Edit code" button (`scan.edit`, D-473). Offline
 scans use the dedicated F8 wrapper below.
 
 `tests/test_staff_flows.py` checks the words and identifiers of `lead_capture`,

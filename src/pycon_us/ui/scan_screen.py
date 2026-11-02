@@ -10,13 +10,16 @@ awaits one handler at a time and shows what it returned, so the tools only retur
 data.
 
 **Manual entry** takes the full ``code:validator`` payload, which USB and Bluetooth HID
-scanners also type before Enter. A submit clears the field and keeps the focus in it, so
-a hardware scanner scans continuously: Android's Enter leaves the focus there and its
+scanners also type before Enter. Every submit clears the field and keeps the focus in it,
+so a hardware scanner scans continuously: Android's Enter leaves the focus there and its
 keyboard up, and iOS's takes it out, so the screen puts it back (F274, U254). A code
 accepted in the last 4 s is cleared without a word (a held code). A second submit while
 the handler runs is dropped with its text, or the next scan would be typed after that
-text and read as one badge (D-471), and the line under the field says to scan it again;
-text that is not a badge says "Not a badge code" and stays for correction.
+text and read as one badge (D-471), and the line under the field says to scan it again.
+Text that is not a badge goes too, for the same reason (D-473): the panel says "Not a
+badge code" with the text it read, and its "Edit code" button gives the text back to be
+corrected by hand, so a scanner's next scan is its own badge and a typist still fixes a
+typo. The two are told apart by that tap, not by how fast the keys come.
 A handler can take a few seconds (the Lead scanner waits for its send, D-426): a
 result that comes after the screen is left, or while another View is on top of it,
 is dropped, so it never buzzes or speaks over another page.
@@ -44,6 +47,7 @@ CoC tool does both. The camera area is ``ui/scan_camera.py`` (E1, #726).
 """
 
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from time import monotonic
 from typing import cast
 
@@ -51,7 +55,14 @@ import flet as ft
 
 from pycon_us import capabilities
 from pycon_us.account import use_account
-from pycon_us.core.badges import NOT_A_BADGE, Badge, Cooldown, ScanResult, parse_badge
+from pycon_us.core.badges import (
+    NOT_A_BADGE,
+    Badge,
+    Cooldown,
+    ScanOutcome,
+    ScanResult,
+    parse_badge,
+)
 from pycon_us.core.staff_tools import ToolKey, may_open
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
@@ -79,6 +90,7 @@ from pycon_us.ui.scrolling import FULL_LIST_EXTENT
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.sync_chip import SyncChip
+from pycon_us.ui.tool_controls import tool_button
 from pycon_us.ui.widths import LIST, sides, use_margin
 
 type OnBadge = Callable[[Badge], Awaitable[ScanResult]]
@@ -92,6 +104,8 @@ type ResultNote = Callable[[Shown], ft.Control | None]
 
 ENTRY_LABEL = "Badge code"
 KEYBOARD_TOOLTIP = "Type a badge code"
+EDIT_CODE = "Edit code"
+"""The button under "Not a badge code" that puts its text back in the field (D-473)."""
 PAUSED_SHEET = "Paused while the sheet is open"
 """The field's line while the queue sheet is open: a submit is dropped (#724)."""
 
@@ -140,7 +154,8 @@ def ScanScreen(
             are dropped with their text (D-471). None scans.
         result_actions: The tool's buttons for the result shown, under the field
             before ``actions``: the Lead scanner's "Add note" (#742). They belong to
-            that result, so the next one (even "Not a badge code") replaces them.
+            that result, so the next one (even "Not a badge code") replaces them. The
+            screen adds "Edit code" before them to that last result (D-473).
         result_note: The tool's line for the result shown, under the panel and
             outside its live region, so it is said only when focused (#762).
         posted: The latest result the tool got outside ``on_badge`` (the CoC name
@@ -217,11 +232,10 @@ def ScanScreen(
         try:
             raw = e.data if isinstance(e.data, str) else e.control.value or ""
             badge = parse_badge(raw)
-            if badge is None:
-                await show(NOT_A_BADGE)
-                await query.focus()  # iOS's Enter took it out (F274); the text stays
-                return
             await query.clear()  # empties the field and puts the focus back in it
+            if badge is None:  # what was read goes to the panel, not kept in the field
+                await show(replace(NOT_A_BADGE, title=raw.strip()))
+                return
             if not cooldown.accept(badge.code, clock()):
                 return  # the same code again within 4 s: a held badge
             result = await on_badge(badge)
@@ -230,11 +244,24 @@ def ScanScreen(
         finally:
             busy.current = False
 
+    @report_errors
+    async def edit(_: ft.Event[ft.FilledTonalButton]) -> None:
+        if shown is not None:
+            text = shown.result.title
+            drop(shown.serial)  # the text is back in the field: nothing left to edit
+            await query.put(text)
+
     for_result = (
         result_actions(shown)
         if result_actions is not None and shown is not None
         else []
     )
+    if shown and shown.result.outcome is ScanOutcome.INVALID and shown.result.title:
+        # Only the screen refuses an entry (the tools never answer INVALID), and an
+        # empty one has no text to give back (D-473).
+        for_result.insert(
+            0, tool_button("scan.edit", EDIT_CODE, ft.Icons.EDIT_OUTLINED, edit)
+        )
     note = result_note(shown) if result_note is not None and shown else None
     chip = SyncChip(
         staff, tokens=tokens, on_click=sheet.open, large_text=prefs.time_above

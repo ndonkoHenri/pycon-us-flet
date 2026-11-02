@@ -99,7 +99,7 @@ class ScanOutcome(StrEnum):
     QUEUED = "queued"
     """Saved offline, to sync when online."""
     INVALID = "invalid"
-    """Not a badge code: the text stays in the field for correction."""
+    """Not a badge code: the field is cleared, the panel shows the text (D-473)."""
     RECORDED = "recorded"
     """An incident recorded (CoC, MASK-04): neutral, never a check-in's green."""
     NOT_RECORDED = "not_recorded"
@@ -165,4 +165,4 @@ class ScanResult:
 NOT_A_BADGE = ScanResult(
     ScanOutcome.INVALID, "Not a badge code", details=("Check the code and try again.",)
 )
-"""The result of an entry ``parse_badge()`` refuses."""
+"""The result of an entry ``parse_badge()`` refuses; the screen adds the text as the title."""

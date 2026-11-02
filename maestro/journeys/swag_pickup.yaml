@@ -7,7 +7,7 @@
 #    this flow: the sheet, "Hand out 3 items", then "Handed out 3 items". On a rerun her
 #    items are gone: "Already picked up", with no sheet.
 # 4. Ada again, past the 4 s cooldown: "Already picked up". Margaret bought nothing:
-#    "Nothing to pick up". Text with no colon: "Not a badge code", and the text stays.
+#    "Nothing to pick up". Text with no colon: "Not a badge code" with the text read, and Edit code (D-473).
 #
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
 # and fake data only.
@@ -141,7 +141,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Not a badge code.*"
+      text: "(?s)Not a badge code\\nnot-a-badge\\n.*"
     timeout: 15000
 - assertVisible:
-    text: not-a-badge  # the field keeps it for correction
+    id: scan.edit  # the text read is in the panel, not kept in the field (D-473)

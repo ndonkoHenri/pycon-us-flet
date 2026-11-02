@@ -140,6 +140,9 @@ class FieldQuery:
             that keeps the text elsewhere too keeps only what was taken.
         clear: The field's ``on_clear``, and a no-match state's "Clear …": empties the
             text, then puts the focus back in the field.
+        put: Replaces the text with the one given, then puts the focus back in the
+            field, after the text; ``clear`` is ``put("")`` (the scan screen's "Edit
+            code" gives a refused entry back to be corrected, #941).
         focus: Puts the focus in the field, for another control that goes away when
             used (search's "Show all results").
         focusable: False while a View pushed on top covers the field's, the field's
@@ -152,6 +155,7 @@ class FieldQuery:
     ref: ft.Ref[ft.TextField]
     changed: Callable[[ft.Event[ft.TextField]], bool | None]
     clear: Callable[[], Awaitable[None]]
+    put: Callable[[str], Awaitable[None]]
     focus: Callable[[], Awaitable[None]]
     focusable: bool
 
@@ -170,11 +174,11 @@ def use_field_query(initial: str = "") -> FieldQuery:
     nothing; only the initial text and a Clear are sent to the field. ``changed``
     still sets state, which is what re-renders the screen at each keystroke.
 
-    A Clear does send text, so it can race too: Flutter puts the empty text over any
-    key typed between the tap and the empty text's arrival, so those keys' reports,
+    A Clear (or a ``put``) does send text, so it can race too: Flutter puts that text
+    over any key typed between the tap and its arrival, so those keys' reports,
     which come in after the tap, are dropped until Flutter answers the focus request
-    that an effect makes once the render has sent the empty text (Flutter handles
-    messages in order). If one came in after the render, the empty text is sent again
+    that an effect makes once the render has sent the text (Flutter handles
+    messages in order). If one came in after the render, the text is sent again
     over what it left on the field, and waited for the same way. Asking for the focus
     also serves D-182: a Clear goes away once the text is empty, so the focus goes
     back in the field, ready to type again, rather than lose a screen reader's place.
@@ -194,11 +198,11 @@ def use_field_query(initial: str = "") -> FieldQuery:
         initial: The text the field starts with (search's remembered query).
     """
     typed, set_typed = ft.use_state(initial)
-    # Counted rather than flagged: each Clear re-renders, even when the state is
-    # already empty, and is sent to the field once.
+    # Counted rather than flagged: each Clear or put re-renders, even when the state
+    # already holds that text, and is sent to the field once.
     clears, set_clears = ft.use_state(0)
     sent_clears = ft.use_ref(0)
-    landing = ft.use_ref(False)  # the empty text is on its way: reports are stale
+    landing = ft.use_ref(False)  # a Clear's or put's text is on its way: reports stale
     overwritten = ft.use_ref(False)  # a stale report came in meanwhile
     ref = ft.use_memo(ft.Ref[ft.TextField], [])  # one for the screen's life
     view_path = ft.use_view_path()  # "" outside a Router
@@ -206,20 +210,20 @@ def use_field_query(initial: str = "") -> FieldQuery:
     shown = ref.current  # the field the last render built, None until the first
     if shown is None or clears != sent_clears.current:
         sent_clears.current = clears
-        value = typed  # the initial text, or Clear's "": the diff sends it
+        value = typed  # the initial text, or a Clear's or put's: the diff sends it
     else:
         value = shown.value  # what Flutter last reported: the diff sends nothing
 
     @report_errors
-    def send_empty() -> None:
+    def send(text: str) -> None:
         landing.current, overwritten.current = True, False
-        set_typed("")
+        set_typed(text)
         set_clears(lambda n: n + 1)
 
     @report_errors
     def changed(e: ft.Event[ft.TextField]) -> bool:
         if landing.current:
-            overwritten.current = True  # Flutter puts the empty text over it
+            overwritten.current = True  # Flutter puts the sent text over it
             return False
         set_typed(e.control.value)
         return True
@@ -230,21 +234,29 @@ def use_field_query(initial: str = "") -> FieldQuery:
             await ref.current.focus()
 
     @report_errors
+    async def put(text: str) -> None:
+        send(text)
+
+    @report_errors
     async def clear() -> None:
-        send_empty()
+        await put("")
 
     @report_errors
     async def land() -> None:
-        # Run after the render that sent the empty text, since Flet runs effects
+        # Run after the render that sent the text, since Flet runs effects
         # after its patch: Flutter answers the focus once it has that text.
         if clears == 0:
             return  # the first render: no Clear yet
         await focus()  # reports its own errors; a newer Clear cancels it here
         landing.current = False
-        if overwritten.current and ref.current is not None and ref.current.value:
-            # Flutter shows "", but a report that came in after the render left
+        if (
+            overwritten.current
+            and ref.current is not None
+            and ref.current.value != typed
+        ):
+            # Flutter shows ``typed``, but a report that came in after the render left
             # its text on the field here (one before the render did not).
-            send_empty()
+            send(typed)
 
     ft.use_effect(land, [clears])
 
@@ -253,6 +265,7 @@ def use_field_query(initial: str = "") -> FieldQuery:
         ref=ref,
         changed=changed,
         clear=clear,
+        put=put,
         focus=focus,
         focusable=focusable,
     )

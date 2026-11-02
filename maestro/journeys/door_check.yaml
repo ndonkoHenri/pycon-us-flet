@@ -7,7 +7,7 @@
 # 3. Ada again, past the 4 s cooldown: "Already checked in", her chip still there, and
 #    the count stays at two.
 # 4. A real badge not on the list (Margaret's) goes online: "Not registered for this
-#    session". Text with no colon: "Not a badge code", and the text stays.
+#    session". Text with no colon: "Not a badge code" with the text read, and Edit code (D-473).
 # 5. The sync chip comes to "All synced", whatever the mock answered (D-441).
 #
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
@@ -124,10 +124,10 @@ tags:
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Not a badge code.*"
+      text: "(?s)Not a badge code\\nnot-a-badge\\n.*"
     timeout: 15000
 - assertVisible:
-    text: not-a-badge  # the field keeps it for correction
+    id: scan.edit  # the text read is in the panel, not kept in the field (D-473)
 - assertVisible:
     id: door.headcount
     text: "2 checked in for this session"
