@@ -33,9 +33,8 @@ from flet.components.hooks.use_ref import MutableRef
 from pycon_us.account import use_account
 from pycon_us.core.lead_sponsors import LeadSponsor, snapshot
 from pycon_us.core.lead_views import LeadView, filter_leads, lead_view, phrase
-from pycon_us.core.staff_tools import ToolKey, may_open, scans_for_sponsor
+from pycon_us.core.staff_tools import ToolKey, scans_for_sponsor
 from pycon_us.lead_list import leads
-from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
@@ -45,7 +44,7 @@ from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.lead_note_sheet import OpenNote, use_note_sheet
 from pycon_us.ui.queue_rows import status_icon
 from pycon_us.ui.scaffold import AppScaffold
-from pycon_us.ui.scan_screen import NotAvailable
+from pycon_us.ui.scan_screen import NotAvailable, use_tool_allowed
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
@@ -82,17 +81,13 @@ def only_label(sponsor: LeadSponsor) -> str:
 @ft.component
 def LeadsPage() -> ft.Control:
     """The leads list, or "Not available" for an account the Lead scanner refuses."""
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.LEAD)
     account = use_account()
-    flags = account.role_flags
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.LEAD, flags)
-    )
     if not allowed:
         return NotAvailable(title=TITLE, source=__name__)
-    return LeadList(owner=account.owner, for_sponsor=scans_for_sponsor(flags))
+    return LeadList(
+        owner=account.owner, for_sponsor=scans_for_sponsor(account.role_flags)
+    )
 
 
 @ft.component

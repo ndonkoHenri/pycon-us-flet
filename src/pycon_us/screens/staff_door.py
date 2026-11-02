@@ -1,10 +1,10 @@
 """Door check (``/more/staff/door``): the shared scan screen, for a session chosen first.
 
 A mount of ``ui/scan_screen.py``'s ``ScanScreen`` (D-416; DOOR-01, DOOR-02; #764). It
-re-checks ``may_open(DOOR)`` with a signed-in account and a mock URL on every render
-(architecture §12.4), else "Not available for this account", so a deep link cannot
-bypass it. It is mounted at ``/now/staff/door`` too and records itself as the last tool
-opened (D-421); More's row and Now's card open it, with the outbox's counts (#766).
+re-checks ``use_tool_allowed(DOOR)`` on every render (architecture §12.4), else "Not
+available for this account", so a deep link cannot bypass it. It is mounted at
+``/now/staff/door`` too and records itself as the last tool opened (D-421); More's row
+and Now's card open it, with the outbox's counts (#766).
 
 What it checks in for is chosen on ``door_session.py``'s picker, pushed at
 ``…/staff/door/session``, as the Lead scanner's sponsor (D-425, D-433). The choice
@@ -34,7 +34,7 @@ import flet as ft
 from pycon_us.account import use_account
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.door_sessions import SEPARATOR, DoorChoice
-from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
+from pycon_us.core.staff_tools import TOOLS, ToolKey
 from pycon_us.door_check import NOT_CHECKED_IN, check_in
 from pycon_us.door_choice import read_door_session
 from pycon_us.locations import is_top_view
@@ -51,7 +51,7 @@ from pycon_us.screens.door_preload import (
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
-from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
+from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, use_tool_allowed
 from pycon_us.ui.staff_picker import Reading, use_arrival
 from pycon_us.ui.tool_controls import context_chip, tool_button
 
@@ -81,14 +81,9 @@ class Read:
 @ft.component
 def DoorCheck() -> ft.Control:
     """Door check, or its "Not available" state for an account it refuses."""
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.DOOR)
     account = use_account()
     memory = use_services().memory
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.DOOR, account.role_flags)
-    )
     if not allowed:
         return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.DOOR  # plain: Now's card reads it when it renders
