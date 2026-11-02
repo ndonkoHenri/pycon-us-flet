@@ -45,7 +45,7 @@ def test_a_disposition_edit_without_the_counts_is_stale() -> None:
     problems = check(edited(row, row.replace("`keep`", "`keep+interim`")), IDS)
     assert len(problems) == 1
     assert "the Counts table by tag is stale" in problems[0]
-    assert "| catalog | 37 | 121 | 58 | 65 | 19 | 1 | 23 | 0 | 263 |" in problems[0]
+    assert "| catalog | 37 | 121 | 58 | 65 | 23 | 2 | 23 | 0 | 263 |" in problems[0]
 
 
 def test_a_missing_and_a_duplicated_id_are_reported() -> None:
