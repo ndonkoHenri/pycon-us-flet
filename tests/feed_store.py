@@ -27,6 +27,7 @@ from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from tests.fakes import MemoryPrefs
 from tests.feeds import changed
+from tests.small_stack import TOO_DEEP_TO_PARSE, nested_lists
 
 NOW = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 TALK = "142"  # a 2026 talk; the variants below rename it
@@ -133,5 +134,6 @@ FAILURES: list[tuple[str, Callable[[], httpx.MockTransport], Status]] = [
     ("HTTP 404", lambda: serving(b"", status=404), "problem"),
     ("an HTML page", lambda: serving(b"<html>Wi-Fi sign-in</html>"), "problem"),
     ("a truncated feed", lambda: serving(NETWORK_FEED[:1000]), "problem"),
+    ("nested too deep", lambda: serving(nested_lists(TOO_DEEP_TO_PARSE)), "problem"),
     ("no schedule", lambda: serving(b'{"posters": []}'), "problem"),
 ]
