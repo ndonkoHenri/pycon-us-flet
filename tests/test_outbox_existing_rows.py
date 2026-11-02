@@ -17,8 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from pycon_us.core import outbox
-from pycon_us.core.outbox import Kind, Outcome, Status
+from pycon_us.core import outbox_enqueue
+from pycon_us.core.outbox import Kind, Status
+from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.outbox_schema import OUTBOX_V1, OUTBOX_V2, file_name
 
@@ -62,10 +63,10 @@ def device(tmp_path: Path) -> Iterator[OutboxDb]:
 
 def scan(
     db: OutboxDb, code: str, sponsor: tuple[str | None, str | None] = ("7", "Acme")
-) -> outbox.Enqueued:
+) -> outbox_enqueue.Enqueued:
     """Scan ``code`` for ``sponsor`` as the upgraded app does."""
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=OWNER,
         code=code,
         payload={"badge_validator": "v"},
@@ -137,7 +138,7 @@ def test_a_scan_for_another_sponsor_adds_a_lead_beside_the_old_row(
 def test_an_edit_of_the_old_note_stays_on_its_row(device: OutboxDb) -> None:
     """Saved again for its lead's sponsor, the old note is rewritten, not doubled."""
     decide = partial(
-        outbox.save_note,
+        outbox_enqueue.save_note,
         owner=OWNER,
         code="A1",
         note="Cold",

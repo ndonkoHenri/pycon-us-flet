@@ -1,9 +1,10 @@
 """A lead note's structure and its text, as the server and Ionic's records keep it (LEAD-10).
 
 The note sheet edits a ``LeadNote``: how interested the attendee was, what to follow
-up with and free text. The outbox sends it as one string (``core/outbox.save_note``,
-D-407) in Ionic's format (``composeNote``), so the server and older records still read
-it (docs/research/ionic/staff-tools-auth.md §7a): one line each, only when set,
+up with and free text. The outbox sends it as one string
+(``core/outbox_enqueue.save_note``, D-407) in Ionic's format (``composeNote``), so the
+server and older records still read it (docs/research/ionic/staff-tools-auth.md §7a):
+one line each, only when set,
 
     Interest: warm
     Follow-up: Demo, Hiring

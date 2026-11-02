@@ -27,16 +27,15 @@ prefill would save over it.
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from functools import partial
+from typing import cast
 
 import flet as ft
-from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us import lead_note
 from pycon_us.core.lead_notes import FOLLOW_UPS, Interest, LeadNote
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.core.lead_views import for_line
-from pycon_us.core.outbox import Outcome
+from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -44,6 +43,7 @@ from pycon_us.services.errors import report_errors, say
 from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_sheet_shape
+from pycon_us.ui.hooks import use_latest_state, use_mounted
 from pycon_us.ui.lead_note_fields import follow_up_chip, interest_button
 from pycon_us.ui.queue_rows import heading, note
 from pycon_us.ui.semantics import named
@@ -236,22 +236,11 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
     staff = use_staff()
     prefs = use_prefs()
     tokens = use_tokens()
-    editing, set_state = ft.use_state(not_editing)
-    # The draft as the handlers left it: a render may not have run between two
-    # events (use_state only schedules one), so Save reads this, not `editing`.
-    latest: MutableRef[Editing | None] = ft.use_ref(editing)
+    # `latest`, the draft as the handlers left it, is what Save reads: not `editing`.
+    editing, latest, set_editing = use_latest_state(cast(Editing | None, None))
     is_open = editing is not None
     field = ft.use_memo(ft.Ref[ft.TextField], [is_open])  # a fresh one each opening
-    mounted = ft.use_ref(True)  # cleared on unmount: a late SnackBar is then dropped
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the screen gone, so a save still waiting stays quiet."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
-
-    set_editing = partial(keep, latest, set_state)
+    mounted = use_mounted()  # a late SnackBar is then dropped
 
     @report_errors
     def open_for(code: str, name: str | None, sponsor: LeadSponsor | None) -> None:
@@ -318,16 +307,6 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
     return NoteSheet(open_for, is_open)
 
 
-def keep(
-    latest: MutableRef[Editing | None],
-    set_state: Callable[[Editing | None], None],
-    value: Editing | None,
-) -> None:
-    """Set the sheet's state and ``latest`` together, so the next event sees it at once."""
-    latest.current = value
-    set_state(value)
-
-
 def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:
     """Return ``last`` with a follow-up chosen or not; None stays None."""
     if last is None:
@@ -341,8 +320,3 @@ def redraft(last: Editing | None, **change: object) -> Editing | None:
     if last is None:
         return None
     return replace(last, draft=replace(last.draft, **change), problem=None)
-
-
-def not_editing() -> Editing | None:
-    """Return None: no sheet open, the hook's first state (a typed default)."""
-    return None

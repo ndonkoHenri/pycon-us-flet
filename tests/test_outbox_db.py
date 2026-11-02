@@ -20,8 +20,9 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from pycon_us.config import YEAR
-from pycon_us.core import outbox
-from pycon_us.core.outbox import Kind, Outcome, Row, Status
+from pycon_us.core import outbox, outbox_enqueue
+from pycon_us.core.outbox import Kind, Row, Status
+from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import Counts, OutboxDb
@@ -40,10 +41,12 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
     database.close()
 
 
-def scan(db: OutboxDb, code: str = "A1", now: float = NOW) -> outbox.Enqueued | None:
+def scan(
+    db: OutboxDb, code: str = "A1", now: float = NOW
+) -> outbox_enqueue.Enqueued | None:
     """Enqueue ``OWNER``'s lead scan of ``code`` for sponsor 7."""
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=OWNER,
         code=code,
         payload={"code": code},
@@ -57,7 +60,7 @@ def scan(db: OutboxDb, code: str = "A1", now: float = NOW) -> outbox.Enqueued | 
 def note(db: OutboxDb, code: str = "A1", text: str = "Met at the booth"):
     """Enqueue ``OWNER``'s note on ``code``'s lead for sponsor 7."""
     decide = partial(
-        outbox.save_note,
+        outbox_enqueue.save_note,
         owner=OWNER,
         code=code,
         note=text,
@@ -71,7 +74,7 @@ def note(db: OutboxDb, code: str = "A1", text: str = "Met at the booth"):
 def admit(db: OutboxDb, code: str = "A1", owner: str = OWNER):
     """Enqueue ``owner``'s door check-in of ``code`` for product 3 in session ``s1``."""
     decide = partial(
-        outbox.admit,
+        outbox_enqueue.admit,
         owner=owner,
         code=code,
         product_ids=[3],
@@ -91,7 +94,7 @@ def raw(path: Path) -> Iterator[sqlite3.Connection]:
         yield connection
 
 
-def queued(enqueued: outbox.Enqueued | None) -> Row:
+def queued(enqueued: outbox_enqueue.Enqueued | None) -> Row:
     """Return the stored row of an enqueue that queued one."""
     assert enqueued is not None and enqueued.outcome is Outcome.QUEUED
     assert enqueued.row is not None and enqueued.row.id is not None
@@ -228,7 +231,7 @@ def test_a_door_check_in_is_stored_once_per_idempotency_key(db: OutboxDb) -> Non
     """The same check-in, from any owner, is the queued row; the index forbids a copy."""
     row = queued(admit(db))
     again = admit(db, owner=OTHER)
-    assert again == outbox.Enqueued(Outcome.ALREADY, row)
+    assert again == outbox_enqueue.Enqueued(Outcome.ALREADY, row)
     with raw(db.path) as other, pytest.raises(sqlite3.IntegrityError):
         other.execute(
             "INSERT INTO outbox (kind, key, payload_json, owner, next_at, created_at,"
@@ -295,7 +298,7 @@ def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> 
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:
     """``enqueue`` refuses a row whose code isn't the one its rows were read for."""
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=OWNER,
         code="B2",
         payload={},

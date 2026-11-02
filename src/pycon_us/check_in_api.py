@@ -2,8 +2,8 @@
 
 Thin: each sends one call through ``ApiClient`` and reads its reply, and a reply that
 can't be read is an ``ApiError`` (D-120). ``redeem()`` is for Swag pickup's online
-hand-out only: the door's redeem bodies go through the outbox (``core/outbox.admit()``)
-and the ``SyncWorker`` sends them (D-56, D-407).
+hand-out only: the door's redeem bodies go through the outbox
+(``core/outbox_enqueue.admit()``) and the ``SyncWorker`` sends them (D-56, D-407).
 """
 
 from collections.abc import Iterable

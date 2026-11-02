@@ -26,6 +26,7 @@ the sheet is open ("Paused while the hand-out is open").
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
+from typing import cast
 
 import flet as ft
 
@@ -39,6 +40,7 @@ from pycon_us.services.api import ApiClient
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.swag import look_up
+from pycon_us.ui.hooks import use_mounted
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, use_tool_allowed
 from pycon_us.ui.semantics import named
@@ -111,18 +113,11 @@ def SwagTool(*, owner: str) -> ft.Control:
     key = staff_swag_categories(svc.storage.year)
     online = use_online(svc, watch=True)
     loaded, retry = use_fetch(fetch_categories, what="Swag categories")
-    chosen, set_chosen = ft.use_state(not_read)
-    mounted = ft.use_ref(True)  # cleared on unmount: a late answer is then dropped
+    chosen, set_chosen = ft.use_state(cast(Chosen | None, None))
+    mounted = use_mounted()  # a late SnackBar is then dropped
     current = chosen.ids if chosen is not None and chosen.owner == owner else None
     latest = ft.use_ref(frozenset[int]())  # what a toggle builds on (#756)
     latest.current = current or frozenset()
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the screen gone, so a read or save still running stays quiet."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
 
     was_online = ft.use_ref(online)  # so opening the screen isn't a return
 
@@ -141,8 +136,7 @@ def SwagTool(*, owner: str) -> ft.Control:
     async def read_chosen() -> None:
         stored = await svc.storage.get(key)  # a failure reads []
         ids = frozenset(int(i) for i in stored if i.isdigit())
-        if mounted.current:
-            set_chosen(Chosen(owner, ids))
+        set_chosen(Chosen(owner, ids))
 
     ft.use_effect(read_chosen, [owner])
 
@@ -270,8 +264,3 @@ def category_chip(
             on_select=selected_now,
         ),
     )
-
-
-def not_read() -> Chosen | None:
-    """Return None: the choice not read yet, ``SwagTool``'s first state (typed)."""
-    return None

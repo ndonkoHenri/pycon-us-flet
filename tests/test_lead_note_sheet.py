@@ -15,7 +15,7 @@ import pytest
 from flet.utils.object_model import patch_dataclass
 
 from pycon_us import lead_capture
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.lead_notes import Interest, LeadNote, compose
 from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.lead_note import NOT_LOADED, NOTHING_TO_SAVE, WILL_SYNC
@@ -224,7 +224,7 @@ async def test_open_lead_on_a_duplicate_opens_its_note_prefilled(
     """A duplicate offers Open lead: the saved note, prefilled and ready to edit."""
     saved = LeadNote(Interest.HOT, ("Partner",), "Met at the booth.")
     lead = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=OWNER,
         code="MOCK0001",
         payload={"badge_validator": "v4l1d01"},
@@ -236,7 +236,7 @@ async def test_open_lead_on_a_duplicate_opens_its_note_prefilled(
     (row,) = db.rows(OWNER, list(outbox.Status)) or []
     assert db.save(outbox.after_success(row, {"first_name": "Ada"}))
     note = partial(
-        outbox.save_note,
+        outbox_enqueue.save_note,
         owner=OWNER,
         code="MOCK0001",
         note=compose(saved),

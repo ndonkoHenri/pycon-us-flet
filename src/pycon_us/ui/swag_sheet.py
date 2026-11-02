@@ -30,6 +30,7 @@ hand-out stays in progress (and scanning paused) until its answer settles it (#7
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -255,7 +256,7 @@ def use_swag_sheet() -> SwagSheet:
     svc = use_services()
     prefs = use_prefs()
     tokens = use_tokens()
-    handing, set_state = ft.use_state(not_handing)
+    handing, set_state = ft.use_state(cast(Handing | None, None))
     latest: MutableRef[Handing | None] = ft.use_ref(handing)
     pending: MutableRef[asyncio.Future[ScanResult | None] | None] = ft.use_ref(None)
     mounted = ft.use_ref(True)  # cleared on unmount: a late answer then sets nothing
@@ -338,8 +339,3 @@ def use_swag_sheet() -> SwagSheet:
         else None
     )
     return SwagSheet(offer, handing is not None)
-
-
-def not_handing() -> Handing | None:
-    """Return None: no sheet open, the hook's first state (a typed default)."""
-    return None

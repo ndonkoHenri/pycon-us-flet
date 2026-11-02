@@ -27,6 +27,7 @@ from pycon_us.services import use_services
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
+from pycon_us.ui.hooks import use_mounted
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import say_if_unsaved
@@ -143,14 +144,7 @@ def use_pick[T](save: Callable[[Storage, T], Awaitable[bool]]) -> Picking[T]:
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
-    mounted = ft.use_ref(True)  # cleared on unmount: a late save then does nothing
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the page gone, so a save still running stays quiet."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
+    mounted = use_mounted()  # a late save then does nothing
 
     @report_errors
     async def pick(choice: T) -> None:

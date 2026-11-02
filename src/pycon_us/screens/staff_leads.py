@@ -26,6 +26,7 @@ account without it sees "Not available for this account".
 
 import time
 from collections.abc import Callable
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -106,9 +107,8 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     field = use_field_query()
     use_minute()  # "5 minutes ago" keeps up while the page shows
     sheet = use_note_sheet(owner=owner)
-    sponsor, set_sponsor = ft.use_state(no_sponsor)
+    sponsor, set_sponsor = ft.use_state(cast(LeadSponsor | None, None))
     only, set_only = ft.use_state(False)
-    mounted = ft.use_ref(True)  # cleared on unmount: a late read then does nothing
     opener: MutableRef[OpenNote] = ft.use_ref(
         lambda: sheet.open  # a callable is use_ref's initialiser: wrapped, not called
     )
@@ -118,17 +118,9 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     )
 
     @report_errors
-    def unmount() -> None:
-        """Mark the page gone, so the sponsor's read still running stays quiet."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
-
-    @report_errors
     async def read_chosen() -> None:
         chosen = await read_sponsor(svc.storage) if for_sponsor else None
-        if mounted.current:
-            set_sponsor(chosen)
+        set_sponsor(chosen)
 
     ft.use_effect(read_chosen, [owner, for_sponsor])
 
@@ -376,8 +368,3 @@ def _LeadRow(
             padding=ft.Padding.symmetric(horizontal=16, vertical=8),
         )
     )
-
-
-def no_sponsor() -> LeadSponsor | None:
-    """Return None: no sponsor read yet, ``LeadList``'s first state (typed)."""
-    return None
