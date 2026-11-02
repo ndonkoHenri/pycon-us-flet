@@ -126,7 +126,7 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
    and the configuration, not on the pin's SHA; the reported version is the nearest tag, which a bump need not change (§2.2 quirks).
    It also deletes the worktree's pub cache clone (§5.8), as `flet clean` and a change of the bundled Python version
    do: if `build/pub-cache` is missing, clone it again before the next build.
-4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
+4. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`; and re-run §8.1's backup and restore check, D-472) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
 5. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
 
 **When 1.1.0 is on PyPI** (one PR):
@@ -1026,25 +1026,6 @@ The owner's own accounts are the only route, and testing is internal only. There
 | Owner's emulator (and a borrowed phone), kept updated | Local `flet build apk --arch arm64-v8a` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
 | Testers | Local `flet build aab` → Play Console › **Internal testing** | The upload key; Play re-signs with its app signing key | Up to 100 testers by email list; no review. Testers install through an opt-in link. |
 
-**What Android backs up (D-472).** Auto Backup takes one file, `shared_prefs/FlutterSharedPreferences.xml`: favourites, settings and the Developer options come back on a new phone. The secure-storage files (the API key and secret, wrapped by a Keystore key that stays on the old phone) and the outbox (`outbox-<year>.db`, queued scans) never leave it, and neither does the rest of `files/` (the feed cache, and the 24 MB of Python that Flet unpacks, which sit close to Auto Backup's 25 MB cap). A restored phone starts signed out ("Clearing a partial sign-in" in the log), with its favourites and an empty outbox. The rules are `android_res/xml/backup_rules.xml` (Android 11 and older) and `data_extraction_rules.xml` (12 and newer), an allowlist because the rules take no wildcards and the outbox's name holds the year; `tests/test_android_backup_rules.py` pins them.
-
-**Check a backup and restore** on an emulator without a Google account, with `bmgr` and its local transport. The emulator must be a `google_apis` image (`adb root`), and the app must be running, since Android skips a stopped app ("Backup is not allowed"). Sign in against the mock (§6), star a session, cut the network (`cmd connectivity airplane-mode enable`) and scan two badges, so the outbox holds two rows, then:
-
-```bash
-P=io.github.ndonkohenri.confcompanion; S=<emulator id>
-adb -s $S root
-adb -s $S shell "bmgr enable true; bmgr transport com.android.localtransport/.LocalTransport"
-adb -s $S shell "cmd connectivity airplane-mode disable; am start -n $P/.MainActivity; sleep 5; bmgr backupnow $P"
-# What went in: the transport's tar holds apps/$P/_manifest and sp/FlutterSharedPreferences.xml, and nothing else.
-adb -s $S shell 'tar -tvf $(find /data/data/com.android.localtransport/files -path "*_full/'$P'")'
-adb -s $S uninstall $P && adb -s $S install build/apk/pycon-us.apk   # the Keystore key goes with the uninstall
-adb -s $S shell "bmgr restore 1 $P"
-adb -s $S logcat -c; adb -s $S shell "am start -n $P/.MainActivity"
-adb -s $S logcat -d | grep -i "unwrap\|partial sign-in"           # no unwrap failure, one partial sign-in
-```
-
-Expect: the app opens signed out; My schedule holds the starred session; `files/data/` has no `outbox-<year>.db`; the mock logs no request. Checked in #818 on an Android 16 emulator (the default rules gave a 24 MB backup, an `InvalidKeyException: Failed to unwrap key` and two restored queued scans; ours a 4 KB backup and none of those). The Android 11 file is the same include and has no emulator image here.
-
 A device can update in place only from one signing identity: our upload key (sideload) or Play's app signing key (Play), not both. Pick one route per device. Switching means uninstalling first.
 
 **The upload key**, created once:
@@ -1072,6 +1053,27 @@ uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk 
   - complete the declarations Play asks for before the first internal release.
 - **Target API.** Play enforces a minimum `targetSdk` on uploads; ours is 36, the latest stable level (D-106).
 - **The bundle id cannot change** once an app exists in Play Console: D-452 settled it first.
+
+#### What Android backs up (D-472)
+
+Auto Backup takes one file, `shared_prefs/FlutterSharedPreferences.xml`: favourites, settings and the Developer options come back on a new phone. The secure-storage files (the API key and secret, wrapped by a Keystore key that stays on the old phone) and the outbox (`outbox-<year>.db`, queued scans) never leave it, and neither does the rest of `files/` (the feed cache, and the 24 MB of Python that Flet unpacks: a cloud backup's cap is 25 MB). A restored phone starts signed out ("Clearing a partial sign-in" in the log), with its favourites and an empty outbox. The rules are `android_res/xml/backup_rules.xml` (Android 11 and older) and `data_extraction_rules.xml` (12 and newer), an allowlist because the rules take no wildcards and the outbox's name holds the year; `tests/test_android_backup_rules.py` pins them.
+
+**Check a backup and restore** on an emulator without a Google account, with `bmgr` and its local transport. The emulator must be a `google_apis` image (`adb root`), and the app must be running, since Android skips a stopped app ("Backup is not allowed"). Sign in against the mock (§6), star a session, cut the network (`cmd connectivity airplane-mode enable`) and scan two badges, so the outbox holds two rows, then:
+
+```bash
+P=io.github.ndonkohenri.confcompanion; S=<emulator id>
+adb -s $S root
+adb -s $S shell "bmgr enable true; bmgr transport com.android.localtransport/.LocalTransport"
+adb -s $S shell "cmd connectivity airplane-mode disable; am start -n $P/.MainActivity; sleep 5; bmgr backupnow $P"
+# What went in: the transport's tar holds apps/$P/_manifest and sp/FlutterSharedPreferences.xml, and nothing else.
+adb -s $S shell 'tar -tvf $(find /data/data/com.android.localtransport/files -path "*_full/'$P'")'
+adb -s $S uninstall $P && adb -s $S install build/apk/pycon-us.apk   # the Keystore key goes with the uninstall
+adb -s $S shell "bmgr restore 1 $P"
+adb -s $S logcat -c; adb -s $S shell "am start -n $P/.MainActivity"
+adb -s $S logcat -d | grep -i "unwrap\|partial sign-in"           # no unwrap failure, one partial sign-in
+```
+
+Expect: the app opens signed out; My schedule holds the starred session; `files/data/` has no `outbox-<year>.db`; the mock logs no request. Checked in #818 on an Android 16 emulator (the default rules gave a 24 MB backup, an `InvalidKeyException: Failed to unwrap key` and two restored queued scans; ours a 4 KB backup and none of those). The Android 11 file is the same include and has no emulator image here.
 
 ### 8.2 iOS
 

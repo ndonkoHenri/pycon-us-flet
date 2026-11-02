@@ -15,6 +15,11 @@ import pytest
 from flet_cli.utils.android import android_resource_files
 
 ROOT = Path(__file__).resolve().parents[1]
+ROOTS = {
+    "backup_rules.xml": "full-backup-content",
+    "data_extraction_rules.xml": "data-extraction-rules",
+}
+"""The root element Android reads in each rules file; another name is silently ignored."""
 PREFERENCES = ("sharedpref", "FlutterSharedPreferences.xml")
 """The (domain, path) of the one file Auto Backup may take: SharedPreferences' own."""
 
@@ -39,6 +44,7 @@ def includes(file: str, *parents: str) -> list[tuple[str | None, str | None]]:
             none for a root that holds them itself.
     """
     node = ET.parse(res_dir() / "xml" / file).getroot()
+    assert node.tag == ROOTS[file], f"{file}'s root is <{node.tag}>"
     for name in parents:
         found = node.find(name)
         assert found is not None, f"{file} has no <{name}>"
