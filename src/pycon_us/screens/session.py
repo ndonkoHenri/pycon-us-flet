@@ -32,9 +32,9 @@ import flet as ft
 from pycon_us import clock
 from pycon_us.change_log import use_change_log
 from pycon_us.config import ConferenceInfo
-from pycon_us.core.change_views import detail_badge
+from pycon_us.core.change_views import REMOVED_NOTE, detail_badge
 from pycon_us.core.diff import Change
-from pycon_us.core.models import Session, Speaker
+from pycon_us.core.models import OPEN_SPACE, Session, Speaker
 from pycon_us.core.row_views import Places, people, places
 from pycon_us.core.timeline import posters
 from pycon_us.favorites import use_favorites
@@ -43,7 +43,6 @@ from pycon_us.prefs import use_prefs
 from pycon_us.screens.keynote_people import keynote_about, keynote_speakers
 from pycon_us.screens.session_extras import (
     IMAGE_FADE_MS,
-    OPEN_SPACE,
     Posters,
     SessionMenu,
     ShareButton,
@@ -72,9 +71,6 @@ SCREEN = "session"
 
 NOT_FOUND = "This session isn't in the current schedule"
 """The empty state of an unknown id (ux.md §4.6)."""
-
-REMOVED = "Removed from the latest schedule"
-"""The note over a session a newer feed dropped (D-47's words, never "cancelled")."""
 
 SECTION_GAP = 24
 """The space between the page's sections (ux.md §3.6); 8 dp within one."""
@@ -400,7 +396,7 @@ def _removed_note(high_contrast: bool) -> ft.Control:
                     ft.Column(
                         [
                             ft.Text(
-                                REMOVED,
+                                REMOVED_NOTE,
                                 theme_style=ft.TextThemeStyle.TITLE_SMALL,
                                 color=on_container,
                             ),

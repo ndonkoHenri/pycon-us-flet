@@ -40,7 +40,9 @@ SEED = "#3B3EA9"
 """PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
 
 BOOTH_AMBER = "#F2C14E"
-"""A selected expo booth's fill in every scheme, as the plan is the same (ux.md §6.2)."""
+"""A selected expo booth's fill in every scheme, as the plan is the same (ux.md §6.2).
+
+A selected job fair table's too, on the print's purple at well over 3:1 (#402)."""
 
 BOOT_COLOR = "#680579"
 """The splash's purple (``[tool.flet.splash]``, ux.md §2.6): the boot view and the start

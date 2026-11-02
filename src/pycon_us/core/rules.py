@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
-from pycon_us.core.models import Poster, Room, Session, Speaker
+from pycon_us.core.models import OPEN_SPACE, Poster, Room, Session, Speaker
 from pycon_us.core.names import PLENARY_KINDS, clean_title, plain_text, trailing_room
 from pycon_us.core.records import OpenSpace, Slot
 from pycon_us.core.slugs import room_sort_key, slugify_room
@@ -111,7 +111,7 @@ def drop_rule(slot: Slot) -> str | None:
     """
     if slot.kind.startswith("available-open-space"):
         return "available-open-space"
-    if slot.kind == "open-space":
+    if slot.kind == OPEN_SPACE:
         return "open-space-duplicate"
     if _is_placeholder(slot):
         return "placeholder"
@@ -280,7 +280,7 @@ def open_space_session(space: OpenSpace, settings: FeedSettings) -> Session | No
     return _session(
         id=space.session_id,
         name=space.title,
-        kind="open-space",
+        kind=OPEN_SPACE,
         location=space.room,
         start=space.start,
         end=space.end,
@@ -404,7 +404,7 @@ def _session(
         id=id,
         name=name,
         kind=kind,
-        track="Open Space" if kind == "open-space" else track(kind),
+        track="Open Space" if kind == OPEN_SPACE else track(kind),
         location=location,
         display_location=display_location,
         rooms=room_names,
