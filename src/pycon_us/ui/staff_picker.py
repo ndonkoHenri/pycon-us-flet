@@ -7,6 +7,7 @@ fetches its list each time it opens (``use_fetch()``: a spinner, then the list, 
 Back does, rows that read as one phrase with the chosen one ticked (``choice_row()``),
 and a tap that saves the choice and goes back (``use_pick()``), staying with "Couldn't
 save your change" when the save fails, since the tool reads the choice from storage.
+Swag pickup's category chips, on its scan screen, fetch through ``use_fetch()`` too.
 
 On the tool's scan screen, the choice heads the screen as an outlined chip that reopens
 the picker, and with none the screen is paused with a tonal button (both
@@ -46,7 +47,7 @@ type Status = Literal["loading", "failed", "loaded"]
 
 @dataclass(frozen=True)
 class Loaded[T]:
-    """Where a picker's fetch is.
+    """Where a ``use_fetch()`` is.
 
     Attributes:
         status: Loading, failed (offline or an error) or loaded.
@@ -74,7 +75,7 @@ def use_arrival(owner: str) -> object:
 def use_fetch[T](
     fetch: Callable[[ApiClient], Awaitable[T]], *, what: str
 ) -> tuple[Loaded[T], Callable[[], None]]:
-    """Fetch a picker's list as it opens, and again at each Retry (a hook).
+    """Fetch a list as the page opens, and again at each Retry (a hook).
 
     A plain function that calls hooks, so the page calls it once per render, before
     any early return (D-70).
@@ -86,6 +87,8 @@ def use_fetch[T](
     Returns:
         Where the fetch is, and Retry, which fetches again.
     """
+    # A late answer needs no mounted guard: Flet cancels load() on unmount (F2), and a
+    # setter called after it updates nothing (tests/test_flet_effects.py).
     svc = use_services()
     loaded, set_loaded = ft.use_state(Loaded[T]("loading"))
     tries, set_tries = ft.use_state(0)
