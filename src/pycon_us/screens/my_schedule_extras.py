@@ -31,7 +31,7 @@ from pycon_us.services import use_services
 from pycon_us.services.calendar import add_to_calendar
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.buttons import LABEL_PADDING
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.semantics import named
 
 SCREEN = "my_schedule"
@@ -66,7 +66,9 @@ def export_slug(year: int) -> str:
 
 
 @ft.component
-def ScheduleMenu(sessions: tuple[Session, ...], *, settings: bool) -> ft.Control:
+def ScheduleMenu(
+    sessions: tuple[Session, ...], *, settings: bool, source: str
+) -> ft.Control:
     """The app bar's overflow ("More options"): Export, then Reminder settings.
 
     Export is disabled while the calendar's sheet or the save dialog is up, so a
@@ -81,6 +83,7 @@ def ScheduleMenu(sessions: tuple[Session, ...], *, settings: bool) -> ft.Control
             Export only with one at least.
         settings: Whether to offer Reminder settings: a build with E3 (D-401). The
             caller shows the menu only with an item in it.
+        source: My schedule's ``__name__``, for View source, always last (D-461).
     """
     page = ft.context.page
     svc = use_services()
@@ -122,6 +125,7 @@ def ScheduleMenu(sessions: tuple[Session, ...], *, settings: bool) -> ft.Control
                 identifier=f"{SCREEN}.reminder_settings",
             )
         )
+    items.extend(view_source_items(svc, source))
     return overflow_menu(f"{SCREEN}.overflow", items)
 
 

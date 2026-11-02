@@ -172,6 +172,7 @@ def current[S: Shown](kind: type[S]) -> S:
 def _scaffold(
     *,
     title: str,
+    source: str | None = None,
     body: ft.Control,
     actions: list[ft.Control] | None = None,
     on_retap: Callable[[], object] | None = None,

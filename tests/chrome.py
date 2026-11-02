@@ -163,6 +163,7 @@ def view_at(hooks: Hooks, page: FakePage, view_path: str, **kwargs: Any) -> ft.V
     hooks.view_path = view_path
     page.route = page.route if kwargs.pop("below", False) else view_path
     kwargs.setdefault("title", "Title")
+    kwargs.setdefault("source", None)
     return AppScaffold(body=ft.Text("body"), **kwargs)
 
 

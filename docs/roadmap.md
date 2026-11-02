@@ -1453,7 +1453,7 @@ README with screenshots and an accessibility section, CONTRIBUTING, `good first 
 
 epic, area:quality
 
-The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, and whether to approach the PSF. The script runs on the LAN mock from the laptop (D-457), and reopens O-8 if it finds a reason.
+The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, and whether to approach the PSF. The script is [`demo-script.md`](demo-script.md), a draft until the UI freezes: it runs on simulators against the mock on the laptop (D-457, D-463), and reopens O-8 if it finds a reason.
 
 ## 8. Upstream track
 

@@ -36,7 +36,7 @@ from pycon_us.theme_hc import hc_border
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.focus_back import focus_back
 from pycon_us.ui.links import open_link
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
@@ -116,7 +116,9 @@ def ShareButton(session: Session) -> ft.Control:
 
 
 @ft.component
-def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
+def SessionMenu(
+    session: Session, *, site: bool, calendar: bool, source: str
+) -> ft.Control:
     """The app bar's overflow ("More options"): the public page, then Add to calendar.
 
     "Open on us.pycon.org" leaves the app: a link, read "Opens in browser" after its
@@ -130,6 +132,7 @@ def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
         site: Whether to offer the session's public page (``Session.url``).
         calendar: Whether to offer Add to calendar: a session the schedule still has
             and that can be saved (D-186, D-31).
+        source: Session detail's ``__name__``, for View source, always last (D-461).
     """
     svc = use_services()
     prefs = use_prefs()  # the export's alarm follows the reminders' lead (D-401)
@@ -172,6 +175,7 @@ def SessionMenu(session: Session, *, site: bool, calendar: bool) -> ft.Control:
                 disabled=adding,
             )
         )
+    items.extend(view_source_items(svc, source))
     return overflow_menu(f"{SCREEN}.overflow", items)
 
 

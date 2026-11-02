@@ -162,8 +162,9 @@ def ScheduleChanges(year: str) -> ft.View:
                 )
     return AppScaffold(
         title=TITLE,
+        source=None if current else __name__,  # one overflow on the bar (D-461)
         body=ft.ListView(items, expand=True, padding=sides(margin)),
-        actions=[mark_all_menu(change_log, svc.storage, screen=SCREEN)]
+        actions=[mark_all_menu(change_log, svc, screen=SCREEN, source=__name__)]
         if current
         else None,
     )

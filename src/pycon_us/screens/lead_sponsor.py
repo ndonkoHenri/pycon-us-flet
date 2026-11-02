@@ -81,7 +81,7 @@ def SponsorPicker() -> ft.Control:
         and scans_for_sponsor(flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     return SponsorList(owner=account.owner)
 
 
@@ -145,6 +145,7 @@ def SponsorList(*, owner: str) -> ft.Control:
             items.append(no_match("sponsors", field.value, PREFIX, field.clear))
     return picker_page(
         title=TITLE,
+        source=__name__,
         prefix=PREFIX,
         cancel=picking.cancel,
         margin=margin,

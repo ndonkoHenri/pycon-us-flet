@@ -311,7 +311,7 @@ async def overflow(
 ) -> AsyncIterator[Shown]:
     """The Schedule's overflow alone, on the Schedule's View."""
     async with showing(
-        ScheduleOverflow,
+        lambda: ScheduleOverflow(source=__name__),
         year=YEAR,
         conference=Conference(data=processed(2026), source="bundled", version=1),
         tmp_path=tmp_path,

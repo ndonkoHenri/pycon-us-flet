@@ -3,8 +3,12 @@ Copyright 2026 The pycon-us-flet contributors
 
 This product is a rebuild of the PyCon US mobile app
 (https://github.com/PyCon/pycon-us-mobile), which is licensed under the
-Apache License, Version 2.0. The original app is our functional reference;
-its data semantics, texts and research notes informed this project.
+Apache License, Version 2.0; that app's licence file states Copyright 2015
+Drifty Co. The original app is our functional reference; its data semantics,
+texts and research notes informed this project. Parts of our code are that
+app's logic rewritten in Python and changed: the feed's processing rules
+(src/pycon_us/core/rules.py), the slugs (core/slugs.py), the request signing
+(core/signing.py) and the API calls (services/endpoints.py).
 
 The app bundles the Roboto font (Regular, Medium and Bold, version 2.138,
 https://github.com/googlefonts/roboto), Copyright 2011 Google Inc., licensed
@@ -13,22 +17,42 @@ flutter_packages/roboto_fonts/.
 
 The brand marks in src/assets/icons/brands/ (Python, PyPI, Mastodon, Bluesky,
 X, LinkedIn, YouTube and Discord) are the unmodified SVGs of Simple Icons,
-version 13.21.0 (https://github.com/simple-icons/simple-icons), dedicated to
-the public domain under CC0 1.0 Universal. The marks themselves are trademarks
-of their owners; the app shows each one only beside a link to that brand.
+version 13.21.0 (https://github.com/simple-icons/simple-icons), a project
+released under CC0 1.0 Universal; its disclaimer says that this does not mean
+every icon in it is CC0, and its data lists no other licence for these eight.
+The marks themselves are trademarks of their owners; the app shows each one
+only beside a link to that brand.
 
-The floor plans in src/assets/maps/ are the PyCon US mobile app's
-(src/assets/img/floor-plans/, Apache License, Version 2.0), drawings of the
-Long Beach Convention Center's spaces prepared by GES, re-encoded to WebP at a
-smaller size; on the campus plan, the PyCon US wordmark and the venue's logo
-are painted over. The expo hall plan is that app's too
-(src/assets/img/pycon-us-2026-floorplan-nologo.jpg), re-encoded the same way,
-with its sun-and-palms mark painted over; the sponsors' logos on it are
-trademarks of their owners. The job fair plan is that app's too
+The floor plans in src/assets/maps/ are from the PyCon US mobile app's
+repository (src/assets/img/floor-plans/), whose licence is the Apache License,
+Version 2.0. The concourse, upper, arena and seaside plans are drawings of the
+Long Beach Convention Center's spaces prepared by GES, each with GES Global
+Experience Specialists' own copyright notice in its title block, which we keep
+as printed. All are re-encoded to WebP at a smaller size. On the campus plan,
+the PyCon US wordmark and the venue's logo are painted over; the names and
+wordmarks of the venue's spaces on it are the venue's. The expo hall plan is
+from that repository too (src/assets/img/pycon-us-2026-floorplan-nologo.jpg),
+re-encoded the same way, with its sun-and-palms mark painted over; the logos of
+the sponsors, the community groups and the Python Software Foundation on it are
+trademarks of their owners. The job fair plan is from that repository too
 (src/assets/img/floor-plans/job-fair.jpg), cropped to the floor without its
-header and its PyCon US logo, and re-encoded the same way; the sponsors' logos
-on it are trademarks of their owners. The room and venue pin positions and the booth
+header and its PyCon US logo, and re-encoded the same way; the logos on it are
+trademarks of their owners. The room and venue pin positions and the booth
 rectangles in src/pycon_us/data/2026/map.toml are that app's too.
+
+The app bundles an unchanged copy of the public PyCon US 2026 feed
+(src/pycon_us/data/2026/conference.json, from
+https://us.pycon.org/2026/schedule/conference.json) so that it works offline,
+and fetches the feed again when it can. Its sessions, names, biographies and
+sponsor texts stay with the Python Software Foundation and their authors; this
+project's licence does not cover them. The photos and logos the feed links to
+are loaded from their published addresses and are not part of this project.
+
+The keynote and panel texts in src/pycon_us/data/2026/content.toml are written
+in our own words from the PyCon US site's keynote speakers page
+(https://us.pycon.org/2026/about/keynote-speakers/). The photos they name are
+that site's, loaded from its address when shown, and are not part of this
+project.
 
 This is not an official Python Software Foundation app. "PyCon" and "Python"
 are trademarks of the Python Software Foundation.
