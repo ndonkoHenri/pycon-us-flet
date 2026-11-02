@@ -19,9 +19,10 @@ from pycon_us.account import Account
 from pycon_us.account_profile import FLAGS
 from pycon_us.config import load_year
 from pycon_us.core.staff_tools import BUILT_TOOLS, TOOLS
+from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
-from pycon_us.prefs import DEV_MOCK_API_URL, Prefs
+from pycon_us.prefs import Prefs
 from pycon_us.screens import more
 from pycon_us.screens.more import More
 from pycon_us.screens.staff_entry import CARD
