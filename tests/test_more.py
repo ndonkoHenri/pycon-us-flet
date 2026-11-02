@@ -23,7 +23,7 @@ from pycon_us.locations import PAGES, parent_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
 from pycon_us.screens import more
-from pycon_us.screens.more import MORE_PAGES, More, MoreEntry
+from pycon_us.screens.more import More, MoreEntry
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
 from pycon_us.staff import Staff
@@ -35,6 +35,17 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
 )
+
+MORE_PAGES = (
+    *more.PROGRAMME,
+    *more.EXPO_AND_SPONSORS,
+    *more.AT_THE_VENUE,
+    *more.ABOUT,
+    more.SETTINGS,
+    more.ABOUT_APP,
+    more.DEVELOPER,
+)
+"""Every page the list links to, in its order."""
 
 
 @pytest.fixture
@@ -68,8 +79,8 @@ def prefs() -> Prefs:
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out ``Account`` store, restored, as after a first launch."""
-    return Account(restored=True)
+    """A signed-out ``Account`` store, as after a first launch."""
+    return Account()
 
 
 @pytest.fixture

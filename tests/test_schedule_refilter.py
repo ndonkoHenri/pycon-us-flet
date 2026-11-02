@@ -28,7 +28,6 @@ memory = schedule_view.memory
 conference = schedule_view.conference
 shown = schedule_view.shown
 
-KEYNOTE = "slot-2026-05-16T09:25:00-07:00"
 BREAK = "slot-2026-05-16T10:05:00-07:00"
 TALKS = "slot-2026-05-16T10:30:00-07:00"
 FIRST = "slot-2026-05-16T08:00:00-07:00"

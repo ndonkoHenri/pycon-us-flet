@@ -141,7 +141,6 @@ class AttendeeProducts:
     Attributes:
         code: The attendee's access code.
         name: The attendee's name ("" without one).
-        attendee_id: The attendee's id, or None without a usable one.
         items_by_category: Each category's name and its items, by name in alphabetical
             order, as Ionic's ``keyvalue`` pipe showed them.
         dietary: The door's dietary note, or None (swag mode sends none).
@@ -151,7 +150,6 @@ class AttendeeProducts:
 
     code: str
     name: str
-    attendee_id: int | None
     items_by_category: tuple[tuple[str, tuple[Item, ...]], ...]
     dietary: str | None = None
     has_allergy: bool | None = None
@@ -183,7 +181,6 @@ def parse_attendee_products(reply: object) -> AttendeeProducts:
     return AttendeeProducts(
         code,
         name if isinstance(name, str) else "",
-        _id(reply.get("attendee_id")),
         tuple((name, items) for name, items in groups if items),
         _optional_text(reply.get("dietary")),
         has_allergy if isinstance(has_allergy, bool) else None,

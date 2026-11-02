@@ -120,9 +120,8 @@ class Online:
 
 
 def staff(*, door_check: bool = True, signed_in: bool = True) -> Account:
-    """A restored ``Account``: door staff, signed in, by default."""
+    """An ``Account``: door staff, signed in, by default."""
     return Account(
-        restored=True,
         signed_in=signed_in,
         email="staff@example.com",
         door_check=door_check,

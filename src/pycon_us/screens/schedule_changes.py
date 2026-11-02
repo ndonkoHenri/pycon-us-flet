@@ -44,14 +44,13 @@ from pycon_us.screens.schedule_changes_seen import (
     use_seen_marks,
     with_dot,
 )
-from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.favorite import FavoriteButton, ToggleFavorite, use_favorite_toggle
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
-from pycon_us.ui.states import EmptyState
+from pycon_us.ui.states import EmptyState, not_found
 from pycon_us.ui.widths import LIST, sides, use_margin
 
 SCREEN = "changes"

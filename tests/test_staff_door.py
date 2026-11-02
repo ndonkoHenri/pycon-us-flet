@@ -200,7 +200,7 @@ async def test_a_catalog_of_swag_only_says_none_are_available(show: Show) -> Non
     [
         staff(door_check=False, lead_retrieval=True),
         staff(door_check=False, mask_violation=True),
-        Account(restored=True),
+        Account(),
     ],
     ids=["sponsor", "coc", "signed out"],
 )
