@@ -1,0 +1,138 @@
+# SHIRT-02 (#825): Swag pickup against the local mock, as staff@example.com.
+#
+# 1. With no category chosen scanning is paused; T-Shirt and Swag Bag are chosen.
+# 2. A typed code (Grace's, who never gets her shirt here) opens the hand-out sheet;
+#    Cancel closes it and the panel says "Ready to hand out". Nothing is recorded.
+# 3. Ada, sent as a HID scanner does (no tap on the field). On a mock that hasn't seen
+#    this flow: the sheet, "Hand out 3 items", then "Handed out 3 items". On a rerun her
+#    items are gone: "Already picked up", with no sheet.
+# 4. Ada again, past the 4 s cooldown: "Already picked up". Margaret bought nothing:
+#    "Nothing to pick up". Text with no colon: "Not a badge code", and the text stays.
+#
+# Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
+# and fake data only.
+# The first run on a running mock redeems Ada's shirts and bag, for good: only a restart
+# gives them back. So a rerun passes with step 3's hand-out skipped; it proves the hand-out
+# only on a mock just started, where the mock's log shows one POST redeem_products per run.
+appId: io.github.ndonkohenri.confcompanion
+name: Swag pickup, hand-out or already picked up, nothing to pick up, not a badge
+tags:
+  - staff
+  - swag
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: staff@example.com
+      PASSWORD: mock-staff
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: more.staff.swag
+    direction: DOWN
+- tapOn:
+    id: more.staff.swag
+
+# 1. Choose what to hand out.
+- extendedWaitUntil:
+    visible:
+      id: swag.category.3
+    timeout: 15000
+- assertVisible:
+    text: "(?s).*Choose what to hand out.*"
+- tapOn:
+    id: swag.category.3
+- tapOn:
+    id: swag.category.4
+- extendedWaitUntil:
+    notVisible:
+      text: "(?s).*Choose what to hand out.*"
+    timeout: 5000
+
+# 2. Manual entry opens the sheet; Cancel records nothing.
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0002:v4l1d02
+- extendedWaitUntil:
+    visible:
+      id: swag.item.31
+    timeout: 15000
+- assertVisible:
+    text: Hand out to Grace Sample
+- assertVisible:
+    id: swag.hand_out
+    text: Hand out 1 item
+- tapOn:
+    id: swag.cancel
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Ready to hand out.*Grace Sample.*T-Shirt \\(L\\).*"
+    timeout: 15000
+
+# 3. A HID-style scan: the hand-out, or on a rerun what it left.
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      text: "Hand out 3 items|(?s)Already picked up.*Ada Example.*"
+    timeout: 15000
+- runFlow:
+    when:
+      visible:
+        id: swag.hand_out
+    commands:
+      - assertVisible:
+          text: Hand out to Ada Example
+      - assertVisible:
+          id: swag.item.30
+      - assertVisible:
+          id: swag.item.40
+      - tapOn:
+          id: swag.hand_out
+      - extendedWaitUntil:
+          visible:
+            id: scan.result
+            text: "(?s)Handed out 3 items.*Ada Example.*"
+          timeout: 15000
+
+# 4. Already picked up; nothing bought; not a badge.
+- runFlow: ../subflows/past_cooldown.yaml
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0001:v4l1d01
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Already picked up.*Ada Example.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: MOCK0004:v4l1d04
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Nothing to pick up.*Margaret Test.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: not-a-badge
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not a badge code.*"
+    timeout: 15000
+- assertVisible:
+    text: not-a-badge  # the field keeps it for correction

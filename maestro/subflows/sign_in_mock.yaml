@@ -1,0 +1,69 @@
+# Point the app at the local mock and sign in with a seed account (D-51). The flows
+# with the tag `staff` run it right after launch_fresh.yaml. It ends as the sign-in page
+# goes, and the flow waits for where the account lands: More, or a sponsor's Lead scanner.
+#
+# EMAIL and PASSWORD name the account (tests/fixtures/mock/seed.json). MOCK_URL is the
+# mock as the device reaches it: by default port 8000 at 10.0.2.2 on the Android
+# emulator and at localhost on the iOS simulator (`-e MOCK_URL=...` for another port).
+appId: io.github.ndonkohenri.confcompanion
+env:
+  MOCK_URL: "${MOCK_URL || (maestro.platform == 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000')}"
+---
+# Developer options › Mock API URL.
+- runFlow: open_developer.yaml
+- scrollUntilVisible:
+    element:
+      id: developer.mock_api_url
+    direction: DOWN
+- tapOn:
+    id: developer.mock_api_url
+- inputText: ${MOCK_URL}
+- pressKey: Enter  # closes the keyboard (maestro/README.md)
+- tapOn:
+    id: developer.mock_api_save
+- runFlow: back.yaml
+- runFlow:  # About this app, when it stayed under Developer options
+    when:
+      notVisible:
+        id: more.title
+    commands:
+      - runFlow: back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+
+# More › Sign in.
+- scrollUntilVisible:
+    element:
+      id: more.sign_in
+    direction: UP
+- tapOn:
+    id: more.sign_in
+- tapOn:
+    id: sign_in.email
+- inputText: ${EMAIL}
+- tapOn:
+    id: sign_in.password
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- tapOn:
+    id: sign_in.submit
+    optional: true  # Enter may have sent it already
+# iOS offers to save the password in its own sheet: Not Now keeps nothing.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: Not Now
+          timeout: 8000
+          optional: true
+      - tapOn:
+          text: Not Now
+          optional: true
+- extendedWaitUntil:
+    notVisible:
+      id: sign_in.email
+    timeout: 30000
