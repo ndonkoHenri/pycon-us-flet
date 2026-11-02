@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 and older (android:fullBackupContent): D-472. Auto Backup takes only the
+  app's SharedPreferences file, so favourites and settings come back on a new phone.
+  Everything else stays out, on purpose:
+  - FlutterSecureStorage.xml holds ciphertext that only this phone's Keystore can open;
+    a restored copy fails with "Failed to unwrap key".
+  - outbox-<year>.db would resend queued scans from the new phone. Rules have no
+    wildcards and the file is named for the year, so a list of includes is safer than
+    a list of excludes.
+  Keep in step with data_extraction_rules.xml.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+</full-backup-content>

@@ -1073,6 +1073,8 @@ def write_atomic(path: Path, data: bytes) -> None:
             raise
 ```
 
+**Backup (D-472).** Android's Auto Backup takes only `FlutterSharedPreferences.xml`, so favourites and settings follow the user to a new phone, while the secure-storage files and the outbox stay on the phone they belong to. A restore therefore reads as signed out through `Account.restore()`'s partial-sign-in path, with an empty outbox. `docs/development.md` §8.1 has the rules and the check.
+
 - `Storage(prefs, directory, year)` is built once in `Services.create()` as `Storage(ft.SharedPreferences(), data_dir(), year)`.
 - Preferences: `await storage.get(THEME)` returns the stored value, or a copy of the default when the key is absent (an explicit `[]` is kept) or its value is not of the pref's type (logged). `await storage.set(pref, value)` JSON-encodes dicts.
 - Feed cache: `read_feed()` returns a `CachedFeed(raw, saved_at)` (bytes and mtime) or `None`; it does not judge the bytes. `write_feed(raw)` runs `data_files.write_atomic` in `asyncio.to_thread` and is called only after `raw` parsed (D-39). `delete_feed(reason)` removes a cache that no longer parses (or that the Developer screen clears, or that a Developer feed URL may have filled when it is left, D-244) and logs why.
