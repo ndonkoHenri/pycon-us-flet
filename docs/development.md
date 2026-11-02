@@ -702,9 +702,6 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
   `regression`, or one flow's file). Each flow starts the app afresh, so a run replaces
   the app's data on that device: never use the owner's `emulator-5554` or a shared
   simulator.
-- **#346's row D** (a fling 0.33 to 0.6 s after the filter sheet, sooner than Maestro can
-  go): `uv run python -m tools.fling_after_sheet --serial <emulator>`, an `adb` driver
-  that runs Maestro only for its setup (the README's "Row D through adb").
 - The flows need no `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
   (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
   `--debug-output build/maestro/<name>` names a folder.

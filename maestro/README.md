@@ -4,9 +4,7 @@ Device flows for the packaged app (`io.github.ndonkohenri.confcompanion`), run w
 local [Maestro](https://maestro.dev) CLI on an Android emulator and an iOS simulator,
 from one set of YAML files (D-252, #348). They check P1's exit journeys (PLAN §7,
 criteria 1 and 2) and repeat regression trials such as #346's fling after the filter
-sheet; row D's faster window has an `adb` driver, `tools/fling_after_sheet.py`
-([below](#row-d-through-adb)). Where Maestro fits
-next to the `flet test` flows in `tests/ui/` is in
+sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 [`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §5.5.
 
 **Free only.** Use the local CLI (and its MCP tools, if you like). Never Maestro Cloud,
@@ -19,7 +17,7 @@ next to the `flet test` flows in `tests/ui/` is in
 | `config.yaml` | The workspace: `maestro test maestro` runs `journeys/*` and `regression/*` |
 | `journeys/` | P1's exit journeys and later screens' journeys, tagged `journeys` (two also `smoke`) |
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
-| `subflows/` | Steps the flows share through `runFlow`; never run on their own, except `fling_setup.yaml`, which `tools/fling_after_sheet.py` runs |
+| `subflows/` | Steps the flows share through `runFlow`; never run on their own |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
 
 | Flow | Tags | What it checks |
@@ -185,33 +183,6 @@ launcher logs every touch, so the time from the tap on "Show N sessions" to the 
 `adb -s emulator-5570 logcat -d | grep TaplEvents`: the `ACTION_UP` at (540, 2232), then
 the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms).
 
-### Row D through adb
-
-#346's row D lost flings 0.33 to 0.6 s after the tap, sooner than Maestro can follow
-one command with another. `tools/fling_after_sheet.py` reaches that window on an Android
-emulator: it sends the tap and the fling in one `adb shell` command (`input tap`, then
-`input swipe` after `--gap` seconds), reads the time between them from the launcher's
-`TaplEvents` log, and judges each trial by the flow's rules (three controls, then
-"moved" only within three rows of one). It runs `subflows/fling_setup.yaml` with the local
-Maestro CLI first (a fresh, offline start at Friday 14:01, on the Schedule), reads the
-screen with `uiautomator dump`, and turns airplane mode off at the end. Like the flow, it
-refuses to run unless the Schedule starts on the now slot, 2:00 PM, `--no-setup` included.
-A trial whose measured gap is missing or outside row D's window, 330 to 600 ms, is "off
-window" whatever the fling did: it says nothing about row D and fails the run, and its
-gap still shows in the summary. The rules are in `tools/fling_trials.py`.
-
-```bash
-uv run python -m tools.fling_after_sheet --serial emulator-5570 --trials 20
-```
-
-The default `--gap 0.5` puts the fling about 0.5 s after the tap (`input` adds about
-30 ms), inside row D's window. Much sooner, the sheet is still leaving and the fling does
-not scroll on any build: #346 saw that at 0.2 to 0.3 s, and on a busy host it lasts
-longer. Each trial prints its kind and its measured gap; the summary
-gives the counts and every measured gap's range and median, and the exit status is 1
-unless every trial moved inside the window and every tap reached the button. Compare builds as with the flow: the same
-`--trials` on each, one right after the other, on a quiet host.
-
 ### Deep links
 
 `journeys/deep_links.yaml` opens each link through `subflows/open_link.yaml`, which joins
@@ -314,8 +285,7 @@ debug output's folder.
   the button there; no flow checks a SnackBar's timeout yet).
 - About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
-  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach: that window is
-  the `adb` driver's ([Row D through adb](#row-d-through-adb)).
+  0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach.
 - Each flow that runs `start_offline.yaml` turns the network back on in its
   `onFlowComplete` (`subflows/online.yaml`).
 - Open a Map pane with `subflows/map_tab.yaml` (`env: TAB: expo`): the tab bar scrolls
@@ -383,27 +353,6 @@ judged by the slot alone, the rule before #484's review; the flow now judges by 
 With rows, on #348's build (`f5785bb`) on Android: `TRIALS=5`, 5 moved, 4 min 52 s, at
 a load average under 3. An earlier run, at a load average of 370, counted one fling as
 short: it had stopped two rows past the rest, in the 12:30 PM slot.
-
-**Row D through `adb`** (`tools/fling_after_sheet.py`), on the same emulator later on
-2026-10-20, with the host's load average between 2 and 40 except where noted. The time
-is measured on the device, from the tap's `ACTION_UP` to the fling's `ACTION_DOWN`:
-
-| Build | `--gap 0.5`, 20 trials | `--gap 0.36`, 15 trials |
-|---|---|---|
-| `main` (`1a2c2b5`) | 18 moved, 1 short, 1 none; 512-666 ms (median 520) | 15 moved; 372-381 ms (median 374) |
-| #346's (`7ccd74f`) | 18 moved, 2 none; 520-742 ms (median 531) | 15 moved; 372-383 ms (median 378) |
-
-Every lost fling, on both builds, came with a slow injection (648 to 742 ms instead of
-about 525) during a spike of the host's load; at a steady gap every fling ran in full on
-both. These runs were counted before #484's review added the window rule: those lost
-flings (and any other trial past 600 ms) fell outside row D's window, so the driver now
-counts them "off window", not "short" or "none". A first #346 run stopped before its trials when one of its controls was cut short
-at a load average of 550. So on this host the driver reaches row D's window, but has
-not yet told #346's build from `main`: #346 lost 11 of 33 there in its own matrix. Run
-both builds again, on a quiet host and with more trials, before trusting either way.
-The flow and the driver read the same rest and controls on each build: `main` rests on
-12:30 PM and its flings end in 3:00 PM; #346's build keeps the 2:00 PM slot, and its
-flings end in 4:00 PM.
 
 **#455** (2026-10-27, `main` at `e5f2e0a`, Flet pin `15854a0ac`), an `ios-simulator`
 build on an iPhone 17 simulator (iOS 26.5), at a load average of 90 to 130:
