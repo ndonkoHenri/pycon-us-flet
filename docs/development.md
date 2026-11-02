@@ -67,7 +67,7 @@
 | iOS minimum | 15.0, fixed by the template | `TPL/ios/Runner.xcodeproj/project.pbxproj:348` |
 | Android release signing without a keystore | Signed with the **debug key**: it installs, but cannot go to Play | `TPL/android/app/build.gradle.kts:103-119` |
 | `flet build ipa` and signing | No profile configured: `--no-codesign` and only an `.xcarchive`. A profile configured but not installed: flet-cli stops within seconds, before Xcode. Installed: a signed `.ipa` (§8.2). | `CLI/commands/build.py:195-204, 297-389` |
-| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`; what those pull in is whatever pip resolves that day (§7.6). | `CLI/commands/build_base.py:2738-2780` |
+| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`, and a package the app imports is listed there itself (D-470); what those pull in is whatever pip resolves that day (§7.6). | `CLI/commands/build_base.py:2738-2780` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
 | Deep links on mobile | Each key (`scheme`, `host`) from `[tool.flet.<android\|ios>.deep_linking]`, else from the common `[tool.flet.deep_linking]` (`flet-dev/flet#6953`, in the pin since `68a4b326c`). The template registers a link only when both resolve: on Android an intent filter for the scheme and host, on iOS a `CFBundleURLTypes` entry for the scheme alone (the host is its `CFBundleURLName`). The host never reaches Python: Flet keeps only the link's path, query and fragment for `page.route`. | `CLI/commands/build_base.py:1449-1454, 3067-3089`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; `TPL/ios/Runner/Info.plist:53-69`; D-269 |
 | Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1175-1184, 1290-1293` |
@@ -119,7 +119,7 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
    # && chain. The depth limits spare the source folder flet-mcp/src/flet_mcp/build.
    find .flet-src/sdk/python/packages -mindepth 2 -maxdepth 2 -type d -name build -exec rm -rf {} +
    ```
-2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
+2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`. Our `httpx` pin must stay inside Flet's range (`grep httpx .flet-src/sdk/python/packages/flet/pyproject.toml`; `>=0.28.1` at `22a6dcb16`). If it falls out, `uv lock` stops with "No solution found": set `[project].dependencies` to the version the range now needs, run `uv lock` again, and say so in the PR. Otherwise the pin stays, even if the lock could take a newer one (D-470).
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
    Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
    3.47.7). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
@@ -160,6 +160,7 @@ license = "Apache-2.0"
 requires-python = ">=3.14,<3.15"      # flet build bundles CPython 3.14 (D-82, F19)
 dependencies = [                      # bundled into the app by flet build: pin exactly
     "flet",                           # pinned by .flet-ref until 1.1.0 is on PyPI (D-81)
+    "httpx==0.28.1",                  # the app imports it: without this, phones get what pip finds that day (D-470)
     "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
 ]
 

@@ -18,6 +18,7 @@ import pytest
 
 from pycon_us import clock
 from pycon_us.core.change_batches import Batch
+from pycon_us.core.change_views import REMOVED_NOTE
 from pycon_us.core.diff import Change, ChangeKind, Listing
 from pycon_us.core.models import ConferenceData
 from pycon_us.screens import session as screen
@@ -193,7 +194,7 @@ async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
     await detail.settle()
     note = detail.node("session.removed")
     assert note.live_region  # announced: it appears while the page is open
-    assert words(note)[0] == screen.REMOVED
+    assert words(note)[0] == REMOVED_NOTE
     assert detail.nodes("session.title")  # the content stays
     assert detail.nodes("session.favorite")  # and the star still works
 

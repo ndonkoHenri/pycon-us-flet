@@ -28,6 +28,8 @@ from html.parser import HTMLParser
 
 from pycon_us.core.markdown_inline import (
     SPACE_CHARS,
+    URL,
+    URL_TRAILER,
     Emphasis,
     Token,
     around,
@@ -38,8 +40,12 @@ from pycon_us.core.markdown_inline import (
     paragraph,
 )
 
-_HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
-_BLOCK_TAGS = frozenset({"p", "ul", "ol", "li", "blockquote", "hr", *_HEADINGS})
+# ``URL`` and ``URL_TRAILER`` are here for ``jobs.py``: it finds a bare URL by the same
+# rule (D-114), and only this module may import the inline layer (D-201).
+__all__ = ["DROPPED_TAGS", "HEADINGS", "URL", "URL_TRAILER", "to_markdown", "to_text"]
+
+HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
+_BLOCK_TAGS = frozenset({"p", "ul", "ol", "li", "blockquote", "hr", *HEADINGS})
 _EMPHASIS = {
     **dict.fromkeys(("strong", "b"), "**"),
     **dict.fromkeys(("em", "i"), "*"),
@@ -215,7 +221,7 @@ def _block(element: _Element, site_url: str) -> list[str]:
     if tag == "blockquote":
         lines = "\n\n".join(_blocks(element, site_url)).split("\n")
         return ["\n".join(f"> {line}" if line else ">" for line in lines)]
-    if tag in _HEADINGS:
+    if tag in HEADINGS:
         tokens = [t for child in element.children for t in _inline(child, site_url)]
         # Markdown headings are one line, so a br becomes a space (D-114).
         text = paragraph(tokens).replace("  \n", " ")
