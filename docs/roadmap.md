@@ -4,7 +4,7 @@
 
 This file turns the plan into work:
 - **P0, P1 and P2** are broken down into PR-sized issues.
-- **P3 and P4** are epics with their scope. We break each one down when its phase starts.
+- **P3 and P4** are epics with their scope here; their PR-sized issues are on GitHub, in each phase's milestone.
 
 `issues.json` seeded GitHub once from the same content (section 10). Once seeded, **GitHub issues are the live task list**. This file keeps the phases, exit criteria, epics and the reasons behind the breakdown. It is edited by hand, only when a phase starts or when scope changes through a `needs-decision` issue.
 
@@ -1461,11 +1461,11 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|
-| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` (alarm on iOS only, D-272), honest settings (D-60) | P2-E6, after a pin bump |
+| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` (alarm on iOS only, D-272), honest settings (D-60); it stays for a build without E3 (D-63) | adopted after the bump to `08b89cce5` (#445): #446..#449 (P2-E6) |
 | 2 | U1 `RefreshIndicator` | UP-U1 | status-strip Refresh and auto-refresh (P1-04) | new issue after the bump |
 | 3 | U15 non-fatal handler errors | UP-U15 | `@report_errors` (P0-21) | delete the decorator |
 | 4 | E1 barcode scanner, after S8 | UP-E1 | manual and HID entry | P3-E3 |
-| 5 | U4 `page.get_app_info()` | UP-U4 | `__version__` | P2-E9 or later |
+| 5 | U4 `page.get_app_info()`, landed as `Page.get_package_info()` | UP-U4 | `__version__` | adopted after the bump to `08b89cce5` (#452, D-386) |
 | 6 | U16 `PageMediaData.text_scale_factor`, U17 accessibility-change event, U10 `AppBar.bottom`, U2 sticky headers, U3 absolute `InteractiveViewer` transform, U9 `use_route_search`, U18 Router Back inside a modal sub-chain | UP-SMALL | fluid layouts, re-read on resume, tabs as a body row, time gutter, select without a camera move, `use_query()`; own `on_view_pop` | one issue each |
 
 **Not tracked here:**
