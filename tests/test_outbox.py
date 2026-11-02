@@ -30,7 +30,7 @@ def lead(
     return replace(row, **{"id": 1, **changes})
 
 
-def scan(rows: list[Row], code: str = "A1", sponsor: str = "7", now: float = NOW):
+def scan(rows: Iterable[Row], code: str = "A1", sponsor: str = "7", now: float = NOW):
     """Scan ``code`` for ``sponsor`` as ``OWNER``."""
     return outbox.scan_lead(
         rows,
@@ -43,15 +43,21 @@ def scan(rows: list[Row], code: str = "A1", sponsor: str = "7", now: float = NOW
     )
 
 
-def note(rows: Iterable[Row], text: str, code: str = "A1", now: float = NOW):
-    """Save ``text`` as the note on ``code``, as ``OWNER`` scanning for sponsor 9."""
+def note(
+    rows: Iterable[Row],
+    text: str,
+    code: str = "A1",
+    now: float = NOW,
+    sponsor: tuple[str | None, str | None] = ("7", "Acme"),
+):
+    """Save ``text`` as ``OWNER``'s note on the lead of ``code`` for ``sponsor``."""
     return outbox.save_note(
         rows,
         owner=OWNER,
         code=code,
         note=text,
-        sponsor_id="9",
-        sponsor_name="Other",
+        sponsor_id=sponsor[0],
+        sponsor_name=sponsor[1],
         now=now,
     )
 
@@ -80,7 +86,7 @@ def test_lead_already_synced_adds_nothing() -> None:
 def test_lead_pending_is_due_now_and_keeps_its_snapshot() -> None:
     """A scan of a pending lead makes it due now; payload and sponsor stay as queued."""
     waiting = lead(next_at=NOW + 60)
-    decision = scan([waiting], sponsor="8", now=NOW + 5)
+    decision = scan([waiting], now=NOW + 5)
     assert decision == outbox.Enqueued(
         Outcome.UPDATED, replace(waiting, next_at=NOW + 5)
     )
@@ -89,7 +95,7 @@ def test_lead_pending_is_due_now_and_keeps_its_snapshot() -> None:
 def test_lead_failed_is_pending_again() -> None:
     """A scan of a failed lead requeues it as "Retry failed" would, keeping its sponsor."""
     failed = lead(status=Status.FAILED, tries=10, last_error="500 down", next_at=NOW)
-    decision = scan([failed], sponsor="8", now=NOW + 5)
+    decision = scan([failed], now=NOW + 5)
     assert decision.outcome is Outcome.UPDATED
     assert decision.row == replace(
         failed, status=Status.PENDING, tries=0, last_error=None, next_at=NOW + 5
@@ -104,6 +110,74 @@ def test_new_lead_snapshots_the_sponsor() -> None:
         Outcome.QUEUED,
         Row(Kind.LEAD, "A1", {"code": "A1"}, OWNER, "8", "Sponsor 8", NOW, NOW),
     )
+
+
+@pytest.mark.parametrize("status", list(Status))
+def test_another_sponsor_gets_its_own_lead_after_any_row(status: Status) -> None:
+    """Synced, pending or failed for one sponsor, another's scan queues its own (D-459).
+
+    The first row is not touched, and the decision names its sponsor for the result.
+    """
+    first = lead(status=status)
+    decision = scan([first], sponsor="8")
+    assert decision == outbox.Enqueued(
+        Outcome.QUEUED,
+        Row(Kind.LEAD, "A1", {"code": "A1"}, OWNER, "8", "Sponsor 8", NOW, NOW),
+        ("Acme",),
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "outcome"),
+    [
+        (Status.SYNCED, Outcome.ALREADY),
+        (Status.PENDING, Outcome.UPDATED),
+        (Status.FAILED, Outcome.UPDATED),
+    ],
+)
+def test_a_repeat_for_a_sponsor_stays_on_its_row_beside_anothers(
+    status: Status, outcome: Outcome
+) -> None:
+    """Only the same sponsor's row is a repeat; the other sponsor's is named (D-459)."""
+    theirs = lead(status=Status.SYNCED, id=1)
+    mine = replace(lead(status=status, id=2), sponsor_id="8", sponsor_name="Beta")
+    decision = scan([theirs, mine], sponsor="8")
+    assert decision.outcome is outcome
+    assert decision.row is not None and decision.row.id == 2
+    assert decision.others == ("Acme",)
+
+
+def test_others_names_only_this_account_s_other_sponsors_on_this_attendee() -> None:
+    """Another account's lead, another attendee's and a note aren't the result's to say."""
+    rows = [
+        replace(lead(id=1), owner="else@example.com"),
+        lead("B2", id=2),
+        replace(lead(id=3), kind=Kind.NOTE),
+    ]
+    assert scan(rows, sponsor="8").others == ()
+
+
+def test_a_sponsor_s_own_account_has_one_lead_per_attendee() -> None:
+    """No sponsor snapshot: a rescan is a repeat, as it always was, and names nobody."""
+    own = replace(lead(status=Status.SYNCED), sponsor_id=None, sponsor_name=None)
+    decision = outbox.scan_lead(
+        [own],
+        owner=OWNER,
+        code="A1",
+        payload={"code": "A1"},
+        sponsor_id=None,
+        sponsor_name=None,
+        now=NOW,
+    )
+    assert decision == outbox.Enqueued(Outcome.ALREADY, own)
+
+
+def test_a_scan_from_an_iterator_finds_its_row_and_the_others() -> None:
+    """Rows given as a one-pass iterator: the repeat and the other sponsor both show."""
+    theirs = lead(id=1)
+    mine = replace(lead(status=Status.SYNCED, id=2), sponsor_id="8", sponsor_name="B")
+    decision = scan(iter([theirs, mine]), sponsor="8")
+    assert decision == outbox.Enqueued(Outcome.ALREADY, mine, ("Acme",))
 
 
 def test_empty_note_is_ignored() -> None:
@@ -130,18 +204,17 @@ def test_new_note_takes_its_leads_sponsor() -> None:
     )
 
 
-def test_new_note_from_an_iterator_takes_its_leads_sponsor() -> None:
-    """Rows given as a one-pass iterator still find the lead after a sponsor switch."""
-    decision = note(iter([lead()]), "Hot")
+def test_each_sponsor_s_lead_on_an_attendee_has_its_own_note() -> None:
+    """A note for one sponsor neither rewrites nor reads another's (D-459)."""
+    acme = stored(note([lead()], "Warm").row, 2)
+    beta = ("8", "Beta")
+    decision = note([lead(), acme], "Cold", sponsor=beta)
+    assert decision.outcome is Outcome.QUEUED
     assert decision.row is not None
-    assert (decision.row.sponsor_id, decision.row.sponsor_name) == ("7", "Acme")
-
-
-def test_note_without_a_lead_row_takes_the_current_sponsor() -> None:
-    """A note on a code with no local lead row snapshots the sponsor scanned for now."""
-    decision = note([], "Hot")
-    assert decision.row is not None
-    assert (decision.row.sponsor_id, decision.row.sponsor_name) == ("9", "Other")
+    assert (decision.row.sponsor_id, decision.row.sponsor_name) == beta
+    assert decision.row.payload["note"] == "Cold"
+    edited = note([lead(), acme, stored(decision.row, 3)], "Hot")
+    assert edited.row is not None and edited.row.id == acme.id
 
 
 @pytest.mark.parametrize("status", list(Status))
@@ -295,6 +368,29 @@ def test_due_skips_what_isnt_ready() -> None:
         replace(lead("B"), kind=Kind.NOTE, owner="else@example.com", id=7),
     ]
     assert [r.id for r in outbox.due(rows, OWNER, NOW)] == [5]
+
+
+def test_a_note_is_due_only_once_its_own_sponsor_s_lead_is_synced() -> None:
+    """Another sponsor's synced lead on the attendee doesn't release the note (D-459)."""
+    acme_synced = lead(status=Status.SYNCED, id=1)
+    beta_waiting = replace(lead(next_at=NOW + 60, id=2), sponsor_id="8")
+    beta_note = replace(beta_waiting, kind=Kind.NOTE, next_at=NOW, id=3)
+    acme_note = replace(acme_synced, kind=Kind.NOTE, status=Status.PENDING, id=4)
+    rows = [acme_synced, beta_waiting, beta_note, acme_note]
+    assert [r.id for r in outbox.due(rows, OWNER, NOW)] == [4]
+    beta_synced = outbox.after_success(replace(beta_waiting, next_at=NOW), {})
+    rows[1] = beta_synced
+    assert [r.id for r in outbox.due(rows, OWNER, NOW)] == [3, 4]
+
+
+def test_forget_synced_keeps_the_lead_a_note_waits_for_not_its_neighbour() -> None:
+    """Only the waiting note's own sponsor's lead stays through a switch (D-459)."""
+    rows = [
+        lead(status=Status.SYNCED, id=1),
+        replace(lead(status=Status.SYNCED, id=2), sponsor_id="8"),
+        replace(lead(id=3), kind=Kind.NOTE, sponsor_id="8"),
+    ]
+    assert [r.id for r in outbox.forget_synced(rows, OWNER)] == [2, 3]
 
 
 def test_forget_synced_keeps_what_isnt_on_the_server() -> None:

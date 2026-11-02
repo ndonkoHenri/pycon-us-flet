@@ -189,6 +189,27 @@ def test_each_row_shows_its_icon_word_kind_code_and_age(db: OutboxDb) -> None:
     assert tile.trailing is None
 
 
+def test_two_sponsors_leads_on_one_attendee_are_told_apart(db: OutboxDb) -> None:
+    """A staff account's rows name their sponsors, so the two aren't alike (D-459)."""
+    for sponsor_id, name in (("1", "Example Corp"), ("3", "Sample Systems")):
+        decide = partial(
+            outbox.scan_lead,
+            owner=OWNER,
+            code="A1",
+            payload={"badge_validator": "v"},
+            sponsor_id=sponsor_id,
+            sponsor_name=name,
+            now=NOW,
+        )
+        assert db.enqueue("A1", decide) is not None
+    found = identified(sheet(read_queue(db, OWNER, others=False)))
+    tiles = [words(tile) for key, tile in found.items() if ".row." in key]
+    assert sorted(tile[2] for tile in tiles) == [
+        "For Example Corp",
+        "For Sample Systems",
+    ]
+
+
 def test_a_flagged_row_says_it_may_be_recorded_twice_beside_an_icon(
     db: OutboxDb,
 ) -> None:

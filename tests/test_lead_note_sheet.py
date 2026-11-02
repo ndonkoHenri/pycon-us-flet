@@ -6,6 +6,7 @@ reports: a segment's new selection, a chip's new state, the field's text (``repo
 then the event. The sheet's sends are ``tests/test_lead_note.py``'s.
 """
 
+import json
 from functools import partial
 from typing import Any, cast
 
@@ -16,9 +17,11 @@ from flet.utils.object_model import patch_dataclass
 from pycon_us import lead_capture
 from pycon_us.core import outbox
 from pycon_us.core.lead_notes import Interest, LeadNote, compose
+from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.lead_note import NOT_LOADED, NOTHING_TO_SAVE, WILL_SYNC
 from pycon_us.screens.staff_lead import NOTE_OPEN
 from pycon_us.services.outbox_db import OutboxDb
+from pycon_us.services.pref_keys import STAFF_SPONSOR
 from pycon_us.ui import scan_screen
 from tests import lead_screen
 from tests.filter_sheet import descendants
@@ -165,6 +168,54 @@ async def test_add_note_opens_the_sheet_pauses_scanning_and_saves_the_note(
         "Interest: warm\nFollow-up: Demo, Hiring\nNotes: Wants a call."
     )
     assert snack(shown) == WILL_SYNC
+
+
+async def test_add_note_goes_to_the_sponsor_scanned_for_not_the_one_chosen_since(
+    show: Show,
+    db: OutboxDb,
+    stored: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The panel still shows the scan for Example Corp after a switch to Sample Systems.
+
+    Its "Add note" is that lead's: the sheet says so and the note keeps its sponsor, so
+    it can't wait for ever on a lead Sample Systems doesn't have (D-459).
+    """
+    location = [lead_screen.VIEW]
+    monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
+    example = LeadSponsor("1", "Example Corp")
+    stored[STAFF_SPONSOR.key] = json.dumps(to_stored(example))
+    account = signed_in(door_check=True)
+    shown = await show(account, outbox=db)
+    await scan(shown)
+    stored[STAFF_SPONSOR.key] = json.dumps(
+        to_stored(LeadSponsor("3", "Sample Systems"))
+    )
+    location[0] = f"{lead_screen.VIEW}/sponsor"  # the picker, then back
+    account.nickname = "Picker"  # a render, as the Router's on a location change
+    await shown.settle()
+    location[0] = lead_screen.VIEW
+    account.nickname = "Back"
+    await shown.settle()
+    assert shown.nodes("lead.sponsor_chip")[0].label == (
+        "Scanning for Sample Systems, change sponsor"
+    )
+    await tap(shown, "lead.add_note")
+    assert "For Example Corp" in sheet_texts(shown)
+    await type_note(shown, "Wants a call.")
+    await shown.click(in_sheet(shown, "lead.note.save"))
+    (row,) = note_rows(db)
+    assert (row.sponsor_id, row.sponsor_name) == ("1", "Example Corp")
+
+
+async def test_a_sponsor_s_own_lead_names_no_sponsor_on_the_sheet(
+    show: Show, db: OutboxDb
+) -> None:
+    """A sponsor's own account has one sponsor: the sheet says nothing about it."""
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    await scan(shown)
+    await tap(shown, "lead.add_note")
+    assert not any(text.startswith("For ") for text in sheet_texts(shown))
 
 
 async def test_open_lead_on_a_duplicate_opens_its_note_prefilled(
