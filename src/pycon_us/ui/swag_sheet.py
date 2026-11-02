@@ -42,7 +42,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_sheet_shape
-from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.buttons import LABEL_PADDING, busy_label
 from pycon_us.ui.queue_rows import heading
 from pycon_us.ui.semantics import named
 
@@ -216,19 +216,10 @@ def hand_out_button(
         sending: The hand-out is being sent.
         on_click: Sends it.
     """
-    label: ft.Control = (
-        ft.Row(
-            [ft.ProgressRing(width=16, height=16, stroke_width=2), ft.Text(SENDING)],
-            spacing=8,
-            tight=True,
-        )
-        if sending
-        else ft.Text(hand_out_words(count))
-    )
     return named(
         "swag.hand_out",
         ft.FilledButton(
-            content=label,
+            content=busy_label(SENDING) if sending else ft.Text(hand_out_words(count)),
             icon=None if sending else ft.Icons.REDEEM_OUTLINED,
             on_click=on_click,
             disabled=sending or count == 0,

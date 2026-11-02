@@ -25,7 +25,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors, say
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import outcome_line, padded
-from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.buttons import LABEL_PADDING, busy_label
 from pycon_us.ui.fields import use_field_query
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.semantics import named
@@ -274,22 +274,10 @@ def submit_button(
         busy: A sign-in is in flight (``Account.signing_in``).
         on_click: Signs in.
     """
-    label: ft.Control = (
-        ft.Row(
-            [
-                ft.ProgressRing(width=16, height=16, stroke_width=2),
-                ft.Text("Signing in…"),
-            ],
-            spacing=8,
-            tight=True,
-        )
-        if busy
-        else ft.Text("Sign in")
-    )
     return named(
         "sign_in.submit",
         ft.FilledButton(
-            content=label,
+            content=busy_label("Signing in…") if busy else ft.Text("Sign in"),
             on_click=on_click,
             disabled=busy,
             style=ft.ButtonStyle(padding=LABEL_PADDING),
