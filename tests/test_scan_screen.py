@@ -38,9 +38,9 @@ from pycon_us.ui.scan_result import (
     fill_of,
     spoken,
 )
-from pycon_us.ui.scan_screen import ResultPanel, ScanScreen
+from pycon_us.ui.scan_screen import SCAN_AGAIN, ResultPanel, ScanScreen
 from tests import scan_rig
-from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel
+from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
 from tests.test_theme import AA_TEXT, contrast_ratio
 
@@ -81,6 +81,14 @@ async def test_a_badge_shows_its_result_and_leaves_the_field_empty_and_focused(
     assert entry(shown).value == ""
     assert rig.focused == 1
     assert f"Read {seconds_ago(0)}" in shown.texts()
+
+
+async def test_the_field_asks_for_the_key_that_keeps_android_s_focus(
+    show: Show,
+) -> None:
+    """``UNSPECIFIED`` keeps Android's keyboard up across submits (F274, #830)."""
+    shown = await show()
+    assert entry(shown).text_input_action == ft.TextInputAction.UNSPECIFIED
 
 
 async def test_the_same_code_within_the_cooldown_changes_nothing(
@@ -139,19 +147,46 @@ async def test_junk_says_not_a_badge_code_and_keeps_the_text(
 
 
 async def test_a_submit_while_the_handler_runs_is_dropped(show: Show, rig: Rig) -> None:
-    """One handler at a time: a second code in flight is dropped, its text kept."""
+    """One handler at a time: a code in flight goes, the focus stays, the line says so."""
     shown = await show()
     rig.gate = asyncio.Event()
     first = asyncio.create_task(enter(shown, "MOCK0001:v1"))
     while not rig.badges:  # the first handler is running, held by the gate
         await asyncio.sleep(0)
     await shown.settle()
+    focused = rig.focused
     await enter(shown, "MOCK0002:v2")
+    await shown.settle()
     assert [b.code for b in rig.badges] == ["MOCK0001"]
-    assert entry(shown).value == "MOCK0002:v2"
+    assert entry(shown).value == ""
+    assert entry(shown).helper == SCAN_AGAIN
+    assert rig.focused == focused + 1  # iOS's Enter took it out (F274)
     rig.gate.set()
     await first
     assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
+    assert entry(shown).helper == SCAN_AGAIN  # still there for who looks up later
+
+
+async def test_scanning_goes_on_through_a_slow_send(show: Show, rig: Rig) -> None:
+    """A scan after a dropped one is read alone, never joined to it (#875, D-471)."""
+    shown = await show()
+    rig.gate = asyncio.Event()
+    first = asyncio.create_task(scan(shown, "MOCK0001:v1"))
+    while not rig.badges:  # the first handler is running, held by the gate
+        await asyncio.sleep(0)
+    await scan(shown, "MOCK0002:v2")  # dropped
+    await scan(shown, "MOCK0003:v3")  # dropped too, while the same handler runs
+    rig.gate.set()
+    await first
+    rig.gate = None
+    await scan(shown, "MOCK0004:v4")
+    await scan(shown, "MOCK0005:v5")
+    assert rig.badges == [
+        Badge("MOCK0001", "v1", "v1"),
+        Badge("MOCK0004", "v4", "v4"),
+        Badge("MOCK0005", "v5", "v5"),
+    ]
+    assert entry(shown).helper is None  # a scan was read: the line has gone
 
 
 async def test_a_result_that_comes_under_another_view_is_dropped(
@@ -208,6 +243,34 @@ async def test_a_paused_screen_drops_a_submit(show: Show, rig: Rig) -> None:
     await enter(shown, "MOCK0001:v1")
     assert rig.badges == []
     assert panel(shown) == spoken(None)
+
+
+async def test_a_scan_after_a_pause_is_read_alone(show: Show, rig: Rig) -> None:
+    """What the pause dropped has gone, so the next scan never joins it (D-471)."""
+    renders: list[Callable[[int], None]] = []
+
+    @ft.component
+    def Scan() -> ft.Control:
+        count, set_count = ft.use_state(0)
+        renders.append(set_count)
+        return ScanScreen(
+            title="Lead scanner",
+            source=__name__,
+            on_badge=rig.on_badge,
+            paused=None if count else "Paused while the note is open",
+        )
+
+    shown = await show(Scan)
+    await scan(shown, "MOCK0001:v1")
+    await shown.settle()
+    assert entry(shown).value == ""
+    assert entry(shown).helper == "Paused while the note is open"  # the line says why
+    focused = rig.focused
+    renders[-1](1)  # the pause ends
+    await shown.settle()
+    assert rig.focused == focused + 1
+    await scan(shown, "MOCK0002:v2")
+    assert rig.badges == [Badge("MOCK0002", "v2", "v2")]
 
 
 async def test_the_keyboard_button_focuses_the_field(show: Show, rig: Rig) -> None:

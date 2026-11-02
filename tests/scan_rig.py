@@ -175,6 +175,16 @@ async def enter(shown: harness.Shown, text: str) -> None:
     await shown.event(field, "submit", text)
 
 
+async def scan(shown: harness.Shown, code: str) -> None:
+    """Scan ``code`` as a HID scanner does, whatever the field holds: nothing replaces it.
+
+    The keys land after the text the field shows by then, and Enter submits it all, so a
+    scan after text left behind reads as what the two make together.
+    """
+    await shown.settle()  # what the app sent the field has landed before the next scan
+    await enter(shown, f"{entry(shown).value or ''}{code}")
+
+
 def panel(shown: harness.Shown) -> str:
     """What the result panel says: a live region while a result shows (ux.md §9).
 

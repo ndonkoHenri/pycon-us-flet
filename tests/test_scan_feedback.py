@@ -109,7 +109,8 @@ async def test_a_submit_during_a_result_s_feedback_is_dropped(
     rig.result = ACCEPTED
     await asyncio.wait_for(enter(shown, "MOCK0002:v2"), timeout=5)
     assert [badge.code for badge in rig.badges] == ["MOCK0001"]
-    assert entry(shown).value == "MOCK0002:v2"  # kept, to submit again
+    await shown.settle()
+    assert entry(shown).value == ""  # gone, so the next scan stands alone (D-471)
     pulses.gate.set()
     await first
     assert pulses.effects == ["heavy_impact", "vibrate"]
@@ -273,14 +274,15 @@ async def test_at_large_text_the_chip_heads_the_body_and_wraps(show: Show) -> No
 async def test_the_queue_sheet_pauses_scanning_and_gives_the_focus_back(
     show: Show, rig: Rig
 ) -> None:
-    """While the sheet is open a code is dropped, kept and the field says why."""
+    """While the sheet is open a code is dropped with its text; the field says why."""
     shown = await show(staff=Staff(pending=3))
     await click_node(shown, "staff.sync_chip")
     assert sheet(shown) is not None
     assert entry(shown).helper == PAUSED_SHEET
     await enter(shown, "MOCK0001:v1")
+    await shown.settle()
     assert rig.badges == []
-    assert entry(shown).value == "MOCK0001:v1"
+    assert entry(shown).value == ""
     focused = rig.focused
     await close_sheet(shown)
     assert sheet(shown) is None

@@ -10,11 +10,13 @@ awaits one handler at a time and shows what it returned, so the tools only retur
 data.
 
 **Manual entry** takes the full ``code:validator`` payload, which USB and Bluetooth HID
-scanners also type before Enter. A submit clears the field and puts the focus back in
-it (every submit drops it, and Android's keyboard with it: F274, U254), so a hardware
-scanner scans continuously; a code accepted in the last 4 s is cleared
-without a word (a held code); a second submit while the handler runs is dropped, its
-text kept; text that is not a badge says "Not a badge code" and stays for correction.
+scanners also type before Enter. A submit clears the field and keeps the focus in it, so
+a hardware scanner scans continuously: Android's Enter leaves the focus there and its
+keyboard up, and iOS's takes it out, so the screen puts it back (F274, U254). A code
+accepted in the last 4 s is cleared without a word (a held code). A second submit while
+the handler runs is dropped with its text, or the next scan would be typed after that
+text and read as one badge (D-471), and the line under the field says to scan it again;
+text that is not a badge says "Not a badge code" and stays for correction.
 A handler can take a few seconds (the Lead scanner waits for its send, D-426): a
 result that comes after the screen is left, or while another View is on top of it,
 is dropped, so it never buzzes or speaks over another page.
@@ -25,7 +27,7 @@ the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet wi
 signed-in account's rows (``use_queue_sheet()``); at large text it heads the body
 rather than the bar, so its words wrap (#752). Scanning **pauses** while the sheet
 is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
-dropped, its text kept, and the field says why; when the pause ends the focus goes
+dropped with its text, and the field says why; when the pause ends the focus goes
 back to the field. It goes back there too when Back pops a page pushed over the
 screen (the leads list, a picker), so a HID scanner's next scan lands in it (#775,
 D-438).
@@ -92,6 +94,9 @@ KEYBOARD_TOOLTIP = "Type a badge code"
 PAUSED_SHEET = "Paused while the sheet is open"
 """The field's line while the queue sheet is open: a submit is dropped (#724)."""
 
+SCAN_AGAIN = "Scanned too soon: scan that badge again"
+"""The field's line after a submit dropped while the handler ran, its one sign (D-471)."""
+
 NOT_AVAILABLE = "Not available for this account"
 NOT_AVAILABLE_BODY = "Sign in on More with an account that has access to it."
 """A tool screen's state for an account its rule refuses (architecture §12.4)."""
@@ -131,7 +136,7 @@ def ScanScreen(
         actions: The tool's own buttons, under the field ("Add note").
         paused: Why scanning is paused, under the field ("Paused while the note
             is open"), while one of the tool's dialogs or sheets is open: submits
-            are dropped, their text kept. None scans.
+            are dropped with their text (D-471). None scans.
         result_actions: The tool's buttons for the result shown, under the field
             before ``actions``: the Lead scanner's "Add note" (#742). They belong to
             that result, so the next one (even "Not a badge code") replaces them.
@@ -155,6 +160,7 @@ def ScanScreen(
     use_wake_lock()
     cooldown = ft.use_memo(Cooldown, [])  # one per screen: its codes' last accepts
     busy = ft.use_ref(False)  # the handler runs: the single flight
+    too_soon, set_too_soon = ft.use_state(False)  # the last submit was dropped for it
     shown, set_shown = ft.use_state(cast(Shown | None, None))
     count = ft.use_ref(0)  # the results so far: no serial comes twice, even cleared
     why_paused = PAUSED_SHEET if sheet.is_open else paused
@@ -201,7 +207,10 @@ def ScanScreen(
     @report_errors
     async def submit(e: ft.Event[ft.TextField]) -> None:
         if why_paused is not None or busy.current:
+            set_too_soon(why_paused is None)  # a pause's line says why already
+            await query.clear()  # the next scan never joins this text (D-471)
             return
+        set_too_soon(False)
         # Held until the result is felt and said, so results reach staff in order.
         busy.current = True
         try:
@@ -209,7 +218,7 @@ def ScanScreen(
             badge = parse_badge(raw)
             if badge is None:
                 await show(NOT_A_BADGE)
-                await query.focus()  # Enter took it out (F274); the text stays
+                await query.focus()  # iOS's Enter took it out (F274); the text stays
                 return
             await query.clear()  # empties the field and puts the focus back in it
             if not cooldown.accept(badge.code, clock()):
@@ -262,10 +271,13 @@ def ScanScreen(
                     autocorrect=False,
                     enable_suggestions=False,
                     capitalization=ft.TextCapitalization.NONE,
+                    # Android's Enter then keeps the focus and the keyboard; iOS's
+                    # still takes the focus, so the refocus calls stay (F274, U254).
+                    text_input_action=ft.TextInputAction.UNSPECIFIED,
                     # Never off, unlike a SearchField's (D-330): Flutter applies it
                     # a frame after the patch, so the focus asked for on Back would
                     # come first and be dropped (F288, D-438).
-                    helper=why_paused,
+                    helper=why_paused or (SCAN_AGAIN if too_soon else None),
                 ),
             )
         ),

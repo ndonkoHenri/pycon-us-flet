@@ -17,8 +17,8 @@ goes at a sign-out (D-414); ids no longer in the catalog are ignored.
 
 Swag pickup is **online only** (D-56): while ``use_online()`` says offline (checked
 every 5 s), and while no category is chosen, scanning is paused with the reason under
-the field, so a HID scanner's submit is dropped and its text kept (D-420). A badge is
-looked up by ``swag.look_up()``; items left open ``ui/swag_sheet.py``'s hand-out sheet,
+the field, so a HID scanner's submit is dropped with its text (D-420, D-471). A badge
+is looked up by ``swag.look_up()``; items left open ``ui/swag_sheet.py``'s hand-out sheet,
 pre-ticked, and the panel says how the hand-out went (#769). Scanning is paused while
 the sheet is open ("Paused while the hand-out is open").
 """

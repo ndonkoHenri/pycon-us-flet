@@ -273,7 +273,7 @@ async def test_a_scan_while_the_sheet_is_open_is_dropped(
     await tap(shown, "lead.add_note")
     quick[0] += 5
     await scan(shown, "MOCK0002:v4l1d02")
-    assert scan_field(shown).value == "MOCK0002:v4l1d02"  # kept, not scanned
+    assert scan_field(shown).value == ""  # dropped with its text (D-471)
     assert len(db.rows(OWNER, list(outbox.Status)) or []) == 1
     await shown.click(in_sheet(shown, "lead.note.cancel"))
     assert sheet(shown) is None and helper(shown) is None

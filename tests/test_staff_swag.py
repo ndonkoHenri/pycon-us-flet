@@ -307,7 +307,7 @@ async def test_offline_pauses_with_the_reason_and_resumes(
     assert helper(shown) == OFFLINE
     await enter(shown, "MOCK0001:v4l1d01")
     (field,) = shown.find(ft.TextField)
-    assert field.value == "MOCK0001:v4l1d01"  # dropped, its text kept (D-420)
+    assert field.value == ""  # dropped with its text (D-420, D-471)
     assert READY not in panel(shown)
     await online.flip(shown, True)
     assert helper(shown) is None

@@ -306,14 +306,14 @@ async def test_cancel_sends_nothing_and_keeps_the_lookup_on_the_panel(
 async def test_a_hid_submit_while_the_sheet_is_open_is_dropped(
     show: Show, now: list[float]
 ) -> None:
-    """Grace's badge under Ada's sheet: dropped, its text kept; the sheet stays Ada's."""
+    """Grace's badge under Ada's sheet: dropped with its text; the sheet stays Ada's."""
     shown = await show()
     submit = await scan(shown, ADA)
     now[0] += 5
     entry = field(shown)
     shown.session.apply_patch(entry._i, {"value": GRACE})
     await shown.event(entry, "submit", GRACE)
-    assert field(shown).value == GRACE
+    assert field(shown).value == ""
     sheet_now = sheet(shown)
     assert sheet_now is not None
     assert "Hand out to Ada Example" in [

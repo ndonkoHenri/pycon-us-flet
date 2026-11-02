@@ -319,11 +319,11 @@ async def test_a_late_dismissal_of_the_last_dialog_leaves_the_next_open(
 async def test_a_held_badge_and_a_submit_while_open_open_one_review(
     show: Show, mock: MockState, switch: Switch, clock: list[float]
 ) -> None:
-    """A submit while the review is open is dropped, its text kept; then the cooldown."""
+    """A submit while the review is open is dropped with its text; then the cooldown."""
     shown = await show()
     task = await scan(shown)
     await enter(shown, "MOCK0003:x")  # a HID scanner typing while the review is open
-    assert badge_field(shown).value == "MOCK0003:x"  # kept
+    assert badge_field(shown).value == ""  # dropped with its text (D-471)
     assert texts(shown)[1] == "Grace Sample"  # still Grace's review, one dialog
     await tap(shown, "coc.review.cancel")
     await asyncio.wait_for(task, 2)
