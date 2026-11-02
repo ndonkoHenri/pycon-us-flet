@@ -4,7 +4,8 @@ The screen runs in a real Flet session (``tests/harness.py``) over the mock's ow
 transport, signed with the seeded staff account's key, so the categories and lookups
 are what the mock's ``handle()`` answers. The connection the screen sees is a stand-in
 for ``use_online()`` the test flips. Pinned: the chips' states, the stored choice and
-its relaunch, the pauses (no category, offline), a scan's result, and the rule.
+its relaunch, the pauses (no category, offline), a scan's result, the fetch tried again
+when the connection returns, and the rule.
 """
 
 import asyncio
@@ -19,6 +20,7 @@ import pytest
 
 from pycon_us.account import Account
 from pycon_us.config import YearData, load_year
+from pycon_us.core.check_in import Catalog
 from pycon_us.core.staff_tools import ToolKey
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.memory import ViewMemory
@@ -33,6 +35,7 @@ from pycon_us.screens.staff_swag import (
     SwagPickup,
 )
 from pycon_us.services import Services
+from pycon_us.services.api import ApiClient
 from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
@@ -67,6 +70,29 @@ class Switch(httpx.AsyncBaseTransport):
         if self.offline:
             raise httpx.ConnectError("offline", request=request)
         return await self.inner.handle_async_request(request)
+
+
+class HungOnce(httpx.AsyncBaseTransport):
+    """The mock, but its first request hangs until ``release``, then times out."""
+
+    def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
+        """Answer through ``inner``, the first request excepted."""
+        self.inner = inner
+        self.release = asyncio.Event()
+        self.hung = False
+        self.cancelled = False
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Hang the first request and record its cancelling; let ``inner`` answer the rest."""
+        if self.hung:
+            return await self.inner.handle_async_request(request)
+        self.hung = True
+        try:
+            await self.release.wait()
+        except asyncio.CancelledError:
+            self.cancelled = True
+            raise
+        raise httpx.ReadTimeout("no reply", request=request)
 
 
 class Online:
@@ -114,6 +140,25 @@ def online(monkeypatch: pytest.MonkeyPatch) -> Online:
     held = Online()
     monkeypatch.setattr(staff_swag, "use_online", held.hook)
     return held
+
+
+@pytest.fixture
+def fetches(monkeypatch: pytest.MonkeyPatch) -> list[ApiClient]:
+    """The catalog fetches the screen started, one client each.
+
+    Counted here, not at the transport: the mock's fixed clock makes a fetch send two
+    requests, the first refused for its skew (``ApiClient.request``).
+    """
+    started: list[ApiClient] = []
+    fetch = staff_swag.fetch_catalog
+
+    async def counted(api: ApiClient) -> Catalog:
+        """Record the fetch, then send it."""
+        started.append(api)
+        return await fetch(api)
+
+    monkeypatch.setattr(staff_swag, "fetch_catalog", counted)
+    return started
 
 
 @pytest.fixture
@@ -306,6 +351,56 @@ async def test_a_failed_catalog_reloads_when_the_connection_returns(
     switch.offline = False
     await online.flip(shown, True)
     assert shown.nodes("swag.category.3")
+
+
+async def test_a_connection_returning_during_a_fetch_restarts_it(
+    show: Show, switch: Switch, online: Online, fetches: list[ApiClient]
+) -> None:
+    """Retry hangs, then back online: the chips come, the old fetch's failure never shows.
+
+    The hanging fetch is cancelled, so it doesn't race the new one (#876).
+    """
+    switch.offline = True
+    shown = await show()
+    await online.flip(shown, False)
+    assert NOT_LOADED in shown.texts()
+    hung = HungOnce(switch.inner)
+    switch.inner = hung
+    switch.offline = False
+    await shown.click(cast(ft.TextButton, shown.node("swag.categories.retry").content))
+    assert shown.nodes("swag.categories.loading")
+    await online.flip(shown, True)
+    hung.release.set()  # were it still out, its timeout would land after the new answer
+    await shown.settle()
+    assert NOT_LOADED not in shown.texts()
+    assert shown.nodes("swag.category.3")
+    assert hung.cancelled
+    assert len(fetches) == 3  # the opening's, Retry's, and the return's
+
+
+async def test_a_connection_lost_during_a_fetch_leaves_it_out(
+    show: Show, switch: Switch, online: Online, fetches: list[ApiClient]
+) -> None:
+    """Only the connection's return restarts a fetch: losing it asks for nothing."""
+    hung = HungOnce(switch.inner)
+    switch.inner = hung
+    shown = await show()
+    await online.flip(shown, False)
+    assert len(fetches) == 1
+    assert not hung.cancelled
+    assert shown.nodes("swag.categories.loading")
+
+
+async def test_a_connection_change_with_the_catalog_loaded_fetches_nothing(
+    show: Show, online: Online, fetches: list[ApiClient]
+) -> None:
+    """One fetch as the screen opens; off and on again, the chips stay, no other."""
+    shown = await show()
+    assert len(fetches) == 1
+    await online.flip(shown, False)
+    await online.flip(shown, True)
+    assert shown.nodes("swag.category.3")
+    assert len(fetches) == 1
 
 
 async def test_the_catalog_shows_a_progress_line_while_it_loads(
