@@ -50,7 +50,7 @@
 
 ---
 
-## 3. Module layout (D-67; names in decisions §M)
+## 3. Module layout (D-67; naming rules in decisions §M)
 
 About 40 modules at the P1 exit (D-67), most of them screens.
 
