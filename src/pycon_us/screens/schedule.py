@@ -352,6 +352,7 @@ def Schedule() -> ft.View:
                 on_scroll=on_scroll,
                 on_measure=on_measure,
                 on_clear_filters=track_filter.show_all,
+                key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
             )
         )
     tabs = ft.Tabs(

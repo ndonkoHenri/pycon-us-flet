@@ -376,6 +376,7 @@ def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
                 body_box=box,
                 on_close=on_close,
                 on_body_size=on_body_size,
+                key=item.booth.number,  # pyright: ignore[reportCallIssue]  # as SessionRow's
             )
         )
     return ft.Stack(
