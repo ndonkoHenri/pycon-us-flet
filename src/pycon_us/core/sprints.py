@@ -10,7 +10,7 @@ listings' long-form listings share.
 """
 
 from pycon_us.core.models import ConferenceData, Sprint
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 
 PREVIEW_CHARS = 160
 """The longest description a card shows whole: about four lines on a phone at 100 %.
@@ -51,12 +51,7 @@ def filter_projects(listed: tuple[Sprint, ...], query: str) -> tuple[Sprint, ...
     Returns:
         The projects found, in the page's order.
     """
-    words = fold(query).split()
-    if not words:
-        return listed
-    return tuple(
-        sprint for sprint in listed if all(word in sprint.search_text for word in words)
-    )
+    return matching(listed, query, lambda sprint: sprint.search_text)
 
 
 def cut_short(sprint: Sprint) -> bool:

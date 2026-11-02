@@ -29,7 +29,7 @@ from urllib.parse import unquote, urlsplit
 from pycon_us.core import html_md
 from pycon_us.core.links import feed_link
 from pycon_us.core.models import ConferenceData, JobListing, Role, Sponsor
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 
 _HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _BLOCKS = frozenset({"p", "li"})  # where a bare URL makes a role
@@ -129,10 +129,7 @@ def filter_listings(
     Returns:
         The listings found, in feed order.
     """
-    words = fold(query).split()
-    if not words:
-        return listings
-    return tuple(j for j in listings if all(word in j.search_text for word in words))
+    return matching(listings, query, lambda listing: listing.search_text)
 
 
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:

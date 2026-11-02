@@ -17,7 +17,7 @@ from hypothesis import strategies as st
 from pycon_us.config import load_year
 from pycon_us.core.feed import process
 from pycon_us.core.models import Speaker
-from pycon_us.core.queries import days, fold, speaker_order
+from pycon_us.core.queries import days, fold, matching, speaker_order
 from tests.feeds import YEARS, changed, processed, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
@@ -113,3 +113,17 @@ def test_speakers_sort_by_folded_name_then_id() -> None:
         "8",  # obrien: the apostrophe does not count
         "3",  # ofelia
     ]
+
+
+@pytest.mark.parametrize("query", ["", "   ", "’", " ' "])
+def test_a_query_with_no_word_returns_the_items_themselves(query: str) -> None:
+    """Screens tell "a filter applies" by identity, as sprints.py's ``found is not listed``."""
+    items = ("async in depth", "typing")
+    assert matching(items, query, str) is items
+
+
+def test_matching_keeps_the_items_that_hold_every_word_in_order() -> None:
+    """D-46: the folded query's words, in any order, each a substring of the item's text."""
+    items = ("async in depth", "typing", "depth of asyncio")
+    assert matching(items, "DEPTH ásync", str) == ("async in depth", "depth of asyncio")
+    assert matching(items, "dep typ", str) == ()
