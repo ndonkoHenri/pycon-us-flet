@@ -14,7 +14,7 @@ from typing import cast
 import flet as ft
 import pytest
 
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.core.timefmt import day_heading
 from pycon_us.core.timeline import track_sessions
 from pycon_us.screens import lightning_talks as screen
@@ -29,6 +29,13 @@ YEAR = load_year(2026)
 COPY = YEAR.content.lightning_talks
 DATA = processed(2026)
 VIEW = "/more/lightning-talks"
+SIGNUP_URL = "https://example.org/2026/signup/lightning-talk/"
+assert COPY is not None
+WITH_SIGN_UP = replace(
+    YEAR,
+    content=replace(YEAR.content, lightning_talks=replace(COPY, signup_url=SIGNUP_URL)),
+)
+"""2026 as if its site still had the sign-up, which went with the live site (#824)."""
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -39,7 +46,10 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def render(
-            *, year: int = 2026, conference: Conference | None = None
+            *,
+            year: int = 2026,
+            conference: Conference | None = None,
+            year_data: YearData | None = None,
         ) -> Shown:
             if conference is None:
                 conference = Conference(
@@ -49,7 +59,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                 showing(
                     screen.LightningTalks,
                     screen,
-                    year=load_year(year),
+                    year=year_data or load_year(year),
                     conference=conference,
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
@@ -106,8 +116,7 @@ async def test_sign_up_opens_the_years_sign_up_in_the_in_app_browser(
     show: Show,
 ) -> None:
     """INFO-14: a link, said to leave the app."""
-    assert COPY is not None
-    page = await show()
+    page = await show(year_data=WITH_SIGN_UP)
     node = page.node("lightning_talks.sign_up")
     assert node.link
     button = cast(ft.FilledButton, node.content)
@@ -119,9 +128,17 @@ async def test_sign_up_opens_the_years_sign_up_in_the_in_app_browser(
     padding = cast(ft.Padding, button.style.padding)
     assert padding.top == padding.bottom == 10
     await page.click(button)
-    assert page.launcher.launched == [
-        (COPY.signup_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
-    ]
+    assert page.launcher.launched == [(SIGNUP_URL, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
+
+
+async def test_2026_has_no_sign_up_since_its_page_is_gone(show: Show) -> None:
+    """The sign-up went with the live site: the copy stays, no dead button (#824)."""
+    assert COPY is not None
+    page = await show()
+    assert page.nodes("lightning_talks.sign_up") == []
+    texts = page.texts()
+    assert all(paragraph in texts for paragraph in COPY.intro)
+    assert page.nodes("lightning_talks.more_info")  # the archived site still has this
 
 
 def doubt_texts(control: ft.Control) -> list[str]:
@@ -232,7 +249,7 @@ async def test_a_year_without_the_copy_shows_its_talks_alone(show: Show) -> None
 
 async def test_without_data_the_copy_stays_and_the_talks_load(show: Show) -> None:
     """ux.md §4.1: the copy is bundled; the sessions load and fail as the Schedule's."""
-    loading = await show(conference=Conference())
+    loading = await show(conference=Conference(), year_data=WITH_SIGN_UP)
     assert loading.nodes("lightning_talks.sign_up")
     assert "Loading schedule" in [n.label for n in loading.find(ft.Semantics)]
     failed = await show(conference=Conference(problem="offline"))

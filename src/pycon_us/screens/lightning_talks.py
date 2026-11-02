@@ -8,7 +8,8 @@ list (EVT-03, SHELL-10). From the top:
 
 - a filled card with the year's copy (``content.toml``'s ``[lightning_talks]``, D-45):
   what a lightning talk is, when and where they happen, and "Sign up for a lightning
-  talk", which opens the site's sign-up in the in-app browser (the link rule, INFO-14);
+  talk", which opens the site's sign-up in the in-app browser (the link rule, INFO-14),
+  when the year has one;
 - "Think you can't do one?", a fold that starts collapsed, with the doubts people
   give and their answers (``ui.fold.FoldTile``, the app's one fold, D-191);
 - "More about lightning talks", the site's page, in the in-app browser;
@@ -153,8 +154,9 @@ def LightningTalks() -> ft.View:
 def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     """Return the card that says what a lightning talk is, with the sign-up button.
 
-    A filled card (M3's ``surface_container_highest``), its heading a level-2 heading
-    (F40) and its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
+    The button only when the year has a sign-up: no dead control (ux.md §1). A filled
+    card (M3's ``surface_container_highest``), its heading a level-2 heading (F40) and
+    its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
     screen readers the heading, the paragraphs and the button are nodes of their own,
     the heading read first and alone (D-211). The
     button leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with
@@ -188,25 +190,26 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
             spacing=12,
         ),
     )
-    button = ft.FilledButton(
-        ft.Text(SIGN_UP, semantics_label=f"{SIGN_UP}\n{OPENS_IN[LinkKind.WEB]}"),
-        icon=ft.Icons.OPEN_IN_NEW,
-        on_click=sign_up,
-        style=ft.ButtonStyle(padding=ICON_PADDING),
-    )
+    column: list[ft.Control] = [heading, paragraphs]
+    if copy.signup_url:
+        button = ft.FilledButton(
+            ft.Text(SIGN_UP, semantics_label=f"{SIGN_UP}\n{OPENS_IN[LinkKind.WEB]}"),
+            icon=ft.Icons.OPEN_IN_NEW,
+            on_click=sign_up,
+            style=ft.ButtonStyle(padding=ICON_PADDING),
+        )
+        # Its own row, so it keeps its width and wraps at large text.
+        column.append(
+            ft.Container(
+                external(f"{SCREEN}.sign_up", button),
+                padding=ft.Padding.only(top=4),
+            )
+        )
     return ft.Container(
         ft.Card(
             ft.Container(
                 ft.Column(
-                    [
-                        heading,
-                        paragraphs,
-                        # Its own row, so it keeps its width and wraps at large text.
-                        ft.Container(
-                            external(f"{SCREEN}.sign_up", button),
-                            padding=ft.Padding.only(top=4),
-                        ),
-                    ],
+                    column,
                     spacing=12,
                     horizontal_alignment=ft.CrossAxisAlignment.START,
                 ),

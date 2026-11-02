@@ -20,23 +20,19 @@ city = "Long Beach, CA"
 address = "300 E Ocean Blvd, Long Beach, CA 90802"
 site_url = "https://us.pycon.org/2026/"
 feed_url = "https://us.pycon.org/2026/schedule/conference.json"
-# Where attendees check their registration and add tutorials and summits to it; session
-# detail links it for sessions that need registration (SESS-01). Optional. Source:
-# https://us.pycon.org/2026/attend/information/ (checked 2026-10-13).
-registration_url = "https://us.pycon.org/2026/accounts/dashboard/"
-# The development sprints' page and where a project signs up for them, for the Sprints
-# page's menu (EVT-08). Optional. Source: Ionic's Sprints page, checked on
-# us.pycon.org (2026-10-13).
+# The development sprints' page, for the Sprints page's menu (EVT-08). Optional. Source:
+# Ionic's Sprints page, checked on us.pycon.org (2026-10-13).
 sprints_url = "https://us.pycon.org/2026/events/dev-sprints/"
-sprint_submit_url = "https://us.pycon.org/2026/sprints/project/submit/"
-# The public page a speaker joins the speakers' Discord from, which the Account page
-# opens for a speaker account in the in-app browser (AUTH-10, D-411): a web page that
-# uses the browser's us.pycon.org session, never an /api/v1 call (D-51). Optional.
-# Source: Ionic's account.ts, openSpeakerDiscord().
-speaker_discord_url = "https://us.pycon.org/2026/speaker/join_discord/"
+# No registration_url, sprint_submit_url or speaker_discord_url (SESS-01, EVT-08,
+# AUTH-10, D-411): the registration dashboard, the sprint project form and the speakers'
+# Discord page were pages of the live site, under /2026/accounts/dashboard/,
+# /2026/sprints/project/submit/ and /2026/speaker/join_discord/. The PSF archived the
+# site as static pages, and they are gone: 404 on us.pycon.org and on
+# pycon-archive.python.org (checked 2026-11-02). Without the keys the app shows no link,
+# no menu item and no button for them (#824). A new year's site gives them back.
 # When the bundled snapshot, conference.json, was fetched (D-38, NEW-03). Written by
 # tools/update_snapshot.py; the status strip (P1) shows the data's age from it.
-snapshot_captured_at = 2026-10-11T17:56:49-07:00
+snapshot_captured_at = 2026-11-01T17:58:32-08:00
 
 [directions]
 label = "Long Beach Convention Center (Pine Ave Entrance)"

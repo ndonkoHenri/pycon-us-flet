@@ -36,6 +36,21 @@ class LeadSponsor:
     logo_url: str | None = None
 
 
+def snapshot(sponsor_id: str | None, sponsor_name: str | None) -> LeadSponsor | None:
+    """Return the sponsor a lead was scanned for, from its outbox row's snapshot.
+
+    Args:
+        sponsor_id: The row's ``sponsor_id``; None for a sponsor's own lead.
+        sponsor_name: The row's ``sponsor_name``.
+
+    Returns:
+        The sponsor, or None for a sponsor's own lead.
+    """
+    if sponsor_id is None:
+        return None
+    return LeadSponsor(sponsor_id, sponsor_name or sponsor_id)
+
+
 def parse_sponsors(reply: object) -> tuple[LeadSponsor, ...]:
     """Read the ``lead_sponsors`` reply into sponsors sorted by name (API-09).
 

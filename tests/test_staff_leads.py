@@ -331,6 +331,45 @@ async def test_a_note_shows_and_a_tap_opens_the_sheet_whose_save_updates_the_row
     assert rows(shown)[1].endswith(", has a note")
 
 
+async def test_two_sponsors_leads_on_one_attendee_are_two_rows_with_their_own_notes(
+    show: Show, db: OutboxDb
+) -> None:
+    """Each row names its sponsor, and its tap edits that sponsor's note (D-459).
+
+    The sponsor chosen now is neither row's: the note goes where its lead went.
+    """
+    example = ("1", "Example Corp")
+    sample = ("3", "Sample Systems")
+    add(db, "MOCK0001", 100.0, status=Status.SYNCED, name="Ada", sponsor=example)
+    add(db, "MOCK0001", 200.0, status=Status.SYNCED, name="Ada", sponsor=sample)
+    note(db, "MOCK0001", "Notes: Example's.", sponsor=example)
+    shown = await show(door_staff(), db, chosen=LeadSponsor("2", "Beta"))
+    phrases = rows(shown)
+    assert [p.split(", ")[-1] for p in phrases] == ["Sample Systems", "has a note"]
+    assert "Example Corp" in phrases[1]
+    row = shown.node("lead.leads.row.MOCK0001.3")
+    await shown.click(cast(ft.Container, row.parent))
+    opened = sheet(shown)
+    assert opened is not None
+    texts = [str(c.value) for c in descendants(opened) if isinstance(c, ft.Text)]
+    assert "For Sample Systems" in texts
+    field = next(c for c in descendants(opened) if isinstance(c, ft.TextField))
+    assert not field.value  # Example's note isn't Sample's
+    patch_dataclass(field, {"value": "Sample's."})  # as Flutter reports it
+    await shown.event(field, "change", "Sample's.")
+    save = next(
+        c.content
+        for c in descendants(opened)
+        if isinstance(c, ft.Semantics) and c.identifier == "lead.note.save"
+    )
+    await shown.click(cast(ft.Button, save))
+    notes = [r for r in db.rows(OWNER, list(Status)) or [] if r.kind is Kind.NOTE]
+    assert {r.sponsor_id: r.payload["note"] for r in notes} == {
+        "1": "Notes: Example's.",
+        "3": "Notes: Sample's.",
+    }
+
+
 async def test_the_list_follows_the_outbox_while_open(show: Show, db: OutboxDb) -> None:
     """A row synced by the worker turns Confirmed once ``Staff.revision`` moves (D-69)."""
     queued = add(db, "MOCK0001", 100.0)

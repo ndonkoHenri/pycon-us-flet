@@ -67,15 +67,19 @@ DUE_SQL = """
 SELECT o.* FROM outbox o
 WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
   AND (o.kind <> 'note' OR EXISTS (SELECT 1 FROM outbox l WHERE l.owner = o.owner
-       AND l.kind = 'lead' AND l.key = o.key AND l.status = 'synced'))
+       AND l.kind = 'lead' AND l.key = o.key AND l.sponsor_id IS o.sponsor_id
+       AND l.status = 'synced'))
 ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id
 """
-"""The due rows in send order (§12.1); ``core.outbox.due()`` is its Python twin."""
+"""The due rows in send order (§12.1); ``core.outbox.due()`` is its Python twin.
+
+``IS``, not ``=``: a sponsor's own lead and its note both have a NULL ``sponsor_id``."""
 
 DELETE_SYNCED_SQL = """
 DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
   AND NOT (kind = 'lead' AND EXISTS (SELECT 1 FROM outbox n WHERE n.owner = :owner
-           AND n.kind = 'note' AND n.key = outbox.key AND n.status <> 'synced'))
+           AND n.kind = 'note' AND n.key = outbox.key
+           AND n.sponsor_id IS outbox.sponsor_id AND n.status <> 'synced'))
 """
 """``core.outbox.forget_synced()`` in SQL: a synced lead stays while its note waits."""
 

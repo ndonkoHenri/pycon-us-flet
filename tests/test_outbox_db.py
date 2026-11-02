@@ -55,14 +55,14 @@ def scan(db: OutboxDb, code: str = "A1", now: float = NOW) -> outbox.Enqueued | 
 
 
 def note(db: OutboxDb, code: str = "A1", text: str = "Met at the booth"):
-    """Enqueue ``OWNER``'s note on ``code``'s lead."""
+    """Enqueue ``OWNER``'s note on ``code``'s lead for sponsor 7."""
     decide = partial(
         outbox.save_note,
         owner=OWNER,
         code=code,
         note=text,
-        sponsor_id="9",
-        sponsor_name="Other",
+        sponsor_id="7",
+        sponsor_name="Acme",
         now=NOW,
     )
     return db.enqueue(code, decide)
@@ -241,7 +241,6 @@ def test_a_note_is_never_due_before_its_lead_is_synced(db: OutboxDb) -> None:
     """The lead goes first; its note waits until the lead is synced."""
     lead = queued(scan(db))
     text = queued(note(db))
-    assert text.sponsor_id == "7"  # its lead's sponsor, not the current one
     assert db.due_rows(OWNER, NOW) == [lead]
     refused = outbox.after_error(lead, "Bad badge", NOW)
     assert db.save(refused)
@@ -362,7 +361,7 @@ ROWS = st.lists(
         key=st.sampled_from(("A1", "B2", "C3")),
         payload=st.just({}),
         owner=st.sampled_from(ROW_OWNERS),
-        sponsor_id=st.none(),
+        sponsor_id=st.sampled_from((None, "1", "2")),
         sponsor_name=st.none(),
         next_at=TIMES,
         created_at=TIMES,
@@ -377,8 +376,9 @@ ROWS = st.lists(
 def stored_rows(rows: list[Row]) -> Iterator[OutboxDb]:
     """Yield a fresh database holding ``rows``, door rows with unique idempotency keys."""
     insert = (
-        "INSERT INTO outbox (kind, key, payload_json, owner, status, tries, next_at,"
-        " created_at, idem_key) VALUES (?, ?, '{}', ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO outbox (kind, key, payload_json, owner, sponsor_id, status,"
+        " tries, next_at, created_at, idem_key)"
+        " VALUES (?, ?, '{}', ?, ?, ?, ?, ?, ?, ?)"
     )
     with tempfile.TemporaryDirectory() as directory:
         database = OutboxDb(Path(directory), 2026)
@@ -386,7 +386,14 @@ def stored_rows(rows: list[Row]) -> Iterator[OutboxDb]:
         with raw(database.path) as other:
             for index, r in enumerate(rows):
                 idem_key = f"{r.key}|{index}|s" if r.kind is Kind.DOOR else None
-                values = (r.kind.value, r.key, r.owner, r.status.value, r.tries)
+                values = (
+                    r.kind.value,
+                    r.key,
+                    r.owner,
+                    r.sponsor_id,
+                    r.status.value,
+                    r.tries,
+                )
                 other.execute(insert, (*values, r.next_at, r.created_at, idem_key))
         yield database
         database.close()

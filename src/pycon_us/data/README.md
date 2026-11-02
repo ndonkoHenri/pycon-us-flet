@@ -31,6 +31,12 @@ on demand. To refresh it before a build, run `uv run python tools/update_snapsho
 feed of `config.YEAR`, refuses one that does not parse cleanly, replaces each file atomically (one
 after the other) and prints the count changes. Review the diff like any other.
 
+A year's links are checked by hand, since the site changes under them. The PSF archives a past year as
+static pages: its feed then names `pycon-archive.python.org`, and the pages that needed the live site (a
+sign-in, a form) are gone. So a link the archive doesn't serve leaves the data, and its control goes with it
+(`registration_url`, `sprint_submit_url`, `speaker_discord_url`, `propose_url` and `signup_url` are optional:
+no dead control), and the copy says how things stand. 2026 lost those five (#824, checked 2026-11-02).
+
 `config.YEAR` picks the year the app shows. `2025/` is kept for its recorded feed in
 `tests/fixtures/feeds/`; its Eastern time zone keeps the code honest about zones, and its keynotes and
 moments test the moments in a second year (D-274).

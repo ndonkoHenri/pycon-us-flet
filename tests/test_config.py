@@ -62,44 +62,34 @@ def test_2026_is_in_pacific_time() -> None:
     )
 
 
-def test_the_registration_dashboard_is_year_data_and_optional() -> None:
-    """2026 names its registration dashboard, and 2025 loads with none.
+def test_the_archived_years_name_no_registration_dashboard() -> None:
+    """2026's went with the live site (#824), and 2025 never named one; both load.
 
-    SESS-01's registration guidance links it; 2025 has none, and none is needed.
+    SESS-01's registration guidance then has no link to a dead page.
     """
-    assert (
-        load_year(2026).conference.registration_url
-        == "https://us.pycon.org/2026/accounts/dashboard/"
-    )
+    assert load_year(2026).conference.registration_url == ""
     assert load_year(2025).conference.registration_url == ""
 
 
 def test_the_sprint_pages_are_year_data_and_optional() -> None:
-    """2026 names its sprint info and project form pages, and 2025 loads with neither.
+    """2026 names its sprint info page alone, and 2025 loads with neither.
 
-    EVT-08: they are the Sprints page's menu; 2025's feed has no sprint projects.
+    EVT-08: they are the Sprints page's menu; 2026's project form went with the live
+    site (#824), and 2025's feed has no sprint projects.
     """
     conference = load_year(2026).conference
     assert conference.sprints_url == "https://us.pycon.org/2026/events/dev-sprints/"
-    assert (
-        conference.sprint_submit_url
-        == "https://us.pycon.org/2026/sprints/project/submit/"
-    )
+    assert conference.sprint_submit_url == ""
     assert load_year(2025).conference.sprints_url == ""
     assert load_year(2025).conference.sprint_submit_url == ""
 
 
-def test_the_speaker_discord_page_is_year_data_and_optional() -> None:
-    """2026 names the public page Ionic opened for speakers; 2025 loads without it.
+def test_the_archived_years_name_no_speaker_discord_page() -> None:
+    """2026's went with the live site (#824), and 2025 never named one; both load.
 
-    AUTH-10, D-411: a web page in the in-app browser, never an /api/v1 call (D-51).
+    AUTH-10, D-411: the Account page then has no button to a dead page.
     """
-    conference = load_year(2026).conference
-    assert (
-        conference.speaker_discord_url
-        == "https://us.pycon.org/2026/speaker/join_discord/"
-    )
-    assert "/api/" not in conference.speaker_discord_url
+    assert load_year(2026).conference.speaker_discord_url == ""
     assert load_year(2025).conference.speaker_discord_url == ""
 
 
@@ -173,15 +163,20 @@ def test_2026_lists_the_places_that_are_not_rooms() -> None:
 
 
 def test_2026_has_the_open_spaces_and_lightning_talks_pages_copy() -> None:
-    """EVT-02, EVT-03: their links and words are year data (D-45), never code."""
+    """EVT-02, EVT-03: their links and words are year data (D-45), never code.
+
+    The sign-ups went with the live site (#824), so the copy says they have closed and
+    never offers the "+" or the button the pages then leave out.
+    """
     content = load_year(2026).content
     assert content.open_spaces is not None
-    assert content.open_spaces.propose_url == (
-        "https://us.pycon.org/2026/signup/open-space/"
-    )
+    assert content.open_spaces.propose_url == ""
+    assert "have closed" in content.open_spaces.intro
+    assert "tap +" not in content.open_spaces.intro
     talks = content.lightning_talks
     assert talks is not None
-    assert talks.signup_url == "https://us.pycon.org/2026/signup/lightning-talk/"
+    assert talks.signup_url == ""
+    assert "have closed" in talks.intro[-1]
     assert talks.info_url == "https://us.pycon.org/2026/events/lightning-talks/"
     assert talks.heading and talks.intro and len(talks.doubts) == 4
     # Copy in the app's voice (ux.md §4.9): no exclamation marks.

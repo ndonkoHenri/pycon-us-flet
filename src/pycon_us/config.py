@@ -86,13 +86,14 @@ class ConferenceInfo:
     year bundles no snapshot (only the active year needs one)."""
     registration_url: str = ""
     """Where an attendee checks their registration and adds tutorials or summits to it,
-    for session detail's registration guidance (SESS-01); empty when not known."""
+    for session detail's registration guidance (SESS-01); empty when the year's site has
+    no such page: the card shows without a link."""
     sprints_url: str = ""
     """The site's page about the development sprints, for the Sprints page (EVT-08);
     empty when not known."""
     sprint_submit_url: str = ""
     """Where a project signs up for the sprints, for the Sprints page (EVT-08); empty
-    when not known."""
+    when the year's site has no such page: no menu item, no button."""
     speaker_discord_url: str = ""
     """The PSF's public page that lets a speaker join the speakers' Discord, which the
     Account page opens for a speaker (AUTH-10, D-411); empty: no button."""
