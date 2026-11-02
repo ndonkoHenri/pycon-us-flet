@@ -36,6 +36,9 @@ from tests.sprints_page import (
     year_with,
 )
 
+FORM_URL = "https://example.org/2026/sprints/project/submit/"
+"""A project form for 2026, whose own went with the live site (#824)."""
+
 show, focused = sprints_page.show, sprints_page.focused
 
 
@@ -225,7 +228,7 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
     show: Any,
 ) -> None:
     """EVT-08: both from the year data, in the in-app browser."""
-    shown = await show()
+    shown = await show(year=year_with(sprint_submit_url=FORM_URL))
     (menu,) = shown.find(ft.PopupMenuButton)
     assert menu.tooltip == "More options"
     assert shown.node("sprints.menu").content is menu
@@ -240,16 +243,27 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
         assert cast(ft.Semantics, title).link  # each one wraps (F47, D-233)
         assert str(menu_text(item).semantics_label).endswith("\nOpens in browser")
         await shown.click(item)
-    assert shown.launched == [INFO.sprints_url, INFO.sprint_submit_url]
+    assert shown.launched == [INFO.sprints_url, FORM_URL]
 
 
 async def test_a_year_without_the_pages_has_no_menu(show: Any) -> None:
     """With neither sprint page there is no menu; with the form alone, it has that."""
     shown = await show(year=year_with(sprints_url="", sprint_submit_url=""))
     assert shown.find(ft.PopupMenuButton) == []
-    only_form = await show(year=year_with(sprints_url=""))
+    only_form = await show(year=year_with(sprints_url="", sprint_submit_url=FORM_URL))
     (menu,) = only_form.find(ft.PopupMenuButton)
     assert [menu_text(item).value for item in menu.items] == [screen.SUBMIT]
+
+
+async def test_2026_s_menu_has_the_info_page_alone_since_its_form_is_gone(
+    show: Any,
+) -> None:
+    """The project form went with the live site, so no dead item for it (#824)."""
+    shown = await show()
+    (menu,) = shown.find(ft.PopupMenuButton)
+    assert [menu_text(item).value for item in menu.items] == [
+        "Sprint info on us.pycon.org"
+    ]
 
 
 async def test_no_projects_yet_offers_the_form_and_no_filter(show: Any) -> None:
@@ -257,17 +271,17 @@ async def test_no_projects_yet_offers_the_form_and_no_filter(show: Any) -> None:
 
     The sprint days still show; a year without the form has no button.
     """
-    shown = await show(conference=with_sprints())
+    shown = await show(
+        conference=with_sprints(), year=year_with(sprint_submit_url=FORM_URL)
+    )
     assert shown.node("sprints.none").live_region
     assert shown.find(ft.TextField) == []  # nothing to filter
     assert shown.nodes("sprints.dates")  # the days are known all the same
     (button,) = shown.find(ft.FilledTonalButton)
     assert button.content == "Submit a project"
     await shown.click(button)
-    assert shown.launched == [INFO.sprint_submit_url]
-    without_form = await show(
-        conference=with_sprints(), year=year_with(sprint_submit_url="")
-    )
+    assert shown.launched == [FORM_URL]
+    without_form = await show(conference=with_sprints())  # 2026's, since #824
     assert without_form.find(ft.FilledTonalButton) == []
 
 

@@ -5,8 +5,9 @@ returns to the hub (D-207).
 
 The app bar's ``+`` proposes one: "Propose an open space" opens the site's sign-up,
 from the year data (``content.toml``'s ``[open_spaces]``, D-45), in the in-app browser
-(the link rule, INFO-14). Under it, day tabs over swipeable day lists, a tab for each
-day the feed has open spaces on, named by its date (the Schedule's ``day_tab()``):
+(the link rule, INFO-14); a year whose site has no sign-up has no ``+``. Under it, day
+tabs over swipeable day lists, a tab for each day the feed has open spaces on, named by
+its date (the Schedule's ``day_tab()``):
 Ionic called every day after Saturday "Sunday". The page opens on today when it has
 open spaces, else on the first day.
 
@@ -19,7 +20,7 @@ own saved ids, so a star tap re-renders one day and in it one row (D-153). The
 Schedule's filter, which hides open spaces by default, never applies here (D-20).
 
 Without data the page loads and fails as the Schedule does (ux.md §4.1); a feed with
-no open spaces yet says so, with "Propose one".
+no open spaces yet says so, with "Propose one" when the year has the sign-up.
 """
 
 from collections.abc import Sequence
@@ -99,7 +100,8 @@ def OpenSpaces() -> ft.View:
     async def refresh() -> None:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
-    actions = [propose_button(copy.propose_url, svc)] if copy else None
+    url = copy.propose_url if copy else ""
+    actions = [propose_button(url, svc)] if url else None
     if data is None:
         body: ft.Control = ft.ListView(
             [
@@ -115,7 +117,6 @@ def OpenSpaces() -> ft.View:
         )
         return AppScaffold(title=TITLE, source=__name__, actions=actions, body=body)
     if not days:
-        url = copy.propose_url if copy else None
         return AppScaffold(
             title=TITLE,
             source=__name__,
@@ -232,20 +233,20 @@ def propose_button(url: str, svc: Services) -> ft.Control:
     )
 
 
-def none_yet(url: str | None, svc: Services, margin: float) -> ft.Control:
+def none_yet(url: str, svc: Services, margin: float) -> ft.Control:
     """Return the page of a feed without open spaces: why, and "Propose one".
 
     Open spaces are proposed during the conference, so before it the feed has none:
     the way out is to propose one, when the year says where (ux.md §4.6).
 
     Args:
-        url: The year's sign-up, or None for a year without one: no button then, and
+        url: The year's sign-up, or empty for a year without one: no button then, and
             the sentence says the app shows them on its own (D-175).
         svc: The session's services, for the launcher.
         margin: The screen's side margin (``ui.widths.use_margin()``).
     """
     on_action = None
-    if url is not None:
+    if url:
 
         @report_errors
         async def propose(e: ft.Event[ft.Button]) -> None:

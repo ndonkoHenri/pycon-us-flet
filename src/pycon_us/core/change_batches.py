@@ -77,8 +77,9 @@ def decode_batches(raw: bytes, zone: tzinfo) -> list[Batch]:
     What can be read is read: a batch that is not as ``encode_batches()`` writes it (a
     field missing or of the wrong type, an unknown kind, a time without an offset or out
     of range) is skipped and logged, and the others are kept. Bytes that are not a JSON
-    list, or nest too deep, give no batches (logged). Nothing raises: the log is a
-    convenience, never a reason to stop.
+    list, or nest too deep for the parser, give no batches (logged). How deep is too deep
+    depends on the stack, so a nesting either stops the parser or is skipped as any other
+    wrong value. Nothing raises: the log is a convenience, never a reason to stop.
 
     Args:
         raw: The file's bytes.
@@ -167,7 +168,9 @@ def _change(item: Any, zone: tzinfo) -> Change:
     if not isinstance(item, dict):
         raise TypeError("a change is not an object")
     key = _text(item["id"])
-    kind = ChangeKind(item["kind"])
+    # Checked first: on a value that is no kind, ChangeKind's error holds its repr, which
+    # can overflow the stack on a nesting the parser got through, and that must not raise.
+    kind = ChangeKind(_text(item["kind"]))
     old, new = _listing(item["old"], zone), _listing(item["new"], zone)
     # An addition has no old side and a removal no new one; every other kind has both.
     sides = (kind is not ChangeKind.ADDED, kind is not ChangeKind.REMOVED)

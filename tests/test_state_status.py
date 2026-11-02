@@ -36,6 +36,13 @@ frozen_clock, year, storage = (
 )
 
 
+def three_days_after_the_snapshot(year: YearData) -> datetime:
+    """When the bundled snapshot is stale, whenever a refresh of it last captured it."""
+    captured_at = year.conference.snapshot_captured_at
+    assert captured_at is not None
+    return captured_at + timedelta(days=3)
+
+
 # ------------------------------------------------------------------ status and age
 
 
@@ -295,7 +302,7 @@ async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_
 async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) -> None:
     """The refresh at start, over a stale snapshot, says ``stale`` while it runs."""
     conference = await loaded(storage, year)
-    clock.set_test_now(NOW + timedelta(days=3))  # the bundled snapshot is stale
+    clock.set_test_now(three_days_after_the_snapshot(year))
     feed = HeldFeed()
 
     # bootstrap()'s call, over the bundled snapshot on a first start.
@@ -312,9 +319,10 @@ async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) 
 async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
-    """A refresh the user asked for says ``refreshing`` as it starts, then ``fresh``."""
+    """Over stale data, a refresh the user asked for says ``refreshing``, then ``fresh``."""
     conference = await loaded(storage, year)
-    clock.set_test_now(NOW + timedelta(days=3))
+    clock.set_test_now(three_days_after_the_snapshot(year))
+    assert conference.status(year.conference) == "stale"
     log = StatusLog(conference, year)
     feed = HeldFeed()
 
@@ -359,7 +367,7 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
 ) -> None:
     """A Refresh tap joins a quiet refresh's request, saying ``refreshing`` at once."""
     conference = await loaded(storage, year)
-    clock.set_test_now(NOW + timedelta(days=3))
+    clock.set_test_now(three_days_after_the_snapshot(year))
     feed = HeldFeed()
     quiet = conference.start_refresh_if_due(storage, year, transport=feed.transport)
     assert quiet is not None

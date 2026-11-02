@@ -146,8 +146,9 @@ def test_report_says_when_the_previous_snapshot_no_longer_parses(
 
 def test_report_says_when_the_feed_is_unchanged(data_dir: Path) -> None:
     """A feed equal to the bundled one is reported as its size, "unchanged"."""
-    report = update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
-    assert f"{len(RECORDED):,} bytes, unchanged" in report
+    bundled, _ = files(data_dir)
+    report = update_snapshot(2026, data_dir, transport=serving(bundled), now=NOW)
+    assert f"{len(bundled):,} bytes, unchanged" in report
 
 
 @pytest.mark.parametrize(

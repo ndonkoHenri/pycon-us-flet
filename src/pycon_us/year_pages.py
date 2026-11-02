@@ -20,11 +20,12 @@ class OpenSpacesInfo:
         intro: One line on what open spaces are and how to host one, at the head of
             each day's list.
         propose_url: Where "Propose an open space" goes: the site's sign-up, opened
-            in the in-app browser (INFO-14).
+            in the in-app browser (INFO-14). Empty when the site has none, a year whose
+            site is archived: no button then, so the intro must not offer one.
     """
 
     intro: str
-    propose_url: str
+    propose_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -48,16 +49,18 @@ class LightningTalksInfo:
         heading: The copy card's heading: "What's a lightning talk?".
         intro: The card's paragraphs, in order: what one is, and when and where they
             happen this year.
-        signup_url: Where "Sign up for a lightning talk" goes, in the in-app browser.
         info_url: The site's page on them, the page's "More about lightning talks".
         doubts: "Think you can't do one?": the reasons and their answers, in order.
+        signup_url: Where "Sign up for a lightning talk" goes, in the in-app browser.
+            Empty when the site has none, a year whose site is archived: no button
+            then, so the intro must say how things stand.
     """
 
     heading: str
     intro: tuple[str, ...]
-    signup_url: str
     info_url: str
     doubts: tuple[Doubt, ...]
+    signup_url: str = ""
 
 
 def check_https(url: str, file: str, key: str) -> None:
@@ -108,14 +111,16 @@ def check_pages(
     """
     if open_spaces is not None:
         check_text(open_spaces.intro, file, "open_spaces.intro")
-        check_https(open_spaces.propose_url, file, "open_spaces.propose_url")
+        if open_spaces.propose_url:
+            check_https(open_spaces.propose_url, file, "open_spaces.propose_url")
     if (talks := lightning_talks) is not None:
         check_text(talks.heading, file, "lightning_talks.heading")
         if not talks.intro:
             raise YearDataError(f"{file}: lightning_talks.intro: is empty")
         for index, paragraph in enumerate(talks.intro):
             check_text(paragraph, file, f"lightning_talks.intro[{index}]")
-        check_https(talks.signup_url, file, "lightning_talks.signup_url")
+        if talks.signup_url:
+            check_https(talks.signup_url, file, "lightning_talks.signup_url")
         check_https(talks.info_url, file, "lightning_talks.info_url")
         if not talks.doubts:  # a fold with nothing in it
             raise YearDataError(f"{file}: lightning_talks.doubts: is empty")
