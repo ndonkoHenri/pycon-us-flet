@@ -7,9 +7,7 @@ format the app writes.
 
 import json
 import logging
-import threading
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from functools import cache, partial
@@ -30,6 +28,13 @@ from pycon_us.core.change_batches import (
 from pycon_us.core.diff import Change, ChangeKind, diff
 from pycon_us.core.feed import process
 from tests.feeds import YEARS, add, move, pair, processed, remove, rename, settings
+from tests.small_stack import (
+    DEPTHS,
+    TOO_DEEP_TO_PARSE,
+    nested_lists,
+    nested_objects,
+    on_a_small_stack,
+)
 
 ZONES = {2025: ZoneInfo("America/New_York"), 2026: ZoneInfo("America/Los_Angeles")}
 """Each year's conference zone: 2025 in Pittsburgh, 2026 in Long Beach."""
@@ -159,26 +164,6 @@ def test_a_file_that_is_not_a_json_list_gives_nothing_and_a_log(
     assert "The change log is not" in caplog.text
 
 
-def on_a_small_stack[T](call: Callable[[], T]) -> T:
-    """Return ``call()``'s result (or raise its error) from a thread with a small stack.
-
-    Python 3.14 limits recursion in C by the stack that is really there, so whether a depth
-    overflows on the main thread differs between macOS and Linux (#848). This small stack
-    overflows at the same depths on both.
-    """
-    previous = threading.stack_size(512 * 1024)
-    try:
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(call).result()
-    finally:
-        threading.stack_size(previous)
-
-
-def nested_objects(depth: int) -> bytes:
-    """JSON objects nested ``depth`` deep: printing them takes more stack than parsing."""
-    return b'{"a":' * depth + b"1" + b"}" * depth
-
-
 def with_kind(kind: bytes) -> bytes:
     """A log of one batch whose one change has ``kind``, as raw JSON, as its kind."""
     return (
@@ -191,7 +176,7 @@ def test_a_file_too_deep_to_parse_gives_nothing_and_a_log(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Bytes that overflow the stack in the parser read as no batches, with a warning."""
-    raw = b"[" * 100_000 + b"]" * 100_000
+    raw = nested_lists(TOO_DEEP_TO_PARSE)
     with caplog.at_level(logging.WARNING):
         assert on_a_small_stack(partial(decode_batches, raw, UTC)) == []
     assert "The change log is not JSON" in caplog.text
@@ -208,10 +193,9 @@ def test_no_depth_of_nesting_raises(
     """At every depth, one the parser takes or not, there are no batches and a warning.
 
     Between the depth that printing overflows at and the one parsing does, reading a
-    change's kind used to raise (#848). That window is about a tenth of the depth, its
-    place differs per platform, so the steps of 5% go through it on any of them.
+    change's kind used to raise (#848).
     """
-    for depth in (int(100 * 1.05**step) for step in range(142)):
+    for depth in DEPTHS:
         caplog.clear()
         raw = shape(nested_objects(depth))
         with caplog.at_level(logging.WARNING):
