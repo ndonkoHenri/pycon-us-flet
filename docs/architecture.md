@@ -1041,6 +1041,8 @@ As built (P0-08), one recursive `build(cls, raw, file)` in `year_schema.py` (wit
 
 SharedPreferences takes only `str`, `int`, `float`, `bool` and `list[str]` (F12): dicts are JSON strings, and the feed never goes there. All keys are constants in one table in `services/pref_keys.py` (split from `services/storage.py`, #777): each is a `Pref(key, default)` whose default's type is the value's type (`favorites(year)` builds the per-year key). `Storage.get()` reads a key, giving its default when the key is absent, unreadable or SharedPreferences fails (D-120); `Storage.read()` raises that failure instead, for the favourites, which must not take a failed read for an empty list (D-172), and the account, which must not clear the keystore after one (#684). `Storage.remove(pref)` removes one key and returns whether it is gone, an absent one included (#684).
 
+**Backup (D-472).** Android's Auto Backup takes only `FlutterSharedPreferences.xml`, so favourites and settings follow the user to a new phone, while the secure-storage files and the outbox stay on the phone they belong to. A restore therefore reads as signed out through `Account.restore()`'s partial-sign-in path, with an empty outbox. `docs/development.md` §8.1 has the rules and the check.
+
 ```python
 # src/pycon_us/services/pref_keys.py (excerpt)
 THEME: Pref[str] = Pref("pycon.theme", "system")

@@ -204,6 +204,14 @@ bgcolor_dark = "#680579"
 [tool.flet.flutter.pubspec.dependencies] # Roboto 400/500/700 (D-26, D-105); path from build/flutter/
 roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }
 
+[tool.flet.android]                   # Auto Backup takes only the preferences file (D-472, §8.1)
+res_dir = "android_res"               # android_res/xml/*.xml, from the project root: the backup rules
+
+[tool.flet.android.manifest_application]
+allowBackup = "true"                  # said outright, though it is Android's default
+fullBackupContent = "@xml/backup_rules"                  # Android 11 and older
+dataExtractionRules = "@xml/data_extraction_rules"       # Android 12 and newer
+
 [tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
 "org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
 
@@ -283,6 +291,7 @@ S5 then built every target from this setup, and P0-04 (#52) built `apk --arch ar
 | `tool.flet.splash.color`, `dark_color` | `CLI/commands/build_base.py:1758-1784` (`splash_setting`), `:1786-1822` (`_resolve_splash`) | Native splash background, light and dark |
 | `tool.flet.boot_screen.flet` | `CLI/commands/build_base.py:1824-1868` (`_resolve_boot_screen`) | Background of Flet's boot screen while Python starts (`DOCS/publish/index.md` "Built-in `flet` boot screen") |
 | `tool.flet.android.gradle_properties` | `CLI/commands/build_base.py:1290-1293` | Merged over the template defaults, so ours replaces `org.gradle.jvmargs` |
+| `tool.flet.android.res_dir`, `tool.flet.android.manifest_application` | `CLI/commands/build_base.py:3236-3310` (`copy_android_resources`); `TPL/android/app/src/main/AndroidManifest.xml:13-21` | `res_dir` is a folder laid out like `res/`, relative to the project root (not to `[tool.flet.app] path`: a first build with `src/android_res` failed with "is not a directory"), copied into the generated project; each `manifest_application` key becomes an `android:<key>` attribute on `<application>`. Ours: the two backup-rule files (D-472, §8.1) |
 | `tool.flet.ios.info` | `CLI/commands/build_base.py:1232-1240` | Merged into `Info.plist` |
 | `tool.flet.flutter.pubspec.dependencies` | `CLI/commands/build_base.py:2034-2052` | Merged into `build/flutter/pubspec.yaml`, so relative paths resolve from `build/flutter/`; adds `roboto_fonts` (D-105) |
 | `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1493-1528` | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
@@ -1016,6 +1025,25 @@ The owner's own accounts are the only route, and testing is internal only. There
 | Quick look | CI artifact (§7.4) or local `flet build apk --arch arm64-v8a` (D-106) | The debug key | Uninstall before switching builds |
 | Owner's emulator (and a borrowed phone), kept updated | Local `flet build apk --arch arm64-v8a` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
 | Testers | Local `flet build aab` → Play Console › **Internal testing** | The upload key; Play re-signs with its app signing key | Up to 100 testers by email list; no review. Testers install through an opt-in link. |
+
+**What Android backs up (D-472).** Auto Backup takes one file, `shared_prefs/FlutterSharedPreferences.xml`: favourites, settings and the Developer options come back on a new phone. The secure-storage files (the API key and secret, wrapped by a Keystore key that stays on the old phone) and the outbox (`outbox-<year>.db`, queued scans) never leave it, and neither does the rest of `files/` (the feed cache, and the 24 MB of Python that Flet unpacks, which sit close to Auto Backup's 25 MB cap). A restored phone starts signed out ("Clearing a partial sign-in" in the log), with its favourites and an empty outbox. The rules are `android_res/xml/backup_rules.xml` (Android 11 and older) and `data_extraction_rules.xml` (12 and newer), an allowlist because the rules take no wildcards and the outbox's name holds the year; `tests/test_android_backup_rules.py` pins them.
+
+**Check a backup and restore** on an emulator without a Google account, with `bmgr` and its local transport. The emulator must be a `google_apis` image (`adb root`), and the app must be running, since Android skips a stopped app ("Backup is not allowed"). Sign in against the mock (§6), star a session, cut the network (`cmd connectivity airplane-mode enable`) and scan two badges, so the outbox holds two rows, then:
+
+```bash
+P=io.github.ndonkohenri.confcompanion; S=<emulator id>
+adb -s $S root
+adb -s $S shell "bmgr enable true; bmgr transport com.android.localtransport/.LocalTransport"
+adb -s $S shell "cmd connectivity airplane-mode disable; am start -n $P/.MainActivity; sleep 5; bmgr backupnow $P"
+# What went in: the transport's tar holds apps/$P/_manifest and sp/FlutterSharedPreferences.xml, and nothing else.
+adb -s $S shell 'tar -tvf $(find /data/data/com.android.localtransport/files -path "*_full/'$P'")'
+adb -s $S uninstall $P && adb -s $S install build/apk/pycon-us.apk   # the Keystore key goes with the uninstall
+adb -s $S shell "bmgr restore 1 $P"
+adb -s $S logcat -c; adb -s $S shell "am start -n $P/.MainActivity"
+adb -s $S logcat -d | grep -i "unwrap\|partial sign-in"           # no unwrap failure, one partial sign-in
+```
+
+Expect: the app opens signed out; My schedule holds the starred session; `files/data/` has no `outbox-<year>.db`; the mock logs no request. Checked in #818 on an Android 16 emulator (the default rules gave a 24 MB backup, an `InvalidKeyException: Failed to unwrap key` and two restored queued scans; ours a 4 KB backup and none of those). The Android 11 file is the same include and has no emulator image here.
 
 A device can update in place only from one signing identity: our upload key (sideload) or Play's app signing key (Play), not both. Pick one route per device. Switching means uninstalling first.
 

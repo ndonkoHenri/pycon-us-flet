@@ -62,6 +62,14 @@ roboto_fonts = { path = "../../flutter_packages/roboto_fonts" }
 "android.permission.POST_NOTIFICATIONS" = true     # Android 13+; the plugin merges it too, declared so the app says so
 "android.permission.SCHEDULE_EXACT_ALARM" = true   # exact reminders when the user allows them; never USE_EXACT_ALARM (D-221)
 
+[tool.flet.android]                   # Auto Backup takes only the preferences file (D-472, development.md §8.1)
+res_dir = "android_res"               # android_res/xml/*.xml, from the project root: the backup rules
+
+[tool.flet.android.manifest_application]
+allowBackup = "true"                  # said outright, though it is Android's default
+fullBackupContent = "@xml/backup_rules"                  # Android 11 and older
+dataExtractionRules = "@xml/data_extraction_rules"       # Android 12 and newer
+
 [tool.flet.android.gradle_properties] # fits a standard GitHub runner (template: -Xmx8G)
 "org.gradle.jvmargs" = "-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError"
 

@@ -3,7 +3,7 @@
 The owner module of ``capabilities.SECURE_STORAGE`` (architecture §13): a packaged
 build keeps ``pycon.api_key`` and ``pycon.api_secret`` with ``flet-secure-storage``,
 the Android Keystore or the iOS keychain, readable after the first unlock and never
-synced or moved to another device. Without the extension (the companion app, D-63)
+synced or moved to another device (Android's Auto Backup leaves its files out, D-472). Without the extension (the companion app, D-63)
 they live in memory for the session, so a restart signs out.
 
 Read, write and remove report a failure as ``Storage`` does (D-120): logged and
