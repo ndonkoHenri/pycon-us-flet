@@ -16,7 +16,7 @@ for the sponsor chosen when it was scanned (STORE-11).
 
 Staff who scan for a sponsor (``scans_for_sponsor()``, LEAD-05, LEAD-06) choose it on
 ``lead_sponsor.py``'s picker, pushed at ``…/staff/lead/sponsor``. The choice
-(``STAFF_SPONSOR``) is read with the consent, and again whenever the location changes,
+(``staff_sponsor()``) is read with the consent, and again whenever the location changes,
 so it is current when the picker goes back (D-425). With none, the picker opens by
 itself once, and the scan screen is paused ("Choose a sponsor to start scanning")
 with a "Choose sponsor" button; with one, a "For: Example Corp" chip

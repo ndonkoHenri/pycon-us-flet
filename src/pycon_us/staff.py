@@ -1,6 +1,6 @@
 """The ``Staff`` store: the staff outbox as the screens see it (P3, D-56).
 
-The rows live in ``outbox.db`` (``services/outbox_db.py``); this store holds what the
+The rows live in ``outbox-<year>.db`` (``services/outbox_db.py``); this store holds what the
 sync chip, the queue sheet and sign-out's question show about them: how many of the
 signed-in account's rows are pending, failed and synced, whether a sync pass is under
 way and how the last one ended. ``services/sync.py``'s ``SyncWorker`` writes it after

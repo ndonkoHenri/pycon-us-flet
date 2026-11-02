@@ -95,7 +95,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield the session's outbox, empty, in its own directory; closed afterwards."""
     directory = tmp_path / "outbox"
     directory.mkdir()
-    database = OutboxDb(directory)
+    database = OutboxDb(directory, 2026)
     yield database
     database.close()
 

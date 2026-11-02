@@ -21,6 +21,7 @@ from pycon_us.config import ConferenceInfo, Content, YearDataError, load_year
 from pycon_us.year_info import SafetyContact, WifiInfo, check_info
 from pycon_us.year_schema import build
 from tests.feeds import processed
+from tests.next_year import copy_forward
 
 EMAIL_CONTACT = {
     "label": "Email the Code of Conduct team",
@@ -188,32 +189,6 @@ def test_every_year_s_safety_contacts_were_checked_for_it(year: int) -> None:
     # UTC is ahead of every US zone, so a check made today anywhere there passes.
     today = datetime.now(UTC).date()
     assert stale_contacts(year, config.DATA_DIR, today) == []
-
-
-def copy_forward(tmp_path: Path, checked: date | None = None) -> Path:
-    """Copy 2026 to ``tmp_path`` as 2026 and as a 2027 with its dates a year on.
-
-    Args:
-        tmp_path: Where the year folders go.
-        checked: The 2027 contacts' check date; None keeps 2026's, as a rollover
-            that forgot the check would.
-    """
-    shutil.copytree(config.DATA_DIR / "2026", tmp_path / "2026")
-    folder = tmp_path / "2027"
-    shutil.copytree(config.DATA_DIR / "2026", folder)
-    conference = folder / "conference.toml"
-    text = conference.read_text(encoding="utf-8")
-    text = text.replace("year = 2026", "year = 2027").replace("2026-05-", "2027-05-")
-    conference.write_text(text, encoding="utf-8")
-    content = folder / "content.toml"
-    text = content.read_text(encoding="utf-8")
-    # The hand-written moments (D-274) and the venue hours (D-282) must fall in their
-    # year, so they move with it.
-    text = text.replace("2026-05-", "2027-05-")
-    if checked is not None:
-        text = text.replace("checked = 2026-10-20", f"checked = {checked.isoformat()}")
-    content.write_text(text, encoding="utf-8")
-    return tmp_path
 
 
 def test_a_contact_copied_forward_unchecked_is_stale(tmp_path: Path) -> None:

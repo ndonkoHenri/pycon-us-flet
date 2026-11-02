@@ -27,8 +27,8 @@ from pycon_us.services.outbox_db import Counts, OutboxDb
 from pycon_us.services.pref_keys import (
     SCANNER_CONSENT,
     STAFF_PREFIX,
-    STAFF_SWAG_CATEGORIES,
     Pref,
+    staff_swag_categories,
 )
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage
@@ -57,10 +57,10 @@ db = outbox_db
 A = "a@example.com"
 B = "b@example.com"
 LATER_KEYS = (
-    "pycon.staff_sponsor",
+    "pycon.staff_2026_sponsor",
     SCANNER_CONSENT.key,
-    STAFF_SWAG_CATEGORIES.key,
-    "pycon.staff_door_session",
+    staff_swag_categories(2026).key,
+    "pycon.staff_2026_door_session",
 )
 """Staff keys #39, #40 and #41 add: the sponsor, the scanner consent, the swag
 categories and the session Door check checks in for."""
@@ -162,7 +162,7 @@ async def test_clear_staff_data_never_creates_the_outbox(
     tmp_path: Path, storage: Storage
 ) -> None:
     """Without ``outbox.db`` there is nothing to count or delete, and none is made."""
-    never = OutboxDb(tmp_path / "never")
+    never = OutboxDb(tmp_path / "never", 2026)
     (tmp_path / "never").mkdir()
     assert staff_counts(never) == Counts()
     assert await clear_staff_data(never, storage, Staff())

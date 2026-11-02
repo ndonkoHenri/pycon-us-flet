@@ -28,7 +28,7 @@ from pycon_us.screens.door_session import SessionPicker
 from pycon_us.screens.staff_door import DoorCheck
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
+from pycon_us.services.pref_keys import staff_door_session
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
@@ -110,7 +110,7 @@ async def show(
     who = seeded(state_at(), "staff")
     directory = tmp_path / "outbox"
     directory.mkdir()
-    shared = OutboxDb(directory)
+    shared = OutboxDb(directory, 2026)
     async with AsyncExitStack() as stack:
         stack.callback(shared.close)
 
@@ -129,7 +129,7 @@ async def show(
             )
             await private_api.connect(BASE_URL, 2026)
             if chosen is not None:
-                stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(chosen))
+                stored[staff_door_session(2026).key] = json.dumps(to_stored(chosen))
             prefs = prefs or Prefs(loaded=True)
             prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
             shown = await stack.enter_async_context(
@@ -164,7 +164,7 @@ async def tap(shown: Shown, identifier: str) -> None:
 
 async def stored_choice(shown: Shown) -> dict[str, Any]:
     """The choice as storage holds it."""
-    return await shown.storage.get(STAFF_DOOR_SESSION)
+    return await shown.storage.get(staff_door_session(2026))
 
 
 def helper(shown: Shown) -> str | None:

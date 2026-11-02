@@ -33,7 +33,7 @@ from pycon_us.screens.lead_sponsor import (
     SponsorPicker,
 )
 from pycon_us.services import Services
-from pycon_us.services.pref_keys import STAFF_SPONSOR
+from pycon_us.services.pref_keys import staff_sponsor
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
@@ -117,7 +117,7 @@ async def show(
             )
             await private_api.connect(BASE_URL, 2026)
             if chosen is not None:
-                stored[STAFF_SPONSOR.key] = json.dumps(to_stored(chosen))
+                stored[staff_sponsor(2026).key] = json.dumps(to_stored(chosen))
             prefs = Prefs(loaded=True)
             prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
             shown = await stack.enter_async_context(
@@ -186,7 +186,7 @@ async def test_a_tap_saves_the_sponsor_and_goes_back(show: Show) -> None:
     """The choice is stored as ``{id, name, logo_url}``; the page pops to the scanner."""
     shown = await show(chosen=LeadSponsor("1", "Example Corp"))
     await tap(shown, "3")
-    assert await shown.storage.get(STAFF_SPONSOR) == {
+    assert await shown.storage.get(staff_sponsor(2026)) == {
         "id": "3",
         "name": "Sample Systems",
         "logo_url": None,
@@ -201,7 +201,7 @@ async def test_cancel_goes_back_and_keeps_the_choice(show: Show) -> None:
     (cancel,) = [b for b in shown.find(ft.IconButton) if b.tooltip == "Cancel"]
     await shown.click(cancel)
     assert shown.went == ["/more/staff/lead"]
-    assert (await shown.storage.get(STAFF_SPONSOR))["id"] == "1"
+    assert (await shown.storage.get(staff_sponsor(2026)))["id"] == "1"
 
 
 async def test_a_save_that_ends_after_cancel_leaves_the_user_where_they_are(

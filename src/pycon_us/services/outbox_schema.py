@@ -13,8 +13,22 @@ from dataclasses import replace
 
 from pycon_us.core.outbox import Kind, Row, Status
 
-FILE_NAME = "outbox.db"
-"""The database's file in the data directory (D-108)."""
+
+def file_name(year: int) -> str:
+    """Return a year's database file in the data directory (D-108, D-466).
+
+    One file per conference year, as the feed cache and the change log are (D-48):
+    every query and send then stays within the year, since a row's sponsor, products
+    and access code mean nothing in another year's data (D-56).
+
+    Args:
+        year: The conference year.
+
+    Returns:
+        ``outbox-<year>.db``.
+    """
+    return f"outbox-{year}.db"
+
 
 OUTBOX_V1 = """
 CREATE TABLE IF NOT EXISTS outbox (

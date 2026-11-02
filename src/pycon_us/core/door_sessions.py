@@ -5,7 +5,7 @@ The picker (``screens/door_session.py``) lists a door category's products as ses
 pattern; ``session_parts()`` splits it from the title), under a heading per day, the
 undated ones last; a search keeps the sessions whose title or day and time hold every
 word (D-46). The choice is a ``DoorChoice``: one session, or all of a category's, with
-the label the scan screen's chip shows. ``pycon.staff_door_session`` keeps it
+the label the scan screen's chip shows. ``pycon.staff_<year>_door_session`` keeps it
 (``to_stored()``, ``from_stored()``), a staff key (D-414, D-433).
 """
 
@@ -229,7 +229,7 @@ def choose_all(category: Category, sessions: Iterable[DoorSession]) -> DoorChoic
 
 
 def to_stored(choice: DoorChoice) -> dict[str, Any]:
-    """Return the choice as ``pycon.staff_door_session`` keeps it.
+    """Return the choice as ``pycon.staff_<year>_door_session`` keeps it.
 
     Args:
         choice: The choice made on the picker.
@@ -246,7 +246,7 @@ def to_stored(choice: DoorChoice) -> dict[str, Any]:
 
 
 def from_stored(value: dict[str, Any]) -> DoorChoice | None:
-    """Return the choice ``pycon.staff_door_session`` holds, or None.
+    """Return the choice ``pycon.staff_<year>_door_session`` holds, or None.
 
     Args:
         value: The stored object; ``{}`` when nothing was chosen.

@@ -248,9 +248,9 @@ async def reset_app(
 
     DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
     year's favourites, the Developer options and their unlock, the mock account), the
-    mock account's key and secret, the feed cache, the change log (D-255) and the
-    staff outbox's rows, every account's (``clear_staff_data()``, D-414). In
-    memory, without a restart: real time and no error details, as Developer's own
+    mock account's key and secret, every year's feed cache and change log (D-255,
+    D-466) and this year's staff outbox rows, every account's (``clear_staff_data()``,
+    D-414). In memory, without a restart: real time and no error details, as Developer's own
     Reset sets them before the stores change (D-187), and no private-API client
     (D-51); the bundled snapshot, from the year's feed, with a running refresh
     cancelled and an empty change log (``Conference.reset()``, D-301); the settings,
@@ -285,10 +285,13 @@ async def reset_app(
     # Its own deletion: the reset deletes the log only when a feed URL was set
     # (set_feed_url returns early otherwise), and this result goes into `complete`.
     log_deleted = await changes_file.delete_batches(svc.storage, "Reset app")
+    others_deleted = await svc.storage.delete_other_years()
     prefs.reset()
     favorites.reset()
     svc.memory.reset()
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
-    complete = cleared and signed_out and staff_cleared and deleted and log_deleted
+    complete = all(
+        (cleared, signed_out, staff_cleared, deleted, log_deleted, others_deleted)
+    )
     logger.info("Reset app: %s", "done" if complete else "some data was not deleted")
     return complete

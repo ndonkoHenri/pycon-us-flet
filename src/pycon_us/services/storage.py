@@ -9,7 +9,8 @@ Two places, one job each:
 * **Files in the durable data directory** (``FLET_APP_STORAGE_DATA``) for the raw feed
   cache, ``feed-<year>.json``, and the change log, ``changes-<year>.json``
   (``changes_file.py``), replaced atomically: readers see the old file or the new
-  (``data_files.py``).
+  (``data_files.py``). Only the active year's are read: Reset app deletes the others
+  (``delete_other_years()``).
 
 Storage failures are expected (D-71): logged and returned, never raised, because the
 data in memory stays correct for the session and the next write tries again (D-120).
@@ -232,6 +233,23 @@ class Storage:
             logger.warning("Could not delete %s", path.name, exc_info=True)
             return False
         return True
+
+    async def delete_other_years(self) -> bool:
+        """Delete other years' feed caches and change logs: Reset app (D-198, D-466).
+
+        Nothing reads them once the active year has moved on, and Reset app promises a
+        fresh install's state, as it does for every year's preferences.
+
+        Returns:
+            Whether they are all gone; a failure is logged (D-120).
+        """
+        others = [
+            path
+            for pattern in ("feed-*.json", "changes-*.json")
+            for path in self.directory.glob(pattern)
+            if not path.stem.endswith(f"-{self.year}")
+        ]
+        return all([await self.delete_file(path, "Reset app") for path in others])
 
     async def clear_prefs(self, prefix: str = PREFIX) -> bool:
         """Remove every key the app keeps in SharedPreferences under ``prefix``.

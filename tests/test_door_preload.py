@@ -27,7 +27,7 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import staff_door
 from pycon_us.screens.door_preload import ONLINE, RETRY
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
+from pycon_us.services.pref_keys import staff_door_session
 from tests import door_rig
 from tests.door_rig import ASYNC, VIEW, Show, helper, preload_line, staff
 from tests.fakes import MemorySemantics
@@ -151,7 +151,7 @@ async def test_changing_the_session_mid_load_cancels_it(
     shown = await show(VIEW, account, chosen=TUTORIALS, transport=gate)
     await gate.let(shown, 10)
     assert helper(shown) == f"{LOADING} 1 of 2"
-    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(SUMMIT))
+    stored[staff_door_session(2026).key] = json.dumps(to_stored(SUMMIT))
     location[0] = f"{VIEW}?picked"  # back from the picker: the key is read again
     account.nickname = "Picked"
     await shown.settle()
@@ -179,7 +179,7 @@ async def test_scanning_waits_while_the_choice_is_read_again(
         return await read_door_session(storage)
 
     monkeypatch.setattr(staff_door, "read_door_session", slow_read)
-    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(SUMMIT))
+    stored[staff_door_session(2026).key] = json.dumps(to_stored(SUMMIT))
     location[0] = f"{VIEW}?picked"  # back from the picker: the key is read again
     account.nickname = "Picked"  # re-renders the tool, as the route change does
     await shown.settle()
@@ -229,11 +229,11 @@ async def test_the_list_is_never_written(
     The row is the redeem body (code, validator, time, products), never the name
     or the dietary needs (D-56).
     """
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     shown = await show(VIEW, chosen=TUTORIALS, outbox=database)
     assert preload_line(shown) == READY_THREE
     await enter(shown, "MOCK0002:v4l1d02")
-    assert set(stored) == {STAFF_DOOR_SESSION.key}
+    assert set(stored) == {staff_door_session(2026).key}
     (row,) = database.rows("staff@example.com", list(Status)) or []
     assert row.key == "MOCK0002"
     database.close()

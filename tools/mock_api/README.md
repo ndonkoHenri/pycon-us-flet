@@ -229,7 +229,8 @@ time. Every name in it is made up, every email is at `example.com`, and every pa
   names, some accented, emails at `example.com`, no products, and prior incidents by turns (0, 0, 0, 0, 1, 2, 3, 5).
   The same N gives the same attendees. `--attendees 3000` serves 3,004 in the CoC directory, enough to try the name
   search's 25-row cap on a device. The badge sheet prints the seeded four only.
-- `year` is the conference year the mock serves; requests for another year are 404.
+- `year` is the conference year the mock serves; requests for another year are 404. The tests' `from_seed()` keeps
+  the seed's, 2026, as they pin it; the server and the badge sheet use `config.YEAR`, so a rollover needs no edit here.
 
 ### What the mock records
 

@@ -43,7 +43,7 @@ NOW = 1_000_000.0
 @pytest.fixture
 def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an empty outbox in its own directory, closed afterwards."""
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     yield database
     database.close()
 

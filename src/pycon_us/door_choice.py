@@ -2,16 +2,16 @@
 
 ``fetch_door_catalog()`` asks ``redeemable`` each time the session picker opens and
 keeps the door's part (DOOR-01): the catalog is never kept, as the sponsor list isn't
-(D-425). The choice is ``STAFF_DOOR_SESSION``, a staff key (D-414), so a sign-out, a
-sign-in as another account and Clear staff data remove it with no code of their own;
-Door check reads it as it opens and whenever the location changes (D-433).
+(D-425). The choice is ``staff_door_session()``, a staff key of the year (D-414, D-466),
+so a sign-out, a sign-in as another account and Clear staff data remove it with no code
+of their own; Door check reads it as it opens and whenever the location changes (D-433).
 """
 
 from pycon_us.check_in_api import fetch_catalog
 from pycon_us.core.check_in import Catalog, door_catalog
 from pycon_us.core.door_sessions import DoorChoice, from_stored, to_stored
 from pycon_us.services.api import ApiClient
-from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
+from pycon_us.services.pref_keys import staff_door_session
 from pycon_us.services.storage import Storage
 
 
@@ -37,7 +37,7 @@ async def read_door_session(storage: Storage) -> DoorChoice | None:
     Args:
         storage: The session's storage.
     """
-    return from_stored(await storage.get(STAFF_DOOR_SESSION))
+    return from_stored(await storage.get(staff_door_session(storage.year)))
 
 
 async def save_door_session(storage: Storage, choice: DoorChoice) -> bool:
@@ -47,4 +47,4 @@ async def save_door_session(storage: Storage, choice: DoorChoice) -> bool:
         storage: The session's storage.
         choice: The session, or sessions, chosen on the picker.
     """
-    return await storage.set(STAFF_DOOR_SESSION, to_stored(choice))
+    return await storage.set(staff_door_session(storage.year), to_stored(choice))

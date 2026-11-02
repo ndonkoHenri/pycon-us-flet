@@ -19,6 +19,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from pycon_us.config import YEAR
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Kind, Outcome, Row, Status
 from pycon_us.memory import ViewMemory
@@ -34,7 +35,7 @@ NOW = 1_000_000.0
 @pytest.fixture
 def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an outbox database in an empty data directory, closed afterwards."""
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     yield database
     database.close()
 
@@ -122,18 +123,18 @@ def test_first_use_creates_the_file_in_wal_mode_at_the_latest_version(
 
 def test_an_empty_file_is_migrated(tmp_path: Path) -> None:
     """A zero-byte ``outbox.db`` (an interrupted first open) is migrated, not refused."""
-    (tmp_path / "outbox.db").touch()
-    database = OutboxDb(tmp_path)
+    (tmp_path / "outbox-2026.db").touch()
+    database = OutboxDb(tmp_path, 2026)
     assert queued(scan(database)).key == "A1"
     database.close()
 
 
 def test_rows_survive_close_and_reopen_without_migrating_again(tmp_path: Path) -> None:
     """A re-open keeps the rows and the version: the migration is idempotent."""
-    first = OutboxDb(tmp_path)
+    first = OutboxDb(tmp_path, 2026)
     row = queued(scan(first))
     first.close()
-    second = OutboxDb(tmp_path)
+    second = OutboxDb(tmp_path, 2026)
     assert second.rows(OWNER, [Status.PENDING]) == [row]
     with raw(second.path) as other:
         assert other.execute("PRAGMA user_version").fetchone() == (len(MIGRATIONS),)
@@ -144,14 +145,14 @@ def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
     tmp_path: Path,
 ) -> None:
     """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file, its rows unflagged (D-410)."""
-    with raw(tmp_path / "outbox.db") as v1:
+    with raw(tmp_path / "outbox-2026.db") as v1:
         v1.executescript(f"{MIGRATIONS[0]}PRAGMA user_version = 1;")
         v1.execute(
             "INSERT INTO outbox (kind, key, payload_json, owner, next_at, created_at)"
             " VALUES ('lead', 'A1', '{}', ?, ?, ?)",
             (OWNER, NOW, NOW),
         )
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     (row,) = database.rows(OWNER, [Status.PENDING]) or []
     assert (row.key, row.maybe_sent) == ("A1", False)
     flagged = outbox.after_network_error(row, NOW, maybe_sent=True)
@@ -184,7 +185,7 @@ def test_a_file_that_cannot_be_opened_is_logged_and_returned(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """An open failure returns "nothing stored" for the caller to say, not an error."""
-    database = OutboxDb(tmp_path / "missing")
+    database = OutboxDb(tmp_path / "missing", 2026)
     with caplog.at_level(logging.WARNING):
         assert scan(database) is None
         assert database.counts(OWNER) is None
@@ -380,7 +381,7 @@ def stored_rows(rows: list[Row]) -> Iterator[OutboxDb]:
         " created_at, idem_key) VALUES (?, ?, '{}', ?, ?, ?, ?, ?, ?)"
     )
     with tempfile.TemporaryDirectory() as directory:
-        database = OutboxDb(Path(directory))
+        database = OutboxDb(Path(directory), 2026)
         assert database.clear()  # opens and migrates
         with raw(database.path) as other:
             for index, r in enumerate(rows):
@@ -422,7 +423,7 @@ def test_services_build_the_outbox_in_the_data_directory_and_close_it(
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path))
     svc = Services.create(ViewMemory())
     assert svc.outbox is not None
-    assert svc.outbox.path == tmp_path.absolute() / "outbox.db"
+    assert svc.outbox.path == tmp_path.absolute() / f"outbox-{YEAR}.db"
     assert not svc.outbox.path.exists()  # nothing opened until the staff tools run
     queued(scan(svc.outbox))
     svc.close()

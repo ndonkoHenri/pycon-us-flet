@@ -116,7 +116,7 @@ class Services:
             when the build has ``flet-secure-storage``, else memory for the session
             (``services.credentials``, D-49, D-63).
         outbox: The staff outbox's database (``services.outbox_db``, D-49), which
-            opens ``outbox.db`` on first use: only the staff tools use it, and D-51
+            opens ``outbox-<year>.db`` on first use: only the staff tools use it, and D-51
             hides them without a mock API URL. ``None`` in tests that don't need it.
         favorites_sync: Keeps the favourites in step with the mock account while
             signed in (``services.favorites_sync``, D-406); ``App`` runs it.
@@ -198,7 +198,7 @@ class Services:
             reminders=start_reminders(permissions),
             private_api=PrivateApi(credentials=credentials),
             credentials=CredentialStorage(secure_storage()),
-            outbox=OutboxDb(directory),
+            outbox=OutboxDb(directory, year.conference.year),
             sync_wake=sync_wake,
             # The handler at construction: one set later would need an update (F257).
             connectivity=ft.Connectivity(on_change=kick_on_reconnect(sync_wake)),
