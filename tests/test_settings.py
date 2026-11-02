@@ -73,8 +73,8 @@ def prefs() -> Prefs:
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out account, restored, as on a first launch."""
-    return Account(restored=True)
+    """A signed-out account, as on a first launch."""
+    return Account()
 
 
 @pytest.fixture

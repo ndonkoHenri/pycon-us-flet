@@ -63,7 +63,7 @@ def open_modals(page: ft.Page) -> list[ft.DialogControl]:
     Args:
         page: The session's page.
     """
-    dialogs = page._dialogs.controls  # pyright: ignore[reportPrivateUsage]
+    dialogs = page._dialogs.controls
     return [d for d in dialogs if d.open and not isinstance(d, KEPT + UNCLOSABLE)]
 
 
@@ -87,7 +87,7 @@ async def close_modals(page: ft.Page) -> None:
         dialog.update()
     loop = asyncio.get_running_loop()
     deadline = loop.time() + CLOSE_WAIT
-    dialogs = page._dialogs.controls  # pyright: ignore[reportPrivateUsage]
+    dialogs = page._dialogs.controls
     while any(d is c for d in closing for c in dialogs):
         if loop.time() >= deadline:
             logger.warning("A route change went on with a modal still closing")

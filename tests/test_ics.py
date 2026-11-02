@@ -370,7 +370,7 @@ def test_ical_reads_every_session_back(
     ],
 )
 def test_a_file_s_name_is_its_title_s_first_words(name: str, slug: str) -> None:
-    """Lower-case ASCII words joined by ``-``, cut after a word; none gives the fallback."""
+    """Lower-case ASCII words joined by ``-``, cut after a word; none gives ``session``."""
     assert file_slug(name) == slug
 
 
@@ -380,4 +380,3 @@ def test_a_file_s_name_is_never_longer_than_its_limit() -> None:
     long_title = "talk " * 20
     assert len(file_slug(long_title)) <= FILE_SLUG_CHARS
     assert not file_slug(long_title).endswith("-")
-    assert file_slug("", fallback="my-schedule") == "my-schedule"

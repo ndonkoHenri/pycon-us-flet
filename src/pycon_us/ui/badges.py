@@ -106,20 +106,6 @@ def badge_specs(
     return [spec for spec in specs if spec[0] not in omit]
 
 
-def session_badges(
-    session: Session, info: ConferenceInfo, tokens: Tokens
-) -> list[ft.Control]:
-    """Return a session's badges drawn: ``badge_specs()`` as ``TrackBadge``s.
-
-    Args:
-        session: The session.
-        info: The year's facts, for the track's display name (DATA-28).
-        tokens: The current scheme's tokens.
-    """
-    specs = badge_specs(session, info, tokens)
-    return [TrackBadge(label, colors) for label, colors in specs]
-
-
 def badge_row(badges: list[ft.Control]) -> ft.Row:
     """Return badges side by side, wrapping onto more lines when they don't fit.
 
@@ -127,7 +113,7 @@ def badge_row(badges: list[ft.Control]) -> ft.Row:
     group, and 4 dp between wrapped lines, so a wrapped row stays compact.
 
     Args:
-        badges: The badges, e.g. from ``session_badges()``.
+        badges: The badges, e.g. ``TrackBadge``s.
     """
     return ft.Row(badges, wrap=True, spacing=8, run_spacing=4)
 
