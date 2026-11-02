@@ -5,9 +5,10 @@ what is lawful or contacted anyone. The owner signs it off in a comment on #846,
 and that outcome becomes a D-number. Contacting anyone (the PSF, GES, the venue, a sponsor, a speaker) is the owner's
 alone (D-101).
 
-Checked on 2026-11-02 at `main` `a6899a3b`. Nothing here removes or changes an asset; the table says what could
-change. `NOTICE` and its bundled copy `src/pycon_us/licence_texts/notice.txt` were updated in this PR where they were
-plainly incomplete.
+Checked on 2026-11-02 at `main` `a6899a3b`; the README was read again at `283841e2`, and no asset or bundled data
+changed between the two. Nothing here removes or changes an asset; the table says what could change. `NOTICE` and its
+bundled copy `src/pycon_us/licence_texts/notice.txt` were updated in this PR where they were plainly incomplete, and
+the Licences page's Simple Icons row where it overstated CC0.
 
 ## What most needs the owner's eye
 
@@ -117,7 +118,7 @@ the correct permissions to use the icons relevant to their project". Its data ha
 
 | # | Mark | Where | Status | What we do today | Recommendation |
 |---|---|---|---|---|---|
-| E1 | All eight | `src/assets/icons/brands/` | The SVG files are the set's; the marks are their owners'. `NOTICE` used to say all were CC0, and now quotes the limit. `licences.py`'s row still says "public domain" | Each beside a link to that brand (D-36) | Correct the Licences page's row to match `NOTICE` |
+| E1 | All eight | `src/assets/icons/brands/` | The SVG files are the set's; the marks are their owners'. `NOTICE` used to say all were CC0, and the Licences page's row "public domain"; both now state the limit. D-264, `docs/ux.md` and the feature matrix still say "CC0" of the set | Each beside a link to that brand (D-36) | Keep; the owner's D-number can restate D-264 |
 | E2 | Python | `python.svg`, shown on About the PSF and Social media | One-colour mark in `#3776AB`, not the PSF's two-colour logo. The PSF's policy: "Logos that simply change the colors or fonts require permission from the PSF Trademarks Committee" | Beside links to python.org and the Python blog | Replace it with the PSF's own logo file unchanged, or a Material icon, or the owner asks. Recommended: a Material icon, the simplest |
 | E3 | LinkedIn | `linkedin.svg`, shown on About the PSF and Social media | Simple Icons removed it in 14.0.0 (`simple-icons/simple-icons#11372`), citing LinkedIn's guidelines that it "generally does not permit" use of its logos, with narrow exceptions | Beside a link to LinkedIn. D-264 pins 13.21.0 because it is the last release with all eight | Replace it with a Material icon. That also lets the set move to a current release |
 | E4 | PyPI | `pypi.svg`, shown on About the PSF and Social media | The PSF's trademark page doesn't mention PyPI; Simple Icons lists no guidelines | Beside links to pypi.org and its blog | Keep; owner to note |
@@ -183,8 +184,9 @@ words, not a reading of them:
   is subject to approval by the PSF trademarks committee (write to psf-trademarks at python.org)". The policy doesn't
   discuss apps.
 
-Also out of date: the README's licence section says the licence is "to be added" and that the project uses the PyCon and
-PSF logos "only to name the event", which B6 and E2 don't match. That goes with the README's rewrite (#844).
+The README's licence section (rewritten in #868) speaks of the names: "We use the names only to say which event and
+language this is about; the app's name and icon use no PSF mark." It leaves the logos the app does show (B6, E2) to
+`NOTICE`, which lists them. Owner to note.
 
 ## What this review didn't check
 
