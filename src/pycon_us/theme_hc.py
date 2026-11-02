@@ -27,7 +27,7 @@ colours below (``theme.py`` builds HC's ``Tokens`` from them and outlines every 
 and ``with_hc_components()``, whose component themes trade the cards' shadows and fills
 for a border, outline every chip and ring the bar's and the rail's selected pill (D-306).
 
-Module of its own because ``theme.py`` is near D-66's 400 lines (decisions §M).
+Module of its own because ``theme.py`` is near D-66's 400 lines.
 """
 
 import dataclasses

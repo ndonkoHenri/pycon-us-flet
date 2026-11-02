@@ -111,7 +111,7 @@ The full spec is [`docs/ux.md`](docs/ux.md), which consolidates three UX studies
 
 ## 5. Architecture in brief
 
-The full design is in [`docs/architecture.md`](docs/architecture.md); the names are in [decisions §M](docs/decisions.md#m-naming-binding).
+The full design is in [`docs/architecture.md`](docs/architecture.md); the naming rules are in [decisions §M](docs/decisions.md#m-naming-binding).
 
 ```
 src/main.py ── App (boot gate, providers, Router)

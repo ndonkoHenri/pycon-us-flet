@@ -1,4 +1,4 @@
-"""The session rows of every list (decisions §M): sessions and notices.
+"""The session rows of every list: sessions and notices.
 
 ``SessionRow`` and ``NoticeRow`` are memoised components keyed by session id (D-153):
 a list owner builds each session's ``SessionView`` once per feed version

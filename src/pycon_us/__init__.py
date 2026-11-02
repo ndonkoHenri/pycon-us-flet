@@ -1,7 +1,8 @@
 """PyCon US conference companion, built with Python and Flet.
 
-The import package of the app. ``src/main.py`` is the entry point; the modules
-are laid out in ``docs/decisions.md`` section M.
+The import package of the app. ``src/main.py`` is the entry point; each module's
+docstring says what it is for, and ``docs/decisions.md`` section M holds the
+names.
 """
 
 __version__ = "0.1.0"
