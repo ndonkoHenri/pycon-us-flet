@@ -46,11 +46,24 @@ say "fetching origin/main"
 git -C "$root" fetch -q origin main
 base=$(git -C "$root" rev-parse --verify origin/main)
 
+remove_scratch() {
+    git -C "$root" worktree remove --force "$1" 2> /dev/null || rm -rf "$1"
+}
+
 # Not $TMPDIR: macOS's dirhelper sweeps it daily at 03:35, removing files older than 3 days, and uv's clones keep their
 # old timestamps, so a sweep during a gate can take files from its fresh .venv and fail tests falsely.
-scratch=$(mktemp -d "$HOME/Library/Caches/gate.XXXXXX")
+caches=$HOME/Library/Caches
+
+# A gate killed outright (SIGKILL, power loss) can't clean up, and nothing sweeps this folder. A gate takes minutes, so
+# a scratch untouched for a day is dead; a younger one may be another gate's, running now.
+while IFS= read -r -d '' dead; do
+    say "removing the scratch of a dead gate: $dead"
+    remove_scratch "$dead" || say "can't remove $dead"
+done < <(find "$caches" -maxdepth 1 -type d -name 'gate.??????' -mmin +1440 -print0)
+
+scratch=$(mktemp -d "$caches/gate.XXXXXX")
 cleanup() {
-    git -C "$root" worktree remove --force "$scratch" 2> /dev/null || rm -rf "$scratch"
+    remove_scratch "$scratch"
     git -C "$root" worktree prune
 }
 trap cleanup EXIT
