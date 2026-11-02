@@ -204,6 +204,19 @@ def test_a_lost_answer_flags_the_row_for_good() -> None:
     assert outbox.retry_failed(failed, NOW).maybe_sent
 
 
+def test_an_unreadable_answer_counts_and_flags_the_row_for_good() -> None:
+    """An ``ApiError`` that may have been applied is one more try, and flagged (#874)."""
+    flagged = outbox.after_error(lead(tries=4), "Not JSON", NOW, maybe_sent=True)
+    assert flagged == lead(
+        tries=5,
+        last_error="Not JSON",
+        next_at=NOW + outbox.NETWORK_BACKOFF,
+        maybe_sent=True,
+    )
+    assert outbox.after_error(flagged, "500", NOW).maybe_sent  # a later refusal
+    assert not outbox.after_error(lead(), "500", NOW).maybe_sent
+
+
 @pytest.mark.parametrize(
     ("status", "maybe_sent", "words"),
     [

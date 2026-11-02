@@ -21,6 +21,7 @@ from pycon_us.lead_capture import (
     CAPTURED,
     MAY_BE_TWICE,
     NOT_CAPTURED,
+    NOT_CONFIRMED,
     NOT_SAVED,
     RETRY_FROM_QUEUE,
     SAVED,
@@ -32,6 +33,7 @@ from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from pycon_us.services.sync import SyncWorker
 from tests import accounts
+from tests.api_clients import ReplyReplaced
 from tests.sync_rig import Rig, outbox_db
 
 shared, storage, keystore, credentials = (
@@ -214,6 +216,42 @@ async def test_a_lost_answer_says_may_be_recorded_twice_and_loses_nothing(
         assert result == ScanResult(
             ScanOutcome.QUEUED, SAVED, "MOCK0001", (MAY_BE_TWICE,), "MOCK0001"
         )
+        rig.clock.at += 60  # the backoff; then the resend lands
+        again = await scanner.scan()
+        assert again == ScanResult(
+            ScanOutcome.ACCEPTED,
+            CAPTURED,
+            "Ada",
+            ("MOCK0001", MAY_BE_TWICE),
+            "MOCK0001",
+        )
+        assert captures(rig) == [(1, "MOCK0001")] * 2  # both kept: none lost
+    finally:
+        await scanner.stop()
+
+
+async def test_an_unreadable_answer_is_not_confirmed_and_never_not_captured(
+    db: OutboxDb, storage: Storage, credentials: CredentialStorage
+) -> None:
+    """The mock recorded it and the reply can't be read: "Not confirmed", flagged (#874)."""
+    rig = Rig(db, storage, credentials, "non_idempotent")
+    scanner = Scanner(rig)
+    scanner.start()
+    try:
+        await rig.sign_in("sponsor")
+        committing = rig.wire.inner
+        rig.wire.inner = ReplyReplaced(committing, b"<html>ok</html>")
+        result = await scanner.scan()
+        (row,) = rig.rows()
+        assert row.last_error
+        assert result == ScanResult(
+            ScanOutcome.DENIED,
+            NOT_CONFIRMED,
+            "MOCK0001",
+            (row.last_error, WILL_RETRY, MAY_BE_TWICE),
+            "MOCK0001",
+        )
+        rig.wire.inner = committing
         rig.clock.at += 60  # the backoff; then the resend lands
         again = await scanner.scan()
         assert again == ScanResult(

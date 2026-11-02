@@ -83,8 +83,10 @@ async def redeem(api: ApiClient, payload: dict[str, object]) -> RedeemReply:
         What the call redeemed and the server's errors.
 
     Raises:
-        NetworkError: No answer arrived.
-        ApiError: The mock refused the call, or its reply could not be read.
+        NetworkError: No answer arrived; ``maybe_sent`` says whether it may have been
+            applied all the same (D-410).
+        ApiError: The mock refused the call, or its reply could not be read
+            (``unreadable``), so it may have been applied all the same.
     """
     reply = await api.request(REDEEM, payload=payload)
     try:
