@@ -7,7 +7,7 @@ tabs, the now line and the states without data are in ``test_schedule.py``.
 
 import gc
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, cast
 
 import flet as ft
@@ -18,7 +18,8 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.prefs import Prefs
-from pycon_us.screens import schedule_days, schedule_head
+from pycon_us.screens import schedule as screen
+from pycon_us.screens import schedule_head
 from pycon_us.screens.schedule_slots import slot_keys
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling, status_strip
@@ -53,20 +54,22 @@ async def test_the_shown_day_renders_first_and_the_others_after_a_round_trip(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """D-156: the first render has one day list; the second all of them."""
-    first: list[int] = []
-    original = schedule_days._DayList
+    built: list[date] = []
+    original = screen.DayList
 
-    def spy(*args: Any, **kwargs: Any) -> ft.Control:
-        first.append(1)
-        return original(*args, **kwargs)
+    def spy(day: date, *args: Any, **kwargs: Any) -> ft.Control:
+        built.append(day)
+        return original(day, *args, **kwargs)
 
-    monkeypatch.setattr(schedule_days, "_DayList", spy)
+    monkeypatch.setattr(screen, "DayList", spy)
     schedule = await shown()
     (view,) = find(schedule.session, ft.TabBarView)
     pages = list(view.controls)
     assert len(pages) == len(DAYS)
     assert len(find(schedule.session, ft.ListView)) == len(DAYS)  # after the second
-    assert first[0] == 1  # and the first render built only the shown day's list
+    # A render builds its days in order, so Friday before Wednesday is where the first
+    # render ended. Later renders (the jump's landing) build them all again.
+    assert built[: len(DAYS) + 1] == [FRIDAY, *DAYS]
 
 
 async def test_each_slot_is_one_keyed_item_beside_its_gutter(
