@@ -10,6 +10,9 @@ state, and looks at what ran:
 - an ``async def`` setup still running when the component unmounts is cancelled,
   with no cleanup at all (flet-dev/flet#7005), which is what stops every ticking loop
   and pending wait in the app;
+- a state setter called after the unmount renders nothing, so an answer landing before
+  that cancellation reaches the task needs no ``mounted`` guard
+  (``Component._schedule_update()`` and ``update()`` both refuse);
 - on a dependency change, the running setup is cancelled, and an ``async def``
   cleanup runs to its end before the next setup starts (flet-dev/flet#7005).
 """
@@ -91,6 +94,37 @@ async def test_an_async_setup_is_cancelled_on_unmount_without_a_cleanup() -> Non
         setters["root"](0)
         await settle()
         assert task.cancelled()
+
+
+async def test_a_state_setter_after_unmount_renders_nothing() -> None:
+    """A late ``set_state`` raises nothing and never renders the unmounted component."""
+    renders: list[int] = []
+    setters: dict[str, Setter] = {}
+
+    @ft.component
+    def Child() -> ft.Control:
+        """Return a text that logs each render of its state."""
+        value, set_value = ft.use_state(0)
+        setters["child"] = set_value
+        renders.append(value)
+        return ft.Text(str(value))
+
+    @ft.component
+    def Root() -> ft.Control:
+        """Return the child while ``shown`` is 1, else an empty column."""
+        shown, set_shown = ft.use_state(1)
+        setters["root"] = set_shown
+        return ft.Column([Child()] if shown else [])
+
+    async with rendering(Root):
+        setters["child"](1)  # still mounted: this one renders
+        await settle()
+        assert renders == [0, 1]
+        setters["root"](0)
+        await settle()
+        setters["child"](2)  # as an answer landing late would
+        await settle()
+        assert renders == [0, 1]
 
 
 async def test_an_async_cleanup_finishes_before_the_next_setup() -> None:
