@@ -12,8 +12,8 @@
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
 # and fake data only.
 # The first run on a running mock redeems Ada's shirts and bag, for good: only a restart
-# gives them back. So a rerun passes with step 3's hand-out skipped; it proves the hand-out
-# only on a mock just started, where the mock's log shows one POST redeem_products per run.
+# gives them back. So a rerun passes with step 3's hand-out skipped. The flow proves the
+# hand-out only on a mock just started, where the mock's log shows its POST redeem_products.
 appId: io.github.ndonkohenri.confcompanion
 name: Swag pickup, hand-out or already picked up, nothing to pick up, not a badge
 tags:
