@@ -167,7 +167,7 @@ def products(code: str, *, left: bool) -> AttendeeProducts:
         )
         if group:
             groups.append((category.name, group))
-    return AttendeeProducts(code, person["full_name"], person["id"], tuple(groups))
+    return AttendeeProducts(code, person["full_name"], tuple(groups))
 
 
 def offer(code: str) -> Offer:
