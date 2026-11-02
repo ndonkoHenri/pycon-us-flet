@@ -7,10 +7,10 @@ session; buckets the timeline's sessions into conference-local days and time gro
 the sponsorship levels once (DATA-22); and last converts the feed's HTML to Markdown and
 search text, once (D-130, D-140), reading the job listings' roles as it goes (D-278).
 
-Failures are split in two. A feed whose structure is wrong raises ``FeedError``, so the
-caller keeps the data it has. A single bad record is skipped, recorded in
-``ConferenceData.skipped`` and logged; it never blanks the schedule. Unknown fields are
-ignored, so the feed can grow without breaking the app.
+Failures are split in two. A feed whose structure is wrong, or that nests too deep to read,
+raises ``FeedError``, so the caller keeps the data it has. A single bad record is skipped,
+recorded in ``ConferenceData.skipped`` and logged; it never blanks the schedule. Unknown
+fields are ignored, so the feed can grow without breaking the app.
 """
 
 import json
@@ -51,7 +51,10 @@ _MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
 class FeedError(ValueError):
-    """The feed as a whole is unusable: not JSON, wrong structure, or no readable slot."""
+    """The feed as a whole is unusable.
+
+    It is not JSON, has the wrong structure, nests too deep to read or has no readable slot.
+    """
 
 
 def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
@@ -67,9 +70,20 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
 
     Raises:
         FeedError: The feed is not a JSON object with a ``schedule`` list, an optional
-            section is not a list, ``conference`` or its ``content`` is not an object, or
-            no schedule slot could be read.
+            section is not a list, ``conference`` or its ``content`` is not an object, no
+            schedule slot could be read, or its JSON or HTML nests too deep to read.
     """
+    try:
+        return _processed(raw, settings)
+    except RecursionError as error:
+        # Not a ValueError, so no decoder's guard sees it. It can come from the parser, from
+        # printing a bad record's value, which takes more stack than parsing it, or from
+        # walking a description's HTML (#891), and how deep is too deep depends on the stack.
+        raise FeedError(f"nested too deep: {error}") from None
+
+
+def _processed(raw: bytes, settings: FeedSettings) -> ConferenceData:
+    """Run the pipeline: ``process()`` without its guard."""
     started = time.perf_counter()
     document = _document(raw)
     sections = _sections(document)

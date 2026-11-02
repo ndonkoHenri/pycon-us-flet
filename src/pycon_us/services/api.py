@@ -214,6 +214,29 @@ def error_message(body: object) -> str | None:
 NOT_JSON = object()
 """Stands for a reply that does not decode, unlike a JSON ``null``."""
 
+MAX_NESTING = 32
+"""How many levels of values a reply may nest; the private API's use a handful. A deeper
+one is not read: the parser may take it, but printing it or dumping it into an outbox row
+takes more stack, by how much depends on the stack, and neither guards against that (#891).
+This is far below what even a small stack overflows at."""
+
+
+def _decoded(content: bytes) -> object:
+    """Return a reply's JSON, or ``NOT_JSON``: not UTF-8, not JSON, or nested too deep."""
+    try:
+        body = json.loads(content)
+    except ValueError, RecursionError:
+        return NOT_JSON
+    level = [body]
+    for _ in range(MAX_NESTING):
+        level = [
+            child
+            for parent in level
+            if isinstance(parent, dict | list)
+            for child in (parent.values() if isinstance(parent, dict) else parent)
+        ]
+    return NOT_JSON if level else body
+
 
 def unwrap(response: httpx.Response, enveloped: bool) -> object:
     """Turn a reply into what the caller reads, or an ``ApiError``.
@@ -228,13 +251,10 @@ def unwrap(response: httpx.Response, enveloped: bool) -> object:
     Raises:
         ApiError: A refusal: an error status (with the body's ``error`` or ``message``
             when it has one) or a ``{"code", "error"}`` envelope whatever the status.
-            Or ``unreadable``: a success whose body is not JSON or has no envelope, which
-            the server may have applied (#874).
+            Or ``unreadable``: a success whose body is not JSON, nests deeper than
+            ``MAX_NESTING`` or has no envelope, which the server may have applied (#874).
     """
-    try:
-        body = json.loads(response.content)
-    except ValueError:  # not UTF-8, or not JSON
-        body = NOT_JSON
+    body = _decoded(response.content)
     status = response.status_code
     if not response.is_success:
         raise ApiError(status, error_message(body) or response.reason_phrase)
