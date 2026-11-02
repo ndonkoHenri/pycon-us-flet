@@ -18,7 +18,8 @@ from pycon_us.core.change_batches import Batch
 from pycon_us.core.diff import Change, ChangeKind
 from pycon_us.core.timeline import NOW_KEY, now_place, timeline
 from pycon_us.prefs import Prefs
-from pycon_us.screens import schedule_days, schedule_head
+from pycon_us.screens import schedule as screen
+from pycon_us.screens import schedule_head
 from pycon_us.screens.schedule_slots import slot_keys
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling, status_strip
@@ -54,13 +55,13 @@ async def test_the_shown_day_renders_first_and_the_others_after_a_round_trip(
 ) -> None:
     """D-156: the first render has one day list; the second all of them."""
     first: list[int] = []
-    original = schedule_days._DayList
+    original = screen.DayList
 
     def spy(*args: Any, **kwargs: Any) -> ft.Control:
         first.append(1)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(schedule_days, "_DayList", spy)
+    monkeypatch.setattr(screen, "DayList", spy)
     schedule = await shown()
     (view,) = find(schedule.session, ft.TabBarView)
     pages = list(view.controls)

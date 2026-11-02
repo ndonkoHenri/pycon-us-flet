@@ -155,7 +155,7 @@ def ScheduleChanges(year: str) -> ft.View:
                         on_toggle,
                         tokens,
                         fade_ms,
-                        key=f"{stamp}/{view.change.id}/{view.change.kind}",
+                        key=f"{stamp}/{view.change.id}/{view.change.kind}",  # pyright: ignore[reportCallIssue]  # as SessionRow's
                     )
                     for view in group.views
                 )
@@ -169,6 +169,8 @@ def ScheduleChanges(year: str) -> ft.View:
     )
 
 
+@ft.memo
+@ft.component
 def ChangeItem(
     view: ChangeView,
     saved: bool,
@@ -176,12 +178,12 @@ def ChangeItem(
     on_toggle: ToggleFavorite,
     tokens: Tokens,
     fade_ms: int,
-    *,
-    key: str,
 ) -> ft.Control:
     """Return one change: its icon, title and "old → new", read as one sentence, and a star.
 
-    A memoised component (D-153): a star tap re-renders only the items of that session.
+    A memoised component (D-153, F34): a star tap re-renders only the items of that
+    session. Its key is unique in the list: the batch's detection time, the id and the
+    kind.
 
     Args:
         view: The change's view, the same object while the log and the clock format
@@ -191,23 +193,7 @@ def ChangeItem(
         on_toggle: The list's one star handler (``use_favorite_toggle()``).
         tokens: The scheme's tokens (D-150), for the star's colour.
         fade_ms: How long the dot fades once seen (``prefs.motion_ms()``).
-        key: Unique in the list: the batch's detection time, the id and the kind.
     """
-    # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
-    return _ChangeItem(view, saved, unseen, on_toggle, tokens, fade_ms, key=key)  # pyright: ignore[reportCallIssue]
-
-
-@ft.memo
-@ft.component
-def _ChangeItem(
-    view: ChangeView,
-    saved: bool,
-    unseen: bool,
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    fade_ms: int,
-) -> ft.Control:
-    """The body of ``ChangeItem``; it runs only when the props change (F34)."""
     page = ft.context.page
     view_path = ft.use_view_path()
     change = view.change
