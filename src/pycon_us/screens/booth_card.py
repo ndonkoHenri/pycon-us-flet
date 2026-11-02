@@ -138,6 +138,8 @@ def card_phrase(item: ExpoBooth, hiring: str) -> str:
     return ", ".join(part for part in parts if part)
 
 
+@ft.memo
+@ft.component
 def BoothCard(
     item: ExpoBooth,
     *,
@@ -149,6 +151,8 @@ def BoothCard(
 ) -> ft.Control:
     """Return the card of the selected booth: a memoised component keyed by its number.
 
+    Its body runs only when its props change (F34).
+
     Args:
         item: The selected booth and its exhibitors.
         hiring: ``hiring_line()`` for a booth of one exhibitor, else "".
@@ -158,30 +162,6 @@ def BoothCard(
         on_close: ``ExpoHall``'s handler that clears the selection.
         on_body_size: ``ExpoHall``'s handler for the body's measured size.
     """
-    # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
-    return _BoothCard(
-        item,
-        hiring=hiring,
-        view_path=view_path,
-        body_box=body_box,
-        on_close=on_close,
-        on_body_size=on_body_size,
-        key=item.booth.number,  # pyright: ignore[reportCallIssue]
-    )
-
-
-@ft.memo
-@ft.component
-def _BoothCard(
-    item: ExpoBooth,
-    *,
-    hiring: str,
-    view_path: str,
-    body_box: float | None,
-    on_close: Callable[[], None],
-    on_body_size: OnBodySize,
-) -> ft.Control:
-    """The body of ``BoothCard()``: it runs only when its props change (F34)."""
     parts: list[ft.Control] = [_head(item, hiring)]
     if len(item.sponsors) == 1:
         target = drill_href(view_path, "sponsor", item.sponsors[0].slug)
