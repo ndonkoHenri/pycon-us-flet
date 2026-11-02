@@ -424,7 +424,7 @@ Run the P0 exit criteria with packaged builds on an Android emulator, an iOS sim
 4. **The quality issues and the exit** (P1-29..P1-33).
 
 **Decisions in this milestone:**
-- O-4, app identity (P1-34): before the first real TestFlight upload.
+- O-4, app identity (P1-34): settled by D-452.
 - O-6, CFP (P1-35): around 2026-11-20.
 - O-1, the bottom bar (P1-36): settled by D-454, without the week of dogfooding.
 
@@ -1337,7 +1337,7 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
   - tests and tools: #348 (Maestro flows, which the check issues `P2-93`..`P2-96`, `P2-100` and `P2-101` wait for), #312, #257, #339;
   - bugs: #337, #342, #343, #344; docs: #359;
   - the iPhone session #121, with VoiceOver checks #261 and #320;
-  - decisions: #15 (`P1-34`, O-4, app identity; its placeholders ship in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1; settled by D-454 in #819).
+  - decisions: #15 (`P1-34`, O-4, app identity; settled by D-452; its placeholders shipped in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1; settled by D-454 in #819).
 - **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
 
 ## 6. P3 Accounts & staff tools
