@@ -2,6 +2,7 @@
 
 How we build this app: for the humans and the AI agents (Claude Code, Codex, ...) who work on it.
 Claude Code reads it through `CLAUDE.md`, which contains only `@AGENTS.md`.
+People contributing from outside the team start with [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## The project in one minute
 
