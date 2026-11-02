@@ -44,7 +44,7 @@ import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from functools import partial
-from typing import Literal
+from typing import Literal, cast
 
 import flet as ft
 
@@ -63,6 +63,7 @@ from pycon_us.ui.coc_email import email_actions, email_note
 from pycon_us.ui.coc_review import use_review
 from pycon_us.ui.coc_search import SEARCH_OPEN, use_find
 from pycon_us.ui.coc_search_sheet import find_button
+from pycon_us.ui.hooks import use_mounted
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_clear import use_on_background
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
@@ -139,16 +140,9 @@ def CocTool(*, owner: str) -> ft.Control:
     svc = use_services()
     prefs = use_prefs()
     online = use_online(svc, watch=True)
-    directory, set_directory = ft.use_state(not_fetched)
+    directory, set_directory = ft.use_state(cast(Directory | None, None))
     tries, set_tries = ft.use_state(0)  # Retry and Reload ask again
-    mounted = ft.use_ref(True)  # cleared on unmount: a late answer is then dropped
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the screen gone, so a fetch still running sets nothing."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
+    mounted = use_mounted()  # a late answer is then dropped
 
     @report_errors
     async def load() -> None:
@@ -200,7 +194,7 @@ def CocTool(*, owner: str) -> ft.Control:
             set_directory(lambda last: with_count(last, code, incidents))
 
     review = use_review(on_recorded=counted)
-    posted, set_posted = ft.use_state(not_posted)
+    posted, set_posted = ft.use_state(cast(Posted | None, None))
 
     @report_errors
     async def picked(attendee: Attendee) -> None:
@@ -243,11 +237,6 @@ def CocTool(*, owner: str) -> ft.Control:
     )
 
 
-def not_posted() -> Posted | None:
-    """Return None: nothing recorded by name yet (a typed default)."""
-    return None
-
-
 def find_reason(directory: Directory, words: str, online: bool) -> str | None:
     """Return why Find by name is disabled now, or None once it can search.
 
@@ -259,11 +248,6 @@ def find_reason(directory: Directory, words: str, online: bool) -> str | None:
     if not online:
         return OFFLINE
     return None if directory.status == "loaded" else words
-
-
-def not_fetched() -> Directory | None:
-    """Return None: nothing fetched yet, ``CocTool``'s first state (typed)."""
-    return None
 
 
 def status_words(directory: Directory) -> str:

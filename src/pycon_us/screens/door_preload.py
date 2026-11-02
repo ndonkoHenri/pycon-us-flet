@@ -17,6 +17,7 @@ writes it anywhere (D-56).
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from typing import cast
 
 import flet as ft
 
@@ -89,18 +90,10 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
     view_path = ft.use_view_path()
     svc = use_services()
     prefs = use_prefs()
-    held, set_held = ft.use_state(not_loaded)
+    held, set_held = ft.use_state(cast(Preload | None, None))
     tries, set_tries = ft.use_state(0)  # Retry loads again
-    mounted = ft.use_ref(True)  # cleared on unmount: a late answer is then dropped
     ids = choice.product_ids if choice is not None else ()
     key = (owner, ids, tries)
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the screen gone, so a load still running sets nothing."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
 
     @report_errors
     async def load() -> None:
@@ -112,15 +105,13 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
         @report_errors
         def progress(done: int, total: int) -> None:
             """Show how many sessions' calls have finished."""
-            if mounted.current:
-                set_held(Preload(key, done, total))
+            set_held(Preload(key, done, total))
 
         if svc.api is None:  # the URL went meanwhile; the route's guard follows
             loaded = Loaded(Inventory(), ids)
         else:
             loaded = await load_inventory(svc.api, ids, progress)
-        if mounted.current:
-            set_held(Preload(key, len(ids), len(ids), loaded))
+        set_held(Preload(key, len(ids), len(ids), loaded))
 
     ft.use_effect(load, [owner, ids, tries])  # a change cancels the load running
     preload = (
@@ -133,7 +124,7 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
         # VoiceOver has no live regions: iOS hears "Ready" or "online" this way.
         if not (prefs.announcements and preload.loaded is not None and ids):
             return
-        if mounted.current and is_top_view(page.route, view_path):
+        if is_top_view(page.route, view_path):
             # Sent at once; only the answer, which iOS may never give, is waited for
             # (F276). A failure leaves the line, which shows it all the same.
             with contextlib.suppress(*SERVICE_ERRORS):
@@ -147,11 +138,6 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
         set_tries(lambda last: last + 1)  # the latest try, not this render's
 
     return Preloading(preload, retry)
-
-
-def not_loaded() -> Preload | None:
-    """Return None: nothing loaded yet, ``use_preload()``'s first state (typed)."""
-    return None
 
 
 def status_words(preload: Preload) -> str:

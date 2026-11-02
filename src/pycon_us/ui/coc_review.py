@@ -23,6 +23,7 @@ import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from functools import partial
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -42,6 +43,7 @@ from pycon_us.ui.coc_review_dialog import (
     review_dialog,
     review_of,
 )
+from pycon_us.ui.hooks import use_latest_state
 from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
 
 NO_CONNECTION = "No connection. Nothing was recorded."
@@ -145,16 +147,12 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
     svc = use_services()
     prefs = use_prefs()
     tokens = use_tokens()
-    review, set_state = ft.use_state(not_open)
-    # The review as the handlers left it: a render may not have run between two
-    # events (use_state only schedules one), so Record reads this (#756).
-    latest: MutableRef[Review | None] = ft.use_ref(review)
+    # `latest`, the review as the handlers left it, is what Record reads (#756).
+    review, latest, set_review = use_latest_state(cast(Review | None, None))
     waiting: MutableRef[asyncio.Future[ScanResult] | None] = ft.use_ref(None)
     is_open = review is not None
     field = ft.use_memo(ft.Ref[ft.TextField], [is_open])  # a fresh one each opening
     mounted = ft.use_ref(True)  # cleared on unmount: a late reply then sets nothing
-
-    set_review = partial(keep, latest, set_state)
 
     @report_errors
     def finish(result: ScanResult) -> None:
@@ -269,18 +267,3 @@ def answer(
     future, waiting.current = waiting.current, None
     if future is not None and not future.done():
         future.set_result(result)
-
-
-def keep(
-    latest: MutableRef[Review | None],
-    set_state: Callable[[Review | None], None],
-    value: Review | None,
-) -> None:
-    """Set the review and ``latest`` together, so the next event sees it at once."""
-    latest.current = value
-    set_state(value)
-
-
-def not_open() -> Review | None:
-    """Return None: no review open, the hook's first state (a typed default)."""
-    return None

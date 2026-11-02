@@ -43,6 +43,7 @@ CoC tool does both. The camera area is ``ui/scan_camera.py`` (E1, #726).
 
 from collections.abc import Awaitable, Callable
 from time import monotonic
+from typing import cast
 
 import flet as ft
 
@@ -58,6 +59,7 @@ from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import padded
 from pycon_us.ui.fields import use_field_query
+from pycon_us.ui.hooks import use_mounted
 from pycon_us.ui.queue_sheet import use_queue_sheet
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_camera import CameraUnavailable
@@ -153,20 +155,13 @@ def ScanScreen(
     use_wake_lock()
     cooldown = ft.use_memo(Cooldown, [])  # one per screen: its codes' last accepts
     busy = ft.use_ref(False)  # the handler runs: the single flight
-    shown, set_shown = ft.use_state(no_result)
+    shown, set_shown = ft.use_state(cast(Shown | None, None))
     count = ft.use_ref(0)  # the results so far: no serial comes twice, even cleared
     why_paused = PAUSED_SHEET if sheet.is_open else paused
     # Scanning goes on from the field: no pause, and no View pushed on top (D-438).
     ready = why_paused is None and query.focusable
     was_held = ft.use_ref(False)
-    mounted = ft.use_ref(True)  # cleared on unmount: a late result is then dropped
-
-    @report_errors
-    def unmount() -> None:
-        """Mark the screen gone, so a handler still running stays quiet."""
-        mounted.current = False
-
-    ft.use_effect(lambda: None, [], cleanup=unmount)
+    mounted = use_mounted()  # a late result is then dropped
 
     @report_errors
     async def resume() -> None:
@@ -291,11 +286,6 @@ def ScanScreen(
         ],
         body=ft.ListView(body, expand=True, padding=sides(margin, top=8, bottom=16)),
     )
-
-
-def no_result() -> Shown | None:
-    """Return None: nothing scanned yet, the screen's first state (a typed default)."""
-    return None
 
 
 @ft.component
