@@ -44,11 +44,10 @@ import flet as ft
 from pycon_us.account import use_account
 from pycon_us.core.badges import ScanOutcome
 from pycon_us.core.lead_sponsors import LeadSponsor
-from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open, scans_for_sponsor
+from pycon_us.core.staff_tools import TOOLS, ToolKey, scans_for_sponsor
 from pycon_us.lead_capture import capture
 from pycon_us.lead_list import lead_count
 from pycon_us.locations import is_top_view
-from pycon_us.prefs import use_prefs
 from pycon_us.screens import lead_sponsor, staff_leads
 from pycon_us.screens.lead_consent import LeadConsent
 from pycon_us.services import use_services
@@ -58,7 +57,7 @@ from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.ui.lead_note_sheet import OpenNote, use_note_sheet
 from pycon_us.ui.scan_result import Shown
-from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
+from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, use_tool_allowed
 from pycon_us.ui.staff_picker import Reading, use_arrival
 from pycon_us.ui.tool_controls import context_chip, tool_button
 
@@ -100,14 +99,9 @@ class Read:
 @ft.component
 def LeadScanner() -> ft.Control:
     """The Lead scanner, or its "Not available" state for an account it refuses."""
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.LEAD)
     account = use_account()
     memory = use_services().memory
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.LEAD, account.role_flags)
-    )
     if not allowed:
         return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.LEAD  # plain: Now's card reads it when it renders
