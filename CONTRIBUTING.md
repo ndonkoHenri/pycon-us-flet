@@ -12,7 +12,7 @@ don't need to sign anything or add a sign-off line.
 The docs are large: `docs/decisions.md` alone is over 900 KB. Don't read them through. Before your first PR, read:
 
 1. [`README.md`](README.md): what the project is.
-2. [`docs/development.md` §5.1](docs/development.md#51-from-a-clean-checkout): setup.
+2. [`docs/development.md` §5.1](docs/development.md#51-from-a-clean-mac): setup.
 3. [`AGENTS.md`](AGENTS.md), two short sections: [Principles](AGENTS.md#principles) and
    [Working with Flet](AGENTS.md#working-with-flet).
 4. Six decisions, a few KB in all: non-goals (D-08), code style (D-66), Flet rules (D-70), pull requests (D-92),
@@ -26,15 +26,23 @@ Then read only what your issue cites, and look up the rest when you need it.
 
 ## Look things up
 
-Decisions are binding, and the docs cite them by id. Each one is a single table row, so `grep` finds it:
+Decisions are binding, and the docs cite them by id. Each one is a single table row, so `grep` finds it. Pasting
+into zsh, macOS's default shell, run `setopt interactivecomments` first, or `#` doesn't start a comment
+([§5.1](docs/development.md#51-from-a-clean-mac)):
 
 ```sh
-grep '^| D-87 |' docs/decisions.md                      # one decision (ids below 10 are D-01, D-02, ...)
-grep -n 'D-87\b' docs/decisions.md | cut -c1-160        # what else mentions it
-grep -n -i 'favourites' docs/decisions.md | cut -c1-160 # a topic
-grep '^| F2 |' docs/decisions.md                        # a verified Flet fact
-grep -n 'INFO-03' docs/feature-matrix.md | cut -c1-160  # a feature id
-grep -n '^#' docs/ux.md                                 # a doc's table of contents
+# One decision (ids below 10 are D-01, D-02, ...)
+grep '^| D-87 |' docs/decisions.md
+# What else mentions it
+grep -n 'D-87\b' docs/decisions.md | cut -c1-160
+# A topic
+grep -n -i 'favourites' docs/decisions.md | cut -c1-160
+# A verified Flet fact
+grep '^| F2 |' docs/decisions.md
+# A feature id
+grep -n 'INFO-03' docs/feature-matrix.md | cut -c1-160
+# A doc's table of contents
+grep -n '^#' docs/ux.md
 ```
 
 A row's first words say when a later decision amends it; a struck-through part no longer applies.
@@ -49,8 +57,8 @@ A row's first words say when a later decision amends it; a struck-through part n
 
 ## Set up
 
-Fork the repo, then follow [`docs/development.md` §5.1](docs/development.md#51-from-a-clean-checkout) with your fork
-in place of its first line:
+Fork the repo, then follow [`docs/development.md` §5.1](docs/development.md#51-from-a-clean-mac) with your fork in
+place of its first line:
 
 ```sh
 gh repo fork ndonkoHenri/pycon-us-flet --clone && cd pycon-us-flet
@@ -74,10 +82,15 @@ say so in your PR, and a maintainer checks iOS.
 
 ## Run the checks
 
+In zsh, the same `setopt interactivecomments` comes first:
+
 ```sh
-tools/check.sh          # the full checks: lockfile, ruff, formatting, pyright, pytest
-tools/check.sh --fast   # the same without pytest; the pre-push hook runs this
-uv run pytest tests/test_about.py   # one test file, while you work
+# The full checks: lockfile, ruff, formatting, pyright, pytest
+tools/check.sh
+# The same without pytest; the pre-push hook runs this
+tools/check.sh --fast
+# One test file, while you work
+uv run pytest tests/test_about.py
 ```
 
 The pre-push hook is the `git config core.hooksPath .githooks` line in §5.1. Run the full checks before you ask for
@@ -116,7 +129,7 @@ maintainers, not for you:
 
 | In AGENTS.md | For you |
 |---|---|
-| [Read first](AGENTS.md#read-first) (`PLAN.md`, the whole decisions file) | The short list above is enough. |
+| [Read first](AGENTS.md#read-first) (`PLAN.md`, the decisions for your area, the area's docs) | The short list above is enough. |
 | [Rules for AI agents](AGENTS.md#rules-for-ai-agents), including the signature line and acting only in this repository (D-212) | Doesn't apply. You can take part in Flet's own repositories as you like. |
 | [Reviews and merging](AGENTS.md#reviews-and-merging): the merge gate, second opinions, agents merging their own PRs | Maintainers do this. You get a review and a merge, or a reason. |
 | [Project board](AGENTS.md#project-board), and settling decisions in `docs/decisions.md` | Maintainers do this. |

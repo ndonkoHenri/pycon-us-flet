@@ -35,7 +35,7 @@ From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 <!--
 - Second opinion (D-100): required for more than 400 changed lines, architecture changes or edits to
   docs/decisions.md. Name the model, link the PR comment that summarises its findings and what changed, or write
-  "Not required" with the reason.
+  "Not required" with the reason, or "Owed (capped), D-458" when the reviewer is capped.
 - Copilot, when requested (`gh pr edit <n> --add-reviewer @copilot`; paused while the repo is private, D-273): it
   doesn't replace the second opinion; each comment is fixed or answered on its thread with the reason.
 -->
@@ -50,7 +50,7 @@ From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 - [ ] Runs on Android and iOS, with screenshots (UI or native changes).
 - [ ] Accessible: labels, contrast, 200 % text, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated in this PR when behaviour or decisions changed.
-- [ ] Second opinion done when required; every review comment fixed or answered with a reason.
+- [ ] Second opinion done when required, or owed under D-458; every review comment fixed or answered with a reason.
 - [ ] I re-read the whole final diff.
 
 ## Follow-ups

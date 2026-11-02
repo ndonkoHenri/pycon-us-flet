@@ -5,7 +5,7 @@
 #   LINK   the link's scheme and host, given to the run (`-e LINK=confcompanion://app`).
 #          Default: the one below, which must equal `[tool.flet.deep_linking]` in
 #          pyproject.toml; tests/test_deep_link_flow.py checks that it does, so a
-#          rename there (O-4, #15) fails the check rather than this flow.
+#          rename there fails the check rather than this flow.
 #
 # The first link on a simulator asks "Open in …?" (F31): tap Open when it shows.
 appId: io.github.ndonkohenri.confcompanion
