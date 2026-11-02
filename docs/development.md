@@ -436,17 +436,20 @@ The first build also makes Gradle fetch what is still missing (on this Mac, `pla
 **3. iOS.** `flet devices` and `flet emulators` require the Android SDK even with `ios` (`CLI/commands/devices.py:82`, `CLI/commands/emulators.py:102`), so on an iOS-only Mac list simulators with `xcrun` instead. `flet debug ios` itself asks only for Flutter (`CLI/commands/build_base.py:938`).
 
 ```bash
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 sudo xcodebuild -license accept
-xcodebuild -runFirstLaunch
+sudo xcodebuild -runFirstLaunch
 xcodebuild -downloadPlatform iOS
 xcrun simctl list devices available
 xcrun simctl boot <simulator udid>
-open -a Simulator
+open -a DeviceHub
 export LANG=en_US.UTF-8
 uv run flet debug ios -d <simulator udid>
 ```
 
-- The three `xcodebuild` lines are **unverified**: this Mac's Xcode was set up long ago. Without `LANG`, CocoaPods warns.
+- `xcode-select` comes first because a Mac that got git from `xcode-select --install` stays on the Command Line Tools after Xcode is installed; there `xcodebuild` stops with "requires Xcode" and `xcrun` can't find `simctl`.
+- The `xcode-select` line and the three `xcodebuild` lines are **unverified**: this Mac's Xcode was set up long ago. Without `LANG`, CocoaPods warns.
+- Xcode 27 has Device Hub in place of the Simulator app, so `open -a` no longer finds the old name.
 - A fresh Xcode downloads its own current runtime, which may not be the iOS 26.5 all our checks ran on (§5.5).
 - Simulators need no Apple account; a phone needs the signing setup of §8.2.
 
@@ -541,7 +544,7 @@ Notes:
 |---|---|
 | List connected devices | `uv run flet devices [android\|ios]` (USB and wireless; `--device-connection attached\|wireless`) |
 | Android emulators | `uv run flet emulators`; `uv run flet emulators start <name> [--cold]`; `uv run flet emulators create <name>` |
-| iOS simulators | `xcrun simctl list devices available` for the udids; `xcrun simctl boot <udid>` and `open -a Simulator`, then `flet debug ios -d <udid>`. A simulator that a build left shut down comes back with `xcrun simctl boot <udid>`. Simulator builds need no signing. |
+| iOS simulators | `xcrun simctl list devices available` for the udids; `xcrun simctl boot <udid>` and `open -a DeviceHub`, then `flet debug ios -d <udid>`. A simulator that a build left shut down comes back with `xcrun simctl boot <udid>`. Simulator builds need no signing. |
 | Install an APK over the previous build | `adb install -r build/apk/pycon-us.apk`, then `adb shell am force-stop io.github.ndonkohenri.pyconus` before launching, so the update is judged from a cold start: a process still running from the old build keeps its old state until it stops. On the Android 16 emulator the install ended the running app both times it was tried (#53); the force-stop makes that certain. |
 | Android Python log | `adb logcat -s flet.python` (`-d` dumps the buffer, `-c` clears it) |
 | iOS simulator Python log | `xcrun simctl spawn booted log stream --style compact --predicate 'sender == "dart_bridge"'` |
