@@ -5,31 +5,25 @@ import pytest
 
 from pycon_us import config
 from pycon_us.config import load_year
-from pycon_us.year_tracks import TRACK_GROUPS, TrackFormat
+from pycon_us.year_tracks import TRACK_GROUPS
 
 YEARS = sorted(
     int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
 )
 
 
-@pytest.mark.parametrize(
-    ("fmt", "expected"),
-    [
-        ("short", "AI"),
-        ("plural", "Future of AI with Python"),
-        ("long", "The Future of AI with Python"),
-    ],
-)
-def test_track_name_formats(fmt: TrackFormat, expected: str) -> None:
-    """``track_name`` gives the AI track's short, plural and long names."""
-    assert load_year(2026).conference.track_name("Ai", fmt) == expected
+def test_track_name_is_the_short_name_and_the_plural_stays_on_the_track() -> None:
+    """``track_name`` says "AI"; the AI track itself holds the title of its list."""
+    conference = load_year(2026).conference
+    assert conference.track_name("Ai") == "AI"
+    assert conference.track("Ai").plural == "Future of AI with Python"
 
 
 def test_security_keeps_its_track_title() -> None:
     """Security's short name is its key and its plural is its track's title."""
     conference = load_year(2026).conference
     assert conference.track_name("Security") == "Security"
-    assert conference.track_name("Security", "plural") == "Trailblazing Python Security"
+    assert conference.track("Security").plural == "Trailblazing Python Security"
 
 
 def test_2026_registry_names_every_processed_track() -> None:
@@ -54,16 +48,16 @@ def test_2026_registry_names_every_processed_track() -> None:
     }
 
 
-def test_track_name_defaults_to_short() -> None:
-    """``track_name`` without a format gives the short name, "Lightning talks"."""
+def test_track_name_is_not_the_key() -> None:
+    """``track_name`` gives the display name "Lightning talks", not the key."""
     assert load_year(2026).conference.track_name("Lightning-talks") == "Lightning talks"
 
 
-@pytest.mark.parametrize("fmt", ["short", "plural", "long"])
-def test_unknown_track_falls_back_to_its_humanised_key(fmt: TrackFormat) -> None:
+def test_unknown_track_falls_back_to_its_humanised_key() -> None:
     """A track the registry lacks is named by its humanised key, in a known group."""
     conference = load_year(2026).conference
-    assert conference.track_name("Hallway-track", fmt) == "Hallway track"
+    assert conference.track_name("Hallway-track") == "Hallway track"
+    assert conference.track("Hallway-track").plural == "Hallway track"
     assert conference.track("Hallway-track").group in TRACK_GROUPS
 
 

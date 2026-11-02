@@ -777,7 +777,7 @@ Rendered with `ft.Markdown(value, selectable=True, extension_set=ft.MarkdownExte
 
 ### 7.8 Names and slugs (`core/slugs.py`)
 
-Track display names (`short`, `plural`, `long`) and clean URL slugs (`ai`, `lightning-talks`; not Ionic's `ais`) come from the `[[tracks]]` table of `conference.toml`, with a humanised fallback (DATA-28, DATA-29). Three normalisers are copied exactly from Ionic because data keys depend on them: `slugify_room` (lower-case, `[^a-z0-9]+` → `-`, strip `-`), `normalize_room_key` (drop `room\s+`, keep `[a-z0-9]`; keys the pins) and `sponsor_slug` (lower-case, `\s+` → `-`, drop `[^a-z0-9-]`; JavaScript's `\s` spelled out, nothing trimmed, so `Qube Research & Technologies` is `qube-research--technologies`; built in #373, D-261). Beside them, `semantics_key()` makes a semantics identifier's key the same way as `slugify_room` (decisions §M); it lives here, with no Flet, so the year-data loader can check that two PSF labels give two identifiers (D-283).
+Track display names (`short`, `plural`) and clean URL slugs (`ai`, `lightning-talks`; not Ionic's `ais`) come from the `[[tracks]]` table of `conference.toml`, with a humanised fallback (DATA-28, DATA-29). Three normalisers are copied exactly from Ionic because data keys depend on them: `slugify_room` (lower-case, `[^a-z0-9]+` → `-`, strip `-`), `normalize_room_key` (drop `room\s+`, keep `[a-z0-9]`; keys the pins) and `sponsor_slug` (lower-case, `\s+` → `-`, drop `[^a-z0-9-]`; JavaScript's `\s` spelled out, nothing trimmed, so `Qube Research & Technologies` is `qube-research--technologies`; built in #373, D-261). Beside them, `semantics_key()` makes a semantics identifier's key the same way as `slugify_room` (decisions §M); it lives here, with no Flet, so the year-data loader can check that two PSF labels give two identifiers (D-283).
 
 ### 7.9 Change log (`core/diff.py`; D-47, NEW-04, P2)
 
@@ -841,7 +841,6 @@ longitude = -118.191722
 key = "Ai"                  # as produced by feed processing: the kind, first letter upper-cased
 short = "AI"
 plural = "Future of AI with Python"
-long = "The Future of AI with Python"
 icon = "MEMORY_OUTLINED"    # an outlined ft.Icons name (D-27); colours stay in the theme tokens (D-24, D-25)
 group = "talks"             # filter-sheet group: talks | hands-on | community | logistics
 slug = "ai"                 # its page, /more/tracks/ai: written out, never derived (DATA-29, D-199)
