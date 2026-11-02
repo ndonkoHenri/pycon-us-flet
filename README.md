@@ -79,7 +79,7 @@ come from Flet are listed in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps
 
 ## Running it
 
-[`docs/development.md`, section 5.1](docs/development.md#51-from-a-clean-checkout) goes from a clean checkout to the
+[`docs/development.md`, section 5.1](docs/development.md#51-from-a-clean-mac) goes from a clean checkout to the
 app on an emulator or simulator. You need git and [uv](https://docs.astral.sh/uv/); Android also needs an emulator or a
 phone, and iOS needs a Mac with Xcode. The tests need no device. While the repository is private, cloning it needs
 access to it.
