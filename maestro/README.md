@@ -1,6 +1,6 @@
 # Maestro flows
 
-Device flows for the packaged app (`io.github.ndonkohenri.pyconus`), run with the free,
+Device flows for the packaged app (`io.github.ndonkohenri.confcompanion`), run with the free,
 local [Maestro](https://maestro.dev) CLI on an Android emulator and an iOS simulator,
 from one set of YAML files (D-252, #348). They check P1's exit journeys (PLAN §7,
 criteria 1 and 2) and repeat regression trials such as #346's fling after the filter
@@ -215,7 +215,7 @@ unless every trial moved inside the window and every tap reached the button. Com
 ### Deep links
 
 `journeys/deep_links.yaml` opens each link through `subflows/open_link.yaml`, which joins
-`LINK` (the scheme and host) and the route path. With no `LINK` it uses `pyconus://app`,
+`LINK` (the scheme and host) and the route path. With no `LINK` it uses `confcompanion://app`,
 which must equal `[tool.flet.deep_linking]` in `pyproject.toml` (D-269):
 `tests/test_deep_link_flow.py` checks it, so when O-4 (#15) renames the scheme the check
 fails, not the flow. To try a build with other values before that default changes, give
@@ -491,8 +491,8 @@ feed URL before its first launch: SharedPreferences are the app container's own
 
 ```bash
 xcrun simctl install <udid> build/ios-simulator/pycon-us.app
-data=$(xcrun simctl get_app_container <udid> io.github.ndonkohenri.pyconus data)
-xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.ndonkohenri.pyconus" \
+data=$(xcrun simctl get_app_container <udid> io.github.ndonkohenri.confcompanion data)
+xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.ndonkohenri.confcompanion" \
   flutter.pycon.dev -string '{"feed_url": "http://127.0.0.1:9/conference-2026.json"}'
 ```
 

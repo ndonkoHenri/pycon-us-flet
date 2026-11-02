@@ -4,7 +4,7 @@
 # from the card, "Thanks to NVIDIA, a Visionary sponsor" (scripts/spotlight_name.js),
 # and expects that sponsor's page, /now/sponsor/<slug> (D-17). Back leaves that one
 # View, and Now shows the same card.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Now, the sponsor spotlight, its sponsor, then Back to Now
 tags:
   - journeys

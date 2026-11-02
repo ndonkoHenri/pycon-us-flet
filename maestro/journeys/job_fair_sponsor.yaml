@@ -3,7 +3,7 @@
 # Bloomberg is at job fair table T2. Its row (map.table.bloomberg) pushes
 # /map/sponsor/bloomberg on the Map; Back leaves that one View, and the Job fair pane
 # shows the same row again.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Map, Job fair, a sponsor, then Back to the pane
 tags:
   - journeys

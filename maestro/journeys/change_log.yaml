@@ -30,7 +30,7 @@
 # Not airplane mode, unlike the other journeys: it would cut the emulator's way to the
 # laptop too. The launch's own refresh may publish the year's live feed; the feed URL
 # change then deletes it and the log (D-255).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: A moved saved session from a feed pair, through the change log
 tags:
   - feed_pair

@@ -59,7 +59,7 @@ Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]`
 ```toml
 # pyproject.toml (P2-24, #384). Placeholders until the app identity (O-4, #15).
 [tool.flet.deep_linking]
-scheme = "pyconus"
+scheme = "confcompanion"
 host = "app"
 ```
 

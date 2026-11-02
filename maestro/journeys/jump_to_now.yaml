@@ -6,7 +6,7 @@
 # 2:00 PM slot back at the top, and on iOS the button goes. A flet test flow could not
 # check this: it can neither fling nor read where a list rests (testing-and-quality.md
 # §5.4).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Jump to now lands on the now slot
 tags:
   - journeys

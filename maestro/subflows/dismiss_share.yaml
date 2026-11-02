@@ -3,7 +3,7 @@
 # region (PopoverDismissRegion) in both orientations, and a tap on it beside the sheet
 # closes it: on the right, mid-height, since a tap near the left edge of an iPhone in
 # landscape left it open. A sheet with a close button ("Close") is closed with it.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

@@ -4,7 +4,7 @@
 # the fold on a phone, so the flow scrolls to it. A tap pushes its page,
 # /more/sponsors/sponsor/capital-one (D-17); Back leaves that one View, and the list
 # shows the same card again.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: More, Sponsors, a sponsor, then Back to the list
 tags:
   - journeys

@@ -4,7 +4,7 @@
 # At Friday 14:10 Now lists the panel (session 123) as happening now; it is in Grand
 # Ballroom B alone, on the Upper level plan, so session detail shows the room's card
 # (D-349). Offline (start_offline.yaml): the pins and plans are bundled (map.toml).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: A session, its room's floor plan, Back
 tags:
   - journeys

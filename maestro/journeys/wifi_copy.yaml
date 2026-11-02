@@ -7,7 +7,7 @@
 # iOS and on Android before 13; Android 13 and later confirms every copy itself, so
 # there the flow only checks that no failure is said (D-263). That the clipboard holds
 # the password is read outside the flow: `xcrun simctl pbpaste <udid>` on a simulator.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: More, Wi-Fi, Copy password
 tags:
   - journeys
