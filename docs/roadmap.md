@@ -199,7 +199,7 @@ feature, area:data · after P0-01 · DATA-34, DATA-14, DATA-28
 
 - No year, date or URL is hard-coded outside the data files.
 - A malformed file fails naming the file, key and problem; a test loads every year.
-- `track_name(key, fmt)` covers `short`, `plural` and `long`.
+- `track_name(key)` gives the short name; the track also holds its `plural`.
 
 #### P0-09 · Add the clock and conference-local time formatting
 

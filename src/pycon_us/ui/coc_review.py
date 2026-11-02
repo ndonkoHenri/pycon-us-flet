@@ -19,7 +19,6 @@ never stored, never logged, and gone when it closes.
 """
 
 import asyncio
-import contextlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from functools import partial
@@ -35,7 +34,6 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.theme import use_tokens
 from pycon_us.ui.coc_review_dialog import (
     DialogActions,
@@ -44,7 +42,7 @@ from pycon_us.ui.coc_review_dialog import (
     review_of,
 )
 from pycon_us.ui.hooks import use_latest_state
-from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
+from pycon_us.ui.semantics import announce
 
 NO_CONNECTION = "No connection. Nothing was recorded."
 MAYBE_RECORDED = (
@@ -216,9 +214,7 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
         # VoiceOver has no live regions: iOS hears the problem this way.
         if not (problem and prefs.announcements and mounted.current):
             return
-        with contextlib.suppress(*SERVICE_ERRORS, TimeoutError):
-            said = svc.semantics.announce_message(problem)
-            await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
+        await announce(svc.semantics, problem)
 
     ft.use_effect(say, [problem])
 

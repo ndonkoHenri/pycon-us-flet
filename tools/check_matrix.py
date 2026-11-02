@@ -43,7 +43,7 @@ GROUPS = ("catalog", "NEW")
 
 _CELL_SPLIT = re.compile(
     r"(?<!\\)\|"
-)  # a cell may hold an escaped pipe, as in 'short'\|'long'
+)  # a cell may hold an escaped pipe, as in str\|int
 _SECTION = re.compile(r"^### (\S+) · ")
 _SECTION_ROWS = re.compile(r"^(\d+) rows? · ")
 _NEW_ID = re.compile(r"^NEW-\d\d$")

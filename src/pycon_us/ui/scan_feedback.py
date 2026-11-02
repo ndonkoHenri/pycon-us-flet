@@ -5,11 +5,11 @@ ux.md §7.2's haptics and spoken columns, and a screen that stays awake (#724):
 - ``buzz()`` gives an outcome's haptics (``HAPTICS``): accepted and queued a light
   impact, a duplicate two medium ones, a denial a heavy one then a vibration, a code
   that is not a badge none; CoC's incident recorded a light impact, not recorded none.
-- ``announce()`` says it where the platform takes announcements (``Prefs.announcements``,
-  iOS): politely, assertively for a duplicate or a denial. There the result panel is no
-  live region, so the result is said once; elsewhere (Android, where Flutter reports
-  no announcements, F13) the panel's live region says it (D-241, D-420). Its answer
-  is awaited at most ``ANNOUNCE_WAIT_S``: iOS never gives one under VoiceOver (F276).
+- ``announce_result()`` says it where the platform takes announcements
+  (``Prefs.announcements``, iOS): politely, assertively for a duplicate or a denial.
+  There the result panel is no live region, so the result is said once; elsewhere
+  (Android, where Flutter reports no announcements, F13) the panel's live region says
+  it (D-241, D-420). ``ui/semantics.py``'s ``announce()`` caps the wait for its answer.
 - ``use_wake_lock()`` keeps the screen on while the calling screen is mounted and
   the app is in the foreground, and lets it sleep again in the background and on
   unmount.
@@ -27,6 +27,7 @@ from pycon_us.core.badges import ScanOutcome, ScanResult
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import SERVICE_ERRORS
+from pycon_us.ui.semantics import announce
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,6 @@ ASSERTIVE = frozenset({ScanOutcome.DUPLICATE, ScanOutcome.DENIED})
 GAP_S = 0.15
 """Seconds between two effects, so a duplicate's two pulses are felt as two."""
 
-ANNOUNCE_WAIT_S = 0.5
-"""How long an announcement is awaited. iOS never answers one while its accessibility
-bridge runs (VoiceOver on, or a UI test), so Flet's call would wait forever and hold
-the scan screen's single flight: every later scan was dropped (F276, U256)."""
-
 
 async def buzz(haptics: ft.HapticFeedback, outcome: ScanOutcome) -> None:
     """Give an outcome's haptics (``HAPTICS``).
@@ -76,7 +72,7 @@ async def buzz(haptics: ft.HapticFeedback, outcome: ScanOutcome) -> None:
             return
 
 
-async def announce(semantics: ft.SemanticsService, result: ScanResult) -> None:
+async def announce_result(semantics: ft.SemanticsService, result: ScanResult) -> None:
     """Say a result through the platform's announcements (iOS; ``ASSERTIVE``).
 
     Call it only where ``Prefs.announcements`` is true: the panel is then no live
@@ -91,14 +87,7 @@ async def announce(semantics: ft.SemanticsService, result: ScanResult) -> None:
         if result.outcome in ASSERTIVE
         else ft.Assertiveness.POLITE
     )
-    said = semantics.announce_message(result.spoken, assertiveness=assertiveness)
-    try:
-        # Sent at once; only the answer, which iOS may never give, is waited for.
-        await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
-    except TimeoutError:
-        logger.debug("No answer to the scan's announcement (F276)")
-    except SERVICE_ERRORS:  # the panel shows it all the same
-        logger.warning("Could not announce the scan's result", exc_info=True)
+    await announce(semantics, result.spoken, assertiveness=assertiveness)
 
 
 async def keep_awake(svc: Services) -> None:
