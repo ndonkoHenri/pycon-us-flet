@@ -64,7 +64,7 @@ from pycon_us.ui.session_rows import (
     use_recent_changes,
     use_session_views,
 )
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList
+from pycon_us.ui.states import NoDataState
 from pycon_us.ui.status_strip import StatusStrip, use_minute
 from pycon_us.ui.widths import LIST, sides, use_margin
 
@@ -102,34 +102,15 @@ def Now() -> ft.View:
     def toggle(key: str) -> None:
         set_opened(opened ^ {key})
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     row = partial(_row, by_id, info, favorites.ids, changes, on_toggle, tokens)
     fold = partial(folded, saved=favorites.ids, opened=opened, toggle=toggle)
 
     rows: list[ft.Control]
-    if data is None and conference.problem is None:
-        # The first fetch runs, or is about to (NEW-03); the strip says so.
+    if data is None:
         rows = [
-            StatusStrip(auto_refresh=True),
+            StatusStrip(auto_refresh=True),  # its bar shows the first fetch and a retry
             ScanCard(),  # staff work needs no schedule
-            SkeletonList("Loading schedule"),
-        ]
-    elif data is None:
-        rows = [
-            StatusStrip(auto_refresh=True),  # its bar shows a retry
-            ScanCard(),
-            EmptyState(
-                "Can't load the schedule",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,
-                identifier=f"{SCREEN}.no_data",
-            ),
+            NoDataState(conference, svc, f"{SCREEN}.no_data"),
         ]
     else:
         now = clock.now()

@@ -47,7 +47,7 @@ from pycon_us.ui.session_rows import (
     use_recent_changes,
     use_session_views,
 )
-from pycon_us.ui.states import NO_DATA_BODY, EmptyState, SkeletonList, not_found
+from pycon_us.ui.states import EmptyState, NoDataState, not_found
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_tracks import Track
 
@@ -107,10 +107,6 @@ def TrackDetail(slug: str) -> ft.View:
         lambda: shared_badges(track, days) if track else frozenset[str](), [days]
     )
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     if track is None:
         return AppScaffold(
             title="Not found",
@@ -132,20 +128,8 @@ def TrackDetail(slug: str) -> ft.View:
     items: list[ft.Control] = [
         intro(track, tokens, spanish=SPANISH in shared, large_text=prefs.time_above)
     ]
-    if data is None and conference.problem is None:
-        items.append(SkeletonList())  # the first fetch runs (NEW-03)
-    elif data is None:
-        items.append(
-            EmptyState(
-                "Can't load the schedule",
-                icon=ft.Icons.CLOUD_OFF_OUTLINED,
-                body=NO_DATA_BODY[conference.problem or "offline"],
-                action="Try again",
-                on_action=refresh,
-                disabled=conference.refreshing,  # in place, so focus stays (D-182)
-                identifier=f"{SCREEN}.no_data",
-            )
-        )
+    if data is None:
+        items.append(NoDataState(conference, svc, f"{SCREEN}.no_data"))
     elif not days:
         items.append(
             EmptyState(

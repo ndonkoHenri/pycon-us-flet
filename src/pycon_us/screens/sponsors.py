@@ -148,20 +148,9 @@ def Sponsors() -> ft.View:
     conference = use_conference()
     data = conference.data
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     items: list[ft.Control] = [StatusStrip()]
     if data is None:
-        items.append(
-            NoDataState(
-                conference.problem,
-                on_retry=refresh,
-                retrying=conference.status(svc.year.conference) == "refreshing",
-                identifier=f"{SCREEN}.no_data",
-            )
-        )
+        items.append(NoDataState(conference, svc, f"{SCREEN}.no_data"))
     elif not data.sponsor_levels:
         items.append(
             EmptyState(

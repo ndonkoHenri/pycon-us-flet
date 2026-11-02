@@ -126,10 +126,6 @@ def MySchedule() -> ft.View:
     changes = use_recent_changes()
 
     @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
-    @report_errors
     def browse() -> None:
         page.navigate("/schedule")
 
@@ -157,14 +153,7 @@ def MySchedule() -> ft.View:
             )
         ]
     elif agenda is None or data is None:
-        content = [
-            NoDataState(
-                conference.problem,
-                on_retry=refresh,
-                retrying=conference.status(info) == "refreshing",
-                identifier=f"{SCREEN}.no_data",
-            )
-        ]
+        content = [NoDataState(conference, svc, f"{SCREEN}.no_data")]
     elif not agenda.days and saved:  # saved, but no longer in the feed (D-172)
         content = [
             EmptyState(

@@ -96,22 +96,11 @@ def OpenSpaces() -> ft.View:
     # The badge every row would repeat; one object, so the day lists still skip.
     omit = ft.use_memo(lambda: frozenset({info.track_name(TRACK)}), [])
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
     url = copy.propose_url if copy else ""
     actions = [propose_button(url, svc)] if url else None
     if data is None:
         body: ft.Control = ft.ListView(
-            [
-                NoDataState(
-                    conference.problem,
-                    on_retry=refresh,
-                    retrying=conference.status(info) == "refreshing",
-                    identifier=f"{SCREEN}.no_data",
-                )
-            ],
+            [NoDataState(conference, svc, f"{SCREEN}.no_data")],
             expand=True,
             padding=sides(margin),
         )
