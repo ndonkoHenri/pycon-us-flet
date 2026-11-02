@@ -8,7 +8,9 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import icalendar
 import pytest
+from ical.calendar_stream import IcsCalendarStream
 
 from pycon_us import APP_NAME
 from pycon_us.core.ics import (
@@ -300,9 +302,8 @@ def agenda(year: int, monkeypatch: pytest.MonkeyPatch) -> tuple[bytes, list[tupl
     return calendar_file(sessions, year=year, now=NOW), [shown(s) for s in sessions]
 
 
-# The two parser tests below are D-268's independent check. The parsers are not
-# dependencies, so CI skips them; run them with
-#   uv run --with icalendar==7.3.0 --with ical==14.3.0 pytest tests/test_ics.py
+# The two parser tests below are D-268's independent check: readers we didn't write, so
+# a misreading of RFC 5545 that core/ics.py shares with the tests above can't hide.
 
 
 @pytest.mark.parametrize("year", YEARS)
@@ -310,7 +311,6 @@ def test_icalendar_reads_every_session_back(
     year: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """``icalendar`` parses a whole agenda: each event and alarm reads back unchanged."""
-    icalendar = pytest.importorskip("icalendar")
     file, expected = agenda(year, monkeypatch)
     calendar = icalendar.Calendar.from_ical(file)
     events = calendar.walk("VEVENT")
@@ -340,9 +340,8 @@ def test_ical_reads_every_session_back(
     year: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The stricter ``ical`` parses a whole agenda: each event reads back unchanged."""
-    stream = pytest.importorskip("ical.calendar_stream")
     file, expected = agenda(year, monkeypatch)
-    calendar = stream.IcsCalendarStream.calendar_from_ics(file.decode())
+    calendar = IcsCalendarStream.calendar_from_ics(file.decode())
     assert calendar.prodid == f"-//{ODD_NAME}//EN"
     read = [
         (e.summary, e.location, e.description, e.dtstart, e.dtend)
