@@ -3,7 +3,7 @@
 # slot at the top. regression/fling_after_sheet.yaml runs it first; tools/fling_after_sheet.py
 # runs it on its own (`maestro test`), then drives the trials through adb, so it leaves
 # airplane mode on: the flow's onFlowComplete, or the driver, turns it off.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     file: start_offline.yaml

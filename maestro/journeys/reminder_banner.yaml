@@ -11,7 +11,7 @@
 #   it away.
 # Settings' Reminders section is reminder_settings.yaml's (#449): a packaged build has
 # E3, so the interim's sentence, which this flow checked until then, never shows there.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: The reminder Banner on the fake clock
 tags:
   - journeys

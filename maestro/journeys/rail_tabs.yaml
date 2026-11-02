@@ -6,7 +6,7 @@
 # rail by its destination's name (subflows/tab.yaml) and shows no bar; a session pushed
 # from Now, the filter sheet, a SnackBar with Undo, and About this app pushed from More
 # come on the way, with a screenshot of each to look at for the content widths (D-305).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: The rail's five tabs, and no rail on a pushed View
 tags:
   - tablet

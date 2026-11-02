@@ -68,7 +68,7 @@ def test_one_sessions_file_is_pinned_byte_for_byte() -> None:
         b"VERSION:2.0\r\n"
         b"PRODID:-//Conf Companion//EN\r\n"
         b"BEGIN:VEVENT\r\n"
-        b"UID:2026-101@conf-companion.invalid\r\n"
+        b"UID:2026-101@confcompanion.ndonkohenri.github.io\r\n"
         b"DTSTAMP:20260501T120000Z\r\n"
         b"DTSTART:20260516T001500Z\r\n"
         b"DTEND:20260516T004500Z\r\n"
@@ -176,12 +176,14 @@ def test_uids_are_the_same_across_two_loads_and_unique(year: int) -> None:
 def test_a_uid_names_the_year_and_keeps_out_spaces_and_commas() -> None:
     """A ``UID`` is ``<year>-<id>@<domain>``, a synthetic id percent-encoded."""
     data = processed(2026)
-    assert values(one(data, "142"), "UID") == ["2026-142@conf-companion.invalid"]
+    assert values(one(data, "142"), "UID") == [
+        "2026-142@confcompanion.ndonkohenri.github.io"
+    ]
     (uid,) = values(one(data, COLLAPSED), "UID")
     assert uid.startswith("2026-break-Room%20103ABC%2C%20Room%20104AB%2C")
-    assert uid.endswith("-07%3A00@conf-companion.invalid")
+    assert uid.endswith("-07%3A00@confcompanion.ndonkohenri.github.io")
     file = calendar_file([data.sessions["142"]], year=2027, now=NOW)
-    assert values(file, "UID") == ["2027-142@conf-companion.invalid"]
+    assert values(file, "UID") == ["2027-142@confcompanion.ndonkohenri.github.io"]
 
 
 @pytest.mark.parametrize("session_id", [COLLAPSED, "poster-detail-60"])
@@ -240,10 +242,10 @@ def test_the_agenda_order_is_the_schedules() -> None:
     ids = ["218", "51", "142", "196"]  # 196 is days earlier; the rest share 10:30
     file = calendar_file([data.sessions[i] for i in ids], year=2026, now=NOW)
     assert values(file, "UID") == [
-        "2026-196@conf-companion.invalid",
-        "2026-142@conf-companion.invalid",  # Grand Ballroom A
-        "2026-51@conf-companion.invalid",  # Grand Ballroom B
-        "2026-218@conf-companion.invalid",  # Room 201A
+        "2026-196@confcompanion.ndonkohenri.github.io",
+        "2026-142@confcompanion.ndonkohenri.github.io",  # Grand Ballroom A
+        "2026-51@confcompanion.ndonkohenri.github.io",  # Grand Ballroom B
+        "2026-218@confcompanion.ndonkohenri.github.io",  # Room 201A
     ]
 
 

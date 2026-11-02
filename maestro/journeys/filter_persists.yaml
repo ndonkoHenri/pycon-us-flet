@@ -4,7 +4,7 @@
 # list, and the 2:00 PM slot loses its AI talk (session 138) but keeps The Bakery
 # (session 30). After the app is closed and opened again, the Schedule still hides AI
 # and still says so, and the sheet still has AI off.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: A hidden track stays visible on the Schedule and survives a relaunch
 tags:
   - journeys

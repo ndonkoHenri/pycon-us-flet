@@ -9,14 +9,14 @@
 # - The switch on: the 5 · 10 · 15 min lead shows at 10; pick 15. On Android, where
 #   Alarms & reminders is off for a fresh install, its card shows; never on iOS. (On
 #   an emulator where it was allowed, `pm clear` keeps it; reset it first with
-#   `adb shell cmd appops set --uid io.github.ndonkohenri.pyconus SCHEDULE_EXACT_ALARM default`.)
+#   `adb shell cmd appops set --uid io.github.ndonkohenri.confcompanion SCHEDULE_EXACT_ALARM default`.)
 # - A relaunch: the switch still on, 15 still picked. A segment says it is picked as
 #   `selected` on both platforms; the switch row is Android's `checked` and iOS's
 #   value "1".
 # - My schedule › More options › Reminder settings: Settings over My schedule; Back
 #   returns to My schedule.
 # - The switch off again, so a second run starts the same way.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Session reminders at 15 min, held after a relaunch
 tags:
   - journeys

@@ -12,7 +12,7 @@
 # http://localhost:8000 from the iOS simulator (`-e MOCK_URL=...` for another port).
 # The mock's seed and fake data only.
 # Each run records two incidents in the mock's memory, so the counts grow run by run.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: CoC incident, clear after 15 s and in the background, email hidden
 tags:
   - staff

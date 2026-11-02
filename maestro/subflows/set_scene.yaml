@@ -9,7 +9,7 @@
 # The first Refresh now only lets the launch's own refresh end: a Refresh now joins a
 # running refresh, which keeps the URL it started with (D-223, D-244). Developer is then
 # opened afresh, so the second Refresh now's words are its own.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow: open_developer.yaml
 - scrollUntilVisible:

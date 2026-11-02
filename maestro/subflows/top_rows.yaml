@@ -3,7 +3,7 @@
 # screen, in order. regression/fling_after_sheet.yaml reads them after each control and
 # each trial: a trial ended near where a full fling ends when its top row is among a
 # control's rows, or the control's top row among its own (scripts/record_fling.js).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow: top_slot.yaml
 - evalScript: ${output.topRows = [output.topRow]}

@@ -6,7 +6,7 @@
 # last flow left it (no clearState): run sponsors_offline_logos.yaml (or any journey)
 # at the default size first, then set the largest text and relaunch through this flow
 # (maestro/README.md, "Large text").
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: The sponsor and job pages at the largest text
 tags:
   - large_text

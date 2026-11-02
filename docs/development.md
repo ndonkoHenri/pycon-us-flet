@@ -180,8 +180,9 @@ dev = [                               # host only, never bundled; versions in uv
 
 # ------------------------------------------------------------------ flet build
 [tool.flet]
-product = "Conf Companion"            # display name: neutral placeholder until O-4 (D-36)
-bundle_id = "io.github.ndonkohenri.pyconus"   # placeholder until O-4, both platforms
+product = "Conf Companion"            # display name, neutral: no PSF mark (D-36, D-452)
+bundle_id = "io.github.ndonkohenri.confcompanion"   # both platforms (D-452)
+icon_background = "#680579"           # behind src/assets/icon.svg where a platform needs an opaque icon (D-452)
 
 [tool.flet.app]
 path = "src"                          # entry point src/main.py
@@ -279,7 +280,7 @@ S5 then built every target from this setup, and P0-04 (#52) built `apk --arch ar
 | `tool.flet.ios.info` | `CLI/commands/build_base.py:1232-1240` | Merged into `Info.plist` |
 | `tool.flet.flutter.pubspec.dependencies` | `CLI/commands/build_base.py:2034-2052` | Merged into `build/flutter/pubspec.yaml`, so relative paths resolve from `build/flutter/`; adds `roboto_fonts` (D-105) |
 | `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1493-1528` | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
-| `tool.flet.deep_linking` | `CLI/commands/build_base.py:1449-1454, 3067-3089` (`get_deep_linking_setting`) | `pyconus://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
+| `tool.flet.deep_linking` | `CLI/commands/build_base.py:1449-1454, 3067-3089` (`get_deep_linking_setting`) | `confcompanion://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
 | `tool.flet.android.permission` | `CLI/commands/build_base.py:1285-1288`; `TPL/android/app/src/main/AndroidManifest.xml:3-7` | Merged over the template's `INTERNET`: one `<uses-permission>` per `true` key; adds `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221, #446) |
 | `tool.flet.dev_packages` | `CLI/commands/build_base.py:2714-2738` | Rewrites `flet`, `flet-notifications`, `flet-permission-handler` and `flet-secure-storage` to `<name> @ file:///…/.flet-src/…` for the bundle; relative paths resolve from the project root |
 
@@ -300,9 +301,9 @@ Not set, because the default is what we want:
 `flet build` generates every icon and splash image from `src/assets/` (`DOCS/publish/index.md` "Icons" and "Splash screen", lines 832-1228). Nothing is copied into the template by hand.
 - **P0:** Flet's default icon. A build that has a placeholder icon is obviously a development build. Since `08b89cce5` (flet-dev/flet#6973) flet-cli renders that default in every build from the Flet logo SVG that `flet-platform-assets` bundles ("Generated default app icons" in the build log) instead of keeping the template's committed rasters; on #445's builds the launcher showed the Flet mark labelled "Conf Companion" on Android 16 and iOS 26.5, as before.
 - **P0 (SHELL-01):** the splash and boot-screen colours in §3.1, `#680579` in light and dark. Native splash, Flet's boot screen and our `BootView` then share one background, so nothing flashes between them. The colours live in `pyproject.toml`, not in `--splash-color` flags, so the file stays the only configuration (§7.4).
-- **When O-4 settles the identity:** add `src/assets/icon.png` (1024 × 1024, transparent background, our own mark, no PSF logo per D-36) and `[tool.flet] icon_background`.
-  - If the generated framing looks wrong, add `icon_ios.png` or `icon_android.png`: artwork within the central 60 % for iOS, and within a centred circle of about 57 % for Android.
-  - The splash artwork (`splash.png`, plus the same file as `splash_dark.png`, which iOS needs before it applies `dark_color`) also waits for O-4. Until then the splash falls back to the icon, then to the default Flet icon (`DOCS/publish/index.md` "Splash images"): #445's builds showed the Flet mark on our `#680579` on both platforms.
+- **Since D-452:** our own mark, `src/assets/icon.svg`, with `[tool.flet] icon_background = "#680579"`. flet-cli renders every platform's sizes from that one file and frames it for each platform. The native splash has no artwork of its own, so it falls back to the icon on the same purple.
+  - The other two drafts are in `docs/icon-options/`. To change the icon, replace `icon.svg`: an icon stays free to change.
+  - If the generated framing ever looks wrong, add `icon_ios.png` or `icon_android.png`: artwork within the central 60 % for iOS, and within a centred circle of about 57 % for Android.
 
 ### 3.4 Additions by phase
 
@@ -313,7 +314,7 @@ Each row lands in the PR that ships the feature, never earlier. A Flet extension
 
 | Phase | Feature | Addition | Exists in flet-cli today? |
 |---|---|---|---|
-| P2 | Deep links (NEW-07, D-21) | **Done in P2-24 (#384), now in `pyproject.toml`:** one common `[tool.flet.deep_linking]` table with the placeholders `scheme = "pyconus"` and `host = "app"` (D-269), which O-4 (#15) swaps. Links look like `pyconus://app/schedule/session/42`. `tests/test_deep_linking.py` runs flet-cli's resolver for Android and iOS. | Yes (`flet-dev/flet#6953`, in the pin) |
+| P2 | Deep links (NEW-07, D-21) | **Done in P2-24 (#384), now in `pyproject.toml`:** one common `[tool.flet.deep_linking]` table with `scheme = "confcompanion"` and `host = "app"` (D-269, D-452). Links look like `confcompanion://app/schedule/session/42`. `tests/test_deep_linking.py` runs flet-cli's resolver for Android and iOS. | Yes (`flet-dev/flet#6953`, in the pin) |
 | P2 | Runtime permissions (D-75) | **Done in P2-86 (#446), now in `pyproject.toml`:** `"flet-permission-handler"`, added three times as above; `Services.permissions` holds its service only when `capabilities.PERMISSIONS` (architecture §4.2). | Yes (monorepo package) |
 | P2 | Reminders (E3, D-58..D-61) | **Done in P2-86 (#446), now in `pyproject.toml`:** `"flet-notifications"` from the monorepo (flet-dev/flet#6999, module `flet_notifications`), added three times as above; PyPI's `flet-notifications` is an unrelated project, so the path tables stay until Flet publishes it. `[tool.flet.android.permission]` declares `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221; never `USE_EXACT_ALARM`). The rest comes with the extension: its Android manifest adds the action, scheduled and boot receivers and `RECEIVE_BOOT_COMPLETED`, its `flet-extension.toml` turns on core library desugaring (U7), and the template's `AppDelegate.swift` sets the iOS notification delegate (D-220). iOS needs no plist key; permission is requested through the extension (F17). | Yes, at `08b89cce5` (#445) |
 | P3 | Mock credentials (D-49) | **Done in #684, now in `pyproject.toml`:** `"flet-secure-storage"` from the monorepo, added three times as above (the dependency, `[tool.uv.sources]` and `[tool.flet.dev_packages]`); `capabilities.SECURE_STORAGE` turns on in packaged builds, and `services/credentials.py` owns it. | Yes (monorepo package) |
@@ -454,11 +455,11 @@ Notes:
 | List connected devices | `uv run flet devices [android\|ios]` (USB and wireless; `--device-connection attached\|wireless`) |
 | Android emulators | `uv run flet emulators`; `uv run flet emulators start <name> [--cold]`; `uv run flet emulators create <name>` |
 | iOS simulators | `xcrun simctl list devices available` for the udids; `xcrun simctl boot <udid>` and `open -a Simulator`, then `flet debug ios -d <udid>`. A simulator that a build left shut down comes back with `xcrun simctl boot <udid>`. Simulator builds need no signing. |
-| Install an APK over the previous build | `adb install -r build/apk/pycon-us.apk`, then `adb shell am force-stop io.github.ndonkohenri.pyconus` before launching, so the update is judged from a cold start: a process still running from the old build keeps its old state until it stops. On the Android 16 emulator the install ended the running app both times it was tried (#53); the force-stop makes that certain. |
+| Install an APK over the previous build | `adb install -r build/apk/pycon-us.apk`, then `adb shell am force-stop io.github.ndonkohenri.confcompanion` before launching, so the update is judged from a cold start: a process still running from the old build keeps its old state until it stops. On the Android 16 emulator the install ended the running app both times it was tried (#53); the force-stop makes that certain. |
 | Android Python log | `adb logcat -s flet.python` (`-d` dumps the buffer, `-c` clears it) |
 | iOS simulator Python log | `xcrun simctl spawn booted log stream --style compact --predicate 'sender == "dart_bridge"'` |
 | Open a route directly (a packaged build) | Android: `adb shell am start -n <package>/.MainActivity --es route /schedule/session/42` (what `flet debug --route` passes); iOS simulator: `xcrun simctl launch <udid> <bundle id> --route=/schedule/session/42`. `simctl openurl` with a custom scheme waits for a tap on the system's "Open" prompt (F31) |
-| Open a deep link (a packaged build, D-269) | Android: `adb -s <serial> shell am start -W -a android.intent.action.VIEW -d 'pyconus://app/now'` (no `-n`: the intent filter picks the app, and `-W` waits for the launch; `Activity: io.github.ndonkohenri.pyconus/.MainActivity` says it matched, and on a busy host `Status` may read `timeout` while the app still opens). `adb shell pm query-activities -a android.intent.action.VIEW -d <link>` lists what would answer a link without opening it. iOS simulator: `xcrun simctl openurl <udid> 'pyconus://app/now'`; the first link on a simulator stops at the system's "Open in …?" prompt, which simctl cannot answer (F31) and a Maestro `tapOn: "Open"` does; later links, even after a reinstall, open the app directly. The link's path becomes `page.route` (`/now`); iOS checks only the scheme, and the host never reaches `page.route` (D-269). |
+| Open a deep link (a packaged build, D-269) | Android: `adb -s <serial> shell am start -W -a android.intent.action.VIEW -d 'confcompanion://app/now'` (no `-n`: the intent filter picks the app, and `-W` waits for the launch; `Activity: io.github.ndonkohenri.confcompanion/.MainActivity` says it matched, and on a busy host `Status` may read `timeout` while the app still opens). `adb shell pm query-activities -a android.intent.action.VIEW -d <link>` lists what would answer a link without opening it. iOS simulator: `xcrun simctl openurl <udid> 'confcompanion://app/now'`; the first link on a simulator stops at the system's "Open in …?" prompt, which simctl cannot answer (F31) and a Maestro `tapOn: "Open"` does; later links, even after a reinstall, open the app directly. The link's path becomes `page.route` (`/now`); iOS checks only the scheme, and the host never reaches `page.route` (D-269). |
 | iPhone Python log | Console.app › the device › filter on the app process |
 | A tester's log | Developer screen › Share log, which sends `console.log` (D-72) |
 
@@ -500,7 +501,7 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 
 - `-d` is required for both platforms, and `--tests-dir tests/ui` points `flet test` at the flows (its default is `tests`, which would collect the unit tests too). `-v` streams the Flutter test process's output; without it a failure prints only the output's tail. `-k <expression>` runs some flows only.
 - `flet test` first provisions a Flutter test host in `build/flutter` through the `flet build` pipeline (1 to 2½ minutes; the app's Python is packaged again on every run), then pytest runs each flow: `flutter test` builds a debug binary, installs it, launches it and connects the tester, and the app is uninstalled when the flow ends. So every flow starts from a fresh install, with no stored settings or cache. On #78's Mac (M4), with warm Gradle and Xcode caches, the shell flow took about 3½ minutes on Android (provisioning 1 min, Gradle 45 s, install 15 s, the flow about 1 min) and about 5 minutes on iOS (provisioning 2½ min, Xcode build 67 s); a first run on a host busy with other emulators took 15 minutes on Android.
-- The bundle id is the app's own (`io.github.ndonkohenri.pyconus`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
+- The bundle id is the app's own (`io.github.ndonkohenri.confcompanion`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
 - Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out-<flow>.png` (D-223): look there first when a flow fails.
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 - When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
@@ -804,7 +805,7 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 
 **This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which differs from your machine's and changes with every run.
 - Download it with `gh run download <run-id>`, which unzips it into a folder named after the APK, then run `adb install <that folder>/pycon-us-<…>.apk`. The run page gives you the zip; unzip it first.
-- Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.pyconus` first, which loses the app's data.
+- Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.confcompanion` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
 
 ### 7.5 Not in CI: iOS
@@ -845,7 +846,7 @@ A device can update in place only from one signing identity: our upload key (sid
 
 ```bash
 mkdir -p ~/keys
-keytool -genkeypair -v -keystore ~/keys/pyconus-upload.jks \
+keytool -genkeypair -v -keystore ~/keys/confcompanion-upload.jks \
     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
 
@@ -853,7 +854,7 @@ keytool -genkeypair -v -keystore ~/keys/pyconus-upload.jks \
 
 ```bash
 # The values come from the password manager; nothing is written to the repo.
-export FLET_ANDROID_SIGNING_KEY_STORE=~/keys/pyconus-upload.jks
+export FLET_ANDROID_SIGNING_KEY_STORE=~/keys/confcompanion-upload.jks
 export FLET_ANDROID_SIGNING_KEY_ALIAS=upload
 read -rs FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD && export FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD
 uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk --arch arm64-v8a

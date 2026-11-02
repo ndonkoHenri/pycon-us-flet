@@ -7,7 +7,7 @@
 # data, so it shows with the feed unreachable (start_offline.yaml). Each status is read
 # as words ("Open now, until 5:00 PM", core/hours.py's spoken form), which is the text
 # Maestro finds on both platforms.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: More, Venue & hours, Open now on a conference morning
 tags:
   - journeys
