@@ -237,7 +237,7 @@ ROUTES = [
         ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
         pushed("staff/swag", SwagPickup),
-        pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
+        pushed("staff/coc", CocScanner),
     ),
     pushed("schedule", Schedule),
     pushed(
@@ -308,8 +308,8 @@ ROUTES = [
             pushed(LEADS_LIST, LeadsPage),
         ),
         pushed("staff/door", DoorCheck, pushed(SESSION_PICKER, SessionPicker)),
-        pushed("staff/swag", SwagPickup),  # by deep link until #769's entries
-        pushed("staff/coc", CocScanner),  # by deep link until #760 lists it (D-421)
+        pushed("staff/swag", SwagPickup),
+        pushed("staff/coc", CocScanner),
     ),
     UNKNOWN,  # last: it matches anything (D-270)
 ]

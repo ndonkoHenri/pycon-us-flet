@@ -594,6 +594,33 @@ wheels = [
 ]
 
 [[package]]
+name = "ical"
+version = "14.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/15/e6/1b82fa09fd4b245305f63e112796edaab3786aa1ed1ea85ed9adbf02b956/ical-14.3.0.tar.gz", hash = "sha256:6d6165d6d1d6449a3f1cb6e437f2c7ba8794e31e6a0c3162419a82b3e7e7ce76", size = 161006, upload-time = "2026-10-04T22:39:30.363Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/ca/252019163a2186c95e455f06724f1b4381cfbb5935171bfd31425edab123/ical-14.3.0-py3-none-any.whl", hash = "sha256:40efd0c7d2a14f95c99fd287fa2a65807226f4671b40055f401568ceeb8cb3e4", size = 146707, upload-time = "2026-10-04T22:39:28.775Z" },
+]
+
+[[package]]
+name = "icalendar"
+version = "7.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/2b/1bbf82d316df18c3331d9a06228819c8a5814ceda545a3e9980e52ffce1b/icalendar-7.3.0.tar.gz", hash = "sha256:7bd001c8e648205e1bde5c6a5b77096598e8d0893dcf57755c6c597635620132", size = 525811, upload-time = "2026-08-19T15:10:21.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/82/50bff78b0bb0c7d7c0cb39e0ee189b92f611fff6bd7cf57f25e92d5a7551/icalendar-7.3.0-py3-none-any.whl", hash = "sha256:8355acfe17be81b368f0b1e3740817cea9b56ea889931f8f1a87c62f2d28db0b", size = 542540, upload-time = "2026-08-19T15:10:19.525Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.20"
 source = { registry = "https://pypi.org/simple" }
@@ -878,6 +905,8 @@ dev = [
     { name = "flet-platform-assets" },
     { name = "flet-web" },
     { name = "hypothesis" },
+    { name = "ical" },
+    { name = "icalendar" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
@@ -901,6 +930,8 @@ dev = [
     { name = "flet-platform-assets", editable = ".flet-src/sdk/python/packages/flet-platform-assets" },
     { name = "flet-web", editable = ".flet-src/sdk/python/packages/flet-web" },
     { name = "hypothesis" },
+    { name = "ical" },
+    { name = "icalendar" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
