@@ -12,8 +12,8 @@
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
 # and fake data only.
 # The first run on a running mock redeems Ada's shirts and bag, for good: only a restart
-# gives them back. So a rerun passes with step 3's hand-out skipped. The flow proves the
-# hand-out only on a mock just started, where the mock's log shows its POST redeem_products.
+# gives them back. So a rerun passes with step 3's hand-out skipped. To prove the hand-out,
+# run on a mock just started with `-e HAND_OUT=required`: the flow then fails without it.
 appId: io.github.ndonkohenri.confcompanion
 name: Swag pickup, hand-out or already picked up, nothing to pick up, not a badge
 tags:
@@ -77,14 +77,23 @@ tags:
       text: "(?s)Ready to hand out.*Grace Sample.*T-Shirt \\(L\\).*"
     timeout: 15000
 
-# 3. A HID-style scan: the hand-out, or on a rerun what it left.
+# 3. A HID-style scan: the hand-out, or on a rerun what it left. HAND_OUT=required takes
+#    away the rerun's way out, so "Already picked up" fails on a mock just started.
 - runFlow:
     file: ../subflows/scan.yaml
     env:
       CODE: MOCK0001:v4l1d01
+- runFlow:
+    when:
+      true: ${HAND_OUT == 'required'}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: swag.hand_out
+          timeout: 15000
 - extendedWaitUntil:
     visible:
-      text: "Hand out 3 items|(?s)Already picked up.*Ada Example.*"
+      text: "(?s)Hand out 3 items|Already picked up.*Ada Example.*"
     timeout: 15000
 - runFlow:
     when:

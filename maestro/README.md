@@ -322,10 +322,17 @@ against a mock that remembers:
 | `door_check` | `staff@example.com` | Product 10 redeemed for Ada and Linus | The same on screen: the door decides on the device, and the mock's "already redeemed" still syncs the row (D-441) |
 | `swag_pickup` | `staff@example.com` | Ada's shirts and bag redeemed, for good; Grace's sheet is only cancelled | **Checks less:** Ada has nothing left, so she shows "Already picked up" at once and the hand-out is skipped |
 
-So the hand-out is checked only on a mock that hasn't seen `swag_pickup` on any device:
-restart the mock first. The log tells which run you had, since a run with the hand-out
-has one more `POST /2026/api/v1/check_in/redeem_products/` than `door_check`'s two. The
-log names each endpoint, not the badge. A run of the four sends two
+So the hand-out is checked only on a mock that hasn't seen `swag_pickup` on any device.
+To check it, restart the mock first and make it mandatory, so that a wrong "Already picked
+up" fails instead of passing as a rerun:
+
+```bash
+maestro --device <id> test -e HAND_OUT=required --include-tags=staff maestro
+```
+
+Without the switch, the log tells which run you had, since a run with the hand-out has one
+more `POST /2026/api/v1/check_in/redeem_products/` than `door_check`'s two. The log names
+each endpoint, not the badge. A run of the four sends two
 `mask_violations/capture` POSTs and two `lead_retrieval/capture` GETs, whatever the mock
 remembers. These counts are at the default `--capture idempotent`, the one the flows have
 run against.
