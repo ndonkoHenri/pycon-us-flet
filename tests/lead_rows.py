@@ -62,15 +62,22 @@ def add(
     return row
 
 
-def note(db: OutboxDb, code: str, text: str, *, owner: str = OWNER) -> None:
-    """Store ``text`` as the account's note on the lead ``code``."""
+def note(
+    db: OutboxDb,
+    code: str,
+    text: str,
+    *,
+    owner: str = OWNER,
+    sponsor: tuple[str, str] | None = None,
+) -> None:
+    """Store ``text`` as the account's note on the lead ``code`` for ``sponsor``."""
     decide = partial(
         outbox.save_note,
         owner=owner,
         code=code,
         note=text,
-        sponsor_id=None,
-        sponsor_name=None,
+        sponsor_id=None if sponsor is None else sponsor[0],
+        sponsor_name=None if sponsor is None else sponsor[1],
         now=0.0,
     )
     assert db.enqueue(code, decide) is not None

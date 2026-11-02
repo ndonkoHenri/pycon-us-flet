@@ -8,8 +8,9 @@ opened by its "Leads (42)" button, so the scan screen stays as the four tools sh
 (``scans_for_sponsor()``) with one chosen, a filter chip "Only Example Corp"
 (``lead.leads.only_sponsor``) that compares sponsor ids; while either narrows the list
 and finds some, a live count line (``lead.leads.count``, "3 leads"); then a lazy ``ListView`` of
-every lead, newest first, with no cap. A row (``lead.leads.row.<code>``) is one stop
-read "Ada, Confirmed, 5 minutes ago, has a note": its status icon and words
+every lead, newest first, with no cap: an attendee scanned for two sponsors is two rows
+(D-459). A row (``lead.leads.row.<code>``, with ``.<sponsor id>`` on a staff account's)
+is one stop read "Ada, Confirmed, 5 minutes ago, has a note": its status icon and words
 (``status_text()``, with ``WARNING_AMBER`` beside a flagged row's, D-410), the first
 name or, without one, the code (a pending lead shows only its code), the time ago, the
 sponsor on a staff account's rows, and a note icon. A tap opens the note sheet for the
@@ -30,7 +31,7 @@ import flet as ft
 from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us.account import use_account
-from pycon_us.core.lead_sponsors import LeadSponsor
+from pycon_us.core.lead_sponsors import LeadSponsor, snapshot
 from pycon_us.core.lead_views import LeadView, filter_leads, lead_view, phrase
 from pycon_us.core.staff_tools import ToolKey, may_open, scans_for_sponsor
 from pycon_us.lead_list import leads
@@ -41,7 +42,7 @@ from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
-from pycon_us.ui.lead_note_sheet import use_note_sheet
+from pycon_us.ui.lead_note_sheet import OpenNote, use_note_sheet
 from pycon_us.ui.queue_rows import status_icon
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable
@@ -109,11 +110,11 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     margin = use_margin(LIST)  # its width class (D-305)
     field = use_field_query()
     use_minute()  # "5 minutes ago" keeps up while the page shows
-    sheet = use_note_sheet(owner=owner, sponsor=None)  # a note takes its lead's sponsor
+    sheet = use_note_sheet(owner=owner)
     sponsor, set_sponsor = ft.use_state(no_sponsor)
     only, set_only = ft.use_state(False)
     mounted = ft.use_ref(True)  # cleared on unmount: a late read then does nothing
-    opener: MutableRef[Callable[[str, str | None], None]] = ft.use_ref(
+    opener: MutableRef[OpenNote] = ft.use_ref(
         lambda: sheet.open  # a callable is use_ref's initialiser: wrapped, not called
     )
     opener.current = sheet.open  # the latest, which the stable callback below calls
@@ -139,7 +140,8 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     @report_errors
     def open_lead(view: LeadView) -> None:
         if opener.current is not None:  # always set: the render sets it
-            opener.current(view.code, view.name)
+            scanned_for = snapshot(view.sponsor_id, view.sponsor_name)
+            opener.current(view.code, view.name, scanned_for)
 
     on_open = ft.use_callback(open_lead, [])
 
@@ -296,7 +298,7 @@ def only_chip(
 def LeadRow(
     view: LeadView, tokens: Tokens, on_open: Callable[[LeadView], None]
 ) -> ft.Control:
-    """Return one lead's row, a memoised component keyed by its code (D-153).
+    """Return one lead's row, a memoised component keyed by ``LeadView.key`` (D-153).
 
     So a keystroke or a minute's tick re-renders only the rows it changes; a thousand
     rows stay quick.
@@ -307,7 +309,7 @@ def LeadRow(
         on_open: Opens the note sheet for it; stable across renders (``use_callback``).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
-    return _LeadRow(view, tokens, on_open, key=view.code)  # pyright: ignore[reportCallIssue]
+    return _LeadRow(view, tokens, on_open, key=view.key)  # pyright: ignore[reportCallIssue]
 
 
 @ft.memo
@@ -355,7 +357,7 @@ def _LeadRow(
         content=ft.Container(
             ft.Semantics(
                 label=phrase(view),
-                identifier=f"lead.leads.row.{view.code}",
+                identifier=f"lead.leads.row.{view.key}",
                 button=True,
                 exclude_semantics=True,  # the phrase replaces the texts
                 content=ft.Row(

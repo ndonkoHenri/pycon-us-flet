@@ -17,11 +17,13 @@ import pytest
 
 from pycon_us.core import outbox
 from pycon_us.core.outbox import NETWORK_BACKOFF, Status
+from pycon_us.services.api import MAX_NESTING
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from tests import accounts
 from tests.api_clients import ReplyReplaced, replying
+from tests.small_stack import nested_objects
 from tests.sync_rig import Rig, outbox_db
 from tools.mock_api.faults import Fault
 from tools.mock_api.state import Capture
@@ -139,9 +141,10 @@ async def test_a_lost_reply_flags_exactly_its_row_and_any_duplicate_is_flagged(
     [
         (LEAD, b"<html>ok</html>"),
         (LEAD, b'{"code": 200}'),
+        (LEAD, b'{"code": 200, "data": %b}' % nested_objects(MAX_NESTING)),
         (DOOR, b"<html>ok</html>"),
     ],
-    ids=["lead-not-json", "lead-no-envelope", "door-not-json"],
+    ids=["lead-not-json", "lead-no-envelope", "lead-too-deep", "door-not-json"],
 )
 @pytest.mark.parametrize(
     ("capture", "copies"), [("non_idempotent", 2), ("idempotent", 1)]

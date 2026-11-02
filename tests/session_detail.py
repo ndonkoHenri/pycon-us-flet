@@ -17,7 +17,7 @@ import flet as ft
 import pytest
 
 from pycon_us import clock
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.screens import session as screen
 from pycon_us.state import Conference
 from pycon_us.ui import location_card
@@ -68,14 +68,14 @@ class Detail(Shown):
         await self.settle()
 
 
-type Render = Callable[[str], Awaitable[Detail]]
+type Render = Callable[..., Awaitable[Detail]]
 
 
 @asynccontextmanager
 async def rendering(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield render(session_id): the detail of that session at ``VIEW``.
+    """Yield render(session_id, year=YEAR): that session's detail at ``VIEW``.
 
     Each test module's ``render`` fixture enters it with its own ``tmp_path`` and
     ``monkeypatch``; leaving it closes every session it rendered. The location card's
@@ -85,7 +85,7 @@ async def rendering(
     try:
         async with AsyncExitStack() as stack:
 
-            async def show(session_id: str) -> Detail:
+            async def show(session_id: str, year: YearData = YEAR) -> Detail:
                 opened: list[Callable[[str | None], None]] = []
 
                 @ft.component
@@ -101,7 +101,7 @@ async def rendering(
                     showing(
                         Opened,
                         screen,
-                        year=YEAR,
+                        year=year,
                         conference=Conference(
                             data=processed(2026), source="bundled", version=1
                         ),

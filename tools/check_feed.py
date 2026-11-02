@@ -139,7 +139,7 @@ def next_year_status(
         return f"{following}: HTTP {response.status_code} at {url}"
     try:
         slots = len(json.loads(response.content)["schedule"])
-    except (ValueError, KeyError, TypeError) as error:
+    except (ValueError, KeyError, TypeError, RecursionError) as error:
         return f"{following}: HTTP 200 at {url}, but not a feed: {error!r}"
     return (
         f"{following}: PUBLISHED at {url} with {slots} slots; "

@@ -11,7 +11,6 @@ they scan for (LEAD-05, LEAD-06): the picker opens once by itself, the screen wa
 until one is chosen, then heads it with a "For: ..." chip; a sponsor's account sees none.
 """
 
-import json
 from typing import Any, cast
 
 import flet as ft
@@ -21,20 +20,20 @@ from flet.components.component import Component
 from pycon_us import lead_capture
 from pycon_us.account import Account
 from pycon_us.core import outbox
-from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
+from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.lead_capture import ALREADY, SAVED
 from pycon_us.locations import parent_of
 from pycon_us.screens import lead_sponsor
 from pycon_us.screens.staff_lead import NO_SPONSOR, TITLE
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
+from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_PREFIX
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from pycon_us.ui.snack_bars import NOT_SAVED
 from tests import harness, lead_rows, lead_screen
 from tests.fakes import MemoryPrefs
 from tests.harness import Shown
-from tests.lead_screen import Show, signed_in
+from tests.lead_screen import Show, chip_text, choose, helper, signed_in
 from tests.mock_calls import state_at
 from tests.scan_rig import enter, panel
 from tests.sync_rig import outbox_db
@@ -284,32 +283,9 @@ PICKER = f"{VIEW}/{lead_sponsor.SEGMENT}"
 EXAMPLE = LeadSponsor("1", "Example Corp")
 
 
-def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
-    """Store ``sponsor`` as the chosen one, as the picker saves it."""
-    stored[STAFF_SPONSOR.key] = json.dumps(to_stored(sponsor))
-
-
-def chip_text(shown: Shown) -> str | None:
-    """What the "For: ..." chip shows, or None without the chip."""
-    nodes = shown.nodes("lead.sponsor_chip")
-    if not nodes:
-        return None
-    (node,) = nodes
-    row = node.content
-    assert isinstance(row, ft.Row)
-    (text,) = [c for c in row.controls if isinstance(c, ft.Text)]
-    return str(text.value)
-
-
 def chip(shown: Shown) -> ft.Container:
     """The chip's tappable container, around its one node."""
     return cast(ft.Container, shown.node("lead.sponsor_chip").parent)
-
-
-def helper(shown: Shown) -> str | None:
-    """The scan field's helper line: why scanning is paused, or None."""
-    (field,) = shown.find(ft.TextField)
-    return cast(str | None, field.helper)
 
 
 async def test_staff_without_a_sponsor_get_the_picker_once_and_a_paused_screen(
@@ -386,6 +362,35 @@ async def test_back_from_the_picker_shows_the_sponsor_chosen(
     await shown.settle()
     assert chip_text(shown) == "For: Example Corp"
     assert helper(shown) is None
+
+
+async def test_a_consent_given_scans_at_once_for_the_sponsor_read(
+    show: Show, stored: dict[str, Any]
+) -> None:
+    """Giving it is no change of location: nothing is read again, so nothing waits."""
+    choose(stored, EXAMPLE)
+    shown = await show(signed_in(door_check=True), consent=False)
+    await give(shown)
+    assert chip_text(shown) == "For: Example Corp"
+    assert helper(shown) is None
+
+
+async def test_a_consent_that_can_t_be_saved_stays_given_at_the_next_read(
+    show: Show, stored: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Storage says no, but the session's answer stands when the keys are read again."""
+    location = [VIEW]
+    monkeypatch.setattr(ft, "use_route_location", lambda: location[0])
+    choose(stored, EXAMPLE)
+    account = signed_in(door_check=True)
+    shown = await show(account, consent=False)
+    cast(MemoryPrefs, shown.storage.prefs).fail_writes = True
+    await give(shown)
+    location[0] = PICKER
+    account.nickname = "Picker"  # a render, as the Router's on a location change
+    await shown.settle()
+    assert not asks(shown)
+    assert helper(shown) is None  # the read has landed: nothing waits for it
 
 
 async def test_a_sponsor_s_own_account_sees_no_chip_and_no_picker(

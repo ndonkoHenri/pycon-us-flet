@@ -59,7 +59,10 @@ async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
     render: Render,
 ) -> None:
     """A tutorial's card says to register separately; its link opens registration."""
-    detail = await render(TUTORIAL)
+    url = "https://example.org/2026/accounts/dashboard/"
+    # 2026 as if its site still had the dashboard, which went with the live site (#824).
+    conference = replace(YEAR.conference, registration_url=url)
+    detail = await render(TUTORIAL, year=replace(YEAR, conference=conference))
     assert detail.text("session.registration") == [
         screen.REGISTRATION_TITLE,
         screen.REGISTRATION_TEXT,
@@ -67,10 +70,20 @@ async def test_a_tutorial_says_it_needs_registration_and_links_the_dashboard(
     link = detail.node("session.registration.link")
     tile = next(n for n in descendants(link) if isinstance(n, ft.ListTile))
     await detail.click(tile)
-    assert detail.launcher.launched == [
-        (YEAR.conference.registration_url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
-    ]
+    assert detail.launcher.launched == [(url, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
     assert_line_icon(detail.node("session.registration"), ft.Icons.INFO_OUTLINE)
+
+
+async def test_2026_s_registration_card_has_no_link_since_its_dashboard_is_gone(
+    render: Render,
+) -> None:
+    """The dashboard went with the live site: the words stay, no dead link (#824)."""
+    detail = await render(TUTORIAL)
+    assert detail.text("session.registration") == [
+        screen.REGISTRATION_TITLE,
+        screen.REGISTRATION_TEXT,
+    ]
+    assert detail.nodes("session.registration.link") == []
 
 
 async def test_a_talk_needs_no_registration_card(render: Render) -> None:

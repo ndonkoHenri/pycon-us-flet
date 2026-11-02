@@ -26,7 +26,7 @@ def json_object(body: bytes) -> dict[str, object]:
     """
     try:
         payload = json.loads(body)
-    except ValueError:  # UnicodeDecodeError and JSONDecodeError are both ValueErrors
+    except ValueError, RecursionError:  # not UTF-8, not JSON, or nested too deep
         payload = None
     if not isinstance(payload, dict):
         raise Refused(400, "The body must be a JSON object.")
