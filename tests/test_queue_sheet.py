@@ -15,7 +15,7 @@ import pytest
 from flet.components.hooks.use_ref import MutableRef
 
 from pycon_us.account import Account
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.outbox import Row, Status
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
@@ -59,7 +59,7 @@ def seed(
 ) -> Row:
     """Store a lead row of ``owner``'s for ``code``, scanned at ``at``, in a status."""
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=owner,
         code=code,
         payload={"badge_validator": "v"},
@@ -193,7 +193,7 @@ def test_two_sponsors_leads_on_one_attendee_are_told_apart(db: OutboxDb) -> None
     """A staff account's rows name their sponsors, so the two aren't alike (D-459)."""
     for sponsor_id, name in (("1", "Example Corp"), ("3", "Sample Systems")):
         decide = partial(
-            outbox.scan_lead,
+            outbox_enqueue.scan_lead,
             owner=OWNER,
             code="A1",
             payload={"badge_validator": "v"},
@@ -224,7 +224,7 @@ def test_a_flagged_row_says_it_may_be_recorded_twice_beside_an_icon(
 def test_a_check_in_the_server_refused_says_already_redeemed(db: OutboxDb) -> None:
     """A 200 reply with ``errors`` syncs the row; the sheet says so and why (D-441)."""
     decide = partial(
-        outbox.admit,
+        outbox_enqueue.admit,
         owner=OWNER,
         code="MOCK0001",
         product_ids=[10],

@@ -14,7 +14,7 @@ from dataclasses import replace
 import httpx
 import pytest
 
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.admission import (
     Admission,
     Attendee,
@@ -214,7 +214,7 @@ def door_row(code: str, *products: int, status: Status = Status.PENDING) -> Row:
     for product in products:
         payload[f"product-redeem-{product}"] = product
         payload[f"product-{product}-quantity"] = 1
-    enqueued = outbox.admit(
+    enqueued = outbox_enqueue.admit(
         [],
         owner="staff@example.com",
         code=code,

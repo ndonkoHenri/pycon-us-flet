@@ -1,7 +1,7 @@
 """A lead scan through the outbox, with its result at once (#741; LEAD-07, LEAD-09).
 
 ``capture()`` is the Lead scanner's ``on_badge``. It enqueues the scan as a ``lead``
-row (``core/outbox.py``'s ``scan_lead``, one row per owner, code and sponsor, D-459), so
+row (``core/outbox_enqueue.scan_lead``, one row per owner, code and sponsor, D-459), so
 it survives airplane mode and a kill (D-56); the row keeps the sponsor it was scanned
 for (STORE-11), and a staff account's result says which sponsor that is, and any other
 it has the attendee in its leads for. It then kicks the ``SyncWorker``, which stays the
@@ -22,7 +22,8 @@ import flet as ft
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.lead_sponsors import LeadSponsor, snapshot
 from pycon_us.core.lead_views import first_name, for_line
-from pycon_us.core.outbox import Outcome, Row, Status, scan_lead
+from pycon_us.core.outbox import Row, Status
+from pycon_us.core.outbox_enqueue import Outcome, scan_lead
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff
 

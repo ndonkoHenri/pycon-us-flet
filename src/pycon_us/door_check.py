@@ -4,8 +4,8 @@
 preloaded attendee list (``door_preload.py``) and the account's own door rows
 (``core/admission.decide()``, STORE-12), so the line keeps moving offline; a badge
 outside the list is looked up online (``fetch_attendee_products(door=True)``). An
-admission is a ``door`` row (``core/outbox.admit()``, one per check-in), which the
-``SyncWorker`` sends as the ``redeem`` POST (D-56, D-407). Unlike the Lead scanner
+admission is a ``door`` row (``core/outbox_enqueue.admit()``, one per check-in), which
+the ``SyncWorker`` sends as the ``redeem`` POST (D-56, D-407). Unlike the Lead scanner
 (D-426) the door doesn't wait for the worker: the person is admitted now, and the sync
 chip and the queue sheet say how the row syncs. A reply whose ``errors`` say a product
 was already redeemed still syncs the row, and the queue sheet shows it (D-441).
@@ -25,7 +25,7 @@ from pycon_us.check_in_api import fetch_attendee_products
 from pycon_us.core.admission import Attendee, Inventory, decide, tags
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.core.check_in import AttendeeProducts, Item, redeem_payload
-from pycon_us.core.outbox import Outcome, admit
+from pycon_us.core.outbox_enqueue import Outcome, admit
 from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff

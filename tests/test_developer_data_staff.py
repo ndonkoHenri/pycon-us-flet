@@ -17,7 +17,7 @@ from typing import Any, cast
 import flet as ft
 import pytest
 
-from pycon_us.core import outbox
+from pycon_us.core import outbox_enqueue
 from pycon_us.core.outbox import Status
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.prefs import Prefs
@@ -79,7 +79,7 @@ def seed(db: OutboxDb, owner: str, *statuses: Status) -> None:
     for status in statuses:
         code = f"{owner[0]}{len(db.rows(owner, tuple(Status)) or [])}"
         decide = partial(
-            outbox.scan_lead,
+            outbox_enqueue.scan_lead,
             owner=owner,
             code=code,
             payload={"badge_validator": "v"},

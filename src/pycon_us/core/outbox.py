@@ -1,15 +1,14 @@
-"""The staff outbox's rules: what a scan enqueues, how a send moves a row, what is due.
+"""The staff outbox's rows and their send rules: how a send moves a row, what is due.
 
 The outbox keeps every lead scan, lead note and door check-in until the server has it
 (D-56): "never lose or misattribute a scan". The rules that keep that promise are pure
-and live here, so a hypothesis state machine proves them (D-77) before any sqlite
+and live here and in ``core/outbox_enqueue.py`` (what a scan, a note or an admission
+enqueues), so a hypothesis state machine proves them (D-77) before any sqlite
 (``services/outbox_db.py``) or sending (``services/sync.py``) code exists. Every function
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
 ``status_text()`` says a row's status, flagged "may be recorded twice" after a send
-whose answer was lost or could not be read (D-57, D-410). A lead belongs to a
-sponsor, so an account keeps one lead row and one note row per (owner, code, sponsor
-id); a sponsor's own account has one sponsor id, None (D-459).
+whose answer was lost or could not be read (D-57, D-410).
 """
 
 from collections.abc import Iterable, Mapping
@@ -111,212 +110,6 @@ def status_text(row: Row) -> str:
     return f"{words} · {MAYBE_TWICE}" if row.maybe_sent else words
 
 
-class Outcome(StrEnum):
-    """What an enqueue decided, so the caller knows whether to store and what to say."""
-
-    QUEUED = "queued"
-    """A new row: insert it and kick the worker."""
-    UPDATED = "updated"
-    """An existing row changed: save it and kick the worker."""
-    ALREADY = "already"
-    """Nothing to store: the lead is already in your leads, or the check-in is queued."""
-    IGNORED = "ignored"
-    """Nothing to store: an empty note."""
-
-
-@dataclass(frozen=True)
-class Enqueued:
-    """An enqueue's decision.
-
-    Attributes:
-        outcome: What happened.
-        row: The row to insert (``QUEUED``) or save (``UPDATED``), or the existing row
-            that made the scan a no-op (``ALREADY``); None for an ignored note.
-        others: A lead scan's: the names of the other sponsors this account has the
-            attendee in its leads for, so the result can say so (D-459).
-    """
-
-    outcome: Outcome
-    row: Row | None = None
-    others: tuple[str, ...] = ()
-
-
-def _find(
-    rows: Iterable[Row], owner: str, kind: Kind, key: str, sponsor_id: str | None
-) -> Row | None:
-    """Return the owner's row of a kind for an access code and a sponsor, if any."""
-    wanted = (owner, kind, key, sponsor_id)
-    return next(
-        (r for r in rows if (r.owner, r.kind, r.key, r.sponsor_id) == wanted), None
-    )
-
-
-def _requeue(row: Row, now: float) -> Row:
-    """Return a row pending again from scratch: no counted failures, due now."""
-    return replace(row, status=Status.PENDING, tries=0, next_at=now, last_error=None)
-
-
-def scan_lead(
-    rows: Iterable[Row],
-    *,
-    owner: str,
-    code: str,
-    payload: Mapping[str, Any],
-    sponsor_id: str | None,
-    sponsor_name: str | None,
-    now: float,
-) -> Enqueued:
-    """Decide what a lead scan does: one lead row per (owner, code, sponsor) (D-459).
-
-    A lead belongs to its sponsor, so only this sponsor's row counts. A synced row
-    means the lead is already in your leads; a pending row is made due now; a failed
-    one is pending again, as "Retry failed" would make it. Either keeps its first
-    payload. Otherwise a new row snapshots the sponsor, even if the attendee is a lead
-    for another sponsor: that lead's row stays as it is, and ``others`` names it.
-
-    Args:
-        rows: The outbox rows (any owner's; only ``owner``'s count).
-        owner: The signed-in account's lower-cased email.
-        code: The attendee's access code.
-        payload: The capture request.
-        sponsor_id: The sponsor the scan is for now.
-        sponsor_name: That sponsor's name.
-        now: The current time (epoch seconds).
-
-    Returns:
-        ``ALREADY`` with the synced row, ``UPDATED`` with the existing row requeued, or
-        ``QUEUED`` with a new row; each with ``others``.
-    """
-    rows = tuple(rows)  # Searched twice: a one-pass iterator would miss the row.
-    others = tuple(
-        r.sponsor_name
-        for r in rows
-        if r.owner == owner
-        and r.kind is Kind.LEAD
-        and r.key == code
-        and r.sponsor_id != sponsor_id
-        and r.sponsor_name
-    )
-    existing = _find(rows, owner, Kind.LEAD, code, sponsor_id)
-    if existing is None:
-        row = Row(
-            Kind.LEAD, code, dict(payload), owner, sponsor_id, sponsor_name, now, now
-        )
-        return Enqueued(Outcome.QUEUED, row, others)
-    if existing.status is Status.SYNCED:
-        return Enqueued(Outcome.ALREADY, existing, others)
-    if existing.status is Status.FAILED:
-        return Enqueued(Outcome.UPDATED, _requeue(existing, now), others)
-    return Enqueued(Outcome.UPDATED, replace(existing, next_at=now), others)
-
-
-def save_note(
-    rows: Iterable[Row],
-    *,
-    owner: str,
-    code: str,
-    note: str,
-    sponsor_id: str | None,
-    sponsor_name: str | None,
-    now: float,
-) -> Enqueued:
-    """Decide what saving a lead note does: one note row per (owner, code, sponsor).
-
-    An empty or blank note is ignored. An existing note row takes the new text and is
-    pending from scratch, whatever its status: a synced note was edited, so it is sent
-    again. A new row snapshots the sponsor of the lead it is for, which the caller
-    takes from that lead's row or result, never from the sponsor chosen now, so a
-    switch between the scan and the note cannot send the note elsewhere (D-459).
-
-    Args:
-        rows: The outbox rows (any owner's; only ``owner``'s count).
-        owner: The signed-in account's lower-cased email.
-        code: The lead's access code.
-        note: The note's text.
-        sponsor_id: The sponsor of the lead the note is for.
-        sponsor_name: That sponsor's name.
-        now: The current time (epoch seconds).
-
-    Returns:
-        ``IGNORED``, ``UPDATED`` with the existing row, or ``QUEUED`` with a new row.
-    """
-    if not note.strip():
-        return Enqueued(Outcome.IGNORED)
-    payload = {"accessCode": code, "note": note}
-    existing = _find(rows, owner, Kind.NOTE, code, sponsor_id)
-    if existing is not None:
-        return Enqueued(
-            Outcome.UPDATED, _requeue(replace(existing, payload=payload), now)
-        )
-    row = Row(Kind.NOTE, code, payload, owner, sponsor_id, sponsor_name, now, now)
-    return Enqueued(Outcome.QUEUED, row)
-
-
-def door_key(code: str, product_ids: Iterable[int | str], session: str) -> str:
-    """Return a check-in's idempotency key: ``code|sorted product ids|scan session``.
-
-    Args:
-        code: The attendee's access code.
-        product_ids: The products admitted.
-        session: The scan session (the door screen's visit) the check-in belongs to.
-
-    Returns:
-        The key; the same check-in always gives the same one.
-    """
-    ids = ",".join(sorted(str(product_id) for product_id in product_ids))
-    return f"{code}|{ids}|{session}"
-
-
-def admit(
-    rows: Iterable[Row],
-    *,
-    owner: str,
-    code: str,
-    product_ids: Iterable[int | str],
-    session: str,
-    payload: Mapping[str, Any],
-    sponsor_id: str | None,
-    sponsor_name: str | None,
-    now: float,
-) -> Enqueued:
-    """Decide what a door admission does: one row per check-in.
-
-    A check-in is its idempotency key (``door_key()``), unique across the outbox: the
-    same attendee, products and scan session admitted again is the row already queued.
-    Any other check-in, for another session say, gets a row of its own (STORE-12).
-
-    Args:
-        rows: The outbox rows (every owner's: the key is unique across them).
-        owner: The signed-in account's lower-cased email.
-        code: The attendee's access code.
-        product_ids: The products admitted.
-        session: The scan session.
-        payload: The redeem request.
-        sponsor_id: The sponsor snapshot (None for the door, usually).
-        sponsor_name: That sponsor's name.
-        now: The current time (epoch seconds).
-
-    Returns:
-        ``ALREADY`` with the existing row, or ``QUEUED`` with a new row.
-    """
-    idem_key = door_key(code, product_ids, session)
-    existing = next((r for r in rows if r.idem_key == idem_key), None)
-    if existing is not None:
-        return Enqueued(Outcome.ALREADY, existing)
-    row = Row(
-        Kind.DOOR,
-        code,
-        dict(payload),
-        owner,
-        sponsor_id,
-        sponsor_name,
-        now,
-        now,
-        idem_key=idem_key,
-    )
-    return Enqueued(Outcome.QUEUED, row)
-
-
 def _pending(row: Row) -> None:
     """Refuse to send a row that isn't pending: only ``due()`` rows are sent."""
     if row.status is not Status.PENDING:
@@ -390,6 +183,22 @@ def after_error(row: Row, message: str, now: float, *, maybe_sent: bool = False)
     )
 
 
+def requeue(row: Row, now: float) -> Row:
+    """Return a row pending again from scratch: no counted failures, due now.
+
+    Behind "Retry failed" and an enqueue that brings a row back
+    (``core/outbox_enqueue.py``). Unlike ``retry_failed()``, it takes any status.
+
+    Args:
+        row: The row.
+        now: The current time (epoch seconds).
+
+    Returns:
+        The row, pending.
+    """
+    return replace(row, status=Status.PENDING, tries=0, next_at=now, last_error=None)
+
+
 def retry_failed(row: Row, now: float) -> Row:
     """Return a failed row pending again ("Retry failed"): no counted failures, due now.
 
@@ -405,7 +214,7 @@ def retry_failed(row: Row, now: float) -> Row:
     """
     if row.status is not Status.FAILED:
         raise ValueError(f"outbox row {row.id} is {row.status}, not failed")
-    return _requeue(row, now)
+    return requeue(row, now)
 
 
 def due(rows: Iterable[Row], owner: str, now: float) -> list[Row]:
