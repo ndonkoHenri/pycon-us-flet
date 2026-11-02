@@ -14,7 +14,7 @@ communities what a polished Python mobile app looks like. It is not an official 
 - **Phases, not deadlines.** P0 Foundations, P1 Attendee core, P2 Conference companion, P3 Accounts & staff tools,
   P4 Showcase. Presenting the app at PyCon US 2027 (Long Beach, May 12–18) is the objective, not a deadline.
 
-**Status:** P0 Foundations is under way: the project scaffold, CI and the GitHub workflow are in place; the data core and app shell come next.
+**Status:** P0 Foundations and P1 Attendee core are done; P2 Conference companion and P3 Accounts & staff tools are in progress.
 
 ## How to read the docs
 
@@ -41,5 +41,5 @@ the workflow, labels, branches, reviews and the definition of done. Decisions ch
 
 ## Licence
 
-Apache-2.0, like the original app (to be added with the project scaffold). "PyCon" and the PyCon and PSF logos are
+Apache-2.0 ([`LICENSE`](LICENSE)), like the original app. "PyCon" and the PyCon and PSF logos are
 trademarks of the Python Software Foundation; this project uses them only to name the event.
