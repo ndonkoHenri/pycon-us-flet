@@ -47,7 +47,9 @@ from time import monotonic
 import flet as ft
 
 from pycon_us import capabilities
+from pycon_us.account import use_account
 from pycon_us.core.badges import NOT_A_BADGE, Badge, Cooldown, ScanResult, parse_badge
+from pycon_us.core.staff_tools import ToolKey, may_open
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -349,6 +351,24 @@ def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.
     if shown is not None:
         panel.append(age_line(age, clear_after))
     return ft.Column(panel, spacing=4, tight=True)
+
+
+def use_tool_allowed(tool: ToolKey) -> bool:
+    """Say whether a staff tool may open now: each screen's gate (architecture §12.4).
+
+    It takes a mock URL (D-51), a signed-in account and the tool's rule; else the
+    screen shows ``NotAvailable``, so a deep link cannot bypass it.
+
+    Args:
+        tool: The tool whose rule applies.
+    """
+    prefs = use_prefs()
+    account = use_account()
+    return (
+        prefs.private_api_enabled
+        and account.signed_in
+        and may_open(tool, account.role_flags)
+    )
 
 
 @ft.component

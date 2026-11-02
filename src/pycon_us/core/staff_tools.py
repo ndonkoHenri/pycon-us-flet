@@ -1,10 +1,10 @@
 """Which staff tools an account may open: Ionic's gating, pure (D-16, D-54; SHELL-06, SHELL-11).
 
 Every staff entry point (More's "Staff tools" section, the Now card) and every tool
-screen's re-check asks ``staff_entries()`` or ``may_open()``, so the gating is one table,
-docs/architecture.md §12.4, pinned by an exhaustive truth-table test. The flags are the
-``Account`` store's attribute names; an absent flag is False (SHELL-11: the server may
-leave one out).
+screen's re-check (``ui/scan_screen.py``'s ``use_tool_allowed()``) asks ``staff_entries()``
+or ``may_open()``, so the gating is one table, docs/architecture.md §12.4, pinned by an
+exhaustive truth-table test. The flags are the ``Account`` store's attribute names; an
+absent flag is False (SHELL-11: the server may leave one out).
 """
 
 from collections.abc import Mapping, Sequence

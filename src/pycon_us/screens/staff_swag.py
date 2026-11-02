@@ -34,16 +34,15 @@ import flet as ft
 from pycon_us.account import use_account
 from pycon_us.check_in_api import fetch_catalog
 from pycon_us.core.check_in import Category, swag_catalog
-from pycon_us.core.staff_tools import TOOLS, ToolKey, may_open
+from pycon_us.core.staff_tools import TOOLS, ToolKey
 from pycon_us.locations import is_top_view
-from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.swag import look_up
 from pycon_us.ui.online import use_online
-from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
+from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, use_tool_allowed
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import say_if_unsaved
 from pycon_us.ui.swag_sheet import use_swag_sheet
@@ -99,14 +98,9 @@ class Chosen:
 @ft.component
 def SwagPickup() -> ft.Control:
     """Swag pickup, or its "Not available" state for an account it refuses."""
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.SWAG)
     account = use_account()
     memory = use_services().memory
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.SWAG, account.role_flags)
-    )
     if not allowed:
         return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.SWAG  # plain: Now's card reads it when it renders
