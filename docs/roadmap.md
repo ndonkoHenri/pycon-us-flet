@@ -4,7 +4,7 @@
 
 This file turns the plan into work:
 - **P0, P1 and P2** are broken down into PR-sized issues.
-- **P3 and P4** are epics with their scope. We break each one down when its phase starts.
+- **P3 and P4** are epics with their scope here; their PR-sized issues are on GitHub, in each phase's milestone.
 
 `issues.json` seeded GitHub once from the same content (section 10). Once seeded, **GitHub issues are the live task list**. This file keeps the phases, exit criteria, epics and the reasons behind the breakdown. It is edited by hand, only when a phase starts or when scope changes through a `needs-decision` issue.
 
@@ -426,7 +426,7 @@ Run the P0 exit criteria with packaged builds on an Android emulator, an iOS sim
 **Decisions in this milestone:**
 - O-4, app identity (P1-34): before the first real TestFlight upload.
 - O-6, CFP (P1-35): around 2026-11-20.
-- O-1, the bottom bar (P1-36): after a week of dogfooding.
+- O-1, the bottom bar (P1-36): settled by D-454, without the week of dogfooding.
 
 ### P1-E1 · Attendee building blocks
 
@@ -769,7 +769,7 @@ design, needs-decision, area:shell · after P1-15, P1-16
 
 After a week with the P1 build, confirm Now · Schedule · My schedule · Map · More and opening on Now, or propose a change with the reason.
 
-- O-1 settled; D-13 and D-14 lose their provisional mark or are superseded.
+- O-1 settled by D-454 (#819), which says the week of dogfooding didn't happen; D-13 and D-14 lost their provisional mark.
 
 #### S6 · Spike: can local reminders be reliable when the app isn't running?
 
@@ -1337,7 +1337,7 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
   - tests and tools: #348 (Maestro flows, which the check issues `P2-93`..`P2-96`, `P2-100` and `P2-101` wait for), #312, #257, #339;
   - bugs: #337, #342, #343, #344; docs: #359;
   - the iPhone session #121, with VoiceOver checks #261 and #320;
-  - decisions: #15 (`P1-34`, O-4, app identity; its placeholders ship in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1).
+  - decisions: #15 (`P1-34`, O-4, app identity; its placeholders ship in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1; settled by D-454 in #819).
 - **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
 
 ## 6. P3 Accounts & staff tools
@@ -1345,7 +1345,7 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
 **Goal.** The private-API features, built faithfully against the local mock, with the scanner as the showcase. The app never calls private PSF endpoints (D-06, D-51).
 
 **Exit criteria** (PLAN §7):
-1. **Tools against the mock.** Every tool kept under O-7 completes scripted scenarios on an Android emulator and the iPhone, with manual and HID entry, and with the camera when E1 is bundled (the iPhone's camera, or the emulator's virtual scene camera).
+1. **Tools against the mock.** Every staff tool (all four, D-456) completes scripted scenarios on an Android emulator and the iPhone, with manual and HID entry, and with the camera when E1 is bundled (the iPhone's camera, or the emulator's virtual scene camera).
 2. **Offline queue.**
    - Airplane-mode scans survive kill and restart.
    - Under idempotent mock semantics each record syncs exactly once; under non-idempotent ones nothing is lost, and a duplicate occurs only after a lost response, where it is detected and shown (D-57).
@@ -1360,8 +1360,8 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
 - P3-E4 relies on S1's `sqlite3` verdict; re-run it only if a Flet pin bump changed the Python build since S1.
 
 **Decisions.**
-- O-7, staff-tool depth: lead → door → swag → CoC. The last two may move to `later`.
-- O-8, the stage-demo backend: decided at the exit.
+- O-7, staff-tool depth: settled by D-456: lead → door → swag → CoC, all built.
+- O-8, the stage-demo backend: settled by D-457: the LAN mock from the laptop.
 
 ### P3-E1 · Epic: mock API server and contract
 
@@ -1403,13 +1403,13 @@ Category and session pickers, inventory preload ("works offline"), pure `core/ad
 
 epic, area:staff · after P3-E3 · SHIRT-01, SHIRT-02, SHIRT-03, SHIRT-04, API-06
 
-Swag categories, a scan that fetches redeemable products, a hand-out sheet with available items pre-ticked, and an online-only redeem. May move to `later` under O-7.
+Swag categories, a scan that fetches redeemable products, a hand-out sheet with available items pre-ticked, and an online-only redeem. Kept and built (D-456).
 
 ### P3-E8 · Epic: Code of Conduct incident capture
 
 epic, area:staff · after P3-E3 · MASK-01, MASK-02, MASK-03, MASK-04, MASK-05, API-08
 
-An in-memory attendee directory, name search, a review dialog before every record (scans included), neutral wording, hidden emails, and online-only errors. May move to `later` under O-7.
+An in-memory attendee directory, name search, a review dialog before every record (scans included), neutral wording, hidden emails, and online-only errors. Kept and built (D-456).
 
 ## 7. P4 Showcase
 
@@ -1453,7 +1453,7 @@ README with screenshots and an accessibility section, CONTRIBUTING, `good first 
 
 epic, area:quality
 
-The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, O-8, and whether to approach the PSF.
+The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, and whether to approach the PSF. The script runs on the LAN mock from the laptop (D-457), and reopens O-8 if it finds a reason.
 
 ## 8. Upstream track
 
@@ -1461,11 +1461,11 @@ Upstream work happens in flet-dev repositories, by the owner: agents work only i
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|
-| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` (alarm on iOS only, D-272), honest settings (D-60) | P2-E6, after a pin bump |
+| 1 | E3 scheduled notifications (flet-dev/flet#6948) | UP-E3, S6 | Now's next-session card, in-app Banner, `.ics` (alarm on iOS only, D-272), honest settings (D-60); it stays for a build without E3 (D-63) | adopted after the bump to `08b89cce5` (#445): #446..#449 (P2-E6) |
 | 2 | U1 `RefreshIndicator` | UP-U1 | status-strip Refresh and auto-refresh (P1-04) | new issue after the bump |
 | 3 | U15 non-fatal handler errors | UP-U15 | `@report_errors` (P0-21) | delete the decorator |
 | 4 | E1 barcode scanner, after S8 | UP-E1 | manual and HID entry | P3-E3 |
-| 5 | U4 `page.get_app_info()` | UP-U4 | `__version__` | P2-E9 or later |
+| 5 | U4 `page.get_app_info()`, landed as `Page.get_package_info()` | UP-U4 | `__version__` | adopted after the bump to `08b89cce5` (#452, D-386) |
 | 6 | U16 `PageMediaData.text_scale_factor`, U17 accessibility-change event, U10 `AppBar.bottom`, U2 sticky headers, U3 absolute `InteractiveViewer` transform, U9 `use_route_search`, U18 Router Back inside a modal sub-chain | UP-SMALL | fluid layouts, re-read on resume, tabs as a body row, time gutter, select without a camera move, `use_query()`; own `on_view_pop` | one issue each |
 
 **Not tracked here:**

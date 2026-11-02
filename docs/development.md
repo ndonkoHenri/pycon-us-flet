@@ -176,6 +176,9 @@ dev = [                               # host only, never bundled; versions in uv
     "hypothesis",
     "ruff",
     "pyright",
+    "segno",                          # the mock-badge sheet's QR codes (D-391); never bundled
+    "icalendar",                      # reads core/ics.py's files back (D-268); never bundled
+    "ical",                           # the stricter reader of the same files (D-268); never bundled
 ]
 
 # ------------------------------------------------------------------ flet build
@@ -677,7 +680,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
 - **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).
 - **Badges.** `uv run python -m tools.mock_api.badges` writes `build/mock-badges.html`, the printable sheet of mock-badge QR codes for the P3 exit test (one card per seeded attendee, A4 or Letter; `segno`, D-391). The mock README says more.
-- **Stage demos** may need an in-app backend instead of the LAN mock. That is open decision O-8, decided at the P3 exit.
+- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet. An emulator or simulator on the laptop uses the table above. The demo script is #855's, and it reopens O-8 if it finds a reason.
 
 ---
 
@@ -861,12 +864,12 @@ uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk 
 ```
 
 - flet-cli reads these four variables (`CLI/commands/build_base.py:3424-3456`). One password fills the other, and the alias defaults to `upload`. The template switches the release build to that signing config (`TPL/android/app/build.gradle.kts:103-119`).
-- **Play Console setup,** once, after O-4 settles the identity:
+- **Play Console setup,** once:
   - create the app under the neutral working name;
   - keep Play App Signing (the default for new apps);
   - complete the declarations Play asks for before the first internal release.
 - **Target API.** Play enforces a minimum `targetSdk` on uploads; ours is 36, the latest stable level (D-106).
-- **The bundle id cannot change** once an app exists in Play Console. That is why O-4 must be decided before this step.
+- **The bundle id cannot change** once an app exists in Play Console: D-452 settled it first.
 
 ### 8.2 iOS
 
@@ -879,11 +882,11 @@ uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk 
 
 Internal TestFlight testers are members of the owner's App Store Connect team: up to 100 people, with no Beta App Review. A build expires after 90 days. **External** testing would need Beta App Review, and the store name would then be visible outside the team, so it is out of scope (D-85).
 
-**Setup** (owner-only, #121), first with a throwaway bundle id, then with the O-4 identity. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
+**Setup** (owner-only, #121), with the identity in D-452. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
 1. Register an explicit App ID for the bundle id, and register the owner's devices.
 2. Create an Apple Development certificate and a **Development** provisioning profile for the App ID that includes those devices (`flet debug ios` needs it; see the Flet blog post "flet debug", 2025-12-02, "Testing on a real iPhone/iPad device"). Regenerate it whenever a device is added.
 3. Create an Apple Distribution certificate, and an App Store profile. Name both profiles exactly as in `pyproject.toml`.
-4. Create an App Store Connect record under the neutral working name (O-4) and a SKU.
+4. Create an App Store Connect record under the name Conf Companion (D-452) and a SKU.
 5. Commit the signing configuration. Team ids and profile names are not secrets; another contributor overrides them with `--ios-team-id` and `--ios-provisioning-profile` (`DOCS/publish/ios.md` "Resolution order"). P0-04 (#52) committed the team id and the certificate names; the two `provisioning_profile` lines follow once #121 has created the profiles.
 
 As applied in `pyproject.toml` (§3.1), with the lines #121 adds commented out:
@@ -953,7 +956,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Topic | What it takes |
 |---|---|
 | **Trademark** | "PyCon" and the PyCon and PSF logos are PSF trademarks, and Apache-2.0 grants no trademark rights (D-36, D-87). A store listing needs either the PSF's written permission under its trademark usage policy, or a name and icon with no PSF marks. Even then the app describes an event the PSF runs, so App Review's intellectual-property rules (guideline 5.2) and Play's impersonation policy apply. "Not an official PSF app" stays wherever the app names itself. |
-| Identity | The final name, icon and bundle id (O-4). The bundle id cannot change once a store record exists. |
+| Identity | Settled by D-452. The bundle id cannot change once a build is uploaded to App Store Connect or an app exists in Play Console. |
 | Accounts | Apple: individual, or organisation (needs a D-U-N-S number). Google Play: new personal accounts must run a closed test (a minimum number of testers for 14 days) before production access; check the current rules. |
 | Privacy | A privacy-policy URL (both stores require one). App Privacy: "Data Not Collected", since there are no analytics, no crash service and favourites stay on the device (D-08, D-72). The Play Data safety form. |
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
@@ -973,7 +976,6 @@ S5 closed the rows it answered: builds from the `.flet-src` setup (§2.2, §8), 
 | An iPhone development certificate and profiles; the release numbers on the iPhone | #121 | Simulators only for iOS (§5.3) |
 | `build-android.yml` on a GitHub runner: the `-Xmx4G` heap, `--arch arm64-v8a`, the first run's time | P0-06 (#54) | **Answered** by #54: the heap fits `ubuntu-latest` (7.9 GB; at least 1 GB available, swap under 400 MB), and a clean run takes about 9.5-12.5 minutes (§7.4) |
 | A Flet companion app in the stores that speaks 1.1 | Flet 1.1.0 release | The companion client from `.flet-src/client` (§5.2), or `flet debug` |
-| App identity: name, icon, bundle id, URL scheme | O-4 | Placeholders as in §3.1 |
 | Distribution routes | O-5 | Internal only (D-85) |
 | Cleartext HTTP and iOS local-network behaviour with the LAN mock | The first P3 device test | Use the companion client or the emulator |
 | serious_python stages the app in the shared pub cache, so overlapping builds can ship each other's Python (§5.8) | U28 (#185, flet-dev/serious-python#255) | A pub cache per worktree and the bundle check (§5.8, D-176) |

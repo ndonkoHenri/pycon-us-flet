@@ -11,8 +11,8 @@
 #   OS_ANSWER  the OS prompt's answer after Allow: allow (default) or deny
 #
 # After Allow and the OS's Allow, session reminders are on at 10 minutes: the app's log
-# says "Reminders: a plan of N applied" again (Developer › Share log), and Settings
-# still shows the interim until #449 (D-395).
+# says "Reminders: a plan of N applied" again (Developer › Share log), and Settings'
+# Reminders section shows them on (D-395, D-401).
 appId: io.github.ndonkohenri.confcompanion
 name: The first star shows the reminders primer, then the OS asks
 tags:

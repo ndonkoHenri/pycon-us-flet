@@ -256,11 +256,12 @@ async def test_a_logged_email_is_shared_as_a_placeholder(
 
 
 def test_flet_still_sends_the_sheet_s_origin_without_a_size() -> None:
-    """At the pin Flet sends the origin as a point, which an iPad refuses (F115, U95).
+    """At the pin Flet sends the origin as a point with no size (U95).
 
-    A tripwire for the Flet bump that fixes it: when this fails, the origin carries a
-    size, sharing works on an iPad, and F115's interim (a share there says it failed)
-    can go.
+    An iPad opens the sheet anyway, pointing from the view's centre: share_plus 13.3.1
+    makes a small rectangle there out of an empty one (F263, which supersedes F115). A
+    tripwire for the Flet bump that lets the origin carry a size: when this fails, the
+    popover can point from the origin we send, and ``centre()`` needs another look.
     """
     args = flet_share._share_args(share_position_origin=ft.Offset(200, 400))
     assert args["share_position_origin"] == {"x": 200, "y": 400}
